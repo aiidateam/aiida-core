@@ -233,10 +233,17 @@ class Scheduler(metaclass=abc.ABCMeta):
                 stderr_str = f'2> {escape_for_bash(code_info.stderr_name)}' if code_info.stderr_name else ''
 
             command_string = f'{command_to_exec} {stdin_str} {stdout_str} {stderr_str}'
+<<<<<<< HEAD
             
             if code_info.relative_run_directory:
                 run_in_folder = f'cd {escape_for_bash(code_info.relative_run_directory)}' 
                 output_string = f'({run_in_folder} && exec {command_string})'
+=======
+
+            if code_info.folder_path:
+                run_in_folder = f'cd {escape_for_bash(code_info.folder_path)}'
+                output_string = f'({run_in_folder}; {command_string})'
+>>>>>>> 9687c9f155d5e785734cf8d6cfc5b136a6083c99
             else:
                 output_string = command_string
 

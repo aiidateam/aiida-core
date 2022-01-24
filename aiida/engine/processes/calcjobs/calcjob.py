@@ -705,18 +705,18 @@ class CalcJob(Process):
                 this_withmpi = code_info.withmpi
 
             if this_withmpi:
-                this_argv = (
-                    mpi_args + extra_mpirun_params + [this_code.get_execname()] +
-                    (code_info.cmdline_params if code_info.cmdline_params is not None else [])
-                )
+                computer_cmdline_params = mpi_args + extra_mpirun_params
             else:
-                this_argv = [this_code.get_execname()
-                             ] + (code_info.cmdline_params if code_info.cmdline_params is not None else [])
+                computer_cmdline_params = None
+                
+            this_argv = [this_code.get_execname()
+                            ] + (code_info.cmdline_params if code_info.cmdline_params is not None else [])
 
             # overwrite the old cmdline_params and add codename and mpirun stuff
             code_info.cmdline_params = this_argv
 
-            codes_info.append(code_info)
+            codes_info.append((code_info, computer_cmdline_params))
+            
         job_tmpl.codes_info = codes_info
 
         # set the codes execution mode, default set to `SERIAL`

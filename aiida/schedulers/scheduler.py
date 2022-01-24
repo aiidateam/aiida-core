@@ -218,10 +218,14 @@ class Scheduler(metaclass=abc.ABCMeta):
 
         list_of_runlines = []
         
-        for code_info in codes_info:
+        for code_info, computer_cmdline_params in codes_info:
             command_to_exec_list = []
+            if computer_cmdline_params:
+                for arg in computer_cmdline_params:
+                    command_to_exec_list.append(escape_for_bash(arg, use_double_quotes=computer_cmdline_double_quotes))
             for arg in code_info.cmdline_params:
-                command_to_exec_list.append(escape_for_bash(arg, use_double_quotes=computer_cmdline_double_quotes))
+                command_to_exec_list.append(escape_for_bash(arg))
+                
             command_to_exec = ' '.join(command_to_exec_list)
 
             stdin_str = f'< {escape_for_bash(code_info.stdin_name)}' if code_info.stdin_name else ''

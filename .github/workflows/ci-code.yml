@@ -43,14 +43,20 @@ jobs:
 
     needs: [check-requirements]
 
-    runs-on: ubuntu-latest
     timeout-minutes: 30
 
     strategy:
       fail-fast: false
       matrix:
+        os: ['ubuntu-latest']
         python-version: ['3.8', '3.10']
         backend: ['django', 'sqlalchemy']
+        include:
+        - os: macos-latest
+          python-version: 3.8
+          backend: django
+
+    runs-on: "${{ matrix.os }}"
 
     services:
       postgres:

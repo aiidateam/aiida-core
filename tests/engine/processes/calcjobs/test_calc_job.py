@@ -51,6 +51,9 @@ class DummyCalcJob(CalcJob):
 
         codeinfo = CodeInfo()
         codeinfo.code_uuid = self.inputs.code.uuid
+        codeinfo.stdin_name = 'aiida.in'
+        codeinfo.stdout_name = 'aiida.out'
+        codeinfo.stderr_name = 'aiida.err'
 
         calcinfo = CalcInfo()
         calcinfo.codes_info = [codeinfo]
@@ -128,7 +131,8 @@ class MultiCodesCalcJob(CalcJob):
     
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
-def test_double_quote(aiida_local_code_factory, file_regression):
+@pytest.mark.parametrize('calcjob_withmpi', [True, False])
+def test_double_quote(aiida_local_code_factory, file_regression, calcjob_withmpi):
     """test run container code"""
     computer = orm.Computer(
         label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.direct',
@@ -143,7 +147,8 @@ def test_double_quote(aiida_local_code_factory, file_regression):
                 'resources': {
                     'num_machines': 1,
                     'num_mpiprocs_per_machine': 1
-                }
+                },
+                'withmpi': calcjob_withmpi,
             }
         }
     }

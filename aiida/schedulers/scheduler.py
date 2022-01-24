@@ -156,7 +156,7 @@ class Scheduler(metaclass=abc.ABCMeta):
             script_lines.append(job_tmpl.prepend_text)
             script_lines.append(empty_line)
 
-        script_lines.append(self._get_run_line(job_tmpl.codes_info, job_tmpl.codes_run_mode, job_tmpl.run_line_double_quotes))
+        script_lines.append(self._get_run_line(job_tmpl.codes_info, job_tmpl.codes_run_mode, job_tmpl.computer_cmdline_double_quotes))
         script_lines.append(empty_line)
 
         if job_tmpl.append_text:
@@ -203,7 +203,7 @@ class Scheduler(metaclass=abc.ABCMeta):
         # pylint: disable=no-self-use,unused-argument
         return None
 
-    def _get_run_line(self, codes_info, codes_run_mode, run_line_double_quotes):
+    def _get_run_line(self, codes_info, codes_run_mode, computer_cmdline_double_quotes):
         """Return a string with the line to execute a specific code with specific arguments.
 
         :parameter codes_info: a list of `aiida.common.datastructures.CodeInfo` objects. Each contains the information
@@ -215,16 +215,13 @@ class Scheduler(metaclass=abc.ABCMeta):
         """
         from functools import partial
         from aiida.common.datastructures import CodeRunMode
-        from aiida.common.escaping import escape_for_bash
 
         list_of_runlines = []
         
-        escape_for_bash = partial(escape_for_bash, use_double_quotes=run_line_double_quotes)    # pylint: disable=redefined-outer-name, reimported
-
         for code_info in codes_info:
             command_to_exec_list = []
             for arg in code_info.cmdline_params:
-                command_to_exec_list.append(escape_for_bash(arg))
+                command_to_exec_list.append(escape_for_bash(arg, use_double_quotes=computer_cmdline_double_quotes))
             command_to_exec = ' '.join(command_to_exec_list)
 
             stdin_str = f'< {escape_for_bash(code_info.stdin_name)}' if code_info.stdin_name else ''

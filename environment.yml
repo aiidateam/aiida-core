@@ -5,7 +5,7 @@ channels:
 - conda-forge
 - defaults
 dependencies:
-- python~=3.7
+- python~=3.8
 - aldjemy~=2.4
 - alembic~=1.2
 - archive-path~=0.3.6
@@ -20,9 +20,9 @@ dependencies:
 - ipython~=7.20
 - jinja2~=3.0
 - jsonschema~=3.0
-- kiwipy[rmq]~=0.7.4
+- kiwipy[rmq]~=0.7.5
 - importlib-metadata~=4.3
-- numpy~=1.17
+- numpy~=1.19
 - pamqp~=2.3
 - paramiko>=2.7.2,~=2.7
 - plumpy~=0.20.0

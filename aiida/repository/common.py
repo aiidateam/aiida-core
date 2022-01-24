@@ -81,7 +81,7 @@ class File():
             objects = {name: File.from_serialized(obj, name) for name, obj in serialized.get('o', {}).items()}
 
         instance = cls.__new__(cls)
-        instance.__init__(name, file_type, key, objects)
+        instance.__init__(name, file_type, key, objects)  # type: ignore[misc]
         return instance
 
     def serialize(self) -> dict:

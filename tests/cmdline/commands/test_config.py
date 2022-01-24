@@ -141,3 +141,9 @@ class TestVerdiConfig:
 
         result = run_cli_command(cmd_verdi.verdi, ['config', 'caching', '--disabled'])
         assert result.output.strip() == ''
+
+    def test_config_downgrade(self, run_cli_command):
+        """Test `verdi config downgrade`"""
+        options = ['config', 'downgrade', '1']
+        result = run_cli_command(cmd_verdi.verdi, options)
+        assert 'Success: Downgraded' in result.output.strip()

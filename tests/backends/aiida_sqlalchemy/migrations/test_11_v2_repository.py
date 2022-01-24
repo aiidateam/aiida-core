@@ -46,7 +46,7 @@ def test_node_repository_metadata(perform_migrations: Migrator):
     with perform_migrations.session() as session:
         node = session.query(DbNode).filter(DbNode.id == node_id).one()
         assert hasattr(node, 'repository_metadata')
-        assert node.repository_metadata == {}
+        assert node.repository_metadata is None
 
 
 def test_entry_point_core_prefix(perform_migrations: Migrator):
@@ -204,7 +204,7 @@ def test_repository_migration(perform_migrations: Migrator):  # pylint: disable=
                 }
             }
         }
-        assert node_03.repository_metadata == {}
+        assert node_03.repository_metadata is None
         assert node_05.repository_metadata == {
             'o': {
                 'input.txt': {

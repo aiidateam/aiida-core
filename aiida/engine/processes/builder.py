@@ -97,10 +97,10 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
             except KeyError as exception:
                 if not self._port_namespace.dynamic:
                     raise AttributeError(f'Unknown builder parameter: {attr}') from exception
-                port = None  # type: ignore[assignment]
+                port = None
             else:
                 value = port.serialize(value)  # type: ignore[union-attr]
-                validation_error = port.validate(value)
+                validation_error = port.validate(value)  # type: ignore[union-attr]
                 if validation_error:
                     raise ValueError(f'invalid attribute value {validation_error.message}')
 

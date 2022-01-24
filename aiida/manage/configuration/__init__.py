@@ -23,16 +23,19 @@ __all__ = (
     'CURRENT_CONFIG_VERSION',
     'Config',
     'ConfigValidationError',
+    'MIGRATIONS',
     'OLDEST_COMPATIBLE_CONFIG_VERSION',
     'Option',
     'Profile',
     'check_and_migrate_config',
     'config_needs_migrating',
     'config_schema',
+    'downgrade_config',
     'get_current_version',
     'get_option',
     'get_option_names',
     'parse_option',
+    'upgrade_config',
 )
 
 # yapf: enable
@@ -57,6 +60,63 @@ from . import options
 CONFIG = None
 PROFILE = None
 BACKEND_UUID = None  # This will be set to the UUID of the profile as soon as its corresponding backend is loaded
+
+
+def is_rabbitmq_version_supported():
+    """Return whether the version of RabbitMQ configured for the current profile is supported.
+
+    Versions 3.8 and above are not compatible with AiiDA with default configuration.
+
+    :return: boolean whether the current RabbitMQ version is supported.
+    """
+    from packaging.version import parse
+    return get_rabbitmq_version() < parse('3.8')
+
+
+def get_rabbitmq_version():
+    """Return the version of the RabbitMQ server that the current profile connects to.
+
+    :return: :class:`packaging.version.Version`
+    """
+    from packaging.version import parse
+
+    from aiida.manage.manager import get_manager
+    communicator = get_manager().get_communicator()
+    return parse(communicator.server_properties['version'].decode('utf-8'))
+
+
+def check_rabbitmq_version():
+    """Check the version of RabbitMQ that is being connected to and emit warning if the version is not compatible."""
+    from aiida.cmdline.utils import echo
+    if not is_rabbitmq_version_supported():
+        echo.echo_warning(f'RabbitMQ v{get_rabbitmq_version()} is not supported and will cause unexpected problems!')
+        echo.echo_warning('It can cause long-running workflows to crash and jobs to be submitted multiple times.')
+        echo.echo_warning('See https://github.com/aiidateam/aiida-core/wiki/RabbitMQ-version-to-use for details.')
+
+
+def check_version():
+    """Check the currently installed version of ``aiida-core`` and warn if it is a post release development version.
+
+    The ``aiida-core`` package maintains the protocol that the ``develop`` branch will use a post release version
+    number. This means it will always append `.post0` to the version of the latest release. This should mean that if
+    this protocol is maintained properly, this method will print a warning if the currently installed version is a
+    post release development branch and not an actual release.
+    """
+    from packaging.version import parse
+
+    from aiida import __version__
+    from aiida.cmdline.utils import echo
+
+    version = parse(__version__)
+
+    # Showing of the warning can be turned off by setting the following option to false.
+    show_warning = get_config_option('warnings.development_version')
+
+    if version.is_postrelease and show_warning:
+        echo.echo_warning(f'You are currently using a post release development version of AiiDA: {version}')
+        echo.echo_warning('Be aware that this is not recommended for production and is not officially supported.')
+        echo.echo_warning('Databases used with this version may not be compatible with future releases of AiiDA')
+        echo.echo_warning('as you might not be able to automatically migrate your data.\n')
 
 
 def load_profile(profile=None):
@@ -91,6 +151,13 @@ def load_profile(profile=None):
     # Note that we do not configure with `with_orm=True` because that will force the backend to be loaded. This should
     # instead be done lazily in `Manager._load_backend`.
     configure_logging()
+
+    # Check whether a development version is being run. Note that needs to be called after ``configure_logging`` because
+    # this function relies on the logging being properly configured for the warning to show.
+    check_version()
+
+    # Check whether a compatible version of RabbitMQ is being used.
+    check_rabbitmq_version()
 
     return PROFILE
 

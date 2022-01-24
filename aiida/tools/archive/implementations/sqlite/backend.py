@@ -376,36 +376,36 @@ def get_backend_entity(dbmodel) -> Type[entities.SqlaModelEntity]:  # pylint: di
     raise TypeError(f'Cannot get backend entity for {dbmodel}')
 
 
-@get_backend_entity.register(DbAuthInfo)
+@get_backend_entity.register(DbAuthInfo)  # type: ignore[call-overload]
 def _(dbmodel):
     return create_backend_cls(authinfos.SqlaAuthInfo, dbmodel.__class__)
 
 
-@get_backend_entity.register(DbComment)  # type: ignore[no-redef]
+@get_backend_entity.register(DbComment)  # type: ignore[call-overload]
 def _(dbmodel):
     return create_backend_cls(comments.SqlaComment, dbmodel.__class__)
 
 
-@get_backend_entity.register(DbComputer)  # type: ignore[no-redef]
+@get_backend_entity.register(DbComputer)  # type: ignore[call-overload]
 def _(dbmodel):
     return create_backend_cls(computers.SqlaComputer, dbmodel.__class__)
 
 
-@get_backend_entity.register(DbGroup)  # type: ignore[no-redef]
+@get_backend_entity.register(DbGroup)  # type: ignore[call-overload]
 def _(dbmodel):
     return create_backend_cls(groups.SqlaGroup, dbmodel.__class__)
 
 
-@get_backend_entity.register(DbLog)  # type: ignore[no-redef]
+@get_backend_entity.register(DbLog)  # type: ignore[call-overload]
 def _(dbmodel):
     return create_backend_cls(logs.SqlaLog, dbmodel.__class__)
 
 
-@get_backend_entity.register(DbNode)  # type: ignore[no-redef]
+@get_backend_entity.register(DbNode)  # type: ignore[call-overload]
 def _(dbmodel):
     return create_backend_cls(nodes.SqlaNode, dbmodel.__class__)
 
 
-@get_backend_entity.register(DbUser)  # type: ignore[no-redef]
+@get_backend_entity.register(DbUser)  # type: ignore[call-overload]
 def _(dbmodel):
     return create_backend_cls(users.SqlaUser, dbmodel.__class__)

@@ -132,7 +132,7 @@ def migrate(  # pylint: disable=too-many-branches,too-many-statements
 
         if outpath.exists() and force:
             outpath.unlink()
-        shutil.move(Path(tmpdirname) / 'new.zip', outpath)  # type: ignore
+        shutil.move(Path(tmpdirname) / 'new.zip', outpath)  # type: ignore[arg-type]
 
 
 def _read_json(inpath: Path, filename: str, is_tar: bool) -> Dict[str, Any]:

@@ -6,6 +6,8 @@ import shutil
 from typing import BinaryIO, Iterable, Iterator, List, Optional, Tuple
 import uuid
 
+from aiida.common.folders import SandboxFolder
+
 from .abstract import AbstractRepositoryBackend
 
 __all__ = ('SandboxRepositoryBackend',)
@@ -15,7 +17,6 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
     """Implementation of the ``AbstractRepositoryBackend`` using a sandbox folder on disk as the backend."""
 
     def __init__(self):
-        from aiida.common.folders import SandboxFolder
         self._sandbox: Optional[SandboxFolder] = None
 
     def __str__(self) -> str:
@@ -51,14 +52,11 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
     @property
     def is_initialised(self) -> bool:
         """Return whether the repository has been initialised."""
-        from aiida.common.folders import SandboxFolder
         return isinstance(self._sandbox, SandboxFolder)
 
     @property
     def sandbox(self):
         """Return the sandbox instance of this repository."""
-        from aiida.common.folders import SandboxFolder
-
         if self._sandbox is None:
             self._sandbox = SandboxFolder()
 

@@ -22,7 +22,8 @@ jobs:
         python-version: '3.8'
     - name: Install python dependencies
       run: |
-        pip install -e .[docs,tests]
+        pip install --upgrade pip
+        pip install -e .[docs,tests,rest,atomic_tools]
     - name: Build HTML docs
       id: linkcheck
       run: |

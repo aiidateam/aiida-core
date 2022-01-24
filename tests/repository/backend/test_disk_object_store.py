@@ -170,7 +170,7 @@ def test_erase(repository, generate_directory):
 
     assert repository.has_object(key)
 
-    dirpath = pathlib.Path(repository.container.get_folder())
+    dirpath = pathlib.Path(repository._container.get_folder())  # pylint: disable=protected-access
     repository.erase()
 
     assert not dirpath.exists()
@@ -207,7 +207,7 @@ def test_list_objects(repository, generate_directory):
 def test_key_format(repository):
     """Test the ``key_format`` property."""
     repository.initialise()
-    assert repository.key_format == repository.container.hash_type
+    assert repository.key_format == repository._container.hash_type  # pylint: disable=protected-access
 
 
 def test_get_info(populated_repository):
@@ -268,7 +268,7 @@ def test_get_info(populated_repository):
 def test_maintain(populated_repository, kwargs, output_info):
     """Test the ``maintain`` method."""
     populated_repository.maintain(**kwargs)
-    file_info = populated_repository.container.count_objects()
+    file_info = populated_repository._container.count_objects()  # pylint: disable=protected-access
     assert file_info['loose'] == output_info['unpacked']
     assert file_info['packed'] == output_info['packed']
 

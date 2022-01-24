@@ -14,6 +14,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.schema import Column
+from sqlalchemy.sql.schema import Index, UniqueConstraint
 from sqlalchemy.types import DateTime, Integer, Text
 
 from aiida.backends.sqlalchemy.models.base import Base
@@ -28,17 +29,28 @@ class DbComment(Base):
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
 
-    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
-    dbnode_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'))
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, nullable=False)
+    dbnode_id = Column(
+        Integer, ForeignKey('db_dbnode.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), nullable=False
+    )
 
-    ctime = Column(DateTime(timezone=True), default=timezone.now)
-    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now)
+    ctime = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
+    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=False)
 
-    user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'))
-    content = Column(Text, nullable=True)
+    user_id = Column(
+        Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), nullable=False
+    )
+    content = Column(Text, default='', nullable=False)
 
     dbnode = relationship('DbNode', backref='dbcomments')
     user = relationship('DbUser')
+
+    __table_args__ = (
+        # index/constraint names mirror django's auto-generated ones
+        UniqueConstraint(uuid, name='db_dbcomment_uuid_49bac08c_uniq'),
+        Index('db_dbcomment_dbnode_id_3b812b6b', dbnode_id),
+        Index('db_dbcomment_user_id_8ed5e360', user_id),
+    )
 
     def __str__(self):
         return 'DbComment for [{} {}] on {}'.format(

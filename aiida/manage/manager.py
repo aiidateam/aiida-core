@@ -114,6 +114,7 @@ class Manager:
         from aiida.common import ConfigurationError, InvalidOperation
         from aiida.common.log import configure_logging
         from aiida.manage import configuration
+        from aiida.manage.profile_access import ProfileAccessManager
 
         profile = self.get_profile()
 
@@ -129,6 +130,8 @@ class Manager:
 
         # Do NOT reload the backend environment if already loaded, simply reload the backend instance after
         if configuration.BACKEND_UUID is None:
+            access_manager = ProfileAccessManager(profile)
+            access_manager.request_access()
             backend_manager.load_backend_environment(profile, validate_schema=schema_check)
             configuration.BACKEND_UUID = profile.uuid
 

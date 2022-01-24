@@ -104,21 +104,21 @@ class CodeInfo(DefaultFieldsAttributeDict):
 
         code.x cmdline_params[0] cmdline_params[1] ... < stdin > stdout
 <<<<<<< HEAD
-    
-    * ``relative_run_directory``: (optional) the absolute path, in string, of the folder where to 
+
+    * ``relative_run_directory``: (optional) the absolute path, in string, of the folder where to
       run the code. If it is specified, the code will be called as:
-      
+
         (cd relative_run_directory && exec code.x ...)
-      
-      producing the outputs in the specified directory. 
+
+      producing the outputs in the specified directory.
       Note: the engine expetcts that the `CalcJob` plugin creates the relative path
       in which the code should be executed. Retrieving lists, such as e.g. `retrieve_list`,
-      shall furthermore be updated accordingly to specify paths that include this relative path. 
+      shall furthermore be updated accordingly to specify paths that include this relative path.
       For more info regarding the command, please visit the following links:
       [1.] https://www.gnu.org/savannah-checkouts/gnu/bash/manual/bash.html#Command-Grouping
       [2.] https://www.gnu.org/savannah-checkouts/gnu/bash/manual/bash.html#Command-Execution-Environment
-      [3.] https://stackoverflow.com/questions/786376/how-do-i-run-a-program-with-a-different-working-directory-from-current-from-lin/786515#786515 
-    
+      [3.] https://stackoverflow.com/questions/786376/how-do-i-run-a-program-with-a-different-working-directory-from-current-from-lin/786515#786515
+
 =======
 
     * ``folder_path``: (optional) the path, in string, of the folder where to

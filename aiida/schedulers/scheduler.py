@@ -234,9 +234,9 @@ class Scheduler(metaclass=abc.ABCMeta):
 
             command_string = f'{command_to_exec} {stdin_str} {stdout_str} {stderr_str}'
 <<<<<<< HEAD
-            
+
             if code_info.relative_run_directory:
-                run_in_folder = f'cd {escape_for_bash(code_info.relative_run_directory)}' 
+                run_in_folder = f'cd {escape_for_bash(code_info.relative_run_directory)}'
                 output_string = f'({run_in_folder} && exec {command_string})'
 =======
 

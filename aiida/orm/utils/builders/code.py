@@ -65,7 +65,6 @@ class CodeBuilder:
         code.label = self._get_and_count('label', used)
         code.description = self._get_and_count('description', used)
         code.set_input_plugin_name(self._get_and_count('input_plugin', used))
-        code.set_use_double_quotes(self._get_and_count('use_double_quotes', used))
         code.set_prepend_text(self._get_and_count('prepend_text', used))
         code.set_append_text(self._get_and_count('append_text', used))
 
@@ -101,7 +100,6 @@ class CodeBuilder:
         spec['label'] = code.label
         spec['description'] = code.description
         spec['input_plugin'] = code.get_input_plugin_name()
-        spec['use_double_quotes'] = code.get_use_double_quotes()
         spec['prepend_text'] = code.get_prepend_text()
         spec['append_text'] = code.get_append_text()
 

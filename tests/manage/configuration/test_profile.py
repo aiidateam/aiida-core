@@ -37,12 +37,15 @@ class TestProfile(AiidaTestCase):
                 'database_password': 'pass',
                 'repository_uri': f"file:///{os.path.join('/some/path', f'repository_{cls.profile_name}')}",
             },
-            'broker_protocol': 'amqp',
-            'broker_username': 'guest',
-            'broker_password': 'guest',
-            'broker_host': 'localhost',
-            'broker_port': 5672,
-            'broker_virtual_host': '',
+            'process_control_backend': 'rabbitmq',
+            'process_control_config': {
+                'broker_protocol': 'amqp',
+                'broker_username': 'guest',
+                'broker_password': 'guest',
+                'broker_host': 'localhost',
+                'broker_port': 5672,
+                'broker_virtual_host': '',
+            }
         }
         cls.profile = Profile(cls.profile_name, cls.profile_dictionary)
 

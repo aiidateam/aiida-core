@@ -199,8 +199,8 @@ class SimplifyOptions(SingleMigration):
                 config['options'][current] = config['options'].pop(new)
 
 
-class AbstractStorage(SingleMigration):
-    """Move the storage configuration under a top-level "storage" key.
+class AbstractStorageAndProcess(SingleMigration):
+    """Move the storage config under a top-level "storage" key and rabbitmq config under "processing".
 
     This allows for different storage backends to have different configuration.
     """
@@ -209,7 +209,7 @@ class AbstractStorage(SingleMigration):
     up_revision = 6
     up_compatible = 6
 
-    conversions = (
+    storage_conversions = (
         ('AIIDADB_ENGINE', 'database_engine'),
         ('AIIDADB_HOST', 'database_hostname'),
         ('AIIDADB_PORT', 'database_port'),
@@ -218,29 +218,52 @@ class AbstractStorage(SingleMigration):
         ('AIIDADB_NAME', 'database_name'),
         ('AIIDADB_REPOSITORY_URI', 'repository_uri'),
     )
+    process_keys = (
+        'broker_protocol',
+        'broker_username',
+        'broker_password',
+        'broker_host',
+        'broker_port',
+        'broker_virtual_host',
+        'broker_parameters',
+    )
 
     def upgrade(self, config: ConfigType) -> None:
         for profile_name, profile in config.get('profiles', {}).items():
             if 'AIIDADB_BACKEND' in profile:
                 profile['storage_backend'] = profile.pop('AIIDADB_BACKEND')
             profile.setdefault('storage_config', {})
-            for old, new in self.conversions:
+            for old, new in self.storage_conversions:
                 if old in profile:
                     profile['storage_config'][new] = profile.pop(old)
                 else:
                     CONFIG_LOGGER.warning(f'profile {profile_name!r} had no expected {old!r} key')
+            profile['process_control_backend'] = 'rabbitmq'
+            profile.setdefault('process_control_config', {})
+            for key in self.process_keys:
+                if key in profile:
+                    profile['process_control_config'][key] = profile.pop(key)
+                elif key not in ('broker_parameters', 'broker_virtual_host'):
+                    CONFIG_LOGGER.warning(f'profile {profile_name!r} had no expected {old!r} key')
 
     def downgrade(self, config: ConfigType) -> None:
         for profile in config.get('profiles', {}).values():
-            for old, new in self.conversions:
+            for old, new in self.storage_conversions:
                 if new in profile.get('storage_config', {}):
                     profile[old] = profile['storage_config'].pop(new)
             profile.pop('storage_config', None)
             if 'storage_backend' in profile:
                 profile['AIIDADB_BACKEND'] = profile.pop('storage_backend')
+            for key in self.process_keys:
+                if key in profile.get('process_control_config', {}):
+                    profile[key] = profile['process_control_config'].pop(key)
+            profile.pop('process_control_backend', None)
+            profile.pop('process_control_config', None)
 
 
-MIGRATIONS = (Initial, AddProfileUuid, SimplifyDefaultProfiles, AddMessageBroker, SimplifyOptions, AbstractStorage)
+MIGRATIONS = (
+    Initial, AddProfileUuid, SimplifyDefaultProfiles, AddMessageBroker, SimplifyOptions, AbstractStorageAndProcess
+)
 
 
 def get_current_version(config):

@@ -62,12 +62,16 @@ def setup(
             'repository_uri': f'file://{repository}',
         }
     )
-    profile.broker_protocol = broker_protocol
-    profile.broker_username = broker_username
-    profile.broker_password = broker_password
-    profile.broker_host = broker_host
-    profile.broker_port = broker_port
-    profile.broker_virtual_host = broker_virtual_host
+    profile.set_process_controller(
+        'rabbitmq', {
+            'broker_protocol': broker_protocol,
+            'broker_username': broker_username,
+            'broker_password': broker_password,
+            'broker_host': broker_host,
+            'broker_port': broker_port,
+            'broker_virtual_host': broker_virtual_host,
+        }
+    )
 
     config = get_config()
 

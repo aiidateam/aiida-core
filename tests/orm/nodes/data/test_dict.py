@@ -66,6 +66,18 @@ def test_set_item(dictionary):
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.parametrize('key, expected', (('value', True), ('non-existing', False)))
+def test_contains(dictionary, key, expected):
+    """Test the ``__contains__`` implementation."""
+    node = Dict(dictionary)
+    assert (key in dictionary) is expected
+    assert (key in node) is expected
+
+    node.store()
+    assert (key in node) is expected
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
 def test_correct_raises(dictionary):
     """Test that the methods for accessing the item raise the correct error.
 

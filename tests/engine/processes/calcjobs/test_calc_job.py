@@ -45,6 +45,7 @@ class DummyCalcJob(CalcJob):
     @classmethod
     def define(cls, spec):
         super().define(spec)
+        spec.input('custom_cmdline_string', valid_type=orm.Str, required=False)
 
     def prepare_for_submission(self, folder):
         from aiida.common.datastructures import CalcInfo, CodeInfo
@@ -54,6 +55,9 @@ class DummyCalcJob(CalcJob):
         codeinfo.stdin_name = 'aiida.in'
         codeinfo.stdout_name = 'aiida.out'
         codeinfo.stderr_name = 'aiida.err'
+        
+        if 'custom_cmdline_string' in self.inputs:
+            codeinfo.custom_cmdline_string = self.inputs.custom_cmdline_string.value
 
         calcinfo = CalcInfo()
         calcinfo.codes_info = [codeinfo]
@@ -132,12 +136,13 @@ class MultiCodesCalcJob(CalcJob):
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
 @pytest.mark.parametrize('code_use_double_quotes', [True, False])
-def test_double_quote(aiida_local_code_factory, file_regression, code_use_double_quotes):
+@pytest.mark.parametrize('computer_use_double_quotes', [True, False])
+def test_double_quote(aiida_local_code_factory, file_regression, code_use_double_quotes, computer_use_double_quotes):
     """test run container code"""
     computer = orm.Computer(
         label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.direct',
     ).store()
-    computer.set_use_double_quotes(True)
+    computer.set_use_double_quotes(computer_use_double_quotes)
     
     inputs = {
         'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash', computer, use_double_quotes=code_use_double_quotes),
@@ -161,6 +166,32 @@ def test_double_quote(aiida_local_code_factory, file_regression, code_use_double
 
     file_regression.check(content, extension='.sh')
 
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
+def test_custom_cmdline_string(aiida_local_code_factory, file_regression):
+    """test run container code"""
+
+    inputs = {
+        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
+        'custom_cmdline_string': orm.Str(r"I%CaN&Be#-+$~Literally?/\any@thing sh -c 'exe < in > out'"),
+        'metadata': {
+            'dry_run': True,
+            'options': {
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
+                },
+            }
+        }
+    }
+
+    _, node = launch.run_get_node(DummyCalcJob, **inputs)
+    folder_name = node.dry_run_info['folder']
+    submit_script_filename = node.get_option('submit_script_filename')
+    with open(os.path.join(folder_name, submit_script_filename), encoding='utf8') as handle:
+        content = handle.read()
+
+    file_regression.check(content, extension='.sh')
 
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')

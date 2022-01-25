@@ -213,12 +213,15 @@ class Scheduler(metaclass=abc.ABCMeta):
             to launch the multiple codes.
         :return: string with format: [executable] [args] {[ < stdin ]} {[ < stdout ]} {[2>&1 | 2> stderr]}
         """
-        from functools import partial
         from aiida.common.datastructures import CodeRunMode
 
         list_of_runlines = []
         
         for code_info in codes_info:
+            if code_info.custom_cmdline_string:
+                list_of_runlines.append(code_info.custom_cmdline_string)
+                continue
+            
             command_to_exec_list = []
             if code_info.computer_cmdline_params:
                 for arg in code_info.computer_cmdline_params:

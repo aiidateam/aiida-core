@@ -357,24 +357,28 @@ def load_documentation_profile():
     with tempfile.NamedTemporaryFile() as handle:
         profile_name = 'readthedocs'
         profile_config = {
-            'storage_backend': 'django',
-            'storage_config': {
-                'database_engine': 'postgresql_psycopg2',
-                'database_port': 5432,
-                'database_hostname': 'localhost',
-                'database_name': 'aiidadb',
-                'database_password': 'aiidadb',
-                'database_username': 'aiida',
-                'repository_uri': 'file:///dev/null',
+            'storage': {
+                'backend': 'django',
+                'config': {
+                    'database_engine': 'postgresql_psycopg2',
+                    'database_port': 5432,
+                    'database_hostname': 'localhost',
+                    'database_name': 'aiidadb',
+                    'database_password': 'aiidadb',
+                    'database_username': 'aiida',
+                    'repository_uri': 'file:///dev/null',
+                }
             },
-            'process_control_backend': 'rabbitmq',
-            'process_control_config': {
-                'broker_protocol': 'amqp',
-                'broker_username': 'guest',
-                'broker_password': 'guest',
-                'broker_host': 'localhost',
-                'broker_port': 5672,
-                'broker_virtual_host': '',
+            'process_control': {
+                'backend': 'rabbitmq',
+                'config': {
+                    'broker_protocol': 'amqp',
+                    'broker_username': 'guest',
+                    'broker_password': 'guest',
+                    'broker_host': 'localhost',
+                    'broker_port': 5672,
+                    'broker_virtual_host': '',
+                }
             },
         }
         config = {'default_profile': profile_name, 'profiles': {profile_name: profile_config}}

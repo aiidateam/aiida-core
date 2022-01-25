@@ -68,7 +68,7 @@ def test_merge_deprecated_yaml(tmp_path):
                 encoding='utf-8'
             )
         )
-        config_dictionary['profiles']['default']['storage_config']['repository_uri'] = f"file:///{tmp_path/'repo'}"
+        config_dictionary['profiles']['default']['storage']['config']['repository_uri'] = f"file:///{tmp_path/'repo'}"
         cache_dictionary = {
             'default': {
                 'default': True,

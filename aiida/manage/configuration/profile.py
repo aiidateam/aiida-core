@@ -39,20 +39,20 @@ CIRCUS_STATS_SOCKET_TEMPLATE = 'circus.s.sock'
 class Profile:  # pylint: disable=too-many-public-methods
     """Class that models a profile as it is stored in the configuration file of an AiiDA instance."""
 
-    KEY_OPTIONS = 'options'
     KEY_UUID = 'PROFILE_UUID'
     KEY_DEFAULT_USER_EMAIL = 'default_user_email'
-    KEY_STORAGE_BACKEND = 'storage_backend'
-    KEY_STORAGE_CONFIG = 'storage_config'
-    KEY_PROCESS_BACKEND = 'process_control_backend'
-    KEY_PROCESS_CONFIG = 'process_control_config'
+    KEY_STORAGE = 'storage'
+    KEY_PROCESS = 'process_control'
+    KEY_STORAGE_BACKEND = 'backend'
+    KEY_STORAGE_CONFIG = 'config'
+    KEY_PROCESS_BACKEND = 'backend'
+    KEY_PROCESS_CONFIG = 'config'
+    KEY_OPTIONS = 'options'
 
     # keys that are expected to be in the parsed configuration
     REQUIRED_KEYS = (
-        KEY_STORAGE_BACKEND,
-        KEY_STORAGE_CONFIG,
-        KEY_PROCESS_BACKEND,
-        KEY_PROCESS_CONFIG,
+        KEY_STORAGE,
+        KEY_PROCESS,
     )
 
     @classproperty
@@ -112,12 +112,12 @@ class Profile:  # pylint: disable=too-many-public-methods
     @property
     def storage_backend(self) -> str:
         """Return the type of the storage backend."""
-        return self._attributes[self.KEY_STORAGE_BACKEND]
+        return self._attributes[self.KEY_STORAGE][self.KEY_STORAGE_BACKEND]
 
     @property
     def storage_config(self) -> Dict[str, Any]:
         """Return the configuration required by the storage backend."""
-        return self._attributes[self.KEY_STORAGE_CONFIG]
+        return self._attributes[self.KEY_STORAGE][self.KEY_STORAGE_CONFIG]
 
     def set_storage(self, name: str, config: Dict[str, Any]) -> None:
         """Set the storage backend and its configuration.
@@ -126,18 +126,19 @@ class Profile:  # pylint: disable=too-many-public-methods
         :param config: the configuration of the storage backend
         """
         # to-do validation (by loading the storage backend, and using a classmethod to validate the config)
-        self._attributes[self.KEY_STORAGE_BACKEND] = name
-        self._attributes[self.KEY_STORAGE_CONFIG] = config
+        self._attributes.setdefault(self.KEY_STORAGE, {})
+        self._attributes[self.KEY_STORAGE][self.KEY_STORAGE_BACKEND] = name
+        self._attributes[self.KEY_STORAGE][self.KEY_STORAGE_CONFIG] = config
 
     @property
     def process_control_backend(self) -> str:
         """Return the type of the process control backend."""
-        return self._attributes[self.KEY_PROCESS_BACKEND]
+        return self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_BACKEND]
 
     @property
     def process_control_config(self) -> Dict[str, Any]:
         """Return the configuration required by the process control backend."""
-        return self._attributes[self.KEY_PROCESS_CONFIG]
+        return self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_CONFIG]
 
     def set_process_controller(self, name: str, config: Dict[str, Any]) -> None:
         """Set the process control backend and its configuration.
@@ -146,8 +147,9 @@ class Profile:  # pylint: disable=too-many-public-methods
         :param config: the configuration of the process backend
         """
         # to-do validation (by loading the process backend, and using a classmethod to validate the config)
-        self._attributes[self.KEY_PROCESS_BACKEND] = name
-        self._attributes[self.KEY_PROCESS_CONFIG] = config
+        self._attributes.setdefault(self.KEY_PROCESS, {})
+        self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_BACKEND] = name
+        self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_CONFIG] = config
 
     @property
     def options(self):

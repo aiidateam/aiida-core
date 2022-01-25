@@ -170,110 +170,118 @@
     },
     "profile": {
       "type": "object",
-      "required": ["storage_backend", "storage_config", "process_control_backend", "process_control_config"],
+      "required": ["storage", "process_control"],
       "properties": {
         "PROFILE_UUID": {
           "description": "The profile's unique key",
           "type": "string"
         },
-        "storage_backend": {
-          "description": "The storage backend type to use",
-          "type": "string",
-          "default": "django"
-        },
-        "storage_config": {
-          "description": "The configuration to parse to the storage backend",
+        "storage": {
+          "description": "The storage configuration",
           "type": "object",
+          "required": ["backend", "config"],
           "properties": {
-            "database_engine": {
-                "type": "string",
-                "default": "postgresql_psycopg2"
+            "backend": {
+              "description": "The storage backend type to use",
+              "type": "string",
+              "default": "django"
             },
-            "database_port": {
-                "type": ["integer", "string"],
-                "minimum": 1,
-                "pattern": "\\d+",
-                "default": 5432
-            },
-            "database_hostname": {
-                "type": [
-                    "string",
-                    "null"
-                ],
-                "default": null
-            },
-            "database_username": {
-                "type": "string"
-            },
-            "database_password": {
-                "type": [
-                    "string",
-                    "null"
-                ],
-                "default": null
-            },
-            "database_name": {
-                "type": "string"
-            },
-            "repository_uri": {
-                "description": "URI to the AiiDA object store",
-                "type": "string"
+            "config": {
+              "description": "The configuration to pass to the storage backend",
+              "type": "object",
+              "properties": {
+                "database_engine": {
+                  "type": "string",
+                  "default": "postgresql_psycopg2"
+                },
+                "database_port": {
+                  "type": ["integer", "string"],
+                  "minimum": 1,
+                  "pattern": "\\d+",
+                  "default": 5432
+                },
+                "database_hostname": {
+                  "type": ["string", "null"],
+                  "default": null
+                },
+                "database_username": {
+                  "type": "string"
+                },
+                "database_password": {
+                  "type": ["string", "null"],
+                  "default": null
+                },
+                "database_name": {
+                  "type": "string"
+                },
+                "repository_uri": {
+                  "description": "URI to the AiiDA object store",
+                  "type": "string"
+                }
+              }
             }
           }
         },
-        "process_control_backend": {
-            "description": "The process execution backend type to use",
-            "type": "string",
-            "default": "rabbitmq"
-        },
-        "process_control_config": {
-          "description": "The configuration to control process execution",
+        "process_control": {
+          "description": "The process control configuration",
           "type": "object",
-          "parameters": {
-            "broker_protocol": {
-              "description": "Protocol for connecting to the RabbitMQ server",
+          "required": ["backend", "config"],
+          "properties": {
+            "backend": {
+              "description": "The process execution backend type to use",
               "type": "string",
-              "enum": ["amqp", "amqps"],
-              "default": "amqp"
+              "default": "rabbitmq"
             },
-            "broker_username": {
-              "description": "Username for RabbitMQ authentication",
-              "type": "string",
-              "default": "guest"
-            },
-            "broker_password": {
-              "description": "Password for RabbitMQ authentication",
-              "type": "string",
-              "default": "guest"
-            },
-            "broker_host": {
-              "description": "Hostname of the RabbitMQ server",
-              "type": "string",
-              "default": "127.0.0.1"
-            },
-            "broker_port": {
-              "description": "Port of the RabbitMQ server",
-              "type": "integer",
-              "minimum": 1,
-              "default": 5672
-            },
-            "broker_virtual_host": {
-              "description": "RabbitMQ virtual host to connect to",
-              "type": "string",
-              "default": ""
-            },
-            "broker_parameters": {
-              "description": "RabbitMQ arguments that will be encoded as query parameters",
+            "config": {
+              "description": "The configuration to pass to the process execution backend",
               "type": "object",
-              "default": {
-                "heartbeat": 600
-              },
-              "properties": {
-                "heartbeat": {
-                  "description": "After how many seconds the peer TCP connection should be considered unreachable",
+              "parameters": {
+                "broker_protocol": {
+                  "description": "Protocol for connecting to the RabbitMQ server",
+                  "type": "string",
+                  "enum": ["amqp", "amqps"],
+                  "default": "amqp"
+                },
+                "broker_username": {
+                  "description": "Username for RabbitMQ authentication",
+                  "type": "string",
+                  "default": "guest"
+                },
+                "broker_password": {
+                  "description": "Password for RabbitMQ authentication",
+                  "type": "string",
+                  "default": "guest"
+                },
+                "broker_host": {
+                  "description": "Hostname of the RabbitMQ server",
+                  "type": "string",
+                  "default": "127.0.0.1"
+                },
+                "broker_port": {
+                  "description": "Port of the RabbitMQ server",
                   "type": "integer",
-                  "default": 600,
-                  "minimum": 0
+                  "minimum": 1,
+                  "default": 5672
+                },
+                "broker_virtual_host": {
+                  "description": "RabbitMQ virtual host to connect to",
+                  "type": "string",
+                  "default": ""
+                },
+                "broker_parameters": {
+                  "description": "RabbitMQ arguments that will be encoded as query parameters",
+                  "type": "object",
+                  "default": {
+                    "heartbeat": 600
+                  },
+                  "properties": {
+                    "heartbeat": {
+                      "description": "After how many seconds the peer TCP connection should be considered unreachable",
+                      "type": "integer",
+                      "default": 600,
+                      "minimum": 0
+                    }
+                  }
                 }
               }
             }

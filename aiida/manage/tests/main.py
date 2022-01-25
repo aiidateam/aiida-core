@@ -278,24 +278,28 @@ class TemporaryProfileManager(ProfileManager):
         Used to set up AiiDA profile from self.profile_info dictionary.
         """
         dictionary = {
-            'storage_backend': self.profile_info.get('storage_backend'),
-            'storage_config': {
-                'database_engine': self.profile_info.get('database_engine'),
-                'database_port': self.profile_info.get('database_port'),
-                'database_hostname': self.profile_info.get('database_hostname'),
-                'database_name': self.profile_info.get('database_name'),
-                'database_username': self.profile_info.get('database_username'),
-                'database_password': self.profile_info.get('database_password'),
-                'repository_uri': f'file://{self.repo}',
+            'storage': {
+                'backend': self.profile_info.get('storage_backend'),
+                'config': {
+                    'database_engine': self.profile_info.get('database_engine'),
+                    'database_port': self.profile_info.get('database_port'),
+                    'database_hostname': self.profile_info.get('database_hostname'),
+                    'database_name': self.profile_info.get('database_name'),
+                    'database_username': self.profile_info.get('database_username'),
+                    'database_password': self.profile_info.get('database_password'),
+                    'repository_uri': f'file://{self.repo}',
+                }
             },
-            'process_control_backend': 'rabbitmq',
-            'process_control_config': {
-                'broker_protocol': self.profile_info.get('broker_protocol'),
-                'broker_username': self.profile_info.get('broker_username'),
-                'broker_password': self.profile_info.get('broker_password'),
-                'broker_host': self.profile_info.get('broker_host'),
-                'broker_port': self.profile_info.get('broker_port'),
-                'broker_virtual_host': self.profile_info.get('broker_virtual_host'),
+            'process_control': {
+                'backend': 'rabbitmq',
+                'config': {
+                    'broker_protocol': self.profile_info.get('broker_protocol'),
+                    'broker_username': self.profile_info.get('broker_username'),
+                    'broker_password': self.profile_info.get('broker_password'),
+                    'broker_host': self.profile_info.get('broker_host'),
+                    'broker_port': self.profile_info.get('broker_port'),
+                    'broker_virtual_host': self.profile_info.get('broker_virtual_host'),
+                }
             }
         }
         return dictionary

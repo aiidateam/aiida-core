@@ -253,7 +253,7 @@ QUICKSETUP_REPOSITORY_URI = options.REPOSITORY_PATH.clone(
 SETUP_DATABASE_ENGINE = QUICKSETUP_DATABASE_ENGINE.clone(
     prompt='Database engine',
     contextual_default=functools.partial(
-        get_profile_attribute_default, ('storage_config.database_engine', 'postgresql_psycopg2')
+        get_profile_attribute_default, ('storage.config.database_engine', 'postgresql_psycopg2')
     ),
     cls=options.interactive.InteractiveOption
 )
@@ -267,7 +267,7 @@ SETUP_DATABASE_BACKEND = QUICKSETUP_DATABASE_BACKEND.clone(
 SETUP_DATABASE_HOSTNAME = QUICKSETUP_DATABASE_HOSTNAME.clone(
     prompt='Database host',
     contextual_default=functools.partial(
-        get_profile_attribute_default, ('storage_config.database_hostname', 'localhost')
+        get_profile_attribute_default, ('storage.config.database_hostname', 'localhost')
     ),
     cls=options.interactive.InteractiveOption
 )
@@ -275,7 +275,7 @@ SETUP_DATABASE_HOSTNAME = QUICKSETUP_DATABASE_HOSTNAME.clone(
 SETUP_DATABASE_PORT = QUICKSETUP_DATABASE_PORT.clone(
     prompt='Database port',
     contextual_default=functools.partial(
-        get_profile_attribute_default, ('storage_config.database_port', DEFAULT_DBINFO['port'])
+        get_profile_attribute_default, ('storage.config.database_port', DEFAULT_DBINFO['port'])
     ),
     cls=options.interactive.InteractiveOption
 )
@@ -283,56 +283,66 @@ SETUP_DATABASE_PORT = QUICKSETUP_DATABASE_PORT.clone(
 SETUP_DATABASE_NAME = QUICKSETUP_DATABASE_NAME.clone(
     prompt='Database name',
     required=True,
-    contextual_default=functools.partial(get_profile_attribute_default, ('storage_config.database_name', None)),
+    contextual_default=functools.partial(get_profile_attribute_default, ('storage.config.database_name', None)),
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_DATABASE_USERNAME = QUICKSETUP_DATABASE_USERNAME.clone(
     prompt='Database username',
     required=True,
-    contextual_default=functools.partial(get_profile_attribute_default, ('storage_config.database_username', None)),
+    contextual_default=functools.partial(get_profile_attribute_default, ('storage.config.database_username', None)),
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_DATABASE_PASSWORD = QUICKSETUP_DATABASE_PASSWORD.clone(
     prompt='Database password',
     required=True,
-    contextual_default=functools.partial(get_profile_attribute_default, ('storage_config.database_password', None)),
+    contextual_default=functools.partial(get_profile_attribute_default, ('storage.config.database_password', None)),
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_BROKER_PROTOCOL = QUICKSETUP_BROKER_PROTOCOL.clone(
     prompt='Broker protocol',
     required=True,
-    contextual_default=functools.partial(get_profile_attribute_default, ('broker_protocol', BROKER_DEFAULTS.protocol)),
+    contextual_default=functools.partial(
+        get_profile_attribute_default, ('process_control.config.broker_protocol', BROKER_DEFAULTS.protocol)
+    ),
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_BROKER_USERNAME = QUICKSETUP_BROKER_USERNAME.clone(
     prompt='Broker username',
     required=True,
-    contextual_default=functools.partial(get_profile_attribute_default, ('broker_username', BROKER_DEFAULTS.username)),
+    contextual_default=functools.partial(
+        get_profile_attribute_default, ('process_control.config.broker_username', BROKER_DEFAULTS.username)
+    ),
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_BROKER_PASSWORD = QUICKSETUP_BROKER_PASSWORD.clone(
     prompt='Broker password',
     required=True,
-    contextual_default=functools.partial(get_profile_attribute_default, ('broker_password', BROKER_DEFAULTS.password)),
+    contextual_default=functools.partial(
+        get_profile_attribute_default, ('process_control.config.broker_password', BROKER_DEFAULTS.password)
+    ),
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_BROKER_HOST = QUICKSETUP_BROKER_HOST.clone(
     prompt='Broker host',
     required=True,
-    contextual_default=functools.partial(get_profile_attribute_default, ('broker_host', BROKER_DEFAULTS.host)),
+    contextual_default=functools.partial(
+        get_profile_attribute_default, ('process_control.config.broker_host', BROKER_DEFAULTS.host)
+    ),
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_BROKER_PORT = QUICKSETUP_BROKER_PORT.clone(
     prompt='Broker port',
     required=True,
-    contextual_default=functools.partial(get_profile_attribute_default, ('broker_port', BROKER_DEFAULTS.port)),
+    contextual_default=functools.partial(
+        get_profile_attribute_default, ('process_control.config.broker_port', BROKER_DEFAULTS.port)
+    ),
     cls=options.interactive.InteractiveOption
 )
 
@@ -340,7 +350,7 @@ SETUP_BROKER_VIRTUAL_HOST = QUICKSETUP_BROKER_VIRTUAL_HOST.clone(
     prompt='Broker virtual host name',
     required=True,
     contextual_default=functools.partial(
-        get_profile_attribute_default, ('broker_virtual_host', BROKER_DEFAULTS.virtual_host)
+        get_profile_attribute_default, ('process_control.config.broker_virtual_host', BROKER_DEFAULTS.virtual_host)
     ),
     cls=options.interactive.InteractiveOption
 )

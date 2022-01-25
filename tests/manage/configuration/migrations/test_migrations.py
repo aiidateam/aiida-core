@@ -119,7 +119,7 @@ class TestConfigMigration(TestCase):
 
     def test_6_5_migration(self):
         """Test the step between config versions 6 and 5."""
-        config_initial = self.load_config_sample('input/6.json')
-        config_reference = self.load_config_sample('reference/5.json')
+        config_initial = self.load_config_sample('reference/6.json')
+        config_reference = self.load_config_sample('input/5.json')
         config_migrated = downgrade_config(config_initial, 5)
         self.assertEqual(config_migrated, config_reference)

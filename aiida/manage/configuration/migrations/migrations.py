@@ -230,35 +230,39 @@ class AbstractStorageAndProcess(SingleMigration):
 
     def upgrade(self, config: ConfigType) -> None:
         for profile_name, profile in config.get('profiles', {}).items():
+            profile.setdefault('storage', {})
             if 'AIIDADB_BACKEND' in profile:
-                profile['storage_backend'] = profile.pop('AIIDADB_BACKEND')
-            profile.setdefault('storage_config', {})
+                profile['storage']['backend'] = profile.pop('AIIDADB_BACKEND')
+            else:
+                CONFIG_LOGGER.warning(f'profile {profile_name!r} had no expected "AIIDADB_BACKEND" key')
+                profile['storage']['backend'] = 'sqlalchemy'
+            profile['storage'].setdefault('config', {})
             for old, new in self.storage_conversions:
                 if old in profile:
-                    profile['storage_config'][new] = profile.pop(old)
+                    profile['storage']['config'][new] = profile.pop(old)
                 else:
                     CONFIG_LOGGER.warning(f'profile {profile_name!r} had no expected {old!r} key')
-            profile['process_control_backend'] = 'rabbitmq'
-            profile.setdefault('process_control_config', {})
+            profile.setdefault('process_control', {})
+            profile['process_control']['backend'] = 'rabbitmq'
+            profile['process_control'].setdefault('config', {})
             for key in self.process_keys:
                 if key in profile:
-                    profile['process_control_config'][key] = profile.pop(key)
+                    profile['process_control']['config'][key] = profile.pop(key)
                 elif key not in ('broker_parameters', 'broker_virtual_host'):
                     CONFIG_LOGGER.warning(f'profile {profile_name!r} had no expected {old!r} key')
 
     def downgrade(self, config: ConfigType) -> None:
         for profile in config.get('profiles', {}).values():
+            if 'backend' in profile.get('storage', {}):
+                profile['AIIDADB_BACKEND'] = profile['storage']['backend']
             for old, new in self.storage_conversions:
-                if new in profile.get('storage_config', {}):
-                    profile[old] = profile['storage_config'].pop(new)
-            profile.pop('storage_config', None)
-            if 'storage_backend' in profile:
-                profile['AIIDADB_BACKEND'] = profile.pop('storage_backend')
+                if new in profile.get('storage', {}).get('config', {}):
+                    profile[old] = profile['storage']['config'].pop(new)
+            profile.pop('storage', None)
             for key in self.process_keys:
-                if key in profile.get('process_control_config', {}):
-                    profile[key] = profile['process_control_config'].pop(key)
-            profile.pop('process_control_backend', None)
-            profile.pop('process_control_config', None)
+                if key in profile.get('process_control', {}).get('config', {}):
+                    profile[key] = profile['process_control']['config'].pop(key)
+            profile.pop('process_control', None)
 
 
 MIGRATIONS = (

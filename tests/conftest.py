@@ -236,25 +236,29 @@ def profile_factory() -> Profile:
 
         profile_dictionary = {
             'default_user_email': kwargs.pop('default_user_email', 'dummy@localhost'),
-            'storage_backend': kwargs.pop('storage_backend', 'django'),
-            'storage_config': {
-                'database_engine': kwargs.pop('database_engine', 'postgresql_psycopg2'),
-                'database_hostname': kwargs.pop('database_hostname', 'localhost'),
-                'database_port': kwargs.pop('database_port', 5432),
-                'database_name': kwargs.pop('database_name', name),
-                'database_username': kwargs.pop('database_username', 'user'),
-                'database_password': kwargs.pop('database_password', 'pass'),
-                'repository_uri': f"file:///{os.path.join(repository_dirpath, f'repository_{name}')}",
+            'storage': {
+                'backend': kwargs.pop('storage_backend', 'django'),
+                'config': {
+                    'database_engine': kwargs.pop('database_engine', 'postgresql_psycopg2'),
+                    'database_hostname': kwargs.pop('database_hostname', 'localhost'),
+                    'database_port': kwargs.pop('database_port', 5432),
+                    'database_name': kwargs.pop('database_name', name),
+                    'database_username': kwargs.pop('database_username', 'user'),
+                    'database_password': kwargs.pop('database_password', 'pass'),
+                    'repository_uri': f"file:///{os.path.join(repository_dirpath, f'repository_{name}')}",
+                }
             },
-            'process_control_backend': kwargs.pop('process_control_backend', 'rabbitmq'),
-            'process_control_config': {
-                'broker_protocol': kwargs.pop('broker_protocol', 'amqp'),
-                'broker_username': kwargs.pop('broker_username', 'guest'),
-                'broker_password': kwargs.pop('broker_password', 'guest'),
-                'broker_host': kwargs.pop('broker_host', 'localhost'),
-                'broker_port': kwargs.pop('broker_port', 5672),
-                'broker_virtual_host': kwargs.pop('broker_virtual_host', ''),
-                'broker_parameters': kwargs.pop('broker_parameters', {}),
+            'process_control': {
+                'backend': kwargs.pop('process_control_backend', 'rabbitmq'),
+                'config': {
+                    'broker_protocol': kwargs.pop('broker_protocol', 'amqp'),
+                    'broker_username': kwargs.pop('broker_username', 'guest'),
+                    'broker_password': kwargs.pop('broker_password', 'guest'),
+                    'broker_host': kwargs.pop('broker_host', 'localhost'),
+                    'broker_port': kwargs.pop('broker_port', 5672),
+                    'broker_virtual_host': kwargs.pop('broker_virtual_host', ''),
+                    'broker_parameters': kwargs.pop('broker_parameters', {}),
+                }
             }
         }
 

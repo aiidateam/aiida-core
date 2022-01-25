@@ -367,12 +367,15 @@ def load_documentation_profile():
                 'database_username': 'aiida',
                 'repository_uri': 'file:///dev/null',
             },
-            'broker_protocol': 'amqp',
-            'broker_username': 'guest',
-            'broker_password': 'guest',
-            'broker_host': 'localhost',
-            'broker_port': 5672,
-            'broker_virtual_host': '',
+            'process_control_backend': 'rabbitmq',
+            'process_control_config': {
+                'broker_protocol': 'amqp',
+                'broker_username': 'guest',
+                'broker_password': 'guest',
+                'broker_host': 'localhost',
+                'broker_port': 5672,
+                'broker_virtual_host': '',
+            },
         }
         config = {'default_profile': profile_name, 'profiles': {profile_name: profile_config}}
         PROFILE = Profile(profile_name, profile_config)

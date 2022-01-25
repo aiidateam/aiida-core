@@ -288,12 +288,15 @@ class TemporaryProfileManager(ProfileManager):
                 'database_password': self.profile_info.get('database_password'),
                 'repository_uri': f'file://{self.repo}',
             },
-            'broker_protocol': self.profile_info.get('broker_protocol'),
-            'broker_username': self.profile_info.get('broker_username'),
-            'broker_password': self.profile_info.get('broker_password'),
-            'broker_host': self.profile_info.get('broker_host'),
-            'broker_port': self.profile_info.get('broker_port'),
-            'broker_virtual_host': self.profile_info.get('broker_virtual_host'),
+            'process_control_backend': 'rabbitmq',
+            'process_control_config': {
+                'broker_protocol': self.profile_info.get('broker_protocol'),
+                'broker_username': self.profile_info.get('broker_username'),
+                'broker_password': self.profile_info.get('broker_password'),
+                'broker_host': self.profile_info.get('broker_host'),
+                'broker_port': self.profile_info.get('broker_port'),
+                'broker_virtual_host': self.profile_info.get('broker_virtual_host'),
+            }
         }
         return dictionary
 

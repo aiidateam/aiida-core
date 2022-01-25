@@ -36,12 +36,15 @@ def create_mock_profile(name, repository_dirpath=None, **kwargs):
             'database_password': kwargs.pop('database_password', 'pass'),
             'repository_uri': f"file:///{os.path.join(repository_dirpath, f'repository_{name}')}",
         },
-        'broker_protocol': kwargs.pop('broker_protocol', 'amqp'),
-        'broker_username': kwargs.pop('broker_username', 'guest'),
-        'broker_password': kwargs.pop('broker_password', 'guest'),
-        'broker_host': kwargs.pop('broker_host', 'localhost'),
-        'broker_port': kwargs.pop('broker_port', 5672),
-        'broker_virtual_host': kwargs.pop('broker_virtual_host', ''),
+        'process_control_backend': kwargs.pop('process_control_backend', 'rabbitmq'),
+        'process_control_config': {
+            'broker_protocol': kwargs.pop('broker_protocol', 'amqp'),
+            'broker_username': kwargs.pop('broker_username', 'guest'),
+            'broker_password': kwargs.pop('broker_password', 'guest'),
+            'broker_host': kwargs.pop('broker_host', 'localhost'),
+            'broker_port': kwargs.pop('broker_port', 5672),
+            'broker_virtual_host': kwargs.pop('broker_virtual_host', ''),
+        }
     }
 
     return Profile(name, profile_dictionary)

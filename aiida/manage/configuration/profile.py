@@ -44,25 +44,15 @@ class Profile:  # pylint: disable=too-many-public-methods
     KEY_DEFAULT_USER_EMAIL = 'default_user_email'
     KEY_STORAGE_BACKEND = 'storage_backend'
     KEY_STORAGE_CONFIG = 'storage_config'
-    RMQ_PREFIX = 'aiida-{uuid}'
-    KEY_BROKER_PROTOCOL = 'broker_protocol'
-    KEY_BROKER_USERNAME = 'broker_username'
-    KEY_BROKER_PASSWORD = 'broker_password'
-    KEY_BROKER_HOST = 'broker_host'
-    KEY_BROKER_PORT = 'broker_port'
-    KEY_BROKER_VIRTUAL_HOST = 'broker_virtual_host'
-    KEY_BROKER_PARAMETERS = 'broker_parameters'
+    KEY_PROCESS_BACKEND = 'process_control_backend'
+    KEY_PROCESS_CONFIG = 'process_control_config'
 
     # keys that are expected to be in the parsed configuration
     REQUIRED_KEYS = (
         KEY_STORAGE_BACKEND,
         KEY_STORAGE_CONFIG,
-        KEY_BROKER_PROTOCOL,
-        KEY_BROKER_USERNAME,
-        KEY_BROKER_PASSWORD,
-        KEY_BROKER_HOST,
-        KEY_BROKER_PORT,
-        KEY_BROKER_VIRTUAL_HOST,
+        KEY_PROCESS_BACKEND,
+        KEY_PROCESS_CONFIG,
     )
 
     @classproperty
@@ -111,10 +101,12 @@ class Profile:  # pylint: disable=too-many-public-methods
 
     @property
     def default_user_email(self) -> Optional[str]:
+        """Return the default user email."""
         return self._attributes.get(self.KEY_DEFAULT_USER_EMAIL, None)
 
     @default_user_email.setter
     def default_user_email(self, value: Optional[str]) -> None:
+        """Set the default user email."""
         self._attributes[self.KEY_DEFAULT_USER_EMAIL] = value
 
     @property
@@ -138,60 +130,24 @@ class Profile:  # pylint: disable=too-many-public-methods
         self._attributes[self.KEY_STORAGE_CONFIG] = config
 
     @property
-    def broker_protocol(self):
-        return self._attributes[self.KEY_BROKER_PROTOCOL]
-
-    @broker_protocol.setter
-    def broker_protocol(self, value):
-        self._attributes[self.KEY_BROKER_PROTOCOL] = value
+    def process_control_backend(self) -> str:
+        """Return the type of the process control backend."""
+        return self._attributes[self.KEY_PROCESS_BACKEND]
 
     @property
-    def broker_host(self):
-        return self._attributes[self.KEY_BROKER_HOST]
+    def process_control_config(self) -> Dict[str, Any]:
+        """Return the configuration required by the process control backend."""
+        return self._attributes[self.KEY_PROCESS_CONFIG]
 
-    @broker_host.setter
-    def broker_host(self, value):
-        self._attributes[self.KEY_BROKER_HOST] = value
+    def set_process_controller(self, name: str, config: Dict[str, Any]) -> None:
+        """Set the process control backend and its configuration.
 
-    @property
-    def broker_port(self):
-        return self._attributes[self.KEY_BROKER_PORT]
-
-    @broker_port.setter
-    def broker_port(self, value):
-        self._attributes[self.KEY_BROKER_PORT] = value
-
-    @property
-    def broker_username(self):
-        return self._attributes[self.KEY_BROKER_USERNAME]
-
-    @broker_username.setter
-    def broker_username(self, value):
-        self._attributes[self.KEY_BROKER_USERNAME] = value
-
-    @property
-    def broker_password(self):
-        return self._attributes[self.KEY_BROKER_PASSWORD]
-
-    @broker_password.setter
-    def broker_password(self, value):
-        self._attributes[self.KEY_BROKER_PASSWORD] = value
-
-    @property
-    def broker_virtual_host(self):
-        return self._attributes[self.KEY_BROKER_VIRTUAL_HOST]
-
-    @broker_virtual_host.setter
-    def broker_virtual_host(self, value):
-        self._attributes[self.KEY_BROKER_VIRTUAL_HOST] = value
-
-    @property
-    def broker_parameters(self):
-        return self._attributes.get(self.KEY_BROKER_PARAMETERS, {})
-
-    @broker_parameters.setter
-    def broker_parameters(self, value):
-        self._attributes[self.KEY_BROKER_PARAMETERS] = value
+        :param name: the name of the process backend
+        :param config: the configuration of the process backend
+        """
+        # to-do validation (by loading the process backend, and using a classmethod to validate the config)
+        self._attributes[self.KEY_PROCESS_BACKEND] = name
+        self._attributes[self.KEY_PROCESS_CONFIG] = config
 
     @property
     def options(self):
@@ -236,14 +192,6 @@ class Profile:  # pylint: disable=too-many-public-methods
         return self._attributes
 
     @property
-    def rmq_prefix(self):
-        """Return the prefix that should be used for RMQ resources
-
-        :return: the rmq prefix string
-        """
-        return self.RMQ_PREFIX.format(uuid=self.uuid)
-
-    @property
     def is_test_profile(self) -> bool:
         """Return whether the profile is a test profile
 
@@ -279,17 +227,19 @@ class Profile:  # pylint: disable=too-many-public-methods
 
         return parts.scheme, os.path.expanduser(parts.path)
 
-    def get_rmq_url(self):
+    @property
+    def rmq_prefix(self) -> str:
+        """Return the prefix that should be used for RMQ resources
+
+        :return: the rmq prefix string
+        """
+        return f'aiida-{self.uuid}'
+
+    def get_rmq_url(self) -> str:
         from aiida.manage.external.rmq import get_rmq_url
-        return get_rmq_url(
-            protocol=self.broker_protocol,
-            username=self.broker_username,
-            password=self.broker_password,
-            host=self.broker_host,
-            port=self.broker_port,
-            virtual_host=self.broker_virtual_host,
-            **self.broker_parameters
-        )
+        kwargs = {key[7:]: val for key, val in self.process_control_config.items() if key.startswith('broker_')}
+        additional_kwargs = kwargs.pop('parameters', {})
+        return get_rmq_url(**kwargs, **additional_kwargs)
 
     @property
     def filepaths(self):

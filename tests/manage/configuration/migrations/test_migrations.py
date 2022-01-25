@@ -111,8 +111,15 @@ class TestConfigMigration(TestCase):
         self.assertEqual(config_migrated, config_reference)
 
     def test_5_6_migration(self):
-        """Test the step between config versions 4 and 5."""
+        """Test the step between config versions 5 and 6."""
         config_initial = self.load_config_sample('input/5.json')
         config_reference = self.load_config_sample('reference/6.json')
         config_migrated = upgrade_config(config_initial, 6)
+        self.assertEqual(config_migrated, config_reference)
+
+    def test_6_5_migration(self):
+        """Test the step between config versions 6 and 5."""
+        config_initial = self.load_config_sample('input/6.json')
+        config_reference = self.load_config_sample('reference/5.json')
+        config_migrated = downgrade_config(config_initial, 5)
         self.assertEqual(config_migrated, config_reference)

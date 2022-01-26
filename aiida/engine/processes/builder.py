@@ -263,5 +263,5 @@ class ProcessBuilder(ProcessBuilderNamespace):  # pylint: disable=too-many-ances
     def _repr_pretty_(self, p, _) -> str:  # pylint: disable=invalid-name
         """Pretty representation for in the IPython console and notebooks."""
         return p.text(
-            f'Process class: {self._process_class.get_name()}\nInputs:\n{json.dumps(self, cls=PrettyEncoder, indent=4)}'
+            f'Process class: {self._process_class.__name__}\nInputs:\n{json.dumps(self, cls=PrettyEncoder, indent=4)}'
         )

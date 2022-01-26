@@ -116,8 +116,8 @@ class ProcessBuilderNamespace(MutableMapping):
                     raise AttributeError(f'Unknown builder parameter: {attr}') from exception
                 port = None
             else:
-                value = port.serialize(value)
-                validation_error = port.validate(value)
+                value = port.serialize(value)  # type: ignore[union-attr]
+                validation_error = port.validate(value)  # type: ignore[union-attr]
                 if validation_error:
                     raise ValueError(f'invalid attribute value {validation_error.message}')
 

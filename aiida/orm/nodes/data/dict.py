@@ -124,6 +124,11 @@ class Dict(Data):
         for key in self.attributes.keys():
             yield key
 
+    def items(self):
+        """Iterator of all items stored in the Dict node."""
+        for key, value in self.attributes_items():
+            yield key, value
+
     @property
     def dict(self):
         """Return an instance of `AttributeManager` that transforms the dictionary into an attribute dict.

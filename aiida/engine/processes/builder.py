@@ -35,7 +35,6 @@ class PrettyEncoder(json.JSONEncoder):
             return o.value
         if isinstance(o, Node):
             return o.get_description()
-        return json.JSONEncoder.default(self, o)
 
 
 class ProcessBuilderNamespace(MutableMapping):

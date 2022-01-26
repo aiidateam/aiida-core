@@ -16,10 +16,9 @@ from IPython.lib.pretty import pretty
 import pytest
 
 from aiida import orm
-from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida.common import LinkType
 from aiida.engine import Process, WorkChain
-from aiida.engine.processes.builder import ProcessBuilder, ProcessBuilderNamespace
+from aiida.engine.processes.builder import ProcessBuilderNamespace
 from aiida.plugins import CalculationFactory
 
 DEFAULT_INT = 256
@@ -36,6 +35,7 @@ class ExampleWorkChain(WorkChain):
         spec.input('name.spaced', valid_type=orm.Int, help='Namespaced port')
         spec.input('name_spaced', valid_type=orm.Str, help='Not actually a namespaced port')
         spec.input('boolean', valid_type=orm.Bool, help='A pointless boolean')
+        spec.input('dict', valid_type=orm.Dict, help='A pointless dict', required=False)
         spec.input('default', valid_type=orm.Int, default=lambda: orm.Int(DEFAULT_INT).store())
 
 
@@ -105,6 +105,12 @@ def example_inputs():
             'spaced': orm.Int(1).store(),
         },
         'name_spaced': orm.Str('underscored').store(),
+        'dict': orm.Dict({
+            'a': 1,
+            'b': {
+                'c': 2
+            }
+        }),
         'boolean': orm.Bool(True).store(),
         'metadata': {}
     }
@@ -183,6 +189,7 @@ def test_dynamic_setters(example_inputs):
     builder.name.spaced = example_inputs['name']['spaced']
     builder.name_spaced = example_inputs['name_spaced']
     builder.boolean = example_inputs['boolean']
+    builder.dict = example_inputs['dict']
     assert builder == example_inputs
 
 
@@ -348,9 +355,14 @@ def test_update():
     with pytest.raises(ValueError):
         builder._update({'nested': {'namespace': {'int': 5, 'str': 'x'}}})
 
+    update_dict = {'nested': {'namespace': {'int': 5, 'float': 3.0, 'str': 'x'}}}
     # Now we specify all required inputs and an additional optional one and since it is a nested namespace
-    builder._update({'nested': {'namespace': {'int': 5, 'float': 3.0, 'str': 'x'}}})
-    assert builder._inputs(prune=True) == {'nested': {'namespace': {'int': 5, 'float': 3.0, 'str': 'x'}}}
+    builder._update(update_dict)
+    assert builder._inputs(prune=True) == update_dict
+
+    # Pass the dictionary as keyword arguments
+    builder._update(**update_dict)
+    assert builder._inputs(prune=True) == update_dict
 
 
 def test_merge():
@@ -405,28 +417,32 @@ def test_instance_interference():
     assert builder_one.port == 1
 
 
-def test_pretty_repr():
+def test_pretty_repr(example_inputs):
     """Test the pretty representation of the ``ProcessBuilder`` class."""
-    builder = ProcessBuilder(ArithmeticAddCalculation)
-
-    builder.x = orm.Int(3)
-    builder.y = orm.Int(1)
-    builder.metadata.options.resources = {'num_machines': 1}
+    builder = ExampleWorkChain.get_builder()
+    builder._update(example_inputs)
 
     pretty_repr = \
-    """Process class: ArithmeticAddCalculation
+    """Process class: ExampleWorkChain
     Inputs:
     {
-        "metadata": {
-            "options": {
-                "stash": {},
-                "resources": {
-                    "num_machines": 1
-                }
+        "metadata": {},
+        "dynamic": {
+            "namespace": {
+                "alp": 1
             }
         },
-        "x": 3,
-        "y": 1
+        "name": {
+            "spaced": 1
+        },
+        "name_spaced": "underscored",
+        "dict": {
+            "a": 1,
+            "b": {
+                "c": 2
+            }
+        },
+        "boolean": true
     }"""
     pretty_repr = re.sub(r'(?m)^\s{4}', '', pretty_repr)
 

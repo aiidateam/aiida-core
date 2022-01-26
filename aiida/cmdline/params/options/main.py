@@ -30,11 +30,10 @@ __all__ = (
     'HOSTNAME', 'IDENTIFIER', 'INPUT_FORMAT', 'INPUT_PLUGIN', 'LABEL', 'LIMIT', 'NODE', 'NODES', 'NON_INTERACTIVE',
     'OLDER_THAN', 'ORDER_BY', 'ORDER_DIRECTION', 'PAST_DAYS', 'PAUSED', 'PORT', 'PREPEND_TEXT', 'PRINT_TRACEBACK',
     'PROCESS_LABEL', 'PROCESS_STATE', 'PROFILE', 'PROFILE_ONLY_CONFIG', 'PROFILE_SET_DEFAULT', 'PROJECT', 'RAW',
-    'REPOSITORY_PATH', 'SCHEDULER', 'SILENT', 'SOURCE_GROUP', 'TARGET_GROUP', 'TIMEOUT', 'TRAJECTORY_INDEX',
-    'TRANSPORT', 'TRAVERSAL_RULE_HELP_STRING', 'TYPE_STRING', 'USER', 'USER_EMAIL', 'USER_FIRST_NAME',
-    'USER_INSTITUTION', 'USER_LAST_NAME', 'VERBOSITY', 'VISUALIZATION_FORMAT', 'WAIT', 'WITH_ELEMENTS',
-    'WITH_ELEMENTS_EXCLUSIVE', 'active_process_states', 'graph_traversal_rules', 'valid_calc_job_states',
-    'valid_process_states'
+    'REPOSITORY_PATH', 'SCHEDULER', 'SILENT', 'TIMEOUT', 'TRAJECTORY_INDEX', 'TRANSPORT', 'TRAVERSAL_RULE_HELP_STRING',
+    'TYPE_STRING', 'USER', 'USER_EMAIL', 'USER_FIRST_NAME', 'USER_INSTITUTION', 'USER_LAST_NAME', 'VERBOSITY',
+    'VISUALIZATION_FORMAT', 'WAIT', 'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE', 'active_process_states',
+    'graph_traversal_rules', 'valid_calc_job_states', 'valid_process_states'
 )
 
 TRAVERSAL_RULE_HELP_STRING = {
@@ -203,22 +202,6 @@ DATA = OverridableOption(
 
 GROUP = OverridableOption(
     '-G', '--group', 'group', type=types.GroupParamType(), help='A single group identified by its ID, UUID or label.'
-)
-
-SOURCE_GROUP = OverridableOption(
-    '-s',
-    '--source-group',
-    'source_group',
-    type=types.GroupParamType(),
-    help='A single group identified by its ID, UUID or label.'
-)
-
-TARGET_GROUP = OverridableOption(
-    '-t',
-    '--target-group',
-    'target_group',
-    type=types.GroupParamType(),
-    help='A single group identified by its ID, UUID or label.'
 )
 
 GROUPS = OverridableOption(

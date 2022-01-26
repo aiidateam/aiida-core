@@ -11,7 +11,7 @@
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import arguments, options
+from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import UniquenessError
@@ -85,64 +85,61 @@ def group_remove_nodes(group, nodes, clear, force):
 
 
 @verdi_group.command('move-nodes')
-@options.SOURCE_GROUP(required=True)
-@options.TARGET_GROUP(required=True)
 @arguments.NODES()
+@click.option('-s', '--source-group', type=types.GroupParamType(), required=True, help='The group whose nodes to move.')
+@click.option(
+    '-t', '--target-group', type=types.GroupParamType(), required=True, help='The group to which the nodes are moved.'
+)
 @options.FORCE(help='Do not ask for confirmation and skip all checks.')
+@options.ALL(help='Move all nodes from the source to the target group.')
 @with_dbenv()
-def group_move_nodes(source_group, target_group, nodes, force):
-    """Move nodes from one group to another."""
+def group_move_nodes(source_group, target_group, force, nodes, all_entries):
+    """Move the specified NODES from one group to another."""
     from aiida.orm import Group, Node, QueryBuilder
 
-    source_label = source_group.label
-    source_class = source_group.__class__.__name__
+    if not force and source_group.pk == target_group.pk:
+        echo.echo_critical(f'Source and target group are the same: {source_group}.')
 
-    target_label = target_group.label
-    target_class = target_group.__class__.__name__
+    if not nodes:
+        if not all_entries:
+            return
+        nodes = list(source_group.nodes)
+        click.confirm(f'Are you sure you want to move ALL nodes from {source_group} to {target_group}?', abort=True)
 
-    if not force:
+    elif not force:
 
-        if source_label == target_label:
-            echo.echo_critical(f'Source and target group are the same: {source_class}<{source_label}>.')
+        node_pks = [node.pk for node in nodes]
 
-        if nodes:
-            node_pks = [node.pk for node in nodes]
+        query = QueryBuilder()
+        query.append(Group, filters={'id': source_group.pk}, tag='group')
+        query.append(Node, with_group='group', filters={'id': {'in': node_pks}}, project='id')
 
-            query = QueryBuilder()
-            query.append(Group, filters={'label': source_label}, tag='group')
-            query.append(Node, with_group='group', filters={'id': {'in': node_pks}}, project='id')
+        source_group_node_pks = query.all(flat=True)
 
-            source_group_node_pks = query.all(flat=True)
+        if not source_group_node_pks:
+            echo.echo_critical(f'None of the specified nodes are in {source_group}.')
 
-            if not source_group_node_pks:
-                echo.echo_critical(f'None of the specified nodes are in {source_class}<{source_label}>.')
+        if len(node_pks) > len(source_group_node_pks):
+            absent_node_pks = set(node_pks).difference(set(source_group_node_pks))
+            echo.echo_warning(f'{len(absent_node_pks)} nodes with PK {absent_node_pks} are not in {source_group}.')
+            nodes = [node for node in nodes if node.pk in source_group_node_pks]
 
-            if len(node_pks) > len(source_group_node_pks):
-                absent_node_pks = set(node_pks).difference(set(source_group_node_pks))
-                echo.echo_warning(
-                    f'{len(absent_node_pks)} nodes with PK {absent_node_pks} are not in {source_class}<{source_label}>.'
-                )
-                nodes = [node for node in nodes if node.pk in source_group_node_pks]
+        query = QueryBuilder()
+        query.append(Group, filters={'id': target_group.pk}, tag='group')
+        query.append(Node, with_group='group', filters={'id': {'in': node_pks}}, project='id')
 
-            query = QueryBuilder()
-            query.append(Group, filters={'label': target_label}, tag='group')
-            query.append(Node, with_group='group', filters={'id': {'in': node_pks}}, project='id')
+        target_group_node_pks = query.all(flat=True)
 
-            target_group_node_pks = query.all(flat=True)
-
-            if target_group_node_pks:
-                echo.echo_warning(
-                    f'{len(target_group_node_pks)} nodes with PK {set(target_group_node_pks)} are already in '
-                    f'{target_class}<{target_label}>. These will still be removed from {source_class}<{source_label}>.'
-                )
-
-            click.confirm(
-                f'Are you sure you want to move {len(nodes)} nodes from {source_class}<{source_label}> '
-                f'to {target_class}<{target_label}>?',
-                abort=True
+        if target_group_node_pks:
+            echo.echo_warning(
+                f'{len(target_group_node_pks)} nodes with PK {set(target_group_node_pks)} are already in '
+                f'{target_group}. These will still be removed from {source_group} if present.'
             )
-        else:
-            echo.echo_critical('No nodes identifiers were provided.')
+
+        click.confirm(
+            f'Are you sure you want to move {len(nodes)} nodes from {source_group} '
+            f'to {target_group}?', abort=True
+        )
 
     source_group.remove_nodes(nodes)
     target_group.add_nodes(nodes)

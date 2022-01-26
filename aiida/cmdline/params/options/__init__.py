@@ -92,8 +92,6 @@ __all__ = (
     'REPOSITORY_PATH',
     'SCHEDULER',
     'SILENT',
-    'SOURCE_GROUP',
-    'TARGET_GROUP',
     'TIMEOUT',
     'TRAJECTORY_INDEX',
     'TRANSPORT',

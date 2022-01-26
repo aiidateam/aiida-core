@@ -97,19 +97,18 @@ def group_move_nodes(source_group, target_group, force, nodes, all_entries):
     """Move the specified NODES from one group to another."""
     from aiida.orm import Group, Node, QueryBuilder
 
-    if not force and source_group.pk == target_group.pk:
+    if source_group.pk == target_group.pk:
         echo.echo_critical(f'Source and target group are the same: {source_group}.')
 
     if not nodes:
-        if not all_entries:
-            return
-        nodes = list(source_group.nodes)
-        click.confirm(f'Are you sure you want to move ALL nodes from {source_group} to {target_group}?', abort=True)
+        if all_entries:
+            nodes = list(source_group.nodes)
+        else:
+            echo.echo_critical('Neither NODES or the `-a, --all` option was specified.')
 
-    elif not force:
+    node_pks = [node.pk for node in nodes]
 
-        node_pks = [node.pk for node in nodes]
-
+    if not all_entries:
         query = QueryBuilder()
         query.append(Group, filters={'id': source_group.pk}, tag='group')
         query.append(Node, with_group='group', filters={'id': {'in': node_pks}}, project='id')
@@ -123,19 +122,21 @@ def group_move_nodes(source_group, target_group, force, nodes, all_entries):
             absent_node_pks = set(node_pks).difference(set(source_group_node_pks))
             echo.echo_warning(f'{len(absent_node_pks)} nodes with PK {absent_node_pks} are not in {source_group}.')
             nodes = [node for node in nodes if node.pk in source_group_node_pks]
+            node_pks = set(node_pks).difference(absent_node_pks)
 
-        query = QueryBuilder()
-        query.append(Group, filters={'id': target_group.pk}, tag='group')
-        query.append(Node, with_group='group', filters={'id': {'in': node_pks}}, project='id')
+    query = QueryBuilder()
+    query.append(Group, filters={'id': target_group.pk}, tag='group')
+    query.append(Node, with_group='group', filters={'id': {'in': node_pks}}, project='id')
 
-        target_group_node_pks = query.all(flat=True)
+    target_group_node_pks = query.all(flat=True)
 
-        if target_group_node_pks:
-            echo.echo_warning(
-                f'{len(target_group_node_pks)} nodes with PK {set(target_group_node_pks)} are already in '
-                f'{target_group}. These will still be removed from {source_group} if present.'
-            )
+    if target_group_node_pks:
+        echo.echo_warning(
+            f'{len(target_group_node_pks)} nodes with PK {set(target_group_node_pks)} are already in '
+            f'{target_group}. These will still be removed from {source_group}.'
+        )
 
+    if not force:
         click.confirm(
             f'Are you sure you want to move {len(nodes)} nodes from {source_group} '
             f'to {target_group}?', abort=True

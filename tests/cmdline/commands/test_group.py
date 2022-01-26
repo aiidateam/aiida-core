@@ -320,13 +320,17 @@ class TestVerdiGroup(AiidaTestCase):
 
         group1.add_nodes([node_01, node_02])
 
-        # Try moving the nodes to the same group
+        # Moving the nodes to the same group
         result = self.cli_runner.invoke(
             cmd_group.group_move_nodes, ['-s', 'dummygroup1', '-t', 'dummygroup1', node_01.uuid, node_02.uuid]
         )
         self.assertIn('Source and target group are the same:', result.output)
 
-        # Try moving the nodes from the empty group
+        # Not specifying NODES or `--all`
+        result = self.cli_runner.invoke(cmd_group.group_move_nodes, ['-s', 'dummygroup1', '-t', 'dummygroup2'])
+        self.assertIn('Neither NODES or the `-a, --all` option was specified.', result.output)
+
+        # Moving the nodes from the empty group
         result = self.cli_runner.invoke(
             cmd_group.group_move_nodes, ['-s', 'dummygroup2', '-t', 'dummygroup1', node_01.uuid, node_02.uuid]
         )
@@ -364,6 +368,15 @@ class TestVerdiGroup(AiidaTestCase):
         )
         assert node_01 in group2.nodes
         assert node_02 in group2.nodes
+
+        # Force move all nodes back to the first dummy group
+        result = self.cli_runner.invoke(
+            cmd_group.group_move_nodes, ['-f', '-s', 'dummygroup2', '-t', 'dummygroup1', '--all']
+        )
+        assert node_01 not in group2.nodes
+        assert node_02 not in group2.nodes
+        assert node_01 in group1.nodes
+        assert node_02 in group1.nodes
 
     def test_copy_existing_group(self):
         """Test user is prompted to continue if destination group exists and is not empty"""

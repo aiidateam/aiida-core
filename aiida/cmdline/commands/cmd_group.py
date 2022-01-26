@@ -92,7 +92,7 @@ def group_remove_nodes(group, nodes, clear, force):
 @with_dbenv()
 def group_move_nodes(source_group, target_group, nodes, force):
     """Move nodes from one group to another."""
-    from aiida.orm import QueryBuilder, Group, Node
+    from aiida.orm import Group, Node, QueryBuilder
 
     source_label = source_group.label
     source_class = source_group.__class__.__name__

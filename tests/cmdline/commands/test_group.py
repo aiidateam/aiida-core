@@ -309,6 +309,75 @@ class TestVerdiGroup(AiidaTestCase):
         self.assertIn('Aborted', result.output)
         self.assertEqual(group.count(), 1)
 
+    def test_move_nodes(self):
+        """Test `verdi group move-nodes` command."""
+        node_01 = orm.CalculationNode().store()
+        node_02 = orm.Int(1).store()
+        node_03 = orm.Bool(True).store()
+
+        group1 = orm.load_group('dummygroup1')
+        group2 = orm.load_group('dummygroup2')
+
+        group1.add_nodes([node_01, node_02])
+
+        # Moving the nodes to the same group
+        result = self.cli_runner.invoke(
+            cmd_group.group_move_nodes, ['-s', 'dummygroup1', '-t', 'dummygroup1', node_01.uuid, node_02.uuid]
+        )
+        self.assertIn('Source and target group are the same:', result.output)
+
+        # Not specifying NODES or `--all`
+        result = self.cli_runner.invoke(cmd_group.group_move_nodes, ['-s', 'dummygroup1', '-t', 'dummygroup2'])
+        self.assertIn('Neither NODES or the `-a, --all` option was specified.', result.output)
+
+        # Moving the nodes from the empty group
+        result = self.cli_runner.invoke(
+            cmd_group.group_move_nodes, ['-s', 'dummygroup2', '-t', 'dummygroup1', node_01.uuid, node_02.uuid]
+        )
+        self.assertIn('None of the specified nodes are in', result.output)
+
+        # Move two nodes to the second dummy group, but specify a missing uuid
+        result = self.cli_runner.invoke(
+            cmd_group.group_move_nodes, ['-s', 'dummygroup1', '-t', 'dummygroup2', node_01.uuid, node_03.uuid]
+        )
+        self.assertIn(f'1 nodes with PK {{{node_03.pk}}} are not in', result.output)
+        # Check that the node that is present is actually moved
+        result = self.cli_runner.invoke(
+            cmd_group.group_move_nodes,
+            ['-f', '-s', 'dummygroup1', '-t', 'dummygroup2', node_01.uuid, node_03.uuid],
+        )
+        assert node_01 not in group1.nodes
+        assert node_01 in group2.nodes
+
+        # Add the first node back to the first group, and try to move it from the second one
+        group1.add_nodes(node_01)
+        result = self.cli_runner.invoke(
+            cmd_group.group_move_nodes, ['-s', 'dummygroup2', '-t', 'dummygroup1', node_01.uuid]
+        )
+        self.assertIn(f'1 nodes with PK {{{node_01.pk}}} are already', result.output)
+        # Check that it is still removed from the second group
+        result = self.cli_runner.invoke(
+            cmd_group.group_move_nodes,
+            ['-f', '-s', 'dummygroup2', '-t', 'dummygroup1', node_01.uuid],
+        )
+        assert node_01 not in group2.nodes
+
+        # Force move the two nodes to the second dummy group
+        result = self.cli_runner.invoke(
+            cmd_group.group_move_nodes, ['-f', '-s', 'dummygroup1', '-t', 'dummygroup2', node_01.uuid, node_02.uuid]
+        )
+        assert node_01 in group2.nodes
+        assert node_02 in group2.nodes
+
+        # Force move all nodes back to the first dummy group
+        result = self.cli_runner.invoke(
+            cmd_group.group_move_nodes, ['-f', '-s', 'dummygroup2', '-t', 'dummygroup1', '--all']
+        )
+        assert node_01 not in group2.nodes
+        assert node_02 not in group2.nodes
+        assert node_01 in group1.nodes
+        assert node_02 in group1.nodes
+
     def test_copy_existing_group(self):
         """Test user is prompted to continue if destination group exists and is not empty"""
         source_label = 'source_copy_existing_group'

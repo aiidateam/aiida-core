@@ -75,8 +75,12 @@ class Dict(Data):
             return self.get_dict() == other.get_dict()
         return self.get_dict() == other
 
+    def __contains__(self, key: str) -> bool:
+        """Return whether the node contains a key."""
+        return key in self.attributes
+
     def set_dict(self, dictionary):
-        """ Replace the current dictionary with another one.
+        """Replace the current dictionary with another one.
 
         :param dictionary: dictionary to set
         """

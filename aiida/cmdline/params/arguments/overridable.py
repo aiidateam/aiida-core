@@ -14,6 +14,8 @@
 """
 import click
 
+__all__ = ('OverridableArgument',)
+
 
 class OverridableArgument:
     """

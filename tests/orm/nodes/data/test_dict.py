@@ -27,6 +27,13 @@ def test_keys(dictionary):
 
 
 @pytest.mark.usefixtures('clear_database_before_test')
+def test_items(dictionary):
+    """Test the ``items`` method."""
+    node = Dict(dictionary)
+    assert sorted(node.items()) == sorted(dictionary.items())
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
 def test_get_dict(dictionary):
     """Test the ``get_dict`` method."""
     node = Dict(dictionary)

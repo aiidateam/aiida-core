@@ -26,16 +26,16 @@ __all__ = ('ProcessBuilder', 'ProcessBuilderNamespace')
 class PrettyEncoder(json.JSONEncoder):
     """JSON encoder for returning a pretty representation of an AiiDA ``ProcessBuilder``."""
 
-    def default(self, obj):  # pylint: disable=arguments-differ
-        if isinstance(obj, (ProcessBuilder, ProcessBuilderNamespace)):
-            return dict(obj)
-        if isinstance(obj, Dict):
-            return obj.get_dict()
-        if isinstance(obj, BaseType):
-            return obj.value
-        if isinstance(obj, Node):
-            return obj.get_description()
-        return json.JSONEncoder.default(self, obj)
+    def default(self, o):  # pylint: disable=arguments-differ
+        if isinstance(o, (ProcessBuilder, ProcessBuilderNamespace)):
+            return dict(o)
+        if isinstance(o, Dict):
+            return o.get_dict()
+        if isinstance(o, BaseType):
+            return o.value
+        if isinstance(o, Node):
+            return o.get_description()
+        return json.JSONEncoder.default(self, o)
 
 
 class ProcessBuilderNamespace(MutableMapping):
@@ -262,7 +262,6 @@ class ProcessBuilder(ProcessBuilderNamespace):  # pylint: disable=too-many-ances
 
     def _repr_pretty_(self, p, _) -> str:  # pylint: disable=invalid-name
         """Pretty representation for in the IPython console and notebooks."""
-
         return p.text(
             f'Process class: {self._process_class.get_name()}\nInputs:\n{json.dumps(self, cls=PrettyEncoder, indent=4)}'
         )

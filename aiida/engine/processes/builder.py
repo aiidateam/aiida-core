@@ -10,7 +10,6 @@
 """Convenience classes to help building the input dictionaries for Processes."""
 from collections.abc import Mapping, MutableMapping
 import json
-import textwrap
 from typing import TYPE_CHECKING, Any, Type
 from uuid import uuid4
 
@@ -22,6 +21,21 @@ if TYPE_CHECKING:
     from aiida.engine.processes.process import Process
 
 __all__ = ('ProcessBuilder', 'ProcessBuilderNamespace')
+
+
+class PrettyEncoder(json.JSONEncoder):
+    """JSON encoder for returning a pretty representation of an AiiDA ``ProcessBuilder``."""
+
+    def default(self, obj):  # pylint: disable=arguments-differ
+        if isinstance(obj, (ProcessBuilder, ProcessBuilderNamespace)):
+            return dict(obj)
+        if isinstance(obj, Dict):
+            return obj.get_dict()
+        if isinstance(obj, BaseType):
+            return obj.value
+        if isinstance(obj, Node):
+            return obj.get_description()
+        return json.JSONEncoder.default(self, obj)
 
 
 class ProcessBuilderNamespace(MutableMapping):
@@ -102,8 +116,8 @@ class ProcessBuilderNamespace(MutableMapping):
                     raise AttributeError(f'Unknown builder parameter: {attr}') from exception
                 port = None
             else:
-                value = port.serialize(value)  # type: ignore[union-attr]
-                validation_error = port.validate(value)  # type: ignore[union-attr]
+                value = port.serialize(value)
+                validation_error = port.validate(value)
                 if validation_error:
                     raise ValueError(f'invalid attribute value {validation_error.message}')
 
@@ -249,34 +263,6 @@ class ProcessBuilder(ProcessBuilderNamespace):  # pylint: disable=too-many-ances
     def _repr_pretty_(self, p, _) -> str:  # pylint: disable=invalid-name
         """Pretty representation for in the IPython console and notebooks."""
 
-        return p.text(f'Process class: {self._process_class.get_name()}\nInputs:\n{self._format_inputs(self._data)}')
-
-    @classmethod
-    def _format_inputs(cls, inputs: Mapping, level: int = 0) -> str:
-        """Return the dictionary of inputs as a human-readable wayformatted multiline string for displaying.
-
-        :param inputs: a nested dictionary of inputs nodes
-        :param level: the nesting level of the current dictionary
-        """
-        result = []
-        indent_string = ' ' * (4 * level)
-
-        for key, value in sorted(inputs.items()):
-            if isinstance(value, (dict, ProcessBuilder, ProcessBuilderNamespace)) and len(value) > 0:
-                result.append(textwrap.indent(f'"{key}": {{', indent_string))
-                result.append(cls._format_inputs(value, level=level + 1))
-                result.append(textwrap.indent('},', indent_string))
-            elif isinstance(value, Dict):
-                result.append(textwrap.indent(f'"{key}": {{', indent_string))
-                for line in json.dumps(value.get_dict(), indent=4).split('\n'):
-                    if line not in ['{', '}', '{}']:
-                        result.append(textwrap.indent(f'{line}', indent_string))
-                result.append(textwrap.indent('},', indent_string))
-            elif isinstance(value, BaseType):
-                result.append(textwrap.indent(f'"{key}": {value.value}', indent_string))
-            elif isinstance(value, Node):
-                result.append(textwrap.indent(f'"{key}": {value.get_description()}', indent_string))
-            else:
-                result.append(textwrap.indent(f'"{key}": {value}', indent_string))
-
-        return '\n'.join(result)
+        return p.text(
+            f'Process class: {self._process_class.get_name()}\nInputs:\n{json.dumps(self, cls=PrettyEncoder, indent=4)}'
+        )

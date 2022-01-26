@@ -102,16 +102,18 @@ def test_pretty_repr():
     pretty_repr = \
     """Process class: ArithmeticAddCalculation
     Inputs:
-    "metadata": {
-        "options": {
-            "resources": {
-                "num_machines": 1
-            },
-            "stash": {}
+    {
+        "metadata": {
+            "options": {
+                "stash": {},
+                "resources": {
+                    "num_machines": 1
+                }
+            }
         },
-    },
-    "x": 3
-    "y": 1"""
+        "x": 3,
+        "y": 1
+    }"""
     pretty_repr = re.sub(r'(?m)^\s{4}', '', pretty_repr)
 
     assert pretty(builder) == pretty_repr

@@ -405,12 +405,13 @@ class SqlaJoiner:
 
         descendants_recursive = aliased(
             aliased_walk.union_all(
-                select(*selection_union_list
-                       ).select_from(join(
-                           aliased_walk,
-                           link2,
-                           link2.input_id == aliased_walk.c.descendant_id,
-                       )).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
+                select(*selection_union_list).select_from(
+                    join(
+                        aliased_walk,
+                        link2,
+                        link2.input_id == aliased_walk.c.descendant_id,
+                    )
+                ).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
             )
         )  # .alias()
 
@@ -470,12 +471,13 @@ class SqlaJoiner:
 
         ancestors_recursive = aliased(
             aliased_walk.union_all(
-                select(*selection_union_list
-                       ).select_from(join(
-                           aliased_walk,
-                           link2,
-                           link2.output_id == aliased_walk.c.ancestor_id,
-                       )).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
+                select(*selection_union_list).select_from(
+                    join(
+                        aliased_walk,
+                        link2,
+                        link2.output_id == aliased_walk.c.ancestor_id,
+                    )
+                ).where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
                 # I can't follow RETURN or CALL links
             )
         )

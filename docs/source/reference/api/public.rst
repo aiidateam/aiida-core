@@ -22,8 +22,8 @@ It contains various sub-packages that we refer to as "second-level packages".
 
 .. warning::
 
-    The implementation of resources that are *not* considered part of the public API can change between minor AiiDA releases.
-    When relying on such resources in scripts or AiiDA plugins, your code can therefore break in between minor AiiDA releases.
+    The interface and implementation of resources that are *not* considered part of the public API can change between minor AiiDA releases, and can even be moved or fully removed, without a deprecation period whatsoever.
+    Be aware that scripts or AiiDA plugins that rely on such resources, can therefore break unexpectedly in between minor AiiDA releases.
 
 Below we provide a list of the resources per second-level package that are exposed in this way.
 If a module is mentioned, then all the resources defined in its ``__all__`` are included

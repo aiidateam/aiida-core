@@ -19,11 +19,11 @@ and indeed a valid implementation is::
 """
 from functools import partial
 from types import TracebackType
-from typing import Any, Optional, Type
+from typing import Any, Callable, Optional, Type
 
 __all__ = (
     'get_progress_reporter', 'set_progress_reporter', 'set_progress_bar_tqdm', 'ProgressReporterAbstract',
-    'TQDM_BAR_FORMAT'
+    'TQDM_BAR_FORMAT', 'create_callback'
 )
 
 TQDM_BAR_FORMAT = '{desc:40.40}{percentage:6.1f}%|{bar}| {n_fmt}/{total_fmt}'
@@ -50,9 +50,25 @@ class ProgressReporterAbstract:
         :param desc: A description of the process
 
         """
-        self.total = total
-        self.desc = desc
-        self.increment = 0
+        self._total = total
+        self._desc = desc
+        self._increment: int = 0
+
+    @property
+    def total(self) -> int:
+        """Return the total iterations expected."""
+        return self._total
+
+    @property
+    def desc(self) -> Optional[str]:
+        """Return the description of the process."""
+        return self._desc
+
+    @property
+    def n(self) -> int:  # pylint: disable=invalid-name
+        """Return the current iteration."""
+        # note using `n` as the attribute name is necessary for compatibility with tqdm
+        return self._increment
 
     def __enter__(self) -> 'ProgressReporterAbstract':
         """Enter the contextmanager."""
@@ -71,7 +87,7 @@ class ProgressReporterAbstract:
         :param refresh: Force refresh of the progress reporter
 
         """
-        self.desc = text
+        self._desc = text
 
     def update(self, n: int = 1):  # pylint: disable=invalid-name
         """Update the progress counter.
@@ -79,7 +95,17 @@ class ProgressReporterAbstract:
         :param n: Increment to add to the internal counter of iterations
 
         """
-        self.increment += n
+        self._increment += n
+
+    def reset(self, total: Optional[int] = None):
+        """Resets current iterations to 0.
+
+        :param total: If not None, update number of expected iterations.
+
+        """
+        self._increment = 0
+        if total is not None:
+            self._total = total
 
 
 class ProgressReporterNull(ProgressReporterAbstract):
@@ -103,8 +129,8 @@ def get_progress_reporter() -> Type[ProgressReporterAbstract]:
                 progress.update()
 
     """
-    global PROGRESS_REPORTER
-    return PROGRESS_REPORTER  # type: ignore
+    global PROGRESS_REPORTER  # pylint: disable=global-variable-not-assigned
+    return PROGRESS_REPORTER
 
 
 def set_progress_reporter(reporter: Optional[Type[ProgressReporterAbstract]] = None, **kwargs: Any):
@@ -128,11 +154,11 @@ def set_progress_reporter(reporter: Optional[Type[ProgressReporterAbstract]] = N
     """
     global PROGRESS_REPORTER
     if reporter is None:
-        PROGRESS_REPORTER = ProgressReporterNull  # type: ignore
+        PROGRESS_REPORTER = ProgressReporterNull
     elif kwargs:
         PROGRESS_REPORTER = partial(reporter, **kwargs)  # type: ignore
     else:
-        PROGRESS_REPORTER = reporter  # type: ignore
+        PROGRESS_REPORTER = reporter
 
 
 def set_progress_bar_tqdm(bar_format: Optional[str] = TQDM_BAR_FORMAT, leave: Optional[bool] = False, **kwargs: Any):
@@ -148,3 +174,26 @@ def set_progress_bar_tqdm(bar_format: Optional[str] = TQDM_BAR_FORMAT, leave: Op
     """
     from tqdm import tqdm
     set_progress_reporter(tqdm, bar_format=bar_format, leave=leave, **kwargs)
+
+
+def create_callback(progress_reporter: ProgressReporterAbstract) -> Callable[[str, Any], None]:
+    """Create a callback function to update the progress reporter.
+
+    :returns: a callback to report on the process, ``callback(action, value)``,
+        with the following callback signatures:
+
+        - ``callback('init', {'total': <int>, 'description': <str>})``,
+            to reset the progress with a new total iterations and description
+        - ``callback('update', <int>)``,
+            to update the progress by a certain number of iterations
+
+    """
+
+    def _callback(action: str, value: Any):
+        if action == 'init':
+            progress_reporter.reset(value['total'])
+            progress_reporter.set_description_str(value['description'])
+        elif action == 'update':
+            progress_reporter.update(value)
+
+    return _callback

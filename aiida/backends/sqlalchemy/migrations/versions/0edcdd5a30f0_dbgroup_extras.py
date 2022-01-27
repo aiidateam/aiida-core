@@ -18,7 +18,6 @@ Create Date: 2019-04-03 14:38:50.585639
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.sql import text
 
 # revision identifiers, used by Alembic.
 revision = '0edcdd5a30f0'
@@ -29,12 +28,13 @@ depends_on = None
 
 def upgrade():
     """Upgrade: Add the extras column to the 'db_dbgroup' table"""
-    op.add_column('db_dbgroup', sa.Column('extras', postgresql.JSONB(astext_type=sa.Text())))
-    op.execute(text("""
-    UPDATE db_dbgroup
-    SET extras='{}'
-    """))
-    op.alter_column('db_dbgroup', 'extras', nullable=False)
+    # We add the column with a `server_default` because otherwise the migration would fail since existing rows will not
+    # have a value and violate the not-nullable clause. However, the model doesn't use a server default but a default
+    # on the ORM level, so we remove the server default from the column directly after.
+    op.add_column(
+        'db_dbgroup', sa.Column('extras', postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default='{}')
+    )
+    op.alter_column('db_dbgroup', 'extras', server_default=None)
 
 
 def downgrade():

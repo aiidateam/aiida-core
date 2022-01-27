@@ -10,17 +10,16 @@
 """Django implementations for the Comment entity and collection."""
 # pylint: disable=import-error,no-name-in-module
 import contextlib
-
 from datetime import datetime
+
 from django.core.exceptions import ObjectDoesNotExist
 
 from aiida.backends.djsite.db import models
 from aiida.common import exceptions, lang
 
+from . import entities, users
 from ..comments import BackendComment, BackendCommentCollection
 from .utils import ModelWrapper
-from . import entities
-from . import users
 
 
 class DjangoComment(entities.DjangoModelEntity[models.DbComment], BackendComment):
@@ -67,10 +66,12 @@ class DjangoComment(entities.DjangoModelEntity[models.DbComment], BackendComment
         if self._dbmodel.dbnode.id is None or self._dbmodel.user.id is None:
             raise exceptions.ModificationNotAllowed('The corresponding node and/or user are not stored')
 
-        # `contextlib.suppress` provides empty context and can be replaced with `contextlib.nullcontext` after we drop
-        # support for python 3.6
-        with suppress_auto_now([(models.DbComment, ['mtime'])]) if self.mtime else contextlib.suppress():
+        with suppress_auto_now([(models.DbComment, ['mtime'])]) if self.mtime else contextlib.nullcontext():
             super().store()
+
+    @property
+    def uuid(self) -> str:
+        return str(self._dbmodel.uuid)
 
     @property
     def ctime(self):
@@ -116,7 +117,7 @@ class DjangoCommentCollection(BackendCommentCollection):
         :param content: the comment content
         :return: a Comment object associated to the given node and user
         """
-        return DjangoComment(self.backend, node, user, content, **kwargs)
+        return DjangoComment(self.backend, node, user, content, **kwargs)  # pylint: disable=abstract-class-instantiated
 
     def delete(self, comment_id):
         """
@@ -171,7 +172,7 @@ class DjangoCommentCollection(BackendCommentCollection):
             raise exceptions.ValidationError('filters must not be empty')
 
         # Apply filter and delete found entities
-        builder = QueryBuilder().append(Comment, filters=filters, project='id').all()
+        builder = QueryBuilder(backend=self.backend).append(Comment, filters=filters, project='id').all()
         entities_to_delete = [_[0] for _ in builder]
         for entity in entities_to_delete:
             self.delete(entity)

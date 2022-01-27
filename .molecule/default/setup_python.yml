@@ -1,0 +1,27 @@
+- name: Set up Python Environment
+  hosts: all
+  gather_facts: false
+
+  # run as root user
+  become: true
+  become_method: "{{ become_method }}"
+  become_user: root
+
+  tasks:
+
+  - name: pip install aiida-core requirements
+    pip:
+      chdir: "{{ aiida_core_dir }}"
+      # TODO dynamically change for python version
+      requirements: requirements/requirements-py-3.8.txt
+      executable: "{{ venv_bin }}/pip"
+      extra_args: --cache-dir {{ aiida_pip_cache }}
+    register: pip_install_deps
+
+  - name: pip install aiida-core
+    pip:
+      chdir: "{{ aiida_core_dir }}"
+      name: .
+      executable: "{{ venv_bin }}/pip"
+      editable: "{{ aiida_pip_editable | default(true) }}"
+      extra_args: --no-deps

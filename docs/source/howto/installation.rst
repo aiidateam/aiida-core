@@ -79,18 +79,39 @@ Configuring your installation
 Activating tab-completion
 -------------------------
 The ``verdi`` command line interface has many commands and parameters, which can be tab-completed to simplify its use.
-To enable tab-completion, the following shell command should be executed:
+To enable tab-completion, the following shell command should be executed (depending on the shell you use):
 
-.. code:: bash
+.. panels::
+    :container: container-lg pb-3
+    :column: col-lg-12 p-2
 
-    $ eval "$(_VERDI_COMPLETE=source verdi)"
+    Enable tab-completion for ``verdi`` one of the following supported shells
+
+    .. tabbed:: bash
+
+        .. code-block:: console
+
+            eval "$(_VERDI_COMPLETE=bash_source verdi)"
+
+    .. tabbed:: zsh
+
+        .. code-block:: console
+
+            eval "$(_VERDI_COMPLETE=zsh_source verdi)"
+
+    .. tabbed:: fish
+
+        .. code-block:: console
+
+            eval (env _FOO_BAR_COMPLETE=fish_source foo-bar)
+
 
 Place this command in your shell or virtual environment activation script to automatically enable tab completion when opening a new shell or activating an environment.
 This file is shell specific, but likely one of the following:
 
     * the startup file of your shell (``.bashrc``, ``.zsh``, ...), if aiida is installed system-wide
-    * the `activation script <https://virtualenv.pypa.io/en/latest/userguide/#activate-script>`_ of your virtual environment
-    * a `startup file <https://conda.io/docs/user-guide/tasks/manage-environments.html#saving-environment-variables>`_ for your conda environment
+    * the `activators <https://virtualenv.pypa.io/en/latest/user_guide.html#activators>`_ of your virtual environment
+    * a `startup file <https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#saving-environment-variables>`_ for your conda environment
 
 
 .. important::
@@ -102,52 +123,131 @@ This file is shell specific, but likely one of the following:
 
 Configuring profile options
 ---------------------------
+
 AiiDA provides various configurational options for profiles, which can be controlled with the :ref:`verdi config<reference:command-line:verdi-config>` command.
-To set a configurational option, simply pass the name of the option and the value to set ``verdi config OPTION_NAME OPTION_VALUE``.
-The available options are tab-completed, so simply type ``verdi config`` and thit <TAB> twice to list them.
 
-For example, if you want to change the default number of workers that are created when you start the daemon, you can run:
+To view all configuration options set for the current profile:
 
-.. code:: bash
+.. code:: console
 
-    $ verdi config daemon.default_workers 5
-    Success: daemon.default_workers set to 5 for profile-one
+    $ verdi config list
+    name                                   source    value
+    -------------------------------------  --------  ------------
+    autofill.user.email                    global    abc@test.com
+    autofill.user.first_name               global    chris
+    autofill.user.institution              global    epfl
+    autofill.user.last_name                global    sewell
+    caching.default_enabled                default   False
+    caching.disabled_for                   default
+    caching.enabled_for                    default
+    daemon.default_workers                 default   1
+    daemon.timeout                         profile   20
+    daemon.worker_process_slots            default   200
+    db.batch_size                          default   100000
+    logging.aiida_loglevel                 default   REPORT
+    logging.alembic_loglevel               default   WARNING
+    logging.circus_loglevel                default   INFO
+    logging.db_loglevel                    default   REPORT
+    logging.kiwipy_loglevel                default   WARNING
+    logging.paramiko_loglevel              default   WARNING
+    logging.plumpy_loglevel                default   WARNING
+    logging.sqlalchemy_loglevel            default   WARNING
+    rmq.task_timeout                       default   10
+    runner.poll.interval                   profile   50
+    transport.task_maximum_attempts        global    6
+    transport.task_retry_initial_interval  default   20
+    verdi.shell.auto_import                default
+    warnings.showdeprecations              default   True
 
-You can check the currently defined value of any option by simply calling the command without specifying a value, for example:
+Configuration option values are taken, in order of priority, from either the profile specific setting, the global setting (applies to all profiles), or the default value.
 
-.. code:: bash
+You can also filter by a prefix:
 
-    $ verdi config daemon.default_workers
+.. code:: console
+
+    $ verdi config list transport
+    name                                   source    value
+    -------------------------------------  --------  ------------
+    transport.task_maximum_attempts        global    6
+    transport.task_retry_initial_interval  default   20
+
+To show the full information for a configuration option or get its current value:
+
+.. code:: console
+
+    $ verdi config show transport.task_maximum_attempts
+    schema:
+        default: 5
+        description: Maximum number of transport task attempts before a Process is Paused.
+        minimum: 1
+        type: integer
+    values:
+        default: 5
+        global: 6
+        profile: <NOTSET>
+    $ verdi config get transport.task_maximum_attempts
+    6
+
+You can also retrieve the value *via* the API:
+
+.. code-block:: ipython
+
+    In [1]: from aiida import get_config_option
+    In [2]: get_config_option('transport.task_maximum_attempts')
+    Out[2]: 6
+
+To set a value, at the profile or global level:
+
+.. code-block:: console
+
+    $ verdi config set transport.task_maximum_attempts 10
+    Success: 'transport.task_maximum_attempts' set to 10 for 'quicksetup' profile
+    $ verdi config set --global transport.task_maximum_attempts 20
+    Success: 'transport.task_maximum_attempts' set to 20 globally
+    $ verdi config show transport.task_maximum_attempts
+    schema:
+        type: integer
+        default: 5
+        minimum: 1
+        description: Maximum number of transport task attempts before a Process is Paused.
+    values:
+        default: 5
+        global: 20
+        profile: 10
+    $ verdi config get transport.task_maximum_attempts
+    10
+
+.. tip::
+
+    By default any option set through ``verdi config`` will be applied to the current default profile.
+    To change the profile you can use the :ref:`profile option<topics:cli:profile>`.
+
+Similarly to unset a value:
+
+.. code-block:: console
+
+    $ verdi config unset transport.task_maximum_attempts
+    Success: 'transport.task_maximum_attempts' unset for 'quicksetup' profile
+    $ verdi config unset --global transport.task_maximum_attempts
+    Success: 'transport.task_maximum_attempts' unset globally
+    $ verdi config show transport.task_maximum_attempts
+    schema:
+        type: integer
+        default: 5
+        minimum: 1
+        description: Maximum number of transport task attempts before a Process is Paused.
+    values:
+        default: 5
+        global: <NOTSET>
+        profile: <NOTSET>
+    $ verdi config get transport.task_maximum_attempts
     5
-
-If no value is displayed, it means that no value has ever explicitly been set for this particular option and the default will always be used.
-By default any option set through ``verdi config`` will be applied to the current default profile.
-To change the profile you can use the :ref:`profile option<topics:cli:profile>`.
-
-To undo the configuration of a particular option and reset it so the default value is used, you can use the ``--unset`` option:
-
-.. code:: bash
-
-    $ verdi config daemon.default_workers --unset
-    Success: daemon.default_workers unset for profile-one
-
-If you want to set a particular option that should be applied to all profiles, you can use the ``--global`` flag:
-
-.. code:: bash
-
-    $ verdi config daemon.default_workers 5 --global
-    Success: daemon.default_workers set to 5 globally
-
-and just as on a per-profile basis, this can be undone with the ``--unset`` flag:
-
-.. code:: bash
-
-    $ verdi config daemon.default_workers --unset --global
-    Success: daemon.default_workers unset globally
 
 .. important::
 
     Changes that affect the daemon (e.g. ``logging.aiida_loglevel``) will only take affect after restarting the daemon.
+
+.. seealso:: :ref:`How-to configure caching <how-to:run-codes:caching>`
 
 
 .. _how-to:installation:configure:instance-isolation:
@@ -157,7 +257,7 @@ Isolating multiple instances
 An AiiDA instance is defined as the installed source code plus the configuration folder that stores the configuration files with all the configured profiles.
 It is possible to run multiple AiiDA instances on a single machine, simply by isolating the code and configuration in a virtual environment.
 
-To isolate the code, simply create a virtual environment, e.g., with conda or venv, and then follow the instructions for :ref:`installation<intro:install:aiida-core>` after activation.
+To isolate the code, make sure to install AiiDA into a virtual environment, e.g., with conda or venv, as described :ref:`here <intro:get_started:setup>`.
 Whenever you activate this particular environment, you will be running the particular version of AiiDA (and all the plugins) that you installed specifically for it.
 
 This is separate from the configuration of AiiDA, which is stored in the configuration directory which is always named ``.aiida`` and by default is stored in the home directory.
@@ -166,7 +266,7 @@ By default, each AiiDA instance (each installation) will store associated profil
 A best practice is to always separate the profiles together with the code to which they belong.
 The typical approach is to place the configuration folder in the virtual environment itself and have it automatically selected whenever the environment is activated.
 
-The location of the AiiDA configuration folder, can be controlled with the ``AIIDA_PATH`` environment variable.
+The location of the AiiDA configuration folder can be controlled with the ``AIIDA_PATH`` environment variable.
 This allows us to change the configuration folder automatically, by adding the following lines to the activation script of a virtual environment.
 For example, if the path of your virtual environment is ``/home/user/.virtualenvs/aiida``, add the following line:
 
@@ -235,7 +335,35 @@ Tuning performance
 
 AiiDA supports running hundreds of thousands of calculations and graphs with millions of nodes.
 However, optimal performance at that scale might require some tweaks to the AiiDA configuration to balance the CPU and disk load.
-Here are a few general tips that might improve the AiiDA performance:
+
+Here are a few tips for tuning AiiDA performance:
+
+
+    .. dropdown:: Increase the number of daemon workers
+
+        By default, the AiiDA daemon only uses a single worker, i.e. a single operating system process.
+        If ``verdi daemon status`` shows the daemon worker constantly at high CPU usage, you can use ``verdi daemon incr X`` to add ``X`` parallel daemon workers.
+
+        Keep in mind that other processes need to run on your computer (e.g. rabbitmq, the PostgreSQL database, ...), i.e. it's a good idea to stop increasing the number of workers before you reach the number of cores of your CPU.
+
+        To make the change permanent, set
+        ::
+
+            verdi config set daemon.default_workers 5
+
+    .. dropdown:: Increase the number of daemon worker slots
+
+
+        Each daemon worker accepts only a limited number of tasks at a time.
+        If ``verdi daemon status`` constantly warns about a high percentage of the available daemon worker slots being used, you can increase the number of tasks handled by each daemon worker (thus increasing the workload per worker).
+        Increasing it to 1000 should typically work.
+
+        Set the corresponding config variable and restart the daemon
+        ::
+
+            verdi config set daemon.worker_process_slots 1000
+
+
 
     .. dropdown:: Prevent your operating system from indexing the file repository.
 
@@ -243,13 +371,6 @@ Here are a few general tips that might improve the AiiDA performance:
         A large file repository can take a long time to index, up to the point where the hard drive is constantly indexing.
 
         In order to exclude the repository folder from indexing, add its path to the ``PRUNEPATH`` variable in the ``/etc/updatedb.conf`` configuration file (use ``sudo``).
-
-    .. dropdown:: Optimize the number of daemon workers
-
-        The verdi deamon can manage an arbitrary number of parallel workers; by default only one is activated.
-        If ``verdi daemon status`` shows the daemon worker(s) constantly at high CPU usage, use ``verdi daemon incr X`` to add ``X`` daemon workers.
-        It is recommended that the number of workers does not exceed the number of CPU cores.
-        Ideally, if possible, one should use one or two cores less than the machine has, to avoid to degrade the PostgreSQL database performance.
 
     .. dropdown:: Move the Postgresql database to a fast disk (SSD), ideally on a large partition.
 
@@ -306,6 +427,19 @@ Here are a few general tips that might improve the AiiDA performance:
         and try a simple AiiDA query with the new database.
         If everything went fine, you can delete the old database location.
 
+If you're still encountering performance issues, the following tips can help with pinpointing performance bottlenecks.
+
+    .. dropdown:: Analyze the RabbitMQ message rate
+
+        If you're observing slow performance of the AiiDA engine, the `RabbitMQ management plugin <https://www.rabbitmq.com/management.html>`_ provides an intuitive dashboard that lets you monitor the message rate and check on what the AiiDA engine is up to.
+
+        Enable the management plugin via something like::
+
+            sudo rabbitmq-plugins enable rabbitmq_management
+
+        Then, navigate to http://localhost:15672/ and log in with ``guest``/``guest``.
+
+
 .. _how-to:installation:update:
 
 Updating your installation
@@ -330,9 +464,7 @@ Failing to do so, may leave your installation in a broken state, or worse may ev
         * If you have installed AiiDA through ``pip`` simply run: ``pip install --upgrade aiida-core``.
         * If you have installed from the git repository using ``pip install -e .``, first delete all the ``.pyc`` files (``find . -name "*.pyc" -delete``) before updating your branch with ``git pull``.
 
-    6. Run `reentry scan` to update the cache of registered entry points.
-
-    7. Migrate your database with ``verdi -p <profile_name> database migrate``.
+    6. Migrate your database with ``verdi -p <profile_name> storage migrate``.
        Depending on the size of your database and the number of migrations to perform, data migration can take time, so please be patient.
 
 After the database migration finishes, you will be able to continue working with your existing data.
@@ -356,83 +488,20 @@ Backing up your installation
 
 A full backup of an AiiDA instance and AiiDA managed data requires a backup of:
 
-* the profile configuration in the ``config.json`` file located in the ``.aiida`` folder.
-  Typically located at ``~/.aiida`` (see also :ref:`intro:install:setup`).
+* the AiiDA configuration folder, which is typically named ``.aiida`` and located in the home folder (see also :ref:`intro:install:setup`).
+  This folder contains, among other things, the ``config.json`` configuration file and log files.
 
 * files associated with nodes in the repository folder (one per profile). Typically located in the ``.aiida`` folder.
 
 * queryable metadata in the PostgreSQL database (one per profile).
 
 
-.. _how-to:installation:backup:repository:
+.. todo::
 
-Repository backup (``.aiida`` folder)
--------------------------------------
+    .. _how-to:installation:backup:repository:
 
-For **small repositories** (with less than ~100k files), simply back up the ``.aiida`` folder using standard backup software.
-For example, the ``rsync`` utility supports incremental backups, and a backup command might look like ``rsync -avHzPx`` (verbose) or ``rsync -aHzx``.
+    title: Repository backup
 
-For **large repositories** with millions of files, even incremental backups can take a significant amount of time.
-AiiDA provides a helper script that takes advantage of the AiiDA database in order to figure out which files have been added since your last backup.
-The instructions below explain how to use it:
-
- 1. Configure your backup using ``verdi -p PROFILENAME devel configure-backup`` where ``PROFILENAME`` is the name of the AiiDA profile that should be backed up.
-    This will ask for information on:
-
-    * The "backup folder", where the backup *configuration file* will be placed.
-      This defaults to a folder named ``backup_PROFILENAME`` in your ``.aiida`` directory.
-
-    * The "destination folder", where the files of the backup will be stored.
-      This defaults to a subfolder of the backup folder but we **strongly suggest to back up to a different drive** (see note below).
-
-    The configuration step creates two files in the "backup folder": a ``backup_info.json`` configuration file (can also be edited manually) and a ``start_backup.py`` script.
-
-    .. dropdown:: Notes on using a SSH mount for the backups (on Linux)
-
-        Using the same disk for your backup forgoes protection against the most common cause of data loss: disk failure.
-        One simple option is to use a destination folder mounted over ssh.
-
-        On Ubuntu, install ``sshfs`` using ``sudo apt-get install sshfs``.
-        Imagine you run your calculations on `server_1` and would like to back up regularly to `server_2`.
-        Mount a `server_2` directory on `server_1` using the following command on `server_1`:
-
-        .. code-block:: shell
-
-            sshfs -o idmap=user -o rw backup_user@server_2:/home/backup_user/backup_destination_dir/ /home/aiida_user/remote_backup_dir/
-
-        Use ``gnome-session-properties`` in the terminal to add this line to the actions performed at start-up.
-        Do **not** add it to your shell's startup file (e.g. ``.bashrc``) or your computer will complain that the mount point is not empty whenever you open a new terminal.
-
- 2. Run the ``start_backup.py`` script in the "backup folder" to start the backup.
-
-    This will back up all data added after the ``oldest_object_backedup`` date.
-    It will only carry out a new backup every ``periodicity`` days, until a certain end date if specified (using ``end_date_of_backup`` or ``days_to_backup``), see :ref:`this reference page <reference:backup-script-config-options>` for a detailed description of all options.
-
-    Once you've checked that it works, make sure to run the script periodically (e.g. using a daily cron job).
-
-    .. dropdown:: Setting up a cron job on Linux
-
-        This is a quick note on how to setup a cron job on Linux (you can find many more resources online).
-
-        On Ubuntu, you can set up a cron job using:
-
-        .. code-block:: bash
-
-            sudo crontab -u USERNAME -e
-
-        It will open an editor, where you can add a line of the form::
-
-            00 03 * * * /home/USERNAME/.aiida/backup/start_backup.py 2>&1 | mail -s "Incremental backup of the repository" USER_EMAIL@domain.net
-
-        or (if you need to backup a different profile than the default one)::
-
-            00 03 * * * verdi -p PROFILENAME run /home/USERNAME/.aiida/backup/start_backup.py 2>&1 | mail -s "Incremental backup of the repository" USER_EMAIL@domain.net
-
-        This will launch the backup of the database every day at 3 AM (03:00), and send the output (or any error message) to the email address specified at the end (provided the ``mail`` command -- from ``mailutils`` -- is configured appropriately).
-
-.. note::
-
-    You might want to exclude the file repository from any separately set up automatic backups of your home directory.
 
 .. _how-to:installation:backup:postgresql:
 

@@ -201,12 +201,14 @@ This function, passed as ``serializer`` parameter to ``spec.input``, is invoked 
 For inputs which are stored in the database (``non_db=False``), the serialization function should return an AiiDA data type.
 For ``non_db`` inputs, the function must be idempotent because it might be applied more than once.
 
-The following example work chain takes three inputs ``a``, ``b``, ``c``, and simply returns the given inputs. The :func:`aiida.orm.nodes.data.base.to_aiida_type` function is used as serialization function.
+The following example work chain takes three inputs ``a``, ``b``, ``c``, and simply returns the given inputs.
+The :func:`~aiida.orm.nodes.data.base.to_aiida_type` function is used as serialization function.
 
 .. include:: include/snippets/serialize/workchain_serialize.py
     :code: python
 
-This work chain can now be called with native Python types, which will automatically be converted to AiiDA types by the :func:`aiida.orm.nodes.data.base.to_aiida_type` function. Note that the module which defines the corresponding AiiDA type must be loaded for it to be recognized by :func:`aiida.orm.nodes.data.base.to_aiida_type`.
+This work chain can now be called with native Python types, which will automatically be converted to AiiDA types by the :func:`~aiida.orm.nodes.data.base.to_aiida_type` function.
+Note that the module which defines the corresponding AiiDA type must be loaded for it to be recognized by :func:`~aiida.orm.nodes.data.base.to_aiida_type`.
 
 .. include:: include/snippets/serialize/run_workchain_serialize.py
     :code: python
@@ -221,9 +223,9 @@ Exit codes
 Any ``Process`` most likely will have one or multiple expected failure modes.
 To clearly communicate to the caller what went wrong, the ``Process`` supports setting its ``exit_status``.
 This ``exit_status``, a positive integer, is an attribute of the process node and by convention, when it is zero means the process was successful, whereas any other value indicates failure.
-This concept of an exit code, with a positive integer as the exit status, `is a common concept in programming <https://shapeshed.com/unix-exit-codes/>`_ and a standard way for programs to communicate the result of their execution.
+This concept of an exit code, with a positive integer as the exit status, `is a common concept in programming <https://en.wikipedia.org/wiki/Exit_status>`_ and a standard way for programs to communicate the result of their execution.
 
-Potential exit codes for the ``Process`` can be defined through the ``ProcessSpec``, just like inputs and ouputs.
+Potential exit codes for the ``Process`` can be defined through the ``ProcessSpec``, just like inputs and outputs.
 Any exit code consists of a positive non-zero integer, a string label to reference it and a more detailed description of the problem that triggers the exit code.
 Consider the following example:
 
@@ -250,6 +252,16 @@ This is useful, because the caller can now programmatically, based on the ``exit
 This is an infinitely more robust way of communicating specific errors to a non-human than parsing text-based logs or reports.
 Additionally, the exit codes make it very easy to query for failed processes with specific error codes.
 
+.. seealso::
+
+    Additional documentation, specific to certain process types, can be found in the following sections:
+
+    - :ref:`Process functions<topics:processes:functions:exit_codes>`
+    - :ref:`Work functions<topics:workflows:usage:workfunctions:exit_codes>`
+    - :ref:`CalcJob parsers<topics:calculations:usage:calcjobs:parsers>`
+    - :ref:`Workchain exit code specification<topics:workflows:usage:workchains:define_exit_codes>`
+    - :ref:`External code plugins<how-to:plugin-codes:parsing:errors>`
+    - :ref:`Restart workchains<how-to:restart-workchain>`
 
 .. _topics:processes:usage:exit_code_conventions:
 
@@ -330,7 +342,7 @@ For example, when we want to run an instance of the :py:class:`~aiida.calculatio
 The function will submit the calculation to the daemon and immediately return control to the interpreter, returning the node that is used to represent the process in the provenance graph.
 
 .. warning::
-    Process functions, i.e. python functions decorated with the ``calcfunction`` or ``workfunction`` decorators, **cannot be submitted** but can only be run.
+    For a process to be submittable, the class or function needs to be importable in the daemon environment by a) giving it an :ref:`associated entry point<how-to:plugin-codes:entry-points>` or b) :ref:`including its module path<how-to:faq:process-not-importable-daemon>` in the ``PYTHONPATH`` that the daemon workers will have.
 
 The ``run`` function is called identically:
 
@@ -356,8 +368,8 @@ The examples used above would look like the following:
 .. include:: include/snippets/launch/launch_submit_dictionary.py
     :code: python
 
-Process functions, i.e. :ref:`calculation functions<topics:calculations:concepts:calcfunctions>` and :ref:`work functions<topics:workflows:concepts:workfunctions>`, can be launched like any other process as explained above, with the only exception that they **cannot be submitted**.
-In addition to this limitation, process functions have two additional methods of being launched:
+Process functions, i.e. :ref:`calculation functions<topics:calculations:concepts:calcfunctions>` and :ref:`work functions<topics:workflows:concepts:workfunctions>`, can be launched like any other process as explained above.
+Process functions have two additional methods of being launched:
 
  * Simply *calling* the function
  * Using the internal run method attributes
@@ -379,10 +391,10 @@ The process builder is essentially a tool that helps you build the inputs for th
 To get a *builder* for a particular ``CalcJob`` or a ``WorkChain`` implementation, all you need is the class itself, which can be loaded through the :py:class:`~aiida.plugins.factories.CalculationFactory` and :py:class:`~aiida.plugins.factories.WorkflowFactory`, respectively.
 Let's take the :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation` as an example::
 
-    ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+    ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
     builder = ArithmeticAddCalculation.get_builder()
 
-The string ``arithmetic.add`` is the entry point of the ``ArithmeticAddCalculation`` and passing it to the ``CalculationFactory`` will return the corresponding class.
+The string ``core.arithmetic.add`` is the entry point of the ``ArithmeticAddCalculation`` and passing it to the ``CalculationFactory`` will return the corresponding class.
 Calling the ``get_builder`` method on that class will return an instance of the :py:class:`~aiida.engine.processes.builder.ProcessBuilder` class that is tailored for the ``ArithmeticAddCalculation``.
 The builder will help you in defining the inputs that the ``ArithmeticAddCalculation`` requires and has a few handy tools to simplify this process.
 

@@ -7,18 +7,28 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines,invalid-name
+# pylint: disable=too-many-lines,invalid-name,no-member
 """Tests for specific subclasses of Data."""
 import os
 import tempfile
 import unittest
 
+import pytest
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.utils import Capturing
-from aiida.orm import load_node
-from aiida.orm import CifData, StructureData, KpointsData, BandsData, ArrayData, TrajectoryData, Dict
-from aiida.orm.nodes.data.structure import Kind, Site
+from aiida.orm import ArrayData, BandsData, CifData, Dict, KpointsData, StructureData, TrajectoryData, load_node
+from aiida.orm.nodes.data.structure import (
+    Kind,
+    Site,
+    ase_refine_cell,
+    get_formula,
+    get_pymatgen_version,
+    has_ase,
+    has_pymatgen,
+    has_spglib,
+)
 
 
 def has_seekpath():
@@ -49,11 +59,16 @@ def simplify(string):
     return '\n'.join(s.strip() for s in string.split())
 
 
+@pytest.mark.skipif(not has_pymatgen(), reason='pymatgen not installed')
+def test_get_pymatgen_version():
+    assert isinstance(get_pymatgen_version(), str)
+
+
 class TestCifData(AiidaTestCase):
     """Tests for CifData class."""
     from distutils.version import StrictVersion
+
     from aiida.orm.nodes.data.cif import has_pycifrw
-    from aiida.orm.nodes.data.structure import has_ase, has_pymatgen, has_spglib, get_pymatgen_version
 
     valid_sample_cif_str = '''
         data_test
@@ -188,6 +203,7 @@ class TestCifData(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
+    @pytest.mark.requires_rmq
     def test_get_structure(self):
         """Test `CifData.get_structure`."""
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
@@ -225,6 +241,7 @@ O 0.5 0.5 0.5
 
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
+    @pytest.mark.requires_rmq
     def test_ase_primitive_and_conventional_cells_ase(self):
         """Checking the number of atoms per primitive/conventional cell
         returned by ASE ase.io.read() method. Test input is
@@ -270,6 +287,7 @@ O 0.5 0.5 0.5
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
     @unittest.skipIf(not has_pymatgen(), 'Unable to import pymatgen')
+    @pytest.mark.requires_rmq
     def test_ase_primitive_and_conventional_cells_pymatgen(self):
         """Checking the number of atoms per primitive/conventional cell
         returned by ASE ase.io.read() method. Test input is
@@ -327,8 +345,9 @@ Te2 0.00000 0.00000 0.79030 0.01912
         """
         Tests CifData.pycifrw_from_cif()
         """
-        from aiida.orm.nodes.data.cif import pycifrw_from_cif
         import re
+
+        from aiida.orm.nodes.data.cif import pycifrw_from_cif
 
         datablocks = [{
             '_atom_site_label': ['A', 'B', 'C'],
@@ -390,8 +409,9 @@ _publ_section_title                     'Test CIF'
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
     def test_pycifrw_syntax(self):
         """Tests CifData.pycifrw_from_cif() - check syntax pb in PyCifRW 3.6."""
-        from aiida.orm.nodes.data.cif import pycifrw_from_cif
         import re
+
+        from aiida.orm.nodes.data.cif import pycifrw_from_cif
 
         datablocks = [{
             '_tag': '[value]',
@@ -416,10 +436,10 @@ _tag                                    '[value]'
         """Tests CifData - check that long lines (longer than 2048 characters) are supported.
         Should not raise any error."""
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
-            tmpf.write('''
+            tmpf.write(f'''
 data_0
-_tag   {}
- '''.format('a' * 5000))
+_tag   {'a' * 5000}
+ ''')
             tmpf.flush()
             _ = CifData(file=tmpf.name)
 
@@ -530,6 +550,7 @@ _tag   {}
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
     @unittest.skipIf(not has_spglib(), 'Unable to import spglib')
+    @pytest.mark.requires_rmq
     def test_refine(self):
         """
         Test case for refinement (space group determination) for a
@@ -694,7 +715,7 @@ _tag   {}
         for test_string, result in tests:
             with tempfile.NamedTemporaryFile(mode='w+') as handle:
                 handle.write(
-                    """
+                    f"""
                     data_test
                     loop_
                     _atom_site_label
@@ -702,8 +723,8 @@ _tag   {}
                     _atom_site_fract_y
                     _atom_site_fract_z
                     _atom_site_occupancy
-                    {}
-                """.format(test_string)
+                    {test_string}
+                """
                 )
                 handle.flush()
                 cif = CifData(file=handle.name)
@@ -721,8 +742,8 @@ _tag   {}
 
         for formula, result in tests:
             with tempfile.NamedTemporaryFile(mode='w+') as handle:
-                formula_string = "_chemical_formula_sum '{}'".format(formula) if formula else '\n'
-                handle.write("""data_test\n{}\n""".format(formula_string))
+                formula_string = f"_chemical_formula_sum '{formula}'" if formula else '\n'
+                handle.write(f"""data_test\n{formula_string}\n""")
                 handle.flush()
                 cif = CifData(file=handle.name)
                 self.assertEqual(cif.has_unknown_species, result, formula_string)
@@ -739,8 +760,8 @@ _tag   {}
         for test_string, result in tests:
             with tempfile.NamedTemporaryFile(mode='w+') as handle:
                 base = 'loop_\n_atom_site_label\n_atom_site_fract_x\n_atom_site_fract_y\n_atom_site_fract_z'
-                atomic_site_string = '{}\n{}'.format(base, test_string) if test_string else ''
-                handle.write("""data_test\n{}\n""".format(atomic_site_string))
+                atomic_site_string = f'{base}\n{test_string}' if test_string else ''
+                handle.write(f"""data_test\n{atomic_site_string}\n""")
                 handle.flush()
                 cif = CifData(file=handle.name)
                 self.assertEqual(cif.has_undefined_atomic_sites, result)
@@ -1032,7 +1053,6 @@ class TestStructureData(AiidaTestCase):
     Tests the creation of StructureData objects (cell and pbc).
     """
     # pylint: disable=too-many-public-methods
-    from aiida.orm.nodes.data.structure import has_ase, has_spglib
     from aiida.orm.nodes.data.cif import has_pycifrw
 
     def test_cell_ok_and_atoms(self):
@@ -1506,9 +1526,9 @@ class TestStructureData(AiidaTestCase):
         Test the ase_refine_cell() function
         """
         # pylint: disable=too-many-statements
-        from aiida.orm.nodes.data.structure import ase_refine_cell
-        import ase
         import math
+
+        import ase
         import numpy
 
         a = ase.Atoms(cell=[10, 10, 10])
@@ -1587,8 +1607,6 @@ class TestStructureData(AiidaTestCase):
         """
         Tests the generation of formula
         """
-        from aiida.orm.nodes.data.structure import get_formula
-
         self.assertEqual(get_formula(['Ba', 'Ti'] + ['O'] * 3), 'BaO3Ti')
         self.assertEqual(get_formula(['Ba', 'Ti', 'C'] + ['O'] * 3, separator=' '), 'C Ba O3 Ti')
         self.assertEqual(get_formula(['H'] * 6 + ['C'] * 6), 'C6H6')
@@ -1616,8 +1634,6 @@ class TestStructureData(AiidaTestCase):
         """
         Tests the generation of formula, including unknown entry.
         """
-        from aiida.orm.nodes.data.structure import get_formula
-
         self.assertEqual(get_formula(['Ba', 'Ti'] + ['X'] * 3), 'BaTiX3')
         self.assertEqual(get_formula(['Ba', 'Ti', 'C'] + ['X'] * 3, separator=' '), 'C Ba Ti X3')
         self.assertEqual(get_formula(['X'] * 6 + ['C'] * 6), 'C6X6')
@@ -1643,6 +1659,7 @@ class TestStructureData(AiidaTestCase):
 
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
+    @pytest.mark.requires_rmq
     def test_get_cif(self):
         """
         Tests the conversion to CifData
@@ -1686,11 +1703,8 @@ loop_
   _symmetry_equiv_pos_as_xyz
    'x, y, z'
 
-_symmetry_Int_Tables_number             1
+_symmetry_int_tables_number             1
 _symmetry_space_group_name_H-M          'P 1'
-_symmetry_space_group_name_Hall         'P 1'
-_cell_formula_units_Z                   1
-_chemical_formula_sum                   'Ba2 Ti'
 """
             )
         )
@@ -1909,7 +1923,6 @@ class TestStructureDataReload(AiidaTestCase):
 
 class TestStructureDataFromAse(AiidaTestCase):
     """Tests the creation of Sites from/to a ASE object."""
-    from aiida.orm.nodes.data.structure import has_ase
 
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
     def test_ase(self):
@@ -2096,7 +2109,6 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
     Tests the creation of StructureData from a pymatgen Structure and
     Molecule objects.
     """
-    from aiida.orm.nodes.data.structure import has_pymatgen, get_pymatgen_version
 
     @unittest.skipIf(not has_pymatgen(), 'Unable to import pymatgen')
     def test_1(self):
@@ -2168,6 +2180,7 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
 
         def recursively_compare_values(left, right):
             from collections.abc import Mapping
+
             from numpy import testing
 
             if isinstance(left, Mapping):
@@ -2179,7 +2192,7 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
             elif isinstance(left, float):
                 testing.assert_almost_equal(left, right)
             else:
-                assert left == right, '{} is not {}'.format(value, right)
+                assert left == right, f'{value} is not {right}'
 
         recursively_compare_values(dict1, dict2)
 
@@ -2220,15 +2233,17 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         Tests pymatgen -> StructureData, with partial occupancies and spins.
         This should raise a ValueError.
         """
-        import pymatgen
+        from pymatgen.core.composition import Composition
+        from pymatgen.core.periodic_table import Specie
+        from pymatgen.core.structure import Structure
 
-        Fe_spin_up = pymatgen.Specie('Fe', 0, properties={'spin': 1})
-        Mn_spin_up = pymatgen.Specie('Mn', 0, properties={'spin': 1})
-        Fe_spin_down = pymatgen.Specie('Fe', 0, properties={'spin': -1})
-        Mn_spin_down = pymatgen.Specie('Mn', 0, properties={'spin': -1})
-        FeMn1 = pymatgen.Composition({Fe_spin_up: 0.5, Mn_spin_up: 0.5})
-        FeMn2 = pymatgen.Composition({Fe_spin_down: 0.5, Mn_spin_down: 0.5})
-        a = pymatgen.Structure(
+        Fe_spin_up = Specie('Fe', 0, properties={'spin': 1})
+        Mn_spin_up = Specie('Mn', 0, properties={'spin': 1})
+        Fe_spin_down = Specie('Fe', 0, properties={'spin': -1})
+        Mn_spin_down = Specie('Mn', 0, properties={'spin': -1})
+        FeMn1 = Composition({Fe_spin_up: 0.5, Mn_spin_up: 0.5})
+        FeMn2 = Composition({Fe_spin_down: 0.5, Mn_spin_down: 0.5})
+        a = Structure(
             lattice=[[4, 0, 0], [0, 4, 0], [0, 0, 4]], species=[FeMn1, FeMn2], coords=[[0, 0, 0], [0.5, 0.5, 0.5]]
         )
 
@@ -2236,9 +2251,9 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
             StructureData(pymatgen=a)
 
         # same, with vacancies
-        Fe1 = pymatgen.Composition({Fe_spin_up: 0.5})
-        Fe2 = pymatgen.Composition({Fe_spin_down: 0.5})
-        a = pymatgen.Structure(
+        Fe1 = Composition({Fe_spin_up: 0.5})
+        Fe2 = Composition({Fe_spin_down: 0.5})
+        a = Structure(
             lattice=[[4, 0, 0], [0, 4, 0], [0, 0, 4]], species=[Fe1, Fe2], coords=[[0, 0, 0], [0.5, 0.5, 0.5]]
         )
 
@@ -2250,12 +2265,13 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
     def test_multiple_kinds_partial_occupancies():
         """Tests that a structure with multiple sites with the same element but different
         partial occupancies, get their own unique kind name."""
-        import pymatgen
+        from pymatgen.core.composition import Composition
+        from pymatgen.core.structure import Structure
 
-        Mg1 = pymatgen.Composition({'Mg': 0.50})
-        Mg2 = pymatgen.Composition({'Mg': 0.25})
+        Mg1 = Composition({'Mg': 0.50})
+        Mg2 = Composition({'Mg': 0.25})
 
-        a = pymatgen.Structure(
+        a = Structure(
             lattice=[[4, 0, 0], [0, 4, 0], [0, 0, 4]], species=[Mg1, Mg2], coords=[[0, 0, 0], [0.5, 0.5, 0.5]]
         )
 
@@ -2268,12 +2284,13 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
         Tests that a structure with multiple sites with the same alloy symbols but different
         weights, get their own unique kind name
         """
-        import pymatgen
+        from pymatgen.core.composition import Composition
+        from pymatgen.core.structure import Structure
 
-        alloy_one = pymatgen.Composition({'Mg': 0.25, 'Al': 0.75})
-        alloy_two = pymatgen.Composition({'Mg': 0.45, 'Al': 0.55})
+        alloy_one = Composition({'Mg': 0.25, 'Al': 0.75})
+        alloy_two = Composition({'Mg': 0.45, 'Al': 0.55})
 
-        a = pymatgen.Structure(
+        a = Structure(
             lattice=[[4, 0, 0], [0, 4, 0], [0, 0, 4]],
             species=[alloy_one, alloy_two],
             coords=[[0, 0, 0], [0.5, 0.5, 0.5]]
@@ -2285,7 +2302,6 @@ class TestStructureDataFromPymatgen(AiidaTestCase):
 class TestPymatgenFromStructureData(AiidaTestCase):
     """Tests the creation of pymatgen Structure and Molecule objects from
     StructureData."""
-    from aiida.orm.nodes.data.structure import has_ase, has_pymatgen, get_pymatgen_version
 
     @unittest.skipIf(not has_pymatgen(), 'Unable to import pymatgen')
     def test_1(self):
@@ -2823,6 +2839,7 @@ class TestTrajectoryData(AiidaTestCase):
             # Step 66 does not exist
             n.get_index_from_stepid(66)
 
+    @pytest.mark.requires_rmq
     def test_conversion_to_structure(self):
         """
         Check the methods to export a given time step to a StructureData node.
@@ -2982,6 +2999,7 @@ class TestTrajectoryData(AiidaTestCase):
     def test_export_to_file():
         """Export the band structure on a file, check if it is working."""
         import numpy
+
         from aiida.orm.nodes.data.cif import has_pycifrw
 
         n = TrajectoryData()
@@ -3182,6 +3200,7 @@ class TestKpointsData(AiidaTestCase):
         the same behavior of the old implementation
         """
         import numpy
+
         from aiida.tools.data.array.kpoints import get_explicit_kpoints_path
 
         # Shouldn't get anything without having set the cell
@@ -3233,6 +3252,7 @@ class TestKpointsData(AiidaTestCase):
         the same behavior of the old implementation
         """
         import numpy
+
         from aiida.tools.data.array.kpoints import get_kpoints_path
 
         alat = 1.5
@@ -3256,6 +3276,7 @@ class TestSpglibTupleConversion(AiidaTestCase):
         Test conversion of a simple tuple to an AiiDA structure
         """
         import numpy as np
+
         from aiida.tools import spglib_tuple_to_structure
 
         cell = np.array([[4., 1., 0.], [0., 4., 0.], [0., 0., 4.]])
@@ -3278,6 +3299,7 @@ class TestSpglibTupleConversion(AiidaTestCase):
     def test_complex1_to_aiida(self):
         """Test conversion of a  tuple to an AiiDA structure when passing also information on the kinds."""
         import numpy as np
+
         from aiida.tools import spglib_tuple_to_structure
 
         cell = np.array([[4., 1., 0.], [0., 4., 0.], [0., 0., 4.]])
@@ -3339,6 +3361,7 @@ class TestSpglibTupleConversion(AiidaTestCase):
     def test_from_aiida(self):
         """Test conversion of an AiiDA structure to a spglib tuple."""
         import numpy as np
+
         from aiida.tools import structure_to_spglib_tuple
 
         cell = np.array([[4., 1., 0.], [0., 4., 0.], [0., 0., 4.]])
@@ -3368,7 +3391,8 @@ class TestSpglibTupleConversion(AiidaTestCase):
         Convert an AiiDA structure to a tuple and go back to see if we get the same results
         """
         import numpy as np
-        from aiida.tools import structure_to_spglib_tuple, spglib_tuple_to_structure
+
+        from aiida.tools import spglib_tuple_to_structure, structure_to_spglib_tuple
 
         cell = np.array([[4., 1., 0.], [0., 4., 0.], [0., 0., 4.]])
 
@@ -3403,11 +3427,11 @@ class TestSeekpathExplicitPath(AiidaTestCase):
     def test_simple(self):
         """Test a simple case."""
         import numpy as np
-        from aiida.plugins import DataFactory
 
+        from aiida.plugins import DataFactory
         from aiida.tools import get_explicit_kpoints_path
 
-        structure = DataFactory('structure')(cell=[[4, 0, 0], [0, 4, 0], [0, 0, 6]])
+        structure = DataFactory('core.structure')(cell=[[4, 0, 0], [0, 4, 0], [0, 0, 6]])
         structure.append_atom(symbols='Ba', position=[0, 0, 0])
         structure.append_atom(symbols='Ti', position=[2, 2, 3])
         structure.append_atom(symbols='O', position=[2, 2, 0])
@@ -3486,10 +3510,11 @@ class TestSeekpathPath(AiidaTestCase):
     def test_simple(self):
         """Test SeekPath for BaTiO3 structure."""
         import numpy as np
+
         from aiida.plugins import DataFactory
         from aiida.tools import get_kpoints_path
 
-        structure = DataFactory('structure')(cell=[[4, 0, 0], [0, 4, 0], [0, 0, 6]])
+        structure = DataFactory('core.structure')(cell=[[4, 0, 0], [0, 4, 0], [0, 0, 6]])
         structure.append_atom(symbols='Ba', position=[0, 0, 0])
         structure.append_atom(symbols='Ti', position=[2, 2, 3])
         structure.append_atom(symbols='O', position=[2, 2, 0])

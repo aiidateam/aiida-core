@@ -9,25 +9,31 @@
 ###########################################################################
 """Implementation of the CalcJob process."""
 import io
+import os
+import shutil
+from typing import Any, Dict, Hashable, Optional, Type, Union
 
-import plumpy
+import plumpy.ports
+import plumpy.process_states
 
 from aiida import orm
-from aiida.common import exceptions, AttributeDict
+from aiida.common import AttributeDict, exceptions
 from aiida.common.datastructures import CalcInfo
 from aiida.common.folders import Folder
-from aiida.common.lang import override, classproperty
+from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
 
 from ..exit_code import ExitCode
+from ..ports import PortNamespace
 from ..process import Process, ProcessState
 from ..process_spec import CalcJobProcessSpec
-from .tasks import Waiting, UPLOAD_COMMAND
+from .importer import CalcJobImporter
+from .tasks import UPLOAD_COMMAND, Waiting
 
 __all__ = ('CalcJob',)
 
 
-def validate_calc_job(inputs, ctx):  # pylint: disable=too-many-return-statements
+def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:  # pylint: disable=too-many-return-statements
     """Validate the entire set of inputs passed to the `CalcJob` constructor.
 
     Reasons that will cause this validation to raise an `InputValidationError`:
@@ -35,6 +41,7 @@ def validate_calc_job(inputs, ctx):  # pylint: disable=too-many-return-statement
      * No `Computer` has been specified, neither directly in `metadata.computer` nor indirectly through the `Code` input
      * The specified computer is not stored
      * The `Computer` specified in `metadata.computer` is not the same as that of the specified `Code`
+     * No `Code` has been specified and no `remote_folder` input has been specified, i.e. this is no import run
 
     :return: string with error message in case the inputs are invalid
     """
@@ -43,7 +50,15 @@ def validate_calc_job(inputs, ctx):  # pylint: disable=too-many-return-statement
         ctx.get_port('metadata.computer')
     except ValueError:
         # If the namespace no longer contains the `code` or `metadata.computer` ports we skip validation
-        return
+        return None
+
+    remote_folder = inputs.get('remote_folder', None)
+
+    if remote_folder is not None:
+        # The `remote_folder` input has been specified and so this concerns an import run, which means that neither
+        # a `Code` nor a `Computer` are required. However, they are allowed to be specified but will not be explicitly
+        # checked for consistency.
+        return None
 
     code = inputs.get('code', None)
     computer_from_code = code.computer
@@ -69,11 +84,11 @@ def validate_calc_job(inputs, ctx):  # pylint: disable=too-many-return-statement
     try:
         resources_port = ctx.get_port('metadata.options.resources')
     except ValueError:
-        return
+        return None
 
     # If the resources port exists but is not required, we don't need to validate it against the computer's scheduler
     if not resources_port.required:
-        return
+        return None
 
     computer = computer_from_code or computer_from_metadata
     scheduler = computer.get_scheduler()
@@ -89,19 +104,60 @@ def validate_calc_job(inputs, ctx):  # pylint: disable=too-many-return-statement
     except ValueError as exception:
         return f'input `metadata.options.resources` is not valid for the `{scheduler}` scheduler: {exception}'
 
+    return None
 
-def validate_parser(parser_name, _):
+
+def validate_stash_options(stash_options: Any, _: Any) -> Optional[str]:
+    """Validate the ``stash`` options."""
+    from aiida.common.datastructures import StashMode
+
+    target_base = stash_options.get('target_base', None)
+    source_list = stash_options.get('source_list', None)
+    stash_mode = stash_options.get('mode', StashMode.COPY.value)
+
+    if not isinstance(target_base, str) or not os.path.isabs(target_base):
+        return f'`metadata.options.stash.target_base` should be an absolute filepath, got: {target_base}'
+
+    if (
+        not isinstance(source_list, (list, tuple)) or
+        any(not isinstance(src, str) or os.path.isabs(src) for src in source_list)
+    ):
+        port = 'metadata.options.stash.source_list'
+        return f'`{port}` should be a list or tuple of relative filepaths, got: {source_list}'
+
+    try:
+        StashMode(stash_mode)
+    except ValueError:
+        port = 'metadata.options.stash.mode'
+        return f'`{port}` should be a member of aiida.common.datastructures.StashMode, got: {stash_mode}'
+
+    return None
+
+
+def validate_parser(parser_name: Any, _: Any) -> Optional[str]:
     """Validate the parser.
 
     :return: string with error message in case the inputs are invalid
     """
     from aiida.plugins import ParserFactory
 
-    if parser_name is not plumpy.UNSPECIFIED:
-        try:
-            ParserFactory(parser_name)
-        except exceptions.EntryPointError as exception:
-            return f'invalid parser specified: {exception}'
+    try:
+        ParserFactory(parser_name)
+    except exceptions.EntryPointError as exception:
+        return f'invalid parser specified: {exception}'
+
+    return None
+
+
+def validate_additional_retrieve_list(additional_retrieve_list: Any, _: Any) -> Optional[str]:
+    """Validate the additional retrieve list.
+
+    :return: string with error message in case the input is invalid.
+    """
+    if any(not isinstance(value, str) or os.path.isabs(value) for value in additional_retrieve_list):
+        return f'`additional_retrieve_list` should only contain relative filepaths but got: {additional_retrieve_list}'
+
+    return None
 
 
 class CalcJob(Process):
@@ -109,9 +165,9 @@ class CalcJob(Process):
 
     _node_class = orm.CalcJobNode
     _spec_class = CalcJobProcessSpec
-    link_label_retrieved = 'retrieved'
+    link_label_retrieved: str = 'retrieved'
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         """Construct a CalcJob instance.
 
         Construct the instance only if it is a sub class of `CalcJob`, otherwise raise `InvalidOperation`.
@@ -124,15 +180,27 @@ class CalcJob(Process):
         super().__init__(*args, **kwargs)
 
     @classmethod
-    def define(cls, spec: CalcJobProcessSpec):
-        # yapf: disable
+    def define(cls, spec: CalcJobProcessSpec) -> None:  # type: ignore[override]
         """Define the process specification, including its inputs, outputs and known exit codes.
+
+        Ports are added to the `metadata` input namespace (inherited from the base Process),
+        and a `code` input Port, a `remote_folder` output Port and retrieved folder output Port
+        are added.
 
         :param spec: the calculation job process spec to define.
         """
+        # yapf: disable
         super().define(spec)
-        spec.inputs.validator = validate_calc_job
-        spec.input('code', valid_type=orm.Code, help='The `Code` to use for this job.')
+        spec.inputs.validator = validate_calc_job  # type: ignore[assignment]  # takes only PortNamespace not Port
+        spec.input('code', valid_type=orm.Code, required=False,
+            help='The `Code` to use for this job. This input is required, unless the `remote_folder` input is '
+                 'specified, which means an existing job is being imported and no code will actually be run.')
+        spec.input('remote_folder', valid_type=orm.RemoteData, required=False,
+            help='Remote directory containing the results of an already completed calculation job without AiiDA. The '
+                 'inputs should be passed to the `CalcJob` as normal but instead of launching the actual job, the '
+                 'engine will recreate the input files and then proceed straight to the retrieve step where the files '
+                 'of this `RemoteData` will be retrieved as if it had been actually launched through AiiDA. If a '
+                 'parser is defined in the inputs, the results are parsed and attached as output nodes as usual.')
         spec.input('metadata.dry_run', valid_type=bool, default=False,
             help='When set to `True` will prepare the calculation job for submission but not actually launch it.')
         spec.input('metadata.computer', valid_type=orm.Computer, required=False,
@@ -161,6 +229,8 @@ class CalcJob(Process):
                  'inserted before any non-scheduler command')
         spec.input('metadata.options.queue_name', valid_type=str, required=False,
             help='Set the name of the queue on the remote computer')
+        spec.input('metadata.options.rerunnable', valid_type=bool, required=False,
+            help='Determines if the calculation can be requeued / rerun.')
         spec.input('metadata.options.account', valid_type=str, required=False,
             help='Set the account to use in for the queue on the remote computer')
         spec.input('metadata.options.qos', valid_type=str, required=False,
@@ -186,9 +256,24 @@ class CalcJob(Process):
                  'script, just after the code execution',)
         spec.input('metadata.options.parser_name', valid_type=str, required=False, validator=validate_parser,
             help='Set a string for the output parser. Can be None if no output plugin is available or needed')
+        spec.input('metadata.options.additional_retrieve_list', required=False,
+            valid_type=(list, tuple), validator=validate_additional_retrieve_list,
+            help='List of relative file paths that should be retrieved in addition to what the plugin specifies.')
+        spec.input_namespace('metadata.options.stash', required=False, populate_defaults=False,
+            validator=validate_stash_options,
+            help='Optional directives to stash files after the calculation job has completed.')
+        spec.input('metadata.options.stash.target_base', valid_type=str, required=False,
+            help='The base location to where the files should be stashd. For example, for the `copy` stash mode, this '
+            'should be an absolute filepath on the remote computer.')
+        spec.input('metadata.options.stash.source_list', valid_type=(tuple, list), required=False,
+            help='Sequence of relative filepaths representing files in the remote directory that should be stashed.')
+        spec.input('metadata.options.stash.stash_mode', valid_type=str, required=False,
+            help='Mode with which to perform the stashing, should be value of `aiida.common.datastructures.StashMode.')
 
         spec.output('remote_folder', valid_type=orm.RemoteData,
             help='Input files necessary to run the process will be stored in this folder node.')
+        spec.output('remote_stash', valid_type=orm.RemoteStashData, required=False,
+            help='Contents of the `stash.source_list` option are stored in this remote folder after job completion.')
         spec.output(cls.link_label_retrieved, valid_type=orm.FolderData, pass_to_parser=True,
             help='Files that are retrieved by the daemon will be stored in this node. By default the stdout and stderr '
                  'of the scheduler will be added, but one can add more by specifying them in `CalcInfo.retrieve_list`.')
@@ -200,6 +285,7 @@ class CalcJob(Process):
             message='The job ran out of memory.')
         spec.exit_code(120, 'ERROR_SCHEDULER_OUT_OF_WALLTIME',
             message='The job ran out of walltime.')
+        # yapf: enable
 
     @classproperty
     def spec_options(cls):  # pylint: disable=no-self-argument
@@ -210,12 +296,33 @@ class CalcJob(Process):
         """
         return cls.spec_metadata['options']  # pylint: disable=unsubscriptable-object
 
+    @classmethod
+    def get_importer(cls, entry_point_name: str = None) -> CalcJobImporter:
+        """Load the `CalcJobImporter` associated with this `CalcJob` if it exists.
+
+        By default an importer with the same entry point as the ``CalcJob`` will be loaded, however, this can be
+        overridden using the ``entry_point_name`` argument.
+
+        :param entry_point_name: optional entry point name of a ``CalcJobImporter`` to override the default.
+        :return: the loaded ``CalcJobImporter``.
+        :raises: if no importer class could be loaded.
+        """
+        from aiida.plugins import CalcJobImporterFactory
+        from aiida.plugins.entry_point import get_entry_point_from_class
+
+        if entry_point_name is None:
+            _, entry_point = get_entry_point_from_class(cls.__module__, cls.__name__)
+            if entry_point is not None:
+                entry_point_name = entry_point.name  # type: ignore[attr-defined]
+
+        return CalcJobImporterFactory(entry_point_name)()
+
     @property
-    def options(self):
+    def options(self) -> AttributeDict:
         """Return the options of the metadata that were specified when this process instance was launched.
 
         :return: options dictionary
-        :rtype: dict
+
         """
         try:
             return self.metadata.options
@@ -223,14 +330,18 @@ class CalcJob(Process):
             return AttributeDict()
 
     @classmethod
-    def get_state_classes(cls):
+    def get_state_classes(cls) -> Dict[Hashable, Type[plumpy.process_states.State]]:
+        """A mapping of the State constants to the corresponding state class.
+
+        Overrides the waiting state with the Calcjob specific version.
+        """
         # Overwrite the waiting state
         states_map = super().get_state_classes()
         states_map[ProcessState.WAITING] = Waiting
         return states_map
 
     @override
-    def on_terminated(self):
+    def on_terminated(self) -> None:
         """Cleanup the node by deleting the calulation job state.
 
         .. note:: This has to be done before calling the super because that will seal the node after we cannot change it
@@ -239,27 +350,23 @@ class CalcJob(Process):
         super().on_terminated()
 
     @override
-    def run(self):
+    def run(self) -> Union[plumpy.process_states.Stop, int, plumpy.process_states.Wait]:
         """Run the calculation job.
 
         This means invoking the `presubmit` and storing the temporary folder in the node's repository. Then we move the
         process in the `Wait` state, waiting for the `UPLOAD` transport task to be started.
-        """
-        if self.inputs.metadata.dry_run:
-            from aiida.common.folders import SubmitTestFolder
-            from aiida.engine.daemon.execmanager import upload_calculation
-            from aiida.transports.plugins.local import LocalTransport
 
-            with LocalTransport() as transport:
-                with SubmitTestFolder() as folder:
-                    calc_info = self.presubmit(folder)
-                    transport.chdir(folder.abspath)
-                    upload_calculation(self.node, transport, calc_info, folder, inputs=self.inputs, dry_run=True)
-                    self.node.dry_run_info = {
-                        'folder': folder.abspath,
-                        'script_filename': self.node.get_option('submit_script_filename')
-                    }
-            return plumpy.Stop(None, True)
+        :returns: the `Stop` command if a dry run, int if the process has an exit status,
+            `Wait` command if the calcjob is to be uploaded
+
+        """
+        if self.inputs.metadata.dry_run:  # type: ignore[union-attr]
+            self._perform_dry_run()
+            return plumpy.process_states.Stop(None, True)
+
+        if 'remote_folder' in self.inputs:  # type: ignore[operator]
+            exit_code = self._perform_import()
+            return exit_code
 
         # The following conditional is required for the caching to properly work. Even if the source node has a process
         # state of `Finished` the cached process will still enter the running state. The process state will have then
@@ -269,7 +376,7 @@ class CalcJob(Process):
             return self.node.exit_status
 
         # Launch the upload operation
-        return plumpy.Wait(msg='Waiting to upload', data=UPLOAD_COMMAND)
+        return plumpy.process_states.Wait(msg='Waiting to upload', data=UPLOAD_COMMAND)
 
     def prepare_for_submission(self, folder: Folder) -> CalcInfo:
         """Prepare the calculation for submission.
@@ -282,15 +389,63 @@ class CalcJob(Process):
         :param folder: a temporary folder on the local file system.
         :returns: the `CalcInfo` instance
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
-    def parse(self, retrieved_temporary_folder=None):
+    def _perform_dry_run(self):
+        """Perform a dry run.
+
+        Instead of performing the normal sequence of steps, just the `presubmit` is called, which will call the method
+        `prepare_for_submission` of the plugin to generate the input files based on the inputs. Then the upload action
+        is called, but using a normal local transport that will copy the files to a local sandbox folder. The generated
+        input script and the absolute path to the sandbox folder are stored in the `dry_run_info` attribute of the node
+        of this process.
+        """
+        from aiida.common.folders import SubmitTestFolder
+        from aiida.engine.daemon.execmanager import upload_calculation
+        from aiida.transports.plugins.local import LocalTransport
+
+        with LocalTransport() as transport:
+            with SubmitTestFolder() as folder:
+                calc_info = self.presubmit(folder)
+                transport.chdir(folder.abspath)
+                upload_calculation(self.node, transport, calc_info, folder, inputs=self.inputs, dry_run=True)
+                self.node.dry_run_info = {
+                    'folder': folder.abspath,
+                    'script_filename': self.node.get_option('submit_script_filename')
+                }
+
+    def _perform_import(self):
+        """Perform the import of an already completed calculation.
+
+        The inputs contained a `RemoteData` under the key `remote_folder` signalling that this is not supposed to be run
+        as a normal calculation job, but rather the results are already computed outside of AiiDA and merely need to be
+        imported.
+        """
+        from aiida.common.datastructures import CalcJobState
+        from aiida.common.folders import SandboxFolder
+        from aiida.engine.daemon.execmanager import retrieve_calculation
+        from aiida.transports.plugins.local import LocalTransport
+
+        with LocalTransport() as transport:
+            with SandboxFolder() as folder:
+                with SandboxFolder() as retrieved_temporary_folder:
+                    self.presubmit(folder)
+                    self.node.set_remote_workdir(
+                        self.inputs.remote_folder.get_remote_path()  # type: ignore[union-attr]
+                    )
+                    retrieve_calculation(self.node, transport, retrieved_temporary_folder.abspath)
+                    self.node.set_state(CalcJobState.PARSING)
+                    self.node.set_attribute(orm.CalcJobNode.IMMIGRATED_KEY, True)
+                    return self.parse(retrieved_temporary_folder.abspath)
+
+    def parse(self, retrieved_temporary_folder: Optional[str] = None) -> ExitCode:
         """Parse a retrieved job calculation.
 
         This is called once it's finished waiting for the calculation to be finished and the data has been retrieved.
-        """
-        import shutil
 
+        :param retrieved_temporary_folder: The path to the temporary folder
+
+        """
         try:
             retrieved = self.node.outputs.retrieved
         except exceptions.NotExistent:
@@ -312,13 +467,15 @@ class CalcJob(Process):
         try:
             exit_code_retrieved = self.parse_retrieved_output(retrieved_temporary_folder)
         finally:
-            shutil.rmtree(retrieved_temporary_folder, ignore_errors=True)
+            if retrieved_temporary_folder is not None:
+                shutil.rmtree(retrieved_temporary_folder, ignore_errors=True)
 
         if exit_code_retrieved is not None and exit_code_retrieved.status > 0:
             msg = f'output parser returned exit code<{exit_code_retrieved.status}>: {exit_code_retrieved.message}'
             self.logger.warning(msg)
 
         # The final exit code is that of the scheduler, unless the output parser returned one
+        exit_code: Optional[ExitCode]
         if exit_code_retrieved is not None:
             exit_code = exit_code_retrieved
         else:
@@ -330,9 +487,18 @@ class CalcJob(Process):
 
         return exit_code or ExitCode(0)
 
-    def parse_scheduler_output(self, retrieved):
+    def parse_scheduler_output(self, retrieved: orm.Node) -> Optional[ExitCode]:
         """Parse the output of the scheduler if that functionality has been implemented for the plugin."""
-        scheduler = self.node.computer.get_scheduler()
+        computer = self.node.computer
+
+        if computer is None:
+            self.logger.info(
+                'no computer is defined for this calculation job which suggest that it is an imported job and so '
+                'scheduler output probably is not available or not in a format that can be reliably parsed, skipping..'
+            )
+            return None
+
+        scheduler = computer.get_scheduler()
         filename_stderr = self.node.get_option('scheduler_stderr')
         filename_stdout = self.node.get_option('scheduler_stdout')
 
@@ -358,16 +524,16 @@ class CalcJob(Process):
 
         # Only attempt to call the scheduler parser if all three resources of information are available
         if any(entry is None for entry in [detailed_job_info, scheduler_stderr, scheduler_stdout]):
-            return
+            return None
 
         try:
             exit_code = scheduler.parse_output(detailed_job_info, scheduler_stdout, scheduler_stderr)
         except exceptions.FeatureNotAvailable:
             self.logger.info(f'`{scheduler.__class__.__name__}` does not implement scheduler output parsing')
-            return
+            return None
         except Exception as exception:  # pylint: disable=broad-except
             self.logger.error(f'the `parse_output` method of the scheduler excepted: {exception}')
-            return
+            return None
 
         if exit_code is not None and not isinstance(exit_code, ExitCode):
             args = (scheduler.__class__.__name__, type(exit_code))
@@ -375,12 +541,12 @@ class CalcJob(Process):
 
         return exit_code
 
-    def parse_retrieved_output(self, retrieved_temporary_folder=None):
+    def parse_retrieved_output(self, retrieved_temporary_folder: Optional[str] = None) -> Optional[ExitCode]:
         """Parse the retrieved data by calling the parser plugin if it was defined in the inputs."""
         parser_class = self.node.get_parser_class()
 
         if parser_class is None:
-            return
+            return None
 
         parser = parser_class(self.node)
         parse_kwargs = parser.get_outputs_for_parsing()
@@ -404,56 +570,56 @@ class CalcJob(Process):
 
         return exit_code
 
-    def presubmit(self, folder):
+    def presubmit(self, folder: Folder) -> CalcInfo:
         """Prepares the calculation folder with all inputs, ready to be copied to the cluster.
 
         :param folder: a SandboxFolder that can be used to write calculation input files and the scheduling script.
-        :type folder: :class:`aiida.common.folders.Folder`
 
         :return calcinfo: the CalcInfo object containing the information needed by the daemon to handle operations.
-        :rtype calcinfo: :class:`aiida.common.CalcInfo`
+
         """
         # pylint: disable=too-many-locals,too-many-statements,too-many-branches
-        import os
-
-        from aiida.common.exceptions import PluginInternalError, ValidationError, InvalidOperation, InputValidationError
         from aiida.common import json
-        from aiida.common.utils import validate_list_of_string_tuples
         from aiida.common.datastructures import CodeInfo, CodeRunMode
-        from aiida.orm import load_node, Code, Computer
-        from aiida.plugins import DataFactory
+        from aiida.common.exceptions import InputValidationError, InvalidOperation, PluginInternalError, ValidationError
+        from aiida.common.utils import validate_list_of_string_tuples
+        from aiida.orm import Code, Computer, load_node
         from aiida.schedulers.datastructures import JobTemplate
 
-        computer = self.node.computer
         inputs = self.node.get_incoming(link_type=LinkType.INPUT_CALC)
 
-        if not self.inputs.metadata.dry_run and self.node.has_cached_links():
+        if not self.inputs.metadata.dry_run and self.node.has_cached_links():  # type: ignore[union-attr]
             raise InvalidOperation('calculation node has unstored links in cache')
 
+        computer = self.node.computer
         codes = [_ for _ in inputs.all_nodes() if isinstance(_, Code)]
 
         for code in codes:
             if not code.can_run_on(computer):
-                raise InputValidationError('The selected code {} for calculation {} cannot run on computer {}'.format(
-                    code.pk, self.node.pk, computer.label))
+                raise InputValidationError(
+                    'The selected code {} for calculation {} cannot run on computer {}'.format(
+                        code.pk, self.node.pk, computer.label
+                    )
+                )
 
             if code.is_local() and code.get_local_executable() in folder.get_content_list():
-                raise PluginInternalError('The plugin created a file {} that is also the executable name!'.format(
-                    code.get_local_executable()))
+                raise PluginInternalError(
+                    f'The plugin created a file {code.get_local_executable()} that is also the executable name!'
+                )
 
         calc_info = self.prepare_for_submission(folder)
         calc_info.uuid = str(self.node.uuid)
-        scheduler = computer.get_scheduler()
 
         # I create the job template to pass to the scheduler
         job_tmpl = JobTemplate()
-        job_tmpl.shebang = computer.get_shebang()
         job_tmpl.submit_as_hold = False
-        job_tmpl.rerunnable = False
+        job_tmpl.rerunnable = self.options.get('rerunnable', False)
         job_tmpl.job_environment = {}
         # 'email', 'email_on_started', 'email_on_terminated',
         job_tmpl.job_name = f'aiida-{self.node.pk}'
         job_tmpl.sched_output_path = self.options.scheduler_stdout
+        if computer is not None:
+            job_tmpl.shebang = computer.get_shebang()
         if self.options.scheduler_stderr == self.options.scheduler_stdout:
             job_tmpl.sched_join_files = True
         else:
@@ -461,30 +627,25 @@ class CalcJob(Process):
             job_tmpl.sched_join_files = False
 
         # Set retrieve path, add also scheduler STDOUT and STDERR
-        retrieve_list = (calc_info.retrieve_list if calc_info.retrieve_list is not None else [])
+        retrieve_list = calc_info.retrieve_list or []
         if (job_tmpl.sched_output_path is not None and job_tmpl.sched_output_path not in retrieve_list):
             retrieve_list.append(job_tmpl.sched_output_path)
         if not job_tmpl.sched_join_files:
             if (job_tmpl.sched_error_path is not None and job_tmpl.sched_error_path not in retrieve_list):
                 retrieve_list.append(job_tmpl.sched_error_path)
+        retrieve_list.extend(self.node.get_option('additional_retrieve_list') or [])
         self.node.set_retrieve_list(retrieve_list)
 
-        retrieve_singlefile_list = (calc_info.retrieve_singlefile_list
-                                    if calc_info.retrieve_singlefile_list is not None else [])
-        # a validation on the subclasses of retrieve_singlefile_list
-        for _, subclassname, _ in retrieve_singlefile_list:
-            file_sub_class = DataFactory(subclassname)
-            if not issubclass(file_sub_class, orm.SinglefileData):
-                raise PluginInternalError(
-                    '[presubmission of calc {}] retrieve_singlefile_list subclass problem: {} is '
-                    'not subclass of SinglefileData'.format(self.node.pk, file_sub_class.__name__))
-        if retrieve_singlefile_list:
-            self.node.set_retrieve_singlefile_list(retrieve_singlefile_list)
-
         # Handle the retrieve_temporary_list
-        retrieve_temporary_list = (calc_info.retrieve_temporary_list
-                                   if calc_info.retrieve_temporary_list is not None else [])
+        retrieve_temporary_list = calc_info.retrieve_temporary_list or []
         self.node.set_retrieve_temporary_list(retrieve_temporary_list)
+
+        # If the inputs contain a ``remote_folder`` input node, we are in an import scenario and can skip the rest
+        if 'remote_folder' in inputs.all_link_labels():
+            return
+
+        # The remaining code is only necessary for actual runs, for example, creating the submission script
+        scheduler = computer.get_scheduler()
 
         # the if is done so that if the method returns None, this is
         # not added. This has two advantages:
@@ -525,26 +686,29 @@ class CalcJob(Process):
                 raise PluginInternalError('Invalid codes_info, must be a list of CodeInfo objects')
 
             if code_info.code_uuid is None:
-                raise PluginInternalError('CalcInfo should have '
-                                          'the information of the code '
-                                          'to be launched')
+                raise PluginInternalError('CalcInfo should have the information of the code to be launched')
             this_code = load_node(code_info.code_uuid, sub_classes=(Code,))
 
-            this_withmpi = code_info.withmpi  # to decide better how to set the default
-            if this_withmpi is None:
-                if len(calc_info.codes_info) > 1:
-                    raise PluginInternalError('For more than one code, it is '
-                                              'necessary to set withmpi in '
-                                              'codes_info')
-                else:
-                    this_withmpi = self.node.get_option('withmpi')
+            # To determine whether this code should be run with MPI enabled, we get the value that was set in the inputs
+            # of the entire process, which can then be overwritten by the value from the `CodeInfo`. This allows plugins
+            # to force certain codes to run without MPI, even if the user wants to run all codes with MPI whenever
+            # possible. This use case is typically useful for `CalcJob`s that consist of multiple codes where one or
+            # multiple codes always have to be executed without MPI.
+
+            this_withmpi = self.node.get_option('withmpi')
+
+            # Override the value of `withmpi` with that of the `CodeInfo` if and only if it is set
+            if code_info.withmpi is not None:
+                this_withmpi = code_info.withmpi
 
             if this_withmpi:
-                this_argv = (mpi_args + extra_mpirun_params + [this_code.get_execname()] +
-                             (code_info.cmdline_params if code_info.cmdline_params is not None else []))
+                this_argv = (
+                    mpi_args + extra_mpirun_params + [this_code.get_execname()] +
+                    (code_info.cmdline_params if code_info.cmdline_params is not None else [])
+                )
             else:
-                this_argv = [this_code.get_execname()] + (code_info.cmdline_params
-                                                          if code_info.cmdline_params is not None else [])
+                this_argv = [this_code.get_execname()
+                             ] + (code_info.cmdline_params if code_info.cmdline_params is not None else [])
 
             # overwrite the old cmdline_params and add codename and mpirun stuff
             code_info.cmdline_params = this_argv
@@ -552,15 +716,12 @@ class CalcJob(Process):
             codes_info.append(code_info)
         job_tmpl.codes_info = codes_info
 
-        # set the codes execution mode
+        # set the codes execution mode, default set to `SERIAL`
+        codes_run_mode = CodeRunMode.SERIAL
+        if calc_info.codes_run_mode:
+            codes_run_mode = calc_info.codes_run_mode
 
-        if len(codes) > 1:
-            try:
-                job_tmpl.codes_run_mode = calc_info.codes_run_mode
-            except KeyError:
-                raise PluginInternalError('Need to set the order of the code execution (parallel or serial?)')
-        else:
-            job_tmpl.codes_run_mode = CodeRunMode.SERIAL
+        job_tmpl.codes_run_mode = codes_run_mode
         ########################################################################
 
         custom_sched_commands = self.node.get_option('custom_scheduler_commands')
@@ -583,15 +744,12 @@ class CalcJob(Process):
         priority = self.node.get_option('priority')
         if priority is not None:
             job_tmpl.priority = priority
-        max_memory_kb = self.node.get_option('max_memory_kb')
-        if max_memory_kb is not None:
-            job_tmpl.max_memory_kb = max_memory_kb
+
+        job_tmpl.max_memory_kb = self.node.get_option('max_memory_kb') or computer.get_default_memory_per_machine()
+
         max_wallclock_seconds = self.node.get_option('max_wallclock_seconds')
         if max_wallclock_seconds is not None:
             job_tmpl.max_wallclock_seconds = max_wallclock_seconds
-        max_memory_kb = self.node.get_option('max_memory_kb')
-        if max_memory_kb is not None:
-            job_tmpl.max_memory_kb = max_memory_kb
 
         submit_script_filename = self.node.get_option('submit_script_filename')
         script_content = scheduler.get_submit_script(job_tmpl)
@@ -612,26 +770,34 @@ class CalcJob(Process):
         local_copy_list = calc_info.local_copy_list
         try:
             validate_list_of_string_tuples(local_copy_list, tuple_length=3)
-        except ValidationError as exc:
-            raise PluginInternalError(f'[presubmission of calc {this_pk}] local_copy_list format problem: {exc}')
+        except ValidationError as exception:
+            raise PluginInternalError(
+                f'[presubmission of calc {this_pk}] local_copy_list format problem: {exception}'
+            ) from exception
 
         remote_copy_list = calc_info.remote_copy_list
         try:
             validate_list_of_string_tuples(remote_copy_list, tuple_length=3)
-        except ValidationError as exc:
-            raise PluginInternalError(f'[presubmission of calc {this_pk}] remote_copy_list format problem: {exc}')
+        except ValidationError as exception:
+            raise PluginInternalError(
+                f'[presubmission of calc {this_pk}] remote_copy_list format problem: {exception}'
+            ) from exception
 
         for (remote_computer_uuid, _, dest_rel_path) in remote_copy_list:
             try:
                 Computer.objects.get(uuid=remote_computer_uuid)  # pylint: disable=unused-variable
-            except exceptions.NotExistent:
-                raise PluginInternalError('[presubmission of calc {}] '
-                                          'The remote copy requires a computer with UUID={}'
-                                          'but no such computer was found in the '
-                                          'database'.format(this_pk, remote_computer_uuid))
+            except exceptions.NotExistent as exception:
+                raise PluginInternalError(
+                    '[presubmission of calc {}] '
+                    'The remote copy requires a computer with UUID={}'
+                    'but no such computer was found in the '
+                    'database'.format(this_pk, remote_computer_uuid)
+                ) from exception
             if os.path.isabs(dest_rel_path):
-                raise PluginInternalError('[presubmission of calc {}] '
-                                          'The destination path of the remote copy '
-                                          'is absolute! ({})'.format(this_pk, dest_rel_path))
+                raise PluginInternalError(
+                    '[presubmission of calc {}] '
+                    'The destination path of the remote copy '
+                    'is absolute! ({})'.format(this_pk, dest_rel_path)
+                )
 
         return calc_info

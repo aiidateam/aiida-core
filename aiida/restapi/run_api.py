@@ -13,12 +13,11 @@ It defines the method with all required parameters to run restapi locally.
 """
 import importlib
 import os
-import warnings
 
 from flask_cors import CORS
-from aiida.common.warnings import AiidaDeprecationWarning
-from .common.config import CLI_DEFAULTS, APP_CONFIG, API_CONFIG
+
 from . import api as api_classes
+from .common.config import API_CONFIG, APP_CONFIG, CLI_DEFAULTS
 
 __all__ = ('run_api', 'configure_api')
 
@@ -37,35 +36,19 @@ def run_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **kwargs)
     :param catch_internal_server:  If true, catch and print all inter server errors
     :param debug: enable debugging
     :param wsgi_profile: use WSGI profiler middleware for finding bottlenecks in web application
-    :param hookup: If true, hook up application to built-in server, else just return it. This parameter
-        is deprecated as of AiiDA 1.2.1. If you don't intend to run the API (hookup=False) use `configure_api` instead.
+    :param posting: Whether or not to include POST-enabled endpoints (currently only `/querybuilder`).
 
     :returns: tuple (app, api) if hookup==False or runs app if hookup==True
     """
-    hookup = kwargs.pop('hookup', None)
-    if hookup is None:
-        hookup = CLI_DEFAULTS['HOOKUP_APP']
-    else:
-        warnings.warn(  # pylint: disable=no-member
-            'Using the `hookup` parameter is deprecated since `v1.2.1` and will stop working in `v2.0.0`. '
-            'To configure the app without running it, use `configure_api` instead.', AiidaDeprecationWarning
-        )
-
     hostname = kwargs.pop('hostname', CLI_DEFAULTS['HOST_NAME'])
     port = kwargs.pop('port', CLI_DEFAULTS['PORT'])
     debug = kwargs.pop('debug', APP_CONFIG['DEBUG'])
 
     api = configure_api(flask_app, flask_api, **kwargs)
 
-    if hookup:
-        # Run app through built-in werkzeug server
-        print(f" * REST API running on http://{hostname}:{port}{API_CONFIG['PREFIX']}")
-        api.app.run(debug=debug, host=hostname, port=int(port), threaded=True)
-
-    else:
-        # Return the app & api without specifying port/host to be handled by an external server (e.g. apache).
-        # Some of the user-defined configuration of the app is ineffective (only affects built-in server).
-        return api.app, api
+    # Run app through built-in werkzeug server
+    print(f" * REST API running on http://{hostname}:{port}{API_CONFIG['PREFIX']}")
+    api.app.run(debug=debug, host=hostname, port=int(port), threaded=True)
 
 
 def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **kwargs):
@@ -80,6 +63,7 @@ def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **k
     :param catch_internal_server:  If true, catch and print internal server errors with full python traceback.
         Useful during app development.
     :param wsgi_profile: use WSGI profiler middleware for finding bottlenecks in the web application
+    :param posting: Whether or not to include POST-enabled endpoints (currently only `/querybuilder`).
 
     :returns: Flask RESTful API
     :rtype: :py:class:`flask_restful.Api`
@@ -89,6 +73,7 @@ def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **k
     config = kwargs.pop('config', CLI_DEFAULTS['CONFIG_DIR'])
     catch_internal_server = kwargs.pop('catch_internal_server', CLI_DEFAULTS['CATCH_INTERNAL_SERVER'])
     wsgi_profile = kwargs.pop('wsgi_profile', CLI_DEFAULTS['WSGI_PROFILE'])
+    posting = kwargs.pop('posting', CLI_DEFAULTS['POSTING'])
 
     if kwargs:
         raise ValueError(f'Unknown keyword arguments: {kwargs}')
@@ -121,4 +106,4 @@ def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **k
         app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
 
     # Instantiate and return a Flask RESTful API by associating its app
-    return flask_api(app, **API_CONFIG)
+    return flask_api(app, posting=posting, **config_module.API_CONFIG)

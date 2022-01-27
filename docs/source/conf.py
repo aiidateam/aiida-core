@@ -43,11 +43,12 @@ needs_sphinx = '1.5.0'
 extensions = [
     'sphinx.ext.intersphinx', 'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.viewcode', 'sphinx.ext.coverage',
     'sphinx.ext.mathjax', 'sphinx.ext.ifconfig', 'sphinx.ext.todo', 'IPython.sphinxext.ipython_console_highlighting',
-    'IPython.sphinxext.ipython_directive', 'aiida.sphinxext', 'sphinx_panels', 'sphinx_copybutton', 'sphinxext.rediraffe', 'notfound.extension'
+    'IPython.sphinxext.ipython_directive', 'aiida.sphinxext', 'sphinx_panels', 'sphinx_copybutton', 'sphinxext.rediraffe',
+    'notfound.extension', 'sphinx_sqlalchemy'
 ]
 ipython_mplbackend = ''
 copybutton_selector = 'div:not(.no-copy)>div.highlight pre'
-copybutton_prompt_text = r'>>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: '
+copybutton_prompt_text = r'>>> |\.\.\. |(?:\(.*\) )?\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: '
 copybutton_prompt_is_regexp = True
 
 todo_include_todos = False
@@ -97,12 +98,10 @@ exclude_patterns = [
     'get_started/**',
     'howto/installation_more/index.rst',
     'import_export/**',
-    'internals/engine.rst',
     'internals/global_design.rst',
     'internals/orm.rst',
     'scheduler/index.rst',
     'topics/daemon.rst',
-    'topics/repository.rst',
     'working_with_aiida/**',
 ]
 
@@ -134,6 +133,7 @@ intersphinx_mapping = {
     'pandas': ('https://pandas.pydata.org/docs/', None),
     'plumpy': ('https://plumpy.readthedocs.io/en/latest/', None),
     'python': ('https://docs.python.org/3', None),
+    'sqlalchemy': ('https://docs.sqlalchemy.org/en/14/', None),
 }
 
 # -- Options for HTML output ---------------------------------------------------
@@ -409,3 +409,8 @@ with open('nitpick-exceptions', 'r') as handle:
     nitpick_ignore = [
         tuple(line.strip().split(None, 1)) for line in handle.readlines() if line.strip() and not line.startswith('#')
     ]
+
+linkcheck_ignore = [r'http://localhost:\d+/',
+                    r'http://127.0.0.1:\d+/',
+                    r'http://www.wannier.org/support/',
+                    r'https://github.com/aiidateam/aiida-diff/blob/92c61bdcc2db201d69da4d8b83a2b3f5dd529bf1/aiida_diff/data/__init__.py#L14-L20']

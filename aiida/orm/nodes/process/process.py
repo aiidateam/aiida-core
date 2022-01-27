@@ -10,14 +10,19 @@
 """Module with `Node` sub class for processes."""
 
 import enum
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
-from plumpy import ProcessState
+from plumpy.process_states import ProcessState
 
-from aiida.common.links import LinkType
 from aiida.common.lang import classproperty
+from aiida.common.links import LinkType
 from aiida.orm.utils.mixins import Sealable
 
 from ..node import Node
+
+if TYPE_CHECKING:
+    from aiida.engine.processes import Process
+    from aiida.engine.processes.builder import ProcessBuilder
 
 __all__ = ('ProcessNode',)
 
@@ -48,7 +53,7 @@ class ProcessNode(Sealable, Node):
 
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
-    def __str__(self):
+    def __str__(self) -> str:
         base = super().__str__()
         if self.process_type:
             return f'{base} ({self.process_type})'
@@ -56,7 +61,7 @@ class ProcessNode(Sealable, Node):
         return f'{base}'
 
     @classproperty
-    def _updatable_attributes(cls):
+    def _updatable_attributes(cls) -> Tuple[str, ...]:
         # pylint: disable=no-self-argument
         return super()._updatable_attributes + (
             cls.PROCESS_PAUSED_KEY,
@@ -79,7 +84,7 @@ class ProcessNode(Sealable, Node):
         from aiida.orm.utils.log import create_logger_adapter
         return create_logger_adapter(self._logger, self)
 
-    def get_builder_restart(self):
+    def get_builder_restart(self) -> 'ProcessBuilder':
         """Return a `ProcessBuilder` that is ready to relaunch the process that created this node.
 
         The process class will be set based on the `process_type` of this node and the inputs of the builder will be
@@ -94,7 +99,7 @@ class ProcessNode(Sealable, Node):
         return builder
 
     @property
-    def process_class(self):
+    def process_class(self) -> Type['Process']:
         """Return the process class that was used to create this node.
 
         :return: `Process` class
@@ -105,15 +110,13 @@ class ProcessNode(Sealable, Node):
         from aiida.plugins.entry_point import load_entry_point_from_string
 
         if not self.process_type:
-            raise ValueError(f'no process type for CalcJobNode<{self.pk}>: cannot recreate process class')
+            raise ValueError(f'no process type for Node<{self.pk}>: cannot recreate process class')
 
         try:
             process_class = load_entry_point_from_string(self.process_type)
         except exceptions.EntryPointError as exception:
             raise ValueError(
-                'could not load process class for entry point {} for CalcJobNode<{}>: {}'.format(
-                    self.pk, self.process_type, exception
-                )
+                f'could not load process class for entry point `{self.process_type}` for Node<{self.pk}>: {exception}'
             )
         except ValueError:
             try:
@@ -121,14 +124,14 @@ class ProcessNode(Sealable, Node):
                 module_name, class_name = self.process_type.rsplit('.', 1)
                 module = importlib.import_module(module_name)
                 process_class = getattr(module, class_name)
-            except (ValueError, ImportError):
+            except (AttributeError, ValueError, ImportError) as exception:
                 raise ValueError(
-                    f'could not load process class CalcJobNode<{self.pk}> given its `process_type`: {self.process_type}'
+                    f'could not load process class from `{self.process_type}` for Node<{self.pk}>: {exception}'
                 )
 
         return process_class
 
-    def set_process_type(self, process_type_string):
+    def set_process_type(self, process_type_string: str) -> None:
         """
         Set the process type string.
 
@@ -137,7 +140,7 @@ class ProcessNode(Sealable, Node):
         self.process_type = process_type_string
 
     @property
-    def process_label(self):
+    def process_label(self) -> Optional[str]:
         """
         Return the process label
 
@@ -145,7 +148,7 @@ class ProcessNode(Sealable, Node):
         """
         return self.get_attribute(self.PROCESS_LABEL_KEY, None)
 
-    def set_process_label(self, label):
+    def set_process_label(self, label: str) -> None:
         """
         Set the process label
 
@@ -154,7 +157,7 @@ class ProcessNode(Sealable, Node):
         self.set_attribute(self.PROCESS_LABEL_KEY, label)
 
     @property
-    def process_state(self):
+    def process_state(self) -> Optional[ProcessState]:
         """
         Return the process state
 
@@ -167,7 +170,7 @@ class ProcessNode(Sealable, Node):
 
         return ProcessState(state)
 
-    def set_process_state(self, state):
+    def set_process_state(self, state: Union[str, ProcessState]):
         """
         Set the process state
 
@@ -178,7 +181,7 @@ class ProcessNode(Sealable, Node):
         return self.set_attribute(self.PROCESS_STATE_KEY, state)
 
     @property
-    def process_status(self):
+    def process_status(self) -> Optional[str]:
         """
         Return the process status
 
@@ -188,7 +191,7 @@ class ProcessNode(Sealable, Node):
         """
         return self.get_attribute(self.PROCESS_STATUS_KEY, None)
 
-    def set_process_status(self, status):
+    def set_process_status(self, status: Optional[str]) -> None:
         """
         Set the process status
 
@@ -210,7 +213,7 @@ class ProcessNode(Sealable, Node):
         return self.set_attribute(self.PROCESS_STATUS_KEY, status)
 
     @property
-    def is_terminated(self):
+    def is_terminated(self) -> bool:
         """
         Return whether the process has terminated
 
@@ -222,7 +225,7 @@ class ProcessNode(Sealable, Node):
         return self.is_excepted or self.is_finished or self.is_killed
 
     @property
-    def is_excepted(self):
+    def is_excepted(self) -> bool:
         """
         Return whether the process has excepted
 
@@ -234,7 +237,7 @@ class ProcessNode(Sealable, Node):
         return self.process_state == ProcessState.EXCEPTED
 
     @property
-    def is_killed(self):
+    def is_killed(self) -> bool:
         """
         Return whether the process was killed
 
@@ -246,7 +249,7 @@ class ProcessNode(Sealable, Node):
         return self.process_state == ProcessState.KILLED
 
     @property
-    def is_finished(self):
+    def is_finished(self) -> bool:
         """
         Return whether the process has finished
 
@@ -259,7 +262,7 @@ class ProcessNode(Sealable, Node):
         return self.process_state == ProcessState.FINISHED
 
     @property
-    def is_finished_ok(self):
+    def is_finished_ok(self) -> bool:
         """
         Return whether the process has finished successfully
 
@@ -271,7 +274,7 @@ class ProcessNode(Sealable, Node):
         return self.is_finished and self.exit_status == 0
 
     @property
-    def is_failed(self):
+    def is_failed(self) -> bool:
         """
         Return whether the process has failed
 
@@ -283,7 +286,7 @@ class ProcessNode(Sealable, Node):
         return self.is_finished and self.exit_status != 0
 
     @property
-    def exit_status(self):
+    def exit_status(self) -> Optional[int]:
         """
         Return the exit status of the process
 
@@ -291,7 +294,7 @@ class ProcessNode(Sealable, Node):
         """
         return self.get_attribute(self.EXIT_STATUS_KEY, None)
 
-    def set_exit_status(self, status):
+    def set_exit_status(self, status: Union[None, enum.Enum, int]) -> None:
         """
         Set the exit status of the process
 
@@ -309,7 +312,7 @@ class ProcessNode(Sealable, Node):
         return self.set_attribute(self.EXIT_STATUS_KEY, status)
 
     @property
-    def exit_message(self):
+    def exit_message(self) -> Optional[str]:
         """
         Return the exit message of the process
 
@@ -317,7 +320,7 @@ class ProcessNode(Sealable, Node):
         """
         return self.get_attribute(self.EXIT_MESSAGE_KEY, None)
 
-    def set_exit_message(self, message):
+    def set_exit_message(self, message: Optional[str]) -> None:
         """
         Set the exit message of the process, if None nothing will be done
 
@@ -332,7 +335,7 @@ class ProcessNode(Sealable, Node):
         return self.set_attribute(self.EXIT_MESSAGE_KEY, message)
 
     @property
-    def exception(self):
+    def exception(self) -> Optional[str]:
         """
         Return the exception of the process or None if the process is not excepted.
 
@@ -345,7 +348,7 @@ class ProcessNode(Sealable, Node):
 
         return None
 
-    def set_exception(self, exception):
+    def set_exception(self, exception: str) -> None:
         """
         Set the exception of the process
 
@@ -357,7 +360,7 @@ class ProcessNode(Sealable, Node):
         return self.set_attribute(self.EXCEPTION_KEY, exception)
 
     @property
-    def checkpoint(self):
+    def checkpoint(self) -> Optional[Dict[str, Any]]:
         """
         Return the checkpoint bundle set for the process
 
@@ -365,7 +368,7 @@ class ProcessNode(Sealable, Node):
         """
         return self.get_attribute(self.CHECKPOINT_KEY, None)
 
-    def set_checkpoint(self, checkpoint):
+    def set_checkpoint(self, checkpoint: Dict[str, Any]) -> None:
         """
         Set the checkpoint bundle set for the process
 
@@ -373,7 +376,7 @@ class ProcessNode(Sealable, Node):
         """
         return self.set_attribute(self.CHECKPOINT_KEY, checkpoint)
 
-    def delete_checkpoint(self):
+    def delete_checkpoint(self) -> None:
         """
         Delete the checkpoint bundle set for the process
         """
@@ -383,7 +386,7 @@ class ProcessNode(Sealable, Node):
             pass
 
     @property
-    def paused(self):
+    def paused(self) -> bool:
         """
         Return whether the process is paused
 
@@ -391,7 +394,7 @@ class ProcessNode(Sealable, Node):
         """
         return self.get_attribute(self.PROCESS_PAUSED_KEY, False)
 
-    def pause(self):
+    def pause(self) -> None:
         """
         Mark the process as paused by setting the corresponding attribute.
 
@@ -400,7 +403,7 @@ class ProcessNode(Sealable, Node):
         """
         return self.set_attribute(self.PROCESS_PAUSED_KEY, True)
 
-    def unpause(self):
+    def unpause(self) -> None:
         """
         Mark the process as unpaused by removing the corresponding attribute.
 
@@ -413,7 +416,7 @@ class ProcessNode(Sealable, Node):
             pass
 
     @property
-    def called(self):
+    def called(self) -> List['ProcessNode']:
         """
         Return a list of nodes that the process called
 
@@ -422,7 +425,7 @@ class ProcessNode(Sealable, Node):
         return self.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all_nodes()
 
     @property
-    def called_descendants(self):
+    def called_descendants(self) -> List['ProcessNode']:
         """
         Return a list of all nodes that have been called downstream of this process
 
@@ -437,7 +440,7 @@ class ProcessNode(Sealable, Node):
         return descendants
 
     @property
-    def caller(self):
+    def caller(self) -> Optional['ProcessNode']:
         """
         Return the process node that called this process node, or None if it does not have a caller
 
@@ -450,7 +453,7 @@ class ProcessNode(Sealable, Node):
         else:
             return caller
 
-    def validate_incoming(self, source, link_type, link_label):
+    def validate_incoming(self, source: Node, link_type: LinkType, link_label: str) -> None:
         """Validate adding a link of the given type from a given node to ourself.
 
         Adding an input link to a `ProcessNode` once it is stored is illegal because this should be taken care of
@@ -468,7 +471,7 @@ class ProcessNode(Sealable, Node):
             raise ValueError('attempted to add an input link after the process node was already stored.')
 
     @property
-    def is_valid_cache(self):
+    def is_valid_cache(self) -> bool:
         """
         Return whether the node is valid for caching
 
@@ -476,13 +479,14 @@ class ProcessNode(Sealable, Node):
         """
         if not (super().is_valid_cache and self.is_finished):
             return False
+
         try:
             process_class = self.process_class
         except ValueError as exc:
             self.logger.warning(f"Not considering {self} for caching, '{exc!r}' when accessing its process class.")
             return False
-        # For process functions, the `process_class` does not have an
-        # is_valid_cache attribute
+
+        # For process functions, the `process_class` does not have an is_valid_cache attribute
         try:
             is_valid_cache_func = process_class.is_valid_cache
         except AttributeError:
@@ -490,7 +494,15 @@ class ProcessNode(Sealable, Node):
 
         return is_valid_cache_func(self)
 
-    def _get_objects_to_hash(self):
+    @is_valid_cache.setter
+    def is_valid_cache(self, valid: bool) -> None:
+        """Set whether this node instance is considered valid for caching or not.
+
+        :param valid: whether the node is valid or invalid for use in caching.
+        """
+        super().is_valid_cache = valid  # type: ignore[misc]
+
+    def _get_objects_to_hash(self) -> List[Any]:
         """
         Return a list of objects which should be included in the hash.
         """

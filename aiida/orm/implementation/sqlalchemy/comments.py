@@ -11,17 +11,14 @@
 # pylint: disable=import-error,no-name-in-module
 
 from datetime import datetime
+
 from sqlalchemy.orm.exc import NoResultFound
 
-from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models import comment as models
-from aiida.common import exceptions
-from aiida.common import lang
+from aiida.common import exceptions, lang
 
+from . import entities, users, utils
 from ..comments import BackendComment, BackendCommentCollection
-from . import entities
-from . import users
-from . import utils
 
 
 class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
@@ -69,6 +66,10 @@ class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
         super().store()
 
     @property
+    def uuid(self) -> str:
+        return str(self._dbmodel.uuid)
+
+    @property
     def ctime(self):
         return self._dbmodel.ctime
 
@@ -112,7 +113,7 @@ class SqlaCommentCollection(BackendCommentCollection):
         :param content: the comment content
         :return: a Comment object associated to the given node and user
         """
-        return SqlaComment(self.backend, node, user, content, **kwargs)
+        return SqlaComment(self.backend, node, user, content, **kwargs)  # pylint: disable=abstract-class-instantiated
 
     def delete(self, comment_id):
         """
@@ -127,7 +128,7 @@ class SqlaCommentCollection(BackendCommentCollection):
         if not isinstance(comment_id, int):
             raise TypeError('comment_id must be an int')
 
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             session.query(models.DbComment).filter_by(id=comment_id).one().delete()
@@ -142,7 +143,7 @@ class SqlaCommentCollection(BackendCommentCollection):
 
         :raises `~aiida.common.exceptions.IntegrityError`: if all Comments could not be deleted
         """
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             session.query(models.DbComment).delete()
@@ -173,7 +174,7 @@ class SqlaCommentCollection(BackendCommentCollection):
             raise exceptions.ValidationError('filters must not be empty')
 
         # Apply filter and delete found entities
-        builder = QueryBuilder().append(Comment, filters=filters, project='id')
+        builder = QueryBuilder(backend=self.backend).append(Comment, filters=filters, project='id')
         entities_to_delete = builder.all(flat=True)
         for entity in entities_to_delete:
             self.delete(entity)

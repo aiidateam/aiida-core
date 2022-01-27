@@ -8,17 +8,17 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Classes and methods for Django specific backend entities"""
-
-import typing
+from typing import Generic, Set, TypeVar
 
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.common.lang import type_check
+
 from . import utils
 
-ModelType = typing.TypeVar('ModelType')  # pylint: disable=invalid-name
+ModelType = TypeVar('ModelType')  # pylint: disable=invalid-name
 
 
-class SqlaModelEntity(typing.Generic[ModelType]):
+class SqlaModelEntity(Generic[ModelType]):
     """A mixin that adds some common SQLA backend entity methods"""
 
     MODEL_CLASS = None
@@ -68,11 +68,6 @@ class SqlaModelEntity(typing.Generic[ModelType]):
 
     @property
     def dbmodel(self):
-        """
-        Get the underlying database model instance
-
-        :return: the database model instance
-        """
         return self._dbmodel._model  # pylint: disable=protected-access
 
     @property
@@ -101,3 +96,7 @@ class SqlaModelEntity(typing.Generic[ModelType]):
         """
         self._dbmodel.save()
         return self
+
+    def _flush_if_stored(self, fields: Set[str]) -> None:
+        if self._dbmodel.is_saved():
+            self._dbmodel._flush(fields)  # pylint: disable=protected-access

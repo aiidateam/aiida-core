@@ -42,7 +42,7 @@ def restapi_server():
 
 @pytest.fixture
 def server_url():
-    from aiida.restapi.common.config import CLI_DEFAULTS, API_CONFIG
+    from aiida.restapi.common.config import API_CONFIG, CLI_DEFAULTS
 
     return f"http://{CLI_DEFAULTS['HOST_NAME']}:{CLI_DEFAULTS['PORT']}{API_CONFIG['PREFIX']}"
 
@@ -54,4 +54,33 @@ def restrict_sqlalchemy_queuepool(aiida_profile):
 
     backend_manager = get_manager().get_backend_manager()
     backend_manager.reset_backend_environment()
-    backend_manager.load_backend_environment(aiida_profile, pool_timeout=1, max_overflow=0)
+    actual_profile = aiida_profile._manager._profile  # pylint: disable=protected-access
+    backend_manager.load_backend_environment(actual_profile, pool_timeout=1, max_overflow=0)
+
+
+@pytest.fixture
+def populate_restapi_database(clear_database_before_test):
+    """Populates the database with a considerable set of nodes to test the restAPI"""
+    # pylint: disable=unused-argument
+    from aiida import orm
+
+    struct_forcif = orm.StructureData().store()
+    orm.StructureData().store()
+    orm.StructureData().store()
+
+    orm.Dict().store()
+    orm.Dict().store()
+
+    orm.CifData(ase=struct_forcif.get_ase()).store()
+
+    orm.KpointsData().store()
+
+    orm.FolderData().store()
+
+    orm.CalcFunctionNode().store()
+    orm.CalcJobNode().store()
+    orm.CalcJobNode().store()
+
+    orm.WorkFunctionNode().store()
+    orm.WorkFunctionNode().store()
+    orm.WorkChainNode().store()

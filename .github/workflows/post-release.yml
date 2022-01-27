@@ -1,0 +1,53 @@
+name: post-release
+
+on:
+  release:
+    types: [published, edited]
+
+jobs:
+
+  upload-transifex:
+    # Every time when a new version is released,
+    # upload the latest pot files to transifex services for team transilation.
+    # https://www.transifex.com/aiidateam/aiida-core/dashboard/
+
+    # Only run this job on the main repository and not on forks
+    if: github.repository == 'aiidateam/aiida-core'
+
+    name: Upload pot files to transifex
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # Build doc to pot files and register them to `.tx/config` file
+    # Installation steps are modeled after the docs job in `ci.yml`
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+
+    - name: Install python dependencies
+      run: |
+        pip install --upgrade pip
+        pip install transifex-client sphinx-intl
+        pip install -e .[docs,tests,rest,atomic_tools]
+
+    - name: Build pot files
+      env:
+        READTHEDOCS: 'True'
+        RUN_APIDOC: 'False'
+      run:
+        sphinx-build -b gettext docs/source locale
+
+    - name: Setting transifex configuration and upload pot files
+      env:
+        PROJECT_NAME: aiida-core
+        USER: ${{ secrets.TRANSIFEX_USER }}
+        PASSWD: ${{ secrets.TRANSIFEX_PASSWORD }}
+      run: |
+        tx init --no-interactive
+        sphinx-intl update-txconfig-resources --pot-dir locale --transifex-project-name ${PROJECT_NAME}
+        echo $'[https://www.transifex.com]\nhostname = https://www.transifex.com\nusername = '"${USER}"$'\npassword = '"${PASSWD}"$'\n' > ~/.transifexrc
+        tx push -s

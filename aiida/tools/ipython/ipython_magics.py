@@ -34,10 +34,8 @@ Usage
    In [2]: %aiida
 """
 
-from IPython import version_info  # pylint: disable=no-name-in-module
-from IPython.core import magic  # pylint: disable=no-name-in-module,import-error
-
-from aiida.common import json
+from IPython import get_ipython, version_info
+from IPython.core import magic
 
 
 def add_to_ns(local_ns, name, obj):
@@ -77,8 +75,8 @@ class AiiDALoaderMagics(magic.Magics):
         .. todo:: implement parameters, e.g. for the profile to load.
         """
         # pylint: disable=unused-argument,attribute-defined-outside-init
-        from aiida.manage.configuration import load_profile
         from aiida.cmdline.utils.shell import get_start_namespace
+        from aiida.manage.configuration import load_profile
 
         self.is_warning = False
         lcontent = line.strip()
@@ -99,6 +97,8 @@ class AiiDALoaderMagics(magic.Magics):
         """
         Output in JSON format.
         """
+        from aiida.common import json
+
         obj = {'current_state': self.current_state}
         if version_info[0] >= 3:
             return obj
@@ -130,11 +130,10 @@ class AiiDALoaderMagics(magic.Magics):
 
         return latex
 
-    def _repr_pretty_(self, pretty_print, cycle):
+    def _repr_pretty_(self, pretty_print, cycle):  # pylint: disable=unused-argument
         """
         Output in text format.
         """
-        # pylint: disable=unused-argument
         if self.is_warning:
             warning_str = '** '
         else:
@@ -146,6 +145,24 @@ class AiiDALoaderMagics(magic.Magics):
 
 def load_ipython_extension(ipython):
     """
-    Triggers the load of all the AiiDA magic commands.
+    Registers the %aiida IPython extension.
+
+    .. deprecated:: v3.0.0
+        Use :py:func:`~aiida.tools.ipython.ipython_magics.register_ipython_extension` instead.
     """
+    register_ipython_extension(ipython)
+
+
+def register_ipython_extension(ipython=None):
+    """
+    Registers the %aiida IPython extension.
+
+    The %aiida IPython extension provides the same environment as the `verdi shell`.
+
+    :param ipython: InteractiveShell instance. If omitted, the global InteractiveShell is used.
+
+    """
+    if ipython is None:
+        ipython = get_ipython()
+
     ipython.register_magics(AiiDALoaderMagics)

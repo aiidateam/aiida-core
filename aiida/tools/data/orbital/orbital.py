@@ -17,6 +17,8 @@ For subclasses of Orbital, see submodules.
 from aiida.common.exceptions import ValidationError
 from aiida.plugins.entry_point import get_entry_point_from_class
 
+__all__ = ('Orbital',)
+
 
 def validate_int(value):
     """
@@ -111,6 +113,12 @@ class Orbital:
 
     def __repr__(self):
         return f'<{self.__class__.__name__}: {str(self)}>'
+
+    def __str__(self) -> str:
+        orb_dict = self.get_orbital_dict()
+
+        position_string = f"{orb_dict['position'][0]:.4f},{orb_dict['position'][1]:.4f},{orb_dict['position'][2]:.4f}"
+        return f'Orbital @ {position_string}'
 
     def _validate_keys(self, input_dict):
         """

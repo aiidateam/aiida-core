@@ -1,4 +1,4 @@
-name: continuous-integration
+name: continuous-integration-code
 
 on:
   push:
@@ -20,10 +20,10 @@ jobs:
     - name: Set up Python 3.8
       uses: actions/setup-python@v2
       with:
-        python-version: 3.8
+        python-version: '3.8'
 
-    - name: Install dm-script dependencies
-      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 tomlkit
+    - name: Install utils/ dependencies
+      run: pip install -r utils/requirements.txt
 
     - name: Check requirements files
       id: check_reqs
@@ -33,7 +33,7 @@ jobs:
       if: failure() && steps.check_reqs.outputs.error
       uses: peter-evans/commit-comment@v1
       with:
-        path: setup.json
+        path: pyproject.toml
         body: |
           ${{ steps.check_reqs.outputs.error }}
 
@@ -49,8 +49,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        python-version: ['3.8', '3.10']
         backend: ['django', 'sqlalchemy']
-        python-version: [3.6, 3.8]
 
     services:
       postgres:
@@ -70,6 +70,10 @@ jobs:
         image: rabbitmq:latest
         ports:
           - 5672:5672
+      slurm:
+        image: xenonmiddleware/slurm:17
+        ports:
+          - 5001:22
 
     steps:
     - uses: actions/checkout@v2
@@ -81,20 +85,34 @@ jobs:
 
     - name: Install system dependencies
       run: |
-        sudo rm -f /etc/apt/sources.list.d/dotnetdev.list /etc/apt/sources.list.d/microsoft-prod.list
         sudo apt update
-        sudo apt install postgresql-10 graphviz
+        sudo apt install postgresql graphviz
 
-    - name: Upgrade pip
+    - name: Upgrade pip and setuptools
       run: |
         pip install --upgrade pip
         pip --version
+
+    - name: Build pymatgen with compatible numpy
+      run: |
+        # This step is necessary because certain versions of `pymatgen` will not specify an explicit version of
+        # `numpy` in its build requirements, and so the latest version will be used. This causes problems,
+        # however, because this means that the compiled version of `pymatgen` can only be used with that version
+        # of `numpy` or higher, since `numpy` only guarantees forward compatibility of the ABI. If we want to
+        # run with an older version of `numpy`, we need to ensure that `pymatgen` is built with that same
+        # version. This we can accomplish by installing the desired version of `numpy` manually and then calling
+        # the install command for `pymatgen` with the `--no-build-isolation` flag. This flag will ensure that
+        # build dependencies are ignored and won't be installed (preventing the most recent version of `numpy`
+        # to be installed) and the build relies on those requirements already being present in the environment.
+        # We also need to install `wheel` because otherwise the `pymatgen` build will fail because `bdist_wheel`
+        # will not be available.
+        pip install numpy==1.21.4 wheel
+        pip install pymatgen==2022.0.16 --no-cache-dir --no-build-isolation
 
     - name: Install aiida-core
       run: |
         pip install --use-feature=2020-resolver -r requirements/requirements-py-${{ matrix.python-version }}.txt
         pip install --use-feature=2020-resolver --no-deps -e .
-        reentry scan
         pip freeze
 
     - name: Setup environment
@@ -106,14 +124,15 @@ jobs:
     - name: Run test suite
       env:
         AIIDA_TEST_BACKEND: ${{ matrix.backend }}
+        SQLALCHEMY_WARN_20: 1
       run:
         .github/workflows/tests.sh
 
     - name: Upload coverage report
-      if: matrix.python-version == 3.6 && github.repository == 'aiidateam/aiida-core'
+      if: matrix.python-version == 3.8 && github.repository == 'aiidateam/aiida-core'
       uses: codecov/codecov-action@v1
       with:
-        name: aiida-pytests-py3.6-${{ matrix.backend }}
+        name: aiida-pytests-py3.8-${{ matrix.backend }}
         flags: ${{ matrix.backend }}
         file: ./coverage.xml
         fail_ci_if_error: false  # don't fail job, if coverage upload fails
@@ -121,15 +140,20 @@ jobs:
   verdi:
 
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.8', '3.10']
 
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Python 3.8
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
-        python-version: 3.8
+        python-version: ${{ matrix.python-version }}
 
     - name: Install python dependencies
       run: pip install -e .
@@ -138,32 +162,3 @@ jobs:
       run: |
         verdi devel check-load-time
         .github/workflows/verdi.sh
-
-  docker:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Install docker
-      run: |
-        sudo apt-get update
-        sudo apt-get install apt-transport-https ca-certificates curl software-properties-common
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-        sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu  $(lsb_release -cs)  stable"
-        sudo apt-get update
-        sudo apt-get install docker-ce
-
-    - name: Build the aiida-core image
-      run:
-        docker build -t aiida-core .
-
-    - name: Run aiida-core image and test the default aiida profile and localhost computer.
-      run: |
-        export DOCKERID=`docker run -d aiida-core`
-        docker exec --tty $DOCKERID wait-for-services
-        docker logs $DOCKERID
-        docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi profile show default'
-        docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi computer show localhost'
-        docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi daemon status'

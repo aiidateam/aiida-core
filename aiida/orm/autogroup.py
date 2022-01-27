@@ -9,11 +9,9 @@
 ###########################################################################
 """Module to manage the autogrouping functionality by ``verdi run``."""
 import re
-import warnings
 
 from aiida.common import exceptions, timezone
 from aiida.common.escaping import escape_for_sql_like, get_regex_pattern_from_sql
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm import AutoGroup
 from aiida.plugins.entry_point import get_entry_point_string_from_class
 
@@ -28,8 +26,8 @@ class Autogroup:
     `AutoGroup` instance.
 
     The exclude/include lists are lists of strings like:
-    ``aiida.data:int``, ``aiida.calculation:quantumespresso.pw``,
-    ``aiida.data:array.%``, ...
+    ``aiida.data:core.int``, ``aiida.calculation:quantumespresso.pw``,
+    ``aiida.data:core.array.%``, ...
     i.e.: a string identifying the base class, followed a colona and by the path to the class
     as accepted by CalculationFactory/DataFactory.
     Each string can contain one or more wildcard characters ``%``;
@@ -85,16 +83,6 @@ class Autogroup:
         If no group label prefix was set, it will set a default one by itself."""
         return self._group_label_prefix
 
-    def get_group_name(self):
-        """Get the label of the group.
-        If no group label was set, it will set a default one by itself.
-
-        .. deprecated:: 1.2.0
-            Will be removed in `v2.0.0`, use :py:meth:`.get_group_label_prefix` instead.
-        """
-        warnings.warn('function is deprecated, use `get_group_label_prefix` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        return self.get_group_label_prefix()
-
     def set_exclude(self, exclude):
         """Set the list of classes to exclude in the autogrouping.
 
@@ -132,15 +120,6 @@ class Autogroup:
         if not isinstance(label_prefix, str):
             raise exceptions.ValidationError('group label must be a string')
         self._group_label_prefix = label_prefix
-
-    def set_group_name(self, gname):
-        """Set the name of the group.
-
-        .. deprecated:: 1.2.0
-            Will be removed in `v2.0.0`, use :py:meth:`.set_group_label_prefix` instead.
-        """
-        warnings.warn('function is deprecated, use `set_group_label_prefix` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        return self.set_group_label_prefix(label_prefix=gname)
 
     @staticmethod
     def _matches(string, filter_string):

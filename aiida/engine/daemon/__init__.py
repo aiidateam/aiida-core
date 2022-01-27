@@ -7,3 +7,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Module with resources for the daemon."""
+
+# AUTO-GENERATED
+
+# yapf: disable
+# pylint: disable=wildcard-import
+
+from .client import *
+
+__all__ = (
+    'DaemonClient',
+)
+
+# yapf: enable

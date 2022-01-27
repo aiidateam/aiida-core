@@ -13,9 +13,8 @@ from aiida.backends.djsite.db.models import DbAuthInfo
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 
+from . import entities, utils
 from ..authinfos import BackendAuthInfo, BackendAuthInfoCollection
-from . import entities
-from . import utils
 
 
 class DjangoAuthInfo(entities.DjangoModelEntity[DbAuthInfo], BackendAuthInfo):
@@ -30,8 +29,7 @@ class DjangoAuthInfo(entities.DjangoModelEntity[DbAuthInfo], BackendAuthInfo):
         :param user: a :class:`aiida.orm.implementation.users.BackendUser` instance
         :return: an :class:`aiida.orm.implementation.authinfos.BackendAuthInfo` instance
         """
-        from . import computers
-        from . import users
+        from . import computers, users
         super().__init__(backend)
         type_check(user, users.DjangoUser)
         type_check(computer, computers.DjangoComputer)
@@ -135,26 +133,3 @@ class DjangoAuthInfoCollection(BackendAuthInfoCollection):
             DbAuthInfo.objects.get(pk=pk).delete()
         except ObjectDoesNotExist:
             raise exceptions.NotExistent(f'AuthInfo<{pk}> does not exist')
-
-    def get(self, computer, user):
-        """Return an entry from the collection that is configured for the given computer and user
-
-        :param computer: a :class:`aiida.orm.implementation.computers.BackendComputer` instance
-        :param user: a :class:`aiida.orm.implementation.users.BackendUser` instance
-        :return: :class:`aiida.orm.implementation.authinfos.BackendAuthInfo`
-        :raise aiida.common.exceptions.NotExistent: if no entry exists for the computer/user pair
-        :raise aiida.common.exceptions.MultipleObjectsError: if multiple entries exist for the computer/user pair
-        """
-        # pylint: disable=import-error,no-name-in-module
-        from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-
-        try:
-            authinfo = DbAuthInfo.objects.get(dbcomputer=computer.id, aiidauser=user.id)
-        except ObjectDoesNotExist:
-            raise exceptions.NotExistent(f'User<{user.email}> has no configuration for Computer<{computer.name}>')
-        except MultipleObjectsReturned:
-            raise exceptions.MultipleObjectsError(
-                f'User<{user.email}> has multiple configurations for Computer<{computer.name}>'
-            )
-        else:
-            return self.from_dbmodel(authinfo)

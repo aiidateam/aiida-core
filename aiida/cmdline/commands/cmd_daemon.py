@@ -11,8 +11,8 @@
 
 import os
 import subprocess
-import time
 import sys
+import time
 
 import click
 from click_spinner import spinner
@@ -20,8 +20,12 @@ from click_spinner import spinner
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.utils.common import get_env_with_venv_bin
-from aiida.cmdline.utils.daemon import get_daemon_status, \
-    print_client_response_status, delete_stale_pid_file, _START_CIRCUS_COMMAND
+from aiida.cmdline.utils.daemon import (
+    _START_CIRCUS_COMMAND,
+    delete_stale_pid_file,
+    get_daemon_status,
+    print_client_response_status,
+)
 from aiida.manage.configuration import get_config
 
 
@@ -54,12 +58,14 @@ def start(foreground, number):
 
     If the NUMBER of desired workers is not specified, the default is used, which is determined by the configuration
     option `daemon.default_workers`, which if not explicitly changed defaults to 1.
+
+    Returns exit code 0 if the daemon is OK, non-zero if there was an error.
     """
     from aiida.engine.daemon.client import get_daemon_client
 
     client = get_daemon_client()
 
-    echo.echo('Starting the daemon... ', nl=False)
+    echo.echo(f'Starting the daemon with {number} workers... ', nl=False)
 
     if foreground:
         command = ['verdi', '-p', client.profile.name, 'daemon', _START_CIRCUS_COMMAND, '--foreground', str(number)]
@@ -70,7 +76,7 @@ def start(foreground, number):
         currenv = get_env_with_venv_bin()
         subprocess.check_output(command, env=currenv, stderr=subprocess.STDOUT)  # pylint: disable=unexpected-keyword-arg
     except subprocess.CalledProcessError as exception:
-        click.secho('FAILED', fg='red', bold=True)
+        echo.echo('FAILED', fg='red', bold=True)
         echo.echo_critical(str(exception))
 
     # We add a small timeout to give the pid-file a chance to be created
@@ -78,7 +84,9 @@ def start(foreground, number):
         time.sleep(1)
         response = client.get_status()
 
-    print_client_response_status(response)
+    retcode = print_client_response_status(response)
+    if retcode:
+        sys.exit(retcode)
 
 
 @verdi_daemon.command()
@@ -101,8 +109,8 @@ def status(all_profiles):
     for profile in profiles:
         client = get_daemon_client(profile.name)
         delete_stale_pid_file(client)
-        click.secho('Profile: ', fg='red', bold=True, nl=False)
-        click.secho(f'{profile.name}', bold=True)
+        echo.echo('Profile: ', fg='red', bold=True, nl=False)
+        echo.echo(f'{profile.name}', bold=True)
         result = get_daemon_status(client)
         echo.echo(result)
         daemons_running.append(client.is_daemon_running)
@@ -115,24 +123,34 @@ def status(all_profiles):
 @click.argument('number', default=1, type=int)
 @decorators.only_if_daemon_running()
 def incr(number):
-    """Add NUMBER [default=1] workers to the running daemon."""
+    """Add NUMBER [default=1] workers to the running daemon.
+
+    Returns exit code 0 if the daemon is OK, non-zero if there was an error.
+    """
     from aiida.engine.daemon.client import get_daemon_client
 
     client = get_daemon_client()
     response = client.increase_workers(number)
-    print_client_response_status(response)
+    retcode = print_client_response_status(response)
+    if retcode:
+        sys.exit(retcode)
 
 
 @verdi_daemon.command()
 @click.argument('number', default=1, type=int)
 @decorators.only_if_daemon_running()
 def decr(number):
-    """Remove NUMBER [default=1] workers from the running daemon."""
+    """Remove NUMBER [default=1] workers from the running daemon.
+
+    Returns exit code 0 if the daemon is OK, non-zero if there was an error.
+    """
     from aiida.engine.daemon.client import get_daemon_client
 
     client = get_daemon_client()
     response = client.decrease_workers(number)
-    print_client_response_status(response)
+    retcode = print_client_response_status(response)
+    if retcode:
+        sys.exit(retcode)
 
 
 @verdi_daemon.command()
@@ -144,7 +162,7 @@ def logshow():
 
     try:
         currenv = get_env_with_venv_bin()
-        process = subprocess.Popen(['tail', '-f', client.daemon_log_file], env=currenv)
+        process = subprocess.Popen(['tail', '-f', client.daemon_log_file], env=currenv)  # pylint: disable=consider-using-with
         process.wait()
     except KeyboardInterrupt:
         process.kill()
@@ -154,7 +172,10 @@ def logshow():
 @click.option('--no-wait', is_flag=True, help='Do not wait for confirmation.')
 @click.option('--all', 'all_profiles', is_flag=True, help='Stop all daemons.')
 def stop(no_wait, all_profiles):
-    """Stop the daemon."""
+    """Stop the daemon.
+
+    Returns exit code 0 if the daemon was shut down successfully (or was not running), non-zero if there was an error.
+    """
     from aiida.engine.daemon.client import get_daemon_client
 
     config = get_config()
@@ -168,8 +189,8 @@ def stop(no_wait, all_profiles):
 
         client = get_daemon_client(profile.name)
 
-        click.secho('Profile: ', fg='red', bold=True, nl=False)
-        click.secho(f'{profile.name}', bold=True)
+        echo.echo('Profile: ', fg='red', bold=True, nl=False)
+        echo.echo(f'{profile.name}', bold=True)
 
         if not client.is_daemon_running:
             echo.echo('Daemon was not running')
@@ -188,9 +209,11 @@ def stop(no_wait, all_profiles):
 
         if wait:
             if response['status'] == client.DAEMON_ERROR_NOT_RUNNING:
-                click.echo('The daemon was not running.')
+                echo.echo('The daemon was not running.')
             else:
-                print_client_response_status(response)
+                retcode = print_client_response_status(response)
+                if retcode:
+                    sys.exit(retcode)
 
 
 @verdi_daemon.command()
@@ -205,6 +228,8 @@ def restart(ctx, reset, no_wait):
     By default will only reset the workers of the running daemon. After the restart the same amount of workers will be
     running. If the `--reset` flag is passed, however, the full daemon will be stopped and restarted with the default
     number of workers that is started when calling `verdi daemon start` manually.
+
+    Returns exit code 0 if the result is OK, non-zero if there was an error.
     """
     from aiida.engine.daemon.client import get_daemon_client
 
@@ -230,7 +255,9 @@ def restart(ctx, reset, no_wait):
         response = client.restart_daemon(wait)
 
         if wait:
-            print_client_response_status(response)
+            retcode = print_client_response_status(response)
+            if retcode:
+                sys.exit(retcode)
 
 
 @verdi_daemon.command(hidden=True)

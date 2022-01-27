@@ -7,24 +7,19 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=import-error,no-name-in-module
 """Utilities and configuration of the SqlAlchemy database schema."""
-
-import os
 import contextlib
+import os
 
-from alembic import command
-from alembic.config import Config
-from alembic.runtime.environment import EnvironmentContext
-from alembic.script import ScriptDirectory
-
+from alembic.command import downgrade, upgrade
+import sqlalchemy
 from sqlalchemy.orm.exc import NoResultFound
 
 from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.common import NotExistent
-from ..manager import BackendManager, SettingsManager, Setting
 
-ALEMBIC_FILENAME = 'alembic.ini'
+from ..manager import SCHEMA_GENERATION_VALUE, BackendManager, Setting, SettingsManager
+
 ALEMBIC_REL_PATH = 'migrations'
 
 # The database schema version required to perform schema reset for a given code schema generation
@@ -36,19 +31,55 @@ class SqlaBackendManager(BackendManager):
 
     @staticmethod
     @contextlib.contextmanager
-    def alembic_config():
-        """Context manager to return an instance of an Alembic configuration with the current connection inserted.
+    def alembic_config(start_transaction=True):
+        """Context manager to return an instance of an Alembic configuration.
 
-        :return: instance of :py:class:`alembic.config.Config`
+        The current database connection is added in the `attributes` property, through which it can then also be
+        retrieved, also in the `env.py` file, which is run when the database is migrated.
         """
+        from alembic.config import Config
+
         from . import ENGINE
 
-        with ENGINE.begin() as connection:
+        # Certain migrations, such as altering tables, require that there is no existing transactions
+        # locking the tables.
+        # Presently, ``SqlaSettingsManager.get`` has been found to leave idle transactions,
+        # and so we need to ensure that they are closed.
+        transaction = get_scoped_session().get_transaction()
+        if transaction:
+            transaction.close()
+
+        engine_context = ENGINE.begin if start_transaction else ENGINE.connect
+        with engine_context() as connection:
             dir_path = os.path.dirname(os.path.realpath(__file__))
-            config = Config(os.path.join(dir_path, ALEMBIC_FILENAME))
+            config = Config()
             config.set_main_option('script_location', os.path.join(dir_path, ALEMBIC_REL_PATH))
             config.attributes['connection'] = connection  # pylint: disable=unsupported-assignment-operation
             yield config
+
+    @contextlib.contextmanager
+    def alembic_script(self):
+        """Context manager to return an instance of an Alembic `ScriptDirectory`."""
+        from alembic.script import ScriptDirectory
+
+        with self.alembic_config() as config:
+            yield ScriptDirectory.from_config(config)
+
+    @contextlib.contextmanager
+    def migration_context(self):
+        """Context manager to return an instance of an Alembic migration context.
+
+        This migration context will have been configured with the current database connection, which allows this context
+        to be used to inspect the contents of the database, such as the current revision.
+        """
+        from alembic.runtime.environment import EnvironmentContext
+        from alembic.script import ScriptDirectory
+
+        with self.alembic_config() as config:
+            script = ScriptDirectory.from_config(config)
+            with EnvironmentContext(config, script) as context:
+                context.configure(context.config.attributes['connection'])
+                yield context.get_context()
 
     def get_settings_manager(self):
         """Return an instance of the `SettingsManager`.
@@ -73,6 +104,14 @@ class SqlaBackendManager(BackendManager):
         from . import reset_session
         reset_session()
 
+    def list_schema_versions(self):
+        """List all available schema versions (oldest to latest).
+
+        :return: list of strings with schema versions
+        """
+        with self.alembic_script() as script:
+            return list(reversed([entry.revision for entry in script.walk_revisions()]))
+
     def is_database_schema_ahead(self):
         """Determine whether the database schema version is ahead of the code schema version.
 
@@ -80,29 +119,12 @@ class SqlaBackendManager(BackendManager):
 
         :return: boolean, True if the database schema version is ahead of the code schema version.
         """
-        from alembic.util import CommandError
+        with self.alembic_script() as script:
+            return self.get_schema_version_backend() not in [entry.revision for entry in script.walk_revisions()]
 
-        # In the case of SqlAlchemy, if the database revision is ahead of the code, that means the revision stored in
-        # the database is not even present in the code base. Therefore we cannot locate it in the revision graph and
-        # determine whether it is ahead of the current code head. We simply try to get the revision and if it does not
-        # exist it means it is ahead.
-        with self.alembic_config() as config:
-            try:
-                script = ScriptDirectory.from_config(config)
-                script.get_revision(self.get_schema_version_database())
-            except CommandError:
-                # Raised when the revision of the database is not present in the revision graph.
-                return True
-            else:
-                return False
-
-    def get_schema_version_code(self):
-        """Return the code schema version."""
-        with self.alembic_config() as config:
-            script = ScriptDirectory.from_config(config)
-            schema_version_code = script.get_current_head()
-
-        return schema_version_code
+    def get_schema_version_head(self):
+        with self.alembic_script() as script:
+            return script.get_current_head()
 
     def get_schema_version_reset(self, schema_generation_code):
         """Return schema version the database should have to be able to automatically reset to code schema generation.
@@ -112,43 +134,38 @@ class SqlaBackendManager(BackendManager):
         """
         return SCHEMA_VERSION_RESET[schema_generation_code]
 
-    def get_schema_version_database(self):
-        """Return the database schema version.
+    def get_schema_version_backend(self):
+        with self.migration_context() as context:
+            return context.get_current_revision()
 
-        :return: `distutils.version.StrictVersion` with schema version of the database
+    def set_schema_version_backend(self, version: str) -> None:
+        with self.migration_context() as context:
+            return context.stamp(context.script, version)
+
+    def _migrate_database_generation(self):
+        self.set_schema_generation_database(SCHEMA_GENERATION_VALUE)
+        self.set_schema_version_backend('head')
+
+    def migrate_up(self, version: str):
+        """Migrate the database up to a specific version.
+
+        :param version: string with schema version to migrate to
         """
+        with self.alembic_config(start_transaction=False) as config:
+            upgrade(config, version)
 
-        def get_database_version(revision, _):
-            """Get the current revision."""
-            if isinstance(revision, tuple) and revision:
-                config.attributes['rev'] = revision[0]  # pylint: disable=unsupported-assignment-operation
-            else:
-                config.attributes['rev'] = None  # pylint: disable=unsupported-assignment-operation
-            return []
+    def migrate_down(self, version: str):
+        """Migrate the database down to a specific version.
 
-        with self.alembic_config() as config:
-
-            script = ScriptDirectory.from_config(config)
-
-            with EnvironmentContext(config, script, fn=get_database_version):
-                script.run_env()
-                return config.attributes['rev']  # pylint: disable=unsubscriptable-object
-
-    def set_schema_version_database(self, version):
-        """Set the database schema version.
-
-        :param version: string with schema version to set
+        :param version: string with schema version to migrate to
         """
-        # pylint: disable=cyclic-import
-        from aiida.manage.manager import get_manager
-        backend = get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
-        backend.execute_raw(r"""UPDATE alembic_version SET version_num='{}';""".format(version))
+        with self.alembic_config(start_transaction=False) as config:
+            downgrade(config, version)
 
     def _migrate_database_version(self):
-        """Migrate the database to the current schema version."""
+        """Migrate the database to the latest schema version."""
         super()._migrate_database_version()
-        with self.alembic_config() as config:
-            command.upgrade(config, 'head')
+        self.migrate_up('head')
 
 
 class SqlaSettingsManager(SettingsManager):
@@ -161,8 +178,7 @@ class SqlaSettingsManager(SettingsManager):
 
         :raises: `~aiida.common.exceptions.NotExistent` if the settings table does not exist
         """
-        from sqlalchemy.engine import reflection
-        inspector = reflection.Inspector.from_engine(get_scoped_session().bind)
+        inspector = sqlalchemy.inspect(get_scoped_session().bind)
         if self.table_name not in inspector.get_table_names():
             raise NotExistent('the settings table does not exist')
 
@@ -196,7 +212,7 @@ class SqlaSettingsManager(SettingsManager):
         self.validate_table_existence()
         validate_attribute_extra_key(key)
 
-        other_attribs = dict()
+        other_attribs = {}
         if description is not None:
             other_attribs['description'] = description
 

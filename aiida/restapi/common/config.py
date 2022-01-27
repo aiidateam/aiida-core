@@ -16,7 +16,7 @@ API_CONFIG = {
     'LIMIT_DEFAULT': 400,  # default records total
     'PERPAGE_DEFAULT': 20,  # default records per page
     'PREFIX': '/api/v4',  # prefix for all URLs
-    'VERSION': '4.0.1',
+    'VERSION': '4.1.0',
 }
 
 APP_CONFIG = {
@@ -47,4 +47,5 @@ CLI_DEFAULTS = {
     'WSGI_PROFILE': False,
     'HOOKUP_APP': True,
     'CATCH_INTERNAL_SERVER': False,
+    'POSTING': True,  # Include POST endpoints (currently only /querybuilder)
 }

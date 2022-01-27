@@ -13,17 +13,16 @@
 The purpose of these tests is to benchmark and compare processes,
 which are executed *via* both a local runner and the daemon.
 """
-import datetime
+import asyncio
 
-from tornado import gen
 import pytest
 
-from aiida.engine import run_get_node, submit, ToContext, while_, WorkChain
+from aiida.engine import WorkChain, run_get_node, submit, while_
 from aiida.manage.manager import get_manager
 from aiida.orm import Code, Int
 from aiida.plugins.factories import CalculationFactory
 
-ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 
 
 class WorkchainLoop(WorkChain):
@@ -55,7 +54,7 @@ class WorkchainLoopWcSerial(WorkchainLoop):
 
     def run_task(self):
         future = self.submit(WorkchainLoop, iterations=Int(1))
-        return ToContext(**{f'wkchain{str(self.ctx.counter)}': future})
+        return self.to_context(**{f'wkchain{str(self.ctx.counter)}': future})
 
 
 class WorkchainLoopWcThreaded(WorkchainLoop):
@@ -71,7 +70,7 @@ class WorkchainLoopWcThreaded(WorkchainLoop):
             f'wkchain{str(i)}': self.submit(WorkchainLoop, iterations=Int(1))
             for i in range(self.inputs.iterations.value)
         }
-        return ToContext(**context)
+        return self.to_context(**context)
 
 
 class WorkchainLoopCalcSerial(WorkchainLoop):
@@ -84,7 +83,7 @@ class WorkchainLoopCalcSerial(WorkchainLoop):
             'code': self.inputs.code,
         }
         future = self.submit(ArithmeticAddCalculation, **inputs)
-        return ToContext(addition=future)
+        return self.to_context(addition=future)
 
 
 class WorkchainLoopCalcThreaded(WorkchainLoop):
@@ -103,7 +102,7 @@ class WorkchainLoopCalcThreaded(WorkchainLoop):
                 'code': self.inputs.code,
             }
             futures[f'addition{str(i)}'] = self.submit(ArithmeticAddCalculation, **inputs)
-        return ToContext(**futures)
+        return self.to_context(**futures)
 
 
 WORKCHAINS = {
@@ -120,7 +119,7 @@ WORKCHAINS = {
 @pytest.mark.benchmark(group='engine')
 def test_workchain_local(benchmark, aiida_localhost, workchain, iterations, outgoing):
     """Benchmark Workchains, executed in the local runner."""
-    code = Code(input_plugin_name='arithmetic.add', remote_computer_exec=[aiida_localhost, '/bin/true'])
+    code = Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[aiida_localhost, '/bin/true'])
 
     def _run():
         return run_get_node(workchain, iterations=Int(iterations), code=code)
@@ -131,17 +130,15 @@ def test_workchain_local(benchmark, aiida_localhost, workchain, iterations, outg
     assert len(result.node.get_outgoing().all()) == outgoing
 
 
-@gen.coroutine
-def with_timeout(what, timeout=60):
-    """Coroutine return with timeout."""
-    raise gen.Return((yield gen.with_timeout(datetime.timedelta(seconds=timeout), what)))
+async def with_timeout(what, timeout=60):
+    result = await asyncio.wait_for(what, timeout)
+    return result
 
 
-@gen.coroutine
-def wait_for_process(runner, calc_node, timeout=60):
-    """Coroutine block with timeout."""
+async def wait_for_process(runner, calc_node, timeout=60):
     future = runner.get_process_future(calc_node.pk)
-    raise gen.Return((yield with_timeout(future, timeout)))
+    result = await with_timeout(future, timeout)
+    return result
 
 
 @pytest.fixture()
@@ -159,13 +156,12 @@ def submit_get_node():
 
     def _submit(_process, timeout=60, **kwargs):
 
-        @gen.coroutine
-        def _do_submit():
+        async def _do_submit():
             node = submit(_process, **kwargs)
-            yield wait_for_process(runner, node)
+            await wait_for_process(runner, node)
             return node
 
-        result = runner.loop.run_sync(_do_submit, timeout=timeout)
+        result = runner.loop.run_until_complete(_do_submit())
 
         return result
 
@@ -179,7 +175,7 @@ def submit_get_node():
 @pytest.mark.benchmark(group='engine')
 def test_workchain_daemon(benchmark, submit_get_node, aiida_localhost, workchain, iterations, outgoing):
     """Benchmark Workchains, executed in the via a daemon runner."""
-    code = Code(input_plugin_name='arithmetic.add', remote_computer_exec=[aiida_localhost, '/bin/true'])
+    code = Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[aiida_localhost, '/bin/true'])
 
     def _run():
         return submit_get_node(workchain, iterations=Int(iterations), code=code)

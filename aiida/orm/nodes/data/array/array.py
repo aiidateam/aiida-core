@@ -10,8 +10,9 @@
 """
 AiiDA ORM data class storing (numpy) arrays
 """
-
 from ..data import Data
+
+__all__ = ('ArrayData',)
 
 
 class ArrayData(Data):
@@ -148,6 +149,7 @@ class ArrayData(Data):
         """
         import re
         import tempfile
+
         import numpy
 
         if not isinstance(array, numpy.ndarray):
@@ -169,7 +171,7 @@ class ArrayData(Data):
             handle.seek(0)
 
             # Write the numpy array to the repository, keeping the byte representation
-            self.put_object_from_filelike(handle, f'{name}.npy', mode='wb', encoding=None)
+            self.put_object_from_filelike(handle, f'{name}.npy')
 
         # Store the array name and shape for querying purposes
         self.set_attribute(f'{self.array_prefix}{name}', list(array.shape))

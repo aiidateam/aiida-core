@@ -14,8 +14,9 @@
 # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
 # pylint: disable=no-name-in-module,import-error
 from django.db import migrations, models
-import aiida.common.utils
+
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
+import aiida.common.utils
 
 REVISION = '1.0.18'
 DOWN_REVISION = '1.0.17'
@@ -33,7 +34,7 @@ def _verify_uuid_uniqueness(apps, schema_editor):
     :raises: IntegrityError if database contains rows with duplicate UUIDS.
     """
     # pylint: disable=unused-argument
-    from aiida.manage.database.integrity.duplicate_uuid import verify_uuid_uniqueness
+    from aiida.backends.general.migrations.duplicate_uuids import verify_uuid_uniqueness
 
     for table in tables:
         verify_uuid_uniqueness(table=table)

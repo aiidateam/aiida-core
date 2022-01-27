@@ -9,11 +9,18 @@
 ###########################################################################
 # pylint: disable=cyclic-import
 """Module for converting backend entities into frontend, ORM, entities"""
-from collections.abc import Mapping, Iterator, Sized
+from collections.abc import Iterator, Mapping, Sized
 from functools import singledispatch
 
-from aiida.orm.implementation import BackendComputer, BackendGroup, BackendUser, BackendAuthInfo, BackendComment, \
-    BackendLog, BackendNode
+from aiida.orm.implementation import (
+    BackendAuthInfo,
+    BackendComment,
+    BackendComputer,
+    BackendGroup,
+    BackendLog,
+    BackendNode,
+    BackendUser,
+)
 
 
 @singledispatch
@@ -44,6 +51,10 @@ def _(backend_entity):
 
     Note that we do not register on `collections.abc.Sequence` because that will also match strings.
     """
+    if hasattr(backend_entity, '_asdict'):
+        # it is a NamedTuple, so return as is
+        return backend_entity
+
     converted = []
 
     # Note that we cannot use a simple comprehension because raised `TypeError` should be caught here otherwise only
@@ -96,7 +107,7 @@ def _(backend_entity):
 
 @get_orm_entity.register(BackendNode)
 def _(backend_entity):
-    from .utils.node import load_node_class
+    from .utils.node import load_node_class  # pylint: disable=import-error,no-name-in-module
     node_class = load_node_class(backend_entity.node_type)
     return node_class.from_backend_entity(backend_entity)
 

@@ -8,12 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Data class that can be used to store a single file in its repository."""
-import inspect
+import contextlib
 import os
-import warnings
+import pathlib
 
 from aiida.common import exceptions
-from aiida.common.warnings import AiidaDeprecationWarning
+
 from .data import Data
 
 __all__ = ('SinglefileData',)
@@ -34,19 +34,8 @@ class SinglefileData(Data):
         # pylint: disable=redefined-builtin
         super().__init__(**kwargs)
 
-        # 'filename' argument was added to 'set_file' after 1.0.0.
-        if 'filename' not in inspect.getfullargspec(self.set_file)[0]:
-            warnings.warn(  # pylint: disable=no-member
-                f"Method '{type(self).__name__}.set_file' does not support the 'filename' argument. " +
-                'This will raise an exception in AiiDA 2.0.', AiidaDeprecationWarning
-            )
-
         if file is not None:
-            if filename is None:
-                # don't assume that set_file has a 'filename' argument (remove guard in 2.0.0)
-                self.set_file(file)
-            else:
-                self.set_file(file, filename=filename)
+            self.set_file(file, filename=filename)
 
     @property
     def filename(self):
@@ -56,34 +45,19 @@ class SinglefileData(Data):
         """
         return self.get_attribute('filename')
 
-    def open(self, path=None, mode='r', key=None):
+    @contextlib.contextmanager
+    def open(self, path=None, mode='r'):
         """Return an open file handle to the content of this data node.
 
-        .. deprecated:: 1.4.0
-            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
-
-        .. deprecated:: 1.4.0
-            Starting from `v2.0.0` this will raise if not used in a context manager.
-
         :param path: the relative path of the object within the repository.
-        :param key: optional key within the repository, by default is the `filename` set in the attributes
         :param mode: the mode with which to open the file handle (default: read mode)
         :return: a file handle
         """
-        from ..node import WarnWhenNotEntered
-        if key is not None:
-            if path is not None:
-                raise ValueError('cannot specify both `path` and `key`.')
-            warnings.warn(
-                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
-                AiidaDeprecationWarning
-            )  # pylint: disable=no-member
-            path = key
-
         if path is None:
             path = self.filename
 
-        return WarnWhenNotEntered(self._repository.open(path, mode=mode), repr(self))
+        with super().open(path, mode=mode) as handle:
+            yield handle
 
     def get_content(self):
         """Return the content of the single file stored for this data node.
@@ -102,7 +76,7 @@ class SinglefileData(Data):
         """
         # pylint: disable=redefined-builtin
 
-        if isinstance(file, str):
+        if isinstance(file, (str, pathlib.Path)):
             is_filelike = False
 
             key = os.path.basename(file)
@@ -129,7 +103,7 @@ class SinglefileData(Data):
             pass
 
         if is_filelike:
-            self.put_object_from_filelike(file, key, mode='wb')
+            self.put_object_from_filelike(file, key)
         else:
             self.put_object_from_file(file, key)
 

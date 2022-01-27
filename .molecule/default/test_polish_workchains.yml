@@ -1,0 +1,82 @@
+- name: Test the runnning of complex polish notation workchains
+  hosts: all
+  gather_facts: false
+
+  # run as aiida user
+  become: true
+  become_method: "{{ become_method }}"
+  become_user: "{{ aiida_user | default('aiida') }}"
+
+  environment:
+    AIIDA_PATH: "{{ aiida_path }}"
+
+  tasks:
+
+  - name: "Check if add code is already present"
+    command: "{{ venv_bin }}/verdi -p {{ aiida_backend }} code show add@localhost"
+    ignore_errors: true
+    changed_when: false
+    no_log: true
+    register: aiida_check_code
+
+  - name: verdi add code setup
+    when: aiida_check_code.rc != 0
+    command: >
+      {{ venv_bin }}/verdi -p {{ aiida_backend }} code setup
+      -D "simple script that adds two numbers"
+      -n -L add -P core.arithmetic.add
+      -Y localhost --remote-abs-path=/bin/bash
+
+  - name: Copy workchain files
+    copy:
+      src: polish
+      dest: "${HOME}/{{ aiida_backend }}"
+
+  - name: get python path including workchains
+    command: echo "${PYTHONPATH}:${HOME}/{{ aiida_backend }}/polish"
+    register: echo_pythonpath
+
+  - set_fact:
+      aiida_pythonpath: "{{ echo_pythonpath.stdout }}"
+
+  - name: Reset pythonpath of daemon ({{ aiida_workers }} workers)
+    # note `verdi daemon restart` did not seem to update the environmental variables?
+    shell: |
+      {{ venv_bin }}/verdi -p {{ aiida_backend }} daemon stop
+      {{ venv_bin }}/verdi -p {{ aiida_backend }} daemon start {{ aiida_workers }}
+    environment:
+      PYTHONPATH: "{{ aiida_pythonpath }}"
+
+  - when: aiida_query_stats | default(false) | bool
+    include_tasks: tasks/reset_query_stats.yml
+
+  - name: "run polish workchains"
+    # Note the exclamation point after the code is necessary to force the value to be interpreted as LABEL type identifier
+    shell: |
+      set -e
+      declare -a EXPRESSIONS=({{ polish_expressions | map('quote') | join(' ') }})
+      for expression in "${EXPRESSIONS[@]}"; do
+        {{ venv_bin }}/verdi -p {{ aiida_backend }} run --auto-group -l polish -- "{{ polish_script }}" -X add! -C -F -d -t {{ polish_timeout }} -r 2 "$expression"
+      done
+    args:
+      executable: /bin/bash
+    vars:
+      polish_script: "${HOME}/{{ aiida_backend }}/polish/cli.py"
+      polish_timeout: 600
+      polish_expressions:
+        - "1 -2 -1 4 -5 -5 * * * * +"
+        - "2 1 3 3 -1 + ^ ^ +"
+        - "3 -5 -1 -4 + * ^"
+        - "2 4 2 -4 * * +"
+        - "3 1 1 5 ^ ^ ^"
+        # - "3 1 3 4 -4 2 * + + ^ ^"  # this takes a longer time to run
+    environment:
+      PYTHONPATH: "{{ aiida_pythonpath }}"
+    register: polish_output
+
+  - name: print polish workchain output
+    debug:
+      msg: "{{ polish_output.stdout }}"
+
+  - when: aiida_query_stats | default(false) | bool
+    include_tasks: tasks/log_query_stats.yml

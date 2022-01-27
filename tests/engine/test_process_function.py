@@ -8,11 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the process_function decorator."""
+import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.engine import run, run_get_node, submit, calcfunction, workfunction, Process, ExitCode
+from aiida.engine import ExitCode, Process, calcfunction, run, run_get_node, submit, workfunction
 from aiida.orm.nodes.data.bool import get_true_node
+from aiida.workflows.arithmetic.add_multiply import add_multiply
 
 DEFAULT_INT = 256
 DEFAULT_LABEL = 'Default label'
@@ -21,6 +23,7 @@ CUSTOM_LABEL = 'Custom label'
 CUSTOM_DESCRIPTION = 'Custom description'
 
 
+@pytest.mark.requires_rmq
 class TestProcessFunction(AiidaTestCase):
     """
     Note that here we use `@workfunctions` and `@calculations`, the concrete versions of the
@@ -350,8 +353,10 @@ class TestProcessFunction(AiidaTestCase):
         self.assertEqual(result, get_true_node())
         self.assertTrue(isinstance(node, orm.CalcFunctionNode))
 
-        with self.assertRaises(AssertionError):
-            submit(self.function_return_true)
+        # Process function can be submitted and will be run by a daemon worker as long as the function is importable
+        # Note that the actual running is not tested here but is done so in `.github/system_tests/test_daemon.py`.
+        node = submit(add_multiply, x=orm.Int(1), y=orm.Int(2), z=orm.Int(3))
+        assert isinstance(node, orm.WorkFunctionNode)
 
     def test_return_exit_code(self):
         """

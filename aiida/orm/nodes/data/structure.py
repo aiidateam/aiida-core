@@ -18,6 +18,7 @@ import itertools
 
 from aiida.common.constants import elements
 from aiida.common.exceptions import UnsupportedSpeciesError
+
 from .data import Data
 
 __all__ = ('StructureData', 'Kind', 'Site')
@@ -115,8 +116,12 @@ def get_pymatgen_version():
     """
     if not has_pymatgen():
         return None
-    import pymatgen
-    return pymatgen.__version__
+    try:
+        from pymatgen import __version__
+    except ImportError:
+        # this was changed in version 2022.0.3
+        from pymatgen.core import __version__
+    return __version__
 
 
 def has_spglib():
@@ -501,17 +506,10 @@ def get_formula(symbol_list, mode='hill', separator=''):
     # for hill and count cases, simply count the occurences of each
     # chemical symbol (with some re-ordering in hill)
     if mode in ['hill', 'hill_compact']:
-        symbol_set = set(symbol_list)
-        first_symbols = []
-        if 'C' in symbol_set:
-            # remove C (and H if present) from list and put them at the
-            # beginning
-            symbol_set.remove('C')
-            first_symbols.append('C')
-            if 'H' in symbol_set:
-                symbol_set.remove('H')
-                first_symbols.append('H')
-        ordered_symbol_set = first_symbols + list(sorted(symbol_set))
+        if 'C' in symbol_list:
+            ordered_symbol_set = sorted(set(symbol_list), key=lambda elem: {'C': '0', 'H': '1'}.get(elem, elem))
+        else:
+            ordered_symbol_set = sorted(set(symbol_list))
         the_symbol_list = [[symbol_list.count(elem), elem] for elem in ordered_symbol_set]
 
     elif mode in ['count', 'count_compact']:
@@ -584,6 +582,7 @@ def symop_ortho_from_fract(cell):
     """
     # pylint: disable=invalid-name
     import math
+
     import numpy
 
     a, b, c, alpha, beta, gamma = cell
@@ -608,6 +607,7 @@ def symop_fract_from_ortho(cell):
     """
     # pylint: disable=invalid-name
     import math
+
     import numpy
 
     a, b, c, alpha, beta, gamma = cell
@@ -634,8 +634,8 @@ def ase_refine_cell(aseatoms, **kwargs):
     :return newase: refined cell with reduced set of atoms
     :return symmetry: a dictionary describing the symmetry space group
     """
-    from spglib import refine_cell, get_symmetry_dataset
     from ase.atoms import Atoms
+    from spglib import get_symmetry_dataset, refine_cell
     cell, positions, numbers = refine_cell(aseatoms, **kwargs)
 
     refined_atoms = Atoms(numbers, scaled_positions=positions, cell=cell, pbc=True)
@@ -744,7 +744,7 @@ class StructureData(Data):
 
         super().__init__(**kwargs)
 
-        if any([ext is not None for ext in [ase, pymatgen, pymatgen_structure, pymatgen_molecule]]):
+        if any(ext is not None for ext in [ase, pymatgen, pymatgen_structure, pymatgen_molecule]):
 
             if ase is not None:
                 self.set_ase(ase)
@@ -958,10 +958,7 @@ class StructureData(Data):
         counts = Counter([k.name for k in kinds])
         for count in counts:
             if counts[count] != 1:
-                raise ValidationError(
-                    "Kind with name '{}' appears {} times "
-                    'instead of only one'.format(count, counts[count])
-                )
+                raise ValidationError(f"Kind with name '{count}' appears {counts[count]} times instead of only one")
 
         try:
             # This will try to create the sites objects
@@ -990,7 +987,7 @@ class StructureData(Data):
 
         return_string = 'CRYSTAL\nPRIMVEC 1\n'
         for cell_vector in self.cell:
-            return_string += ' '.join(['%18.10f' % i for i in cell_vector])
+            return_string += ' '.join([f'{i:18.10f}' for i in cell_vector])
             return_string += '\n'
         return_string += 'PRIMCOORD 1\n'
         return_string += f'{int(len(sites))} 1\n'
@@ -1015,8 +1012,9 @@ class StructureData(Data):
         Write the given structure to a string of format required by ChemDoodle.
         """
         # pylint: disable=too-many-locals,invalid-name
-        import numpy as np
         from itertools import product
+
+        import numpy as np
 
         from aiida.common import json
 
@@ -1376,8 +1374,7 @@ class StructureData(Data):
 
         if site.kind_name not in [kind.name for kind in self.kinds]:
             raise ValueError(
-                "No kind with name '{}', available kinds are: "
-                '{}'.format(site.kind_name, [kind.name for kind in self.kinds])
+                f"No kind with name '{site.kind_name}', available kinds are: {[kind.name for kind in self.kinds]}"
             )
 
         # If here, no exceptions have been raised, so I add the site.
@@ -1775,8 +1772,9 @@ class StructureData(Data):
             AiiDA database for record. Default False.
         :return: :py:class:`aiida.orm.nodes.data.cif.CifData` node.
         """
-        from .dict import Dict
         from aiida.tools.data import structure as structure_tools
+
+        from .dict import Dict
 
         param = Dict(dict=kwargs)
         try:
@@ -1859,7 +1857,7 @@ class StructureData(Data):
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors)
         """
-        from pymatgen import Structure
+        from pymatgen.core.structure import Structure
 
         if self.pbc != (True, True, True):
             raise ValueError('Periodic boundary conditions must apply in all three dimensions of real space')
@@ -1867,9 +1865,9 @@ class StructureData(Data):
         species = []
         additional_kwargs = {}
 
-        if (kwargs.pop('add_spin', False) and any([n.endswith('1') or n.endswith('2') for n in self.get_kind_names()])):
+        if (kwargs.pop('add_spin', False) and any(n.endswith('1') or n.endswith('2') for n in self.get_kind_names())):
             # case when spins are defined -> no partial occupancy allowed
-            from pymatgen import Specie
+            from pymatgen.core.periodic_table import Specie
             oxidation_state = 0  # now I always set the oxidation_state to zero
             for site in self.sites:
                 kind = self.get_kind(site.kind_name)
@@ -1887,10 +1885,10 @@ class StructureData(Data):
             for site in self.sites:
                 kind = self.get_kind(site.kind_name)
                 species.append(dict(zip(kind.symbols, kind.weights)))
-            if any([
+            if any(
                 create_automatic_kind_name(self.get_kind(name).symbols,
                                            self.get_kind(name).weights) != name for name in self.get_site_kindnames()
-            ]):
+            ):
                 # add "kind_name" as a properties to each site, whenever
                 # the kind_name cannot be automatically obtained from the symbols
                 additional_kwargs['site_properties'] = {'kind_name': self.get_site_kindnames()}
@@ -1914,7 +1912,7 @@ class StructureData(Data):
         .. note:: Requires the pymatgen module (version >= 3.0.13, usage
             of earlier versions may cause errors)
         """
-        from pymatgen import Molecule
+        from pymatgen.core.structure import Molecule
 
         if kwargs:
             raise ValueError(f'Unrecognized parameters passed to pymatgen converter: {kwargs.keys()}')
@@ -2148,18 +2146,14 @@ class Kind:
             return (False, 'Different length of symbols list')
 
         # Check list of symbols
-        for i in range(len(self.symbols)):
-            if self.symbols[i] != other_kind.symbols[i]:
-                return (
-                    False, f'Symbol at position {i + 1:d} are different ({self.symbols[i]} vs. {other_kind.symbols[i]})'
-                )
+        for i, symbol in enumerate(self.symbols):
+            if symbol != other_kind.symbols[i]:
+                return (False, f'Symbol at position {i + 1:d} are different ({symbol} vs. {other_kind.symbols[i]})')
         # Check weights (assuming length of weights and of symbols have same
         # length, which should be always true
-        for i in range(len(self.weights)):
-            if self.weights[i] != other_kind.weights[i]:
-                return (
-                    False, f'Weight at position {i + 1:d} are different ({self.weights[i]} vs. {other_kind.weights[i]})'
-                )
+        for i, weight in enumerate(self.weights):
+            if weight != other_kind.weights[i]:
+                return (False, f'Weight at position {i + 1:d} are different ({weight} vs. {other_kind.weights[i]})')
         # Check masses
         if abs(self.mass - other_kind.mass) > _MASS_THRESHOLD:
             return (False, f'Masses are different ({self.mass} vs. {other_kind.mass})')
@@ -2391,6 +2385,7 @@ class Site:
         """
         # pylint: disable=too-many-branches
         from collections import defaultdict
+
         import ase
 
         # I create the list of tags

@@ -105,6 +105,7 @@ When you load a calculation node from the database, you can use these property m
 
 Process exit codes
 ==================
+
 The previous section about the process state showed that a process that is ``Finished`` does not say anything about whether the result is 'successful' or 'failed'.
 The ``Finished`` state means nothing more than that the engine succeeded in running the process to the end of execution, without it encountering exceptions or being killed.
 To distinguish between a 'successful' and 'failed' process, an 'exit status' can be defined.
@@ -112,8 +113,10 @@ The `exit status is a common concept in programming <https://en.wikipedia.org/wi
 By default a process that terminates nominally will get a ``0`` (zero) exit status.
 To mark a process as failed, one can return an instance of the :py:class:`~aiida.engine.processes.exit_code.ExitCode` named tuple, which allows to set an integer ``exit_status`` and a string message as ``exit_message``.
 When the engine receives such an ``ExitCode`` as the return value from a process, it will set the exit status and message on the corresponding attributes of the process node representing the process in the provenance graph.
-How exit codes can be defined and returned depends on the process type and will be documented in detail in the respective :ref:`calculation<topics:calculations:usage>` and :ref:`workflow<topics:workflows:usage>` development sections.
 
+.. seealso::
+
+    For how exit codes can be defined and returned see the :ref:`exit code usage section <topics:processes:usage:exit_codes>`.
 
 .. _topics:processes:concepts:lifetime:
 
@@ -142,6 +145,7 @@ When a process is 'submitted', an instance of the ``Process`` is created, along 
 This is called a 'process checkpoint', more information on which :ref:`will follow later<topics:processes:concepts:checkpoints>`.
 Subsequently, the process instance is shut down and a 'continuation task' is sent to the process queue of RabbitMQ.
 This task is simply a small message that just contains an identifier for the process.
+In order to reconstruct the process from a `checkpoint`, the process needs to be importable in the daemon environment by a) giving it an :ref:`associated entry point<how-to:plugin-codes:entry-points>` or b) :ref:`including its module path<how-to:faq:process-not-importable-daemon>` in the ``PYTHONPATH`` that the daemon workers will have.
 
 All the daemon runners, when they are launched, subscribe to the process queue and RabbitMQ will distribute the continuation tasks to them as they come in, making sure that each task is only sent to one runner at a time.
 The receiving daemon runner can restore the process instance in memory from the checkpoint that was stored in the database and continue the execution.
@@ -154,6 +158,10 @@ Each daemon runner has a maximum number of tasks that it can run concurrently, w
 Processes, whose task is in the queue and not with any runner, though technically 'active' as they are not terminated, are not actually being run at the moment.
 While a process is not actually being run, i.e. it is not in memory with a runner, one cannot interact with it.
 Similarly, as soon as the task disappears, either because the process was intentionally terminated (or unintentionally), the process will never continue running again.
+
+.. figure:: include/images/submit_sysml.png
+
+    A systems modelling representation of submitting a process.
 
 
 .. _topics:processes:concepts:checkpoints:

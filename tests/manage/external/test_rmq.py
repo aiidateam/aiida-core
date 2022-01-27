@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `aiida.manage.external.rmq` module."""
+from kiwipy.rmq import RmqThreadCommunicator
 import pytest
 
 from aiida.manage.external import rmq
@@ -16,7 +17,6 @@ from aiida.manage.external import rmq
 @pytest.mark.parametrize(('args', 'kwargs', 'expected'), (
     ((), {}, 'amqp://guest:guest@127.0.0.1:5672?'),
     ((), {'heartbeat': 1}, 'amqp://guest:guest@127.0.0.1:5672?'),
-    ((), {'invalid_parameters': 1}, ValueError),
     ((), {'cafile': 'file', 'cadata': 'ab'}, 'amqp://guest:guest@127.0.0.1:5672?'),
     (('amqps', 'jojo', 'rabbit', '192.168.0.1', 6783), {}, 'amqps://jojo:rabbit@192.168.0.1:6783?'),
 ))  # yapf: disable
@@ -35,3 +35,25 @@ def test_get_rmq_url(args, kwargs, expected):
     else:
         with pytest.raises(expected):
             rmq.get_rmq_url(*args, **kwargs)
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.parametrize('url', ('amqp://guest:guest@127.0.0.1:5672',))
+def test_communicator(url):
+    """Test the instantiation of a ``kiwipy.rmq.RmqThreadCommunicator``.
+
+    This class is used by all runners to communicate with the RabbitMQ server.
+    """
+    RmqThreadCommunicator.connect(connection_params={'url': url})
+
+
+@pytest.mark.requires_rmq
+def test_add_rpc_subscriber(communicator):
+    """Test ``add_rpc_subscriber``."""
+    communicator.add_rpc_subscriber(None)
+
+
+@pytest.mark.requires_rmq
+def test_add_broadcast_subscriber(communicator):
+    """Test ``add_broadcast_subscriber``."""
+    communicator.add_broadcast_subscriber(None)

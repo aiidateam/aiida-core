@@ -11,10 +11,11 @@
 """Module to manage logs for the SQLA backend."""
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import backref, relationship
 from sqlalchemy.schema import Column
-from sqlalchemy.types import Integer, DateTime, String, Text
+from sqlalchemy.sql.schema import Index, UniqueConstraint
+from sqlalchemy.types import DateTime, Integer, String, Text
 
 from aiida.backends.sqlalchemy.models.base import Base
 from aiida.common import timezone
@@ -22,37 +23,46 @@ from aiida.common.utils import get_new_uuid
 
 
 class DbLog(Base):
-    """Class to store logs using SQLA backend."""
+    """Database model to store log levels and messages relating to a process node."""
     __tablename__ = 'db_dblog'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
-    time = Column(DateTime(timezone=True), default=timezone.now)
-    loggername = Column(String(255), index=True)
-    levelname = Column(String(255), index=True)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, nullable=False)
+    time = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
+    loggername = Column(String(255), nullable=False, doc='What process recorded the message')
+    levelname = Column(String(50), nullable=False, doc='How critical the message is')
     dbnode_id = Column(
         Integer, ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED', ondelete='CASCADE'), nullable=False
     )
-    message = Column(Text(), nullable=True)
-    _metadata = Column('metadata', JSONB)
+    message = Column(Text(), default='', nullable=False)
+    _metadata = Column('metadata', JSONB, default=dict, nullable=False)
 
     dbnode = relationship('DbNode', backref=backref('dblogs', passive_deletes='all', cascade='merge'))
 
-    def __init__(self, time, loggername, levelname, dbnode_id, **kwargs):
-        """Setup initial value for the class attributes."""
-        if 'uuid' in kwargs:
-            self.uuid = kwargs['uuid']
-        if 'message' in kwargs:
-            self.message = kwargs['message']
-        if 'metadata' in kwargs:
-            self._metadata = kwargs['metadata'] or {}
-        else:
-            self._metadata = {}
-
-        self.time = time
-        self.loggername = loggername
-        self.levelname = levelname
-        self.dbnode_id = dbnode_id
+    __table_args__ = (
+        # index/constrain names mirror django's auto-generated ones
+        UniqueConstraint(uuid, name='db_dblog_uuid_9cf77df3_uniq'),
+        Index('db_dblog_loggername_00b5ba16', loggername),
+        Index('db_dblog_levelname_ad5dc346', levelname),
+        Index('db_dblog_dbnode_id_da34b732', dbnode_id),
+        Index(
+            'db_dblog_loggername_00b5ba16_like',
+            loggername,
+            postgresql_using='btree',
+            postgresql_ops={'loggername': 'varchar_pattern_ops'}
+        ),
+        Index(
+            'db_dblog_levelname_ad5dc346_like',
+            levelname,
+            postgresql_using='btree',
+            postgresql_ops={'levelname': 'varchar_pattern_ops'}
+        ),
+    )
 
     def __str__(self):
         return f'DbLog: {self.levelname} for node {self.dbnode.id}: {self.message}'
+
+    def __init__(self, *args, **kwargs):
+        """Construct new instance making sure the `_metadata` column is initialized to empty dict if `None`."""
+        super().__init__(*args, **kwargs)
+        self._metadata = kwargs.pop('metadata', {}) or {}

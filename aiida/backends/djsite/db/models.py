@@ -16,8 +16,9 @@ from django.db import models as m
 from django.db.models.query import QuerySet
 from pytz import UTC
 
-import aiida.backends.djsite.db.migrations as migrations
+from aiida.backends.djsite.db import migrations
 from aiida.common import timezone
+from aiida.common.json import JSONEncoder
 from aiida.common.utils import get_new_uuid
 
 # This variable identifies the schema version of this file.
@@ -124,9 +125,10 @@ class DbNode(m.Model):
     dbcomputer = m.ForeignKey('DbComputer', null=True, on_delete=m.PROTECT, related_name='dbnodes')
 
     # JSON Attributes
-    attributes = JSONField(default=dict, null=True)
+    attributes = JSONField(default=dict, null=True, encoder=JSONEncoder)
     # JSON Extras
-    extras = JSONField(default=dict, null=True)
+    extras = JSONField(default=dict, null=True, encoder=JSONEncoder)
+    repository_metadata = JSONField(default=dict, null=True, encoder=JSONEncoder)
 
     objects = m.Manager()
     # Return aiida Node instances or their subclasses instead of DbNode instances
@@ -183,7 +185,7 @@ class DbLink(m.Model):
 class DbSetting(m.Model):
     """This will store generic settings that should be database-wide."""
     key = m.CharField(max_length=1024, db_index=True, blank=False, unique=True)
-    val = JSONField(default=None, null=True)
+    val = JSONField(default=None, null=True, encoder=JSONEncoder)
     # I also add a description field for the variables
     description = m.TextField(blank=True)
     # Modification time of this attribute
@@ -255,7 +257,7 @@ class DbGroup(m.Model):
     # the groups
     user = m.ForeignKey(DbUser, on_delete=m.CASCADE, related_name='dbgroups')
     # JSON Extras
-    extras = JSONField(default=dict, null=False)
+    extras = JSONField(default=dict, null=False, encoder=JSONEncoder)
 
     class Meta:
         unique_together = (('label', 'type_string'),)
@@ -269,7 +271,7 @@ class DbComputer(m.Model):
     Table of computers or clusters.
 
     Attributes:
-    * name: A name to be used to refer to this computer. Must be unique.
+    * label: A name to be used to refer to this computer. Must be unique.
     * hostname: Fully-qualified hostname of the host
     * transport_type: a string with a valid transport type
 
@@ -297,15 +299,15 @@ class DbComputer(m.Model):
 
     """
     uuid = m.UUIDField(default=get_new_uuid, unique=True)
-    name = m.CharField(max_length=255, unique=True, blank=False)
+    label = m.CharField(max_length=255, unique=True, blank=False)
     hostname = m.CharField(max_length=255)
     description = m.TextField(blank=True)
     scheduler_type = m.CharField(max_length=255)
     transport_type = m.CharField(max_length=255)
-    metadata = JSONField(default=dict)
+    metadata = JSONField(default=dict, encoder=JSONEncoder)
 
     def __str__(self):
-        return f'{self.name} ({self.hostname})'
+        return f'{self.label} ({self.hostname})'
 
 
 class DbAuthInfo(m.Model):
@@ -316,12 +318,12 @@ class DbAuthInfo(m.Model):
     # Delete the DbAuthInfo if either the user or the computer are removed
     aiidauser = m.ForeignKey(DbUser, on_delete=m.CASCADE)
     dbcomputer = m.ForeignKey(DbComputer, on_delete=m.CASCADE)
-    auth_params = JSONField(default=dict)  # contains mainly the remoteuser and the private_key
+    auth_params = JSONField(default=dict, encoder=JSONEncoder)  # contains mainly the remoteuser and the private_key
 
     # The keys defined in the metadata of the DbAuthInfo will override the
-    # keys with the same name defined in the DbComputer (using a dict.update()
+    # keys with the same label defined in the DbComputer (using a dict.update()
     # call of python).
-    metadata = JSONField(default=dict)
+    metadata = JSONField(default=dict, encoder=JSONEncoder)
     # Whether this computer is enabled (user-level enabling feature)
     enabled = m.BooleanField(default=True)
 
@@ -330,8 +332,8 @@ class DbAuthInfo(m.Model):
 
     def __str__(self):
         if self.enabled:
-            return f'DB authorization info for {self.aiidauser.email} on {self.dbcomputer.name}'
-        return f'DB authorization info for {self.aiidauser.email} on {self.dbcomputer.name} [DISABLED]'
+            return f'DB authorization info for {self.aiidauser.email} on {self.dbcomputer.label}'
+        return f'DB authorization info for {self.aiidauser.email} on {self.dbcomputer.label} [DISABLED]'
 
 
 class DbComment(m.Model):
@@ -360,7 +362,7 @@ class DbLog(m.Model):
     levelname = m.CharField(max_length=50, db_index=True)
     dbnode = m.ForeignKey(DbNode, related_name='dblogs', on_delete=m.CASCADE)
     message = m.TextField(blank=True)
-    metadata = JSONField(default=dict)
+    metadata = JSONField(default=dict, encoder=JSONEncoder)
 
     def __str__(self):
         return f'DbLog: {self.levelname} for node {self.dbnode.id}: {self.message}'
@@ -396,9 +398,9 @@ def suppress_auto_now(list_of_models_fields):
     #    ]
     #   ...
     # }
-    _original_model_values = dict()
+    _original_model_values = {}
     for model, fields in list_of_models_fields:
-        _original_field_values = dict()
+        _original_field_values = {}
         for field in model._meta.local_fields:  # pylint: disable=protected-access
             if field.name in fields:
                 _original_field_values[field] = {
@@ -411,7 +413,7 @@ def suppress_auto_now(list_of_models_fields):
     try:
         yield
     finally:
-        for model in _original_model_values:
-            for field in _original_model_values[model]:
-                field.auto_now = _original_model_values[model][field]['auto_now']
-                field.editable = _original_model_values[model][field]['editable']
+        for model, data in _original_model_values.items():
+            for field, value in data.items():
+                field.auto_now = value['auto_now']
+                field.editable = value['editable']

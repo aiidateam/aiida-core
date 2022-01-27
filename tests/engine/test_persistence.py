@@ -9,14 +9,15 @@
 ###########################################################################
 """Test persisting via the AiiDAPersister."""
 import plumpy
+import pytest
 
 from aiida.backends.testbase import AiidaTestCase
-from aiida.engine.persistence import AiiDAPersister
 from aiida.engine import Process, run
-
+from aiida.engine.persistence import AiiDAPersister
 from tests.utils.processes import DummyProcess
 
 
+@pytest.mark.requires_rmq
 class TestProcess(AiidaTestCase):
     """Test the basic saving and loading of process states."""
 
@@ -40,6 +41,7 @@ class TestProcess(AiidaTestCase):
         self.assertEqual(loaded_process.state, plumpy.ProcessState.FINISHED)
 
 
+@pytest.mark.requires_rmq
 class TestAiiDAPersister(AiidaTestCase):
     """Test AiiDAPersister."""
     maxDiff = 1024

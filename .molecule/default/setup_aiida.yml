@@ -1,0 +1,91 @@
+- name: Set up AiiDa Environment
+  hosts: all
+  gather_facts: false
+
+  # run as aiida user
+  become: true
+  become_method: "{{ become_method }}"
+  become_user: "{{ aiida_user | default('aiida') }}"
+
+  environment:
+    AIIDA_PATH: "{{ aiida_path }}"
+
+  tasks:
+
+  - name: Create a new database with name "{{ aiida_backend }}"
+    postgresql_db:
+      name: "{{ aiida_backend }}"
+      login_host: localhost
+      login_user: aiida
+      login_password: ''
+      encoding: UTF8
+      lc_collate: en_US.UTF-8
+      lc_ctype: en_US.UTF-8
+      template: template0
+
+  - name: Add pg_stat_statements extension to the database
+    when: aiida_query_stats | default(false) | bool
+    postgresql_ext:
+      name: pg_stat_statements
+      login_host: localhost
+      login_user: aiida
+      login_password: ''
+      db: "{{ aiida_backend }}"
+
+  - name: verdi setup for "{{ aiida_backend }}"
+    command: >
+      {{ venv_bin }}/verdi setup
+      --non-interactive
+      --profile "{{ aiida_backend }}"
+      --email "aiida@localhost"
+      --first-name "ringo"
+      --last-name "starr"
+      --institution "the beatles"
+      --db-backend "{{ aiida_backend }}"
+      --db-host=localhost
+      --db-name="{{ aiida_backend }}"
+      --db-username=aiida
+      --db-password=''
+    args:
+      creates: "{{ aiida_path }}/.aiida/config.json"
+
+  - name: "Check if computer is already present"
+    command: "{{ venv_bin }}/verdi -p {{ aiida_backend }} computer show localhost"
+    ignore_errors: true
+    changed_when: false
+    no_log: true
+    register: aiida_check_computer
+
+  - name: verdi computer setup localhost
+    when: aiida_check_computer.rc != 0
+    command: >
+      {{ venv_bin }}/verdi -p {{ aiida_backend }} computer setup
+      --non-interactive
+      --label "localhost"
+      --description "this computer"
+      --hostname "localhost"
+      --transport core.local
+      --scheduler core.direct
+      --work-dir {{ aiida_path }}/local_work_dir/
+      --mpirun-command "mpirun -np {tot_num_mpiprocs}"
+      --mpiprocs-per-machine 1
+
+  - name: verdi computer configure localhost
+    when: aiida_check_computer.rc != 0
+    command: >
+      {{ venv_bin }}/verdi -p {{ aiida_backend }} computer configure core.local "localhost"
+      --non-interactive
+      --safe-interval 0.0
+
+  # we restart the daemon in run_tests.yml, so no need to start here
+  # - name: verdi start daemon with {{ aiida_workers }} workers
+  #   command: "{{ venv_bin }}/verdi -p {{ aiida_backend }} daemon start {{ aiida_workers }}"
+
+  - name: get verdi status
+    command: "{{ venv_bin }}/verdi -p {{ aiida_backend }} status"
+    register: verdi_status
+    changed_when: false
+
+  - name: print verdi status
+    debug:
+      var: verdi_status.stdout

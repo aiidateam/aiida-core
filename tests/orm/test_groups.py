@@ -81,8 +81,8 @@ class TestGroups(AiidaTestCase):
         nodes_sliced = group.nodes[1:3]
         self.assertTrue(isinstance(nodes_sliced, list))
         self.assertEqual(len(nodes_sliced), 2)
-        self.assertTrue(all([isinstance(node, orm.Data) for node in nodes_sliced]))
-        self.assertTrue(all([node.uuid in set(node.uuid for node in nodes) for node in nodes_sliced]))
+        self.assertTrue(all(isinstance(node, orm.Data) for node in nodes_sliced))
+        self.assertTrue(all(node.uuid in set(node.uuid for node in nodes) for node in nodes_sliced))
 
     def test_description(self):
         """Test the update of the description both for stored and unstored groups."""
@@ -342,32 +342,10 @@ class TestGroupsSubclasses(AiidaTestCase):
 
         assert isinstance(loaded, orm.Group)
 
-    @staticmethod
-    def test_explicit_type_string():
-        """Test that passing explicit `type_string` to `Group` constructor is still possible despite being deprecated.
-
-        Both constructing a group while passing explicit `type_string` as well as loading a group with unregistered
-        type string should emit a warning, but it should be possible.
-        """
-        type_string = 'data.potcar'  # An unregistered custom type string
-
-        with pytest.warns(UserWarning):
-            group = orm.Group(label='group', type_string=type_string)
-
-        group.store()
-        assert group.type_string == type_string
-
-        with pytest.warns(UserWarning):
-            loaded = orm.Group.get(label=group.label, type_string=type_string)
-
-        assert isinstance(loaded, orm.Group)
-        assert loaded.pk == group.pk
-        assert loaded.type_string == group.type_string
-
-        queried = orm.QueryBuilder().append(orm.Group, filters={'id': group.pk, 'type_string': type_string}).one()[0]
-        assert isinstance(queried, orm.Group)
-        assert queried.pk == group.pk
-        assert queried.type_string == group.type_string
+        # Removing it as other methods might get a warning instead
+        group_pk = group.pk
+        del group
+        orm.Group.objects.delete(pk=group_pk)
 
     @staticmethod
     def test_querying():
@@ -385,6 +363,11 @@ class TestGroupsSubclasses(AiidaTestCase):
         assert orm.QueryBuilder().append(orm.Group, subclassing=False).count() == 1
         assert orm.QueryBuilder().append(orm.Group).count() == 3
         assert orm.QueryBuilder().append(orm.Group, filters={'type_string': 'custom.group'}).count() == 1
+
+        # Removing it as other methods might get a warning instead
+        group_pk = group.pk
+        del group
+        orm.Group.objects.delete(pk=group_pk)
 
     @staticmethod
     def test_querying_node_subclasses():
@@ -407,7 +390,7 @@ class TestGroupsSubclasses(AiidaTestCase):
 
     @staticmethod
     def test_query_with_group():
-        """Docs."""
+        """Test that querying a data node in a group works."""
         group = orm.Group(label='group').store()
         data = orm.Data().store()
 

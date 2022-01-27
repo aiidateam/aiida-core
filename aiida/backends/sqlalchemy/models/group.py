@@ -11,53 +11,87 @@
 """Module to manage computers for the SQLA backend."""
 
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import relationship, backref
-from sqlalchemy.schema import Column, Table, UniqueConstraint, Index
-from sqlalchemy.types import Integer, String, DateTime, Text
-
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import backref, relationship
+from sqlalchemy.schema import Column, Index, UniqueConstraint
+from sqlalchemy.types import DateTime, Integer, String, Text
 
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
 
 from .base import Base
 
-table_groups_nodes = Table(  # pylint: disable=invalid-name
-    'db_dbgroup_dbnodes',
-    Base.metadata,
-    Column('id', Integer, primary_key=True),
-    Column('dbnode_id', Integer, ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED')),
-    Column('dbgroup_id', Integer, ForeignKey('db_dbgroup.id', deferrable=True, initially='DEFERRED')),
-    UniqueConstraint('dbgroup_id', 'dbnode_id', name='db_dbgroup_dbnodes_dbgroup_id_dbnode_id_key'),
-)
+
+class DbGroupNode(Base):
+    """Database model to store group-to-nodes relations."""
+    __tablename__ = 'db_dbgroup_dbnodes'
+
+    id = Column(Integer, primary_key=True)
+    dbnode_id = Column(Integer, ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED'), nullable=False)
+    dbgroup_id = Column(Integer, ForeignKey('db_dbgroup.id', deferrable=True, initially='DEFERRED'), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint('dbgroup_id', 'dbnode_id', name='db_dbgroup_dbnodes_dbgroup_id_dbnode_id_eee23cce_uniq'),
+        Index('db_dbgroup_dbnodes_dbgroup_id_9d3a0f9d', dbgroup_id),
+        Index('db_dbgroup_dbnodes_dbnode_id_118b9439', dbnode_id),
+    )
+
+
+table_groups_nodes = DbGroupNode.__table__
 
 
 class DbGroup(Base):
-    """Class to store groups using SQLA backend."""
+    """Database model to store groups of nodes.
+
+    Users will typically identify and handle groups by using their ``label``
+    (which, unlike the ``labels`` in other models, must be unique).
+    Groups also have a ``type``, which serves to identify what plugin is being instanced,
+    and the ``extras`` property for users to set any relevant information.
+    """
 
     __tablename__ = 'db_dbgroup'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
 
-    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
-    label = Column(String(255), index=True)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, nullable=False)
+    label = Column(String(255), nullable=False)
 
-    type_string = Column(String(255), default='', index=True)
+    type_string = Column(String(255), default='', nullable=False)
 
-    time = Column(DateTime(timezone=True), default=timezone.now)
-    description = Column(Text, nullable=True)
+    time = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
+    description = Column(Text, default='', nullable=False)
 
     extras = Column(JSONB, default=dict, nullable=False)
 
-    user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'))
+    user_id = Column(
+        Integer,
+        ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
+        nullable=False,
+    )
     user = relationship('DbUser', backref=backref('dbgroups', cascade='merge'))
 
     dbnodes = relationship('DbNode', secondary=table_groups_nodes, backref='dbgroups', lazy='dynamic')
 
-    __table_args__ = (UniqueConstraint('label', 'type_string'),)
-
-    Index('db_dbgroup_dbnodes_dbnode_id_idx', table_groups_nodes.c.dbnode_id)
-    Index('db_dbgroup_dbnodes_dbgroup_id_idx', table_groups_nodes.c.dbgroup_id)
+    __table_args__ = (
+        # index/constrinat names mirror django's auto-generated ones
+        UniqueConstraint('label', 'type_string', name='db_dbgroup_name_type_12656f33_uniq'),
+        UniqueConstraint(uuid, name='db_dbgroup_uuid_af896177_uniq'),
+        Index('db_dbgroup_name_66c75272', label),
+        Index('db_dbgroup_type_23b2a748', type_string),
+        Index('db_dbgroup_user_id_100f8a51', user_id),
+        Index(
+            'db_dbgroup_name_66c75272_like',
+            label,
+            postgresql_using='btree',
+            postgresql_ops={'label': 'varchar_pattern_ops'}
+        ),
+        Index(
+            'db_dbgroup_type_23b2a748_like',
+            type_string,
+            postgresql_using='btree',
+            postgresql_ops={'type_string': 'varchar_pattern_ops'}
+        ),
+    )
 
     @property
     def pk(self):

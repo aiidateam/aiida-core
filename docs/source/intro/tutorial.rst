@@ -13,7 +13,7 @@ Basic tutorial
 
 Welcome to the AiiDA tutorial!
 The goal of this tutorial is to give you a basic idea of how AiiDA helps you in executing data-driven workflows.
-At the end of this tutorial you will know how to:
+At the end of this tutorial, you will know how to:
 
 * Store data in the database and subsequently retrieve it.
 * Decorate a Python function such that its inputs and outputs are automatically tracked.
@@ -22,7 +22,7 @@ At the end of this tutorial you will know how to:
 
 .. important::
 
-    If you are working on your own machine, note that the tutorial assumes that you have a working AiiDA installation, and have set up your AiiDA profile in the current Python environment.
+    If you are working on your own machine, note that the tutorial assumes that you have a working AiiDA installation and have set up your AiiDA profile in the current Python environment.
     If this is not the case, consult the :ref:`getting started page<intro:get_started>`.
 
 Provenance
@@ -44,7 +44,7 @@ In the provenance graph, you can see different types of *nodes* represented by d
 The green ellipses are ``Data`` nodes, the blue ellipse is a ``Code`` node, and the rectangles represent *processes*, i.e. the calculations performed in your *workflow*.
 
 The provenance graph allows us to not only see what data we have, but also how it was produced.
-During this tutorial we will be using AiiDA to generate the provenance graph in :numref:`fig_intro_workchain_graph` step by step.
+During this tutorial, we will be using AiiDA to generate the provenance graph in :numref:`fig_intro_workchain_graph` step by step.
 
 Data nodes
 ==========
@@ -94,7 +94,7 @@ Use the PK only if you are working within a single database, i.e. in an interact
     The PK numbers shown throughout this tutorial assume that you start from a completely empty database.
     It is possible that the nodes' PKs will be different for your database!
 
-    The UUIDs are generated randomly and are therefore **guaranteed** to be different.
+    The UUIDs are generated randomly and are, therefore, **guaranteed** to be different.
 
 Next, let's leave the IPython shell by typing ``exit()`` and then enter.
 Back in the terminal, use the ``verdi`` command line interface (CLI) to check the data node we have just created:
@@ -250,8 +250,8 @@ If you're running this tutorial in the Quantum Mobile VM or on Binder, these hav
 
     .. code-block:: console
 
-        $ verdi computer setup -L tutor -H localhost -T local -S direct -w `echo $PWD/work` -n
-        $ verdi computer configure local tutor --safe-interval 5 -n
+        $ verdi computer setup -L tutor -H localhost -T core.local -S core.direct -w `echo $PWD/work` -n
+        $ verdi computer configure core.local tutor --safe-interval 5 -n
 
     The first commands sets up the computer with the following options:
 
@@ -268,9 +268,9 @@ If you're running this tutorial in the Quantum Mobile VM or on Binder, these hav
 
     .. code-block:: console
 
-        $ verdi code setup -L add --on-computer --computer=tutor -P arithmetic.add --remote-abs-path=/bin/bash -n
+        $ verdi code setup -L add --on-computer --computer=tutor -P core.arithmetic.add --remote-abs-path=/bin/bash -n
 
-    This command sets up a code with *label* ``add`` on the *computer* ``tutor``, using the *plugin* ``arithmetic.add``.
+    This command sets up a code with *label* ``add`` on the *computer* ``tutor``, using the *plugin* ``core.arithmetic.add``.
 
 A typical real-world example of a computer is a remote supercomputing facility.
 Codes can be anything from a Python script to powerful *ab initio* codes such as Quantum Espresso or machine learning tools like Tensorflow.
@@ -449,7 +449,7 @@ Instead of the *result* of the calculation, it returns the node of the ``CalcJob
 
 .. code-block:: ipython
 
-    Out[1]: <CalcJobNode: uuid: e221cf69-5027-4bb4-a3c9-e649b435393b (pk: 12) (aiida.calculations:arithmetic.add)>
+    Out[1]: <CalcJobNode: uuid: e221cf69-5027-4bb4-a3c9-e649b435393b (pk: 12) (aiida.calculations:core.arithmetic.add)>
 
 Let's exit the IPython shell and have a look at the process list:
 
@@ -524,9 +524,9 @@ Start up the ``verdi shell`` and load the ``MultiplyAddWorkChain`` using the ``W
 
 .. code-block:: ipython
 
-    In [1]: MultiplyAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
+    In [1]: MultiplyAddWorkChain = WorkflowFactory('core.arithmetic.multiply_add')
 
-The ``WorkflowFactory`` is a useful and robust tool for loading workflows based on their *entry point*, e.g. ``'arithmetic.multiply_add'`` in this case.
+The ``WorkflowFactory`` is a useful and robust tool for loading workflows based on their *entry point*, e.g. ``'core.arithmetic.multiply_add'`` in this case.
 Similar to a ``CalcJob``, the ``WorkChain`` input can be set up using a builder:
 
 .. code-block:: ipython
@@ -570,6 +570,17 @@ Depending on which step the workflow is running, you should get something like t
 We can see that the ``MultiplyAddWorkChain`` is currently waiting for its *child process*, the ``ArithmeticAddCalculation``, to finish.
 Check the process list again for *all* processes (You should know how by now!).
 After about half a minute, all the processes should be in the ``Finished`` state.
+The ``verdi process status`` command prints a *hierarchical* overview of the processes called by the work chain:
+
+.. code-block:: console
+
+    $ verdi process status 19
+    MultiplyAddWorkChain<19> Finished [0] [3:result]
+        ├── multiply<20> Finished [0]
+        └── ArithmeticAddCalculation<22> Finished [0]
+
+The bracket ``[3:result]`` indicates the current step in the outline of the :py:class:`~aiida.workflows.arithmetic.multiply_add.MultiplyAddWorkChain` (step 3, with name ``result``).
+The ``process status`` is particularly useful for debugging complex work chains, since it helps pinpoint where a problem occurred.
 
 We can now generate the full provenance graph for the ``WorkChain`` with:
 
@@ -595,7 +606,7 @@ Next Steps
 
 Congratulations! You have completed the first step to becoming an AiiDA expert.
 
-We have also compiled useful how-to guides that are especially relevant for the following use cases:
+We have compiled how-to guides that are especially relevant for the following use cases:
 
 .. div:: dropdown-group
 
@@ -603,13 +614,13 @@ We have also compiled useful how-to guides that are especially relevant for the 
         :container:
 
         Designing a workflow
-            After reading the :ref:`Basic Tutorial <tutorial:basic>`, you may want to learn about how to encode the logic of a typical scientific workflow in the :ref:`multi-step workflows how-to <how-to:workflows>`.
+            After reading the :ref:`Basic Tutorial <tutorial:basic>`, you may want to learn about how to encode the logic of a typical scientific workflow in the :ref:`writing workflows how-to <how-to:write-workflows>`.
 
         Reusable data types
             If you have a certain input or output data type, which you use often, then you may wish to turn it into its own :ref:`data plugin <topics:data_types:plugin>`.
 
-        Exploring your data
-            Once you have run multiple computations, the :ref:`find and query data how-to <how-to:data:find>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <how-to:data:visualise-provenance>`.
+        Finding and querying for your data
+            Once you have run multiple computations, the :ref:`find and query data how-to <how-to:query>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <how-to:data:visualise-provenance>`.
 
         Sharing your data
             You can export all or part of your data to file with the :ref:`export/import functionality<how-to:share:archives>` or you can even serve your data over HTTP(S) using the :ref:`AiiDA REST API <how-to:share:serve>`.
@@ -641,7 +652,7 @@ We have also compiled useful how-to guides that are especially relevant for the 
             If none meet your needs, then the :ref:`external codes how-to <how-to:plugin-codes>` can show you how to create your own calculation plugin.
 
         Exploring your data
-            Once you have run multiple computations, the :ref:`find and query data how-to <how-to:data:find>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <how-to:data:visualise-provenance>`.
+            Once you have run multiple computations, the :ref:`find and query data how-to <how-to:query>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <how-to:data:visualise-provenance>`.
 
         Sharing your data
             You can export all or part of your data to file with the :ref:`export/import functionality<how-to:share:archives>` or you can even serve your data over HTTP(S) using the :ref:`AiiDA REST API <how-to:share:serve>`.

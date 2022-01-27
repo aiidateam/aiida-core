@@ -11,7 +11,7 @@
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import Process
-from aiida.orm import Node, Data
+from aiida.orm import Data, Node
 
 
 class TestProcessSpec(AiidaTestCase):

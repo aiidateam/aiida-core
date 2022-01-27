@@ -1,0 +1,34 @@
+db_dbauthinfo:
+  db_dbauthinfo_aiidauser_id_dbcomputer_id_777cdaa8_uniq:
+  - aiidauser_id
+  - dbcomputer_id
+db_dbcomment:
+  db_dbcomment_uuid_49bac08c_uniq:
+  - uuid
+db_dbcomputer:
+  db_dbcomputer_label_bc480bab_uniq:
+  - label
+  db_dbcomputer_uuid_f35defa6_uniq:
+  - uuid
+db_dbgroup:
+  db_dbgroup_name_type_12656f33_uniq:
+  - label
+  - type_string
+  db_dbgroup_uuid_af896177_uniq:
+  - uuid
+db_dbgroup_dbnodes:
+  db_dbgroup_dbnodes_dbgroup_id_dbnode_id_eee23cce_uniq:
+  - dbgroup_id
+  - dbnode_id
+db_dblog:
+  db_dblog_uuid_9cf77df3_uniq:
+  - uuid
+db_dbnode:
+  db_dbnode_uuid_62e0bf98_uniq:
+  - uuid
+db_dbsetting:
+  db_dbsetting_key_1b84beb4_uniq:
+  - key
+db_dbuser:
+  db_dbuser_email_30150b7e_uniq:
+  - email

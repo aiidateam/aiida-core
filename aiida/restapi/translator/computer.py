@@ -11,8 +11,8 @@
 Translator for computer
 """
 
-from aiida.restapi.translator.base import BaseTranslator
 from aiida import orm
+from aiida.restapi.translator.base import BaseTranslator
 
 
 class ComputerTranslator(BaseTranslator):
@@ -36,8 +36,8 @@ class ComputerTranslator(BaseTranslator):
         Get projectable properties specific for Computer
         :return: dict of projectable properties and column_order list
         """
-        from aiida.plugins.entry_point import get_entry_points
         from aiida.common.exceptions import EntryPointError
+        from aiida.plugins.entry_point import get_entry_points
 
         schedulers = {}
         for entry_point in get_entry_points('aiida.schedulers'):
@@ -75,9 +75,9 @@ class ComputerTranslator(BaseTranslator):
                 'type': 'int',
                 'is_display': False
             },
-            'name': {
-                'display_name': 'Name',
-                'help_text': 'Name of the object',
+            'label': {
+                'display_name': 'Label',
+                'help_text': 'Label of the computer',
                 'is_foreign_key': False,
                 'type': 'str',
                 'is_display': True
@@ -108,6 +108,6 @@ class ComputerTranslator(BaseTranslator):
         }
 
         # Note: final schema will contain details for only the fields present in column order
-        column_order = ['uuid', 'name', 'hostname', 'description', 'scheduler_type', 'transport_type']
+        column_order = ['uuid', 'label', 'hostname', 'description', 'scheduler_type', 'transport_type']
 
         return projectable_properties, column_order

@@ -16,6 +16,8 @@ import numpy
 
 from .array import ArrayData
 
+__all__ = ('KpointsData',)
+
 _DEFAULT_EPSILON_LENGTH = 1e-5
 _DEFAULT_EPSILON_ANGLE = 1e-5
 
@@ -150,7 +152,7 @@ class KpointsData(ArrayData):
             raise ValueError('The input must contain an integer index, to map the labels into the kpoint list')
         labels = [str(i[1]) for i in value]
 
-        if any([i > len(self.get_kpoints()) - 1 for i in label_numbers]):
+        if any(i > len(self.get_kpoints()) - 1 for i in label_numbers):
             raise ValueError('Index of label exceeding the list of kpoints')
 
         self.set_attribute('label_numbers', label_numbers)
@@ -240,6 +242,7 @@ class KpointsData(ArrayData):
             Default = [0.,0.,0.].
         """
         from aiida.common.exceptions import ModificationNotAllowed
+
         # validate
         try:
             the_mesh = [int(i) for i in mesh]
@@ -372,7 +375,7 @@ class KpointsData(ArrayData):
             else:
                 raise ValueError(f'kpoints must be a list of lists in {self._dimension}D case')
 
-        if kpoints.dtype != numpy.dtype(numpy.float):
+        if kpoints.dtype != numpy.dtype(float):
             raise ValueError(f'kpoints must be an array of type floats. Found instead {kpoints.dtype}')
 
         if kpoints.shape[1] < self._dimension:
@@ -385,7 +388,7 @@ class KpointsData(ArrayData):
             weights = numpy.array(weights)
             if weights.shape[0] != kpoints.shape[0]:
                 raise ValueError(f'Found {weights.shape[0]} weights but {kpoints.shape[0]} kpoints')
-            if weights.dtype != numpy.dtype(numpy.float):
+            if weights.dtype != numpy.dtype(float):
                 raise ValueError(f'weights must be an array of type floats. Found instead {weights.dtype}')
 
         return kpoints, weights

@@ -13,23 +13,59 @@ results. These are general and contain only the main logic; where appropriate,
 the routines make reference to the suitable plugins for all
 plugin-specific operations.
 """
+from collections.abc import Mapping
+from logging import LoggerAdapter
 import os
+import pathlib
 import shutil
+from tempfile import NamedTemporaryFile
+from typing import Any, List
+from typing import Mapping as MappingType
+from typing import Optional, Tuple, Union
 
 from aiida.common import AIIDA_LOGGER, exceptions
+from aiida.common.datastructures import CalcInfo
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
-from aiida.orm import FolderData, Node
+from aiida.orm import CalcJobNode, Code, FolderData, Node, RemoteData, load_node
 from aiida.orm.utils.log import get_dblogger_extra
-from aiida.plugins import DataFactory
+from aiida.repository.common import FileType
 from aiida.schedulers.datastructures import JobState
+from aiida.transports import Transport
 
 REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 
 EXEC_LOGGER = AIIDA_LOGGER.getChild('execmanager')
 
 
-def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=False):
+def _find_data_node(inputs: MappingType[str, Any], uuid: str) -> Optional[Node]:
+    """Find and return the node with the given UUID from a nested mapping of input nodes.
+
+    :param inputs: (nested) mapping of nodes
+    :param uuid: UUID of the node to find
+    :return: instance of `Node` or `None` if not found
+    """
+    data_node = None
+
+    for input_node in inputs.values():
+        if isinstance(input_node, Mapping):
+            data_node = _find_data_node(input_node, uuid)
+        elif isinstance(input_node, Node) and input_node.uuid == uuid:
+            data_node = input_node
+        if data_node is not None:
+            break
+
+    return data_node
+
+
+def upload_calculation(
+    node: CalcJobNode,
+    transport: Transport,
+    calc_info: CalcInfo,
+    folder: SandboxFolder,
+    inputs: Optional[MappingType[str, Any]] = None,
+    dry_run: bool = False
+) -> None:
     """Upload a `CalcJob` instance
 
     :param node: the `CalcJobNode`.
@@ -38,9 +74,6 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
     :param folder: temporary local file system folder containing the inputs written by `CalcJob.prepare_for_submission`
     """
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
-    from logging import LoggerAdapter
-    from tempfile import NamedTemporaryFile
-    from aiida.orm import load_node, Code, RemoteData
 
     # If the calculation already has a `remote_folder`, simply return. The upload was apparently already completed
     # before, which can happen if the daemon is restarted and it shuts down after uploading but before getting the
@@ -152,58 +185,44 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
                     transport.put(handle.name, filename)
             transport.chmod(code.get_local_executable(), 0o755)  # rwxr-xr-x
 
-    # local_copy_list is a list of tuples, each with (uuid, dest_rel_path)
+    # local_copy_list is a list of tuples, each with (uuid, dest_path, rel_path)
     # NOTE: validation of these lists are done inside calculation.presubmit()
     local_copy_list = calc_info.local_copy_list or []
     remote_copy_list = calc_info.remote_copy_list or []
     remote_symlink_list = calc_info.remote_symlink_list or []
     provenance_exclude_list = calc_info.provenance_exclude_list or []
 
-    # First creates the directory structure locally before copying the sandbox folder, so that all the intermediate
-    # folders for the files in the copy_lists are there before calling the copy methods of the transport (or else
-    # these will fail).
-    # Alternatively, one would have to call the path creation methods of the transports just before calling the
-    # copy methods to make sure each path is there, unnecessarily duplicating the number of connections requested.
-    for _, _, target_relpath in local_copy_list + remote_copy_list + remote_symlink_list:
-        dirname = os.path.dirname(target_relpath)
-        if dirname:
-            os.makedirs(os.path.join(folder.abspath, dirname), exist_ok=True)
-
     for uuid, filename, target in local_copy_list:
         logger.debug(f'[submission of calculation {node.uuid}] copying local file/folder to {target}')
-
-        def find_data_node(inputs, uuid):
-            """Find and return the node with the given UUID from a nested mapping of input nodes.
-
-            :param inputs: (nested) mapping of nodes
-            :param uuid: UUID of the node to find
-            :return: instance of `Node` or `None` if not found
-            """
-            from collections.abc import Mapping
-            data_node = None
-
-            for input_node in inputs.values():
-                if isinstance(input_node, Mapping):
-                    data_node = find_data_node(input_node, uuid)
-                elif isinstance(input_node, Node) and input_node.uuid == uuid:
-                    data_node = input_node
-                if data_node is not None:
-                    break
-
-            return data_node
 
         try:
             data_node = load_node(uuid=uuid)
         except exceptions.NotExistent:
-            data_node = find_data_node(inputs, uuid)
+            data_node = _find_data_node(inputs, uuid) if inputs else None
 
         if data_node is None:
             logger.warning(f'failed to load Node<{uuid}> specified in the `local_copy_list`')
         else:
-            with folder.open(target, 'wb') as handle:
-                with data_node.open(filename, 'rb') as source:
-                    shutil.copyfileobj(source, handle)
-            provenance_exclude_list.append(target)
+
+            # If no explicit source filename is defined, we assume the top-level directory
+            filename_source = filename or '.'
+            filename_target = target or ''
+
+            # Make the target filepath absolute and create any intermediate directories if they don't yet exist
+            filepath_target = pathlib.Path(folder.abspath) / filename_target
+            filepath_target.parent.mkdir(parents=True, exist_ok=True)
+
+            if data_node.get_object(filename_source).file_type == FileType.DIRECTORY:
+                # If the source object is a directory, we copy its entire contents
+                data_node.copy_tree(filepath_target, filename_source)
+                provenance_exclude_list.extend(data_node.list_object_names(filename_source))
+            else:
+                # Otherwise, simply copy the file
+                with folder.open(target, 'wb') as handle:
+                    with data_node.open(filename, 'rb') as source:
+                        shutil.copyfileobj(source, handle)
+
+                provenance_exclude_list.append(target)
 
     # In a dry_run, the working directory is the raw input folder, which will already contain these resources
     if not dry_run:
@@ -254,7 +273,8 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
     else:
 
         if remote_copy_list:
-            with open(os.path.join(workdir, '_aiida_remote_copy_list.txt'), 'w') as handle:
+            filepath = os.path.join(workdir, '_aiida_remote_copy_list.txt')
+            with open(filepath, 'w', encoding='utf-8') as handle:  # type: ignore[assignment]
                 for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
                     handle.write(
                         'would have copied {} to {} in working directory on remote {}'.format(
@@ -263,7 +283,8 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
                     )
 
         if remote_symlink_list:
-            with open(os.path.join(workdir, '_aiida_remote_symlink_list.txt'), 'w') as handle:
+            filepath = os.path.join(workdir, '_aiida_remote_symlink_list.txt')
+            with open(filepath, 'w', encoding='utf-8') as handle:  # type: ignore[assignment]
                 for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_symlink_list:
                     handle.write(
                         'would have created symlinks from {} to {} in working directory on remote {}'.format(
@@ -286,9 +307,25 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
         for filename in filenames:
             filepath = os.path.join(root, filename)
             relpath = os.path.normpath(os.path.relpath(filepath, folder.abspath))
-            if relpath not in provenance_exclude_list:
-                with open(filepath, 'rb') as handle:
-                    node._repository.put_object_from_filelike(handle, relpath, 'wb', force=True)  # pylint: disable=protected-access
+            dirname = os.path.dirname(relpath)
+
+            # Construct a list of all (partial) filepaths
+            # For example, if `relpath == 'some/sub/directory/file.txt'` then the list of relative directory paths is
+            # ['some', 'some/sub', 'some/sub/directory']
+            # This is necessary, because if any of these paths is in the `provenance_exclude_list` the file should not
+            # be copied over.
+            components = dirname.split(os.sep)
+            dirnames = [os.path.join(*components[:i]) for i in range(1, len(components) + 1)]
+            if relpath not in provenance_exclude_list and all(
+                dirname not in provenance_exclude_list for dirname in dirnames
+            ):
+                with open(filepath, 'rb') as handle:  # type: ignore[assignment]
+                    node._repository.put_object_from_filelike(handle, relpath)  # pylint: disable=protected-access
+
+    # Since the node is already stored, we cannot use the normal repository interface since it will raise a
+    # `ModificationNotAllowed` error. To bypass it, we go straight to the underlying repository instance to store the
+    # files, however, this means we have to manually update the node's repository metadata.
+    node._update_repository_metadata()  # pylint: disable=protected-access
 
     if not dry_run:
         # Make sure that attaching the `remote_folder` with a link is the last thing we do. This gives the biggest
@@ -301,7 +338,7 @@ def upload_calculation(node, transport, calc_info, folder, inputs=None, dry_run=
         remotedata.store()
 
 
-def submit_calculation(calculation, transport):
+def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str:
     """Submit a previously uploaded `CalcJob` to the scheduler.
 
     :param calculation: the instance of CalcJobNode to submit.
@@ -329,7 +366,66 @@ def submit_calculation(calculation, transport):
     return job_id
 
 
-def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
+def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
+    """Stash files from the working directory of a completed calculation to a permanent remote folder.
+
+    After a calculation has been completed, optionally stash files from the work directory to a storage location on the
+    same remote machine. This is useful if one wants to keep certain files from a completed calculation to be removed
+    from the scratch directory, because they are necessary for restarts, but that are too heavy to retrieve.
+    Instructions of which files to copy where are retrieved from the `stash.source_list` option.
+
+    :param calculation: the calculation job node.
+    :param transport: an already opened transport.
+    """
+    from aiida.common.datastructures import StashMode
+    from aiida.orm import RemoteStashFolderData
+
+    logger_extra = get_dblogger_extra(calculation)
+
+    stash_options = calculation.get_option('stash')
+    stash_mode = stash_options.get('mode', StashMode.COPY.value)
+    source_list = stash_options.get('source_list', [])
+
+    if not source_list:
+        return
+
+    if stash_mode != StashMode.COPY.value:
+        EXEC_LOGGER.warning(f'stashing mode {stash_mode} is not implemented yet.')
+        return
+
+    cls = RemoteStashFolderData
+
+    EXEC_LOGGER.debug(f'stashing files for calculation<{calculation.pk}>: {source_list}', extra=logger_extra)
+
+    uuid = calculation.uuid
+    target_basepath = os.path.join(stash_options['target_base'], uuid[:2], uuid[2:4], uuid[4:])
+
+    for source_filename in source_list:
+
+        source_filepath = os.path.join(calculation.get_remote_workdir(), source_filename)
+        target_filepath = os.path.join(target_basepath, source_filename)
+
+        # If the source file is in a (nested) directory, create those directories first in the target directory
+        target_dirname = os.path.dirname(target_filepath)
+        transport.makedirs(target_dirname, ignore_existing=True)
+
+        try:
+            transport.copy(source_filepath, target_filepath)
+        except (IOError, ValueError) as exception:
+            EXEC_LOGGER.warning(f'failed to stash {source_filepath} to {target_filepath}: {exception}')
+        else:
+            EXEC_LOGGER.debug(f'stashed {source_filepath} to {target_filepath}')
+
+    remote_stash = cls(
+        computer=calculation.computer,
+        target_basepath=target_basepath,
+        stash_mode=StashMode(stash_mode),
+        source_list=source_list,
+    ).store()
+    remote_stash.add_incoming(calculation, link_type=LinkType.CREATE, link_label='remote_stash')
+
+
+def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retrieved_temporary_folder: str) -> None:
     """Retrieve all the files of a completed job calculation using the given transport.
 
     If the job defined anything in the `retrieve_temporary_list`, those entries will be stored in the
@@ -365,17 +461,11 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
         # First, retrieve the files of folderdata
         retrieve_list = calculation.get_retrieve_list()
         retrieve_temporary_list = calculation.get_retrieve_temporary_list()
-        retrieve_singlefile_list = calculation.get_retrieve_singlefile_list()
 
         with SandboxFolder() as folder:
             retrieve_files_from_list(calculation, transport, folder.abspath, retrieve_list)
             # Here I retrieved everything; now I store them inside the calculation
             retrieved_files.put_object_from_tree(folder.abspath)
-
-        # Second, retrieve the singlefiles, if any files were specified in the 'retrieve_temporary_list' key
-        if retrieve_singlefile_list:
-            with SandboxFolder() as folder:
-                _retrieve_singlefiles(calculation, transport, folder, retrieve_singlefile_list, logger_extra)
 
         # Retrieve the temporary files in the retrieved_temporary_folder if any files were
         # specified in the 'retrieve_temporary_list' key
@@ -401,7 +491,7 @@ def retrieve_calculation(calculation, transport, retrieved_temporary_folder):
     retrieved_files.add_incoming(calculation, link_type=LinkType.CREATE, link_label=calculation.link_label_retrieved)
 
 
-def kill_calculation(calculation, transport):
+def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     """
     Kill the calculation through the scheduler
 
@@ -409,6 +499,10 @@ def kill_calculation(calculation, transport):
     :param transport: an already opened transport to use to address the scheduler
     """
     job_id = calculation.get_job_id()
+
+    if job_id is None:
+        # the calculation has not yet been submitted to the scheduler
+        return
 
     # Get the scheduler plugin class and initialize it with the correct transport
     scheduler = calculation.computer.get_scheduler()
@@ -431,39 +525,11 @@ def kill_calculation(calculation, transport):
                 'scheduler.kill() failed but job<{%s}> no longer seems to be running regardless', job_id
             )
 
-    return True
 
-
-def _retrieve_singlefiles(job, transport, folder, retrieve_file_list, logger_extra=None):
-    """Retrieve files specified through the singlefile list mechanism."""
-    singlefile_list = []
-    for (linkname, subclassname, filename) in retrieve_file_list:
-        EXEC_LOGGER.debug(
-            '[retrieval of calc {}] Trying '
-            "to retrieve remote singlefile '{}'".format(job.pk, filename),
-            extra=logger_extra
-        )
-        localfilename = os.path.join(folder.abspath, os.path.split(filename)[1])
-        transport.get(filename, localfilename, ignore_nonexisting=True)
-        singlefile_list.append((linkname, subclassname, localfilename))
-
-    # ignore files that have not been retrieved
-    singlefile_list = [i for i in singlefile_list if os.path.exists(i[2])]
-
-    # after retrieving from the cluster, I create the objects
-    singlefiles = []
-    for (linkname, subclassname, filename) in singlefile_list:
-        cls = DataFactory(subclassname)
-        singlefile = cls(file=filename)
-        singlefile.add_incoming(job, link_type=LinkType.CREATE, link_label=linkname)
-        singlefiles.append(singlefile)
-
-    for fil in singlefiles:
-        EXEC_LOGGER.debug(f'[retrieval of calc {job.pk}] Storing retrieved_singlefile={fil.pk}', extra=logger_extra)
-        fil.store()
-
-
-def retrieve_files_from_list(calculation, transport, folder, retrieve_list):
+def retrieve_files_from_list(
+    calculation: CalcJobNode, transport: Transport, folder: str, retrieve_list: List[Union[str, Tuple[str, str, int],
+                                                                                           list]]
+) -> None:
     """
     Retrieve all the files in the retrieve_list from the remote into the
     local folder instance through the transport. The entries in the retrieve_list

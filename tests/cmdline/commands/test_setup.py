@@ -8,8 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi profile`."""
-
 import traceback
+
 from click.testing import CliRunner
 import pytest
 
@@ -19,22 +19,21 @@ from aiida.backends.testbase import AiidaPostgresTestCase
 from aiida.cmdline.commands import cmd_setup
 from aiida.manage import configuration
 from aiida.manage.external.postgres import Postgres
+from aiida.manage.manager import get_manager
 
-from tests.utils.configuration import with_temporary_config_instance
 
-
+@pytest.mark.usefixtures('config_with_profile')
 class TestVerdiSetup(AiidaPostgresTestCase):
     """Tests for `verdi setup` and `verdi quicksetup`."""
 
     def setUp(self):
         """Create a CLI runner to invoke the CLI commands."""
-        if configuration.PROFILE.database_backend == BACKEND_DJANGO:
+        if configuration.PROFILE.storage_backend == BACKEND_DJANGO:
             pytest.skip('Reenable when #2813 is addressed')
         super().setUp()
-        self.backend = configuration.PROFILE.database_backend
+        self.backend = configuration.PROFILE.storage_backend
         self.cli_runner = CliRunner()
 
-    @with_temporary_config_instance
     def test_help(self):
         """Check that the `--help` option is eager, is not overruled and will properly display the help message.
 
@@ -44,7 +43,6 @@ class TestVerdiSetup(AiidaPostgresTestCase):
         self.cli_runner.invoke(cmd_setup.setup, ['--help'], catch_exceptions=False)
         self.cli_runner.invoke(cmd_setup.quicksetup, ['--help'], catch_exceptions=False)
 
-    @with_temporary_config_instance
     def test_quicksetup(self):
         """Test `verdi quicksetup`."""
         configuration.reset_profile()
@@ -69,21 +67,25 @@ class TestVerdiSetup(AiidaPostgresTestCase):
         self.assertIn(profile_name, config.profile_names)
 
         profile = config.get_profile(profile_name)
-        profile.default_user = user_email
+        profile.default_user_email = user_email
 
         # Verify that the backend type of the created profile matches that of the profile for the current test session
-        self.assertEqual(self.backend, profile.database_backend)
+        self.assertEqual(self.backend, profile.storage_backend)
 
         user = orm.User.objects.get(email=user_email)
         self.assertEqual(user.first_name, user_first_name)
         self.assertEqual(user.last_name, user_last_name)
         self.assertEqual(user.institution, user_institution)
 
-    @with_temporary_config_instance
+        # Check that the repository UUID was stored in the database
+        manager = get_manager()
+        backend_manager = manager.get_backend_manager()
+        self.assertEqual(backend_manager.get_repository_uuid(), self.backend.get_repository().uuid)
+
     def test_quicksetup_from_config_file(self):
         """Test `verdi quicksetup` from configuration file."""
-        import tempfile
         import os
+        import tempfile
 
         with tempfile.NamedTemporaryFile('w') as handle:
             handle.write(
@@ -99,7 +101,6 @@ email: 123@234.de"""
             result = self.cli_runner.invoke(cmd_setup.quicksetup, ['--config', os.path.realpath(handle.name)])
         self.assertClickResultNoException(result)
 
-    @with_temporary_config_instance
     def test_quicksetup_wrong_port(self):
         """Test `verdi quicksetup` exits if port is wrong."""
         configuration.reset_profile()
@@ -119,7 +120,6 @@ email: 123@234.de"""
         result = self.cli_runner.invoke(cmd_setup.quicksetup, options)
         self.assertIsNotNone(result.exception, ''.join(traceback.format_exception(*result.exc_info)))
 
-    @with_temporary_config_instance
     def test_setup(self):
         """Test `verdi setup` (non-interactive)."""
         postgres = Postgres(interactive=False, quiet=True, dbinfo=self.pg_test.dsn)
@@ -154,12 +154,17 @@ email: 123@234.de"""
         self.assertIn(profile_name, config.profile_names)
 
         profile = config.get_profile(profile_name)
-        profile.default_user = user_email
+        profile.default_user_email = user_email
 
         # Verify that the backend type of the created profile matches that of the profile for the current test session
-        self.assertEqual(self.backend, profile.database_backend)
+        self.assertEqual(self.backend, profile.storage_backend)
 
         user = orm.User.objects.get(email=user_email)
         self.assertEqual(user.first_name, user_first_name)
         self.assertEqual(user.last_name, user_last_name)
         self.assertEqual(user.institution, user_institution)
+
+        # Check that the repository UUID was stored in the database
+        manager = get_manager()
+        backend_manager = manager.get_backend_manager()
+        self.assertEqual(backend_manager.get_repository_uuid(), self.backend.get_repository().uuid)

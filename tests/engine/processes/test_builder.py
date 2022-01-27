@@ -10,9 +10,9 @@
 """Tests for `aiida.engine.processes.builder.ProcessBuilder`."""
 import pytest
 
+from aiida import orm
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida.engine.processes.builder import ProcessBuilder
-from aiida import orm
 
 
 def test_access_methods():
@@ -28,29 +28,29 @@ def test_access_methods():
     builder = ProcessBuilder(ArithmeticAddCalculation)
 
     builder['x'] = node_numb
-    assert dict(builder) == {'metadata': {'options': {}}, 'x': node_numb}
+    assert dict(builder) == {'metadata': {'options': {'stash': {}}}, 'x': node_numb}
 
     del builder['x']
-    assert dict(builder) == {'metadata': {'options': {}}}
+    assert dict(builder) == {'metadata': {'options': {'stash': {}}}}
 
     with pytest.raises(ValueError):
         builder['x'] = node_dict
 
     builder['x'] = node_numb
-    assert dict(builder) == {'metadata': {'options': {}}, 'x': node_numb}
+    assert dict(builder) == {'metadata': {'options': {'stash': {}}}, 'x': node_numb}
 
     # AS ATTRIBUTES
     del builder
     builder = ProcessBuilder(ArithmeticAddCalculation)
 
     builder.x = node_numb
-    assert dict(builder) == {'metadata': {'options': {}}, 'x': node_numb}
+    assert dict(builder) == {'metadata': {'options': {'stash': {}}}, 'x': node_numb}
 
     del builder.x
-    assert dict(builder) == {'metadata': {'options': {}}}
+    assert dict(builder) == {'metadata': {'options': {'stash': {}}}}
 
     with pytest.raises(ValueError):
         builder.x = node_dict
 
     builder.x = node_numb
-    assert dict(builder) == {'metadata': {'options': {}}, 'x': node_numb}
+    assert dict(builder) == {'metadata': {'options': {'stash': {}}}, 'x': node_numb}

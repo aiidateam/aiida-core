@@ -15,13 +15,11 @@ from copy import copy
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.session import make_transient
 
-from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.backends.sqlalchemy.models.computer import DbComputer
 from aiida.common import exceptions
-from aiida.orm.implementation.computers import BackendComputerCollection, BackendComputer
+from aiida.orm.implementation.computers import BackendComputer, BackendComputerCollection
 
-from . import utils
-from . import entities
+from . import entities, utils
 
 
 class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
@@ -53,7 +51,7 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
 
     def copy(self):
         """Create an unstored clone of an already stored `Computer`."""
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         if not self.is_stored:
             raise exceptions.InvalidOperation('You can copy a computer only after having stored it')
@@ -76,8 +74,8 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
         return self
 
     @property
-    def name(self):
-        return self._dbmodel.name
+    def label(self):
+        return self._dbmodel.label
 
     @property
     def description(self):
@@ -93,20 +91,11 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
     def set_metadata(self, metadata):
         self._dbmodel._metadata = metadata  # pylint: disable=protected-access
 
-    def get_name(self):
-        return self._dbmodel.name
-
-    def set_name(self, val):
-        self._dbmodel.name = val
-
-    def get_hostname(self):
-        return self._dbmodel.hostname
+    def set_label(self, val):
+        self._dbmodel.label = val
 
     def set_hostname(self, val):
         self._dbmodel.hostname = val
-
-    def get_description(self):
-        return self._dbmodel.description
 
     def set_description(self, val):
         self._dbmodel.description = val
@@ -129,15 +118,14 @@ class SqlaComputerCollection(BackendComputerCollection):
 
     ENTITY_CLASS = SqlaComputer
 
-    @staticmethod
-    def list_names():
-        session = get_scoped_session()
-        return session.query(DbComputer.name).all()
+    def list_names(self):
+        session = self.backend.get_session()
+        return session.query(DbComputer.label).all()
 
     def delete(self, pk):
         try:
-            session = get_scoped_session()
-            session.query(DbComputer).get(pk).delete()
+            session = self.backend.get_session()
+            session.get(DbComputer, pk).delete()
             session.commit()
         except SQLAlchemyError as exc:
             raise exceptions.InvalidOperation(

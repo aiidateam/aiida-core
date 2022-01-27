@@ -17,11 +17,23 @@ Collection of pytest fixtures using the TestManager for easy testing of AiiDA pl
  * aiida_local_code_factory
 
 """
+import asyncio
 import shutil
 import tempfile
+
 import pytest
 
-from aiida.manage.tests import test_manager, get_test_backend_name, get_test_profile_name
+from aiida.common.log import AIIDA_LOGGER
+from aiida.manage.tests import get_test_backend_name, get_test_profile_name, test_manager
+
+
+@pytest.fixture(scope='function')
+def aiida_caplog(caplog):
+    """A copy of pytest's caplog fixture, which allows ``AIIDA_LOGGER`` to propagate."""
+    propogate = AIIDA_LOGGER.propagate
+    AIIDA_LOGGER.propagate = True
+    yield caplog
+    AIIDA_LOGGER.propagate = propogate
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -48,7 +60,7 @@ def clear_database(clear_database_after_test):
 @pytest.fixture(scope='function')
 def clear_database_after_test(aiida_profile):
     """Clear the database after the test."""
-    yield
+    yield aiida_profile
     aiida_profile.reset_db()
 
 
@@ -56,7 +68,27 @@ def clear_database_after_test(aiida_profile):
 def clear_database_before_test(aiida_profile):
     """Clear the database before the test."""
     aiida_profile.reset_db()
+    yield aiida_profile
+
+
+@pytest.fixture(scope='class')
+def clear_database_before_test_class(aiida_profile):
+    """Clear the database before a test class."""
+    aiida_profile.reset_db()
     yield
+
+
+@pytest.fixture(scope='function')
+def temporary_event_loop():
+    """Create a temporary loop for independent test case"""
+    current = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        yield
+    finally:
+        loop.close()
+        asyncio.set_event_loop(current)
 
 
 @pytest.fixture(scope='function')
@@ -84,15 +116,15 @@ def aiida_localhost(temp_dir):
     Usage::
 
       def test_1(aiida_localhost):
-          name = aiida_localhost.get_name()
+          label = aiida_localhost.label
           # proceed to set up code or use 'aiida_local_code_factory' instead
 
 
     :return: The computer node
     :rtype: :py:class:`aiida.orm.Computer`
     """
-    from aiida.orm import Computer
     from aiida.common.exceptions import NotExistent
+    from aiida.orm import Computer
 
     label = 'localhost-test'
 
@@ -104,11 +136,13 @@ def aiida_localhost(temp_dir):
             description='localhost computer set up by test manager',
             hostname=label,
             workdir=temp_dir,
-            transport_type='local',
-            scheduler_type='direct'
+            transport_type='core.local',
+            scheduler_type='core.direct'
         )
         computer.store()
         computer.set_minimum_job_poll_interval(0.)
+        computer.set_default_mpiprocs_per_machine(1)
+        computer.set_default_memory_per_machine(100000)
         computer.configure()
 
     return computer

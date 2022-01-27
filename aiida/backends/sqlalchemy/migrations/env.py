@@ -7,72 +7,49 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=unused-import
-"""Upper lewel SQLAlchemy migration funcitons."""
+"""Upper level SQLAlchemy migration funcitons."""
 from alembic import context
-
-# The available SQLAlchemy tables
-from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
-from aiida.backends.sqlalchemy.models.comment import DbComment
-from aiida.backends.sqlalchemy.models.computer import DbComputer
-from aiida.backends.sqlalchemy.models.group import DbGroup
-from aiida.backends.sqlalchemy.models.log import DbLog
-from aiida.backends.sqlalchemy.models.node import DbLink, DbNode
-from aiida.backends.sqlalchemy.models.settings import DbSetting
-from aiida.backends.sqlalchemy.models.user import DbUser
-from aiida.common.exceptions import DbContentError
-from aiida.backends.sqlalchemy.models.base import Base
-target_metadata = Base.metadata  # pylint: disable=invalid-name
-
-
-def run_migrations_offline():
-    """Run migrations in 'offline' mode.
-
-    This configures the context with just a URL
-    and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
-
-    Calls to context.execute() here emit the given string to the
-    script output."""
-    raise NotImplementedError('This feature is not currently supported.')
 
 
 def run_migrations_online():
     """Run migrations in 'online' mode.
 
-    In this scenario we need to create an Engine
-    and associate a connection with the context."""
+    The connection should have been passed to the config, which we use to configue the migration context.
+    """
 
-    # This is the Alembic Config object, which provides
-    # access to the values within the .ini file in use.
-    # It is initialized by alembic and we enrich it here
-    # to point to the right database configuration.
-    #  pylint: disable=no-member
-    config = context.config
+    # pylint: disable=unused-import
+    from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
+    from aiida.backends.sqlalchemy.models.base import Base
+    from aiida.backends.sqlalchemy.models.comment import DbComment
+    from aiida.backends.sqlalchemy.models.computer import DbComputer
+    from aiida.backends.sqlalchemy.models.group import DbGroup
+    from aiida.backends.sqlalchemy.models.log import DbLog
+    from aiida.backends.sqlalchemy.models.node import DbLink, DbNode
+    from aiida.backends.sqlalchemy.models.settings import DbSetting
+    from aiida.backends.sqlalchemy.models.user import DbUser
+    from aiida.common.exceptions import DbContentError
+    config = context.config  # pylint: disable=no-member
 
-    connectable = config.attributes.get('connection', None)
+    connection = config.attributes.get('connection', None)
 
-    if connectable is None:
+    if connection is None:
         from aiida.common.exceptions import ConfigurationError
         raise ConfigurationError('An initialized connection is expected for the AiiDA online migrations.')
 
-    with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            transaction_per_migration=True,
-        )
+    context.configure(  # pylint: disable=no-member
+        connection=connection,
+        target_metadata=Base.metadata,
+        transaction_per_migration=True,
+    )
 
-        with context.begin_transaction():
-            context.run_migrations()
+    context.run_migrations()  # pylint: disable=no-member
 
 
 try:
     if context.is_offline_mode():  # pylint: disable=no-member
-        run_migrations_offline()
-    else:
-        run_migrations_online()
+        NotImplementedError('This feature is not currently supported.')
+
+    run_migrations_online()
 except NameError:
     # This will occur in an environment that is just compiling the documentation
     pass

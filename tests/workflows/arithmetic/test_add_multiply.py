@@ -17,11 +17,12 @@ from aiida.workflows.arithmetic.add_multiply import add_multiply
 
 def test_factory():
     """Test that the work function can be loaded through the factory."""
-    loaded = WorkflowFactory('arithmetic.add_multiply')
+    loaded = WorkflowFactory('core.arithmetic.add_multiply')
     assert loaded.is_process_function
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('clear_database_before_test', 'temporary_event_loop')
 def test_run():
     """Test running the work function."""
     x = Int(1)

@@ -9,8 +9,7 @@
 ###########################################################################
 # pylint: disable=invalid-name
 """Database migration."""
-from django.db import models
-from django.db import migrations
+from django.db import migrations, models
 
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
 

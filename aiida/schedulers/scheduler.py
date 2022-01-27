@@ -79,21 +79,6 @@ class Scheduler(metaclass=abc.ABCMeta):
             raise RuntimeError('the class attribute `_job_resource_class` is not a subclass of `JobResource`.')
 
     @classmethod
-    def get_valid_schedulers(cls):
-        """Return all available scheduler plugins.
-
-        .. deprecated:: 1.3.0
-
-            Will be removed in `2.0.0`, use `aiida.plugins.entry_point.get_entry_point_names` instead
-        """
-        import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning
-        from aiida.plugins.entry_point import get_entry_point_names
-        message = 'method is deprecated, use `aiida.plugins.entry_point.get_entry_point_names` instead'
-        warnings.warn(message, AiidaDeprecationWarning)  # pylint: disable=no-member
-        return get_entry_point_names('aiida.schedulers')
-
-    @classmethod
     def get_short_doc(cls):
         """Return the first non-empty line of the class docstring, if available."""
         # Remove empty lines
@@ -184,6 +169,24 @@ class Scheduler(metaclass=abc.ABCMeta):
             script_lines.append(empty_line)
 
         return '\n'.join(script_lines)
+
+    def _get_submit_script_environment_variables(self, template):  # pylint: disable=no-self-use
+        """Return the part of the submit script header that defines environment variables.
+
+        :parameter template: a `aiida.schedulers.datastrutures.JobTemplate` instance.
+        :return: string containing environment variable declarations.
+        """
+        if not isinstance(template.job_environment, dict):
+            raise ValueError('If you provide job_environment, it must be a dictionary')
+
+        lines = ['# ENVIRONMENT VARIABLES BEGIN ###']
+
+        for key, value in template.job_environment.items():
+            lines.append(f'export {key.strip()}={escape_for_bash(value)}')
+
+        lines.append('# ENVIRONMENT VARIABLES END ###')
+
+        return '\n'.join(lines)
 
     @abc.abstractmethod
     def _get_submit_script_header(self, job_tmpl):
@@ -289,35 +292,6 @@ class Scheduler(metaclass=abc.ABCMeta):
         }
 
         return detailed_job_info
-
-    def get_detailed_jobinfo(self, jobid):
-        """
-        Return a string with the output of the detailed_jobinfo command.
-
-        .. deprecated:: 1.1.0
-            Will be removed in `v2.0.0`, use :meth:`aiida.schedulers.scheduler.Scheduler.get_detailed_job_info` instead.
-
-        At the moment, the output text is just retrieved
-        and stored for logging purposes, but no parsing is performed.
-
-        :raises: :class:`aiida.common.exceptions.FeatureNotAvailable`
-        """
-        import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning
-        warnings.warn('function is deprecated, use `get_detailed_job_info` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        command = self._get_detailed_job_info_command(job_id=jobid)  # pylint: disable=assignment-from-no-return
-        with self.transport:
-            retval, stdout, stderr = self.transport.exec_command_wait(command)
-
-        return f"""Detailed jobinfo obtained with command '{command}'
-Return Code: {retval}
--------------------------------------------------------------
-stdout:
-{stdout}
-stderr:
-{stderr}
-"""
 
     @abc.abstractmethod
     def _parse_joblist_output(self, retval, stdout, stderr):

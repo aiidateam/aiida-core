@@ -1,0 +1,12 @@
+---
+label: slurm-ssh
+description: slurm container
+hostname: localhost
+transport: core.ssh
+scheduler: core.slurm
+shebang: "#!/bin/bash"
+work_dir: /home/{username}/workdir
+mpirun_command: "mpirun -np {tot_num_mpiprocs}"
+mpiprocs_per_machine: 1
+prepend_text: ""
+append_text: ""

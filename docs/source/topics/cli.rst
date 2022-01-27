@@ -25,11 +25,11 @@ Multi-value options
 Some ``verdi`` commands provide *options* that can take multiple values.
 This allows to avoid repetition and e.g. write::
 
-    verdi export create -N 10 11 12 -- archive.aiida
+    verdi archive create -N 10 11 12 -- archive.aiida
 
 instead of the more lengthy::
 
-    verdi export create -N 10 -N 11 -N 12 archive.aiida
+    verdi archive create -N 10 -N 11 -N 12 archive.aiida
 
 Note the use of the so-called 'endopts' marker ``--`` that is necessary to mark the end of the ``-N`` option and distinguish it from the ``archive.aiida`` argument.
 
@@ -68,7 +68,7 @@ The ``Usage:`` line encodes information on the command's parameters, e.g.:
 Multi-value options are followed by ``...`` in the help string and the ``Usage:`` line of the corresponding command will contain the 'endopts' marker.
 For example::
 
-    Usage: verdi export create [OPTIONS] [--] OUTPUT_FILE
+    Usage: verdi archive create [OPTIONS] [--] OUTPUT_FILE
 
         Export various entities, such as Codes, Computers, Groups and Nodes, to an
         archive file for backup or sharing purposes.
@@ -100,6 +100,33 @@ In order to use a different profile, pass the ``-p/--profile`` option to any ``v
 
 Note that the specified profile will be used for this and *only* this command.
 Use ``verdi profile setdefault`` in order to permanently change the default profile.
+
+
+.. _topics:cli:verbosity:
+
+Verbosity
+=========
+All ``verdi`` commands have the ``-v/--verbosity`` option, which allows to control the verbosity of the output that is printed by the command.
+The option takes a value that is known as the log level and all messages that are emitted with an inferior log level will be suppressed.
+The valid values in order of increasing log level are: `NOTSET`, `DEBUG`, `INFO`, `REPORT`, `WARNING`, `ERROR` and `CRITICAL`.
+For example, if the log level is set to ``ERROR``, only messages with the ``ERROR`` and ``CRITICAL`` level will be shown.
+The choice for these log level values comes directly from `Python's built-in logging module <https://docs.python.org/3/library/logging.html>`_.
+The ``REPORT`` level is a log level that is defined and added by AiiDA that sits between the ``INFO`` and ``WARNING`` level, and is the default log level.
+
+The verbosity option is case-insensitive, i.e., ``--verbosity debug`` and ``--verbosity DEBUG`` are identical.
+The option can be passed at any subcommand level, for example:
+
+.. code:: console
+
+    verdi process list --verbosity debug
+
+is identical to
+
+.. code:: console
+
+    verdi --verbosity debug process list
+
+When the option is specified multiple times, only the last value will be considered.
 
 
 .. _topics:cli:identifiers:

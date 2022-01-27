@@ -11,6 +11,7 @@
 """Add a uniqueness constraint to the uuid column of DbNode table."""
 
 from django.db import migrations, models
+
 from aiida.backends.djsite.db.migrations import upgrade_schema_version
 from aiida.common.utils import get_new_uuid
 
@@ -27,7 +28,7 @@ def verify_node_uuid_uniqueness(_, __):
 
     :raises: IntegrityError if database contains nodes with duplicate UUIDS.
     """
-    from aiida.manage.database.integrity.duplicate_uuid import verify_uuid_uniqueness
+    from aiida.backends.general.migrations.duplicate_uuids import verify_uuid_uniqueness
     verify_uuid_uniqueness(table='db_dbnode')
 
 

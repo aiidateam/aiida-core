@@ -229,11 +229,11 @@ File lists
 
 Local copy list
 ~~~~~~~~~~~~~~~
-The local copy list takes tuples of length three, each of which represents a file to be copied, defined through the following items:
+The local copy list takes tuples of length three, each of which represents a file or directory to be copied, defined through the following items:
 
     * `node uuid`: the node whose repository contains the file, typically a ``SinglefileData`` or ``FolderData`` node
-    * `source relative path`: the relative path of the file within the node repository
-    * `target relative path`: the relative path within the working directory to which to copy the file
+    * `source relative path`: the relative path of the file or directory within the node repository
+    * `target relative path`: the relative path within the working directory to which to copy the file or directory contents
 
 As an example, consider a ``CalcJob`` implementation that receives a ``SinglefileData`` node as input with the name ``pseudopotential``, to copy its contents one can specify:
 
@@ -250,6 +250,43 @@ If instead, you need to transfer a specific file from a ``FolderData``, you can 
 
 Note that the filenames in the relative source and target path need not be the same.
 This depends fully on how the files are stored in the node's repository and what files need to be written to the working directory.
+
+To copy the contents of a directory of the source node, simply define it as the `source relative path`.
+For example, imagine we have a `FolderData` node that is passed as the `folder` input, which has the following repository virtual hierarchy:
+
+.. code:: bash
+
+    ├─ sub
+    │  └─ file_b.txt
+    └─ file_a.txt
+
+If the entire content needs to be copied over, specify the `local_copy_list` as follows:
+
+.. code:: python
+
+    calc_info.local_copy_list = [(self.inputs.folder.uuid, '.', None)]
+
+The ``'.'`` here indicates that the entire contents need to be copied over.
+Alternatively, one can specify a sub directory, e.g.:
+
+.. code:: python
+
+    calc_info.local_copy_list = [(self.inputs.folder.uuid, 'sub', None)]
+
+Finally, the `target relative path` can be used to write the contents of the source repository to a particular sub directory in the working directory.
+For example, the following statement:
+
+.. code:: python
+
+    calc_info.local_copy_list = [(self.inputs.folder.uuid, 'sub', 'relative/target')]
+
+will result in the following file hierarchy in the working directory of the calculation:
+
+.. code:: bash
+
+    └─ relative
+       └─ target
+           └─ file_b.txt
 
 One might think what the purpose of the list is, when one could just as easily use normal the normal API to write the file to the ``folder`` sandbox folder.
 It is true, that in this way the file will be copied to the working directory, however, then it will *also* be copied into the repository of the calculation node.
@@ -312,54 +349,256 @@ Note that the source path can point to a directory, in which case its contents w
 
 Retrieve list
 ~~~~~~~~~~~~~
-The retrieve list supports various formats to define what files should be retrieved.
-The simplest is retrieving a single file, whose filename you know before hand and you simply want to copy with the same name in the retrieved folder.
-Imagine you want to retrieve the files ``output1.out`` and ``output_folder/output2.out`` you would simply add them as strings to the retrieve list:
+The retrieve list is a list of instructions of what files and folders should be retrieved by the engine once a calculation job has terminated.
+Each instruction should have one of two formats:
 
-.. code:: python
+    * a string representing a relative filepath in the remote working directory
+    * a tuple of length three that allows to control the name of the retrieved file or folder in the retrieved folder
 
-    calc_info.retrieve_list = ['output1.out', 'output_folder/output2.out']
+The retrieve list can contain any number of instructions and can use both formats at the same time.
+The first format is obviously the simplest, however, this requires one knows the exact name of the file or folder to be retrieved and in addition any subdirectories will be ignored when it is retrieved.
+If the exact filename is not known and `glob patterns <https://en.wikipedia.org/wiki/Glob_%28programming%29>`_ should be used, or if the original folder structure should be (partially) kept, one should use the tuple format, which has the following format:
 
-The retrieved files will be copied over keeping the exact names and hierarchy.
-If you require more control over the hierarchy and nesting, you can use tuples of length three instead, with the following items:
+    * `source relative path`: the relative path, with respect to the working directory on the remote, of the file or directory to retrieve.
+    * `target relative path`: the relative path of the directory in the retrieved folder in to which the content of the source will be copied. The string ``'.'`` indicates the top level in the retrieved folder.
+    * `depth`: the number of levels of nesting in the source path to maintain when copying, starting from the deepest file.
 
-    * `source relative path`: the relative path, with respect to the working directory on the remote, of the file or directory to retrieve
-    * `target relative path`: the relative path where to copy the files locally in the retrieved folder. The string `'.'` indicates the top level in the retrieved folder.
-    * `depth`: the number of levels of nesting in the folder hierarchy to maintain when copying, starting from the deepest file
+To illustrate the various possibilities, consider the following example file hierarchy in the remote working directory:
 
-For example, imagine the calculation will have written a file in the remote working directory with the folder hierarchy ``some/remote/path/files/output.dat``.
-If you want to copy the file, with the final resulting path ``path/files/output.dat``, you would specify:
+.. code:: bash
 
-.. code:: python
+    ├─ path
+    |  ├── sub
+    │  │   ├─ file_c.txt
+    │  │   └─ file_d.txt
+    |  └─ file_b.txt
+    └─ file_a.txt
 
-    calc_info.retrieve_list = [('some/remote/path/files/output.dat', '.', 2)]
+Below, you will find examples for various use cases of files and folders to be retrieved.
+Each example starts with the format of the ``retrieve_list``, followed by a schematic depiction of the final file hierarchy that would be created in the retrieved folder.
 
-The depth of two, ensures that only two levels of nesting are copied.
-If the output files have dynamic names that one cannot know beforehand, the ``'*'`` glob pattern can be used.
-For example, if the code will generate a number of XML files in the folder ``relative/path/output`` with filenames that follow the pattern ``file_*[0-9].xml``, you can instruct to retrieve all of them as follows:
+Explicit file or folder
+.......................
 
-.. code:: python
+Retrieving a single toplevel file or folder (with all its contents) where the final folder structure is not important.
 
-    calc_info.retrieve_list = [('relative/path/output/file_*[0-9].xml', '.', 1)]
+.. code:: bash
 
-The second item when using globbing *has* to be ``'.'`` and the depth works just as before.
-In this example, all files matching the globbing pattern will be copied in the directory ``output`` in the retrieved folder data node.
+    retrieve_list = ['file_a.txt']
+
+    └─ file_a.txt
+
+.. code:: bash
+
+    retrieve_list = ['path']
+
+    ├── sub
+    │   ├─ file_c.txt
+    │   └─ file_d.txt
+    └─ file_b.txt
+
+
+Explicit nested file or folder
+..............................
+
+Retrieving a single file or folder (with all its contents) that is located in a subdirectory in the remote working directory, where the final folder structure is not important.
+
+.. code:: bash
+
+    retrieve_list = ['path/file_b.txt']
+
+    └─ file_b.txt
+
+.. code:: bash
+
+    retrieve_list = ['path/sub']
+
+    ├─ file_c.txt
+    └─ file_d.txt
+
+
+Explicit nested file or folder keeping (partial) hierarchy
+..........................................................
+
+The following examples show how the file hierarchy of the retrieved files can be controlled.
+By changing the ``depth`` parameter of the tuple, one can control what part of the remote folder hierarchy is kept.
+In the given example, the maximum depth of the remote folder hierarchy is ``3``.
+The following example shows that by specifying ``3``, the exact folder structure is kept:
+
+.. code:: bash
+
+    retrieve_list = [('path/sub/file_c.txt', '.', 3)]
+
+    └─ path
+        └─ sub
+           └─ file_c.txt
+
+For ``depth=2``, only two levels of nesting are kept (including the file itself) and so the ``path`` folder is discarded.
+
+.. code:: bash
+
+    retrieve_list = [('path/sub/file_c.txt', '.', 2)]
+
+    └─ sub
+       └─ file_c.txt
+
+The same applies for directories.
+By specifying a directory for the first element, all its contents will be retrieved.
+With ``depth=1``, only the first level ``sub`` is kept of the folder hierarchy.
+
+.. code:: bash
+
+    retrieve_list = [('path/sub', '.', 1)]
+
+    └── sub
+        ├─ file_c.txt
+        └─ file_d.txt
+
+
+Pattern matching
+................
+
+If the exact file or folder name is not known beforehand, glob patterns can be used.
+In the following examples, all files that match ``*c.txt`` in the directory ``path/sub`` will be retrieved.
+Since ``depth=0`` the files will be copied without the ``path/sub`` subdirectory.
+
+.. code:: bash
+
+    retrieve_list = [('path/sub/*c.txt', '.', 0)]
+
+    └─ file_c.txt
+
+To keep the subdirectory structure, one can set the depth parameter, just as in the previous examples.
+
+.. code:: bash
+
+    retrieve_list = [('path/sub/*c.txt', '.', 2)]
+
+    └── sub
+        └─ file_c.txt
+
+
+Specific target directory
+.........................
+
+The final folder hierarchy of the retrieved files in the retrieved folder is not only determined by the hierarchy of the remote working directory, but can also be controlled through the second and third elements of the instructions tuples.
+The final ``depth`` element controls what level of hierarchy of the source is maintained, where the second element specifies the base path in the retrieved folder into which the remote files should be retrieved.
+For example, to retrieve a nested file, maintaining the remote hierarchy and storing it locally in the ``target`` directory, one can do the following:
+
+.. code:: bash
+
+    retrieve_list = [('path/sub/file_c.txt', 'target', 3)]
+
+    └─ target
+        └─ path
+            └─ sub
+               └─ file_c.txt
+
+The same applies for folders that are to be retrieved:
+
+.. code:: bash
+
+    retrieve_list = [('path/sub', 'target', 1)]
+
+    └─ target
+        └── sub
+            ├─ file_c.txt
+            └─ file_d.txt
+
+Note that `target` here is not used to rename the retrieved file or folder, but indicates the path of the directory into which the source is copied.
+The target relative path is also compatible with glob patterns in the source relative paths:
+
+.. code:: bash
+
+    retrieve_list = [('path/sub/*c.txt', 'target', 0)]
+
+    └─ target
+        └─ file_c.txt
 
 
 Retrieve temporary list
 ~~~~~~~~~~~~~~~~~~~~~~~
+
 Recall that, as explained in the :ref:`'prepare' section<topics:calculations:usage:calcjobs:prepare>`, all the files that are retrieved by the engine following the 'retrieve list', are stored in the ``retrieved`` folder data node.
 This means that any file you retrieve for a completed calculation job will be stored in your repository.
 If you are retrieving big files, this can cause your repository to grow significantly.
 Often, however, you might only need a part of the information contained in these retrieved files.
 To solve this common issue, there is the concept of the 'retrieve temporary list'.
-The specification of the retrieve temporary list is identical to that of the normal :ref:`retrieve list<topics:calculations:usage:calcjobs:file_lists_retrieve>`.
-The only difference is that, unlike the files of the retrieve list which will be permanently stored in the retrieved :py:class:`~aiida.orm.nodes.data.folder.FolderData` node, the files of the retrieve temporary list will be stored in a temporary sandbox folder.
-This folder is then passed to the :ref:`parser<topics:calculations:usage:calcjobs:parsers>`, if one was specified for the calculation job.
-The parser implementation can then parse these files and store the relevant information as output nodes.
-After the parser terminates, the engine will take care to automatically clean up the sandbox folder with the temporarily retrieved files.
-The contract of the 'retrieve temporary list' is essentially that the files will be available during parsing and will be destroyed immediately afterwards.
+The specification of the retrieve temporary list is identical to that of the normal :ref:`retrieve list<topics:calculations:usage:calcjobs:file_lists_retrieve>`, but it is added to the ``calc_info`` under the ``retrieve_temporary_list`` attribute:
 
+.. code-block:: python
+
+    calcinfo = CalcInfo()
+    calcinfo.retrieve_temporary_list = ['relative/path/to/file.txt']
+
+The only difference is that, unlike the files of the retrieve list which will be permanently stored in the retrieved :py:class:`~aiida.orm.nodes.data.folder.FolderData` node, the files of the retrieve temporary list will be stored in a temporary sandbox folder.
+This folder is then passed under the ``retrieved_temporary_folder`` keyword argument to the ``parse`` method of the :ref:`parser<topics:calculations:usage:calcjobs:parsers>`, if one was specified for the calculation job:
+
+.. code-block:: python
+
+    def parse(self, **kwargs):
+        """Parse the retrieved files of the calculation job."""
+
+        retrieved_temporary_folder = kwargs['retrieved_temporary_folder']
+
+The parser implementation can then parse these files and store the relevant information as output nodes.
+
+.. important::
+
+    The type of ``kwargs['retrieved_temporary_folder']`` is a simple ``str`` that represents the `absolute` filepath to the temporary folder.
+    You can access its contents with the ``os`` standard library module or convert it into a ``pathlib.Path``.
+
+After the parser terminates, the engine will automatically clean up the sandbox folder with the temporarily retrieved files.
+The concept of the ``retrieve_temporary_list`` is essentially that the files will be available during parsing and will be destroyed immediately afterwards.
+
+.. _topics:calculations:usage:calcjobs:stashing:
+
+Stashing on the remote
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 1.6.0
+
+The ``stash`` option namespace allows a user to specify certain files and/or folders that are created by the calculation job to be stashed somewhere on the remote where the job is run.
+This can be useful if these need to be stored for a longer time on a machine where the scratch space is cleaned regularly, but they need to be kept on the remote machine and not retrieved.
+Examples are files that are necessary to restart a calculation but are too big to be retrieved and stored permanently in the local file repository.
+
+The files/folder that need to be stashed are specified through their relative filepaths within the working directory in the ``stash.source_list`` option.
+Using the ``COPY`` mode, the target path defines another location (on the same filesystem as the calculation) to copy the files to, and is set through the ``stash.target_base`` option, for example:
+
+.. code-block:: python
+
+   from aiida.common.datastructures import StashMode
+
+   inputs = {
+       'code': ....,
+       ...
+       'metadata': {
+           'options': {
+               'stash': {
+                   'source_list': ['aiida.out', 'output.txt'],
+                   'target_base': '/storage/project/stash_folder',
+                   'stash_mode': StashMode.COPY.value,
+               }
+           }
+       }
+   }
+
+.. note::
+
+   In the future, other methods for stashing may be implemented, such as placing all files in a (compressed) tarball or even stash files on tape.
+
+.. important::
+
+   If the ``stash`` option namespace is defined for a calculation job, the daemon will perform the stashing operations before the files are retrieved.
+   This means that the stashing happens before the parsing of the output files (which occurs after the retrieving step), such that that the files will be stashed independent of the final exit status that the parser will assign to the calculation job.
+   This may cause files to be stashed for calculations that will later be considered to have failed.
+
+The stashed files and folders are represented by an output node that is attached to the calculation node through the label ``remote_stash``, as a ``RemoteStashFolderData`` node.
+Just like the ``remote_folder`` node, this represents a location or files on a remote machine and so is equivalent to a "symbolic link".
+
+.. important::
+
+   AiiDA does not actually control the files in the remote stash, and so the contents may disappear at some point.
 
 .. _topics:calculations:usage:calcjobs:options:
 
@@ -373,6 +612,13 @@ The full list of available options are documented below as part of the ``CalcJob
     :module: aiida.engine.processes.calcjobs
     :expand-namespaces:
 
+
+The ``rerunnable`` option enables the scheduler to re-launch the calculation if it has failed, for example due to node failure or a failure to launch the job. It corresponds to the ``--requeue`` option in SLURM, and the ``-r`` option in SGE, LSF, and PBS. The following two conditions must be met in order for this to work well with AiiDA:
+
+- the scheduler assigns the same job-id to the restarted job
+- the code produces the same results if it has already partially run before (not every scheduler may produce this situation)
+
+Because this depends on the scheduler, its configuration, and the code used, we cannot say conclusively when it will work -- do your own testing! It has been tested on a cluster using SLURM, but that does not guarantee other SLURM clusters behave in the same way.
 
 .. _topics:calculations:usage:calcjobs:launch:
 
@@ -514,7 +760,7 @@ Scheduler errors
 
 Besides the output parsers, the scheduler plugins can also provide parsing of the output generated by the job scheduler, by implementing the :meth:`~aiida.schedulers.scheduler.Scheduler.parse_output` method.
 If the scheduler plugin has implemented this method, the output generated by the scheduler, written to the stdout and stderr file descriptors as well as the output of the detailed job info command, is parsed.
-If the parser detects a known problem, such as an out-of-memory (OOM) error, the corresponding exit code will already be set on the calculation job node.
+If the parser detects a known problem, such as an out-of-memory (OOM) or out-of-walltime (OOW) error, the corresponding exit code will already be set on the calculation job node.
 The output parser, if defined in the inputs, can inspect the exit status on the node and decide to keep it or override it with a different, potentially more useful, exit code.
 
 .. code:: python
@@ -523,10 +769,17 @@ The output parser, if defined in the inputs, can inspect the exit status on the 
 
         def parse(self, **kwargs):
             """Parse the contents of the output files retrieved in the `FolderData`."""
+
+            # It is probably best to check for explicit exit codes.
+            if self.node.exit_status == self.exit_codes.ERROR_SCHEDULER_OUT_OF_WALLTIME.status:
+                # The scheduler parser detected an OOW error.
+                # By returning `None`, the same exit code will be kept.
+                return None
+
+            # It is also possible to just check for any exit status to be set as a fallback.
             if self.node.exit_status is not None:
-                # If an exit status is already set on the node, that means the
-                # scheduler plugin detected a problem.
-                return
+                # You can still try to parse files before exiting the parsing.
+                return None
 
 Note that in the example given above, the parser returns immediately if it detects that the scheduler detected a problem.
 Since it returns `None`, the exit code of the scheduler will be kept and will be the final exit code of the calculation job.

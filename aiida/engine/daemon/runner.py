@@ -8,17 +8,35 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Function that starts a daemon runner."""
+import asyncio
 import logging
 import signal
 
 from aiida.common.log import configure_logging
 from aiida.engine.daemon.client import get_daemon_client
+from aiida.engine.runners import Runner
 from aiida.manage.manager import get_manager
 
 LOGGER = logging.getLogger(__name__)
 
 
-def start_daemon():
+async def shutdown_runner(runner: Runner) -> None:
+    """Cleanup tasks tied to the service's shutdown."""
+    from asyncio import all_tasks, current_task
+
+    LOGGER.info('Received signal to shut down the daemon runner')
+    tasks = [task for task in all_tasks() if task is not current_task()]
+
+    for task in tasks:
+        task.cancel()
+
+    await asyncio.gather(*tasks, return_exceptions=True)
+    runner.close()
+
+    LOGGER.info('Daemon runner stopped')
+
+
+def start_daemon() -> None:
     """Start a daemon runner for the currently configured profile."""
     daemon_client = get_daemon_client()
     configure_logging(daemon=True, daemon_log_file=daemon_client.daemon_log_file)
@@ -31,19 +49,15 @@ def start_daemon():
         LOGGER.exception('daemon runner failed to start')
         raise
 
-    def shutdown_daemon(_num, _frame):
-        LOGGER.info('Received signal to shut down the daemon runner')
-        runner.close()
-
-    signal.signal(signal.SIGINT, shutdown_daemon)
-    signal.signal(signal.SIGTERM, shutdown_daemon)
-
-    LOGGER.info('Starting a daemon runner')
+    signals = (signal.SIGTERM, signal.SIGINT)
+    for s in signals:  # pylint: disable=invalid-name
+        runner.loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown_runner(runner)))
 
     try:
+        LOGGER.info('Starting a daemon runner')
         runner.start()
     except SystemError as exception:
         LOGGER.info('Received a SystemError: %s', exception)
         runner.close()
 
-    LOGGER.info('Daemon runner stopped')
+    LOGGER.info('Daemon runner started')

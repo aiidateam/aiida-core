@@ -10,18 +10,17 @@
 """
 Defines an rst directive to auto-document AiiDA processes.
 """
-from collections.abc import Mapping, Iterable
+from collections.abc import Iterable, Mapping
 import inspect
 
 from docutils import nodes
 from docutils.core import publish_doctree
 from docutils.parsers.rst import directives
+from plumpy.ports import OutputPort
 from sphinx import addnodes
 from sphinx.ext.autodoc import ClassDocumenter
 from sphinx.util.docutils import SphinxDirective
 from sphinxcontrib.details.directive import details, summary
-
-from plumpy.ports import OutputPort
 
 from aiida.common.utils import get_object_from_string
 from aiida.engine import Process
@@ -117,9 +116,12 @@ class AiidaProcessDirective(SphinxDirective):
         content += self.build_doctree(title='Outputs:', port_namespace=self.process_spec.outputs)
 
         if hasattr(self.process_spec, 'get_outline'):
-            outline = self.process_spec.get_outline()
-            if outline is not None:
-                content += self.build_outline_doctree(outline=outline)
+            try:
+                outline = self.process_spec.get_outline()
+                if outline is not None:
+                    content += self.build_outline_doctree(outline=outline)
+            except AssertionError:
+                pass
         return content
 
     def build_doctree(self, title, port_namespace):

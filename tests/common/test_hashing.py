@@ -11,9 +11,11 @@
 Unittests for aiida.common.hashing:make_hash with hardcoded hash values
 """
 
-import itertools
 import collections
 from datetime import datetime
+from decimal import Decimal
+import hashlib
+import itertools
 import uuid
 
 import numpy as np
@@ -24,9 +26,11 @@ try:
 except ImportError:
     import unittest
 
-from aiida.common.hashing import make_hash, float_to_text
-from aiida.common.folders import SandboxFolder
 from aiida.backends.testbase import AiidaTestCase
+from aiida.common.exceptions import HashingError
+from aiida.common.folders import SandboxFolder
+from aiida.common.hashing import chunked_file_hash, float_to_text, make_hash
+from aiida.common.utils import DatetimePrecision
 from aiida.orm import Dict
 
 
@@ -36,6 +40,7 @@ class FloatToTextTest(unittest.TestCase):
     """
 
     def test_subnormal(self):
+        self.assertEqual(float_to_text(-0.00, sig=2), '0')  # 0 is always printed as '0'
         self.assertEqual(float_to_text(3.555, sig=2), '3.6')
         self.assertEqual(float_to_text(3.555, sig=3), '3.56')
         self.assertEqual(float_to_text(3.141592653589793238462643383279502884197, sig=14), '3.1415926535898')
@@ -166,18 +171,36 @@ class MakeHashTest(unittest.TestCase):
             'be7c7c7faaff07d796db4cbef4d3d07ed29fdfd4a38c9aded00a4c2da2b89b9c'
         )
 
+    def test_datetime_precision_hashing(self):
+        dt_prec = DatetimePrecision(datetime(2018, 8, 18, 8, 18), 10)
+        self.assertEqual(make_hash(dt_prec), '837ab70b3b7bd04c1718834a0394a2230d81242c442e4aa088abeab15622df37')
+        dt_prec_utc = DatetimePrecision(datetime.utcfromtimestamp(0), 0)
+        self.assertEqual(make_hash(dt_prec_utc), '8c756ee99eaf9655bb00166839b9d40aa44eac97684b28f6e3c07d4331ae644e')
+
     def test_numpy_types(self):
         self.assertEqual(
             make_hash(np.float64(3.141)), 'b3302aad550413e14fe44d5ead10b3aeda9884055fca77f9368c48517916d4be'
         )  # pylint: disable=no-member
         self.assertEqual(make_hash(np.int64(42)), '9468692328de958d7a8039e8a2eb05cd6888b7911bbc3794d0dfebd8df3482cd')  # pylint: disable=no-member
 
+    def test_decimal(self):
+        self.assertEqual(
+            make_hash(Decimal('3.141')), 'b3302aad550413e14fe44d5ead10b3aeda9884055fca77f9368c48517916d4be'
+        )  # pylint: disable=no-member
+
+        # make sure we get the same hashes as for corresponding float or int
+        self.assertEqual(make_hash(Decimal('3.141')), make_hash(3.141))  # pylint: disable=no-member
+
+        self.assertEqual(make_hash(Decimal('3.')), make_hash(3))  # pylint: disable=no-member
+
+        self.assertEqual(make_hash(Decimal('3141')), make_hash(3141))  # pylint: disable=no-member
+
     def test_unhashable_type(self):
 
         class MadeupClass:
             pass
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(HashingError):
             make_hash(MadeupClass())
 
     def test_folder(self):
@@ -255,3 +278,11 @@ class CheckDBRoundTrip(AiidaTestCase):
             recomputed_hash = node.get_hash()
 
             self.assertEqual(first_hash, recomputed_hash)
+
+
+def test_chunked_file_hash(tmp_path):
+    """Test the ``chunked_file_hash`` function."""
+    (tmp_path / 'afile').write_bytes(b'content')
+    with (tmp_path / 'afile').open('rb') as handle:
+        key = chunked_file_hash(handle, hashlib.sha256)
+    assert key == 'ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73'

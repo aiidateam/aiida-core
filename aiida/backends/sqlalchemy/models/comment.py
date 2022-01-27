@@ -11,33 +11,46 @@
 """Module to manage comments for the SQLA backend."""
 
 from sqlalchemy import ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.schema import Column
-from sqlalchemy.types import Integer, DateTime, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.sql.schema import Index, UniqueConstraint
+from sqlalchemy.types import DateTime, Integer, Text
 
-from aiida.common import timezone
 from aiida.backends.sqlalchemy.models.base import Base
+from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
 
 
 class DbComment(Base):
-    """Class to store comments using SQLA backend."""
+    """Database model to store comments, relating to a node."""
+
     __tablename__ = 'db_dbcomment'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
 
-    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, unique=True)
-    dbnode_id = Column(Integer, ForeignKey('db_dbnode.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'))
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, nullable=False)
+    dbnode_id = Column(
+        Integer, ForeignKey('db_dbnode.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), nullable=False
+    )
 
-    ctime = Column(DateTime(timezone=True), default=timezone.now)
-    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now)
+    ctime = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
+    mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=False)
 
-    user_id = Column(Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'))
-    content = Column(Text, nullable=True)
+    user_id = Column(
+        Integer, ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'), nullable=False
+    )
+    content = Column(Text, default='', nullable=False)
 
     dbnode = relationship('DbNode', backref='dbcomments')
     user = relationship('DbUser')
+
+    __table_args__ = (
+        # index/constraint names mirror django's auto-generated ones
+        UniqueConstraint(uuid, name='db_dbcomment_uuid_49bac08c_uniq'),
+        Index('db_dbcomment_dbnode_id_3b812b6b', dbnode_id),
+        Index('db_dbcomment_user_id_8ed5e360', user_id),
+    )
 
     def __str__(self):
         return 'DbComment for [{} {}] on {}'.format(
@@ -49,7 +62,7 @@ class DbComment(Base):
         """Adding mtime attribute if not present."""
         super().__init__(*args, **kwargs)
         # The behavior of an unstored Comment instance should be that all its attributes should be initialized in
-        # accordance with the defaults specified on the collums, i.e. if a default is specified for the `uuid` column,
+        # accordance with the defaults specified on the columns, i.e. if a default is specified for the `uuid` column,
         # then an unstored `DbComment` instance should have a default value for the `uuid` attribute. The exception here
         # is the `mtime`, that we do not want to be set upon instantiation, but only upon storing. However, in
         # SqlAlchemy a default *has* to be defined if one wants to get that value upon storing. But since defining a

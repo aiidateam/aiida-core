@@ -2,6 +2,7 @@
 from aiida.engine import calcfunction
 from aiida.orm import Int
 
+
 @calcfunction
 def add(x, y):
     result = load_node(100)

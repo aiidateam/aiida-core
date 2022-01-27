@@ -1,5 +1,0 @@
-[run]
-source = aiida
-
-[html]
-directory = .ci/coverage/html

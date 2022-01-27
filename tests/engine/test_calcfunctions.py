@@ -8,13 +8,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the calcfunction decorator and CalcFunctionNode."""
+import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.common.links import LinkType
-from aiida.engine import calcfunction, Process
+from aiida.engine import Process, calcfunction
 from aiida.manage.caching import enable_caching
-from aiida.orm import Int, CalcFunctionNode
+from aiida.orm import CalcFunctionNode, Int
 
 # Global required for one of the caching tests to keep track of the number of times the calculation function is executed
 EXECUTION_COUNTER = 0
@@ -37,6 +38,7 @@ def execution_counter_calcfunction(data):
     return Int(data.value + 1)
 
 
+@pytest.mark.requires_rmq
 class TestCalcFunction(AiidaTestCase):
     """Tests for calcfunctions.
 

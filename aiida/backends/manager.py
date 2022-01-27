@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for settings and utilities to determine and set the database schema versions."""
-
 import abc
 import collections
 
@@ -34,14 +33,14 @@ TEMPLATE_INVALID_SCHEMA_GENERATION = """
 Database schema generation `{schema_generation_database}` is incompatible with the required schema generation `{schema_generation_code}`.
 To migrate the database schema generation to the current one, run the following command:
 
-    verdi -p {profile_name} database migrate
+    verdi -p {profile_name} storage migrate
 """
 
 TEMPLATE_INVALID_SCHEMA_VERSION = """
 Database schema version `{schema_version_database}` is incompatible with the required schema version `{schema_version_code}`.
 To migrate the database schema version to the current one, run the following command:
 
-    verdi -p {profile_name} database migrate
+    verdi -p {profile_name} storage migrate
 """
 
 TEMPLATE_MIGRATE_SCHEMA_VERSION_INVALID_VERSION = """
@@ -60,6 +59,8 @@ The current database version is `{schema_version_database}` but `{schema_version
 First install `aiida-core~={aiida_core_version_reset}` and migrate the database to the latest version.
 After the database schema is migrated to version `{schema_version_reset}` you can reinstall this version of `aiida-core` and migrate the schema generation.
 """
+
+REPOSITORY_UUID_KEY = 'repository|uuid'
 
 Setting = collections.namedtuple('Setting', ['key', 'value', 'description', 'time'])
 
@@ -91,6 +92,13 @@ class SettingsManager:
 
         :param key: the key identifying the setting
         :raises: `~aiida.common.exceptions.NotExistent` if the settings does not exist
+        """
+
+    @abc.abstractmethod
+    def validate_table_existence(self):
+        """Verify that the `DbSetting` table actually exists.
+
+        :raises: `~aiida.common.exceptions.NotExistent` if the settings table does not exist
         """
 
 
@@ -144,7 +152,7 @@ class BackendManager:
             self.validate_schema_generation_for_migration()
             self._migrate_database_generation()
 
-        if self.get_schema_version_code() != self.get_schema_version_database():
+        if self.get_schema_version_head() != self.get_schema_version_backend():
             self.validate_schema_version_for_migration()
             self._migrate_database_version()
 
@@ -159,7 +167,7 @@ class BackendManager:
         logic that is required.
         """
         self.set_schema_generation_database(SCHEMA_GENERATION_VALUE)
-        self.set_schema_version_database(self.get_schema_version_code())
+        self.set_schema_version_backend(self.get_schema_version_head())
 
     def _migrate_database_version(self):
         """Migrate the database to the current schema version.
@@ -170,16 +178,16 @@ class BackendManager:
 
     @abc.abstractmethod
     def is_database_schema_ahead(self):
-        """Determine whether the database schema version is ahead of the code schema version.
+        """Determine whether the backend schema version is ahead of the head schema version.
 
         .. warning:: this will not check whether the schema generations are equal
 
-        :return: boolean, True if the database schema version is ahead of the code schema version.
+        :return: boolean, True if the backend schema version is ahead of the head schema version.
         """
 
     @abc.abstractmethod
-    def get_schema_version_code(self):
-        """Return the code schema version."""
+    def get_schema_version_head(self) -> str:
+        """Return the head schema version for this backend, i.e. the latest schema this backend can be migrated to"""
 
     @abc.abstractmethod
     def get_schema_version_reset(self, schema_generation_code):
@@ -190,14 +198,11 @@ class BackendManager:
         """
 
     @abc.abstractmethod
-    def get_schema_version_database(self):
-        """Return the database schema version.
-
-        :return: `distutils.version.LooseVersion` with schema version of the database
-        """
+    def get_schema_version_backend(self) -> str:
+        """Return the schema version of the currently configured backend instance."""
 
     @abc.abstractmethod
-    def set_schema_version_database(self, version):
+    def set_schema_version_backend(self, version: str) -> None:
         """Set the database schema version.
 
         :param version: string with schema version to set
@@ -221,6 +226,24 @@ class BackendManager:
         """
         self.get_settings_manager().set(SCHEMA_GENERATION_KEY, generation)
 
+    def set_repository_uuid(self, uuid):
+        """Set the UUID of the repository that is associated with this database.
+
+        :param uuid: the UUID of the repository associated with this database.
+        """
+        self.get_settings_manager().set(REPOSITORY_UUID_KEY, uuid, description='Repository UUID')
+
+    def get_repository_uuid(self):
+        """Return the UUID of the repository that is associated with this database.
+
+        :return: the UUID of the repository associated with this database or None if it doesn't exist.
+        """
+        try:
+            setting = self.get_settings_manager().get(REPOSITORY_UUID_KEY)
+            return setting.value
+        except exceptions.NotExistent:
+            return None
+
     def validate_schema(self, profile):
         """Validate that the current database generation and schema are up-to-date with that of the code.
 
@@ -237,7 +260,7 @@ class BackendManager:
         """
         schema_generation_code = SCHEMA_GENERATION_VALUE
         schema_generation_database = self.get_schema_generation_database()
-        schema_version_database = self.get_schema_version_database()
+        schema_version_database = self.get_schema_version_backend()
         schema_version_reset = self.get_schema_version_reset(schema_generation_code)
         schema_generation_reset, aiida_core_version_reset = SCHEMA_GENERATION_RESET[schema_generation_code]
 
@@ -268,8 +291,8 @@ class BackendManager:
 
         :raises `aiida.common.exceptions.IncompatibleDatabaseSchema`: if database schema version cannot be migrated
         """
-        schema_version_code = self.get_schema_version_code()
-        schema_version_database = self.get_schema_version_database()
+        schema_version_code = self.get_schema_version_head()
+        schema_version_database = self.get_schema_version_backend()
 
         if self.is_database_schema_ahead():
             # Database is newer than the code so a downgrade would be necessary but this is not supported.
@@ -303,8 +326,8 @@ class BackendManager:
         :param profile: the profile for which to validate the database schema
         :raises `aiida.common.exceptions.IncompatibleDatabaseSchema`: if database schema version is not up-to-date
         """
-        schema_version_code = self.get_schema_version_code()
-        schema_version_database = self.get_schema_version_database()
+        schema_version_code = self.get_schema_version_head()
+        schema_version_database = self.get_schema_version_backend()
 
         if schema_version_database != schema_version_code:
             raise exceptions.IncompatibleDatabaseSchema(

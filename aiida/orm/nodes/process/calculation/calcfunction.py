@@ -8,11 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub class for calculation function processes."""
+from typing import TYPE_CHECKING
 
 from aiida.common.links import LinkType
 from aiida.orm.utils.mixins import FunctionCalculationMixin
 
 from .calculation import CalculationNode
+
+if TYPE_CHECKING:
+    from aiida.orm import Node
 
 __all__ = ('CalcFunctionNode',)
 
@@ -20,7 +24,7 @@ __all__ = ('CalcFunctionNode',)
 class CalcFunctionNode(FunctionCalculationMixin, CalculationNode):
     """ORM class for all nodes representing the execution of a calcfunction."""
 
-    def validate_outgoing(self, target, link_type, link_label):
+    def validate_outgoing(self, target: 'Node', link_type: LinkType, link_label: str) -> None:
         """
         Validate adding a link of the given type from ourself to a given node.
 

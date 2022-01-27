@@ -8,22 +8,33 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Translator for node"""
-import pkgutil
-import imp
+from importlib._bootstrap import _exec, _load
+import importlib.machinery
+import importlib.util
 import inspect
 import os
+import pkgutil
+import sys
 
 from aiida import orm
-from aiida.orm import Node, Data
 from aiida.common.exceptions import (
-    InputValidationError, ValidationError, InvalidOperation, LoadingEntryPointError, EntryPointError
+    EntryPointError,
+    InputValidationError,
+    InvalidOperation,
+    LoadingEntryPointError,
+    ValidationError,
 )
 from aiida.manage.manager import get_manager
-from aiida.plugins.entry_point import load_entry_point, get_entry_point_names
-from aiida.restapi.translator.base import BaseTranslator
-from aiida.restapi.common.identifiers import get_full_type_filters
+from aiida.orm import Data, Node
+from aiida.plugins.entry_point import get_entry_point_names, load_entry_point
 from aiida.restapi.common.exceptions import RestFeatureNotAvailable, RestInputValidationError, RestValidationError
-from aiida.restapi.common.identifiers import get_node_namespace, load_entry_point_from_full_type, construct_full_type
+from aiida.restapi.common.identifiers import (
+    construct_full_type,
+    get_full_type_filters,
+    get_node_namespace,
+    load_entry_point_from_full_type,
+)
+from aiida.restapi.translator.base import BaseTranslator
 
 
 class NodeTranslator(BaseTranslator):
@@ -341,17 +352,36 @@ class NodeTranslator(BaseTranslator):
         results = {}
 
         for _, name, is_pkg in pkgutil.walk_packages([package_path]):
-            # N.B. pkgutil.walk_package requires a LIST of paths.
+            # N.B. pkgutil.walk_packages requires a LIST of paths
 
             full_path_base = os.path.join(package_path, name)
-
             if is_pkg:
-                app_module = imp.load_package(full_path_base, full_path_base)
+                # re-implementation of deprecated `imp.load_package`
+                if os.path.isdir(full_path_base):
+                    #Adds an extension to check for __init__ file in the package directory
+                    extensions = (importlib.machinery.SOURCE_SUFFIXES[:] + importlib.machinery.BYTECODE_SUFFIXES[:])
+                    for extension in extensions:
+                        init_path = os.path.join(full_path_base, '__init__' + extension)
+                        if os.path.exists(init_path):
+                            path = init_path
+                            break
+                    else:
+                        raise ValueError(f'{full_path_base!r} is not a package')
+                #passing [] to submodule_search_locations indicates its a package and python searches for sub-modules
+                spec = importlib.util.spec_from_file_location(full_path_base, path, submodule_search_locations=[])
+                if full_path_base in sys.modules:
+                    #executes from sys.modules
+                    app_module = _exec(spec, sys.modules[full_path_base])
+                else:
+                    #loads and executes the module
+                    app_module = _load(spec)
             else:
                 full_path = f'{full_path_base}.py'
-                # I could use load_module but it takes lots of arguments,
-                # then I use load_source
-                app_module = imp.load_source(f'rst{name}', full_path)
+                # reimplementation of deprecated `imp.load_source`
+                spec = importlib.util.spec_from_file_location(name, full_path)
+                app_module = importlib.util.module_from_spec(spec)
+                sys.modules[name] = app_module
+                spec.loader.exec_module(app_module)
 
             # Go through the content of the module
             if not is_pkg:
@@ -466,7 +496,7 @@ class NodeTranslator(BaseTranslator):
         """
         try:
             flist = node.list_objects(filename)
-        except IOError:
+        except NotADirectoryError:
             raise RestInputValidationError(f'{filename} is not a directory in this repository')
         response = []
         for fobj in flist:
@@ -487,7 +517,7 @@ class NodeTranslator(BaseTranslator):
             try:
                 data = node.get_object_content(filename, mode='rb')
                 return data
-            except IOError:
+            except FileNotFoundError:
                 raise RestInputValidationError('No such file is present')
         raise RestValidationError('filename is not provided')
 
@@ -563,26 +593,24 @@ class NodeTranslator(BaseTranslator):
 
         for node_entry in results[result_name]:
             # construct full_type and add it to every node
-            try:
-                node_entry['full_type'] = construct_full_type(node_entry['node_type'], node_entry['process_type'])
-            except KeyError:
-                node_entry['full_type'] = None
+            node_entry['full_type'] = (
+                construct_full_type(node_entry.get('node_type'), node_entry.get('process_type'))
+                if node_entry.get('node_type') or node_entry.get('process_type') else None
+            )
 
         return results
 
     def get_statistics(self, user_pk=None):
         """Return statistics for a given node"""
-
-        qmanager = self._backend.query_manager
-        return qmanager.get_creation_statistics(user_pk=user_pk)
+        return self._backend.query().get_creation_statistics(user_pk=user_pk)
 
     @staticmethod
-    def get_namespace():
+    def get_namespace(user_pk=None, count_nodes=False):
         """
         return full_types of the nodes
         """
 
-        return get_node_namespace().get_description()
+        return get_node_namespace(user_pk=user_pk, count_nodes=count_nodes).get_description()
 
     def get_io_tree(self, uuid_pattern, tree_in_limit, tree_out_limit):
         # pylint: disable=too-many-statements,too-many-locals

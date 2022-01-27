@@ -10,8 +10,9 @@
 """Tests for the `verdi group` command."""
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common import exceptions
 from aiida.cmdline.commands import cmd_group
+from aiida.cmdline.utils.echo import ExitCode
+from aiida.common import exceptions
 
 
 class TestVerdiGroup(AiidaTestCase):
@@ -131,6 +132,12 @@ class TestVerdiGroup(AiidaTestCase):
         """Test `verdi group delete` command."""
         orm.Group(label='group_test_delete_01').store()
         orm.Group(label='group_test_delete_02').store()
+        orm.Group(label='group_test_delete_03').store()
+
+        # dry run
+        result = self.cli_runner.invoke(cmd_group.group_delete, ['--dry-run', 'group_test_delete_01'])
+        self.assertClickResultNoException(result)
+        orm.load_group(label='group_test_delete_01')
 
         result = self.cli_runner.invoke(cmd_group.group_delete, ['--force', 'group_test_delete_01'])
         self.assertClickResultNoException(result)
@@ -142,22 +149,34 @@ class TestVerdiGroup(AiidaTestCase):
 
         node_01 = orm.CalculationNode().store()
         node_02 = orm.CalculationNode().store()
+        node_pks = {node_01.pk, node_02.pk}
 
-        # Add some nodes and then use `verdi group delete --clear` to delete a node even when it contains nodes
+        # Add some nodes and then use `verdi group delete` to delete a group that contains nodes
         group = orm.load_group(label='group_test_delete_02')
         group.add_nodes([node_01, node_02])
         self.assertEqual(group.count(), 2)
 
-        # Calling delete on a group without the `--clear` option should raise
         result = self.cli_runner.invoke(cmd_group.group_delete, ['--force', 'group_test_delete_02'])
-        self.assertIsNotNone(result.exception, result.output)
-
-        # With `--clear` option should delete group and nodes
-        result = self.cli_runner.invoke(cmd_group.group_delete, ['--force', '--clear', 'group_test_delete_02'])
-        self.assertClickResultNoException(result)
 
         with self.assertRaises(exceptions.NotExistent):
-            group = orm.load_group(label='group_test_delete_02')
+            orm.load_group(label='group_test_delete_02')
+
+        # check nodes still exist
+        for pk in node_pks:
+            orm.load_node(pk)
+
+        # delete the group and the nodes it contains
+        group = orm.load_group(label='group_test_delete_03')
+        group.add_nodes([node_01, node_02])
+        result = self.cli_runner.invoke(cmd_group.group_delete, ['--force', '--delete-nodes', 'group_test_delete_03'])
+        self.assertClickResultNoException(result)
+
+        # check group and nodes no longer exist
+        with self.assertRaises(exceptions.NotExistent):
+            orm.load_group(label='group_test_delete_03')
+        for pk in node_pks:
+            with self.assertRaises(exceptions.NotExistent):
+                orm.load_node(pk)
 
     def test_show(self):
         """Test `verdi group show` command."""
@@ -246,7 +265,7 @@ class TestVerdiGroup(AiidaTestCase):
         result = self.cli_runner.invoke(cmd_group.group_remove_nodes, ['--force', '--group=dummygroup1', node_01.uuid])
         self.assertIsNone(result.exception, result.output)
 
-        # Check if node is added in group using group show command
+        # Check that the node is no longer in the group
         result = self.cli_runner.invoke(cmd_group.group_show, ['-r', 'dummygroup1'])
         self.assertClickResultNoException(result)
         self.assertNotIn('CalculationNode', result.output)
@@ -260,6 +279,104 @@ class TestVerdiGroup(AiidaTestCase):
         result = self.cli_runner.invoke(cmd_group.group_remove_nodes, ['--force', '--clear', '--group=dummygroup1'])
         self.assertClickResultNoException(result)
         self.assertEqual(group.count(), 0)
+
+        # Try to remove node that isn't in the group
+        result = self.cli_runner.invoke(cmd_group.group_remove_nodes, ['--group=dummygroup1', node_01.uuid])
+        self.assertEqual(result.exit_code, ExitCode.CRITICAL)
+
+        # Try to remove no nodes nor clear the group
+        result = self.cli_runner.invoke(cmd_group.group_remove_nodes, ['--group=dummygroup1'])
+        self.assertEqual(result.exit_code, ExitCode.CRITICAL)
+
+        # Try to remove both nodes and clear the group
+        result = self.cli_runner.invoke(cmd_group.group_remove_nodes, ['--group=dummygroup1', '--clear', node_01.uuid])
+        self.assertEqual(result.exit_code, ExitCode.CRITICAL)
+
+        # Add a node with confirmation
+        result = self.cli_runner.invoke(cmd_group.group_add_nodes, ['--group=dummygroup1', node_01.uuid], input='y')
+        self.assertEqual(group.count(), 1)
+
+        # Try to remove two nodes, one that isn't in the group, but abort
+        result = self.cli_runner.invoke(
+            cmd_group.group_remove_nodes, ['--group=dummygroup1', node_01.uuid, node_02.uuid], input='N'
+        )
+        self.assertIn('Warning', result.output)
+        self.assertEqual(group.count(), 1)
+
+        # Try to clear all nodes from the group, but abort
+        result = self.cli_runner.invoke(cmd_group.group_remove_nodes, ['--group=dummygroup1', '--clear'], input='N')
+        self.assertIn('Are you sure you want to remove ALL', result.output)
+        self.assertIn('Aborted', result.output)
+        self.assertEqual(group.count(), 1)
+
+    def test_move_nodes(self):
+        """Test `verdi group move-nodes` command."""
+        node_01 = orm.CalculationNode().store()
+        node_02 = orm.Int(1).store()
+        node_03 = orm.Bool(True).store()
+
+        group1 = orm.load_group('dummygroup1')
+        group2 = orm.load_group('dummygroup2')
+
+        group1.add_nodes([node_01, node_02])
+
+        # Moving the nodes to the same group
+        result = self.cli_runner.invoke(
+            cmd_group.group_move_nodes, ['-s', 'dummygroup1', '-t', 'dummygroup1', node_01.uuid, node_02.uuid]
+        )
+        self.assertIn('Source and target group are the same:', result.output)
+
+        # Not specifying NODES or `--all`
+        result = self.cli_runner.invoke(cmd_group.group_move_nodes, ['-s', 'dummygroup1', '-t', 'dummygroup2'])
+        self.assertIn('Neither NODES or the `-a, --all` option was specified.', result.output)
+
+        # Moving the nodes from the empty group
+        result = self.cli_runner.invoke(
+            cmd_group.group_move_nodes, ['-s', 'dummygroup2', '-t', 'dummygroup1', node_01.uuid, node_02.uuid]
+        )
+        self.assertIn('None of the specified nodes are in', result.output)
+
+        # Move two nodes to the second dummy group, but specify a missing uuid
+        result = self.cli_runner.invoke(
+            cmd_group.group_move_nodes, ['-s', 'dummygroup1', '-t', 'dummygroup2', node_01.uuid, node_03.uuid]
+        )
+        self.assertIn(f'1 nodes with PK {{{node_03.pk}}} are not in', result.output)
+        # Check that the node that is present is actually moved
+        result = self.cli_runner.invoke(
+            cmd_group.group_move_nodes,
+            ['-f', '-s', 'dummygroup1', '-t', 'dummygroup2', node_01.uuid, node_03.uuid],
+        )
+        assert node_01 not in group1.nodes
+        assert node_01 in group2.nodes
+
+        # Add the first node back to the first group, and try to move it from the second one
+        group1.add_nodes(node_01)
+        result = self.cli_runner.invoke(
+            cmd_group.group_move_nodes, ['-s', 'dummygroup2', '-t', 'dummygroup1', node_01.uuid]
+        )
+        self.assertIn(f'1 nodes with PK {{{node_01.pk}}} are already', result.output)
+        # Check that it is still removed from the second group
+        result = self.cli_runner.invoke(
+            cmd_group.group_move_nodes,
+            ['-f', '-s', 'dummygroup2', '-t', 'dummygroup1', node_01.uuid],
+        )
+        assert node_01 not in group2.nodes
+
+        # Force move the two nodes to the second dummy group
+        result = self.cli_runner.invoke(
+            cmd_group.group_move_nodes, ['-f', '-s', 'dummygroup1', '-t', 'dummygroup2', node_01.uuid, node_02.uuid]
+        )
+        assert node_01 in group2.nodes
+        assert node_02 in group2.nodes
+
+        # Force move all nodes back to the first dummy group
+        result = self.cli_runner.invoke(
+            cmd_group.group_move_nodes, ['-f', '-s', 'dummygroup2', '-t', 'dummygroup1', '--all']
+        )
+        assert node_01 not in group2.nodes
+        assert node_02 not in group2.nodes
+        assert node_01 in group1.nodes
+        assert node_02 in group1.nodes
 
     def test_copy_existing_group(self):
         """Test user is prompted to continue if destination group exists and is not empty"""
@@ -278,7 +395,8 @@ class TestVerdiGroup(AiidaTestCase):
         result = self.cli_runner.invoke(cmd_group.group_copy, options)
         self.assertClickResultNoException(result)
         self.assertIn(
-            f'Success: Nodes copied from group<{source_label}> to group<{dest_label}>', result.output, result.exception
+            f'Success: Nodes copied from {source_group} to {source_group.__class__.__name__}<{dest_label}>.',
+            result.output, result.exception
         )
 
         # Check destination group exists with source group's nodes
@@ -291,8 +409,7 @@ class TestVerdiGroup(AiidaTestCase):
         result = self.cli_runner.invoke(cmd_group.group_copy, options)
         self.assertIsNotNone(result.exception, result.output)
         self.assertIn(
-            f'Warning: Destination group<{dest_label}> already exists and is not empty.', result.output,
-            result.exception
+            f'Warning: Destination {dest_group} already exists and is not empty.', result.output, result.exception
         )
 
         # Check destination group is unchanged

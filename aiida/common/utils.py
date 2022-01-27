@@ -8,12 +8,15 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Miscellaneous generic utility functions and classes."""
+from datetime import datetime
 import filecmp
 import inspect
 import io
 import os
 import re
 import sys
+from typing import Any, Dict
+from uuid import UUID
 
 from .lang import classproperty
 
@@ -26,6 +29,19 @@ def get_new_uuid():
     """
     import uuid
     return str(uuid.uuid4())
+
+
+def validate_uuid(given_uuid: str) -> bool:
+    """A simple check for the UUID validity."""
+    try:
+        parsed_uuid = UUID(given_uuid, version=4)
+    except ValueError:
+        # If not a valid UUID
+        return False
+
+    # Check if there was any kind of conversion of the hex during
+    # the validation
+    return str(parsed_uuid) == given_uuid
 
 
 def validate_list_of_string_tuples(val, tuple_length):
@@ -115,8 +131,7 @@ def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero=False):  #
     s_tot = int(s_tot)
 
     if negative_to_zero:
-        if s_tot < 0:
-            s_tot = 0
+        s_tot = max(s_tot, 0)
 
     negative = (s_tot < 0)
     s_tot = abs(s_tot)
@@ -247,15 +262,9 @@ def are_dir_trees_equal(dir1, dir2):
     # If the directories contain the same files, compare the common files
     (_, mismatch, errors) = filecmp.cmpfiles(dir1, dir2, dirs_cmp.common_files, shallow=False)
     if mismatch:
-        return (
-            False, 'The following files in the directories {} and {} '
-            "don't match: {}".format(dir1, dir2, mismatch)
-        )
+        return (False, f"The following files in the directories {dir1} and {dir2} don't match: {mismatch}")
     if errors:
-        return (
-            False, 'The following files in the directories {} and {} '
-            "aren't regular: {}".format(dir1, dir2, errors)
-        )
+        return (False, f"The following files in the directories {dir1} and {dir2} aren't regular: {errors}")
 
     for common_dir in dirs_cmp.common_dirs:
         new_dir1 = os.path.join(dir1, common_dir)
@@ -380,7 +389,7 @@ class Prettifier:
         return re.sub(r'(\d+)', r'$_{\1}$', label)
 
     @classproperty
-    def prettifiers(cls):  # pylint: disable=no-self-argument
+    def prettifiers(cls) -> Dict[str, Any]:  # pylint: disable=no-self-argument
         """
         Property that returns a dictionary that for each string associates
         the function to prettify a label
@@ -404,7 +413,7 @@ class Prettifier:
 
         :return: a list of strings
         """
-        return sorted(cls.prettifiers.keys())  # pylint: disable=no-member
+        return sorted(cls.prettifiers.keys())
 
     def __init__(self, format):  # pylint: disable=redefined-builtin
         """
@@ -512,12 +521,12 @@ class Capturing:
     # pylint: disable=attribute-defined-outside-init
 
     def __init__(self, capture_stderr=False):
-        self.stdout_lines = list()
+        self.stdout_lines = []
         super().__init__()
 
         self._capture_stderr = capture_stderr
         if self._capture_stderr:
-            self.stderr_lines = list()
+            self.stderr_lines = []
         else:
             self.stderr_lines = None
 
@@ -581,3 +590,27 @@ class ErrorAccumulator:
     def raise_errors(self, raise_cls):
         if not self.success():
             raise raise_cls(f'The following errors were encountered: {self.errors}')
+
+
+class DatetimePrecision:
+    """
+    A simple class which stores a datetime object with its precision. No
+    internal check is done (cause itis not possible).
+
+    precision:  1 (only full date)
+                2 (date plus hour)
+                3 (date + hour + minute)
+                4 (dare + hour + minute +second)
+    """
+
+    def __init__(self, dtobj, precision):
+        """ Constructor to check valid datetime object and precision """
+
+        if not isinstance(dtobj, datetime):
+            raise TypeError('dtobj argument has to be a datetime object')
+
+        if not isinstance(precision, int):
+            raise TypeError('precision argument has to be an integer')
+
+        self.dtobj = dtobj
+        self.precision = precision

@@ -8,76 +8,87 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for the ORM user class."""
-
-import warnings
+from typing import TYPE_CHECKING, Optional, Tuple, Type, Union, cast
 
 from aiida.common import exceptions
-from aiida.common.warnings import AiidaDeprecationWarning
+from aiida.common.lang import classproperty
 from aiida.manage.manager import get_manager
 
 from . import entities
 
+if TYPE_CHECKING:
+    from aiida.orm.implementation import Backend, BackendUser
+
 __all__ = ('User',)
 
 
-class User(entities.Entity):
+class UserCollection(entities.Collection['User']):
+    """The collection of users stored in a backend."""
+
+    UNDEFINED = 'UNDEFINED'
+    _default_user: Union[None, str, 'User'] = None
+
+    @staticmethod
+    def _entity_base_cls() -> Type['User']:
+        return User
+
+    def __init__(self, entity_class: Type['User'], backend: Optional['Backend'] = None) -> None:
+        super().__init__(entity_class=entity_class, backend=backend)
+        self._default_user = self.UNDEFINED
+
+    def get_or_create(self, email: str, **kwargs) -> Tuple[bool, 'User']:
+        """Get the existing user with a given email address or create an unstored one
+
+        :param kwargs: The properties of the user to get or create
+        :return: The corresponding user object
+        :raises: :class:`aiida.common.exceptions.MultipleObjectsError`,
+            :class:`aiida.common.exceptions.NotExistent`
+        """
+        try:
+            return False, self.get(email=email)
+        except exceptions.NotExistent:
+            return True, User(backend=self.backend, email=email, **kwargs)
+
+    def get_default(self) -> Optional['User']:
+        """Get the current default user"""
+        if self._default_user is self.UNDEFINED:
+            from aiida.manage.configuration import get_profile
+            profile = get_profile()
+            email = profile.default_user_email
+            if not email:
+                self._default_user = None
+
+            try:
+                self._default_user = self.get(email=email)
+            except (exceptions.MultipleObjectsError, exceptions.NotExistent):
+                self._default_user = None
+
+        return cast(Optional['User'], self._default_user)
+
+    def reset(self) -> None:
+        """
+        Reset internal caches (default user).
+        """
+        self._default_user = self.UNDEFINED
+
+
+class User(entities.Entity['BackendUser']):
     """AiiDA User"""
 
-    class Collection(entities.Collection):
-        """The collection of users stored in a backend."""
+    Collection = UserCollection
 
-        UNDEFINED = 'UNDEFINED'
-        _default_user = None  # type: aiida.orm.User
+    @classproperty
+    def objects(cls: Type['User']) -> UserCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
+        return UserCollection.get_cached(cls, get_manager().get_backend())
 
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self._default_user = self.UNDEFINED
-
-        def get_or_create(self, email, **kwargs):
-            """
-                Get the existing user with a given email address or create an unstored one
-
-                :param kwargs: The properties of the user to get or create
-                :return: The corresponding user object
-                :rtype: :class:`aiida.orm.User`
-                :raises: :class:`aiida.common.exceptions.MultipleObjectsError`,
-                    :class:`aiida.common.exceptions.NotExistent`
-                """
-            try:
-                return False, self.get(email=email)
-            except exceptions.NotExistent:
-                return True, User(backend=self.backend, email=email, **kwargs)
-
-        def get_default(self):
-            """
-            Get the current default user
-
-            :return: The default user
-            :rtype: :class:`aiida.orm.User`
-            """
-            if self._default_user is self.UNDEFINED:
-                from aiida.manage.configuration import get_profile
-                profile = get_profile()
-                email = profile.default_user
-                if not email:
-                    self._default_user = None
-
-                try:
-                    self._default_user = self.get(email=email)
-                except (exceptions.MultipleObjectsError, exceptions.NotExistent):
-                    self._default_user = None
-
-            return self._default_user
-
-        def reset(self):
-            """
-            Reset internal caches (default user).
-            """
-            self._default_user = self.UNDEFINED
-
-    REQUIRED_FIELDS = ['first_name', 'last_name', 'institution']
-
-    def __init__(self, email, first_name='', last_name='', institution='', backend=None):
+    def __init__(
+        self,
+        email: str,
+        first_name: str = '',
+        last_name: str = '',
+        institution: str = '',
+        backend: Optional['Backend'] = None
+    ):
         """Create a new `User`."""
         # pylint: disable=too-many-arguments
         backend = backend or get_manager().get_backend()
@@ -85,11 +96,11 @@ class User(entities.Entity):
         backend_entity = backend.users.create(email, first_name, last_name, institution)
         super().__init__(backend_entity)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.email
 
     @staticmethod
-    def normalize_email(email):
+    def normalize_email(email: str) -> str:
         """Normalize the address by lowercasing the domain part of the email address (taken from Django)."""
         email = email or ''
         try:
@@ -101,38 +112,38 @@ class User(entities.Entity):
         return email
 
     @property
-    def email(self):
+    def email(self) -> str:
         return self._backend_entity.email
 
     @email.setter
-    def email(self, email):
+    def email(self, email: str) -> None:
         self._backend_entity.email = email
 
     @property
-    def first_name(self):
+    def first_name(self) -> str:
         return self._backend_entity.first_name
 
     @first_name.setter
-    def first_name(self, first_name):
+    def first_name(self, first_name: str) -> None:
         self._backend_entity.first_name = first_name
 
     @property
-    def last_name(self):
+    def last_name(self) -> str:
         return self._backend_entity.last_name
 
     @last_name.setter
-    def last_name(self, last_name):
+    def last_name(self, last_name: str) -> None:
         self._backend_entity.last_name = last_name
 
     @property
-    def institution(self):
+    def institution(self) -> str:
         return self._backend_entity.institution
 
     @institution.setter
-    def institution(self, institution):
+    def institution(self, institution: str) -> None:
         self._backend_entity.institution = institution
 
-    def get_full_name(self):
+    def get_full_name(self) -> str:
         """
         Return the user full name
 
@@ -149,7 +160,7 @@ class User(entities.Entity):
 
         return full_name
 
-    def get_short_name(self):
+    def get_short_name(self) -> str:
         """
         Return the user short name (typically, this returns the email)
 
@@ -157,57 +168,9 @@ class User(entities.Entity):
         """
         return self.email
 
-    @staticmethod
-    def get_schema():
+    @property
+    def uuid(self) -> None:
         """
-        Every node property contains:
-
-          - display_name: display name of the property
-          - help text: short help text of the property
-          - is_foreign_key: is the property foreign key to other type of the node
-          - type: type of the property. e.g. str, dict, int
-
-        :return: schema of the user
-
-        .. deprecated:: 1.0.0
-
-            Will be removed in `v2.0.0`.
-            Use :meth:`~aiida.restapi.translator.base.BaseTranslator.get_projectable_properties` instead.
-
+        For now users do not have UUIDs so always return None
         """
-        message = 'method is deprecated, use' \
-            '`aiida.restapi.translator.base.BaseTranslator.get_projectable_properties` instead'
-        warnings.warn(message, AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        return {
-            'id': {
-                'display_name': 'Id',
-                'help_text': 'Id of the object',
-                'is_foreign_key': False,
-                'type': 'int'
-            },
-            'email': {
-                'display_name': 'email',
-                'help_text': 'e-mail of the user',
-                'is_foreign_key': False,
-                'type': 'str'
-            },
-            'first_name': {
-                'display_name': 'First name',
-                'help_text': 'First name of the user',
-                'is_foreign_key': False,
-                'type': 'str'
-            },
-            'institution': {
-                'display_name': 'Institution',
-                'help_text': 'Affiliation of the user',
-                'is_foreign_key': False,
-                'type': 'str'
-            },
-            'last_name': {
-                'display_name': 'Last name',
-                'help_text': 'Last name of the user',
-                'is_foreign_key': False,
-                'type': 'str'
-            }
-        }
+        return None

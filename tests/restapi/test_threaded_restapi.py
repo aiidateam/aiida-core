@@ -12,11 +12,11 @@
 Threaded mode is the default (and only) way to run the AiiDA REST API (see `aiida.restapi.run_api:run_api()`).
 This test file's layout is inspired by https://gist.github.com/prschmid/4643738
 """
-import time
 from threading import Thread
+import time
 
-import requests
 import pytest
+import requests
 
 NO_OF_REQUESTS = 100
 
@@ -62,8 +62,7 @@ def test_run_threaded_server(restapi_server, server_url, aiida_localhost):
             pytest.fail('Thread did not close/join within 1 min after REST API server was called to shutdown')
 
 
-# Tracked in issue #4281
-@pytest.mark.flaky(reruns=2)
+@pytest.mark.skip('Is often failing on Python 3.8 and 3.9: see https://github.com/aiidateam/aiida-core/issues/4281')
 @pytest.mark.usefixtures('clear_database_before_test', 'restrict_sqlalchemy_queuepool')
 def test_run_without_close_session(restapi_server, server_url, aiida_localhost, capfd):
     """Run AiiDA REST API threaded in a separate thread and perform many sequential requests"""

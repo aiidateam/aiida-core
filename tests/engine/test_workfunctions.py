@@ -8,14 +8,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the workfunction decorator and WorkFunctionNode."""
+import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
-from aiida.engine import calcfunction, workfunction, Process
+from aiida.engine import Process, calcfunction, workfunction
 from aiida.manage.caching import enable_caching
-from aiida.orm import Int, WorkFunctionNode, CalcFunctionNode
+from aiida.orm import CalcFunctionNode, Int, WorkFunctionNode
 
 
+@pytest.mark.requires_rmq
 class TestWorkFunction(AiidaTestCase):
     """Tests for workfunctions.
 

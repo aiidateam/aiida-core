@@ -10,11 +10,15 @@
 # pylint: disable=invalid-name
 """Utilities for the workflow engine."""
 
+import asyncio
 import contextlib
+from datetime import datetime
 import logging
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterator, List, Optional, Tuple, Type, Union
 
-import tornado.ioloop
-from tornado import concurrent, gen
+if TYPE_CHECKING:
+    from .processes import Process, ProcessBuilder
+    from .runners import Runner
 
 __all__ = ('interruptable_task', 'InterruptableFuture', 'is_process_function')
 
@@ -23,7 +27,9 @@ PROCESS_STATE_CHANGE_KEY = 'process|state_change|{}'
 PROCESS_STATE_CHANGE_DESCRIPTION = 'The last time a process of type {}, changed state'
 
 
-def instantiate_process(runner, process, *args, **inputs):
+def instantiate_process(
+    runner: 'Runner', process: Union['Process', Type['Process'], 'ProcessBuilder'], *args, **inputs
+) -> 'Process':
     """
     Return an instance of the process with the given inputs. The function can deal with various types
     of the `process`:
@@ -49,6 +55,8 @@ def instantiate_process(runner, process, *args, **inputs):
         builder = process
         process_class = builder.process_class
         inputs.update(**builder._inputs(prune=True))  # pylint: disable=protected-access
+    elif is_process_function(process):
+        process_class = process.process_class  # type: ignore[attr-defined]
     elif issubclass(process, Process):
         process_class = process
     else:
@@ -59,73 +67,77 @@ def instantiate_process(runner, process, *args, **inputs):
     return process
 
 
-class InterruptableFuture(concurrent.Future):
+class InterruptableFuture(asyncio.Future):
     """A future that can be interrupted by calling `interrupt`."""
 
-    def interrupt(self, reason):
+    def interrupt(self, reason: Exception) -> None:
         """This method should be called to interrupt the coroutine represented by this InterruptableFuture."""
         self.set_exception(reason)
 
-    @gen.coroutine
-    def with_interrupt(self, yieldable):
+    async def with_interrupt(self, coro: Awaitable[Any]) -> Any:
         """
-        Yield a yieldable which will be interrupted if this future is interrupted ::
+        return result of a coroutine which will be interrupted if this future is interrupted ::
 
-            from tornado import ioloop, gen
-            loop = ioloop.IOLoop.current()
+            import asyncio
+            loop = asyncio.get_event_loop()
 
             interruptable = InterutableFuture()
-            loop.add_callback(interruptable.interrupt, RuntimeError("STOP"))
-            loop.run_sync(lambda: interruptable.with_interrupt(gen.sleep(2)))
+            loop.call_soon(interruptable.interrupt, RuntimeError("STOP"))
+            loop.run_until_complete(interruptable.with_interrupt(asyncio.sleep(2.)))
             >>> RuntimeError: STOP
 
 
-        :param yieldable: The yieldable
-        :return: The result of the yieldable
+        :param coro: The coroutine that can be interrupted
+        :return: The result of the coroutine
         """
-        # Wait for one of the two to finish, if it's us that finishes we expect that it was
-        # because of an exception that will have been raised automatically
-        wait_iterator = gen.WaitIterator(yieldable, self)
-        result = yield wait_iterator.next()  # pylint: disable=stop-iteration-return
-        if not wait_iterator.current_index == 0:
-            raise RuntimeError(f"This interruptible future had it's result set unexpectedly to {result}")
+        task = asyncio.ensure_future(coro)
+        wait_iter = asyncio.as_completed({self, task})
+        result = await next(wait_iter)
+        if self.done():
+            raise RuntimeError(f"This interruptible future had it's result set unexpectedly to '{result}'")
 
-        result = yield [yieldable, self][0]
-        raise gen.Return(result)
+        return result
 
 
-def interruptable_task(coro, loop=None):
+def interruptable_task(
+    coro: Callable[[InterruptableFuture], Awaitable[Any]],
+    loop: Optional[asyncio.AbstractEventLoop] = None
+) -> InterruptableFuture:
     """
     Turn the given coroutine into an interruptable task by turning it into an InterruptableFuture and returning it.
 
-    :param coro: the coroutine that should be made interruptable
-    :param loop: the event loop in which to run the coroutine, by default uses tornado.ioloop.IOLoop.current()
+    :param coro: the coroutine that should be made interruptable with object of InterutableFuture as last paramenter
+    :param loop: the event loop in which to run the coroutine, by default uses asyncio.get_event_loop()
     :return: an InterruptableFuture
     """
 
-    loop = loop or tornado.ioloop.IOLoop.current()
+    loop = loop or asyncio.get_event_loop()
     future = InterruptableFuture()
 
-    @gen.coroutine
-    def execute_coroutine():
+    async def execute_coroutine():
         """Coroutine that wraps the original coroutine and sets it result on the future only if not already set."""
         try:
-            result = yield coro(future)
+            result = await coro(future)
         except Exception as exception:  # pylint: disable=broad-except
             if not future.done():
                 future.set_exception(exception)
+            else:
+                LOGGER.warning(
+                    'Interruptable future set to %s before its coro %s is done. %s', future.result(), coro.__name__,
+                    str(exception)
+                )
         else:
             # If the future has not been set elsewhere, i.e. by the interrupt call, by the time that the coroutine
             # is executed, set the future's result to the result of the coroutine
             if not future.done():
                 future.set_result(result)
 
-    loop.add_callback(execute_coroutine)
+    loop.create_task(execute_coroutine())
 
     return future
 
 
-def ensure_coroutine(fct):
+def ensure_coroutine(fct: Callable[..., Any]) -> Callable[..., Awaitable[Any]]:
     """
     Ensure that the given function ``fct`` is a coroutine
 
@@ -134,42 +146,46 @@ def ensure_coroutine(fct):
     :param fct: the function
     :returns: the coroutine
     """
-    if tornado.gen.is_coroutine_function(fct):
+    if asyncio.iscoroutinefunction(fct):
         return fct
 
-    @tornado.gen.coroutine
-    def wrapper(*args, **kwargs):
-        raise tornado.gen.Return(fct(*args, **kwargs))
+    async def wrapper(*args, **kwargs):
+        return fct(*args, **kwargs)
 
     return wrapper
 
 
-@gen.coroutine
-def exponential_backoff_retry(fct, initial_interval=10.0, max_attempts=5, logger=None, ignore_exceptions=None):
+async def exponential_backoff_retry(
+    fct: Callable[..., Any],
+    initial_interval: Union[int, float] = 10.0,
+    max_attempts: int = 5,
+    logger: Optional[logging.Logger] = None,
+    ignore_exceptions: Union[None, Type[Exception], Tuple[Type[Exception], ...]] = None
+) -> Any:
     """
     Coroutine to call a function, recalling it with an exponential backoff in the case of an exception
 
     This coroutine will loop ``max_attempts`` times, calling the ``fct`` function, breaking immediately when the call
-    finished without raising an exception, at which point the returned result will be raised, wrapped in a
-    ``tornado.gen.Result`` instance. If an exception is caught, the function will yield a ``tornado.gen.sleep`` with a
-    time interval equal to the ``initial_interval`` multiplied by ``2*N`` where ``N`` is the number of excepted calls.
+    finished without raising an exception, at which point the result will be returned. If an exception is caught, the
+    function will await a ``asyncio.sleep`` with a time interval equal to the ``initial_interval`` multiplied by
+    ``2 ** (N - 1)`` where ``N`` is the number of excepted calls.
 
     :param fct: the function to call, which will be turned into a coroutine first if it is not already
     :param initial_interval: the time to wait after the first caught exception before calling the coroutine again
     :param max_attempts: the maximum number of times to call the coroutine before re-raising the exception
-    :param ignore_exceptions: list or tuple of exceptions to ignore, i.e. when caught do nothing and simply re-raise
-    :raises: ``tornado.gen.Result`` if the ``coro`` call completes within ``max_attempts`` retries without raising
+    :param ignore_exceptions: exceptions to ignore, i.e. when caught do nothing and simply re-raise
+    :return: result if the ``coro`` call completes within ``max_attempts`` retries without raising
     """
     if logger is None:
         logger = LOGGER
 
-    result = None
+    result: Any = None
     coro = ensure_coroutine(fct)
     interval = initial_interval
 
     for iteration in range(max_attempts):
         try:
-            result = yield coro()
+            result = await coro()
             break  # Finished successfully
         except Exception as exception:  # pylint: disable=broad-except
 
@@ -186,13 +202,13 @@ def exponential_backoff_retry(fct, initial_interval=10.0, max_attempts=5, logger
                 raise
             else:
                 logger.exception('iteration %d of %s excepted, retrying after %d seconds', count, coro_name, interval)
-                yield gen.sleep(interval)
+                await asyncio.sleep(interval)
                 interval *= 2
 
-    raise gen.Return(result)
+    return result
 
 
-def is_process_function(function):
+def is_process_function(function: Any) -> bool:
     """Return whether the given function is a process function
 
     :param function: a function
@@ -204,7 +220,7 @@ def is_process_function(function):
         return False
 
 
-def is_process_scoped():
+def is_process_scoped() -> bool:
     """Return whether the current scope is within a process.
 
     :returns: True if the current scope is within a nested process, False otherwise
@@ -214,23 +230,23 @@ def is_process_scoped():
 
 
 @contextlib.contextmanager
-def loop_scope(loop):
+def loop_scope(loop) -> Iterator[None]:
     """
     Make an event loop current for the scope of the context
 
     :param loop: The event loop to make current for the duration of the scope
-    :type loop: :class:`tornado.ioloop.IOLoop`
+    :type loop: asyncio event loop
     """
-    current = tornado.ioloop.IOLoop.current()
+    current = asyncio.get_event_loop()
 
     try:
-        loop.make_current()
+        asyncio.set_event_loop(loop)
         yield
     finally:
-        current.make_current()
+        asyncio.set_event_loop(current)
 
 
-def set_process_state_change_timestamp(process):
+def set_process_state_change_timestamp(process: 'Process') -> None:
     """
     Set the global setting that reflects the last time a process changed state, for the process type
     of the given process, to the current timestamp. The process type will be determined based on
@@ -241,7 +257,7 @@ def set_process_state_change_timestamp(process):
     from aiida.common import timezone
     from aiida.common.exceptions import UniquenessError
     from aiida.manage.manager import get_manager  # pylint: disable=cyclic-import
-    from aiida.orm import ProcessNode, CalculationNode, WorkflowNode
+    from aiida.orm import CalculationNode, ProcessNode, WorkflowNode
 
     if isinstance(process.node, CalculationNode):
         process_type = 'calculation'
@@ -264,7 +280,7 @@ def set_process_state_change_timestamp(process):
         process.logger.debug(f'could not update the {key} setting because of a UniquenessError: {exception}')
 
 
-def get_process_state_change_timestamp(process_type=None):
+def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Optional[datetime]:
     """
     Get the global setting that reflects the last time a process of the given process type changed its state.
     The returned value will be the corresponding timestamp or None if the setting does not exist.
@@ -289,7 +305,7 @@ def get_process_state_change_timestamp(process_type=None):
     else:
         process_types = [process_type]
 
-    timestamps = []
+    timestamps: List[datetime] = []
 
     for process_type_key in process_types:
         key = PROCESS_STATE_CHANGE_KEY.format(process_type_key)

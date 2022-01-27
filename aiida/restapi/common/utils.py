@@ -16,9 +16,9 @@ from flask.json import JSONEncoder
 from wrapt import decorator
 
 from aiida.common.exceptions import InputValidationError, ValidationError
+from aiida.common.utils import DatetimePrecision
 from aiida.manage.manager import get_manager
-from aiida.restapi.common.exceptions import RestValidationError, \
-    RestInputValidationError
+from aiida.restapi.common.exceptions import RestInputValidationError, RestValidationError
 
 # Important to match querybuilder keys
 PK_DBSYNONYM = 'id'
@@ -46,9 +46,7 @@ class CustomJSONEncoder(JSONEncoder):
 
         # Treat the datetime objects
         if isinstance(o, datetime):
-            if 'datetime_format' in SERIALIZER_CONFIG.keys() and \
-                            SERIALIZER_CONFIG[
-                                'datetime_format'] != 'default':
+            if 'datetime_format' in SERIALIZER_CONFIG and SERIALIZER_CONFIG['datetime_format'] != 'default':
                 if SERIALIZER_CONFIG['datetime_format'] == 'asinput':
                     if o.utcoffset() is not None:
                         o = o - o.utcoffset()
@@ -60,30 +58,6 @@ class CustomJSONEncoder(JSONEncoder):
 
         # If not returned yet, do it in the default way
         return JSONEncoder.default(self, o)
-
-
-class DatetimePrecision:
-    """
-    A simple class which stores a datetime object with its precision. No
-    internal check is done (cause itis not possible).
-
-    precision:  1 (only full date)
-                2 (date plus hour)
-                3 (date + hour + minute)
-                4 (dare + hour + minute +second)
-    """
-
-    def __init__(self, dtobj, precision):
-        """ Constructor to check valid datetime object and precision """
-
-        if not isinstance(dtobj, datetime):
-            raise TypeError('dtobj argument has to be a datetime object')
-
-        if not isinstance(precision, int):
-            raise TypeError('precision argument has to be an integer')
-
-        self.dtobj = dtobj
-        self.precision = precision
 
 
 class Utils:
@@ -208,8 +182,8 @@ class Utils:
             return (resource_type, page, node_id, query_type)
 
         if path[0] in [
-            'projectable_properties', 'statistics', 'full_types', 'download', 'download_formats', 'report', 'status',
-            'input_files', 'output_files'
+            'projectable_properties', 'statistics', 'full_types', 'full_types_count', 'download', 'download_formats',
+            'report', 'status', 'input_files', 'output_files'
         ]:
             query_type = path.pop(0)
             if path:
@@ -516,7 +490,7 @@ class Utils:
         field_counts = {}
         for field in field_list:
             field_key = field[0]
-            if field_key not in field_counts.keys():
+            if field_key not in field_counts:
                 field_counts[field_key] = 1
                 # Store the information whether membership operator is used
                 # is_membership = (field[1] is '=in=')
@@ -531,33 +505,33 @@ class Utils:
                 field_counts[field_key] = field_counts[field_key] + 1
 
         ## Check the reserved keywords
-        if 'limit' in field_counts.keys() and field_counts['limit'] > 1:
+        if 'limit' in field_counts and field_counts['limit'] > 1:
             raise RestInputValidationError('You cannot specify limit more than once')
-        if 'offset' in field_counts.keys() and field_counts['offset'] > 1:
+        if 'offset' in field_counts and field_counts['offset'] > 1:
             raise RestInputValidationError('You cannot specify offset more than once')
-        if 'perpage' in field_counts.keys() and field_counts['perpage'] > 1:
+        if 'perpage' in field_counts and field_counts['perpage'] > 1:
             raise RestInputValidationError('You cannot specify perpage more than once')
-        if 'orderby' in field_counts.keys() and field_counts['orderby'] > 1:
+        if 'orderby' in field_counts and field_counts['orderby'] > 1:
             raise RestInputValidationError('You cannot specify orderby more than once')
-        if 'download' in field_counts.keys() and field_counts['download'] > 1:
+        if 'download' in field_counts and field_counts['download'] > 1:
             raise RestInputValidationError('You cannot specify download more than once')
-        if 'download_format' in field_counts.keys() and field_counts['download_format'] > 1:
+        if 'download_format' in field_counts and field_counts['download_format'] > 1:
             raise RestInputValidationError('You cannot specify download_format more than once')
-        if 'filename' in field_counts.keys() and field_counts['filename'] > 1:
+        if 'filename' in field_counts and field_counts['filename'] > 1:
             raise RestInputValidationError('You cannot specify filename more than once')
-        if 'in_limit' in field_counts.keys() and field_counts['in_limit'] > 1:
+        if 'in_limit' in field_counts and field_counts['in_limit'] > 1:
             raise RestInputValidationError('You cannot specify in_limit more than once')
-        if 'out_limit' in field_counts.keys() and field_counts['out_limit'] > 1:
+        if 'out_limit' in field_counts and field_counts['out_limit'] > 1:
             raise RestInputValidationError('You cannot specify out_limit more than once')
-        if 'attributes' in field_counts.keys() and field_counts['attributes'] > 1:
+        if 'attributes' in field_counts and field_counts['attributes'] > 1:
             raise RestInputValidationError('You cannot specify attributes more than once')
-        if 'attributes_filter' in field_counts.keys() and field_counts['attributes_filter'] > 1:
+        if 'attributes_filter' in field_counts and field_counts['attributes_filter'] > 1:
             raise RestInputValidationError('You cannot specify attributes_filter more than once')
-        if 'extras' in field_counts.keys() and field_counts['extras'] > 1:
+        if 'extras' in field_counts and field_counts['extras'] > 1:
             raise RestInputValidationError('You cannot specify extras more than once')
-        if 'extras_filter' in field_counts.keys() and field_counts['extras_filter'] > 1:
+        if 'extras_filter' in field_counts and field_counts['extras_filter'] > 1:
             raise RestInputValidationError('You cannot specify extras_filter more than once')
-        if 'full_type' in field_counts.keys() and field_counts['full_type'] > 1:
+        if 'full_type' in field_counts and field_counts['full_type'] > 1:
             raise RestInputValidationError('You cannot specify full_type more than once')
 
         ## Extract results
@@ -690,16 +664,15 @@ class Utils:
         :return: parsed values for the querykeys
         """
 
-        from pyparsing import Word, alphas, nums, alphanums, printables, \
-            ZeroOrMore, OneOrMore, Suppress, Optional, Literal, Group, \
-            QuotedString, Combine, \
-            StringStart as SS, StringEnd as SE, \
-            WordEnd as WE, \
-            ParseException
-
-        from pyparsing import pyparsing_common as ppc
         from dateutil import parser as dtparser
         from psycopg2.tz import FixedOffsetTimezone
+        from pyparsing import Combine, Group, Literal, OneOrMore, Optional, ParseException, QuotedString
+        from pyparsing import StringEnd as SE
+        from pyparsing import StringStart as SS
+        from pyparsing import Suppress, Word
+        from pyparsing import WordEnd as WE
+        from pyparsing import ZeroOrMore, alphanums, alphas, nums, printables
+        from pyparsing import pyparsing_common as ppc
 
         ## Define grammar
         # key types

@@ -8,13 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi devel` commands."""
-
 import sys
+
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import options
-from aiida.cmdline.params.types import TestModuleParamType
 from aiida.cmdline.utils import decorators, echo
 
 
@@ -31,19 +29,27 @@ def devel_check_load_time():
     Known pathways that increase load time:
 
         * the database environment is loaded when it doesn't need to be
-        * the `aiida.orm` module is imported when it doesn't need to be
+        * Unexpected `aiida.*` modules are imported
 
     If either of these conditions are true, the command will raise a critical error
     """
     from aiida.manage.manager import get_manager
+
+    loaded_aiida_modules = [key for key in sys.modules if key.startswith('aiida.')]
+    aiida_modules_str = '\n- '.join(sorted(loaded_aiida_modules))
+    echo.echo_info(f'aiida modules loaded:\n- {aiida_modules_str}')
 
     manager = get_manager()
 
     if manager.backend_loaded:
         echo.echo_critical('potential `verdi` speed problem: database backend is loaded.')
 
-    if 'aiida.orm' in sys.modules:
-        echo.echo_critical('potential `verdi` speed problem: `aiida.orm` module is imported.')
+    allowed = ('aiida.backends', 'aiida.cmdline', 'aiida.common', 'aiida.manage', 'aiida.plugins', 'aiida.restapi')
+    for loaded in loaded_aiida_modules:
+        if not any(loaded.startswith(mod) for mod in allowed):
+            echo.echo_critical(
+                f'potential `verdi` speed problem: `{loaded}` module is imported which is not in: {allowed}'
+            )
 
     echo.echo_success('no issues detected')
 
@@ -89,29 +95,23 @@ def devel_validate_plugins():
     echo.echo_success('all registered plugins could successfully loaded.')
 
 
-@verdi_devel.command('tests')
-@click.argument('paths', nargs=-1, type=TestModuleParamType(), required=False)
-@options.VERBOSE(help='Print the class and function name for each test.')
-@decorators.deprecated_command("This command has been removed in aiida-core v1.1.0. Please run 'pytest' instead.")
+@verdi_devel.command('run-sql')
+@click.argument('sql', type=str)
 @decorators.with_dbenv()
-def devel_tests(paths, verbose):  # pylint: disable=unused-argument
-    """Run the unittest suite or parts of it.
-
-    .. deprecated:: 1.1.0
-        Entry point will be completely removed in `v2.0.0`.
-    """
+def devel_run_sql(sql):
+    """Run a raw SQL command on the database."""
+    from aiida.manage.manager import get_manager
+    manager = get_manager()
+    result = manager.get_backend().execute_raw(sql)
+    if isinstance(result, (list, tuple)):
+        for row in result:
+            echo.echo(str(row))
+    else:
+        echo.echo(str(result))
 
 
 @verdi_devel.command('play', hidden=True)
 def devel_play():
     """Play the Aida triumphal march by Giuseppe Verdi."""
     import webbrowser
-
     webbrowser.open_new('http://upload.wikimedia.org/wikipedia/commons/3/32/Triumphal_March_from_Aida.ogg')
-
-
-@verdi_devel.command()
-def configure_backup():
-    """Configure backup of the repository folder."""
-    from aiida.manage.backup.backup_setup import BackupSetup
-    BackupSetup().run()

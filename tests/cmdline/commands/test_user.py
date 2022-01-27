@@ -11,9 +11,9 @@
 
 from click.testing import CliRunner
 
+from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_user
-from aiida import orm
 
 USER_1 = {  # pylint: disable=invalid-name
     'email': 'testuser1@localhost',
@@ -36,9 +36,9 @@ class TestVerdiUserCommand(AiidaTestCase):
         super().setUp()
 
         created, user = orm.User.objects.get_or_create(email=USER_1['email'])
-        for key, _ in USER_1.items():
+        for key, value in USER_1.items():
             if key != 'email':
-                setattr(user, key, USER_1[key])
+                setattr(user, key, value)
         if created:
             orm.User(**USER_1).store()
         self.cli_runner = CliRunner()

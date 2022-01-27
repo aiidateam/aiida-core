@@ -10,8 +10,8 @@ How to work with data
 Importing data
 ==============
 
-AiiDA allows users to export data from their database into an export archive file, which can be imported in any other AiiDA database.
-If you have an AiiDA export archive that you would like to import, you can use the ``verdi import`` command (see :ref:`the reference section<reference:command-line:verdi-import>` for details).
+AiiDA allows users to export data from their database into an export archive file, which can be imported into any other AiiDA database.
+If you have an AiiDA export archive that you would like to import, you can use the ``verdi archive import`` command (see :ref:`the reference section<reference:command-line:verdi-archive>` for details).
 
 .. note:: For information on exporting and importing data via AiiDA archives, see :ref:`"How to share data"<how-to:share:archives>`.
 
@@ -58,7 +58,7 @@ If you have such a file that you would like to store in AiiDA, you can use the `
 
 .. code-block:: python
 
-    SinglefileData = DataFactory('singlefile')
+    SinglefileData = DataFactory('core.singlefile')
     singlefile = SinglefileData(file='/absolute/path/to/file.txt')
     singlefile.store()
 
@@ -71,277 +71,47 @@ Then we just construct an instance of that class, passing the file of interest a
 Note that after construction, you will get an *unstored* node.
 This means that at this point your data is not yet stored in the database and you can first inspect it and optionally modify it.
 If you are happy with the results, you can store the new data permanently by calling the :py:meth:`~aiida.orm.nodes.node.Node.store` method.
-Every node is assigned a Universal Unique Identifer (UUID) upon creation and once stored it is also assigned a primary key (PK), which can be retrieved through the ``node.uuid`` and ``node.pk`` properties, respectively.
+Every node is assigned a Universal Unique Identifier (UUID) upon creation and once stored it is also assigned a primary key (PK), which can be retrieved through the ``node.uuid`` and ``node.pk`` properties, respectively.
 You can use these identifiers to reference and or retrieve a node.
-Ways to find and retrieve data that have previously been imported are described in section :ref:`"How to find data"<how-to:data:find>`.
+Ways to find and retrieve data that have previously been imported are described in section :ref:`"How to find data"<how-to:query>`.
 
 If none of the currently available data types, as listed by ``verdi plugin list``, seem to fit your needs, you can also create your own custom type.
 For details refer to the next section :ref:`"How to add support for custom data types"<topics:data_types:plugin>`.
 
 
-.. _how-to:data:find:
+.. _how-to:data:import:provenance:
 
-Finding and querying for data
-=============================
+Provenance
+----------
 
-Once you have successfully completed a series of workflows for your project, or have imported a dataset you are interested in, you want to quickly find the data that is relevant for your analysis.
-The data in an AiiDA database is stored as a graph of connected entities, which can be easily *queried* with the :class:`~aiida.orm.querybuilder.QueryBuilder` class.
-
-The :class:`~aiida.orm.querybuilder.QueryBuilder` lets you query your AiiDA database independently of the backend used under the hood.
-Before starting to write a query, it helps to:
-
-*   Know what you want to query for.
-    In the language of databases, you need to tell the backend what *entity* you are looking for and optionally which of its properties you want to *project*.
-    For example, you might be interested in the label of a calculation and the PK's of all its outputs.
-*   Know the relationships between entities you are interested in.
-    Nodes of an AiiDA graph (vertices) are connected with links (edges).
-    A node can for example be either the input or output of another node, but also an ancestor or a descendant.
-*   Know how you want to filter the results of your query.
-
-Once you are clear about what you want and how you can get it, the :class:`~aiida.orm.querybuilder.QueryBuilder` will build an SQL-query for you.
-
-There are two ways of using the :class:`~aiida.orm.querybuilder.QueryBuilder`:
-
-#.  In the *appender* method, you construct your query step by step using the ``QueryBuilder.append()`` method.
-#.  In the *queryhelp* approach, you construct a dictionary that defines your query and pass it to the :class:`~aiida.orm.querybuilder.QueryBuilder`.
-
-Both APIs provide the same functionality - the appender method may be more suitable for interactive use, e.g., in the ``verdi shell``, whereas the queryhelp method can be useful in scripting.
-In this section we will focus on the basics of the appender method.
-For more advanced queries or more details on the queryhelp, see the :ref:`topics section on advanced querying <topics:database:advancedquery>`.
-
-.. _how-to:data:find:select:
-
-Selecting entities
-------------------
-
-Using the ``append()`` method of the :class:`~aiida.orm.querybuilder.QueryBuilder`, you can query for the entities you are interested in.
-Suppose you want to query for calculation job nodes in your database:
+While AiiDA will automatically keep the provenance of data that is created by it through calculations and workflows, this is clearly not the case when creating data nodes manually, as described in the previous section.
+Typically, the manual creation of data happens at the beginning of a project when data from external databases is imported as a starting point for further calculations.
+To still keep some form of provenance, the :class:`~aiida.orm.nodes.data.Data` base class allows to record the _source_ of the data it contains.
+When constructing a new data node, of any type, you can pass a dictionary with information of the source under the ``source`` keyword argument:
 
 .. code-block:: python
 
-    from aiida.orm import QueryBuilder
-    qb = QueryBuilder()       # Instantiating instance. One instance -> one query
-    qb.append(CalcJobNode)    # Setting first vertex of path
+    data = Data(source={'uri': 'http://some.domain.org/files?id=12345', 'id': '12345'})
 
-If you are interested in instances of different classes, you can also pass an iterable of classes.
-However, they have to be of the same ORM-type (e.g. all have to be subclasses of :class:`~aiida.orm.nodes.node.Node`):
+Once stored, this data can always be retrieved through the ``source`` property:
 
 .. code-block:: python
 
-    qb = QueryBuilder()       # Instantiating instance. One instance -> one query
-    qb.append([CalcJobNode, WorkChainNode]) # Setting first vertice of path, either WorkChainNode or Job.
-
-.. note::
-
-    Processes have both a run-time :class:`~aiida.engine.processes.process.Process` that executes them and a :class:`~aiida.orm.nodes.node.Node` that stores their data in the database (see the :ref:`corresponding topics section<topics:processes:concepts:types>` for a detailed explanation).
-    The :class:`~aiida.orm.querybuilder.QueryBuilder` allows you to pass either the :class:`~aiida.orm.nodes.node.Node` class (e.g. :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`) or the :class:`~aiida.engine.processes.process.Process` class (e.g. :class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`), which will automatically select the right entity for the query.
-    Using either :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode` or :class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob` will produce the same query results.
-
-.. _how-to:data:find:results:
-
-Retrieving results
-------------------
-
-Once you have *appended* the entity you want to query for to the :class:`~aiida.orm.querybuilder.QueryBuilder`, the next question is how to get the results.
-There are several ways to obtain data from a query:
-
-.. code-block:: python
-
-    qb = QueryBuilder()                 # Instantiating instance
-    qb.append(CalcJobNode)              # Setting first vertice of path
-
-    first_row = qb.first()              # Returns a list (!) of the results of the first row
-
-    all_results_d = qb.dict()           # Returns all results as a list of dictionaries
-
-    all_results_l = qb.all()            # Returns a list of lists
-
-In case you are working with a large dataset, you can also return your query as a generator:
-
-.. code-block:: python
-
-    all_res_d_gen = qb.iterdict()       # Return a generator of dictionaries
-                                        # of all results
-    all_res_l_gen = qb.iterall()        # Returns a generator of lists
-
-This will retrieve the data in batches, and you can start working with the data before the query has completely finished.
-For example, you can iterate over the results of your query in a for loop:
-
-.. code-block:: python
-
-    for entry in qb.iterall():
-        # do something with a single entry in the query result
-
-.. _how-to:data:find:filters:
-
-Filters
--------
-
-Usually you do not want to query for *all* entities of a certain class, but rather *filter* the results based on certain properties.
-Suppose you do not want all :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode` data, but only those that are ``finished``:
-
-.. code-block:: python
-
-    qb = QueryBuilder()                 # Initialize a QueryBuilder instance
-    qb.append(
-        CalcJobNode,                    # Append a CalcJobNode
-        filters={                       # Specify the filters:
-            'attributes.process_state': 'finished',  # the process is finished
-        },
-    )
-
-You can apply multiple filters to one entity in a query.
-Say you are interested in all calculation jobs in your database that are ``finished`` **and** have ``exit_status == 0``:
-
-.. code-block:: python
-
-    qb = QueryBuilder()                 # Initialize a QueryBuilder instance
-    qb.append(
-        CalcJobNode,                    # Append a CalcJobNode
-        filters={                       # Specify the filters:
-            'attributes.process_state': 'finished',     # the process is finished AND
-            'attributes.exit_status': 0                 # has exit_status == 0
-        },
-    )
-
-In case you want to query for calculation jobs that satisfy one of these conditions, you can use the ``or`` operator:
-
-.. code-block:: python
-
-    qb = QueryBuilder()
-    qb.append(
-        CalcJobNode,
-        filters={
-            'or':[
-                {'attributes.process_state': 'finished'},
-                {'attributes.exit_status': 0}
-            ]
-        },
-    )
-
-If we had written ``and`` instead of ``or`` in the example above, we would have performed the exact same query as the previous one, because ``and`` is the default behavior if you provide several filters as key-value pairs in a dictionary to the ``filters`` argument.
-In case you want all calculation jobs with state ``finished`` or ``excepted``, you can also use the ``in`` operator:
-
-.. code-block:: python
-
-    qb = QueryBuilder()
-    qb.append(
-        CalcJobNode,
-        filters={
-            'attributes.process_state': {'in': ['finished', 'excepted']}
-        },
-    )
-
-You can negate a filter by adding an exclamation mark in front of the operator.
-So, to query for all calculation jobs that are not a ``finished`` or ``excepted`` state:
-
-.. code-block:: python
-
-    qb = QueryBuilder()
-    qb.append(
-        CalcJobNode,
-        filters={
-            'attributes.process_state': {'!in': ['finished', 'excepted']}
-        },
-    )
-
-.. note::
-
-    The above rule applies to all operators.
-    For example, you can check non-equality with ``!==``, since this is the equality operator (``==``) with a negation prepended.
-
-A complete list of all available operators can be found in the :ref:`advanced querying section<topics:database:advancedquery:tables:operators>`.
-
-.. _how-to:data:find:relationships:
-
-Relationships
--------------
-
-It is possible to query for data based on its relationship to another entity in the database.
-Imagine you are not interested in the calculation jobs themselves, but in one of the outputs they create.
-You can build upon your initial query for all  :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`'s in the database using the relationship of the output to the first step in the query:
-
-.. code-block::
-
-    qb = QueryBuilder()
-    qb.append(CalcJobNode, tag='calcjob')
-    qb.append(Int, with_incoming='calcjob')
-
-In the first ``append`` call, we query for all  :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`'s in the database, and *tag* this step with the *unique* identifier ``'calcjob'``.
-Next, we look for all ``Int`` nodes that are an output of the  :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`'s found in the first step, using the ``with_incoming`` relationship argument.
-The ``Int`` node was created by the  :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode` and as such has an *incoming* create link.
-
-In the context of our query, we are building a *path* consisting of *vertices* (i.e. the entities we query for) connected by *edges* defined by the relationships between them.
-The complete set of all possible relationships you can use query for, as well as the entities that they connect to, can be found in the :ref:`advanced querying section<topics:database:advancedquery:tables:relationships>`.
-
-.. note::
-
-    The ``tag`` identifier can be any alphanumeric string, it is simply a label used to refer to a previous vertex along the query path when defining a relationship.
-
-.. _how-to:data:find:projections:
-
-Projections
------------
-
-By default, the :class:`~aiida.orm.querybuilder.QueryBuilder` returns the instances of the entities corresponding to the final append to the query path.
-For example:
-
-.. code-block:: python
-
-    qb = QueryBuilder()
-    qb.append(CalcJobNode, tag='calcjob')
-    qb.append(Int, with_incoming='calcjob')
-
-The above code snippet will return all ``Int`` nodes that are outputs of any  :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`.
-However, you can also *project* other entities in the path by adding ``project='*'`` to the corresponding ``append()`` call:
-
-.. code-block:: python
-
-    qb = QueryBuilder()
-    qb.append(CalcJobNode, tag='calcjob', project='*')
-    qb.append(Int, with_incoming='calcjob')
-
-This will return all  :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`'s that have an ``Int`` output node.
-
-However, in many cases we are not interested in the entities themselves, but rather their PK, UUID, *attributes* or some other piece of information stored by the entity.
-This can be achieved by providing the corresponding *column* to the ``project`` keyword argument:
-
-.. code-block:: python
-
-    qb = QueryBuilder()
-    qb.append(CalcJobNode, tag='calcjob')
-    qb.append(Int, with_incoming='calcjob', project='id')
-
-In the above example, executing the query returns all *PK's* of the ``Int`` nodes which are outputs of all  :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`'s in the database.
-Moreover, you can project more than one piece of information for one vertex by providing a list:
-
-.. code-block:: python
-
-    qb = QueryBuilder()
-    qb.append(CalcJobNode, tag='calcjob')
-    qb.append(Int, with_incoming='calcjob', project=['id', 'attributes.value'])
-
-For the query above, ``qb.all()`` will return a list of lists, for which each element corresponds to one entity and contains two items: the PK of the ``Int`` node and its value.
-Finally, you can project information for multiple vertices along the query path:
-
-.. code-block:: python
-
-    qb = QueryBuilder()
-    qb.append(CalcJobNode, tag='calcjob', project='*')
-    qb.append(Int, with_incoming='calcjob', project=['id', 'attributes.value'])
-
-All projections must start with one of the *columns* of the entities in the database, or project the instances themselves using ``'*'``.
-Examples of columns we have encountered so far are ``id``, ``uuid`` and ``attributes``.
-If the column is a dictionary, you can expand the dictionary values using a dot notation, as we have done in the previous example to obtain the ``attributes.value``.
-This can be used to project the values of nested dictionaries as well.
-
-.. note::
-
-    Be aware that for consistency, ``QueryBuilder.all()`` / ``iterall()`` always returns a list of lists, even if you only project one property of a single entity.
-    Use ``QueryBuilder.all(flat=True)`` to return the query result as a flat list in this case.
-
-As mentioned in the beginning, this section provides only a brief introduction to the :class:`~aiida.orm.querybuilder.QueryBuilder`'s basic functionality.
-To learn about more advanced queries, please see :ref:`the corresponding topics section<topics:database:advancedquery>`.
+    data.source   # Will return the ``source`` dictionary that was passed in the constructor, if any
+
+The following list shows all the keys that are allowed to be set in the ``source`` dictionary:
+
+    * 'db_name': The name of the external database.
+    * 'db_uri': The base URI of the external database.
+    * 'uri': The exact URI of where the data can be retrieved. Ideally this is a persistent URI.
+    * 'id': The external ID with which the data is identified in the external database.
+    * 'version': The version of the data, if any.
+    * 'extras': Optional dictionary with other fields for source description.
+    * 'source_md5': MD5 checksum of the data.
+    * 'description': Human-readable free form description of the data's source.
+    * 'license': A string with the type of license that applies to the data, if any.
+
+If any other keys are defined, an exception will be raised by the constructor.
 
 
 .. _how-to:data:organize:
@@ -507,10 +277,15 @@ From the command line interface:
       Are you sure to delete Group<another_group>? [y/N]: y
       Success: Group<another_group> deleted.
 
-.. important::
-    Any deletion operation related to groups won't affect the nodes themselves.
-    For example if you delete a group, the nodes that belonged to the group will remain in the database.
-    The same happens if you remove nodes from the group -- they will remain in the database but won't belong to the group anymore.
+Any deletion operation related to groups, by default, will not affect the nodes themselves.
+For example if you delete a group, the nodes that belonged to the group will remain in the database.
+The same happens if you remove nodes from the group -- they will remain in the database but won't belong to the group anymore.
+
+If you also wish to delete the nodes, when deleting the group, use the ``--delete-nodes`` option:
+
+.. code-block:: console
+
+      $ verdi group delete another_group --delete-nodes
 
 Copy one group into another
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -592,7 +367,7 @@ To achieve the same result as above one would need to do something as follows:
     group = load_group(label='promising_structures')
 
     # Here make sure to include only structures, as group can contain any nodes.
-    structures = [s for s in group.nodes if isinstance(nodes, StructureData)]
+    structures = [node for node in group.nodes if isinstance(node, StructureData)]
     for structure in structures:
         builder = SomeWorkChain.get_builder()
         builder.structure = structure
@@ -719,7 +494,7 @@ To traverse paths, use the :py:func:`~aiida.tools.groups.paths.GroupPath.childre
     GroupPath('base1/sub_group2', cls='<class 'aiida.orm.groups.Group'>')
     GroupPath('base2/other/sub_group3', cls='<class 'aiida.orm.groups.Group'>')
 
-You can also traverse directly through the nodes of a path, optionally filtering by node class and any other filters allowed by the :ref:`QueryBuilder <how-to:data:find>`:
+You can also traverse directly through the nodes of a path, optionally filtering by node class and any other filters allowed by the :ref:`QueryBuilder <how-to:query>`:
 
 .. code-block:: ipython
 
@@ -764,7 +539,7 @@ Deleting data
 
 By default, every time you run or submit a new calculation, AiiDA will create for you new nodes in the database, and will never replace or delete data.
 There are cases, however, when it might be useful to delete nodes that are not useful anymore, for instance test runs or incorrect/wrong data and calculations.
-For this case, AiiDA provides the ``verdi node delete`` command to remove the nodes from the provenance graph.
+For this case, AiiDA provides the ``verdi node delete`` command and the :py:func:`~aiida.tools.graph.deletions.delete_nodes` function, to remove the nodes from the provenance graph.
 
 .. caution::
    Once the data is deleted, there is no way to recover it (unless you made a backup).
@@ -780,6 +555,13 @@ In addition, there are a number of additional rules that are not mandatory to en
 For instance, you can set ``--create-forward`` if, when deleting a calculation, you want to delete also the data it produced (using instead ``--no-create-forward`` will delete the calculation only, keeping the output data: note that this effectively strips out the provenance information of the output data).
 The full list of these flags is available from the help command ``verdi node delete -h``.
 
+.. code-block:: python
+
+    from aiida.tools import delete_nodes
+    pks_to_be_deleted = delete_nodes(
+        [1, 2, 3], dry_run=True, create_forward=True, call_calc_forward=True, call_work_forward=True
+    )
+
 Deleting computers
 ------------------
 To delete a computer, you can use ``verdi computer delete``.
@@ -794,7 +576,7 @@ This includes, notably:
 
 * *Node extras*: These can be deleted using :py:meth:`~aiida.orm.entities.EntityExtrasMixin.delete_extra` and :py:meth:`~aiida.orm.entities.EntityExtrasMixin.delete_extra_many` methods.
 * *Node comments*: These can be removed using :py:meth:`~aiida.orm.nodes.node.Node.remove_comment`.
-* *Groups*: These can be deleted using :py:meth:`Group.objects.delete() <aiida.orm.groups.Group.Collection.delete>`.
+* *Groups*: These can be deleted using :py:meth:`Group.objects.delete() <aiida.orm.groups.GroupCollection.delete>`.
   This command will only delete the group, not the nodes contained in the group.
 
 Completely deleting an AiiDA profile
@@ -805,3 +587,79 @@ This command will delete both the file repository and the database.
 .. danger::
 
   It is not possible to restore a deleted profile unless it was previously backed up!
+
+.. _how-to:data:transfer:
+
+Transferring data
+=================
+
+.. versionadded:: 1.6.0
+
+.. danger::
+
+    This feature is still in beta version and its API might change in the near future.
+    It is therefore not recommended that you rely on it for your public/production workflows.
+
+    Moreover, feedback on its implementation is much appreciated (at https://github.com/aiidateam/aiida-core/issues/4811).
+
+When a calculation job is launched, AiiDA will create a :py:class:`~aiida.orm.nodes.data.remote.RemoteData` node that is attached as an output node to the calculation node with the label ``remote_folder``.
+The input files generated by the ``CalcJob`` plugin are copied to this remote folder and, since the job is executed there as well, the code will produce its output files in that same remote folder also.
+Since the :py:class:`~aiida.orm.nodes.data.remote.RemoteData` node only explicitly stores the filepath on the remote computer, and not its actual contents, it functions more or less like a symbolic link.
+That means that if the remote folder gets deleted, there will be no way to retrieve its contents.
+The ``CalcJob`` plugin can for that reason specify some files that should be :ref:`retrieved<topics:calculations:usage:calcjobs:file_lists_retrieve>` and stored locally in a :py:class:`~aiida.orm.nodes.data.folder.FolderData` node for safekeeing, which is attached to the calculation node as an output with the label ``retrieved_folder``.
+
+Although the :ref:`retrieve_list<topics:calculations:usage:calcjobs:file_lists_retrieve>` allows to specify what output files are to be retrieved locally, this has to be done *before* the calculation is submitted.
+In order to provide more flexibility in deciding what files of completed calculation jobs are to be stored locally, even after it has terminated, AiiDA ships with a the :py:class:`~aiida.calculations.transfer.TransferCalculation` plugin.
+This calculation plugin enables to retrieve files from a remote machine and save them in a local :py:class:`~aiida.orm.nodes.data.folder.FolderData`.
+The specifications of what to copy are provided through an input of type
+
+.. code-block:: ipython
+
+    In [1]: instructions_cont = {}
+        ... instructions_cont['retrieve_files'] = True
+        ... instructions_cont['symlink_files'] = [
+        ...     ('node_keyname', 'source/path/filename', 'target/path/filename'),
+        ... ]
+        ... instructions_node = orm.Dict(dict=instructions_cont)
+
+The ``'source/path/filename'`` and ``'target/path/filename'`` are both relative paths (to their respective folders).
+The ``node_keyname`` is a string that will be used when providing the source :py:class:`~aiida.orm.nodes.data.remote.RemoteData` node to the calculation.
+You also need to provide the computer between which the transfer will occur:
+
+.. code-block:: ipython
+
+    In [2]: transfer_builder = CalculationFactory('core.transfer').get_builder()
+        ... transfer_builder.instructions = instructions_node
+        ... transfer_builder.source_nodes = {'node_keyname': source_node}
+        ... transfer_builder.metadata.computer = source_node.computer
+
+The variable ``source_node`` here corresponds to the ``RemoteData`` node whose contents need to be retrieved.
+Finally, you just run or submit the calculation as you would do with any other:
+
+.. code-block:: ipython
+
+    In [2]: from aiida.engine import submit
+        ... submit(transfer_builder)
+
+You can also use this to copy local files into a new :py:class:`~aiida.orm.nodes.data.remote.RemoteData` folder.
+For this you first have to adapt the instructions to set ``'retrieve_files'`` to ``False`` and use a ``'local_files'`` list instead of the ``'symlink_files'``:
+
+.. code-block:: ipython
+
+    In [1]: instructions_cont = {}
+        ... instructions_cont['retrieve_files'] = False
+        ... instructions_cont['local_files'] = [
+        ...     ('node_keyname', 'source/path/filename', 'target/path/filename'),
+        ... ]
+        ... instructions_node = orm.Dict(dict=instructions_cont)
+
+It is also relevant to note that, in this case, the ``source_node`` will be of type :py:class:`~aiida.orm.nodes.data.folder.FolderData` so you will have to manually select the computer to where you want to copy the files.
+You can do this by looking at your available computers running ``verdi computer list`` and using the label shown to load it with :py:func:`~aiida.orm.utils.load_computer`:
+
+.. code-block:: ipython
+
+    In [2]: transfer_builder.metadata.computer = load_computer('some-computer-label')
+
+Both when uploading or retrieving, you can copy multiple files by appending them to the list of the ``local_files`` or ``symlink_files`` keys in the instructions input, respectively.
+It is also possible to copy files from any number of nodes by providing several ``source_node`` s, each with a different ``'node_keyname'``.
+The target node will always be one (so you can *"gather"* files in a single call, but not *"distribute"* them).

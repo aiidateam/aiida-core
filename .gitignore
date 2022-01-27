@@ -25,7 +25,7 @@
 coverage.xml
 
 # Files created by RPN tests
-.ci/polish/polish_workchains/polish*
+**/polish_workchains/polish*
 
 # Build files
 dist/
@@ -34,3 +34,5 @@ pip-wheel-metadata
 # Docs
 docs/build
 docs/source/reference/apidoc
+
+pplot_out/

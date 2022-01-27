@@ -9,23 +9,29 @@
 ###########################################################################
 """Module to manage loading entrypoints."""
 import enum
-import traceback
 import functools
+import traceback
+from typing import Any, List, Optional, Sequence, Set, Tuple
+from warnings import warn
 
-try:
-    from reentry.default_manager import PluginManager
-    # I don't use the default manager as it has scan_for_not_found=True
-    # by default, which re-runs scan if no entrypoints are found
-    ENTRYPOINT_MANAGER = PluginManager(scan_for_not_found=False)
-except ImportError:
-    import pkg_resources as ENTRYPOINT_MANAGER
+# importlib.metadata was introduced into the standard library in python 3.8,
+# but was then updated in python 3.10 to use an improved API.
+# So for now we use the backport importlib_metadata package.
+from importlib_metadata import EntryPoint, EntryPoints
+from importlib_metadata import entry_points as _eps
 
-from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError, LoadingEntryPointError
+from aiida.common.exceptions import LoadingEntryPointError, MissingEntryPointError, MultipleEntryPointError
+from aiida.common.warnings import AiidaDeprecationWarning
 
-__all__ = ('load_entry_point', 'load_entry_point_from_string')
+__all__ = ('load_entry_point', 'load_entry_point_from_string', 'parse_entry_point', 'get_entry_points')
 
 ENTRY_POINT_GROUP_PREFIX = 'aiida.'
 ENTRY_POINT_STRING_SEPARATOR = ':'
+
+
+@functools.lru_cache(maxsize=1)
+def eps():
+    return _eps()
 
 
 class EntryPointFormat(enum.Enum):
@@ -36,9 +42,9 @@ class EntryPointFormat(enum.Enum):
 
     Under these definitions a potentially valid entry point string may have the following formats:
 
-        * FULL:    prefixed group plus entry point name     aiida.transports:ssh
-        * PARTIAL: unprefixed group plus entry point name   transports:ssh
-        * MINIMAL: no group but only entry point name:      ssh
+        * FULL:    prefixed group plus entry point name     aiida.transports:core.ssh
+        * PARTIAL: unprefixed group plus entry point name   transports:core.ssh
+        * MINIMAL: no group but only entry point name:      core.ssh
 
     Note that the MINIMAL format can potentially lead to ambiguity if the name appears in multiple
     entry point groups.
@@ -53,19 +59,44 @@ class EntryPointFormat(enum.Enum):
 ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP = {
     'aiida.calculations': 'aiida.orm.nodes.process.calculation.calcjob',
     'aiida.cmdline.data': 'aiida.cmdline.data',
+    'aiida.cmdline.data.structure.import': 'aiida.cmdline.data.structure.import',
+    'aiida.cmdline.computer.configure': 'aiida.cmdline.computer.configure',
     'aiida.data': 'aiida.orm.nodes.data',
     'aiida.groups': 'aiida.orm.groups',
     'aiida.node': 'aiida.orm.nodes',
     'aiida.parsers': 'aiida.parsers.plugins',
     'aiida.schedulers': 'aiida.schedulers.plugins',
+    'aiida.tools.calculations': 'aiida.tools.calculations',
+    'aiida.tools.data.orbitals': 'aiida.tools.data.orbitals',
     'aiida.tools.dbexporters': 'aiida.tools.dbexporters',
     'aiida.tools.dbimporters': 'aiida.tools.dbimporters.plugins',
     'aiida.transports': 'aiida.transports.plugins',
     'aiida.workflows': 'aiida.workflows',
 }
 
+DEPRECATED_ENTRY_POINTS_MAPPING = {
+    'aiida.calculations': ['arithmetic.add', 'templatereplacer'],
+    'aiida.data': [
+        'array', 'array.bands', 'array.kpoints', 'array.projection', 'array.trajectory', 'array.xy', 'base', 'bool',
+        'cif', 'code', 'dict', 'float', 'folder', 'int', 'list', 'numeric', 'orbital', 'remote', 'remote.stash',
+        'remote.stash.folder', 'singlefile', 'str', 'structure', 'upf'
+    ],
+    'aiida.tools.dbimporters': ['cod', 'icsd', 'materialsproject', 'mpds', 'mpod', 'nninc', 'oqmd', 'pcod', 'tcod'],
+    'aiida.tools.data.orbitals': ['orbital', 'realhydrogen'],
+    'aiida.parsers': ['arithmetic.add', 'templatereplacer.doubler'],
+    'aiida.schedulers': ['direct', 'lsf', 'pbspro', 'sge', 'slurm', 'torque'],
+    'aiida.transports': ['local', 'ssh'],
+    'aiida.workflows': ['arithmetic.multiply_add', 'arithmetic.add_multiply'],
+}
 
-def validate_registered_entry_points():  # pylint: disable=invalid-name
+
+def parse_entry_point(group: str, spec: str) -> EntryPoint:
+    """Return an entry point, given its group and spec (as formatted in the setup)"""
+    name, value = spec.split('=', maxsplit=1)
+    return EntryPoint(group=group, name=name.strip(), value=value.strip())
+
+
+def validate_registered_entry_points() -> None:  # pylint: disable=invalid-name
     """Validate all registered entry points by loading them with the corresponding factory.
 
     :raises EntryPointError: if any of the registered entry points cannot be loaded. This can happen if:
@@ -94,7 +125,7 @@ def validate_registered_entry_points():  # pylint: disable=invalid-name
             factory(entry_point.name)
 
 
-def format_entry_point_string(group, name, fmt=EntryPointFormat.FULL):
+def format_entry_point_string(group: str, name: str, fmt: EntryPointFormat = EntryPointFormat.FULL) -> str:
     """
     Format an entry point string for a given entry point group and name, based on the specified format
 
@@ -116,7 +147,7 @@ def format_entry_point_string(group, name, fmt=EntryPointFormat.FULL):
     raise ValueError('invalid EntryPointFormat')
 
 
-def parse_entry_point_string(entry_point_string):
+def parse_entry_point_string(entry_point_string: str) -> Tuple[str, str]:
     """
     Validate the entry point string and attempt to parse the entry point group and name
 
@@ -136,14 +167,13 @@ def parse_entry_point_string(entry_point_string):
     return group, name
 
 
-def get_entry_point_string_format(entry_point_string):
+def get_entry_point_string_format(entry_point_string: str) -> EntryPointFormat:
     """
     Determine the format of an entry point string. Note that it does not validate the actual entry point
     string and it may not correspond to any actual entry point. This will only assess the string format
 
     :param entry_point_string: the entry point string
     :returns: the entry point type
-    :rtype: EntryPointFormat
     """
     try:
         group, _ = entry_point_string.split(ENTRY_POINT_STRING_SEPARATOR)
@@ -155,7 +185,7 @@ def get_entry_point_string_format(entry_point_string):
         return EntryPointFormat.PARTIAL
 
 
-def get_entry_point_from_string(entry_point_string):
+def get_entry_point_from_string(entry_point_string: str) -> EntryPoint:
     """
     Return an entry point for the given entry point string
 
@@ -170,7 +200,7 @@ def get_entry_point_from_string(entry_point_string):
     return get_entry_point(group, name)
 
 
-def load_entry_point_from_string(entry_point_string):
+def load_entry_point_from_string(entry_point_string: str) -> Any:
     """
     Load the class registered for a given entry point string that determines group and name
 
@@ -186,7 +216,7 @@ def load_entry_point_from_string(entry_point_string):
     return load_entry_point(group, name)
 
 
-def load_entry_point(group, name):
+def load_entry_point(group: str, name: str) -> Any:
     """
     Load the class registered under the entry point for a given name and group
 
@@ -209,44 +239,35 @@ def load_entry_point(group, name):
     return loaded_entry_point
 
 
-def get_entry_point_groups():
+def get_entry_point_groups() -> Set[str]:
     """
     Return a list of all the recognized entry point groups
 
     :return: a list of valid entry point groups
     """
-    return ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP.keys()
+    return eps().groups
 
 
-def get_entry_point_names(group, sort=True):
-    """
-    Return a list of all the entry point names within a specific group
-
-    :param group: the entry point group
-    :param sort: if True, the returned list will be sorted alphabetically
-    :return: a list of entry point names
-    """
-    entry_point_names = [ep.name for ep in get_entry_points(group)]
-
-    if sort is True:
-        entry_point_names.sort()
-
-    return entry_point_names
+def get_entry_point_names(group: str, sort: bool = True) -> List[str]:
+    """Return the entry points within a group."""
+    all_eps = eps()
+    group_names = list(all_eps.select(group=group).names)
+    if sort:
+        return sorted(group_names)
+    return group_names
 
 
-@functools.lru_cache(maxsize=None)
-def get_entry_points(group):
+def get_entry_points(group: str) -> EntryPoints:
     """
     Return a list of all the entry points within a specific group
 
     :param group: the entry point group
     :return: a list of entry points
     """
-    return list(ENTRYPOINT_MANAGER.iter_entry_points(group=group))
+    return eps().select(group=group)
 
 
-@functools.lru_cache(maxsize=None)
-def get_entry_point(group, name):
+def get_entry_point(group: str, name: str) -> EntryPoint:
     """
     Return an entry point with a given name within a specific group
 
@@ -254,26 +275,47 @@ def get_entry_point(group, name):
     :param name: the name of the entry point
     :return: the entry point if it exists else None
     :raises aiida.common.MissingEntryPointError: entry point was not registered
-    :raises aiida.common.MultipleEntryPointError: entry point could not be uniquely resolved
+
     """
-    entry_points = [ep for ep in get_entry_points(group) if ep.name == name]
-
-    if not entry_points:
-        raise MissingEntryPointError(
-            "Entry point '{}' not found in group '{}'. Try running `reentry scan` to update "
-            'the entry point cache.'.format(name, group)
-        )
-
-    if len(entry_points) > 1:
-        raise MultipleEntryPointError(
-            "Multiple entry points '{}' found in group '{}'.Try running `reentry scan` to "
-            'repopulate the entry point cache.'.format(name, group)
-        )
-
-    return entry_points[0]
+    # The next line should be removed for ``aiida-core==3.0`` when the old deprecated entry points are fully removed.
+    name = convert_potentially_deprecated_entry_point(group, name)
+    found = eps().select(group=group, name=name)
+    if name not in found.names:
+        raise MissingEntryPointError(f"Entry point '{name}' not found in group '{group}'")
+    if len(found.names) > 1:
+        raise MultipleEntryPointError(f"Multiple entry points '{name}' found in group '{group}': {found}")
+    return found[name]
 
 
-def get_entry_point_from_class(class_module, class_name):
+def convert_potentially_deprecated_entry_point(group: str, name: str) -> str:
+    """Check whether the specified entry point is deprecated, in which case print warning and convert to new name.
+
+    For `aiida-core==2.0` all existing entry points where properly prefixed with ``core.`` and the old entry points were
+    deprecated. To provide a smooth transition these deprecated entry points are detected in ``get_entry_point``, which
+    is the lowest function that tries to resolve an entry point string, by calling this function.
+
+    If the entry point corresponds to a deprecated one, a warning is raised and the new corresponding entry point name
+    is returned.
+
+    This method should be removed in ``aiida-core==3.0``.
+    """
+    try:
+        deprecated_entry_points = DEPRECATED_ENTRY_POINTS_MAPPING[group]
+    except KeyError:
+        return name
+    else:
+        if name in deprecated_entry_points:
+            warn(
+                f'The entry point `{name}` is deprecated. Please replace it with `core.{name}`.',
+                AiidaDeprecationWarning
+            )
+            name = f'core.{name}'
+
+        return name
+
+
+@functools.lru_cache(maxsize=100)
+def get_entry_point_from_class(class_module: str, class_name: str) -> Tuple[Optional[str], Optional[EntryPoint]]:
     """
     Given the module and name of a class, attempt to obtain the corresponding entry point if it exists
 
@@ -281,20 +323,19 @@ def get_entry_point_from_class(class_module, class_name):
     :param class_name: name of the class
     :return: a tuple of the corresponding group and entry point or None if not found
     """
-    for group in ENTRYPOINT_MANAGER.get_entry_map().keys():
-        for entry_point in ENTRYPOINT_MANAGER.iter_entry_points(group):
+    for group in get_entry_point_groups():
+        for entry_point in get_entry_points(group):
 
-            if entry_point.module_name != class_module:
+            if entry_point.module != class_module:
                 continue
 
-            for entry_point_class_name in entry_point.attrs:
-                if entry_point_class_name == class_name:
-                    return group, entry_point
+            if entry_point.attr == class_name:
+                return group, entry_point
 
     return None, None
 
 
-def get_entry_point_string_from_class(class_module, class_name):  # pylint: disable=invalid-name
+def get_entry_point_string_from_class(class_module: str, class_name: str) -> Optional[str]:  # pylint: disable=invalid-name
     """
     Given the module and name of a class, attempt to obtain the corresponding entry point if it
     exists and return the entry point string which will be the entry point group and entry point
@@ -310,16 +351,15 @@ def get_entry_point_string_from_class(class_module, class_name):  # pylint: disa
     :param class_module: module of the class
     :param class_name: name of the class
     :return: the corresponding entry point string or None
-    :rtype: str
     """
     group, entry_point = get_entry_point_from_class(class_module, class_name)
 
     if group and entry_point:
-        return ENTRY_POINT_STRING_SEPARATOR.join([group, entry_point.name])
+        return ENTRY_POINT_STRING_SEPARATOR.join([group, entry_point.name])  # type: ignore[attr-defined]
     return None
 
 
-def is_valid_entry_point_string(entry_point_string):
+def is_valid_entry_point_string(entry_point_string: str) -> bool:
     """
     Verify whether the given entry point string is a valid one. For the string to be valid means that it is composed
     of two strings, the entry point group and name, concatenated by the entry point string separator. If that is the
@@ -338,8 +378,8 @@ def is_valid_entry_point_string(entry_point_string):
     return group in ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP
 
 
-@functools.lru_cache(maxsize=None)
-def is_registered_entry_point(class_module, class_name, groups=None):
+@functools.lru_cache(maxsize=100)
+def is_registered_entry_point(class_module: str, class_name: str, groups: Optional[Sequence[str]] = None) -> bool:
     """Verify whether the class with the given module and class name is a registered entry point.
 
     .. note:: this function only checks whether the class has a registered entry point. It does explicitly not verify
@@ -348,13 +388,10 @@ def is_registered_entry_point(class_module, class_name, groups=None):
     :param class_module: the module of the class
     :param class_name: the name of the class
     :param groups: optionally consider only these entry point groups to look for the class
-    :return: boolean, True if the class is a registered entry point, False otherwise.
+    :return: True if the class is a registered entry point, False otherwise.
     """
-    if groups is None:
-        groups = list(ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP.keys())
-
-    for group in groups:
-        for entry_point in ENTRYPOINT_MANAGER.iter_entry_points(group):
-            if class_module == entry_point.module_name and [class_name] == entry_point.attrs:
+    for group in get_entry_point_groups() if groups is None else groups:
+        for entry_point in get_entry_points(group):
+            if class_module == entry_point.module and class_name == entry_point.attr:
                 return True
     return False

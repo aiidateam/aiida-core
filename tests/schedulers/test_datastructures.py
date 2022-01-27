@@ -120,8 +120,9 @@ class TestParEnvJobResource:
 
 def test_serialization():
     """Test the serialization/deserialization of JobInfo classes."""
-    from aiida.schedulers.datastructures import JobInfo, JobState
     from datetime import datetime
+
+    from aiida.schedulers.datastructures import JobInfo, JobState
 
     dict_serialized_content = {
         'job_id': '12723',

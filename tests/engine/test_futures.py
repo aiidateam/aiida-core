@@ -8,20 +8,20 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to test process futures."""
-import datetime
+import asyncio
 
-from tornado import gen
+import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import processes, run
 from aiida.manage.manager import get_manager
-
 from tests.utils import processes as test_processes
 
 
+@pytest.mark.requires_rmq
 class TestWf(AiidaTestCase):
     """Test process futures."""
-    TIMEOUT = datetime.timedelta(seconds=5.0)
+    TIMEOUT = 5.0  # seconds
 
     def test_calculation_future_broadcasts(self):
         """Test calculation future broadcasts."""
@@ -31,11 +31,11 @@ class TestWf(AiidaTestCase):
 
         # No polling
         future = processes.futures.ProcessFuture(
-            pk=process.pid, poll_interval=None, communicator=manager.get_communicator()
+            pk=process.pid, loop=runner.loop, communicator=manager.get_communicator()
         )
 
         run(process)
-        calc_node = runner.run_until_complete(gen.with_timeout(self.TIMEOUT, future))
+        calc_node = runner.run_until_complete(asyncio.wait_for(future, self.TIMEOUT))
 
         self.assertEqual(process.node.pk, calc_node.pk)
 
@@ -49,6 +49,6 @@ class TestWf(AiidaTestCase):
         future = processes.futures.ProcessFuture(pk=process.pid, loop=runner.loop, poll_interval=0)
 
         runner.run(process)
-        calc_node = runner.run_until_complete(gen.with_timeout(self.TIMEOUT, future))
+        calc_node = runner.run_until_complete(asyncio.wait_for(future, self.TIMEOUT))
 
         self.assertEqual(process.node.pk, calc_node.pk)

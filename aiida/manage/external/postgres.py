@@ -15,14 +15,21 @@ functionality from within python without knowing details about how postgres is
 installed by default on various systems. If the postgres setup is not the
 default installation, additional information needs to be provided.
 """
+from typing import TYPE_CHECKING
+
 import click
-from pgsu import PGSU, PostgresConnectionMode, DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-module
+from pgsu import DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-module
+from pgsu import PGSU, PostgresConnectionMode
 
 from aiida.cmdline.utils import echo
 
+if TYPE_CHECKING:
+    from aiida.manage.configuration import Profile
+
 __all__ = ('Postgres', 'PostgresConnectionMode', 'DEFAULT_DBINFO')
 
-_CREATE_USER_COMMAND = 'CREATE USER "{}" WITH PASSWORD \'{}\''
+# The last placeholder is for adding privileges of the user
+_CREATE_USER_COMMAND = 'CREATE USER "{}" WITH PASSWORD \'{}\' {}'
 _DROP_USER_COMMAND = 'DROP USER "{}"'
 _CREATE_DB_COMMAND = (
     'CREATE DATABASE "{}" OWNER "{}" ENCODING \'UTF8\' '
@@ -59,7 +66,7 @@ class Postgres(PGSU):
         super().__init__(dsn=dbinfo, **kwargs)
 
     @classmethod
-    def from_profile(cls, profile, **kwargs):
+    def from_profile(cls, profile: 'Profile', **kwargs):
         """Create Postgres instance with dbinfo from AiiDA profile data.
 
         Note: This only uses host and port from the profile, since the others are not going to be relevant for the
@@ -73,8 +80,8 @@ class Postgres(PGSU):
         dbinfo = DEFAULT_DBINFO.copy()
         dbinfo.update(
             dict(
-                host=profile.database_hostname or DEFAULT_DBINFO['host'],
-                port=profile.database_port or DEFAULT_DBINFO['port']
+                host=profile.storage_config['database_hostname'] or DEFAULT_DBINFO['host'],
+                port=profile.storage_config['database_port'] or DEFAULT_DBINFO['port']
             )
         )
 
@@ -91,7 +98,7 @@ class Postgres(PGSU):
         """
         return bool(self.execute(_USER_EXISTS_COMMAND.format(dbuser)))
 
-    def create_dbuser(self, dbuser, dbpass):
+    def create_dbuser(self, dbuser, dbpass, privileges=''):
         """
         Create a database user in postgres
 
@@ -100,7 +107,7 @@ class Postgres(PGSU):
         :raises: psycopg2.errors.DuplicateObject if user already exists and
             self.connection_mode == PostgresConnectionMode.PSYCOPG
         """
-        self.execute(_CREATE_USER_COMMAND.format(dbuser, dbpass))
+        self.execute(_CREATE_USER_COMMAND.format(dbuser, dbpass, privileges))
 
     def drop_dbuser(self, dbuser):
         """
@@ -116,9 +123,11 @@ class Postgres(PGSU):
         :param str dbuser: Name of the user to be created or reused.
         :returns: tuple (dbuser, created)
         """
+        if not self.interactive:
+            return dbuser, not self.dbuser_exists(dbuser)
         create = True
         while create and self.dbuser_exists(dbuser):
-            echo.echo_info(f'Database user "{dbuser}" already exists!')
+            echo.echo_warning(f'Database user "{dbuser}" already exists!')
             if not click.confirm('Use it? '):
                 dbuser = click.prompt('New database user name: ', type=str, default=dbuser)
             else:
@@ -163,9 +172,11 @@ class Postgres(PGSU):
         :param str dbname: Name of the database to be created or reused.
         :returns: tuple (dbname, created)
         """
+        if not self.interactive:
+            return dbname, not self.db_exists(dbname)
         create = True
         while create and self.db_exists(dbname):
-            echo.echo_info(f'database {dbname} already exists!')
+            echo.echo_warning(f'database {dbname} already exists!')
             if not click.confirm('Use it (make sure it is not used by another profile)?'):
                 dbname = click.prompt('new name', type=str, default=dbname)
             else:
@@ -216,7 +227,7 @@ def manual_setup_instructions(dbuser, dbname):
         'Run the following commands as a UNIX user with access to PostgreSQL (Ubuntu: $ sudo su postgres):',
         '',
         '\t$ psql template1',
-        f'	==> {_CREATE_USER_COMMAND.format(dbuser, dbpass)}',
+        f'	==> {_CREATE_USER_COMMAND.format(dbuser, dbpass, "")}',
         f'	==> {_CREATE_DB_COMMAND.format(dbname, dbuser)}',
         f'	==> {_GRANT_PRIV_COMMAND.format(dbname, dbuser)}',
     ])

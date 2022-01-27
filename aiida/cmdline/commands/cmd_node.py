@@ -8,20 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi node` command."""
-
-import shutil
 import pathlib
+import shutil
 
 import click
 import tabulate
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import options, arguments
+from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.cmdline.utils import decorators, echo, multi_line_input
 from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.common import exceptions
-from aiida.common import timezone
+from aiida.common import exceptions, timezone
 from aiida.common.links import GraphTraversalRules
 
 
@@ -41,9 +39,9 @@ def verdi_node_repo():
 @with_dbenv()
 def repo_cat(node, relative_path):
     """Output the content of a file in the node repository folder."""
+    import errno
     from shutil import copyfileobj
     import sys
-    import errno
 
     try:
         with node.open(relative_path, mode='rb') as fhandle:
@@ -57,7 +55,7 @@ def repo_cat(node, relative_path):
 
 @verdi_node_repo.command('ls')
 @arguments.NODE()
-@click.argument('relative_path', type=str, default='.')
+@click.argument('relative_path', type=str, required=False)
 @click.option('-c', '--color', 'color', flag_value=True, help='Use different color for folders and files.')
 @with_dbenv()
 def repo_ls(node, relative_path, color):
@@ -202,9 +200,9 @@ def node_show(nodes, print_groups):
         echo.echo(get_node_info(node))
 
         if print_groups:
-            from aiida.orm.querybuilder import QueryBuilder
-            from aiida.orm.groups import Group
             from aiida.orm import Node  # pylint: disable=redefined-outer-name
+            from aiida.orm.groups import Group
+            from aiida.orm.querybuilder import QueryBuilder
 
             # pylint: disable=invalid-name
             qb = QueryBuilder()
@@ -278,48 +276,41 @@ def extras(nodes, keys, fmt, identifier, raw):
     echo_node_dict(nodes, keys, fmt, identifier, raw, use_attrs=False)
 
 
-@verdi_node.command()
-@arguments.NODES()
-@click.option('-d', '--depth', 'depth', default=1, help='Show children of nodes up to given depth')
-@with_dbenv()
-@decorators.deprecated_command('This command will be removed in `aiida-core==2.0.0`.')
-def tree(nodes, depth):
-    """Show a tree of nodes starting from a given node."""
-    from aiida.common import LinkType
-    from aiida.cmdline.utils.ascii_vis import NodeTreePrinter
-
-    for node in nodes:
-        NodeTreePrinter.print_node_tree(node, depth, tuple(LinkType.__members__.values()))
-
-        if len(nodes) > 1:
-            echo.echo('')
-
-
 @verdi_node.command('delete')
-@arguments.NODES('nodes', required=True)
-@options.VERBOSE()
+@click.argument('identifier', nargs=-1, metavar='NODES')
 @options.DRY_RUN()
 @options.FORCE()
 @options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
 @with_dbenv()
-def node_delete(nodes, dry_run, verbose, force, **kwargs):
+def node_delete(identifier, dry_run, force, **traversal_rules):
     """Delete nodes from the provenance graph.
 
     This will not only delete the nodes explicitly provided via the command line, but will also include
     the nodes necessary to keep a consistent graph, according to the rules outlined in the documentation.
     You can modify some of those rules using options of this command.
     """
-    from aiida.manage.database.delete.nodes import delete_nodes
+    from aiida.orm.utils.loaders import NodeEntityLoader
+    from aiida.tools import delete_nodes
 
-    verbosity = 1
-    if force:
-        verbosity = 0
-    elif verbose:
-        verbosity = 2
+    pks = []
 
-    node_pks_to_delete = [node.pk for node in nodes]
+    for obj in identifier:
+        # we only load the node if we need to convert from a uuid/label
+        try:
+            pks.append(int(obj))
+        except ValueError:
+            pks.append(NodeEntityLoader.load_entity(obj).pk)
 
-    delete_nodes(node_pks_to_delete, dry_run=dry_run, verbosity=verbosity, force=force, **kwargs)
+    def _dry_run_callback(pks):
+        if not pks or force:
+            return False
+        echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
+        return not click.confirm('Shall I continue?', abort=True)
+
+    _, was_deleted = delete_nodes(pks, dry_run=dry_run or _dry_run_callback, **traversal_rules)
+
+    if was_deleted:
+        echo.echo_success('Finished deletion.')
 
 
 @verdi_node.command('rehash')
@@ -415,7 +406,6 @@ def verdi_graph():
 )
 @click.option('-o', '--process-out', is_flag=True, help='Show outgoing links for all processes.')
 @click.option('-i', '--process-in', is_flag=True, help='Show incoming links for all processes.')
-@options.VERBOSE(help='Print verbose information of the graph traversal.')
 @click.option(
     '-e',
     '--engine',
@@ -436,15 +426,14 @@ def verdi_graph():
 @click.option('-s', '--show', is_flag=True, help='Open the rendered result with the default application.')
 @decorators.with_dbenv()
 def graph_generate(
-    root_node, link_types, identifier, ancestor_depth, descendant_depth, process_out, process_in, engine, verbose,
-    output_format, highlight_classes, show
+    root_node, link_types, identifier, ancestor_depth, descendant_depth, process_out, process_in, engine, output_format,
+    highlight_classes, show
 ):
     """
     Generate a graph from a ROOT_NODE (specified by pk or uuid).
     """
     # pylint: disable=too-many-arguments
     from aiida.tools.visualization import Graph
-    print_func = echo.echo_info if verbose else None
     link_types = {'all': (), 'logic': ('input_work', 'return'), 'data': ('input_calc', 'create')}[link_types]
 
     echo.echo_info(f'Initiating graphviz engine: {engine}')
@@ -458,7 +447,6 @@ def graph_generate(
         annotate_links='both',
         include_process_outputs=process_out,
         highlight_classes=highlight_classes,
-        print_func=print_func
     )
     echo.echo_info(f'Recursing descendants, max depth={descendant_depth}')
     graph.recurse_descendants(
@@ -468,7 +456,6 @@ def graph_generate(
         annotate_links='both',
         include_process_inputs=process_in,
         highlight_classes=highlight_classes,
-        print_func=print_func
     )
     output_file_name = graph.graphviz.render(
         filename=f'{root_node.pk}.{engine}', format=output_format, view=show, cleanup=True
@@ -538,7 +525,7 @@ def comment_show(user, nodes):
             if not comments:
                 valid_users = ', '.join(set(comment.user.email for comment in all_comments))
                 echo.echo_warning(f'no comments found for user {user}')
-                echo.echo_info(f'valid users found for Node<{node.pk}>: {valid_users}')
+                echo.echo_report(f'valid users found for Node<{node.pk}>: {valid_users}')
 
         else:
             comments = all_comments
@@ -553,7 +540,7 @@ def comment_show(user, nodes):
             echo.echo('\n'.join(comment_msg))
 
         if not comments:
-            echo.echo_info('no comments found')
+            echo.echo_report('no comments found')
 
 
 @verdi_comment.command('remove')

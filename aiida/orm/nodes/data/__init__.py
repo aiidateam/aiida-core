@@ -9,27 +9,65 @@
 ###########################################################################
 """Module with `Node` sub classes for data structures."""
 
-from .array import ArrayData, BandsData, KpointsData, ProjectionData, TrajectoryData, XyData
-from .base import BaseType
-from .bool import Bool
-from .cif import CifData
-from .code import Code
-from .data import Data
-from .dict import Dict
-from .float import Float
-from .folder import FolderData
-from .int import Int
-from .list import List
-from .numeric import NumericType
-from .orbital import OrbitalData
-from .remote import RemoteData
-from .singlefile import SinglefileData
-from .str import Str
-from .structure import StructureData
-from .upf import UpfData
+# AUTO-GENERATED
+
+# yapf: disable
+# pylint: disable=wildcard-import
+
+from .array import *
+from .base import *
+from .bool import *
+from .cif import *
+from .code import *
+from .data import *
+from .dict import *
+from .enum import *
+from .float import *
+from .folder import *
+from .int import *
+from .list import *
+from .numeric import *
+from .orbital import *
+from .remote import *
+from .singlefile import *
+from .str import *
+from .structure import *
+from .upf import *
 
 __all__ = (
-    'Data', 'BaseType', 'ArrayData', 'BandsData', 'KpointsData', 'ProjectionData', 'TrajectoryData', 'XyData', 'Bool',
-    'CifData', 'Code', 'Float', 'FolderData', 'Int', 'List', 'OrbitalData', 'Dict', 'RemoteData', 'SinglefileData',
-    'Str', 'StructureData', 'UpfData', 'NumericType'
+    'ArrayData',
+    'BandsData',
+    'BaseType',
+    'Bool',
+    'CifData',
+    'Code',
+    'Data',
+    'Dict',
+    'EnumData',
+    'Float',
+    'FolderData',
+    'Int',
+    'Kind',
+    'KpointsData',
+    'List',
+    'NumericType',
+    'OrbitalData',
+    'ProjectionData',
+    'RemoteData',
+    'RemoteStashData',
+    'RemoteStashFolderData',
+    'SinglefileData',
+    'Site',
+    'Str',
+    'StructureData',
+    'TrajectoryData',
+    'UpfData',
+    'XyData',
+    'cif_from_ase',
+    'find_bandgap',
+    'has_pycifrw',
+    'pycifrw_from_cif',
+    'to_aiida_type',
 )
+
+# yapf: enable

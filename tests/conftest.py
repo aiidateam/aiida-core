@@ -154,23 +154,6 @@ def generate_calculation_node():
     return _generate_calculation_node
 
 
-@pytest.fixture(scope='session')
-def computer():
-    """Return a default computer."""
-    from aiida.orm import Computer
-    created, computer = Computer.objects.get_or_create(
-        label='localhost',
-        hostname='localhost',
-        transport_type='core.local',
-        scheduler_type='core.direct',
-        workdir='/tmp/aiida',
-    )
-    if created:
-        computer.store()
-
-    return computer
-
-
 @pytest.fixture
 def isolated_config(monkeypatch):
     """Return a copy of the currently loaded config and set that as the loaded config.

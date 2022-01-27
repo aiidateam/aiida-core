@@ -13,6 +13,8 @@ import json
 from typing import TYPE_CHECKING, Any, Type
 from uuid import uuid4
 
+import yaml
+
 from aiida.engine.processes.ports import PortNamespace
 from aiida.orm import Dict, Node
 from aiida.orm.nodes.data.base import BaseType
@@ -262,5 +264,6 @@ class ProcessBuilder(ProcessBuilderNamespace):  # pylint: disable=too-many-ances
     def _repr_pretty_(self, p, _) -> str:  # pylint: disable=invalid-name
         """Pretty representation for in the IPython console and notebooks."""
         return p.text(
-            f'Process class: {self._process_class.__name__}\nInputs:\n{json.dumps(self, cls=PrettyEncoder, indent=4)}'
+            f'Process class: {self._process_class.__name__}\n'
+            f'Inputs:\n{yaml.safe_dump(json.JSONDecoder().decode(PrettyEncoder().encode(self)))}'
         )

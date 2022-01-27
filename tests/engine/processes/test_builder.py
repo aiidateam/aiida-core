@@ -7,12 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=protected-access,no-member,no-name-in-module,redefined-outer-name
 """Tests for `aiida.engine.processes.builder.ProcessBuilder`."""
 from collections.abc import Mapping, MutableMapping
-# pylint: disable=protected-access,no-member,no-name-in-module,redefined-outer-name
-import re
 
 from IPython.lib.pretty import pretty
+from importlib_metadata import textwrap
 import pytest
 
 from aiida import orm
@@ -286,10 +286,10 @@ def test_port_names_overlapping_mutable_mapping_methods():  # pylint: disable=in
     assert builder.boolean == orm.Bool(False)
 
 
-def test_calc_job_node_get_builder_restart(computer):
+def test_calc_job_node_get_builder_restart(aiida_localhost):
     """Test the `CalcJobNode.get_builder_restart` method."""
     original = orm.CalcJobNode(
-        computer=computer, process_type='aiida.calculations:core.arithmetic.add', label='original'
+        computer=aiida_localhost, process_type='aiida.calculations:core.arithmetic.add', label='original'
     )
     original.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
     original.set_option('max_wallclock_seconds', 1800)
@@ -309,10 +309,10 @@ def test_calc_job_node_get_builder_restart(computer):
     assert builder._inputs(prune=True)['metadata']['options'] == original.get_options()
 
 
-def test_code_get_builder(computer):
+def test_code_get_builder(aiida_localhost):
     """Test that the `Code.get_builder` method returns a builder where the code is already set."""
     code = orm.Code()
-    code.set_remote_computer_exec((computer, '/bin/true'))
+    code.set_remote_computer_exec((aiida_localhost, '/bin/true'))
     code.label = 'test_code'
     code.set_input_plugin_name('core.templatereplacer')
     code.store()
@@ -423,27 +423,20 @@ def test_pretty_repr(example_inputs):
     builder._update(example_inputs)
 
     pretty_repr = \
-    """Process class: ExampleWorkChain
+    """
+    Process class: ExampleWorkChain
     Inputs:
-    {
-        "metadata": {},
-        "dynamic": {
-            "namespace": {
-                "alp": 1
-            }
-        },
-        "name": {
-            "spaced": 1
-        },
-        "name_spaced": "underscored",
-        "dict": {
-            "a": 1,
-            "b": {
-                "c": 2
-            }
-        },
-        "boolean": true
-    }"""
-    pretty_repr = re.sub(r'(?m)^\s{4}', '', pretty_repr)
-
-    assert pretty(builder) == pretty_repr
+    boolean: true
+    dict:
+      a: 1
+      b:
+        c: 2
+    dynamic:
+      namespace:
+        alp: 1
+    metadata: {}
+    name:
+      spaced: 1
+    name_spaced: underscored
+    """
+    assert pretty(builder) == textwrap.dedent(pretty_repr.lstrip('\n'))

@@ -1,0 +1,59 @@
+# Test the Docker image on every pull request.
+#
+# The steps are:
+# 1. Build docker image using cached data.
+# 2. Start the docker container.
+# 3. Check that AiiDA is responsive.
+
+name: build-and-test-image-from-pull-request
+
+on:
+  pull_request:
+    path_ignore:
+      - 'docs/**'
+
+jobs:
+
+  build-and-test:
+
+    # Only run this job on the main repository and not on forks
+    if: github.repository == 'aiidateam/aiida-core'
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      -
+        uses: actions/checkout@v2
+      -
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      -
+        name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+      -
+        name: Build image locally
+        uses: docker/build-push-action@v2
+        with:
+          load: true
+          push: false
+          tags: aiida-core:latest
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+      -
+        name: Start and test the container
+        run: |
+          export DOCKERID=`docker run -d aiida-core:latest`
+          docker exec --tty $DOCKERID wait-for-services
+          docker logs $DOCKERID
+          docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi profile show default'
+          docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi computer show localhost'
+          docker exec --tty --user aiida $DOCKERID /bin/bash -l -c 'verdi daemon status'

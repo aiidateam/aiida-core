@@ -8,11 +8,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Convenience classes to help building the input dictionaries for Processes."""
-import collections
-from typing import Any, Type, TYPE_CHECKING
+from collections.abc import Mapping, MutableMapping
+import json
+from typing import TYPE_CHECKING, Any, Type
+from uuid import uuid4
 
-from aiida.orm import Node
+import yaml
+
 from aiida.engine.processes.ports import PortNamespace
+from aiida.orm import Dict, Node
+from aiida.orm.nodes.data.base import BaseType
 
 if TYPE_CHECKING:
     from aiida.engine.processes.process import Process
@@ -20,7 +25,21 @@ if TYPE_CHECKING:
 __all__ = ('ProcessBuilder', 'ProcessBuilderNamespace')
 
 
-class ProcessBuilderNamespace(collections.abc.MutableMapping):
+class PrettyEncoder(json.JSONEncoder):
+    """JSON encoder for returning a pretty representation of an AiiDA ``ProcessBuilder``."""
+
+    def default(self, o):  # pylint: disable=arguments-differ
+        if isinstance(o, (ProcessBuilder, ProcessBuilderNamespace)):
+            return dict(o)
+        if isinstance(o, Dict):
+            return o.get_dict()
+        if isinstance(o, BaseType):
+            return o.value
+        if isinstance(o, Node):
+            return o.get_description()
+
+
+class ProcessBuilderNamespace(MutableMapping):
     """Input namespace for the `ProcessBuilder`.
 
     Dynamically generates the getters and setters for the input ports of a given PortNamespace
@@ -41,7 +60,9 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
         self._valid_fields = []
         self._data = {}
 
-        # The name and port objects have to be passed to the defined functions as defaults for
+        dynamic_properties = {}
+
+        # The name and port objects have to be passed to the defined functions as defaults for
         # their arguments, because this way the content at the time of defining the method is
         # saved. If they are used directly in the body, it will try to capture the value from
         # its enclosing scope at the time of being called.
@@ -69,7 +90,15 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
             fgetter.__doc__ = str(port)
             getter = property(fgetter)
             getter.setter(fsetter)  # pylint: disable=too-many-function-args
-            setattr(self.__class__, name, getter)
+            dynamic_properties[name] = getter
+
+        # The dynamic property can only be attached to a class and not an instance, however, we cannot attach it to
+        # the ``ProcessBuilderNamespace`` class since it would interfere with other instances that may already
+        # exist. The workaround is to create a new class on the fly that derives from ``ProcessBuilderNamespace``
+        # and add the dynamic property to that instead
+        class_name = f'{self.__class__.__name__}-{uuid4()}'
+        child_class = type(class_name, (self.__class__,), dynamic_properties)
+        self.__class__ = child_class
 
     def __setattr__(self, attr: str, value: Any) -> None:
         """Assign the given value to the port with key `attr`.
@@ -83,16 +112,28 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
         else:
             try:
                 port = self._port_namespace[attr]
-            except KeyError:
+            except KeyError as exception:
                 if not self._port_namespace.dynamic:
-                    raise AttributeError(f'Unknown builder parameter: {attr}')
+                    raise AttributeError(f'Unknown builder parameter: {attr}') from exception
+                port = None
             else:
                 value = port.serialize(value)  # type: ignore[union-attr]
-                validation_error = port.validate(value)
+                validation_error = port.validate(value)  # type: ignore[union-attr]
                 if validation_error:
                     raise ValueError(f'invalid attribute value {validation_error.message}')
 
-            self._data[attr] = value
+            # If the attribute that is being set corresponds to a port that is a ``PortNamespace`` we need to make sure
+            # that the nested value remains a ``ProcessBuilderNamespace``. Otherwise, the nested namespaces will become
+            # plain dictionaries and no longer have the properties of the ``ProcessBuilderNamespace`` that provide all
+            # the autocompletion and validation when values are being set. Therefore we first construct a new instance
+            # of a ``ProcessBuilderNamespace`` for the port of the attribute that is being set and than iteratively set
+            # all the values within the mapping that is being assigned to the attribute.
+            if isinstance(port, PortNamespace):
+                self._data[attr] = ProcessBuilderNamespace(port)
+                for sub_key, sub_value in value.items():
+                    setattr(self._data[attr], sub_key, sub_value)
+            else:
+                self._data[attr] = value
 
     def __repr__(self):
         return self._data.__repr__()
@@ -119,28 +160,54 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
     def __delattr__(self, item):
         self._data.__delitem__(item)
 
-    def _update(self, *args, **kwds):
-        """Update the values of the builder namespace passing a mapping as argument or individual keyword value pairs.
+    def _recursive_merge(self, dictionary, key, value):
+        """Recursively merge the contents of ``dictionary`` setting its ``key`` to ``value``."""
+        if isinstance(value, Mapping):
+            for inner_key, inner_value in value.items():
+                self._recursive_merge(dictionary[key], inner_key, inner_value)
+        else:
+            dictionary[key] = value
 
-        The method is prefixed with an underscore in order to not reserve the name for a potential port, but in
-        principle the method functions just as `collections.abc.MutableMapping.update`.
+    def _merge(self, *args, **kwds):
+        """Merge the content of a dictionary or keyword arguments in .
 
-        :param args: a single mapping that should be mapped on the namespace
+        .. note:: This method differs in behavior from ``_update`` in that ``_merge`` will recursively update the
+            existing dictionary with the one that is specified in the arguments. The ``_update`` method will merge only
+            the keys on the top level, but any lower lying nested namespace will be replaced entirely.
 
-        :param kwds: keyword value pairs that should be mapped onto the ports
+        The method is prefixed with an underscore in order to not reserve the name for a potential port.
+
+        :param args: a single mapping that should be mapped on the namespace.
+        :param kwds: keyword value pairs that should be mapped onto the ports.
         """
         if len(args) > 1:
             raise TypeError(f'update expected at most 1 arguments, got {int(len(args))}')
 
         if args:
             for key, value in args[0].items():
-                if isinstance(value, collections.abc.Mapping):
+                self._recursive_merge(self, key, value)
+
+        for key, value in kwds.items():
+            self._recursive_merge(self, key, value)
+
+    def _update(self, *args, **kwds):
+        """Update the values of the builder namespace passing a mapping as argument or individual keyword value pairs.
+
+        The method functions just as `collections.abc.MutableMapping.update` and is merely prefixed with an underscore
+        in order to not reserve the name for a potential port.
+
+        :param args: a single mapping that should be mapped on the namespace.
+        :param kwds: keyword value pairs that should be mapped onto the ports.
+        """
+        if args:
+            for key, value in args[0].items():
+                if isinstance(value, Mapping):
                     self[key].update(value)
                 else:
                     self.__setattr__(key, value)
 
         for key, value in kwds.items():
-            if isinstance(value, collections.abc.Mapping):
+            if isinstance(value, Mapping):
                 self[key].update(value)
             else:
                 self.__setattr__(key, value)
@@ -165,12 +232,12 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
         :param value: a nested mapping of port values
         :return: the same mapping but without any nested namespace that is completely empty.
         """
-        if isinstance(value, collections.abc.Mapping) and not isinstance(value, Node):
+        if isinstance(value, Mapping) and not isinstance(value, Node):
             result = {}
             for key, sub_value in value.items():
                 pruned = self._prune(sub_value)
                 # If `pruned` is an "empty'ish" mapping and not an instance of `Node`, skip it, otherwise keep it.
-                if not (isinstance(pruned, collections.abc.Mapping) and not pruned and not isinstance(pruned, Node)):
+                if not (isinstance(pruned, Mapping) and not pruned and not isinstance(pruned, Node)):
                     result[key] = pruned
             return result
 
@@ -193,3 +260,10 @@ class ProcessBuilder(ProcessBuilderNamespace):  # pylint: disable=too-many-ances
     def process_class(self) -> Type['Process']:
         """Return the process class for which this builder is constructed."""
         return self._process_class
+
+    def _repr_pretty_(self, p, _) -> str:  # pylint: disable=invalid-name
+        """Pretty representation for in the IPython console and notebooks."""
+        return p.text(
+            f'Process class: {self._process_class.__name__}\n'
+            f'Inputs:\n{yaml.safe_dump(json.JSONDecoder().decode(PrettyEncoder().encode(self)))}'
+        )

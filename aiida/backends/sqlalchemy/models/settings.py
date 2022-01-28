@@ -10,12 +10,12 @@
 # pylint: disable=import-error,no-name-in-module
 """Module to manage node settings for the SQLA backend."""
 from pytz import UTC
-
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.schema import UniqueConstraint
-from sqlalchemy.types import Integer, String, DateTime
+from sqlalchemy.sql.schema import Index
+from sqlalchemy.types import DateTime, Integer, String, Text
 
 from aiida.backends import sqlalchemy as sa
 from aiida.backends.sqlalchemy.models.base import Base
@@ -23,17 +23,28 @@ from aiida.common import timezone
 
 
 class DbSetting(Base):
-    """Class to store node settings using the SQLA backend."""
+    """Database model to store global settings."""
     __tablename__ = 'db_dbsetting'
-    __table_args__ = (UniqueConstraint('key'),)
+
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
 
-    key = Column(String(255), index=True, nullable=False)
+    key = Column(String(1024), nullable=False)
     val = Column(JSONB, default={})
 
     # I also add a description field for the variables
-    description = Column(String(255), default='', nullable=False)
-    time = Column(DateTime(timezone=True), default=UTC, onupdate=timezone.now)
+    description = Column(Text, default='', nullable=False)
+    time = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=False)
+
+    __table_args__ = (
+        # index/constraint names mirror django's auto-generated ones
+        UniqueConstraint(key, name='db_dbsetting_key_1b84beb4_uniq'),
+        Index(
+            'db_dbsetting_key_1b84beb4_like',
+            key,
+            postgresql_using='btree',
+            postgresql_ops={'key': 'varchar_pattern_ops'}
+        ),
+    )
 
     def __str__(self):
         return f"'{self.key}'={self.getvalue()}"

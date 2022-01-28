@@ -8,10 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the process_function decorator."""
+import pytest
 
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
-from aiida.engine import run, run_get_node, submit, calcfunction, workfunction, Process, ExitCode
+from aiida.engine import ExitCode, Process, calcfunction, run, run_get_node, submit, workfunction
 from aiida.orm.nodes.data.bool import get_true_node
 from aiida.workflows.arithmetic.add_multiply import add_multiply
 
@@ -22,6 +23,7 @@ CUSTOM_LABEL = 'Custom label'
 CUSTOM_DESCRIPTION = 'Custom description'
 
 
+@pytest.mark.requires_rmq
 class TestProcessFunction(AiidaTestCase):
     """
     Note that here we use `@workfunctions` and `@calculations`, the concrete versions of the

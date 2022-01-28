@@ -8,12 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`Data` sub class to represent a dictionary."""
-
 import copy
 
 from aiida.common import exceptions
-from .data import Data
+
 from .base import to_aiida_type
+from .data import Data
 
 __all__ = ('Dict',)
 
@@ -46,17 +46,17 @@ class Dict(Data):
     Finally, all dictionary mutations will be forbidden once the node is stored.
     """
 
-    def __init__(self, **kwargs):
-        """Store a dictionary as a `Node` instance.
+    def __init__(self, value=None, **kwargs):
+        """Initialise a ``Dict`` node instance.
 
-        Usual rules for attribute names apply, in particular, keys cannot start with an underscore, or a `ValueError`
+        Usual rules for attribute names apply, in particular, keys cannot start with an underscore, or a ``ValueError``
         will be raised.
 
         Initial attributes can be changed, deleted or added as long as the node is not stored.
 
-        :param dict: the dictionary to set
+        :param value: dictionary to initialise the ``Dict`` node from
         """
-        dictionary = kwargs.pop('dict', None)
+        dictionary = value or kwargs.pop('dict', None)
         super().__init__(**kwargs)
         if dictionary:
             self.set_dict(dictionary)
@@ -70,8 +70,17 @@ class Dict(Data):
     def __setitem__(self, key, value):
         self.set_attribute(key, value)
 
+    def __eq__(self, other):
+        if isinstance(other, Dict):
+            return self.get_dict() == other.get_dict()
+        return self.get_dict() == other
+
+    def __contains__(self, key: str) -> bool:
+        """Return whether the node contains a key."""
+        return key in self.attributes
+
     def set_dict(self, dictionary):
-        """ Replace the current dictionary with another one.
+        """Replace the current dictionary with another one.
 
         :param dictionary: dictionary to set
         """
@@ -115,6 +124,11 @@ class Dict(Data):
         for key in self.attributes.keys():
             yield key
 
+    def items(self):
+        """Iterator of all items stored in the Dict node."""
+        for key, value in self.attributes_items():
+            yield key, value
+
     @property
     def dict(self):
         """Return an instance of `AttributeManager` that transforms the dictionary into an attribute dict.
@@ -129,4 +143,4 @@ class Dict(Data):
 
 @to_aiida_type.register(dict)
 def _(value):
-    return Dict(dict=value)
+    return Dict(value)

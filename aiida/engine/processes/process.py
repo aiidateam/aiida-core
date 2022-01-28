@@ -10,35 +10,47 @@
 """The AiiDA process class"""
 import asyncio
 import collections
+from collections.abc import Mapping
 import enum
 import inspect
 import logging
-from uuid import UUID
 import traceback
 from types import TracebackType
 from typing import (
-    Any, cast, Dict, Iterable, Iterator, List, MutableMapping, Optional, Type, Tuple, Union, TYPE_CHECKING
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    MutableMapping,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+    cast,
 )
+from uuid import UUID
 
 from aio_pika.exceptions import ConnectionClosed
+from kiwipy.communications import UnroutableError
 import plumpy.exceptions
 import plumpy.futures
-import plumpy.processes
 import plumpy.persistence
-from plumpy.process_states import ProcessState, Finished
-from kiwipy.communications import UnroutableError
+from plumpy.process_states import Finished, ProcessState
+import plumpy.processes
 
 from aiida import orm
-from aiida.orm.utils import serialize
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.orm.utils import serialize
 
-from .exit_code import ExitCode, ExitCodesNamespace
 from .builder import ProcessBuilder
-from .ports import InputPort, OutputPort, PortNamespace, PORT_NAMESPACE_SEPARATOR
+from .exit_code import ExitCode, ExitCodesNamespace
+from .ports import PORT_NAMESPACE_SEPARATOR, InputPort, OutputPort, PortNamespace
 from .process_spec import ProcessSpec
 
 if TYPE_CHECKING:
@@ -413,7 +425,7 @@ class Process(plumpy.processes.Process):
         :param exc_info: the sys.exc_info() object (type, value, traceback)
         """
         super().on_except(exc_info)
-        self.node.set_exception(''.join(traceback.format_exception(exc_info[0], exc_info[1], None)))
+        self.node.set_exception(''.join(traceback.format_exception(exc_info[0], exc_info[1], None)).rstrip())
         self.report(''.join(traceback.format_exception(*exc_info)))
 
     @override
@@ -603,7 +615,7 @@ class Process(plumpy.processes.Process):
         :param encoded: encoded (serialized) inputs
         :return: The decoded input args
         """
-        return serialize.deserialize(encoded)
+        return serialize.deserialize_unsafe(encoded)
 
     def update_node_state(self, state: plumpy.process_states.State) -> None:
         self.update_outputs()
@@ -755,7 +767,7 @@ class Process(plumpy.processes.Process):
         if (port is None and isinstance(port_value, orm.Node)) or (isinstance(port, InputPort) and not port.non_db):
             return [(parent_name, port_value)]
 
-        if port is None and isinstance(port_value, collections.Mapping) or isinstance(port, PortNamespace):
+        if port is None and isinstance(port_value, Mapping) or isinstance(port, PortNamespace):
             items = []
             for name, value in port_value.items():
 
@@ -796,7 +808,7 @@ class Process(plumpy.processes.Process):
         if port is None and isinstance(port_value, orm.Node) or isinstance(port, OutputPort):
             return [(parent_name, port_value)]
 
-        if (port is None and isinstance(port_value, collections.Mapping) or isinstance(port, PortNamespace)):
+        if (port is None and isinstance(port_value, Mapping) or isinstance(port, PortNamespace)):
             items = []
             for name, value in port_value.items():
 
@@ -882,7 +894,7 @@ class Process(plumpy.processes.Process):
         # maps the exposed name to all outputs that belong to it
         top_namespace_map = collections.defaultdict(list)
         link_types = (LinkType.CREATE, LinkType.RETURN)
-        process_outputs_dict = {entry.link_label: entry.node for entry in node.get_outgoing(link_type=link_types)}
+        process_outputs_dict = node.get_outgoing(link_type=link_types).nested()
 
         for port_name in process_outputs_dict:
             top_namespace = port_name.split(namespace_separator)[0]
@@ -891,6 +903,8 @@ class Process(plumpy.processes.Process):
         for port_namespace in self._get_namespace_list(namespace=namespace, agglomerate=agglomerate):
             # only the top-level key is stored in _exposed_outputs
             for top_name in top_namespace_map:
+                if namespace is not None and namespace not in self.spec()._exposed_outputs:  # pylint: disable=protected-access
+                    raise KeyError(f'the namespace `{namespace}` is not an exposed namespace.')
                 if top_name in self.spec()._exposed_outputs[port_namespace][process_class]:  # pylint: disable=protected-access
                     output_key_map[top_name] = port_namespace
 

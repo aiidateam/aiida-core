@@ -9,6 +9,7 @@
 ###########################################################################
 """Data plugin to represet arrays of projected wavefunction components."""
 import copy
+
 import numpy as np
 
 from aiida.common import exceptions
@@ -17,6 +18,8 @@ from aiida.plugins import OrbitalFactory
 from ..orbital import OrbitalData
 from .array import ArrayData
 from .bands import BandsData
+
+__all__ = ('ProjectionData',)
 
 
 class ProjectionData(OrbitalData, ArrayData):
@@ -47,7 +50,7 @@ class ProjectionData(OrbitalData, ArrayData):
         # The [0:2] is so that each array, and not collection of arrays
         # is used to make the comparison
         if np.shape(projection_array) != shape_bands:
-            raise AttributeError('These arrays are not the same shape as' ' the bands')
+            raise AttributeError('These arrays are not the same shape as the bands')
 
     def set_reference_bandsdata(self, value):
         """
@@ -73,9 +76,7 @@ class ProjectionData(OrbitalData, ArrayData):
                     uuid = bands.uuid
                 except Exception:  # pylint: disable=bare-except
                     raise exceptions.NotExistent(
-                        'The value passed to '
-                        'set_reference_bandsdata was not '
-                        'associated to any bandsdata'
+                        'The value passed to set_reference_bandsdata was not associated to any bandsdata'
                     )
 
         self.set_attribute('reference_bandsdata_uuid', uuid)
@@ -218,7 +219,7 @@ class ProjectionData(OrbitalData, ArrayData):
             required_length, raises exception using array_name if there is
             a failure
             """
-            if not all([isinstance(_, np.ndarray) for _ in array_list]):
+            if not all(isinstance(_, np.ndarray) for _ in array_list):
                 raise exceptions.ValidationError(f'{array_name} was not composed entirely of ndarrays')
             if len(array_list) != orb_length:
                 raise exceptions.ValidationError(f'{array_name} did not have the same length as the list of orbitals')
@@ -283,7 +284,7 @@ class ProjectionData(OrbitalData, ArrayData):
             except IndexError:
                 return exceptions.ValidationError('tags must be a list')
 
-            if not all([isinstance(_, str) for _ in tags]):
+            if not all(isinstance(_, str) for _ in tags):
                 raise exceptions.ValidationError('Tags must set a list of strings')
             self.set_attribute('tags', tags)
 

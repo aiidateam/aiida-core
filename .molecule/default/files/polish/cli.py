@@ -9,6 +9,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Command line interface to dynamically create and run a WorkChain that can evaluate a reversed polish expression."""
+import importlib
+import sys
+import time
 
 import click
 
@@ -20,7 +23,7 @@ from aiida.cmdline.utils import decorators
 @click.argument('expression', type=click.STRING, required=False)
 @click.option('-d', '--daemon', is_flag=True, help='Submit the workchains to the daemon.')
 @options.CODE(
-    type=types.CodeParamType(entry_point='arithmetic.add'),
+    type=types.CodeParamType(entry_point='core.arithmetic.add'),
     required=False,
     help='Code to perform the add operations with. Required if -C flag is specified'
 )
@@ -96,11 +99,8 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
     If no expression is specified, a random one will be generated that adheres to these rules
     """
     # pylint: disable=too-many-arguments,too-many-locals,too-many-statements,too-many-branches
-    import importlib
-    import sys
-    import time
+    from aiida.engine import run_get_node
     from aiida.orm import Code, Int, Str
-    from aiida.engine import run_get_node, submit
 
     lib_expression = importlib.import_module('lib.expression')
     lib_workchain = importlib.import_module('lib.workchain')
@@ -138,31 +138,7 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
             inputs['code'] = code
 
         if daemon:
-            workchain = submit(workchains.Polish00WorkChain, **inputs)
-            start_time = time.time()
-            timed_out = True
-
-            while time.time() - start_time < timeout:
-                time.sleep(sleep)
-
-                if workchain.is_terminated:
-                    timed_out = False
-                    total_time = time.time() - start_time
-                    break
-
-            if timed_out:
-                click.secho('Failed: ', fg='red', bold=True, nl=False)
-                click.secho(
-                    f'the workchain<{workchain.pk}> did not finish in time and the operation timed out', bold=True
-                )
-                sys.exit(1)
-
-            try:
-                result = workchain.outputs.result
-            except AttributeError:
-                click.secho('Failed: ', fg='red', bold=True, nl=False)
-                click.secho(f'the workchain<{workchain.pk}> did not return a result output node', bold=True)
-                sys.exit(1)
+            result, workchain, total_time = run_via_daemon(workchains, inputs, sleep, timeout)
 
         else:
             start_time = time.time()
@@ -183,6 +159,38 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
             click.secho('Success: ', fg='green', bold=True, nl=False)
             click.secho(f'the workchain accurately reproduced the evaluated value in {total_time:.2f}s', bold=True)
             sys.exit(0)
+
+
+def run_via_daemon(workchains, inputs, sleep, timeout):
+    """Run via the daemon, polling until it is terminated or timeout."""
+    from aiida.engine import submit
+
+    workchain = submit(workchains.Polish00WorkChain, **inputs)
+    start_time = time.time()
+    timed_out = True
+
+    while time.time() - start_time < timeout:
+        time.sleep(sleep)
+
+        if workchain.is_terminated:
+            timed_out = False
+            total_time = time.time() - start_time
+            break
+
+    if timed_out:
+        click.secho('Failed: ', fg='red', bold=True, nl=False)
+        click.secho(f'the workchain<{workchain.pk}> did not finish in time and the operation timed out', bold=True)
+        return None
+
+    try:
+        result = workchain.outputs.result
+    except AttributeError:
+        click.secho('Failed: ', fg='red', bold=True, nl=False)
+        click.secho(f'the workchain<{workchain.pk}> did not return a result output node', bold=True)
+        click.echo(str(workchain.attributes))
+        return None
+
+    return result, workchain, total_time
 
 
 if __name__ == '__main__':

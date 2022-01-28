@@ -8,11 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """A transport queue to batch process multiple tasks that require a Transport."""
+import asyncio
 import contextlib
+import contextvars
 import logging
 import traceback
 from typing import Awaitable, Dict, Hashable, Iterator, Optional
-import asyncio
 
 from aiida.orm import AuthInfo
 from aiida.transports import Transport
@@ -96,11 +97,22 @@ class TransportQueue:
                         transport_request.future.set_result(transport)
 
             # Save the handle so that we can cancel the callback if the user no longer wants it
-            open_callback_handle = self._loop.call_later(safe_open_interval, do_open)
+            # Note: Don't pass the Process context, since (a) it is not needed by `do_open` and (b) the transport is
+            # passed around to many places, including outside aiida-core (e.g. paramiko). Anyone keeping a reference
+            # to this handle would otherwise keep the Process context (and thus the process itself) in memory.
+            # See https://github.com/aiidateam/aiida-core/issues/4698
+            open_callback_handle = self._loop.call_later(
+                safe_open_interval, do_open, context=contextvars.Context()
+            )  #  type: ignore[call-arg]
 
         try:
             transport_request.count += 1
             yield transport_request.future
+        except asyncio.CancelledError:  # pylint: disable=try-except-raise
+            # note this is only required in python<=3.7,
+            # where asyncio.CancelledError inherits from Exception
+            _LOGGER.debug('Transport task cancelled')
+            raise
         except Exception:
             _LOGGER.error('Exception whilst using transport:\n%s', traceback.format_exc())
             raise

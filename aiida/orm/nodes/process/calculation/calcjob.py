@@ -8,16 +8,25 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub class for calculation job processes."""
-
-import warnings
+import datetime
+from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Sequence, Tuple, Type, Union
 
 from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
 from aiida.common.lang import classproperty
 from aiida.common.links import LinkType
-from aiida.common.warnings import AiidaDeprecationWarning
 
 from .calculation import CalculationNode
+
+if TYPE_CHECKING:
+    from aiida.engine.processes.builder import ProcessBuilder
+    from aiida.orm import FolderData
+    from aiida.orm.authinfos import AuthInfo
+    from aiida.orm.utils.calcjob import CalcJobResultManager
+    from aiida.parsers import Parser
+    from aiida.schedulers.datastructures import JobInfo, JobState
+    from aiida.tools.calculations import CalculationTools
+    from aiida.transports import Transport
 
 __all__ = ('CalcJobNode',)
 
@@ -28,24 +37,21 @@ class CalcJobNode(CalculationNode):
     # pylint: disable=too-many-public-methods
 
     CALC_JOB_STATE_KEY = 'state'
+    IMMIGRATED_KEY = 'imported'
     REMOTE_WORKDIR_KEY = 'remote_workdir'
     RETRIEVE_LIST_KEY = 'retrieve_list'
     RETRIEVE_TEMPORARY_LIST_KEY = 'retrieve_temporary_list'
-    RETRIEVE_SINGLE_FILE_LIST_KEY = 'retrieve_singlefile_list'
     SCHEDULER_JOB_ID_KEY = 'job_id'
     SCHEDULER_STATE_KEY = 'scheduler_state'
     SCHEDULER_LAST_CHECK_TIME_KEY = 'scheduler_lastchecktime'
     SCHEDULER_LAST_JOB_INFO_KEY = 'last_job_info'
     SCHEDULER_DETAILED_JOB_INFO_KEY = 'detailed_job_info'
 
-    # Base path within the repository where to put objects by default
-    _repository_base_path = 'raw_input'
-
     # An optional entry point for a CalculationTools instance
     _tools = None
 
     @property
-    def tools(self):
+    def tools(self) -> 'CalculationTools':
         """Return the calculation tools that are registered for the process type associated with this calculation.
 
         If the entry point name stored in the `process_type` of the CalcJobNode has an accompanying entry point in the
@@ -55,34 +61,38 @@ class CalcJobNode(CalculationNode):
 
         :return: CalculationTools instance
         """
-        from aiida.plugins.entry_point import is_valid_entry_point_string, get_entry_point_from_string, load_entry_point
+        from aiida.plugins.entry_point import get_entry_point_from_string, is_valid_entry_point_string, load_entry_point
         from aiida.tools.calculations import CalculationTools
 
         if self._tools is None:
             entry_point_string = self.process_type
 
-            if is_valid_entry_point_string(entry_point_string):
+            if entry_point_string and is_valid_entry_point_string(entry_point_string):
                 entry_point = get_entry_point_from_string(entry_point_string)
 
                 try:
-                    tools_class = load_entry_point('aiida.tools.calculations', entry_point.name)
+                    tools_class = load_entry_point(
+                        'aiida.tools.calculations',
+                        entry_point.name  # type: ignore[attr-defined]
+                    )
                     self._tools = tools_class(self)
                 except exceptions.EntryPointError as exception:
                     self._tools = CalculationTools(self)
+                    entry_point_name = entry_point.name  # type: ignore[attr-defined]
                     self.logger.warning(
-                        f'could not load the calculation tools entry point {entry_point.name}: {exception}'
+                        f'could not load the calculation tools entry point {entry_point_name}: {exception}'
                     )
 
         return self._tools
 
     @classproperty
-    def _updatable_attributes(cls):  # pylint: disable=no-self-argument
+    def _updatable_attributes(cls) -> Tuple[str, ...]:  # pylint: disable=no-self-argument
         return super()._updatable_attributes + (
             cls.CALC_JOB_STATE_KEY,
+            cls.IMMIGRATED_KEY,
             cls.REMOTE_WORKDIR_KEY,
             cls.RETRIEVE_LIST_KEY,
             cls.RETRIEVE_TEMPORARY_LIST_KEY,
-            cls.RETRIEVE_SINGLE_FILE_LIST_KEY,
             cls.SCHEDULER_JOB_ID_KEY,
             cls.SCHEDULER_STATE_KEY,
             cls.SCHEDULER_LAST_CHECK_TIME_KEY,
@@ -91,7 +101,7 @@ class CalcJobNode(CalculationNode):
         )
 
     @classproperty
-    def _hash_ignored_attributes(cls):  # pylint: disable=no-self-argument
+    def _hash_ignored_attributes(cls) -> Tuple[str, ...]:  # pylint: disable=no-self-argument
         return super()._hash_ignored_attributes + (
             'queue_name',
             'account',
@@ -101,7 +111,7 @@ class CalcJobNode(CalculationNode):
             'max_memory_kb',
         )
 
-    def _get_objects_to_hash(self):
+    def _get_objects_to_hash(self) -> List[Any]:
         """Return a list of objects which should be included in the hash.
 
         This method is purposefully overridden from the base `Node` class, because we do not want to include the
@@ -127,7 +137,7 @@ class CalcJobNode(CalculationNode):
         ]
         return objects
 
-    def get_builder_restart(self):
+    def get_builder_restart(self) -> 'ProcessBuilder':
         """Return a `ProcessBuilder` that is ready to relaunch the same `CalcJob` that created this node.
 
         The process class will be set based on the `process_type` of this node and the inputs of the builder will be
@@ -137,30 +147,17 @@ class CalcJobNode(CalculationNode):
         In addition to prepopulating the input nodes, which is implemented by the base `ProcessNode` class, here we
         also add the `options` that were passed in the `metadata` input of the `CalcJob` process.
 
-        :return: `~aiida.engine.processes.builder.ProcessBuilder` instance
         """
         builder = super().get_builder_restart()
-        builder.metadata.options = self.get_options()
-
+        builder.metadata.options = self.get_options()  # type: ignore[attr-defined]
         return builder
 
     @property
-    def _raw_input_folder(self):
-        """
-        Get the input folder object.
+    def is_imported(self) -> bool:
+        """Return whether the calculation job was imported instead of being an actual run."""
+        return self.get_attribute(self.IMMIGRATED_KEY, None) is True
 
-        :return: the input folder object.
-        :raise: NotExistent: if the raw folder hasn't been created yet
-        """
-        from aiida.common.exceptions import NotExistent
-
-        return_folder = self._repository._get_base_folder()  # pylint: disable=protected-access
-        if return_folder.exists():
-            return return_folder
-
-        raise NotExistent('the `_raw_input_folder` has not yet been created')
-
-    def get_option(self, name):
+    def get_option(self, name: str) -> Optional[Any]:
         """
         Retun the value of an option that was set for this CalcJobNode
 
@@ -170,7 +167,7 @@ class CalcJobNode(CalculationNode):
         """
         return self.get_attribute(name, None)
 
-    def set_option(self, name, value):
+    def set_option(self, name: str, value: Any) -> None:
         """
         Set an option to the given value
 
@@ -181,21 +178,21 @@ class CalcJobNode(CalculationNode):
         """
         self.set_attribute(name, value)
 
-    def get_options(self):
+    def get_options(self) -> Dict[str, Any]:
         """
         Return the dictionary of options set for this CalcJobNode
 
         :return: dictionary of the options and their values
         """
         options = {}
-        for name in self.process_class.spec_options.keys():
+        for name in self.process_class.spec_options.keys():  # type: ignore[attr-defined]
             value = self.get_option(name)
             if value is not None:
                 options[name] = value
 
         return options
 
-    def set_options(self, options):
+    def set_options(self, options: Dict[str, Any]) -> None:
         """
         Set the options for this CalcJobNode
 
@@ -204,7 +201,7 @@ class CalcJobNode(CalculationNode):
         for name, value in options.items():
             self.set_option(name, value)
 
-    def get_state(self):
+    def get_state(self) -> Optional[CalcJobState]:
         """Return the calculation job active sub state.
 
         The calculation job state serves to give more granular state information to `CalcJobs`, in addition to the
@@ -223,10 +220,9 @@ class CalcJobNode(CalculationNode):
 
         return state
 
-    def set_state(self, state):
+    def set_state(self, state: CalcJobState) -> None:
         """Set the calculation active job state.
 
-        :param state: a string with the state from ``aiida.common.datastructures.CalcJobState``.
         :raise: ValueError if state is invalid
         """
         if not isinstance(state, CalcJobState):
@@ -234,21 +230,21 @@ class CalcJobNode(CalculationNode):
 
         self.set_attribute(self.CALC_JOB_STATE_KEY, state.value)
 
-    def delete_state(self):
+    def delete_state(self) -> None:
         """Delete the calculation job state attribute if it exists."""
         try:
             self.delete_attribute(self.CALC_JOB_STATE_KEY)
         except AttributeError:
             pass
 
-    def set_remote_workdir(self, remote_workdir):
+    def set_remote_workdir(self, remote_workdir: str) -> None:
         """Set the absolute path to the working directory on the remote computer where the calculation is run.
 
         :param remote_workdir: absolute filepath to the remote working directory
         """
         self.set_attribute(self.REMOTE_WORKDIR_KEY, remote_workdir)
 
-    def get_remote_workdir(self):
+    def get_remote_workdir(self) -> Optional[str]:
         """Return the path to the remote (on cluster) scratch folder of the calculation.
 
         :return: a string with the remote path
@@ -256,10 +252,10 @@ class CalcJobNode(CalculationNode):
         return self.get_attribute(self.REMOTE_WORKDIR_KEY, None)
 
     @staticmethod
-    def _validate_retrieval_directive(directives):
+    def _validate_retrieval_directive(directives: Sequence[Union[str, Tuple[str, str, str]]]) -> None:
         """Validate a list or tuple of file retrieval directives.
 
-        :param directives: a list or tuple of file retrieveal directives
+        :param directives: a list or tuple of file retrieval directives
         :raise ValueError: if the format of the directives is invalid
         """
         if not isinstance(directives, (tuple, list)):
@@ -284,7 +280,7 @@ class CalcJobNode(CalculationNode):
             if not isinstance(directive[2], int):
                 raise ValueError('invalid directive, three element has to be an integer representing the depth')
 
-    def set_retrieve_list(self, retrieve_list):
+    def set_retrieve_list(self, retrieve_list: Sequence[Union[str, Tuple[str, str, str]]]) -> None:
         """Set the retrieve list.
 
         This list of directives will instruct the daemon what files to retrieve after the calculation has completed.
@@ -295,14 +291,14 @@ class CalcJobNode(CalculationNode):
         self._validate_retrieval_directive(retrieve_list)
         self.set_attribute(self.RETRIEVE_LIST_KEY, retrieve_list)
 
-    def get_retrieve_list(self):
+    def get_retrieve_list(self) -> Optional[Sequence[Union[str, Tuple[str, str, str]]]]:
         """Return the list of files/directories to be retrieved on the cluster after the calculation has completed.
 
         :return: a list of file directives
         """
         return self.get_attribute(self.RETRIEVE_LIST_KEY, None)
 
-    def set_retrieve_temporary_list(self, retrieve_temporary_list):
+    def set_retrieve_temporary_list(self, retrieve_temporary_list: Sequence[Union[str, Tuple[str, str, str]]]) -> None:
         """Set the retrieve temporary list.
 
         The retrieve temporary list stores files that are retrieved after completion and made available during parsing
@@ -313,54 +309,14 @@ class CalcJobNode(CalculationNode):
         self._validate_retrieval_directive(retrieve_temporary_list)
         self.set_attribute(self.RETRIEVE_TEMPORARY_LIST_KEY, retrieve_temporary_list)
 
-    def get_retrieve_temporary_list(self):
+    def get_retrieve_temporary_list(self) -> Optional[Sequence[Union[str, Tuple[str, str, str]]]]:
         """Return list of files to be retrieved from the cluster which will be available during parsing.
 
         :return: a list of file directives
         """
         return self.get_attribute(self.RETRIEVE_TEMPORARY_LIST_KEY, None)
 
-    def set_retrieve_singlefile_list(self, retrieve_singlefile_list):
-        """Set the retrieve singlefile list.
-
-        The files will be stored as `SinglefileData` instances and added as output nodes to this calculation node.
-        The format of a single file directive is a tuple or list of length 3 with the following entries:
-
-            1. the link label under which the file should be added
-            2. the `SinglefileData` class or sub class to use to store
-            3. the filepath relative to the remote working directory of the calculation
-
-        :param retrieve_singlefile_list: list or tuple of single file directives
-
-        .. deprecated:: 1.0.0
-
-            Will be removed in `v2.0.0`.
-            Use :meth:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.set_retrieve_temporary_list` instead.
-
-        """
-        warnings.warn('method is deprecated, use `set_retrieve_temporary_list` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        if not isinstance(retrieve_singlefile_list, (tuple, list)):
-            raise TypeError('retrieve_singlefile_list has to be a list or tuple')
-
-        for j in retrieve_singlefile_list:
-            if not isinstance(j, (tuple, list)) or not all(isinstance(i, str) for i in j):
-                raise ValueError('You have to pass a list (or tuple) of lists of strings as retrieve_singlefile_list')
-
-        self.set_attribute(self.RETRIEVE_SINGLE_FILE_LIST_KEY, retrieve_singlefile_list)
-
-    def get_retrieve_singlefile_list(self):
-        """Return the list of files to be retrieved on the cluster after the calculation has completed.
-
-        :return: list of single file retrieval directives
-
-        .. deprecated:: 1.0.0
-            Will be removed in `v2.0.0`, use
-            :meth:`aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.get_retrieve_temporary_list` instead.
-        """
-        return self.get_attribute(self.RETRIEVE_SINGLE_FILE_LIST_KEY, None)
-
-    def set_job_id(self, job_id):
+    def set_job_id(self, job_id: Union[int, str]) -> None:
         """Set the job id that was assigned to the calculation by the scheduler.
 
         .. note:: the id will always be stored as a string
@@ -369,14 +325,14 @@ class CalcJobNode(CalculationNode):
         """
         return self.set_attribute(self.SCHEDULER_JOB_ID_KEY, str(job_id))
 
-    def get_job_id(self):
+    def get_job_id(self) -> Optional[str]:
         """Return job id that was assigned to the calculation by the scheduler.
 
         :return: the string representation of the scheduler job id
         """
         return self.get_attribute(self.SCHEDULER_JOB_ID_KEY, None)
 
-    def set_scheduler_state(self, state):
+    def set_scheduler_state(self, state: 'JobState') -> None:
         """Set the scheduler state.
 
         :param state: an instance of `JobState`
@@ -390,7 +346,7 @@ class CalcJobNode(CalculationNode):
         self.set_attribute(self.SCHEDULER_STATE_KEY, state.value)
         self.set_attribute(self.SCHEDULER_LAST_CHECK_TIME_KEY, timezone.datetime_to_isoformat(timezone.now()))
 
-    def get_scheduler_state(self):
+    def get_scheduler_state(self) -> Optional['JobState']:
         """Return the status of the calculation according to the cluster scheduler.
 
         :return: a JobState enum instance.
@@ -404,7 +360,7 @@ class CalcJobNode(CalculationNode):
 
         return JobState(state)
 
-    def get_scheduler_lastchecktime(self):
+    def get_scheduler_lastchecktime(self) -> Optional[datetime.datetime]:
         """Return the time of the last update of the scheduler state by the daemon or None if it was never set.
 
         :return: a datetime object or None
@@ -417,14 +373,14 @@ class CalcJobNode(CalculationNode):
 
         return value
 
-    def set_detailed_job_info(self, detailed_job_info):
+    def set_detailed_job_info(self, detailed_job_info: Optional[dict]) -> None:
         """Set the detailed job info dictionary.
 
         :param detailed_job_info: a dictionary with metadata with the accounting of a completed job
         """
         self.set_attribute(self.SCHEDULER_DETAILED_JOB_INFO_KEY, detailed_job_info)
 
-    def get_detailed_job_info(self):
+    def get_detailed_job_info(self) -> Optional[dict]:
         """Return the detailed job info dictionary.
 
         The scheduler is polled for the detailed job info after the job is completed and ready to be retrieved.
@@ -433,14 +389,14 @@ class CalcJobNode(CalculationNode):
         """
         return self.get_attribute(self.SCHEDULER_DETAILED_JOB_INFO_KEY, None)
 
-    def set_last_job_info(self, last_job_info):
+    def set_last_job_info(self, last_job_info: 'JobInfo') -> None:
         """Set the last job info.
 
         :param last_job_info: a `JobInfo` object
         """
         self.set_attribute(self.SCHEDULER_LAST_JOB_INFO_KEY, last_job_info.get_dict())
 
-    def get_last_job_info(self):
+    def get_last_job_info(self) -> Optional['JobInfo']:
         """Return the last information asked to the scheduler about the status of the job.
 
         The last job info is updated on every poll of the scheduler, except for the final poll when the job drops from
@@ -462,28 +418,26 @@ class CalcJobNode(CalculationNode):
 
         return job_info
 
-    def get_authinfo(self):
+    def get_authinfo(self) -> 'AuthInfo':
         """Return the `AuthInfo` that is configured for the `Computer` set for this node.
 
         :return: `AuthInfo`
         """
-        from aiida.orm.authinfos import AuthInfo
-
         computer = self.computer
 
         if computer is None:
             raise exceptions.NotExistent('No computer has been set for this calculation')
 
-        return AuthInfo.from_backend_entity(self.backend.authinfos.get(computer=computer, user=self.user))
+        return computer.get_authinfo(self.user)  # pylint: disable=no-member
 
-    def get_transport(self):
+    def get_transport(self) -> 'Transport':
         """Return the transport for this calculation.
 
         :return: `Transport` configured with the `AuthInfo` associated to the computer of this node
         """
         return self.get_authinfo().get_transport()
 
-    def get_parser_class(self):
+    def get_parser_class(self) -> Optional[Type['Parser']]:
         """Return the output parser object for this calculation or None if no parser is set.
 
         :return: a `Parser` class.
@@ -499,11 +453,11 @@ class CalcJobNode(CalculationNode):
         return None
 
     @property
-    def link_label_retrieved(self):
+    def link_label_retrieved(self) -> str:
         """Return the link label used for the retrieved FolderData node."""
         return 'retrieved'
 
-    def get_retrieved_node(self):
+    def get_retrieved_node(self) -> Optional['FolderData']:
         """Return the retrieved data folder.
 
         :return: the retrieved FolderData node or None if not found
@@ -515,7 +469,7 @@ class CalcJobNode(CalculationNode):
             return None
 
     @property
-    def res(self):
+    def res(self) -> 'CalcJobResultManager':
         """
         To be used to get direct access to the parsed parameters.
 
@@ -528,7 +482,7 @@ class CalcJobNode(CalculationNode):
         from aiida.orm.utils.calcjob import CalcJobResultManager
         return CalcJobResultManager(self)
 
-    def get_scheduler_stdout(self):
+    def get_scheduler_stdout(self) -> Optional[AnyStr]:
         """Return the scheduler stderr output if the calculation has finished and been retrieved, None otherwise.
 
         :return: scheduler stderr output or None
@@ -546,7 +500,7 @@ class CalcJobNode(CalculationNode):
 
         return stdout
 
-    def get_scheduler_stderr(self):
+    def get_scheduler_stderr(self) -> Optional[AnyStr]:
         """Return the scheduler stdout output if the calculation has finished and been retrieved, None otherwise.
 
         :return: scheduler stdout output or None
@@ -564,6 +518,9 @@ class CalcJobNode(CalculationNode):
 
         return stderr
 
-    def get_description(self):
-        """Return a string with a description of the node based on its properties."""
-        return self.get_state()
+    def get_description(self) -> str:
+        """Return a description of the node based on its properties."""
+        state = self.get_state()
+        if not state:
+            return ''
+        return state.value

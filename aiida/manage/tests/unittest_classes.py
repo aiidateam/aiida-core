@@ -10,13 +10,21 @@
 """
 Test classes and test runners for testing AiiDA plugins with unittest.
 """
-
 import unittest
+import warnings
 
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage.manager import get_manager
-from . import _GLOBAL_TEST_MANAGER, test_manager, get_test_backend_name, get_test_profile_name
+
+from .main import _GLOBAL_TEST_MANAGER, get_test_backend_name, get_test_profile_name, test_manager
 
 __all__ = ('PluginTestCase', 'TestRunner')
+
+warnings.warn(  # pylint: disable=no-member
+    'This module has been deprecated and will be removed soon. Please use the `pytest` fixtures instead.\n'
+    'See https://github.com/aiidateam/aiida-core/wiki/AiiDA-2.0-plugin-migration-guide#unit-tests',
+    AiidaDeprecationWarning
+)
 
 
 class PluginTestCase(unittest.TestCase):
@@ -79,10 +87,8 @@ class TestRunner(unittest.runner.TextTestRunner):
         :param backend: name of database backend to be used.
         :param profile_name: name of test profile to be used or None (will use temporary profile)
         """
-        import warnings
-        from aiida.common.warnings import AiidaDeprecationWarning
         warnings.warn(  # pylint: disable=no-member
-            'Please use "pytest" for testing AiiDA plugins. Support for "unittest" will be removed in `v2.0.0`',
+            'Please use "pytest" for testing AiiDA plugins. Support for "unittest" will be removed soon',
             AiidaDeprecationWarning
         )
 

@@ -10,9 +10,10 @@
 """Implementation of Transfer CalcJob."""
 
 import os
+
 from aiida import orm
-from aiida.engine import CalcJob
 from aiida.common.datastructures import CalcInfo
+from aiida.engine import CalcJob
 
 
 def validate_instructions(instructions, _):
@@ -74,7 +75,7 @@ def validate_transfer_inputs(inputs, _):
 
     for node_label, node_object in source_nodes.items():
         if isinstance(node_object, orm.RemoteData):
-            if computer.name != node_object.computer.name:
+            if computer.label != node_object.computer.label:
                 error_message = (
                     f' > remote node `{node_label}` points to computer `{node_object.computer}`, '
                     f'not the one being used (`{computer}`)'

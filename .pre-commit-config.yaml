@@ -1,15 +1,32 @@
+ci:
+    autoupdate_schedule: monthly
+    autofix_prs: true
+    skip: [mypy, pylint, dm-generate-all, dependencies, verdi-autodocs]
+
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v2.5.0
+    rev: v4.1.0
     hooks:
     -   id: double-quote-string-fixer
     -   id: end-of-file-fixer
+        exclude: &exclude_pre_commit_hooks >
+            (?x)^(
+                tests/.*(?<!\.py)$
+            )$
     -   id: fix-encoding-pragma
     -   id: mixed-line-ending
     -   id: trailing-whitespace
+        exclude: *exclude_pre_commit_hooks
+    -   id: check-yaml
+
+
+-   repo: https://github.com/pycqa/isort
+    rev: 5.10.1
+    hooks:
+    - id: isort
 
 -   repo: https://github.com/ikamensh/flynt/
-    rev: '0.55'
+    rev: '0.69'
     hooks:
     -   id: flynt
         args: [
@@ -18,7 +35,7 @@ repos:
         ]
 
 -   repo: https://github.com/pre-commit/mirrors-yapf
-    rev: v0.30.0
+    rev: v0.32.0
     hooks:
     -   id: yapf
         name: yapf
@@ -28,29 +45,68 @@ repos:
                 docs/.*|
             )$
         args: ['-i']
+        additional_dependencies: ['toml']
 
 -   repo: local
 
     hooks:
 
+    -   id: imports
+        name: imports
+        entry: python utils/make_all.py
+        language: python
+        types: [python]
+        require_serial: true
+        pass_filenames: false
+        files: aiida/.*py
+
     -   id: mypy
         name: mypy
         entry: mypy
+        args: [--config-file=pyproject.toml]
         language: python
         types: [python]
         require_serial: true
         pass_filenames: true
         files: >-
             (?x)^(
+                aiida/backends/control.py|
                 aiida/common/progress_reporter.py|
-                aiida/manage/manager.py|
                 aiida/engine/.*py|
+                aiida/manage/manager.py|
                 aiida/manage/database/delete/nodes.py|
+                aiida/orm/querybuilder.py|
+                aiida/orm/implementation/entities.py|
+                aiida/orm/implementation/backends.py|
+                aiida/orm/implementation/authinfos.py|
+                aiida/orm/implementation/comments.py|
+                aiida/orm/implementation/computers.py|
+                aiida/orm/implementation/groups.py|
+                aiida/orm/implementation/logs.py|
+                aiida/orm/implementation/nodes.py|
+                aiida/orm/implementation/users.py|
+                aiida/orm/implementation/sql/backends.py|
+                aiida/orm/implementation/django/backend.py|
+                aiida/orm/implementation/sqlalchemy/backend.py|
+                aiida/orm/implementation/querybuilder.py|
+                aiida/orm/implementation/sqlalchemy/querybuilder/.*py|
+                aiida/orm/entities.py|
+                aiida/orm/authinfos.py|
+                aiida/orm/comments.py|
+                aiida/orm/computers.py|
+                aiida/orm/groups.py|
+                aiida/orm/logs.py|
+                aiida/orm/users.py|
+                aiida/orm/nodes/data/enum.py|
+                aiida/orm/nodes/data/jsonable.py|
+                aiida/orm/nodes/node.py|
+                aiida/orm/nodes/process/.*py|
+                aiida/plugins/entry_point.py|
+                aiida/plugins/factories.py|
+                aiida/repository/.*py|
                 aiida/tools/graph/graph_traversers.py|
                 aiida/tools/groups/paths.py|
-                aiida/tools/importexport/archive/.*py|
-                aiida/tools/importexport/dbexport/__init__.py|
-                aiida/tools/importexport/dbimport/backends/.*.py|
+                aiida/tools/archive/.*py|
             )$
 
     -   id: pylint
@@ -67,22 +123,8 @@ repos:
         pass_filenames: false
         files: >-
             (?x)^(
-                setup.py|
-                setup.json|
+                pyproject.toml|
                 utils/dependency_management.py
-            )$
-
-    -   id: pyproject
-        name: Validate pyproject.toml
-        entry: python ./utils/dependency_management.py validate-pyproject-toml
-        language: system
-        pass_filenames: false
-        files: >-
-            (?x)^(
-                setup.json|
-                setup.py|
-                utils/dependency_management.py|
-                pyproject.toml
             )$
 
     -   id: dependencies
@@ -92,8 +134,7 @@ repos:
         pass_filenames: false
         files: >-
             (?x)^(
-                setup.json|
-                setup.py|
+                pyproject.toml|
                 utils/dependency_management.py|
                 environment.yml|
             )$
@@ -109,16 +150,4 @@ repos:
                 aiida/cmdline/params/.*|
                 aiida/cmdline/params/types/.*|
                 utils/validate_consistency.py|
-            )$
-
-    -   id: version-number
-        name: Check version numbers
-        entry: python ./utils/validate_consistency.py version
-        language: system
-        pass_filenames: false
-        files: >-
-            (?x)^(
-                setup.json|
-                utils/validate_consistency.py|
-                aiida/__init__.py
             )$

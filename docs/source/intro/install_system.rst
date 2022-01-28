@@ -23,25 +23,23 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
 
       Open a terminal and execute:
 
-       .. code-block:: console
+      .. code-block:: console
 
-           $ sudo apt install \
-              git python3-dev python3-pip \
-              postgresql postgresql-server-dev-all postgresql-client rabbitmq-server
+         $ sudo apt install git python3-dev python3-pip postgresql postgresql-server-dev-all postgresql-client rabbitmq-server
 
    .. tabbed:: MacOS X (Homebrew)
 
-       The recommended installation method for Mac OS X is to use `Homebrew <https://brew.sh>`__.
+      The recommended installation method for Mac OS X is to use `Homebrew <https://brew.sh>`__.
 
-       #. Follow `this guide <https://docs.brew.sh/Installation>`__ to install Homebrew on your system if not installed yet.
+      #. Follow `this guide <https://docs.brew.sh/Installation>`__ to install Homebrew on your system if not installed yet.
 
-       #. Open a terminal and execute:
+      #. Open a terminal and execute:
 
-          .. code-block:: console
+         .. code-block:: console
 
-              $ brew install postgresql rabbitmq git python
-              $ brew services start postgresql
-              $ brew services start rabbitmq
+            $ brew install postgresql rabbitmq git python
+            $ brew services start postgresql
+            $ brew services start rabbitmq
 
    .. tabbed:: Windows Subsystem for Linux
 
@@ -55,77 +53,85 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
 
             .. code-block:: console
 
-                $ sudo apt install rabbitmq-server
-                $ sudo service rabbitmq-server start
+               $ sudo apt install rabbitmq-server
+
+            then start the ``rabbitmq`` server:
+
+            .. code-block:: console
+
+               $ sudo service rabbitmq-server start
 
       #. Install Python and PostgreSQL:
 
          .. code-block:: console
 
-             $ sudo apt install \
-                postgresql postgresql-server-dev-all postgresql-client \
-                git python3-dev python-pip
-             $ sudo service postgresql start
+            $ sudo apt install postgresql postgresql-server-dev-all postgresql-client git python3-dev python-pip
+
+         then start the PostgreSQL server:
+
+         .. code-block:: console
+
+            $ sudo service postgresql start
 
       .. dropdown:: How to setup WSL to automatically start services after system boot.
 
-          Create a file ``start_aiida_services.sh`` containing the following lines:
+         Create a file ``start_aiida_services.sh`` containing the following lines:
 
-          .. code-block:: console
+         .. code-block:: console
 
-             service postgresql start
-             service rabbitmq-server start # Only for WSL 2!
+            $ service postgresql start
+            $ service rabbitmq-server start # Only for WSL 2!
 
-          and store it in your preferred location, e.g., the home directory.
-          Then make the file executeable, and editable only by root users with:
+         and store it in your preferred location, e.g., the home directory.
+         Then make the file executable, and editable only by root users with:
 
-          .. code-block:: console
+         .. code-block:: console
 
-             $ chmod a+x,go-w /path/to/start_aiida_services.sh
-             $ sudo chown root:root /path/to/start_aiida_services.sh
+            $ chmod a+x,go-w /path/to/start_aiida_services.sh
+            $ sudo chown root:root /path/to/start_aiida_services.sh
 
-          Next, run
+         Next, run
 
-          .. code-block:: console
+         .. code-block:: console
 
-             $ sudo visudo
+            $ sudo visudo
 
-          and add the line
+         and add the line
 
-          .. code-block:: sh
+         .. code-block:: sh
 
-             <username> ALL=(root) NOPASSWD: /path/to/start_aiida_services.sh
+            <username> ALL=(root) NOPASSWD: /path/to/start_aiida_services.sh
 
-          replacing ``<username>`` with your Ubuntu username.
-          This will allow you to run *only* this specific ``.sh`` file with ``root`` access (without password), without lowering security on the rest of your system.
+         replacing ``<username>`` with your Ubuntu username.
+         This will allow you to run *only* this specific ``.sh`` file with ``root`` access (without password), without lowering security on the rest of your system.
 
-          Now you can use the Windows Task Scheduler to automatically execute this file on startup:
+         Now you can use the Windows Task Scheduler to automatically execute this file on startup:
 
-          #. Open Task Scheduler.
+         #. Open Task Scheduler.
 
-          #. In the "Actions" menu, click "Create Task".
+         #. In the "Actions" menu, click "Create Task".
 
-          #. In "General/Security options", select "Run whether user is logged on or not".
+         #. In "General/Security options", select "Run whether user is logged on or not".
 
-          #. In the "Triggers" tab, click "New...".
+         #. In the "Triggers" tab, click "New...".
 
-             #. In the "Begin the task:" dropdown, select "At startup".
+            #. In the "Begin the task:" dropdown, select "At startup".
 
-             #. Click "OK" to confirm.
+            #. Click "OK" to confirm.
 
-          #. In the "Actions" tab, click "New...".
+         #. In the "Actions" tab, click "New...".
 
-             #. In the "Action" dropdown, select "Start a program".
+            #. In the "Action" dropdown, select "Start a program".
 
-             #. In the "Program/script" text field, add ``C:\Windows\System32\bash.exe``.
+            #. In the "Program/script" text field, add ``C:\Windows\System32\bash.exe``.
 
-             #. In the "Add arguments (optional)" text field, add ``-c "sudo /path/to/start_aiida_services.sh"``.
+            #. In the "Add arguments (optional)" text field, add ``-c "sudo /path/to/start_aiida_services.sh"``.
 
-             #. Click "OK" to confirm.
+            #. Click "OK" to confirm.
 
-          #. Click "OK" to confirm the task.
+         #. Click "OK" to confirm the task.
 
-          You can tweak other details of this task to fit your needs.
+         You can tweak other details of this task to fit your needs.
 
    .. tabbed:: Other
 
@@ -134,7 +140,7 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
 
       .. tip::
 
-          Alternatively use the :ref:`pure conda installation method <intro:get_started:conda-install>`.
+         Alternatively use the :ref:`pure conda installation method <intro:get_started:conda-install>`.
 
    ---
 
@@ -148,15 +154,25 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
 
       .. code-block:: console
 
-          $ python -m pip venv ~/envs/aiida
-          $ source ~/envs/aiida/bin/activate
-          (aiida) $ pip install aiida-core
-          (aiida) $ reentry scan
+         $ python -m venv ~/envs/aiida
+         $ source ~/envs/aiida/bin/activate
+         (aiida) $ pip install aiida-core
+
+      .. important::
+
+         Make sure the ``python`` executable is for a Python version that is supported by AiiDA.
+         You can see the version using:
+
+         .. code-block:: console
+
+            $ python --version
+
+         You can find the supported Python versions for the latest version of AiiDA `on the PyPI page <https://pypi.org/project/aiida-core/>`__.
 
       .. tip::
 
-          See the `venv documentation <https://docs.python.org/3/library/venv.html>`__ if the activation command fails.
-          The exact command for activating a virtual environment differs slightly based on the used shell.
+         See the `venv documentation <https://docs.python.org/3/library/venv.html>`__ if the activation command fails.
+         The exact command for activating a virtual environment differs slightly based on the used shell.
 
       .. dropdown:: :fa:`plus-circle` Installation extras
 
@@ -174,7 +190,7 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
 
          .. code-block:: console
 
-             (aiida) $ pip install aiida-core[atomic_tools,docs]
+            (aiida) $ pip install aiida-core[atomic_tools,docs]
 
          .. dropdown:: :fa:`wrench` Kerberos on Ubuntu
 
@@ -195,9 +211,8 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
 
          .. code-block:: console
 
-             $ conda create -n aiida -c conda-forge aiida-core
-             $ conda activate aiida
-             (aiida) $ reentry scan
+            $ conda create -yn aiida -c conda-forge aiida-core
+            $ conda activate aiida
 
    .. tabbed:: From source
 
@@ -207,12 +222,11 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
 
       .. code-block:: console
 
-          $ git clone https://github.com/aiidateam/aiida-core.git
-          $ cd aiida-core/
-          $ python -m pip venv ~/envs/aiida
-          $ source ~/envs/aiida/bin/activate
-          (aiida) $ pip install .
-          (aiida) $ reentry scan
+         $ git clone https://github.com/aiidateam/aiida-core.git
+         $ cd aiida-core/
+         $ python -m venv ~/envs/aiida
+         $ source ~/envs/aiida/bin/activate
+         (aiida) $ pip install .
 
    ---
 
@@ -222,14 +236,19 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
 
    .. code-block:: console
 
-       (aiida) $ verdi quicksetup
-       Info: enter "?" for help
-       Info: enter "!" to ignore the default and set no value
-       Profile name: me
-       Email Address (for sharing data): me@user.com
-       First name: my
-       Last name: name
-       Institution: where-i-work
+      (aiida) $ verdi quicksetup
+      Info: enter "?" for help
+      Info: enter "!" to ignore the default and set no value
+      Profile name: me
+      Email Address (for sharing data): me@user.com
+      First name: my
+      Last name: name
+      Institution: where-i-work
+
+   .. admonition:: Is AiiDA unable to auto-detect the PostgreSQL setup?
+      :class: attention title-icon-troubleshoot
+
+      If you get an error saying that AiiDA has trouble autodetecting the PostgreSQL setup, you will need to do the manual setup explained in the :ref:`troubleshooting section<intro:troubleshooting:installation:postgresql-autodetect-issues>`.
 
    ---
 
@@ -239,15 +258,15 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
 
    .. code-block:: console
 
-       (aiida) $ verdi daemon start 2
+      (aiida) $ verdi daemon start 2
 
    .. important::
 
-        The verdi daemon(s) must be restarted after a system reboot.
+      The verdi daemon(s) must be restarted after a system reboot.
 
    .. tip::
 
-       Do not start more daemons then there are physical processors on your system.
+      Do not start more daemons then there are physical processors on your system.
 
    ---
 
@@ -257,22 +276,22 @@ This is the *recommended* installation method to setup AiiDA on a personal lapto
 
    .. code-block:: console
 
-       (aiida) $ verdi status
-       ✓ config dir:  /home/ubuntu/.aiida
-       ✓ profile:     On profile me
-       ✓ repository:  /home/ubuntu/.aiida/repository/me
-       ✓ postgres:    Connected as aiida_qs_ubuntu_c6a4f69d255fbe9cdb7385dcdcf3c050@localhost:5432
-       ✓ rabbitmq:    Connected as amqp://127.0.0.1?heartbeat=600
-       ✓ daemon:      Daemon is running as PID 16430 since 2020-04-29 12:17:31
+      (aiida) $ verdi status
+      ✓ config dir:  /home/ubuntu/.aiida
+      ✓ profile:     On profile me
+      ✓ repository:  /home/ubuntu/.aiida/repository/me
+      ✓ postgres:    Connected as aiida_qs_ubuntu_c6a4f69d255fbe9cdb7385dcdcf3c050@localhost:5432
+      ✓ rabbitmq:    Connected as amqp://127.0.0.1?heartbeat=600
+      ✓ daemon:      Daemon is running as PID 16430 since 2020-04-29 12:17:31
 
    At this point you should now have a working AiiDA environment, from which you can add and retrieve data.
 
-   .. admonition:: Missing a checkmark or ecountered some other issue?
-       :class: attention title-icon-troubleshoot
+   .. admonition:: Missing a checkmark or encountered some other issue?
+      :class: attention title-icon-troubleshoot
 
-       :ref:`See the troubleshooting section <intro:troubleshooting>`.
+      :ref:`See the troubleshooting section <intro:troubleshooting>`.
 
    .. link-button:: intro:get_started:next
-       :type: ref
-       :text: What's next?
-       :classes: btn-outline-primary btn-block font-weight-bold
+      :type: ref
+      :text: What's next?
+      :classes: btn-outline-primary btn-block font-weight-bold

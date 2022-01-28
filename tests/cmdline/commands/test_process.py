@@ -8,120 +8,25 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi process`."""
-import subprocess
-import sys
-import time
 import asyncio
 from concurrent.futures import Future
+import time
 
 from click.testing import CliRunner
-import plumpy
 import kiwipy
+import plumpy
+import pytest
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_process
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
-from aiida.manage.manager import get_manager
-from aiida.orm import CalcJobNode, WorkflowNode, WorkFunctionNode, WorkChainNode
-
+from aiida.orm import CalcJobNode, WorkChainNode, WorkflowNode, WorkFunctionNode
 from tests.utils import processes as test_processes
 
 
 def get_result_lines(result):
     return [e for e in result.output.split('\n') if e]
-
-
-class TestVerdiProcessDaemon(AiidaTestCase):
-    """Tests for `verdi process` that require a running daemon."""
-
-    TEST_TIMEOUT = 5.
-
-    def setUp(self):
-        super().setUp()
-        from aiida.cmdline.utils.common import get_env_with_venv_bin
-        from aiida.engine.daemon.client import DaemonClient
-        from aiida.manage.configuration import get_config
-
-        # Add the current python path to the environment that will be used for the daemon sub process. This is necessary
-        # to guarantee the daemon can also import all the classes that are defined in this `tests` module.
-        env = get_env_with_venv_bin()
-        env['PYTHONPATH'] = ':'.join(sys.path)
-
-        profile = get_config().current_profile
-        self.daemon_client = DaemonClient(profile)
-        self.daemon_pid = subprocess.Popen(
-            self.daemon_client.cmd_string.split(), stderr=sys.stderr, stdout=sys.stdout, env=env
-        ).pid
-        self.runner = get_manager().create_runner(rmq_submit=True)
-        self.cli_runner = CliRunner()
-
-    def tearDown(self):
-        import os
-        import signal
-
-        os.kill(self.daemon_pid, signal.SIGTERM)
-        super().tearDown()
-
-    def test_pause_play_kill(self):
-        """
-        Test the pause/play/kill commands
-        """
-        # pylint: disable=no-member
-        from aiida.orm import load_node
-
-        calc = self.runner.submit(test_processes.WaitProcess)
-        start_time = time.time()
-        while calc.process_state is not plumpy.ProcessState.WAITING:
-            if time.time() - start_time >= self.TEST_TIMEOUT:
-                self.fail('Timed out waiting for process to enter waiting state')
-
-        # Make sure that calling any command on a non-existing process id will not except but print an error
-        # To simulate a process without a corresponding task, we simply create a node and store it. This node will not
-        # have an associated task at RabbitMQ, but it will be a valid `ProcessNode` so it will pass the initial
-        # filtering of the `verdi process` commands
-        orphaned_node = WorkFunctionNode().store()
-        non_existing_process_id = str(orphaned_node.pk)
-        for command in [cmd_process.process_pause, cmd_process.process_play, cmd_process.process_kill]:
-            result = self.cli_runner.invoke(command, [non_existing_process_id])
-            self.assertClickResultNoException(result)
-            self.assertIn('Error:', result.output)
-
-        self.assertFalse(calc.paused)
-        result = self.cli_runner.invoke(cmd_process.process_pause, [str(calc.pk)])
-        self.assertIsNone(result.exception, result.output)
-
-        # We need to make sure that the process is picked up by the daemon and put in the Waiting state before we start
-        # running the CLI commands, so we add a broadcast subscriber for the state change, which when hit will set the
-        # future to True. This will be our signal that we can start testing
-        waiting_future = Future()
-        filters = kiwipy.BroadcastFilter(
-            lambda *args, **kwargs: waiting_future.set_result(True), sender=calc.pk, subject='state_changed.*.waiting'
-        )
-        self.runner.communicator.add_broadcast_subscriber(filters)
-
-        # The process may already have been picked up by the daemon and put in the waiting state, before the subscriber
-        # got the chance to attach itself, making it have missed the broadcast. That's why check if the state is already
-        # waiting, and if not, we run the loop of the runner to start waiting for the broadcast message. To make sure
-        # that we have the latest state of the node as it is in the database, we force refresh it by reloading it.
-        calc = load_node(calc.pk)
-        if calc.process_state != plumpy.ProcessState.WAITING:
-            self.runner.loop.run_until_complete(asyncio.wait_for(waiting_future, timeout=5.0))
-
-        # Here we now that the process is with the daemon runner and in the waiting state so we can starting running
-        # the `verdi process` commands that we want to test
-        result = self.cli_runner.invoke(cmd_process.process_pause, ['--wait', str(calc.pk)])
-        self.assertIsNone(result.exception, result.output)
-        self.assertTrue(calc.paused)
-
-        result = self.cli_runner.invoke(cmd_process.process_play, ['--wait', str(calc.pk)])
-        self.assertIsNone(result.exception, result.output)
-        self.assertFalse(calc.paused)
-
-        result = self.cli_runner.invoke(cmd_process.process_kill, ['--wait', str(calc.pk)])
-        self.assertIsNone(result.exception, result.output)
-        self.assertTrue(calc.is_terminated)
-        self.assertTrue(calc.is_killed)
 
 
 class TestVerdiProcess(AiidaTestCase):
@@ -174,6 +79,14 @@ class TestVerdiProcess(AiidaTestCase):
     def setUp(self):
         super().setUp()
         self.cli_runner = CliRunner()
+
+    def test_list_non_raw(self):
+        """Test the list command as the user would run it (e.g. without -r)."""
+
+        result = self.cli_runner.invoke(cmd_process.process_list)
+        self.assertIsNone(result.exception, result.output)
+        self.assertIn('Total results:', result.output)
+        self.assertIn('last time an entry changed state', result.output)
 
     def test_list(self):
         """Test the list command."""
@@ -382,60 +295,44 @@ class TestVerdiProcess(AiidaTestCase):
             self.assertEqual(get_result_lines(result)[0], 'No log messages recorded for this entry')
 
 
-class TestVerdiProcessListWarning(AiidaTestCase):
-    """Tests for the `verdi process list` active slots warning."""
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_list_worker_slot_warning(run_cli_command, monkeypatch):
+    """
+    Test that the if the number of used worker process slots exceeds a threshold,
+    that the warning message is displayed to the user when running `verdi process list`
+    """
+    from aiida.cmdline.utils import common
+    from aiida.engine import DaemonClient, ProcessState
+    from aiida.manage.configuration import get_config
 
-    def setUp(self):
-        super().setUp()
-        self.cli_runner = CliRunner()
-        # Override the call to the circus client to retrieve the number of workers
-        # As we don't have a running circus client, this will normally fail, so here we simulate the
-        # response by redefining the function to get the final value we want.
-        import aiida.cmdline.utils.common
-        self.real_get_num_workers = aiida.cmdline.utils.common.get_num_workers
-        aiida.cmdline.utils.common.get_num_workers = lambda: 1
+    monkeypatch.setattr(common, 'get_num_workers', lambda: 1)
+    monkeypatch.setattr(DaemonClient, 'is_daemon_running', lambda: True)
 
-    def tearDown(self):
-        # Reset the redefined function
-        import aiida.cmdline.utils.common
-        aiida.cmdline.utils.common.get_num_workers = self.real_get_num_workers
-        super().tearDown()
+    # Get the number of allowed processes per worker:
+    config = get_config()
+    worker_process_slots = config.get_option('daemon.worker_process_slots', config.current_profile.name)
+    limit = int(worker_process_slots * 0.9)
 
-    def test_list_worker_slot_warning(self):
-        """
-        Test that the if the number of used worker process slots exceeds a threshold,
-        that the warning message is displayed to the user when running `verdi process list`
-        """
-        from aiida.engine import ProcessState
-        from aiida.manage.configuration import get_config
-
-        # Get the number of allowed processes per worker:
-        config = get_config()
-        worker_process_slots = config.get_option('daemon.worker_process_slots', config.current_profile.name)
-        limit = int(worker_process_slots * 0.9)
-
-        # Create additional active nodes such that we have 90% of the active slot limit
-        for _ in range(limit):
-            calc = WorkFunctionNode()
-            calc.set_process_state(ProcessState.RUNNING)
-            calc.store()
-
-        # Default cmd should not throw the warning as we are below the limit
-        result = self.cli_runner.invoke(cmd_process.process_list)
-        self.assertClickResultNoException(result)
-        warning_phrase = 'of the available daemon worker slots have been used!'
-        self.assertTrue(all([warning_phrase not in line for line in get_result_lines(result)]))
-
-        # Add one more running node to put us over the limit
+    # Create additional active nodes such that we have 90% of the active slot limit
+    for _ in range(limit):
         calc = WorkFunctionNode()
         calc.set_process_state(ProcessState.RUNNING)
         calc.store()
 
-        # Now the warning should fire
-        result = self.cli_runner.invoke(cmd_process.process_list)
-        self.assertClickResultNoException(result)
-        warning_phrase = '% of the available daemon worker slots have been used!'
-        self.assertTrue(any([warning_phrase in line for line in get_result_lines(result)]))
+    # Default cmd should not throw the warning as we are below the limit
+    result = run_cli_command(cmd_process.process_list)
+    warning_phrase = 'of the available daemon worker slots have been used!'
+    assert all(warning_phrase not in line for line in result.output_lines)
+
+    # Add one more running node to put us over the limit
+    calc = WorkFunctionNode()
+    calc.set_process_state(ProcessState.RUNNING)
+    calc.store()
+
+    # Now the warning should fire
+    result = run_cli_command(cmd_process.process_list)
+    warning_phrase = '% of the available daemon worker slots have been used!'
+    assert any(warning_phrase in line for line in result.output_lines)
 
 
 class TestVerdiProcessCallRoot(AiidaTestCase):
@@ -487,3 +384,76 @@ class TestVerdiProcessCallRoot(AiidaTestCase):
         self.assertIn('No callers found', get_result_lines(result)[0])
         self.assertIn(str(self.node_root.pk), get_result_lines(result)[1])
         self.assertIn(str(self.node_root.pk), get_result_lines(result)[2])
+
+
+@pytest.mark.skip(reason='fails to complete randomly (see issue #4731)')
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('with_daemon', 'clear_database_before_test')
+@pytest.mark.parametrize('cmd_try_all', (True, False))
+def test_pause_play_kill(cmd_try_all, run_cli_command):
+    """
+    Test the pause/play/kill commands
+    """
+    # pylint: disable=no-member, too-many-locals
+    from aiida.cmdline.commands.cmd_process import process_kill, process_pause, process_play
+    from aiida.engine import ProcessState
+    from aiida.manage.manager import get_manager
+    from aiida.orm import load_node
+
+    runner = get_manager().create_runner(rmq_submit=True)
+    calc = runner.submit(test_processes.WaitProcess)
+
+    test_daemon_timeout = 5.
+    start_time = time.time()
+    while calc.process_state is not plumpy.ProcessState.WAITING:
+        if time.time() - start_time >= test_daemon_timeout:
+            raise RuntimeError('Timed out waiting for process to enter waiting state')
+
+    # Make sure that calling any command on a non-existing process id will not except but print an error
+    # To simulate a process without a corresponding task, we simply create a node and store it. This node will not
+    # have an associated task at RabbitMQ, but it will be a valid `ProcessNode` with and active state, so it will
+    # pass the initial filtering of the `verdi process` commands
+    orphaned_node = WorkFunctionNode()
+    orphaned_node.set_process_state(ProcessState.RUNNING)
+    orphaned_node.store()
+    non_existing_process_id = str(orphaned_node.pk)
+    for command in [process_pause, process_play, process_kill]:
+        result = run_cli_command(command, [non_existing_process_id])
+        assert 'Error:' in result.output
+
+    assert not calc.paused
+    result = run_cli_command(process_pause, [str(calc.pk)])
+
+    # We need to make sure that the process is picked up by the daemon and put in the Waiting state before we start
+    # running the CLI commands, so we add a broadcast subscriber for the state change, which when hit will set the
+    # future to True. This will be our signal that we can start testing
+    waiting_future = Future()
+    filters = kiwipy.BroadcastFilter(
+        lambda *args, **kwargs: waiting_future.set_result(True), sender=calc.pk, subject='state_changed.*.waiting'
+    )
+    runner.communicator.add_broadcast_subscriber(filters)
+
+    # The process may already have been picked up by the daemon and put in the waiting state, before the subscriber
+    # got the chance to attach itself, making it have missed the broadcast. That's why check if the state is already
+    # waiting, and if not, we run the loop of the runner to start waiting for the broadcast message. To make sure
+    # that we have the latest state of the node as it is in the database, we force refresh it by reloading it.
+    calc = load_node(calc.pk)
+    if calc.process_state != plumpy.ProcessState.WAITING:
+        runner.loop.run_until_complete(asyncio.wait_for(waiting_future, timeout=5.0))
+
+    # Here we now that the process is with the daemon runner and in the waiting state so we can starting running
+    # the `verdi process` commands that we want to test
+    result = run_cli_command(process_pause, ['--wait', str(calc.pk)])
+    assert calc.paused
+
+    if cmd_try_all:
+        cmd_option = '--all'
+    else:
+        cmd_option = str(calc.pk)
+
+    result = run_cli_command(process_play, ['--wait', cmd_option])
+    assert not calc.paused
+
+    result = run_cli_command(process_kill, ['--wait', str(calc.pk)])
+    assert calc.is_terminated
+    assert calc.is_killed

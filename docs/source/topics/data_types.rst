@@ -11,7 +11,7 @@ The different data types can be accessed through the :py:func:`~aiida.plugins.fa
 
 .. code-block:: ipython
 
-  In [1]: ArrayData = DataFactory('array')
+  In [1]: ArrayData = DataFactory('core.array')
 
 .. important::
 
@@ -22,11 +22,11 @@ The different data types can be accessed through the :py:func:`~aiida.plugins.fa
 
     from aiida.plugins import DataFactory
 
-    ArrayData = DataFactory('array')
+    ArrayData = DataFactory('core.array')
 
 A list of all the data entry points can be obtain running the command ``verdi plugin list aiida.data``.
 
-For all data types, you can follow the link to the corresponding data class in the API reference to read more about the class and its methods. We also detail what is stored in the database (mostly as attributes, so the information can be easily queried e.g. with the :ref:`QueryBuilder <how-to:data:find>`) and what is stored as a raw file in the AiiDA file repository (providing access to the file contents, but not efficiently queryable: this is useful for e.g. big data files that don't need to be queried for).
+For all data types, you can follow the link to the corresponding data class in the API reference to read more about the class and its methods. We also detail what is stored in the database (mostly as attributes, so the information can be easily queried e.g. with the :ref:`QueryBuilder <how-to:query>`) and what is stored as a raw file in the AiiDA file repository (providing access to the file contents, but not efficiently queryable: this is useful for e.g. big data files that don't need to be queried for).
 
 If you need to work with some specific type of data, first check the list of data types/plugins below, and if you don't find what you need, give a look to :ref:`Adding support for custom data types <topics:data_types:plugin>`.
 
@@ -156,7 +156,7 @@ Each array is assigned to a name specified by the user using the :py:meth:`~aiid
 
 .. code-block:: ipython
 
-  In [1]: ArrayData = DataFactory('array'); import numpy as np
+  In [1]: ArrayData = DataFactory('core.array'); import numpy as np
 
   In [2]: array = ArrayData()
 
@@ -195,7 +195,7 @@ In case you are working with arrays that have a relationship with each other, i.
 
 .. code-block:: ipython
 
-  In [1]: XyData = DataFactory('array.xy'); import numpy as np
+  In [1]: XyData = DataFactory('core.array.xy'); import numpy as np
 
   In [2]: xy = XyData()
 
@@ -221,7 +221,7 @@ This class can be initialized via the **absolute** path to the file you want to 
 
 .. code-block:: ipython
 
-  In [1]: SinglefileData = DataFactory('singlefile')
+  In [1]: SinglefileData = DataFactory('core.singlefile')
 
   In [2]: single_file = SinglefileData('/absolute/path/to/file')
 
@@ -244,7 +244,7 @@ To store a complete directory, simply use the ``tree`` keyword:
 
 .. code-block:: ipython
 
-  In [1]: FolderData = DataFactory('folder')
+  In [1]: FolderData = DataFactory('core.folder')
 
   In [2]: folder = FolderData(tree='/absolute/path/to/directory')
 
@@ -264,14 +264,14 @@ or from `file-like objects <https://docs.python.org/3/glossary.html#term-file-li
 
   In [4]: folder.put_object_from_filelike(filelike_object, path='file2.txt')
 
-Inversely, the content of the files stored in the :py:class:`~aiida.orm.nodes.data.folder.FolderData` node can be accessed using the :py:class:`~aiida.orm.nodes.node.Node.get_object_content()` method:
+Inversely, the content of the files stored in the :py:class:`~aiida.orm.nodes.data.folder.FolderData` node can be accessed using the :py:meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.get_object_content()` method:
 
 .. code-block:: ipython
 
   In [5]: folder.get_object_content('file1.txt')
   Out[5]: 'File 1 content\n'
 
-To see the files that are stored in the :py:class:`~aiida.orm.nodes.data.folder.FolderData`, you can use the :py:class:`~aiida.orm.nodes.node.Node.list_object_names()` method:
+To see the files that are stored in the :py:class:`~aiida.orm.nodes.data.folder.FolderData`, you can use the :py:meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.list_object_names()` method:
 
 .. code-block:: ipython
 
@@ -279,14 +279,14 @@ To see the files that are stored in the :py:class:`~aiida.orm.nodes.data.folder.
   Out[6]: ['subdir', 'file1.txt', 'file2.txt']
 
 In this example, ``subdir`` was a sub directory of ``/absolute/path/to/directory``, whose contents where added above.
-to list the contents of the ``subdir`` directory, you can pass its path to the :py:meth:`~aiida.orm.nodes.node.Node.list_object_names()` method:
+to list the contents of the ``subdir`` directory, you can pass its path to the :py:meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.list_object_names()` method:
 
 .. code-block:: ipython
 
   In [7]: folder.list_object_names('subdir')
   Out[7]: ['file3.txt', 'module.py']
 
-The content can once again be shown using the :py:meth:`~aiida.orm.nodes.node.Node.get_object_content()` method by passing the correct path:
+The content can once again be shown using the :py:meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.get_object_content()` method by passing the correct path:
 
 .. code-block:: ipython
 
@@ -306,7 +306,7 @@ To create a :py:class:`~aiida.orm.nodes.data.remote.RemoteData` instance, simply
 
 .. code-block:: ipython
 
-  In [1]: RemoteData = DataFactory('remote')
+  In [1]: RemoteData = DataFactory('core.remote')
 
   In [2]: computer = load_computer(label='computer_label')
 
@@ -377,7 +377,7 @@ Let's begin with creating the instance by defining its unit cell:
 
 .. code-block:: ipython
 
-  In [1]: StructureData = DataFactory('structure')
+  In [1]: StructureData = DataFactory('core.structure')
 
   In [2]: unit_cell = [[3.0, 0.0, 0.0], [0.0, 3.0, 0.0], [0.0, 0.0, 3.0]]
 
@@ -454,7 +454,7 @@ If you have a list of :py:class:`~aiida.orm.nodes.data.structure.StructureData` 
 
 .. code-block:: ipython
 
-  In [1]: TrajectoryData = DataFactory('array.trajectory')
+  In [1]: TrajectoryData = DataFactory('core.array.trajectory')
 
   In [2]: trajectory = TrajectoryData(structure_list)
 
@@ -508,7 +508,7 @@ To create a :py:class:`~aiida.orm.nodes.data.array.kpoints.KpointsData` instance
 
 .. code-block:: ipython
 
-  In [1]: KpointsData = DataFactory('array.kpoints')
+  In [1]: KpointsData = DataFactory('core.array.kpoints')
      ...: kpoints_mesh = KpointsData()
      ...: kpoints_mesh.set_kpoints_mesh([2, 2, 2])
 
@@ -614,7 +614,7 @@ The dropdown panels below explain some expanded use cases on how to create a :py
   .. code-block:: python
 
     from aiida.plugins import DataFactory
-    BandsData = DataFactory('array.bands')
+    BandsData = DataFactory('core.array.bands')
     bands_data = BandsData()
 
   To import the bands we need to make sure to have two arrays: one containing kpoints and another containing bands.

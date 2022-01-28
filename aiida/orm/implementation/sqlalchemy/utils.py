@@ -80,11 +80,14 @@ class ModelWrapper:
             self._flush(fields=fields)
 
     def is_saved(self):
-        """Retun whether the wrapped model instance is saved in the database.
+        """Return whether the wrapped model instance is saved in the database.
 
         :return: boolean, True if the model is saved in the database, False otherwise
         """
-        return self._model.id is not None
+        # we should not flush here since it may lead to IntegrityErrors
+        # which are handled later in the save method
+        with self._model.session.no_autoflush:
+            return self._model.id is not None
 
     def save(self):
         """Store the model instance.
@@ -143,7 +146,7 @@ class ModelWrapper:
 
         :return: boolean, True if currently in open transaction, False otherwise.
         """
-        return get_scoped_session().transaction.nested
+        return get_scoped_session().in_nested_transaction()
 
 
 @contextlib.contextmanager

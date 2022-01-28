@@ -25,7 +25,7 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      create   Export subsets of the provenance graph to file for sharing.
+      create   Write subsets of the provenance graph to a single file.
       import   Import data from an AiiDA archive file.
       inspect  Inspect contents of an archive without importing it.
       migrate  Migrate an export archive to a more recent format version.
@@ -78,45 +78,7 @@ Below is a list with all available subcommands.
       reveal     Reveal one or more hidden codes in `verdi code list`.
       setup      Setup a new code.
       show       Display detailed information for a code.
-
-
-.. _reference:command-line:verdi-comment:
-
-``verdi comment``
------------------
-
-.. code:: console
-
-    Usage:  [OPTIONS] COMMAND [ARGS]...
-
-      Inspect, create and manage node comments.
-
-    Options:
-      --help  Show this message and exit.
-
-    Commands:
-      add     Add a comment to one or more nodes.
-      remove  Remove a comment of a node.
-      show    Show the comments of one or multiple nodes.
-      update  Update a comment of a node.
-
-
-.. _reference:command-line:verdi-completioncommand:
-
-``verdi completioncommand``
----------------------------
-
-.. code:: console
-
-    Usage:  [OPTIONS]
-
-      Return the code to activate bash completion.
-
-      This command is mainly for back-compatibility.
-      You should rather use: eval "$(_VERDI_COMPLETE=source verdi)"
-
-    Options:
-      --help  Show this message and exit.
+      test       Run tests for the given code to check whether it is usable.
 
 
 .. _reference:command-line:verdi-computer:
@@ -141,7 +103,6 @@ Below is a list with all available subcommands.
       enable     Enable the computer for the given user.
       list       List all available computers.
       relabel    Relabel a computer.
-      rename     Rename a computer.
       setup      Create a new computer.
       show       Show detailed information for a computer.
       test       Test the connection to a computer.
@@ -154,14 +115,21 @@ Below is a list with all available subcommands.
 
 .. code:: console
 
-    Usage:  [OPTIONS] OPTION_NAME OPTION_VALUE
+    Usage:  [OPTIONS] COMMAND [ARGS]...
 
-      Configure profile-specific or global AiiDA options.
+      Manage the AiiDA configuration.
 
     Options:
-      --global  Apply the option configuration wide.
-      --unset   Remove the line matching the option name from the config file.
-      --help    Show this message and exit.
+      --help  Show this message and exit.
+
+    Commands:
+      caching    List caching-enabled process types for the current profile.
+      downgrade  Print a configuration, downgraded to a specific version.
+      get        Get the value of an AiiDA option for the current profile.
+      list       List AiiDA options for the current profile.
+      set        Set an AiiDA option.
+      show       Show details of an AiiDA option for the current profile.
+      unset      Unset an AiiDA option.
 
 
 .. _reference:command-line:verdi-daemon:
@@ -200,7 +168,9 @@ Below is a list with all available subcommands.
       Inspect, create and manage data nodes.
 
     Options:
-      --help  Show this message and exit.
+      -v, --verbosity [notset|debug|info|report|warning|error|critical]
+                                      Set the verbosity of the output.
+      --help                          Show this message and exit.
 
 
 .. _reference:command-line:verdi-database:
@@ -214,12 +184,15 @@ Below is a list with all available subcommands.
 
       Inspect and manage the database.
 
+      .. deprecated:: v2.0.0
+
     Options:
       --help  Show this message and exit.
 
     Commands:
       integrity  Check the integrity of the database and fix potential issues.
       migrate    Migrate the database to the latest schema version.
+      summary    Summarise the entities in the database.
       version    Show the version of the database.
 
 
@@ -240,48 +213,9 @@ Below is a list with all available subcommands.
     Commands:
       check-load-time          Check for common indicators that slowdown `verdi`.
       check-undesired-imports  Check that verdi does not import python modules it shouldn't.
-      configure-backup         Configure backup of the repository folder.
+      run-sql                  Run a raw SQL command on the database.
       run_daemon               Run a daemon instance in the current interpreter.
-      tests                    Run the unittest suite or parts of it.
       validate-plugins         Validate all plugins by checking they can be loaded.
-
-
-.. _reference:command-line:verdi-export:
-
-``verdi export``
-----------------
-
-.. code:: console
-
-    Usage:  [OPTIONS] COMMAND [ARGS]...
-
-      Deprecated, use `verdi archive`.
-
-    Options:
-      --help  Show this message and exit.
-
-    Commands:
-      create   Export subsets of the provenance graph to file for sharing.
-      inspect  Inspect contents of an exported archive without importing it.
-      migrate  Migrate an export archive to a more recent format version.
-
-
-.. _reference:command-line:verdi-graph:
-
-``verdi graph``
----------------
-
-.. code:: console
-
-    Usage:  [OPTIONS] COMMAND [ARGS]...
-
-      Create visual representations of the provenance graph.
-
-    Options:
-      --help  Show this message and exit.
-
-    Commands:
-      generate  Generate a graph from a ROOT_NODE (specified by pk or uuid).
 
 
 .. _reference:command-line:verdi-group:
@@ -301,10 +235,11 @@ Below is a list with all available subcommands.
     Commands:
       add-nodes     Add nodes to a group.
       copy          Duplicate a group.
-      create        Create an empty group with a given name.
+      create        Create an empty group with a given label.
       delete        Delete a group and (optionally) the nodes it contains.
       description   Change the description of a group.
       list          Show a list of existing groups.
+      move-nodes    Move the specified NODES from one group to another.
       path          Inspect groups of nodes, with delimited label paths.
       relabel       Change the label of a group.
       remove-nodes  Remove nodes from a group.
@@ -324,59 +259,6 @@ Below is a list with all available subcommands.
 
     Options:
       --help  Show this message and exit.
-
-
-.. _reference:command-line:verdi-import:
-
-``verdi import``
-----------------
-
-.. code:: console
-
-    Usage:  [OPTIONS] [--] [ARCHIVES]...
-
-      Deprecated, use `verdi archive import`.
-
-    Options:
-      -w, --webpages TEXT...          Discover all URL targets pointing to files with the
-                                      .aiida extension for these HTTP addresses. Automatically
-                                      discovered archive URLs will be downloaded and added to
-                                      ARCHIVES for importing
-
-      -G, --group GROUP               Specify group to which all the import nodes will be
-                                      added. If such a group does not exist, it will be
-                                      created automatically.
-
-      -e, --extras-mode-existing [keep_existing|update_existing|mirror|none|ask]
-                                      Specify which extras from the export archive should be
-                                      imported for nodes that are already contained in the
-                                      database: ask: import all extras and prompt what to do
-                                      for existing extras. keep_existing: import all extras
-                                      and keep original value of existing extras.
-                                      update_existing: import all extras and overwrite value
-                                      of existing extras. mirror: import all extras and remove
-                                      any existing extras that are not present in the archive.
-                                      none: do not import any extras.
-
-      -n, --extras-mode-new [import|none]
-                                      Specify whether to import extras of new nodes: import:
-                                      import extras. none: do not import extras.
-
-      --comment-mode [newest|overwrite]
-                                      Specify the way to import Comments with identical UUIDs:
-                                      newest: Only the newest Comments (based on mtime)
-                                      (default).overwrite: Replace existing Comments with
-                                      those from the import file.
-
-      --migration / --no-migration    Force migration of archive file archives, if needed.
-                                      [default: True]
-
-      -v, --verbosity [DEBUG|INFO|WARNING|CRITICAL]
-                                      Control the verbosity of console logging
-      -n, --non-interactive           In non-interactive mode, the CLI never prompts but
-                                      simply uses default values for options that define one.
-
-      --help                          Show this message and exit.
 
 
 .. _reference:command-line:verdi-node:
@@ -404,7 +286,6 @@ Below is a list with all available subcommands.
       rehash       Recompute the hash for nodes in the database.
       repo         Inspect the content of a node repository folder.
       show         Show generic information on one or more nodes.
-      tree         Show a tree of nodes starting from a given node.
 
 
 .. _reference:command-line:verdi-plugin:
@@ -486,12 +367,10 @@ Below is a list with all available subcommands.
     Options:
       -n, --non-interactive           In non-interactive mode, the CLI never prompts but
                                       simply uses default values for options that define one.
-
       --profile PROFILE               The name of the new profile.  [required]
       --email EMAIL                   Email address associated with the data you generate. The
                                       email address is exported along with the data, when
                                       sharing it.  [required]
-
       --first-name NONEMPTYSTRING     First name of the user.  [required]
       --last-name NONEMPTYSTRING      Last name of the user.  [required]
       --institution NONEMPTYSTRING    Institution of the user.  [required]
@@ -501,57 +380,29 @@ Below is a list with all available subcommands.
                                       Database backend to use.
       --db-host HOSTNAME              Database server host. Leave empty for "peer"
                                       authentication.
-
       --db-port INTEGER               Database server port.
       --db-name NONEMPTYSTRING        Name of the database to create.
       --db-username NONEMPTYSTRING    Name of the database user to create.
       --db-password TEXT              Password of the database user.
       --su-db-name TEXT               Name of the template database to connect to as the
                                       database superuser.
-
       --su-db-username TEXT           User name of the database super user.
       --su-db-password TEXT           Password to connect as the database superuser.
       --broker-protocol [amqp|amqps]  Protocol to use for the message broker.  [default: amqp]
       --broker-username NONEMPTYSTRING
                                       Username to use for authentication with the message
                                       broker.  [default: guest]
-
       --broker-password NONEMPTYSTRING
                                       Password to use for authentication with the message
                                       broker.  [default: guest]
-
       --broker-host HOSTNAME          Hostname for the message broker.  [default: 127.0.0.1]
       --broker-port INTEGER           Port for the message broker.  [default: 5672]
       --broker-virtual-host TEXT      Name of the virtual host for the message broker without
-                                      leading forward slash.  [default: ]
-
+                                      leading forward slash.
       --repository DIRECTORY          Absolute path to the file repository.
       --config FILEORURL              Load option values from configuration file in yaml
                                       format (local path or URL).
-
       --help                          Show this message and exit.
-
-
-.. _reference:command-line:verdi-rehash:
-
-``verdi rehash``
-----------------
-
-.. code:: console
-
-    Usage:  [OPTIONS] [NODES]...
-
-      Recompute the hash for nodes in the database.
-
-      The set of nodes that will be rehashed can be filtered by their identifier and/or
-      based on their class.
-
-    Options:
-      -e, --entry-point PLUGIN  Only include nodes that are class or sub class of the class
-                                identified by this entry point.
-
-      -f, --force               Do not ask for confirmation.
-      --help                    Show this message and exit.
 
 
 .. _reference:command-line:verdi-restapi:
@@ -575,8 +426,6 @@ Below is a list with all available subcommands.
       -c, --config-dir PATH    Path to the configuration directory
       --wsgi-profile           Whether to enable WSGI profiler middleware for finding
                                bottlenecks
-
-      --hookup / --no-hookup   Hookup app to flask server
       --help                   Show this message and exit.
 
 
@@ -597,17 +446,10 @@ Below is a list with all available subcommands.
                                       Specify the prefix of the label of the auto group
                                       (numbers might be automatically appended to generate
                                       unique names per run).
-
-      -n, --group-name TEXT           Specify the name of the auto group [DEPRECATED, USE
-                                      --auto-group-label-prefix instead]. This also enables
-                                      auto-grouping.
-
-      -e, --exclude TEXT              Exclude these classes from auto grouping (use full
+      -e, --exclude STR...            Exclude these classes from auto grouping (use full
                                       entrypoint strings).
-
-      -i, --include TEXT              Include these classes from auto grouping  (use full
+      -i, --include STR...            Include these classes from auto grouping (use full
                                       entrypoint strings or "all").
-
       --help                          Show this message and exit.
 
 
@@ -625,12 +467,10 @@ Below is a list with all available subcommands.
     Options:
       -n, --non-interactive           In non-interactive mode, the CLI never prompts but
                                       simply uses default values for options that define one.
-
       --profile PROFILE               The name of the new profile.  [required]
       --email EMAIL                   Email address associated with the data you generate. The
                                       email address is exported along with the data, when
                                       sharing it.  [required]
-
       --first-name NONEMPTYSTRING     First name of the user.  [required]
       --last-name NONEMPTYSTRING      Last name of the user.  [required]
       --institution NONEMPTYSTRING    Institution of the user.  [required]
@@ -640,33 +480,24 @@ Below is a list with all available subcommands.
                                       Database backend to use.
       --db-host HOSTNAME              Database server host. Leave empty for "peer"
                                       authentication.
-
       --db-port INTEGER               Database server port.
       --db-name NONEMPTYSTRING        Name of the database to create.  [required]
       --db-username NONEMPTYSTRING    Name of the database user to create.  [required]
       --db-password TEXT              Password of the database user.  [required]
-      --broker-protocol [amqp|amqps]  Protocol to use for the message broker.  [default: amqp;
-                                      required]
-
+      --broker-protocol [amqp|amqps]  Protocol to use for the message broker.  [required]
       --broker-username NONEMPTYSTRING
                                       Username to use for authentication with the message
-                                      broker.  [default: guest; required]
-
+                                      broker.  [required]
       --broker-password NONEMPTYSTRING
                                       Password to use for authentication with the message
-                                      broker.  [default: guest; required]
-
-      --broker-host HOSTNAME          Hostname for the message broker.  [default: 127.0.0.1;
-                                      required]
-
-      --broker-port INTEGER           Port for the message broker.  [default: 5672; required]
+                                      broker.  [required]
+      --broker-host HOSTNAME          Hostname for the message broker.  [required]
+      --broker-port INTEGER           Port for the message broker.  [required]
       --broker-virtual-host TEXT      Name of the virtual host for the message broker without
-                                      leading forward slash.  [default: ; required]
-
+                                      leading forward slash.  [required]
       --repository DIRECTORY          Absolute path to the file repository.
       --config FILEORURL              Load option values from configuration file in yaml
                                       format (local path or URL).
-
       --help                          Show this message and exit.
 
 
@@ -685,7 +516,6 @@ Below is a list with all available subcommands.
       --plain                         Use a plain Python shell.
       --no-startup                    When using plain Python, ignore the PYTHONSTARTUP
                                       environment variable and ~/.pythonrc.py script.
-
       -i, --interface [ipython|bpython]
                                       Specify an interactive interpreter interface.
       --help                          Show this message and exit.
@@ -706,6 +536,27 @@ Below is a list with all available subcommands.
       -t, --print-traceback  Print the full traceback in case an exception is raised.
       --no-rmq               Do not check RabbitMQ status
       --help                 Show this message and exit.
+
+
+.. _reference:command-line:verdi-storage:
+
+``verdi storage``
+-----------------
+
+.. code:: console
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Inspect and manage stored data for a profile.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      info       Summarise the contents of the storage.
+      integrity  Checks for the integrity of the data storage.
+      maintain   Performs maintenance tasks on the repository.
+      migrate    Migrate the storage to the latest schema version.
 
 
 .. _reference:command-line:verdi-user:

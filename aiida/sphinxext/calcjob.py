@@ -13,7 +13,8 @@ Defines an rst directive to auto-document AiiDA calculation job.
 import inspect
 
 from aiida.engine import CalcJob
-from .process import AiidaProcessDocumenter, AiidaProcessDirective
+
+from .process import AiidaProcessDirective, AiidaProcessDocumenter
 
 
 def setup_extension(app):

@@ -9,9 +9,8 @@
 ###########################################################################
 # pylint: disable=too-many-lines,missing-function-docstring,invalid-name,missing-class-docstring,no-self-use
 """Tests for the `WorkChain` class."""
-import inspect
-import unittest
 import asyncio
+import inspect
 
 import plumpy
 import pytest
@@ -21,10 +20,10 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.common.utils import Capturing
-from aiida.engine import ExitCode, Process, ToContext, WorkChain, if_, while_, return_, launch, calcfunction
+from aiida.engine import ExitCode, Process, ToContext, WorkChain, append_, calcfunction, if_, launch, return_, while_
 from aiida.engine.persistence import ObjectLoader
 from aiida.manage.manager import get_manager
-from aiida.orm import load_node, Bool, Float, Int, Str
+from aiida.orm import Bool, Float, Int, Str, load_node
 
 
 def run_until_paused(proc):
@@ -187,6 +186,7 @@ class PotentialFailureWorkChain(WorkChain):
         self.out(self.OUTPUT_LABEL, Int(self.OUTPUT_VALUE).store())
 
 
+@pytest.mark.requires_rmq
 class TestExitStatus(AiidaTestCase):
     """
     This class should test the various ways that one can exit from the outline flow of a WorkChain, other than
@@ -268,6 +268,7 @@ class IfTest(WorkChain):
         self.ctx.s2 = True
 
 
+@pytest.mark.requires_rmq
 class TestContext(AiidaTestCase):
 
     def test_attributes(self):
@@ -289,6 +290,7 @@ class TestContext(AiidaTestCase):
             wc.ctx['new_attr']  # pylint: disable=pointless-statement
 
 
+@pytest.mark.requires_rmq
 class TestWorkchain(AiidaTestCase):
 
     # pylint: disable=too-many-public-methods
@@ -677,7 +679,8 @@ class TestWorkchain(AiidaTestCase):
         run_and_check_success(MainWorkChain)
 
     def test_if_block_persistence(self):
-        """
+        """Test a reloaded `If` conditional can be resumed.
+
         This test was created to capture issue #902
         """
         runner = get_manager().get_runner()
@@ -685,11 +688,13 @@ class TestWorkchain(AiidaTestCase):
         runner.schedule(wc)
 
         async def run_async(workchain):
+
+            # run the original workchain until paused
             await run_until_paused(workchain)
             self.assertTrue(workchain.ctx.s1)
             self.assertFalse(workchain.ctx.s2)
 
-            # Now bundle the thing
+            # Now bundle the workchain
             bundle = plumpy.Bundle(workchain)
             # Need to close the process before recreating a new instance
             workchain.close()
@@ -699,13 +704,20 @@ class TestWorkchain(AiidaTestCase):
             self.assertTrue(workchain2.ctx.s1)
             self.assertFalse(workchain2.ctx.s2)
 
+            # check bundling again creates the same saved state
             bundle2 = plumpy.Bundle(workchain2)
             self.assertDictEqual(bundle, bundle2)
 
-            workchain.play()
-            await workchain.future()
-            self.assertTrue(workchain.ctx.s1)
-            self.assertTrue(workchain.ctx.s2)
+            # run the loaded workchain to completion
+            runner.schedule(workchain2)
+            workchain2.play()
+            await workchain2.future()
+            self.assertTrue(workchain2.ctx.s1)
+            self.assertTrue(workchain2.ctx.s2)
+
+            # ensure the original paused workchain future is finalised
+            # to avoid warnings
+            workchain.future().set_result(None)
 
         runner.loop.run_until_complete(run_async(wc))
 
@@ -768,6 +780,182 @@ class TestWorkchain(AiidaTestCase):
 
         run_and_check_success(Workchain)
 
+    def test_nested_to_context(self):
+        val = Int(5).store()
+
+        test_case = self
+
+        class SimpleWc(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.result)
+                spec.outputs.dynamic = True
+
+            def result(self):
+                self.out('result', val)
+
+        class Workchain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.begin, cls.result)
+
+            def begin(self):
+                self.to_context(**{'sub1.sub2.result_a': self.submit(SimpleWc)})
+                return ToContext(**{'sub1.sub2.result_b': self.submit(SimpleWc)})
+
+            def result(self):
+                test_case.assertEqual(self.ctx.sub1.sub2.result_a.outputs.result, val)
+                test_case.assertEqual(self.ctx.sub1.sub2.result_b.outputs.result, val)
+
+        run_and_check_success(Workchain)
+
+    def test_nested_to_context_with_append(self):
+        val1 = Int(5).store()
+        val2 = Int(6).store()
+
+        test_case = self
+
+        class SimpleWc1(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.result)
+                spec.outputs.dynamic = True
+
+            def result(self):
+                self.out('result', val1)
+
+        class SimpleWc2(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.result)
+                spec.outputs.dynamic = True
+
+            def result(self):
+                self.out('result', val2)
+
+        class Workchain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.begin, cls.result)
+
+            def begin(self):
+                self.to_context(**{'sub1.workchains': append_(self.submit(SimpleWc1))})
+                return ToContext(**{'sub1.workchains': append_(self.submit(SimpleWc2))})
+
+            def result(self):
+                test_case.assertEqual(self.ctx.sub1.workchains[0].outputs.result, val1)
+                test_case.assertEqual(self.ctx.sub1.workchains[1].outputs.result, val2)
+
+        run_and_check_success(Workchain)
+
+    def test_nested_to_context_no_overlap(self):
+        val = Int(5).store()
+
+        class SimpleWc(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.result)
+                spec.outputs.dynamic = True
+
+            def result(self):
+                self.out('result', val)
+
+        class Workchain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.begin, cls.result)
+
+            def begin(self):
+                self.to_context(**{'result_a': self.submit(SimpleWc)})
+                return ToContext(**{'result_a.sub1': self.submit(SimpleWc)})
+
+            def result(self):
+                raise RuntimeError('Never reached: the second to_context above should fail')
+
+        process = Workchain()
+        with pytest.raises(ValueError):
+            launch.run(process)
+
+    def test_nested_to_context_no_overlap_with_append(self):
+        val = Int(5).store()
+
+        class SimpleWc(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.result)
+                spec.outputs.dynamic = True
+
+            def result(self):
+                self.out('result', val)
+
+        class Workchain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.begin, cls.result)
+
+            def begin(self):
+                self.to_context(workchains=append_(self.submit(SimpleWc)))  # make the workchains point to a list
+                return ToContext(**{'workchains.sub1.sub2': self.submit(SimpleWc)})  # now try to treat it as a sub-dict
+
+            def result(self):
+                raise RuntimeError('Never reached: the second to_context above should fail')
+
+        process = Workchain()
+        with pytest.raises(ValueError):
+            launch.run(process)
+
+    def test_nested_to_context_no_overlap_with_append2(self):
+        val = Int(5).store()
+
+        class SimpleWc(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.result)
+                spec.outputs.dynamic = True
+
+            def result(self):
+                self.out('result', val)
+
+        class Workchain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.begin, cls.result)
+
+            def begin(self):
+                self.to_context(workchains=append_(self.submit(SimpleWc)))  # make the workchains point to a list
+                return ToContext(
+                    **{'workchains.sub1': self.submit(SimpleWc)}
+                )  # now try to treat the final path element it as a sub-dict
+
+            def result(self):
+                raise RuntimeError('Never reached: the second to_context above should fail')
+
+        process = Workchain()
+        with pytest.raises(ValueError):
+            launch.run(process)
+
     def test_namespace_nondb_mapping(self):
         """
         Regression test for a bug in _flatten_inputs
@@ -826,12 +1014,12 @@ class TestWorkchain(AiidaTestCase):
         wc = ExitCodeWorkChain()
 
         # The exit code can be gotten by calling it with the status or label, as well as using attribute dereferencing
-        self.assertEqual(wc.exit_codes(status).status, status)
-        self.assertEqual(wc.exit_codes(label).status, status)
-        self.assertEqual(wc.exit_codes.SOME_EXIT_CODE.status, status)
+        self.assertEqual(wc.exit_codes(status).status, status)  # pylint: disable=too-many-function-args
+        self.assertEqual(wc.exit_codes(label).status, status)  # pylint: disable=too-many-function-args
+        self.assertEqual(wc.exit_codes.SOME_EXIT_CODE.status, status)  # pylint: disable=no-member
 
         with self.assertRaises(AttributeError):
-            wc.exit_codes.NON_EXISTENT_ERROR  # pylint: disable=pointless-statement
+            wc.exit_codes.NON_EXISTENT_ERROR  # pylint: disable=no-member,pointless-statement
 
         self.assertEqual(ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.status, status)  # pylint: disable=no-member
         self.assertEqual(ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.message, message)  # pylint: disable=no-member
@@ -850,6 +1038,7 @@ class TestWorkchain(AiidaTestCase):
         return proc.finished_steps
 
 
+@pytest.mark.requires_rmq
 class TestWorkChainAbort(AiidaTestCase):
     """
     Test the functionality to abort a workchain
@@ -926,6 +1115,7 @@ class TestWorkChainAbort(AiidaTestCase):
         self.assertEqual(process.node.is_killed, True)
 
 
+@pytest.mark.requires_rmq
 class TestWorkChainAbortChildren(AiidaTestCase):
     """
     Test the functionality to abort a workchain and verify that children
@@ -1018,6 +1208,7 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         self.assertEqual(process.node.is_killed, True)
 
 
+@pytest.mark.requires_rmq
 class TestImmutableInputWorkchain(AiidaTestCase):
     """
     Test that inputs cannot be modified
@@ -1123,6 +1314,7 @@ class SerializeWorkChain(WorkChain):
         assert self.inputs.test == self.inputs.reference
 
 
+@pytest.mark.requires_rmq
 class TestSerializeWorkChain(AiidaTestCase):
     """
     Test workchains with serialized input / output.
@@ -1249,6 +1441,7 @@ class ChildExposeWorkChain(WorkChain):
         self.out('c', self.inputs.c)
 
 
+@pytest.mark.requires_rmq
 class TestWorkChainExpose(AiidaTestCase):
     """
     Test the expose inputs / outputs functionality
@@ -1285,7 +1478,6 @@ class TestWorkChainExpose(AiidaTestCase):
             }
         )
 
-    @unittest.skip('Functionality of `Process.exposed_outputs` is broken for nested namespaces, see issue #3533.')
     def test_nested_expose(self):
         res = launch.run(
             GrandParentExposeWorkChain,
@@ -1360,6 +1552,7 @@ class TestWorkChainExpose(AiidaTestCase):
         launch.run(Child)
 
 
+@pytest.mark.requires_rmq
 class TestWorkChainMisc(AiidaTestCase):
 
     class PointlessWorkChain(WorkChain):
@@ -1396,6 +1589,7 @@ class TestWorkChainMisc(AiidaTestCase):
             launch.run(TestWorkChainMisc.IllegalSubmitWorkChain)
 
 
+@pytest.mark.requires_rmq
 class TestDefaultUniqueness(AiidaTestCase):
     """Test that default inputs of exposed nodes will get unique UUIDS."""
 

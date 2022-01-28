@@ -8,95 +8,60 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi database` commands."""
+# pylint: disable=unused-argument
 
 import click
 
-from aiida.common import exceptions
+from aiida.backends.general.migrations.duplicate_uuids import TABLES_UUID_DEDUPLICATION
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
-from aiida.cmdline.utils import decorators, echo
-from aiida.manage.database.integrity.duplicate_uuid import TABLES_UUID_DEDUPLICATION
+from aiida.cmdline.utils import decorators
 
 
 @verdi.group('database')
 def verdi_database():
-    """Inspect and manage the database."""
+    """Inspect and manage the database.
+
+    .. deprecated:: v2.0.0
+    """
 
 
 @verdi_database.command('version')
+@decorators.deprecated_command(
+    'This command has been deprecated and no longer has any effect. It will be removed soon from the CLI (in v2.1).\n'
+    'The same information is now available through `verdi status`.\n'
+)
 def database_version():
     """Show the version of the database.
 
     The database version is defined by the tuple of the schema generation and schema revision.
+
+    .. deprecated:: v2.0.0
     """
-    from aiida.manage.manager import get_manager
-
-    manager = get_manager()
-    manager._load_backend(schema_check=False)  # pylint: disable=protected-access
-    backend_manager = manager.get_backend_manager()
-
-    echo.echo('Generation: ', bold=True, nl=False)
-    echo.echo(backend_manager.get_schema_generation_database())
-    echo.echo('Revision:   ', bold=True, nl=False)
-    echo.echo(backend_manager.get_schema_version_database())
 
 
 @verdi_database.command('migrate')
 @options.FORCE()
-def database_migrate(force):
-    """Migrate the database to the latest schema version."""
-    from aiida.manage.manager import get_manager
-    from aiida.engine.daemon.client import get_daemon_client
+@click.pass_context
+@decorators.deprecated_command(
+    'This command has been deprecated and will be removed soon (in v3.0). '
+    'Please call `verdi storage migrate` instead.\n'
+)
+def database_migrate(ctx, force):
+    """Migrate the database to the latest schema version.
 
-    client = get_daemon_client()
-    if client.is_daemon_running:
-        echo.echo_critical('Migration aborted, the daemon for the profile is still running.')
-
-    manager = get_manager()
-    profile = manager.get_profile()
-    backend = manager._load_backend(schema_check=False)  # pylint: disable=protected-access
-
-    if force:
-        try:
-            backend.migrate()
-        except exceptions.ConfigurationError as exception:
-            echo.echo_critical(str(exception))
-        return
-
-    echo.echo_warning('Migrating your database might take a while and is not reversible.')
-    echo.echo_warning('Before continuing, make sure you have completed the following steps:')
-    echo.echo_warning('')
-    echo.echo_warning(' 1. Make sure you have no active calculations and workflows.')
-    echo.echo_warning(' 2. If you do, revert the code to the previous version and finish running them first.')
-    echo.echo_warning(' 3. Stop the daemon using `verdi daemon stop`')
-    echo.echo_warning(' 4. Make a backup of your database and repository')
-    echo.echo_warning('')
-    echo.echo_warning('', nl=False)
-
-    expected_answer = 'MIGRATE NOW'
-    confirm_message = 'If you have completed the steps above and want to migrate profile "{}", type {}'.format(
-        profile.name, expected_answer
-    )
-
-    try:
-        response = click.prompt(confirm_message)
-        while response != expected_answer:
-            response = click.prompt(confirm_message)
-    except click.Abort:
-        echo.echo('\n')
-        echo.echo_critical('Migration aborted, the data has not been affected.')
-    else:
-        try:
-            backend.migrate()
-        except exceptions.ConfigurationError as exception:
-            echo.echo_critical(str(exception))
-        else:
-            echo.echo_success('migration completed')
+    .. deprecated:: v2.0.0
+    """
+    from aiida.cmdline.commands.cmd_storage import storage_migrate
+    ctx.forward(storage_migrate)
 
 
 @verdi_database.group('integrity')
 def verdi_database_integrity():
-    """Check the integrity of the database and fix potential issues."""
+    """Check the integrity of the database and fix potential issues.
+
+    .. deprecated:: v2.0.0
+    """
 
 
 @verdi_database_integrity.command('detect-duplicate-uuid')
@@ -110,6 +75,10 @@ def verdi_database_integrity():
 @click.option(
     '-a', '--apply-patch', is_flag=True, help='Actually apply the proposed changes instead of performing a dry run.'
 )
+@decorators.deprecated_command(
+    'This command has been deprecated and no longer has any effect. It will be removed soon from the CLI (in v2.1).\n'
+    'For remaining available integrity checks, use `verdi storage integrity` instead.\n'
+)
 def detect_duplicate_uuid(table, apply_patch):
     """Detect and fix entities with duplicate UUIDs.
 
@@ -119,78 +88,45 @@ def detect_duplicate_uuid(table, apply_patch):
     constraint on UUIDs on the database level. However, this would leave databases created before this patch with
     duplicate UUIDs in an inconsistent state. This command will run an analysis to detect duplicate UUIDs in a given
     table and solve it by generating new UUIDs. Note that it will not delete or merge any rows.
+
+
+    .. deprecated:: v2.0.0
     """
-    from aiida.manage.database.integrity.duplicate_uuid import deduplicate_uuids
-    from aiida.manage.manager import get_manager
-
-    manager = get_manager()
-    manager._load_backend(schema_check=False)  # pylint: disable=protected-access
-
-    try:
-        messages = deduplicate_uuids(table=table, dry_run=not apply_patch)
-    except Exception as exception:  # pylint: disable=broad-except
-        echo.echo_critical(f'integrity check failed: {str(exception)}')
-    else:
-        for message in messages:
-            echo.echo_info(message)
-
-        if apply_patch:
-            echo.echo_success('integrity patch completed')
-        else:
-            echo.echo_success('dry-run of integrity patch completed')
 
 
 @verdi_database_integrity.command('detect-invalid-links')
 @decorators.with_dbenv()
+@decorators.deprecated_command(
+    'This command has been deprecated and no longer has any effect. It will be removed soon from the CLI (in v2.1).\n'
+    'For remaining available integrity checks, use `verdi storage integrity` instead.\n'
+)
 def detect_invalid_links():
-    """Scan the database for invalid links."""
-    from tabulate import tabulate
+    """Scan the database for invalid links.
 
-    from aiida.manage.database.integrity.sql.links import INVALID_LINK_SELECT_STATEMENTS
-    from aiida.manage.manager import get_manager
-
-    integrity_violated = False
-
-    backend = get_manager().get_backend()
-
-    for check in INVALID_LINK_SELECT_STATEMENTS:
-
-        result = backend.execute_prepared_statement(check.sql, check.parameters)
-
-        if result:
-            integrity_violated = True
-            echo.echo_warning(f'{check.message}:\n')
-            echo.echo(tabulate(result, headers=check.headers))
-
-    if not integrity_violated:
-        echo.echo_success('no integrity violations detected')
-    else:
-        echo.echo_critical('one or more integrity violations detected')
+    .. deprecated:: v2.0.0
+    """
 
 
 @verdi_database_integrity.command('detect-invalid-nodes')
 @decorators.with_dbenv()
+@decorators.deprecated_command(
+    'This command has been deprecated and no longer has any effect. It will be removed soon from the CLI (in v2.1).\n'
+    'For remaining available integrity checks, use `verdi storage integrity` instead.\n'
+)
 def detect_invalid_nodes():
-    """Scan the database for invalid nodes."""
-    from tabulate import tabulate
+    """Scan the database for invalid nodes.
 
-    from aiida.manage.database.integrity.sql.nodes import INVALID_NODE_SELECT_STATEMENTS
-    from aiida.manage.manager import get_manager
+    .. deprecated:: v2.0.0
+    """
 
-    integrity_violated = False
 
-    backend = get_manager().get_backend()
+@verdi_database.command('summary')
+@decorators.deprecated_command(
+    'This command has been deprecated and no longer has any effect. It will be removed soon from the CLI (in v2.1).\n'
+    'Please call `verdi storage info` instead.\n'
+)
+def database_summary():
+    """Summarise the entities in the database.
 
-    for check in INVALID_NODE_SELECT_STATEMENTS:
-
-        result = backend.execute_prepared_statement(check.sql, check.parameters)
-
-        if result:
-            integrity_violated = True
-            echo.echo_warning(f'{check.message}:\n')
-            echo.echo(tabulate(result, headers=check.headers))
-
-    if not integrity_violated:
-        echo.echo_success('no integrity violations detected')
-    else:
-        echo.echo_critical('one or more integrity violations detected')
+    .. deprecated:: v2.0.0
+    """

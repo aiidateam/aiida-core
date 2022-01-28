@@ -12,13 +12,19 @@
 #from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ValidationError
-from aiida.tools.data.orbital import Orbital
-
 from aiida.plugins import OrbitalFactory
+from aiida.tools.data.orbital import Orbital
 
 
 class TestOrbital(AiidaTestCase):
     """Test the Orbital base class"""
+
+    def test_orbital_str(self):
+        """"Test the output of __str__ method"""
+        orbital = Orbital(position=(1, 2, 3))
+        expected_output = 'Orbital @ 1.0000,2.0000,3.0000'
+
+        self.assertEqual(str(orbital), expected_output)
 
     def test_required_fields(self):
         """Verify that required fields are validated."""
@@ -51,7 +57,7 @@ class TestRealhydrogenOrbital(AiidaTestCase):
 
     def test_required_fields(self):
         """Verify that required fields are validated."""
-        RealhydrogenOrbital = OrbitalFactory('realhydrogen')  # pylint: disable=invalid-name
+        RealhydrogenOrbital = OrbitalFactory('core.realhydrogen')  # pylint: disable=invalid-name
         # Check that the required fields of the base class are not enough
         with self.assertRaises(ValidationError):
             RealhydrogenOrbital(position=(1, 2, 3))
@@ -73,7 +79,7 @@ class TestRealhydrogenOrbital(AiidaTestCase):
 
     def test_validation_for_fields(self):
         """Verify that the values are properly validated"""
-        RealhydrogenOrbital = OrbitalFactory('realhydrogen')  # pylint: disable=invalid-name
+        RealhydrogenOrbital = OrbitalFactory('core.realhydrogen')  # pylint: disable=invalid-name
 
         with self.assertRaises(ValidationError) as exc:
             RealhydrogenOrbital(
@@ -113,7 +119,7 @@ class TestRealhydrogenOrbital(AiidaTestCase):
         Testing (some of) the optional parameters to check that the functionality works
         (they are indeed optional but accepted if specified, they are validated, ...)
         """
-        RealhydrogenOrbital = OrbitalFactory('realhydrogen')  # pylint: disable=invalid-name
+        RealhydrogenOrbital = OrbitalFactory('core.realhydrogen')  # pylint: disable=invalid-name
 
         orbital = RealhydrogenOrbital(
             **{
@@ -168,7 +174,7 @@ class TestRealhydrogenOrbital(AiidaTestCase):
 
     def test_unknown_fields(self):
         """Verify that unkwown fields raise a validation error."""
-        RealhydrogenOrbital = OrbitalFactory('realhydrogen')  # pylint: disable=invalid-name
+        RealhydrogenOrbital = OrbitalFactory('core.realhydrogen')  # pylint: disable=invalid-name
 
         with self.assertRaises(ValidationError) as exc:
             RealhydrogenOrbital(
@@ -186,7 +192,7 @@ class TestRealhydrogenOrbital(AiidaTestCase):
         """
         Test if the function ``get_name_from_quantum_numbers`` works as expected
         """
-        RealhydrogenOrbital = OrbitalFactory('realhydrogen')  # pylint: disable=invalid-name
+        RealhydrogenOrbital = OrbitalFactory('core.realhydrogen')  # pylint: disable=invalid-name
 
         name = RealhydrogenOrbital.get_name_from_quantum_numbers(angular_momentum=1)
         self.assertEqual(name, 'P')

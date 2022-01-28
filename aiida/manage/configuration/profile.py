@@ -9,10 +9,19 @@
 ###########################################################################
 """AiiDA profile related code"""
 import collections
+from copy import deepcopy
 import os
+import pathlib
+from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional
 
 from aiida.common import exceptions
+from aiida.common.lang import classproperty
+
+from .options import parse_option
 from .settings import DAEMON_DIR, DAEMON_LOG_DIR
+
+if TYPE_CHECKING:
+    from aiida.repository import Repository  # pylint: disable=ungrouped-imports
 
 __all__ = ('Profile',)
 
@@ -30,226 +39,117 @@ CIRCUS_STATS_SOCKET_TEMPLATE = 'circus.s.sock'
 class Profile:  # pylint: disable=too-many-public-methods
     """Class that models a profile as it is stored in the configuration file of an AiiDA instance."""
 
-    RMQ_PREFIX = 'aiida-{uuid}'
-    KEY_OPTIONS = 'options'
     KEY_UUID = 'PROFILE_UUID'
-    KEY_DEFAULT_USER = 'default_user_email'
-    KEY_DATABASE_ENGINE = 'AIIDADB_ENGINE'
-    KEY_DATABASE_BACKEND = 'AIIDADB_BACKEND'
-    KEY_DATABASE_NAME = 'AIIDADB_NAME'
-    KEY_DATABASE_PORT = 'AIIDADB_PORT'
-    KEY_DATABASE_HOSTNAME = 'AIIDADB_HOST'
-    KEY_DATABASE_USERNAME = 'AIIDADB_USER'
-    KEY_DATABASE_PASSWORD = 'AIIDADB_PASS'  # noqa
-    KEY_BROKER_PROTOCOL = 'broker_protocol'
-    KEY_BROKER_USERNAME = 'broker_username'
-    KEY_BROKER_PASSWORD = 'broker_password'  # noqa
-    KEY_BROKER_HOST = 'broker_host'
-    KEY_BROKER_PORT = 'broker_port'
-    KEY_BROKER_VIRTUAL_HOST = 'broker_virtual_host'
-    KEY_BROKER_PARAMETERS = 'broker_parameters'
-    KEY_REPOSITORY_URI = 'AIIDADB_REPOSITORY_URI'
+    KEY_DEFAULT_USER_EMAIL = 'default_user_email'
+    KEY_STORAGE = 'storage'
+    KEY_PROCESS = 'process_control'
+    KEY_STORAGE_BACKEND = 'backend'
+    KEY_STORAGE_CONFIG = 'config'
+    KEY_PROCESS_BACKEND = 'backend'
+    KEY_PROCESS_CONFIG = 'config'
+    KEY_OPTIONS = 'options'
 
-    # A mapping of valid attributes to the key under which they are stored in the configuration dictionary
-    _map_config_to_internal = {
-        KEY_OPTIONS: 'options',
-        KEY_UUID: 'uuid',
-        KEY_DEFAULT_USER: 'default_user',
-        KEY_DATABASE_ENGINE: 'database_engine',
-        KEY_DATABASE_BACKEND: 'database_backend',
-        KEY_DATABASE_NAME: 'database_name',
-        KEY_DATABASE_PORT: 'database_port',
-        KEY_DATABASE_HOSTNAME: 'database_hostname',
-        KEY_DATABASE_USERNAME: 'database_username',
-        KEY_DATABASE_PASSWORD: 'database_password',
-        KEY_BROKER_PROTOCOL: 'broker_protocol',
-        KEY_BROKER_USERNAME: 'broker_username',
-        KEY_BROKER_PASSWORD: 'broker_password',
-        KEY_BROKER_HOST: 'broker_host',
-        KEY_BROKER_PORT: 'broker_port',
-        KEY_BROKER_VIRTUAL_HOST: 'broker_virtual_host',
-        KEY_BROKER_PARAMETERS: 'broker_parameters',
-        KEY_REPOSITORY_URI: 'repository_uri',
-    }
+    # keys that are expected to be in the parsed configuration
+    REQUIRED_KEYS = (
+        KEY_STORAGE,
+        KEY_PROCESS,
+    )
 
-    @classmethod
-    def contains_unknown_keys(cls, dictionary):
-        """Return whether the profile dictionary contains any unsupported keys.
+    @classproperty
+    def defaults(cls):  # pylint: disable=no-self-use,no-self-argument
+        """Return the dictionary of default values for profile settings."""
+        return {
+            'repository': {
+                'pack_size_target': 4 * 1024 * 1024 * 1024,
+                'loose_prefix_len': 2,
+                'hash_type': 'sha256',
+                'compression_algorithm': 'zlib+1'
+            }
+        }
 
-        :param dictionary: a profile dictionary
-        :return: boolean, True when the dictionay contains unsupported keys
-        """
-        return set(dictionary.keys()) - set(cls._map_config_to_internal.keys())
-
-    def __init__(self, name, attributes, from_config=False):
-        if not isinstance(attributes, collections.abc.Mapping):
-            raise TypeError(f'attributes should be a mapping but is {type(attributes)}')
+    def __init__(self, name: str, config: Mapping[str, Any], validate=True):
+        """Load a profile with the profile configuration."""
+        if not isinstance(config, collections.abc.Mapping):
+            raise TypeError(f'config should be a mapping but is {type(config)}')
+        if validate and not set(config.keys()).issuperset(self.REQUIRED_KEYS):
+            raise exceptions.ConfigurationError(
+                f'profile {name!r} configuration does not contain all required keys: {self.REQUIRED_KEYS}'
+            )
 
         self._name = name
-        self._attributes = {}
-
-        for internal_key, value in attributes.items():
-            if from_config:
-                try:
-                    internal_key = self._map_config_to_internal[internal_key]
-                except KeyError:
-                    from aiida.cmdline.utils import echo
-                    echo.echo_warning(
-                        f'removed unsupported key `{internal_key}` with value `{value}` from profile `{name}`'
-                    )
-                    continue
-            setattr(self, internal_key, value)
+        self._attributes: Dict[str, Any] = deepcopy(config)
 
         # Create a default UUID if not specified
-        if self.uuid is None:
+        if self._attributes.get(self.KEY_UUID, None) is None:
             from uuid import uuid4
-            self.uuid = uuid4().hex
+            self._attributes[self.KEY_UUID] = uuid4().hex
 
         # Currently, whether a profile is a test profile is solely determined by its name starting with 'test_'
         self._test_profile = bool(self.name.startswith('test_'))
 
     @property
-    def uuid(self):
+    def uuid(self) -> str:
         """Return the profile uuid.
 
         :return: string UUID
         """
-        try:
-            return self._attributes[self.KEY_UUID]
-        except KeyError:
-            return None
+        return self._attributes[self.KEY_UUID]
 
     @uuid.setter
-    def uuid(self, value):
+    def uuid(self, value: str) -> None:
         self._attributes[self.KEY_UUID] = value
 
     @property
-    def default_user(self):
-        return self._attributes.get(self.KEY_DEFAULT_USER, None)
+    def default_user_email(self) -> Optional[str]:
+        """Return the default user email."""
+        return self._attributes.get(self.KEY_DEFAULT_USER_EMAIL, None)
 
-    @default_user.setter
-    def default_user(self, value):
-        self._attributes[self.KEY_DEFAULT_USER] = value
-
-    @property
-    def database_engine(self):
-        return self._attributes[self.KEY_DATABASE_ENGINE]
-
-    @database_engine.setter
-    def database_engine(self, value):
-        self._attributes[self.KEY_DATABASE_ENGINE] = value
+    @default_user_email.setter
+    def default_user_email(self, value: Optional[str]) -> None:
+        """Set the default user email."""
+        self._attributes[self.KEY_DEFAULT_USER_EMAIL] = value
 
     @property
-    def database_backend(self):
-        return self._attributes[self.KEY_DATABASE_BACKEND]
-
-    @database_backend.setter
-    def database_backend(self, value):
-        self._attributes[self.KEY_DATABASE_BACKEND] = value
+    def storage_backend(self) -> str:
+        """Return the type of the storage backend."""
+        return self._attributes[self.KEY_STORAGE][self.KEY_STORAGE_BACKEND]
 
     @property
-    def database_name(self):
-        return self._attributes[self.KEY_DATABASE_NAME]
+    def storage_config(self) -> Dict[str, Any]:
+        """Return the configuration required by the storage backend."""
+        return self._attributes[self.KEY_STORAGE][self.KEY_STORAGE_CONFIG]
 
-    @database_name.setter
-    def database_name(self, value):
-        self._attributes[self.KEY_DATABASE_NAME] = value
+    def set_storage(self, name: str, config: Dict[str, Any]) -> None:
+        """Set the storage backend and its configuration.
 
-    @property
-    def database_port(self):
-        return self._attributes[self.KEY_DATABASE_PORT]
-
-    @database_port.setter
-    def database_port(self, value):
-        self._attributes[self.KEY_DATABASE_PORT] = value
-
-    @property
-    def database_hostname(self):
-        return self._attributes[self.KEY_DATABASE_HOSTNAME]
-
-    @database_hostname.setter
-    def database_hostname(self, value):
-        self._attributes[self.KEY_DATABASE_HOSTNAME] = value
+        :param name: the name of the storage backend
+        :param config: the configuration of the storage backend
+        """
+        # to-do validation (by loading the storage backend, and using a classmethod to validate the config)
+        self._attributes.setdefault(self.KEY_STORAGE, {})
+        self._attributes[self.KEY_STORAGE][self.KEY_STORAGE_BACKEND] = name
+        self._attributes[self.KEY_STORAGE][self.KEY_STORAGE_CONFIG] = config
 
     @property
-    def database_username(self):
-        return self._attributes[self.KEY_DATABASE_USERNAME]
-
-    @database_username.setter
-    def database_username(self, value):
-        self._attributes[self.KEY_DATABASE_USERNAME] = value
+    def process_control_backend(self) -> str:
+        """Return the type of the process control backend."""
+        return self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_BACKEND]
 
     @property
-    def database_password(self):
-        return self._attributes[self.KEY_DATABASE_PASSWORD]
+    def process_control_config(self) -> Dict[str, Any]:
+        """Return the configuration required by the process control backend."""
+        return self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_CONFIG]
 
-    @database_password.setter
-    def database_password(self, value):
-        self._attributes[self.KEY_DATABASE_PASSWORD] = value
+    def set_process_controller(self, name: str, config: Dict[str, Any]) -> None:
+        """Set the process control backend and its configuration.
 
-    @property
-    def broker_protocol(self):
-        return self._attributes[self.KEY_BROKER_PROTOCOL]
-
-    @broker_protocol.setter
-    def broker_protocol(self, value):
-        self._attributes[self.KEY_BROKER_PROTOCOL] = value
-
-    @property
-    def broker_host(self):
-        return self._attributes[self.KEY_BROKER_HOST]
-
-    @broker_host.setter
-    def broker_host(self, value):
-        self._attributes[self.KEY_BROKER_HOST] = value
-
-    @property
-    def broker_port(self):
-        return self._attributes[self.KEY_BROKER_PORT]
-
-    @broker_port.setter
-    def broker_port(self, value):
-        self._attributes[self.KEY_BROKER_PORT] = value
-
-    @property
-    def broker_username(self):
-        return self._attributes[self.KEY_BROKER_USERNAME]
-
-    @broker_username.setter
-    def broker_username(self, value):
-        self._attributes[self.KEY_BROKER_USERNAME] = value
-
-    @property
-    def broker_password(self):
-        return self._attributes[self.KEY_BROKER_PASSWORD]
-
-    @broker_password.setter
-    def broker_password(self, value):
-        self._attributes[self.KEY_BROKER_PASSWORD] = value
-
-    @property
-    def broker_virtual_host(self):
-        return self._attributes[self.KEY_BROKER_VIRTUAL_HOST]
-
-    @broker_virtual_host.setter
-    def broker_virtual_host(self, value):
-        self._attributes[self.KEY_BROKER_VIRTUAL_HOST] = value
-
-    @property
-    def broker_parameters(self):
-        return self._attributes.get(self.KEY_BROKER_PARAMETERS, {})
-
-    @broker_parameters.setter
-    def broker_parameters(self, value):
-        self._attributes[self.KEY_BROKER_PARAMETERS] = value
-
-    @property
-    def repository_uri(self):
-        return self._attributes[self.KEY_REPOSITORY_URI]
-
-    @repository_uri.setter
-    def repository_uri(self, value):
-        self._attributes[self.KEY_REPOSITORY_URI] = value
+        :param name: the name of the process backend
+        :param config: the configuration of the process backend
+        """
+        # to-do validation (by loading the process backend, and using a classmethod to validate the config)
+        self._attributes.setdefault(self.KEY_PROCESS, {})
+        self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_BACKEND] = name
+        self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_CONFIG] = config
 
     @property
     def options(self):
@@ -270,8 +170,9 @@ class Profile:  # pylint: disable=too-many-public-methods
         :param option_value: the option value
         :param override: boolean, if False, will not override the option if it already exists
         """
+        _, parsed_value = parse_option(option_key, value)  # ensure the value is validated
         if option_key not in self.options or override:
-            self.options[option_key] = value
+            self.options[option_key] = parsed_value
 
     def unset_option(self, option_key):
         self.options.pop(option_key, None)
@@ -285,7 +186,7 @@ class Profile:  # pylint: disable=too-many-public-methods
         return self._name
 
     @property
-    def dictionary(self):
+    def dictionary(self) -> Dict[str, Any]:
         """Return the profile attributes as a dictionary with keys as it is stored in the config
 
         :return: the profile configuration dictionary
@@ -293,15 +194,7 @@ class Profile:  # pylint: disable=too-many-public-methods
         return self._attributes
 
     @property
-    def rmq_prefix(self):
-        """Return the prefix that should be used for RMQ resources
-
-        :return: the rmq prefix string
-        """
-        return self.RMQ_PREFIX.format(uuid=self.uuid)
-
-    @property
-    def is_test_profile(self):
+    def is_test_profile(self) -> bool:
         """Return whether the profile is a test profile
 
         :return: boolean, True if test profile, False otherwise
@@ -309,12 +202,12 @@ class Profile:  # pylint: disable=too-many-public-methods
         return self._test_profile
 
     @property
-    def repository_path(self):
+    def repository_path(self) -> pathlib.Path:
         """Return the absolute path of the repository configured for this profile.
 
         :return: absolute filepath of the profile's file repository
         """
-        return self._parse_repository_uri()[1]
+        return pathlib.Path(self._parse_repository_uri()[1])
 
     def _parse_repository_uri(self):
         """
@@ -326,7 +219,7 @@ class Profile:  # pylint: disable=too-many-public-methods
         """
         from urllib.parse import urlparse
 
-        parts = urlparse(self.repository_uri)
+        parts = urlparse(self.storage_config['repository_uri'])
 
         if parts.scheme != 'file':
             raise exceptions.ConfigurationError('invalid repository protocol, only the local `file://` is supported')
@@ -336,29 +229,19 @@ class Profile:  # pylint: disable=too-many-public-methods
 
         return parts.scheme, os.path.expanduser(parts.path)
 
-    def get_rmq_url(self):
+    @property
+    def rmq_prefix(self) -> str:
+        """Return the prefix that should be used for RMQ resources
+
+        :return: the rmq prefix string
+        """
+        return f'aiida-{self.uuid}'
+
+    def get_rmq_url(self) -> str:
         from aiida.manage.external.rmq import get_rmq_url
-        return get_rmq_url(
-            protocol=self.broker_protocol,
-            username=self.broker_username,
-            password=self.broker_password,
-            host=self.broker_host,
-            port=self.broker_port,
-            virtual_host=self.broker_virtual_host,
-            **self.broker_parameters
-        )
-
-    def configure_repository(self):
-        """Validates the configured repository and in the case of a file system repo makes sure the folder exists."""
-        import errno
-
-        try:
-            os.makedirs(self.repository_path)
-        except OSError as exception:
-            if exception.errno != errno.EEXIST:
-                raise exceptions.ConfigurationError(
-                    f'could not create the configured repository `{self.repository_path}`: {str(exception)}'
-                )
+        kwargs = {key[7:]: val for key, val in self.process_control_config.items() if key.startswith('broker_')}
+        additional_kwargs = kwargs.pop('parameters', {})
+        return get_rmq_url(**kwargs, **additional_kwargs)
 
     @property
     def filepaths(self):

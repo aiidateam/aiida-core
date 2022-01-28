@@ -3,7 +3,6 @@ name: test-install
 on:
   pull_request:
     paths:
-      - 'setup.*'
       - 'environment.yml'
       - '**/requirements*.txt'
       - 'pyproject.toml'
@@ -28,13 +27,72 @@ jobs:
     - name: Set up Python 3.9
       uses: actions/setup-python@v2
       with:
-        python-version: 3.9
+        python-version: '3.9'
 
-    - name: Install dm-script dependencies
-      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 tomlkit
+    - name: Install utils/ dependencies
+      run: pip install -r utils/requirements.txt
 
     - name: Validate
-      run: python ./utils/dependency_management.py validate-all
+      run: |
+        python ./utils/dependency_management.py check-requirements
+        python ./utils/dependency_management.py validate-all
+
+  resolve-pip-dependencies:
+    # Check whether the environments defined in the requirements/* files are
+    # resolvable.
+    #
+    # This job should use the planned `pip resolve` command once released:
+    # https://github.com/pypa/pip/issues/7819
+
+    needs: [validate-dependency-specification]
+    if: github.repository == 'aiidateam/aiida-core'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.8', '3.9', '3.10']
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Upgrade pip and setuptools
+      run: |
+        pip install --upgrade pip setuptools
+        pip --version
+
+    - name: Create environment from requirements file.
+      run: |
+        pip install -r requirements/requirements-py-${{ matrix.python-version }}.txt
+        pip freeze
+
+  create-conda-environment:
+    # Verify that we can create a valid conda environment from the environment.yml file.
+
+    needs: [validate-dependency-specification]
+    if: github.repository == 'aiidateam/aiida-core'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Conda
+      uses: s-weigand/setup-conda@v1
+      with:
+        conda-channels: conda-forge
+
+    - run: conda --version
+
+    - name: Test conda environment
+      run: |
+        conda env create --dry-run -f environment.yml -n test-environment
 
   install-with-pip:
 
@@ -55,7 +113,7 @@ jobs:
     - name: Set up Python 3.8
       uses: actions/setup-python@v2
       with:
-        python-version: 3.8
+        python-version: '3.8'
 
     - name: Pip install
       id: pip_install
@@ -69,21 +127,28 @@ jobs:
       run:
         python -c "import aiida"
 
-    - name: Send Slack notification
-      if: ${{ failure() && github.event_name == 'schedule' }}
-      uses: kpritam/slack-job-status-action@v1
-      with:
-        job-status: ${{ job.status }}
-        slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
-        channel: dev-aiida-core
-
   install-with-conda:
+    # Verify that we can install AiiDA with conda.
 
     if: github.repository == 'aiidateam/aiida-core'
     runs-on: ubuntu-latest
-    name: install-with-conda
-
     timeout-minutes: 5
+
+    strategy:
+      fail-fast: false
+      matrix:
+
+        python-version: ['3.8', '3.9', '3.10']
+
+        # Not being able to install with conda on a specific Python version is
+        # not sufficient to fail the run, but something we want to be aware of.
+        optional: [true]
+
+        include:
+          # Installing with conda without specyfing the Python version should
+          # not fail since this is advocated as part of the user documentation.
+          - python-version: ''
+            optional: false
 
     steps:
     - uses: actions/checkout@v2
@@ -91,42 +156,33 @@ jobs:
     - name: Setup Conda
       uses: s-weigand/setup-conda@v1
       with:
-        python-version: 3.9
-        update-conda: false
         conda-channels: conda-forge
+
     - run: conda --version
-    - run: python --version
-    - run: which python
 
-    - name: Create conda environment
-      run: |
-        conda env create -f environment.yml -n test-environment
-        source activate test-environment
-        python -m pip install --no-deps -e .
+    - name: Test installation
+      id: test_installation
+      continue-on-error: ${{ matrix.optional }}
+      run: >
+        conda create --dry-run -n test-install aiida-core
+        ${{ matrix.python-version && format('python={0}', matrix.python-version) }}
 
-    - name: Test importing aiida
-      run: |
-        source activate test-environment
-        python -c "import aiida"
-
-    - name: Send Slack notification
-      if: ${{ failure() && github.event_name == 'schedule' }}
-      uses: kpritam/slack-job-status-action@v1
-      with:
-        job-status: ${{ job.status }}
-        slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
-        channel: dev-aiida-core
+    - name: Warn about failure
+      if: steps.test_installation.outcome == 'Failure'
+      run: >
+        echo "::warning ::Failed conda installation for
+        Python ${{ matrix.python-version }}."
 
   tests:
 
-    needs: [install-with-pip, install-with-conda]
+    needs: [install-with-pip]
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 30
 
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: ['3.8', '3.9', '3.10']
         backend: ['django', 'sqlalchemy']
 
     services:
@@ -147,6 +203,10 @@ jobs:
         image: rabbitmq:latest
         ports:
           - 5672:5672
+      slurm:
+        image: xenonmiddleware/slurm:17
+        ports:
+          - 5001:22
 
     steps:
     - uses: actions/checkout@v2
@@ -159,7 +219,7 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt update
-        sudo apt install postgresql-10 graphviz
+        sudo apt install postgresql graphviz
 
     - name: Upgrade pip and setuptools
       # It is crucial to update `setuptools` or the installation of `pymatgen` can break
@@ -170,7 +230,6 @@ jobs:
     - name: Install aiida-core
       run: |
         pip install -e .[atomic_tools,docs,notebook,rest,tests]
-        reentry scan
 
     - run: pip freeze
 
@@ -186,27 +245,19 @@ jobs:
       run:
         .github/workflows/tests.sh
 
-    - name: Send Slack notification
-      if: ${{ failure() && github.event_name == 'schedule' }}
-      uses: kpritam/slack-job-status-action@v1
-      with:
-        job-status: ${{ job.status }}
-        slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
-        channel: dev-aiida-core
-
     - name: Freeze test environment
       run: pip freeze | sed '1d' | tee requirements-py-${{ matrix.python-version }}.txt
 
     # Add python-version specific requirements/ file to the requirements.txt artifact.
     # This artifact can be used in the next step to automatically create a pull request
-    # updating the requirements (in case they are  inconsistent with the setup.json file).
+    # updating the requirements (in case they are  inconsistent with the pyproject.toml file).
     - uses: actions/upload-artifact@v1
       if: matrix.backend == 'django'  # The requirements are identical between backends.
       with:
         name: requirements.txt
         path: requirements-py-${{ matrix.python-version }}.txt
 
-# Check whether the requirements/ files are consistent with the dependency specification in the setup.json file.
+# Check whether the requirements/ files are consistent with the dependency specification in the pyproject.toml file.
 # If the check fails, warn the user via a comment and try to automatically create a pull request to update the files
 # (does not work on pull requests from forks).
 
@@ -225,8 +276,8 @@ jobs:
       with:
         python-version: 3.9
 
-    - name: Install dm-script dependencies
-      run: pip install packaging==20.3 click~=7.0 pyyaml~=5.1 tomlkit
+    - name: Install utils/ dependencies
+      run: pip install -r utils/requirements.txt
 
     - name: Check consistency of requirements/ files
       id: check_reqs
@@ -241,7 +292,7 @@ jobs:
       uses: peter-evans/commit-comment@v1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        path: setup.json
+        path: pyproject.toml
         body: |
           The requirements/ files are inconsistent!
 
@@ -269,16 +320,14 @@ jobs:
       if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
       id: create_update_requirements_pr
       continue-on-error: true
-      uses: peter-evans/create-pull-request@v2
+      uses: peter-evans/create-pull-request@v3
       with:
-        committer: GitHub <noreply@github.com>
-        author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
         branch: update-requirements
         commit-message: "Automated update of requirements/ files."
         title: "Update requirements/ files."
         body: |
           Update requirements files to ensure that they are consistent
-          with the dependencies specified in the 'setup.json' file.
+          with the dependencies specified in the 'pyproject.toml' file.
 
           Please note, that this pull request was likely created to
           resolve the inconsistency for a specific dependency, however
@@ -294,7 +343,7 @@ jobs:
         issue-number: ${{ github.event.number }}
         body: |
           I automatically created a pull request (#${{ steps.create_update_requirements_pr.outputs.pr_number }}) that adapts the
-          requirements/ files according to the dependencies specified in the 'setup.json' file.
+          requirements/ files according to the dependencies specified in the 'pyproject.toml' file.
 
     - name: Create PR comment on failure
       if: steps.create_update_requirements_pr.outcome == 'Failure'
@@ -303,4 +352,4 @@ jobs:
         issue-number: ${{ github.event.number }}
         body: |
           Please update the requirements/ files to ensure that they
-          are consistent with the dependencies specified in the 'setup.json' file.
+          are consistent with the dependencies specified in the 'pyproject.toml' file.

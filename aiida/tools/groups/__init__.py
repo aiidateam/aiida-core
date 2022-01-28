@@ -13,8 +13,21 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=wildcard-import,undefined-variable
 """Provides tools for interacting with AiiDA Groups."""
+
+# AUTO-GENERATED
+
+# yapf: disable
+# pylint: disable=wildcard-import
+
 from .paths import *
 
-__all__ = paths.__all__
+__all__ = (
+    'GroupNotFoundError',
+    'GroupNotUniqueError',
+    'GroupPath',
+    'InvalidPath',
+    'NoGroupsInPathError',
+)
+
+# yapf: enable

@@ -11,16 +11,18 @@
 
 import io
 
+import pytest
+
 from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common import LinkType
 from aiida.engine import CalcJob
 from aiida.parsers import Parser
-from aiida.plugins import CalculationFactory, ParserFactory
 from aiida.parsers.plugins.arithmetic.add import SimpleArithmeticAddParser  # for demonstration purposes only
+from aiida.plugins import CalculationFactory, ParserFactory
 
-ArithmeticAddCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
-ArithmeticAddParser = ParserFactory('arithmetic.add')  # pylint: disable=invalid-name
+ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
+ArithmeticAddParser = ParserFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 
 
 class CustomCalcJob(CalcJob):
@@ -86,6 +88,7 @@ class TestParser(AiidaTestCase):
         self.assertIn('output', outputs_for_parsing)
         self.assertEqual(outputs_for_parsing['output'].uuid, output.uuid)
 
+    @pytest.mark.requires_rmq
     def test_parse_from_node(self):
         """Test that the `parse_from_node` returns a tuple of the parsed output nodes and a calculation node.
 

@@ -11,8 +11,8 @@
 Translator for group
 """
 
-from aiida.restapi.translator.base import BaseTranslator
 from aiida import orm
+from aiida.restapi.translator.base import BaseTranslator
 
 
 class GroupTranslator(BaseTranslator):

@@ -8,26 +8,27 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SqlAlchemy implementation of the `BackendNode` and `BackendNodeCollection` classes."""
-
 # pylint: disable=no-name-in-module,import-error
 from datetime import datetime
-from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.exc import SQLAlchemyError
+from typing import Any, Dict, Iterable, Tuple
 
-from aiida.backends.sqlalchemy import get_scoped_session
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm.exc import NoResultFound
+
 from aiida.backends.sqlalchemy.models import node as models
 from aiida.common import exceptions
 from aiida.common.lang import type_check
-from aiida.orm.implementation.utils import clean_value
+from aiida.orm.implementation.sql.extras import SqlExtrasMixin
+from aiida.orm.implementation.utils import clean_value, validate_attribute_extra_key
 
-from .. import BackendNode, BackendNodeCollection
 from . import entities
 from . import utils as sqla_utils
+from .. import BackendNode, BackendNodeCollection
 from .computers import SqlaComputer
 from .users import SqlaUser
 
 
-class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
+class SqlaNode(entities.SqlaModelEntity[models.DbNode], SqlExtrasMixin, BackendNode):
     """SQLA Node backend entity"""
 
     # pylint: disable=too-many-public-methods
@@ -106,12 +107,55 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         return clone
 
     @property
-    def computer(self):
-        """Return the computer of this node.
+    def ctime(self):
+        return self._dbmodel.ctime
 
-        :return: the computer or None
-        :rtype: `BackendComputer` or None
-        """
+    @property
+    def mtime(self):
+        return self._dbmodel.mtime
+
+    @property
+    def uuid(self):
+        return str(self._dbmodel.uuid)
+
+    @property
+    def node_type(self):
+        return self._dbmodel.node_type
+
+    @property
+    def process_type(self):
+        return self._dbmodel.process_type
+
+    @process_type.setter
+    def process_type(self, value):
+        self._dbmodel.process_type = value
+
+    @property
+    def label(self):
+        return self._dbmodel.label
+
+    @label.setter
+    def label(self, value):
+        self._dbmodel.label = value
+
+    @property
+    def description(self):
+        return self._dbmodel.description
+
+    @description.setter
+    def description(self, value):
+        self._dbmodel.description = value
+
+    @property
+    def repository_metadata(self):
+        return self._dbmodel.repository_metadata or {}
+
+    @repository_metadata.setter
+    def repository_metadata(self, value):
+        self._dbmodel.repository_metadata = value
+
+    @property
+    def computer(self):
         try:
             return self.backend.computers.from_dbmodel(self._dbmodel.dbcomputer)
         except TypeError:
@@ -119,10 +163,6 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
 
     @computer.setter
     def computer(self, computer):
-        """Set the computer of this node.
-
-        :param computer: a `BackendComputer`
-        """
         type_check(computer, SqlaComputer, allow_none=True)
 
         if computer is not None:
@@ -132,32 +172,15 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
 
     @property
     def user(self):
-        """Return the user of this node.
-
-        :return: the user
-        :rtype: `BackendUser`
-        """
         return self.backend.users.from_dbmodel(self._dbmodel.user)
 
     @user.setter
     def user(self, user):
-        """Set the user of this node.
-
-        :param user: a `BackendUser`
-        """
         type_check(user, SqlaUser)
         self._dbmodel.user = user.dbmodel
 
     def add_incoming(self, source, link_type, link_label):
-        """Add a link of the given type from a given node to ourself.
-
-        :param source: the node from which the link is coming
-        :param link_type: the link type
-        :param link_label: the link label
-        :return: True if the proposed link is allowed, False otherwise
-        :raise aiida.common.ModificationNotAllowed: if either source or target node is not stored
-        """
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         type_check(source, SqlaNode)
 
@@ -171,15 +194,10 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         session.commit()
 
     def _add_link(self, source, link_type, link_label):
-        """Add a link of the given type from a given node to ourself.
-
-        :param source: the node from which the link is coming
-        :param link_type: the link type
-        :param link_label: the link label
-        """
+        """Add a single link"""
         from aiida.backends.sqlalchemy.models.node import DbLink
 
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             with session.begin_nested():
@@ -193,13 +211,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
         self._dbmodel.extras = clean_value(self._dbmodel.extras)
 
     def store(self, links=None, with_transaction=True, clean=True):  # pylint: disable=arguments-differ
-        """Store the node in the database.
-
-        :param links: optional links to add before storing
-        :param with_transaction: if False, do not use a transaction because the caller will already have opened one.
-        :param clean: boolean, if True, will clean the attributes and extras before attempting to store
-        """
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         if clean:
             self.clean_values()
@@ -219,6 +231,79 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], BackendNode):
 
         return self
 
+    @property
+    def attributes(self):
+        return self._dbmodel.attributes
+
+    def get_attribute(self, key: str) -> Any:
+        try:
+            return self._dbmodel.attributes[key]
+        except KeyError as exception:
+            raise AttributeError(f'attribute `{exception}` does not exist') from exception
+
+    def set_attribute(self, key: str, value: Any) -> None:
+        validate_attribute_extra_key(key)
+
+        if self.is_stored:
+            value = clean_value(value)
+
+        self._dbmodel.attributes[key] = value
+        self._flush_if_stored({'attributes'})
+
+    def set_attribute_many(self, attributes: Dict[str, Any]) -> None:
+        for key in attributes:
+            validate_attribute_extra_key(key)
+
+        if self.is_stored:
+            attributes = {key: clean_value(value) for key, value in attributes.items()}
+
+        for key, value in attributes.items():
+            # We need to use `self.dbmodel` without the underscore, because otherwise the second iteration will refetch
+            # what is in the database and we lose the initial changes.
+            self.dbmodel.attributes[key] = value
+        self._flush_if_stored({'attributes'})
+
+    def reset_attributes(self, attributes: Dict[str, Any]) -> None:
+        for key in attributes:
+            validate_attribute_extra_key(key)
+
+        if self.is_stored:
+            attributes = clean_value(attributes)
+
+        self.dbmodel.attributes = attributes
+        self._flush_if_stored({'attributes'})
+
+    def delete_attribute(self, key: str) -> None:
+        try:
+            self._dbmodel.attributes.pop(key)
+        except KeyError as exception:
+            raise AttributeError(f'attribute `{exception}` does not exist') from exception
+        else:
+            self._flush_if_stored({'attributes'})
+
+    def delete_attribute_many(self, keys: Iterable[str]) -> None:
+        non_existing_keys = [key for key in keys if key not in self._dbmodel.attributes]
+
+        if non_existing_keys:
+            raise AttributeError(f"attributes `{', '.join(non_existing_keys)}` do not exist")
+
+        for key in keys:
+            self.dbmodel.attributes.pop(key)
+
+        self._flush_if_stored({'attributes'})
+
+    def clear_attributes(self):
+        self._dbmodel.attributes = {}
+        self._flush_if_stored({'attributes'})
+
+    def attributes_items(self) -> Iterable[Tuple[str, Any]]:
+        for key, value in self._dbmodel.attributes.items():
+            yield key, value
+
+    def attributes_keys(self) -> Iterable[str]:
+        for key in self._dbmodel.attributes.keys():
+            yield key
+
 
 class SqlaNodeCollection(BackendNodeCollection):
     """The collection of Node entries."""
@@ -226,11 +311,7 @@ class SqlaNodeCollection(BackendNodeCollection):
     ENTITY_CLASS = SqlaNode
 
     def get(self, pk):
-        """Return a Node entry from the collection with the given id
-
-        :param pk: id of the node
-        """
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             return self.ENTITY_CLASS.from_dbmodel(session.query(models.DbNode).filter_by(id=pk).one(), self.backend)
@@ -238,11 +319,7 @@ class SqlaNodeCollection(BackendNodeCollection):
             raise exceptions.NotExistent(f"Node with pk '{pk}' not found") from NoResultFound
 
     def delete(self, pk):
-        """Remove a Node entry from the collection with the given id
-
-        :param pk: id of the node to delete
-        """
-        session = get_scoped_session()
+        session = self.backend.get_session()
 
         try:
             session.query(models.DbNode).filter_by(id=pk).one().delete()

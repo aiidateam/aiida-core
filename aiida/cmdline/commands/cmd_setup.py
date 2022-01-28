@@ -51,20 +51,27 @@ def setup(
     from aiida import orm
     from aiida.manage.configuration import get_config
 
-    profile.database_engine = db_engine
-    profile.database_backend = db_backend
-    profile.database_name = db_name
-    profile.database_port = db_port
-    profile.database_hostname = db_host
-    profile.database_username = db_username
-    profile.database_password = db_password
-    profile.broker_protocol = broker_protocol
-    profile.broker_username = broker_username
-    profile.broker_password = broker_password
-    profile.broker_host = broker_host
-    profile.broker_port = broker_port
-    profile.broker_virtual_host = broker_virtual_host
-    profile.repository_uri = f'file://{repository}'
+    profile.set_storage(
+        db_backend, {
+            'database_engine': db_engine,
+            'database_hostname': db_host,
+            'database_port': db_port,
+            'database_name': db_name,
+            'database_username': db_username,
+            'database_password': db_password,
+            'repository_uri': f'file://{repository}',
+        }
+    )
+    profile.set_process_controller(
+        'rabbitmq', {
+            'broker_protocol': broker_protocol,
+            'broker_username': broker_username,
+            'broker_password': broker_password,
+            'broker_host': broker_host,
+            'broker_port': broker_port,
+            'broker_virtual_host': broker_virtual_host,
+        }
+    )
 
     config = get_config()
 
@@ -77,8 +84,9 @@ def setup(
     echo.echo_success(f'created new profile `{profile.name}`.')
 
     # Migrate the database
-    echo.echo_info('migrating the database.')
-    backend = get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
+    echo.echo_report('migrating the database.')
+    manager = get_manager()
+    backend = manager._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access
 
     try:
         backend.migrate()
@@ -89,11 +97,24 @@ def setup(
     else:
         echo.echo_success('database migration completed.')
 
+    # Retrieve the repository UUID from the database. If set, this means this database is associated with the repository
+    # with that UUID and we have to make sure that the provided repository corresponds to it.
+    backend_manager = manager.get_backend_manager()
+    repository_uuid_database = backend_manager.get_repository_uuid()
+    repository_uuid_profile = backend.get_repository().uuid
+
+    if repository_uuid_database != repository_uuid_profile:
+        echo.echo_critical(
+            f'incompatible database and repository configured:\n'
+            f'Database `{db_name}` is associated with the repository with UUID `{repository_uuid_database}`\n'
+            f'However, the configured repository has UUID `{repository_uuid_profile}`.'
+        )
+
     # Optionally setting configuration default user settings
-    config.set_option('user.email', email, override=False)
-    config.set_option('user.first_name', first_name, override=False)
-    config.set_option('user.last_name', last_name, override=False)
-    config.set_option('user.institution', institution, override=False)
+    config.set_option('autofill.user.email', email, override=False)
+    config.set_option('autofill.user.first_name', first_name, override=False)
+    config.set_option('autofill.user.last_name', last_name, override=False)
+    config.set_option('autofill.user.institution', institution, override=False)
 
     # Create the user if it does not yet exist
     created, user = orm.User.objects.get_or_create(
@@ -101,7 +122,7 @@ def setup(
     )
     if created:
         user.store()
-    profile.default_user = user.email
+    profile.default_user_email = user.email
     config.update_profile(profile)
     config.store()
 

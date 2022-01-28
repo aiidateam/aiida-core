@@ -11,7 +11,7 @@
 """AiiDA manager for global settings"""
 import asyncio
 import functools
-from typing import Any, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     from kiwipy.rmq import RmqThreadCommunicator
@@ -19,11 +19,11 @@ if TYPE_CHECKING:
 
     from aiida.backends.manager import BackendManager
     from aiida.engine.daemon.client import DaemonClient
+    from aiida.engine.persistence import AiiDAPersister
     from aiida.engine.runners import Runner
     from aiida.manage.configuration.config import Config
     from aiida.manage.configuration.profile import Profile
     from aiida.orm.implementation import Backend
-    from aiida.engine.persistence import AiiDAPersister
 
 __all__ = ('get_manager', 'reset_manager')
 
@@ -99,20 +99,22 @@ class Manager:
         manager.reset_backend_environment()
         self._backend = None
 
-    def _load_backend(self, schema_check: bool = True) -> 'Backend':
+    def _load_backend(self, schema_check: bool = True, repository_check: bool = True) -> 'Backend':
         """Load the backend for the currently configured profile and return it.
 
         .. note:: this will reconstruct the `Backend` instance in `self._backend` so the preferred method to load the
             backend is to call `get_backend` which will create it only when not yet instantiated.
 
-        :param schema_check: force a database schema check if the database environment has not yet been loaded
-        :return: the database backend
-
+        :param schema_check: force a database schema check if the database environment has not yet been loaded.
+        :param repository_check: force a check that the database is associated with the repository that is configured
+            for the current profile.
+        :return: the database backend.
         """
-        from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
+        from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA, get_backend_manager
         from aiida.common import ConfigurationError, InvalidOperation
         from aiida.common.log import configure_logging
         from aiida.manage import configuration
+        from aiida.manage.profile_access import ProfileAccessManager
 
         profile = self.get_profile()
 
@@ -124,14 +126,16 @@ class Manager:
         if configuration.BACKEND_UUID is not None and configuration.BACKEND_UUID != profile.uuid:
             raise InvalidOperation('cannot load backend because backend of another profile is already loaded')
 
+        backend_manager = get_backend_manager(profile.storage_backend)
+
         # Do NOT reload the backend environment if already loaded, simply reload the backend instance after
         if configuration.BACKEND_UUID is None:
-            from aiida.backends import get_backend_manager
-            backend_manager = get_backend_manager(profile.database_backend)
+            access_manager = ProfileAccessManager(profile)
+            access_manager.request_access()
             backend_manager.load_backend_environment(profile, validate_schema=schema_check)
             configuration.BACKEND_UUID = profile.uuid
 
-        backend_type = profile.database_backend
+        backend_type = profile.storage_backend
 
         # Can only import the backend classes after the backend has been loaded
         if backend_type == BACKEND_DJANGO:
@@ -140,6 +144,25 @@ class Manager:
         elif backend_type == BACKEND_SQLA:
             from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
             self._backend = SqlaBackend()
+        else:
+            raise ValueError(f'unknown database backend type: {backend_type}')
+
+        # Perform the check on the repository compatibility. Since this is new functionality and the stability is not
+        # yet known, we issue a warning in the case the repo and database are incompatible. In the future this might
+        # then become an exception once we have verified that it is working reliably.
+        if repository_check and not profile.is_test_profile:
+            repository_uuid_config = self._backend.get_repository().uuid
+            repository_uuid_database = backend_manager.get_repository_uuid()
+
+            from aiida.cmdline.utils import echo
+            if repository_uuid_config != repository_uuid_database:
+                echo.echo_warning(
+                    f'the database and repository configured for profile `{profile.name}` are incompatible:\n\n'
+                    f'Repository UUID in profile:  {repository_uuid_config}\n'
+                    f'Repository UUID in database: {repository_uuid_database}\n\n'
+                    'Using a database with an incompatible repository will prevent AiiDA from functioning properly.\n'
+                    'Please make sure that the configuration of your profile is correct.\n'
+                )
 
         # Reconfigure the logging with `with_orm=True` to make sure that profile specific logging configuration options
         # are taken into account and the `DbLogHandler` is configured.
@@ -168,13 +191,16 @@ class Manager:
         from aiida.common import ConfigurationError
 
         if self._backend_manager is None:
-            self._load_backend()
+
+            if self._backend is None:
+                self._load_backend()
+
             profile = self.get_profile()
             if profile is None:
                 raise ConfigurationError(
                     'Could not determine the current profile. Consider loading a profile using `aiida.load_profile()`.'
                 )
-            self._backend_manager = get_backend_manager(profile.database_backend)
+            self._backend_manager = get_backend_manager(profile.storage_backend)
 
         return self._backend_manager
 
@@ -225,9 +251,10 @@ class Manager:
         :return: the communicator instance
 
         """
+        import kiwipy.rmq
+
         from aiida.common import ConfigurationError
         from aiida.manage.external import rmq
-        import kiwipy.rmq
 
         profile = self.get_profile()
         if profile is None:
@@ -243,7 +270,7 @@ class Manager:
         if with_orm:
             from aiida.orm.utils import serialize
             encoder = functools.partial(serialize.serialize, encoding='utf-8')
-            decoder = serialize.deserialize
+            decoder = serialize.deserialize_unsafe
         else:
             # used by verdi status to get a communicator without needing to load the dbenv
             from aiida.common import json
@@ -258,6 +285,7 @@ class Manager:
             task_exchange=rmq.get_task_exchange_name(prefix),
             task_queue=rmq.get_launch_queue_name(prefix),
             task_prefetch_count=task_prefetch_count,
+            async_task_timeout=self.get_config().get_option('rmq.task_timeout', profile.name),
             # This is needed because the verdi commands will call this function and when called in unit tests the
             # testing_mode cannot be set.
             testing_mode=profile.is_test_profile,
@@ -354,6 +382,7 @@ class Manager:
 
         """
         from plumpy.persistence import LoadSaveContext
+
         from aiida.engine import persistence
         from aiida.manage.external import rmq
 

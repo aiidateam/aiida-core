@@ -9,9 +9,10 @@
 ###########################################################################
 # pylint: disable=invalid-name,protected-access
 """Tests for the `SgeScheduler` plugin."""
-import unittest
 import logging
+import unittest
 
+from aiida.common.datastructures import CodeRunMode
 from aiida.schedulers.datastructures import JobState
 from aiida.schedulers.plugins.sge import SgeScheduler
 from aiida.schedulers.scheduler import SchedulerError, SchedulerParsingError
@@ -310,10 +311,12 @@ class TestCommand(unittest.TestCase):
         sge = SgeScheduler()
 
         job_tmpl = JobTemplate()
+        job_tmpl.codes_info = []
+        job_tmpl.codes_run_mode = CodeRunMode.SERIAL
         job_tmpl.job_resource = sge.create_job_resource(parallel_env='mpi8', tot_num_mpiprocs=16)
         job_tmpl.working_directory = '/home/users/dorigm7s/test'
         job_tmpl.submit_as_hold = None
-        job_tmpl.rerunnable = None
+        job_tmpl.rerunnable = False
         job_tmpl.email = None
         job_tmpl.email_on_started = None
         job_tmpl.email_on_terminated = None
@@ -325,17 +328,37 @@ class TestCommand(unittest.TestCase):
         job_tmpl.max_wallclock_seconds = '3600'  # "23:59:59"
         job_tmpl.job_environment = {'HOME': '/home/users/dorigm7s/', 'WIENROOT': '$HOME:/WIEN2k'}
 
-        submit_script_text = sge._get_submit_script_header(job_tmpl)
+        submit_script_text = sge.get_submit_script(job_tmpl)
 
         self.assertTrue('#$ -wd /home/users/dorigm7s/test' in submit_script_text)
         self.assertTrue('#$ -N BestJobEver' in submit_script_text)
         self.assertTrue('#$ -q FavQ.q' in submit_script_text)
         self.assertTrue('#$ -l h_rt=01:00:00' in submit_script_text)
-        # self.assertTrue( 'export HOME=/home/users/dorigm7s/'
-        #                 in submit_script_text )
         self.assertTrue('# ENVIRONMENT VARIABLES BEGIN ###' in submit_script_text)
         self.assertTrue("export HOME='/home/users/dorigm7s/'" in submit_script_text)
         self.assertTrue("export WIENROOT='$HOME:/WIEN2k'" in submit_script_text)
+        self.assertFalse('#$ -r yes' in submit_script_text)
+
+    def test_submit_script_rerunnable(self):  # pylint: disable=no-self-use
+        """Test the `rerunnable` option of the submit script."""
+        from aiida.schedulers.datastructures import JobTemplate
+
+        sge = SgeScheduler()
+
+        job_tmpl = JobTemplate()
+        job_tmpl.codes_info = []
+        job_tmpl.codes_run_mode = CodeRunMode.SERIAL
+        job_tmpl.job_resource = sge.create_job_resource(parallel_env='mpi8', tot_num_mpiprocs=16)
+
+        job_tmpl.rerunnable = True
+        submit_script_text = sge.get_submit_script(job_tmpl)
+        assert '#$ -r yes' in submit_script_text
+        assert '#$ -r no' not in submit_script_text
+
+        job_tmpl.rerunnable = False
+        submit_script_text = sge.get_submit_script(job_tmpl)
+        assert '#$ -r yes' not in submit_script_text
+        assert '#$ -r no' in submit_script_text
 
     @staticmethod
     def _parse_time_string(string, fmt='%Y-%m-%dT%H:%M:%S'):
@@ -344,8 +367,8 @@ class TestCommand(unittest.TestCase):
         returns a datetime object.
         Example format: 2013-06-13T11:53:11
         """
-        import time
         import datetime
+        import time
 
         try:
             time_struct = time.strptime(string, fmt)
@@ -356,3 +379,16 @@ class TestCommand(unittest.TestCase):
         # the seconds since epoch, as suggested on stackoverflow:
         # http://stackoverflow.com/questions/1697815
         return datetime.datetime.fromtimestamp(time.mktime(time_struct))
+
+    def test_job_name_cleaning(self):
+        """Test that invalid characters are cleaned from job name."""
+        from aiida.schedulers.datastructures import JobTemplate
+
+        scheduler = SgeScheduler()
+
+        job_tmpl = JobTemplate()
+        job_tmpl.job_resource = scheduler.create_job_resource(parallel_env='mpi8', tot_num_mpiprocs=16)
+        job_tmpl.job_name = 'Some/job:name@with*invalid-characters.'
+
+        header = scheduler._get_submit_script_header(job_tmpl)
+        self.assertTrue('#$ -N Somejobnamewithinvalid-characters.' in header, header)

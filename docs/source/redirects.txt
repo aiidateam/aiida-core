@@ -4,7 +4,9 @@ get_started/index.rst intro/get_started.rst
 get_started/computers.rst howto/run_codes.rst
 get_started/codes.rst howto/run_codes.rst
 howto/plugins.rst howto/plugins_develop.rst
-import_export/main.html internals/data_storage.rst
+howto/exploring.rst howto/query.rst
+import_export/main.rst internals/archive_format.rst
+internals/data_storage.rst internals/archive_format.rst
 install/quick_installation.rst intro/get_started.rst
 install/prerequisites.rst intro/get_started.rst
 install/installation.rst intro/get_started.rst
@@ -15,7 +17,7 @@ restapi/index.rst reference/rest_api.rst
 verdi/verdi_user_guide.rst topics/cli.rst
 working_with_aiida/index.rst howto/index.rst
 working_with_aiida/python_api.rst reference/api/public.rst
-working_with_aiida/resultmanager.rst howto/exploring.rst
+working_with_aiida/resultmanager.rst howto/query.rst
 working_with_aiida/scripting.rst howto/interact.rst
 datatypes/index.rst topics/data_types.rst
 datatypes/functionality.rst topics/data_types.rst

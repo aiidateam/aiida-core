@@ -9,22 +9,36 @@
 ###########################################################################
 # pylint: disable=no-name-in-module
 """Tests to run with a running daemon."""
+import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 
-from aiida.common import exceptions
+from workchains import (
+    ArithmeticAddBaseWorkChain,
+    CalcFunctionRunnerWorkChain,
+    DynamicDbInput,
+    DynamicMixedInput,
+    DynamicNonDbInput,
+    ListEcho,
+    NestedInputNamespace,
+    NestedWorkChain,
+    SerializeWorkChain,
+    WorkFunctionRunnerWorkChain,
+)
+
+from aiida.common import StashMode, exceptions
 from aiida.engine import run, submit
 from aiida.engine.daemon.client import get_daemon_client
 from aiida.engine.persistence import ObjectLoader
+from aiida.engine.processes import Process
 from aiida.manage.caching import enable_caching
-from aiida.orm import CalcJobNode, load_node, Int, Str, List, Dict, load_code
+from aiida.orm import CalcJobNode, Dict, Int, List, Str, load_code, load_node
 from aiida.plugins import CalculationFactory, WorkflowFactory
-from aiida.workflows.arithmetic.add_multiply import add_multiply, add
-from workchains import (
-    NestedWorkChain, DynamicNonDbInput, DynamicDbInput, DynamicMixedInput, ListEcho, CalcFunctionRunnerWorkChain,
-    WorkFunctionRunnerWorkChain, NestedInputNamespace, SerializeWorkChain, ArithmeticAddBaseWorkChain
-)
+from aiida.workflows.arithmetic.add_multiply import add, add_multiply
+from tests.utils.memory import get_instances  # pylint: disable=import-error
 
 CODENAME_ADD = 'add@localhost'
 CODENAME_DOUBLER = 'doubler@localhost'
@@ -270,7 +284,7 @@ def create_calculation_process(code, inputval):
     """
     Create the process and inputs for a submitting / running a calculation.
     """
-    TemplatereplacerCalculation = CalculationFactory('templatereplacer')
+    TemplatereplacerCalculation = CalculationFactory('core.templatereplacer')
     parameters = Dict(dict={'value': inputval})
     template = Dict(
         dict={
@@ -293,7 +307,7 @@ def create_calculation_process(code, inputval):
         },
         'max_wallclock_seconds': 5 * 60,
         'withmpi': False,
-        'parser_name': 'templatereplacer.doubler',
+        'parser_name': 'core.templatereplacer.doubler',
     }
 
     expected_result = {'value': 2 * inputval, 'retrieved_temporary_files': {'triple_value.tmp': str(inputval * 3)}}
@@ -311,7 +325,7 @@ def create_calculation_process(code, inputval):
 
 def run_arithmetic_add():
     """Run the `ArithmeticAddCalculation`."""
-    ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+    ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 
     code = load_code(CODENAME_ADD)
     inputs = {
@@ -371,7 +385,7 @@ def run_base_restart_workchain():
 
 def run_multiply_add_workchain():
     """Run the `MultiplyAddWorkChain`."""
-    MultiplyAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
+    MultiplyAddWorkChain = WorkflowFactory('core.arithmetic.multiply_add')
 
     code = load_code(CODENAME_ADD)
     inputs = {
@@ -389,9 +403,12 @@ def run_multiply_add_workchain():
     assert results['result'].value == 5
 
 
-def main():
-    """Launch a bunch of calculation jobs and workchains."""
-    # pylint: disable=too-many-locals,too-many-statements,too-many-branches
+def launch_all():
+    """Launch a bunch of calculation jobs and workchains.
+
+    :returns: dictionary with expected results and pks of all launched calculations and workchains
+    """
+    # pylint: disable=too-many-locals,too-many-statements
     expected_results_process_functions = {}
     expected_results_calculations = {}
     expected_results_workchains = {}
@@ -408,6 +425,24 @@ def main():
     # Run the `MultiplyAddWorkChain`
     print('Running the `MultiplyAddWorkChain`')
     run_multiply_add_workchain()
+
+    # Testing the stashing functionality
+    process, inputs, expected_result = create_calculation_process(code=code_doubler, inputval=1)
+    with tempfile.TemporaryDirectory() as tmpdir:
+
+        # Delete the temporary directory to test that the stashing functionality will create it if necessary
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+        source_list = ['output.txt', 'triple_value.tmp']
+        inputs['metadata']['options']['stash'] = {'target_base': tmpdir, 'source_list': source_list}
+        _, node = run.get_node(process, **inputs)
+        assert node.is_finished_ok
+        assert 'remote_stash' in node.outputs
+        remote_stash = node.outputs.remote_stash
+        assert remote_stash.stash_mode == StashMode.COPY
+        assert remote_stash.target_basepath.startswith(tmpdir)
+        assert sorted(remote_stash.source_list) == sorted(source_list)
+        assert sorted(p for p in os.listdir(remote_stash.target_basepath)) == sorted(source_list)
 
     # Submitting the calcfunction through the launchers
     print('Submitting calcfunction to the daemon')
@@ -437,8 +472,8 @@ def main():
     builder = NestedWorkChain.get_builder()
     input_val = 4
     builder.inp = Int(input_val)
-    proc = submit(builder)
-    expected_results_workchains[proc.pk] = input_val
+    pk = submit(builder).pk
+    expected_results_workchains[pk] = input_val
 
     print('Submitting a workchain with a nested input namespace.')
     value = Int(-12)
@@ -483,9 +518,46 @@ def main():
     calculation_pks = sorted(expected_results_calculations.keys())
     workchains_pks = sorted(expected_results_workchains.keys())
     process_functions_pks = sorted(expected_results_process_functions.keys())
-    pks = calculation_pks + workchains_pks + process_functions_pks
 
-    print('Wating for end of execution...')
+    return {
+        'pks': calculation_pks + workchains_pks + process_functions_pks,
+        'calculations': expected_results_calculations,
+        'process_functions': expected_results_process_functions,
+        'workchains': expected_results_workchains,
+    }
+
+
+def relaunch_cached(results):
+    """Launch the same calculations but with caching enabled -- these should be FINISHED immediately."""
+    code_doubler = load_code(CODENAME_DOUBLER)
+    cached_calcs = []
+    with enable_caching(identifier='aiida.calculations:core.templatereplacer'):
+        for counter in range(1, NUMBER_CALCULATIONS + 1):
+            inputval = counter
+            calc, expected_result = run_calculation(code=code_doubler, counter=counter, inputval=inputval)
+            cached_calcs.append(calc)
+            results['calculations'][calc.pk] = expected_result
+
+    if not (
+        validate_calculations(results['calculations']) and validate_workchains(results['workchains']) and
+        validate_cached(cached_calcs) and validate_process_functions(results['process_functions'])
+    ):
+        print_daemon_log()
+        print('')
+        print('ERROR! Some return values are different from the expected value')
+        sys.exit(3)
+
+    print_daemon_log()
+    print('')
+    print('OK, all calculations have the expected parsed result')
+
+
+def main():
+    """Launch a bunch of calculation jobs and workchains."""
+
+    results = launch_all()
+
+    print('Waiting for end of execution...')
     start_time = time.time()
     exited_with_timeout = True
     while time.time() - start_time < TIMEOUTSECS:
@@ -515,7 +587,7 @@ def main():
         except subprocess.CalledProcessError as exception:
             print(f'Note: the command failed, message: {exception}')
 
-        if jobs_have_finished(pks):
+        if jobs_have_finished(results['pks']):
             print('Calculation terminated its execution')
             exited_with_timeout = False
             break
@@ -525,30 +597,18 @@ def main():
         print('')
         print(f'Timeout!! Calculation did not complete after {TIMEOUTSECS} seconds')
         sys.exit(2)
-    else:
-        # Launch the same calculations but with caching enabled -- these should be FINISHED immediately
-        cached_calcs = []
-        with enable_caching(identifier='aiida.calculations:templatereplacer'):
-            for counter in range(1, NUMBER_CALCULATIONS + 1):
-                inputval = counter
-                calc, expected_result = run_calculation(code=code_doubler, counter=counter, inputval=inputval)
-                cached_calcs.append(calc)
-                expected_results_calculations[calc.pk] = expected_result
 
-        if (
-            validate_calculations(expected_results_calculations) and
-            validate_workchains(expected_results_workchains) and validate_cached(cached_calcs) and
-            validate_process_functions(expected_results_process_functions)
-        ):
-            print_daemon_log()
-            print('')
-            print('OK, all calculations have the expected parsed result')
-            sys.exit(0)
-        else:
-            print_daemon_log()
-            print('')
-            print('ERROR! Some return values are different from the expected value')
-            sys.exit(3)
+    relaunch_cached(results)
+
+    # Check that no references to processes remain in memory
+    # Note: This tests only processes that were `run` in the same interpreter, not those that were `submitted`
+    del results
+    processes = get_instances(Process, delay=1.0)
+    if processes:
+        print(f'Memory leak! Process instances remained in memory: {processes}')
+        sys.exit(4)
+
+    sys.exit(0)
 
 
 if __name__ == '__main__':

@@ -12,13 +12,16 @@
 import glob
 import io
 import os
+import re
 from stat import S_ISDIR, S_ISREG
 
 import click
+import paramiko
 
 from aiida.cmdline.params import options
 from aiida.cmdline.params.types.path import AbsolutePathOrEmptyParamType
 from aiida.common.escaping import escape_for_bash
+
 from ..transport import Transport, TransportInternalError
 
 __all__ = ('parse_sshconfig', 'convert_to_bool', 'SshTransport')
@@ -33,10 +36,10 @@ def parse_sshconfig(computername):
 
     :param computername: the computer name for which we want the configuration.
     """
-    import paramiko
     config = paramiko.SSHConfig()
     try:
-        config.parse(open(os.path.expanduser('~/.ssh/config'), encoding='utf8'))
+        with open(os.path.expanduser('~/.ssh/config'), encoding='utf8') as fhandle:
+            config.parse(fhandle)
     except IOError:
         # No file found, so empty configuration
         pass
@@ -118,11 +121,28 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             }
         ),
         (
+            'proxy_jump', {
+                'prompt':
+                'SSH proxy jump',
+                'help':
+                'SSH proxy jump for tunneling through other SSH hosts.'
+                ' Use a comma-separated list of hosts of the form [user@]host[:port].'
+                ' If user or port are not specified for a host, the user & port values from the target host are used.'
+                ' This option must be provided explicitly and is not parsed from the SSH config file when left empty.',
+                'non_interactive_default':
+                True
+            }
+        ),  # Managed 'manually' in connect
+        (
             'proxy_command', {
-                'prompt': 'SSH proxy command',
-                'help': 'SSH proxy command for tunneling through a proxy server.'
+                'prompt':
+                'SSH proxy command',
+                'help':
+                'SSH proxy command for tunneling through a proxy server.'
+                ' For tunneling through another SSH host, consider using the "SSH proxy jump" option instead!'
                 ' Leave empty to parse the proxy command from the SSH config file.',
-                'non_interactive_default': True
+                'non_interactive_default':
+                True
             }
         ),  # Managed 'manually' in connect
         (
@@ -309,6 +329,13 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         return ' '.join(new_pieces)
 
     @classmethod
+    def _get_proxy_jump_suggestion_string(cls, _):
+        """
+        Return an empty suggestion since Paramiko does not parse ProxyJump from the SSH config.
+        """
+        return ''
+
+    @classmethod
     def _get_compress_suggestion_string(cls, computer):  # pylint: disable=unused-argument
         """
         Return a suggestion for the specific field.
@@ -376,11 +403,11 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         function (as port, username, password, ...); taken from the
         accepted paramiko.SSHClient.connect() params.
         """
-        import paramiko
         super().__init__(*args, **kwargs)
 
         self._sftp = None
         self._proxy = None
+        self._proxies = []
 
         self._machine = kwargs.pop('machine')
 
@@ -409,7 +436,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             except KeyError:
                 pass
 
-    def open(self):
+    def open(self):  # pylint: disable=too-many-branches,too-many-statements
         """
         Open a SSHClient to the machine possibly using the parameters given
         in the __init__.
@@ -419,18 +446,76 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         :raise aiida.common.InvalidOperation: if the channel is already open
         """
+        from paramiko.ssh_exception import SSHException
+
         from aiida.common.exceptions import InvalidOperation
         from aiida.transports.util import _DetachedProxyCommand
 
         if self._is_open:
             raise InvalidOperation('Cannot open the transport twice')
         # Open a SSHClient
-        connection_arguments = self._connect_args
+        connection_arguments = self._connect_args.copy()
         if 'key_filename' in connection_arguments and not connection_arguments['key_filename']:
             connection_arguments.pop('key_filename')
-        proxystring = connection_arguments.pop('proxy_command', None)
-        if proxystring:
-            self._proxy = _DetachedProxyCommand(proxystring)
+
+        proxyjumpstring = connection_arguments.pop('proxy_jump', None)
+        proxycmdstring = connection_arguments.pop('proxy_command', None)
+
+        if proxyjumpstring and proxycmdstring:
+            raise ValueError('The SSH proxy jump and SSH proxy command options can not be used together')
+
+        if proxyjumpstring:
+            matcher = re.compile(r'^(?:(?P<username>[^@]+)@)?(?P<host>[^@:]+)(?::(?P<port>\d+))?\s*$')
+            try:
+                # don't use a generator here to have everything evaluated
+                proxies = [matcher.match(s).groupdict() for s in proxyjumpstring.split(',')]
+            except AttributeError:
+                raise ValueError('The given configuration for the SSH proxy jump option could not be parsed')
+
+            # proxy_jump supports a list of jump hosts, each jump host is another Paramiko SSH connection
+            # but when opening a forward channel on a connection, we have to give the next hop.
+            # So we go through adjacent pairs and by adding the final target to the list we make it universal.
+            for proxy, target in zip(
+                proxies, proxies[1:] + [{
+                    'host': self._machine,
+                    'port': connection_arguments.get('port', 22),
+                }]
+            ):
+                proxy_connargs = connection_arguments.copy()
+
+                if proxy['username']:
+                    proxy_connargs['username'] = proxy['username']
+                if proxy['port']:
+                    proxy_connargs['port'] = int(proxy['port'])
+                if not target['port']:  # the target port for the channel can not be None
+                    target['port'] = connection_arguments.get('port', 22)
+
+                proxy_client = paramiko.SSHClient()
+                if self._load_system_host_keys:
+                    proxy_client.load_system_host_keys()
+                if self._missing_key_policy == 'RejectPolicy':
+                    proxy_client.set_missing_host_key_policy(paramiko.RejectPolicy())
+                elif self._missing_key_policy == 'WarningPolicy':
+                    proxy_client.set_missing_host_key_policy(paramiko.WarningPolicy())
+                elif self._missing_key_policy == 'AutoAddPolicy':
+                    proxy_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+                try:
+                    proxy_client.connect(proxy['host'], **proxy_connargs)
+                except Exception as exc:
+                    self.logger.error(
+                        f"Error connecting to proxy '{proxy['host']}' through SSH: [{self.__class__.__name__}] {exc}, "
+                        f'connect_args were: {proxy_connargs}'
+                    )
+                    self._close_proxies()  # close all since we're going to start anew on the next open() (if any)
+                    raise
+                connection_arguments['sock'] = proxy_client.get_transport().open_channel(
+                    'direct-tcpip', (target['host'], target['port']), ('', 0)
+                )
+                self._proxies.append(proxy_client)
+
+        if proxycmdstring:
+            self._proxy = _DetachedProxyCommand(proxycmdstring)
             connection_arguments['sock'] = self._proxy
 
         try:
@@ -440,22 +525,14 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
                 f"Error connecting to '{self._machine}' through SSH: " + f'[{self.__class__.__name__}] {exc}, ' +
                 f'connect_args were: {self._connect_args}'
             )
+            self._close_proxies()
             raise
 
-        # Open also a File transport client. SFTP by default, pure SSH in ssh_only
-        self.open_file_transport()
-
-        return self
-
-    def open_file_transport(self):
-        """
-        Open the SFTP channel, and handle error by directing customer to try another transport
-        """
-        from aiida.common.exceptions import InvalidOperation
-        from paramiko.ssh_exception import SSHException
+        # Open the SFTP channel, and handle error by directing customer to try another transport
         try:
             self._sftp = self._client.open_sftp()
         except SSHException:
+            self._close_proxies()
             raise InvalidOperation(
                 'Error in ssh transport plugin. This may be due to the remote computer not supporting SFTP. '
                 'Try setting it up with the aiida.transports:ssh_only transport from the aiida-sshonly plugin instead.'
@@ -465,6 +542,21 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         # Set the current directory to a explicit path, and not to None
         self._sftp.chdir(self._sftp.normalize('.'))
+
+        return self
+
+    def _close_proxies(self):
+        """Close all proxy connections (proxy_jump and proxy_command)"""
+
+        # Paramiko only closes the channel when closing the main connection, but not the connection itself.
+        while self._proxies:
+            self._proxies.pop().close()
+
+        if self._proxy:
+            # Paramiko should close this automatically when closing the channel,
+            # but since the process is started in __init__this might not happen correctly.
+            self._proxy.close()
+            self._proxy = None
 
     def close(self):
         """
@@ -481,6 +573,8 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         self._sftp.close()
         self._client.close()
+        self._close_proxies()
+
         self._is_open = False
 
     @property
@@ -676,7 +770,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         command = f'{rm_exe} {rm_flags} {escape_for_bash(path)}'
 
-        retval, stdout, stderr = self.exec_command_wait(command)
+        retval, stdout, stderr = self.exec_command_wait_bytes(command)
 
         if retval == 0:
             if stderr.strip():
@@ -1132,7 +1226,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         # to simplify writing the above copy function
         command = f'{cp_exe} {cp_flags} {escape_for_bash(src)} {escape_for_bash(dst)}'
 
-        retval, stdout, stderr = self.exec_command_wait(command)
+        retval, stdout, stderr = self.exec_command_wait_bytes(command)
 
         if retval == 0:
             if stderr.strip():
@@ -1155,7 +1249,6 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         """
         if not pattern:
             return os.listdir(path)
-        import re
         if path.startswith('/'):  # always this is the case in the local case
             base_dir = path
         else:
@@ -1176,13 +1269,12 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         """
         if not pattern:
             return self.sftp.listdir(path)
-        import re
         if path.startswith('/'):
             base_dir = path
         else:
             base_dir = os.path.join(self.getcwd(), path)
 
-        filtered_list = glob.glob(os.path.join(base_dir, pattern))
+        filtered_list = self.glob(os.path.join(base_dir, pattern))
         if not base_dir.endswith('/'):
             base_dir += '/'
         return [re.sub(base_dir, '', i) for i in filtered_list]
@@ -1264,7 +1356,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         if self.getcwd() is not None:
             escaped_folder = escape_for_bash(self.getcwd())
-            command_to_execute = (f'cd {escaped_folder} && {command}')
+            command_to_execute = (f'cd {escaped_folder} && ( {command} )')
         else:
             command_to_execute = command
 
@@ -1282,7 +1374,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         return stdin, stdout, stderr, channel
 
-    def exec_command_wait(self, command, stdin=None, combine_stderr=False, bufsize=-1):  # pylint: disable=arguments-differ
+    def exec_command_wait_bytes(self, command, stdin=None, combine_stderr=False, bufsize=-1):  # pylint: disable=arguments-differ, too-many-branches
         """
         Executes the specified command and waits for it to finish.
 
@@ -1294,35 +1386,101 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         :param bufsize: same meaning of paramiko.
 
         :return: a tuple with (return_value, stdout, stderr) where stdout and stderr
-            are strings.
+            are both bytes and the return_value is an int.
         """
+        import socket
+        import time
+
         ssh_stdin, stdout, stderr, channel = self._exec_command_internal(command, combine_stderr, bufsize=bufsize)
 
         if stdin is not None:
             if isinstance(stdin, str):
                 filelike_stdin = io.StringIO(stdin)
-            else:
+            elif isinstance(stdin, bytes):
+                filelike_stdin = io.BytesIO(stdin)
+            elif isinstance(stdin, (io.BufferedIOBase, io.TextIOBase)):
+                # It seems both StringIO and BytesIO work correctly when doing ssh_stdin.write(line)?
+                # (The ChannelFile is opened with mode 'b', but until now it always has been a StringIO)
                 filelike_stdin = stdin
+            else:
+                raise ValueError('You can only pass strings, bytes, BytesIO or StringIO objects')
 
-            try:
-                for line in filelike_stdin.readlines():
-                    ssh_stdin.write(line)
-            except AttributeError:
-                raise ValueError('stdin can only be either a string of a file-like object!')
+            for line in filelike_stdin:
+                ssh_stdin.write(line)
 
         # I flush and close them anyway; important to call shutdown_write
         # to avoid hangouts
         ssh_stdin.flush()
         ssh_stdin.channel.shutdown_write()
 
+        # Now I get the output
+        stdout_bytes = []
+        stderr_bytes = []
+        # 100kB buffer (note that this should be smaller than the window size of paramiko)
+        # Also, apparently if the data is coming slowly, the read() command will not unlock even for
+        # times much larger than the timeout. Therefore we don't want to have very large buffers otherwise
+        # you risk that a lot of output is sent to both stdout and stderr, and stderr goes beyond the
+        # window size and blocks.
+        # Note that this is different than the bufsize of paramiko.
+        internal_bufsize = 100 * 1024
+
+        # Set a small timeout on the channels, so that if we get data from both
+        # stderr and stdout, and the connection is slow, we interleave the receive and don't hang
+        # NOTE: Timeouts and sleep time below, as well as the internal_bufsize above, have been benchmarked
+        # to try to optimize the overall throughput. I could get ~100MB/s on a localhost via ssh (and 3x slower
+        # if compression is enabled).
+        # It's important to mention that, for speed benchmarks, it's important to disable compression
+        # in the SSH transport settings, as it will cap the max speed.
+        stdout.channel.settimeout(0.01)
+        stderr.channel.settimeout(0.01)  # Maybe redundant, as this could be the same channel.
+
+        while True:
+            chunk_exists = False
+
+            if stdout.channel.recv_ready():  # True means that the next .read call will at least receive 1 byte
+                chunk_exists = True
+                try:
+                    piece = stdout.read(internal_bufsize)
+                    stdout_bytes.append(piece)
+                except socket.timeout:
+                    # There was a timeout: I continue as there should still be data
+                    pass
+
+            if stderr.channel.recv_stderr_ready():  # True means that the next .read call will at least receive 1 byte
+                chunk_exists = True
+                try:
+                    piece = stderr.read(internal_bufsize)
+                    stderr_bytes.append(piece)
+                except socket.timeout:
+                    # There was a timeout: I continue as there should still be data
+                    pass
+
+            # If chunk_exists, there is data (either already read and put in the std*_bytes lists, or
+            # still in the buffer because of a timeout). I need to loop.
+            # Otherwise, there is no data in the buffers, and I enter this block.
+            if not chunk_exists:
+                # Both channels have no data in the buffer
+                if channel.exit_status_ready():
+                    # The remote execution is over
+
+                    # I think that in some corner cases there might still be some data,
+                    # in case the data arrived between the previous calls and this check.
+                    # So we do a final read. Since the execution is over, I think all data is in the buffers,
+                    # so we can just read the whole buffer without loops
+                    stdout_bytes.append(stdout.read())
+                    stderr_bytes.append(stderr.read())
+                    # And we go out of the `while True` loop
+                    break
+                # The exit status is not ready:
+                # I just put a small sleep to avoid infinite fast loops when data
+                # is not available on a slow connection, and loop
+                time.sleep(0.01)
+
         # I get the return code (blocking)
+        # However, if I am here, the exit status is ready so this should be returning very quickly
         retval = channel.recv_exit_status()
 
-        # needs to be after 'recv_exit_status', otherwise it might hang
-        output_text = stdout.read().decode('utf-8')
-        stderr_text = stderr.read().decode('utf-8')
-
-        return retval, output_text, stderr_text
+        return (retval, b''.join(stdout_bytes), b''.join(stderr_bytes))
 
     def gotocomputer_command(self, remotedir):
         """
@@ -1333,11 +1491,17 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         if 'username' in self._connect_args:
             further_params.append(f"-l {escape_for_bash(self._connect_args['username'])}")
 
-        if 'port' in self._connect_args and self._connect_args['port']:
+        if self._connect_args.get('port'):
             further_params.append(f"-p {self._connect_args['port']}")
 
-        if 'key_filename' in self._connect_args and self._connect_args['key_filename']:
+        if self._connect_args.get('key_filename'):
             further_params.append(f"-i {escape_for_bash(self._connect_args['key_filename'])}")
+
+        if self._connect_args.get('proxy_jump'):
+            further_params.append(f"-o ProxyJump={escape_for_bash(self._connect_args['proxy_jump'])}")
+
+        if self._connect_args.get('proxy_command'):
+            further_params.append(f"-o ProxyCommand={escape_for_bash(self._connect_args['proxy_command'])}")
 
         further_params_str = ' '.join(further_params)
 

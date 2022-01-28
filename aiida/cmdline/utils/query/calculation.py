@@ -8,8 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """A utility module with a factory of standard QueryBuilder instances for Calculation nodes."""
-from aiida.common.lang import classproperty
 from aiida.cmdline.utils.query.mapping import CalculationProjectionMapper
+from aiida.common.lang import classproperty
 
 
 class CalculationQueryBuilder:
@@ -21,7 +21,8 @@ class CalculationQueryBuilder:
     _default_projections = ('pk', 'ctime', 'process_label', 'state', 'process_status')
     _valid_projections = (
         'pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'process_status', 'exit_status', 'sealed',
-        'process_label', 'label', 'description', 'node_type', 'paused', 'process_type', 'job_state', 'scheduler_state'
+        'process_label', 'label', 'description', 'node_type', 'paused', 'process_type', 'job_state', 'scheduler_state',
+        'exception'
     )
 
     def __init__(self, mapper=None):

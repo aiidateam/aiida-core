@@ -58,35 +58,87 @@ In order to figure out why a calculation is *not* being reused, the :meth:`~aiid
     ]
 
 
-.. _topics:provenance:caching:control:
+.. _topics:provenance:caching:control-hashing:
 
 Controlling hashing
 -------------------
 
-There are a couple of ways in which you can customized what properties are being considered when calculating the hash for a new instance of a data node.
-Most of this are established at the time of creating the data plugin extension:
+Data nodes
+..........
 
-* If you wish to ignore specific attributes, a :py:class:`~aiida.orm.nodes.Node` subclass can have a ``_hash_ignored_attributes`` attribute.
-  This is a list of attribute names, which are ignored when creating the hash.
-* To add things which should be considered in the hash, you can override the :meth:`~aiida.orm.nodes.Node._get_objects_to_hash` method.
-  Note that doing so also overrides the behavior described above, so make sure to use the ``super()`` method in order to prevent this.
-* You can pass a keyword argument to :meth:`~aiida.orm.nodes.Node.get_hash`.
-  These are, in turn, passed on to :meth:`~aiida.common.hashing.make_hash`.
+The hashing of *Data nodes* can be customized both when implementing a new data node class and during runtime.
 
-The process nodes have a fixed behavior that is internal to AiiDA and are not subclassable, so they can't be customized in a direct way.
-To know more about the specifics of these internals you can visit the :ref:`corresponding section <internal_architecture:engine:caching>`.
-The only way in which these can be influenced by plugin designers is indirectly via the hash criteria for the associated data types of their inputs.
+In the :py:class:`~aiida.orm.nodes.Node` subclass:
+
+* Use the ``_hash_ignored_attributes`` to exclude a list of node attributes ``['attr1', 'attr2']`` from computing the hash.
+* Include extra information in computing the hash by overriding the :meth:`~aiida.orm.nodes.Node._get_objects_to_hash` method.
+  Use the ``super()`` method, and then append to the list of objects to hash.
+
+You can also modify hashing behavior during runtime by passing a keyword argument to :meth:`~aiida.orm.nodes.Node.get_hash`, which are forwarded to :meth:`~aiida.common.hashing.make_hash`.
+
+Process nodes
+.............
+
+The hashing of *Process nodes* is fixed and can only be influenced indirectly via the hashes of their inputs.
+For implementation details of the hashing mechanism for process nodes, see :ref:`here <internal_architecture:engine:caching>`.
+
+.. _topics:provenance:caching:control-caching:
 
 Controlling Caching
 -------------------
 
-Although you can't directly controll the hashing mechanism of the process node when implementing a plugin, there are ways in which you can control its caching:
+In the caching mechanism, there are two different types of roles played by the nodes: the node that is currently being stored is called the `target`, and the nodes already stored in the database that are considered to be equivalent are referred to as a `source`.
 
-* The :meth:`spec.exit_code <aiida.engine.processes.process_spec.ProcessSpec.exit_code>` has a keyword argument ``invalidates_cache``.
-  If this is set to ``True``, that means that a calculation with this exit code will not be used as a cache source for another one, even if their hashes match.
-* The :class:`Process <aiida.engine.processes.process.Process>` parent class from which calcjobs inherit has an :meth:`is_valid_cache <aiida.engine.processes.process.Process.is_valid_cache>` method, which can be overriden in the plugin to implement custom ways of invalidating the cache.
-  When doing this, make sure to call :meth:`super().is_valid_cache(node)<aiida.engine.processes.process.Process.is_valid_cache>` and respect its output: if it is `False`, your implementation should also return `False`.
-  If you do not comply with this, the 'invalidates_cache' keyword on exit codes will not work.
+Targets
+.......
+
+Controlling what nodes will look in the database for existing equivalents when being stored is done on the class level.
+Section :ref:`how-to:run-codes:caching:configure` explains how this can be controlled globally through the profile configuration, or locally through context managers.
+
+Sources
+.......
+
+When a node is being stored (the `target`) and caching is enabled for its node class (see section above), a valid cache `source` is obtained through the method :meth:`~aiida.orm.nodes.node.Node._get_same_node`.
+This method calls the iterator :meth:`~aiida.orm.nodes.node.Node._iter_all_same_nodes` and takes the first one it returns if there are any.
+To find the list of `source` nodes that are equivalent to the `target` that is being stored, :meth:`~aiida.orm.nodes.node.Node._iter_all_same_nodes` performs the following steps:
+
+ 1. It queries the database for all nodes that have the same hash as the `target` node.
+ 2. From the result, only those nodes are returned where the property :meth:`~aiida.orm.nodes.node.Node.is_valid_cache` returns ``True``.
+
+The property :meth:`~aiida.orm.nodes.node.Node.is_valid_cache` therefore allows to control whether a stored node can be used as a `source` in the caching mechanism.
+By default, for all nodes, the property returns ``True``.
+However, this can be changed on a per-node basis, by setting it to ``False``
+
+.. code-block:: python
+
+    node = load_node(<IDENTIFIER>)
+    node.is_valid_cache = False
+
+Setting the property to ``False``, will cause an extra to be stored on the node in the database, such that even when it is loaded at a later point in time, ``is_valid_cache`` returns ``False``.
+
+.. code-block:: python
+
+    node = load_node(<IDENTIFIER>)
+    assert node.is_valid_cache is False
+
+Through this method, it is possible to guarantee that individual nodes are never used as a `source` for caching.
+
+The :class:`~aiida.engine.processes.process.Process` class overrides the :meth:`~aiida.orm.nodes.node.Node.is_valid_cache` property to give more fine-grained control on process nodes as caching sources.
+If either :meth:`~aiida.orm.nodes.node.Node.is_valid_cache` of the base class or :meth:`~aiida.orm.nodes.process.process.ProcessNode.is_finished` returns ``False``, the process node is not a valid source.
+Likewise, if the process class cannot be loaded from the node, through the :meth:`~aiida.orm.nodes.process.process.ProcessNode.process_class`, the node is not a valid caching source.
+Finally, if the associated process class implements the :meth:`~aiida.engine.processes.process.Process.is_valid_cache` method, it is called, passing the node as an argument.
+If that returns ``True``, the node is considered to be a valid caching source.
+
+The :meth:`~aiida.engine.processes.process.Process.is_valid_cache` is implemented on the :class:`~aiida.engine.processes.process.Process` class.
+It will check whether the exit code that is set on the node, if any, has the keyword argument ``invalidates_cache`` set to ``True``, in which case the property will return ``False`` indicating the node is not a valid caching source.
+Whether an exit code invalidates the cache, is controlled with the ``invalidates_cache`` argument when it is defined on the process spec through the :meth:`spec.exit_code <aiida.engine.processes.process_spec.ProcessSpec.exit_code>` method.
+
+.. warning::
+
+    Process plugins can override the :meth:`~aiida.engine.processes.process.Process.is_valid_cache` method, to further control how nodes are considered valid caching sources.
+    When doing so, make sure to call :meth:`super().is_valid_cache(node) <aiida.engine.processes.process.Process.is_valid_cache>` and respect its output: if it is `False`, your implementation should also return `False`.
+    If you do not comply with this, the ``invalidates_cache`` keyword on exit codes will no longer work.
+
 
 .. _topics:provenance:caching:limitations:
 

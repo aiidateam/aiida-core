@@ -14,7 +14,6 @@ import uuid
 
 from aiida.backends.testbase import AiidaTestCase
 from aiida.manage.configuration import Profile
-
 from tests.utils.configuration import create_mock_profile
 
 
@@ -27,15 +26,30 @@ class TestProfile(AiidaTestCase):
         super().setUpClass(*args, **kwargs)
         cls.profile_name = 'test_profile'
         cls.profile_dictionary = {
-            'default_user': 'dummy@localhost',
-            'database_engine': 'postgresql_psycopg2',
-            'database_backend': 'django',
-            'database_name': cls.profile_name,
-            'database_port': '5432',
-            'database_hostname': 'localhost',
-            'database_username': 'user',
-            'database_password': 'pass',
-            'repository_uri': f"file:///{os.path.join('/some/path', f'repository_{cls.profile_name}')}",
+            'default_user_email': 'dummy@localhost',
+            'storage': {
+                'backend': 'django',
+                'config': {
+                    'database_engine': 'postgresql_psycopg2',
+                    'database_name': cls.profile_name,
+                    'database_port': '5432',
+                    'database_hostname': 'localhost',
+                    'database_username': 'user',
+                    'database_password': 'pass',
+                    'repository_uri': f"file:///{os.path.join('/some/path', f'repository_{cls.profile_name}')}",
+                }
+            },
+            'process_control': {
+                'backend': 'rabbitmq',
+                'config': {
+                    'broker_protocol': 'amqp',
+                    'broker_username': 'guest',
+                    'broker_password': 'guest',
+                    'broker_host': 'localhost',
+                    'broker_port': 5672,
+                    'broker_virtual_host': '',
+                }
+            }
         }
         cls.profile = Profile(cls.profile_name, cls.profile_dictionary)
 
@@ -43,14 +57,16 @@ class TestProfile(AiidaTestCase):
         """Test the basic properties of a Profile instance."""
         self.assertEqual(self.profile.name, self.profile_name)
 
-        for attribute, value in self.profile_dictionary.items():
-            self.assertEqual(getattr(self.profile, attribute), value)
+        self.assertEqual(self.profile.storage_backend, 'django')
+        self.assertEqual(self.profile.storage_config, self.profile_dictionary['storage']['config'])
+        self.assertEqual(self.profile.process_control_backend, 'rabbitmq')
+        self.assertEqual(self.profile.process_control_config, self.profile_dictionary['process_control']['config'])
 
         # Verify that the uuid property returns a valid UUID by attempting to construct an UUID instance from it
         uuid.UUID(self.profile.uuid)
 
         # Check that the default user email field is not None
-        self.assertIsNotNone(self.profile.default_user)
+        self.assertIsNotNone(self.profile.default_user_email)
 
         # The RabbitMQ prefix should contain the profile UUID
         self.assertIn(self.profile.uuid, self.profile.rmq_prefix)
@@ -68,9 +84,9 @@ class TestProfile(AiidaTestCase):
 
     def test_set_option(self):
         """Test the `set_option` method."""
-        option_key = 'user_email'
-        option_value_one = 'first@email.com'
-        option_value_two = 'second@email.com'
+        option_key = 'daemon.timeout'
+        option_value_one = 999
+        option_value_two = 666
 
         # Setting an option if it does not exist should work
         self.profile.set_option(option_key, option_value_one)

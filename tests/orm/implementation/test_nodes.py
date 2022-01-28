@@ -14,9 +14,10 @@ from collections import OrderedDict
 from datetime import datetime
 from uuid import UUID
 
+import pytz
+
 from aiida.backends.testbase import AiidaTestCase
-from aiida.common import timezone
-from aiida.common import exceptions
+from aiida.common import exceptions, timezone
 
 
 class TestBackendNode(AiidaTestCase):
@@ -57,8 +58,9 @@ class TestBackendNode(AiidaTestCase):
         self.assertTrue(isinstance(node.ctime, datetime))
         self.assertIsNone(node.mtime)
         self.assertIsNone(node.process_type)
-        self.assertEqual(node.attributes, dict())
-        self.assertEqual(node.extras, dict())
+        self.assertEqual(node.attributes, {})
+        self.assertEqual(node.extras, {})
+        self.assertEqual(node.repository_metadata, {})
         self.assertEqual(node.node_type, self.node_type)
         self.assertEqual(node.label, self.node_label)
         self.assertEqual(node.description, self.node_description)
@@ -84,8 +86,9 @@ class TestBackendNode(AiidaTestCase):
         self.assertTrue(isinstance(node.ctime, datetime))
         self.assertTrue(isinstance(node.mtime, datetime))
         self.assertIsNone(node.process_type)
-        self.assertEqual(node.attributes, dict())
-        self.assertEqual(node.extras, dict())
+        self.assertEqual(node.attributes, {})
+        self.assertEqual(node.extras, {})
+        self.assertEqual(node.repository_metadata, {})
         self.assertEqual(node.node_type, self.node_type)
         self.assertEqual(node.label, self.node_label)
         self.assertEqual(node.description, self.node_description)
@@ -103,10 +106,8 @@ class TestBackendNode(AiidaTestCase):
         Test creation of a BackendNode when passing the mtime and the ctime. The passed ctime and mtime
         should be respected since it is important for the correct import of nodes at the AiiDA import/export.
         """
-        from aiida.tools.importexport.dbimport.utils import deserialize_attributes
-
-        ctime = deserialize_attributes('2019-02-27T16:20:12.245738', 'date')
-        mtime = deserialize_attributes('2019-02-27T16:27:14.798838', 'date')
+        ctime = datetime(2019, 2, 27, 16, 20, 12, 245738, pytz.utc)
+        mtime = datetime(2019, 2, 27, 16, 27, 14, 798838, pytz.utc)
 
         node = self.backend.nodes.create(
             node_type=self.node_type,
@@ -163,7 +164,7 @@ class TestBackendNode(AiidaTestCase):
 
     def test_computer_methods(self):
         """Test the computer methods of a BackendNode."""
-        new_computer = self.backend.computers.create(name='localhost2', hostname='localhost').store()
+        new_computer = self.backend.computers.create(label='localhost2', hostname='localhost').store()
         self.assertEqual(self.node.computer.id, self.computer.id)
         self.node.computer = new_computer
         self.assertEqual(self.node.computer.id, new_computer.id)

@@ -9,7 +9,7 @@
 ###########################################################################
 # pylint: disable=protected-access,too-many-locals,invalid-name,too-many-public-methods
 """Tests for `verdi calcjob`."""
-import gzip
+import io
 
 from click.testing import CliRunner
 
@@ -17,10 +17,10 @@ from aiida import orm
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_calcjob as command
 from aiida.common.datastructures import CalcJobState
+from aiida.orm.nodes.data.remote.base import RemoteData
 from aiida.plugins import CalculationFactory
 from aiida.plugins.entry_point import get_entry_point_string_from_class
-
-from tests.utils.archives import import_archive
+from tests.utils.archives import import_test_archive
 
 
 def get_result_lines(result):
@@ -37,7 +37,11 @@ class TestVerdiCalculation(AiidaTestCase):
         from aiida.engine import ProcessState
 
         cls.computer = orm.Computer(
-            label='comp', hostname='localhost', transport_type='local', scheduler_type='direct', workdir='/tmp/aiida'
+            label='comp',
+            hostname='localhost',
+            transport_type='core.local',
+            scheduler_type='core.direct',
+            workdir='/tmp/aiida'
         ).store()
 
         cls.code = orm.Code(remote_computer_exec=(cls.computer, '/bin/true')).store()
@@ -49,7 +53,7 @@ class TestVerdiCalculation(AiidaTestCase):
         authinfo = orm.AuthInfo(computer=cls.computer, user=user)
         authinfo.store()
 
-        process_class = CalculationFactory('templatereplacer')
+        process_class = CalculationFactory('core.templatereplacer')
         process_type = get_entry_point_string_from_class(process_class.__module__, process_class.__name__)
 
         # Create 5 CalcJobNodes (one for each CalculationState)
@@ -57,7 +61,12 @@ class TestVerdiCalculation(AiidaTestCase):
 
             calc = orm.CalcJobNode(computer=cls.computer, process_type=process_type)
             calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+            calc.set_remote_workdir('/tmp/aiida/work')
+            remote = RemoteData(remote_path='/tmp/aiida/work')
+            remote.computer = calc.computer
+            remote.add_incoming(calc, LinkType.CREATE, link_label='remote_folder')
             calc.store()
+            remote.store()
 
             calc.set_process_state(ProcessState.RUNNING)
             cls.calcs.append(calc)
@@ -88,15 +97,21 @@ class TestVerdiCalculation(AiidaTestCase):
         calc.store()
         calc.set_exit_status(cls.EXIT_STATUS)
         calc.set_process_state(ProcessState.FINISHED)
+        calc.set_remote_workdir('/tmp/aiida/work')
+        remote = RemoteData(remote_path='/tmp/aiida/work')
+        remote.computer = calc.computer
+        remote.add_incoming(calc, LinkType.CREATE, link_label='remote_folder')
+        remote.store()
         cls.calcs.append(calc)
 
         # Load the fixture containing a single ArithmeticAddCalculation node
-        import_archive('calcjob/arithmetic.add.aiida')
+        import_test_archive('calcjob/arithmetic.add.aiida')
 
         # Get the imported ArithmeticAddCalculation node
-        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+        ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
         calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()[0]
         cls.arithmetic_job = calculations[0]
+        print(cls.arithmetic_job.repository_metadata)
 
     def setUp(self):
         super().setUp()
@@ -130,10 +145,13 @@ class TestVerdiCalculation(AiidaTestCase):
         options = [self.arithmetic_job.uuid]
         result = self.cli_runner.invoke(command.calcjob_inputls, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEqual(len(get_result_lines(result)), 3)
+        # There is also an additional fourth file added by hand to test retrieval of binary content
+        # see comments in test_calcjob_inputcat
+        self.assertEqual(len(get_result_lines(result)), 4)
         self.assertIn('.aiida', get_result_lines(result))
         self.assertIn('aiida.in', get_result_lines(result))
         self.assertIn('_aiidasubmit.sh', get_result_lines(result))
+        self.assertIn('in_gzipped_data', get_result_lines(result))
 
         options = [self.arithmetic_job.uuid, '.aiida']
         result = self.cli_runner.invoke(command.calcjob_inputls, options)
@@ -156,10 +174,13 @@ class TestVerdiCalculation(AiidaTestCase):
         options = [self.arithmetic_job.uuid]
         result = self.cli_runner.invoke(command.calcjob_outputls, options)
         self.assertIsNone(result.exception, result.output)
-        self.assertEqual(len(get_result_lines(result)), 3)
+        # There is also an additional fourth file added by hand to test retrieval of binary content
+        # see comments in test_calcjob_outputcat
+        self.assertEqual(len(get_result_lines(result)), 4)
         self.assertIn('_scheduler-stderr.txt', get_result_lines(result))
         self.assertIn('_scheduler-stdout.txt', get_result_lines(result))
         self.assertIn('aiida.out', get_result_lines(result))
+        self.assertIn('gzipped_data', get_result_lines(result))
 
         options = [self.arithmetic_job.uuid, 'non-existing-folder']
         result = self.cli_runner.invoke(command.calcjob_inputls, options)
@@ -186,16 +207,16 @@ class TestVerdiCalculation(AiidaTestCase):
         self.assertEqual(get_result_lines(result)[0], '2 3')
 
         # Test cat binary files
-        with self.arithmetic_job.open('aiida.in', 'wb') as fh_out:
-            fh_out.write(gzip.compress(b'COMPRESS'))
+        self.arithmetic_job._repository.put_object_from_filelike(io.BytesIO(b'COMPRESS'), 'aiida.in')
+        self.arithmetic_job._update_repository_metadata()
 
         options = [self.arithmetic_job.uuid, 'aiida.in']
         result = self.cli_runner.invoke(command.calcjob_inputcat, options)
-        assert gzip.decompress(result.stdout_bytes) == b'COMPRESS'
+        assert result.stdout_bytes == b'COMPRESS'
 
-        # Replace the file
-        with self.arithmetic_job.open('aiida.in', 'w') as fh_out:
-            fh_out.write('2 3\n')
+        # Restore the file
+        self.arithmetic_job._repository.put_object_from_filelike(io.BytesIO(b'2 3\n'), 'aiida.in')
+        self.arithmetic_job._update_repository_metadata()
 
     def test_calcjob_outputcat(self):
         """Test verdi calcjob outputcat"""
@@ -218,16 +239,16 @@ class TestVerdiCalculation(AiidaTestCase):
 
         # Test cat binary files
         retrieved = self.arithmetic_job.outputs.retrieved
-        with retrieved.open('aiida.out', 'wb') as fh_out:
-            fh_out.write(gzip.compress(b'COMPRESS'))
+        retrieved._repository.put_object_from_filelike(io.BytesIO(b'COMPRESS'), 'aiida.out')
+        retrieved._update_repository_metadata()
 
         options = [self.arithmetic_job.uuid, 'aiida.out']
         result = self.cli_runner.invoke(command.calcjob_outputcat, options)
-        assert gzip.decompress(result.stdout_bytes) == b'COMPRESS'
+        assert result.stdout_bytes == b'COMPRESS'
 
-        # Replace the file
-        with retrieved.open('aiida.out', 'w') as fh_out:
-            fh_out.write('5\n')
+        # Restore the file
+        retrieved._repository.put_object_from_filelike(io.BytesIO(b'5\n'), 'aiida.out')
+        retrieved._update_repository_metadata()
 
     def test_calcjob_cleanworkdir(self):
         """Test verdi calcjob cleanworkdir"""
@@ -236,13 +257,6 @@ class TestVerdiCalculation(AiidaTestCase):
         options = []
         result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
         self.assertIsNotNone(result.exception)
-
-        # Cannot specify both -p and -o options
-        for flag_p in ['-p', '--past-days']:
-            for flag_o in ['-o', '--older-than']:
-                options = [flag_p, '5', flag_o, '1']
-                result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
-                self.assertIsNotNone(result.exception)
 
         # Without the force flag it should fail
         options = [str(self.result_job.uuid)]
@@ -254,20 +268,59 @@ class TestVerdiCalculation(AiidaTestCase):
         result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
         self.assertIsNone(result.exception, result.output)
 
+        # Do it again should fail as the calcjob has been cleaned
+        options = ['-f', str(self.result_job.uuid)]
+        result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
+        self.assertIsNotNone(result.exception, result.output)
+
+        # The flag should have been set
+        assert self.result_job.outputs.remote_folder.get_extra('cleaned') is True
+
+        # Check applying both p and o filters
+        for flag_p in ['-p', '--past-days']:
+            for flag_o in ['-o', '--older-than']:
+                options = [flag_p, '5', flag_o, '1', '-f']
+                result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
+                # This should fail - the node was just created in the test
+                self.assertIsNotNone(result.exception)
+
+                options = [flag_p, '5', flag_o, '0', '-f']
+                result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
+                # This should pass fine
+                self.assertIsNone(result.exception)
+                self.result_job.outputs.remote_folder.delete_extra('cleaned')
+
+                options = [flag_p, '0', flag_o, '0', '-f']
+                result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
+                # This should not pass
+                self.assertIsNotNone(result.exception)
+
+        # Should fail because the exit code is not 999 - using the failed job for testing
+        options = [str(self.calcs[-1].uuid), '-E', '999', '-f']
+        result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
+        self.assertIsNotNone(result.exception)
+
+        # Should be fine because the exit code is 100
+        self.calcs[-1].outputs.remote_folder.set_extra('cleaned', False)
+        options = [str(self.calcs[-1].uuid), '-E', '100', '-f']
+        result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
+        self.assertIsNone(result.exception)
+
     def test_calcjob_inoutputcat_old(self):
         """Test most recent process class / plug-in can be successfully used to find filenames"""
 
         # Import old archive of ArithmeticAddCalculation
-        import_archive('calcjob/arithmetic.add_old.aiida')
-        ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+        import_test_archive('calcjob/arithmetic.add_old.aiida')
+        ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
         calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()
+        add_job = None
         for job in calculations:
             if job[0].uuid == self.arithmetic_job.uuid:
                 continue
 
             add_job = job[0]
-            return
-
+            break
+        assert add_job
         # Make sure add_job does not specify options 'input_filename' and 'output_filename'
         self.assertIsNone(
             add_job.get_option('input_filename'), msg=f"'input_filename' should not be an option for {add_job}"

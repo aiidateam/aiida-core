@@ -46,7 +46,7 @@ def calcjob_gotocomputer(calcjob):
         echo.echo_critical('no remote work directory for this calcjob, maybe the daemon did not submit it yet')
 
     command = transport.gotocomputer_command(remote_workdir)
-    echo.echo_info('going to the remote work directory...')
+    echo.echo_report('going to the remote work directory...')
     os.system(command)
 
 
@@ -87,9 +87,9 @@ def calcjob_inputcat(calcjob, path):
 
     If PATH is not specified, the default input file path will be used, if defined by the calcjob plugin class.
     """
+    import errno
     from shutil import copyfileobj
     import sys
-    import errno
 
     # Get path from the given CalcJobNode if not defined by user
     if path is None:
@@ -134,9 +134,9 @@ def calcjob_outputcat(calcjob, path):
     If PATH is not specified, the default output file path will be used, if defined by the calcjob plugin class.
     Content can only be shown after the daemon has retrieved the remote files.
     """
+    import errno
     from shutil import copyfileobj
     import sys
-    import errno
 
     try:
         retrieved = calcjob.outputs.retrieved
@@ -228,7 +228,8 @@ def calcjob_outputls(calcjob, path, color):
 @options.OLDER_THAN(default=None)
 @options.COMPUTERS(help='include only calcjobs that were ran on these computers')
 @options.FORCE()
-def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force):
+@options.EXIT_STATUS()
+def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force, exit_status):
     """
     Clean all content of all output remote folders of calcjobs.
 
@@ -236,9 +237,8 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force):
     If both are specified, a logical AND is done between the two, i.e. the calcjobs that will be cleaned have been
     modified AFTER [-p option] days from now, but BEFORE [-o option] days from now.
     """
-    from aiida.orm.utils.loaders import ComputerEntityLoader, IdentifierType
-    from aiida.orm.utils.remote import clean_remote, get_calcjob_remote_paths
     from aiida import orm
+    from aiida.orm.utils.remote import get_calcjob_remote_paths
 
     if calcjobs:
         if (past_days is not None and older_than is not None):
@@ -248,7 +248,14 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force):
             echo.echo_critical('if no explicit calcjobs are specified, at least one filtering option is required')
 
     calcjobs_pks = [calcjob.pk for calcjob in calcjobs]
-    path_mapping = get_calcjob_remote_paths(calcjobs_pks, past_days, older_than, computers)
+    path_mapping = get_calcjob_remote_paths(
+        calcjobs_pks,
+        past_days,
+        older_than,
+        computers,
+        exit_status=exit_status,
+        only_not_cleaned=True,
+    )
 
     if path_mapping is None:
         echo.echo_critical('no calcjobs found with the given criteria')
@@ -263,12 +270,12 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force):
     for computer_uuid, paths in path_mapping.items():
 
         counter = 0
-        computer = ComputerEntityLoader.load_entity(computer_uuid, identifier_type=IdentifierType.UUID)
+        computer = orm.load_computer(uuid=computer_uuid)
         transport = orm.AuthInfo.objects.get(dbcomputer_id=computer.id, aiidauser_id=user.id).get_transport()
 
         with transport:
-            for path in paths:
-                clean_remote(transport, path)
+            for remote_folder in paths:
+                remote_folder._clean(transport=transport)  # pylint:disable=protected-access
                 counter += 1
 
         echo.echo_success(f'{counter} remote folders cleaned on {computer.label}')

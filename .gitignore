@@ -34,3 +34,5 @@ pip-wheel-metadata
 # Docs
 docs/build
 docs/source/reference/apidoc
+
+pplot_out/

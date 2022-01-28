@@ -7,68 +7,162 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=undefined-variable,wildcard-import,global-statement,redefined-outer-name,cyclic-import
 """Modules related to the configuration of an AiiDA instance."""
+
+# AUTO-GENERATED
+
+# yapf: disable
+# pylint: disable=wildcard-import
+
+from .config import *
+from .migrations import *
+from .options import *
+from .profile import *
+
+__all__ = (
+    'CURRENT_CONFIG_VERSION',
+    'Config',
+    'ConfigValidationError',
+    'MIGRATIONS',
+    'OLDEST_COMPATIBLE_CONFIG_VERSION',
+    'Option',
+    'Profile',
+    'check_and_migrate_config',
+    'config_needs_migrating',
+    'config_schema',
+    'downgrade_config',
+    'get_current_version',
+    'get_option',
+    'get_option_names',
+    'parse_option',
+    'upgrade_config',
+)
+
+# yapf: enable
+
+# END AUTO-GENERATED
+
+# pylint: disable=global-statement,redefined-outer-name,wrong-import-order
+
+__all__ += (
+    'get_config', 'get_config_option', 'get_config_path', 'get_profile', 'load_documentation_profile', 'load_profile',
+    'reset_config', 'reset_profile', 'CONFIG', 'PROFILE', 'BACKEND_UUID'
+)
+
+import os
+import shutil
+from typing import Optional
 import warnings
 
 from aiida.common.warnings import AiidaDeprecationWarning
-from .config import *
-from .options import *
-from .profile import *
+
+from . import options
 
 CONFIG = None
 PROFILE = None
 BACKEND_UUID = None  # This will be set to the UUID of the profile as soon as its corresponding backend is loaded
 
-__all__ = (
-    config.__all__ + options.__all__ + profile.__all__ +
-    ('get_config', 'get_config_option', 'get_config_path', 'load_profile', 'reset_config')
-)
+
+def is_rabbitmq_version_supported():
+    """Return whether the version of RabbitMQ configured for the current profile is supported.
+
+    Versions 3.8 and above are not compatible with AiiDA with default configuration.
+
+    :return: boolean whether the current RabbitMQ version is supported.
+    """
+    from packaging.version import parse
+    return get_rabbitmq_version() < parse('3.8')
 
 
-def load_profile(profile=None):
+def get_rabbitmq_version():
+    """Return the version of the RabbitMQ server that the current profile connects to.
+
+    :return: :class:`packaging.version.Version`
+    """
+    from packaging.version import parse
+
+    from aiida.manage.manager import get_manager
+    communicator = get_manager().get_communicator()
+    return parse(communicator.server_properties['version'].decode('utf-8'))
+
+
+def check_rabbitmq_version():
+    """Check the version of RabbitMQ that is being connected to and emit warning if the version is not compatible."""
+    from aiida.cmdline.utils import echo
+    if not is_rabbitmq_version_supported():
+        echo.echo_warning(f'RabbitMQ v{get_rabbitmq_version()} is not supported and will cause unexpected problems!')
+        echo.echo_warning('It can cause long-running workflows to crash and jobs to be submitted multiple times.')
+        echo.echo_warning('See https://github.com/aiidateam/aiida-core/wiki/RabbitMQ-version-to-use for details.')
+
+
+def check_version():
+    """Check the currently installed version of ``aiida-core`` and warn if it is a post release development version.
+
+    The ``aiida-core`` package maintains the protocol that the ``develop`` branch will use a post release version
+    number. This means it will always append `.post0` to the version of the latest release. This should mean that if
+    this protocol is maintained properly, this method will print a warning if the currently installed version is a
+    post release development branch and not an actual release.
+    """
+    from packaging.version import parse
+
+    from aiida import __version__
+    from aiida.cmdline.utils import echo
+
+    version = parse(__version__)
+
+    # Showing of the warning can be turned off by setting the following option to false.
+    show_warning = get_config_option('warnings.development_version')
+
+    if version.is_postrelease and show_warning:
+        echo.echo_warning(f'You are currently using a post release development version of AiiDA: {version}')
+        echo.echo_warning('Be aware that this is not recommended for production and is not officially supported.')
+        echo.echo_warning('Databases used with this version may not be compatible with future releases of AiiDA')
+        echo.echo_warning('as you might not be able to automatically migrate your data.\n')
+
+
+def load_profile(profile: Optional[str] = None) -> Profile:
     """Load a profile.
 
     .. note:: if a profile is already loaded and no explicit profile is specified, nothing will be done
 
     :param profile: the name of the profile to load, by default will use the one marked as default in the config
-    :type profile: str
 
     :return: the loaded `Profile` instance
-    :rtype: :class:`~aiida.manage.configuration.Profile`
     :raises `aiida.common.exceptions.InvalidOperation`: if the backend of another profile has already been loaded
     """
     from aiida.common import InvalidOperation
     from aiida.common.log import configure_logging
 
-    global PROFILE
-    global BACKEND_UUID
+    global PROFILE  # pylint: disable=global-variable-not-assigned
+    global BACKEND_UUID  # pylint: disable=global-variable-not-assigned
 
     # If a profile is loaded and the specified profile name is None or that of the currently loaded, do nothing
     if PROFILE and (profile is None or PROFILE.name is profile):
         return PROFILE
 
-    profile = get_config().get_profile(profile)
+    PROFILE = get_config().get_profile(profile)
 
-    if BACKEND_UUID is not None and BACKEND_UUID != profile.uuid:
+    if BACKEND_UUID is not None and BACKEND_UUID != PROFILE.uuid:
         # Once the switching of profiles with different backends becomes possible, the backend has to be reset properly
         raise InvalidOperation('cannot switch profile because backend of another profile is already loaded')
-
-    # Set the global variable and make sure the repository is configured
-    PROFILE = profile
-    PROFILE.configure_repository()
 
     # Reconfigure the logging to make sure that profile specific logging configuration options are taken into account.
     # Note that we do not configure with `with_orm=True` because that will force the backend to be loaded. This should
     # instead be done lazily in `Manager._load_backend`.
     configure_logging()
 
+    # Check whether a development version is being run. Note that needs to be called after ``configure_logging`` because
+    # this function relies on the logging being properly configured for the warning to show.
+    check_version()
+
+    # Check whether a compatible version of RabbitMQ is being used.
+    check_rabbitmq_version()
+
     return PROFILE
 
 
 def get_config_path():
     """Returns path to .aiida configuration directory."""
-    import os
     from .settings import AIIDA_CONFIG_FOLDER, DEFAULT_CONFIG_FILE_NAME
 
     return os.path.join(AIIDA_CONFIG_FOLDER, DEFAULT_CONFIG_FILE_NAME)
@@ -87,8 +181,8 @@ def load_config(create=False):
     :rtype: :class:`~aiida.manage.configuration.config.Config`
     :raises aiida.common.MissingConfigurationError: if the configuration file could not be found and create=False
     """
-    import os
     from aiida.common import exceptions
+
     from .config import Config
 
     filepath = get_config_path()
@@ -98,19 +192,54 @@ def load_config(create=False):
 
     try:
         config = Config.from_file(filepath)
-    except ValueError:
-        raise exceptions.ConfigurationError(f'configuration file {filepath} contains invalid JSON')
+    except ValueError as exc:
+        raise exceptions.ConfigurationError(f'configuration file {filepath} contains invalid JSON') from exc
+
+    _merge_deprecated_cache_yaml(config, filepath)
 
     return config
 
 
-def get_profile():
+def _merge_deprecated_cache_yaml(config, filepath):
+    """Merge the deprecated cache_config.yml into the config."""
+    from aiida.common import timezone
+    cache_path = os.path.join(os.path.dirname(filepath), 'cache_config.yml')
+    if not os.path.exists(cache_path):
+        return
+
+    cache_path_backup = None
+    # Keep generating a new backup filename based on the current time until it does not exist
+    while not cache_path_backup or os.path.isfile(cache_path_backup):
+        cache_path_backup = f"{cache_path}.{timezone.now().strftime('%Y%m%d-%H%M%S.%f')}"
+
+    warnings.warn(
+        'cache_config.yml use is deprecated and support will be removed in `v3.0`. Merging into config.json and '
+        f'moving to: {cache_path_backup}', AiidaDeprecationWarning
+    )
+    import yaml
+    with open(cache_path, 'r', encoding='utf8') as handle:
+        cache_config = yaml.safe_load(handle)
+    for profile_name, data in cache_config.items():
+        if profile_name not in config.profile_names:
+            warnings.warn(f"Profile '{profile_name}' from cache_config.yml not in config.json, skipping", UserWarning)
+            continue
+        for key, option_name in [('default', 'caching.default_enabled'), ('enabled', 'caching.enabled_for'),
+                                 ('disabled', 'caching.disabled_for')]:
+            if key in data:
+                value = data[key]
+                # in case of empty key
+                value = [] if value is None and key != 'default' else value
+                config.set_option(option_name, value, scope=profile_name)
+    config.store()
+    shutil.move(cache_path, cache_path_backup)
+
+
+def get_profile() -> Profile:
     """Return the currently loaded profile.
 
     :return: the globally loaded `Profile` instance or `None`
-    :rtype: :class:`~aiida.manage.configuration.Profile`
     """
-    global PROFILE
+    global PROFILE  # pylint: disable=global-variable-not-assigned
     return PROFILE
 
 
@@ -216,7 +345,9 @@ def load_documentation_profile():
     the documentation to be built without having to install and configure AiiDA nor having an actual database present.
     """
     import tempfile
+
     from aiida.manage.manager import get_manager
+
     from .config import Config
     from .profile import Profile
 
@@ -225,17 +356,32 @@ def load_documentation_profile():
 
     with tempfile.NamedTemporaryFile() as handle:
         profile_name = 'readthedocs'
-        profile = {
-            'AIIDADB_ENGINE': 'postgresql_psycopg2',
-            'AIIDADB_BACKEND': 'django',
-            'AIIDADB_PORT': 5432,
-            'AIIDADB_HOST': 'localhost',
-            'AIIDADB_NAME': 'aiidadb',
-            'AIIDADB_PASS': 'aiidadb',
-            'AIIDADB_USER': 'aiida',
-            'AIIDADB_REPOSITORY_URI': 'file:///dev/null',
+        profile_config = {
+            'storage': {
+                'backend': 'django',
+                'config': {
+                    'database_engine': 'postgresql_psycopg2',
+                    'database_port': 5432,
+                    'database_hostname': 'localhost',
+                    'database_name': 'aiidadb',
+                    'database_password': 'aiidadb',
+                    'database_username': 'aiida',
+                    'repository_uri': 'file:///dev/null',
+                }
+            },
+            'process_control': {
+                'backend': 'rabbitmq',
+                'config': {
+                    'broker_protocol': 'amqp',
+                    'broker_username': 'guest',
+                    'broker_password': 'guest',
+                    'broker_host': 'localhost',
+                    'broker_port': 5672,
+                    'broker_virtual_host': '',
+                }
+            },
         }
-        config = {'default_profile': profile_name, 'profiles': {profile_name: profile}}
-        PROFILE = Profile(profile_name, profile, from_config=True)
+        config = {'default_profile': profile_name, 'profiles': {profile_name: profile_config}}
+        PROFILE = Profile(profile_name, profile_config)
         CONFIG = Config(handle.name, config)
-        get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
+        get_manager()._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access

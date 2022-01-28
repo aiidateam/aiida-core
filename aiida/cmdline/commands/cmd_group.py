@@ -8,16 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi group` commands"""
-import warnings
-import logging
 import click
 
-from aiida.common.exceptions import UniquenessError
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import options, arguments
+from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.common.exceptions import UniquenessError
 from aiida.common.links import GraphTraversalRules
 
 
@@ -34,7 +31,7 @@ def verdi_group():
 def group_add_nodes(group, force, nodes):
     """Add nodes to a group."""
     if not force:
-        click.confirm(f'Do you really want to add {len(nodes)} nodes to Group<{group.label}>?', abort=True)
+        click.confirm(f'Do you really want to add {len(nodes)} nodes to {group}?', abort=True)
 
     group.add_nodes(nodes)
 
@@ -47,18 +44,106 @@ def group_add_nodes(group, force, nodes):
 @with_dbenv()
 def group_remove_nodes(group, nodes, clear, force):
     """Remove nodes from a group."""
-    if clear:
-        message = f'Do you really want to remove ALL the nodes from Group<{group.label}>?'
-    else:
-        message = f'Do you really want to remove {len(nodes)} nodes from Group<{group.label}>?'
+    from aiida.orm import Group, Node, QueryBuilder
+
+    if nodes and clear:
+        echo.echo_critical(
+            'Specify either the `--clear` flag to remove all nodes or the identifiers of the nodes you want to remove.'
+        )
 
     if not force:
+
+        if nodes:
+            node_pks = [node.pk for node in nodes]
+
+            query = QueryBuilder()
+            query.append(Group, filters={'id': group.pk}, tag='group')
+            query.append(Node, with_group='group', filters={'id': {'in': node_pks}}, project='id')
+
+            group_node_pks = query.all(flat=True)
+
+            if not group_node_pks:
+                echo.echo_critical(f'None of the specified nodes are in {group}.')
+
+            if len(node_pks) > len(group_node_pks):
+                node_pks = set(node_pks).difference(set(group_node_pks))
+                echo.echo_warning(f'{len(node_pks)} nodes with PK {node_pks} are not in {group}.')
+
+            message = f'Are you sure you want to remove {len(group_node_pks)} nodes from {group}?'
+
+        elif clear:
+            message = f'Are you sure you want to remove ALL the nodes from {group}?'
+        else:
+            echo.echo_critical(f'No nodes were provided for removal from {group}.')
+
         click.confirm(message, abort=True)
 
     if clear:
         group.clear()
     else:
         group.remove_nodes(nodes)
+
+
+@verdi_group.command('move-nodes')
+@arguments.NODES()
+@click.option('-s', '--source-group', type=types.GroupParamType(), required=True, help='The group whose nodes to move.')
+@click.option(
+    '-t', '--target-group', type=types.GroupParamType(), required=True, help='The group to which the nodes are moved.'
+)
+@options.FORCE(help='Do not ask for confirmation and skip all checks.')
+@options.ALL(help='Move all nodes from the source to the target group.')
+@with_dbenv()
+def group_move_nodes(source_group, target_group, force, nodes, all_entries):
+    """Move the specified NODES from one group to another."""
+    from aiida.orm import Group, Node, QueryBuilder
+
+    if source_group.pk == target_group.pk:
+        echo.echo_critical(f'Source and target group are the same: {source_group}.')
+
+    if not nodes:
+        if all_entries:
+            nodes = list(source_group.nodes)
+        else:
+            echo.echo_critical('Neither NODES or the `-a, --all` option was specified.')
+
+    node_pks = [node.pk for node in nodes]
+
+    if not all_entries:
+        query = QueryBuilder()
+        query.append(Group, filters={'id': source_group.pk}, tag='group')
+        query.append(Node, with_group='group', filters={'id': {'in': node_pks}}, project='id')
+
+        source_group_node_pks = query.all(flat=True)
+
+        if not source_group_node_pks:
+            echo.echo_critical(f'None of the specified nodes are in {source_group}.')
+
+        if len(node_pks) > len(source_group_node_pks):
+            absent_node_pks = set(node_pks).difference(set(source_group_node_pks))
+            echo.echo_warning(f'{len(absent_node_pks)} nodes with PK {absent_node_pks} are not in {source_group}.')
+            nodes = [node for node in nodes if node.pk in source_group_node_pks]
+            node_pks = set(node_pks).difference(absent_node_pks)
+
+    query = QueryBuilder()
+    query.append(Group, filters={'id': target_group.pk}, tag='group')
+    query.append(Node, with_group='group', filters={'id': {'in': node_pks}}, project='id')
+
+    target_group_node_pks = query.all(flat=True)
+
+    if target_group_node_pks:
+        echo.echo_warning(
+            f'{len(target_group_node_pks)} nodes with PK {set(target_group_node_pks)} are already in '
+            f'{target_group}. These will still be removed from {source_group}.'
+        )
+
+    if not force:
+        click.confirm(
+            f'Are you sure you want to move {len(nodes)} nodes from {source_group} '
+            f'to {target_group}?', abort=True
+        )
+
+    source_group.remove_nodes(nodes)
+    target_group.add_nodes(nodes)
 
 
 @verdi_group.command('delete')
@@ -69,31 +154,16 @@ def group_remove_nodes(group, nodes, clear, force):
 )
 @options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
 @options.DRY_RUN()
-@options.VERBOSE()
-@options.GROUP_CLEAR(
-    help='Remove all nodes before deleting the group itself.' +
-    ' [deprecated: No longer has any effect. Will be removed in 2.0.0]'
-)
 @with_dbenv()
-def group_delete(group, clear, delete_nodes, dry_run, force, verbose, **traversal_rules):
+def group_delete(group, delete_nodes, dry_run, force, **traversal_rules):
     """Delete a group and (optionally) the nodes it contains."""
-    from aiida.common.log import override_log_formatter_context
-    from aiida.tools import delete_group_nodes, DELETE_LOGGER
     from aiida import orm
-
-    if clear:
-        warnings.warn('`--clear` is deprecated and no longer has any effect.', AiidaDeprecationWarning)  # pylint: disable=no-member
-
-    label = group.label
-    klass = group.__class__.__name__
-
-    verbosity = logging.DEBUG if verbose else logging.INFO
-    DELETE_LOGGER.setLevel(verbosity)
+    from aiida.tools import delete_group_nodes
 
     if not (force or dry_run):
-        click.confirm(f'Are you sure to delete {klass}<{label}>?', abort=True)
+        click.confirm(f'Are you sure you want to delete {group}?', abort=True)
     elif dry_run:
-        echo.echo_info(f'Would have deleted {klass}<{label}>.')
+        echo.echo_report(f'Would have deleted {group}.')
 
     if delete_nodes:
 
@@ -101,17 +171,17 @@ def group_delete(group, clear, delete_nodes, dry_run, force, verbose, **traversa
             if not pks or force:
                 return False
             echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
-            return not click.confirm('Shall I continue?', abort=True)
+            return not click.confirm('Do you want to continue?', abort=True)
 
-        with override_log_formatter_context('%(message)s'):
-            _, nodes_deleted = delete_group_nodes([group.pk], dry_run=dry_run or _dry_run_callback, **traversal_rules)
+        _, nodes_deleted = delete_group_nodes([group.pk], dry_run=dry_run or _dry_run_callback, **traversal_rules)
         if not nodes_deleted:
             # don't delete the group if the nodes were not deleted
             return
 
     if not dry_run:
+        group_str = str(group)
         orm.Group.objects.delete(group.pk)
-        echo.echo_success(f'{klass}<{label}> deleted.')
+        echo.echo_success(f'{group_str} deleted.')
 
 
 @verdi_group.command('relabel')
@@ -123,9 +193,9 @@ def group_relabel(group, label):
     try:
         group.label = label
     except UniquenessError as exception:
-        echo.echo_critical(f'Error: {exception}.')
+        echo.echo_critical(str(exception))
     else:
-        echo.echo_success(f'Label changed to {label}')
+        echo.echo_success(f"Label changed to '{label}'")
 
 
 @verdi_group.command('description')
@@ -135,11 +205,11 @@ def group_relabel(group, label):
 def group_description(group, description):
     """Change the description of a group.
 
-    If no DESCRIPTION is defined, the current description will simply be echoed.
+    If no description is defined, the current description will simply be echoed.
     """
     if description:
         group.description = description
-        echo.echo_success(f'Changed the description of Group<{group.label}>')
+        echo.echo_success(f'Changed the description of {group}.')
     else:
         echo.echo(group.description)
 
@@ -152,7 +222,7 @@ def group_description(group, description):
     '--uuid',
     is_flag=True,
     default=False,
-    help='Show UUIDs together with PKs. Note: if the --raw option is also passed, PKs are not printed, but oly UUIDs.'
+    help='Show UUIDs together with PKs. Note: if the --raw option is also passed, PKs are not printed, but only UUIDs.'
 )
 @arguments.GROUP()
 @with_dbenv()
@@ -160,8 +230,8 @@ def group_show(group, raw, limit, uuid):
     """Show information for a given group."""
     from tabulate import tabulate
 
-    from aiida.common.utils import str_timedelta
     from aiida.common import timezone
+    from aiida.common.utils import str_timedelta
 
     if limit:
         node_iterator = group.nodes[:limit]
@@ -203,16 +273,8 @@ def group_show(group, raw, limit, uuid):
 
 @verdi_group.command('list')
 @options.ALL_USERS(help='Show groups for all users, rather than only for the current user.')
-@options.USER(help='Add a filter to show only groups belonging to a specific user')
+@options.USER(help='Add a filter to show only groups belonging to a specific user.')
 @options.ALL(help='Show groups of all types.')
-@click.option(
-    '-t',
-    '--type',
-    'group_type',
-    default=None,
-    help='Show groups of a specific type, instead of user-defined groups. Start with semicolumn if you want to '
-    'specify aiida-internal type. [deprecated: use `--type-string` instead. Will be removed in 2.0.0]'
-)
 @options.TYPE_STRING()
 @click.option(
     '-d',
@@ -250,27 +312,21 @@ def group_show(group, raw, limit, uuid):
 @options.NODE(help='Show only the groups that contain the node.')
 @with_dbenv()
 def group_list(
-    all_users, user, all_entries, group_type, type_string, with_description, count, past_days, startswith, endswith,
-    contains, order_by, order_dir, node
+    all_users, user, all_entries, type_string, with_description, count, past_days, startswith, endswith, contains,
+    order_by, order_dir, node
 ):
     """Show a list of existing groups."""
     # pylint: disable=too-many-branches,too-many-arguments,too-many-locals,too-many-statements
     import datetime
+
+    from tabulate import tabulate
+
     from aiida import orm
     from aiida.common import timezone
     from aiida.common.escaping import escape_for_sql_like
-    from tabulate import tabulate
 
     builder = orm.QueryBuilder()
     filters = {}
-
-    if group_type is not None:
-        warnings.warn('`--group-type` is deprecated, use `--type-string` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        if type_string is not None:
-            raise click.BadOptionUsage('group-type', 'cannot use `--group-type` and `--type-string` at the same time.')
-        else:
-            type_string = group_type
 
     # Have to specify the default for `type_string` here instead of directly in the option otherwise it will always
     # raise above if the user specifies just the `--group-type` option. Once that option is removed, the default can
@@ -288,7 +344,7 @@ def group_list(
     if past_days:
         filters['time'] = {'>': timezone.now() - datetime.timedelta(days=past_days)}
 
-    # Query for specific group names
+    # Query for specific group labels
     filters['or'] = []
     if startswith:
         filters['or'].append({'label': {'like': f'{escape_for_sql_like(startswith)}%'}})
@@ -342,10 +398,10 @@ def group_list(
         table.append([projection_lambdas[field](group[0]) for field in projection_fields])
 
     if not all_entries:
-        echo.echo_info('to show groups of all types, use the `-a/--all` option.')
+        echo.echo_report('To show groups of all types, use the `-a/--all` option.')
 
     if not table:
-        echo.echo_info('no groups found matching the specified criteria.')
+        echo.echo_report('No groups found matching the specified criteria.')
     else:
         echo.echo(tabulate(table, headers=projection_header))
 
@@ -354,15 +410,15 @@ def group_list(
 @click.argument('group_label', nargs=1, type=click.STRING)
 @with_dbenv()
 def group_create(group_label):
-    """Create an empty group with a given name."""
+    """Create an empty group with a given label."""
     from aiida import orm
 
     group, created = orm.Group.objects.get_or_create(label=group_label)
 
     if created:
-        echo.echo_success(f"Group created with PK = {group.id} and name '{group.label}'")
+        echo.echo_success(f"Group created with PK = {group.pk} and label '{group.label}'.")
     else:
-        echo.echo_info(f"Group '{group.label}' already exists, PK = {group.id}")
+        echo.echo_report(f"Group with label '{group.label}' already exists: {group}.")
 
 
 @verdi_group.command('copy')
@@ -380,12 +436,12 @@ def group_copy(source_group, destination_group):
 
     # Issue warning if destination group is not empty and get user confirmation to continue
     if not created and not dest_group.is_empty:
-        echo.echo_warning(f'Destination group<{dest_group.label}> already exists and is not empty.')
+        echo.echo_warning(f'Destination {dest_group} already exists and is not empty.')
         click.confirm('Do you wish to continue anyway?', abort=True)
 
     # Copy nodes
     dest_group.add_nodes(list(source_group.nodes))
-    echo.echo_success(f'Nodes copied from group<{source_group.label}> to group<{dest_group.label}>')
+    echo.echo_success(f'Nodes copied from {source_group} to {dest_group}.')
 
 
 @verdi_group.group('path')

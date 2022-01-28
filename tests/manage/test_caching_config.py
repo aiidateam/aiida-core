@@ -11,74 +11,89 @@
 
 # pylint: disable=redefined-outer-name
 
-import tempfile
 import contextlib
+import json
+from pathlib import Path
 
-import yaml
 import pytest
+import yaml
 
 from aiida.common import exceptions
-from aiida.manage.configuration import get_profile
-from aiida.manage.caching import configure, get_use_cache, enable_caching, disable_caching
+from aiida.manage.caching import disable_caching, enable_caching, get_use_cache
 
 
 @pytest.fixture
-def configure_caching():
+def configure_caching(config_with_profile_factory):
     """
     Fixture to set the caching configuration in the test profile to
     a specific dictionary. This is done by creating a temporary
     caching configuration file.
     """
+    config = config_with_profile_factory()
 
     @contextlib.contextmanager
     def inner(config_dict):
-        with tempfile.NamedTemporaryFile() as handle:
-            yaml.dump({get_profile().name: config_dict}, handle, encoding='utf-8')
-            configure(config_file=handle.name)
+        for key, value in config_dict.items():
+            config.set_option(f'caching.{key}', value)
         yield
         # reset the configuration
-        configure()
+        for key in config_dict.keys():
+            config.unset_option(f'caching.{key}')
 
     return inner
 
 
-@pytest.fixture
-def use_default_configuration(configure_caching):  # pylint: disable=redefined-outer-name
+def test_merge_deprecated_yaml(tmp_path):
+    """Test that an existing 'cache_config.yml' is correctly merged into the main config.
+
+    An AiidaDeprecationWarning should also be raised.
     """
-    Fixture to load a default caching configuration.
-    """
-    with configure_caching(
-        config_dict={
-            'default': True,
-            'enabled': ['aiida.calculations:arithmetic.add'],
-            'disabled': ['aiida.calculations:templatereplacer']
+    from aiida.common.warnings import AiidaDeprecationWarning
+    from aiida.manage import configuration
+    from aiida.manage.configuration import get_config_option, load_profile, reset_profile, settings
+
+    # Store the current configuration instance and config directory path
+    current_config = configuration.CONFIG
+    current_config_path = current_config.dirpath
+    current_profile_name = configuration.PROFILE.name
+
+    try:
+        reset_profile()
+        configuration.CONFIG = None
+
+        # Create a temporary folder, set it as the current config directory path
+        settings.AIIDA_CONFIG_FOLDER = str(tmp_path)
+        config_dictionary = json.loads(
+            Path(__file__).parent.joinpath('configuration/migrations/test_samples/reference/6.json').read_text(
+                encoding='utf-8'
+            )
+        )
+        config_dictionary['profiles']['default']['storage']['config']['repository_uri'] = f"file:///{tmp_path/'repo'}"
+        cache_dictionary = {
+            'default': {
+                'default': True,
+                'enabled': ['aiida.calculations:quantumespresso.pw'],
+                'disabled': ['aiida.calculations:core.templatereplacer']
+            }
         }
-    ):
-        yield
+        tmp_path.joinpath('config.json').write_text(json.dumps(config_dictionary))
+        tmp_path.joinpath('cache_config.yml').write_text(yaml.dump(cache_dictionary))
+        with pytest.warns(AiidaDeprecationWarning, match='cache_config.yml'):
+            configuration.CONFIG = configuration.load_config()
+        load_profile('default')
 
-
-def test_empty_enabled_disabled(configure_caching):
-    """Test that `aiida.manage.caching.configure` does not except when either `enabled` or `disabled` is `None`.
-
-    This will happen when the configuration file specifies either one of the keys but no actual values, e.g.::
-
-        profile_name:
-            default: False
-            enabled:
-
-    In this case, the dictionary parsed by yaml will contain `None` for the `enabled` key.
-    Now this will be unlikely, but the same holds when all values are commented::
-
-        profile_name:
-            default: False
-            enabled:
-                # - aiida.calculations:templatereplacer
-
-    which is not unlikely to occurr in the wild.
-    """
-    with configure_caching(config_dict={'default': True, 'enabled': None, 'disabled': None}):
-        # Check that `get_use_cache` also does not except, and works as expected
-        assert get_use_cache(identifier='aiida.calculations:templatereplacer')
+        assert get_config_option('caching.default_enabled') is True
+        assert get_config_option('caching.enabled_for') == ['aiida.calculations:quantumespresso.pw']
+        assert get_config_option('caching.disabled_for') == ['aiida.calculations:core.templatereplacer']
+        # should have now been moved to cache_config.yml.<DATETIME>
+        assert not tmp_path.joinpath('cache_config.yml').exists()
+    finally:
+        # Reset the config folder path and the config instance. Note this will always be executed after the yield no
+        # matter what happened in the test that used this fixture.
+        reset_profile()
+        settings.AIIDA_CONFIG_FOLDER = current_config_path
+        configuration.CONFIG = current_config
+        load_profile(current_profile_name)
 
 
 def test_no_enabled_disabled(configure_caching):
@@ -89,33 +104,33 @@ def test_no_enabled_disabled(configure_caching):
         profile_name:
             default: False
     """
-    with configure_caching(config_dict={'default': False}):
+    with configure_caching(config_dict={'default_enabled': False}):
         # Check that `get_use_cache` also does not except, and works as expected
-        assert not get_use_cache(identifier='aiida.calculations:templatereplacer')
+        assert not get_use_cache(identifier='aiida.calculations:core.templatereplacer')
 
 
 @pytest.mark.parametrize(
     'config_dict', [{
         'wrong_key': ['foo']
     }, {
-        'default': 2
+        'default_enabled': 'x'
     }, {
-        'enabled': 4
+        'enabled_for': 4
     }, {
-        'default': 'string'
+        'default_enabled': 'string'
     }, {
-        'enabled': ['aiida.spam:Ni']
+        'enabled_for': ['aiida.spam:Ni']
     }, {
-        'default': True,
-        'enabled': ['aiida.calculations:With:second_separator']
+        'default_enabled': True,
+        'enabled_for': ['aiida.calculations:With:second_separator']
     }, {
-        'enabled': ['aiida.sp*:Ni']
+        'enabled_for': ['aiida.sp*:Ni']
     }, {
-        'disabled': ['aiida.sp*!bar']
+        'disabled_for': ['aiida.sp*!bar']
     }, {
-        'enabled': ['startswith.number.2bad']
+        'enabled_for': ['startswith.number.2bad']
     }, {
-        'enabled': ['some.thing.in.this.is.a.keyword']
+        'enabled_for': ['some.thing.in.this.is.a.keyword']
     }]
 )
 def test_invalid_configuration_dict(configure_caching, config_dict):
@@ -126,72 +141,74 @@ def test_invalid_configuration_dict(configure_caching, config_dict):
             pass
 
 
-def test_invalid_identifier(use_default_configuration):  # pylint: disable=unused-argument
+def test_invalid_identifier(configure_caching):
     """Test `get_use_cache` raises a `TypeError` if identifier is not a string."""
-    with pytest.raises(TypeError):
-        get_use_cache(identifier=int)
+    with configure_caching({}):
+        with pytest.raises(TypeError):
+            get_use_cache(identifier=int)
 
 
-def test_default(use_default_configuration):  # pylint: disable=unused-argument
+def test_default(configure_caching):
     """Verify that when not specifying any specific identifier, the `default` is used, which is set to `True`."""
-    assert get_use_cache()
+    with configure_caching({'default_enabled': True}):
+        assert get_use_cache()
 
 
-@pytest.mark.parametrize(['config_dict', 'enabled', 'disabled'], [
+@pytest.mark.parametrize(['config_dict', 'enabled_for', 'disabled_for'], [
     ({
-        'default': True,
-        'enabled': ['aiida.calculations:arithmetic.add'],
-        'disabled': ['aiida.calculations:templatereplacer']
+        'default_enabled': True,
+        'enabled_for': ['aiida.calculations:arithmetic.add'],
+        'disabled_for': ['aiida.calculations:core.templatereplacer']
     }, ['some_identifier', 'aiida.calculations:arithmetic.add', 'aiida.calculations:TEMPLATEREPLACER'
-        ], ['aiida.calculations:templatereplacer']),
+        ], ['aiida.calculations:core.templatereplacer']),
     ({
-        'default': False,
-        'enabled': ['aiida.calculations:arithmetic.add'],
-        'disabled': ['aiida.calculations:templatereplacer']
-    }, ['aiida.calculations:arithmetic.add'], ['aiida.calculations:templatereplacer', 'some_identifier']),
+        'default_enabled': False,
+        'enabled_for': ['aiida.calculations:arithmetic.add'],
+        'disabled_for': ['aiida.calculations:core.templatereplacer']
+    }, ['aiida.calculations:arithmetic.add'], ['aiida.calculations:core.templatereplacer', 'some_identifier']),
     ({
-        'default': False,
-        'enabled': ['aiida.calculations:*'],
-    }, ['aiida.calculations:templatereplacer', 'aiida.calculations:arithmetic.add'], ['some_identifier']),
+        'default_enabled': False,
+        'enabled_for': ['aiida.calculations:*'],
+    }, ['aiida.calculations:core.templatereplacer', 'aiida.calculations:arithmetic.add'], ['some_identifier']),
     ({
-        'default': False,
-        'enabled': ['aiida.calcul*'],
-    }, ['aiida.calculations:templatereplacer', 'aiida.calculations:arithmetic.add'], ['some_identifier']),
+        'default_enabled': False,
+        'enabled_for': ['aiida.calcul*'],
+    }, ['aiida.calculations:core.templatereplacer', 'aiida.calculations:arithmetic.add'], ['some_identifier']),
     ({
-        'default': False,
-        'enabled': ['aiida.calculations:*'],
-        'disabled': ['aiida.calculations:arithmetic.add']
-    }, ['aiida.calculations:templatereplacer', 'aiida.calculations:ARIthmetic.add'
+        'default_enabled': False,
+        'enabled_for': ['aiida.calculations:*'],
+        'disabled_for': ['aiida.calculations:arithmetic.add']
+    }, ['aiida.calculations:core.templatereplacer', 'aiida.calculations:ARIthmetic.add'
         ], ['some_identifier', 'aiida.calculations:arithmetic.add']),
     ({
-        'default': False,
-        'enabled': ['aiida.calculations:ar*thmetic.add'],
-        'disabled': ['aiida.calculations:*'],
+        'default_enabled': False,
+        'enabled_for': ['aiida.calculations:ar*thmetic.add'],
+        'disabled_for': ['aiida.calculations:*'],
     }, ['aiida.calculations:arithmetic.add', 'aiida.calculations:arblarghthmetic.add'
-        ], ['some_identifier', 'aiida.calculations:templatereplacer']),
+        ], ['some_identifier', 'aiida.calculations:core.templatereplacer']),
 ])
-def test_configuration(configure_caching, config_dict, enabled, disabled):
+def test_configuration(configure_caching, config_dict, enabled_for, disabled_for):
     """Check that different caching configurations give the expected result.
     """
     with configure_caching(config_dict=config_dict):
-        for identifier in enabled:
+        for identifier in enabled_for:
             assert get_use_cache(identifier=identifier)
-        for identifier in disabled:
+        for identifier in disabled_for:
             assert not get_use_cache(identifier=identifier)
 
 
 @pytest.mark.parametrize(
     ['config_dict', 'valid_identifiers', 'invalid_identifiers'],
     [({
-        'default': False,
-        'enabled': ['aiida.calculations:*thmetic.add'],
-        'disabled': ['aiida.calculations:arith*ic.add']
-    }, ['some_identifier', 'aiida.calculations:templatereplacer'], ['aiida.calculations:arithmetic.add']),
+        'default_enabled': False,
+        'enabled_for': ['aiida.calculations:*thmetic.add'],
+        'disabled_for': ['aiida.calculations:arith*ic.add']
+    }, ['some_identifier', 'aiida.calculations:core.templatereplacer'], ['aiida.calculations:arithmetic.add']),
      ({
-         'default': False,
-         'enabled': ['aiida.calculations:arithmetic.add'],
-         'disabled': ['aiida.calculations:arithmetic.add']
-     }, ['some_identifier', 'aiida.calculations:templatereplacer'], ['aiida.calculations:arithmetic.add'])]
+         'default_enabled': False,
+         'enabled_for': ['aiida.calculations:arithmetic.add'],
+         'disabled_for': ['aiida.calculations:arithmetic.add']
+     }, ['some_identifier', 'aiida.calculations:core.templatereplacer'], ['aiida.calculations:arithmetic.add'])]
 )
 def test_ambiguous_configuration(configure_caching, config_dict, valid_identifiers, invalid_identifiers):
     """
@@ -211,7 +228,7 @@ def test_enable_caching_specific(configure_caching):
     Check that using enable_caching for a specific identifier works.
     """
     identifier = 'some_ident'
-    with configure_caching({'default': False}):
+    with configure_caching({'default_enabled': False}):
         with enable_caching(identifier=identifier):
             assert get_use_cache(identifier=identifier)
 
@@ -221,7 +238,7 @@ def test_enable_caching_global(configure_caching):
     Check that using enable_caching for a specific identifier works.
     """
     specific_identifier = 'some_ident'
-    with configure_caching(config_dict={'default': False, 'disabled': [specific_identifier]}):
+    with configure_caching(config_dict={'default_enabled': False, 'disabled_for': [specific_identifier]}):
         with enable_caching():
             assert get_use_cache(identifier='some_other_ident')
             assert get_use_cache(identifier=specific_identifier)
@@ -232,7 +249,7 @@ def test_disable_caching_specific(configure_caching):
     Check that using disable_caching for a specific identifier works.
     """
     identifier = 'some_ident'
-    with configure_caching({'default': True}):
+    with configure_caching({'default_enabled': True}):
         with disable_caching(identifier=identifier):
             assert not get_use_cache(identifier=identifier)
 
@@ -242,7 +259,7 @@ def test_disable_caching_global(configure_caching):
     Check that using disable_caching for a specific identifier works.
     """
     specific_identifier = 'some_ident'
-    with configure_caching(config_dict={'default': True, 'enabled': [specific_identifier]}):
+    with configure_caching(config_dict={'default_enabled': True, 'enabled_for': [specific_identifier]}):
         with disable_caching():
             assert not get_use_cache(identifier='some_other_ident')
             assert not get_use_cache(identifier=specific_identifier)

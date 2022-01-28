@@ -10,13 +10,15 @@
 """Module to test process futures."""
 import asyncio
 
+import pytest
+
 from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import processes, run
 from aiida.manage.manager import get_manager
-
 from tests.utils import processes as test_processes
 
 
+@pytest.mark.requires_rmq
 class TestWf(AiidaTestCase):
     """Test process futures."""
     TIMEOUT = 5.0  # seconds

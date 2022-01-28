@@ -21,10 +21,10 @@ while true; do
     load_time=$(/usr/bin/time -q -f "%e" $VERDI 2>&1 > /dev/null)
 
     if (( $(echo "$load_time < $LOAD_LIMIT" | bc -l) )); then
-        echo "SUCCESS: loading time $load_time at iteration $iteration below $load_limit"
+        echo "SUCCESS: loading time $load_time at iteration $iteration below $LOAD_LIMIT"
         break
     else
-        echo "WARNING: loading time $load_time at iteration $iteration above $load_limit"
+        echo "WARNING: loading time $load_time at iteration $iteration above $LOAD_LIMIT"
 
         if [ $iteration -eq $MAX_NUMBER_ATTEMPTS ]; then
             echo "ERROR: loading time exceeded the load limit $iteration consecutive times."

@@ -10,6 +10,7 @@
 """`Data` sub class to represent a list."""
 from collections.abc import MutableSequence
 
+from .base import to_aiida_type
 from .data import Data
 
 __all__ = ('List',)
@@ -20,8 +21,12 @@ class List(Data, MutableSequence):
 
     _LIST_KEY = 'list'
 
-    def __init__(self, **kwargs):
-        data = kwargs.pop('list', list())
+    def __init__(self, value=None, **kwargs):
+        """Initialise a ``List`` node instance.
+
+        :param value: list to initialise the ``List`` node from
+        """
+        data = value or kwargs.pop('list', [])
         super().__init__(**kwargs)
         self.set_list(data)
 
@@ -47,13 +52,9 @@ class List(Data, MutableSequence):
         return f'{super().__str__()} value: {self.get_list()}'
 
     def __eq__(self, other):
-        try:
+        if isinstance(other, List):
             return self.get_list() == other.get_list()
-        except AttributeError:
-            return self.get_list() == other
-
-    def __ne__(self, other):
-        return not self == other
+        return self.get_list() == other
 
     def append(self, value):
         data = self.get_list()
@@ -61,20 +62,24 @@ class List(Data, MutableSequence):
         if not self._using_list_reference():
             self.set_list(data)
 
-    def extend(self, value):  # pylint: disable=arguments-differ
+    def extend(self, value):  # pylint: disable=arguments-renamed
         data = self.get_list()
         data.extend(value)
         if not self._using_list_reference():
             self.set_list(data)
 
-    def insert(self, i, value):  # pylint: disable=arguments-differ
+    def insert(self, i, value):  # pylint: disable=arguments-renamed
         data = self.get_list()
         data.insert(i, value)
         if not self._using_list_reference():
             self.set_list(data)
 
     def remove(self, value):
-        del self[value]
+        data = self.get_list()
+        item = data.remove(value)
+        if not self._using_list_reference():
+            self.set_list(data)
+        return item
 
     def pop(self, **kwargs):  # pylint: disable=arguments-differ
         """Remove and return item at index (default last)."""
@@ -112,7 +117,7 @@ class List(Data, MutableSequence):
         try:
             return self.get_attribute(self._LIST_KEY)
         except AttributeError:
-            self.set_list(list())
+            self.set_list([])
             return self.get_attribute(self._LIST_KEY)
 
     def set_list(self, data):
@@ -122,7 +127,7 @@ class List(Data, MutableSequence):
         """
         if not isinstance(data, list):
             raise TypeError('Must supply list type')
-        self.set_attribute(self._LIST_KEY, data)
+        self.set_attribute(self._LIST_KEY, data.copy())
 
     def _using_list_reference(self):
         """
@@ -139,3 +144,8 @@ class List(Data, MutableSequence):
         :rtype: bool
         """
         return not self.is_stored
+
+
+@to_aiida_type.register(list)
+def _(value):
+    return List(list=value)

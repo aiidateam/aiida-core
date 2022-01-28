@@ -7,3 +7,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Management of the database."""
+
+# AUTO-GENERATED
+
+# yapf: disable
+# pylint: disable=wildcard-import
+
+from .integrity import *
+
+__all__ = (
+    'write_database_integrity_violation',
+)
+
+# yapf: enable

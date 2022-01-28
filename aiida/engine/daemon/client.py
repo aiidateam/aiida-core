@@ -7,16 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Controls the daemon
-"""
-
+"""Client to interact with the daemon."""
 import enum
 import os
 import shutil
 import socket
 import tempfile
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from aiida.manage.configuration import get_config, get_config_option
 from aiida.manage.configuration.profile import Profile
@@ -30,6 +27,8 @@ VIRTUALENV = os.environ.get('VIRTUAL_ENV', None)
 
 # see https://github.com/python/typing/issues/182
 JsonDictType = Dict[str, Any]
+
+__all__ = ('DaemonClient',)
 
 
 class ControllerProtocol(enum.Enum):
@@ -184,7 +183,9 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         """
         if self.is_daemon_running:
             try:
-                return open(self.circus_socket_file, 'r', encoding='utf8').read().strip()
+                with open(self.circus_socket_file, 'r', encoding='utf8') as fhandle:
+                    content = fhandle.read().strip()
+                return content
             except (ValueError, IOError):
                 raise RuntimeError('daemon is running so sockets file should have been there but could not read it')
         else:
@@ -208,7 +209,9 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         """
         if os.path.isfile(self.circus_pid_file):
             try:
-                return int(open(self.circus_pid_file, 'r', encoding='utf8').read().strip())
+                with open(self.circus_pid_file, 'r', encoding='utf8') as fhandle:
+                    content = fhandle.read().strip()
+                return int(content)
             except (ValueError, IOError):
                 return None
         else:

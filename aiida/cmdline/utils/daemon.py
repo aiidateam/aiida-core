@@ -35,7 +35,7 @@ def print_client_response_status(response):
         return 0
     if response['status'] == DaemonClient.DAEMON_ERROR_NOT_RUNNING:
         echo.echo('FAILED', fg='red', bold=True)
-        echo.echo('Try to run `verdi daemon start --foreground` to potentially see the exception')
+        echo.echo('Try to run `verdi daemon start-circus --foreground` to potentially see the exception')
         return 2
     if response['status'] == DaemonClient.DAEMON_ERROR_TIMEOUT:
         echo.echo('TIMEOUT', fg='red', bold=True)

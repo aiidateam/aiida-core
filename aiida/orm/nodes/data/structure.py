@@ -1790,7 +1790,7 @@ class StructureData(Data):
 
         :return: a PhonopyAtoms object
         """
-        from phonopy.structure.atoms import PhonopyAtoms  # pylint: disable=import-error
+        from phonopy.structure.atoms import PhonopyAtoms  # pylint: disable=import-error,no-name-in-module
 
         atoms = PhonopyAtoms(symbols=[_.kind_name for _ in self.sites])
         # Phonopy internally uses scaled positions, so you must store cell first!

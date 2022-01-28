@@ -548,13 +548,14 @@ In order to restore a backup, you will need to:
 
 Managing multiple users
 =======================
-Setups with multiple users for a single AiiDA instance are currently not supported.
-Instead, each AiiDA user should install AiiDA in a Unix/Windows account on their own computer.
-Under this account it is possible to configure all the credentials necessary to connect to remote computers.
-Using independent accounts will ensure that, for instance, the SSH credentials to connect to supercomputers are not shared with others.
+AiiDA currently does not support multiple users running concurrently on the same AiiDA profile.
+While AiiDA will tag any node with the :py:class:`~aiida.orm.users.User` who created it (the default user is specified in the profile), this information is currently not used internally.
+In particular, there is currently no permission system in place to limit the operations that can be performed by a given user.
 
-Data can be shared between instances using :ref:`AiiDA's export and import functionality <how-to:share:archives>`.
-Sharing (subsets of) the AiiDA graph can be done as often as needed.
+The typical setup involves each user individually installing AiiDA on their operating system account.
+Data can be shared between private AiiDA profiles through :ref:`AiiDA's export and import functionality <how-to:share:archives>`.
+
+Note that while the configuration file of an AiiDA instance contains access credentials (e.g. for the postgresql database or the rabbitmq service), AiiDA does not store sensitive data in the database or file repository, and AiiDA export archives never contain such data.
 
 .. _#4122: https://github.com/aiidateam/aiida-core/issues/4122
 .. |Computer| replace:: :py:class:`~aiida.orm.Computer`

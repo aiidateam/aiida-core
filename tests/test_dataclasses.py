@@ -1711,7 +1711,6 @@ _symmetry_space_group_name_H-M          'P 1'
 
     def test_xyz_parser(self):
         """Test XYZ parser."""
-        import numpy as np
         xyz_string1 = """
 3
 
@@ -1743,9 +1742,7 @@ Ag 0 0 2.0335
             # Making sure that the structure has sites, kinds and a cell
             self.assertTrue(s.sites)
             self.assertTrue(s.kinds)
-            self.assertTrue(s.cell)
-            # The default cell is given in these cases:
-            self.assertEqual(s.cell, np.diag([1, 1, 1]).tolist())
+            self.assertIsNone(s.cell)
 
         # Testing a case where 1
         xyz_string4 = """
@@ -1957,10 +1954,14 @@ class TestStructureDataFromAse(AiidaTestCase):
 
         assert s.cell is None
         assert s.pbc == (False, False, False)
+        retdict = s.get_dimensionality()
+        assert retdict['value'] == 0
+        assert retdict['dim'] == 0
 
-        with self.assertRaises(AssertionError):
-            # Enabling pbc on a structure with no cell should raise
-            s.set_pbc(True)
+        # Enabling this consistency check would require us to change the default value
+        # with self.assertRaises(AssertionError):
+        # Enabling pbc on a structure with no cell should raise
+        # s.set_pbc(True)
 
         # after setting a cell, we should be able to enable pbc
         s.set_cell([[5, 0, 0], [0, 5, 0], [0, 0, 5]])

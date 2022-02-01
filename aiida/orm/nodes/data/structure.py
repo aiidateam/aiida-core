@@ -15,6 +15,7 @@ functions to operate on them.
 import copy
 import functools
 import itertools
+from sqlite3 import ProgrammingError
 
 from aiida.common.constants import elements
 from aiida.common.exceptions import UnsupportedSpeciesError
@@ -764,6 +765,8 @@ class StructureData(Data):
 
         else:
             if pbc is None:
+                # If a cell is provided by the user, we default to pbc
+                # If not
                 pbc = [True, True, True]
             self.set_cell(cell)
             self.set_pbc(pbc)
@@ -771,23 +774,36 @@ class StructureData(Data):
     def get_dimensionality(self):
         """
         This function checks the dimensionality of the structure and
-        calculates its length/surface/volume
-        :return: returns the dimensionality and length/surface/volume
+        calculates its length/surface/volume.
+
+        If no cell is specified, the length/surface/volume is 0.
+
+        :return: returns a dictionary with keys "dim" (dimensionality integer), "label" (dimensionality label)
+            and "value" (numerical length/surface/volume).
         """
 
         import numpy as np
 
         retdict = {}
 
-        cell = np.array(self.cell)
         pbc = np.array(self.pbc)
         dim = len(pbc[pbc])
 
         retdict['dim'] = dim
         retdict['label'] = self._dimensionality_label[dim]
 
+        if dim not in (0, 1, 2, 3):
+            raise ProgrammingError(f'Dimensionality {dim} must be one of 0, 1, 2, 3')
+
+        if self.cell == _DEFAULT_CELL:
+            # If no cell was specified, no volume can be computed
+            retdict['value'] = 0
+            return retdict
+
+        cell = np.array(self.cell)
         if dim == 0:
-            pass
+            # We have no concept of 0d volume. Let's return a value of 0 for a consistent output dictionary
+            retdict['value'] = 0
         elif dim == 1:
             retdict['value'] = np.linalg.norm(cell[pbc])
         elif dim == 2:
@@ -795,8 +811,6 @@ class StructureData(Data):
             retdict['value'] = np.linalg.norm(np.cross(vectors[0], vectors[1]))
         elif dim == 3:
             retdict['value'] = np.dot(cell[0], np.cross(cell[1], cell[2]))
-        else:
-            raise ValueError(f'Dimensionality {dim} must be <= 3')
 
         return retdict
 
@@ -1649,8 +1663,10 @@ class StructureData(Data):
             raise ModificationNotAllowed('The StructureData object cannot be modified, it has already been stored')
         the_pbc = get_valid_pbc(value)
 
-        if any(the_pbc):
-            assert self.cell is not None, 'Must provide cell when specifying periodic boundary conditions.'
+        # In order to introduce this consistency check, we would need to change the default value of `pbc`
+        # (at least for cases where the user does not provide a cell).
+        # if any(the_pbc):
+        #     assert self.cell is not None, 'Must provide cell when specifying periodic boundary conditions.'
 
         # self._pbc = the_pbc
         self.set_attribute('pbc1', the_pbc[0])

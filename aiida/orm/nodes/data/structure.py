@@ -1740,6 +1740,8 @@ class StructureData(Data):
 
         :return: a float.
         """
+        if self.cell is _DEFAULT_CELL:
+            return 0
         return calc_cell_volume(self.cell)
 
     def get_cif(self, converter='ase', store=False, **kwargs):

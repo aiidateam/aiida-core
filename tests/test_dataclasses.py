@@ -1947,7 +1947,7 @@ class TestStructureDataFromAse(AiidaTestCase):
         self.assertAlmostEqual(c[1].mass, 110.2)
 
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
-    def test_ase_molecule(self):
+    def test_ase_molecule(self):  # pylint: disable=no-self-use
         """Tests that importing a molecule from ASE works."""
         from ase.build import molecule
         s = StructureData(ase=molecule('H2O'))
@@ -1959,9 +1959,10 @@ class TestStructureDataFromAse(AiidaTestCase):
         assert retdict['dim'] == 0
 
         # Enabling this consistency check would require us to change the default value
+        # of pbc to [False, False, False]
         # with self.assertRaises(AssertionError):
-        # Enabling pbc on a structure with no cell should raise
-        # s.set_pbc(True)
+        #   Enabling pbc on a structure with no cell should raise
+        #   s.set_pbc(True)
 
         # after setting a cell, we should be able to enable pbc
         s.set_cell([[5, 0, 0], [0, 5, 0], [0, 0, 5]])

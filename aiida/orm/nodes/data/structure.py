@@ -30,6 +30,8 @@ _MASS_THRESHOLD = 1.e-3
 _SUM_THRESHOLD = 1.e-6
 # Threshold used to check if the cell volume is not zero.
 _VOLUME_THRESHOLD = 1.e-6
+# Default cell
+_DEFAULT_CELL = None
 
 _valid_symbols = tuple(i['symbol'] for i in elements.values())
 _atomic_masses = {el['symbol']: el['mass'] for el in elements.values()}
@@ -42,6 +44,8 @@ def _get_valid_cell(inputcell):
 
     :raise ValueError: whenever the format is not valid.
     """
+    if inputcell is _DEFAULT_CELL:
+        return _DEFAULT_CELL
     try:
         the_cell = list(list(float(c) for c in i) for i in inputcell)
         if len(the_cell) != 3:
@@ -721,7 +725,7 @@ class StructureData(Data):
 
     def __init__(
         self,
-        cell=None,
+        cell=_DEFAULT_CELL,
         pbc=None,
         ase=None,
         pymatgen=None,
@@ -759,12 +763,8 @@ class StructureData(Data):
                 self.set_pymatgen_molecule(pymatgen_molecule)
 
         else:
-            if cell is None:
-                cell = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]]
-
             if pbc is None:
                 pbc = [True, True, True]
-
             self.set_cell(cell)
             self.set_pbc(pbc)
 
@@ -806,7 +806,10 @@ class StructureData(Data):
         """
         if is_ase_atoms(aseatoms):
             # Read the ase structure
-            self.cell = aseatoms.cell
+            if calc_cell_volume(aseatoms.cell) == 0.0:  # ASE defaults to cell [0.,0.,0.]
+                self.cell = _DEFAULT_CELL
+            else:
+                self.cell = aseatoms.cell
             self.pbc = aseatoms.pbc
             self.clear_kinds()  # This also calls clear_sites
             for atom in aseatoms:
@@ -1139,10 +1142,6 @@ class StructureData(Data):
             """
             return list(zip(*[(min(values), max(values)) for values in zip(*positions)]))
 
-        # First, set PBC
-        # All the checks are done in get_valid_pbc called by set_pbc, no need to check anything here
-        self.set_pbc(pbc)
-
         # Calculating the minimal cell:
         positions = np.array([site.position for site in self.sites])
         position_min, _ = get_extremas_from_positions(positions)
@@ -1162,6 +1161,9 @@ class StructureData(Data):
         # Transform the vector (a, b, c ) to [[a,0,0], [0,b,0], [0,0,c]]
         newcell = np.diag(minimal_orthorhombic_cell_dimensions)
         self.set_cell(newcell.tolist())
+
+        # Now set PBC (checks are done in set_pbc, no need to check anything here)
+        self.set_pbc(pbc)
 
     def get_description(self):
         """
@@ -1685,6 +1687,9 @@ class StructureData(Data):
         if self.is_stored:
             raise ModificationNotAllowed('The StructureData object cannot be modified, it has already been stored')
         the_pbc = get_valid_pbc(value)
+
+        if any(the_pbc):
+            assert self.cell is not None, 'Must provide cell when specifying periodic boundary conditions.'
 
         # self._pbc = the_pbc
         self.set_attribute('pbc1', the_pbc[0])

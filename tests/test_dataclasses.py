@@ -2326,7 +2326,11 @@ class TestPymatgenFromStructureData(AiidaTestCase):
     def test_1(self):
         """Tests the check of periodic boundary conditions."""
         struct = StructureData()
+        with self.assertRaises(ValueError):
+            # cell needed for pymatgen structure
+            struct.get_pymatgen_structure()
 
+        struct.set_cell([[1, 0, 0], [0, 1, 2], [3, 4, 5]])
         struct.pbc = [True, True, True]
         struct.get_pymatgen_structure()
 

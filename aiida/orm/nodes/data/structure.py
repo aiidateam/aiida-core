@@ -15,7 +15,6 @@ functions to operate on them.
 import copy
 import functools
 import itertools
-from sqlite3 import ProgrammingError
 
 from aiida.common.constants import elements
 from aiida.common.exceptions import UnsupportedSpeciesError
@@ -793,7 +792,7 @@ class StructureData(Data):
         retdict['label'] = self._dimensionality_label[dim]
 
         if dim not in (0, 1, 2, 3):
-            raise ProgrammingError(f'Dimensionality {dim} must be one of 0, 1, 2, 3')
+            raise ValueError(f'Dimensionality {dim} must be one of 0, 1, 2, 3')
 
         if self.cell == _DEFAULT_CELL:
             # If no cell was specified, no volume can be computed
@@ -1845,6 +1844,8 @@ class StructureData(Data):
 
         if self.pbc != (True, True, True):
             raise ValueError('Periodic boundary conditions must apply in all three dimensions of real space')
+        if self.cell == _DEFAULT_CELL:
+            raise ValueError('Must specify cell in order to create pymatgen structure')
 
         species = []
         additional_kwargs = {}

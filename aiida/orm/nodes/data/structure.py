@@ -1126,45 +1126,6 @@ class StructureData(Data):
         for sym, position in atoms:
             self.append_atom(symbols=sym, position=position)
 
-    def _adjust_default_cell(self, vacuum_factor=1.0, vacuum_addition=10.0, pbc=(False, False, False)):
-        """
-        If the structure was imported from an xyz file, it lacks a defined cell,
-        and the default cell is taken ([[1,0,0], [0,1,0], [0,0,1]]),
-        leading to an unphysical definition of the structure.
-        This method will adjust the cell
-        """
-        # pylint: disable=invalid-name
-        import numpy as np
-
-        def get_extremas_from_positions(positions):
-            """
-            returns the minimum and maximum value for each dimension in the positions given
-            """
-            return list(zip(*[(min(values), max(values)) for values in zip(*positions)]))
-
-        # Calculating the minimal cell:
-        positions = np.array([site.position for site in self.sites])
-        position_min, _ = get_extremas_from_positions(positions)
-
-        # Translate the structure to the origin, such that the minimal values in each dimension
-        # amount to (0,0,0)
-        positions -= position_min
-        for index, site in enumerate(self.get_attribute('sites')):
-            site['position'] = list(positions[index])
-
-        # The orthorhombic cell that (just) accomodates the whole structure is now given by the
-        # extremas of position in each dimension:
-        minimal_orthorhombic_cell_dimensions = np.array(get_extremas_from_positions(positions)[1])
-        minimal_orthorhombic_cell_dimensions = np.dot(vacuum_factor, minimal_orthorhombic_cell_dimensions)
-        minimal_orthorhombic_cell_dimensions += vacuum_addition
-
-        # Transform the vector (a, b, c ) to [[a,0,0], [0,b,0], [0,0,c]]
-        newcell = np.diag(minimal_orthorhombic_cell_dimensions)
-        self.set_cell(newcell.tolist())
-
-        # Now set PBC (checks are done in set_pbc, no need to check anything here)
-        self.set_pbc(pbc)
-
     def get_description(self):
         """
         Returns a string with infos retrieved from StructureData node's properties
@@ -2498,3 +2459,45 @@ class Site:
 
 # get_structuredata_from_qeinput has been moved to:
 # aiida.tools.codespecific.quantumespresso.qeinputparser
+
+
+def _adjust_default_cell(structure, vacuum_factor=1.0, vacuum_addition=10.0, pbc=(False, False, False)):
+    """
+    If the structure was imported from an xyz file, it lacks a cell.
+    This method will adjust the cell
+
+    Note: This helper method is not used by the StructureData class directly.
+    """
+    # pylint: disable=invalid-name
+    import numpy as np
+
+    def get_extremas_from_positions(positions):
+        """
+        returns the minimum and maximum value for each dimension in the positions given
+        """
+        return list(zip(*[(min(values), max(values)) for values in zip(*positions)]))
+
+    # Calculating the minimal cell:
+    positions = np.array([site.position for site in structure.sites])
+    position_min, _ = get_extremas_from_positions(positions)
+
+    # Translate the structure to the origin, such that the minimal values in each dimension
+    # amount to (0,0,0)
+    positions -= position_min
+    for index, site in enumerate(structure.get_attribute('sites')):
+        site['position'] = list(positions[index])
+
+    # The orthorhombic cell that (just) accomodates the whole structure is now given by the
+    # extremas of position in each dimension:
+    minimal_orthorhombic_cell_dimensions = np.array(get_extremas_from_positions(positions)[1])
+    minimal_orthorhombic_cell_dimensions = np.dot(vacuum_factor, minimal_orthorhombic_cell_dimensions)
+    minimal_orthorhombic_cell_dimensions += vacuum_addition
+
+    # Transform the vector (a, b, c ) to [[a,0,0], [0,b,0], [0,0,c]]
+    newcell = np.diag(minimal_orthorhombic_cell_dimensions)
+    structure.set_cell(newcell.tolist())
+
+    # Now set PBC (checks are done in set_pbc, no need to check anything here)
+    structure.set_pbc(pbc)
+
+    return structure

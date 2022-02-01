@@ -190,6 +190,7 @@ def import_aiida_xyz(filename, vacuum_factor, vacuum_addition, pbc, label, group
     Import structure in XYZ format using AiiDA's internal importer
     """
     from aiida.orm import StructureData
+    from aiida.orm.nodes.data.structure import _adjust_default_cell
 
     with open(filename, encoding='utf8') as fobj:
         xyz_txt = fobj.read()
@@ -206,7 +207,8 @@ def import_aiida_xyz(filename, vacuum_factor, vacuum_addition, pbc, label, group
 
     try:
         new_structure._parse_xyz(xyz_txt)  # pylint: disable=protected-access
-        new_structure._adjust_default_cell(  # pylint: disable=protected-access
+        new_structure = _adjust_default_cell(  # pylint: disable=protected-access
+            new_structure,
             vacuum_addition=vacuum_addition,
             vacuum_factor=vacuum_factor,
             pbc=pbc_bools)

@@ -1950,6 +1950,23 @@ class TestStructureDataFromAse(AiidaTestCase):
         self.assertAlmostEqual(c[1].mass, 110.2)
 
     @unittest.skipIf(not has_ase(), 'Unable to import ase')
+    def test_ase_molecule(self):
+        """Tests that importing a molecule from ASE works."""
+        from ase.build import molecule
+        s = StructureData(ase=molecule('H2O'))
+
+        assert s.cell is None
+        assert s.pbc == (False, False, False)
+
+        with self.assertRaises(AssertionError):
+            # Enabling pbc on a structure with no cell should raise
+            s.set_pbc(True)
+
+        # after setting a cell, we should be able to enable pbc
+        s.set_cell([[5, 0, 0], [0, 5, 0], [0, 0, 5]])
+        s.set_pbc(True)
+
+    @unittest.skipIf(not has_ase(), 'Unable to import ase')
     def test_conversion_of_types_1(self):
         """
         Tests roundtrip ASE -> StructureData -> ASE, with tags

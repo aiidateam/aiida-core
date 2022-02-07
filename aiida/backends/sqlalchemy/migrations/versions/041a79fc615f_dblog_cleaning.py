@@ -228,7 +228,7 @@ def export_and_clean_workflow_logs(connection):
 
             # If delete_on_close is False, we are running for the user and add additional message of file location
             if not delete_on_close:
-                echo.echo('Exported entity logs that don\'t correspond to nodes to {}'.format(filename))
+                echo.echo(f'Exported entity logs that don\'t correspond to nodes to {filename}')
 
         # Now delete the records
         connection.execute(

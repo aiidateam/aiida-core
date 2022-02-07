@@ -175,10 +175,7 @@ def pycifrw_from_cif(datablocks, loops=None, names=None):
                         row_size = len(tag_values)
                     elif row_size != len(tag_values):
                         raise ValueError(
-                            'Number of values for tag '
-                            "'{}' is different from "
-                            'the others in the same '
-                            'loop'.format(tag)
+                            f'Number of values for tag \'{tag}\' is different from the others in the same loop'
                         )
                     if row_size == 0:
                         continue

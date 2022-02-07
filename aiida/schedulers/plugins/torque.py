@@ -85,11 +85,7 @@ class TorqueScheduler(PbsBaseClass):
                 if physical_memory_kb <= 0:
                     raise ValueError
             except ValueError:
-                raise ValueError(
-                    'max_memory_kb must be '
-                    "a positive integer (in kB)! It is instead '{}'"
-                    ''.format((max_memory_kb))
-                )
+                raise ValueError(f'max_memory_kb must be a positive integer (in kB)! It is instead \'{max_memory_kb}\'')
             # There is always something before, at least the total #
             # of nodes
             select_string += f',mem={physical_memory_kb}kb'

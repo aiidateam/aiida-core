@@ -384,9 +384,7 @@ class SlurmScheduler(Scheduler):
                     raise ValueError
             except ValueError:
                 raise ValueError(
-                    'max_memory_kb must be '
-                    "a positive integer (in kB)! It is instead '{}'"
-                    ''.format((job_tmpl.max_memory_kb))
+                    f'max_memory_kb must be a positive integer (in kB)! It is instead \'{job_tmpl.max_memory_kb}\''
                 )
             # --mem: Specify the real memory required per node in MegaBytes.
             # --mem and  --mem-per-cpu  are  mutually exclusive.
@@ -546,9 +544,7 @@ stderr='{stderr.strip()}'"""
                 # gathered up to now, and continue to the next job
                 # Also print a warning
                 self.logger.warning(
-                    'Wrong line length in squeue output!'
-                    "Skipping optional fields. Line: '{}'"
-                    ''.format(jobdata_raw)
+                    f'Wrong line length in squeue output!Skipping optional fields. Line: \'{jobdata_raw}\''
                 )
                 # I append this job before continuing
                 job_list.append(this_job)

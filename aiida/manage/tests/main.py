@@ -147,7 +147,7 @@ class ProfileManager:
             self._profile = load_profile(profile_name)
             manager.get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
         except Exception:
-            raise TestManagerError('Unable to load test profile \'{}\'.'.format(profile_name))
+            raise TestManagerError(f'Unable to load test profile \'{profile_name}\'.')
         check_if_tests_can_run()
 
         self._select_db_test_case(backend=self._profile.storage_backend)

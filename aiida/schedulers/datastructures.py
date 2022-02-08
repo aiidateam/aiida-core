@@ -296,9 +296,9 @@ class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-insta
       * ``append_text``: a (possibly multi-line) string to be inserted
         in the scheduler script after the main execution line
       * ``import_sys_environment``: import the system environment variables
-      * ``codes_info``: a list of (aiida.common.datastructures.CodeInfo, computer_cmdline_params)
+      * ``codes_info``: a list of (aiida.common.datastructures.CodeInfo, prepend_cmdline_params)
         tuple objects. Each contains the information necessary to run a single code. At the
-        moment, where computer_cmdline_params is a list of string of computer or scheduler
+        moment, where prepend_cmdline_params is a list of string of computer or scheduler
         setting cmdline parameters while CodeInfo object can contain:
 
         * ``cmdline_parameters``: a list of strings with the command line arguments

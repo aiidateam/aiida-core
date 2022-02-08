@@ -705,9 +705,9 @@ class CalcJob(Process):
                 this_withmpi = code_info.withmpi
 
             if this_withmpi:
-                code_info.computer_cmdline_params = mpi_args + extra_mpirun_params
+                code_info.prepend_cmdline_params = mpi_args + extra_mpirun_params
             else:
-                code_info.computer_cmdline_params = None
+                code_info.prepend_cmdline_params = None
                 
             code_info.use_double_quotes = this_code.get_use_double_quotes()
             this_argv = [this_code.get_execname()

@@ -99,10 +99,10 @@ class CodeInfo(DefaultFieldsAttributeDict):
     This attribute-dictionary contains the information needed to execute a code.
     Possible attributes are:
     
-    * ``computer_cmdline_params``: (optional) a list of strings, containing parameters to be 
+    * ``prepend_cmdline_params``: (optional) a list of strings, containing parameters to be 
       written in front of cmdline_params::
       
-        computer_cmdline_params cmdline_params ...
+        prepend_cmdline_params cmdline_params ...
 
     * ``cmdline_params``: a list of strings, containing parameters to be written on
       the command line right after the call to the code, as for example::
@@ -143,13 +143,13 @@ class CodeInfo(DefaultFieldsAttributeDict):
       on the remote computer)
     * ``use_double_quotes``: if True, the code cmdline parameters of bash script escaped by 
       quotes, this only apply to cmdline_params of code_info since the bash escape behaviour of
-      computer_cmdline_params in set by computer and already take effect in computer_cmdline_params
+      prepend_cmdline_params in set by computer and already take effect in prepend_cmdline_params
     * ``code_uuid``: the uuid of the code associated to the CodeInfo
     * ``custom_cmdline_string``: If this field provided, only the content of this string will print and
       the string will print as it is without any escape 
     """
     _default_fields = (
-        'computer_cmdline_params',
+        'prepend_cmdline_params',
         'cmdline_params',  # as a list of strings
         'stdin_name',
         'stdout_name',

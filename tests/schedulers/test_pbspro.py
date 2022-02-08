@@ -934,7 +934,6 @@ class TestSubmitScript(unittest.TestCase):
         code_info.stdin_name = 'aiida.in'
         code_info.use_double_quotes = (False, False, False)
 
-
         for (shebang, expected_first_line) in ((None, '#!/bin/bash'), ('', ''), ('NOSET', '#!/bin/bash')):
             job_tmpl = JobTemplate()
             if shebang == 'NOSET':

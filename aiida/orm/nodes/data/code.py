@@ -350,7 +350,7 @@ class Code(Data):
         was set.
         """
         return self.get_attribute('input_plugin', None)
-    
+
     def set_use_double_quotes(self, use_double_quotes):
         """
         Set whether a code cmdline is escape with double quotes.

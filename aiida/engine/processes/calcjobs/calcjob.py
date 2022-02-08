@@ -708,19 +708,21 @@ class CalcJob(Process):
                 code_info.prepend_cmdline_params = mpi_args + extra_mpirun_params
             else:
                 code_info.prepend_cmdline_params = None
-                
+
             # Set code_info use_double_quotes based on computer and code setup if code_info not set by plugin
             if code_info.use_double_quotes is None:
-                code_info.use_double_quotes = (computer.get_use_double_quotes(), this_code.get_use_double_quotes(), False)
-                
+                code_info.use_double_quotes = (
+                    computer.get_use_double_quotes(), this_code.get_use_double_quotes(), False
+                )
+
             this_argv = [this_code.get_execname()
-                            ] + (code_info.cmdline_params if code_info.cmdline_params is not None else [])
+                         ] + (code_info.cmdline_params if code_info.cmdline_params is not None else [])
 
             # overwrite the old cmdline_params and add codename and mpirun stuff
             code_info.cmdline_params = this_argv
 
             codes_info.append(code_info)
-            
+
         job_tmpl.codes_info = codes_info
 
         # set the codes execution mode, default set to `SERIAL`

@@ -709,7 +709,10 @@ class CalcJob(Process):
             else:
                 code_info.prepend_cmdline_params = None
                 
-            code_info.use_double_quotes = this_code.get_use_double_quotes()
+            # Set code_info use_double_quotes based on computer and code setup if code_info not set by plugin
+            if code_info.use_double_quotes is None:
+                code_info.use_double_quotes = (computer.get_use_double_quotes(), this_code.get_use_double_quotes(), False)
+                
             this_argv = [this_code.get_execname()
                             ] + (code_info.cmdline_params if code_info.cmdline_params is not None else [])
 
@@ -756,7 +759,6 @@ class CalcJob(Process):
         if max_wallclock_seconds is not None:
             job_tmpl.max_wallclock_seconds = max_wallclock_seconds
 
-        job_tmpl.computer_cmdline_double_quotes = computer.get_use_double_quotes()
         submit_script_filename = self.node.get_option('submit_script_filename')
         script_content = scheduler.get_submit_script(job_tmpl)
         folder.create_file_from_filelike(io.StringIO(script_content), submit_script_filename, 'w', encoding='utf8')

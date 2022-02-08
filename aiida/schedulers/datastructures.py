@@ -353,7 +353,6 @@ class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-insta
         'import_sys_environment',
         'codes_run_mode',
         'codes_info',
-        'computer_cmdline_double_quotes',
     )
 
 

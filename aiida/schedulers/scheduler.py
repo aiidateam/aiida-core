@@ -156,7 +156,7 @@ class Scheduler(metaclass=abc.ABCMeta):
             script_lines.append(job_tmpl.prepend_text)
             script_lines.append(empty_line)
 
-        script_lines.append(self._get_run_line(job_tmpl.codes_info, job_tmpl.codes_run_mode, job_tmpl.computer_cmdline_double_quotes))
+        script_lines.append(self._get_run_line(job_tmpl.codes_info, job_tmpl.codes_run_mode))
         script_lines.append(empty_line)
 
         if job_tmpl.append_text:
@@ -203,7 +203,7 @@ class Scheduler(metaclass=abc.ABCMeta):
         # pylint: disable=no-self-use,unused-argument
         return None
 
-    def _get_run_line(self, codes_info, codes_run_mode, computer_cmdline_double_quotes):
+    def _get_run_line(self, codes_info, codes_run_mode):
         """Return a string with the line to execute a specific code with specific arguments.
 
         :parameter codes_info: a list of `aiida.common.datastructures.CodeInfo` objects. Each contains the information
@@ -222,23 +222,24 @@ class Scheduler(metaclass=abc.ABCMeta):
                 list_of_runlines.append(code_info.custom_cmdline_string)
                 continue
             
+            
             command_to_exec_list = []
             if code_info.prepend_cmdline_params:
                 for arg in code_info.prepend_cmdline_params:
-                    command_to_exec_list.append(escape_for_bash(arg, use_double_quotes=computer_cmdline_double_quotes))
+                    command_to_exec_list.append(escape_for_bash(arg, use_double_quotes=code_info.use_double_quotes[0]))
             for arg in code_info.cmdline_params:
-                command_to_exec_list.append(escape_for_bash(arg, use_double_quotes=code_info.use_double_quotes))
+                command_to_exec_list.append(escape_for_bash(arg, use_double_quotes=code_info.use_double_quotes[1]))
                 
             command_to_exec = ' '.join(command_to_exec_list)
 
-            stdin_str = f'< {escape_for_bash(code_info.stdin_name)}' if code_info.stdin_name else ''
-            stdout_str = f'> {escape_for_bash(code_info.stdout_name)}' if code_info.stdout_name else ''
+            stdin_str = f'< {escape_for_bash(code_info.stdin_name, code_info.use_double_quotes[2])}' if code_info.stdin_name else ''
+            stdout_str = f'> {escape_for_bash(code_info.stdout_name, code_info.use_double_quotes[2])}' if code_info.stdout_name else ''
 
             join_files = code_info.join_files
             if join_files:
                 stderr_str = '2>&1'
             else:
-                stderr_str = f'2> {escape_for_bash(code_info.stderr_name)}' if code_info.stderr_name else ''
+                stderr_str = f'2> {escape_for_bash(code_info.stderr_name, code_info.use_double_quotes[2])}' if code_info.stderr_name else ''
 
             output_string = f'{command_to_exec} {stdin_str} {stdout_str} {stderr_str}'
 

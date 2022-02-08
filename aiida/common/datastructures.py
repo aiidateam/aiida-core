@@ -156,7 +156,7 @@ class CodeInfo(DefaultFieldsAttributeDict):
         'stderr_name',
         'join_files',
         'withmpi',
-        'use_double_quotes', # only apply to cmdline_params
+        'use_double_quotes', # tuple to control double quotes of (prepend_, cmdline_params, append_)
         'code_uuid',
         'custom_cmdline_string',
     )

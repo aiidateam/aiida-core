@@ -125,6 +125,7 @@ def test_submit_script():
     code_info = CodeInfo()
     code_info.cmdline_params = ['mpirun', '-np', '2', 'pw.x', '-npool', '1']
     code_info.stdin_name = 'aiida.in'
+    code_info.use_double_quotes = (False, False, False)
     job_tmpl.codes_info = [code_info]
     job_tmpl.codes_run_mode = CodeRunMode.SERIAL
     job_tmpl.account = 'account_id'

@@ -885,6 +885,7 @@ class TestSubmitScript(unittest.TestCase):
         code_info = CodeInfo()
         code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
         code_info.stdin_name = 'aiida.in'
+        code_info.use_double_quotes = (False, False, False)
         job_tmpl.codes_info = [code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
@@ -915,6 +916,7 @@ class TestSubmitScript(unittest.TestCase):
         code_info = CodeInfo()
         code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
         code_info.stdin_name = 'aiida.in'
+        code_info.use_double_quotes = (False, False, False)
         job_tmpl.codes_info = [code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
@@ -945,6 +947,7 @@ class TestSubmitScript(unittest.TestCase):
         code_info = CodeInfo()
         code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
         code_info.stdin_name = 'aiida.in'
+        code_info.use_double_quotes = (False, False, False)
         job_tmpl.codes_info = [code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
@@ -977,6 +980,7 @@ class TestSubmitScript(unittest.TestCase):
         code_info = CodeInfo()
         code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
         code_info.stdin_name = 'aiida.in'
+        code_info.use_double_quotes = (False, False, False)
         job_tmpl.codes_info = [code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
@@ -1015,6 +1019,7 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.job_resource = scheduler.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
         code_info = CodeInfo()
         code_info.cmdline_params = []
+        code_info.use_double_quotes = (False, False, False)
         job_tmpl.codes_info = [code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 

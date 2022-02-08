@@ -141,9 +141,9 @@ class CodeInfo(DefaultFieldsAttributeDict):
 
     * ``withmpi``: if True, executes the code with mpirun (or another MPI installed
       on the remote computer)
-    * ``use_double_quotes``: if True, the code cmdline parameters of bash script escaped by 
-      quotes, this only apply to cmdline_params of code_info since the bash escape behaviour of
-      prepend_cmdline_params in set by computer and already take effect in prepend_cmdline_params
+    * ``use_double_quotes``: is a tuple contain three bool values which decide whether use double quotes for 
+      prepend_cmdline_params, cmdline_params, append_cmdline_parames respectively. If True, the code cmdline parameters of 
+      bash script escaped by quotes.
     * ``code_uuid``: the uuid of the code associated to the CodeInfo
     * ``custom_cmdline_string``: If this field provided, only the content of this string will print and
       the string will print as it is without any escape 

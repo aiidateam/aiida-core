@@ -204,6 +204,7 @@ def set_computer_builder(ctx, param, value):
 @options_computer.MPI_RUN_COMMAND()
 @options_computer.MPI_PROCS_PER_MACHINE()
 @options_computer.DEFAULT_MEMORY_PER_MACHINE()
+@options_computer.USE_DOUBLE_QUOTES()
 @options_computer.PREPEND_TEXT()
 @options_computer.APPEND_TEXT()
 @options.NON_INTERACTIVE()

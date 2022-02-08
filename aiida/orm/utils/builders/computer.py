@@ -45,6 +45,7 @@ class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
         spec['shebang'] = computer.get_shebang()
         spec['mpirun_command'] = ' '.join(computer.get_mpirun_command())
         spec['mpiprocs_per_machine'] = computer.get_default_mpiprocs_per_machine()
+        spec['use_double_quotes'] = computer.get_use_double_quotes()
         spec['default_memory_per_machine'] = computer.get_default_memory_per_machine()
 
         return spec
@@ -80,6 +81,7 @@ class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
         computer.set_append_text(self._get_and_count('append_text', used))
         computer.set_workdir(self._get_and_count('work_dir', used))
         computer.set_shebang(self._get_and_count('shebang', used))
+        computer.set_use_double_quotes(self._get_and_count('use_double_quotes', used))
 
         mpiprocs_per_machine = self._get_and_count('mpiprocs_per_machine', used)
         # In the command line, 0 means unspecified

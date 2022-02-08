@@ -117,6 +117,16 @@ DEFAULT_MEMORY_PER_MACHINE = OverridableOption(
     help='The default amount of RAM (kB) that should be allocated per machine (node), if not otherwise specified.'
 )
 
+USE_DOUBLE_QUOTES = OverridableOption(
+    '--use-double-quotes/--not-use-double-quotes',
+    is_eager=False,
+    default=False,
+    cls=InteractiveOption,
+    prompt='Whether use double quotes for prepend cmdline params?',
+    help='Whether the cmdline parameters before the code executable parameters in '
+    'script using the double quotes to escape.',
+)
+
 PREPEND_TEXT = OverridableOption(
     '--prepend-text',
     cls=TemplateInteractiveOption,

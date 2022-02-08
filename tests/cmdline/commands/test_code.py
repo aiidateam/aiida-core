@@ -151,7 +151,7 @@ def test_noninteractive_remote(run_cli_command, aiida_localhost, non_interactive
     label = 'noninteractive_remote'
     options = [
         '--non-interactive', f'--label={label}', '--description=description', '--input-plugin=core.arithmetic.add',
-        '--on-computer', f'--computer={aiida_localhost.label}', '--remote-abs-path=/remote/abs/path'
+        '--on-computer', f'--computer={aiida_localhost.label}', '--remote-abs-path=/remote/abs/path', '--use-double-quotes',
     ]
     run_cli_command(cmd_code.setup_code, options)
     assert isinstance(load_code(label), Code)

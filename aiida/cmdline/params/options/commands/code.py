@@ -109,6 +109,15 @@ REL_PATH = OverridableOption(
     help='[if --store-in-db]: Relative path of the executable inside the code-folder.'
 )
 
+USE_DOUBLE_QUOTES = OverridableOption(
+    '--use-double-quotes/--not-use-double-quotes',
+    is_eager=False,
+    default=False,
+    cls=InteractiveOption,
+    prompt='Whether use double quotes for code cmdline params?',
+    help='Whether the code executable parameters in script using the double quotes to escape.'
+)
+
 LABEL = options.LABEL.clone(
     prompt='Label',
     callback=validate_label_uniqueness,

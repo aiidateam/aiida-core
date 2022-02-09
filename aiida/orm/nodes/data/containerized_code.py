@@ -54,7 +54,7 @@ class ContainerizedCode(Code):
         type_check(computer, orm.Computer)
         self.computer = computer
 
-        container_engine_command = engine_command.format(image=image)
+        container_engine_command = engine_command.format(image=image, exec_str='$exec_str')
 
         self.set_attribute('container_engine_command', container_engine_command)
         self.set_attribute('image', image)
@@ -69,3 +69,12 @@ class ContainerizedCode(Code):
 
     def get_container_engine_command(self):
         return self.get_attribute('container_engine_command', '')
+
+    def get_use_double_quotes(self):
+        """
+        Here for containerized code override the default of super class using double
+        quotes as default.
+        
+        Return whether a code is escape with double quotes (True, default) or not (False).
+        """
+        return self.get_attribute('use_double_quotes', True)

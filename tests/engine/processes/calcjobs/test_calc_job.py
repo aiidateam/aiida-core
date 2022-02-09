@@ -139,7 +139,7 @@ class MultiCodesCalcJob(CalcJob):
 @pytest.mark.parametrize('code_use_double_quotes', [True, False])
 @pytest.mark.parametrize('computer_use_double_quotes', [True, False])
 def test_double_quote(aiida_local_code_factory, file_regression, code_use_double_quotes, computer_use_double_quotes):
-    """test run container code"""
+    """test that bash script quote escape behaviour can be controlled"""
     computer = orm.Computer(
         label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.direct',
     ).store()
@@ -170,7 +170,7 @@ def test_double_quote(aiida_local_code_factory, file_regression, code_use_double
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
 def test_custom_cmdline_string(aiida_local_code_factory, file_regression):
-    """test run container code"""
+    """test having a custom cmdline string in the bash script"""
 
     inputs = {
         'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
@@ -261,10 +261,11 @@ def test_containerized_code(aiida_local_code_factory, file_regression):
     computer = orm.Computer(
         label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.direct'
     ).store()
-    engine_command = 'docker run {image}'
+    engine_command = """docker run -it -v $PWD:/workdir:rw -w /workdir {image} sh -c '{exec_str}'"""
     code = ContainerizedCode(
-        computer=computer, engine_command=engine_command, image='cscs/qe-mpich:latest', container_exec_path='/usr/bin/pw.x'
+        computer=computer, engine_command=engine_command, image='ubuntu', container_exec_path='/bin/bash'
     )
+    code.set_use_double_quotes(use_double_quotes=True)
 
     inputs = {
         'code': code,

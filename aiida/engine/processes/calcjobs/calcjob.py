@@ -692,6 +692,44 @@ class CalcJob(Process):
             if code_info.code_uuid is None:
                 raise PluginInternalError('CalcInfo should have the information of the code to be launched')
             this_code = load_code(code_info.code_uuid)
+            
+            # Set code_info use_double_quotes based on computer and code setup if code_info not set by plugin
+            if code_info.use_double_quotes is None:
+                code_info.use_double_quotes = (computer.get_use_double_quotes(), this_code.get_use_double_quotes())
+            
+            # set this_argv only for container code with custom_cmdline_string to override other parameters
+            if isinstance(this_code, ContainerizedCode):
+                from string import Template
+                from aiida.common.escaping import escape_for_bash
+                
+                # This part copy from scheduler _get_run_line
+                stdin_str = f'< {escape_for_bash(code_info.stdin_name, code_info.use_double_quotes[1])}' if code_info.stdin_name else ''
+                stdout_str = f'> {escape_for_bash(code_info.stdout_name, code_info.use_double_quotes[1])}' if code_info.stdout_name else ''
+
+                join_files = code_info.join_files
+                if join_files:
+                    stderr_str = '2>&1'
+                else:
+                    stderr_str = f'2> {escape_for_bash(code_info.stderr_name, code_info.use_double_quotes[1])}' if code_info.stderr_name else ''
+
+                append_cmdline_list = [stdin_str, stdout_str, stderr_str]
+                
+                command_to_exec_list = [escape_for_bash(this_code.get_container_exec_path(), use_double_quotes=code_info.use_double_quotes[1])]
+                
+                if code_info.cmdline_params is not None:
+                    for arg in code_info.cmdline_params:
+                        command_to_exec_list.append(escape_for_bash(arg, use_double_quotes=code_info.use_double_quotes[1]))
+                        
+                command_to_exec = ' '.join(command_to_exec_list + append_cmdline_list)
+                
+                # containerized code run line always use its own mpi setting rather config from prepend
+                code_info.prepend_cmdline_params = None
+                
+                temp_obj = Template(this_code.get_container_engine_command())
+                
+                # use safe_substitute since $ also be placeholder for ENV_VAR
+                code_info.custom_cmdline_string = temp_obj.safe_substitute(exec_str=command_to_exec)
+            
 
             # To determine whether this code should be run with MPI enabled, we get the value that was set in the inputs
             # of the entire process, which can then be overwritten by the value from the `CodeInfo`. This allows plugins
@@ -710,23 +748,8 @@ class CalcJob(Process):
             else:
                 code_info.prepend_cmdline_params = None
                 
-            # Set code_info use_double_quotes based on computer and code setup if code_info not set by plugin
-            if code_info.use_double_quotes is None:
-                code_info.use_double_quotes = (computer.get_use_double_quotes(), this_code.get_use_double_quotes(), False)
-                
             this_argv = [this_code.get_execname()
                             ] + (code_info.cmdline_params if code_info.cmdline_params is not None else [])
-            
-            # set this_argv only for container code
-            if isinstance(this_code, ContainerizedCode):
-                # containerized code run line always use its own mpi setting rather config from prepend
-                code_info.prepend_cmdline_params = None
-                
-                this_argv = this_code.get_container_engine_command().split(' ') + [
-                    this_code.get_container_exec_path()
-                ] + (code_info.cmdline_params if code_info.cmdline_params is not None else [])
-                
-            # overwrite the old cmdline_params and add codename and mpirun stuff
             code_info.cmdline_params = this_argv
 
             codes_info.append(code_info)

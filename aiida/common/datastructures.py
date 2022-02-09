@@ -141,8 +141,8 @@ class CodeInfo(DefaultFieldsAttributeDict):
 
     * ``withmpi``: if True, executes the code with mpirun (or another MPI installed
       on the remote computer)
-    * ``use_double_quotes``: is a tuple contain three bool values which decide whether use double quotes for 
-      prepend_cmdline_params, cmdline_params, append_cmdline_parames respectively. If True, the code cmdline parameters of 
+    * ``use_double_quotes``: is a tuple contain two bool values which decide whether use double quotes for 
+      prepend_cmdline_params, cmdline_params respectively. If True, the code cmdline parameters of 
       bash script escaped by quotes.
     * ``code_uuid``: the uuid of the code associated to the CodeInfo
     * ``custom_cmdline_string``: If this field provided, only the content of this string will print and
@@ -156,7 +156,7 @@ class CodeInfo(DefaultFieldsAttributeDict):
         'stderr_name',
         'join_files',
         'withmpi',
-        'use_double_quotes', # tuple to control double quotes of (prepend_, cmdline_params, append_)
+        'use_double_quotes', # tuple to control double quotes of (prepend_cmdline_params, cmdline_params)
         'code_uuid',
         'custom_cmdline_string',
     )

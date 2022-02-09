@@ -1,0 +1,475 @@
+columns:
+  db_dbauthinfo:
+    aiidauser_id:
+      data_type: integer
+      default: null
+      is_nullable: true
+    auth_params:
+      data_type: jsonb
+      default: null
+      is_nullable: true
+    dbcomputer_id:
+      data_type: integer
+      default: null
+      is_nullable: true
+    enabled:
+      data_type: boolean
+      default: null
+      is_nullable: true
+    id:
+      data_type: integer
+      default: nextval('db_dbauthinfo_id_seq'::regclass)
+      is_nullable: false
+    metadata:
+      data_type: jsonb
+      default: null
+      is_nullable: true
+  db_dbcomment:
+    content:
+      data_type: text
+      default: null
+      is_nullable: true
+    ctime:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: true
+    dbnode_id:
+      data_type: integer
+      default: null
+      is_nullable: true
+    id:
+      data_type: integer
+      default: nextval('db_dbcomment_id_seq'::regclass)
+      is_nullable: false
+    mtime:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: true
+    user_id:
+      data_type: integer
+      default: null
+      is_nullable: true
+    uuid:
+      data_type: uuid
+      default: null
+      is_nullable: true
+  db_dbcomputer:
+    description:
+      data_type: text
+      default: null
+      is_nullable: true
+    hostname:
+      data_type: character varying
+      default: null
+      is_nullable: true
+      max_length: 255
+    id:
+      data_type: integer
+      default: nextval('db_dbcomputer_id_seq'::regclass)
+      is_nullable: false
+    metadata:
+      data_type: jsonb
+      default: null
+      is_nullable: true
+    name:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    scheduler_type:
+      data_type: character varying
+      default: null
+      is_nullable: true
+      max_length: 255
+    transport_type:
+      data_type: character varying
+      default: null
+      is_nullable: true
+      max_length: 255
+    uuid:
+      data_type: uuid
+      default: null
+      is_nullable: true
+  db_dbgroup:
+    description:
+      data_type: text
+      default: null
+      is_nullable: true
+    extras:
+      data_type: jsonb
+      default: null
+      is_nullable: false
+    id:
+      data_type: integer
+      default: nextval('db_dbgroup_id_seq'::regclass)
+      is_nullable: false
+    label:
+      data_type: character varying
+      default: null
+      is_nullable: true
+      max_length: 255
+    time:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: true
+    type_string:
+      data_type: character varying
+      default: null
+      is_nullable: true
+      max_length: 255
+    user_id:
+      data_type: integer
+      default: null
+      is_nullable: true
+    uuid:
+      data_type: uuid
+      default: null
+      is_nullable: true
+  db_dbgroup_dbnodes:
+    dbgroup_id:
+      data_type: integer
+      default: null
+      is_nullable: true
+    dbnode_id:
+      data_type: integer
+      default: null
+      is_nullable: true
+    id:
+      data_type: integer
+      default: nextval('db_dbgroup_dbnodes_id_seq'::regclass)
+      is_nullable: false
+  db_dblink:
+    id:
+      data_type: integer
+      default: nextval('db_dblink_id_seq'::regclass)
+      is_nullable: false
+    input_id:
+      data_type: integer
+      default: null
+      is_nullable: true
+    label:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    output_id:
+      data_type: integer
+      default: null
+      is_nullable: true
+    type:
+      data_type: character varying
+      default: null
+      is_nullable: true
+      max_length: 255
+  db_dblog:
+    dbnode_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    id:
+      data_type: integer
+      default: nextval('db_dblog_id_seq'::regclass)
+      is_nullable: false
+    levelname:
+      data_type: character varying
+      default: null
+      is_nullable: true
+      max_length: 255
+    loggername:
+      data_type: character varying
+      default: null
+      is_nullable: true
+      max_length: 255
+    message:
+      data_type: text
+      default: null
+      is_nullable: true
+    metadata:
+      data_type: jsonb
+      default: null
+      is_nullable: true
+    time:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: true
+    uuid:
+      data_type: uuid
+      default: null
+      is_nullable: true
+  db_dbnode:
+    attributes:
+      data_type: jsonb
+      default: null
+      is_nullable: true
+    ctime:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: true
+    dbcomputer_id:
+      data_type: integer
+      default: null
+      is_nullable: true
+    description:
+      data_type: text
+      default: null
+      is_nullable: true
+    extras:
+      data_type: jsonb
+      default: null
+      is_nullable: true
+    id:
+      data_type: integer
+      default: nextval('db_dbnode_id_seq'::regclass)
+      is_nullable: false
+    label:
+      data_type: character varying
+      default: null
+      is_nullable: true
+      max_length: 255
+    mtime:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: true
+    node_type:
+      data_type: character varying
+      default: null
+      is_nullable: true
+      max_length: 255
+    process_type:
+      data_type: character varying
+      default: null
+      is_nullable: true
+      max_length: 255
+    user_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    uuid:
+      data_type: uuid
+      default: null
+      is_nullable: true
+  db_dbsetting:
+    description:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    id:
+      data_type: integer
+      default: nextval('db_dbsetting_id_seq'::regclass)
+      is_nullable: false
+    key:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    time:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: true
+    val:
+      data_type: jsonb
+      default: null
+      is_nullable: true
+  db_dbuser:
+    email:
+      data_type: character varying
+      default: null
+      is_nullable: true
+      max_length: 254
+    first_name:
+      data_type: character varying
+      default: null
+      is_nullable: true
+      max_length: 254
+    id:
+      data_type: integer
+      default: nextval('db_dbuser_id_seq'::regclass)
+      is_nullable: false
+    institution:
+      data_type: character varying
+      default: null
+      is_nullable: true
+      max_length: 254
+    last_name:
+      data_type: character varying
+      default: null
+      is_nullable: true
+      max_length: 254
+constraints:
+  primary_key:
+    db_dbauthinfo:
+      db_dbauthinfo_pkey:
+      - id
+    db_dbcomment:
+      db_dbcomment_pkey:
+      - id
+    db_dbcomputer:
+      db_dbcomputer_pkey:
+      - id
+    db_dbgroup:
+      db_dbgroup_pkey:
+      - id
+    db_dbgroup_dbnodes:
+      db_dbgroup_dbnodes_pkey:
+      - id
+    db_dblink:
+      db_dblink_pkey:
+      - id
+    db_dblog:
+      db_dblog_pkey:
+      - id
+    db_dbnode:
+      db_dbnode_pkey:
+      - id
+    db_dbsetting:
+      db_dbsetting_pkey:
+      - id
+    db_dbuser:
+      db_dbuser_pkey:
+      - id
+  unique:
+    db_dbauthinfo:
+      db_dbauthinfo_aiidauser_id_dbcomputer_id_key:
+      - aiidauser_id
+      - dbcomputer_id
+    db_dbcomment:
+      db_dbcomment_uuid_key:
+      - uuid
+    db_dbcomputer:
+      db_dbcomputer_name_key:
+      - name
+      db_dbcomputer_uuid_key:
+      - uuid
+    db_dbgroup:
+      db_dbgroup_label_type_string_key:
+      - label
+      - type_string
+      db_dbgroup_uuid_key:
+      - uuid
+    db_dbgroup_dbnodes:
+      db_dbgroup_dbnodes_dbgroup_id_dbnode_id_key:
+      - dbgroup_id
+      - dbnode_id
+    db_dblog:
+      db_dblog_uuid_key:
+      - uuid
+    db_dbnode:
+      db_dbnode_uuid_key:
+      - uuid
+    db_dbsetting:
+      db_dbsetting_key_key:
+      - key
+foreign_keys:
+  db_dbauthinfo:
+    db_dbauthinfo_aiidauser_id_fkey: FOREIGN KEY (aiidauser_id) REFERENCES db_dbuser(id)
+      ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
+    db_dbauthinfo_dbcomputer_id_fkey: FOREIGN KEY (dbcomputer_id) REFERENCES db_dbcomputer(id)
+      ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
+  db_dbcomment:
+    db_dbcomment_dbnode_id_fkey: FOREIGN KEY (dbnode_id) REFERENCES db_dbnode(id)
+      ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
+    db_dbcomment_user_id_fkey: FOREIGN KEY (user_id) REFERENCES db_dbuser(id) ON DELETE
+      CASCADE DEFERRABLE INITIALLY DEFERRED
+  db_dbgroup:
+    db_dbgroup_user_id_fkey: FOREIGN KEY (user_id) REFERENCES db_dbuser(id) ON DELETE
+      CASCADE DEFERRABLE INITIALLY DEFERRED
+  db_dbgroup_dbnodes:
+    db_dbgroup_dbnodes_dbgroup_id_fkey: FOREIGN KEY (dbgroup_id) REFERENCES db_dbgroup(id)
+      DEFERRABLE INITIALLY DEFERRED
+    db_dbgroup_dbnodes_dbnode_id_fkey: FOREIGN KEY (dbnode_id) REFERENCES db_dbnode(id)
+      DEFERRABLE INITIALLY DEFERRED
+  db_dblink:
+    db_dblink_input_id_fkey: FOREIGN KEY (input_id) REFERENCES db_dbnode(id) DEFERRABLE
+      INITIALLY DEFERRED
+    db_dblink_output_id_fkey: FOREIGN KEY (output_id) REFERENCES db_dbnode(id) ON
+      DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
+  db_dblog:
+    db_dblog_dbnode_id_fkey: FOREIGN KEY (dbnode_id) REFERENCES db_dbnode(id) ON DELETE
+      CASCADE DEFERRABLE INITIALLY DEFERRED
+  db_dbnode:
+    db_dbnode_dbcomputer_id_fkey: FOREIGN KEY (dbcomputer_id) REFERENCES db_dbcomputer(id)
+      ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED
+    db_dbnode_user_id_fkey: FOREIGN KEY (user_id) REFERENCES db_dbuser(id) ON DELETE
+      RESTRICT DEFERRABLE INITIALLY DEFERRED
+indexes:
+  db_dbauthinfo:
+    db_dbauthinfo_aiidauser_id_dbcomputer_id_key: CREATE UNIQUE INDEX db_dbauthinfo_aiidauser_id_dbcomputer_id_key
+      ON public.db_dbauthinfo USING btree (aiidauser_id, dbcomputer_id)
+    db_dbauthinfo_pkey: CREATE UNIQUE INDEX db_dbauthinfo_pkey ON public.db_dbauthinfo
+      USING btree (id)
+  db_dbcomment:
+    db_dbcomment_pkey: CREATE UNIQUE INDEX db_dbcomment_pkey ON public.db_dbcomment
+      USING btree (id)
+    db_dbcomment_uuid_key: CREATE UNIQUE INDEX db_dbcomment_uuid_key ON public.db_dbcomment
+      USING btree (uuid)
+  db_dbcomputer:
+    db_dbcomputer_name_key: CREATE UNIQUE INDEX db_dbcomputer_name_key ON public.db_dbcomputer
+      USING btree (name)
+    db_dbcomputer_pkey: CREATE UNIQUE INDEX db_dbcomputer_pkey ON public.db_dbcomputer
+      USING btree (id)
+    db_dbcomputer_uuid_key: CREATE UNIQUE INDEX db_dbcomputer_uuid_key ON public.db_dbcomputer
+      USING btree (uuid)
+  db_dbgroup:
+    db_dbgroup_label_type_string_key: CREATE UNIQUE INDEX db_dbgroup_label_type_string_key
+      ON public.db_dbgroup USING btree (label, type_string)
+    db_dbgroup_pkey: CREATE UNIQUE INDEX db_dbgroup_pkey ON public.db_dbgroup USING
+      btree (id)
+    db_dbgroup_uuid_key: CREATE UNIQUE INDEX db_dbgroup_uuid_key ON public.db_dbgroup
+      USING btree (uuid)
+    ix_db_dbgroup_label: CREATE INDEX ix_db_dbgroup_label ON public.db_dbgroup USING
+      btree (label)
+    ix_db_dbgroup_type_string: CREATE INDEX ix_db_dbgroup_type_string ON public.db_dbgroup
+      USING btree (type_string)
+  db_dbgroup_dbnodes:
+    db_dbgroup_dbnodes_dbgroup_id_dbnode_id_key: CREATE UNIQUE INDEX db_dbgroup_dbnodes_dbgroup_id_dbnode_id_key
+      ON public.db_dbgroup_dbnodes USING btree (dbgroup_id, dbnode_id)
+    db_dbgroup_dbnodes_dbgroup_id_idx: CREATE INDEX db_dbgroup_dbnodes_dbgroup_id_idx
+      ON public.db_dbgroup_dbnodes USING btree (dbgroup_id)
+    db_dbgroup_dbnodes_dbnode_id_idx: CREATE INDEX db_dbgroup_dbnodes_dbnode_id_idx
+      ON public.db_dbgroup_dbnodes USING btree (dbnode_id)
+    db_dbgroup_dbnodes_pkey: CREATE UNIQUE INDEX db_dbgroup_dbnodes_pkey ON public.db_dbgroup_dbnodes
+      USING btree (id)
+  db_dblink:
+    db_dblink_pkey: CREATE UNIQUE INDEX db_dblink_pkey ON public.db_dblink USING btree
+      (id)
+    ix_db_dblink_input_id: CREATE INDEX ix_db_dblink_input_id ON public.db_dblink
+      USING btree (input_id)
+    ix_db_dblink_label: CREATE INDEX ix_db_dblink_label ON public.db_dblink USING
+      btree (label)
+    ix_db_dblink_output_id: CREATE INDEX ix_db_dblink_output_id ON public.db_dblink
+      USING btree (output_id)
+    ix_db_dblink_type: CREATE INDEX ix_db_dblink_type ON public.db_dblink USING btree
+      (type)
+  db_dblog:
+    db_dblog_pkey: CREATE UNIQUE INDEX db_dblog_pkey ON public.db_dblog USING btree
+      (id)
+    db_dblog_uuid_key: CREATE UNIQUE INDEX db_dblog_uuid_key ON public.db_dblog USING
+      btree (uuid)
+    ix_db_dblog_levelname: CREATE INDEX ix_db_dblog_levelname ON public.db_dblog USING
+      btree (levelname)
+    ix_db_dblog_loggername: CREATE INDEX ix_db_dblog_loggername ON public.db_dblog
+      USING btree (loggername)
+  db_dbnode:
+    db_dbnode_pkey: CREATE UNIQUE INDEX db_dbnode_pkey ON public.db_dbnode USING btree
+      (id)
+    db_dbnode_uuid_key: CREATE UNIQUE INDEX db_dbnode_uuid_key ON public.db_dbnode
+      USING btree (uuid)
+    ix_db_dbnode_label: CREATE INDEX ix_db_dbnode_label ON public.db_dbnode USING
+      btree (label)
+    ix_db_dbnode_node_type: CREATE INDEX ix_db_dbnode_node_type ON public.db_dbnode
+      USING btree (node_type)
+    ix_db_dbnode_process_type: CREATE INDEX ix_db_dbnode_process_type ON public.db_dbnode
+      USING btree (process_type)
+  db_dbsetting:
+    db_dbsetting_key_key: CREATE UNIQUE INDEX db_dbsetting_key_key ON public.db_dbsetting
+      USING btree (key)
+    db_dbsetting_pkey: CREATE UNIQUE INDEX db_dbsetting_pkey ON public.db_dbsetting
+      USING btree (id)
+    ix_db_dbsetting_key: CREATE INDEX ix_db_dbsetting_key ON public.db_dbsetting USING
+      btree (key)
+  db_dbuser:
+    db_dbuser_pkey: CREATE UNIQUE INDEX db_dbuser_pkey ON public.db_dbuser USING btree
+      (id)
+    ix_db_dbuser_email: CREATE UNIQUE INDEX ix_db_dbuser_email ON public.db_dbuser
+      USING btree (email)

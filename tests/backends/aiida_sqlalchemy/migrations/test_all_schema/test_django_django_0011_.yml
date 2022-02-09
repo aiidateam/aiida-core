@@ -1,0 +1,1090 @@
+columns:
+  db_dbattribute:
+    bval:
+      data_type: boolean
+      default: null
+      is_nullable: true
+    datatype:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 10
+    dbnode_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    dval:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: true
+    fval:
+      data_type: double precision
+      default: null
+      is_nullable: true
+    id:
+      data_type: integer
+      default: nextval('db_dbattribute_id_seq'::regclass)
+      is_nullable: false
+    ival:
+      data_type: integer
+      default: null
+      is_nullable: true
+    key:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 1024
+    tval:
+      data_type: text
+      default: null
+      is_nullable: false
+  db_dbauthinfo:
+    aiidauser_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    auth_params:
+      data_type: text
+      default: null
+      is_nullable: false
+    dbcomputer_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    enabled:
+      data_type: boolean
+      default: null
+      is_nullable: false
+    id:
+      data_type: integer
+      default: nextval('db_dbauthinfo_id_seq'::regclass)
+      is_nullable: false
+    metadata:
+      data_type: text
+      default: null
+      is_nullable: false
+  db_dbcalcstate:
+    dbnode_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    id:
+      data_type: integer
+      default: nextval('db_dbcalcstate_id_seq'::regclass)
+      is_nullable: false
+    state:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 25
+    time:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: false
+  db_dbcomment:
+    content:
+      data_type: text
+      default: null
+      is_nullable: false
+    ctime:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: false
+    dbnode_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    id:
+      data_type: integer
+      default: nextval('db_dbcomment_id_seq'::regclass)
+      is_nullable: false
+    mtime:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: false
+    user_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    uuid:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 36
+  db_dbcomputer:
+    description:
+      data_type: text
+      default: null
+      is_nullable: false
+    enabled:
+      data_type: boolean
+      default: null
+      is_nullable: false
+    hostname:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    id:
+      data_type: integer
+      default: nextval('db_dbcomputer_id_seq'::regclass)
+      is_nullable: false
+    metadata:
+      data_type: text
+      default: null
+      is_nullable: false
+    name:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    scheduler_type:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    transport_params:
+      data_type: text
+      default: null
+      is_nullable: false
+    transport_type:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    uuid:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 36
+  db_dbextra:
+    bval:
+      data_type: boolean
+      default: null
+      is_nullable: true
+    datatype:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 10
+    dbnode_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    dval:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: true
+    fval:
+      data_type: double precision
+      default: null
+      is_nullable: true
+    id:
+      data_type: integer
+      default: nextval('db_dbextra_id_seq'::regclass)
+      is_nullable: false
+    ival:
+      data_type: integer
+      default: null
+      is_nullable: true
+    key:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 1024
+    tval:
+      data_type: text
+      default: null
+      is_nullable: false
+  db_dbgroup:
+    description:
+      data_type: text
+      default: null
+      is_nullable: false
+    id:
+      data_type: integer
+      default: nextval('db_dbgroup_id_seq'::regclass)
+      is_nullable: false
+    name:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    time:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: false
+    type:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    user_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    uuid:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 36
+  db_dbgroup_dbnodes:
+    dbgroup_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    dbnode_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    id:
+      data_type: integer
+      default: nextval('db_dbgroup_dbnodes_id_seq'::regclass)
+      is_nullable: false
+  db_dblink:
+    id:
+      data_type: integer
+      default: nextval('db_dblink_id_seq'::regclass)
+      is_nullable: false
+    input_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    label:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    output_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    type:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+  db_dblock:
+    creation:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: false
+    key:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    owner:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    timeout:
+      data_type: integer
+      default: null
+      is_nullable: false
+  db_dblog:
+    id:
+      data_type: integer
+      default: nextval('db_dblog_id_seq'::regclass)
+      is_nullable: false
+    levelname:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 50
+    loggername:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    message:
+      data_type: text
+      default: null
+      is_nullable: false
+    metadata:
+      data_type: text
+      default: null
+      is_nullable: false
+    objname:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    objpk:
+      data_type: integer
+      default: null
+      is_nullable: true
+    time:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: false
+  db_dbnode:
+    ctime:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: false
+    dbcomputer_id:
+      data_type: integer
+      default: null
+      is_nullable: true
+    description:
+      data_type: text
+      default: null
+      is_nullable: false
+    id:
+      data_type: integer
+      default: nextval('db_dbnode_id_seq'::regclass)
+      is_nullable: false
+    label:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    mtime:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: false
+    nodeversion:
+      data_type: integer
+      default: null
+      is_nullable: false
+    process_type:
+      data_type: character varying
+      default: null
+      is_nullable: true
+      max_length: 255
+    public:
+      data_type: boolean
+      default: null
+      is_nullable: false
+    type:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    user_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    uuid:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 36
+  db_dbsetting:
+    bval:
+      data_type: boolean
+      default: null
+      is_nullable: true
+    datatype:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 10
+    description:
+      data_type: text
+      default: null
+      is_nullable: false
+    dval:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: true
+    fval:
+      data_type: double precision
+      default: null
+      is_nullable: true
+    id:
+      data_type: integer
+      default: nextval('db_dbsetting_id_seq'::regclass)
+      is_nullable: false
+    ival:
+      data_type: integer
+      default: null
+      is_nullable: true
+    key:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 1024
+    time:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: false
+    tval:
+      data_type: text
+      default: null
+      is_nullable: false
+  db_dbuser:
+    date_joined:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: false
+    email:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 75
+    first_name:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 254
+    id:
+      data_type: integer
+      default: nextval('db_dbuser_id_seq'::regclass)
+      is_nullable: false
+    institution:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 254
+    is_active:
+      data_type: boolean
+      default: null
+      is_nullable: false
+    is_staff:
+      data_type: boolean
+      default: null
+      is_nullable: false
+    is_superuser:
+      data_type: boolean
+      default: null
+      is_nullable: false
+    last_login:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: false
+    last_name:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 254
+    password:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 128
+  db_dbuser_groups:
+    dbuser_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    group_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    id:
+      data_type: integer
+      default: nextval('db_dbuser_groups_id_seq'::regclass)
+      is_nullable: false
+  db_dbuser_user_permissions:
+    dbuser_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    id:
+      data_type: integer
+      default: nextval('db_dbuser_user_permissions_id_seq'::regclass)
+      is_nullable: false
+    permission_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+  db_dbworkflow:
+    ctime:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: false
+    description:
+      data_type: text
+      default: null
+      is_nullable: false
+    id:
+      data_type: integer
+      default: nextval('db_dbworkflow_id_seq'::regclass)
+      is_nullable: false
+    label:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    lastsyncedversion:
+      data_type: integer
+      default: null
+      is_nullable: false
+    module:
+      data_type: text
+      default: null
+      is_nullable: false
+    module_class:
+      data_type: text
+      default: null
+      is_nullable: false
+    mtime:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: false
+    nodeversion:
+      data_type: integer
+      default: null
+      is_nullable: false
+    report:
+      data_type: text
+      default: null
+      is_nullable: false
+    script_md5:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    script_path:
+      data_type: text
+      default: null
+      is_nullable: false
+    state:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    user_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    uuid:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 36
+  db_dbworkflowdata:
+    aiida_obj_id:
+      data_type: integer
+      default: null
+      is_nullable: true
+    data_type:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    id:
+      data_type: integer
+      default: nextval('db_dbworkflowdata_id_seq'::regclass)
+      is_nullable: false
+    json_value:
+      data_type: text
+      default: null
+      is_nullable: false
+    name:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    parent_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    time:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: false
+    value_type:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+  db_dbworkflowstep:
+    id:
+      data_type: integer
+      default: nextval('db_dbworkflowstep_id_seq'::regclass)
+      is_nullable: false
+    name:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    nextcall:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    parent_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    state:
+      data_type: character varying
+      default: null
+      is_nullable: false
+      max_length: 255
+    time:
+      data_type: timestamp with time zone
+      default: null
+      is_nullable: false
+    user_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+  db_dbworkflowstep_calculations:
+    dbnode_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    dbworkflowstep_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    id:
+      data_type: integer
+      default: nextval('db_dbworkflowstep_calculations_id_seq'::regclass)
+      is_nullable: false
+  db_dbworkflowstep_sub_workflows:
+    dbworkflow_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    dbworkflowstep_id:
+      data_type: integer
+      default: null
+      is_nullable: false
+    id:
+      data_type: integer
+      default: nextval('db_dbworkflowstep_sub_workflows_id_seq'::regclass)
+      is_nullable: false
+constraints:
+  primary_key:
+    db_dbattribute:
+      db_dbattribute_pkey:
+      - id
+    db_dbauthinfo:
+      db_dbauthinfo_pkey:
+      - id
+    db_dbcalcstate:
+      db_dbcalcstate_pkey:
+      - id
+    db_dbcomment:
+      db_dbcomment_pkey:
+      - id
+    db_dbcomputer:
+      db_dbcomputer_pkey:
+      - id
+    db_dbextra:
+      db_dbextra_pkey:
+      - id
+    db_dbgroup:
+      db_dbgroup_pkey:
+      - id
+    db_dbgroup_dbnodes:
+      db_dbgroup_dbnodes_pkey:
+      - id
+    db_dblink:
+      db_dblink_pkey:
+      - id
+    db_dblock:
+      db_dblock_pkey:
+      - key
+    db_dblog:
+      db_dblog_pkey:
+      - id
+    db_dbnode:
+      db_dbnode_pkey:
+      - id
+    db_dbsetting:
+      db_dbsetting_pkey:
+      - id
+    db_dbuser:
+      db_dbuser_pkey:
+      - id
+    db_dbuser_groups:
+      db_dbuser_groups_pkey:
+      - id
+    db_dbuser_user_permissions:
+      db_dbuser_user_permissions_pkey:
+      - id
+    db_dbworkflow:
+      db_dbworkflow_pkey:
+      - id
+    db_dbworkflowdata:
+      db_dbworkflowdata_pkey:
+      - id
+    db_dbworkflowstep:
+      db_dbworkflowstep_pkey:
+      - id
+    db_dbworkflowstep_calculations:
+      db_dbworkflowstep_calculations_pkey:
+      - id
+    db_dbworkflowstep_sub_workflows:
+      db_dbworkflowstep_sub_workflows_pkey:
+      - id
+  unique:
+    db_dbattribute:
+      db_dbattribute_dbnode_id_key_c589e447_uniq:
+      - dbnode_id
+      - key
+    db_dbauthinfo:
+      db_dbauthinfo_aiidauser_id_dbcomputer_id_777cdaa8_uniq:
+      - aiidauser_id
+      - dbcomputer_id
+    db_dbcalcstate:
+      db_dbcalcstate_dbnode_id_state_b4a14db3_uniq:
+      - dbnode_id
+      - state
+    db_dbcomputer:
+      db_dbcomputer_name_key:
+      - name
+    db_dbextra:
+      db_dbextra_dbnode_id_key_aa56fd37_uniq:
+      - dbnode_id
+      - key
+    db_dbgroup:
+      db_dbgroup_name_type_12656f33_uniq:
+      - name
+      - type
+    db_dbgroup_dbnodes:
+      db_dbgroup_dbnodes_dbgroup_id_dbnode_id_eee23cce_uniq:
+      - dbgroup_id
+      - dbnode_id
+    db_dbsetting:
+      db_dbsetting_key_1b84beb4_uniq:
+      - key
+    db_dbuser:
+      db_dbuser_email_key:
+      - email
+    db_dbuser_groups:
+      db_dbuser_groups_dbuser_id_group_id_9155eb4f_uniq:
+      - dbuser_id
+      - group_id
+    db_dbuser_user_permissions:
+      db_dbuser_user_permissio_dbuser_id_permission_id_e6cbabe4_uniq:
+      - dbuser_id
+      - permission_id
+    db_dbworkflowdata:
+      db_dbworkflowdata_parent_id_name_data_type_a4b50dae_uniq:
+      - data_type
+      - name
+      - parent_id
+    db_dbworkflowstep:
+      db_dbworkflowstep_parent_id_name_111027e3_uniq:
+      - name
+      - parent_id
+    db_dbworkflowstep_calculations:
+      db_dbworkflowstep_calcul_dbworkflowstep_id_dbnode_60f50d02_uniq:
+      - dbnode_id
+      - dbworkflowstep_id
+    db_dbworkflowstep_sub_workflows:
+      db_dbworkflowstep_sub_wo_dbworkflowstep_id_dbwork_e9b2b624_uniq:
+      - dbworkflow_id
+      - dbworkflowstep_id
+foreign_keys:
+  db_dbattribute:
+    db_dbattribute_dbnode_id_253bf153_fk_db_dbnode_id: FOREIGN KEY (dbnode_id) REFERENCES
+      db_dbnode(id) DEFERRABLE INITIALLY DEFERRED
+  db_dbauthinfo:
+    db_dbauthinfo_aiidauser_id_0684fdfb_fk_db_dbuser_id: FOREIGN KEY (aiidauser_id)
+      REFERENCES db_dbuser(id) DEFERRABLE INITIALLY DEFERRED
+    db_dbauthinfo_dbcomputer_id_424f7ac4_fk_db_dbcomputer_id: FOREIGN KEY (dbcomputer_id)
+      REFERENCES db_dbcomputer(id) DEFERRABLE INITIALLY DEFERRED
+  db_dbcalcstate:
+    db_dbcalcstate_dbnode_id_f217a84c_fk_db_dbnode_id: FOREIGN KEY (dbnode_id) REFERENCES
+      db_dbnode(id) DEFERRABLE INITIALLY DEFERRED
+  db_dbcomment:
+    db_dbcomment_dbnode_id_3b812b6b_fk_db_dbnode_id: FOREIGN KEY (dbnode_id) REFERENCES
+      db_dbnode(id) DEFERRABLE INITIALLY DEFERRED
+    db_dbcomment_user_id_8ed5e360_fk_db_dbuser_id: FOREIGN KEY (user_id) REFERENCES
+      db_dbuser(id) DEFERRABLE INITIALLY DEFERRED
+  db_dbextra:
+    db_dbextra_dbnode_id_c7fe8961_fk_db_dbnode_id: FOREIGN KEY (dbnode_id) REFERENCES
+      db_dbnode(id) DEFERRABLE INITIALLY DEFERRED
+  db_dbgroup:
+    db_dbgroup_user_id_100f8a51_fk_db_dbuser_id: FOREIGN KEY (user_id) REFERENCES
+      db_dbuser(id) DEFERRABLE INITIALLY DEFERRED
+  db_dbgroup_dbnodes:
+    db_dbgroup_dbnodes_dbgroup_id_9d3a0f9d_fk_db_dbgroup_id: FOREIGN KEY (dbgroup_id)
+      REFERENCES db_dbgroup(id) DEFERRABLE INITIALLY DEFERRED
+    db_dbgroup_dbnodes_dbnode_id_118b9439_fk_db_dbnode_id: FOREIGN KEY (dbnode_id)
+      REFERENCES db_dbnode(id) DEFERRABLE INITIALLY DEFERRED
+  db_dblink:
+    db_dblink_input_id_9245bd73_fk_db_dbnode_id: FOREIGN KEY (input_id) REFERENCES
+      db_dbnode(id) DEFERRABLE INITIALLY DEFERRED
+    db_dblink_output_id_c0167528_fk_db_dbnode_id: FOREIGN KEY (output_id) REFERENCES
+      db_dbnode(id) DEFERRABLE INITIALLY DEFERRED
+  db_dbnode:
+    db_dbnode_dbcomputer_id_315372a3_fk_db_dbcomputer_id: FOREIGN KEY (dbcomputer_id)
+      REFERENCES db_dbcomputer(id) DEFERRABLE INITIALLY DEFERRED
+    db_dbnode_user_id_12e7aeaf_fk_db_dbuser_id: FOREIGN KEY (user_id) REFERENCES db_dbuser(id)
+      DEFERRABLE INITIALLY DEFERRED
+  db_dbuser_groups:
+    db_dbuser_groups_dbuser_id_480b3520_fk_db_dbuser_id: FOREIGN KEY (dbuser_id) REFERENCES
+      db_dbuser(id) DEFERRABLE INITIALLY DEFERRED
+    db_dbuser_groups_group_id_8478d87e_fk_auth_group_id: FOREIGN KEY (group_id) REFERENCES
+      auth_group(id) DEFERRABLE INITIALLY DEFERRED
+  db_dbuser_user_permissions:
+    db_dbuser_user_permi_permission_id_c5aafc54_fk_auth_perm: FOREIGN KEY (permission_id)
+      REFERENCES auth_permission(id) DEFERRABLE INITIALLY DEFERRED
+    db_dbuser_user_permissions_dbuser_id_364456ee_fk_db_dbuser_id: FOREIGN KEY (dbuser_id)
+      REFERENCES db_dbuser(id) DEFERRABLE INITIALLY DEFERRED
+  db_dbworkflow:
+    db_dbworkflow_user_id_ef1f3251_fk_db_dbuser_id: FOREIGN KEY (user_id) REFERENCES
+      db_dbuser(id) DEFERRABLE INITIALLY DEFERRED
+  db_dbworkflowdata:
+    db_dbworkflowdata_aiida_obj_id_70a2d33b_fk_db_dbnode_id: FOREIGN KEY (aiida_obj_id)
+      REFERENCES db_dbnode(id) DEFERRABLE INITIALLY DEFERRED
+    db_dbworkflowdata_parent_id_ff4dbf8d_fk_db_dbworkflow_id: FOREIGN KEY (parent_id)
+      REFERENCES db_dbworkflow(id) DEFERRABLE INITIALLY DEFERRED
+  db_dbworkflowstep:
+    db_dbworkflowstep_parent_id_ffb754d9_fk_db_dbworkflow_id: FOREIGN KEY (parent_id)
+      REFERENCES db_dbworkflow(id) DEFERRABLE INITIALLY DEFERRED
+    db_dbworkflowstep_user_id_04282431_fk_db_dbuser_id: FOREIGN KEY (user_id) REFERENCES
+      db_dbuser(id) DEFERRABLE INITIALLY DEFERRED
+  db_dbworkflowstep_calculations:
+    db_dbworkflowstep_ca_dbnode_id_0d07b7a7_fk_db_dbnode: FOREIGN KEY (dbnode_id)
+      REFERENCES db_dbnode(id) DEFERRABLE INITIALLY DEFERRED
+    db_dbworkflowstep_ca_dbworkflowstep_id_575c3637_fk_db_dbwork: FOREIGN KEY (dbworkflowstep_id)
+      REFERENCES db_dbworkflowstep(id) DEFERRABLE INITIALLY DEFERRED
+  db_dbworkflowstep_sub_workflows:
+    db_dbworkflowstep_su_dbworkflow_id_dca4d103_fk_db_dbwork: FOREIGN KEY (dbworkflow_id)
+      REFERENCES db_dbworkflow(id) DEFERRABLE INITIALLY DEFERRED
+    db_dbworkflowstep_su_dbworkflowstep_id_e183bbb7_fk_db_dbwork: FOREIGN KEY (dbworkflowstep_id)
+      REFERENCES db_dbworkflowstep(id) DEFERRABLE INITIALLY DEFERRED
+indexes:
+  db_dbattribute:
+    db_dbattribute_datatype_91c4dc04: CREATE INDEX db_dbattribute_datatype_91c4dc04
+      ON public.db_dbattribute USING btree (datatype)
+    db_dbattribute_datatype_91c4dc04_like: CREATE INDEX db_dbattribute_datatype_91c4dc04_like
+      ON public.db_dbattribute USING btree (datatype varchar_pattern_ops)
+    db_dbattribute_dbnode_id_253bf153: CREATE INDEX db_dbattribute_dbnode_id_253bf153
+      ON public.db_dbattribute USING btree (dbnode_id)
+    db_dbattribute_dbnode_id_key_c589e447_uniq: CREATE UNIQUE INDEX db_dbattribute_dbnode_id_key_c589e447_uniq
+      ON public.db_dbattribute USING btree (dbnode_id, key)
+    db_dbattribute_key_ac2bc4e4: CREATE INDEX db_dbattribute_key_ac2bc4e4 ON public.db_dbattribute
+      USING btree (key)
+    db_dbattribute_key_ac2bc4e4_like: CREATE INDEX db_dbattribute_key_ac2bc4e4_like
+      ON public.db_dbattribute USING btree (key varchar_pattern_ops)
+    db_dbattribute_pkey: CREATE UNIQUE INDEX db_dbattribute_pkey ON public.db_dbattribute
+      USING btree (id)
+    tval_idx_for_daemon: CREATE INDEX tval_idx_for_daemon ON public.db_dbattribute
+      USING btree (tval) WHERE (tval = ANY (ARRAY['COMPUTED'::text, 'WITHSCHEDULER'::text,
+      'TOSUBMIT'::text]))
+  db_dbauthinfo:
+    db_dbauthinfo_aiidauser_id_0684fdfb: CREATE INDEX db_dbauthinfo_aiidauser_id_0684fdfb
+      ON public.db_dbauthinfo USING btree (aiidauser_id)
+    db_dbauthinfo_aiidauser_id_dbcomputer_id_777cdaa8_uniq: CREATE UNIQUE INDEX db_dbauthinfo_aiidauser_id_dbcomputer_id_777cdaa8_uniq
+      ON public.db_dbauthinfo USING btree (aiidauser_id, dbcomputer_id)
+    db_dbauthinfo_dbcomputer_id_424f7ac4: CREATE INDEX db_dbauthinfo_dbcomputer_id_424f7ac4
+      ON public.db_dbauthinfo USING btree (dbcomputer_id)
+    db_dbauthinfo_pkey: CREATE UNIQUE INDEX db_dbauthinfo_pkey ON public.db_dbauthinfo
+      USING btree (id)
+  db_dbcalcstate:
+    db_dbcalcstate_dbnode_id_f217a84c: CREATE INDEX db_dbcalcstate_dbnode_id_f217a84c
+      ON public.db_dbcalcstate USING btree (dbnode_id)
+    db_dbcalcstate_dbnode_id_state_b4a14db3_uniq: CREATE UNIQUE INDEX db_dbcalcstate_dbnode_id_state_b4a14db3_uniq
+      ON public.db_dbcalcstate USING btree (dbnode_id, state)
+    db_dbcalcstate_pkey: CREATE UNIQUE INDEX db_dbcalcstate_pkey ON public.db_dbcalcstate
+      USING btree (id)
+    db_dbcalcstate_state_0bf54584: CREATE INDEX db_dbcalcstate_state_0bf54584 ON public.db_dbcalcstate
+      USING btree (state)
+    db_dbcalcstate_state_0bf54584_like: CREATE INDEX db_dbcalcstate_state_0bf54584_like
+      ON public.db_dbcalcstate USING btree (state varchar_pattern_ops)
+  db_dbcomment:
+    db_dbcomment_dbnode_id_3b812b6b: CREATE INDEX db_dbcomment_dbnode_id_3b812b6b
+      ON public.db_dbcomment USING btree (dbnode_id)
+    db_dbcomment_pkey: CREATE UNIQUE INDEX db_dbcomment_pkey ON public.db_dbcomment
+      USING btree (id)
+    db_dbcomment_user_id_8ed5e360: CREATE INDEX db_dbcomment_user_id_8ed5e360 ON public.db_dbcomment
+      USING btree (user_id)
+  db_dbcomputer:
+    db_dbcomputer_name_f1800b1a_like: CREATE INDEX db_dbcomputer_name_f1800b1a_like
+      ON public.db_dbcomputer USING btree (name varchar_pattern_ops)
+    db_dbcomputer_name_key: CREATE UNIQUE INDEX db_dbcomputer_name_key ON public.db_dbcomputer
+      USING btree (name)
+    db_dbcomputer_pkey: CREATE UNIQUE INDEX db_dbcomputer_pkey ON public.db_dbcomputer
+      USING btree (id)
+  db_dbextra:
+    db_dbextra_datatype_2eba38c6: CREATE INDEX db_dbextra_datatype_2eba38c6 ON public.db_dbextra
+      USING btree (datatype)
+    db_dbextra_datatype_2eba38c6_like: CREATE INDEX db_dbextra_datatype_2eba38c6_like
+      ON public.db_dbextra USING btree (datatype varchar_pattern_ops)
+    db_dbextra_dbnode_id_c7fe8961: CREATE INDEX db_dbextra_dbnode_id_c7fe8961 ON public.db_dbextra
+      USING btree (dbnode_id)
+    db_dbextra_dbnode_id_key_aa56fd37_uniq: CREATE UNIQUE INDEX db_dbextra_dbnode_id_key_aa56fd37_uniq
+      ON public.db_dbextra USING btree (dbnode_id, key)
+    db_dbextra_key_b1a8abc6: CREATE INDEX db_dbextra_key_b1a8abc6 ON public.db_dbextra
+      USING btree (key)
+    db_dbextra_key_b1a8abc6_like: CREATE INDEX db_dbextra_key_b1a8abc6_like ON public.db_dbextra
+      USING btree (key varchar_pattern_ops)
+    db_dbextra_pkey: CREATE UNIQUE INDEX db_dbextra_pkey ON public.db_dbextra USING
+      btree (id)
+  db_dbgroup:
+    db_dbgroup_name_66c75272: CREATE INDEX db_dbgroup_name_66c75272 ON public.db_dbgroup
+      USING btree (name)
+    db_dbgroup_name_66c75272_like: CREATE INDEX db_dbgroup_name_66c75272_like ON public.db_dbgroup
+      USING btree (name varchar_pattern_ops)
+    db_dbgroup_name_type_12656f33_uniq: CREATE UNIQUE INDEX db_dbgroup_name_type_12656f33_uniq
+      ON public.db_dbgroup USING btree (name, type)
+    db_dbgroup_pkey: CREATE UNIQUE INDEX db_dbgroup_pkey ON public.db_dbgroup USING
+      btree (id)
+    db_dbgroup_type_23b2a748: CREATE INDEX db_dbgroup_type_23b2a748 ON public.db_dbgroup
+      USING btree (type)
+    db_dbgroup_type_23b2a748_like: CREATE INDEX db_dbgroup_type_23b2a748_like ON public.db_dbgroup
+      USING btree (type varchar_pattern_ops)
+    db_dbgroup_user_id_100f8a51: CREATE INDEX db_dbgroup_user_id_100f8a51 ON public.db_dbgroup
+      USING btree (user_id)
+  db_dbgroup_dbnodes:
+    db_dbgroup_dbnodes_dbgroup_id_9d3a0f9d: CREATE INDEX db_dbgroup_dbnodes_dbgroup_id_9d3a0f9d
+      ON public.db_dbgroup_dbnodes USING btree (dbgroup_id)
+    db_dbgroup_dbnodes_dbgroup_id_dbnode_id_eee23cce_uniq: CREATE UNIQUE INDEX db_dbgroup_dbnodes_dbgroup_id_dbnode_id_eee23cce_uniq
+      ON public.db_dbgroup_dbnodes USING btree (dbgroup_id, dbnode_id)
+    db_dbgroup_dbnodes_dbnode_id_118b9439: CREATE INDEX db_dbgroup_dbnodes_dbnode_id_118b9439
+      ON public.db_dbgroup_dbnodes USING btree (dbnode_id)
+    db_dbgroup_dbnodes_pkey: CREATE UNIQUE INDEX db_dbgroup_dbnodes_pkey ON public.db_dbgroup_dbnodes
+      USING btree (id)
+  db_dblink:
+    db_dblink_input_id_9245bd73: CREATE INDEX db_dblink_input_id_9245bd73 ON public.db_dblink
+      USING btree (input_id)
+    db_dblink_label_f1343cfb: CREATE INDEX db_dblink_label_f1343cfb ON public.db_dblink
+      USING btree (label)
+    db_dblink_label_f1343cfb_like: CREATE INDEX db_dblink_label_f1343cfb_like ON public.db_dblink
+      USING btree (label varchar_pattern_ops)
+    db_dblink_output_id_c0167528: CREATE INDEX db_dblink_output_id_c0167528 ON public.db_dblink
+      USING btree (output_id)
+    db_dblink_pkey: CREATE UNIQUE INDEX db_dblink_pkey ON public.db_dblink USING btree
+      (id)
+    db_dblink_type_229f212b: CREATE INDEX db_dblink_type_229f212b ON public.db_dblink
+      USING btree (type)
+    db_dblink_type_229f212b_like: CREATE INDEX db_dblink_type_229f212b_like ON public.db_dblink
+      USING btree (type varchar_pattern_ops)
+  db_dblock:
+    db_dblock_key_048c6767_like: CREATE INDEX db_dblock_key_048c6767_like ON public.db_dblock
+      USING btree (key varchar_pattern_ops)
+    db_dblock_pkey: CREATE UNIQUE INDEX db_dblock_pkey ON public.db_dblock USING btree
+      (key)
+  db_dblog:
+    db_dblog_levelname_ad5dc346: CREATE INDEX db_dblog_levelname_ad5dc346 ON public.db_dblog
+      USING btree (levelname)
+    db_dblog_levelname_ad5dc346_like: CREATE INDEX db_dblog_levelname_ad5dc346_like
+      ON public.db_dblog USING btree (levelname varchar_pattern_ops)
+    db_dblog_loggername_00b5ba16: CREATE INDEX db_dblog_loggername_00b5ba16 ON public.db_dblog
+      USING btree (loggername)
+    db_dblog_loggername_00b5ba16_like: CREATE INDEX db_dblog_loggername_00b5ba16_like
+      ON public.db_dblog USING btree (loggername varchar_pattern_ops)
+    db_dblog_objname_69932b1e: CREATE INDEX db_dblog_objname_69932b1e ON public.db_dblog
+      USING btree (objname)
+    db_dblog_objname_69932b1e_like: CREATE INDEX db_dblog_objname_69932b1e_like ON
+      public.db_dblog USING btree (objname varchar_pattern_ops)
+    db_dblog_objpk_fc47afa9: CREATE INDEX db_dblog_objpk_fc47afa9 ON public.db_dblog
+      USING btree (objpk)
+    db_dblog_pkey: CREATE UNIQUE INDEX db_dblog_pkey ON public.db_dblog USING btree
+      (id)
+  db_dbnode:
+    db_dbnode_ctime_71626ef5: CREATE INDEX db_dbnode_ctime_71626ef5 ON public.db_dbnode
+      USING btree (ctime)
+    db_dbnode_dbcomputer_id_315372a3: CREATE INDEX db_dbnode_dbcomputer_id_315372a3
+      ON public.db_dbnode USING btree (dbcomputer_id)
+    db_dbnode_label_6469539e: CREATE INDEX db_dbnode_label_6469539e ON public.db_dbnode
+      USING btree (label)
+    db_dbnode_label_6469539e_like: CREATE INDEX db_dbnode_label_6469539e_like ON public.db_dbnode
+      USING btree (label varchar_pattern_ops)
+    db_dbnode_mtime_0554ea3d: CREATE INDEX db_dbnode_mtime_0554ea3d ON public.db_dbnode
+      USING btree (mtime)
+    db_dbnode_pkey: CREATE UNIQUE INDEX db_dbnode_pkey ON public.db_dbnode USING btree
+      (id)
+    db_dbnode_process_type_df7298d0: CREATE INDEX db_dbnode_process_type_df7298d0
+      ON public.db_dbnode USING btree (process_type)
+    db_dbnode_process_type_df7298d0_like: CREATE INDEX db_dbnode_process_type_df7298d0_like
+      ON public.db_dbnode USING btree (process_type varchar_pattern_ops)
+    db_dbnode_type_a8ce9753: CREATE INDEX db_dbnode_type_a8ce9753 ON public.db_dbnode
+      USING btree (type)
+    db_dbnode_type_a8ce9753_like: CREATE INDEX db_dbnode_type_a8ce9753_like ON public.db_dbnode
+      USING btree (type varchar_pattern_ops)
+    db_dbnode_user_id_12e7aeaf: CREATE INDEX db_dbnode_user_id_12e7aeaf ON public.db_dbnode
+      USING btree (user_id)
+    db_dbnode_uuid_62e0bf98: CREATE INDEX db_dbnode_uuid_62e0bf98 ON public.db_dbnode
+      USING btree (uuid)
+    db_dbnode_uuid_62e0bf98_like: CREATE INDEX db_dbnode_uuid_62e0bf98_like ON public.db_dbnode
+      USING btree (uuid varchar_pattern_ops)
+  db_dbsetting:
+    db_dbsetting_datatype_49f4397c: CREATE INDEX db_dbsetting_datatype_49f4397c ON
+      public.db_dbsetting USING btree (datatype)
+    db_dbsetting_datatype_49f4397c_like: CREATE INDEX db_dbsetting_datatype_49f4397c_like
+      ON public.db_dbsetting USING btree (datatype varchar_pattern_ops)
+    db_dbsetting_key_1b84beb4: CREATE INDEX db_dbsetting_key_1b84beb4 ON public.db_dbsetting
+      USING btree (key)
+    db_dbsetting_key_1b84beb4_like: CREATE INDEX db_dbsetting_key_1b84beb4_like ON
+      public.db_dbsetting USING btree (key varchar_pattern_ops)
+    db_dbsetting_key_1b84beb4_uniq: CREATE UNIQUE INDEX db_dbsetting_key_1b84beb4_uniq
+      ON public.db_dbsetting USING btree (key)
+    db_dbsetting_pkey: CREATE UNIQUE INDEX db_dbsetting_pkey ON public.db_dbsetting
+      USING btree (id)
+  db_dbuser:
+    db_dbuser_email_30150b7e_like: CREATE INDEX db_dbuser_email_30150b7e_like ON public.db_dbuser
+      USING btree (email varchar_pattern_ops)
+    db_dbuser_email_key: CREATE UNIQUE INDEX db_dbuser_email_key ON public.db_dbuser
+      USING btree (email)
+    db_dbuser_pkey: CREATE UNIQUE INDEX db_dbuser_pkey ON public.db_dbuser USING btree
+      (id)
+  db_dbuser_groups:
+    db_dbuser_groups_dbuser_id_480b3520: CREATE INDEX db_dbuser_groups_dbuser_id_480b3520
+      ON public.db_dbuser_groups USING btree (dbuser_id)
+    db_dbuser_groups_dbuser_id_group_id_9155eb4f_uniq: CREATE UNIQUE INDEX db_dbuser_groups_dbuser_id_group_id_9155eb4f_uniq
+      ON public.db_dbuser_groups USING btree (dbuser_id, group_id)
+    db_dbuser_groups_group_id_8478d87e: CREATE INDEX db_dbuser_groups_group_id_8478d87e
+      ON public.db_dbuser_groups USING btree (group_id)
+    db_dbuser_groups_pkey: CREATE UNIQUE INDEX db_dbuser_groups_pkey ON public.db_dbuser_groups
+      USING btree (id)
+  db_dbuser_user_permissions:
+    db_dbuser_user_permissio_dbuser_id_permission_id_e6cbabe4_uniq: CREATE UNIQUE
+      INDEX db_dbuser_user_permissio_dbuser_id_permission_id_e6cbabe4_uniq ON public.db_dbuser_user_permissions
+      USING btree (dbuser_id, permission_id)
+    db_dbuser_user_permissions_dbuser_id_364456ee: CREATE INDEX db_dbuser_user_permissions_dbuser_id_364456ee
+      ON public.db_dbuser_user_permissions USING btree (dbuser_id)
+    db_dbuser_user_permissions_permission_id_c5aafc54: CREATE INDEX db_dbuser_user_permissions_permission_id_c5aafc54
+      ON public.db_dbuser_user_permissions USING btree (permission_id)
+    db_dbuser_user_permissions_pkey: CREATE UNIQUE INDEX db_dbuser_user_permissions_pkey
+      ON public.db_dbuser_user_permissions USING btree (id)
+  db_dbworkflow:
+    db_dbworkflow_label_7368f34a: CREATE INDEX db_dbworkflow_label_7368f34a ON public.db_dbworkflow
+      USING btree (label)
+    db_dbworkflow_label_7368f34a_like: CREATE INDEX db_dbworkflow_label_7368f34a_like
+      ON public.db_dbworkflow USING btree (label varchar_pattern_ops)
+    db_dbworkflow_pkey: CREATE UNIQUE INDEX db_dbworkflow_pkey ON public.db_dbworkflow
+      USING btree (id)
+    db_dbworkflow_user_id_ef1f3251: CREATE INDEX db_dbworkflow_user_id_ef1f3251 ON
+      public.db_dbworkflow USING btree (user_id)
+  db_dbworkflowdata:
+    db_dbworkflowdata_aiida_obj_id_70a2d33b: CREATE INDEX db_dbworkflowdata_aiida_obj_id_70a2d33b
+      ON public.db_dbworkflowdata USING btree (aiida_obj_id)
+    db_dbworkflowdata_parent_id_ff4dbf8d: CREATE INDEX db_dbworkflowdata_parent_id_ff4dbf8d
+      ON public.db_dbworkflowdata USING btree (parent_id)
+    db_dbworkflowdata_parent_id_name_data_type_a4b50dae_uniq: CREATE UNIQUE INDEX
+      db_dbworkflowdata_parent_id_name_data_type_a4b50dae_uniq ON public.db_dbworkflowdata
+      USING btree (parent_id, name, data_type)
+    db_dbworkflowdata_pkey: CREATE UNIQUE INDEX db_dbworkflowdata_pkey ON public.db_dbworkflowdata
+      USING btree (id)
+  db_dbworkflowstep:
+    db_dbworkflowstep_parent_id_ffb754d9: CREATE INDEX db_dbworkflowstep_parent_id_ffb754d9
+      ON public.db_dbworkflowstep USING btree (parent_id)
+    db_dbworkflowstep_parent_id_name_111027e3_uniq: CREATE UNIQUE INDEX db_dbworkflowstep_parent_id_name_111027e3_uniq
+      ON public.db_dbworkflowstep USING btree (parent_id, name)
+    db_dbworkflowstep_pkey: CREATE UNIQUE INDEX db_dbworkflowstep_pkey ON public.db_dbworkflowstep
+      USING btree (id)
+    db_dbworkflowstep_user_id_04282431: CREATE INDEX db_dbworkflowstep_user_id_04282431
+      ON public.db_dbworkflowstep USING btree (user_id)
+  db_dbworkflowstep_calculations:
+    db_dbworkflowstep_calcul_dbworkflowstep_id_dbnode_60f50d02_uniq: CREATE UNIQUE
+      INDEX db_dbworkflowstep_calcul_dbworkflowstep_id_dbnode_60f50d02_uniq ON public.db_dbworkflowstep_calculations
+      USING btree (dbworkflowstep_id, dbnode_id)
+    db_dbworkflowstep_calculations_dbnode_id_0d07b7a7: CREATE INDEX db_dbworkflowstep_calculations_dbnode_id_0d07b7a7
+      ON public.db_dbworkflowstep_calculations USING btree (dbnode_id)
+    db_dbworkflowstep_calculations_dbworkflowstep_id_575c3637: CREATE INDEX db_dbworkflowstep_calculations_dbworkflowstep_id_575c3637
+      ON public.db_dbworkflowstep_calculations USING btree (dbworkflowstep_id)
+    db_dbworkflowstep_calculations_pkey: CREATE UNIQUE INDEX db_dbworkflowstep_calculations_pkey
+      ON public.db_dbworkflowstep_calculations USING btree (id)
+  db_dbworkflowstep_sub_workflows:
+    db_dbworkflowstep_sub_wo_dbworkflowstep_id_dbwork_e9b2b624_uniq: CREATE UNIQUE
+      INDEX db_dbworkflowstep_sub_wo_dbworkflowstep_id_dbwork_e9b2b624_uniq ON public.db_dbworkflowstep_sub_workflows
+      USING btree (dbworkflowstep_id, dbworkflow_id)
+    db_dbworkflowstep_sub_workflows_dbworkflow_id_dca4d103: CREATE INDEX db_dbworkflowstep_sub_workflows_dbworkflow_id_dca4d103
+      ON public.db_dbworkflowstep_sub_workflows USING btree (dbworkflow_id)
+    db_dbworkflowstep_sub_workflows_dbworkflowstep_id_e183bbb7: CREATE INDEX db_dbworkflowstep_sub_workflows_dbworkflowstep_id_e183bbb7
+      ON public.db_dbworkflowstep_sub_workflows USING btree (dbworkflowstep_id)
+    db_dbworkflowstep_sub_workflows_pkey: CREATE UNIQUE INDEX db_dbworkflowstep_sub_workflows_pkey
+      ON public.db_dbworkflowstep_sub_workflows USING btree (id)

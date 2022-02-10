@@ -116,13 +116,13 @@ If you want to install AiiDA onto you own personal workstation/laptop, it is rec
 
    .. code-block:: console
 
-       (aiida) $ verdi status
-       ✓ config dir:  /home/ubuntu/.aiida
-       ✓ profile:     On profile me
-       ✓ repository:  /home/ubuntu/.aiida/repository/me
-       ✓ postgres:    Connected as aiida_qs_ubuntu_c6a4f69d255fbe9cdb7385dcdcf3c050@localhost:5432
-       ✓ rabbitmq:    Connected as amqp://127.0.0.1?heartbeat=600
-       ✓ daemon:      Daemon is running as PID 16430 since 2020-04-29 12:17:31
+        (aiida) $ verdi status
+        ✓ version:     AiiDA v2.0.0
+        ✓ config:      /path/to/.aiida
+        ✓ profile:     default
+        ✓ storage:     Storage for 'default' @ postgresql://username:***@localhost:5432/db_name / file:///path/to/repository
+        ✓ rabbitmq:    Connected as amqp://127.0.0.1?heartbeat=600
+        ✓ daemon:      Daemon is running as PID 2809 since 2019-03-15 16:27:52
 
    At this point you now have a working AiiDA environment, from which you can add and retrieve data.
 

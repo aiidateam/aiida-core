@@ -40,20 +40,28 @@ To display these parameters, use ``verdi profile show``:
 
 .. code:: bash
 
-    Info: Profile: project-one
-    ----------------------  ------------------------------------------------
-    aiidadb_backend         django
-    aiidadb_engine          postgresql_psycopg2
-    aiidadb_host            localhost
-    aiidadb_name            aiida_project_one
-    aiidadb_pass            correcthorsebatterystaple
-    aiidadb_port            5432
-    aiidadb_repository_uri  file:///home/user/.virtualenvs/aiida/repository/
-    aiidadb_user            aiida
-    default_user_email      user@email.com
-    options                 {'daemon_default_workers': 3}
-    profile_uuid            4c272a87d7f543b08da9fe738d88bb13
-    ----------------------  ------------------------------------------------
+    Report: Profile: a-import-sqla
+    PROFILE_UUID: fede89dae42b4df3bf46ab27e2b500ca
+    default_user_email: user@email.com
+    process_control:
+        backend: rabbitmq
+        config:
+            broker_host: 127.0.0.1
+            broker_password: guest
+            broker_port: 5672
+            broker_protocol: amqp
+            broker_username: guest
+            broker_virtual_host: ''
+    storage:
+        backend: psql_dos
+        config:
+            database_engine: postgresql_psycopg2
+            database_hostname: localhost
+            database_name: name
+            database_password: abc
+            database_port: 5432
+            database_username: username
+            repository_uri: file:///path/to/repository
 
 By default, the parameters of the default profile are shown, but one can pass the profile name of another, e.g., ``verdi profile show project-two`` to change that.
 

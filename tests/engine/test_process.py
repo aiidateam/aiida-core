@@ -350,7 +350,7 @@ class TestProcess(AiidaTestCase):
         from aiida.common import AttributeDict
         from aiida.common.links import LinkType
         from aiida.engine.utils import instantiate_process
-        from aiida.manage.manager import get_manager
+        from aiida.manage import get_manager
 
         runner = get_manager().get_runner()
 
@@ -398,7 +398,7 @@ class TestProcess(AiidaTestCase):
         """Test the ``Process.exposed_outputs`` method for non-existing namespace."""
         from aiida.common.links import LinkType
         from aiida.engine.utils import instantiate_process
-        from aiida.manage.manager import get_manager
+        from aiida.manage import get_manager
 
         runner = get_manager().get_runner()
 

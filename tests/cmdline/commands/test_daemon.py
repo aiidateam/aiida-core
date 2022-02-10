@@ -11,6 +11,7 @@
 """Tests for ``verdi daemon``."""
 import pytest
 
+from aiida import get_profile
 from aiida.cmdline.commands import cmd_daemon
 
 
@@ -62,7 +63,7 @@ def test_daemon_start_number(run_cli_command, daemon_client):
 def test_daemon_start_number_config(run_cli_command, daemon_client, isolated_config):
     """Test ``verdi daemon start`` with ``daemon.default_workers`` config option being set."""
     number = 3
-    isolated_config.set_option('daemon.default_workers', number, scope=isolated_config.current_profile.name)
+    isolated_config.set_option('daemon.default_workers', number, scope=get_profile().name)
     isolated_config.store()
 
     run_cli_command(cmd_daemon.start)
@@ -83,12 +84,12 @@ def test_foreground_multiple_workers(run_cli_command):
     run_cli_command(cmd_daemon.start, ['--foreground', str(4)], raises=True)
 
 
-@pytest.mark.usefixtures('daemon_client')
-def test_daemon_status(run_cli_command, isolated_config):
+@pytest.mark.usefixtures('daemon_client', 'isolated_config')
+def test_daemon_status(run_cli_command):
     """Test ``verdi daemon status``."""
     run_cli_command(cmd_daemon.start)
     result = run_cli_command(cmd_daemon.status)
     last_line = result.output_lines[-1]
 
-    assert f'Profile: {isolated_config.current_profile.name}' in result.output
+    assert f'Profile: {get_profile().name}' in result.output
     assert last_line == 'Use verdi daemon [incr | decr] [num] to increase / decrease the amount of workers'

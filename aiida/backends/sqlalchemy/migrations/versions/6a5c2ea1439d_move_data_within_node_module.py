@@ -8,7 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=invalid-name,no-member
-"""Data migration for `Data` nodes after it was moved in the `aiida.orm.node` module changing the type string.
+"""Change type string for `Data` nodes, from `data.*` to `node.data.*`
+
+Note, this is identical to django_0025
 
 Revision ID: 6a5c2ea1439d
 Revises: 375c2db70663

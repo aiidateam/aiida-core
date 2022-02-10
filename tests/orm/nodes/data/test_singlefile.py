@@ -63,7 +63,7 @@ def check_singlefile_content_with_store(check_singlefile_content):  # pylint: di
 
 
 def test_reload_singlefile_data(
-    clear_database_before_test,  # pylint: disable=unused-argument
+    aiida_profile_clean,  # pylint: disable=unused-argument
     check_singlefile_content_with_store,  # pylint: disable=redefined-outer-name
     check_singlefile_content  # pylint: disable=redefined-outer-name
 ):
@@ -99,7 +99,7 @@ def test_reload_singlefile_data(
 
 
 def test_construct_from_filelike(
-    clear_database_before_test,  # pylint: disable=unused-argument
+    aiida_profile_clean,  # pylint: disable=unused-argument
     check_singlefile_content_with_store  # pylint: disable=redefined-outer-name
 ):
     """Test constructing an instance from filelike instead of filepath."""
@@ -120,7 +120,7 @@ def test_construct_from_filelike(
 
 
 def test_construct_from_string(
-    clear_database_before_test,  # pylint: disable=unused-argument
+    aiida_profile_clean,  # pylint: disable=unused-argument
     check_singlefile_content_with_store  # pylint: disable=redefined-outer-name
 ):
     """Test constructing an instance from a string."""
@@ -137,7 +137,7 @@ def test_construct_from_string(
 
 
 def test_construct_with_path(
-    clear_database_before_test,  # pylint: disable=unused-argument
+    aiida_profile_clean,  # pylint: disable=unused-argument
     check_singlefile_content_with_store  # pylint: disable=redefined-outer-name
 ):
     """Test constructing an instance from a pathlib.Path."""
@@ -158,7 +158,7 @@ def test_construct_with_path(
 
 
 def test_construct_with_filename(
-    clear_database_before_test,  # pylint: disable=unused-argument
+    aiida_profile_clean,  # pylint: disable=unused-argument
     check_singlefile_content  # pylint: disable=redefined-outer-name
 ):
     """Test constructing an instance, providing a filename."""
@@ -182,7 +182,7 @@ def test_construct_with_filename(
 
 
 def test_binary_file(
-    clear_database_before_test,  # pylint: disable=unused-argument
+    aiida_profile_clean,  # pylint: disable=unused-argument
     check_singlefile_content_with_store  # pylint: disable=redefined-outer-name
 ):
     """Test that the constructor accepts binary files."""

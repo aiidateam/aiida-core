@@ -31,41 +31,15 @@ depends_on = None
 tables = ['db_dbcomment', 'db_dbcomputer', 'db_dbgroup', 'db_dbworkflow']
 
 
-def verify_uuid_uniqueness(table):
-    """Check whether the database contains duplicate UUIDS.
-
-    Note that we have to redefine this method from
-    aiida.backends.general.migrations.duplicate_uuids.verify_uuid_uniqueness
-    because that uses the default database connection, while here the one created by Alembic should be used instead.
-
-    :raises: IntegrityError if database contains nodes with duplicate UUIDS.
-    """
-    from sqlalchemy.sql import text
-
-    from aiida.common.exceptions import IntegrityError
-
-    query = text(
-        f'SELECT s.id, s.uuid FROM (SELECT *, COUNT(*) OVER(PARTITION BY uuid) AS c FROM {table}) AS s WHERE c > 1'
-    )
-    conn = op.get_bind()
-    duplicates = conn.execute(query).fetchall()
-
-    if duplicates:
-        command = f'`verdi database integrity detect-duplicate-uuid {table}`'
-        raise IntegrityError(
-            'Your table "{}"" contains entries with duplicate UUIDS.\nRun {} '
-            'to return to a consistent state'.format(table, command)
-        )
-
-
 def upgrade():
-
+    """Migrations for the upgrade."""
+    from aiida.backends.sqlalchemy.migrations.utils.duplicate_uuids import verify_uuid_uniqueness
     for table in tables:
-        verify_uuid_uniqueness(table)
+        verify_uuid_uniqueness(table, op.get_bind())
         op.create_unique_constraint(f'{table}_uuid_key', table, ['uuid'])
 
 
 def downgrade():
-
+    """Migrations for the downgrade."""
     for table in tables:
         op.drop_constraint(f'{table}_uuid_key', table)

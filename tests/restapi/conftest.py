@@ -48,18 +48,40 @@ def server_url():
 
 
 @pytest.fixture
-def restrict_sqlalchemy_queuepool(aiida_profile):
-    """Create special SQLAlchemy engine for use with QueryBuilder - backend-agnostic"""
-    from aiida.manage.manager import get_manager
+def restrict_db_connections(aiida_profile):  # pylint: disable=unused-argument
+    """Restrict the number of database connections allowed to the PSQL database."""
+    from aiida.manage import get_manager
 
-    backend_manager = get_manager().get_backend_manager()
-    backend_manager.reset_backend_environment()
-    actual_profile = aiida_profile._manager._profile  # pylint: disable=protected-access
-    backend_manager.load_backend_environment(actual_profile, pool_timeout=1, max_overflow=0)
+    manager = get_manager()
+
+    # create a new profile with the engine key-word arguments
+    # pool_timeout: number of seconds to wait before giving up on getting a connection from the pool.
+    # max_overflow: maximum number of connections that can be opened above the pool_size (whose default is 5)
+    current_profile = manager.get_profile()
+    new_profile = current_profile.copy()
+    new_profile.set_storage(
+        new_profile.storage_backend,
+        dict(engine_kwargs={
+            'pool_timeout': 1,
+            'max_overflow': 0
+        }, **new_profile.storage_config)
+    )
+    # load the new profile and initialise the database connection
+    manager.unload_profile()
+    manager.load_profile(new_profile)
+    backend = manager.get_profile_storage()
+    # double check that the connection is set with these parameters
+    session = backend.get_session()
+    assert session.bind.pool.timeout() == 1
+    assert session.bind.pool._max_overflow == 0  # pylint: disable=protected-access
+    yield
+    # reset the original profile
+    manager.unload_profile()
+    manager.load_profile(current_profile)
 
 
 @pytest.fixture
-def populate_restapi_database(clear_database_before_test):
+def populate_restapi_database(aiida_profile_clean):
     """Populates the database with a considerable set of nodes to test the restAPI"""
     # pylint: disable=unused-argument
     from aiida import orm

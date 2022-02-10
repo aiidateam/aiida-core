@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
 
 from aiida.common import timezone
 from aiida.common.lang import classproperty
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 
 from . import entities
 
@@ -132,7 +132,7 @@ class Log(entities.Entity['BackendLog']):
 
     @classproperty
     def objects(cls: Type['Log']) -> LogCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
-        return LogCollection.get_cached(cls, get_manager().get_backend())
+        return LogCollection.get_cached(cls, get_manager().get_profile_storage())
 
     def __init__(
         self,
@@ -162,7 +162,7 @@ class Log(entities.Entity['BackendLog']):
         if not loggername or not levelname:
             raise exceptions.ValidationError('The loggername and levelname cannot be empty')
 
-        backend = backend or get_manager().get_backend()
+        backend = backend or get_manager().get_profile_storage()
         model = backend.logs.create(
             time=time,
             loggername=loggername,

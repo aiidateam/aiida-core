@@ -16,7 +16,7 @@ import click
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
-from aiida.common.exceptions import IncompatibleDatabaseSchema
+from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, UnreachableStorage
 from aiida.common.log import override_log_level
 
 from ..utils.echo import ExitCode  # pylint: disable=import-error,no-name-in-module
@@ -59,9 +59,8 @@ def verdi_status(print_traceback, no_rmq):
     from aiida import __version__
     from aiida.cmdline.utils.daemon import delete_stale_pid_file, get_daemon_status
     from aiida.common.utils import Capturing
-    from aiida.manage.configuration import get_rabbitmq_version, is_rabbitmq_version_supported
     from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
-    from aiida.manage.manager import get_manager
+    from aiida.manage.manager import check_rabbitmq_version, get_manager
 
     exit_code = ExitCode.SUCCESS
 
@@ -85,68 +84,50 @@ def verdi_status(print_traceback, no_rmq):
         print_status(ServiceStatus.ERROR, 'profile', message, exception=exc, print_traceback=print_traceback)
         sys.exit(ExitCode.CRITICAL)  # stop here - without a profile we cannot access anything
 
-    # Getting the repository
-    try:
-        repository = manager.get_backend().get_repository()
-    except Exception as exc:
-        message = 'Error with repository folder'
-        print_status(ServiceStatus.ERROR, 'repository', message, exception=exc, print_traceback=print_traceback)
-        exit_code = ExitCode.CRITICAL
-    else:
-        repository_status = f'Connected to {repository}'
-        print_status(ServiceStatus.UP, 'repository', repository_status)
-
-    # Getting the postgres status by trying to get a database cursor
-    backend_manager = manager.get_backend_manager()
-    dbgen = backend_manager.get_schema_generation_database()
-    dbver = backend_manager.get_schema_version_backend()
-    database_data = [
-        profile.storage_config['database_name'],
-        dbgen,
-        dbver,
-        profile.storage_config['database_username'],
-        profile.storage_config['database_hostname'],
-        profile.storage_config['database_port'],
-    ]
+    # Check the backend storage
+    storage_head_version = None
     try:
         with override_log_level():  # temporarily suppress noisy logging
-            backend = manager.get_backend()
-            backend.cursor()
-
-    except IncompatibleDatabaseSchema:
-        message = f'Database schema {dbgen} / {dbver} (generation/version) is incompatible with the code. '
-        message += 'Run `verdi storage migrate` to solve this.'
-        print_status(ServiceStatus.DOWN, 'postgres', message)
+            storage_cls = profile.storage_cls
+            storage_head_version = storage_cls.version_head()
+            storage_backend = storage_cls(profile)
+    except UnreachableStorage as exc:
+        message = 'Unable to connect to profile\'s storage.'
+        print_status(ServiceStatus.DOWN, 'storage', message, exception=exc, print_traceback=print_traceback)
         exit_code = ExitCode.CRITICAL
-
+    except IncompatibleStorageSchema as exc:
+        message = (
+            f'Storage schema version is incompatible with the code version {storage_head_version!r}. '
+            'Run `verdi storage migrate` to solve this.'
+        )
+        print_status(ServiceStatus.DOWN, 'storage', message)
+        exit_code = ExitCode.CRITICAL
+    except CorruptStorage as exc:
+        message = 'Storage is corrupted.'
+        print_status(ServiceStatus.DOWN, 'storage', message, exception=exc, print_traceback=print_traceback)
+        exit_code = ExitCode.CRITICAL
     except Exception as exc:
-        message = 'Unable to connect to database `{}` with schema {} / {} (generation/version) as {}@{}:{}'.format(
-            *database_data
-        )
-        print_status(ServiceStatus.DOWN, 'postgres', message, exception=exc, print_traceback=print_traceback)
+        message = 'Unable to instatiate profile\'s storage.'
+        print_status(ServiceStatus.ERROR, 'storage', message, exception=exc, print_traceback=print_traceback)
         exit_code = ExitCode.CRITICAL
-
     else:
-        message = 'Connected to database `{}` with schema {} / {} (generation/version) as {}@{}:{}'.format(
-            *database_data
-        )
-        print_status(ServiceStatus.UP, 'postgres', message)
+        message = str(storage_backend)
+        print_status(ServiceStatus.UP, 'storage', message)
 
     # Getting the rmq status
     if not no_rmq:
         try:
             with Capturing(capture_stderr=True):
                 with override_log_level():  # temporarily suppress noisy logging
-                    comm = manager.create_communicator(with_orm=False)
-                    comm.close()
+                    comm = manager.get_communicator()
         except Exception as exc:
             message = f'Unable to connect to rabbitmq with URL: {profile.get_rmq_url()}'
             print_status(ServiceStatus.ERROR, 'rabbitmq', message, exception=exc, print_traceback=print_traceback)
             exit_code = ExitCode.CRITICAL
         else:
-            version = get_rabbitmq_version()
+            version, supported = check_rabbitmq_version(comm)
             connection = f'Connected to RabbitMQ v{version} as {profile.get_rmq_url()}'
-            if is_rabbitmq_version_supported():
+            if supported:
                 print_status(ServiceStatus.UP, 'rabbitmq', connection)
             else:
                 print_status(ServiceStatus.WARNING, 'rabbitmq', 'Incompatible RabbitMQ version detected! ' + connection)

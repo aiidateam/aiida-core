@@ -6,7 +6,6 @@ channels:
 - defaults
 dependencies:
 - python~=3.8
-- aldjemy~=2.4
 - alembic~=1.2
 - archive-path~=0.3.6
 - aio-pika~=6.6
@@ -15,7 +14,6 @@ dependencies:
 - click-spinner~=0.1.8
 - click>=8.0.3,~=8.0
 - disk-objectstore~=0.6.0
-- django~=2.2
 - python-graphviz~=0.13
 - ipython~=7.20
 - jinja2~=3.0

@@ -38,7 +38,7 @@ from typing import (
 )
 import warnings
 
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.querybuilder import (
     GROUP_ENTITY_TYPE_PREFIX,
@@ -136,7 +136,7 @@ class QueryBuilder:
         :param distinct: Whether to return de-duplicated rows
 
         """
-        self._backend = backend or get_manager().get_backend()
+        self._backend = backend or get_manager().get_profile_storage()
         self._impl: BackendQueryBuilder = self._backend.query()
 
         # SERIALISABLE ATTRIBUTES

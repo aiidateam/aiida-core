@@ -42,7 +42,7 @@ def validate_entry_point_strings(ctx, param, value):  # pylint: disable=unused-a
     from aiida.orm import autogroup
 
     try:
-        autogroup.Autogroup.validate(value)
+        autogroup.AutogroupManager.validate(value)
     except (TypeError, ValueError) as exc:
         raise click.BadParameter(f'{str(exc)}: `{value}`')
 
@@ -84,7 +84,7 @@ def run(scriptname, varargs, auto_group, auto_group_label_prefix, exclude, inclu
     # pylint: disable=too-many-arguments,exec-used
     """Execute scripts with preloaded AiiDA environment."""
     from aiida.cmdline.utils.shell import DEFAULT_MODULES_LIST
-    from aiida.orm import autogroup
+    from aiida.manage import get_manager
 
     # Prepare the environment for the script to be run
     globals_dict = {
@@ -100,15 +100,12 @@ def run(scriptname, varargs, auto_group, auto_group_label_prefix, exclude, inclu
         globals_dict[f'{alias}'] = getattr(__import__(app_mod, {}, {}, model_name), model_name)
 
     if auto_group:
-        aiida_verdilib_autogroup = autogroup.Autogroup()
+        storage_backend = get_manager().get_profile_storage()
+        storage_backend.autogroup.enable()
         # Set the ``group_label_prefix`` if defined, otherwise a default prefix will be used
-        if auto_group_label_prefix is not None:
-            aiida_verdilib_autogroup.set_group_label_prefix(auto_group_label_prefix)
-        aiida_verdilib_autogroup.set_exclude(exclude)
-        aiida_verdilib_autogroup.set_include(include)
-
-        # Note: this is also set in the exec environment! This is the intended behavior
-        autogroup.CURRENT_AUTOGROUP = aiida_verdilib_autogroup
+        storage_backend.autogroup.set_group_label_prefix(auto_group_label_prefix)
+        storage_backend.autogroup.set_exclude(exclude)
+        storage_backend.autogroup.set_include(include)
 
     # Initialize the variable here, otherwise we get UnboundLocalError in the finally clause if it fails to open
     handle = None
@@ -130,6 +127,7 @@ def run(scriptname, varargs, auto_group, auto_group_label_prefix, exclude, inclu
             # Re-raise the exception to have the error code properly returned at the end
             raise
     finally:
-        autogroup.current_autogroup = None
+        storage_backend = get_manager().get_profile_storage()
+        storage_backend.autogroup.disable()
         if handle:
             handle.close()

@@ -20,7 +20,7 @@ from .groups import *
 from .users import *
 
 __all__ = (
-    'SqlaBackend',
+    'PsqlDosBackend',
     'SqlaGroup',
     'SqlaGroupCollection',
     'SqlaUser',

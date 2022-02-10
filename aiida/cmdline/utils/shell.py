@@ -89,17 +89,15 @@ def run_shell(interface=None):
 
 def get_start_namespace():
     """Load all default and custom modules"""
-    from aiida.manage.configuration import get_config
+    from aiida.manage import get_config_option
 
     user_ns = {}
-
-    config = get_config()
 
     # Load default modules
     for app_mod, model_name, alias in DEFAULT_MODULES_LIST:
         user_ns[alias] = getattr(__import__(app_mod, {}, {}, model_name), model_name)
 
-    verdi_shell_auto_import = config.get_option('verdi.shell.auto_import', config.current_profile.name).split(':')
+    verdi_shell_auto_import = get_config_option('verdi.shell.auto_import').split(':')
 
     # Load custom modules
     modules_list = [(str(e[0]), str(e[2])) for e in [p.rpartition('.') for p in verdi_shell_auto_import] if e[1] == '.']

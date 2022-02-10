@@ -25,7 +25,7 @@ from aiida.backends.sqlalchemy.utils import install_tc
 # revision identifiers, used by Alembic.
 revision = 'e15ef2630a1b'
 down_revision = None
-branch_labels = None
+branch_labels = ('sqlalchemy',)
 depends_on = None
 
 

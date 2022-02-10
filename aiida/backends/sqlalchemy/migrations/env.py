@@ -31,15 +31,22 @@ def run_migrations_online():
     config = context.config  # pylint: disable=no-member
 
     connection = config.attributes.get('connection', None)
+    aiida_profile = config.attributes.get('aiida_profile', None)
+    on_version_apply = config.attributes.get('on_version_apply', None)
 
     if connection is None:
         from aiida.common.exceptions import ConfigurationError
         raise ConfigurationError('An initialized connection is expected for the AiiDA online migrations.')
+    if aiida_profile is None:
+        from aiida.common.exceptions import ConfigurationError
+        raise ConfigurationError('An aiida_profile is expected for the AiiDA online migrations.')
 
     context.configure(  # pylint: disable=no-member
         connection=connection,
         target_metadata=Base.metadata,
         transaction_per_migration=True,
+        aiida_profile=aiida_profile,
+        on_version_apply=on_version_apply
     )
 
     context.run_migrations()  # pylint: disable=no-member

@@ -8,9 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=invalid-name,no-member,import-error,no-name-in-module
-"""Drop various columns from the `DbUser` model.
+"""Simplify `db_dbuser`, by dropping unnecessary columns
 
 These columns were part of the default Django user model
+
+This migration is similar to django_0035
 
 Revision ID: de2eaf6978b4
 Revises: 1830c8430131

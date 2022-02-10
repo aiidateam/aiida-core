@@ -69,7 +69,7 @@ TREE = {'no-objects': (4, 3, 0), 'with-objects': (4, 3, 2)}
 
 
 @pytest.mark.parametrize('depth,breadth,num_objects', TREE.values(), ids=TREE.keys())
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.benchmark(group='import-export')
 def test_export(benchmark, tmp_path, depth, breadth, num_objects):
     """Benchmark exporting a provenance graph."""
@@ -93,7 +93,7 @@ def test_export(benchmark, tmp_path, depth, breadth, num_objects):
 @pytest.mark.benchmark(group='import-export')
 def test_import(aiida_profile, benchmark, tmp_path, depth, breadth, num_objects):
     """Benchmark importing a provenance graph."""
-    aiida_profile.reset_db()
+    aiida_profile.clear_profile()
     root_node = Dict()
     recursive_provenance(root_node, depth=depth, breadth=breadth, num_objects=num_objects)
     root_uuid = root_node.uuid
@@ -102,7 +102,7 @@ def test_import(aiida_profile, benchmark, tmp_path, depth, breadth, num_objects)
     create_archive([root_node], **kwargs)
 
     def _setup():
-        aiida_profile.reset_db()
+        aiida_profile.clear_profile()
 
     def _run():
         import_archive(str(out_path))

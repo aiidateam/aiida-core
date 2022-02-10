@@ -16,7 +16,7 @@ from aiida.tools.archive import create_archive, get_format, import_archive
 
 def test_import_of_attributes(tmp_path, aiida_profile):
     """Check if attributes are properly imported"""
-    aiida_profile.reset_db()
+    aiida_profile.clear_profile()
     # Create Data with attributes
     data = orm.Data()
     data.label = 'my_test_data_node'
@@ -28,7 +28,7 @@ def test_import_of_attributes(tmp_path, aiida_profile):
     create_archive([data], filename=export_file)
 
     # Clean db
-    aiida_profile.reset_db()
+    aiida_profile.clear_profile()
 
     import_archive(export_file)
     builder = orm.QueryBuilder().append(orm.Data, filters={'label': 'my_test_data_node'})
@@ -39,7 +39,7 @@ def test_import_of_attributes(tmp_path, aiida_profile):
     assert imported_node.get_attribute('c') == 3
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_strip_checkpoints(tmp_path):
     """Test that `ProcessNode` checkpoints are stripped.
 

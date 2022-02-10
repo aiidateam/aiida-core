@@ -28,7 +28,7 @@ class TestProfile(AiidaTestCase):
         cls.profile_dictionary = {
             'default_user_email': 'dummy@localhost',
             'storage': {
-                'backend': 'django',
+                'backend': 'psql_dos',
                 'config': {
                     'database_engine': 'postgresql_psycopg2',
                     'database_name': cls.profile_name,
@@ -57,7 +57,7 @@ class TestProfile(AiidaTestCase):
         """Test the basic properties of a Profile instance."""
         self.assertEqual(self.profile.name, self.profile_name)
 
-        self.assertEqual(self.profile.storage_backend, 'django')
+        self.assertEqual(self.profile.storage_backend, 'psql_dos')
         self.assertEqual(self.profile.storage_config, self.profile_dictionary['storage']['config'])
         self.assertEqual(self.profile.process_control_backend, 'rabbitmq')
         self.assertEqual(self.profile.process_control_config, self.profile_dictionary['process_control']['config'])

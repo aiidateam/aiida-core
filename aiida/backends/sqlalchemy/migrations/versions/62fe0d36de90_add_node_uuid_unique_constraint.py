@@ -24,36 +24,10 @@ branch_labels = None
 depends_on = None
 
 
-def verify_node_uuid_uniqueness():
-    """Check whether the database contains nodes with duplicate UUIDS.
-
-    Note that we have to redefine this method from aiida.manage.database.integrity.verify_node_uuid_uniqueness
-    because that uses the default database connection, while here the one created by Alembic should be used instead.
-
-    :raises: IntegrityError if database contains nodes with duplicate UUIDS.
-    """
-    from sqlalchemy.sql import text
-
-    from aiida.common.exceptions import IntegrityError
-
-    query = text(
-        'SELECT s.id, s.uuid FROM (SELECT *, COUNT(*) OVER(PARTITION BY uuid) AS c FROM db_dbnode) AS s WHERE c > 1'
-    )
-    conn = op.get_bind()
-    duplicates = conn.execute(query).fetchall()
-
-    if duplicates:
-        table = 'db_dbnode'
-        command = f'`verdi database integrity detect-duplicate-uuid {table}`'
-        raise IntegrityError(
-            'Your table "{}" contains entries with duplicate UUIDS.\nRun {} '
-            'to return to a consistent state'.format(table, command)
-        )
-
-
 def upgrade():
     """Migrations for the upgrade."""
-    verify_node_uuid_uniqueness()
+    from aiida.backends.sqlalchemy.migrations.utils.duplicate_uuids import verify_uuid_uniqueness
+    verify_uuid_uniqueness('db_dbnode', op.get_bind())
     op.create_unique_constraint('db_dbnode_uuid_key', 'db_dbnode', ['uuid'])
 
 

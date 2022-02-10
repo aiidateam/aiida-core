@@ -21,8 +21,6 @@ class DBLogHandler(logging.Handler):
             # https://github.com/python/cpython/blob/1c2cb516e49ceb56f76e90645e67e8df4e5df01a/Lib/logging/handlers.py#L590
             self.format(record)
 
-        from django.core.exceptions import ImproperlyConfigured  # pylint: disable=no-name-in-module, import-error
-
         from aiida import orm
 
         try:
@@ -33,11 +31,6 @@ class DBLogHandler(logging.Handler):
                 # The backend should be set. We silently absorb this error
                 pass
 
-        except ImproperlyConfigured:
-            # Probably, the logger was called without the
-            # Django settings module loaded. Then,
-            # This ignore should be a no-op.
-            pass
         except Exception:  # pylint: disable=broad-except
             # To avoid loops with the error handler, I just print.
             # Hopefully, though, this should not happen!

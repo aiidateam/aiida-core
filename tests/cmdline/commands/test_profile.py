@@ -14,7 +14,7 @@ import pytest
 
 from aiida.backends.testbase import AiidaPostgresTestCase
 from aiida.cmdline.commands import cmd_profile, cmd_verdi
-from aiida.manage import configuration
+from aiida.manage import configuration, get_manager
 from tests.utils.configuration import create_mock_profile
 
 
@@ -102,11 +102,12 @@ class TestVerdiProfileSetup(AiidaPostgresTestCase):
         self.assertClickSuccess(result)
         for key, value in profile.dictionary.items():
             if isinstance(value, str):
-                self.assertIn(key.lower(), result.output)
+                self.assertIn(key, result.output)
                 self.assertIn(value, result.output)
 
     def test_show_with_profile_option(self):
         """Test the `verdi profile show` command in combination with `-p/--profile."""
+        get_manager().unload_profile()
         self.mock_profiles()
 
         profile_name_non_default = self.profile_list[1]
@@ -140,7 +141,7 @@ class TestVerdiProfileSetup(AiidaPostgresTestCase):
         """Test for verdi profile delete command."""
         from aiida.cmdline.commands.cmd_profile import profile_delete, profile_list
 
-        configuration.reset_profile()
+        get_manager().unload_profile()
 
         kwargs = {'database_port': self.pg_test.dsn['port']}
         self.mock_profiles(**kwargs)

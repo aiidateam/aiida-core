@@ -98,7 +98,7 @@ def migration_migrate_legacy_job_calculation_data(data):
     `process_status`. These are inferred from the old `state` attribute, which is then discarded as its values have
     been deprecated.
     """
-    from aiida.backends.general.migrations.calc_state import STATE_MAPPING
+    from aiida.backends.sqlalchemy.migrations.utils.calc_state import STATE_MAPPING
 
     calc_job_node_type = 'process.calculation.calcjob.CalcJobNode.'
     node_data = data['export_data'].get('Node', {})

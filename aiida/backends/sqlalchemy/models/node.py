@@ -10,7 +10,7 @@
 # pylint: disable=import-error,no-name-in-module
 """Module to manage nodes for the SQLA backend."""
 
-from sqlalchemy import ForeignKey, text
+from sqlalchemy import ForeignKey
 # Specific to PGSQL. If needed to be agnostic
 # http://docs.sqlalchemy.org/en/rel_0_9/core/custom_types.html?highlight=guid#backend-agnostic-guid-type
 # Or maybe rely on sqlalchemy-utils UUID type
@@ -53,7 +53,7 @@ class DbNode(Base):
     mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=False)
     attributes = Column(JSONB)
     extras = Column(JSONB)
-    repository_metadata = Column(JSONB, nullable=True, default=dict)
+    repository_metadata = Column(JSONB, nullable=False, default=dict)
 
     dbcomputer_id = Column(
         Integer,

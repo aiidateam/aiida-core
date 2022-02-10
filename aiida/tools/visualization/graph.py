@@ -18,7 +18,7 @@ from graphviz import Digraph
 
 from aiida import orm
 from aiida.common import LinkType
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 from aiida.orm.utils.links import LinkPair
 from aiida.tools.graph.graph_traversers import traverse_graph
 
@@ -403,7 +403,7 @@ class Graph:
         self._node_styles = node_style_fn or default_node_styles
         self._node_sublabels = node_sublabel_fn or default_node_sublabels
         self._node_id_type = node_id_type
-        self._backend = backend or get_manager().get_backend()
+        self._backend = backend or get_manager().get_profile_storage()
 
         self._ignore_node_style = _OVERRIDE_STYLES_DICT['ignore_node']
         self._origin_node_style = _OVERRIDE_STYLES_DICT['origin_node']

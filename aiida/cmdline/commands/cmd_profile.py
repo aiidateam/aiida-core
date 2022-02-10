@@ -9,7 +9,6 @@
 ###########################################################################
 """`verdi profile` command."""
 import click
-import tabulate
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
@@ -46,6 +45,15 @@ def profile_list():
         echo.echo_formatted_list(config.profiles, ['name'], sort=sort, highlight=highlight)
 
 
+def _strip_private_keys(dct: dict):
+    """Remove private keys (starting `_`) from the dictionary."""
+    return {
+        key: _strip_private_keys(value) if isinstance(value, dict) else value
+        for key, value in dct.items()
+        if not key.startswith('_')
+    }
+
+
 @verdi_profile.command('show')
 @arguments.PROFILE(default=defaults.get_default_profile)
 def profile_show(profile):
@@ -55,8 +63,8 @@ def profile_show(profile):
         echo.echo_critical('no profile to show')
 
     echo.echo_report(f'Profile: {profile.name}')
-    data = sorted([(k.lower(), v) for k, v in profile.dictionary.items()])
-    echo.echo(tabulate.tabulate(data))
+    config = _strip_private_keys(profile.dictionary)
+    echo.echo_dictionary(config, fmt='yaml')
 
 
 @verdi_profile.command('setdefault')

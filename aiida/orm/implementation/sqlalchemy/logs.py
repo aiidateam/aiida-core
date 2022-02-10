@@ -35,7 +35,7 @@ class SqlaLog(entities.SqlaModelEntity[models.DbLog], BackendLog):
                 dbnode_id=dbnode_id,
                 message=message,
                 metadata=metadata
-            )
+            ), backend
         )
 
     @property
@@ -109,7 +109,8 @@ class SqlaLogCollection(BackendLogCollection):
         session = self.backend.get_session()
 
         try:
-            session.query(models.DbLog).filter_by(id=log_id).one().delete()
+            row = session.query(models.DbLog).filter_by(id=log_id).one()
+            session.delete(row)
             session.commit()
         except NoResultFound:
             session.rollback()

@@ -18,7 +18,7 @@ import asyncio
 import pytest
 
 from aiida.engine import WorkChain, run_get_node, submit, while_
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 from aiida.orm import Code, Int
 from aiida.plugins.factories import CalculationFactory
 
@@ -115,7 +115,7 @@ WORKCHAINS = {
 
 
 @pytest.mark.parametrize('workchain,iterations,outgoing', WORKCHAINS.values(), ids=WORKCHAINS.keys())
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.benchmark(group='engine')
 def test_workchain_local(benchmark, aiida_localhost, workchain, iterations, outgoing):
     """Benchmark Workchains, executed in the local runner."""
@@ -171,7 +171,7 @@ def submit_get_node():
 
 
 @pytest.mark.parametrize('workchain,iterations,outgoing', WORKCHAINS.values(), ids=WORKCHAINS.keys())
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.benchmark(group='engine')
 def test_workchain_daemon(benchmark, submit_get_node, aiida_localhost, workchain, iterations, outgoing):
     """Benchmark Workchains, executed in the via a daemon runner."""

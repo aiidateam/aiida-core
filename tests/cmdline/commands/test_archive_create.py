@@ -35,7 +35,7 @@ def test_create_force(run_cli_command, tmp_path):
     run_cli_command(cmd_archive.create, options)
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_create_all(run_cli_command, tmp_path):
     """Test that creating an archive for a set of various ORM entities works with the zip format."""
     computer = Computer(
@@ -59,7 +59,7 @@ def test_create_all(run_cli_command, tmp_path):
         assert archive.querybuilder().append(Group, project=['uuid']).all(flat=True) == [group.uuid]
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_create_basic(run_cli_command, tmp_path):
     """Test that creating an archive for a set of various ORM entities works with the zip format."""
     computer = Computer(

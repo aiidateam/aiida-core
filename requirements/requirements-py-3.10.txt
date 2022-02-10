@@ -2,7 +2,6 @@ aiida-export-migration-tests==0.9.0
 aio-pika==6.8.0
 aiormq==3.3.1
 alabaster==0.7.12
-aldjemy==2.6
 alembic==1.7.5
 aniso8601==9.0.1
 archive-path==0.3.6
@@ -32,7 +31,6 @@ decorator==5.1.0
 defusedxml==0.7.1
 deprecation==2.1.0
 disk-objectstore==0.6.0
-Django==2.2.26
 docutils==0.15.2
 entrypoints==0.3
 Flask==1.1.2
@@ -153,9 +151,7 @@ sphinxcontrib-qthelp==1.0.3
 sphinxcontrib-serializinghtml==1.1.5
 sphinxext-rediraffe==0.2.7
 SQLAlchemy==1.4.27
-sqlalchemy-diff==0.1.5
 SQLAlchemy-Utils==0.37.9
-sqlparse==0.4.2
 sympy==1.9
 tabulate==0.8.9
 tenacity==8.0.1

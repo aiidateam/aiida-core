@@ -3,7 +3,7 @@
 import pytest
 
 import aiida
-from aiida.manage.configuration import check_version
+from aiida.manage.manager import check_version
 
 
 def test_check_version_release(monkeypatch, capsys, isolated_config):

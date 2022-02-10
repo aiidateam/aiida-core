@@ -21,7 +21,7 @@ and workflow engine for the automation of complex sequences of simulations.
 More information at http://www.aiida.net
 """
 from aiida.common.log import configure_logging
-from aiida.manage.configuration import get_config_option, get_profile, load_profile
+from aiida.manage.configuration import get_config_option, get_profile, load_profile, profile_context
 
 __copyright__ = (
     'Copyright (c), This file is part of the AiiDA platform. '
@@ -48,23 +48,21 @@ def get_strict_version():
     return StrictVersion(__version__)
 
 
-def get_version():
+def get_version() -> str:
     """
     Return the current AiiDA distribution version
 
     :returns: the current version
-    :rtype: str
     """
     return __version__
 
 
-def _get_raw_file_header():
+def _get_raw_file_header() -> str:
     """
     Get the default header for source AiiDA source code files.
     Note: is not preceded by comment character.
 
     :return: default AiiDA source file header
-    :rtype: str
     """
     return f"""This file has been created with AiiDA v. {__version__}
 If you use AiiDA for publication purposes, please cite:
@@ -72,7 +70,7 @@ If you use AiiDA for publication purposes, please cite:
 """
 
 
-def get_file_header(comment_char='# '):
+def get_file_header(comment_char: str = '# ') -> str:
     """
     Get the default header for source AiiDA source code files.
 
@@ -81,10 +79,8 @@ def get_file_header(comment_char='# '):
         Prepend by comment character.
 
     :param comment_char: string put in front of each line
-    :type comment_char: str
 
     :return: default AiiDA source file header
-    :rtype: str
     """
     lines = _get_raw_file_header().splitlines()
     return '\n'.join(f'{comment_char}{line}' for line in lines)

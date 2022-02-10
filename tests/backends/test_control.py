@@ -10,7 +10,7 @@
 """Tests for the :mod:`aiida.backends.control` module."""
 import pytest
 
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 
 
 class MockRepositoryBackend():
@@ -18,11 +18,11 @@ class MockRepositoryBackend():
 
     # pylint: disable=no-self-use
 
-    def get_info(self, *args, **kwargs):
+    def get_info(self, *args, **kwargs):  # pylint: disable=unused-argument
         """Method to return information."""
         return 'this is information about the repo'
 
-    def delete_objects(self, *args, **kwargs):
+    def delete_objects(self, *args, **kwargs):  # pylint: disable=unused-argument
         """Method to delete objects."""
 
     def maintain(self, live=True, dry_run=False, **kwargs):
@@ -42,9 +42,9 @@ class MockRepositoryBackend():
 
 
 @pytest.fixture(scope='function')
-def clear_storage_before_test(clear_database_before_test):  # pylint: disable=unused-argument
+def clear_storage_before_test(aiida_profile_clean):  # pylint: disable=unused-argument
     """Clears the storage before a test."""
-    repository = get_manager().get_backend().get_repository()
+    repository = get_manager().get_profile_storage().get_repository()
     object_keys = list(repository.list_objects())
     repository.delete_objects(object_keys)
     repository.maintain(live=False)
@@ -77,7 +77,7 @@ def test_get_unreferenced_keyset():
     datanode.put_object_from_filelike(BytesIO(b'File content'), 'file.txt')
     datanode.store()
 
-    aiida_backend = get_manager().get_backend()
+    aiida_backend = get_manager().get_profile_storage()
     keys = list(orm.Node.objects(aiida_backend).iter_repo_keys())
 
     repository_backend = aiida_backend.get_repository()
@@ -121,7 +121,7 @@ def test_repository_maintain(caplog, monkeypatch, kwargs, logged_texts):
             logmsg += f' > {key}: {val}\n'
         logging.info(logmsg)
 
-    RepoBackendClass = get_manager().get_backend().get_repository().__class__  # pylint: disable=invalid-name
+    RepoBackendClass = get_manager().get_profile_storage().get_repository().__class__  # pylint: disable=invalid-name
     monkeypatch.setattr(RepoBackendClass, 'maintain', mock_maintain)
 
     with caplog.at_level(logging.INFO):
@@ -142,7 +142,7 @@ def test_repository_info(monkeypatch):
             output['extra_value'] = 0
         return output
 
-    RepoBackendClass = get_manager().get_backend().get_repository().__class__  # pylint: disable=invalid-name
+    RepoBackendClass = get_manager().get_profile_storage().get_repository().__class__  # pylint: disable=invalid-name
     monkeypatch.setattr(RepoBackendClass, 'get_info', mock_get_info)
 
     repository_info_out = get_repository_info()

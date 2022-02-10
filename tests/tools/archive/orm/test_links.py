@@ -16,7 +16,7 @@ from aiida.tools.archive import ArchiveFormatSqlZip, create_archive, import_arch
 from tests.tools.archive.utils import get_all_node_links
 
 
-def test_links_to_unknown_nodes(tmp_path, clear_database_before_test):
+def test_links_to_unknown_nodes(tmp_path, aiida_profile_clean):
     """Test importing of nodes, that have links to unknown nodes."""
     # store a node
     node = orm.Data()
@@ -44,7 +44,7 @@ def test_links_to_unknown_nodes(tmp_path, clear_database_before_test):
     with ArchiveFormatSqlZip().open(filename, 'r') as archive:
         assert archive.querybuilder().append(entity_type='link').count() == 1
 
-    clear_database_before_test.reset_db()
+    aiida_profile_clean.clear_profile()
 
     # since the query builder only looks for links between known nodes,
     # this should not import the erroneous link
@@ -54,7 +54,7 @@ def test_links_to_unknown_nodes(tmp_path, clear_database_before_test):
     assert orm.QueryBuilder().append(entity_type='link').count() == 0
 
 
-def test_input_and_create_links(tmp_path, clear_database_before_test):
+def test_input_and_create_links(tmp_path, aiida_profile_clean):
     """
     Simple test that will verify that INPUT and CREATE links are properly exported and
     correctly recreated upon import.
@@ -73,7 +73,7 @@ def test_input_and_create_links(tmp_path, clear_database_before_test):
     export_file = tmp_path.joinpath('export.aiida')
     create_archive([node_output], filename=export_file)
 
-    clear_database_before_test.reset_db()
+    aiida_profile_clean.clear_profile()
 
     import_archive(export_file)
     import_links = get_all_node_links()
@@ -215,7 +215,7 @@ def construct_complex_graph(aiida_localhost_factory, export_combination=0, work_
     return graph_nodes, export_list[export_combination]
 
 
-def test_complex_workflow_graph_links(tmp_path, clear_database_before_test, aiida_localhost_factory):
+def test_complex_workflow_graph_links(tmp_path, aiida_profile_clean, aiida_localhost_factory):
     """
     This test checks that all the needed links are correctly exported and
     imported. More precisely, it checks that INPUT, CREATE, RETURN and CALL
@@ -245,7 +245,7 @@ def test_complex_workflow_graph_links(tmp_path, clear_database_before_test, aiid
     export_file = tmp_path.joinpath('export.aiida')
     create_archive(graph_nodes, filename=export_file)
 
-    clear_database_before_test.reset_db()
+    aiida_profile_clean.clear_profile()
 
     import_archive(export_file)
     import_links = get_all_node_links()
@@ -256,7 +256,7 @@ def test_complex_workflow_graph_links(tmp_path, clear_database_before_test, aiid
     assert set(export_set) == set(import_set)
 
 
-def test_complex_workflow_graph_export_sets(tmp_path, clear_database_before_test, aiida_localhost_factory):
+def test_complex_workflow_graph_export_sets(tmp_path, aiida_profile_clean, aiida_localhost_factory):
     """Test ex-/import of individual nodes in complex graph"""
     for export_conf in range(0, 9):
 
@@ -267,7 +267,7 @@ def test_complex_workflow_graph_export_sets(tmp_path, clear_database_before_test
         create_archive([export_node], filename=export_file, overwrite=True)
         export_node_str = str(export_node)
 
-        clear_database_before_test.reset_db()
+        aiida_profile_clean.clear_profile()
 
         import_archive(export_file)
 
@@ -282,7 +282,7 @@ def test_complex_workflow_graph_export_sets(tmp_path, clear_database_before_test
             str(export_target_uuids.symmetric_difference(imported_node_uuids))
 
 
-def test_high_level_workflow_links(tmp_path, clear_database_before_test, aiida_localhost_factory):
+def test_high_level_workflow_links(tmp_path, aiida_profile_clean, aiida_localhost_factory):
     """
     This test checks that all the needed links are correctly exported and imported.
     INPUT_CALC, INPUT_WORK, CALL_CALC, CALL_WORK, CREATE, and RETURN
@@ -297,7 +297,7 @@ def test_high_level_workflow_links(tmp_path, clear_database_before_test, aiida_l
 
     for calcs in high_level_calc_nodes:
         for works in high_level_work_nodes:
-            clear_database_before_test.reset_db()
+            aiida_profile_clean.clear_profile()
 
             graph_nodes, _ = construct_complex_graph(aiida_localhost_factory, calc_nodes=calcs, work_nodes=works)
 
@@ -325,7 +325,7 @@ def test_high_level_workflow_links(tmp_path, clear_database_before_test, aiida_l
             export_file = tmp_path.joinpath('export.aiida')
             create_archive(graph_nodes, filename=export_file, overwrite=True)
 
-            clear_database_before_test.reset_db()
+            aiida_profile_clean.clear_profile()
 
             import_archive(export_file)
             import_links = get_all_node_links()
@@ -425,7 +425,7 @@ def link_flags_export_helper(name, all_nodes, tmp_path, nodes_to_export, flags, 
     return ret
 
 
-def test_link_flags(tmp_path, clear_database_before_test, aiida_localhost_factory):
+def test_link_flags(tmp_path, aiida_profile_clean, aiida_localhost_factory):
     """Verify all link follow flags are working as intended.
 
     Graph (from ``construct_complex_graph()``)::
@@ -533,13 +533,13 @@ def test_link_flags(tmp_path, clear_database_before_test, aiida_localhost_factor
         )
     )
 
-    link_flags_import_helper(input_links_forward, clear_database_before_test.reset_db)
-    link_flags_import_helper(create_return_links_backward, clear_database_before_test.reset_db)
-    link_flags_import_helper(call_links_backward_calc1, clear_database_before_test.reset_db)
-    link_flags_import_helper(call_links_backward_work2, clear_database_before_test.reset_db)
+    link_flags_import_helper(input_links_forward, aiida_profile_clean.reset_db)
+    link_flags_import_helper(create_return_links_backward, aiida_profile_clean.reset_db)
+    link_flags_import_helper(call_links_backward_calc1, aiida_profile_clean.reset_db)
+    link_flags_import_helper(call_links_backward_work2, aiida_profile_clean.reset_db)
 
 
-def test_double_return_links_for_workflows(tmp_path, clear_database_before_test):
+def test_double_return_links_for_workflows(tmp_path, aiida_profile_clean):
     """
     This test checks that double return links to a node can be exported
     and imported without problems,
@@ -565,7 +565,7 @@ def test_double_return_links_for_workflows(tmp_path, clear_database_before_test)
     export_file = tmp_path.joinpath('export.aiida')
     create_archive([data_out, work1, work2, data_in], filename=export_file)
 
-    clear_database_before_test.reset_db()
+    aiida_profile_clean.clear_profile()
 
     import_archive(export_file)
 
@@ -580,7 +580,7 @@ def test_double_return_links_for_workflows(tmp_path, clear_database_before_test)
     assert len(links_in_db) == links_count  # After import
 
 
-def test_multiple_post_return_links(tmp_path, clear_database_before_test):  # pylint: disable=too-many-locals
+def test_multiple_post_return_links(tmp_path, aiida_profile_clean):  # pylint: disable=too-many-locals
     """Check extra RETURN links can be added to existing Nodes, when label is not unique"""
     data = orm.Int(1).store()
     calc = orm.CalculationNode().store()
@@ -604,7 +604,7 @@ def test_multiple_post_return_links(tmp_path, clear_database_before_test):  # py
     create_archive([data], filename=data_provenance, return_backward=False)
     create_archive([data], filename=all_provenance, return_backward=True)
 
-    clear_database_before_test.reset_db()
+    aiida_profile_clean.clear_profile()
 
     # import data provenance
     import_archive(data_provenance)

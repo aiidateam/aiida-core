@@ -109,7 +109,7 @@ class MultiCodesCalcJob(CalcJob):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
+@pytest.mark.usefixtures('aiida_profile_clean', 'chdir_tmp_path')
 @pytest.mark.parametrize('parallel_run', [True, False])
 def test_multi_codes_run_parallel(aiida_local_code_factory, file_regression, parallel_run):
     """test codes_run_mode set in CalcJob"""
@@ -138,7 +138,7 @@ def test_multi_codes_run_parallel(aiida_local_code_factory, file_regression, par
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
+@pytest.mark.usefixtures('aiida_profile_clean', 'chdir_tmp_path')
 @pytest.mark.parametrize('calcjob_withmpi', [True, False])
 def test_multi_codes_run_withmpi(aiida_local_code_factory, file_regression, calcjob_withmpi):
     """test withmpi set in CalcJob only take effect for codes which have codeinfo.withmpi not set"""
@@ -182,7 +182,7 @@ class TestCalcJob(AiidaTestCase):
     def instantiate_process(self, state=CalcJobState.PARSING):
         """Instantiate a process with default inputs and return the `Process` instance."""
         from aiida.engine.utils import instantiate_process
-        from aiida.manage.manager import get_manager
+        from aiida.manage import get_manager
 
         inputs = deepcopy(self.inputs)
         inputs['code'] = self.remote_code
@@ -486,7 +486,7 @@ class TestCalcJob(AiidaTestCase):
 def generate_process(aiida_local_code_factory):
     """Instantiate a process with default inputs and return the `Process` instance."""
     from aiida.engine.utils import instantiate_process
-    from aiida.manage.manager import get_manager
+    from aiida.manage import get_manager
 
     def _generate_process(inputs=None):
 
@@ -515,7 +515,7 @@ def generate_process(aiida_local_code_factory):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
+@pytest.mark.usefixtures('aiida_profile_clean', 'override_logging')
 def test_parse_insufficient_data(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
 
@@ -546,7 +546,7 @@ def test_parse_insufficient_data(generate_process):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
+@pytest.mark.usefixtures('aiida_profile_clean', 'override_logging')
 def test_parse_non_zero_retval(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
 
@@ -566,7 +566,7 @@ def test_parse_non_zero_retval(generate_process):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
+@pytest.mark.usefixtures('aiida_profile_clean', 'override_logging')
 def test_parse_not_implemented(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
 
@@ -598,7 +598,7 @@ def test_parse_not_implemented(generate_process):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('clear_database_before_test', 'override_logging')
+@pytest.mark.usefixtures('aiida_profile_clean', 'override_logging')
 def test_parse_scheduler_excepted(generate_process, monkeypatch):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
 
@@ -643,7 +643,7 @@ def test_parse_scheduler_excepted(generate_process, monkeypatch):
     (100, 400, 400),
     (100, 0, 0),
 ))
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_parse_exit_code_priority(
     exit_status_scheduler,
     exit_status_retrieved,
@@ -704,7 +704,7 @@ def test_parse_exit_code_priority(
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_additional_retrieve_list(generate_process, fixture_sandbox):
     """Test the ``additional_retrieve_list`` option."""
     process = generate_process()
@@ -746,7 +746,7 @@ def test_additional_retrieve_list(generate_process, fixture_sandbox):
         process = generate_process({'metadata': {'options': {'additional_retrieve_list': ['/abs/path']}}})
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize(('stash_options', 'expected'), (
     ({
         'target_base': None

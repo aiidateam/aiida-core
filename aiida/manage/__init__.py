@@ -27,7 +27,6 @@ Managing an AiiDA instance:
 
 from .caching import *
 from .configuration import *
-from .database import *
 from .external import *
 from .manager import *
 
@@ -59,9 +58,7 @@ __all__ = (
     'get_option_names',
     'get_use_cache',
     'parse_option',
-    'reset_manager',
     'upgrade_config',
-    'write_database_integrity_violation',
 )
 
 # yapf: enable

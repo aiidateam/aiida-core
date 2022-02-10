@@ -52,7 +52,7 @@ def data_migration_legacy_process_attributes(data):
         the ProcessNode is in an active state, i.e. `process_state` is one of ('created', 'running', 'waiting').
         A log-file, listing all illegal ProcessNodes, will be produced in the current directory.
     """
-    from aiida.manage.database.integrity import write_database_integrity_violation
+    from aiida.backends.sqlalchemy.migrations.utils.integrity import write_database_integrity_violation
     from aiida.tools.archive.exceptions import CorruptArchive
 
     attrs_to_remove = ['_sealed', '_finished', '_failed', '_aborted', '_do_abort']

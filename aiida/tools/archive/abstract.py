@@ -56,6 +56,7 @@ class ArchiveWriterAbstract(ABC):
             raise ValueError(f'compression not in range 0-9: {compression}')
         self._compression = compression
         self._format = fmt
+        self._kwargs = kwargs
 
     @property
     def path(self) -> Path:
@@ -123,7 +124,7 @@ class ArchiveWriterAbstract(ABC):
 class ArchiveReaderAbstract(ABC):
     """Reader of an archive, that will be used as a context manager."""
 
-    def __init__(self, path: Union[str, Path], **kwargs: Any):
+    def __init__(self, path: Union[str, Path], **kwargs: Any):  # pylint: disable=unused-argument
         """Initialise the reader.
 
         :param path: archive path

@@ -26,7 +26,7 @@ from .profile import Profile
 
 __all__ = ('Config', 'config_schema', 'ConfigValidationError')
 
-SCHEMA_FILE = 'config-v6.schema.json'
+SCHEMA_FILE = 'config-v7.schema.json'
 
 
 @lru_cache(1)
@@ -256,15 +256,6 @@ class Config:  # pylint: disable=too-many-public-methods
         return self._default_profile
 
     @property
-    def current_profile(self):
-        """Return the currently loaded profile.
-
-        :return: the current profile or None if not defined
-        """
-        from . import get_profile
-        return get_profile()
-
-    @property
     def profile_names(self):
         """Return the list of profile names.
 
@@ -354,7 +345,6 @@ class Config:  # pylint: disable=too-many-public-methods
         :param include_database_user: also delete the database user configured for the profile.
         :param include_repository: also delete the repository configured for the profile.
         """
-        # to-do storage backend specific stuff should be handled by the backend itself
         from aiida.manage.external.postgres import Postgres
 
         profile = self.get_profile(name)

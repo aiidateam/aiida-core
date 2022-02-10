@@ -23,7 +23,7 @@ jobs:
             postgres:
                 image: postgres:10
                 env:
-                    POSTGRES_DB: test_django
+                    POSTGRES_DB: test_aiida
                     POSTGRES_PASSWORD: ''
                     POSTGRES_HOST_AUTH_METHOD: trust
                 options: >-

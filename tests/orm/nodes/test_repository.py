@@ -26,7 +26,7 @@ def cacheable_node():
     return node
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_initialization():
     """Test that the repository instance is lazily constructed."""
     node = Data()
@@ -37,7 +37,7 @@ def test_initialization():
     assert isinstance(node._repository.backend, SandboxRepositoryBackend)
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_unstored():
     """Test the repository for unstored nodes."""
     node = Data()
@@ -47,7 +47,7 @@ def test_unstored():
     assert node.repository_metadata == {}
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_store():
     """Test the repository after storing."""
     node = Data()
@@ -64,7 +64,7 @@ def test_store():
     assert node._repository.hash() == hash_unstored
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_load():
     """Test the repository after loading."""
     node = Data()
@@ -80,7 +80,7 @@ def test_load():
     assert loaded._repository.hash() == hash_stored
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_load_updated():
     """Test the repository after loading."""
     node = CalcJobNode()
@@ -91,7 +91,7 @@ def test_load_updated():
     assert loaded.get_object_content('relative/path', mode='rb') == b'content'
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_caching(cacheable_node):
     """Test the repository after a node is stored from the cache."""
 
@@ -106,7 +106,7 @@ def test_caching(cacheable_node):
     assert cacheable_node._repository.hash() == cached._repository.hash()
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_clone():
     """Test the repository after a node is cloned from a stored node."""
     node = Data()
@@ -124,7 +124,7 @@ def test_clone():
     assert clone._repository.hash() == node._repository.hash()
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_clone_unstored():
     """Test the repository after a node is cloned from an unstored node."""
     node = Data()
@@ -139,7 +139,7 @@ def test_clone_unstored():
     assert clone.get_object_content('relative/path', mode='rb') == b'content'
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_sealed():
     """Test the repository interface for a calculation node before and after it is sealed."""
     node = CalcJobNode()
@@ -151,7 +151,7 @@ def test_sealed():
         node.put_object_from_filelike(io.BytesIO(b'content'), 'path')
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_get_object_raises():
     """Test the ``NodeRepositoryMixin.get_object`` method when it is supposed to raise."""
     node = Data()
@@ -166,7 +166,7 @@ def test_get_object_raises():
         node.get_object('non_existant')
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_get_object():
     """Test the ``NodeRepositoryMixin.get_object`` method."""
     node = CalcJobNode()
@@ -191,7 +191,7 @@ def test_get_object():
     assert file_object.is_dir() is False
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_walk():
     """Test the ``NodeRepositoryMixin.walk`` method."""
     node = Data()
@@ -219,7 +219,7 @@ def test_walk():
     ]
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_glob():
     """Test the ``NodeRepositoryMixin.glob`` method."""
     node = Data()
@@ -228,7 +228,7 @@ def test_glob():
     assert {path.as_posix() for path in node.glob()} == {'relative', 'relative/path'}
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_copy_tree(tmp_path):
     """Test the ``Repository.copy_tree`` method."""
     node = Data()

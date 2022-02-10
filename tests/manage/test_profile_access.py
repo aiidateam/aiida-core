@@ -33,7 +33,7 @@ from aiida.manage.profile_access import ProfileAccessManager
 @pytest.fixture(name='profile_access_manager')
 def fixture_profile_access_manager():
     """Create special SQLAlchemy engine for use with QueryBuilder - backend-agnostic"""
-    from aiida.manage.manager import get_manager
+    from aiida.manage import get_manager
     aiida_profile = get_manager().get_profile()
     return ProfileAccessManager(aiida_profile)
 
@@ -75,7 +75,7 @@ def test_check_methods(profile_access_manager, monkeypatch):
     are returned by `_get_tracking_files`, and when they are not.
     """
 
-    def mockfun_return_path(*args, **kwargs):
+    def mockfun_return_path(*args, **kwargs):  # pylint: disable=unused-argument
         """Mock of _raise_if_locked."""
         return [Path('file.txt')]
 
@@ -83,7 +83,7 @@ def test_check_methods(profile_access_manager, monkeypatch):
     assert profile_access_manager.is_active()
     assert profile_access_manager.is_locked()
 
-    def mockfun_return_empty(*args, **kwargs):
+    def mockfun_return_empty(*args, **kwargs):  # pylint: disable=unused-argument
         """Mock of _raise_if_locked."""
         return []
 
@@ -107,7 +107,7 @@ def test_raise_methods(profile_access_manager, monkeypatch):
     tempfile = Path(file_stem + '.txt')
     tempfile.write_text(file_content, encoding='utf-8')
 
-    def mock_get_tracking_files(*args, **kwargs):
+    def mock_get_tracking_files(*args, **kwargs):  # pylint: disable=unused-argument
         """Mock of _raise_if_locked."""
         return [tempfile]
 
@@ -166,7 +166,7 @@ def test_clear_stale_pid_files(profile_access_manager):
 # with actual processes. It is therefore also dependant on the call to
 # the class in:
 #
-#    >   aiida.manage.manager::Manager._load_backend
+#    >   aiida.manage.manager::Manager.get_profile_storage()
 #
 # Moreover, they also require the use of a separate construct to keep
 # track of processes accessing aiida profiles with ease (MockProcess).

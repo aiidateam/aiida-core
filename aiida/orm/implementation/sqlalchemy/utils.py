@@ -8,43 +8,63 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for the implementation of the SqlAlchemy backend."""
-
 import contextlib
+from typing import TYPE_CHECKING
 
 # pylint: disable=import-error,no-name-in-module
 from sqlalchemy import inspect
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
-from aiida.backends.sqlalchemy import get_scoped_session
 from aiida.common import exceptions
+
+if TYPE_CHECKING:
+    from aiida.orm.implementation.sqlalchemy.backend import PsqlDosBackend
 
 IMMUTABLE_MODEL_FIELDS = {'id', 'pk', 'uuid', 'node_type'}
 
 
 class ModelWrapper:
-    """Wrap a database model instance to correctly update and flush the data model when getting or setting a field.
+    """Wrap an SQLA ORM model and AiiDA storage backend instance together,
+    to correctly update and flush the data model when getting or setting a field.
 
-    If the model is not stored, the behavior of the get and set attributes is unaltered. However, if the model is
-    stored, which is to say, it has a primary key, the `getattr` and `setattr` are modified as follows:
+    The ORM model represents a row in a database table, with a given schema,
+    and its attributes represent the fields (a.k.a. columns) of the table.
+    When an ORM model instance is created, it does not have any association with a particular database,
+    i.e. it is "unsaved".
+    At this point, its attributes can be freely retrieved or set.
 
-    * `getattr`: if the item corresponds to a mutable model field, the model instance is refreshed first
-    * `setattr`: if the item corresponds to a mutable model field, changes are flushed after performing the change
+    When the ORM model instance is saved, it is associated with the database configured for the backend instance,
+    by adding it to the backend instances's session (i.e. its connection with the database).
+    At this point:
+
+    - Whenever we retrieve a field of the model instance, unless we know it to be immutable,
+      we first ensure that the field represents the latest value in the database
+      (e.g. in case the database has been externally updated).
+
+    - Whenever we set a field of the model instance, unless we know it to be immutable,
+      we flush the change to the database.
+
     """
 
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, model, auto_flush=()):
+    def __init__(self, model, backend: 'PsqlDosBackend'):
         """Construct the ModelWrapper.
 
-        :param model: the database model instance to wrap
-        :param auto_flush: an optional tuple of database model fields that are always to be flushed, in addition to
-            the field that corresponds to the attribute being set through `__setattr__`.
+        :param model: the ORM model instance to wrap
+        :param backend: the storage backend instance
         """
         super().__init__()
         # Have to do it this way because we overwrite __setattr__
         object.__setattr__(self, '_model', model)
-        object.__setattr__(self, '_auto_flush', auto_flush)
+        object.__setattr__(self, '_backend', backend)
+
+    @property
+    def session(self) -> Session:
+        """Return the session of the storage backend instance."""
+        return self._backend.get_session()
 
     def __getattr__(self, item):
         """Get an attribute of the model instance.
@@ -57,8 +77,8 @@ class ModelWrapper:
         """
         # Python 3's implementation of copy.copy does not call __init__ on the new object
         # but manually restores attributes instead. Make sure we never get into a recursive
-        # loop by protecting the only special variable here: _model
-        if item == '_model':
+        # loop by protecting the special variables here
+        if item in ('_model', '_backend'):
             raise AttributeError()
 
         if self.is_saved() and self._is_mutable_model_field(item) and not self._in_transaction():
@@ -76,7 +96,7 @@ class ModelWrapper:
         """
         setattr(self._model, key, value)
         if self.is_saved() and self._is_mutable_model_field(key):
-            fields = set((key,) + self._auto_flush)
+            fields = set((key,))
             self._flush(fields=fields)
 
     def is_saved(self):
@@ -86,7 +106,7 @@ class ModelWrapper:
         """
         # we should not flush here since it may lead to IntegrityErrors
         # which are handled later in the save method
-        with self._model.session.no_autoflush:
+        with self.session.no_autoflush:
             return self._model.id is not None
 
     def save(self):
@@ -97,10 +117,11 @@ class ModelWrapper:
         :raises `aiida.common.IntegrityError`: if a database integrity error is raised during the save.
         """
         try:
-            commit = not self._in_transaction()
-            self._model.save(commit=commit)
+            self.session.add(self._model)
+            if not self._in_transaction():
+                self.session.commit()
         except IntegrityError as exception:
-            self._model.session.rollback()
+            self.session.rollback()
             raise exceptions.IntegrityError(str(exception))
 
     def _is_mutable_model_field(self, field):
@@ -138,15 +159,14 @@ class ModelWrapper:
 
         :param fields: optionally refresh only these fields, if `None` all fields are refreshed.
         """
-        self._model.session.expire(self._model, attribute_names=fields)
+        self.session.expire(self._model, attribute_names=fields)
 
-    @staticmethod
-    def _in_transaction():
+    def _in_transaction(self):
         """Return whether the current scope is within an open database transaction.
 
         :return: boolean, True if currently in open transaction, False otherwise.
         """
-        return get_scoped_session().in_nested_transaction()
+        return self.session.in_nested_transaction()
 
 
 @contextlib.contextmanager

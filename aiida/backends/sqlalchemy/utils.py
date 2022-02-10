@@ -9,6 +9,59 @@
 ###########################################################################
 # pylint: disable=import-error,no-name-in-module
 """Utility functions specific to the SqlAlchemy backend."""
+from typing import TypedDict
+
+
+class PsqlConfig(TypedDict, total=False):
+    """Configuration to connect to a PostgreSQL database."""
+    database_hostname: str
+    database_port: int
+    database_username: str
+    database_password: str
+    database_name: str
+
+    engine_kwargs: dict
+    """keyword argument that will be passed on to the SQLAlchemy engine."""
+
+
+def create_sqlalchemy_engine(config: PsqlConfig):
+    """Create SQLAlchemy engine (to be used for QueryBuilder queries)
+
+    :param kwargs: keyword arguments that will be passed on to `sqlalchemy.create_engine`.
+        See https://docs.sqlalchemy.org/en/13/core/engines.html?highlight=create_engine#sqlalchemy.create_engine for
+        more info.
+    """
+    from sqlalchemy import create_engine
+
+    from aiida.common import json
+
+    # The hostname may be `None`, which is a valid value in the case of peer authentication for example. In this case
+    # it should be converted to an empty string, because otherwise the `None` will be converted to string literal "None"
+    hostname = config['database_hostname'] or ''
+    separator = ':' if config['database_port'] else ''
+
+    engine_url = 'postgresql://{user}:{password}@{hostname}{separator}{port}/{name}'.format(
+        separator=separator,
+        user=config['database_username'],
+        password=config['database_password'],
+        hostname=hostname,
+        port=config['database_port'],
+        name=config['database_name']
+    )
+    return create_engine(
+        engine_url,
+        json_serializer=json.dumps,
+        json_deserializer=json.loads,
+        future=True,
+        encoding='utf-8',
+        **config.get('engine_kwargs', {}),
+    )
+
+
+def create_scoped_session_factory(engine, **kwargs):
+    """Create scoped SQLAlchemy session factory"""
+    from sqlalchemy.orm import scoped_session, sessionmaker
+    return scoped_session(sessionmaker(bind=engine, future=True, **kwargs))
 
 
 def flag_modified(instance, key):

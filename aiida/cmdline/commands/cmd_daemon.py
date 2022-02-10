@@ -26,7 +26,7 @@ from aiida.cmdline.utils.daemon import (
     get_daemon_status,
     print_client_response_status,
 )
-from aiida.manage.configuration import get_config
+from aiida.manage import get_manager
 
 
 def validate_daemon_workers(ctx, param, value):  # pylint: disable=unused-argument,invalid-name
@@ -98,12 +98,13 @@ def status(all_profiles):
     """
     from aiida.engine.daemon.client import get_daemon_client
 
-    config = get_config()
+    manager = get_manager()
+    config = manager.get_config()
 
     if all_profiles is True:
         profiles = [profile for profile in config.profiles if not profile.is_test_profile]
     else:
-        profiles = [config.current_profile]
+        profiles = [manager.get_profile()]
 
     daemons_running = []
     for profile in profiles:
@@ -178,12 +179,13 @@ def stop(no_wait, all_profiles):
     """
     from aiida.engine.daemon.client import get_daemon_client
 
-    config = get_config()
+    manager = get_manager()
+    config = manager.get_config()
 
     if all_profiles is True:
         profiles = [profile for profile in config.profiles if not profile.is_test_profile]
     else:
-        profiles = [config.current_profile]
+        profiles = [manager.get_profile()]
 
     for profile in profiles:
 

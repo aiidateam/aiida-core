@@ -8,7 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=invalid-name,no-member
-"""Drop the columns `nodeversion` and `public` from the `DbNode` model.
+"""Drop `db_dbnode.nodeversion` and `db_dbnode.public`
+
+This is similar to migration django_0033
 
 Revision ID: 1830c8430131
 Revises: 1b8ed3425af9

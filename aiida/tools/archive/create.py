@@ -27,7 +27,7 @@ from aiida.common.lang import type_check
 from aiida.common.links import GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.progress_reporter import get_progress_reporter
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import Backend
 from aiida.orm.utils.links import LinkQuadruple
@@ -150,7 +150,7 @@ def create_archive(
 
     """
     # check the backend
-    backend = backend or get_manager().get_backend()
+    backend = backend or get_manager().get_profile_storage()
     type_check(backend, Backend)
     # create a function to get a query builder instance for the backend
     querybuilder = lambda: orm.QueryBuilder(backend=backend)

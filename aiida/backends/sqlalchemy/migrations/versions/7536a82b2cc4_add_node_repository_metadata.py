@@ -28,9 +28,11 @@ depends_on = None
 
 def upgrade():
     """Migrations for the upgrade."""
-    # We add the column with a `server_default` because otherwise the migration would fail since existing rows will not
-    # have a value and violate the not-nullable clause.
-    op.add_column('db_dbnode', sa.Column('repository_metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=True))
+    op.add_column(
+        'db_dbnode',
+        sa.Column('repository_metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default='{}')
+    )
+    op.alter_column('db_dbnode', 'repository_metadata', server_default=None)
 
 
 def downgrade():

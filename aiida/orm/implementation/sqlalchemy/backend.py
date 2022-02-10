@@ -11,37 +11,170 @@
 # pylint: disable=missing-function-docstring
 from contextlib import contextmanager, nullcontext
 import functools
-from typing import Iterator, List, Sequence
+from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence, Union
 
-from sqlalchemy.orm import Session
+from disk_objectstore import Container
+from sqlalchemy import table
+from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
-from aiida.backends.sqlalchemy.manager import SqlaBackendManager
+from aiida.backends.sqlalchemy.migrator import REPOSITORY_UUID_KEY, PsqlDostoreMigrator
 from aiida.backends.sqlalchemy.models import base
-from aiida.common.exceptions import IntegrityError
+from aiida.common.exceptions import ClosedStorage, IntegrityError
+from aiida.manage.configuration.profile import Profile
+from aiida.orm import User
 from aiida.orm.entities import EntityTypes
 
 from . import authinfos, comments, computers, convert, groups, logs, nodes, querybuilder, users
-from ..sql.backends import SqlBackend
+from ..backends import Backend
+from ..entities import BackendEntity
 
-__all__ = ('SqlaBackend',)
+if TYPE_CHECKING:
+    from aiida.repository.backend import DiskObjectStoreRepositoryBackend
+
+__all__ = ('PsqlDosBackend',)
+
+CONTAINER_DEFAULTS: dict = {
+    'pack_size_target': 4 * 1024 * 1024 * 1024,
+    'loose_prefix_len': 2,
+    'hash_type': 'sha256',
+    'compression_algorithm': 'zlib+1'
+}
 
 
-class SqlaBackend(SqlBackend[base.Base]):
-    """SqlAlchemy implementation of `aiida.orm.implementation.backends.Backend`."""
+class PsqlDosBackend(Backend):  # pylint: disable=too-many-public-methods
+    """An AiiDA storage backend that stores data in a PostgreSQL database and disk-objectstore repository.
 
-    def __init__(self):
-        """Construct the backend instance by initializing all the collections."""
+    Note, there were originally two such backends, `sqlalchemy` and `django`.
+    The `django` backend was removed, to consolidate access to this storage.
+    """
+
+    migrator = PsqlDostoreMigrator
+
+    @classmethod
+    def version_head(cls) -> str:
+        return cls.migrator.get_schema_version_head()
+
+    @classmethod
+    def version_profile(cls, profile: Profile) -> None:
+        return cls.migrator(profile).get_schema_version_profile(check_legacy=True)
+
+    @classmethod
+    def migrate(cls, profile: Profile) -> None:
+        cls.migrator(profile).migrate()
+
+    def __init__(self, profile: Profile) -> None:
+        super().__init__(profile)
+
+        # check that the storage is reachable and at the correct version
+        self.migrator(profile).validate_storage()
+
+        self._session_factory: Optional[scoped_session] = None
+        self._initialise_session()
+        # save the URL of the database, for use in the __str__ method
+        self._db_url = self.get_session().get_bind().url  # type: ignore
+
         self._authinfos = authinfos.SqlaAuthInfoCollection(self)
         self._comments = comments.SqlaCommentCollection(self)
         self._computers = computers.SqlaComputerCollection(self)
         self._groups = groups.SqlaGroupCollection(self)
         self._logs = logs.SqlaLogCollection(self)
         self._nodes = nodes.SqlaNodeCollection(self)
-        self._schema_manager = SqlaBackendManager()
         self._users = users.SqlaUserCollection(self)
 
-    def migrate(self):
-        self._schema_manager.migrate()
+    @property
+    def is_closed(self) -> bool:
+        return self._session_factory is None
+
+    def __str__(self) -> str:
+        repo_uri = self.profile.storage_config['repository_uri']
+        state = 'closed' if self.is_closed else 'open'
+        return f'Storage for {self.profile.name!r} [{state}] @ {self._db_url!r} / {repo_uri}'
+
+    def _initialise_session(self):
+        """Initialise the SQLAlchemy session factory.
+
+        Only one session factory is ever associated with a given class instance,
+        i.e. once the instance is closed, it cannot be reopened.
+
+        The session factory, returns a session that is bound to the current thread.
+        Multi-thread support is currently required by the REST API.
+        Although, in the future, we may want to move the multi-thread handling to higher in the AiiDA stack.
+        """
+        from aiida.backends.sqlalchemy.utils import create_sqlalchemy_engine
+        engine = create_sqlalchemy_engine(self._profile.storage_config)
+        self._session_factory = scoped_session(sessionmaker(bind=engine, future=True, expire_on_commit=True))
+
+    def get_session(self) -> Session:
+        """Return an SQLAlchemy session bound to the current thread."""
+        if self._session_factory is None:
+            raise ClosedStorage(str(self))
+        return self._session_factory()
+
+    def close(self) -> None:
+        if self._session_factory is None:
+            return  # the instance is already closed, and so this is a no-op
+        # reset the cached default user instance, since it will now have no associated session
+        User.objects(self).reset()
+        # close the connection
+        # pylint: disable=no-member
+        engine = self._session_factory.bind
+        if engine is not None:
+            engine.dispose()  # type: ignore
+        self._session_factory.expunge_all()
+        self._session_factory.close()
+        self._session_factory = None
+
+    def _clear(self, recreate_user: bool = True) -> None:
+        from aiida.backends.sqlalchemy.models.settings import DbSetting
+        from aiida.backends.sqlalchemy.models.user import DbUser
+
+        super()._clear(recreate_user)
+
+        session = self.get_session()
+
+        # clear the database
+        with self.transaction():
+
+            # save the default user
+            default_user_kwargs = None
+            if recreate_user:
+                default_user = User.objects(self).get_default()
+                if default_user is not None:
+                    default_user_kwargs = {
+                        'email': default_user.email,
+                        'first_name': default_user.first_name,
+                        'last_name': default_user.last_name,
+                        'institution': default_user.institution,
+                    }
+
+            # now clear the database
+            for table_name in (
+                'db_dbgroup_dbnodes', 'db_dbgroup', 'db_dblink', 'db_dbnode', 'db_dblog', 'db_dbauthinfo', 'db_dbuser',
+                'db_dbcomputer'
+            ):
+                session.execute(table(table_name).delete())
+            session.expunge_all()
+
+            # restore the default user
+            if recreate_user and default_user_kwargs:
+                session.add(DbUser(**default_user_kwargs))
+            # clear aiida's cache of the default user
+            User.objects(self).reset()
+
+        # Clear the repository and reset the repository UUID
+        container = Container(self.profile.repository_path / 'container')
+        container.init_container(clear=True, **CONTAINER_DEFAULTS)
+        container_id = container.container_id
+        with self.transaction():
+            session.execute(
+                DbSetting.__table__.update().where(DbSetting.key == REPOSITORY_UUID_KEY).values(val=container_id)
+            )
+
+    def get_repository(self) -> 'DiskObjectStoreRepositoryBackend':
+        from aiida.repository.backend import DiskObjectStoreRepositoryBackend
+
+        container = Container(self.profile.repository_path / 'container')
+        return DiskObjectStoreRepositoryBackend(container=container)
 
     @property
     def authinfos(self):
@@ -73,15 +206,6 @@ class SqlaBackend(SqlBackend[base.Base]):
     @property
     def users(self):
         return self._users
-
-    @staticmethod
-    def get_session() -> Session:
-        """Return a database session that can be used by the `QueryBuilder` to perform its query.
-
-        :return: an instance of :class:`sqlalchemy.orm.session.Session`
-        """
-        from aiida.backends.sqlalchemy import get_scoped_session
-        return get_scoped_session()
 
     @contextmanager
     def transaction(self) -> Iterator[Session]:
@@ -190,39 +314,36 @@ class SqlaBackend(SqlBackend[base.Base]):
         # Delete the actual nodes
         session.query(DbNode).filter(DbNode.id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
 
-    # Below are abstract methods inherited from `aiida.orm.implementation.sql.backends.SqlBackend`
+    def get_backend_entity(self, model: base.Base) -> BackendEntity:
+        """
+        Return the backend entity that corresponds to the given Model instance
 
-    def get_backend_entity(self, model):
+        :param model: the ORM model instance to promote to a backend instance
+        :return: the backend entity corresponding to the given model
+        """
         return convert.get_backend_entity(model, self)
 
-    @contextmanager
-    def cursor(self):
-        from aiida.backends import sqlalchemy as sa
-        try:
-            connection = sa.ENGINE.raw_connection()
-            yield connection.cursor()
-        finally:
-            self._get_connection().close()
+    def set_global_variable(
+        self, key: str, value: Union[None, str, int, float], description: Optional[str] = None, overwrite=True
+    ) -> None:
+        from aiida.backends.sqlalchemy.models.settings import DbSetting
 
-    def execute_raw(self, query):
-        from sqlalchemy import text
-        from sqlalchemy.exc import ResourceClosedError  # pylint: disable=import-error,no-name-in-module
+        session = self.get_session()
+        with (nullcontext() if self.in_transaction else self.transaction()):
+            if session.query(DbSetting).filter(DbSetting.key == key).count():
+                if overwrite:
+                    session.query(DbSetting).filter(DbSetting.key == key).update(dict(val=value))
+                else:
+                    raise ValueError(f'The setting {key} already exists')
+            else:
+                session.add(DbSetting(key=key, val=value, description=description or ''))
 
-        with self.transaction() as session:
-            queryset = session.execute(text(query))
+    def get_global_variable(self, key: str) -> Union[None, str, int, float]:
+        from aiida.backends.sqlalchemy.models.settings import DbSetting
 
-            try:
-                results = queryset.fetchall()
-            except ResourceClosedError:
-                return None
-
-        return results
-
-    @staticmethod
-    def _get_connection():
-        """Get the SQLA database connection
-
-        :return: the SQLA database connection
-        """
-        from aiida.backends import sqlalchemy as sa
-        return sa.ENGINE.raw_connection()
+        session = self.get_session()
+        with (nullcontext() if self.in_transaction else self.transaction()):
+            setting = session.query(DbSetting).filter(DbSetting.key == key).one_or_none()
+            if setting is None:
+                raise KeyError(f'No setting found with key {key}')
+            return setting.val

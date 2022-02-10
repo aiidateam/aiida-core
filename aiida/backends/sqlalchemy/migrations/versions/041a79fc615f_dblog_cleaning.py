@@ -9,237 +9,27 @@
 ###########################################################################
 # pylint: disable=invalid-name,no-member,import-error,no-name-in-module,protected-access
 """This migration cleans the log records from non-Node entity records.
+
 It removes from the DbLog table the legacy workflow records and records
 that correspond to an unknown entity and places them to corresponding files.
 
-This migration corresponds to the 0024_dblog_update Django migration.
+This migration corresponds to the 0024_dblog_update Django migration (except without uuid addition).
 
 Revision ID: 041a79fc615f
 Revises: 7ca08c391c49
 Create Date: 2018-12-28 15:53:14.596810
 """
-import sys
-
 from alembic import op
-import click
 import sqlalchemy as sa
 from sqlalchemy.sql import text
 
-from aiida.backends.general.migrations.utils import dumps_json
-from aiida.cmdline.utils import echo
-from aiida.manage import configuration
+from aiida.backends.sqlalchemy.migrations.utils.dblog_update import export_and_clean_workflow_logs
 
 # revision identifiers, used by Alembic.
 revision = '041a79fc615f'
 down_revision = '7ca08c391c49'
 branch_labels = None
 depends_on = None
-
-# The values that will be exported for the log records that will be deleted
-values_to_export = ['id', 'time', 'loggername', 'levelname', 'objpk', 'objname', 'message', 'metadata']
-
-
-def get_legacy_workflow_log_number(connection):
-    """ Get the number of the log records that correspond to legacy workflows """
-    return connection.execute(
-        text(
-            """
-        SELECT COUNT(*) FROM db_dblog
-        WHERE
-            (db_dblog.objname LIKE 'aiida.workflows.user.%')
-        """
-        )
-    ).fetchall()[0][0]
-
-
-def get_unknown_entity_log_number(connection):
-    """ Get the number of the log records that correspond to unknown entities """
-    return connection.execute(
-        text(
-            """
-        SELECT COUNT(*) FROM db_dblog
-        WHERE
-            (db_dblog.objname NOT LIKE 'node.%') AND
-            (db_dblog.objname NOT LIKE 'aiida.workflows.user.%')
-        """
-        )
-    ).fetchall()[0][0]
-
-
-def get_logs_with_no_nodes_number(connection):
-    """ Get the number of the log records that correspond to nodes that were deleted """
-    return connection.execute(
-        text(
-            """
-        SELECT COUNT(*) FROM db_dblog
-        WHERE
-            (db_dblog.objname LIKE 'node.%') AND NOT EXISTS
-            (SELECT 1 FROM db_dbnode WHERE db_dbnode.id = db_dblog.objpk LIMIT 1)
-        """
-        )
-    ).fetchall()[0][0]
-
-
-def get_serialized_legacy_workflow_logs(connection):
-    """ Get the serialized log records that correspond to legacy workflows """
-    query = connection.execute(
-        text(
-            """
-        SELECT db_dblog.id, db_dblog.time, db_dblog.loggername, db_dblog.levelname, db_dblog.objpk, db_dblog.objname,
-        db_dblog.message, db_dblog.metadata FROM db_dblog
-        WHERE
-            (db_dblog.objname LIKE 'aiida.workflows.user.%')
-        """
-        )
-    )
-    res = []
-    for row in query:
-        res.append(row._asdict())
-    return dumps_json(res)
-
-
-def get_serialized_unknown_entity_logs(connection):
-    """ Get the serialized log records that correspond to unknown entities """
-    query = connection.execute(
-        text(
-            """
-        SELECT db_dblog.id, db_dblog.time, db_dblog.loggername, db_dblog.levelname, db_dblog.objpk, db_dblog.objname,
-        db_dblog.message, db_dblog.metadata FROM db_dblog
-        WHERE
-            (db_dblog.objname NOT LIKE 'node.%') AND
-            (db_dblog.objname NOT LIKE 'aiida.workflows.user.%')
-        """
-        )
-    )
-    res = []
-    for row in query:
-        res.append(row._asdict())
-    return dumps_json(res)
-
-
-def get_serialized_logs_with_no_nodes(connection):
-    """ Get the serialized log records that correspond to nodes that were deleted """
-    query = connection.execute(
-        text(
-            """
-        SELECT db_dblog.id, db_dblog.time, db_dblog.loggername, db_dblog.levelname, db_dblog.objpk, db_dblog.objname,
-        db_dblog.message, db_dblog.metadata FROM db_dblog
-        WHERE
-            (db_dblog.objname LIKE 'node.%') AND NOT EXISTS
-            (SELECT 1 FROM db_dbnode WHERE db_dbnode.id = db_dblog.objpk LIMIT 1)
-        """
-        )
-    )
-    res = []
-    for row in query:
-        res.append(row._asdict())
-    return dumps_json(res)
-
-
-def export_and_clean_workflow_logs(connection):
-    """
-    Export the logs records that correspond to legacy workflows and to unknown entities (place them to files
-    and remove them from the DbLog table).
-    """
-    from tempfile import NamedTemporaryFile
-
-    lwf_no_number = get_legacy_workflow_log_number(connection)
-    other_number = get_unknown_entity_log_number(connection)
-    log_no_node_number = get_logs_with_no_nodes_number(connection)
-
-    # If there are no legacy workflow log records or log records of an unknown entity
-    if lwf_no_number == 0 and other_number == 0 and log_no_node_number == 0:
-        return
-
-    if not configuration.PROFILE.is_test_profile:
-        echo.echo_warning(
-            'We found {} log records that correspond to legacy workflows and {} log records to correspond '
-            'to an unknown entity.'.format(lwf_no_number, other_number)
-        )
-        echo.echo_warning(
-            'These records will be removed from the database and exported to JSON files to the current directory).'
-        )
-        proceed = click.confirm('Would you like to proceed?', default=True)
-        if not proceed:
-            sys.exit(1)
-
-    delete_on_close = configuration.PROFILE.is_test_profile
-
-    # Exporting the legacy workflow log records
-    if lwf_no_number != 0:
-
-        # Get the records and write them to file
-        with NamedTemporaryFile(
-            prefix='legagy_wf_logs-', suffix='.log', dir='.', delete=delete_on_close, mode='w+'
-        ) as handle:
-            # Export the log records
-            filename = handle.name
-            handle.write(get_serialized_legacy_workflow_logs(connection))
-
-            # If delete_on_close is False, we are running for the user and add additional message of file location
-            if not delete_on_close:
-                echo.echo(f'Exported legacy workflow logs to {filename}')
-
-        # Now delete the records
-        connection.execute(
-            text(
-                """
-            DELETE FROM db_dblog
-            WHERE
-                (db_dblog.objname LIKE 'aiida.workflows.user.%')
-            """
-            )
-        )
-
-    # Exporting unknown log records
-    if other_number != 0:
-        # Get the records and write them to file
-        with NamedTemporaryFile(
-            prefix='unknown_entity_logs-', suffix='.log', dir='.', delete=delete_on_close, mode='w+'
-        ) as handle:
-            # Export the log records
-            filename = handle.name
-            handle.write(get_serialized_unknown_entity_logs(connection))
-
-            # If delete_on_close is False, we are running for the user and add additional message of file location
-            if not delete_on_close:
-                echo.echo(f'Exported unexpected entity logs to {filename}')
-
-        # Now delete the records
-        connection.execute(
-            text(
-                """
-            DELETE FROM db_dblog WHERE
-                (db_dblog.objname NOT LIKE 'node.%') AND
-                (db_dblog.objname NOT LIKE 'aiida.workflows.user.%')
-            """
-            )
-        )
-
-    # Exporting log records that don't correspond to nodes
-    if log_no_node_number != 0:
-        # Get the records and write them to file
-        with NamedTemporaryFile(
-            prefix='no_node_entity_logs-', suffix='.log', dir='.', delete=delete_on_close, mode='w+'
-        ) as handle:
-            # Export the log records
-            filename = handle.name
-            handle.write(get_serialized_logs_with_no_nodes(connection))
-
-            # If delete_on_close is False, we are running for the user and add additional message of file location
-            if not delete_on_close:
-                echo.echo('Exported entity logs that don\'t correspond to nodes to {}'.format(filename))
-
-        # Now delete the records
-        connection.execute(
-            text(
-                """
-            DELETE FROM db_dblog WHERE
-            (db_dblog.objname LIKE 'node.%') AND NOT EXISTS
-            (SELECT 1 FROM db_dbnode WHERE db_dbnode.id = db_dblog.objpk LIMIT 1)
-            """
-            )
-        )
 
 
 def upgrade():
@@ -250,18 +40,21 @@ def upgrade():
     connection = op.get_bind()
 
     # Clean data
-    export_and_clean_workflow_logs(connection)
+    export_and_clean_workflow_logs(connection, op.get_context().opts['aiida_profile'])
 
-    # Create the dbnode_id column and add the necessary index
+    # Remove objpk and objname from the metadata dictionary
+    connection.execute(text("""UPDATE db_dblog SET metadata = metadata - 'objpk' - 'objname' """))
+
+    # Create a new column, which is a foreign key to the dbnode table
     op.add_column('db_dblog', sa.Column('dbnode_id', sa.INTEGER(), autoincrement=False, nullable=True))
     # Transfer data to dbnode_id from objpk
     connection.execute(text("""UPDATE db_dblog SET dbnode_id=objpk"""))
-
     op.create_foreign_key(
         None, 'db_dblog', 'db_dbnode', ['dbnode_id'], ['id'], ondelete='CASCADE', initially='DEFERRED', deferrable=True
     )
 
-    # Update the dbnode_id column to not nullable
+    # Now that all the data have been migrated, make the column not nullable and not blank.
+    # A log record should always correspond to a node record
     op.alter_column('db_dblog', 'dbnode_id', nullable=False)
 
     # Remove the objpk column
@@ -269,9 +62,6 @@ def upgrade():
 
     # Remove the objname column
     op.drop_column('db_dblog', 'objname')
-
-    # Remove objpk and objname from metadata dictionary
-    connection.execute(text("""UPDATE db_dblog SET metadata = metadata - 'objpk' - 'objname' """))
 
 
 def downgrade():

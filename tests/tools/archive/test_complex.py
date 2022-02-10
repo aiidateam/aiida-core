@@ -22,7 +22,7 @@ from aiida.common.links import LinkType
 from aiida.tools.archive import create_archive, import_archive
 
 
-def test_complex_graph_import_export(clear_database_before_test, tmp_path, aiida_localhost):
+def test_complex_graph_import_export(aiida_profile_clean, tmp_path, aiida_localhost):
     """
     This test checks that a small and bit complex graph can be correctly
     exported and imported.
@@ -81,7 +81,7 @@ def test_complex_graph_import_export(clear_database_before_test, tmp_path, aiida
     filename = tmp_path / 'export.aiida'
     create_archive([fd1], filename=filename)
 
-    clear_database_before_test.reset_db()
+    aiida_profile_clean.clear_profile()
 
     import_archive(filename)
 
@@ -103,7 +103,7 @@ def test_reexport(aiida_profile, tmp_path):
         |___|     |___|        |___|
 
     """
-    aiida_profile.reset_db()
+    aiida_profile.clear_profile()
 
     # Creating a folder for the archive files
     chars = string.ascii_uppercase + string.digits
@@ -156,7 +156,7 @@ def test_reexport(aiida_profile, tmp_path):
         # this also checks if group memberships are preserved!
         create_archive([group] + list(group.nodes), filename=filename)
         # cleaning the DB!
-        aiida_profile.reset_db()
+        aiida_profile.clear_profile()
         # reimporting the data from the file
         import_archive(filename)
         # creating the hash from db content

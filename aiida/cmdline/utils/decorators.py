@@ -37,15 +37,14 @@ def load_backend_if_not_loaded():
     If no profile has been loaded yet, the default profile will be loaded first. A spinner will be shown during both
     actions to indicate that the function is working and has not crashed, since loading can take a second.
     """
-    from aiida.manage.configuration import get_profile, load_profile
-    from aiida.manage.manager import get_manager
+    from aiida.manage import get_manager
 
     manager = get_manager()
 
-    if get_profile() is None or not manager.backend_loaded:
+    if manager.get_profile() is None or not manager.profile_storage_loaded:
         with spinner():
-            load_profile()  # This will load the default profile if no profile has already been loaded
-            manager.get_backend()  # This will load the backend of the loaded profile, if not already loaded
+            manager.load_profile()  # This will load the default profile if no profile has already been loaded
+            manager.get_profile_storage()  # This will load the backend of the loaded profile, if not already loaded
 
 
 def with_dbenv():

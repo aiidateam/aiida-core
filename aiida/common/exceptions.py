@@ -15,10 +15,10 @@ __all__ = (
     'IntegrityError', 'UniquenessError', 'EntryPointError', 'MissingEntryPointError', 'MultipleEntryPointError',
     'LoadingEntryPointError', 'InvalidEntryPointTypeError', 'InvalidOperation', 'ParsingError', 'InternalError',
     'PluginInternalError', 'ValidationError', 'ConfigurationError', 'ProfileConfigurationError',
-    'MissingConfigurationError', 'ConfigurationVersionError', 'IncompatibleDatabaseSchema', 'DbContentError',
-    'InputValidationError', 'FeatureNotAvailable', 'FeatureDisabled', 'LicensingException', 'TestsNotAllowedError',
-    'UnsupportedSpeciesError', 'TransportTaskException', 'OutputParsingError', 'HashingError', 'DatabaseMigrationError',
-    'LockedProfileError', 'LockingProfileError'
+    'MissingConfigurationError', 'ConfigurationVersionError', 'IncompatibleStorageSchema', 'CorruptStorage',
+    'DbContentError', 'InputValidationError', 'FeatureNotAvailable', 'FeatureDisabled', 'LicensingException',
+    'TestsNotAllowedError', 'UnsupportedSpeciesError', 'TransportTaskException', 'OutputParsingError', 'HashingError',
+    'StorageMigrationError', 'LockedProfileError', 'LockingProfileError', 'ClosedStorage'
 )
 
 
@@ -183,12 +183,38 @@ class ConfigurationVersionError(ConfigurationError):
     """
 
 
+class ClosedStorage(AiidaException):
+    """Raised when trying to access data from a closed storage backend."""
+
+
+class UnreachableStorage(ConfigurationError):
+    """Raised when a connection to the storage backend fails."""
+
+
 class IncompatibleDatabaseSchema(ConfigurationError):
-    """Raised when the database schema is incompatible with that of the code."""
+    """Raised when the storage schema is incompatible with that of the code.
+
+    Deprecated for ``IncompatibleStorageSchema``
+    """
+
+
+class IncompatibleStorageSchema(IncompatibleDatabaseSchema):
+    """Raised when the storage schema is incompatible with that of the code."""
+
+
+class CorruptStorage(ConfigurationError):
+    """Raised when the storage is not found to be internally consistent on validation."""
 
 
 class DatabaseMigrationError(AiidaException):
-    """Raised if a critical error is encountered during a database migration."""
+    """Raised if a critical error is encountered during a storage migration.
+
+    Deprecated for ``StorageMigrationError``
+    """
+
+
+class StorageMigrationError(DatabaseMigrationError):
+    """Raised if a critical error is encountered during a storage migration."""
 
 
 class DbContentError(AiidaException):

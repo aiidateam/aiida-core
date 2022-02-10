@@ -23,7 +23,7 @@ def parameter_type():
 
 
 @pytest.fixture
-def setup_computers(clear_database_before_test):  # pylint: disable=unused-argument
+def setup_computers(aiida_profile_clean):  # pylint: disable=unused-argument
     """Create some `Computer` instances to test the `ComputerParamType` parameter type for the command line
     infrastructure.
 

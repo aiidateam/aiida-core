@@ -24,6 +24,7 @@ from sqlalchemy.sql.schema import Table
 
 # we need to import all models, to ensure they are loaded on the SQLA Metadata
 from aiida.backends.sqlalchemy.models import authinfo, base, comment, computer, group, log, node, user
+from aiida.manage import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.backends import Backend as BackendAbstract
 from aiida.orm.implementation.sqlalchemy import authinfos, comments, computers, entities, groups, logs, nodes, users
@@ -240,7 +241,7 @@ class ArchiveBackendQueryBuilder(SqlaQueryBuilder):
         return DbGroupNodes.__table__  # type: ignore[attr-defined] # pylint: disable=no-member
 
 
-class ArchiveReadOnlyBackend(BackendAbstract):
+class ArchiveReadOnlyBackend(BackendAbstract):  # pylint: disable=too-many-public-methods
     """A read-only backend for the archive."""
 
     def __init__(self, path: Path, session: orm.Session):
@@ -248,8 +249,25 @@ class ArchiveReadOnlyBackend(BackendAbstract):
         self._path = path
         self._session: Optional[orm.Session] = session
         # lazy open the archive zipfile
+    @classmethod
+    def version_head(cls) -> str:
+        raise NotImplementedError
+    @classmethod
+    def version_profile(cls, profile: Profile) -> None:
+        raise NotImplementedError
+    @classmethod
+    def migrate(cls, profile: Profile):
+        raise ReadOnlyError()
         self._zipfile: Optional[zipfile.ZipFile] = None
         self._closed = False
+
+    def __str__(self) -> str:
+        state = 'closed' if self.is_closed else 'open'
+        return f'Aiida archive (read-only) [{state}] @ {self._path}'
+
+    @property
+    def is_closed(self) -> bool:
+        return self._closed
 
     def close(self):
         """Close the backend"""
@@ -309,7 +327,7 @@ class ArchiveReadOnlyBackend(BackendAbstract):
     def users(self):
         return create_backend_collection(users.SqlaUserCollection, self, users.SqlaUser, DbUser)
 
-    def migrate(self):
+    def _clear(self, recreate_user: bool = True) -> None:
         raise ReadOnlyError()
 
     def transaction(self):
@@ -326,6 +344,12 @@ class ArchiveReadOnlyBackend(BackendAbstract):
         raise ReadOnlyError()
 
     def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]):
+        raise ReadOnlyError()
+
+    def get_global_variable(self, key: str):
+        raise NotImplementedError
+
+    def set_global_variable(self, key: str, value, description: Optional[str] = None, overwrite=True) -> None:
         raise ReadOnlyError()
 
 

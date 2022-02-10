@@ -8,7 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=invalid-name,no-member
-"""Data migration for after `ParameterData` was renamed to `Dict`.
+"""Rename `db_dbnode.type` values `data.parameter.ParameterData.` to `data.dict.Dict.`
+
+Note this is identical to migration django_0028
 
 Revision ID: d254fdfed416
 Revises: 61fc0913fae9

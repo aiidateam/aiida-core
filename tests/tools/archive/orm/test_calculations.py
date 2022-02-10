@@ -21,7 +21,7 @@ from aiida.tools.archive import create_archive, import_archive
 @pytest.mark.requires_rmq
 def test_calcfunction(tmp_path, aiida_profile):
     """Test @calcfunction"""
-    aiida_profile.reset_db()
+    aiida_profile.clear_profile()
 
     @calcfunction
     def add(a, b):
@@ -44,7 +44,7 @@ def test_calcfunction(tmp_path, aiida_profile):
     # At this point we export the generated data
     filename1 = tmp_path / 'export1.aiida'
     create_archive([res], filename=filename1, return_backward=True)
-    aiida_profile.reset_db()
+    aiida_profile.clear_profile()
     import_archive(filename1)
     # Check that the imported nodes are correctly imported and that the value is preserved
     for uuid, value in uuids_values:
@@ -56,7 +56,7 @@ def test_calcfunction(tmp_path, aiida_profile):
 
 def test_workcalculation(tmp_path, aiida_profile):
     """Test simple master/slave WorkChainNodes"""
-    aiida_profile.reset_db()
+    aiida_profile.clear_profile()
     master = orm.WorkChainNode()
     slave = orm.WorkChainNode()
 
@@ -79,7 +79,7 @@ def test_workcalculation(tmp_path, aiida_profile):
     uuids_values = [(v.uuid, v.value) for v in (output_1,)]
     filename1 = tmp_path / 'export1.aiida'
     create_archive([output_1], filename=filename1)
-    aiida_profile.reset_db()
+    aiida_profile.clear_profile()
     import_archive(filename1)
 
     for uuid, value in uuids_values:

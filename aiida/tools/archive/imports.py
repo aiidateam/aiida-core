@@ -20,7 +20,7 @@ from aiida.common.lang import type_check
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.progress_reporter import get_progress_reporter
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import Backend
 from aiida.orm.querybuilder import QueryBuilder
@@ -120,7 +120,7 @@ def import_archive(
         raise ValueError(f"merge_comments not in {('leave', 'newest', 'overwrite')!r}")
     type_check(group, orm.Group, allow_none=True)
     type_check(test_run, bool)
-    backend = backend or get_manager().get_backend()
+    backend = backend or get_manager().get_profile_storage()
     type_check(backend, Backend)
 
     if group and not group.is_stored:

@@ -139,6 +139,14 @@ class RESTApiTestCase(AiidaTestCase):
         # Prepare typical REST responses
         cls.process_dummy_data()
 
+    @classmethod
+    def tearDownClass(cls):
+        # we need to reset the default user here,
+        # because the REST API's close_thread_connection decorator wil have closed its session,
+        # meaning the `PsqlDosBackend._clear` method will fail
+        orm.User.objects.reset()
+        super().tearDownClass()
+
     def get_dummy_data(self):
         return self._dummy_data
 

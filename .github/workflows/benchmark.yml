@@ -20,7 +20,6 @@ jobs:
         os: [ubuntu-18.04]
         postgres: ['12.3']
         rabbitmq: ['3.8.3']
-        backend: ['django', 'sqlalchemy']
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
@@ -29,7 +28,7 @@ jobs:
       postgres:
         image: "postgres:${{ matrix.postgres }}"
         env:
-          POSTGRES_DB: test_${{ matrix.backend }}
+          POSTGRES_DB: test_aiida
           POSTGRES_PASSWORD: ''
           POSTGRES_HOST_AUTH_METHOD: trust
         options: >-
@@ -79,15 +78,13 @@ jobs:
         pip freeze
 
     - name: Run benchmarks
-      env:
-        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
       run: pytest --benchmark-only --benchmark-json benchmark.json
 
     - name: Store benchmark result
       uses: aiidateam/github-action-benchmark@v3
       with:
-        benchmark-data-dir-path: "dev/bench/${{ matrix.os }}/${{ matrix.backend }}"
-        name: "pytest-benchmarks:${{ matrix.os }},${{ matrix.backend }}"
+        benchmark-data-dir-path: "dev/bench/${{ matrix.os }}/psql_dos"
+        name: "pytest-benchmarks:${{ matrix.os }},psql_dos"
         metadata: "postgres:${{ matrix.postgres }}, rabbitmq:${{ matrix.rabbitmq }}"
         output-file-path: benchmark.json
         render-json-path: .github/workflows/benchmark-config.json

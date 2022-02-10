@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=invalid-name,no-member
-"""Data migration for legacy `JobCalculations`.
+"""Migrate legacy `JobCalculations`.
 
 These old nodes have already been migrated to the correct `CalcJobNode` type in a previous migration, but they can
 still contain a `state` attribute with a deprecated `JobCalcState` value and they are missing a value for the
@@ -39,6 +39,8 @@ The old `state` attribute has to be removed after the data is migrated, because 
 
 Note: in addition to the three attributes mentioned in the table, all matched nodes will get `Legacy JobCalculation` as
 their `process_label` which is one of the default columns of `verdi process list`.
+
+This migration is identical to django_0038
 
 Revision ID: 26d561acd560
 Revises: 07fac78e6209

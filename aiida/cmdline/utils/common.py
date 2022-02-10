@@ -474,7 +474,7 @@ def get_num_workers():
     Get the number of active daemon workers from the circus client
     """
     from aiida.common.exceptions import CircusCallError
-    from aiida.manage.manager import get_manager
+    from aiida.manage import get_manager
 
     manager = get_manager()
     client = manager.get_daemon_client()
@@ -506,12 +506,11 @@ def check_worker_load(active_slots):
     :param active_slots: the number of currently active worker slots
     """
     from aiida.common.exceptions import CircusCallError
-    from aiida.manage.configuration import get_config
+    from aiida.manage import get_config_option
 
     warning_threshold = 0.9  # 90%
 
-    config = get_config()
-    slots_per_worker = config.get_option('daemon.worker_process_slots', config.current_profile.name)
+    slots_per_worker = get_config_option('daemon.worker_process_slots')
 
     try:
         active_workers = get_num_workers()

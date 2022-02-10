@@ -35,8 +35,7 @@ from aiida.common.escaping import sql_string_match
 from aiida.common.hashing import make_hash
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
-from aiida.manage.manager import get_manager
-from aiida.orm import autogroup
+from aiida.manage import get_manager
 from aiida.orm.utils.links import LinkManager, LinkTriple
 from aiida.orm.utils.node import AbstractNodeMeta
 
@@ -154,7 +153,7 @@ class Node(
 
     @classproperty
     def objects(cls: Type[NodeType]) -> NodeCollection[NodeType]:  # pylint: disable=no-self-argument
-        return NodeCollection.get_cached(cls, get_manager().get_backend())  # type: ignore[arg-type]
+        return NodeCollection.get_cached(cls, get_manager().get_profile_storage())  # type: ignore[arg-type]
 
     def __init__(
         self,
@@ -163,7 +162,7 @@ class Node(
         computer: Optional[Computer] = None,
         **kwargs: Any
     ) -> None:
-        backend = backend or get_manager().get_backend()
+        backend = backend or get_manager().get_profile_storage()
 
         if computer and not computer.is_stored:
             raise ValueError('the computer is not stored')
@@ -716,9 +715,8 @@ class Node(
             else:
                 self._store(with_transaction=with_transaction, clean=True)
 
-            # Set up autogrouping used by verdi run
-            if autogroup.CURRENT_AUTOGROUP is not None and autogroup.CURRENT_AUTOGROUP.is_to_be_grouped(self):
-                group = autogroup.CURRENT_AUTOGROUP.get_or_create_group()
+            if self.backend.autogroup.is_to_be_grouped(self):
+                group = self.backend.autogroup.get_or_create_group()
                 group.add_nodes(self)
 
         return self

@@ -8,7 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=invalid-name,no-member
-"""Renaming `DbNode.type` to `DbNode.node_type`
+"""Rename `db_dbnode.type` to `db_dbnode.node_type`
+
+This is identical to migration django_0029
 
 Revision ID: 5ddd24e52864
 Revises: d254fdfed416

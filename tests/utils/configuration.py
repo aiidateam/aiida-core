@@ -27,7 +27,7 @@ def create_mock_profile(name, repository_dirpath=None, **kwargs):
     profile_dictionary = {
         'default_user_email': kwargs.pop('default_user_email', 'dummy@localhost'),
         'storage': {
-            'backend': kwargs.pop('storage_backend', 'django'),
+            'backend': kwargs.pop('storage_backend', 'psql_dos'),
             'config': {
                 'database_engine': kwargs.pop('database_engine', 'postgresql_psycopg2'),
                 'database_hostname': kwargs.pop('database_hostname', DEFAULT_DBINFO['host']),

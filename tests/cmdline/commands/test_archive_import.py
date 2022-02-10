@@ -22,7 +22,7 @@ class TestVerdiImport:
     """Tests for `verdi import`."""
 
     @pytest.fixture(autouse=True)
-    def init_cls(self, clear_database_before_test):  # pylint: disable=unused-argument
+    def init_cls(self, aiida_profile_clean):  # pylint: disable=unused-argument
         """Setup for each method"""
         # pylint: disable=attribute-defined-outside-init
         self.cli_runner = CliRunner()

@@ -1,12 +1,12 @@
 {
-  "CONFIG_VERSION": { "CURRENT": 6, "OLDEST_COMPATIBLE": 6 },
+  "CONFIG_VERSION": { "CURRENT": 7, "OLDEST_COMPATIBLE": 7 },
   "default_profile": "default",
   "profiles": {
     "default": {
       "default_user_email": "email@aiida.net",
       "PROFILE_UUID": "00000000000000000000000000000000",
       "storage": {
-        "backend": "django",
+        "backend": "psql_dos",
         "config": {
           "database_engine": "postgresql_psycopg2",
           "database_password": "some_random_password",
@@ -15,7 +15,8 @@
           "database_port": "5432",
           "database_username": "aiida_qs_greschd",
           "repository_uri": "file:////home/some_user/.aiida/repository-quicksetup/"
-        }
+        },
+        "_v6_backend": "django"
       },
       "process_control": {
         "backend": "rabbitmq",

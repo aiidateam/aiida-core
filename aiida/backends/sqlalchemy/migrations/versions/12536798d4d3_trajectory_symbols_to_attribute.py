@@ -10,6 +10,8 @@
 # pylint: disable=invalid-name,no-member
 """Move trajectory symbols from repository array to attribute
 
+Note, this is similar to the django migration django_0025
+
 Revision ID: 12536798d4d3
 Revises: 37f3d4882837
 Create Date: 2019-01-21 10:15:02.451308
@@ -25,7 +27,7 @@ from sqlalchemy import Integer, String, cast
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.sql import column, func, select, table, text
 
-from aiida.backends.general.migrations.utils import load_numpy_array_from_repository
+from aiida.backends.sqlalchemy.migrations.utils.utils import load_numpy_array_from_repository
 
 # revision identifiers, used by Alembic.
 revision = '12536798d4d3'
@@ -39,34 +41,48 @@ depends_on = None
 
 def upgrade():
     """Migrations for the upgrade."""
-    # yapf:disable
     connection = op.get_bind()
+    profile = op.get_context().opts['aiida_profile']
+    repo_path = profile.repository_path
 
-    DbNode = table('db_dbnode', column('id', Integer), column('uuid', UUID), column('type', String),
-                   column('attributes', JSONB))
+    DbNode = table(
+        'db_dbnode',
+        column('id', Integer),
+        column('uuid', UUID),
+        column('type', String),
+        column('attributes', JSONB),
+    )
 
     nodes = connection.execute(
-        select(DbNode.c.id, DbNode.c.uuid).where(
-            DbNode.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.'))).fetchall()
+        select(DbNode.c.id,
+               DbNode.c.uuid).where(DbNode.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.'))
+    ).fetchall()
 
     for pk, uuid in nodes:
-        symbols = load_numpy_array_from_repository(uuid, 'symbols').tolist()
-        connection.execute(DbNode.update().where(DbNode.c.id == pk).values(
-            attributes=func.jsonb_set(DbNode.c.attributes, op.inline_literal('{"symbols"}'), cast(symbols, JSONB))))
+        symbols = load_numpy_array_from_repository(repo_path, uuid, 'symbols').tolist()
+        connection.execute(
+            DbNode.update().where(DbNode.c.id == pk).values(
+                attributes=func.jsonb_set(DbNode.c.attributes, op.inline_literal('{"symbols"}'), cast(symbols, JSONB))
+            )
+        )
 
 
 def downgrade():
     """Migrations for the downgrade."""
-    # yapf:disable
     connection = op.get_bind()
 
-    DbNode = table('db_dbnode', column('id', Integer), column('uuid', UUID), column('type', String),
-                   column('attributes', JSONB))
+    DbNode = table(
+        'db_dbnode',
+        column('id', Integer),
+        column('uuid', UUID),
+        column('type', String),
+        column('attributes', JSONB),
+    )
 
     nodes = connection.execute(
-        select(DbNode.c.id, DbNode.c.uuid).where(
-            DbNode.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.'))).fetchall()
+        select(DbNode.c.id,
+               DbNode.c.uuid).where(DbNode.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.'))
+    ).fetchall()
 
     for pk, _ in nodes:
-        connection.execute(
-            text(f"""UPDATE db_dbnode SET attributes = attributes #- '{{symbols}}' WHERE id = {pk}"""))
+        connection.execute(text(f"""UPDATE db_dbnode SET attributes = attributes #- '{{symbols}}' WHERE id = {pk}"""))

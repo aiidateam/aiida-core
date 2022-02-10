@@ -16,7 +16,7 @@ from aiida.common import datastructures
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_add_default(fixture_sandbox, aiida_localhost, generate_calc_job):
     """Test a default `ArithmeticAddCalculation`."""
     entry_point_name = 'core.arithmetic.add'
@@ -45,7 +45,7 @@ def test_add_default(fixture_sandbox, aiida_localhost, generate_calc_job):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_add_custom_filenames(fixture_sandbox, aiida_localhost, generate_calc_job):
     """Test an `ArithmeticAddCalculation` with non-default input and output filenames."""
     entry_point_name = 'core.arithmetic.add'

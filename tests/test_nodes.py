@@ -175,7 +175,7 @@ class TestTypes(AiidaTestCase):
 class TestQueryWithAiidaObjects(AiidaTestCase):
     """
     Test if queries work properly also with aiida.orm.Node classes instead of
-    aiida.backends.djsite.db.models.DbNode objects.
+    backend model objects.
     """
 
     def test_with_subclasses(self):
@@ -264,7 +264,6 @@ class TestNodeBasic(AiidaTestCase):
         """
         A uniqueness constraint on the UUID column of the Node model should prevent multiple nodes with identical UUID
         """
-        from django.db import IntegrityError as DjIntegrityError
         from sqlalchemy.exc import IntegrityError as SqlaIntegrityError
 
         a = orm.Data()
@@ -272,7 +271,7 @@ class TestNodeBasic(AiidaTestCase):
         b.backend_entity.dbmodel.uuid = a.uuid
         a.store()
 
-        with self.assertRaises((DjIntegrityError, SqlaIntegrityError)):
+        with self.assertRaises(SqlaIntegrityError):
             b.store()
 
     def test_attribute_mutability(self):

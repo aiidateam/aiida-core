@@ -15,7 +15,7 @@
 from typing import TYPE_CHECKING, Optional, Set
 
 from aiida.common.log import AIIDA_LOGGER
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import Backend
@@ -44,7 +44,7 @@ def repository_maintain(
     """
 
     if backend is None:
-        backend = get_manager().get_backend()
+        backend = get_manager().get_profile_storage()
     repository = backend.get_repository()
 
     unreferenced_objects = get_unreferenced_keyset(aiida_backend=backend)
@@ -75,7 +75,7 @@ def get_unreferenced_keyset(check_consistency: bool = True, aiida_backend: Optio
     MAINTAIN_LOGGER.info('Obtaining unreferenced object keys ...')
 
     if aiida_backend is None:
-        aiida_backend = get_manager().get_backend()
+        aiida_backend = get_manager().get_profile_storage()
 
     repository = aiida_backend.get_repository()
 
@@ -95,6 +95,6 @@ def get_unreferenced_keyset(check_consistency: bool = True, aiida_backend: Optio
 def get_repository_info(statistics: bool = False, backend: Optional['Backend'] = None) -> dict:
     """Returns general information on the repository."""
     if backend is None:
-        backend = get_manager().get_backend()
+        backend = get_manager().get_profile_storage()
     repository = backend.get_repository()
     return repository.get_info(statistics)

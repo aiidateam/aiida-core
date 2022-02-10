@@ -1,14 +1,14 @@
 ---
-profile: PLACEHOLDER_PROFILE
+profile: test_aiida
 email: aiida@localhost
 first_name: Giuseppe
 last_name: Verdi
 institution: Khedivial
-db_backend: PLACEHOLDER_BACKEND
+db_backend: psql_dos
 db_engine: postgresql_psycopg2
 db_host: localhost
 db_port: 5432
-db_name: PLACEHOLDER_DATABASE_NAME
+db_name: test_aiida
 db_username: postgres
 db_password: ''
 broker_protocol: amqp
@@ -17,4 +17,4 @@ broker_password: guest
 broker_host: 127.0.0.1
 broker_port: 5672
 broker_virtual_host: ''
-repository: PLACEHOLDER_REPOSITORY
+repository: /tmp/test_repository_test_aiida/

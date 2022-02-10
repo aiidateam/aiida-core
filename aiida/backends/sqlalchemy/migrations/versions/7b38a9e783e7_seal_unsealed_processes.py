@@ -19,6 +19,8 @@ The problem here is that this will yield `False` if the attribute `process_state
 case for legacy calculations like `InlineCalculation` nodes. Their node type was already migrated in `0020` but most of
 them will be unsealed.
 
+This is identical to migration django_0041
+
 Revision ID: 7b38a9e783e7
 Revises: e734dd5e50d7
 Create Date: 2019-10-28 13:22:56.224234

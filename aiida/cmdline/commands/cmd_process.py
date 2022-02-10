@@ -17,7 +17,7 @@ from aiida.cmdline.params import arguments, options
 from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.utils.query.calculation import CalculationQueryBuilder
 from aiida.common.log import LOG_LEVELS
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 
 
 @verdi.group('process')

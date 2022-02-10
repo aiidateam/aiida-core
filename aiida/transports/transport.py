@@ -166,12 +166,12 @@ class Transport(abc.ABC):
         """
         Pass the data that should be passed automatically to self.logger
         as 'extra' keyword. This is typically useful if you pass data
-        obtained using get_dblogger_extra in aiida.backends.djsite.utils, to automatically
+        obtained using get_dblogger_extra in aiida.orm.utils.log, to automatically
         log also to the DbLog table.
 
         :param logger_extra: data that you want to pass as extra to the
           self.logger. To write to DbLog, it should be created by the
-          aiida.backends.djsite.utils.get_dblogger_extra function. Pass None if you
+          aiida.orm.utils.log.get_dblogger_extra function. Pass None if you
           do not want to have extras passed.
         """
         self._logger_extra = logger_extra

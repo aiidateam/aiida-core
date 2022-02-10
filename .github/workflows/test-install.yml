@@ -177,19 +177,18 @@ jobs:
 
     needs: [install-with-pip]
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
 
     strategy:
       fail-fast: false
       matrix:
         python-version: ['3.8', '3.9', '3.10']
-        backend: ['django', 'sqlalchemy']
 
     services:
       postgres:
         image: postgres:10
         env:
-          POSTGRES_DB: test_${{ matrix.backend }}
+          POSTGRES_DB: test_aiida
           POSTGRES_PASSWORD: ''
           POSTGRES_HOST_AUTH_METHOD: trust
         options: >-
@@ -234,14 +233,12 @@ jobs:
     - run: pip freeze
 
     - name: Setup AiiDA environment
-      env:
-        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
       run:
         .github/workflows/setup.sh
 
     - name: Run test suite
       env:
-        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
+        SQLALCHEMY_WARN_20: 1
       run:
         .github/workflows/tests.sh
 
@@ -252,7 +249,6 @@ jobs:
     # This artifact can be used in the next step to automatically create a pull request
     # updating the requirements (in case they are  inconsistent with the pyproject.toml file).
     - uses: actions/upload-artifact@v1
-      if: matrix.backend == 'django'  # The requirements are identical between backends.
       with:
         name: requirements.txt
         path: requirements-py-${{ matrix.python-version }}.txt

@@ -76,7 +76,7 @@ class TemporaryProfileManagerTestCase(unittest.TestCase):
         with self.assertRaises(TestManagerError):
             self.test_create_aiida_db()
 
-        self.profile_manager.reset_db()
+        self.profile_manager.clear_profile()
         with self.assertRaises(Exception):
             load_node(data_pk)
 

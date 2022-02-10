@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=invalid-name,no-member
-"""Data migration for some legacy process attributes.
+"""Migrate some legacy process attributes.
 
 Attribute keys that are renamed:
 
@@ -24,6 +24,8 @@ Attribute keys that are removed entirely:
 Finally, after these first migrations, any remaining process nodes that still do not have a sealed attribute and have
 it set to `True`. Excluding the nodes that have a `process_state` attribute of one of the active states `created`,
 running` or `waiting`, because those are actual valid active processes that are not yet sealed.
+
+This is identical to migration django_0040
 
 Revision ID: e734dd5e50d7
 Revises: e797afa09270

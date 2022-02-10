@@ -38,13 +38,13 @@ class SqlaModelEntity(Generic[ModelType]):
         :param backend: the corresponding backend
         :return: the Django entity
         """
-        from .backend import SqlaBackend  # pylint: disable=cyclic-import
+        from .backend import PsqlDosBackend  # pylint: disable=cyclic-import
         cls._class_check()
         type_check(dbmodel, cls.MODEL_CLASS)
-        type_check(backend, SqlaBackend)
+        type_check(backend, PsqlDosBackend)
         entity = cls.__new__(cls)
         super(SqlaModelEntity, entity).__init__(backend)
-        entity._dbmodel = utils.ModelWrapper(dbmodel)  # pylint: disable=protected-access
+        entity._dbmodel = utils.ModelWrapper(dbmodel, backend)  # pylint: disable=protected-access
         return entity
 
     @classmethod

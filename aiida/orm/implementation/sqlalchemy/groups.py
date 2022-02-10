@@ -14,9 +14,9 @@ from aiida.backends.sqlalchemy.models.group import DbGroup
 from aiida.common.exceptions import UniquenessError
 from aiida.common.lang import type_check
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
-from aiida.orm.implementation.sql.extras import SqlExtrasMixin
 
 from . import entities, users, utils
+from .extras_mixin import ExtrasMixin
 
 __all__ = ('SqlaGroup', 'SqlaGroupCollection')
 
@@ -25,7 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 
 # Unfortunately the linter doesn't seem to be able to pick up on the fact that the abstract property 'id'
 # of BackendGroup is actually implemented in SqlaModelEntity so disable the abstract check
-class SqlaGroup(entities.SqlaModelEntity[DbGroup], SqlExtrasMixin, BackendGroup):  # pylint: disable=abstract-method
+class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  # pylint: disable=abstract-method
     """The SQLAlchemy Group object"""
 
     MODEL_CLASS = DbGroup
@@ -44,7 +44,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], SqlExtrasMixin, BackendGroup)
         super().__init__(backend)
 
         dbgroup = DbGroup(label=label, description=description, user=user.dbmodel, type_string=type_string)
-        self._dbmodel = utils.ModelWrapper(dbgroup)
+        self._dbmodel = utils.ModelWrapper(dbgroup, backend)
 
     @property
     def label(self):
@@ -283,5 +283,6 @@ class SqlaGroupCollection(BackendGroupCollection):
     def delete(self, id):  # pylint: disable=redefined-builtin
         session = self.backend.get_session()
 
-        session.get(DbGroup, id).delete()
+        row = session.get(DbGroup, id)
+        session.delete(row)
         session.commit()

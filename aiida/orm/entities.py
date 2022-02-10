@@ -18,7 +18,7 @@ from plumpy.base.utils import call_with_super_check, super_check
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 
 try:
     from typing import Protocol
@@ -79,7 +79,7 @@ class Collection(abc.ABC, Generic[EntityType]):
         from aiida.orm.implementation import Backend
         type_check(backend, Backend, allow_none=True)
         assert issubclass(entity_class, self._entity_base_cls())
-        self._backend = backend or get_manager().get_backend()
+        self._backend = backend or get_manager().get_profile_storage()
         self._entity_type = entity_class
 
     def __call__(self: CollectionType, backend: 'Backend') -> CollectionType:

@@ -8,7 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=invalid-name
-"""Remove `DbComputer.enabled`
+"""Remove `db_dbcomputer.enabled`
+
+This is similar to migration django_0031
 
 Revision ID: 3d6190594e19
 Revises: 5a49629f0d45

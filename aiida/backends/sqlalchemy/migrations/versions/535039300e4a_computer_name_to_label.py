@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=invalid-name,no-member
-"""Rename the ``name`` column of the ``Computer`` entity to ``label``.
+"""Rename `db_dbcomputer.name` to `db_dbcomputer.label`
 
 Revision ID: 535039300e4a
 Revises: 1feaea71bd5a

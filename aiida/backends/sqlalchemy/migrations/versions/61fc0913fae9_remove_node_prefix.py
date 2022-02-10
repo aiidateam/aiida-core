@@ -8,7 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=invalid-name,no-member
-"""Final data migration for `Nodes` after `aiida.orm.nodes` reorganization was finalized to remove the `node.` prefix
+"""Remove the `node.` prefix from `db_dbnode.type`
+
+Final data migration for `Nodes` after `aiida.orm.nodes` reorganization was finalized to remove the `node.` prefix
+
+Note, this is identical to the django_0027 migration.
 
 Revision ID: 61fc0913fae9
 Revises: ce56d84bcc35

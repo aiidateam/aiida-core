@@ -10,11 +10,12 @@
 # pylint: disable=invalid-name,no-member,no-name-in-module,import-error
 """This migration creates UUID column and populates it with distinct UUIDs
 
-This migration corresponds to the 0024_dblog_update Django migration.
+This migration corresponds to the 0024_dblog_update Django migration (only the final part).
 
 Revision ID: ea2f50e7f615
 Revises: 041a79fc615f
-Create Date: 2019-01-30 19:22:50.984380"""
+Create Date: 2019-01-30 19:22:50.984380
+"""
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
@@ -26,38 +27,11 @@ branch_labels = None
 depends_on = None
 
 
-def set_new_uuid(connection):
-    """
-    Set new and distinct UUIDs to all the logs
-    """
-    from aiida.common.utils import get_new_uuid
-
-    # Exit if there are no rows - e.g. initial setup
-    id_query = connection.execute(sa.text('SELECT db_dblog.id FROM db_dblog'))
-    if id_query.rowcount == 0:
-        return
-
-    id_res = id_query.fetchall()
-    ids = []
-    for (curr_id,) in id_res:
-        ids.append(curr_id)
-    uuids = set()
-    while len(uuids) < len(ids):
-        uuids.add(get_new_uuid())
-
-    # Create the key/value pairs
-    key_values = ','.join(f"({curr_id}, '{curr_uuid}')" for curr_id, curr_uuid in zip(ids, uuids))
-
-    update_stm = f"""
-        UPDATE db_dblog as t SET
-            uuid = uuid(c.uuid)
-        from (values {key_values}) as c(id, uuid) where c.id = t.id"""
-    connection.execute(sa.text(update_stm))
-
-
 def upgrade():
     """ Add an UUID column an populate it with unique UUIDs """
+    from aiida.backends.sqlalchemy.migrations.utils.dblog_update import set_new_uuid
     from aiida.common.utils import get_new_uuid
+
     connection = op.get_bind()
 
     # Create the UUID column

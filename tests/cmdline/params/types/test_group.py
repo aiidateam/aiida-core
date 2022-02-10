@@ -24,7 +24,7 @@ def parameter_type():
 
 
 @pytest.fixture
-def setup_groups(clear_database_before_test):
+def setup_groups(aiida_profile_clean):
     """Create some groups to test the `GroupParamType` parameter type for the command line infrastructure.
 
     We create an initial group with a random name and then on purpose create two groups with a name that matches exactly

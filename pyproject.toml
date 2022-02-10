@@ -24,7 +24,6 @@ classifiers = [
 keywords = ["aiida", "workflows"]
 requires-python = ">=3.8"
 dependencies = [
-        "aldjemy~=2.4",
         "alembic~=1.2",
         "archive-path~=0.3.6",
         "aio-pika~=6.6",
@@ -33,7 +32,6 @@ dependencies = [
         "click-spinner~=0.1.8",
         "click~=8.0,>=8.0.3",
         "disk-objectstore~=0.6.0",
-        "django~=2.2",
         "graphviz~=0.13",
         "ipython~=7.20",
         "jinja2~=3.0",
@@ -110,7 +108,6 @@ pre-commit = [
     "pre-commit~=2.2",
     "pylint~=2.11.1",
     "pylint-aiida~=0.1.1",
-    "pylint-django",
     "sqlalchemy[mypy]~=1.4.29",
     "tomli",
     "types-PyYAML",
@@ -128,7 +125,6 @@ tests = [
     "pytest-regressions~=2.2",
     "pympler~=0.9",
     "coverage<5.0",
-    "sqlalchemy-diff~=0.1.3",
     "sqlalchemy-utils~=0.37.2",
     "sphinx~=3.2.1"
 ]
@@ -258,10 +254,7 @@ exclude = [
 ]
 
 [tool.pylint.master]
-load-plugins = ["pylint_aiida", "pylint_django"]
-# this currently fails with aiida.common.exceptions.ProfileConfigurationError: no profile has been loaded
-# we woud need a static settings module to use this
-# django-settings-module = "aiida.backends.djsite.settings"
+load-plugins = ["pylint_aiida"]
 
 [tool.pylint.format]
 max-line-length = 120
@@ -272,7 +265,6 @@ disable = [
     "bad-option-value",
     "consider-using-f-string",
     "cyclic-import",
-    "django-not-configured",
     "duplicate-code",
     "import-outside-toplevel",
     "inconsistent-return-statements",
@@ -318,7 +310,6 @@ testpaths = [
 ]
 filterwarnings = [
     "ignore::DeprecationWarning:babel:",
-    "ignore::DeprecationWarning:django:",
     "ignore::DeprecationWarning:frozendict:",
     "ignore::DeprecationWarning:sqlalchemy:",
     "ignore::DeprecationWarning:yaml:",
@@ -371,7 +362,6 @@ check_untyped_defs = false
 [[tool.mypy.overrides]]
 module = [
     'circus.*',
-    'django.*',
     'kiwipy.*',
     'numpy.*',
     'pytz.*',
@@ -386,7 +376,7 @@ ignore_missing_imports = true
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py38-django
+envlist = py38
 
 [testenv]
 usedevelop=True
@@ -395,18 +385,17 @@ deps =
     py39: -rrequirements/requirements-py-3.9.txt
     py310: -rrequirements/requirements-py-3.10.txt
 
-[testenv:py{38,39,310}-{django,sqla}]
+[testenv:py{38,39,310}]
 passenv =
     PYTHONASYNCIODEBUG
 setenv =
-    django: AIIDA_TEST_BACKEND = django
-    sqla: AIIDA_TEST_BACKEND = sqlalchemy
     SQLALCHEMY_WARN_20 = 1
 commands = pytest {posargs}
 
 [testenv:py{38,39,310}-verdi]
+passenv =
+    AIIDA_TEST_BACKEND
 setenv =
-    AIIDA_TEST_BACKEND = django
     AIIDA_PATH = {toxinidir}/.tox/.aiida
 commands = verdi {posargs}
 
@@ -444,7 +433,7 @@ description = Run the pre-commit checks
 extras = pre-commit
 commands = pre-commit run {posargs}
 
-[testenv:molecule-{django,sqla}]
+[testenv:molecule]
 description = Run the molecule containerised tests
 skip_install = true
 parallel_show_output = true
@@ -454,9 +443,8 @@ deps =
     molecule[docker]~=3.1.0
 setenv =
     MOLECULE_GLOB = .molecule/*/config_local.yml
-    django: AIIDA_TEST_BACKEND = django
-    sqla: AIIDA_TEST_BACKEND = sqlalchemy
 passenv =
+    AIIDA_TEST_BACKEND
     AIIDA_TEST_WORKERS
 commands = molecule {posargs:test}
 """

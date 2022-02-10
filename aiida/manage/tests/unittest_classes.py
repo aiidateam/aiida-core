@@ -14,7 +14,7 @@ import unittest
 import warnings
 
 from aiida.common.warnings import AiidaDeprecationWarning
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 
 from .main import _GLOBAL_TEST_MANAGER, get_test_backend_name, get_test_profile_name, test_manager
 
@@ -58,10 +58,12 @@ class PluginTestCase(unittest.TestCase):
                 'Please use aiida.manage.tests.unittest_classes.TestRunner to run these tests.'
             )
 
-        cls.backend = get_manager().get_backend()
+        cls.backend = get_manager().get_profile_storage()
 
     def tearDown(self):
-        self.test_manager.reset_db()
+        manager = get_manager()
+        if manager.profile_storage_loaded:
+            manager.get_profile_storage()._clear(recreate_user=True)  # pylint: disable=protected-access
 
 
 class TestRunner(unittest.runner.TextTestRunner):

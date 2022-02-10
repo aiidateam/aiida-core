@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 from aiida.plugins import TransportFactory
 
 from . import entities, users
@@ -47,7 +47,7 @@ class AuthInfo(entities.Entity['BackendAuthInfo']):
 
     @classproperty
     def objects(cls: Type['AuthInfo']) -> AuthInfoCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
-        return AuthInfoCollection.get_cached(cls, get_manager().get_backend())
+        return AuthInfoCollection.get_cached(cls, get_manager().get_profile_storage())
 
     PROPERTY_WORKDIR = 'workdir'
 
@@ -58,7 +58,7 @@ class AuthInfo(entities.Entity['BackendAuthInfo']):
         :param user: a `User` instance
         :param backend: the backend to use for the instance, or use the default backend if None
         """
-        backend = backend or get_manager().get_backend()
+        backend = backend or get_manager().get_profile_storage()
         model = backend.authinfos.create(computer=computer.backend_entity, user=user.backend_entity)
         super().__init__(model)
 

@@ -10,6 +10,8 @@
 # pylint: disable=invalid-name,no-member
 """Prepare schema reset.
 
+This is similar to migration django_0042
+
 Revision ID: 91b573400be5
 Revises: 7b38a9e783e7
 Create Date: 2019-07-25 14:58:39.866822

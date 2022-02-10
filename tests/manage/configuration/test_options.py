@@ -10,6 +10,7 @@
 """Tests for the configuration options."""
 import pytest
 
+from aiida import get_profile
 from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ConfigurationError
 from aiida.manage.configuration import ConfigValidationError, get_config, get_config_option
@@ -66,7 +67,7 @@ class TestConfigurationOptions(AiidaTestCase):
     def test_get_config_option_profile_specific(self):
         """Tests that `get_option` correctly gets a configuration option if specified for the current profile."""
         config = get_config()
-        profile = config.current_profile
+        profile = get_profile()
 
         option_name = 'logging.aiida_loglevel'
         option_value_profile = 'WARNING'

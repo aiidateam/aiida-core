@@ -19,7 +19,7 @@ from tests.static import STATIC_DIR
 
 
 @pytest.fixture
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def generate_class_instance():
     """Generate a dummy `Data` instance for the given sub class."""
 
@@ -75,7 +75,7 @@ def data_plugin(request):
     return request.param.load()
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_constructor():
     """Test the constructor.
 
@@ -87,7 +87,7 @@ def test_constructor():
     assert node.source == source
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_data_exporters(data_plugin, generate_class_instance):
     """Verify that the return value of the export methods of all `Data` sub classes have the correct type.
 

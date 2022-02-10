@@ -31,7 +31,7 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
 
     def __init__(self, backend, **kwargs):
         super().__init__(backend)
-        self._dbmodel = utils.ModelWrapper(DbComputer(**kwargs))
+        self._dbmodel = utils.ModelWrapper(DbComputer(**kwargs), backend)
 
     @property
     def uuid(self):
@@ -125,7 +125,8 @@ class SqlaComputerCollection(BackendComputerCollection):
     def delete(self, pk):
         try:
             session = self.backend.get_session()
-            session.get(DbComputer, pk).delete()
+            row = session.get(DbComputer, pk)
+            session.delete(row)
             session.commit()
         except SQLAlchemyError as exc:
             raise exceptions.InvalidOperation(

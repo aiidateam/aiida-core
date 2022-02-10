@@ -18,17 +18,17 @@ from sqlalchemy.orm.exc import NoResultFound
 from aiida.backends.sqlalchemy.models import node as models
 from aiida.common import exceptions
 from aiida.common.lang import type_check
-from aiida.orm.implementation.sql.extras import SqlExtrasMixin
 from aiida.orm.implementation.utils import clean_value, validate_attribute_extra_key
 
 from . import entities
 from . import utils as sqla_utils
 from .. import BackendNode, BackendNodeCollection
 from .computers import SqlaComputer
+from .extras_mixin import ExtrasMixin
 from .users import SqlaUser
 
 
-class SqlaNode(entities.SqlaModelEntity[models.DbNode], SqlExtrasMixin, BackendNode):
+class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode):
     """SQLA Node backend entity"""
 
     # pylint: disable=too-many-public-methods
@@ -83,7 +83,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], SqlExtrasMixin, BackendN
             type_check(mtime, datetime, f'the given mtime is of type {type(mtime)}')
             arguments['mtime'] = mtime
 
-        self._dbmodel = sqla_utils.ModelWrapper(models.DbNode(**arguments))
+        self._dbmodel = sqla_utils.ModelWrapper(models.DbNode(**arguments), backend)
 
     def clone(self):
         """Return an unstored clone of ourselves.
@@ -103,7 +103,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], SqlExtrasMixin, BackendN
 
         clone = self.__class__.__new__(self.__class__)  # pylint: disable=no-value-for-parameter
         clone.__init__(self.backend, self.node_type, self.user)
-        clone._dbmodel = sqla_utils.ModelWrapper(models.DbNode(**arguments))  # pylint: disable=protected-access
+        clone._dbmodel = sqla_utils.ModelWrapper(models.DbNode(**arguments), self.backend)  # pylint: disable=protected-access
         return clone
 
     @property
@@ -322,7 +322,8 @@ class SqlaNodeCollection(BackendNodeCollection):
         session = self.backend.get_session()
 
         try:
-            session.query(models.DbNode).filter_by(id=pk).one().delete()
+            row = session.query(models.DbNode).filter_by(id=pk).one()
+            session.delete(row)
             session.commit()
         except NoResultFound:
             raise exceptions.NotExistent(f"Node with pk '{pk}' not found") from NoResultFound

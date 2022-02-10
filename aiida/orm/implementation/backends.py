@@ -9,11 +9,11 @@
 ###########################################################################
 """Generic backend related objects"""
 import abc
-from typing import TYPE_CHECKING, Any, ContextManager, List, Sequence, TypeVar
+from typing import TYPE_CHECKING, Any, ContextManager, List, Optional, Sequence, TypeVar, Union
 
 if TYPE_CHECKING:
-    from sqlalchemy.orm.session import Session
-
+    from aiida.manage.configuration.profile import Profile
+    from aiida.orm.autogroup import AutogroupManager
     from aiida.orm.entities import EntityTypes
     from aiida.orm.implementation import (
         BackendAuthInfoCollection,
@@ -32,21 +32,99 @@ __all__ = ('Backend',)
 TransactionType = TypeVar('TransactionType')
 
 
-class Backend(abc.ABC):
+class Backend(abc.ABC):  # pylint: disable=too-many-public-methods
     """Abstraction for a backend to read/write persistent data for a profile's provenance graph.
 
     AiiDA splits data storage into two sources:
 
     - Searchable data, which is stored in the database and can be queried using the QueryBuilder
-    - Non-searchable data, which is stored in the repository and can be loaded using the RepositoryBackend
+    - Non-searchable (binary) data, which is stored in the repository and can be loaded using the RepositoryBackend
 
     The two sources are inter-linked by the ``Node.repository_metadata``.
     Once stored, the leaf values of this dictionary must be valid pointers to object keys in the repository.
+
+    The class methods,`version_profile` and `migrate`,
+    should be able to be called for existing storage, at any supported schema version (or empty storage).
+    But an instance of this class should be created only for the latest schema version.
+
     """
 
+    @classmethod
     @abc.abstractmethod
-    def migrate(self) -> None:
-        """Migrate the database to the latest schema generation or version."""
+    def version_head(cls) -> str:
+        """Return the head schema version of this storage backend type."""
+
+    @classmethod
+    @abc.abstractmethod
+    def version_profile(cls, profile: 'Profile') -> Optional[str]:
+        """Return the schema version of the given profile's storage, or None for empty/uninitialised storage.
+
+        :raises: `~aiida.common.exceptions.UnreachableStorage` if the storage cannot be accessed
+        """
+
+    @classmethod
+    @abc.abstractmethod
+    def migrate(cls, profile: 'Profile') -> None:
+        """Migrate the storage of a profile to the latest schema version.
+
+        If the schema version is already the latest version, this method does nothing.
+        If the storage is empty/uninitialised, then it will be initialised at head.
+
+        :raises: `~aiida.common.exceptions.UnreachableStorage` if the storage cannot be accessed
+        """
+
+    @abc.abstractmethod
+    def __init__(self, profile: 'Profile') -> None:
+        """Initialize the backend, for this profile.
+
+        :raises: `~aiida.common.exceptions.UnreachableStorage` if the storage cannot be accessed
+        :raises: `~aiida.common.exceptions.IncompatibleStorageSchema`
+            if the profile's storage schema is not at the latest version (and thus should be migrated)
+        :raises: :raises: :class:`aiida.common.exceptions.CorruptStorage` if the storage is internally inconsistent
+        """
+        from aiida.orm.autogroup import AutogroupManager
+        self._profile = profile
+        self._autogroup = AutogroupManager(self)
+
+    @abc.abstractmethod
+    def __str__(self) -> str:
+        """Return a string showing connection details for this instance."""
+
+    @property
+    def profile(self) -> 'Profile':
+        """Return the profile for this backend."""
+        return self._profile
+
+    @property
+    def autogroup(self) -> 'AutogroupManager':
+        """Return the autogroup manager for this backend."""
+        return self._autogroup
+
+    def version(self) -> str:
+        """Return the schema version of the profile's storage."""
+        version = self.version_profile(self.profile)
+        assert version is not None
+        return version
+
+    @abc.abstractmethod
+    def close(self):
+        """Close the storage access."""
+
+    @property
+    @abc.abstractmethod
+    def is_closed(self) -> bool:
+        """Return whether the storage is closed."""
+
+    @abc.abstractmethod
+    def _clear(self, recreate_user: bool = True) -> None:
+        """Clear the storage, removing all data.
+
+        .. warning:: This is a destructive operation, and should only be used for testing purposes.
+
+        :param recreate_user: Re-create the default `User` for the profile, after clearing the storage.
+        """
+        from aiida.orm.autogroup import AutogroupManager
+        self._autogroup = AutogroupManager(self)
 
     @property
     @abc.abstractmethod
@@ -86,13 +164,6 @@ class Backend(abc.ABC):
     @abc.abstractmethod
     def query(self) -> 'BackendQueryBuilder':
         """Return an instance of a query builder implementation for this backend"""
-
-    @abc.abstractmethod
-    def get_session(self) -> 'Session':
-        """Return a database session that can be used by the `QueryBuilder` to perform its query.
-
-        :return: an instance of :class:`sqlalchemy.orm.session.Session`
-        """
 
     @abc.abstractmethod
     def transaction(self) -> ContextManager[Any]:
@@ -149,3 +220,26 @@ class Backend(abc.ABC):
     @abc.abstractmethod
     def get_repository(self) -> 'AbstractRepositoryBackend':
         """Return the object repository configured for this backend."""
+
+    @abc.abstractmethod
+    def set_global_variable(
+        self, key: str, value: Union[None, str, int, float], description: Optional[str] = None, overwrite=True
+    ) -> None:
+        """Set a global variable in the storage.
+
+        :param key: the key of the setting
+        :param value: the value of the setting
+        :param description: the description of the setting (optional)
+        :param overwrite: if True, overwrite the setting if it already exists
+
+        :raises: `ValueError` if the key already exists and `overwrite` is False
+        """
+
+    @abc.abstractmethod
+    def get_global_variable(self, key: str) -> Union[None, str, int, float]:
+        """Return a global variable from the storage.
+
+        :param key: the key of the setting
+
+        :raises: `KeyError` if the setting does not exist
+        """

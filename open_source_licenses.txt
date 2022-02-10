@@ -2,7 +2,6 @@ Some files in AiiDA include snippets of code taken from other open-source
 projects:
 
 Django:
-  * aiida/backends/djsite/settings/settings.py
   * aiida/common/hashing.py
   * aiida/utils/timezone.py
 

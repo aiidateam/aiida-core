@@ -55,7 +55,7 @@ class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
             lang.type_check(mtime, datetime, f'the given mtime is of type {type(mtime)}')
             arguments['mtime'] = mtime
 
-        self._dbmodel = utils.ModelWrapper(models.DbComment(**arguments))
+        self._dbmodel = utils.ModelWrapper(models.DbComment(**arguments), backend)
 
     def store(self):
         """Can only store if both the node and user are stored as well."""
@@ -131,7 +131,8 @@ class SqlaCommentCollection(BackendCommentCollection):
         session = self.backend.get_session()
 
         try:
-            session.query(models.DbComment).filter_by(id=comment_id).one().delete()
+            row = session.query(models.DbComment).filter_by(id=comment_id).one()
+            session.delete(row)
             session.commit()
         except NoResultFound:
             session.rollback()

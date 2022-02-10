@@ -8,18 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi profile`."""
+import os
+import tempfile
 import traceback
 
 from click.testing import CliRunner
 import pytest
 
 from aiida import orm
-from aiida.backends import BACKEND_DJANGO
 from aiida.backends.testbase import AiidaPostgresTestCase
 from aiida.cmdline.commands import cmd_setup
-from aiida.manage import configuration
+from aiida.manage import configuration, get_manager
 from aiida.manage.external.postgres import Postgres
-from aiida.manage.manager import get_manager
 
 
 @pytest.mark.usefixtures('config_with_profile')
@@ -28,10 +28,8 @@ class TestVerdiSetup(AiidaPostgresTestCase):
 
     def setUp(self):
         """Create a CLI runner to invoke the CLI commands."""
-        if configuration.PROFILE.storage_backend == BACKEND_DJANGO:
-            pytest.skip('Reenable when #2813 is addressed')
         super().setUp()
-        self.backend = configuration.PROFILE.storage_backend
+        self.backend = configuration.get_profile().storage_backend
         self.cli_runner = CliRunner()
 
     def test_help(self):
@@ -45,7 +43,15 @@ class TestVerdiSetup(AiidaPostgresTestCase):
 
     def test_quicksetup(self):
         """Test `verdi quicksetup`."""
-        configuration.reset_profile()
+        config = configuration.get_config()
+        get_manager().unload_profile()
+        profile_name = 'testing'
+        user_email = 'some@email.com'
+        user_first_name = 'John'
+        user_last_name = 'Smith'
+        user_institution = 'ECMA'
+
+        config = configuration.get_config()
 
         profile_name = 'testing'
         user_email = 'some@email.com'
@@ -78,15 +84,12 @@ class TestVerdiSetup(AiidaPostgresTestCase):
         self.assertEqual(user.institution, user_institution)
 
         # Check that the repository UUID was stored in the database
-        manager = get_manager()
-        backend_manager = manager.get_backend_manager()
-        self.assertEqual(backend_manager.get_repository_uuid(), self.backend.get_repository().uuid)
+        backend = profile.storage_cls(profile)
+        self.assertEqual(backend.get_global_variable('repository|uuid'), backend.get_repository().uuid)
 
     def test_quicksetup_from_config_file(self):
         """Test `verdi quicksetup` from configuration file."""
-        import os
-        import tempfile
-
+        get_manager().unload_profile()
         with tempfile.NamedTemporaryFile('w') as handle:
             handle.write(
                 f"""---
@@ -103,7 +106,7 @@ email: 123@234.de"""
 
     def test_quicksetup_wrong_port(self):
         """Test `verdi quicksetup` exits if port is wrong."""
-        configuration.reset_profile()
+        get_manager().unload_profile()
 
         profile_name = 'testing'
         user_email = 'some@email.com'
@@ -129,7 +132,7 @@ email: 123@234.de"""
         db_pass = 'aiida_test_setup'
         postgres.create_dbuser(db_user, db_pass)
         postgres.create_db(db_user, db_name)
-        configuration.reset_profile()
+        get_manager().unload_profile()
 
         profile_name = 'testing'
         user_email = 'some@email.com'
@@ -165,6 +168,5 @@ email: 123@234.de"""
         self.assertEqual(user.institution, user_institution)
 
         # Check that the repository UUID was stored in the database
-        manager = get_manager()
-        backend_manager = manager.get_backend_manager()
-        self.assertEqual(backend_manager.get_repository_uuid(), self.backend.get_repository().uuid)
+        backend = profile.storage_cls(profile)
+        self.assertEqual(backend.get_global_variable('repository|uuid'), backend.get_repository().uuid)

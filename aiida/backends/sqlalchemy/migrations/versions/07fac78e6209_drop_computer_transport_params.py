@@ -8,7 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=invalid-name,no-member
-"""Drop the `transport_params` from the `Computer` database model.
+"""Drop `db_dbcomputer.transport_params`
+
+This is similar to migration django_0036
 
 Revision ID: 07fac78e6209
 Revises: de2eaf6978b4

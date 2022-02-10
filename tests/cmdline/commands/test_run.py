@@ -63,7 +63,7 @@ class TestVerdiRun(AiidaTestCase):
             self.assertClickResultNoException(result)
 
             # Try to load the function calculation node from the printed pk in the output
-            pk = int(result.output)
+            pk = int(result.output.splitlines()[-1])
             node = load_node(pk)
 
             # Verify that the node has the correct function name and content
@@ -77,21 +77,8 @@ class TestAutoGroups(AiidaTestCase):
 
     def setUp(self):
         """Setup the CLI runner to run command line commands."""
-        from aiida.orm import autogroup
-
         super().setUp()
         self.cli_runner = CliRunner()
-        # I need to disable the global variable of this test environment, because invoke is just calling the function
-        # and therefore inheriting the global variable
-        self._old_autogroup = autogroup.CURRENT_AUTOGROUP
-        autogroup.CURRENT_AUTOGROUP = None
-
-    def tearDown(self):
-        """Setup the CLI runner to run command line commands."""
-        from aiida.orm import autogroup
-
-        super().tearDown()
-        autogroup.CURRENT_AUTOGROUP = self._old_autogroup
 
     def test_autogroup(self):
         """Check if the autogroup is properly generated."""

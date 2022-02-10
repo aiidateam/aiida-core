@@ -24,7 +24,7 @@ from aiida.common.exceptions import (
     LoadingEntryPointError,
     ValidationError,
 )
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 from aiida.orm import Data, Node
 from aiida.plugins.entry_point import get_entry_point_names, load_entry_point
 from aiida.restapi.common.exceptions import RestFeatureNotAvailable, RestInputValidationError, RestValidationError
@@ -93,7 +93,7 @@ class NodeTranslator(BaseTranslator):
         """
 
         self._subclasses = self._get_subclasses()
-        self._backend = get_manager().get_backend()
+        self._backend = get_manager().get_profile_storage()
 
     def set_query_type(
         self,

@@ -22,7 +22,7 @@ EntityType = TypeVar('EntityType', bound='BackendEntity')  # pylint: disable=inv
 class BackendEntity(abc.ABC):
     """An first-class entity in the backend"""
 
-    def __init__(self, backend: 'Backend', **kwargs: Any):
+    def __init__(self, backend: 'Backend', **kwargs: Any):  # pylint: disable=unused-argument
         self._backend = backend
 
     @property

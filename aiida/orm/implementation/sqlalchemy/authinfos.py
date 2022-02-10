@@ -32,7 +32,7 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
         super().__init__(backend)
         type_check(user, users.SqlaUser)
         type_check(computer, computers.SqlaComputer)
-        self._dbmodel = utils.ModelWrapper(DbAuthInfo(dbcomputer=computer.dbmodel, aiidauser=user.dbmodel))
+        self._dbmodel = utils.ModelWrapper(DbAuthInfo(dbcomputer=computer.dbmodel, aiidauser=user.dbmodel), backend)
 
     @property
     def id(self):  # pylint: disable=invalid-name
@@ -124,7 +124,8 @@ class SqlaAuthInfoCollection(BackendAuthInfoCollection):
         session = self.backend.get_session()
 
         try:
-            session.query(DbAuthInfo).filter_by(id=pk).one().delete()
+            row = session.query(DbAuthInfo).filter_by(id=pk).one()
+            session.delete(row)
             session.commit()
         except NoResultFound:
             raise exceptions.NotExistent(f'AuthInfo<{pk}> does not exist')

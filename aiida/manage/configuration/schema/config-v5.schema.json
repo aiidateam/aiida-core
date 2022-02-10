@@ -262,7 +262,7 @@
                         "django",
                         "sqlalchemy"
                     ],
-                    "default": "django"
+                    "default": "sqlalchemy"
                 },
                 "AIIDADB_NAME": {
                     "type": "string"

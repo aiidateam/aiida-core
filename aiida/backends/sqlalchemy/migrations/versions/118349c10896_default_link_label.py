@@ -8,10 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=invalid-name
-"""Update all link labels with the value `_return` which is the legacy default single link label.
+"""Update all link labels with the value `_return`
 
+This is the legacy default single link label.
 The old process functions used to use `_return` as the default link label, however, since labels that start or end with
 and underscore are illegal because they are used for namespacing.
+
+This is identical to migration django_0043
 
 Revision ID: 118349c10896
 Revises: 91b573400be5

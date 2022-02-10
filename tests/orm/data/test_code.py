@@ -15,7 +15,7 @@ from aiida.common.exceptions import ValidationError
 from aiida.orm import Code, Computer
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_validate_remote_exec_path():
     """Test ``Code.validate_remote_exec_path``."""
     computer = Computer(

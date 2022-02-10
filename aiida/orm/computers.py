@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 from aiida.plugins import SchedulerFactory, TransportFactory
 
 from . import entities, users
@@ -79,7 +79,7 @@ class Computer(entities.Entity['BackendComputer']):
 
     @classproperty
     def objects(cls: Type['Computer']) -> ComputerCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
-        return ComputerCollection.get_cached(cls, get_manager().get_backend())
+        return ComputerCollection.get_cached(cls, get_manager().get_profile_storage())
 
     def __init__(  # pylint: disable=too-many-arguments
         self,
@@ -92,7 +92,7 @@ class Computer(entities.Entity['BackendComputer']):
         backend: Optional['Backend'] = None,
     ) -> None:
         """Construct a new computer."""
-        backend = backend or get_manager().get_backend()
+        backend = backend or get_manager().get_profile_storage()
         model = backend.computers.create(
             label=label,
             hostname=hostname,

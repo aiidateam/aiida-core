@@ -24,8 +24,7 @@ import sys
 import aiida
 from aiida.manage.configuration import load_documentation_profile
 
-# Load the dummy profile even if we are running locally, this way the documentation will succeed even if the current
-# default profile of the AiiDA installation does not use a Django backend.
+# Load the dummy profile for sphinx autodoc to use when loading modules
 load_documentation_profile()
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -34,9 +33,6 @@ load_documentation_profile()
 #sys.path.insert(0, os.path.abspath('.'))
 
 # -- General configuration -----------------------------------------------------
-
-# If your documentation needs a minimal Sphinx version, state it here.
-needs_sphinx = '1.5.0'
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
@@ -277,13 +273,6 @@ latex_documents = [
 # If false, no module index is generated.
 #latex_domain_indices = True
 
-# this is to avoid the error
-# aiida/orm/implementation/django/querybuilder.py:docstring of
-# aiida.orm.implementation.django.querybuilder.array_length._compiler_dispatch:1: WARNING: Unknown target name: "visit".
-autodoc_default_options = {
-    'exclude-members': '_compiler_dispatch'
-}
-
 
 def run_apidoc(_):
     """Runs sphinx-apidoc when building the documentation.
@@ -296,6 +285,7 @@ def run_apidoc(_):
     source_dir = os.path.abspath(os.path.dirname(__file__))
     apidoc_dir = os.path.join(source_dir, 'reference', 'apidoc')
     package_dir = os.path.join(source_dir, os.pardir, os.pardir, 'aiida')
+    exclude_api_patterns = []
 
     # In #1139, they suggest the route below, but for me this ended up
     # calling sphinx-build, not sphinx-apidoc
@@ -309,7 +299,9 @@ def run_apidoc(_):
         cmd_path = os.path.abspath(os.path.join(sys.prefix, 'bin', 'sphinx-apidoc'))
 
     options = [
-        '-o', apidoc_dir, package_dir,
+        package_dir,
+        *exclude_api_patterns,
+        '-o', apidoc_dir,
         '--private',
         '--force',
         '--no-headings',

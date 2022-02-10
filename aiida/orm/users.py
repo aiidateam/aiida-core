@@ -8,11 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for the ORM user class."""
-from typing import TYPE_CHECKING, Optional, Tuple, Type, Union, cast
+from typing import TYPE_CHECKING, Optional, Tuple, Type
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 
 from . import entities
 
@@ -25,16 +25,13 @@ __all__ = ('User',)
 class UserCollection(entities.Collection['User']):
     """The collection of users stored in a backend."""
 
-    UNDEFINED = 'UNDEFINED'
-    _default_user: Union[None, str, 'User'] = None
-
     @staticmethod
     def _entity_base_cls() -> Type['User']:
         return User
 
     def __init__(self, entity_class: Type['User'], backend: Optional['Backend'] = None) -> None:
         super().__init__(entity_class=entity_class, backend=backend)
-        self._default_user = self.UNDEFINED
+        self._default_user: Optional[User] = None
 
     def get_or_create(self, email: str, **kwargs) -> Tuple[bool, 'User']:
         """Get the existing user with a given email address or create an unstored one
@@ -51,10 +48,8 @@ class UserCollection(entities.Collection['User']):
 
     def get_default(self) -> Optional['User']:
         """Get the current default user"""
-        if self._default_user is self.UNDEFINED:
-            from aiida.manage.configuration import get_profile
-            profile = get_profile()
-            email = profile.default_user_email
+        if self._default_user is None:
+            email = self.backend.profile.default_user_email
             if not email:
                 self._default_user = None
 
@@ -63,13 +58,13 @@ class UserCollection(entities.Collection['User']):
             except (exceptions.MultipleObjectsError, exceptions.NotExistent):
                 self._default_user = None
 
-        return cast(Optional['User'], self._default_user)
+        return self._default_user
 
     def reset(self) -> None:
         """
         Reset internal caches (default user).
         """
-        self._default_user = self.UNDEFINED
+        self._default_user = None
 
 
 class User(entities.Entity['BackendUser']):
@@ -79,7 +74,7 @@ class User(entities.Entity['BackendUser']):
 
     @classproperty
     def objects(cls: Type['User']) -> UserCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
-        return UserCollection.get_cached(cls, get_manager().get_backend())
+        return UserCollection.get_cached(cls, get_manager().get_profile_storage())
 
     def __init__(
         self,
@@ -91,7 +86,7 @@ class User(entities.Entity['BackendUser']):
     ):
         """Create a new `User`."""
         # pylint: disable=too-many-arguments
-        backend = backend or get_manager().get_backend()
+        backend = backend or get_manager().get_profile_storage()
         email = self.normalize_email(email)
         backend_entity = backend.users.create(email, first_name, last_name, institution)
         super().__init__(backend_entity)

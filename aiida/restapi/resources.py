@@ -15,7 +15,7 @@ from flask_restful import Resource
 
 from aiida.common.lang import classproperty
 from aiida.restapi.common.exceptions import RestInputValidationError
-from aiida.restapi.common.utils import Utils, close_session
+from aiida.restapi.common.utils import Utils, close_thread_connection
 
 
 class ServerInfo(Resource):
@@ -98,7 +98,7 @@ class BaseResource(Resource):
     _translator_class = BaseTranslator
     _parse_pk_uuid = None  # Flag to tell the path parser whether to expect a pk or a uuid pattern
 
-    method_decorators = [close_session]  # Close SQLA session after any method call
+    method_decorators = [close_thread_connection]  # Close the thread's storage connection after any method call
 
     ## TODO add the caching support. I cache total count, results, and possibly
 

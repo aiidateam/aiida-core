@@ -608,7 +608,7 @@ class TestVerdiRehash(AiidaTestCase):
         ['--force'],
     )
 )
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_node_delete_basics(run_cli_command, options):
     """
     Testing the correct translation for the `--force` and `--verbosity` options.

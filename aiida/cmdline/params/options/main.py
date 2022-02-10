@@ -11,7 +11,6 @@
 import click
 from pgsu import DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-module
 
-from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA
 from aiida.common.log import LOG_LEVELS, configure_logging
 from aiida.manage.external.rmq import BROKER_DEFAULTS
 
@@ -283,10 +282,7 @@ DB_ENGINE = OverridableOption(
 )
 
 DB_BACKEND = OverridableOption(
-    '--db-backend',
-    type=click.Choice([BACKEND_DJANGO, BACKEND_SQLA]),
-    default=BACKEND_DJANGO,
-    help='Database backend to use.'
+    '--db-backend', type=click.Choice(['psql_dos']), default='psql_dos', help='Database backend to use.'
 )
 
 DB_HOST = OverridableOption(

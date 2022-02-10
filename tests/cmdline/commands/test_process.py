@@ -17,6 +17,7 @@ import kiwipy
 import plumpy
 import pytest
 
+from aiida import get_profile
 from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_process
 from aiida.common.links import LinkType
@@ -291,11 +292,11 @@ class TestVerdiProcess(AiidaTestCase):
         for flag in ['-l', '--levelname']:
             result = self.cli_runner.invoke(cmd_process.process_report, [str(grandparent.pk), flag, 'WARNING'])
             self.assertIsNone(result.exception, result.output)
-            self.assertEqual(len(get_result_lines(result)), 1)
+            self.assertEqual(len(get_result_lines(result)), 1, get_result_lines(result))
             self.assertEqual(get_result_lines(result)[0], 'No log messages recorded for this entry')
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_list_worker_slot_warning(run_cli_command, monkeypatch):
     """
     Test that the if the number of used worker process slots exceeds a threshold,
@@ -310,7 +311,7 @@ def test_list_worker_slot_warning(run_cli_command, monkeypatch):
 
     # Get the number of allowed processes per worker:
     config = get_config()
-    worker_process_slots = config.get_option('daemon.worker_process_slots', config.current_profile.name)
+    worker_process_slots = config.get_option('daemon.worker_process_slots', get_profile().name)
     limit = int(worker_process_slots * 0.9)
 
     # Create additional active nodes such that we have 90% of the active slot limit
@@ -388,7 +389,7 @@ class TestVerdiProcessCallRoot(AiidaTestCase):
 
 @pytest.mark.skip(reason='fails to complete randomly (see issue #4731)')
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('with_daemon', 'clear_database_before_test')
+@pytest.mark.usefixtures('with_daemon', 'aiida_profile_clean')
 @pytest.mark.parametrize('cmd_try_all', (True, False))
 def test_pause_play_kill(cmd_try_all, run_cli_command):
     """
@@ -397,7 +398,7 @@ def test_pause_play_kill(cmd_try_all, run_cli_command):
     # pylint: disable=no-member, too-many-locals
     from aiida.cmdline.commands.cmd_process import process_kill, process_pause, process_play
     from aiida.engine import ProcessState
-    from aiida.manage.manager import get_manager
+    from aiida.manage import get_manager
     from aiida.orm import load_node
 
     runner = get_manager().create_runner(rmq_submit=True)

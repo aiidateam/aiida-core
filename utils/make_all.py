@@ -159,7 +159,7 @@ if __name__ == '__main__':
         # skipped since we don't want to expose the implmentation
         'orm': ['implementation'],
         # skipped since both implementations share class/function names
-        'orm/implementation': ['django', 'sqlalchemy', 'sql'],
+        'orm/implementation': ['sqlalchemy', 'sql'],
         # skip all since the module requires extra requirements
         'restapi': ['*'],
         # keep at aiida.tools.archive level

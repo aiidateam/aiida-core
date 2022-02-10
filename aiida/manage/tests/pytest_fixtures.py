@@ -164,7 +164,15 @@ def aiida_local_code_factory(aiida_localhost):
     :rtype: object
     """
 
-    def get_code(entry_point, executable, computer=aiida_localhost, label=None, use_double_quotes=False, prepend_text=None, append_text=None):
+    def get_code(
+        entry_point,
+        executable,
+        computer=aiida_localhost,
+        label=None,
+        use_double_quotes=False,
+        prepend_text=None,
+        append_text=None
+    ):
         """Get local code.
 
         Sets up code for given entry point on given computer.

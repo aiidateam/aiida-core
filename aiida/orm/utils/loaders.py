@@ -121,6 +121,7 @@ def load_code(identifier=None, pk=None, uuid=None, label=None, sub_classes=None,
         query_with_dashes=query_with_dashes
     )
 
+
 def load_computer(
     identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True
 ) -> 'Computer':
@@ -668,6 +669,7 @@ class CodeEntityLoader(OrmEntityLoader):
             builder.append(Computer, filters={'label': {'==': machinename}}, with_node='code')
 
         return builder
+
 
 class ComputerEntityLoader(OrmEntityLoader):
     """Loader for the `Computer` entity and sub classes."""

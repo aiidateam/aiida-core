@@ -98,10 +98,10 @@ class CodeInfo(DefaultFieldsAttributeDict):
     """
     This attribute-dictionary contains the information needed to execute a code.
     Possible attributes are:
-    
-    * ``prepend_cmdline_params``: (optional) a list of strings, containing parameters to be 
+
+    * ``prepend_cmdline_params``: (optional) a list of strings, containing parameters to be
       written in front of cmdline_params::
-      
+
         prepend_cmdline_params cmdline_params ...
 
     * ``cmdline_params``: a list of strings, containing parameters to be written on
@@ -141,12 +141,12 @@ class CodeInfo(DefaultFieldsAttributeDict):
 
     * ``withmpi``: if True, executes the code with mpirun (or another MPI installed
       on the remote computer)
-    * ``use_double_quotes``: is a tuple contain two bool values which decide whether use double quotes for 
-      prepend_cmdline_params, cmdline_params respectively. If True, the code cmdline parameters of 
+    * ``use_double_quotes``: is a tuple contain two bool values which decide whether use double quotes for
+      prepend_cmdline_params, cmdline_params respectively. If True, the code cmdline parameters of
       bash script escaped by quotes.
     * ``code_uuid``: the uuid of the code associated to the CodeInfo
     * ``custom_cmdline_string``: If this field provided, only the content of this string will print and
-      the string will print as it is without any escape 
+      the string will print as it is without any escape
     """
     _default_fields = (
         'prepend_cmdline_params',
@@ -156,7 +156,7 @@ class CodeInfo(DefaultFieldsAttributeDict):
         'stderr_name',
         'join_files',
         'withmpi',
-        'use_double_quotes', # tuple to control double quotes of (prepend_cmdline_params, cmdline_params)
+        'use_double_quotes',  # tuple to control double quotes of (prepend_cmdline_params, cmdline_params)
         'code_uuid',
         'custom_cmdline_string',
     )

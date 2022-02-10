@@ -38,6 +38,7 @@ def raise_exception(exception, *args, **kwargs):
     """
     raise exception()
 
+
 @pytest.mark.requires_rmq
 class DummyCalcJob(CalcJob):
     """`DummyCalcJob` implementation to test the calcinfo with container code.
@@ -56,7 +57,7 @@ class DummyCalcJob(CalcJob):
         codeinfo.stdin_name = 'aiida.in'
         codeinfo.stdout_name = 'aiida.out'
         codeinfo.stderr_name = 'aiida.err'
-        
+
         if 'custom_cmdline_string' in self.inputs:
             codeinfo.custom_cmdline_string = self.inputs.custom_cmdline_string.value
 
@@ -64,6 +65,7 @@ class DummyCalcJob(CalcJob):
         calcinfo.codes_info = [codeinfo]
 
         return calcinfo
+
 
 @pytest.mark.requires_rmq
 class FileCalcJob(CalcJob):
@@ -133,7 +135,8 @@ class MultiCodesCalcJob(CalcJob):
         else:
             calcinfo.codes_run_mode = CodeRunMode.SERIAL
         return calcinfo
-    
+
+
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
 @pytest.mark.parametrize('code_use_double_quotes', [True, False])
@@ -141,12 +144,18 @@ class MultiCodesCalcJob(CalcJob):
 def test_double_quote(aiida_local_code_factory, file_regression, code_use_double_quotes, computer_use_double_quotes):
     """test that bash script quote escape behaviour can be controlled"""
     computer = orm.Computer(
-        label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.direct',
+        label='test-code-computer',
+        transport_type='core.local',
+        hostname='localhost',
+        scheduler_type='core.direct',
     ).store()
     computer.set_use_double_quotes(computer_use_double_quotes)
-    
+
     inputs = {
-        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash', computer, use_double_quotes=code_use_double_quotes),
+        'code':
+        aiida_local_code_factory(
+            'core.arithmetic.add', '/bin/bash', computer, use_double_quotes=code_use_double_quotes
+        ),
         'metadata': {
             'dry_run': True,
             'options': {
@@ -166,6 +175,7 @@ def test_double_quote(aiida_local_code_factory, file_regression, code_use_double
         content = handle.read()
 
     file_regression.check(content, extension='.sh')
+
 
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')

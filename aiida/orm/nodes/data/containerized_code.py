@@ -27,7 +27,13 @@ class ContainerizedCode(Code):
     # pylint: disable=too-many-public-methods
 
     def __init__(
-        self, computer=None, engine_command=None, image=None, container_exec_path=None, input_plugin_name=None, **kwargs
+        self,
+        computer=None,
+        engine_command=None,
+        image=None,
+        container_exec_path=None,
+        input_plugin_name=None,
+        **kwargs
     ):
         super().__init__(**kwargs)
 
@@ -74,7 +80,7 @@ class ContainerizedCode(Code):
         """
         Here for containerized code override the default of super class using double
         quotes as default.
-        
+
         Return whether a code is escape with double quotes (True, default) or not (False).
         """
         return self.get_attribute('use_double_quotes', True)

@@ -216,20 +216,19 @@ class Scheduler(metaclass=abc.ABCMeta):
         from aiida.common.datastructures import CodeRunMode
 
         list_of_runlines = []
-        
+
         for code_info in codes_info:
             if code_info.custom_cmdline_string:
                 list_of_runlines.append(code_info.custom_cmdline_string)
                 continue
-            
-            
+
             command_to_exec_list = []
             if code_info.prepend_cmdline_params:
                 for arg in code_info.prepend_cmdline_params:
                     command_to_exec_list.append(escape_for_bash(arg, use_double_quotes=code_info.use_double_quotes[0]))
             for arg in code_info.cmdline_params:
                 command_to_exec_list.append(escape_for_bash(arg, use_double_quotes=code_info.use_double_quotes[1]))
-                
+
             command_to_exec = ' '.join(command_to_exec_list)
 
             stdin_str = f'< {escape_for_bash(code_info.stdin_name, code_info.use_double_quotes[1])}' if code_info.stdin_name else ''

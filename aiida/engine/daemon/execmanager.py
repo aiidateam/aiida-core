@@ -27,7 +27,7 @@ from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcInfo
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
-from aiida.orm import CalcJobNode, FolderData, Node, RemoteData, load_node, load_code
+from aiida.orm import CalcJobNode, FolderData, Node, RemoteData, load_code, load_node
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.repository.common import FileType
 from aiida.schedulers.datastructures import JobState

@@ -12,10 +12,12 @@ from contextlib import contextmanager
 from datetime import datetime
 from functools import singledispatch
 from pathlib import Path
+import tempfile
 from typing import BinaryIO, Iterable, Iterator, List, Optional, Sequence, Tuple, Type, cast
 import zipfile
 from zipfile import ZipFile
 
+from archive_path import extract_file_in_zip
 import pytz
 from sqlalchemy import CHAR, Text, orm, types
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -24,15 +26,16 @@ from sqlalchemy.sql.schema import Table
 
 # we need to import all models, to ensure they are loaded on the SQLA Metadata
 from aiida.backends.sqlalchemy.models import authinfo, base, comment, computer, group, log, node, user
+from aiida.common.exceptions import UnreachableStorage
 from aiida.manage import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.backends import Backend as BackendAbstract
 from aiida.orm.implementation.sqlalchemy import authinfos, comments, computers, entities, groups, logs, nodes, users
 from aiida.orm.implementation.sqlalchemy.querybuilder import SqlaQueryBuilder
 from aiida.repository.backend.abstract import AbstractRepositoryBackend
-from aiida.tools.archive.exceptions import ArchiveClosedError, ReadOnlyError
+from aiida.tools.archive.exceptions import ArchiveClosedError, CorruptArchive, ReadOnlyError
 
-from .common import REPO_FOLDER
+from .common import DB_FILENAME, REPO_FOLDER, create_sqla_engine
 
 
 class SqliteModel:
@@ -244,20 +247,26 @@ class ArchiveBackendQueryBuilder(SqlaQueryBuilder):
 class ArchiveReadOnlyBackend(BackendAbstract):  # pylint: disable=too-many-public-methods
     """A read-only backend for the archive."""
 
-    def __init__(self, path: Path, session: orm.Session):
-        super().__init__()
-        self._path = path
-        self._session: Optional[orm.Session] = session
-        # lazy open the archive zipfile
     @classmethod
     def version_head(cls) -> str:
         raise NotImplementedError
+
     @classmethod
     def version_profile(cls, profile: Profile) -> None:
         raise NotImplementedError
+
     @classmethod
     def migrate(cls, profile: Profile):
         raise ReadOnlyError()
+
+    def __init__(self, profile: Profile):
+        super().__init__(profile)
+        self._path = Path(profile.storage_config['path'])
+        if not self._path.is_file():
+            raise UnreachableStorage(f'archive file `{self._path}` does not exist.')
+        # lazy open the archive zipfile and extract the database file
+        self._db_file: Optional[Path] = None
+        self._session: Optional[orm.Session] = None
         self._zipfile: Optional[zipfile.ZipFile] = None
         self._closed = False
 
@@ -273,15 +282,29 @@ class ArchiveReadOnlyBackend(BackendAbstract):  # pylint: disable=too-many-publi
         """Close the backend"""
         if self._session:
             self._session.close()
+        if self._db_file and self._db_file.exists():
+            self._db_file.unlink()
         if self._zipfile:
             self._zipfile.close()
         self._session = None
+        self._db_file = None
         self._zipfile = None
         self._closed = True
 
     def get_session(self) -> orm.Session:
-        if not self._session:
+        """Return an SQLAlchemy session."""
+        if self._closed:
             raise ArchiveClosedError()
+        if self._db_file is None:
+            _, path = tempfile.mkstemp()
+            self._db_file = Path(path)
+            with self._db_file.open('wb') as handle:
+                try:
+                    extract_file_in_zip(self._path, DB_FILENAME, handle, search_limit=4)
+                except Exception as exc:
+                    raise CorruptArchive(f'database could not be read: {exc}') from exc
+        if self._session is None:
+            self._session = orm.Session(create_sqla_engine(self._db_file))
         return self._session
 
     def get_repository(self) -> ZipfileBackendRepository:
@@ -363,16 +386,13 @@ def create_backend_cls(base_class, model_cls):
 
         def __init__(self, _backend, model):
             """Initialise the backend entity."""
+            from aiida.orm.implementation.sqlalchemy.utils import ModelWrapper
             self._backend = _backend
-            # In the SQLA base classes, the SQLA model instance is wrapped in a proxy class,
-            # to handle attributes get/set on stored/unstored instances, and saving instances to the database.
-            # However, since the wrapper is currently tied to the global session (see #5172)
-            # and this is a read-only archive, we don't need to do that.
-            self._dbmodel = model
+            self._dbmodel = ModelWrapper(model, _backend)
 
         @property
         def dbmodel(self):
-            return self._dbmodel
+            return self._dbmodel._model  # pylint: disable=protected-access
 
         @classmethod
         def from_dbmodel(cls, model, _backend):

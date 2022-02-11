@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Implementation of the CalcJob process."""
+import dataclasses
 import io
 import json
 import os
@@ -587,7 +588,7 @@ class CalcJob(Process):
         from aiida.common.exceptions import InputValidationError, InvalidOperation, PluginInternalError, ValidationError
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.orm import Code, Computer, load_node
-        from aiida.schedulers.datastructures import JobTemplate
+        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
         inputs = self.node.get_incoming(link_type=LinkType.INPUT_CALC)
 
@@ -682,7 +683,7 @@ class CalcJob(Process):
         if not isinstance(calc_info.codes_info, (list, tuple)):
             raise PluginInternalError('codes_info passed to CalcInfo must be a list of CalcInfo objects')
 
-        codes_info = []
+        tmpl_codes_info = []
         for code_info in calc_info.codes_info:
 
             if not isinstance(code_info, CodeInfo):
@@ -713,11 +714,15 @@ class CalcJob(Process):
                 this_argv = [this_code.get_execname()
                              ] + (code_info.cmdline_params if code_info.cmdline_params is not None else [])
 
-            # overwrite the old cmdline_params and add codename and mpirun stuff
-            code_info.cmdline_params = this_argv
+            tmpl_code_info = JobTemplateCodeInfo()
+            tmpl_code_info.cmdline_params = this_argv
+            tmpl_code_info.stdin_name = code_info.stdin_name
+            tmpl_code_info.stdout_name = code_info.stdout_name
+            tmpl_code_info.stderr_name = code_info.stderr_name
+            tmpl_code_info.join_files = code_info.join_files
 
-            codes_info.append(code_info)
-        job_tmpl.codes_info = codes_info
+            tmpl_codes_info.append(tmpl_code_info)
+        job_tmpl.codes_info = tmpl_codes_info
 
         # set the codes execution mode, default set to `SERIAL`
         codes_run_mode = CodeRunMode.SERIAL
@@ -759,8 +764,15 @@ class CalcJob(Process):
         script_content = scheduler.get_submit_script(job_tmpl)
         folder.create_file_from_filelike(io.StringIO(script_content), submit_script_filename, 'w', encoding='utf8')
 
+        def encoder(obj):
+            if dataclasses.is_dataclass(obj):
+                return dataclasses.asdict(obj)
+            raise TypeError(f' {obj!r} is not JSON serializable')
+
         subfolder = folder.get_subfolder('.aiida', create=True)
-        subfolder.create_file_from_filelike(io.StringIO(json.dumps(job_tmpl)), 'job_tmpl.json', 'w', encoding='utf8')
+        subfolder.create_file_from_filelike(
+            io.StringIO(json.dumps(job_tmpl, default=encoder)), 'job_tmpl.json', 'w', encoding='utf8'
+        )
         subfolder.create_file_from_filelike(io.StringIO(json.dumps(calc_info)), 'calcinfo.json', 'w', encoding='utf8')
 
         if calc_info.local_copy_list is None:

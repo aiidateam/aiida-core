@@ -195,8 +195,8 @@ class TestSubmitScript:
         """
         Test the creation of a simple submission script.
         """
-        from aiida.common.datastructures import CodeInfo, CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate
+        from aiida.common.datastructures import CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
         scheduler = SlurmScheduler()
 
@@ -205,10 +205,10 @@ class TestSubmitScript:
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.job_resource = scheduler.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
         job_tmpl.max_wallclock_seconds = 24 * 3600
-        code_info = CodeInfo()
-        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
-        code_info.stdin_name = 'aiida.in'
-        job_tmpl.codes_info = [code_info]
+        tmpl_code_info = JobTemplateCodeInfo()
+        tmpl_code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
+        tmpl_code_info.stdin_name = 'aiida.in'
+        job_tmpl.codes_info = [tmpl_code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
         submit_script_text = scheduler.get_submit_script(job_tmpl)
@@ -223,13 +223,13 @@ class TestSubmitScript:
 
     def test_submit_script_bad_shebang(self):
         """Test that first line of submit script is as expected."""
-        from aiida.common.datastructures import CodeInfo, CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate
+        from aiida.common.datastructures import CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
         scheduler = SlurmScheduler()
-        code_info = CodeInfo()
-        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
-        code_info.stdin_name = 'aiida.in'
+        tmpl_code_info = JobTemplateCodeInfo()
+        tmpl_code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
+        tmpl_code_info.stdin_name = 'aiida.in'
 
         for (shebang, expected_first_line) in ((None, '#!/bin/bash'), ('', ''), ('NOSET', '#!/bin/bash')):
             job_tmpl = JobTemplate()
@@ -238,7 +238,7 @@ class TestSubmitScript:
             else:
                 job_tmpl.shebang = shebang
             job_tmpl.job_resource = scheduler.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
-            job_tmpl.codes_info = [code_info]
+            job_tmpl.codes_info = [tmpl_code_info]
             job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
             submit_script_text = scheduler.get_submit_script(job_tmpl)
@@ -251,8 +251,8 @@ class TestSubmitScript:
         Test to verify if script works fine if we specify only
         num_cores_per_machine value.
         """
-        from aiida.common.datastructures import CodeInfo, CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate
+        from aiida.common.datastructures import CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
         scheduler = SlurmScheduler()
 
@@ -263,10 +263,10 @@ class TestSubmitScript:
         )
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
-        code_info = CodeInfo()
-        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
-        code_info.stdin_name = 'aiida.in'
-        job_tmpl.codes_info = [code_info]
+        tmpl_code_info = JobTemplateCodeInfo()
+        tmpl_code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
+        tmpl_code_info.stdin_name = 'aiida.in'
+        job_tmpl.codes_info = [tmpl_code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
         submit_script_text = scheduler.get_submit_script(job_tmpl)
@@ -283,8 +283,8 @@ class TestSubmitScript:
         """
         Test to verify if scripts works fine if we pass only num_cores_per_mpiproc value
         """
-        from aiida.common.datastructures import CodeInfo, CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate
+        from aiida.common.datastructures import CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
         scheduler = SlurmScheduler()
 
@@ -295,10 +295,10 @@ class TestSubmitScript:
         )
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
-        code_info = CodeInfo()
-        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
-        code_info.stdin_name = 'aiida.in'
-        job_tmpl.codes_info = [code_info]
+        tmpl_code_info = JobTemplateCodeInfo()
+        tmpl_code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
+        tmpl_code_info.stdin_name = 'aiida.in'
+        job_tmpl.codes_info = [tmpl_code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
         submit_script_text = scheduler.get_submit_script(job_tmpl)
@@ -318,8 +318,8 @@ class TestSubmitScript:
         It should pass in check:
         res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
         """
-        from aiida.common.datastructures import CodeInfo, CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate
+        from aiida.common.datastructures import CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
         scheduler = SlurmScheduler()
 
@@ -330,10 +330,10 @@ class TestSubmitScript:
         )
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
-        code_info = CodeInfo()
-        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
-        code_info.stdin_name = 'aiida.in'
-        job_tmpl.codes_info = [code_info]
+        tmpl_code_info = JobTemplateCodeInfo()
+        tmpl_code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
+        tmpl_code_info.stdin_name = 'aiida.in'
+        job_tmpl.codes_info = [tmpl_code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
         submit_script_text = scheduler.get_submit_script(job_tmpl)
@@ -368,17 +368,17 @@ class TestSubmitScript:
         """
         Test the creation of a submission script with the `rerunnable` option.
         """
-        from aiida.common.datastructures import CodeInfo, CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate
+        from aiida.common.datastructures import CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
         scheduler = SlurmScheduler()
 
         # minimal job template setup
         job_tmpl = JobTemplate()
         job_tmpl.job_resource = scheduler.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
-        code_info = CodeInfo()
-        code_info.cmdline_params = []
-        job_tmpl.codes_info = [code_info]
+        tmpl_code_info = JobTemplateCodeInfo()
+        tmpl_code_info.cmdline_params = []
+        job_tmpl.codes_info = [tmpl_code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
         # Test the `rerunnable` setting

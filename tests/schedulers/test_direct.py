@@ -11,9 +11,9 @@
 """Tests for the ``DirectScheduler`` plugin."""
 import pytest
 
-from aiida.common.datastructures import CodeInfo, CodeRunMode
+from aiida.common.datastructures import CodeRunMode
 from aiida.schedulers import SchedulerError
-from aiida.schedulers.datastructures import JobTemplate
+from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 from aiida.schedulers.plugins.direct import DirectScheduler
 
 
@@ -26,11 +26,11 @@ def scheduler():
 @pytest.fixture
 def template():
     """Return an instance of the ``JobTemplate`` with some required presets."""
-    code_info = CodeInfo()
-    code_info.cmdline_params = []
+    tmpl_code_info = JobTemplateCodeInfo()
+    tmpl_code_info.cmdline_params = []
 
     template = JobTemplate()
-    template.codes_info = [code_info]
+    template.codes_info = [tmpl_code_info]
     template.codes_run_mode = CodeRunMode.SERIAL
 
     return template

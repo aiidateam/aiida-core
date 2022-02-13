@@ -182,7 +182,7 @@ class Scheduler(metaclass=abc.ABCMeta):
         lines = ['# ENVIRONMENT VARIABLES BEGIN ###']
 
         for key, value in template.job_environment.items():
-            lines.append(f'export {key.strip()}={escape_for_bash(value)}')
+            lines.append(f'export {key.strip()}={escape_for_bash(value, template.environment_variables_double_quotes)}')
 
         lines.append('# ENVIRONMENT VARIABLES END ###')
 

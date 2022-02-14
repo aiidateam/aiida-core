@@ -94,14 +94,14 @@ def test_legacy_jobcalc_attrs(perform_migrations: PsqlDostoreMigrator):
     node_model = perform_migrations.get_current_table('db_dbnode')
     with perform_migrations.session() as session:
 
-        node_process = session.query(node_model).get(node_process_id)
+        node_process = session.get(node_model, node_process_id)
         assert node_process.attributes['sealed'] is True
 
-        node_process_active = session.query(node_model).get(node_process_active_id)
+        node_process_active = session.get(node_model, node_process_active_id)
         assert 'sealed' not in node_process_active.attributes
 
-        node_process_legacy = session.query(node_model).get(node_process_legacy_id)
+        node_process_legacy = session.get(node_model, node_process_legacy_id)
         assert node_process_legacy.attributes['sealed'] is True
 
-        node_data = session.query(node_model).get(node_data_id)
+        node_data = session.get(node_model, node_data_id)
         assert 'sealed' not in node_data.attributes

@@ -48,5 +48,5 @@ def test_node_repository(perform_migrations: PsqlDostoreMigrator):
 
     node_model = perform_migrations.get_current_table('db_dbnode')
     with perform_migrations.session() as session:
-        node = session.query(node_model).get(node_id)
+        node = session.get(node_model, node_id)
         assert node.repository_metadata == {}

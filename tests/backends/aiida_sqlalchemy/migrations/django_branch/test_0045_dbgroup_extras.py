@@ -47,5 +47,5 @@ def test_group_extras(perform_migrations: PsqlDostoreMigrator):
 
     group_model = perform_migrations.get_current_table('db_dbgroup')
     with perform_migrations.session() as session:
-        group_user = session.query(group_model).get(group_user_id)
+        group_user = session.get(group_model, group_user_id)
         assert group_user.extras == {}

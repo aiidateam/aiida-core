@@ -22,6 +22,7 @@ from sqlalchemy import cast, func, select
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql import column, table
 
+from aiida.backends.sqlalchemy.migrations.utils import ReflectMigrations
 from aiida.cmdline.utils import echo
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.common.timezone import datetime_to_isoformat
@@ -138,7 +139,14 @@ def upgrade():
     op.drop_column('db_dbsetting', 'dval')
     op.drop_column('db_dbsetting', 'datatype')
 
-    op.drop_index('db_dbsetting_key_1b84beb4', 'db_dbsetting')
+    ReflectMigrations(op).drop_indexes('db_dbsetting', 'key')  # db_dbsetting_key_1b84beb4
+    op.create_index(
+        'db_dbsetting_key_1b84beb4_like',
+        'db_dbsetting',
+        ['key'],
+        postgresql_using='btree',
+        postgresql_ops={'key': 'varchar_pattern_ops'},
+    )
 
 
 def downgrade():

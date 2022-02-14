@@ -17,6 +17,8 @@ Revises: django_0012
 from alembic import op
 import sqlalchemy as sa
 
+from aiida.backends.sqlalchemy.migrations.utils import ReflectMigrations
+
 revision = 'django_0013'
 down_revision = 'django_0012'
 branch_labels = None
@@ -38,8 +40,9 @@ def upgrade():
         type_=sa.VARCHAR(length=254),
     )
     # Note, I imagine the following was actually a mistake, it is re-added in django_0018
-    op.drop_constraint('db_dbuser_email_key', 'db_dbuser')
-    op.drop_index('db_dbuser_email_30150b7e_like', 'db_dbuser')
+    reflect = ReflectMigrations(op)
+    reflect.drop_unique_constraints('db_dbuser', ['email'])  # db_dbuser_email_key
+    reflect.drop_indexes('db_dbuser', 'email', unique=False)  # db_dbuser_email_30150b7e_like
 
 
 def downgrade():

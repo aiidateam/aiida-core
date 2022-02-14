@@ -321,7 +321,6 @@ class PsqlDostoreMigrator:
         """Context manager to return a session for the database."""
         with self._connection_context() as connection:
             session = Session(connection.engine, future=True)
-            session = Session(connection.engine, future=True)
             try:
                 yield session
             except Exception:

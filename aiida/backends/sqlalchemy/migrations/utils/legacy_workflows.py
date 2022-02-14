@@ -59,10 +59,11 @@ def export_workflow_data(connection, profile):
 
     delete_on_close = profile.is_test_profile
 
+    # pylint: disable=protected-access
     data = {
-        'workflow': [dict(row) for row in connection.execute(select('*').select_from(DbWorkflow))],
-        'workflow_data': [dict(row) for row in connection.execute(select('*').select_from(DbWorkflowData))],
-        'workflow_step': [dict(row) for row in connection.execute(select('*').select_from(DbWorkflowStep))],
+        'workflow': [dict(row._mapping) for row in connection.execute(select('*').select_from(DbWorkflow))],
+        'workflow_data': [dict(row._mapping) for row in connection.execute(select('*').select_from(DbWorkflowData))],
+        'workflow_step': [dict(row._mapping) for row in connection.execute(select('*').select_from(DbWorkflowStep))],
     }
 
     with NamedTemporaryFile(

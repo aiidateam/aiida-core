@@ -88,10 +88,10 @@ def test_node_repository(perform_migrations: PsqlDostoreMigrator):  # pylint: di
         assert repository_uuid.val != ''
         assert isinstance(repository_uuid.val, str)
 
-        node_01 = session.query(node_model).get(dbnode_01_id)
-        node_02 = session.query(node_model).get(dbnode_02_id)
-        node_03 = session.query(node_model).get(dbnode_03_id)
-        node_04 = session.query(node_model).get(dbnode_04_id)
+        node_01 = session.get(node_model, dbnode_01_id)
+        node_02 = session.get(node_model, dbnode_02_id)
+        node_03 = session.get(node_model, dbnode_03_id)
+        node_04 = session.get(node_model, dbnode_04_id)
 
         assert node_01.repository_metadata == {
             'o': {

@@ -70,5 +70,5 @@ def test_legacy_jobcalc_attrs(perform_migrations: PsqlDostoreMigrator):
 
     link_model = perform_migrations.get_current_table('db_dblink')
     with perform_migrations.session() as session:
-        link = session.query(link_model).get(link_id)
+        link = session.get(link_model, link_id)
         assert link.label == 'result'

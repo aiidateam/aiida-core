@@ -60,17 +60,17 @@ def test_group_type_string(perform_migrations: PsqlDostoreMigrator):
     with perform_migrations.session() as session:
 
         # 'user' -> 'core'
-        group_user = session.query(group_model).get(group_user_id)
+        group_user = session.get(group_model, group_user_id)
         assert group_user.type_string == 'core'
 
         # 'data.upf' -> 'core.upf'
-        group_data_upf = session.query(group_model).get(group_data_upf_id)
+        group_data_upf = session.get(group_model, group_data_upf_id)
         assert group_data_upf.type_string == 'core.upf'
 
         # 'auto.import' -> 'core.import'
-        group_autoimport = session.query(group_model).get(group_autoimport_id)
+        group_autoimport = session.get(group_model, group_autoimport_id)
         assert group_autoimport.type_string == 'core.import'
 
         # 'auto.run' -> 'core.auto'
-        group_autorun = session.query(group_model).get(group_autorun_id)
+        group_autorun = session.get(group_model, group_autorun_id)
         assert group_autorun.type_string == 'core.auto'

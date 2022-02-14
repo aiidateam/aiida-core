@@ -59,9 +59,9 @@ def test_node_repository(perform_migrations: PsqlDostoreMigrator):
 
     node_model = perform_migrations.get_current_table('db_dbnode')
     with perform_migrations.session() as session:
-        node_calc = session.query(node_model).get(node_calc_id)
+        node_calc = session.get(node_model, node_calc_id)
         assert node_calc.type == 'process.calculation.calcjob.CalcJobNode.'
-        node_data = session.query(node_model).get(node_data_id)
+        node_data = session.get(node_model, node_data_id)
         assert node_data.type == 'data.int.Int.'
-        node_paramdata = session.query(node_model).get(node_paramdata_id)
+        node_paramdata = session.get(node_model, node_paramdata_id)
         assert node_paramdata.type == 'data.dict.Dict.'

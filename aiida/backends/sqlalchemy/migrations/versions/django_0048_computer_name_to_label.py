@@ -16,6 +16,8 @@ Revises: django_0047
 """
 from alembic import op
 
+from aiida.backends.sqlalchemy.migrations.utils import ReflectMigrations
+
 revision = 'django_0048'
 down_revision = 'django_0047'
 branch_labels = None
@@ -24,8 +26,9 @@ depends_on = None
 
 def upgrade():
     """Migrations for the upgrade."""
-    op.drop_constraint('db_dbcomputer_name_key', 'db_dbcomputer')
-    op.drop_index('db_dbcomputer_name_f1800b1a_like', table_name='db_dbcomputer')
+    reflect = ReflectMigrations(op)
+    reflect.drop_unique_constraints('db_dbcomputer', ['name'])  # db_dbcomputer_name_key
+    reflect.drop_indexes('db_dbcomputer', 'name')  # db_dbcomputer_name_f1800b1a_like
     op.alter_column('db_dbcomputer', 'name', new_column_name='label')
     op.create_unique_constraint('db_dbcomputer_label_bc480bab_uniq', 'db_dbcomputer', ['label'])
     op.create_index(

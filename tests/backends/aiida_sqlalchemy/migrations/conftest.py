@@ -157,7 +157,7 @@ def _generate_index_schema(profile: Profile) -> dict:
 
 
 @pytest.fixture
-def schema_generator():
+def reflect_schema():
     """A fixture to generate the schema of AiiDA tables for a given profile."""
 
     def _generate_schema(profile: Profile) -> dict:

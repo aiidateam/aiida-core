@@ -18,6 +18,9 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from aiida.backends.sqlalchemy.migrations.utils import ReflectMigrations
+from aiida.backends.sqlalchemy.migrations.utils.duplicate_uuids import verify_uuid_uniqueness
+
 revision = 'django_0018'
 down_revision = 'django_0017'
 branch_labels = None
@@ -26,9 +29,9 @@ depends_on = None
 
 def upgrade():
     """Migrations for the upgrade."""
-    from aiida.backends.sqlalchemy.migrations.utils.duplicate_uuids import verify_uuid_uniqueness
+    reflect = ReflectMigrations(op)
 
-    op.drop_index('db_dbnode_uuid_62e0bf98_like', table_name='db_dbnode')
+    reflect.drop_indexes('db_dbnode', 'uuid')  # db_dbnode_uuid_62e0bf98_like
     for table, unique in (
         ('db_dbcomment', 'db_dbcomment_uuid_49bac08c_uniq'),
         ('db_dbcomputer', 'db_dbcomputer_uuid_f35defa6_uniq'),

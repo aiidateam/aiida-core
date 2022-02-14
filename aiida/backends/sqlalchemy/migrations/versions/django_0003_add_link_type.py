@@ -17,6 +17,8 @@ Revises: django_0002
 from alembic import op
 import sqlalchemy as sa
 
+from aiida.backends.sqlalchemy.migrations.utils import ReflectMigrations
+
 revision = 'django_0003'
 down_revision = 'django_0002'
 branch_labels = None
@@ -35,8 +37,9 @@ def upgrade():
         postgresql_using='btree',
         postgresql_ops={'type': 'varchar_pattern_ops'},
     )
-    op.drop_constraint('db_dblink_input_id_output_id_fbe99cb5_uniq', 'db_dblink', type_='unique')
-    op.drop_constraint('db_dblink_output_id_label_00bdb9c7_uniq', 'db_dblink', type_='unique')
+    reflect = ReflectMigrations(op)
+    reflect.drop_unique_constraints('db_dblink', ['input_id', 'output_id'])
+    reflect.drop_unique_constraints('db_dblink', ['output_id', 'label'])
 
 
 def downgrade():

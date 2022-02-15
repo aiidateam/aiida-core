@@ -11,7 +11,7 @@
 """Module to manage users for the SQLA backend."""
 
 from sqlalchemy.schema import Column
-from sqlalchemy.sql.schema import Index, UniqueConstraint
+from sqlalchemy.sql.schema import Index
 from sqlalchemy.types import Integer, String
 
 from aiida.backends.sqlalchemy.models.base import Base
@@ -25,19 +25,14 @@ class DbUser(Base):
     __tablename__ = 'db_dbuser'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-    email = Column(String(254), nullable=False)
+    email = Column(String(254), nullable=False, unique=True)
     first_name = Column(String(254), default='', nullable=False)
     last_name = Column(String(254), default='', nullable=False)
     institution = Column(String(254), default='', nullable=False)
 
     __table_args__ = (
-        # index/constraint names mirror django's auto-generated ones
-        UniqueConstraint(email, name='db_dbuser_email_30150b7e_uniq'),
         Index(
-            'db_dbuser_email_30150b7e_like',
-            email,
-            postgresql_using='btree',
-            postgresql_ops={'email': 'varchar_pattern_ops'}
+            'ix_pat_db_dbuser_email', email, postgresql_using='btree', postgresql_ops={'email': 'varchar_pattern_ops'}
         ),
     )
 

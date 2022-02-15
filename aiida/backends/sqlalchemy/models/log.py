@@ -9,12 +9,10 @@
 ###########################################################################
 # pylint: disable=import-error,no-name-in-module
 """Module to manage logs for the SQLA backend."""
-
-from sqlalchemy import ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import backref, relationship
 from sqlalchemy.schema import Column
-from sqlalchemy.sql.schema import Index, UniqueConstraint
+from sqlalchemy.sql.schema import ForeignKey, Index
 from sqlalchemy.types import DateTime, Integer, String, Text
 
 from aiida.backends.sqlalchemy.models.base import Base
@@ -27,12 +25,15 @@ class DbLog(Base):
     __tablename__ = 'db_dblog'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, nullable=False)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, nullable=False, unique=True)
     time = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
-    loggername = Column(String(255), nullable=False, doc='What process recorded the message')
-    levelname = Column(String(50), nullable=False, doc='How critical the message is')
+    loggername = Column(String(255), nullable=False, index=True, doc='What process recorded the message')
+    levelname = Column(String(50), nullable=False, index=True, doc='How critical the message is')
     dbnode_id = Column(
-        Integer, ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED', ondelete='CASCADE'), nullable=False
+        Integer,
+        ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED', ondelete='CASCADE'),
+        nullable=False,
+        index=True
     )
     message = Column(Text(), default='', nullable=False)
     _metadata = Column('metadata', JSONB, default=dict, nullable=False)
@@ -40,19 +41,14 @@ class DbLog(Base):
     dbnode = relationship('DbNode', backref=backref('dblogs', passive_deletes='all', cascade='merge'))
 
     __table_args__ = (
-        # index/constrain names mirror django's auto-generated ones
-        UniqueConstraint(uuid, name='db_dblog_uuid_9cf77df3_uniq'),
-        Index('db_dblog_loggername_00b5ba16', loggername),
-        Index('db_dblog_levelname_ad5dc346', levelname),
-        Index('db_dblog_dbnode_id_da34b732', dbnode_id),
         Index(
-            'db_dblog_loggername_00b5ba16_like',
+            'ix_pat_db_dblog_loggername',
             loggername,
             postgresql_using='btree',
             postgresql_ops={'loggername': 'varchar_pattern_ops'}
         ),
         Index(
-            'db_dblog_levelname_ad5dc346_like',
+            'ix_pat_db_dblog_levelname',
             levelname,
             postgresql_using='btree',
             postgresql_ops={'levelname': 'varchar_pattern_ops'}

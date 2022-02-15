@@ -50,7 +50,12 @@ def upgrade():
     # Transfer data to dbnode_id from objpk
     connection.execute(text("""UPDATE db_dblog SET dbnode_id=objpk"""))
     op.create_foreign_key(
-        None, 'db_dblog', 'db_dbnode', ['dbnode_id'], ['id'], ondelete='CASCADE', initially='DEFERRED', deferrable=True
+        'db_dblog_dbnode_id_fkey',
+        'db_dblog',
+        'db_dbnode', ['dbnode_id'], ['id'],
+        ondelete='CASCADE',
+        initially='DEFERRED',
+        deferrable=True
     )
 
     # Now that all the data have been migrated, make the column not nullable and not blank.

@@ -11,7 +11,6 @@
 """Module to manage node settings for the SQLA backend."""
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.sql.schema import Index
 from sqlalchemy.types import DateTime, Integer, String, Text
 
@@ -24,8 +23,7 @@ class DbSetting(Base):
     __tablename__ = 'db_dbsetting'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-
-    key = Column(String(1024), nullable=False)
+    key = Column(String(1024), nullable=False, unique=True)
     val = Column(JSONB, default={})
 
     # I also add a description field for the variables
@@ -33,13 +31,8 @@ class DbSetting(Base):
     time = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=False)
 
     __table_args__ = (
-        # index/constraint names mirror django's auto-generated ones
-        UniqueConstraint(key, name='db_dbsetting_key_1b84beb4_uniq'),
         Index(
-            'db_dbsetting_key_1b84beb4_like',
-            key,
-            postgresql_using='btree',
-            postgresql_ops={'key': 'varchar_pattern_ops'}
+            'ix_pat_db_dbsetting_key', 'key', postgresql_using='btree', postgresql_ops={'key': 'varchar_pattern_ops'}
         ),
     )
 

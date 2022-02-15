@@ -134,11 +134,3 @@ def test_non_nullable(perform_migrations: PsqlDostoreMigrator):
         assert log.levelname == 'x' * 50
         assert log.message is not None
         assert log.metadata is not None
-
-
-def test_downgrade(perform_migrations: PsqlDostoreMigrator):
-    """Test downgrading the database schema to before the parity."""
-    # migrate up
-    perform_migrations.migrate_up('sqlalchemy@1de112340b18')
-    # migrate down
-    perform_migrations.migrate_down('sqlalchemy@34a831f4286d')

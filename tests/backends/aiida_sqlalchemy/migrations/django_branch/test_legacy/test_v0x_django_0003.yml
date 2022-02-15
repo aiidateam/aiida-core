@@ -333,191 +333,191 @@ constraints:
       - id
   unique:
     db_dbauthinfo:
-      db_dbauthinfo_aiidauser_id_dbcomputer_id_777cdaa8_uniq:
+      uq_db_dbauthinfo_aiidauser_id_dbcomputer_id:
       - aiidauser_id
       - dbcomputer_id
     db_dbcomment:
-      db_dbcomment_uuid_49bac08c_uniq:
+      uq_db_dbcomment_uuid:
       - uuid
     db_dbcomputer:
-      db_dbcomputer_label_bc480bab_uniq:
+      uq_db_dbcomputer_label:
       - label
-      db_dbcomputer_uuid_f35defa6_uniq:
+      uq_db_dbcomputer_uuid:
       - uuid
     db_dbgroup:
-      db_dbgroup_name_type_12656f33_uniq:
+      uq_db_dbgroup_label_type_string:
       - label
       - type_string
-      db_dbgroup_uuid_af896177_uniq:
+      uq_db_dbgroup_uuid:
       - uuid
     db_dbgroup_dbnodes:
-      db_dbgroup_dbnodes_dbgroup_id_dbnode_id_eee23cce_uniq:
+      uq_db_dbgroup_dbnodes_dbgroup_id_dbnode_id:
       - dbgroup_id
       - dbnode_id
     db_dblog:
-      db_dblog_uuid_9cf77df3_uniq:
+      uq_db_dblog_uuid:
       - uuid
     db_dbnode:
-      db_dbnode_uuid_62e0bf98_uniq:
+      uq_db_dbnode_uuid:
       - uuid
     db_dbsetting:
-      db_dbsetting_key_1b84beb4_uniq:
+      uq_db_dbsetting_key:
       - key
     db_dbuser:
-      db_dbuser_email_30150b7e_uniq:
+      uq_db_dbuser_email:
       - email
 foreign_keys:
   db_dbauthinfo:
-    db_dbauthinfo_aiidauser_id_fkey: FOREIGN KEY (aiidauser_id) REFERENCES db_dbuser(id)
-      ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
-    db_dbauthinfo_dbcomputer_id_fkey: FOREIGN KEY (dbcomputer_id) REFERENCES db_dbcomputer(id)
-      ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
+    fk_db_dbauthinfo_aiidauser_id_db_dbuser: FOREIGN KEY (aiidauser_id) REFERENCES
+      db_dbuser(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
+    fk_db_dbauthinfo_dbcomputer_id_db_dbcomputer: FOREIGN KEY (dbcomputer_id) REFERENCES
+      db_dbcomputer(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
   db_dbcomment:
-    db_dbcomment_dbnode_id_fkey: FOREIGN KEY (dbnode_id) REFERENCES db_dbnode(id)
+    fk_db_dbcomment_dbnode_id_db_dbnode: FOREIGN KEY (dbnode_id) REFERENCES db_dbnode(id)
       ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
-    db_dbcomment_user_id_fkey: FOREIGN KEY (user_id) REFERENCES db_dbuser(id) ON DELETE
-      CASCADE DEFERRABLE INITIALLY DEFERRED
+    fk_db_dbcomment_user_id_db_dbuser: FOREIGN KEY (user_id) REFERENCES db_dbuser(id)
+      ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
   db_dbgroup:
-    db_dbgroup_user_id_fkey: FOREIGN KEY (user_id) REFERENCES db_dbuser(id) ON DELETE
-      CASCADE DEFERRABLE INITIALLY DEFERRED
-  db_dbgroup_dbnodes:
-    db_dbgroup_dbnodes_dbgroup_id_fkey: FOREIGN KEY (dbgroup_id) REFERENCES db_dbgroup(id)
-      DEFERRABLE INITIALLY DEFERRED
-    db_dbgroup_dbnodes_dbnode_id_fkey: FOREIGN KEY (dbnode_id) REFERENCES db_dbnode(id)
-      DEFERRABLE INITIALLY DEFERRED
-  db_dblink:
-    db_dblink_input_id_fkey: FOREIGN KEY (input_id) REFERENCES db_dbnode(id) DEFERRABLE
-      INITIALLY DEFERRED
-    db_dblink_output_id_fkey: FOREIGN KEY (output_id) REFERENCES db_dbnode(id) ON
+    db_dbgroup_user_id_db_dbuser: FOREIGN KEY (user_id) REFERENCES db_dbuser(id) ON
       DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
+  db_dbgroup_dbnodes:
+    fk_db_dbgroup_dbnodes_dbgroup_id_db_dbgroup: FOREIGN KEY (dbgroup_id) REFERENCES
+      db_dbgroup(id) DEFERRABLE INITIALLY DEFERRED
+    fk_db_dbgroup_dbnodes_dbnode_id_db_dbnode: FOREIGN KEY (dbnode_id) REFERENCES
+      db_dbnode(id) DEFERRABLE INITIALLY DEFERRED
+  db_dblink:
+    fk_db_dblink_input_id_db_dbnode: FOREIGN KEY (input_id) REFERENCES db_dbnode(id)
+      DEFERRABLE INITIALLY DEFERRED
+    fk_db_dblink_output_id_db_dbnode: FOREIGN KEY (output_id) REFERENCES db_dbnode(id)
+      ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
   db_dblog:
-    db_dblog_dbnode_id_fkey: FOREIGN KEY (dbnode_id) REFERENCES db_dbnode(id) ON DELETE
-      CASCADE DEFERRABLE INITIALLY DEFERRED
+    fk_db_dblog_dbnode_id_db_dbnode: FOREIGN KEY (dbnode_id) REFERENCES db_dbnode(id)
+      ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
   db_dbnode:
-    db_dbnode_dbcomputer_id_fkey: FOREIGN KEY (dbcomputer_id) REFERENCES db_dbcomputer(id)
+    fk_db_dbnode_dbcomputer_id_db_dbcomputer: FOREIGN KEY (dbcomputer_id) REFERENCES
+      db_dbcomputer(id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED
+    fk_db_dbnode_user_id_db_dbuser: FOREIGN KEY (user_id) REFERENCES db_dbuser(id)
       ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED
-    db_dbnode_user_id_fkey: FOREIGN KEY (user_id) REFERENCES db_dbuser(id) ON DELETE
-      RESTRICT DEFERRABLE INITIALLY DEFERRED
 indexes:
   db_dbauthinfo:
-    db_dbauthinfo_aiidauser_id_0684fdfb: CREATE INDEX db_dbauthinfo_aiidauser_id_0684fdfb
-      ON public.db_dbauthinfo USING btree (aiidauser_id)
-    db_dbauthinfo_aiidauser_id_dbcomputer_id_777cdaa8_uniq: CREATE UNIQUE INDEX db_dbauthinfo_aiidauser_id_dbcomputer_id_777cdaa8_uniq
-      ON public.db_dbauthinfo USING btree (aiidauser_id, dbcomputer_id)
-    db_dbauthinfo_dbcomputer_id_424f7ac4: CREATE INDEX db_dbauthinfo_dbcomputer_id_424f7ac4
-      ON public.db_dbauthinfo USING btree (dbcomputer_id)
     db_dbauthinfo_pkey: CREATE UNIQUE INDEX db_dbauthinfo_pkey ON public.db_dbauthinfo
       USING btree (id)
+    ix_db_dbauthinfo_aiidauser_id: CREATE INDEX ix_db_dbauthinfo_aiidauser_id ON public.db_dbauthinfo
+      USING btree (aiidauser_id)
+    ix_db_dbauthinfo_dbcomputer_id: CREATE INDEX ix_db_dbauthinfo_dbcomputer_id ON
+      public.db_dbauthinfo USING btree (dbcomputer_id)
+    uq_db_dbauthinfo_aiidauser_id_dbcomputer_id: CREATE UNIQUE INDEX uq_db_dbauthinfo_aiidauser_id_dbcomputer_id
+      ON public.db_dbauthinfo USING btree (aiidauser_id, dbcomputer_id)
   db_dbcomment:
-    db_dbcomment_dbnode_id_3b812b6b: CREATE INDEX db_dbcomment_dbnode_id_3b812b6b
-      ON public.db_dbcomment USING btree (dbnode_id)
     db_dbcomment_pkey: CREATE UNIQUE INDEX db_dbcomment_pkey ON public.db_dbcomment
       USING btree (id)
-    db_dbcomment_user_id_8ed5e360: CREATE INDEX db_dbcomment_user_id_8ed5e360 ON public.db_dbcomment
+    ix_db_dbcomment_dbnode_id: CREATE INDEX ix_db_dbcomment_dbnode_id ON public.db_dbcomment
+      USING btree (dbnode_id)
+    ix_db_dbcomment_user_id: CREATE INDEX ix_db_dbcomment_user_id ON public.db_dbcomment
       USING btree (user_id)
-    db_dbcomment_uuid_49bac08c_uniq: CREATE UNIQUE INDEX db_dbcomment_uuid_49bac08c_uniq
-      ON public.db_dbcomment USING btree (uuid)
+    uq_db_dbcomment_uuid: CREATE UNIQUE INDEX uq_db_dbcomment_uuid ON public.db_dbcomment
+      USING btree (uuid)
   db_dbcomputer:
-    db_dbcomputer_label_bc480bab_like: CREATE INDEX db_dbcomputer_label_bc480bab_like
-      ON public.db_dbcomputer USING btree (label varchar_pattern_ops)
-    db_dbcomputer_label_bc480bab_uniq: CREATE UNIQUE INDEX db_dbcomputer_label_bc480bab_uniq
-      ON public.db_dbcomputer USING btree (label)
     db_dbcomputer_pkey: CREATE UNIQUE INDEX db_dbcomputer_pkey ON public.db_dbcomputer
       USING btree (id)
-    db_dbcomputer_uuid_f35defa6_uniq: CREATE UNIQUE INDEX db_dbcomputer_uuid_f35defa6_uniq
-      ON public.db_dbcomputer USING btree (uuid)
-  db_dbgroup:
-    db_dbgroup_name_66c75272: CREATE INDEX db_dbgroup_name_66c75272 ON public.db_dbgroup
-      USING btree (label)
-    db_dbgroup_name_66c75272_like: CREATE INDEX db_dbgroup_name_66c75272_like ON public.db_dbgroup
+    ix_pat_db_dbcomputer_label: CREATE INDEX ix_pat_db_dbcomputer_label ON public.db_dbcomputer
       USING btree (label varchar_pattern_ops)
-    db_dbgroup_name_type_12656f33_uniq: CREATE UNIQUE INDEX db_dbgroup_name_type_12656f33_uniq
-      ON public.db_dbgroup USING btree (label, type_string)
+    uq_db_dbcomputer_label: CREATE UNIQUE INDEX uq_db_dbcomputer_label ON public.db_dbcomputer
+      USING btree (label)
+    uq_db_dbcomputer_uuid: CREATE UNIQUE INDEX uq_db_dbcomputer_uuid ON public.db_dbcomputer
+      USING btree (uuid)
+  db_dbgroup:
     db_dbgroup_pkey: CREATE UNIQUE INDEX db_dbgroup_pkey ON public.db_dbgroup USING
       btree (id)
-    db_dbgroup_type_23b2a748: CREATE INDEX db_dbgroup_type_23b2a748 ON public.db_dbgroup
+    ix_db_dbgroup_label: CREATE INDEX ix_db_dbgroup_label ON public.db_dbgroup USING
+      btree (label)
+    ix_db_dbgroup_type_string: CREATE INDEX ix_db_dbgroup_type_string ON public.db_dbgroup
       USING btree (type_string)
-    db_dbgroup_type_23b2a748_like: CREATE INDEX db_dbgroup_type_23b2a748_like ON public.db_dbgroup
-      USING btree (type_string varchar_pattern_ops)
-    db_dbgroup_user_id_100f8a51: CREATE INDEX db_dbgroup_user_id_100f8a51 ON public.db_dbgroup
+    ix_db_dbgroup_user_id: CREATE INDEX ix_db_dbgroup_user_id ON public.db_dbgroup
       USING btree (user_id)
-    db_dbgroup_uuid_af896177_uniq: CREATE UNIQUE INDEX db_dbgroup_uuid_af896177_uniq
-      ON public.db_dbgroup USING btree (uuid)
+    ix_pat_db_dbgroup_label: CREATE INDEX ix_pat_db_dbgroup_label ON public.db_dbgroup
+      USING btree (label varchar_pattern_ops)
+    ix_pat_db_dbgroup_type_string: CREATE INDEX ix_pat_db_dbgroup_type_string ON public.db_dbgroup
+      USING btree (type_string varchar_pattern_ops)
+    uq_db_dbgroup_label_type_string: CREATE UNIQUE INDEX uq_db_dbgroup_label_type_string
+      ON public.db_dbgroup USING btree (label, type_string)
+    uq_db_dbgroup_uuid: CREATE UNIQUE INDEX uq_db_dbgroup_uuid ON public.db_dbgroup
+      USING btree (uuid)
   db_dbgroup_dbnodes:
-    db_dbgroup_dbnodes_dbgroup_id_9d3a0f9d: CREATE INDEX db_dbgroup_dbnodes_dbgroup_id_9d3a0f9d
-      ON public.db_dbgroup_dbnodes USING btree (dbgroup_id)
-    db_dbgroup_dbnodes_dbgroup_id_dbnode_id_eee23cce_uniq: CREATE UNIQUE INDEX db_dbgroup_dbnodes_dbgroup_id_dbnode_id_eee23cce_uniq
-      ON public.db_dbgroup_dbnodes USING btree (dbgroup_id, dbnode_id)
-    db_dbgroup_dbnodes_dbnode_id_118b9439: CREATE INDEX db_dbgroup_dbnodes_dbnode_id_118b9439
-      ON public.db_dbgroup_dbnodes USING btree (dbnode_id)
     db_dbgroup_dbnodes_pkey: CREATE UNIQUE INDEX db_dbgroup_dbnodes_pkey ON public.db_dbgroup_dbnodes
       USING btree (id)
+    ix_db_dbgroup_dbnodes_dbgroup_id: CREATE INDEX ix_db_dbgroup_dbnodes_dbgroup_id
+      ON public.db_dbgroup_dbnodes USING btree (dbgroup_id)
+    ix_db_dbgroup_dbnodes_dbnode_id: CREATE INDEX ix_db_dbgroup_dbnodes_dbnode_id
+      ON public.db_dbgroup_dbnodes USING btree (dbnode_id)
+    uq_db_dbgroup_dbnodes_dbgroup_id_dbnode_id: CREATE UNIQUE INDEX uq_db_dbgroup_dbnodes_dbgroup_id_dbnode_id
+      ON public.db_dbgroup_dbnodes USING btree (dbgroup_id, dbnode_id)
   db_dblink:
-    db_dblink_input_id_9245bd73: CREATE INDEX db_dblink_input_id_9245bd73 ON public.db_dblink
-      USING btree (input_id)
-    db_dblink_label_f1343cfb: CREATE INDEX db_dblink_label_f1343cfb ON public.db_dblink
-      USING btree (label)
-    db_dblink_label_f1343cfb_like: CREATE INDEX db_dblink_label_f1343cfb_like ON public.db_dblink
-      USING btree (label varchar_pattern_ops)
-    db_dblink_output_id_c0167528: CREATE INDEX db_dblink_output_id_c0167528 ON public.db_dblink
-      USING btree (output_id)
     db_dblink_pkey: CREATE UNIQUE INDEX db_dblink_pkey ON public.db_dblink USING btree
       (id)
-    db_dblink_type_229f212b: CREATE INDEX db_dblink_type_229f212b ON public.db_dblink
-      USING btree (type)
-    db_dblink_type_229f212b_like: CREATE INDEX db_dblink_type_229f212b_like ON public.db_dblink
+    ix_db_dblink_input_id: CREATE INDEX ix_db_dblink_input_id ON public.db_dblink
+      USING btree (input_id)
+    ix_db_dblink_label: CREATE INDEX ix_db_dblink_label ON public.db_dblink USING
+      btree (label)
+    ix_db_dblink_output_id: CREATE INDEX ix_db_dblink_output_id ON public.db_dblink
+      USING btree (output_id)
+    ix_db_dblink_type: CREATE INDEX ix_db_dblink_type ON public.db_dblink USING btree
+      (type)
+    ix_pat_db_dblink_label: CREATE INDEX ix_pat_db_dblink_label ON public.db_dblink
+      USING btree (label varchar_pattern_ops)
+    ix_pat_db_dblink_type: CREATE INDEX ix_pat_db_dblink_type ON public.db_dblink
       USING btree (type varchar_pattern_ops)
   db_dblog:
-    db_dblog_dbnode_id_da34b732: CREATE INDEX db_dblog_dbnode_id_da34b732 ON public.db_dblog
-      USING btree (dbnode_id)
-    db_dblog_levelname_ad5dc346: CREATE INDEX db_dblog_levelname_ad5dc346 ON public.db_dblog
-      USING btree (levelname)
-    db_dblog_levelname_ad5dc346_like: CREATE INDEX db_dblog_levelname_ad5dc346_like
-      ON public.db_dblog USING btree (levelname varchar_pattern_ops)
-    db_dblog_loggername_00b5ba16: CREATE INDEX db_dblog_loggername_00b5ba16 ON public.db_dblog
-      USING btree (loggername)
-    db_dblog_loggername_00b5ba16_like: CREATE INDEX db_dblog_loggername_00b5ba16_like
-      ON public.db_dblog USING btree (loggername varchar_pattern_ops)
     db_dblog_pkey: CREATE UNIQUE INDEX db_dblog_pkey ON public.db_dblog USING btree
       (id)
-    db_dblog_uuid_9cf77df3_uniq: CREATE UNIQUE INDEX db_dblog_uuid_9cf77df3_uniq ON
-      public.db_dblog USING btree (uuid)
+    ix_db_dblog_dbnode_id: CREATE INDEX ix_db_dblog_dbnode_id ON public.db_dblog USING
+      btree (dbnode_id)
+    ix_db_dblog_levelname: CREATE INDEX ix_db_dblog_levelname ON public.db_dblog USING
+      btree (levelname)
+    ix_db_dblog_loggername: CREATE INDEX ix_db_dblog_loggername ON public.db_dblog
+      USING btree (loggername)
+    ix_pat_db_dblog_levelname: CREATE INDEX ix_pat_db_dblog_levelname ON public.db_dblog
+      USING btree (levelname varchar_pattern_ops)
+    ix_pat_db_dblog_loggername: CREATE INDEX ix_pat_db_dblog_loggername ON public.db_dblog
+      USING btree (loggername varchar_pattern_ops)
+    uq_db_dblog_uuid: CREATE UNIQUE INDEX uq_db_dblog_uuid ON public.db_dblog USING
+      btree (uuid)
   db_dbnode:
-    db_dbnode_ctime_71626ef5: CREATE INDEX db_dbnode_ctime_71626ef5 ON public.db_dbnode
-      USING btree (ctime)
-    db_dbnode_dbcomputer_id_315372a3: CREATE INDEX db_dbnode_dbcomputer_id_315372a3
-      ON public.db_dbnode USING btree (dbcomputer_id)
-    db_dbnode_label_6469539e: CREATE INDEX db_dbnode_label_6469539e ON public.db_dbnode
-      USING btree (label)
-    db_dbnode_label_6469539e_like: CREATE INDEX db_dbnode_label_6469539e_like ON public.db_dbnode
-      USING btree (label varchar_pattern_ops)
-    db_dbnode_mtime_0554ea3d: CREATE INDEX db_dbnode_mtime_0554ea3d ON public.db_dbnode
-      USING btree (mtime)
     db_dbnode_pkey: CREATE UNIQUE INDEX db_dbnode_pkey ON public.db_dbnode USING btree
       (id)
-    db_dbnode_process_type_df7298d0: CREATE INDEX db_dbnode_process_type_df7298d0
-      ON public.db_dbnode USING btree (process_type)
-    db_dbnode_process_type_df7298d0_like: CREATE INDEX db_dbnode_process_type_df7298d0_like
-      ON public.db_dbnode USING btree (process_type varchar_pattern_ops)
-    db_dbnode_type_a8ce9753: CREATE INDEX db_dbnode_type_a8ce9753 ON public.db_dbnode
+    ix_db_dbnode_ctime: CREATE INDEX ix_db_dbnode_ctime ON public.db_dbnode USING
+      btree (ctime)
+    ix_db_dbnode_dbcomputer_id: CREATE INDEX ix_db_dbnode_dbcomputer_id ON public.db_dbnode
+      USING btree (dbcomputer_id)
+    ix_db_dbnode_label: CREATE INDEX ix_db_dbnode_label ON public.db_dbnode USING
+      btree (label)
+    ix_db_dbnode_mtime: CREATE INDEX ix_db_dbnode_mtime ON public.db_dbnode USING
+      btree (mtime)
+    ix_db_dbnode_node_type: CREATE INDEX ix_db_dbnode_node_type ON public.db_dbnode
       USING btree (node_type)
-    db_dbnode_type_a8ce9753_like: CREATE INDEX db_dbnode_type_a8ce9753_like ON public.db_dbnode
+    ix_db_dbnode_process_type: CREATE INDEX ix_db_dbnode_process_type ON public.db_dbnode
+      USING btree (process_type)
+    ix_db_dbnode_user_id: CREATE INDEX ix_db_dbnode_user_id ON public.db_dbnode USING
+      btree (user_id)
+    ix_pat_db_dbnode_label: CREATE INDEX ix_pat_db_dbnode_label ON public.db_dbnode
+      USING btree (label varchar_pattern_ops)
+    ix_pat_db_dbnode_node_type: CREATE INDEX ix_pat_db_dbnode_node_type ON public.db_dbnode
       USING btree (node_type varchar_pattern_ops)
-    db_dbnode_user_id_12e7aeaf: CREATE INDEX db_dbnode_user_id_12e7aeaf ON public.db_dbnode
-      USING btree (user_id)
-    db_dbnode_uuid_62e0bf98_uniq: CREATE UNIQUE INDEX db_dbnode_uuid_62e0bf98_uniq
-      ON public.db_dbnode USING btree (uuid)
+    ix_pat_db_dbnode_process_type: CREATE INDEX ix_pat_db_dbnode_process_type ON public.db_dbnode
+      USING btree (process_type varchar_pattern_ops)
+    uq_db_dbnode_uuid: CREATE UNIQUE INDEX uq_db_dbnode_uuid ON public.db_dbnode USING
+      btree (uuid)
   db_dbsetting:
-    db_dbsetting_key_1b84beb4_like: CREATE INDEX db_dbsetting_key_1b84beb4_like ON
-      public.db_dbsetting USING btree (key varchar_pattern_ops)
-    db_dbsetting_key_1b84beb4_uniq: CREATE UNIQUE INDEX db_dbsetting_key_1b84beb4_uniq
-      ON public.db_dbsetting USING btree (key)
     db_dbsetting_pkey: CREATE UNIQUE INDEX db_dbsetting_pkey ON public.db_dbsetting
       USING btree (id)
+    ix_pat_db_dbsetting_key: CREATE INDEX ix_pat_db_dbsetting_key ON public.db_dbsetting
+      USING btree (key varchar_pattern_ops)
+    uq_db_dbsetting_key: CREATE UNIQUE INDEX uq_db_dbsetting_key ON public.db_dbsetting
+      USING btree (key)
   db_dbuser:
-    db_dbuser_email_30150b7e_like: CREATE INDEX db_dbuser_email_30150b7e_like ON public.db_dbuser
-      USING btree (email varchar_pattern_ops)
-    db_dbuser_email_30150b7e_uniq: CREATE UNIQUE INDEX db_dbuser_email_30150b7e_uniq
-      ON public.db_dbuser USING btree (email)
     db_dbuser_pkey: CREATE UNIQUE INDEX db_dbuser_pkey ON public.db_dbuser USING btree
       (id)
+    ix_pat_db_dbuser_email: CREATE INDEX ix_pat_db_dbuser_email ON public.db_dbuser
+      USING btree (email varchar_pattern_ops)
+    uq_db_dbuser_email: CREATE UNIQUE INDEX uq_db_dbuser_email ON public.db_dbuser
+      USING btree (email)

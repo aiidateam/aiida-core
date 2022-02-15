@@ -11,7 +11,7 @@
 """Module to manage computers for the SQLA backend."""
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.schema import Column
-from sqlalchemy.sql.schema import Index, UniqueConstraint
+from sqlalchemy.sql.schema import Index
 from sqlalchemy.types import Integer, String, Text
 
 from aiida.backends.sqlalchemy.models.base import Base
@@ -32,8 +32,8 @@ class DbComputer(Base):
     __tablename__ = 'db_dbcomputer'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, nullable=False)
-    label = Column(String(255), nullable=False)
+    uuid = Column(UUID(as_uuid=True), default=get_new_uuid, nullable=False, unique=True)
+    label = Column(String(255), nullable=False, unique=True)
     hostname = Column(String(255), default='', nullable=False)
     description = Column(Text, default='', nullable=False)
     scheduler_type = Column(String(255), default='', nullable=False)
@@ -41,11 +41,8 @@ class DbComputer(Base):
     _metadata = Column('metadata', JSONB, default=dict, nullable=False)
 
     __table_args__ = (
-        # index names mirror django's auto-generated ones
-        UniqueConstraint(uuid, name='db_dbcomputer_uuid_f35defa6_uniq'),
-        UniqueConstraint(label, name='db_dbcomputer_label_bc480bab_uniq'),
         Index(
-            'db_dbcomputer_label_bc480bab_like',
+            'ix_pat_db_dbcomputer_label',
             label,
             postgresql_using='btree',
             postgresql_ops={'label': 'varchar_pattern_ops'}

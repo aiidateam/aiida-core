@@ -33,6 +33,15 @@ class ReflectMigrations:
         # note, we only want to instatiate the inspector once, since it caches reflection calls to the database
         self.inspector = inspect(op.get_bind())
 
+    def reset_cache(self) -> None:
+        """Reset the inspector cache."""
+        self.inspector = inspect(self.op.get_bind())
+
+    def drop_all_unique_constraints(self, table_name: str) -> None:
+        """Drop all unique constraints set for this table."""
+        for constraint in self.inspector.get_unique_constraints(table_name):
+            self.op.drop_constraint(constraint['name'], table_name, type_='unique')
+
     def drop_unique_constraints(self, table_name: str, column_names: list[str]) -> None:
         """Drop all unique constraints set for this column name group."""
         column_set = set(column_names)
@@ -40,22 +49,25 @@ class ReflectMigrations:
             if set(constraint['column_names']) == column_set:
                 self.op.drop_constraint(constraint['name'], table_name, type_='unique')
 
-    def drop_all_unique_constraints(self, table_name: str) -> None:
-        """Drop all unique constraints set for this table."""
-        for constraint in self.inspector.get_unique_constraints(table_name):
-            self.op.drop_constraint(constraint['name'], table_name, type_='unique')
-
-    def drop_all_indexes(self, table_name: str) -> None:
+    def drop_all_indexes(self, table_name: str, unique: bool = False) -> None:
         """Drop all non-unique indexes set for this table."""
         for index in self.inspector.get_indexes(table_name):
-            if not index['unique']:
+            if index['unique'] is unique:
                 self.op.drop_index(index['name'], table_name)
 
-    def drop_indexes(self, table_name: str, column: str, unique: bool = False) -> None:
+    def drop_indexes(self, table_name: str, column: str | list[str], unique: bool = False) -> None:
         """Drop all indexes set for this column name group."""
+        if isinstance(column, str):
+            column = [column]
+        column_set = set(column)
         for index in self.inspector.get_indexes(table_name):
-            if (index['unique'] is unique) and index['column_names'] == [column]:
+            if (index['unique'] is unique) and (set(index['column_names']) == column_set):
                 self.op.drop_index(index['name'], table_name)
+
+    def drop_all_foreign_keys(self, table_name: str) -> None:
+        """Drop all foreign keys set for this table."""
+        for constraint in self.inspector.get_foreign_keys(table_name):
+            self.op.drop_constraint(constraint['name'], table_name, type_='foreignkey')
 
     def drop_foreign_keys(self, table_name: str, columns: list[str], ref_tbl: str, ref_columns: list[str]) -> None:
         """Drop all foreign keys set for this column name group and referring column set."""

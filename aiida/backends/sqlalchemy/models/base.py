@@ -9,7 +9,6 @@
 ###########################################################################
 # pylint: disable=import-error,no-name-in-module
 """Base SQLAlchemy models."""
-
 from sqlalchemy import MetaData
 from sqlalchemy.orm import declarative_base
 
@@ -18,7 +17,19 @@ class Model:
     """Base ORM model."""
 
 
-Base = declarative_base(cls=Model, name='Model')  # pylint: disable=invalid-name
+# see https://alembic.sqlalchemy.org/en/latest/naming.html
+naming_convention = (
+    ('pk', '%(table_name)s_pkey'),  # this is identical to the default PSQL convention
+    ('ix', 'ix_%(table_name)s_%(column_0_N_label)s'),
+    # note, indexes using varchar_pattern_ops should be named: 'ix_pat_%(table_name)s_%(column_0_N_label)s'
+    ('uq', 'uq_%(table_name)s_%(column_0_N_name)s'),
+    ('ck', 'ck_%(table_name)s_%(constraint_name)s'),
+    ('fk', 'fk_%(table_name)s_%(column_0_N_name)s_%(referred_table_name)s'),
+    # note, ideally we may also append with '_%(referred_column_0_N_name)s', but this causes ORM construction errors:
+    # https://github.com/sqlalchemy/sqlalchemy/issues/5350
+)
+
+Base = declarative_base(cls=Model, name='Model', metadata=MetaData(naming_convention=dict(naming_convention)))  # pylint: disable=invalid-name
 
 
 def get_orm_metadata() -> MetaData:

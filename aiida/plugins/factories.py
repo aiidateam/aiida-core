@@ -78,10 +78,11 @@ def CalculationFactory(entry_point_name: str, load: bool = True) -> Optional[Uni
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
     valid_classes = (CalcJob, calcfunction)
 
-    if (
-        isinstance(entry_point, EntryPoint) or (isclass(entry_point) and issubclass(entry_point, CalcJob)) or
-        (is_process_function(entry_point) and entry_point.node_class is CalcFunctionNode)
-    ):
+    if not load:
+        return entry_point
+
+    if ((isclass(entry_point) and issubclass(entry_point, CalcJob)) or
+        (is_process_function(entry_point) and entry_point.node_class is CalcFunctionNode)):  # type: ignore[union-attr]
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
@@ -99,6 +100,9 @@ def CalcJobImporterFactory(entry_point_name: str, load: bool = True) -> Optional
     entry_point_group = 'aiida.calculations.importers'
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
     valid_classes = (CalcJobImporter,)
+
+    if not load:
+        return entry_point
 
     if isclass(entry_point) and issubclass(entry_point, CalcJobImporter):
         return entry_point  # type: ignore[return-value]
@@ -120,7 +124,10 @@ def DataFactory(entry_point_name: str, load: bool = True) -> Optional[Union[Entr
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
     valid_classes = (Data,)
 
-    if isinstance(entry_point, EntryPoint) or (isclass(entry_point) and issubclass(entry_point, Data)):
+    if not load:
+        return entry_point
+
+    if isclass(entry_point) and issubclass(entry_point, Data):
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
@@ -140,7 +147,10 @@ def DbImporterFactory(entry_point_name: str, load: bool = True) -> Optional[Unio
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
     valid_classes = (DbImporter,)
 
-    if isinstance(entry_point, EntryPoint) or (isclass(entry_point) and issubclass(entry_point, DbImporter)):
+    if not load:
+        return entry_point
+
+    if isclass(entry_point) and issubclass(entry_point, DbImporter):
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
@@ -160,7 +170,10 @@ def GroupFactory(entry_point_name: str, load: bool = True) -> Optional[Union[Ent
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
     valid_classes = (Group,)
 
-    if isinstance(entry_point, EntryPoint) or (isclass(entry_point) and issubclass(entry_point, Group)):
+    if not load:
+        return entry_point
+
+    if isclass(entry_point) and issubclass(entry_point, Group):
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
@@ -180,7 +193,10 @@ def OrbitalFactory(entry_point_name: str, load: bool = True) -> Optional[Union[E
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
     valid_classes = (Orbital,)
 
-    if isinstance(entry_point, EntryPoint) or (isclass(entry_point) and issubclass(entry_point, Orbital)):
+    if not load:
+        return entry_point
+
+    if isclass(entry_point) and issubclass(entry_point, Orbital):
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
@@ -200,7 +216,10 @@ def ParserFactory(entry_point_name: str, load: bool = True) -> Optional[Union[En
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
     valid_classes = (Parser,)
 
-    if isinstance(entry_point, EntryPoint) or (isclass(entry_point) and issubclass(entry_point, Parser)):
+    if not load:
+        return entry_point
+
+    if isclass(entry_point) and issubclass(entry_point, Parser):
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
@@ -220,7 +239,10 @@ def SchedulerFactory(entry_point_name: str, load: bool = True) -> Optional[Union
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
     valid_classes = (Scheduler,)
 
-    if isinstance(entry_point, EntryPoint) or (isclass(entry_point) and issubclass(entry_point, Scheduler)):
+    if not load:
+        return entry_point
+
+    if isclass(entry_point) and issubclass(entry_point, Scheduler):
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
@@ -239,7 +261,10 @@ def TransportFactory(entry_point_name: str, load: bool = True) -> Optional[Union
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
     valid_classes = (Transport,)
 
-    if isinstance(entry_point, EntryPoint) or (isclass(entry_point) and issubclass(entry_point, Transport)):
+    if not load:
+        return entry_point
+
+    if isclass(entry_point) and issubclass(entry_point, Transport):
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
@@ -260,10 +285,11 @@ def WorkflowFactory(entry_point_name: str, load: bool = True) -> Optional[Union[
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
     valid_classes = (WorkChain, workfunction)
 
-    if (
-        isinstance(entry_point, EntryPoint) or (isclass(entry_point) and issubclass(entry_point, WorkChain)) or
-        (is_process_function(entry_point) and entry_point.node_class is WorkFunctionNode)
-    ):
+    if not load:
+        return entry_point
+
+    if ((isclass(entry_point) and issubclass(entry_point, WorkChain)) or
+        (is_process_function(entry_point) and entry_point.node_class is WorkFunctionNode)):  # type: ignore[union-attr]
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)

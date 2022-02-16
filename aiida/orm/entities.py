@@ -12,18 +12,13 @@ import abc
 import copy
 from enum import Enum
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Dict, Generic, List, Optional, Type, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Dict, Generic, List, Optional, Protocol, Type, TypeVar, cast
 
 from plumpy.base.utils import call_with_super_check, super_check
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
 from aiida.manage import get_manager
-
-try:
-    from typing import Protocol
-except ImportError:  # Python <3.8 doesn't have `Protocol` in the stdlib
-    from typing_extensions import Protocol  # type: ignore[misc]
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import Backend, BackendEntity

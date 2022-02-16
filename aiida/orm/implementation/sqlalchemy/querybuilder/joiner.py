@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """A module containing the logic for creating joined queries."""
-from typing import Any, Callable, Dict, NamedTuple, Optional, Type
+from typing import Any, Callable, Dict, NamedTuple, Optional, Protocol, Type
 
 from sqlalchemy import and_, join, select
 from sqlalchemy.dialects.postgresql import array
@@ -21,11 +21,6 @@ from sqlalchemy.types import Integer
 
 from aiida.backends.sqlalchemy.models.base import Model
 from aiida.common.links import LinkType
-
-try:
-    from typing import Protocol
-except ImportError:  # Python <3.8 doesn't have `Protocol` in the stdlib
-    from typing_extensions import Protocol  # type: ignore[misc]
 
 
 class _EntityMapper(Protocol):

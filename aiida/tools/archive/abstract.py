@@ -10,13 +10,7 @@
 """Abstraction for an archive file format."""
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Optional, Type, TypeVar, Union, overload
-
-try:
-    from typing import Literal  # pylint: disable=ungrouped-imports
-except ImportError:
-    # Python <3.8 backport
-    from typing_extensions import Literal  # type: ignore
+from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Literal, Optional, Type, TypeVar, Union, overload
 
 if TYPE_CHECKING:
     from aiida.orm import QueryBuilder

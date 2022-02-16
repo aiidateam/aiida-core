@@ -42,9 +42,9 @@ dependencies = [
         "pamqp~=2.3",
         "paramiko~=2.7,>=2.7.2",
         "plumpy~=0.20.0",
-        "pgsu~=0.2.0",
+        "pgsu~=0.2.1",
         "psutil~=5.6",
-        "psycopg2-binary~=2.8.3",
+        "psycopg2-binary~=2.8",
         "python-dateutil~=2.8",
         "pytz~=2021.1",
         "pyyaml~=5.4",
@@ -319,6 +319,7 @@ filterwarnings = [
     "default::ResourceWarning",
 ]
 markers = [
+    "nightly: long running tests that should rarely be affected and so only run nightly",
     "requires_rmq: requires a connection (on port 5672) to RabbitMQ",
     "sphinx: set parameters for the sphinx `app` fixture"
 ]

@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the migration engine (Alembic) as well as for the AiiDA migrations for SQLAlchemy."""
+from pathlib import Path
 from uuid import uuid4
 
 from pgtest.pgtest import PGTest
@@ -17,6 +18,34 @@ from sqlalchemy import text
 from aiida.backends.sqlalchemy.migrator import PsqlDostoreMigrator
 from aiida.backends.sqlalchemy.utils import create_sqlalchemy_engine
 from aiida.manage.configuration import Profile
+
+
+def pytest_collection_modifyitems(config, items):  # pylint: disable=unused-argument
+    """Dynamically add the ``nightly`` marker to all tests in ``django_branch`` and ``sqlalchemy_branch`` modules."""
+    filepath_django = Path(__file__).parent / 'django_branch'
+    filepath_sqla = Path(__file__).parent / 'sqlalchemy_branch'
+
+    def is_relative_to(path: Path, other: Path) -> bool:
+        """Return whether ``path`` is relative to ``other``.
+
+        .. note:: If Python 3.8 is dropped, this function can be replaced with the built-in method
+            :meth:`pathlib.PurePath.is_relative_to`.
+
+        :return: True if ``path`` is relative to ``other``, False otherwise.
+        """
+        try:
+            path.relative_to(other)
+        except ValueError:
+            return False
+        else:
+            return True
+
+    for item in items:
+
+        filepath_item = Path(item.fspath)
+
+        if is_relative_to(filepath_item, filepath_django) or is_relative_to(filepath_item, filepath_sqla):
+            item.add_marker(getattr(pytest.mark, 'nightly'))
 
 
 @pytest.fixture(scope='session')
@@ -35,10 +64,15 @@ def uninitialised_profile(empty_pg_cluster: PGTest, tmp_path):  # pylint: disabl
 
     database_name = f'test_{uuid4().hex}'
 
-    with psycopg2.connect(**empty_pg_cluster.dsn) as conn:
+    conn = None
+    try:
+        conn = psycopg2.connect(**empty_pg_cluster.dsn)
         conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         with conn.cursor() as cursor:
             cursor.execute(f"CREATE DATABASE {database_name} ENCODING 'utf8';")
+    finally:
+        if conn:
+            conn.close()
 
     yield Profile(
         'test_migrate', {
@@ -61,7 +95,9 @@ def uninitialised_profile(empty_pg_cluster: PGTest, tmp_path):  # pylint: disabl
         }
     )
 
-    with psycopg2.connect(**empty_pg_cluster.dsn) as conn:
+    conn = None
+    try:
+        conn = psycopg2.connect(**empty_pg_cluster.dsn)
         conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         with conn.cursor() as cursor:
             # note after postgresql 13 you can use 'DROP DATABASE name WITH (FORCE)'
@@ -69,6 +105,9 @@ def uninitialised_profile(empty_pg_cluster: PGTest, tmp_path):  # pylint: disabl
             # see: https://dba.stackexchange.com/questions/11893/force-drop-db-while-others-may-be-connected
             cursor.execute(f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{database_name}';")
             cursor.execute(f'DROP DATABASE {database_name};')
+    finally:
+        if conn:
+            conn.close()
 
 
 @pytest.fixture()

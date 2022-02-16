@@ -25,7 +25,7 @@ depends_on = None
 
 
 def upgrade():
-    """Upgrade: Add the extras column to the 'db_dbgroup' table"""
+    """Migrations for the upgrade."""
     # We add the column with a `server_default` because otherwise the migration would fail since existing rows will not
     # have a value and violate the not-nullable clause. However, the model doesn't use a server default but a default
     # on the ORM level, so we remove the server default from the column directly after.
@@ -36,5 +36,5 @@ def upgrade():
 
 
 def downgrade():
-    """Downgrade: Drop the extras column from the 'db_dbgroup' table"""
+    """Migrations for the downgrade."""
     op.drop_column('db_dbgroup', 'extras')

@@ -31,3 +31,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
+    raise NotImplementedError('Migration of the file repository is not reversible.')

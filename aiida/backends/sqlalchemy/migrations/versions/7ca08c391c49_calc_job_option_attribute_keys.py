@@ -95,4 +95,5 @@ def upgrade():
 
 
 def downgrade():
-    pass
+    """Migrations for the downgrade."""
+    raise NotImplementedError('Downgrade of 7ca08c391c49.')

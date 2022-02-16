@@ -112,3 +112,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
+    raise NotImplementedError('Downgrade of 26d561acd560.')

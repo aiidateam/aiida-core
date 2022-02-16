@@ -31,4 +31,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    op.drop_constraint('db_dblog_uuid_9cf77df3_uniq', 'db_dblog', type_='unique')
+    raise NotImplementedError('Downgrade of django_0024.')

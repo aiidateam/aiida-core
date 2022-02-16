@@ -85,48 +85,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    op.execute(
-        r"""
-        UPDATE db_dbattribute AS attribute
-        SET key =  regexp_replace(attribute.key, '^environment_variables', 'custom_environment_variables')
-        FROM db_dbnode AS node
-        WHERE
-            (
-                attribute.key = 'environment_variables' OR
-                attribute.key LIKE 'environment\_variables.%'
-            ) AND
-            node.type = 'node.process.calculation.calcjob.CalcJobNode.' AND
-            node.id = attribute.dbnode_id;
-        -- environment_variables -> custom_environment_variables
-
-        UPDATE db_dbattribute AS attribute
-        SET key =  regexp_replace(attribute.key, '^resources', 'jobresource_params')
-        FROM db_dbnode AS node
-        WHERE
-            (
-                attribute.key = 'resources' OR
-                attribute.key LIKE 'resources.%'
-            ) AND
-            node.type = 'node.process.calculation.calcjob.CalcJobNode.' AND
-            node.id = attribute.dbnode_id;
-        -- resources -> jobresource_params
-
-        UPDATE db_dbattribute AS attribute
-        SET key =  regexp_replace(attribute.key, '^process_label', '_process_label')
-        FROM db_dbnode AS node
-        WHERE
-            attribute.key = 'process_label' AND
-            node.type LIKE 'node.process.%' AND
-            node.id = attribute.dbnode_id;
-        -- process_label -> _process_label
-
-        UPDATE db_dbattribute AS attribute
-        SET key =  regexp_replace(attribute.key, '^parser_name', 'parser')
-        FROM db_dbnode AS node
-        WHERE
-            attribute.key = 'parser_name' AND
-            node.type = 'node.process.calculation.calcjob.CalcJobNode.' AND
-            node.id = attribute.dbnode_id;
-        -- parser_name -> parser
-        """
-    )
+    raise NotImplementedError('Downgrade of django_0023.')

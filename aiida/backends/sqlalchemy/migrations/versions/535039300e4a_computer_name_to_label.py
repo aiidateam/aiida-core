@@ -25,6 +25,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    op.drop_constraint('db_dbcomputer_label_key', 'db_dbcomputer')
-    op.alter_column('db_dbcomputer', 'label', new_column_name='name')  # pylint: disable=no-member
-    op.create_unique_constraint('db_dbcomputer_name_key', 'db_dbcomputer', ['name'])
+    raise NotImplementedError('Downgrade of 535039300e4a.')

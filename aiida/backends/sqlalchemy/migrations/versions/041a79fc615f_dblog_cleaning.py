@@ -73,35 +73,4 @@ def downgrade():
     """
     Downgrade function to the previous schema.
     """
-    # Create an empty column objname (the data is permanently lost)
-    op.add_column('db_dblog', sa.Column('objname', sa.VARCHAR(length=255), autoincrement=False, nullable=True))
-    op.create_index('ix_db_dblog_objname', 'db_dblog', ['objname'])
-
-    # Creating a column objpk -
-    op.add_column('db_dblog', sa.Column('objpk', sa.INTEGER(), autoincrement=False, nullable=True))
-
-    # Copy the data back to objpk from dbnode_id
-    op.execute(text("""UPDATE db_dblog SET objpk=dbnode_id"""))
-
-    # Removing the column dbnode_id
-    op.drop_column('db_dblog', 'dbnode_id')
-
-    # Populate objname with correct values
-    op.execute(
-        text("""UPDATE db_dblog SET objname=db_dbnode.type
-    FROM db_dbnode WHERE db_dbnode.id = db_dblog.objpk""")
-    )
-
-    # Enrich metadata with objpk and objname if these keys don't exist
-    op.execute(
-        text(
-            """UPDATE db_dblog SET metadata = jsonb_set(metadata, '{"objpk"}', to_jsonb(objpk))
-    WHERE NOT (metadata ?| '{"objpk"}') """
-        )
-    )
-    op.execute(
-        text(
-            """UPDATE db_dblog SET metadata = jsonb_set(metadata, '{"objname"}', to_jsonb(objname))
-    WHERE NOT (metadata ?| '{"objname"}') """
-        )
-    )
+    raise NotImplementedError('Downgrade of 041a79fc615f.')

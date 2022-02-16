@@ -25,7 +25,7 @@ depends_on = None
 
 
 def upgrade():
-    """The upgrade migration actions."""
+    """Migrations for the upgrade."""
     from aiida.backends.sqlalchemy.migrations.utils import provenance_redesign
 
     # Migrate calculation nodes by inferring the process type from the type string
@@ -109,32 +109,5 @@ def upgrade():
 
 
 def downgrade():
-    """The downgrade migration actions."""
-    op.execute(
-        """
-        UPDATE db_dbnode SET type = 'calculation.job.JobCalculation.'
-        WHERE type = 'node.process.calculation.calcjob.CalcJobNode.';
-
-        UPDATE db_dbnode SET type = 'calculatison.inline.InlineCalculation.'
-        WHERE type = 'node.process.calculation.calcfunction.CalcFunctionNode.';
-
-        UPDATE db_dbnode SET type = 'calculation.function.FunctionCalculation.'
-        WHERE type = 'node.process.workflow.workfunction.WorkFunctionNode.';
-
-        UPDATE db_dbnode SET type = 'calculation.work.WorkCalculation.'
-        WHERE type = 'node.process.workflow.workchain.WorkChainNode.';
-
-
-        UPDATE db_dblink SET type = 'inputlink'
-        WHERE type = 'input_call' OR type = 'input_work';
-
-        UPDATE db_dblink SET type = 'calllink'
-        WHERE type = 'call_call' OR type = 'call_work';
-
-        UPDATE db_dblink SET type = 'createlink'
-        WHERE type = 'create';
-
-        UPDATE db_dblink SET type = 'returnlink'
-        WHERE type = 'return';
-        """
-    )
+    """Migrations for the downgrade."""
+    raise NotImplementedError('Downgrade of 239cea6d2452.')

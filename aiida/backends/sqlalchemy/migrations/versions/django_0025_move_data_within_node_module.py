@@ -42,13 +42,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    conn = op.get_bind()
-
-    statement = sa.text(
-        r"""
-        UPDATE db_dbnode
-        SET type = regexp_replace(type, '^node.data.', 'data.')
-        WHERE type LIKE 'node.data.%'
-    """
-    )
-    conn.execute(statement)
+    raise NotImplementedError('Downgrade of django_0025.')

@@ -16,8 +16,6 @@ Create Date: 2018-11-14 08:37:13.719646
 
 """
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = '162b99bca4a2'
@@ -27,19 +25,10 @@ depends_on = None
 
 
 def upgrade():
+    """Migrations for the upgrade."""
     op.drop_table('db_dbcalcstate')
 
 
 def downgrade():
-    op.create_table(
-        'db_dbcalcstate', sa.Column('id', sa.INTEGER(), nullable=False),
-        sa.Column('dbnode_id', sa.INTEGER(), autoincrement=False, nullable=True),
-        sa.Column('state', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
-        sa.Column('time', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True),
-        sa.ForeignKeyConstraint(['dbnode_id'], ['db_dbnode.id'],
-                                name='db_dbcalcstate_dbnode_id_fkey',
-                                ondelete='CASCADE',
-                                initially='DEFERRED',
-                                deferrable=True), sa.PrimaryKeyConstraint('id', name='db_dbcalcstate_pkey'),
-        sa.UniqueConstraint('dbnode_id', 'state', name='db_dbcalcstate_dbnode_id_state_key')
-    )
+    """Migrations for the downgrade."""
+    raise NotImplementedError('Downgrade of 162b99bca4a2.')

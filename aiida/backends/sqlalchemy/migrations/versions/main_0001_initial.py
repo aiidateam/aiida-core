@@ -299,4 +299,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    raise NotImplementedError
+    raise NotImplementedError('Downgrade of main_0001.')

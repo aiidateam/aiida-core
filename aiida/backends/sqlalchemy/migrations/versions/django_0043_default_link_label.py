@@ -32,9 +32,6 @@ depends_on = None
 def upgrade():
     """Migrations for the upgrade."""
     conn = op.get_bind()
-
-    # The old process functions used to use `_return` as the default link label, however, since labels that start or end
-    # with and underscore are illegal.
     statement = sa.text("""
         UPDATE db_dblink SET label='result' WHERE label = '_return';
     """)
@@ -43,3 +40,7 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
+    statement = sa.text("""
+        UPDATE db_dblink SET label='_result' WHERE label = 'return';
+    """)
+    op.get_bind().execute(statement)

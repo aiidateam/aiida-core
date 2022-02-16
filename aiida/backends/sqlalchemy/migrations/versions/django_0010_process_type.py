@@ -38,6 +38,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    op.drop_index('db_dbnode_process_type_df7298d0_like', table_name='db_dbnode')
-    op.drop_index('db_dbnode_process_type_df7298d0', table_name='db_dbnode')
-    op.drop_column('db_dbnode', 'process_type')
+    raise NotImplementedError('Downgrade of django_0010.')

@@ -168,4 +168,4 @@ def upgrade():  # pylint: disable=too-many-statements
 
 def downgrade():
     """Downgrade database schema."""
-    # No need to convert the values back to null
+    raise NotImplementedError('Downgrade of 1de112340b16.')

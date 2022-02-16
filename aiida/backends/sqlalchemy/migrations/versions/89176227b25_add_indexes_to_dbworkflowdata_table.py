@@ -25,10 +25,11 @@ depends_on = None
 
 
 def upgrade():
+    """Migrations for the upgrade."""
     op.create_index('ix_db_dbworkflowdata_aiida_obj_id', 'db_dbworkflowdata', ['aiida_obj_id'])
     op.create_index('ix_db_dbworkflowdata_parent_id', 'db_dbworkflowdata', ['parent_id'])
 
 
 def downgrade():
-    op.drop_index('ix_db_dbworkflowdata_aiida_obj_id', 'db_dbworkflowdata')
-    op.drop_index('ix_db_dbworkflowdata_parent_id', 'db_dbworkflowdata')
+    """Migrations for the downgrade."""
+    raise NotImplementedError('Downgrade of 89176227b25.')

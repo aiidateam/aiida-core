@@ -43,11 +43,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    op.drop_index('db_dbgroup_dbnodes_dbnode_id_idx', 'db_dbgroup_dbnodes')
-    op.drop_index('db_dbgroup_dbnodes_dbgroup_id_idx', 'db_dbgroup_dbnodes')
-    op.drop_constraint('db_dbgroup_dbnodes_dbgroup_id_dbnode_id_key', 'db_dbgroup_dbnodes')
-    # Creating the constraint uix_dbnode_id_dbgroup_id that migration
-    # 7a6587e16f4c would add
-    op.create_unique_constraint(
-        'db_dbgroup_dbnodes_dbgroup_id_dbnode_id_key', 'db_dbgroup_dbnodes', ['dbgroup_id', 'dbnode_id']
-    )
+    raise NotImplementedError('Downgrade of 59edaf8a8b79.')

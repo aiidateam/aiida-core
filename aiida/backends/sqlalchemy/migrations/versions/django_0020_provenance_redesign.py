@@ -122,31 +122,4 @@ def downgrade():
     # migration this is changed to always be `node.process.calculation.calcjob.CalcJobNode.`.
     # In the reverse operation, this can then only be reset to `calculation.job.JobCalculation.`
     # but the information on the exact subclass is lost.
-    op.execute(
-        """
-        UPDATE db_dbnode SET type = 'calculation.job.JobCalculation.'
-        WHERE type = 'node.process.calculation.calcjob.CalcJobNode.';
-
-        UPDATE db_dbnode SET type = 'calculatison.inline.InlineCalculation.'
-        WHERE type = 'node.process.calculation.calcfunction.CalcFunctionNode.';
-
-        UPDATE db_dbnode SET type = 'calculation.function.FunctionCalculation.'
-        WHERE type = 'node.process.workflow.workfunction.WorkFunctionNode.';
-
-        UPDATE db_dbnode SET type = 'calculation.work.WorkCalculation.'
-        WHERE type = 'node.process.workflow.workchain.WorkChainNode.';
-
-
-        UPDATE db_dblink SET type = 'inputlink'
-        WHERE type = 'input_call' OR type = 'input_work';
-
-        UPDATE db_dblink SET type = 'calllink'
-        WHERE type = 'call_call' OR type = 'call_work';
-
-        UPDATE db_dblink SET type = 'createlink'
-        WHERE type = 'create';
-
-        UPDATE db_dblink SET type = 'returnlink'
-        WHERE type = 'return';
-        """
-    )
+    raise NotImplementedError('Downgrade of django_0020.')

@@ -39,11 +39,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    conn = op.get_bind()
-
-    statement = sa.text(
-        r"""
-        UPDATE db_dbnode SET type = 'data.parameter.ParameterData.' WHERE type = 'data.dict.Dict.';
-    """
-    )
-    conn.execute(statement)
+    raise NotImplementedError('Downgrade of django_0029.')

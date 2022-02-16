@@ -50,4 +50,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    print('There is no downgrade for the deletion of the kombu tables and the daemon timestamps')
+    raise NotImplementedError('Deletion of the kombu tables is not reversible.')

@@ -54,26 +54,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    conn = op.get_bind()
-
-    # Set hidden=True in attributes if the extras contain hidden=True
-    statement = text(
-        """
-        UPDATE db_dbnode SET attributes = jsonb_set(attributes, '{"hidden"}', to_jsonb(True))
-        WHERE type = 'code.Code.' AND extras @> '{"hidden": true}'
-        """
-    )
-    conn.execute(statement)
-
-    # Set hidden=False in attributes if the extras contain hidden=False
-    statement = text(
-        """
-        UPDATE db_dbnode SET attributes = jsonb_set(attributes, '{"hidden"}', to_jsonb(False))
-        WHERE type = 'code.Code.' AND extras @> '{"hidden": false}'
-        """
-    )
-    conn.execute(statement)
-
-    # Delete the hidden key from the extras
-    statement = text("""UPDATE db_dbnode SET extras = extras-'hidden' WHERE type = 'code.Code.'""")
-    conn.execute(statement)
+    raise NotImplementedError('Downgrade of 35d4ee9a1b0e.')

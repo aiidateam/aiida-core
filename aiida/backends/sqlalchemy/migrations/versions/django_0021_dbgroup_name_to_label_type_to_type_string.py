@@ -61,32 +61,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    # drop new constraint and indexes
-    op.drop_constraint('db_dbgroup_name_type_12656f33_uniq', 'db_dbgroup')
-    op.drop_index('db_dbgroup_name_66c75272', 'db_dbgroup')
-    op.drop_index('db_dbgroup_name_66c75272_like', 'db_dbgroup')
-    op.drop_index('db_dbgroup_type_23b2a748', 'db_dbgroup')
-    op.drop_index('db_dbgroup_type_23b2a748_like', 'db_dbgroup')
-
-    # renaming
-    op.alter_column('db_dbgroup', 'name', new_column_name='label')
-    op.alter_column('db_dbgroup', 'type', new_column_name='type_string')
-
-    # create old constraint and indexes
-    op.create_unique_constraint('db_dbgroup_name_type_12656f33_uniq', 'db_dbgroup', ['name', 'type'])
-    op.create_index('db_dbgroup_name_66c75272', 'db_dbgroup', ['name'])
-    op.create_index(
-        'db_dbgroup_name_66c75272_like',
-        'db_dbgroup',
-        ['name'],
-        postgresql_using='btree',
-        postgresql_ops={'name': 'varchar_pattern_ops'},
-    )
-    op.create_index('db_dbgroup_type_23b2a748', 'db_dbgroup', ['type'])
-    op.create_index(
-        'db_dbgroup_type_23b2a748_like',
-        'db_dbgroup',
-        ['type'],
-        postgresql_using='btree',
-        postgresql_ops={'type': 'varchar_pattern_ops'},
-    )
+    raise NotImplementedError('Downgrade of django_0021.')

@@ -41,12 +41,14 @@ depends_on = None
 
 
 def upgrade():
+    """Migrations for the upgrade."""
     conn = op.get_bind()
     statement = text('\n'.join(forward_sql))
     conn.execute(statement)
 
 
 def downgrade():
+    """Migrations for the downgrade."""
     conn = op.get_bind()
     statement = text('\n'.join(reverse_sql))
     conn.execute(statement)

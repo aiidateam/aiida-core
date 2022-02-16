@@ -30,5 +30,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    op.drop_index('db_dbnode_ctime_71626ef5', table_name='db_dbnode')
-    op.drop_index('db_dbnode_mtime_0554ea3d', table_name='db_dbnode')
+    raise NotImplementedError('Downgrade of django_0005.')

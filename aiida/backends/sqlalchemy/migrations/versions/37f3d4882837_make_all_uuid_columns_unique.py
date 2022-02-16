@@ -41,5 +41,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    for table in tables:
-        op.drop_constraint(f'{table}_uuid_key', table)
+    raise NotImplementedError('Downgrade of 37f3d4882837.')

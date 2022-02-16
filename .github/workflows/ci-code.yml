@@ -90,7 +90,7 @@ jobs:
 
     - name: Upgrade pip and setuptools
       run: |
-        pip install --upgrade pip
+        pip install --upgrade pip setuptools
         pip --version
 
     - name: Build pymatgen with compatible numpy

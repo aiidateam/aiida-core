@@ -89,6 +89,9 @@ def setup_code(ctx, non_interactive, **kwargs):
     else:
         kwargs['code_type'] = CodeBuilder.CodeType.STORE_AND_UPLOAD
 
+    # Convert entry point to its name
+    kwargs['input_plugin'] = kwargs['input_plugin'].name
+
     code_builder = CodeBuilder(**kwargs)
 
     try:
@@ -159,6 +162,9 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 
     if kwargs.pop('hide_original'):
         code.hide()
+
+    # Convert entry point to its name
+    kwargs['input_plugin'] = kwargs['input_plugin'].name
 
     code_builder = ctx.code_builder
     for key, value in kwargs.items():

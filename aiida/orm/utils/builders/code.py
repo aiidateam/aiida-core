@@ -11,8 +11,6 @@
 import enum
 import os
 
-import importlib_metadata
-
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.utils import ErrorAccumulator
 
@@ -155,9 +153,6 @@ class CodeBuilder:
 
         Checks compatibility with other code attributes.
         """
-        if key == 'input_plugin' and isinstance(value, importlib_metadata.EntryPoint):
-            value = value.name
-
         if key == 'description' and value is None:
             value = ''
 

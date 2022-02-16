@@ -80,6 +80,7 @@ def uninitialised_profile(empty_pg_cluster: PGTest, tmp_path):  # pylint: disabl
         if conn:
             conn.close()
 
+
 @pytest.fixture()
 def perform_migrations(uninitialised_profile):  # pylint: disable=redefined-outer-name
     """A fixture to setup a database for migration tests."""

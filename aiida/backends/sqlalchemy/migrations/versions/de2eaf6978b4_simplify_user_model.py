@@ -19,10 +19,7 @@ Revises: 1830c8430131
 Create Date: 2019-05-28 11:15:33.242602
 
 """
-
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = 'de2eaf6978b4'
@@ -43,13 +40,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    op.add_column(
-        'db_dbuser', sa.Column('date_joined', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True)
-    )
-    op.add_column('db_dbuser', sa.Column('password', sa.VARCHAR(length=128), autoincrement=False, nullable=True))
-    op.add_column(
-        'db_dbuser', sa.Column('last_login', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True)
-    )
-    op.add_column('db_dbuser', sa.Column('is_staff', sa.BOOLEAN(), autoincrement=False, nullable=True))
-    op.add_column('db_dbuser', sa.Column('is_superuser', sa.BOOLEAN(), autoincrement=False, nullable=True))
-    op.add_column('db_dbuser', sa.Column('is_active', sa.BOOLEAN(), autoincrement=False, nullable=True))
+    raise NotImplementedError('Downgrade of de2eaf6978b4.')

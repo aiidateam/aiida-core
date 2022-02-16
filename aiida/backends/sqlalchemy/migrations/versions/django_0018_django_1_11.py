@@ -63,28 +63,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    op.drop_index('db_dbuser_email_30150b7e_like', table_name='db_dbuser')
-    op.drop_constraint('db_dbuser_email_30150b7e_uniq', 'db_dbuser', type_='unique')
-    for table, unique in (
-        ('db_dbworkflow', 'db_dbworkflow_uuid_08947ee2_uniq'),
-        ('db_dbnode', None),
-        ('db_dbgroup', 'db_dbgroup_uuid_af896177_uniq'),
-        ('db_dbcomputer', 'db_dbcomputer_uuid_f35defa6_uniq'),
-        ('db_dbcomment', 'db_dbcomment_uuid_49bac08c_uniq'),
-    ):
-        op.alter_column(
-            table,
-            'uuid',
-            existing_type=postgresql.UUID(as_uuid=True),
-            type_=sa.VARCHAR(length=36),
-            nullable=False,
-            postgresql_using='uuid::text'
-        )
-        if unique:
-            op.drop_constraint(unique, table, type_='unique')
-    op.create_index(
-        'db_dbnode_uuid_62e0bf98_like',
-        'db_dbnode', ['uuid'],
-        postgresql_using='btree',
-        postgresql_ops={'uuid': 'varchar_pattern_ops'}
-    )
+    raise NotImplementedError('Downgrade of django_0018.')

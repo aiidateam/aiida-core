@@ -32,4 +32,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    op.alter_column('db_dbnode', 'node_type', new_column_name='type')  # pylint: disable=no-member
+    raise NotImplementedError('Downgrade of django_0030.')

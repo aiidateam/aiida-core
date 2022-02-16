@@ -18,10 +18,9 @@ Create Date: 2019-01-21 15:35:07.280805
 
 """
 from alembic import op
-import numpy
-from sqlalchemy import Integer, String, cast
+from sqlalchemy import Integer, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.sql import column, func, select, table, text
+from sqlalchemy.sql import column, select, table, text
 
 from aiida.backends.sqlalchemy.migrations.utils import utils
 
@@ -60,30 +59,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    connection = op.get_bind()
-    profile = connection, op.get_context().opts['aiida_profile']
-    repo_path = profile.repository_path
-
-    DbNode = table(
-        'db_dbnode',
-        column('id', Integer),
-        column('uuid', UUID),
-        column('type', String),
-        column('attributes', JSONB),
-    )
-
-    nodes = connection.execute(
-        select(DbNode.c.id,
-               DbNode.c.uuid).where(DbNode.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.'))
-    ).fetchall()
-
-    for pk, uuid in nodes:
-        attributes = connection.execute(select(DbNode.c.attributes).where(DbNode.c.id == pk)).fetchone()
-        symbols = numpy.array(attributes['symbols'])
-        utils.store_numpy_array_in_repository(repo_path, uuid, 'symbols', symbols)
-        key = op.inline_literal('{"array|symbols"}')
-        connection.execute(
-            DbNode.update().where(DbNode.c.id == pk).values(
-                attributes=func.jsonb_set(DbNode.c.attributes, key, cast(list(symbols.shape), JSONB))
-            )
-        )
+    raise NotImplementedError('Downgrade of ce56d84bcc35.')

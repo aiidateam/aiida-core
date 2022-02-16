@@ -32,5 +32,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    op.drop_constraint('db_dbnode_uuid_62e0bf98_uniq', 'db_dbnode', type_='unique')
-    op.create_index('db_dbnode_uuid_62e0bf98', 'db_dbnode', ['uuid'])
+    raise NotImplementedError('Downgrade of django_0014.')

@@ -61,29 +61,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    conn = op.get_bind()  # pylint: disable=no-member
-
-    statement = text(
-        """
-        UPDATE db_dbnode SET type = 'calculation.job.simpleplugins.arithmetic.add.ArithmeticAddCalculation.'
-        WHERE type = 'calculation.job.arithmetic.add.ArithmeticAddCalculation.';
-
-        UPDATE db_dbnode SET type = 'calculation.job.simpleplugins.templatereplacer.TemplatereplacerCalculation.'
-        WHERE type = 'calculation.job.templatereplacer.TemplatereplacerCalculation.';
-
-        UPDATE db_dbnode SET process_type = 'aiida.calculations:simpleplugins.arithmetic.add'
-        WHERE process_type = 'aiida.calculations:arithmetic.add';
-
-        UPDATE db_dbnode SET process_type = 'aiida.calculations:simpleplugins.templatereplacer'
-        WHERE process_type = 'aiida.calculations:templatereplacer';
-
-        UPDATE db_dbnode SET attributes = jsonb_set(attributes, '{"input_plugin"}', '"simpleplugins.arithmetic.add"')
-        WHERE attributes @> '{"input_plugin": "arithmetic.add"}'
-        AND type = 'data.code.Code.';
-
-        UPDATE db_dbnode SET attributes = jsonb_set(attributes, '{"input_plugin"}', '"simpleplugins.templatereplacer"')
-        WHERE attributes @> '{"input_plugin": "templatereplacer"}'
-        AND type = 'data.code.Code.';
-    """
-    )
-    conn.execute(statement)
+    raise NotImplementedError('Downgrade of 140c971ae0a3.')

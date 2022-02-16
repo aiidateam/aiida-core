@@ -30,13 +30,6 @@ forward_sql = [
     """UPDATE db_dbgroup SET type_string = 'auto.run' WHERE type_string = 'autogroup.run';""",
 ]
 
-reverse_sql = [
-    """UPDATE db_dbgroup SET type_string = '' WHERE type_string = 'user';""",
-    """UPDATE db_dbgroup SET type_string = 'data.upf.family' WHERE type_string = 'data.upf';""",
-    """UPDATE db_dbgroup SET type_string = 'aiida.import' WHERE type_string = 'auto.import';""",
-    """UPDATE db_dbgroup SET type_string = 'autogroup.run' WHERE type_string = 'auto.run';""",
-]
-
 
 def upgrade():
     """Migrations for the upgrade."""
@@ -45,4 +38,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    op.execute('\n'.join(reverse_sql))
+    raise NotImplementedError('Downgrade of django_0022.')

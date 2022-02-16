@@ -44,16 +44,4 @@ def upgrade():
 
 def downgrade():
     """The downgrade migration actions."""
-    # dropping
-    op.drop_constraint('db_dbgroup_label_type_string_key', 'db_dbgroup')
-    op.drop_index('ix_db_dbgroup_label', 'db_dbgroup')
-    op.drop_index('ix_db_dbgroup_type_string', 'db_dbgroup')
-
-    # renaming
-    op.alter_column('db_dbgroup', 'label', new_column_name='name')
-    op.alter_column('db_dbgroup', 'type_string', new_column_name='type')
-
-    # creating
-    op.create_unique_constraint('db_dbgroup_name_type_key', 'db_dbgroup', ['name', 'type'])
-    op.create_index('ix_db_dbgroup_name', 'db_dbgroup', ['name'])
-    op.create_index('ix_db_dbgroup_type', 'db_dbgroup', ['type'])
+    raise NotImplementedError('Downgrade of b8b23ddefad4.')

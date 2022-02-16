@@ -25,7 +25,7 @@ Create Date: 2019-01-21 10:15:02.451308
 from alembic import op
 from sqlalchemy import Integer, String, cast
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.sql import column, func, select, table, text
+from sqlalchemy.sql import column, func, select, table
 
 from aiida.backends.sqlalchemy.migrations.utils.utils import load_numpy_array_from_repository
 
@@ -69,20 +69,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    connection = op.get_bind()
-
-    DbNode = table(
-        'db_dbnode',
-        column('id', Integer),
-        column('uuid', UUID),
-        column('type', String),
-        column('attributes', JSONB),
-    )
-
-    nodes = connection.execute(
-        select(DbNode.c.id,
-               DbNode.c.uuid).where(DbNode.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.'))
-    ).fetchall()
-
-    for pk, _ in nodes:
-        connection.execute(text(f"""UPDATE db_dbnode SET attributes = attributes #- '{{symbols}}' WHERE id = {pk}"""))
+    raise NotImplementedError('Downgrade of 12536798d4d3.')

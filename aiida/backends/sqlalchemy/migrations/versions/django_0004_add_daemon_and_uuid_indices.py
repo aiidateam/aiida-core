@@ -43,5 +43,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    op.drop_index('tval_idx_for_daemon', table_name='db_dbattribute')
-    op.drop_index('db_dbnode_uuid_62e0bf98', table_name='db_dbnode')
+    raise NotImplementedError('Downgrade of django_0004.')

@@ -151,6 +151,7 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
+    raise NotImplementedError('Downgrade of django_0037.')
 
 
 def attributes_to_dict(attr_list: list):

@@ -16,8 +16,6 @@ Create Date: 2018-05-10 19:08:51.780194
 
 """
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = 'a514d673c163'
@@ -27,14 +25,10 @@ depends_on = None
 
 
 def upgrade():
+    """Migrations for the upgrade."""
     op.drop_table('db_dblock')
 
 
 def downgrade():
-    op.create_table(
-        'db_dblock', sa.Column('key', sa.VARCHAR(length=255), autoincrement=False, nullable=False),
-        sa.Column('creation', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True),
-        sa.Column('timeout', sa.INTEGER(), autoincrement=False, nullable=True),
-        sa.Column('owner', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
-        sa.PrimaryKeyConstraint('key', name='db_dblock_pkey')
-    )
+    """Migrations for the downgrade."""
+    raise NotImplementedError('Downgrade of a514d673c163.')

@@ -15,8 +15,6 @@ Revises: django_0011
 
 """
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 revision = 'django_0012'
 down_revision = 'django_0011'
@@ -31,17 +29,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    op.create_table(
-        'db_dblock',
-        sa.Column('key', sa.VARCHAR(length=255), nullable=False),
-        sa.PrimaryKeyConstraint('key', name='db_dblock_pkey'),
-        sa.Column('creation', postgresql.TIMESTAMP(timezone=True), nullable=False),
-        sa.Column('timeout', sa.INTEGER(), nullable=False),
-        sa.Column('owner', sa.VARCHAR(length=255), nullable=False),
-        sa.Index(
-            'db_dblock_key_048c6767_like',
-            'key',
-            postgresql_using='btree',
-            postgresql_ops={'key': 'varchar_pattern_ops'},
-        ),
-    )
+    raise NotImplementedError('Downgrade of django_0012.')

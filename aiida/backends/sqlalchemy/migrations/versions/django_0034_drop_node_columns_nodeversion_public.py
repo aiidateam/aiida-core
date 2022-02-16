@@ -17,7 +17,6 @@ Revises: django_0033
 
 """
 from alembic import op
-import sqlalchemy as sa
 
 revision = 'django_0034'
 down_revision = 'django_0033'
@@ -26,10 +25,11 @@ depends_on = None
 
 
 def upgrade():
+    """Migrations for the upgrade."""
     op.drop_column('db_dbnode', 'nodeversion')
     op.drop_column('db_dbnode', 'public')
 
 
 def downgrade():
-    op.add_column('db_dbnode', sa.Column('public', sa.BOOLEAN(), nullable=False))
-    op.add_column('db_dbnode', sa.Column('nodeversion', sa.INTEGER(), nullable=False))
+    """Migrations for the downgrade."""
+    raise NotImplementedError('Downgrade of django_0034.')

@@ -151,4 +151,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    print('There is no downgrade for the link types')
+    raise NotImplementedError('Downgrade of a6048f0ffca8.')

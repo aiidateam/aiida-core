@@ -15,7 +15,6 @@ Revises: django_0005
 
 """
 from alembic import op
-import sqlalchemy as sa
 
 revision = 'django_0006'
 down_revision = 'django_0005'
@@ -38,30 +37,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    op.create_table(
-        'db_dbpath',
-        sa.Column('id', sa.INTEGER(), nullable=False),
-        sa.PrimaryKeyConstraint('id', name='db_dbpath_pkey'),
-        sa.Column('parent_id', sa.INTEGER(), nullable=False),
-        sa.Column('child_id', sa.INTEGER(), nullable=False),
-        sa.Column('depth', sa.INTEGER(), nullable=False),
-        sa.Column('entry_edge_id', sa.INTEGER(), nullable=True),
-        sa.Column('direct_edge_id', sa.INTEGER(), nullable=True),
-        sa.Column('exit_edge_id', sa.INTEGER(), nullable=True),
-        sa.Index('db_dbpath_child_id_d8228636', 'child_id'),
-        sa.Index('db_dbpath_parent_id_3b82d6c8', 'parent_id'),
-        sa.ForeignKeyConstraint(
-            ['child_id'],
-            ['db_dbnode.id'],
-            name='db_dbpath_child_id_d8228636_fk_db_dbnode_id',
-            initially='DEFERRED',
-            deferrable=True,
-        ),
-        sa.ForeignKeyConstraint(
-            ['parent_id'],
-            ['db_dbnode.id'],
-            name='db_dbpath_parent_id_3b82d6c8_fk_db_dbnode_id',
-            initially='DEFERRED',
-            deferrable=True,
-        ),
-    )
+    raise NotImplementedError('Downgrade of django_0006.')

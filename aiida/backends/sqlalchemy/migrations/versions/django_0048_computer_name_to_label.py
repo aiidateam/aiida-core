@@ -42,14 +42,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    op.drop_constraint('db_dbcomputer_label_bc480bab_uniq', 'db_dbcomputer')
-    op.drop_index('db_dbcomputer_label_bc480bab_like', table_name='db_dbcomputer')
-    op.alter_column('db_dbcomputer', 'label', new_column_name='name')
-    op.create_unique_constraint('db_dbcomputer_name_key', 'db_dbcomputer', ['name'])
-    op.create_index(
-        'db_dbcomputer_name_f1800b1a_like',
-        'db_dbcomputer',
-        ['name'],
-        postgresql_using='btree',
-        postgresql_ops={'name': 'varchar_pattern_ops'},
-    )
+    raise NotImplementedError('Downgrade of django_0048.')

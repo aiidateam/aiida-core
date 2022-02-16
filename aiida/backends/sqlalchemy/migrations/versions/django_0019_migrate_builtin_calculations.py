@@ -58,30 +58,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    op.execute(
-        """
-        UPDATE db_dbnode SET type = 'calculation.job.simpleplugins.arithmetic.add.ArithmeticAddCalculation.'
-        WHERE type = 'calculation.job.arithmetic.add.ArithmeticAddCalculation.';
-
-        UPDATE db_dbnode SET type = 'calculation.job.simpleplugins.templatereplacer.TemplatereplacerCalculation.'
-        WHERE type = 'calculation.job.templatereplacer.TemplatereplacerCalculation.';
-
-        UPDATE db_dbnode SET process_type = 'aiida.calculations:simpleplugins.arithmetic.add'
-        WHERE process_type = 'aiida.calculations:arithmetic.add';
-
-        UPDATE db_dbnode SET process_type = 'aiida.calculations:simpleplugins.templatereplacer'
-        WHERE process_type = 'aiida.calculations:templatereplacer';
-
-        UPDATE db_dbattribute AS a SET tval = 'simpleplugins.arithmetic.add'
-        FROM db_dbnode AS n WHERE a.dbnode_id = n.id
-            AND a.key = 'input_plugin'
-            AND a.tval = 'arithmetic.add'
-            AND n.type = 'data.code.Code.';
-
-        UPDATE db_dbattribute AS a SET tval = 'simpleplugins.templatereplacer'
-        FROM db_dbnode AS n WHERE a.dbnode_id = n.id
-            AND a.key = 'input_plugin'
-            AND a.tval = 'templatereplacer'
-            AND n.type = 'data.code.Code.';
-        """
-    )
+    raise NotImplementedError('Downgrade of django_0019.')

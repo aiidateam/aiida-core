@@ -421,9 +421,7 @@ class LsfScheduler(aiida.schedulers.Scheduler):
                     raise ValueError
             except ValueError as exc:
                 raise ValueError(
-                    'max_memory_kb must be '
-                    "a positive integer (in kB)! It is instead '{}'"
-                    ''.format((job_tmpl.max_memory_kb))
+                    f'max_memory_kb must be a positive integer (in kB)! It is instead `{job_tmpl.max_memory_kb}`'
                 ) from exc
             # The -M option sets a per-process (soft) memory limit for all the
             # processes that belong to this job

@@ -153,7 +153,7 @@ class ProfileManager:
         try:
             self._profile = load_profile(profile_name)
         except Exception:
-            raise TestManagerError('Unable to load test profile \'{}\'.'.format(profile_name))
+            raise TestManagerError(f'Unable to load test profile `{profile_name}`.')
         check_if_tests_can_run()
 
     @staticmethod

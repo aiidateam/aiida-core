@@ -35,10 +35,15 @@ def uninitialised_profile(empty_pg_cluster: PGTest, tmp_path):  # pylint: disabl
 
     database_name = f'test_{uuid4().hex}'
 
-    with psycopg2.connect(**empty_pg_cluster.dsn) as conn:
+    conn = None
+    try:
+        conn = psycopg2.connect(**empty_pg_cluster.dsn)
         conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         with conn.cursor() as cursor:
             cursor.execute(f"CREATE DATABASE {database_name} ENCODING 'utf8';")
+    finally:
+        if conn:
+            conn.close()
 
     yield Profile(
         'test_migrate', {
@@ -61,7 +66,9 @@ def uninitialised_profile(empty_pg_cluster: PGTest, tmp_path):  # pylint: disabl
         }
     )
 
-    with psycopg2.connect(**empty_pg_cluster.dsn) as conn:
+    conn = None
+    try:
+        conn = psycopg2.connect(**empty_pg_cluster.dsn)
         conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         with conn.cursor() as cursor:
             # note after postgresql 13 you can use 'DROP DATABASE name WITH (FORCE)'
@@ -69,6 +76,9 @@ def uninitialised_profile(empty_pg_cluster: PGTest, tmp_path):  # pylint: disabl
             # see: https://dba.stackexchange.com/questions/11893/force-drop-db-while-others-may-be-connected
             cursor.execute(f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{database_name}';")
             cursor.execute(f'DROP DATABASE {database_name};')
+    finally:
+        if conn:
+            conn.close()
 
 
 @pytest.fixture()

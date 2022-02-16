@@ -16,7 +16,7 @@ import json
 from pathlib import Path
 import shutil
 import tempfile
-from typing import Any, BinaryIO, Dict, List, Optional, Set, Union
+from typing import Any, BinaryIO, Dict, List, Literal, Optional, Set, Union
 import zipfile
 
 from archive_path import NOTSET, ZipPath, extract_file_in_zip, read_file_in_zip
@@ -34,12 +34,6 @@ from aiida.tools.archive.exceptions import CorruptArchive, IncompatibleArchiveVe
 
 from . import backend as db
 from .common import DB_FILENAME, META_FILENAME, REPO_FOLDER, create_sqla_engine
-
-try:
-    from typing import Literal  # pylint: disable=ungrouped-imports
-except ImportError:
-    # Python <3.8 backport
-    from typing_extensions import Literal  # type: ignore
 
 
 @functools.lru_cache(maxsize=10)

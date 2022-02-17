@@ -10,11 +10,7 @@
 """
 Module to get the backend instance from the Models instance
 """
-
-try:  # Python3
-    from functools import singledispatch
-except ImportError:  # Python2
-    from singledispatch import singledispatch
+from functools import singledispatch
 
 from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
 from aiida.backends.sqlalchemy.models.comment import DbComment

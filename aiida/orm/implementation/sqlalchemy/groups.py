@@ -43,7 +43,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
         type_check(user, users.SqlaUser)
         super().__init__(backend)
 
-        dbgroup = DbGroup(label=label, description=description, user=user.bare_model, type_string=type_string)
+        dbgroup = self.MODEL_CLASS(label=label, description=description, user=user.bare_model, type_string=type_string)
         self._model = utils.ModelWrapper(dbgroup, backend)
 
     @property
@@ -87,7 +87,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
 
     @property
     def user(self):
-        return self._backend.users.from_dbmodel(self.model.user)
+        return self.backend.users.ENTITY_CLASS.from_dbmodel(self.model.user, self.backend)
 
     @user.setter
     def user(self, new_user):
@@ -283,6 +283,6 @@ class SqlaGroupCollection(BackendGroupCollection):
     def delete(self, id):  # pylint: disable=redefined-builtin
         session = self.backend.get_session()
 
-        row = session.get(DbGroup, id)
+        row = session.get(self.ENTITY_CLASS.MODEL_CLASS, id)
         session.delete(row)
         session.commit()

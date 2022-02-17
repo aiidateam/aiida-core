@@ -32,8 +32,7 @@ class SqlaModelEntity(Generic[ModelType]):
 
     @classmethod
     def from_dbmodel(cls, dbmodel, backend):
-        """
-        Create an AiiDA Entity from the corresponding ORM model and storage backend
+        """Create an AiiDA Entity from the corresponding SQLA ORM model and storage backend
 
         :param dbmodel: the SQLAlchemy model to create the entity from
         :param backend: the corresponding storage backend

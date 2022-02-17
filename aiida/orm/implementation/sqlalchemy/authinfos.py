@@ -32,7 +32,9 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
         super().__init__(backend)
         type_check(user, users.SqlaUser)
         type_check(computer, computers.SqlaComputer)
-        self._model = utils.ModelWrapper(DbAuthInfo(dbcomputer=computer.bare_model, aiidauser=user.bare_model), backend)
+        self._model = utils.ModelWrapper(
+            self.MODEL_CLASS(dbcomputer=computer.bare_model, aiidauser=user.bare_model), backend
+        )
 
     @property
     def id(self):  # pylint: disable=invalid-name
@@ -68,7 +70,7 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
 
         :return: :class:`aiida.orm.implementation.computers.BackendComputer`
         """
-        return self.backend.computers.from_dbmodel(self.model.dbcomputer)
+        return self.backend.computers.ENTITY_CLASS.from_dbmodel(self.model.dbcomputer, self.backend)
 
     @property
     def user(self):
@@ -76,7 +78,7 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
 
         :return: :class:`aiida.orm.implementation.users.BackendUser`
         """
-        return self._backend.users.from_dbmodel(self.model.aiidauser)
+        return self.backend.users.ENTITY_CLASS.from_dbmodel(self.model.aiidauser, self.backend)
 
     def get_auth_params(self):
         """Return the dictionary of authentication parameters
@@ -123,7 +125,7 @@ class SqlaAuthInfoCollection(BackendAuthInfoCollection):
         session = self.backend.get_session()
 
         try:
-            row = session.query(DbAuthInfo).filter_by(id=pk).one()
+            row = session.query(self.ENTITY_CLASS.MODEL_CLASS).filter_by(id=pk).one()
             session.delete(row)
             session.commit()
         except NoResultFound:

@@ -10,7 +10,7 @@
 """SqlAlchemy implementation of the `BackendNode` and `BackendNodeCollection` classes."""
 # pylint: disable=no-name-in-module,import-error
 from datetime import datetime
-from typing import Any, Dict, Iterable, Tuple
+from typing import Any, Dict, Iterable, Tuple, Type
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import NoResultFound
@@ -83,7 +83,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
             type_check(mtime, datetime, f'the given mtime is of type {type(mtime)}')
             arguments['mtime'] = mtime
 
-        self._model = sqla_utils.ModelWrapper(models.DbNode(**arguments), backend)
+        self._model = sqla_utils.ModelWrapper(self.MODEL_CLASS(**arguments), backend)
 
     def clone(self):
         """Return an unstored clone of ourselves.
@@ -103,7 +103,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
 
         clone = self.__class__.__new__(self.__class__)  # pylint: disable=no-value-for-parameter
         clone.__init__(self.backend, self.node_type, self.user)
-        clone._model = sqla_utils.ModelWrapper(models.DbNode(**arguments), self.backend)  # pylint: disable=protected-access
+        clone._model = sqla_utils.ModelWrapper(self.MODEL_CLASS(**arguments), self.backend)  # pylint: disable=protected-access
         return clone
 
     @property
@@ -157,7 +157,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
     @property
     def computer(self):
         try:
-            return self.backend.computers.from_dbmodel(self.model.dbcomputer)
+            return self.backend.computers.ENTITY_CLASS.from_dbmodel(self.model.dbcomputer, self.backend)
         except TypeError:
             return None
 
@@ -172,7 +172,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
 
     @property
     def user(self):
-        return self.backend.users.from_dbmodel(self.model.user)
+        return self.backend.users.ENTITY_CLASS.from_dbmodel(self.model.user, self.backend)
 
     @user.setter
     def user(self, user):
@@ -308,13 +308,15 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
 class SqlaNodeCollection(BackendNodeCollection):
     """The collection of Node entries."""
 
-    ENTITY_CLASS = SqlaNode
+    ENTITY_CLASS: Type[SqlaNode] = SqlaNode
 
     def get(self, pk):
         session = self.backend.get_session()
 
         try:
-            return self.ENTITY_CLASS.from_dbmodel(session.query(models.DbNode).filter_by(id=pk).one(), self.backend)
+            return self.ENTITY_CLASS.from_dbmodel(
+                session.query(self.ENTITY_CLASS.MODEL_CLASS).filter_by(id=pk).one(), self.backend
+            )
         except NoResultFound:
             raise exceptions.NotExistent(f"Node with pk '{pk}' not found") from NoResultFound
 
@@ -322,7 +324,7 @@ class SqlaNodeCollection(BackendNodeCollection):
         session = self.backend.get_session()
 
         try:
-            row = session.query(models.DbNode).filter_by(id=pk).one()
+            row = session.query(self.ENTITY_CLASS.MODEL_CLASS).filter_by(id=pk).one()
             session.delete(row)
             session.commit()
         except NoResultFound:

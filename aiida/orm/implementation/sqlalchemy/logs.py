@@ -28,7 +28,7 @@ class SqlaLog(entities.SqlaModelEntity[models.DbLog], BackendLog):
         # pylint: disable=too-many-arguments
         super().__init__(backend)
         self._model = utils.ModelWrapper(
-            models.DbLog(
+            self.MODEL_CLASS(
                 time=time,
                 loggername=loggername,
                 levelname=levelname,
@@ -109,7 +109,7 @@ class SqlaLogCollection(BackendLogCollection):
         session = self.backend.get_session()
 
         try:
-            row = session.query(models.DbLog).filter_by(id=log_id).one()
+            row = session.query(self.ENTITY_CLASS.MODEL_CLASS).filter_by(id=log_id).one()
             session.delete(row)
             session.commit()
         except NoResultFound:
@@ -125,7 +125,7 @@ class SqlaLogCollection(BackendLogCollection):
         session = self.backend.get_session()
 
         try:
-            session.query(models.DbLog).delete()
+            session.query(self.ENTITY_CLASS.MODEL_CLASS).delete()
             session.commit()
         except Exception as exc:
             session.rollback()

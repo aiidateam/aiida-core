@@ -24,8 +24,7 @@ def test_creation_from_dbgroup(backend):
     group.store()
     group.add_nodes([node.backend_entity])
 
-    dbgroup = group.bare_model
-    gcopy = backend.groups.from_dbmodel(dbgroup)
+    gcopy = group.__class__.from_dbmodel(group.bare_model, backend)
 
     assert group.pk == gcopy.pk
     assert group.uuid == gcopy.uuid

@@ -11,7 +11,6 @@
 import pytest
 
 from aiida import orm
-from aiida.orm.implementation.sqlalchemy.groups import SqlaGroup
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -25,8 +24,7 @@ def test_creation_from_dbgroup(backend):
     group.store()
     group.add_nodes([node.backend_entity])
 
-    dbgroup = group.bare_model
-    gcopy = SqlaGroup.from_dbmodel(dbgroup, backend)
+    gcopy = group.__class__.from_dbmodel(group.bare_model, backend)
 
     assert group.pk == gcopy.pk
     assert group.uuid == gcopy.uuid

@@ -66,10 +66,6 @@ class SqlaUserCollection(BackendUserCollection):
 
     ENTITY_CLASS = SqlaUser
 
-    def from_dbmodel(self, dbmodel) -> SqlaUser:
-        """Create an entity from the SQLA ORM model"""
-        return self.ENTITY_CLASS.from_dbmodel(dbmodel, self.backend)
-
     def create(self, email, first_name='', last_name='', institution=''):  # pylint: disable=arguments-differ
         """
         Create a user with the provided email address

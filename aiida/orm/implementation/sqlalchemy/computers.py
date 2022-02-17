@@ -60,7 +60,7 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
         make_transient(dbcomputer)
         session.add(dbcomputer)
 
-        newobject = self.__class__.from_dbmodel(dbcomputer)  # pylint: disable=no-value-for-parameter
+        newobject = self.__class__.from_dbmodel(dbcomputer, self.backend)  # pylint: disable=no-value-for-parameter
 
         return newobject
 
@@ -117,10 +117,6 @@ class SqlaComputerCollection(BackendComputerCollection):
     """Collection of `Computer` instances."""
 
     ENTITY_CLASS = SqlaComputer
-
-    def from_dbmodel(self, dbmodel) -> SqlaComputer:
-        """Create an entity from the SQLA ORM model"""
-        return self.ENTITY_CLASS.from_dbmodel(dbmodel, self.backend)
 
     def list_names(self):
         session = self.backend.get_session()

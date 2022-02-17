@@ -69,7 +69,8 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
 
         :return: :class:`aiida.orm.implementation.computers.BackendComputer`
         """
-        return self.backend.computers.from_dbmodel(self._dbmodel.dbcomputer)
+        from .computers import SqlaComputer
+        return SqlaComputer.from_dbmodel(self._dbmodel.dbcomputer, self.backend)
 
     @property
     def user(self):
@@ -77,7 +78,8 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
 
         :return: :class:`aiida.orm.implementation.users.BackendUser`
         """
-        return self._backend.users.from_dbmodel(self._dbmodel.aiidauser)
+        from .users import SqlaUser
+        return SqlaUser.from_dbmodel(self._dbmodel.aiidauser, self.backend)
 
     def get_auth_params(self):
         """Return the dictionary of authentication parameters
@@ -112,10 +114,6 @@ class SqlaAuthInfoCollection(BackendAuthInfoCollection):
     """The collection of SqlAlchemy backend `AuthInfo` entries."""
 
     ENTITY_CLASS = SqlaAuthInfo
-
-    def from_dbmodel(self, dbmodel) -> SqlaAuthInfo:
-        """Create an entity from the SQLA ORM model"""
-        return self.ENTITY_CLASS.from_dbmodel(dbmodel, self.backend)
 
     def delete(self, pk):
         """Delete an entry from the collection.

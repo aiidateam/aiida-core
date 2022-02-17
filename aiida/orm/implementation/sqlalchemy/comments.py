@@ -82,11 +82,13 @@ class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
 
     @property
     def node(self):
-        return self.backend.nodes.from_dbmodel(self.dbmodel.dbnode)
+        from .nodes import SqlaNode
+        return SqlaNode.from_dbmodel(self.dbmodel.dbnode, self.backend)
 
     @property
     def user(self):
-        return self.backend.users.from_dbmodel(self.dbmodel.user)
+        from .users import SqlaUser
+        return SqlaUser.from_dbmodel(self.dbmodel.user, self.backend)
 
     def set_user(self, value):
         self._dbmodel.user = value
@@ -103,10 +105,6 @@ class SqlaCommentCollection(BackendCommentCollection):
     """SqlAlchemy implementation for the CommentCollection."""
 
     ENTITY_CLASS = SqlaComment
-
-    def from_dbmodel(self, dbmodel) -> SqlaComment:
-        """Create an entity from the SQLA ORM model"""
-        return self.ENTITY_CLASS.from_dbmodel(dbmodel, self.backend)
 
     def create(self, node, user, content=None, **kwargs):
         """

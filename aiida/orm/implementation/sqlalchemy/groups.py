@@ -87,7 +87,8 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
 
     @property
     def user(self):
-        return self._backend.users.from_dbmodel(self._dbmodel.user)
+        from .users import SqlaUser
+        return SqlaUser.from_dbmodel(self._dbmodel.user, self.backend)
 
     @user.setter
     def user(self, new_user):
@@ -279,10 +280,6 @@ class SqlaGroupCollection(BackendGroupCollection):
     """The SLQA collection of groups"""
 
     ENTITY_CLASS = SqlaGroup
-
-    def from_dbmodel(self, dbmodel) -> SqlaGroup:
-        """Create an entity from the SQLA ORM model"""
-        return self.ENTITY_CLASS.from_dbmodel(dbmodel, self.backend)
 
     def delete(self, id):  # pylint: disable=redefined-builtin
         session = self.backend.get_session()

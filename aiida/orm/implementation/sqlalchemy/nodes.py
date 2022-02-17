@@ -157,7 +157,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
     @property
     def computer(self):
         try:
-            return self.backend.computers.from_dbmodel(self._dbmodel.dbcomputer)
+            return SqlaComputer.from_dbmodel(self._dbmodel.dbcomputer, self.backend)
         except TypeError:
             return None
 
@@ -172,7 +172,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
 
     @property
     def user(self):
-        return self.backend.users.from_dbmodel(self._dbmodel.user)
+        return SqlaUser.from_dbmodel(self._dbmodel.user, self.backend)
 
     @user.setter
     def user(self, user):
@@ -310,15 +310,11 @@ class SqlaNodeCollection(BackendNodeCollection):
 
     ENTITY_CLASS = SqlaNode
 
-    def from_dbmodel(self, dbmodel) -> SqlaNode:
-        """Create an entity from the SQLA ORM model"""
-        return self.ENTITY_CLASS.from_dbmodel(dbmodel, self.backend)
-
     def get(self, pk):
         session = self.backend.get_session()
 
         try:
-            return self.ENTITY_CLASS.from_dbmodel(session.query(models.DbNode).filter_by(id=pk).one(), self.backend)
+            return SqlaNode.from_dbmodel(session.query(models.DbNode).filter_by(id=pk).one(), self.backend)
         except NoResultFound:
             raise exceptions.NotExistent(f"Node with pk '{pk}' not found") from NoResultFound
 

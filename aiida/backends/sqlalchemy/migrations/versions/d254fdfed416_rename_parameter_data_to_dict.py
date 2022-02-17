@@ -10,7 +10,7 @@
 # pylint: disable=invalid-name,no-member
 """Rename `db_dbnode.type` values `data.parameter.ParameterData.` to `data.dict.Dict.`
 
-Note this is identical to migration django_0028
+Note this is identical to migration django_0029
 
 Revision ID: d254fdfed416
 Revises: 61fc0913fae9

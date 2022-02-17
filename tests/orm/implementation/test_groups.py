@@ -25,7 +25,7 @@ def test_creation_from_dbgroup(backend):
     group.store()
     group.add_nodes([node.backend_entity])
 
-    dbgroup = group.dbmodel
+    dbgroup = group.bare_model
     gcopy = SqlaGroup.from_dbmodel(dbgroup, backend)
 
     assert group.pk == gcopy.pk

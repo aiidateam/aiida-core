@@ -16,13 +16,14 @@ from aiida.common.lang import type_check
 from . import utils
 
 ModelType = TypeVar('ModelType')  # pylint: disable=invalid-name
+SelfType = TypeVar('SelfType', bound='SqlaModelEntity')
 
 
 class SqlaModelEntity(Generic[ModelType]):
     """A mixin that adds some common SQLA backend entity methods"""
 
     MODEL_CLASS = None
-    _dbmodel = None
+    _model: utils.ModelWrapper
 
     @classmethod
     def _class_check(cls):
@@ -33,9 +34,9 @@ class SqlaModelEntity(Generic[ModelType]):
     def from_dbmodel(cls, dbmodel, backend):
         """Create an AiiDA Entity from the corresponding SQLA ORM model and storage backend
 
-        :param dbmodel: the model to create the entity from
-        :param backend: the corresponding backend
-        :return: the Django entity
+        :param dbmodel: the SQLAlchemy model to create the entity from
+        :param backend: the corresponding storage backend
+        :return: the AiiDA entity
         """
         from .backend import PsqlDosBackend  # pylint: disable=cyclic-import
         cls._class_check()
@@ -43,59 +44,53 @@ class SqlaModelEntity(Generic[ModelType]):
         type_check(backend, PsqlDosBackend)
         entity = cls.__new__(cls)
         super(SqlaModelEntity, entity).__init__(backend)
-        entity._dbmodel = utils.ModelWrapper(dbmodel, backend)  # pylint: disable=protected-access
+        entity._model = utils.ModelWrapper(dbmodel, backend)  # pylint: disable=protected-access
         return entity
-
-    @classmethod
-    def get_dbmodel_attribute_name(cls, attr_name):
-        """
-        Given the name of an attribute of the entity class give the corresponding name of the attribute
-        in the db model.  It if doesn't exit this raises a ValueError
-
-        :param attr_name:
-        :return: the dbmodel attribute name
-        :rtype: str
-        """
-        if hasattr(cls.MODEL_CLASS, attr_name):
-            return attr_name
-
-        raise ValueError(f"Unknown attribute '{attr_name}'")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._class_check()
 
     @property
-    def dbmodel(self):
-        return self._dbmodel._model  # pylint: disable=protected-access
+    def model(self) -> utils.ModelWrapper:
+        """Return an ORM model that correctly updates and flushes the data when getting or setting a field."""
+        return self._model
 
     @property
-    def id(self):  # pylint: disable=redefined-builtin, invalid-name
+    def bare_model(self):
+        """Return the underlying SQLA ORM model for this entity.
+
+        .. warning:: Getting/setting attributes on this model bypasses AiiDA's internal update/flush mechanisms.
+        """
+        return self.model._model  # pylint: disable=protected-access
+
+    @property
+    def id(self) -> int:  # pylint: disable=redefined-builtin, invalid-name
         """
         Get the id of this entity
 
         :return: the entity id
         """
-        return self._dbmodel.id
+        return self.model.id
 
     @property
-    def is_stored(self):
+    def is_stored(self) -> bool:
         """
         Is this entity stored?
 
         :return: True if stored, False otherwise
         """
-        return self._dbmodel.id is not None
+        return self.model.id is not None
 
-    def store(self):
+    def store(self: SelfType) -> SelfType:
         """
         Store this entity
 
         :return: the entity itself
         """
-        self._dbmodel.save()
+        self.model.save()
         return self
 
     def _flush_if_stored(self, fields: Set[str]) -> None:
-        if self._dbmodel.is_saved():
-            self._dbmodel._flush(fields)  # pylint: disable=protected-access
+        if self.model.is_saved():
+            self.model._flush(fields)  # pylint: disable=protected-access

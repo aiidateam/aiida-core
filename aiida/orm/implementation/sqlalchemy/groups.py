@@ -88,7 +88,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
     @property
     def user(self):
         from .users import SqlaUser
-        return SqlaUser.from_dbmodel(self.bare_model.user, self.backend)
+        return SqlaUser.from_dbmodel(self.model.user, self.backend)
 
     @user.setter
     def user(self, new_user):

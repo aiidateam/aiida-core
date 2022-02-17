@@ -268,7 +268,7 @@ class TestNodeBasic(AiidaTestCase):
 
         a = orm.Data()
         b = orm.Data()
-        b.backend_entity.sqla_model.uuid = a.uuid
+        b.backend_entity.bare_model.uuid = a.uuid
         a.store()
 
         with self.assertRaises(SqlaIntegrityError):

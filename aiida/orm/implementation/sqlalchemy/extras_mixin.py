@@ -17,17 +17,17 @@ from aiida.orm.implementation.utils import clean_value, validate_attribute_extra
 class ExtrasMixin:
     """Mixin class for SQL implementations of ``extras``."""
 
-    aiida_model: Any
-    sqla_model: Any
+    model: Any
+    bare_model: Any
     is_stored: bool
 
     @property
     def extras(self) -> Dict[str, Any]:
-        return self.aiida_model.extras
+        return self.model.extras
 
     def get_extra(self, key: str) -> Any:
         try:
-            return self.aiida_model.extras[key]
+            return self.model.extras[key]
         except KeyError as exception:
             raise AttributeError(f'extra `{exception}` does not exist') from exception
 
@@ -37,7 +37,7 @@ class ExtrasMixin:
         if self.is_stored:
             value = clean_value(value)
 
-        self.aiida_model.extras[key] = value
+        self.model.extras[key] = value
         self._flush_if_stored({'extras'})
 
     def set_extra_many(self, extras: Dict[str, Any]) -> None:
@@ -48,7 +48,7 @@ class ExtrasMixin:
             extras = {key: clean_value(value) for key, value in extras.items()}
 
         for key, value in extras.items():
-            self.sqla_model.extras[key] = value
+            self.bare_model.extras[key] = value
 
         self._flush_if_stored({'extras'})
 
@@ -59,36 +59,36 @@ class ExtrasMixin:
         if self.is_stored:
             extras = clean_value(extras)
 
-        self.sqla_model.extras = extras
+        self.bare_model.extras = extras
         self._flush_if_stored({'extras'})
 
     def delete_extra(self, key: str) -> None:
         try:
-            self.aiida_model.extras.pop(key)
+            self.model.extras.pop(key)
         except KeyError as exception:
             raise AttributeError(f'extra `{exception}` does not exist') from exception
         else:
             self._flush_if_stored({'extras'})
 
     def delete_extra_many(self, keys: Iterable[str]) -> None:
-        non_existing_keys = [key for key in keys if key not in self.aiida_model.extras]
+        non_existing_keys = [key for key in keys if key not in self.model.extras]
 
         if non_existing_keys:
             raise AttributeError(f"extras `{', '.join(non_existing_keys)}` do not exist")
 
         for key in keys:
-            self.sqla_model.extras.pop(key)
+            self.bare_model.extras.pop(key)
 
         self._flush_if_stored({'extras'})
 
     def clear_extras(self) -> None:
-        self.aiida_model.extras = {}
+        self.model.extras = {}
         self._flush_if_stored({'extras'})
 
     def extras_items(self) -> Iterable[Tuple[str, Any]]:
-        for key, value in self.aiida_model.extras.items():
+        for key, value in self.model.extras.items():
             yield key, value
 
     def extras_keys(self) -> Iterable[str]:
-        for key in self.aiida_model.extras.keys():
+        for key in self.model.extras.keys():
             yield key

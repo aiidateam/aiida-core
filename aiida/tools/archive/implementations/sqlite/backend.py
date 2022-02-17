@@ -388,17 +388,17 @@ def create_backend_cls(base_class, model_cls):
         def __init__(self, _backend, model):
             """Initialise the backend entity."""
             self._backend = _backend
-            self._aiida_model = ModelWrapper(model, _backend)
+            self._model = ModelWrapper(model, _backend)
 
         @property
-        def aiida_model(self) -> ModelWrapper:
+        def model(self) -> ModelWrapper:
             """Return an ORM model that correctly updates and flushes the data model when getting or setting a field."""
-            return self._aiida_model
+            return self._model
 
         @property
-        def sqla_model(self):
+        def bare_model(self):
             """Return the underlying SQLAlchemy ORM model for this entity."""
-            return self.aiida_model._model  # pylint: disable=protected-access
+            return self.model._model  # pylint: disable=protected-access
 
         @classmethod
         def from_dbmodel(cls, model, _backend):

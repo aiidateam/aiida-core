@@ -23,7 +23,7 @@ class SqlaModelEntity(Generic[ModelType]):
     """A mixin that adds some common SQLA backend entity methods"""
 
     MODEL_CLASS = None
-    _aiida_model: utils.ModelWrapper
+    _model: utils.ModelWrapper
 
     @classmethod
     def _class_check(cls):
@@ -45,7 +45,7 @@ class SqlaModelEntity(Generic[ModelType]):
         type_check(backend, PsqlDosBackend)
         entity = cls.__new__(cls)
         super(SqlaModelEntity, entity).__init__(backend)
-        entity._aiida_model = utils.ModelWrapper(dbmodel, backend)  # pylint: disable=protected-access
+        entity._model = utils.ModelWrapper(dbmodel, backend)  # pylint: disable=protected-access
         return entity
 
     def __init__(self, *args, **kwargs):
@@ -53,17 +53,17 @@ class SqlaModelEntity(Generic[ModelType]):
         self._class_check()
 
     @property
-    def aiida_model(self) -> utils.ModelWrapper:
+    def model(self) -> utils.ModelWrapper:
         """Return an ORM model that correctly updates and flushes the data when getting or setting a field."""
-        return self._aiida_model
+        return self._model
 
     @property
-    def sqla_model(self):
+    def bare_model(self):
         """Return the underlying SQLA ORM model for this entity.
 
         .. warning:: Getting/setting attributes on this model bypasses AiiDA's internal update/flush mechanisms.
         """
-        return self.aiida_model._model  # pylint: disable=protected-access
+        return self.model._model  # pylint: disable=protected-access
 
     @property
     def id(self) -> int:  # pylint: disable=redefined-builtin, invalid-name
@@ -72,7 +72,7 @@ class SqlaModelEntity(Generic[ModelType]):
 
         :return: the entity id
         """
-        return self.aiida_model.id
+        return self.model.id
 
     @property
     def is_stored(self) -> bool:
@@ -81,7 +81,7 @@ class SqlaModelEntity(Generic[ModelType]):
 
         :return: True if stored, False otherwise
         """
-        return self.aiida_model.id is not None
+        return self.model.id is not None
 
     def store(self: SelfType) -> SelfType:
         """
@@ -89,9 +89,9 @@ class SqlaModelEntity(Generic[ModelType]):
 
         :return: the entity itself
         """
-        self.aiida_model.save()
+        self.model.save()
         return self
 
     def _flush_if_stored(self, fields: Set[str]) -> None:
-        if self.aiida_model.is_saved():
-            self.aiida_model._flush(fields)  # pylint: disable=protected-access
+        if self.model.is_saved():
+            self.model._flush(fields)  # pylint: disable=protected-access

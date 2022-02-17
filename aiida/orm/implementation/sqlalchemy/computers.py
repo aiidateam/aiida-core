@@ -31,23 +31,23 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
 
     def __init__(self, backend, **kwargs):
         super().__init__(backend)
-        self._aiida_model = utils.ModelWrapper(DbComputer(**kwargs), backend)
+        self._model = utils.ModelWrapper(DbComputer(**kwargs), backend)
 
     @property
     def uuid(self):
-        return str(self.aiida_model.uuid)
+        return str(self.model.uuid)
 
     @property
     def pk(self):
-        return self.aiida_model.id
+        return self.model.id
 
     @property
     def id(self):  # pylint: disable=invalid-name
-        return self.aiida_model.id
+        return self.model.id
 
     @property
     def is_stored(self):
-        return self.aiida_model.id is not None
+        return self.model.id is not None
 
     def copy(self):
         """Create an unstored clone of an already stored `Computer`."""
@@ -56,7 +56,7 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
         if not self.is_stored:
             raise exceptions.InvalidOperation('You can copy a computer only after having stored it')
 
-        dbcomputer = copy(self.aiida_model)
+        dbcomputer = copy(self.model)
         make_transient(dbcomputer)
         session.add(dbcomputer)
 
@@ -67,7 +67,7 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
     def store(self):
         """Store the `Computer` instance."""
         try:
-            self.aiida_model.save()
+            self.model.save()
         except SQLAlchemyError:
             raise ValueError('Integrity error, probably the hostname already exists in the DB')
 
@@ -75,42 +75,42 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
 
     @property
     def label(self):
-        return self.aiida_model.label
+        return self.model.label
 
     @property
     def description(self):
-        return self.aiida_model.description
+        return self.model.description
 
     @property
     def hostname(self):
-        return self.aiida_model.hostname
+        return self.model.hostname
 
     def get_metadata(self):
-        return self.aiida_model._metadata  # pylint: disable=protected-access
+        return self.model._metadata  # pylint: disable=protected-access
 
     def set_metadata(self, metadata):
-        self.aiida_model._metadata = metadata  # pylint: disable=protected-access
+        self.model._metadata = metadata  # pylint: disable=protected-access
 
     def set_label(self, val):
-        self.aiida_model.label = val
+        self.model.label = val
 
     def set_hostname(self, val):
-        self.aiida_model.hostname = val
+        self.model.hostname = val
 
     def set_description(self, val):
-        self.aiida_model.description = val
+        self.model.description = val
 
     def get_scheduler_type(self):
-        return self.aiida_model.scheduler_type
+        return self.model.scheduler_type
 
     def set_scheduler_type(self, scheduler_type):
-        self.aiida_model.scheduler_type = scheduler_type
+        self.model.scheduler_type = scheduler_type
 
     def get_transport_type(self):
-        return self.aiida_model.transport_type
+        return self.model.transport_type
 
     def set_transport_type(self, transport_type):
-        self.aiida_model.transport_type = transport_type
+        self.model.transport_type = transport_type
 
 
 class SqlaComputerCollection(BackendComputerCollection):

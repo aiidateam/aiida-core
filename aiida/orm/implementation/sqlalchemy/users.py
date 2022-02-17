@@ -24,41 +24,41 @@ class SqlaUser(entities.SqlaModelEntity[DbUser], BackendUser):
     def __init__(self, backend, email, first_name, last_name, institution):
         # pylint: disable=too-many-arguments
         super().__init__(backend)
-        self._aiida_model = utils.ModelWrapper(
+        self._model = utils.ModelWrapper(
             DbUser(email=email, first_name=first_name, last_name=last_name, institution=institution), backend
         )
 
     @property
     def email(self):
-        return self.aiida_model.email
+        return self.model.email
 
     @email.setter
     def email(self, email):
-        self.aiida_model.email = email
+        self.model.email = email
 
     @property
     def first_name(self):
-        return self.aiida_model.first_name
+        return self.model.first_name
 
     @first_name.setter
     def first_name(self, first_name):
-        self.aiida_model.first_name = first_name
+        self.model.first_name = first_name
 
     @property
     def last_name(self):
-        return self.aiida_model.last_name
+        return self.model.last_name
 
     @last_name.setter
     def last_name(self, last_name):
-        self.aiida_model.last_name = last_name
+        self.model.last_name = last_name
 
     @property
     def institution(self):
-        return self.aiida_model.institution
+        return self.model.institution
 
     @institution.setter
     def institution(self, institution):
-        self.aiida_model.institution = institution
+        self.model.institution = institution
 
 
 class SqlaUserCollection(BackendUserCollection):

@@ -32,9 +32,7 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
         super().__init__(backend)
         type_check(user, users.SqlaUser)
         type_check(computer, computers.SqlaComputer)
-        self._model = utils.ModelWrapper(
-            DbAuthInfo(dbcomputer=computer.bare_model, aiidauser=user.bare_model), backend
-        )
+        self._model = utils.ModelWrapper(DbAuthInfo(dbcomputer=computer.bare_model, aiidauser=user.bare_model), backend)
 
     @property
     def id(self):  # pylint: disable=invalid-name

@@ -14,9 +14,9 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from aiida.backends.sqlalchemy.models import log as models
 from aiida.common import exceptions
+from aiida.orm.implementation import BackendLog, BackendLogCollection
 
 from . import entities, utils
-from .. import BackendLog, BackendLogCollection
 
 
 class SqlaLog(entities.SqlaModelEntity[models.DbLog], BackendLog):

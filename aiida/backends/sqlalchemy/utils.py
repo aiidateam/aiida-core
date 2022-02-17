@@ -74,7 +74,7 @@ def flag_modified(instance, key):
     """
     from sqlalchemy.orm.attributes import flag_modified as flag_modified_sqla
 
-    from aiida.orm.implementation.sqlalchemy.utils import ModelWrapper
+    from aiida.backends.sqlalchemy.orm.utils import ModelWrapper
 
     if isinstance(instance, ModelWrapper):
         instance = instance._model  # pylint: disable=protected-access

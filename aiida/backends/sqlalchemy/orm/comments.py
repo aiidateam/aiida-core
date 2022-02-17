@@ -16,9 +16,9 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from aiida.backends.sqlalchemy.models import comment as models
 from aiida.common import exceptions, lang
+from aiida.orm.implementation.comments import BackendComment, BackendCommentCollection
 
 from . import entities, users, utils
-from ..comments import BackendComment, BackendCommentCollection
 
 
 class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):

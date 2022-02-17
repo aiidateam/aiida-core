@@ -18,11 +18,11 @@ from sqlalchemy import Integer, cast
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.sql import column, func, select, table, text
 
+from aiida.backends.sqlalchemy.backend import CONTAINER_DEFAULTS
 from aiida.backends.sqlalchemy.migrations.utils import utils
 from aiida.cmdline.utils import echo
 from aiida.common import exceptions
 from aiida.common.progress_reporter import get_progress_reporter, set_progress_bar_tqdm, set_progress_reporter
-from aiida.orm.implementation.sqlalchemy.backend import CONTAINER_DEFAULTS
 
 
 def migrate_repository(connection, profile):

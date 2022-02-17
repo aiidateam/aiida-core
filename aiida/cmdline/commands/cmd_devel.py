@@ -45,7 +45,7 @@ def devel_check_load_time():
     if manager.profile_storage_loaded:
         echo.echo_critical('potential `verdi` speed problem: database backend is loaded.')
 
-    allowed = ('aiida.backends', 'aiida.cmdline', 'aiida.common', 'aiida.manage', 'aiida.plugins', 'aiida.restapi')
+    allowed = ('aiida.cmdline', 'aiida.common', 'aiida.manage', 'aiida.plugins', 'aiida.restapi')
     for loaded in loaded_aiida_modules:
         if not any(loaded.startswith(mod) for mod in allowed):
             echo.echo_critical(

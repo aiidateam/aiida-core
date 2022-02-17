@@ -168,8 +168,8 @@ class PsqlDostoreMigrator:
 
     def initialise(self) -> None:
         """Generate the initial storage schema for this profile, from the ORM models."""
+        from aiida.backends.sqlalchemy.backend import CONTAINER_DEFAULTS
         from aiida.backends.sqlalchemy.models.base import get_orm_metadata
-        from aiida.orm.implementation.sqlalchemy.backend import CONTAINER_DEFAULTS
 
         # setup the database
         # see: https://alembic.sqlalchemy.org/en/latest/cookbook.html#building-an-up-to-date-database-from-scratch

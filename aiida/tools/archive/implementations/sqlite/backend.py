@@ -26,13 +26,13 @@ from sqlalchemy.sql.schema import Table
 
 # we need to import all models, to ensure they are loaded on the SQLA Metadata
 from aiida.backends.sqlalchemy.models import authinfo, base, comment, computer, group, log, node, user
+from aiida.backends.sqlalchemy.orm import authinfos, comments, computers, entities, groups, logs, nodes, users
+from aiida.backends.sqlalchemy.orm.querybuilder import SqlaQueryBuilder
+from aiida.backends.sqlalchemy.orm.utils import ModelWrapper
 from aiida.common.exceptions import UnreachableStorage
 from aiida.manage import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.backends import Backend as BackendAbstract
-from aiida.orm.implementation.sqlalchemy import authinfos, comments, computers, entities, groups, logs, nodes, users
-from aiida.orm.implementation.sqlalchemy.querybuilder import SqlaQueryBuilder
-from aiida.orm.implementation.sqlalchemy.utils import ModelWrapper
 from aiida.repository.backend.abstract import AbstractRepositoryBackend
 from aiida.tools.archive.exceptions import ArchiveClosedError, CorruptArchive, ReadOnlyError
 

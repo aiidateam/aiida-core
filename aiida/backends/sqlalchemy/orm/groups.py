@@ -18,8 +18,6 @@ from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
 from . import entities, users, utils
 from .extras_mixin import ExtrasMixin
 
-__all__ = ('SqlaGroup', 'SqlaGroupCollection')
-
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -180,7 +178,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
         from sqlalchemy.exc import IntegrityError  # pylint: disable=import-error, no-name-in-module
 
         from aiida.backends.sqlalchemy.models.base import Base
-        from aiida.orm.implementation.sqlalchemy.nodes import SqlaNode
+        from aiida.backends.sqlalchemy.orm.nodes import SqlaNode
 
         super().add_nodes(nodes)
         skip_orm = kwargs.get('skip_orm', False)
@@ -236,7 +234,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
         from sqlalchemy import and_
 
         from aiida.backends.sqlalchemy.models.base import Base
-        from aiida.orm.implementation.sqlalchemy.nodes import SqlaNode
+        from aiida.backends.sqlalchemy.orm.nodes import SqlaNode
 
         super().remove_nodes(nodes)
 

@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module with the implementations of the various backend entities for various database backends."""
+"""Module containing the backend entity abstracts for storage backends."""
 
 # AUTO-GENERATED
 

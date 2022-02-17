@@ -20,7 +20,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from aiida.common import exceptions
 
 if TYPE_CHECKING:
-    from aiida.orm.implementation.sqlalchemy.backend import PsqlDosBackend
+    from aiida.backends.sqlalchemy.backend import PsqlDosBackend
 
 IMMUTABLE_MODEL_FIELDS = {'id', 'pk', 'uuid', 'node_type'}
 

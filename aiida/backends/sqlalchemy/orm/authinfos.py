@@ -11,9 +11,9 @@
 from aiida.backends.sqlalchemy.models.authinfo import DbAuthInfo
 from aiida.common import exceptions
 from aiida.common.lang import type_check
+from aiida.orm.implementation.authinfos import BackendAuthInfo, BackendAuthInfoCollection
 
-from . import entities, utils
-from ..authinfos import BackendAuthInfo, BackendAuthInfoCollection
+from . import computers, entities, utils
 
 
 class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
@@ -28,7 +28,7 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
         :param user: a :class:`aiida.orm.implementation.users.BackendUser` instance
         :return: an :class:`aiida.orm.implementation.authinfos.BackendAuthInfo` instance
         """
-        from . import computers, users
+        from . import users
         super().__init__(backend)
         type_check(user, users.SqlaUser)
         type_check(computer, computers.SqlaComputer)

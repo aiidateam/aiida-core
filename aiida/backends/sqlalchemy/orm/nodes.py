@@ -18,11 +18,11 @@ from sqlalchemy.orm.exc import NoResultFound
 from aiida.backends.sqlalchemy.models import node as models
 from aiida.common import exceptions
 from aiida.common.lang import type_check
+from aiida.orm.implementation import BackendNode, BackendNodeCollection
 from aiida.orm.implementation.utils import clean_value, validate_attribute_extra_key
 
 from . import entities
 from . import utils as sqla_utils
-from .. import BackendNode, BackendNodeCollection
 from .computers import SqlaComputer
 from .extras_mixin import ExtrasMixin
 from .users import SqlaUser

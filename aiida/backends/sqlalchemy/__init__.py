@@ -8,3 +8,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with implementation of the storage backend using SqlAlchemy and the disk-objectstore."""
+
+# AUTO-GENERATED
+
+# yapf: disable
+# pylint: disable=wildcard-import
+
+from .backend import *
+
+__all__ = (
+    'PsqlDosBackend',
+)
+
+# yapf: enable

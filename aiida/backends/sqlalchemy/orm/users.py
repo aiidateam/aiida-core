@@ -13,8 +13,6 @@ from aiida.orm.implementation.users import BackendUser, BackendUserCollection
 
 from . import entities, utils
 
-__all__ = ('SqlaUserCollection', 'SqlaUser')
-
 
 class SqlaUser(entities.SqlaModelEntity[DbUser], BackendUser):
     """SQLA user"""

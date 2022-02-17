@@ -38,7 +38,7 @@ class SqlaModelEntity(Generic[ModelType]):
         :param backend: the corresponding storage backend
         :return: the AiiDA entity
         """
-        from .backend import PsqlDosBackend  # pylint: disable=cyclic-import
+        from ..backend import PsqlDosBackend  # pylint: disable=cyclic-import
         cls._class_check()
         type_check(dbmodel, cls.MODEL_CLASS)
         type_check(backend, PsqlDosBackend)

@@ -23,10 +23,10 @@ from aiida.common.exceptions import ClosedStorage, IntegrityError
 from aiida.manage.configuration.profile import Profile
 from aiida.orm import User
 from aiida.orm.entities import EntityTypes
+from aiida.orm.implementation.backends import Backend
+from aiida.orm.implementation.entities import BackendEntity
 
-from . import authinfos, comments, computers, convert, groups, logs, nodes, querybuilder, users
-from ..backends import Backend
-from ..entities import BackendEntity
+from .orm import authinfos, comments, computers, convert, groups, logs, nodes, querybuilder, users
 
 if TYPE_CHECKING:
     from aiida.repository.backend import DiskObjectStoreRepositoryBackend

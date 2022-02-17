@@ -20,8 +20,6 @@ from aiida.backends.sqlalchemy.models.log import DbLog
 from aiida.backends.sqlalchemy.models.node import DbLink, DbNode
 from aiida.backends.sqlalchemy.models.user import DbUser
 
-__all__ = ('get_backend_entity',)
-
 # pylint: disable=cyclic-import
 
 

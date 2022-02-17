@@ -32,28 +32,27 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
         super().__init__(backend)
         type_check(user, users.SqlaUser)
         type_check(computer, computers.SqlaComputer)
-        self._dbmodel = utils.ModelWrapper(DbAuthInfo(dbcomputer=computer.dbmodel, aiidauser=user.dbmodel), backend)
+        self._model = utils.ModelWrapper(DbAuthInfo(dbcomputer=computer.bare_model, aiidauser=user.bare_model), backend)
 
     @property
     def id(self):  # pylint: disable=invalid-name
-        return self._dbmodel.id
+        return self.model.id
 
     @property
-    def is_stored(self):
+    def is_stored(self) -> bool:
         """Return whether the entity is stored.
 
         :return: True if stored, False otherwise
-        :rtype: bool
         """
-        return self._dbmodel.is_saved()
+        return self.model.is_saved()
 
     @property
-    def enabled(self):
+    def enabled(self) -> bool:
         """Return whether this instance is enabled.
 
         :return: boolean, True if enabled, False otherwise
         """
-        return self._dbmodel.enabled
+        return self.model.enabled
 
     @enabled.setter
     def enabled(self, enabled):
@@ -61,7 +60,7 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
 
         :param enabled: boolean, True to enable the instance, False to disable it
         """
-        self._dbmodel.enabled = enabled
+        self.model.enabled = enabled
 
     @property
     def computer(self):
@@ -69,7 +68,7 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
 
         :return: :class:`aiida.orm.implementation.computers.BackendComputer`
         """
-        return self.backend.computers.from_dbmodel(self._dbmodel.dbcomputer)
+        return self.backend.computers.from_dbmodel(self.model.dbcomputer)
 
     @property
     def user(self):
@@ -77,35 +76,35 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
 
         :return: :class:`aiida.orm.implementation.users.BackendUser`
         """
-        return self._backend.users.from_dbmodel(self._dbmodel.aiidauser)
+        return self._backend.users.from_dbmodel(self.model.aiidauser)
 
     def get_auth_params(self):
         """Return the dictionary of authentication parameters
 
         :return: a dictionary with authentication parameters
         """
-        return self._dbmodel.auth_params
+        return self.model.auth_params
 
     def set_auth_params(self, auth_params):
         """Set the dictionary of authentication parameters
 
         :param auth_params: a dictionary with authentication parameters
         """
-        self._dbmodel.auth_params = auth_params
+        self.model.auth_params = auth_params
 
     def get_metadata(self):
         """Return the dictionary of metadata
 
         :return: a dictionary with metadata
         """
-        return self._dbmodel._metadata  # pylint: disable=protected-access
+        return self.model._metadata  # pylint: disable=protected-access
 
     def set_metadata(self, metadata):
         """Set the dictionary of metadata
 
         :param metadata: a dictionary with metadata
         """
-        self._dbmodel._metadata = metadata  # pylint: disable=protected-access
+        self.model._metadata = metadata  # pylint: disable=protected-access
 
 
 class SqlaAuthInfoCollection(BackendAuthInfoCollection):

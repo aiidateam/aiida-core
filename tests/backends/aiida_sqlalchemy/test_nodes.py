@@ -77,7 +77,7 @@ class TestNodeBasicSQLA(AiidaTestCase):
         from aiida.common.utils import get_new_uuid
 
         # Get the automatic user
-        dbuser = self.backend.users.create(f'{self.id()}@aiida.net').store().dbmodel
+        dbuser = self.backend.users.create(f'{self.id()}@aiida.net').store().bare_model
         # Create a new node but don't add it to the session
         node_uuid = get_new_uuid()
         DbNode(user=dbuser, uuid=node_uuid, node_type=None)
@@ -96,7 +96,7 @@ class TestNodeBasicSQLA(AiidaTestCase):
         self.assertEqual(len(res), 0, 'There should not be any nodes with this UUID in the session/DB.')
 
         # Get the automatic user
-        dbuser = orm.User.objects.get_default().backend_entity.dbmodel
+        dbuser = orm.User.objects.get_default().backend_entity.bare_model
         # Create a new node but now add it to the session
         node_uuid = get_new_uuid()
         node = DbNode(user=dbuser, uuid=node_uuid, node_type=None)

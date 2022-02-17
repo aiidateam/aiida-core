@@ -44,16 +44,16 @@ class TestRelationshipsSQLA(AiidaTestCase):
         n_3.add_incoming(n_2, link_type=LinkType.CREATE, link_label='N2')
 
         # Check that the result of outputs is a list
-        self.assertIsInstance(n_1.backend_entity.dbmodel.outputs, list, 'This is expected to be a list')
+        self.assertIsInstance(n_1.backend_entity.bare_model.outputs, list, 'This is expected to be a list')
 
         # Check that the result of outputs_q is a query
         from sqlalchemy.orm.dynamic import AppenderQuery
         self.assertIsInstance(
-            n_1.backend_entity.dbmodel.outputs_q, AppenderQuery, 'This is expected to be an AppenderQuery'
+            n_1.backend_entity.bare_model.outputs_q, AppenderQuery, 'This is expected to be an AppenderQuery'
         )
 
         # Check that the result of outputs is correct
-        out = {_.pk for _ in n_1.backend_entity.dbmodel.outputs}
+        out = {_.pk for _ in n_1.backend_entity.bare_model.outputs}
         self.assertEqual(out, set([n_2.pk]))
 
     def test_inputs_parents_relationship(self):
@@ -69,16 +69,16 @@ class TestRelationshipsSQLA(AiidaTestCase):
         n_3.add_incoming(n_2, link_type=LinkType.CREATE, link_label='N2')
 
         # Check that the result of outputs is a list
-        self.assertIsInstance(n_1.backend_entity.dbmodel.inputs, list, 'This is expected to be a list')
+        self.assertIsInstance(n_1.backend_entity.bare_model.inputs, list, 'This is expected to be a list')
 
         # Check that the result of outputs_q is a query
         from sqlalchemy.orm.dynamic import AppenderQuery
         self.assertIsInstance(
-            n_1.backend_entity.dbmodel.inputs_q, AppenderQuery, 'This is expected to be an AppenderQuery'
+            n_1.backend_entity.bare_model.inputs_q, AppenderQuery, 'This is expected to be an AppenderQuery'
         )
 
         # Check that the result of inputs is correct
-        out = {_.pk for _ in n_3.backend_entity.dbmodel.inputs}
+        out = {_.pk for _ in n_3.backend_entity.bare_model.inputs}
         self.assertEqual(out, set([n_2.pk]))
 
     def test_user_node_1(self):

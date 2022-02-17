@@ -53,18 +53,18 @@ class TestSessionSqla:
         session = self.backend.get_session()
 
         user = self.backend.users.create(email='other@example.com')
-        session.add(user.dbmodel)
+        session.add(user.bare_model)
         session.commit()
 
         defaults = dict(
             label='localhost', hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
         )
         computer = self.backend.computers.create(**defaults)
-        session.add(computer.dbmodel)
+        session.add(computer.bare_model)
         session.commit()
 
         node = self.backend.nodes.create(node_type='', user=user).store()
-        session.add(node.dbmodel)
+        session.add(node.bare_model)
         session.commit()
 
         self.drop_connection()
@@ -77,7 +77,7 @@ class TestSessionSqla:
         session = self.backend.get_session()
 
         user = self.backend.users.create(email='other@example.com')
-        session.add(user.dbmodel)
+        session.add(user.bare_model)
         session.commit()
 
         computer = self.backend.computers.create(
@@ -98,18 +98,18 @@ class TestSessionSqla:
         session = self.backend.get_session()
 
         user = self.backend.users.create(email='other@example.com')
-        session.add(user.dbmodel)
+        session.add(user.bare_model)
         session.commit()
 
         defaults = dict(
             label='localhost', hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
         )
         computer = self.backend.computers.create(**defaults)
-        session.add(computer.dbmodel)
+        session.add(computer.bare_model)
         session.commit()
 
         node = self.backend.nodes.create(node_type='', user=user).store()
-        session.add(node.dbmodel)
+        session.add(node.bare_model)
         session.commit()
 
         self.drop_connection()
@@ -123,7 +123,7 @@ class TestSessionSqla:
         session = self.backend.get_session()
 
         user = self.backend.users.create(email='other@example.com')
-        session.add(user.dbmodel)
+        session.add(user.bare_model)
         session.commit()
 
         defaults = dict(
@@ -151,7 +151,7 @@ class TestSessionSqla:
         try:
             user = self.backend.users.create(email='test@localhost').store()
             node = self.backend.nodes.create(node_type='', user=user).store()
-            master_session = node._dbmodel.session  # pylint: disable=protected-access
+            master_session = node.model.session  # pylint: disable=protected-access
             assert master_session is not custom_session
 
             # Manually load the DbNode in a different session

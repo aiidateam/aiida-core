@@ -29,8 +29,6 @@ py:class TransactionType
 py:class ReturnType
 py:class function
 py:class traceback
-py:class typing_extensions.Protocol
-py:class typing_extensions.Literal
 py:class a
 py:class c
 py:class d

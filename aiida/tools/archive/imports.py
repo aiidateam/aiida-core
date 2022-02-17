@@ -10,7 +10,7 @@
 # pylint: disable=too-many-branches,too-many-lines,too-many-locals,too-many-statements
 """Import an archive."""
 from pathlib import Path
-from typing import Callable, Dict, Optional, Set, Tuple, Union
+from typing import Callable, Dict, Literal, Optional, Set, Tuple, Union
 
 from tabulate import tabulate
 
@@ -30,11 +30,6 @@ from .abstract import ArchiveFormatAbstract
 from .common import batch_iter, entity_type_to_orm
 from .exceptions import ImportTestRun, ImportUniquenessError, ImportValidationError, IncompatibleArchiveVersionError
 from .implementations.sqlite import ArchiveFormatSqlZip
-
-try:
-    from typing import Literal
-except ImportError:
-    from typing_extensions import Literal  # type: ignore
 
 __all__ = ('IMPORT_LOGGER', 'import_archive')
 

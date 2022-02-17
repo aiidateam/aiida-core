@@ -21,6 +21,15 @@ def test_main(version, uninitialised_profile, reflect_schema, data_regression):
     data_regression.check(reflect_schema(uninitialised_profile))
 
 
+def test_head_vs_orm(uninitialised_profile, reflect_schema, data_regression):
+    """Test that the migrations produce the same database schema as the models."""
+    migrator = PsqlDostoreMigrator(uninitialised_profile)
+    head_version = migrator.get_schema_version_head()
+    migrator.initialise()
+    data_regression.check(reflect_schema(uninitialised_profile), basename=f'test_main_{head_version}_')
+
+
+@pytest.mark.nightly
 @pytest.mark.parametrize(
     'version', list(v for v in PsqlDostoreMigrator.get_schema_versions() if v.startswith('django'))
 )
@@ -31,6 +40,7 @@ def test_django(version, uninitialised_profile, reflect_schema, data_regression)
     data_regression.check(reflect_schema(uninitialised_profile))
 
 
+@pytest.mark.nightly
 @pytest.mark.parametrize(
     '_id,version',
     enumerate(
@@ -42,11 +52,3 @@ def test_sqla(_id, version, uninitialised_profile, reflect_schema, data_regressi
     migrator = PsqlDostoreMigrator(uninitialised_profile)
     migrator.migrate_up(f'sqlalchemy@{version}')
     data_regression.check(reflect_schema(uninitialised_profile))
-
-
-def test_head_vs_orm(uninitialised_profile, reflect_schema, data_regression):
-    """Test that the migrations produce the same database schema as the models."""
-    migrator = PsqlDostoreMigrator(uninitialised_profile)
-    head_version = migrator.get_schema_version_head()
-    migrator.initialise()
-    data_regression.check(reflect_schema(uninitialised_profile), basename=f'test_main_{head_version}_')

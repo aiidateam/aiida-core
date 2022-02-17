@@ -10,7 +10,7 @@
 # pylint: disable=invalid-name,no-member
 """Move trajectory symbols from repository array to attribute
 
-Note, this is similar to the django migration django_0025
+Note, this is similar to the django migration django_0026
 
 Revision ID: 12536798d4d3
 Revises: 37f3d4882837

@@ -10,7 +10,7 @@
 # pylint: disable=invalid-name,no-member
 """Rename `db_dbnode.type` to `db_dbnode.node_type`
 
-This is identical to migration django_0029
+This is identical to migration django_0030
 
 Revision ID: 5ddd24e52864
 Revises: d254fdfed416

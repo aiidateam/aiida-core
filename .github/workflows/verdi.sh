@@ -47,9 +47,9 @@ RETVAL=$?
 echo $OUTPUT
 if [ $RETVAT -ne 0 ]; then
     echo "'python -m aiida' exitted with code $RETVAL"
+    exit 2
 fi
 if [[ $OUTPUT != *"command line interface of AiiDA"* ]]; then
     echo "'python -m aiida' did not contain the expected stdout:"
     exit 2
 fi
-exit $RETVAL

@@ -104,6 +104,10 @@ class SqlaCommentCollection(BackendCommentCollection):
 
     ENTITY_CLASS = SqlaComment
 
+    def from_dbmodel(self, dbmodel) -> SqlaComment:
+        """Create an entity from the SQLA ORM model"""
+        return self.ENTITY_CLASS.from_dbmodel(dbmodel, self.backend)
+
     def create(self, node, user, content=None, **kwargs):
         """
         Create a Comment for a given node and user

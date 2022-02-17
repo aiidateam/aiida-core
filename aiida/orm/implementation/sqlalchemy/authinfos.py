@@ -113,6 +113,10 @@ class SqlaAuthInfoCollection(BackendAuthInfoCollection):
 
     ENTITY_CLASS = SqlaAuthInfo
 
+    def from_dbmodel(self, dbmodel) -> SqlaAuthInfo:
+        """Create an entity from the SQLA ORM model"""
+        return self.ENTITY_CLASS.from_dbmodel(dbmodel, self.backend)
+
     def delete(self, pk):
         """Delete an entry from the collection.
 

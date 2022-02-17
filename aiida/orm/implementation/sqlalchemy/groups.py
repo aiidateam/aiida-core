@@ -280,6 +280,10 @@ class SqlaGroupCollection(BackendGroupCollection):
 
     ENTITY_CLASS = SqlaGroup
 
+    def from_dbmodel(self, dbmodel) -> SqlaGroup:
+        """Create an entity from the SQLA ORM model"""
+        return self.ENTITY_CLASS.from_dbmodel(dbmodel, self.backend)
+
     def delete(self, id):  # pylint: disable=redefined-builtin
         session = self.backend.get_session()
 

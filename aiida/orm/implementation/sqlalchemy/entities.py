@@ -31,8 +31,7 @@ class SqlaModelEntity(Generic[ModelType]):
 
     @classmethod
     def from_dbmodel(cls, dbmodel, backend):
-        """
-        Create a DjangoEntity from the corresponding db model class
+        """Create an AiiDA Entity from the corresponding SQLA ORM model and storage backend
 
         :param dbmodel: the model to create the entity from
         :param backend: the corresponding backend

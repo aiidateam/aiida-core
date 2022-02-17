@@ -118,6 +118,10 @@ class SqlaComputerCollection(BackendComputerCollection):
 
     ENTITY_CLASS = SqlaComputer
 
+    def from_dbmodel(self, dbmodel) -> SqlaComputer:
+        """Create an entity from the SQLA ORM model"""
+        return self.ENTITY_CLASS.from_dbmodel(dbmodel, self.backend)
+
     def list_names(self):
         session = self.backend.get_session()
         return session.query(DbComputer.label).all()

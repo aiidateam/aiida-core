@@ -93,6 +93,10 @@ class SqlaLogCollection(BackendLogCollection):
 
     ENTITY_CLASS = SqlaLog
 
+    def from_dbmodel(self, dbmodel) -> SqlaLog:
+        """Create an entity from the SQLA ORM model"""
+        return self.ENTITY_CLASS.from_dbmodel(dbmodel, self.backend)
+
     def delete(self, log_id):
         """
         Remove a Log entry from the collection with the given id

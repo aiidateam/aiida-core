@@ -310,6 +310,10 @@ class SqlaNodeCollection(BackendNodeCollection):
 
     ENTITY_CLASS = SqlaNode
 
+    def from_dbmodel(self, dbmodel) -> SqlaNode:
+        """Create an entity from the SQLA ORM model"""
+        return self.ENTITY_CLASS.from_dbmodel(dbmodel, self.backend)
+
     def get(self, pk):
         session = self.backend.get_session()
 

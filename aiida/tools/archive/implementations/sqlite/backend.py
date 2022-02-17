@@ -393,7 +393,7 @@ def create_backend_cls(base_class, model_cls):
         @property
         def aiida_model(self) -> ModelWrapper:
             """Return an ORM model that correctly updates and flushes the data model when getting or setting a field."""
-            return self.aiida_model
+            return self._aiida_model
 
         @property
         def sqla_model(self):

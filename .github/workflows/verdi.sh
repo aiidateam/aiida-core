@@ -37,3 +37,18 @@ done
 
 $VERDI devel check-load-time
 $VERDI devel check-undesired-imports
+
+
+# Test that we can also run the CLI via `python -m aiida`,
+# that it returns a 0 exit code, and contains the expected stdout.
+OUTPUT=$(python -m aiida 2>&1)
+retVal=$?
+if [ $retVal -ne 0 ]; then
+    echo "'python -m aiida' exitted with code $retVal"
+fi
+if [[ $OUTPUT != *"command line interface of AiiDA"* ]]; then
+    echo "'python -m aiida' did not contain the expected stdout:"
+    echo "$OUTPUT"
+    exit 2
+fi
+exit $retVal

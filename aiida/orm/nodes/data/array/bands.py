@@ -13,11 +13,13 @@ This module defines the classes related to band structures or dispersions
 in a Brillouin zone, and how to operate on them.
 """
 from string import Template
+from typing import List, Optional
 
 import numpy
 
 from aiida.common.exceptions import ValidationError
 from aiida.common.utils import join_labels, prettify_labels
+from aiida.orm.fields import QbAttrField
 
 from .kpoints import KpointsData
 
@@ -220,6 +222,11 @@ class BandsData(KpointsData):
     Class to handle bands data
     """
 
+    __qb_fields__ = (
+        QbAttrField('array_labels', dtype=Optional[List[str]], doc='Labels associated with the band arrays'),
+        QbAttrField('units', dtype=str, doc='Units in which the data in bands were stored'),
+    )
+
     def set_kpointsdata(self, kpointsdata):
         """
         Load the kpoints from a kpoint object.
@@ -354,11 +361,10 @@ class BandsData(KpointsData):
         return self.get_attribute('array_labels', None)
 
     @property
-    def units(self):
+    def units(self) -> str:
         """
         Units in which the data in bands were stored. A string
         """
-        # return copy.deepcopy(self._pbc)
         return self.get_attribute('units')
 
     @units.setter

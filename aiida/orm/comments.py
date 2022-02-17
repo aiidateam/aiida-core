@@ -15,6 +15,7 @@ from aiida.common.lang import classproperty
 from aiida.manage import get_manager
 
 from . import entities, users
+from .fields import QbField
 
 if TYPE_CHECKING:
     from aiida.orm import Node, User
@@ -66,11 +67,20 @@ class CommentCollection(entities.Collection['Comment']):
 class Comment(entities.Entity['BackendComment']):
     """Base class to map a DbComment that represents a comment attached to a certain Node."""
 
+    __qb_fields__ = (
+        QbField('uuid', dtype=str, doc='The UUID of the comment'),
+        QbField('ctime', dtype=datetime, doc='Creation time of the comment'),
+        QbField('mtime', dtype=datetime, doc='Modified time of the comment'),
+        QbField('content', dtype=str, doc='Content of the comment'),
+        QbField('user_pk', 'user_id', dtype=int, doc='User PK that created the comment'),
+        QbField('node_pk', 'dbnode_id', dtype=int, doc='Node PK that the comment is attached to'),
+    )
+
     Collection = CommentCollection
 
     @classproperty
-    def objects(cls: Type['Comment']) -> CommentCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
-        return CommentCollection.get_cached(cls, get_manager().get_profile_storage())
+    def objects(cls: Type['Comment']) -> CommentCollection:  # type: ignore # pylint: disable=no-self-argument
+        return CommentCollection.get_cached(cls, get_manager().get_profile_storage())  # type: ignore
 
     def __init__(self, node: 'Node', user: 'User', content: Optional[str] = None, backend: Optional['Backend'] = None):
         """Create a Comment for a given node and user

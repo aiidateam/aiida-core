@@ -14,6 +14,7 @@ import tempfile
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, override
+from aiida.orm.fields import QbAttrField
 
 
 class FunctionCalculationMixin:
@@ -118,6 +119,8 @@ class Sealable:
     # pylint: disable=no-member,unsupported-membership-test
 
     SEALED_KEY = 'sealed'
+
+    __qb_fields__ = (QbAttrField(SEALED_KEY, dtype=bool, doc='Whether the node is sealed'),)
 
     @classproperty
     def _updatable_attributes(cls):  # pylint: disable=no-self-argument

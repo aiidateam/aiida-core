@@ -48,7 +48,7 @@ from aiida.orm.implementation.querybuilder import (
     QueryDictType,
 )
 
-from . import authinfos, comments, computers, convert, entities, groups, logs, nodes, users
+from . import authinfos, comments, computers, convert, entities, fields, groups, logs, nodes, users
 
 if TYPE_CHECKING:
     # pylint: disable=ungrouped-imports
@@ -60,7 +60,7 @@ __all__ = ('QueryBuilder',)
 # re-usable type annotations
 EntityClsType = Type[Union[entities.Entity, 'Process']]  # pylint: disable=invalid-name
 ProjectType = Union[str, dict, Sequence[Union[str, dict]]]  # pylint: disable=invalid-name
-FilterType = Dict[str, Any]  # pylint: disable=invalid-name
+FilterType = Union[Dict[str, Any], fields.QbFieldFilters]  # pylint: disable=invalid-name
 OrderByType = Union[dict, List[dict], Tuple[dict, ...]]
 
 
@@ -104,6 +104,7 @@ class QueryBuilder:
         offset: Optional[int] = None,
         order_by: Optional[OrderByType] = None,
         distinct: bool = False,
+        project_map: Optional[Dict[str, Dict[str, str]]] = None,
     ) -> None:
         """
         Instantiates a QueryBuilder instance.
@@ -134,6 +135,7 @@ class QueryBuilder:
             How to order the results. As the 2 above, can be set also at later stage,
             check :func:`QueryBuilder.order_by` for more information.
         :param distinct: Whether to return de-duplicated rows
+        :param project_map: A mapping of the projection input-keys to the output-keys of `dict`/`iterdict`
 
         """
         self._backend = backend or get_manager().get_profile_storage()
@@ -146,6 +148,8 @@ class QueryBuilder:
         self._filters: Dict[str, FilterType] = {}
         # map tags to projections: tag -> list(fields) -> func | cast -> value
         self._projections: Dict[str, List[Dict[str, Dict[str, Any]]]] = {}
+        # mapping: tag -> field -> return key for iterdict/dict methods
+        self._project_map: Dict[str, Dict[str, str]] = {}
         # list of mappings: tag -> list(fields) -> 'order' | 'cast' -> value (str('asc' | 'desc'), str(cast_key))
         self._order_by: List[Dict[str, List[Dict[str, Dict[str, str]]]]] = []
         self._limit: Optional[int] = None
@@ -170,6 +174,7 @@ class QueryBuilder:
             else:
                 self.append(cls=path_spec)
         # Validate & add projections
+        self._init_project_map(project_map or {})
         projection_dict = project or {}
         if not isinstance(projection_dict, dict):
             raise TypeError('You need to provide the projections as dictionary')
@@ -200,6 +205,7 @@ class QueryBuilder:
             'path': self._path,
             'filters': self._filters,
             'project': self._projections,
+            'project_map': self._project_map,
             'order_by': self._order_by,
             'limit': self._limit,
             'offset': self._offset,
@@ -560,6 +566,23 @@ class QueryBuilder:
 
         return self
 
+    def _init_project_map(self, project_map: Dict[str, Dict[str, str]]) -> None:
+        """Set the project map.
+
+        Note, this is a private method,
+        since the user should not override what is set by projected QbFields.
+
+        :param dict project_map: The project map.
+        """
+        if not isinstance(project_map, dict):
+            raise TypeError('project_map must be a dict')
+        for key, val in project_map.items():
+            if not isinstance(key, str):
+                raise TypeError('project_map keys must be strings')
+            if not isinstance(val, dict):
+                raise TypeError('project_map values must be dicts')
+        self._project_map = project_map
+
     def order_by(self, order_by: OrderByType) -> 'QueryBuilder':
         """
         Set the entity to order by
@@ -617,6 +640,8 @@ class QueryBuilder:
                 for item_to_order_by in items_to_order_by:
                     if isinstance(item_to_order_by, str):
                         item_to_order_by = {item_to_order_by: {}}
+                    elif isinstance(item_to_order_by, fields.QbField):
+                        item_to_order_by = {item_to_order_by.qb_field: {}}
                     elif isinstance(item_to_order_by, dict):
                         pass
                     else:
@@ -686,7 +711,9 @@ class QueryBuilder:
     @staticmethod
     def _process_filters(filters: FilterType) -> Dict[str, Any]:
         """Process filters."""
-        if not isinstance(filters, dict):
+        if isinstance(filters, fields.QbFieldFilters):
+            filters = filters.as_dict()
+        elif not isinstance(filters, dict):
             raise TypeError('Filters have to be passed as dictionaries')
 
         processed_filters = {}
@@ -696,6 +723,8 @@ class QueryBuilder:
                 # Convert to be the id of the joined entity because we can't query
                 # for the object instance directly
                 processed_filters[f'{key}_id'] = value.id
+            elif isinstance(key, fields.QbField):
+                processed_filters[key.qb_field] = value
             else:
                 processed_filters[key] = value
 
@@ -811,13 +840,28 @@ class QueryBuilder:
         tag = self._tags.get(tag_spec)
         _projections = []
         self.debug('Adding projection of %s: %s', tag_spec, projection_spec)
+
+        def _update_project_map(projection: fields.QbField):
+            """Return the DB field to use, or a tuple of the DB field to use and the key to return."""
+            if projection.qb_field != projection.key:
+                self._project_map.setdefault(tag, {})
+                self._project_map[tag][projection.qb_field] = projection.key
+            return projection.qb_field
+
         if not isinstance(projection_spec, (list, tuple)):
             projection_spec = [projection_spec]  # type: ignore
         for projection in projection_spec:
             if isinstance(projection, dict):
-                _thisprojection = projection
+                _thisprojection = {
+                    _update_project_map(key) if isinstance(key, fields.QbField) else key: value
+                    for key, value in projection.items()
+                }
             elif isinstance(projection, str):
                 _thisprojection = {projection: {}}
+            elif isinstance(projection, fields.QbField):
+                _thisprojection = {_update_project_map(projection): {}}
+            elif isinstance(projection, fields.QbFields):
+                _thisprojection = {_update_project_map(projection[name]): {} for name in projection}
             else:
                 raise ValueError(f'Cannot deal with projection specification {projection}\n')
             for spec in _thisprojection.values():

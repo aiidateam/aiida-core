@@ -10,7 +10,7 @@
 # pylint: disable=too-many-lines,too-many-arguments
 """Package for node ORM classes."""
 import copy
-import datetime
+from datetime import datetime
 import importlib
 from logging import Logger
 from typing import (
@@ -43,6 +43,7 @@ from ..comments import Comment
 from ..computers import Computer
 from ..entities import Collection as EntityCollection
 from ..entities import Entity, EntityAttributesMixin, EntityExtrasMixin
+from ..fields import QbField
 from ..querybuilder import QueryBuilder
 from ..users import User
 from .repository import NodeRepositoryMixin
@@ -148,6 +149,20 @@ class Node(
 
     # These are to be initialized in the `initialization` method
     _incoming_cache: Optional[List[LinkTriple]] = None
+
+    __qb_fields__: Sequence[QbField] = (
+        QbField('uuid', dtype=str, doc='The UUID of the node'),
+        QbField('label', dtype=str, doc='The node label'),
+        QbField('description', dtype=str, doc='The node description'),
+        QbField('node_type', dtype=str, doc='The type of the node'),
+        QbField('ctime', dtype=datetime, doc='The creation time of the node'),
+        QbField('mtime', dtype=datetime, doc='The modification time of the node'),
+        QbField('repository_metadata', dtype=Dict[str, Any], doc='The repository virtual file system'),
+        QbField('extras', dtype=Dict[str, Any], subscriptable=True, doc='The node extras'),
+        QbField('user_pk', 'user_id', dtype=int, doc='The PK of the user who owns the node'),
+        # Subclasses denote specific keys in the attributes dict
+        # QbField('attributes', dtype=Dict[str, Any], subscriptable=True, doc='The node attributes'),
+    )
 
     Collection = NodeCollection
 
@@ -266,7 +281,6 @@ class Node(
         """Return the node UUID.
 
         :return: the string representation of the UUID
-
         """
         return self.backend_entity.uuid
 
@@ -381,7 +395,7 @@ class Node(
         self.backend_entity.user = user.backend_entity  # type: ignore[misc]
 
     @property
-    def ctime(self) -> datetime.datetime:
+    def ctime(self) -> datetime:
         """Return the node ctime.
 
         :return: the ctime
@@ -389,7 +403,7 @@ class Node(
         return self.backend_entity.ctime
 
     @property
-    def mtime(self) -> datetime.datetime:
+    def mtime(self) -> datetime:
         """Return the node mtime.
 
         :return: the mtime

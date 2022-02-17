@@ -9,8 +9,11 @@
 ###########################################################################
 """`Data` sub class to represent a dictionary."""
 import copy
+from typing import Any
+from typing import Dict as DictType
 
 from aiida.common import exceptions
+from aiida.orm.fields import QbField
 
 from .base import to_aiida_type
 from .data import Data
@@ -45,6 +48,10 @@ class Dict(Data):
 
     Finally, all dictionary mutations will be forbidden once the node is stored.
     """
+
+    __qb_fields__ = (
+        QbField('dict', 'attributes', dtype=DictType[str, Any], subscriptable=True, doc='Source of the data'),
+    )
 
     def __init__(self, value=None, **kwargs):
         """Initialise a ``Dict`` node instance.

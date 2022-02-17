@@ -8,8 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA Group entites"""
-from abc import ABCMeta
-from typing import TYPE_CHECKING, ClassVar, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
 import warnings
 
 from aiida.common import exceptions
@@ -17,6 +16,7 @@ from aiida.common.lang import classproperty, type_check
 from aiida.manage import get_manager
 
 from . import convert, entities, users
+from .fields import EntityFieldMeta, QbField
 
 if TYPE_CHECKING:
     from aiida.orm import Node, User
@@ -48,19 +48,19 @@ def load_group_class(type_string: str) -> Type['Group']:
     return group_class
 
 
-class GroupMeta(ABCMeta):
+class GroupMeta(EntityFieldMeta):
     """Meta class for `aiida.orm.groups.Group` to automatically set the `type_string` attribute."""
 
     def __new__(cls, name, bases, namespace, **kwargs):
         from aiida.plugins.entry_point import get_entry_point_from_class
 
-        newcls = ABCMeta.__new__(cls, name, bases, namespace, **kwargs)  # pylint: disable=too-many-function-args
+        newcls = super().__new__(cls, name, bases, namespace, **kwargs)  # pylint: disable=too-many-function-args
 
         mod = namespace['__module__']
         entry_point_group, entry_point = get_entry_point_from_class(mod, name)
 
         if entry_point_group is None or entry_point_group != 'aiida.groups':
-            newcls._type_string = None  # type: ignore[attr-defined]
+            newcls._type_string = None
             message = f'no registered entry point for `{mod}:{name}` so its instances will not be storable.'
             warnings.warn(message)  # pylint: disable=no-member
         else:
@@ -111,6 +111,16 @@ class GroupCollection(entities.Collection['Group']):
 
 class Group(entities.Entity['BackendGroup'], entities.EntityExtrasMixin, metaclass=GroupMeta):
     """An AiiDA ORM implementation of group of nodes."""
+
+    __qb_fields__ = (
+        QbField('uuid', dtype=str, doc='The UUID of the group'),
+        QbField('type_string', dtype=str, doc='The type of the group'),
+        QbField('label', dtype=str, doc='The group label'),
+        QbField('description', dtype=str, doc='The group description'),
+        QbField('time', dtype=str, doc='The time of the group creation'),
+        QbField('extras', dtype=Dict[str, Any], doc='The group extras'),
+        QbField('user_pk', 'user_id', dtype=int, doc='The PK for the creating user'),
+    )
 
     # added by metaclass
     _type_string: ClassVar[Optional[str]]

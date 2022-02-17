@@ -1,0 +1,8 @@
+description: QbField('description', dtype=str)
+hostname: QbField('hostname', dtype=str)
+label: QbField('label', dtype=str)
+metadata: QbField('metadata', dtype=typing.Dict[str, typing.Any])
+pk: QbField('pk', 'id', dtype=int)
+scheduler_type: QbField('scheduler_type', dtype=str)
+transport_type: QbField('transport_type', dtype=str)
+uuid: QbField('uuid', dtype=str)

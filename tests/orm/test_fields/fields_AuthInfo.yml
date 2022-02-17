@@ -1,0 +1,6 @@
+auth_params: QbField('auth_params', dtype=typing.Dict[str, typing.Any])
+computer_pk: QbField('computer_pk', 'dbcomputer_id', dtype=int)
+enabled: QbField('enabled', dtype=bool)
+metadata: QbField('metadata', dtype=typing.Dict[str, typing.Any])
+pk: QbField('pk', 'id', dtype=int)
+user_pk: QbField('user_pk', 'aiidauser_id', dtype=int)

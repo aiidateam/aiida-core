@@ -7,12 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,too-many-locals,too-many-statements
+# pylint: disable=invalid-name,too-many-locals,too-many-statements,unsubscriptable-object
 """Tools for handling Crystallographic Information Files (CIF)"""
-
 import re
+from typing import List
 
 from aiida.common.utils import Capturing
+from aiida.orm.fields import QbAttrField
 
 from .singlefile import SinglefileData
 
@@ -258,6 +259,12 @@ class CifData(SinglefileData):
 
     _values = None
     _ase = None
+
+    __qb_fields__ = (
+        QbAttrField('formulae', dtype=List[str]),
+        QbAttrField('spacegroup_numbers', dtype=List[str]),
+        QbAttrField('md5', dtype=str),
+    )
 
     def __init__(self, ase=None, file=None, filename=None, values=None, scan_type=None, parse_policy=None, **kwargs):
         """Construct a new instance and set the contents to that of the file.

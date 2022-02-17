@@ -15,6 +15,7 @@ from aiida.common.lang import classproperty
 from aiida.manage import get_manager
 
 from . import entities
+from .fields import QbField
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import Backend, BackendUser
@@ -70,11 +71,18 @@ class UserCollection(entities.Collection['User']):
 class User(entities.Entity['BackendUser']):
     """AiiDA User"""
 
+    __qb_fields__ = (
+        QbField('email', dtype=str, doc='The user email'),
+        QbField('first_name', dtype=str, doc='The user first name'),
+        QbField('last_name', dtype=str, doc='The user last name'),
+        QbField('institution', dtype=str, doc='The user institution'),
+    )
+
     Collection = UserCollection
 
     @classproperty
-    def objects(cls: Type['User']) -> UserCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
-        return UserCollection.get_cached(cls, get_manager().get_profile_storage())
+    def objects(cls: Type['User']) -> UserCollection:  # type: ignore # pylint: disable=no-self-argument
+        return UserCollection.get_cached(cls, get_manager().get_profile_storage())  # type: ignore
 
     def __init__(
         self,

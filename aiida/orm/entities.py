@@ -12,13 +12,15 @@ import abc
 import copy
 from enum import Enum
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Dict, Generic, List, Optional, Protocol, Type, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Dict, Generic, List, Optional, Protocol, Sequence, Type, TypeVar, cast
 
 from plumpy.base.utils import call_with_super_check, super_check
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
 from aiida.manage import get_manager
+
+from .fields import EntityFieldMeta, QbField, QbFields
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import Backend, BackendEntity
@@ -161,8 +163,12 @@ class Collection(abc.ABC, Generic[EntityType]):
         return self.query(filters=filters).count()
 
 
-class Entity(abc.ABC, Generic[BackendEntityType]):
+class Entity(Generic[BackendEntityType], metaclass=EntityFieldMeta):
     """An AiiDA entity"""
+
+    fields: QbFields = QbFields()
+
+    __qb_fields__: Sequence[QbField] = (QbField('pk', 'id', dtype=int, doc='The primary key of the entity'),)
 
     @classproperty
     @abc.abstractmethod

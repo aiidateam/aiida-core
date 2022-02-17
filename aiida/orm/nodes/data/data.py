@@ -8,9 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub class `Data` to be used as a base class for data structures."""
+from typing import Optional
+
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.common.links import LinkType
+from aiida.orm.fields import QbAttrField
 
 from ..node import Node
 
@@ -41,6 +44,8 @@ class Data(Node):
     # Data nodes are storable
     _storable = True
     _unstorable_message = 'storing for this node has been disabled'
+
+    __qb_fields__ = (QbAttrField('source', dtype=Optional[dict], subscriptable=True, doc='Source of the data'),)
 
     def __init__(self, *args, source=None, **kwargs):
         """Construct a new instance, setting the ``source`` attribute if provided as a keyword argument."""
@@ -75,7 +80,7 @@ class Data(Node):
         return clone
 
     @property
-    def source(self):
+    def source(self) -> Optional[dict]:
         """
         Gets the dictionary describing the source of Data object. Possible fields:
 

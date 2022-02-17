@@ -107,6 +107,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             'path': [],
             'filters': {},
             'project': {},
+            'project_map': {},
             'order_by': [],
             'offset': None,
             'limit': None,
@@ -229,7 +230,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                         field_name = self.get_corresponding_property(
                             self.get_table_name(self._get_tag_alias(tag)), attrkey, self.inner_to_outer_schema
                         )
-                        yield_result[tag][field_name] = self.to_backend(row[project_index])
+                        key = self._data['project_map'].get(tag, {}).get(field_name, field_name)
+                        yield_result[tag][key] = self.to_backend(row[project_index])
                 yield yield_result
 
     @contextmanager

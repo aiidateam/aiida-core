@@ -8,12 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities to operate on `Node` classes."""
-from abc import ABCMeta
 import logging
 import warnings
 
 from aiida.common import exceptions
 from aiida.common.utils import strip_prefix
+from aiida.orm.fields import EntityFieldMeta
 
 __all__ = (
     'load_node_class',
@@ -44,8 +44,8 @@ def load_node_class(type_string):
 
     try:
         base_path = type_string.rsplit('.', 2)[0]
-    except ValueError:
-        raise exceptions.EntryPointError from ValueError
+    except ValueError as exc:
+        raise exceptions.EntryPointError from exc
 
     # This exception needs to be there to make migrations work that rely on the old type string starting with `node.`
     # Since now the type strings no longer have that prefix, we simply strip it and continue with the normal logic.
@@ -154,11 +154,11 @@ def get_query_type_from_type_string(type_string):
     return type_string
 
 
-class AbstractNodeMeta(ABCMeta):
+class AbstractNodeMeta(EntityFieldMeta):
     """Some python black magic to set correctly the logger also in subclasses."""
 
     def __new__(cls, name, bases, namespace, **kwargs):
-        newcls = ABCMeta.__new__(cls, name, bases, namespace, **kwargs)  # pylint: disable=too-many-function-args
+        newcls = super().__new__(cls, name, bases, namespace, **kwargs)  # pylint: disable=too-many-function-args
         newcls._logger = logging.getLogger(f"{namespace['__module__']}.{name}")
 
         # Set the plugin type string and query type string based on the plugin type string

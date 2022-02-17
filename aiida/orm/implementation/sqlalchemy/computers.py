@@ -60,7 +60,7 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
         make_transient(dbcomputer)
         session.add(dbcomputer)
 
-        newobject = self.__class__.from_dbmodel(dbcomputer, self.backend)  # pylint: disable=no-value-for-parameter
+        newobject = self.__class__.from_dbmodel(dbcomputer, self.backend)
 
         return newobject
 

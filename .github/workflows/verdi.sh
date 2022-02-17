@@ -45,7 +45,7 @@ echo "Invoking verdi via `python -m aiida`"
 OUTPUT=$(python -m aiida 2>&1)
 RETVAL=$?
 echo $OUTPUT
-if [ $RETVAT -ne 0 ]; then
+if [ $RETVAL -ne 0 ]; then
     echo "'python -m aiida' exitted with code $RETVAL"
     exit 2
 fi

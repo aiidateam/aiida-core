@@ -31,7 +31,7 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
 
     def __init__(self, backend, **kwargs):
         super().__init__(backend)
-        self._model = utils.ModelWrapper(DbComputer(**kwargs), backend)
+        self._model = utils.ModelWrapper(self.MODEL_CLASS(**kwargs), backend)
 
     @property
     def uuid(self):
@@ -120,12 +120,12 @@ class SqlaComputerCollection(BackendComputerCollection):
 
     def list_names(self):
         session = self.backend.get_session()
-        return session.query(DbComputer.label).all()
+        return session.query(self.ENTITY_CLASS.MODEL_CLASS.label).all()
 
     def delete(self, pk):
         try:
             session = self.backend.get_session()
-            row = session.get(DbComputer, pk)
+            row = session.get(self.ENTITY_CLASS.MODEL_CLASS, pk)
             session.delete(row)
             session.commit()
         except SQLAlchemyError as exc:

@@ -28,15 +28,13 @@ class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
 
     # pylint: disable=too-many-arguments
     def __init__(self, backend, node, user, content=None, ctime=None, mtime=None):
-        """
-        Construct a SqlaComment.
+        """Construct a SqlaComment.
 
         :param node: a Node instance
         :param user: a User instance
         :param content: the comment content
         :param ctime: The creation time as datetime object
         :param mtime: The modification time as datetime object
-        :return: a Comment object associated to the given node and user
         """
         super().__init__(backend)
         lang.type_check(user, users.SqlaUser)  # pylint: disable=no-member
@@ -55,7 +53,7 @@ class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
             lang.type_check(mtime, datetime, f'the given mtime is of type {type(mtime)}')
             arguments['mtime'] = mtime
 
-        self._model = utils.ModelWrapper(models.DbComment(**arguments), backend)
+        self._model = utils.ModelWrapper(self.MODEL_CLASS(**arguments), backend)
 
     def store(self):
         """Can only store if both the node and user are stored as well."""
@@ -82,13 +80,11 @@ class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
 
     @property
     def node(self):
-        from .nodes import SqlaNode
-        return SqlaNode.from_dbmodel(self.bare_model.dbnode, self.backend)
+        return self.backend.nodes.ENTITY_CLASS.from_dbmodel(self.model.dbnode, self.backend)
 
     @property
     def user(self):
-        from .users import SqlaUser
-        return SqlaUser.from_dbmodel(self.bare_model.user, self.backend)
+        return self.backend.users.ENTITY_CLASS.from_dbmodel(self.model.user, self.backend)
 
     def set_user(self, value):
         self.model.user = value
@@ -115,7 +111,7 @@ class SqlaCommentCollection(BackendCommentCollection):
         :param content: the comment content
         :return: a Comment object associated to the given node and user
         """
-        return SqlaComment(self.backend, node, user, content, **kwargs)  # pylint: disable=abstract-class-instantiated
+        return self.ENTITY_CLASS(self.backend, node, user, content, **kwargs)
 
     def delete(self, comment_id):
         """
@@ -133,7 +129,7 @@ class SqlaCommentCollection(BackendCommentCollection):
         session = self.backend.get_session()
 
         try:
-            row = session.query(models.DbComment).filter_by(id=comment_id).one()
+            row = session.query(self.ENTITY_CLASS.MODEL_CLASS).filter_by(id=comment_id).one()
             session.delete(row)
             session.commit()
         except NoResultFound:
@@ -149,7 +145,7 @@ class SqlaCommentCollection(BackendCommentCollection):
         session = self.backend.get_session()
 
         try:
-            session.query(models.DbComment).delete()
+            session.query(self.ENTITY_CLASS.MODEL_CLASS).delete()
             session.commit()
         except Exception as exc:
             session.rollback()

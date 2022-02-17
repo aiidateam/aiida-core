@@ -25,7 +25,7 @@ class SqlaUser(entities.SqlaModelEntity[DbUser], BackendUser):
         # pylint: disable=too-many-arguments
         super().__init__(backend)
         self._model = utils.ModelWrapper(
-            DbUser(email=email, first_name=first_name, last_name=last_name, institution=institution), backend
+            self.MODEL_CLASS(email=email, first_name=first_name, last_name=last_name, institution=institution), backend
         )
 
     @property
@@ -67,11 +67,5 @@ class SqlaUserCollection(BackendUserCollection):
     ENTITY_CLASS = SqlaUser
 
     def create(self, email, first_name='', last_name='', institution=''):  # pylint: disable=arguments-differ
-        """
-        Create a user with the provided email address
-
-        :return: A new user object
-        :rtype: :class:`aiida.orm.User`
-        """
-        # pylint: disable=abstract-class-instantiated
-        return SqlaUser(self.backend, email, first_name, last_name, institution)
+        """ Create a user with the provided email address"""
+        return self.ENTITY_CLASS(self.backend, email, first_name, last_name, institution)

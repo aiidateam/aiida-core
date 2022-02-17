@@ -42,8 +42,8 @@ class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
         lang.type_check(user, users.SqlaUser)  # pylint: disable=no-member
 
         arguments = {
-            'dbnode': node.dbmodel,
-            'user': user.dbmodel,
+            'dbnode': node.sqla_model,
+            'user': user.sqla_model,
             'content': content,
         }
 
@@ -55,48 +55,48 @@ class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
             lang.type_check(mtime, datetime, f'the given mtime is of type {type(mtime)}')
             arguments['mtime'] = mtime
 
-        self._dbmodel = utils.ModelWrapper(models.DbComment(**arguments), backend)
+        self._aiida_model = utils.ModelWrapper(models.DbComment(**arguments), backend)
 
     def store(self):
         """Can only store if both the node and user are stored as well."""
-        if self._dbmodel.dbnode.id is None or self._dbmodel.user.id is None:
-            self._dbmodel.dbnode = None
+        if self.aiida_model.dbnode.id is None or self.aiida_model.user.id is None:
+            self.aiida_model.dbnode = None
             raise exceptions.ModificationNotAllowed('The corresponding node and/or user are not stored')
 
         super().store()
 
     @property
     def uuid(self) -> str:
-        return str(self._dbmodel.uuid)
+        return str(self.aiida_model.uuid)
 
     @property
     def ctime(self):
-        return self._dbmodel.ctime
+        return self.aiida_model.ctime
 
     @property
     def mtime(self):
-        return self._dbmodel.mtime
+        return self.aiida_model.mtime
 
     def set_mtime(self, value):
-        self._dbmodel.mtime = value
+        self.aiida_model.mtime = value
 
     @property
     def node(self):
-        return self.backend.nodes.from_dbmodel(self.dbmodel.dbnode)
+        return self.backend.nodes.from_dbmodel(self.sqla_model.dbnode)
 
     @property
     def user(self):
-        return self.backend.users.from_dbmodel(self.dbmodel.user)
+        return self.backend.users.from_dbmodel(self.sqla_model.user)
 
     def set_user(self, value):
-        self._dbmodel.user = value
+        self.aiida_model.user = value
 
     @property
     def content(self):
-        return self._dbmodel.content
+        return self.aiida_model.content
 
     def set_content(self, value):
-        self._dbmodel.content = value
+        self.aiida_model.content = value
 
 
 class SqlaCommentCollection(BackendCommentCollection):

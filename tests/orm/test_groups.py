@@ -334,7 +334,7 @@ class TestGroupsSubclasses(AiidaTestCase):
         a normal group and manipulating the type string directly on the database model.
         """
         group = orm.Group(label='group')
-        group.backend_entity.dbmodel.type_string = 'unregistered.subclass'
+        group.backend_entity.sqla_model.type_string = 'unregistered.subclass'
         group.store()
 
         with pytest.warns(UserWarning):
@@ -355,7 +355,7 @@ class TestGroupsSubclasses(AiidaTestCase):
 
         # Fake a subclass by manually setting the type string
         group = orm.Group(label='custom-group')
-        group.backend_entity.dbmodel.type_string = 'custom.group'
+        group.backend_entity.sqla_model.type_string = 'custom.group'
         group.store()
 
         assert orm.QueryBuilder().append(orm.AutoGroup).count() == 1

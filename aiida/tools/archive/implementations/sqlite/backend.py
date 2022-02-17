@@ -32,6 +32,7 @@ from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.backends import Backend as BackendAbstract
 from aiida.orm.implementation.sqlalchemy import authinfos, comments, computers, entities, groups, logs, nodes, users
 from aiida.orm.implementation.sqlalchemy.querybuilder import SqlaQueryBuilder
+from aiida.orm.implementation.sqlalchemy.utils import ModelWrapper
 from aiida.repository.backend.abstract import AbstractRepositoryBackend
 from aiida.tools.archive.exceptions import ArchiveClosedError, CorruptArchive, ReadOnlyError
 
@@ -386,13 +387,18 @@ def create_backend_cls(base_class, model_cls):
 
         def __init__(self, _backend, model):
             """Initialise the backend entity."""
-            from aiida.orm.implementation.sqlalchemy.utils import ModelWrapper
             self._backend = _backend
-            self._dbmodel = ModelWrapper(model, _backend)
+            self._aiida_model = ModelWrapper(model, _backend)
 
         @property
-        def dbmodel(self):
-            return self._dbmodel._model  # pylint: disable=protected-access
+        def aiida_model(self) -> ModelWrapper:
+            """Return an ORM model that correctly updates and flushes the data model when getting or setting a field."""
+            return self.aiida_model
+
+        @property
+        def sqla_model(self):
+            """Return the underlying SQLAlchemy ORM model for this entity."""
+            return self.aiida_model._model  # pylint: disable=protected-access
 
         @classmethod
         def from_dbmodel(cls, model, _backend):

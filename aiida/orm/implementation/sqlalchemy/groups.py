@@ -43,12 +43,12 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
         type_check(user, users.SqlaUser)
         super().__init__(backend)
 
-        dbgroup = DbGroup(label=label, description=description, user=user.dbmodel, type_string=type_string)
-        self._dbmodel = utils.ModelWrapper(dbgroup, backend)
+        dbgroup = DbGroup(label=label, description=description, user=user.sqla_model, type_string=type_string)
+        self._aiida_model = utils.ModelWrapper(dbgroup, backend)
 
     @property
     def label(self):
-        return self._dbmodel.label
+        return self.aiida_model.label
 
     @label.setter
     def label(self, label):
@@ -60,47 +60,47 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
         :param label: the new group label
         :raises aiida.common.UniquenessError: if another group of same type and label already exists
         """
-        self._dbmodel.label = label
+        self.aiida_model.label = label
 
         if self.is_stored:
             try:
-                self._dbmodel.save()
+                self.aiida_model.save()
             except Exception:
                 raise UniquenessError(f'a group of the same type with the label {label} already exists') \
                     from Exception
 
     @property
     def description(self):
-        return self._dbmodel.description
+        return self.aiida_model.description
 
     @description.setter
     def description(self, value):
-        self._dbmodel.description = value
+        self.aiida_model.description = value
 
         # Update the entry in the DB, if the group is already stored
         if self.is_stored:
-            self._dbmodel.save()
+            self.aiida_model.save()
 
     @property
     def type_string(self):
-        return self._dbmodel.type_string
+        return self.aiida_model.type_string
 
     @property
     def user(self):
-        return self._backend.users.from_dbmodel(self._dbmodel.user)
+        return self._backend.users.from_dbmodel(self.aiida_model.user)
 
     @user.setter
     def user(self, new_user):
         type_check(new_user, users.SqlaUser)
-        self._dbmodel.user = new_user.dbmodel
+        self.aiida_model.user = new_user.sqla_model
 
     @property
     def pk(self):
-        return self._dbmodel.id
+        return self.aiida_model.id
 
     @property
     def uuid(self):
-        return str(self._dbmodel.uuid)
+        return str(self.aiida_model.uuid)
 
     def __int__(self):
         if not self.is_stored:
@@ -113,7 +113,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
         return self.pk is not None
 
     def store(self):
-        self._dbmodel.save()
+        self.aiida_model.save()
         return self
 
     def count(self):
@@ -127,8 +127,8 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
     def clear(self):
         """Remove all the nodes from this group."""
         session = self.backend.get_session()
-        # Note we have to call `dbmodel` and `_dbmodel` to circumvent the `ModelWrapper`
-        self.dbmodel.dbnodes = []
+        # Note we have to call `sqla_model` to circumvent flushing data to the database
+        self.sqla_model.dbnodes = []
         session.commit()
 
     @property
@@ -162,7 +162,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
             def __next__(self):
                 return next(self.generator)
 
-        return Iterator(self._dbmodel.dbnodes, self._backend)
+        return Iterator(self.aiida_model.dbnodes, self._backend)
 
     def add_nodes(self, nodes, **kwargs):
         """Add a node or a set of nodes to the group.
@@ -196,7 +196,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
         with utils.disable_expire_on_commit(self.backend.get_session()) as session:
             if not skip_orm:
                 # Get dbnodes here ONCE, otherwise each call to dbnodes will re-read the current value in the database
-                dbnodes = self._dbmodel.dbnodes
+                dbnodes = self.aiida_model.dbnodes
 
                 for node in nodes:
                     check_node(node)
@@ -205,7 +205,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
                     # http://docs.sqlalchemy.org/en/latest/orm/session_transaction.html#using-savepoint
                     try:
                         with session.begin_nested():
-                            dbnodes.append(node.dbmodel)
+                            dbnodes.append(node.sqla_model)
                             session.flush()
                     except IntegrityError:
                         # Duplicate entry, skip
@@ -241,7 +241,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
         super().remove_nodes(nodes)
 
         # Get dbnodes here ONCE, otherwise each call to dbnodes will re-read the current value in the database
-        dbnodes = self._dbmodel.dbnodes
+        dbnodes = self.aiida_model.dbnodes
         skip_orm = kwargs.get('skip_orm', False)
 
         def check_node(node):
@@ -259,8 +259,8 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
                     check_node(node)
 
                     # Check first, if SqlA issues a DELETE statement for an unexisting key it will result in an error
-                    if node.dbmodel in dbnodes:
-                        list_nodes.append(node.dbmodel)
+                    if node.sqla_model in dbnodes:
+                        list_nodes.append(node.sqla_model)
 
                 for node in list_nodes:
                     dbnodes.remove(node)

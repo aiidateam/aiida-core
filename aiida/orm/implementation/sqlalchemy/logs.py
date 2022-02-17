@@ -27,7 +27,7 @@ class SqlaLog(entities.SqlaModelEntity[models.DbLog], BackendLog):
     def __init__(self, backend, time, loggername, levelname, dbnode_id, message='', metadata=None):
         # pylint: disable=too-many-arguments
         super().__init__(backend)
-        self._dbmodel = utils.ModelWrapper(
+        self._aiida_model = utils.ModelWrapper(
             models.DbLog(
                 time=time,
                 loggername=loggername,
@@ -43,49 +43,49 @@ class SqlaLog(entities.SqlaModelEntity[models.DbLog], BackendLog):
         """
         Get the string representation of the UUID of the log entry
         """
-        return str(self._dbmodel.uuid)
+        return str(self.aiida_model.uuid)
 
     @property
     def time(self):
         """
         Get the time corresponding to the entry
         """
-        return self._dbmodel.time
+        return self.aiida_model.time
 
     @property
     def loggername(self):
         """
         The name of the logger that created this entry
         """
-        return self._dbmodel.loggername
+        return self.aiida_model.loggername
 
     @property
     def levelname(self):
         """
         The name of the log level
         """
-        return self._dbmodel.levelname
+        return self.aiida_model.levelname
 
     @property
     def dbnode_id(self):
         """
         Get the id of the object that created the log entry
         """
-        return self._dbmodel.dbnode_id
+        return self.aiida_model.dbnode_id
 
     @property
     def message(self):
         """
         Get the message corresponding to the entry
         """
-        return self._dbmodel.message
+        return self.aiida_model.message
 
     @property
     def metadata(self):
         """
         Get the metadata corresponding to the entry
         """
-        return self._dbmodel._metadata  # pylint: disable=protected-access
+        return self.aiida_model._metadata  # pylint: disable=protected-access
 
 
 class SqlaLogCollection(BackendLogCollection):

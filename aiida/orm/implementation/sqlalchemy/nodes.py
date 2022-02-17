@@ -64,7 +64,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         arguments = {
             'node_type': node_type,
             'process_type': process_type,
-            'user': user.dbmodel,
+            'user': user.sqla_model,
             'label': label,
             'description': description,
         }
@@ -73,7 +73,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
 
         if computer:
             type_check(computer, SqlaComputer, f'computer is of type {type(computer)}')
-            arguments['dbcomputer'] = computer.dbmodel
+            arguments['dbcomputer'] = computer.sqla_model
 
         if ctime:
             type_check(ctime, datetime, f'the given ctime is of type {type(ctime)}')
@@ -83,7 +83,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
             type_check(mtime, datetime, f'the given mtime is of type {type(mtime)}')
             arguments['mtime'] = mtime
 
-        self._dbmodel = sqla_utils.ModelWrapper(models.DbNode(**arguments), backend)
+        self._aiida_model = sqla_utils.ModelWrapper(models.DbNode(**arguments), backend)
 
     def clone(self):
         """Return an unstored clone of ourselves.
@@ -91,73 +91,73 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         :return: an unstored `BackendNode` with the exact same attributes and extras as self
         """
         arguments = {
-            'node_type': self._dbmodel.node_type,
-            'process_type': self._dbmodel.process_type,
-            'user': self._dbmodel.user,
-            'dbcomputer': self._dbmodel.dbcomputer,
-            'label': self._dbmodel.label,
-            'description': self._dbmodel.description,
-            'attributes': self._dbmodel.attributes,
-            'extras': self._dbmodel.extras,
+            'node_type': self.aiida_model.node_type,
+            'process_type': self.aiida_model.process_type,
+            'user': self.aiida_model.user,
+            'dbcomputer': self.aiida_model.dbcomputer,
+            'label': self.aiida_model.label,
+            'description': self.aiida_model.description,
+            'attributes': self.aiida_model.attributes,
+            'extras': self.aiida_model.extras,
         }
 
         clone = self.__class__.__new__(self.__class__)  # pylint: disable=no-value-for-parameter
         clone.__init__(self.backend, self.node_type, self.user)
-        clone._dbmodel = sqla_utils.ModelWrapper(models.DbNode(**arguments), self.backend)  # pylint: disable=protected-access
+        clone._aiida_model = sqla_utils.ModelWrapper(models.DbNode(**arguments), self.backend)  # pylint: disable=protected-access
         return clone
 
     @property
     def ctime(self):
-        return self._dbmodel.ctime
+        return self.aiida_model.ctime
 
     @property
     def mtime(self):
-        return self._dbmodel.mtime
+        return self.aiida_model.mtime
 
     @property
     def uuid(self):
-        return str(self._dbmodel.uuid)
+        return str(self.aiida_model.uuid)
 
     @property
     def node_type(self):
-        return self._dbmodel.node_type
+        return self.aiida_model.node_type
 
     @property
     def process_type(self):
-        return self._dbmodel.process_type
+        return self.aiida_model.process_type
 
     @process_type.setter
     def process_type(self, value):
-        self._dbmodel.process_type = value
+        self.aiida_model.process_type = value
 
     @property
     def label(self):
-        return self._dbmodel.label
+        return self.aiida_model.label
 
     @label.setter
     def label(self, value):
-        self._dbmodel.label = value
+        self.aiida_model.label = value
 
     @property
     def description(self):
-        return self._dbmodel.description
+        return self.aiida_model.description
 
     @description.setter
     def description(self, value):
-        self._dbmodel.description = value
+        self.aiida_model.description = value
 
     @property
     def repository_metadata(self):
-        return self._dbmodel.repository_metadata or {}
+        return self.aiida_model.repository_metadata or {}
 
     @repository_metadata.setter
     def repository_metadata(self, value):
-        self._dbmodel.repository_metadata = value
+        self.aiida_model.repository_metadata = value
 
     @property
     def computer(self):
         try:
-            return self.backend.computers.from_dbmodel(self._dbmodel.dbcomputer)
+            return self.backend.computers.from_dbmodel(self.aiida_model.dbcomputer)
         except TypeError:
             return None
 
@@ -166,18 +166,18 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         type_check(computer, SqlaComputer, allow_none=True)
 
         if computer is not None:
-            computer = computer.dbmodel
+            computer = computer.sqla_model
 
-        self._dbmodel.dbcomputer = computer
+        self.aiida_model.dbcomputer = computer
 
     @property
     def user(self):
-        return self.backend.users.from_dbmodel(self._dbmodel.user)
+        return self.backend.users.from_dbmodel(self.aiida_model.user)
 
     @user.setter
     def user(self, user):
         type_check(user, SqlaUser)
-        self._dbmodel.user = user.dbmodel
+        self.aiida_model.user = user.sqla_model
 
     def add_incoming(self, source, link_type, link_label):
         session = self.backend.get_session()
@@ -207,8 +207,8 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
             raise exceptions.UniquenessError(f'failed to create the link: {exception}') from exception
 
     def clean_values(self):
-        self._dbmodel.attributes = clean_value(self._dbmodel.attributes)
-        self._dbmodel.extras = clean_value(self._dbmodel.extras)
+        self.aiida_model.attributes = clean_value(self.aiida_model.attributes)
+        self.aiida_model.extras = clean_value(self.aiida_model.extras)
 
     def store(self, links=None, with_transaction=True, clean=True):  # pylint: disable=arguments-differ
         session = self.backend.get_session()
@@ -216,7 +216,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         if clean:
             self.clean_values()
 
-        session.add(self._dbmodel)
+        session.add(self.aiida_model)
 
         if links:
             for link_triple in links:
@@ -233,11 +233,11 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
 
     @property
     def attributes(self):
-        return self._dbmodel.attributes
+        return self.aiida_model.attributes
 
     def get_attribute(self, key: str) -> Any:
         try:
-            return self._dbmodel.attributes[key]
+            return self.aiida_model.attributes[key]
         except KeyError as exception:
             raise AttributeError(f'attribute `{exception}` does not exist') from exception
 
@@ -247,7 +247,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         if self.is_stored:
             value = clean_value(value)
 
-        self._dbmodel.attributes[key] = value
+        self.aiida_model.attributes[key] = value
         self._flush_if_stored({'attributes'})
 
     def set_attribute_many(self, attributes: Dict[str, Any]) -> None:
@@ -258,9 +258,9 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
             attributes = {key: clean_value(value) for key, value in attributes.items()}
 
         for key, value in attributes.items():
-            # We need to use `self.dbmodel` without the underscore, because otherwise the second iteration will refetch
+            # We need to use the SQLA model, because otherwise the second iteration will refetch
             # what is in the database and we lose the initial changes.
-            self.dbmodel.attributes[key] = value
+            self.sqla_model.attributes[key] = value
         self._flush_if_stored({'attributes'})
 
     def reset_attributes(self, attributes: Dict[str, Any]) -> None:
@@ -270,38 +270,38 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         if self.is_stored:
             attributes = clean_value(attributes)
 
-        self.dbmodel.attributes = attributes
+        self.sqla_model.attributes = attributes
         self._flush_if_stored({'attributes'})
 
     def delete_attribute(self, key: str) -> None:
         try:
-            self._dbmodel.attributes.pop(key)
+            self.aiida_model.attributes.pop(key)
         except KeyError as exception:
             raise AttributeError(f'attribute `{exception}` does not exist') from exception
         else:
             self._flush_if_stored({'attributes'})
 
     def delete_attribute_many(self, keys: Iterable[str]) -> None:
-        non_existing_keys = [key for key in keys if key not in self._dbmodel.attributes]
+        non_existing_keys = [key for key in keys if key not in self.aiida_model.attributes]
 
         if non_existing_keys:
             raise AttributeError(f"attributes `{', '.join(non_existing_keys)}` do not exist")
 
         for key in keys:
-            self.dbmodel.attributes.pop(key)
+            self.sqla_model.attributes.pop(key)
 
         self._flush_if_stored({'attributes'})
 
     def clear_attributes(self):
-        self._dbmodel.attributes = {}
+        self.aiida_model.attributes = {}
         self._flush_if_stored({'attributes'})
 
     def attributes_items(self) -> Iterable[Tuple[str, Any]]:
-        for key, value in self._dbmodel.attributes.items():
+        for key, value in self.aiida_model.attributes.items():
             yield key, value
 
     def attributes_keys(self) -> Iterable[str]:
-        for key in self._dbmodel.attributes.keys():
+        for key in self.aiida_model.attributes.keys():
             yield key
 
 

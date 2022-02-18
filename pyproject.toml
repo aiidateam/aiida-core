@@ -71,6 +71,7 @@ rest = [
     "flask-cors~=3.0",
     "flask-restful~=0.3.7",
     "flask~=1.1",
+    "itsdangerous<2.1",
     "pyparsing~=2.4",
     "python-memcached~=1.59",
     "seekpath~=1.9,>=1.9.3"

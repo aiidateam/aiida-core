@@ -20,7 +20,7 @@ from . import entities
 
 if TYPE_CHECKING:
     from aiida.orm import Node
-    from aiida.orm.implementation import Backend, BackendLog
+    from aiida.orm.implementation import BackendLog, StorageBackend
     from aiida.orm.querybuilder import FilterType, OrderByType
 
 __all__ = ('Log', 'OrderSpecifier', 'ASCENDING', 'DESCENDING')
@@ -142,7 +142,7 @@ class Log(entities.Entity['BackendLog']):
         dbnode_id: int,
         message: str = '',
         metadata: Optional[Dict[str, Any]] = None,
-        backend: Optional['Backend'] = None
+        backend: Optional['StorageBackend'] = None
     ):  # pylint: disable=too-many-arguments
         """Construct a new log
 

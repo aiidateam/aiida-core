@@ -27,12 +27,12 @@ if TYPE_CHECKING:
     )
     from aiida.repository.backend.abstract import AbstractRepositoryBackend
 
-__all__ = ('Backend',)
+__all__ = ('StorageBackend',)
 
 TransactionType = TypeVar('TransactionType')
 
 
-class Backend(abc.ABC):  # pylint: disable=too-many-public-methods
+class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
     """Abstraction for a backend to read/write persistent data for a profile's provenance graph.
 
     AiiDA splits data storage into two sources:

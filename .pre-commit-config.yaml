@@ -76,7 +76,7 @@ repos:
                 aiida/manage/database/delete/nodes.py|
                 aiida/orm/querybuilder.py|
                 aiida/orm/implementation/entities.py|
-                aiida/orm/implementation/backends.py|
+                aiida/orm/implementation/storage_backend.py|
                 aiida/orm/implementation/authinfos.py|
                 aiida/orm/implementation/comments.py|
                 aiida/orm/implementation/computers.py|

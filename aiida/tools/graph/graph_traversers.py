@@ -21,7 +21,7 @@ from aiida.tools.graph.age_entities import Basket
 from aiida.tools.graph.age_rules import RuleSaveWalkers, RuleSequence, RuleSetWalkers, UpdateRule
 
 if TYPE_CHECKING:
-    from aiida.orm.implementation import Backend
+    from aiida.orm.implementation import StorageBackend
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict
@@ -38,7 +38,7 @@ def get_nodes_delete(
     starting_pks: Iterable[int],
     get_links: bool = False,
     missing_callback: Optional[Callable[[Iterable[int]], None]] = None,
-    backend: Optional['Backend'] = None,
+    backend: Optional['StorageBackend'] = None,
     **traversal_rules: bool
 ) -> TraverseGraphOutput:
     """
@@ -81,7 +81,7 @@ def get_nodes_delete(
 def get_nodes_export(
     starting_pks: Iterable[int],
     get_links: bool = False,
-    backend: Optional['Backend'] = None,
+    backend: Optional['StorageBackend'] = None,
     **traversal_rules: bool
 ) -> TraverseGraphOutput:
     """
@@ -196,7 +196,7 @@ def traverse_graph(
     links_forward: Iterable[LinkType] = (),
     links_backward: Iterable[LinkType] = (),
     missing_callback: Optional[Callable[[Iterable[int]], None]] = None,
-    backend: Optional['Backend'] = None
+    backend: Optional['StorageBackend'] = None
 ) -> TraverseGraphOutput:
     """
     This function will return the set of all nodes that can be connected

@@ -21,7 +21,7 @@ from aiida.common.lang import classproperty, type_check
 from aiida.manage import get_manager
 
 if TYPE_CHECKING:
-    from aiida.orm.implementation import Backend, BackendEntity
+    from aiida.orm.implementation import BackendEntity, StorageBackend
     from aiida.orm.querybuilder import FilterType, OrderByType, QueryBuilder
 
 __all__ = ('Entity', 'Collection', 'EntityAttributesMixin', 'EntityExtrasMixin', 'EntityTypes')
@@ -56,28 +56,28 @@ class Collection(abc.ABC, Generic[EntityType]):
 
     @classmethod
     @lru_cache(maxsize=100)
-    def get_cached(cls, entity_class: Type[EntityType], backend: 'Backend'):
+    def get_cached(cls, entity_class: Type[EntityType], backend: 'StorageBackend'):
         """Get the cached collection instance for the given entity class and backend.
 
         :param backend: the backend instance to get the collection for
         """
-        from aiida.orm.implementation import Backend
-        type_check(backend, Backend)
+        from aiida.orm.implementation import StorageBackend
+        type_check(backend, StorageBackend)
         return cls(entity_class, backend=backend)
 
-    def __init__(self, entity_class: Type[EntityType], backend: Optional['Backend'] = None) -> None:
+    def __init__(self, entity_class: Type[EntityType], backend: Optional['StorageBackend'] = None) -> None:
         """ Construct a new entity collection.
 
         :param entity_class: the entity type e.g. User, Computer, etc
         :param backend: the backend instance to get the collection for, or use the default
         """
-        from aiida.orm.implementation import Backend
-        type_check(backend, Backend, allow_none=True)
+        from aiida.orm.implementation import StorageBackend
+        type_check(backend, StorageBackend, allow_none=True)
         assert issubclass(entity_class, self._entity_base_cls())
         self._backend = backend or get_manager().get_profile_storage()
         self._entity_type = entity_class
 
-    def __call__(self: CollectionType, backend: 'Backend') -> CollectionType:
+    def __call__(self: CollectionType, backend: 'StorageBackend') -> CollectionType:
         """Get or create a cached collection using a new backend."""
         if backend is self._backend:
             return self
@@ -89,7 +89,7 @@ class Collection(abc.ABC, Generic[EntityType]):
         return self._entity_type
 
     @property
-    def backend(self) -> 'Backend':
+    def backend(self) -> 'StorageBackend':
         """Return the backend."""
         return self._backend
 
@@ -244,7 +244,7 @@ class Entity(abc.ABC, Generic[BackendEntityType]):
         return self._backend_entity.is_stored
 
     @property
-    def backend(self) -> 'Backend':
+    def backend(self) -> 'StorageBackend':
         """Get the backend for this entity"""
         return self._backend_entity.backend
 

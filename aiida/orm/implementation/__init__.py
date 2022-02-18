@@ -15,7 +15,6 @@
 # pylint: disable=wildcard-import
 
 from .authinfos import *
-from .backends import *
 from .comments import *
 from .computers import *
 from .entities import *
@@ -23,11 +22,11 @@ from .groups import *
 from .logs import *
 from .nodes import *
 from .querybuilder import *
+from .storage_backend import *
 from .users import *
 from .utils import *
 
 __all__ = (
-    'Backend',
     'BackendAuthInfo',
     'BackendAuthInfoCollection',
     'BackendCollection',
@@ -47,6 +46,7 @@ __all__ = (
     'BackendUser',
     'BackendUserCollection',
     'EntityType',
+    'StorageBackend',
     'clean_value',
     'validate_attribute_extra_key',
 )

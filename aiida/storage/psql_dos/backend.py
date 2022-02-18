@@ -21,8 +21,7 @@ from aiida.common.exceptions import ClosedStorage, IntegrityError
 from aiida.manage.configuration.profile import Profile
 from aiida.orm import User
 from aiida.orm.entities import EntityTypes
-from aiida.orm.implementation.backends import Backend
-from aiida.orm.implementation.entities import BackendEntity
+from aiida.orm.implementation import BackendEntity, StorageBackend
 from aiida.storage.psql_dos.migrator import REPOSITORY_UUID_KEY, PsqlDostoreMigrator
 from aiida.storage.psql_dos.models import base
 
@@ -41,7 +40,7 @@ CONTAINER_DEFAULTS: dict = {
 }
 
 
-class PsqlDosBackend(Backend):  # pylint: disable=too-many-public-methods
+class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
     """An AiiDA storage backend that stores data in a PostgreSQL database and disk-objectstore repository.
 
     Note, there were originally two such backends, `sqlalchemy` and `django`.

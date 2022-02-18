@@ -16,7 +16,7 @@ from aiida import orm
 from aiida.common.exceptions import TestsNotAllowedError
 from aiida.common.lang import classproperty
 from aiida.manage import configuration, get_manager
-from aiida.orm.implementation import Backend
+from aiida.orm.implementation import StorageBackend
 
 TEST_KEYWORD = 'test_'
 
@@ -33,7 +33,7 @@ def check_if_tests_can_run():
 class AiidaTestCase(unittest.TestCase):
     """This is the base class for AiiDA tests, independent of the backend."""
     _class_was_setup = False
-    backend: Optional[Backend] = None
+    backend: Optional[StorageBackend] = None
 
     @classmethod
     def setUpClass(cls):

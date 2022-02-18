@@ -27,7 +27,7 @@ from sqlalchemy.sql.schema import Table
 from aiida.common.exceptions import UnreachableStorage
 from aiida.manage import Profile
 from aiida.orm.entities import EntityTypes
-from aiida.orm.implementation.backends import Backend as BackendAbstract
+from aiida.orm.implementation import StorageBackend
 from aiida.repository.backend.abstract import AbstractRepositoryBackend
 # we need to import all models, to ensure they are loaded on the SQLA Metadata
 from aiida.storage.psql_dos.models import authinfo, base, comment, computer, group, log, node, user
@@ -245,7 +245,7 @@ class ArchiveBackendQueryBuilder(SqlaQueryBuilder):
         return DbGroupNodes.__table__  # type: ignore[attr-defined] # pylint: disable=no-member
 
 
-class ArchiveReadOnlyBackend(BackendAbstract):  # pylint: disable=too-many-public-methods
+class ArchiveReadOnlyBackend(StorageBackend):  # pylint: disable=too-many-public-methods
     """A read-only backend for the archive."""
 
     @classmethod

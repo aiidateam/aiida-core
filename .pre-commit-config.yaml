@@ -71,6 +71,9 @@ repos:
         files: >-
             (?x)^(
                 aiida/backends/control.py|
+                aiida/backends/psql_dos/backend.py|
+                aiida/backends/psql_dos/orm/querybuilder/.*py|
+                aiida/backends/psql_dos/utils.py|
                 aiida/common/progress_reporter.py|
                 aiida/engine/.*py|
                 aiida/manage/manager.py|
@@ -85,10 +88,7 @@ repos:
                 aiida/orm/implementation/logs.py|
                 aiida/orm/implementation/nodes.py|
                 aiida/orm/implementation/users.py|
-                aiida/orm/implementation/sql/backends.py|
-                aiida/orm/implementation/sqlalchemy/backend.py|
                 aiida/orm/implementation/querybuilder.py|
-                aiida/orm/implementation/sqlalchemy/querybuilder/.*py|
                 aiida/orm/entities.py|
                 aiida/orm/authinfos.py|
                 aiida/orm/comments.py|

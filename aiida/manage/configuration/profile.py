@@ -124,7 +124,7 @@ class Profile:  # pylint: disable=too-many-public-methods
     def storage_cls(self) -> Type['Backend']:
         """Return the storage backend class for this profile."""
         if self.storage_backend == 'psql_dos':
-            from aiida.backends.sqlalchemy.backend import PsqlDosBackend
+            from aiida.backends.psql_dos.backend import PsqlDosBackend
             return PsqlDosBackend
         if self.storage_backend == 'archive.sqlite':
             from aiida.tools.archive.implementations.sqlite.backend import ArchiveReadOnlyBackend

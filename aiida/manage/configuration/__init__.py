@@ -248,7 +248,7 @@ def load_documentation_profile():
     """
     import tempfile
 
-    from aiida.backends.sqlalchemy.models.base import get_orm_metadata
+    from aiida.backends.psql_dos.models.base import get_orm_metadata
 
     from .config import Config
 

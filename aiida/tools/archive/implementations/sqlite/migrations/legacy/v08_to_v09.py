@@ -19,7 +19,7 @@ Where XX are the numbers in the migrations' documentation: REV. 1.0.XX
 And migration-name is the name of the particular migration.
 The individual SQLAlchemy database migrations may be found at:
 
-    `aiida.backends.sqlalchemy.migrations.versions.<id>_<migration-name>.py`
+    `aiida.backends.psql_dos.migrations.versions.<id>_<migration-name>.py`
 
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """

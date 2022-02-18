@@ -19,7 +19,7 @@ Where XX are the numbers in the migrations' documentation: REV. 1.0.XX
 And migration-name is the name of the particular migration.
 The individual SQLAlchemy database migrations may be found at:
 
-    `aiida.backends.sqlalchemy.migrations.versions.<id>_<migration-name>.py`
+    `aiida.backends.psql_dos.migrations.versions.<id>_<migration-name>.py`
 
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
@@ -52,7 +52,7 @@ def data_migration_legacy_process_attributes(data):
         the ProcessNode is in an active state, i.e. `process_state` is one of ('created', 'running', 'waiting').
         A log-file, listing all illegal ProcessNodes, will be produced in the current directory.
     """
-    from aiida.backends.sqlalchemy.migrations.utils.integrity import write_database_integrity_violation
+    from aiida.backends.psql_dos.migrations.utils.integrity import write_database_integrity_violation
     from aiida.tools.archive.exceptions import CorruptArchive
 
     attrs_to_remove = ['_sealed', '_finished', '_failed', '_aborted', '_do_abort']

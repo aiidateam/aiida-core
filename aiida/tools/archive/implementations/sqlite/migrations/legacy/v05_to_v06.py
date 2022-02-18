@@ -19,7 +19,7 @@ Where XX are the numbers in the migrations' documentation: REV. 1.0.XX
 And migration-name is the name of the particular migration.
 The individual SQLAlchemy database migrations may be found at:
 
-    `aiida.backends.sqlalchemy.migrations.versions.<id>_<migration-name>.py`
+    `aiida.backends.psql_dos.migrations.versions.<id>_<migration-name>.py`
 
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
@@ -98,7 +98,7 @@ def migration_migrate_legacy_job_calculation_data(data):
     `process_status`. These are inferred from the old `state` attribute, which is then discarded as its values have
     been deprecated.
     """
-    from aiida.backends.sqlalchemy.migrations.utils.calc_state import STATE_MAPPING
+    from aiida.backends.psql_dos.migrations.utils.calc_state import STATE_MAPPING
 
     calc_job_node_type = 'process.calculation.calcjob.CalcJobNode.'
     node_data = data['export_data'].get('Node', {})

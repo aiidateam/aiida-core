@@ -11,8 +11,8 @@
 
 import pytest
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.plugins import DbImporterFactory
+from aiida.storage.testbase import AiidaTestCase
 
 
 def run_materialsproject_api_tests():

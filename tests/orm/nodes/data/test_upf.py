@@ -21,9 +21,9 @@ import numpy
 from numpy import array, isclose
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ParsingError
 from aiida.orm.nodes.data.upf import parse_upf
+from aiida.storage.testbase import AiidaTestCase
 from tests.static import STATIC_DIR
 
 

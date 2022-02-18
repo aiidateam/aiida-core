@@ -18,11 +18,11 @@ import plumpy
 import pytest
 
 from aiida import get_profile
-from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_process
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.orm import CalcJobNode, WorkChainNode, WorkflowNode, WorkFunctionNode
+from aiida.storage.testbase import AiidaTestCase
 from tests.utils import processes as test_processes
 
 

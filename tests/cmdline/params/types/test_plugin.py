@@ -11,9 +11,9 @@
 
 import click
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.params.types.plugin import PluginParamType
 from aiida.plugins.entry_point import get_entry_point_from_string
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestPluginParamType(AiidaTestCase):

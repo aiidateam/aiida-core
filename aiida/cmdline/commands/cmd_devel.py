@@ -102,7 +102,7 @@ def devel_run_sql(sql):
     """Run a raw SQL command on the profile database (only available for 'psql_dos' storage)."""
     from sqlalchemy import text
 
-    from aiida.backends.psql_dos.utils import create_sqlalchemy_engine
+    from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
     assert get_profile().storage_backend == 'psql_dos'
     with create_sqlalchemy_engine(get_profile().storage_config).connect() as connection:
         result = connection.execute(text(sql)).fetchall()

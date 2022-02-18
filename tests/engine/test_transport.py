@@ -11,8 +11,8 @@
 import asyncio
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.engine.transports import TransportQueue
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestTransportQueue(AiidaTestCase):

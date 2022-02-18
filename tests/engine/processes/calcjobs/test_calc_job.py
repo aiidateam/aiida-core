@@ -20,12 +20,12 @@ from unittest.mock import patch
 import pytest
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common import CalcJobState, LinkType, StashMode, exceptions
 from aiida.engine import CalcJob, CalcJobImporter, ExitCode, Process, launch
 from aiida.engine.processes.calcjobs.calcjob import validate_stash_options
 from aiida.engine.processes.ports import PortNamespace
 from aiida.plugins import CalculationFactory
+from aiida.storage.testbase import AiidaTestCase
 
 ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 

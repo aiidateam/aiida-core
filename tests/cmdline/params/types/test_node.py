@@ -8,10 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `NodeParamType`."""
-from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.params.types import NodeParamType
 from aiida.orm import Data
 from aiida.orm.utils.loaders import OrmEntityLoader
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestNodeParamType(AiidaTestCase):

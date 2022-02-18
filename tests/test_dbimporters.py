@@ -10,7 +10,7 @@
 """Tests for subclasses of DbImporter, DbSearchResults and DbEntry"""
 import unittest
 
-from aiida.backends.testbase import AiidaTestCase
+from aiida.storage.testbase import AiidaTestCase
 from tests.static import STATIC_DIR
 
 

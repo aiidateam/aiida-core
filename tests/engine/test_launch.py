@@ -11,9 +11,9 @@
 import pytest
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.engine import CalcJob, Process, WorkChain, calcfunction, launch
+from aiida.storage.testbase import AiidaTestCase
 
 
 @calcfunction

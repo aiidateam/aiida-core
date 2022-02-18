@@ -118,7 +118,7 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch, caplog):
     """Test all the information and cases of the storage maintain command."""
     import logging
 
-    from aiida.backends import control
+    from aiida.storage import control
 
     def mock_maintain(**kwargs):
         logmsg = 'Provided kwargs:\n'

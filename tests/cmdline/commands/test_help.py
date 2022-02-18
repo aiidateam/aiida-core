@@ -11,8 +11,8 @@
 from click.testing import CliRunner
 import pytest
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_verdi
+from aiida.storage.testbase import AiidaTestCase
 
 
 @pytest.mark.usefixtures('config_with_profile')

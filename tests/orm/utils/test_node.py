@@ -10,9 +10,9 @@
 """Tests for the `Node` utils."""
 import pytest
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.orm import Data
 from aiida.orm.utils.node import load_node_class
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestLoadNodeClass(AiidaTestCase):

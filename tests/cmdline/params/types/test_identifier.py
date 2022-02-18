@@ -11,9 +11,9 @@
 
 import click
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.params.types import IdentifierParamType, NodeParamType
 from aiida.orm import Bool, Float, Int
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestIdentifierParamType(AiidaTestCase):

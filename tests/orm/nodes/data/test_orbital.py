@@ -11,10 +11,10 @@
 
 import copy
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common import ValidationError
 from aiida.orm import OrbitalData
 from aiida.plugins import OrbitalFactory
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestOrbitalData(AiidaTestCase):

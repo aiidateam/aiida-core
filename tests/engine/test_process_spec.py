@@ -9,9 +9,9 @@
 ###########################################################################
 """Tests for the `ProcessSpec` class."""
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import Process
 from aiida.orm import Data, Node
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestProcessSpec(AiidaTestCase):

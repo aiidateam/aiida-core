@@ -9,10 +9,10 @@
 ###########################################################################
 """Tests for the `verdi group` command."""
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_group
 from aiida.cmdline.utils.echo import ExitCode
 from aiida.common import exceptions
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestVerdiGroup(AiidaTestCase):

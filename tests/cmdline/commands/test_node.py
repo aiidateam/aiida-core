@@ -19,8 +19,8 @@ from click.testing import CliRunner
 import pytest
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_node
+from aiida.storage.testbase import AiidaTestCase
 
 
 def get_result_lines(result):

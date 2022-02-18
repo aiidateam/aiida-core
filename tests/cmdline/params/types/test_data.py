@@ -9,10 +9,10 @@
 ###########################################################################
 """Tests for the `DataParamType`."""
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.params.types import DataParamType
 from aiida.orm import Data
 from aiida.orm.utils.loaders import OrmEntityLoader
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestDataParamType(AiidaTestCase):

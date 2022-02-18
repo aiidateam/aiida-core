@@ -9,8 +9,8 @@
 ###########################################################################
 """Tests for the links utilities."""
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import validate_link_label
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestValidateLinkLabel(AiidaTestCase):

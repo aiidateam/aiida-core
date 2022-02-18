@@ -16,7 +16,6 @@ import plumpy
 import pytest
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.common.utils import Capturing
@@ -24,6 +23,7 @@ from aiida.engine import ExitCode, Process, ToContext, WorkChain, append_, calcf
 from aiida.engine.persistence import ObjectLoader
 from aiida.manage import get_manager
 from aiida.orm import Bool, Float, Int, Str, load_node
+from aiida.storage.testbase import AiidaTestCase
 
 
 def run_until_paused(proc):

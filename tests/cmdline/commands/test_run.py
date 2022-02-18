@@ -14,9 +14,9 @@ import textwrap
 from click.testing import CliRunner
 import pytest
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_run
 from aiida.common.log import override_log_level
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestVerdiRun(AiidaTestCase):

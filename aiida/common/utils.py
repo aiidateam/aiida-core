@@ -24,8 +24,6 @@ from .lang import classproperty
 def get_new_uuid():
     """
     Return a new UUID (typically to be used for new nodes).
-    It uses the UUID version specified in
-    aiida.backends.settings.AIIDANODES_UUID_VERSION
     """
     import uuid
     return str(uuid.uuid4())

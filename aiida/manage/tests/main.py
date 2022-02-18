@@ -147,7 +147,7 @@ class ProfileManager:
         :param profile_name: Name of the profile to be loaded
         """
         from aiida import load_profile
-        from aiida.backends.testbase import check_if_tests_can_run
+        from aiida.storage.testbase import check_if_tests_can_run
 
         self._profile = None
         try:

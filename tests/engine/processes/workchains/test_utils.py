@@ -11,12 +11,12 @@
 """Tests for `aiida.engine.processes.workchains.utils` module."""
 import pytest
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import ExitCode, ProcessState
 from aiida.engine.processes.workchains.restart import BaseRestartWorkChain
 from aiida.engine.processes.workchains.utils import ProcessHandlerReport, process_handler
 from aiida.orm import ProcessNode
 from aiida.plugins import CalculationFactory
+from aiida.storage.testbase import AiidaTestCase
 
 ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 

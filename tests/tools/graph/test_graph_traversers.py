@@ -9,8 +9,8 @@
 ###########################################################################
 """Tests for aiida.tools.graph.graph_traversers"""
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
+from aiida.storage.testbase import AiidaTestCase
 from aiida.tools.graph.graph_traversers import get_nodes_delete, traverse_graph
 
 

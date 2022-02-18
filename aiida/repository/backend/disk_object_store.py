@@ -156,7 +156,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         :param do_vacuum:flag for forcing the vacuuming of the internal database when cleaning the repository.
         :return:a dictionary with information on the operations performed.
         """
-        from aiida.backends.control import MAINTAIN_LOGGER
+        from aiida.storage.control import MAINTAIN_LOGGER
 
         logger = MAINTAIN_LOGGER.getChild('disk_object_store')
 

@@ -13,13 +13,13 @@ The migration steps are named similarly to the database migrations for Django an
 In the description of each migration, a revision number is given, which refers to the Django migrations.
 The individual Django database migrations may be found at:
 
-    `aiida.backends.djsite.db.migrations.00XX_<migration-name>.py`
+    `aiida.storage.djsite.db.migrations.00XX_<migration-name>.py`
 
 Where XX are the numbers in the migrations' documentation: REV. 1.0.XX
 And migration-name is the name of the particular migration.
 The individual SQLAlchemy database migrations may be found at:
 
-    `aiida.backends.psql_dos.migrations.versions.<id>_<migration-name>.py`
+    `aiida.storage.psql_dos.migrations.versions.<id>_<migration-name>.py`
 
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """

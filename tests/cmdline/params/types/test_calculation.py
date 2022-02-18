@@ -9,10 +9,10 @@
 ###########################################################################
 """Tests for the `CalculationParamType`."""
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.params.types import CalculationParamType
 from aiida.orm import CalcFunctionNode, CalcJobNode, CalculationNode, WorkChainNode, WorkFunctionNode
 from aiida.orm.utils.loaders import OrmEntityLoader
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestCalculationParamType(AiidaTestCase):

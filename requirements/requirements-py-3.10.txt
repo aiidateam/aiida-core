@@ -100,7 +100,7 @@ py==1.11.0
 py-cpuinfo==8.0.0
 PyCifRW==4.4.3
 pycparser==2.21
-pydata-sphinx-theme==0.6.3
+sphinx-book-theme==0.2.0
 Pygments==2.10.0
 pymatgen==2022.1.9
 Pympler==0.9

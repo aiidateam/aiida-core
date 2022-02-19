@@ -136,7 +136,7 @@ intersphinx_mapping = {
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'pydata_sphinx_theme'
+html_theme = 'sphinx_book_theme'
 
 
 # Enable labeling for figures
@@ -146,13 +146,23 @@ numfig = True
 # further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
-    'external_links': [
-        {'url': 'http://www.aiida.net/', 'name': 'AiiDA Home'}
-    ],
+    'home_page_in_toc': False,
+    'repository_url': 'https://github.com/aiidateam/aiida-core',
+    'repository_branch': 'develop',
+    'use_repository_button': True,
+    'use_issues_button': True,
+    'path_to_docs': 'docs/source',
+    'use_edit_page_button': True,
+    'extra_navbar': '',
     'github_url': 'https://github.com/aiidateam/aiida-core',
     'twitter_url': 'https://twitter.com/aiidateam',
-    'use_edit_page_button': True,
+    'external_links': [
+        {'url': 'https://aiida.net', 'name': 'AiiDA home'},
+    ],
 }
+html_domain_indices = True
+html_title = ''
+
 html_context = {
     'github_user': 'aiidateam',
     'github_repo': 'aiida-core',

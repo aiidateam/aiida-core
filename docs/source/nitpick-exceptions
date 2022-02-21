@@ -29,6 +29,9 @@ py:class TransactionType
 py:class ReturnType
 py:class function
 py:class traceback
+py:class ExternalType
+py:class TypeDecorator
+py:class UserDefinedType
 py:class a
 py:class c
 py:class d

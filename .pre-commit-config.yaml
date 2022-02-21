@@ -70,14 +70,13 @@ repos:
         pass_filenames: true
         files: >-
             (?x)^(
-                aiida/backends/control.py|
                 aiida/common/progress_reporter.py|
                 aiida/engine/.*py|
                 aiida/manage/manager.py|
                 aiida/manage/database/delete/nodes.py|
                 aiida/orm/querybuilder.py|
                 aiida/orm/implementation/entities.py|
-                aiida/orm/implementation/backends.py|
+                aiida/orm/implementation/storage_backend.py|
                 aiida/orm/implementation/authinfos.py|
                 aiida/orm/implementation/comments.py|
                 aiida/orm/implementation/computers.py|
@@ -85,10 +84,7 @@ repos:
                 aiida/orm/implementation/logs.py|
                 aiida/orm/implementation/nodes.py|
                 aiida/orm/implementation/users.py|
-                aiida/orm/implementation/sql/backends.py|
-                aiida/orm/implementation/sqlalchemy/backend.py|
                 aiida/orm/implementation/querybuilder.py|
-                aiida/orm/implementation/sqlalchemy/querybuilder/.*py|
                 aiida/orm/entities.py|
                 aiida/orm/authinfos.py|
                 aiida/orm/comments.py|
@@ -103,6 +99,10 @@ repos:
                 aiida/plugins/entry_point.py|
                 aiida/plugins/factories.py|
                 aiida/repository/.*py|
+                aiida/storage/control.py|
+                aiida/storage/psql_dos/backend.py|
+                aiida/storage/psql_dos/orm/querybuilder/.*py|
+                aiida/storage/psql_dos/utils.py|
                 aiida/tools/graph/graph_traversers.py|
                 aiida/tools/groups/paths.py|
                 aiida/tools/archive/.*py|

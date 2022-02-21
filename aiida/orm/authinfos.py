@@ -19,7 +19,7 @@ from . import entities, users
 
 if TYPE_CHECKING:
     from aiida.orm import Computer, User
-    from aiida.orm.implementation import Backend, BackendAuthInfo
+    from aiida.orm.implementation import BackendAuthInfo, StorageBackend
     from aiida.transports import Transport
 
 __all__ = ('AuthInfo',)
@@ -51,7 +51,7 @@ class AuthInfo(entities.Entity['BackendAuthInfo']):
 
     PROPERTY_WORKDIR = 'workdir'
 
-    def __init__(self, computer: 'Computer', user: 'User', backend: Optional['Backend'] = None) -> None:
+    def __init__(self, computer: 'Computer', user: 'User', backend: Optional['StorageBackend'] = None) -> None:
         """Create an `AuthInfo` instance for the given computer and user.
 
         :param computer: a `Computer` instance

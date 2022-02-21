@@ -9,9 +9,9 @@
 ###########################################################################
 """Tests for process spec ports."""
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.engine.processes.ports import InputPort, PortNamespace
 from aiida.orm import Dict, Int
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestInputPort(AiidaTestCase):

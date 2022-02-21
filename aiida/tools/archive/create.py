@@ -29,7 +29,7 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.manage import get_manager
 from aiida.orm.entities import EntityTypes
-from aiida.orm.implementation import Backend
+from aiida.orm.implementation import StorageBackend
 from aiida.orm.utils.links import LinkQuadruple
 from aiida.tools.graph.graph_traversers import get_nodes_export, validate_traversal_rules
 
@@ -59,7 +59,7 @@ def create_archive(
     batch_size: int = 1000,
     compression: int = 6,
     test_run: bool = False,
-    backend: Optional[Backend] = None,
+    backend: Optional[StorageBackend] = None,
     **traversal_rules: bool
 ) -> Path:
     """Export AiiDA data to an archive file.
@@ -151,7 +151,7 @@ def create_archive(
     """
     # check the backend
     backend = backend or get_manager().get_profile_storage()
-    type_check(backend, Backend)
+    type_check(backend, StorageBackend)
     # create a function to get a query builder instance for the backend
     querybuilder = lambda: orm.QueryBuilder(backend=backend)
 
@@ -425,7 +425,7 @@ def _collect_all_entities(
 
 def _collect_required_entities(
     querybuilder: QbType, entity_ids: Dict[EntityTypes, Set[int]], traversal_rules: Dict[str, bool],
-    include_authinfos: bool, include_comments: bool, include_logs: bool, backend: Backend, batch_size: int
+    include_authinfos: bool, include_comments: bool, include_logs: bool, backend: StorageBackend, batch_size: int
 ) -> Tuple[List[list], Set[LinkQuadruple]]:
     """Collect required entities, given a set of starting entities and provenance graph traversal rules.
 
@@ -565,7 +565,7 @@ def _collect_required_entities(
 
 
 def _stream_repo_files(
-    key_format: str, writer: ArchiveWriterAbstract, node_ids: Set[int], backend: Backend, batch_size: int
+    key_format: str, writer: ArchiveWriterAbstract, node_ids: Set[int], backend: StorageBackend, batch_size: int
 ) -> None:
     """Collect all repository object keys from the nodes, then stream the files to the archive."""
     keys = set(orm.Node.objects(backend).iter_repo_keys(filters={'id': {'in': list(node_ids)}}, batch_size=batch_size))

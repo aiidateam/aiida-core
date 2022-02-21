@@ -96,25 +96,25 @@ The following section provides a complete schema for each of the tables of the S
 
 ``*`` indicates columns with a unique constraint, ``→`` indicate foreign keys, and ``?`` indicate value types that are nullable.
 
-.. sqla-model:: ~aiida.backends.sqlalchemy.models.node.DbNode
+.. sqla-model:: ~aiida.storage.psql_dos.models.node.DbNode
 
-.. sqla-model:: ~aiida.backends.sqlalchemy.models.node.DbLink
+.. sqla-model:: ~aiida.storage.psql_dos.models.node.DbLink
 
-.. sqla-model:: ~aiida.backends.sqlalchemy.models.group.DbGroup
+.. sqla-model:: ~aiida.storage.psql_dos.models.group.DbGroup
 
-.. sqla-model:: ~aiida.backends.sqlalchemy.models.group.DbGroupNode
+.. sqla-model:: ~aiida.storage.psql_dos.models.group.DbGroupNode
 
-.. sqla-model:: ~aiida.backends.sqlalchemy.models.user.DbUser
+.. sqla-model:: ~aiida.storage.psql_dos.models.user.DbUser
 
-.. sqla-model:: ~aiida.backends.sqlalchemy.models.computer.DbComputer
+.. sqla-model:: ~aiida.storage.psql_dos.models.computer.DbComputer
 
-.. sqla-model:: ~aiida.backends.sqlalchemy.models.authinfo.DbAuthInfo
+.. sqla-model:: ~aiida.storage.psql_dos.models.authinfo.DbAuthInfo
 
-.. sqla-model:: ~aiida.backends.sqlalchemy.models.comment.DbComment
+.. sqla-model:: ~aiida.storage.psql_dos.models.comment.DbComment
 
-.. sqla-model:: ~aiida.backends.sqlalchemy.models.log.DbLog
+.. sqla-model:: ~aiida.storage.psql_dos.models.log.DbLog
 
-.. sqla-model:: ~aiida.backends.sqlalchemy.models.settings.DbSetting
+.. sqla-model:: ~aiida.storage.psql_dos.models.settings.DbSetting
 
 
 Sequence tables

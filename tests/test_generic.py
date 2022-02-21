@@ -10,7 +10,7 @@
 """Generic tests that need the use of the DB."""
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestCode(AiidaTestCase):

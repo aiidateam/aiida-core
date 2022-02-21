@@ -12,11 +12,11 @@
 import logging
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.common.timezone import now
 from aiida.orm import Log
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestBackendLog(AiidaTestCase):

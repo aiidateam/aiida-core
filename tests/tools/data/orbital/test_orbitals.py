@@ -9,10 +9,10 @@
 ###########################################################################
 """Test for the `Orbital` class and subclasses."""
 
-#from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ValidationError
 from aiida.plugins import OrbitalFactory
+#from aiida import orm
+from aiida.storage.testbase import AiidaTestCase
 from aiida.tools.data.orbital import Orbital
 
 

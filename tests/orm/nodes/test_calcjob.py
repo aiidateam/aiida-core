@@ -10,9 +10,9 @@
 """Tests for the `CalcJobNode` node sub class."""
 import io
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common import CalcJobState, LinkType
 from aiida.orm import CalcJobNode, FolderData
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestCalcJobNode(AiidaTestCase):

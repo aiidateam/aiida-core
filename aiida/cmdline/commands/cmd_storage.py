@@ -92,9 +92,9 @@ def storage_integrity():
 @click.option('--statistics', is_flag=True, help='Provides more in-detail statistically relevant data.')
 def storage_info(statistics):
     """Summarise the contents of the storage."""
-    from aiida.backends.control import get_repository_info
     from aiida.cmdline.utils.common import get_database_summary
     from aiida.orm import QueryBuilder
+    from aiida.storage.control import get_repository_info
 
     with spinner():
         data = {
@@ -119,7 +119,7 @@ def storage_info(statistics):
 )
 def storage_maintain(full, dry_run):
     """Performs maintenance tasks on the repository."""
-    from aiida.backends.control import repository_maintain
+    from aiida.storage.control import repository_maintain
 
     if full:
         echo.echo_warning(

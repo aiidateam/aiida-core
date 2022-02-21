@@ -9,11 +9,11 @@
 ###########################################################################
 """Tests for the ORM mixin classes."""
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.orm import CalculationNode, Int
 from aiida.orm.utils.mixins import Sealable
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestSealable(AiidaTestCase):

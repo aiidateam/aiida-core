@@ -21,7 +21,7 @@ from . import entities, users
 
 if TYPE_CHECKING:
     from aiida.orm import AuthInfo, User
-    from aiida.orm.implementation import Backend, BackendComputer
+    from aiida.orm.implementation import BackendComputer, StorageBackend
     from aiida.schedulers import Scheduler
     from aiida.transports import Transport
 
@@ -89,7 +89,7 @@ class Computer(entities.Entity['BackendComputer']):
         transport_type: str = '',
         scheduler_type: str = '',
         workdir: str = None,
-        backend: Optional['Backend'] = None,
+        backend: Optional['StorageBackend'] = None,
     ) -> None:
         """Construct a new computer."""
         backend = backend or get_manager().get_profile_storage()

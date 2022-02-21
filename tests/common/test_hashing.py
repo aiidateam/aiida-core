@@ -26,12 +26,12 @@ try:
 except ImportError:
     import unittest
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import HashingError
 from aiida.common.folders import SandboxFolder
 from aiida.common.hashing import chunked_file_hash, float_to_text, make_hash
 from aiida.common.utils import DatetimePrecision
 from aiida.orm import Dict
+from aiida.storage.testbase import AiidaTestCase
 
 
 class FloatToTextTest(unittest.TestCase):

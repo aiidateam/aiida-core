@@ -702,7 +702,7 @@ Changes between 1.0 alpha/beta releases are not included - for those see the cha
 - AiiDA now enforces UTF-8 encoding for text output in its files and databases. [[#2107]](https://github.com/aiidateam/aiida-core/pull/2107)
 
 #### Backwards-incompatible changes (only a sub-set)
-- Remove `aiida.tests` and obsolete `aiida.backends.tests.test_parsers` entry point group [[#2778]](https://github.com/aiidateam/aiida-core/pull/2778)
+- Remove `aiida.tests` and obsolete `aiida.storage.tests.test_parsers` entry point group [[#2778]](https://github.com/aiidateam/aiida-core/pull/2778)
 - Implement new link types [[#2220]](https://github.com/aiidateam/aiida-core/pull/2220)
 - Rename the type strings of `Groups` and change the attributes `name` and `type` to `label` and `type_string` [[#2329]](https://github.com/aiidateam/aiida-core/pull/2329)
 - Make various protected `Node` methods public [[#2544]](https://github.com/aiidateam/aiida-core/pull/2544)

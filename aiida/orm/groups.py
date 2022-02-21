@@ -20,7 +20,7 @@ from . import convert, entities, users
 
 if TYPE_CHECKING:
     from aiida.orm import Node, User
-    from aiida.orm.implementation import Backend, BackendGroup
+    from aiida.orm.implementation import BackendGroup, StorageBackend
 
 __all__ = ('Group', 'AutoGroup', 'ImportGroup', 'UpfFamily')
 
@@ -127,7 +127,7 @@ class Group(entities.Entity['BackendGroup'], entities.EntityExtrasMixin, metacla
         user: Optional['User'] = None,
         description: str = '',
         type_string: Optional[str] = None,
-        backend: Optional['Backend'] = None
+        backend: Optional['StorageBackend'] = None
     ):
         """
         Create a new group. Either pass a dbgroup parameter, to reload

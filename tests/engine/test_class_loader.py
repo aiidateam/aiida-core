@@ -9,9 +9,9 @@
 ###########################################################################
 """A module to test class loader factories."""
 import aiida
-from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import Process
 from aiida.plugins import CalculationFactory
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestCalcJob(AiidaTestCase):

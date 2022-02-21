@@ -15,10 +15,10 @@ import io
 from flask_cors.core import ACL_ORIGIN
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common import json
 from aiida.common.links import LinkType
 from aiida.restapi.run_api import configure_api
+from aiida.storage.testbase import AiidaTestCase
 
 
 class RESTApiTestCase(AiidaTestCase):

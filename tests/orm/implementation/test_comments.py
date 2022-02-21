@@ -15,8 +15,8 @@ from uuid import UUID
 import pytz
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions, timezone
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestBackendComment(AiidaTestCase):

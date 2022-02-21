@@ -3,8 +3,8 @@
 
 import numpy as np
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.orm import TrajectoryData, load_node
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestTrajectory(AiidaTestCase):

@@ -12,9 +12,9 @@
 from click.testing import CliRunner
 import pytest
 
-from aiida.backends.testbase import AiidaPostgresTestCase
 from aiida.cmdline.commands import cmd_profile, cmd_verdi
 from aiida.manage import configuration, get_manager
+from aiida.storage.testbase import AiidaPostgresTestCase
 from tests.utils.configuration import create_mock_profile
 
 

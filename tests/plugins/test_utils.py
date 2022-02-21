@@ -9,10 +9,10 @@
 ###########################################################################
 """Tests for utilities dealing with plugins and entry points."""
 from aiida import __version__ as version_core
-from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import WorkChain, calcfunction
 from aiida.plugins import CalculationFactory
 from aiida.plugins.utils import PluginVersionProvider
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestPluginVersionProvider(AiidaTestCase):

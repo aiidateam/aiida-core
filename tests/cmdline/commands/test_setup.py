@@ -16,10 +16,10 @@ from click.testing import CliRunner
 import pytest
 
 from aiida import orm
-from aiida.backends.testbase import AiidaPostgresTestCase
 from aiida.cmdline.commands import cmd_setup
 from aiida.manage import configuration, get_manager
 from aiida.manage.external.postgres import Postgres
+from aiida.storage.testbase import AiidaPostgresTestCase
 
 
 @pytest.mark.usefixtures('config_with_profile')

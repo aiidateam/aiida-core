@@ -8,8 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for Path types"""
-from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.params.types.path import PathOrUrl, check_timeout_seconds
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestPath(AiidaTestCase):

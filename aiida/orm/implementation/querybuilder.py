@@ -16,7 +16,7 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.orm.entities import EntityTypes
 
 if TYPE_CHECKING:
-    from aiida.orm.implementation import Backend
+    from aiida.orm.implementation import StorageBackend
 
 __all__ = ('BackendQueryBuilder',)
 
@@ -80,12 +80,12 @@ GROUP_ENTITY_TYPE_PREFIX = 'group.'
 class BackendQueryBuilder(abc.ABC):
     """Backend query builder interface"""
 
-    def __init__(self, backend: 'Backend'):
+    def __init__(self, backend: 'StorageBackend'):
         """
         :param backend: the backend
         """
-        from . import backends
-        type_check(backend, backends.Backend)
+        from .storage_backend import StorageBackend
+        type_check(backend, StorageBackend)
         self._backend = backend
 
     @abc.abstractmethod

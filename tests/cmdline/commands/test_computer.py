@@ -17,7 +17,6 @@ from click.testing import CliRunner
 import pytest
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands.cmd_computer import (
     computer_configure,
     computer_delete,
@@ -28,6 +27,7 @@ from aiida.cmdline.commands.cmd_computer import (
     computer_show,
     computer_test,
 )
+from aiida.storage.testbase import AiidaTestCase
 
 
 def generate_setup_options_dict(replace_args=None, non_interactive=True):

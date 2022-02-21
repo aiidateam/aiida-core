@@ -23,7 +23,7 @@ from aiida.orm.utils.links import LinkPair
 from aiida.tools.graph.graph_traversers import traverse_graph
 
 if TYPE_CHECKING:
-    from aiida.orm.implementation import Backend
+    from aiida.orm.implementation import StorageBackend
 
 __all__ = ('Graph', 'default_link_styles', 'default_node_styles', 'pstate_node_styles', 'default_node_sublabels')
 
@@ -364,7 +364,7 @@ class Graph:
         node_style_fn=None,
         node_sublabel_fn=None,
         node_id_type='pk',
-        backend: Optional['Backend'] = None
+        backend: Optional['StorageBackend'] = None
     ):
         """a class to create graphviz graphs of the AiiDA node provenance
 
@@ -409,7 +409,7 @@ class Graph:
         self._origin_node_style = _OVERRIDE_STYLES_DICT['origin_node']
 
     @property
-    def backend(self) -> 'Backend':
+    def backend(self) -> 'StorageBackend':
         """The backend used to create the graph"""
         return self._backend
 

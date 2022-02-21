@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Literal, Optional, 
 if TYPE_CHECKING:
     from aiida.orm import QueryBuilder
     from aiida.orm.entities import Entity, EntityTypes
-    from aiida.orm.implementation import Backend
+    from aiida.orm.implementation import StorageBackend
     from aiida.tools.visualization.graph import Graph
 
 SelfType = TypeVar('SelfType')
@@ -145,7 +145,7 @@ class ArchiveReaderAbstract(ABC):
         """
 
     @abstractmethod
-    def get_backend(self) -> 'Backend':
+    def get_backend(self) -> 'StorageBackend':
         """Return a 'read-only' backend for the archive."""
 
     # below are convenience methods for some common use cases

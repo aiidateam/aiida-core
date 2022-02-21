@@ -11,8 +11,8 @@
 
 import zmq
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.engine.daemon.client import get_daemon_client
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestDaemonClient(AiidaTestCase):

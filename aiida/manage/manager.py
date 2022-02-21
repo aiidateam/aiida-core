@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from aiida.engine.runners import Runner
     from aiida.manage.configuration.config import Config
     from aiida.manage.configuration.profile import Profile
-    from aiida.orm.implementation import Backend
+    from aiida.orm.implementation import StorageBackend
 
 __all__ = ('get_manager',)
 
@@ -64,7 +64,7 @@ class Manager:
     def __init__(self) -> None:
         # note: the config currently references the global variables
         self._profile: Optional['Profile'] = None
-        self._profile_storage: Optional['Backend'] = None
+        self._profile_storage: Optional['StorageBackend'] = None
         self._daemon_client: Optional['DaemonClient'] = None
         self._communicator: Optional['RmqThreadCommunicator'] = None
         self._process_controller: Optional['RemoteProcessThreadController'] = None
@@ -193,7 +193,7 @@ class Manager:
         option = get_option(option_name)
         return option.default
 
-    def get_backend(self) -> 'Backend':
+    def get_backend(self) -> 'StorageBackend':
         """Return the current profile's storage backend, loading it if necessary.
 
         Deprecated: use `get_profile_storage` instead.
@@ -202,7 +202,7 @@ class Manager:
         warn('get_backend() is deprecated, use get_profile_storage() instead', AiidaDeprecationWarning)
         return self.get_profile_storage()
 
-    def get_profile_storage(self) -> 'Backend':
+    def get_profile_storage(self) -> 'StorageBackend':
         """Return the current profile's storage backend, loading it if necessary."""
         from aiida.common import ConfigurationError
         from aiida.common.log import configure_logging

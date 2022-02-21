@@ -13,8 +13,8 @@
 import numpy as np
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
+from aiida.storage.testbase import AiidaTestCase
 from aiida.tools.graph.age_entities import AiidaEntitySet, Basket, DirectedEdgeSet, GroupNodeEdge
 from aiida.tools.graph.age_rules import ReplaceRule, RuleSaveWalkers, RuleSequence, RuleSetWalkers, UpdateRule
 

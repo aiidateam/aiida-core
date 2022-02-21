@@ -9,10 +9,10 @@
 ###########################################################################
 """Tests for the CalculationNode and CalcJobNode class."""
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common.datastructures import CalcJobState
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.orm import CalcJobNode, CalculationNode
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestProcessNode(AiidaTestCase):

@@ -17,9 +17,9 @@ import tempfile
 import pytest
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, StoringNotAllowed, ValidationError
 from aiida.common.links import LinkType
+from aiida.storage.testbase import AiidaTestCase
 from aiida.tools import delete_group_nodes, delete_nodes
 
 

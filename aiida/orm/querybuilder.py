@@ -53,7 +53,7 @@ from . import authinfos, comments, computers, convert, entities, groups, logs, n
 if TYPE_CHECKING:
     # pylint: disable=ungrouped-imports
     from aiida.engine import Process
-    from aiida.orm.implementation import Backend
+    from aiida.orm.implementation import StorageBackend
 
 __all__ = ('QueryBuilder',)
 
@@ -94,7 +94,7 @@ class QueryBuilder:
 
     def __init__(
         self,
-        backend: Optional['Backend'] = None,
+        backend: Optional['StorageBackend'] = None,
         *,
         debug: bool = False,
         path: Optional[Sequence[Union[str, Dict[str, Any], EntityClsType]]] = (),
@@ -190,7 +190,7 @@ class QueryBuilder:
             self.order_by(order_by)
 
     @property
-    def backend(self) -> 'Backend':
+    def backend(self) -> 'StorageBackend':
         """Return the backend used by the QueryBuilder."""
         return self._backend
 

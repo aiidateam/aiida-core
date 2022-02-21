@@ -50,6 +50,8 @@ py:class IO
 py:class QueryBuilder
 py:class SelfType
 py:class Profile
+py:class PsqlDosBackend
+py:class str | list[str]
 
 ### AiiDA
 
@@ -201,6 +203,7 @@ py:class uuid.UUID
 py:class psycopg2.extensions.cursor
 
 py:class alembic.config.Config
+py:class alembic.op
 py:class alembic.runtime.migration.MigrationContext
 
 py:class pgsu.PGSU

@@ -8,11 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to test orm utilities to load nodes, codes etc."""
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import NotExistent
 from aiida.orm import Data, Group, Node
 from aiida.orm.utils import load_code, load_computer, load_entity, load_group, load_node
 from aiida.orm.utils.loaders import NodeEntityLoader
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestOrmUtils(AiidaTestCase):

@@ -15,7 +15,6 @@ import unittest
 
 import pytest
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.utils import Capturing
 from aiida.orm import ArrayData, BandsData, CifData, Dict, KpointsData, StructureData, TrajectoryData, load_node
@@ -29,6 +28,7 @@ from aiida.orm.nodes.data.structure import (
     has_pymatgen,
     has_spglib,
 )
+from aiida.storage.testbase import AiidaTestCase
 
 
 def has_seekpath():

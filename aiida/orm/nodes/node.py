@@ -48,8 +48,7 @@ from ..users import User
 from .repository import NodeRepositoryMixin
 
 if TYPE_CHECKING:
-    from ..implementation import Backend
-    from ..implementation.nodes import BackendNode
+    from ..implementation import BackendNode, StorageBackend
 
 __all__ = ('Node',)
 
@@ -157,7 +156,7 @@ class Node(
 
     def __init__(
         self,
-        backend: Optional['Backend'] = None,
+        backend: Optional['StorageBackend'] = None,
         user: Optional[User] = None,
         computer: Optional[Computer] = None,
         **kwargs: Any
@@ -292,7 +291,7 @@ class Node(
 
         :param value: the new value to set
         """
-        self.backend_entity.process_type = value  # type: ignore[misc]
+        self.backend_entity.process_type = value
 
     @property
     def label(self) -> str:
@@ -308,7 +307,7 @@ class Node(
 
         :param value: the new value to set
         """
-        self.backend_entity.label = value  # type: ignore[misc]
+        self.backend_entity.label = value
 
     @property
     def description(self) -> str:
@@ -324,7 +323,7 @@ class Node(
 
         :param value: the new value to set
         """
-        self.backend_entity.description = value  # type: ignore[misc]
+        self.backend_entity.description = value
 
     @property
     def repository_metadata(self) -> Dict[str, Any]:
@@ -340,7 +339,7 @@ class Node(
 
         :param value: the new value to set
         """
-        self.backend_entity.repository_metadata = value  # type: ignore[misc]
+        self.backend_entity.repository_metadata = value
 
     @property
     def computer(self) -> Optional[Computer]:
@@ -361,7 +360,7 @@ class Node(
 
         type_check(computer, Computer, allow_none=True)
 
-        self.backend_entity.computer = None if computer is None else computer.backend_entity  # type: ignore[misc]
+        self.backend_entity.computer = None if computer is None else computer.backend_entity
 
     @property
     def user(self) -> User:
@@ -378,7 +377,7 @@ class Node(
             raise exceptions.ModificationNotAllowed('cannot set the user on a stored node')
 
         type_check(user, User)
-        self.backend_entity.user = user.backend_entity  # type: ignore[misc]
+        self.backend_entity.user = user.backend_entity
 
     @property
     def ctime(self) -> datetime.datetime:

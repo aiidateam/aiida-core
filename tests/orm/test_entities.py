@@ -10,7 +10,7 @@
 """Test for general backend entities"""
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestBackendEntitiesAndCollections(AiidaTestCase):

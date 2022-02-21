@@ -11,9 +11,9 @@
 import pytest
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import ExitCode, Process, calcfunction, run, run_get_node, submit, workfunction
 from aiida.orm.nodes.data.bool import get_true_node
+from aiida.storage.testbase import AiidaTestCase
 from aiida.workflows.arithmetic.add_multiply import add_multiply
 
 DEFAULT_INT = 256

@@ -12,7 +12,7 @@ import abc
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, Iterable, List, Tuple, Type, TypeVar
 
 if TYPE_CHECKING:
-    from aiida.orm.implementation import Backend
+    from aiida.orm.implementation import StorageBackend
 
 __all__ = ('BackendEntity', 'BackendCollection', 'EntityType', 'BackendEntityExtrasMixin')
 
@@ -22,11 +22,11 @@ EntityType = TypeVar('EntityType', bound='BackendEntity')  # pylint: disable=inv
 class BackendEntity(abc.ABC):
     """An first-class entity in the backend"""
 
-    def __init__(self, backend: 'Backend', **kwargs: Any):  # pylint: disable=unused-argument
+    def __init__(self, backend: 'StorageBackend', **kwargs: Any):  # pylint: disable=unused-argument
         self._backend = backend
 
     @property
-    def backend(self) -> 'Backend':
+    def backend(self) -> 'StorageBackend':
         """Return the backend this entity belongs to
 
         :return: the backend instance
@@ -74,7 +74,7 @@ class BackendCollection(Generic[EntityType]):
 
     ENTITY_CLASS: ClassVar[Type[EntityType]]  # type: ignore[misc]
 
-    def __init__(self, backend: 'Backend'):
+    def __init__(self, backend: 'StorageBackend'):
         """
         :param backend: the backend this collection belongs to
         """
@@ -82,7 +82,7 @@ class BackendCollection(Generic[EntityType]):
         self._backend = backend
 
     @property
-    def backend(self) -> 'Backend':
+    def backend(self) -> 'StorageBackend':
         """Return the backend."""
         return self._backend
 

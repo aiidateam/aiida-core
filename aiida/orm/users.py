@@ -17,7 +17,7 @@ from aiida.manage import get_manager
 from . import entities
 
 if TYPE_CHECKING:
-    from aiida.orm.implementation import Backend, BackendUser
+    from aiida.orm.implementation import BackendUser, StorageBackend
 
 __all__ = ('User',)
 
@@ -29,7 +29,7 @@ class UserCollection(entities.Collection['User']):
     def _entity_base_cls() -> Type['User']:
         return User
 
-    def __init__(self, entity_class: Type['User'], backend: Optional['Backend'] = None) -> None:
+    def __init__(self, entity_class: Type['User'], backend: Optional['StorageBackend'] = None) -> None:
         super().__init__(entity_class=entity_class, backend=backend)
         self._default_user: Optional[User] = None
 
@@ -82,7 +82,7 @@ class User(entities.Entity['BackendUser']):
         first_name: str = '',
         last_name: str = '',
         institution: str = '',
-        backend: Optional['Backend'] = None
+        backend: Optional['StorageBackend'] = None
     ):
         """Create a new `User`."""
         # pylint: disable=too-many-arguments

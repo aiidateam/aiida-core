@@ -24,16 +24,16 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.dialects.sqlite import JSON
 from sqlalchemy.sql.schema import Table
 
-# we need to import all models, to ensure they are loaded on the SQLA Metadata
-from aiida.backends.sqlalchemy.models import authinfo, base, comment, computer, group, log, node, user
 from aiida.common.exceptions import UnreachableStorage
 from aiida.manage import Profile
 from aiida.orm.entities import EntityTypes
-from aiida.orm.implementation.backends import Backend as BackendAbstract
-from aiida.orm.implementation.sqlalchemy import authinfos, comments, computers, entities, groups, logs, nodes, users
-from aiida.orm.implementation.sqlalchemy.querybuilder import SqlaQueryBuilder
-from aiida.orm.implementation.sqlalchemy.utils import ModelWrapper
+from aiida.orm.implementation import StorageBackend
 from aiida.repository.backend.abstract import AbstractRepositoryBackend
+# we need to import all models, to ensure they are loaded on the SQLA Metadata
+from aiida.storage.psql_dos.models import authinfo, base, comment, computer, group, log, node, user
+from aiida.storage.psql_dos.orm import authinfos, comments, computers, entities, groups, logs, nodes, users
+from aiida.storage.psql_dos.orm.querybuilder import SqlaQueryBuilder
+from aiida.storage.psql_dos.orm.utils import ModelWrapper
 from aiida.tools.archive.exceptions import ArchiveClosedError, CorruptArchive, ReadOnlyError
 
 from .common import DB_FILENAME, REPO_FOLDER, create_sqla_engine
@@ -245,7 +245,7 @@ class ArchiveBackendQueryBuilder(SqlaQueryBuilder):
         return DbGroupNodes.__table__  # type: ignore[attr-defined] # pylint: disable=no-member
 
 
-class ArchiveReadOnlyBackend(BackendAbstract):  # pylint: disable=too-many-public-methods
+class ArchiveReadOnlyBackend(StorageBackend):  # pylint: disable=too-many-public-methods
     """A read-only backend for the archive."""
 
     @classmethod

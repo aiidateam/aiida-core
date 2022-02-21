@@ -13,7 +13,7 @@ import pytest
 
 from aiida import orm
 from aiida.common.exceptions import NotExistent
-from aiida.orm.implementation.backends import Backend
+from aiida.orm.implementation import StorageBackend
 from aiida.tools.archive import ArchiveFormatSqlZip, ArchiveReaderAbstract
 from tests.utils.archives import get_archive_file
 
@@ -32,7 +32,7 @@ def archive(tmp_path):
 def test_get_backend(archive: ArchiveReaderAbstract):
     """Test retrieving the backend"""
     backend = archive.get_backend()
-    assert isinstance(backend, Backend)
+    assert isinstance(backend, StorageBackend)
 
 
 def test_get(archive: ArchiveReaderAbstract):

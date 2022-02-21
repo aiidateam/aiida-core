@@ -45,7 +45,7 @@ def devel_check_load_time():
     if manager.profile_storage_loaded:
         echo.echo_critical('potential `verdi` speed problem: database backend is loaded.')
 
-    allowed = ('aiida.backends', 'aiida.cmdline', 'aiida.common', 'aiida.manage', 'aiida.plugins', 'aiida.restapi')
+    allowed = ('aiida.cmdline', 'aiida.common', 'aiida.manage', 'aiida.plugins', 'aiida.restapi')
     for loaded in loaded_aiida_modules:
         if not any(loaded.startswith(mod) for mod in allowed):
             echo.echo_critical(
@@ -102,7 +102,7 @@ def devel_run_sql(sql):
     """Run a raw SQL command on the profile database (only available for 'psql_dos' storage)."""
     from sqlalchemy import text
 
-    from aiida.backends.sqlalchemy.utils import create_sqlalchemy_engine
+    from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
     assert get_profile().storage_backend == 'psql_dos'
     with create_sqlalchemy_engine(get_profile().storage_config).connect() as connection:
         result = connection.execute(text(sql)).fetchall()

@@ -10,9 +10,9 @@
 """Unit tests for the backend non-specific utility methods."""
 import math
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.orm.implementation.utils import FIELD_SEPARATOR, clean_value, validate_attribute_extra_key
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestOrmImplementationUtils(AiidaTestCase):

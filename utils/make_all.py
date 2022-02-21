@@ -156,10 +156,9 @@ if __name__ == '__main__':
         'cmdline/utils': ['echo'],
         # skipped since this is for testing only not general use
         'manage': ['tests'],
-        # skipped since we don't want to expose the implmentation
+        # skipped since we don't want to expose the implementation at the top-level
+        'storage': ['psql_dos'],
         'orm': ['implementation'],
-        # skipped since both implementations share class/function names
-        'orm/implementation': ['sqlalchemy', 'sql'],
         # skip all since the module requires extra requirements
         'restapi': ['*'],
         # keep at aiida.tools.archive level

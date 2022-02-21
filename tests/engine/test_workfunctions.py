@@ -10,11 +10,11 @@
 """Tests for the workfunction decorator and WorkFunctionNode."""
 import pytest
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.engine import Process, calcfunction, workfunction
 from aiida.manage.caching import enable_caching
 from aiida.orm import CalcFunctionNode, Int, WorkFunctionNode
+from aiida.storage.testbase import AiidaTestCase
 
 
 @pytest.mark.requires_rmq

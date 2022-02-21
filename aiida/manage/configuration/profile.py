@@ -20,7 +20,7 @@ from .options import parse_option
 from .settings import DAEMON_DIR, DAEMON_LOG_DIR
 
 if TYPE_CHECKING:
-    from aiida.orm.implementation.backends import Backend
+    from aiida.orm.implementation import StorageBackend
 
 __all__ = ('Profile',)
 
@@ -121,10 +121,10 @@ class Profile:  # pylint: disable=too-many-public-methods
         self._attributes[self.KEY_STORAGE][self.KEY_STORAGE_CONFIG] = config
 
     @property
-    def storage_cls(self) -> Type['Backend']:
+    def storage_cls(self) -> Type['StorageBackend']:
         """Return the storage backend class for this profile."""
         if self.storage_backend == 'psql_dos':
-            from aiida.orm.implementation.sqlalchemy.backend import PsqlDosBackend
+            from aiida.storage.psql_dos.backend import PsqlDosBackend
             return PsqlDosBackend
         if self.storage_backend == 'archive.sqlite':
             from aiida.tools.archive.implementations.sqlite.backend import ArchiveReadOnlyBackend

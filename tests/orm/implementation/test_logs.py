@@ -16,9 +16,9 @@ from uuid import UUID
 import pytz
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions, timezone
 from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestBackendLog(AiidaTestCase):

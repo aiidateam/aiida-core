@@ -9,9 +9,9 @@
 ###########################################################################
 """Unit tests for the AuthInfo ORM class."""
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.orm import authinfos
+from aiida.storage.testbase import AiidaTestCase
 
 
 class TestAuthinfo(AiidaTestCase):

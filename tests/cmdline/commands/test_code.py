@@ -318,19 +318,23 @@ def test_code_setup_remote_duplicate_full_label_non_interactive(
     assert f'the code `{label}@{aiida_localhost.label}` already exists.' in result.output
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
 def test_code_setup_local_duplicate_full_label_interactive(
-    run_cli_command, aiida_local_code_factory, aiida_localhost, non_interactive_editor
+    run_cli_command, aiida_local_code_factory, aiida_localhost, non_interactive_editor, tmp_path
 ):
     """Test ``verdi code setup`` for a local code in interactive mode specifying an existing full label."""
+    filepath = tmp_path / 'bash'
+    filepath.write_text('fake bash')
+
     label = 'some-label'
-    code = Code(local_executable='bash', files=['/bin/bash'])
+    code = Code(local_executable='bash', files=[filepath])
     code.label = label
     code.store()
     assert isinstance(load_code(label), Code)
 
     label_unique = 'label-unique'
-    user_input = '\n'.join(['no', label, label_unique, 'd', 'core.arithmetic.add', '/bin', 'bash'])
+    user_input = '\n'.join(['no', label, label_unique, 'd', 'core.arithmetic.add', str(tmp_path), filepath.name])
     run_cli_command(cmd_code.setup_code, user_input=user_input)
     assert isinstance(load_code(label_unique), Code)
 

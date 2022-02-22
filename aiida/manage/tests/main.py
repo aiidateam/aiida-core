@@ -147,14 +147,16 @@ class ProfileManager:
         :param profile_name: Name of the profile to be loaded
         """
         from aiida import load_profile
-        from aiida.storage.testbase import check_if_tests_can_run
 
         self._profile = None
         try:
             self._profile = load_profile(profile_name)
         except Exception:
             raise TestManagerError(f'Unable to load test profile `{profile_name}`.')
-        check_if_tests_can_run()
+        if self._profile is None:
+            raise TestManagerError(f'Unable to load test profile `{profile_name}`.')
+        if not self._profile.is_test_profile:
+            raise TestManagerError(f'Profile `{profile_name}` is not a valid test profile.')
 
     @staticmethod
     def clear_profile():

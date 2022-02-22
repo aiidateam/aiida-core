@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Module to test process futures."""
 import asyncio
 
@@ -14,12 +15,12 @@ import pytest
 
 from aiida.engine import processes, run
 from aiida.manage import get_manager
-from aiida.storage.testbase import AiidaTestCase
 from tests.utils import processes as test_processes
 
 
 @pytest.mark.requires_rmq
-class TestWf(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean')
+class TestWf:
     """Test process futures."""
     TIMEOUT = 5.0  # seconds
 
@@ -37,7 +38,7 @@ class TestWf(AiidaTestCase):
         run(process)
         calc_node = runner.run_until_complete(asyncio.wait_for(future, self.TIMEOUT))
 
-        self.assertEqual(process.node.pk, calc_node.pk)
+        assert process.node.pk == calc_node.pk
 
     def test_calculation_future_polling(self):
         """Test calculation future polling."""
@@ -51,4 +52,4 @@ class TestWf(AiidaTestCase):
         runner.run(process)
         calc_node = runner.run_until_complete(asyncio.wait_for(future, self.TIMEOUT))
 
-        self.assertEqual(process.node.pk, calc_node.pk)
+        assert process.node.pk == calc_node.pk

@@ -7,17 +7,18 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Tests for the `run` functions."""
 import pytest
 
 from aiida.engine import run, run_get_node
 from aiida.orm import Int, ProcessNode, Str
-from aiida.storage.testbase import AiidaTestCase
 from tests.utils.processes import DummyProcess
 
 
 @pytest.mark.requires_rmq
-class TestRun(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean')
+class TestRun:
     """Tests for the `run` functions."""
 
     @staticmethod
@@ -30,4 +31,4 @@ class TestRun(AiidaTestCase):
         """Test the `run_get_node` function."""
         inputs = {'a': Int(2), 'b': Str('test')}
         result, node = run_get_node(DummyProcess, **inputs)  # pylint: disable=unused-variable
-        self.assertIsInstance(node, ProcessNode)
+        assert isinstance(node, ProcessNode)

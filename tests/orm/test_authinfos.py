@@ -7,21 +7,22 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Unit tests for the AuthInfo ORM class."""
+import pytest
 
 from aiida.common import exceptions
 from aiida.orm import authinfos
-from aiida.storage.testbase import AiidaTestCase
 
 
-class TestAuthinfo(AiidaTestCase):
+class TestAuthinfo:
     """Unit tests for the AuthInfo ORM class."""
 
-    def setUp(self):
-        super().setUp()
-        for auth_info in authinfos.AuthInfo.objects.all():
-            authinfos.AuthInfo.objects.delete(auth_info.pk)
-
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        self.computer = aiida_localhost
         self.auth_info = self.computer.configure()  # pylint: disable=no-member
 
     def test_set_auth_params(self):
@@ -29,15 +30,15 @@ class TestAuthinfo(AiidaTestCase):
         auth_params = {'safe_interval': 100}
 
         self.auth_info.set_auth_params(auth_params)
-        self.assertEqual(self.auth_info.get_auth_params(), auth_params)
+        assert self.auth_info.get_auth_params() == auth_params
 
     def test_delete(self):
         """Test deleting a single AuthInfo."""
         pk = self.auth_info.pk
 
-        self.assertEqual(len(authinfos.AuthInfo.objects.all()), 1)
+        assert len(authinfos.AuthInfo.objects.all()) == 1
         authinfos.AuthInfo.objects.delete(pk)
-        self.assertEqual(len(authinfos.AuthInfo.objects.all()), 0)
+        assert len(authinfos.AuthInfo.objects.all()) == 0
 
-        with self.assertRaises(exceptions.NotExistent):
+        with pytest.raises(exceptions.NotExistent):
             authinfos.AuthInfo.objects.delete(pk)

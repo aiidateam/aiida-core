@@ -8,22 +8,24 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for creating graphs (using graphviz)"""
+import pytest
 
 from aiida import orm
 from aiida.common import AttributeDict
 from aiida.common.links import LinkType
 from aiida.engine import ProcessState
 from aiida.orm.utils.links import LinkPair
-from aiida.storage.testbase import AiidaTestCase
 from aiida.tools.visualization import graph as graph_mod
 
 
-class TestVisGraph(AiidaTestCase):
+class TestVisGraph:
     """Tests for verdi graph"""
 
-    def setUp(self):
-        super().setUp()
-        self.refurbish_db()
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        self.computer = aiida_localhost
 
     def create_provenance(self):
         """create an example provenance graph
@@ -110,16 +112,16 @@ class TestVisGraph(AiidaTestCase):
 
         graph = graph_mod.Graph()
         graph.add_node(nodes.pd0)
-        self.assertEqual(graph.nodes, set([nodes.pd0.pk]))
-        self.assertEqual(graph.edges, set())
+        assert graph.nodes == set([nodes.pd0.pk])
+        assert graph.edges == set()
 
         # try adding a second time
         graph.add_node(nodes.pd0)
-        self.assertEqual(graph.nodes, set([nodes.pd0.pk]))
+        assert graph.nodes == set([nodes.pd0.pk])
 
         # add second node
         graph.add_node(nodes.pd1)
-        self.assertEqual(graph.nodes, set([nodes.pd0.pk, nodes.pd1.pk]))
+        assert graph.nodes == set([nodes.pd0.pk, nodes.pd1.pk])
 
     def test_graph_add_edge(self):
         """ test adding an edge to the graph """
@@ -129,8 +131,8 @@ class TestVisGraph(AiidaTestCase):
         graph.add_node(nodes.pd0)
         graph.add_node(nodes.rd1)
         graph.add_edge(nodes.pd0, nodes.rd1)
-        self.assertEqual(graph.nodes, set([nodes.pd0.pk, nodes.rd1.pk]))
-        self.assertEqual(graph.edges, set([(nodes.pd0.pk, nodes.rd1.pk, None)]))
+        assert graph.nodes == set([nodes.pd0.pk, nodes.rd1.pk])
+        assert graph.edges == set([(nodes.pd0.pk, nodes.rd1.pk, None)])
 
     def test_graph_add_incoming(self):
         """ test adding a node and all its incoming nodes to a graph"""
@@ -139,13 +141,11 @@ class TestVisGraph(AiidaTestCase):
         graph = graph_mod.Graph()
         graph.add_incoming(nodes.calc1)
 
-        self.assertEqual(graph.nodes, set([nodes.calc1.pk, nodes.pd0.pk, nodes.pd1.pk, nodes.wc1.pk]))
-        self.assertEqual(
-            graph.edges,
+        assert graph.nodes == set([nodes.calc1.pk, nodes.pd0.pk, nodes.pd1.pk, nodes.wc1.pk])
+        assert graph.edges == \
             set([(nodes.pd0.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
                  (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2')),
                  (nodes.wc1.pk, nodes.calc1.pk, LinkPair(LinkType.CALL_CALC, 'call1'))])
-        )
 
     def test_graph_add_outgoing(self):
         """ test adding a node and all its outgoing nodes to a graph"""
@@ -154,12 +154,10 @@ class TestVisGraph(AiidaTestCase):
         graph = graph_mod.Graph()
         graph.add_outgoing(nodes.calcf1)
 
-        self.assertEqual(graph.nodes, set([nodes.calcf1.pk, nodes.pd3.pk, nodes.fd1.pk]))
-        self.assertEqual(
-            graph.edges,
+        assert graph.nodes == set([nodes.calcf1.pk, nodes.pd3.pk, nodes.fd1.pk])
+        assert graph.edges == \
             set([(nodes.calcf1.pk, nodes.pd3.pk, LinkPair(LinkType.CREATE, 'output1')),
                  (nodes.calcf1.pk, nodes.fd1.pk, LinkPair(LinkType.CREATE, 'output2'))])
-        )
 
     def test_graph_recurse_ancestors(self):
         """ test adding nodes and all its (recursed) incoming nodes to a graph"""
@@ -168,16 +166,14 @@ class TestVisGraph(AiidaTestCase):
         graph = graph_mod.Graph()
         graph.recurse_ancestors(nodes.rd1)
 
-        self.assertEqual(graph.nodes, set([nodes.rd1.pk, nodes.calc1.pk, nodes.pd0.pk, nodes.pd1.pk, nodes.wc1.pk]))
-        self.assertEqual(
-            graph.edges,
+        assert graph.nodes == set([nodes.rd1.pk, nodes.calc1.pk, nodes.pd0.pk, nodes.pd1.pk, nodes.wc1.pk])
+        assert graph.edges == \
             set([(nodes.calc1.pk, nodes.rd1.pk, LinkPair(LinkType.CREATE, 'output')),
                  (nodes.pd0.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
                  (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2')),
                  (nodes.wc1.pk, nodes.calc1.pk, LinkPair(LinkType.CALL_CALC, 'call1')),
                  (nodes.pd0.pk, nodes.wc1.pk, LinkPair(LinkType.INPUT_WORK, 'input1')),
                  (nodes.pd1.pk, nodes.wc1.pk, LinkPair(LinkType.INPUT_WORK, 'input2'))])
-        )
 
     def test_graph_recurse_spot_highlight_classes(self):
         """ test adding nodes and all its (recursed) incoming nodes to a graph"""
@@ -200,14 +196,13 @@ class TestVisGraph(AiidaTestCase):
 
         expected_diff = """\
         +State: running" color=lightgray fillcolor=white penwidth=2 shape=rectangle style=filled]
-        +@localhost" color=lightgray fillcolor=white penwidth=2 shape=ellipse style=filled]
+        +@localhost-test" color=lightgray fillcolor=white penwidth=2 shape=ellipse style=filled]
         +Exit Code: 200" color=lightgray fillcolor=white penwidth=2 shape=rectangle style=filled]
         +\tN{fd1} [label="FolderData ({fd1})" color=lightgray fillcolor=white penwidth=2 shape=ellipse style=filled]
         +++""".format(**{k: v.pk for k, v in nodes.items()})
 
-        self.assertEqual(
-            sorted([l.strip() for l in got_diff.splitlines()]), sorted([l.strip() for l in expected_diff.splitlines()])
-        )
+        assert sorted([l.strip() for l in got_diff.splitlines()]
+                      ) == sorted([l.strip() for l in expected_diff.splitlines()])
 
     def test_graph_recurse_ancestors_filter_links(self):
         """ test adding nodes and all its (recursed) incoming nodes to a graph, but filter link types"""
@@ -216,13 +211,11 @@ class TestVisGraph(AiidaTestCase):
         graph = graph_mod.Graph()
         graph.recurse_ancestors(nodes.rd1, link_types=['create', 'input_calc'])
 
-        self.assertEqual(graph.nodes, set([nodes.rd1.pk, nodes.calc1.pk, nodes.pd0.pk, nodes.pd1.pk]))
-        self.assertEqual(
-            graph.edges,
+        assert graph.nodes == set([nodes.rd1.pk, nodes.calc1.pk, nodes.pd0.pk, nodes.pd1.pk])
+        assert graph.edges == \
             set([(nodes.calc1.pk, nodes.rd1.pk, LinkPair(LinkType.CREATE, 'output')),
                  (nodes.pd0.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
                  (nodes.pd1.pk, nodes.calc1.pk, LinkPair(LinkType.INPUT_CALC, 'input2'))])
-        )
 
     def test_graph_recurse_descendants(self):
         """ test adding nodes and all its (recursed) incoming nodes to a graph"""
@@ -231,15 +224,13 @@ class TestVisGraph(AiidaTestCase):
         graph = graph_mod.Graph()
         graph.recurse_descendants(nodes.rd1)
 
-        self.assertEqual(graph.nodes, set([nodes.rd1.pk, nodes.calcf1.pk, nodes.pd3.pk, nodes.fd1.pk]))
-        self.assertEqual(
-            graph.edges,
+        assert graph.nodes == set([nodes.rd1.pk, nodes.calcf1.pk, nodes.pd3.pk, nodes.fd1.pk])
+        assert graph.edges == \
             set([
                 (nodes.rd1.pk, nodes.calcf1.pk, LinkPair(LinkType.INPUT_CALC, 'input1')),
                 (nodes.calcf1.pk, nodes.pd3.pk, LinkPair(LinkType.CREATE, 'output1')),
                 (nodes.calcf1.pk, nodes.fd1.pk, LinkPair(LinkType.CREATE, 'output2')),
             ])
-        )
 
     def test_graph_graphviz_source(self):
         """ test the output of graphviz source """
@@ -259,7 +250,7 @@ class TestVisGraph(AiidaTestCase):
                     State: running" fillcolor="#e38851ff" penwidth=0 shape=rectangle style=filled]
                 N{pd0} -> N{wc1} [color="#000000" style=dashed]
                 N{rd1} [label="RemoteData ({rd1})
-                    @localhost" fillcolor="#8cd499ff" penwidth=0 shape=ellipse style=filled]
+                    @localhost-test" fillcolor="#8cd499ff" penwidth=0 shape=ellipse style=filled]
                 N{calc1} -> N{rd1} [color="#000000" style=solid]
                 N{fd1} [label="FolderData ({fd1})" fillcolor="#8cd499ff" penwidth=0 shape=ellipse style=filled]
                 N{wc1} -> N{fd1} [color="#000000" style=dashed]
@@ -276,10 +267,8 @@ class TestVisGraph(AiidaTestCase):
         }}""".format(**{k: v.pk for k, v in nodes.items()})
 
         # dedent before comparison
-        self.assertEqual(
-            sorted([l.strip() for l in graph.graphviz.source.splitlines()]),
+        assert sorted([l.strip() for l in graph.graphviz.source.splitlines()]) == \
             sorted([l.strip() for l in expected.splitlines()])
-        )
 
     def test_graph_graphviz_source_pstate(self):
         """ test the output of graphviz source, with the `pstate_node_styles` function """
@@ -303,7 +292,7 @@ class TestVisGraph(AiidaTestCase):
                     State: running" fillcolor="#e38851ff" penwidth=0 shape=polygon sides=6 style=filled]
                 N{pd0} -> N{wc1} [color="#000000" style=dashed]
                 N{rd1} [label="RemoteData ({rd1})
-                    @localhost" pencolor=black shape=rectangle]
+                    @localhost-test" pencolor=black shape=rectangle]
                 N{calc1} -> N{rd1} [color="#000000" style=solid]
                 N{fd1} [label="FolderData ({fd1})" pencolor=black shape=rectangle]
                 N{wc1} -> N{fd1} [color="#000000" style=dashed]
@@ -320,7 +309,5 @@ class TestVisGraph(AiidaTestCase):
         }}""".format(**{k: v.pk for k, v in nodes.items()})
 
         # dedent before comparison
-        self.assertEqual(
-            sorted([l.strip() for l in graph.graphviz.source.splitlines()]),
+        assert sorted([l.strip() for l in graph.graphviz.source.splitlines()]) == \
             sorted([l.strip() for l in expected.splitlines()])
-        )

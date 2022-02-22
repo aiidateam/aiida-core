@@ -7,14 +7,16 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Tests for the `Computer` ORM class."""
+import pytest
 
 from aiida import orm
 from aiida.common import exceptions
-from aiida.storage.testbase import AiidaTestCase
 
 
-class TestComputer(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean')
+class TestComputer:
     """Tests for the `Computer` ORM class."""
 
     def test_get_transport(self):
@@ -40,9 +42,9 @@ class TestComputer(AiidaTestCase):
         # It's on localhost, so I see files that I create
         with transport:
             with tempfile.NamedTemporaryFile() as handle:
-                self.assertEqual(transport.isfile(handle.name), True)
+                assert transport.isfile(handle.name) is True
             # Here the file should have been deleted
-            self.assertEqual(transport.isfile(handle.name), False)
+            assert transport.isfile(handle.name) is False
 
     def test_delete(self):
         """Test the deletion of a `Computer` instance."""
@@ -57,19 +59,21 @@ class TestComputer(AiidaTestCase):
         comp_pk = new_comp.pk
 
         check_computer = orm.Computer.objects.get(id=comp_pk)
-        self.assertEqual(comp_pk, check_computer.pk)
+        assert comp_pk == check_computer.pk
 
         orm.Computer.objects.delete(comp_pk)
 
-        with self.assertRaises(exceptions.NotExistent):
+        with pytest.raises(exceptions.NotExistent):
             orm.Computer.objects.get(id=comp_pk)
 
 
-class TestComputerConfigure(AiidaTestCase):
+class TestComputerConfigure:
     """Tests for the configuring of instance of the `Computer` ORM class."""
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
         """Prepare current user and computer builder with common properties."""
+        # pylint: disable=attribute-defined-outside-init
         from aiida.orm.utils.builders.computer import ComputerBuilder
 
         self.comp_builder = ComputerBuilder(label='test', description='computer', hostname='localhost')
@@ -91,7 +95,7 @@ class TestComputerConfigure(AiidaTestCase):
         comp.store()
 
         comp.configure()
-        self.assertTrue(comp.is_user_configured(self.user))
+        assert comp.is_user_configured(self.user)
 
     def test_configure_ssh(self):
         """Configure a computer for ssh transport and check it is configured."""
@@ -101,7 +105,7 @@ class TestComputerConfigure(AiidaTestCase):
         comp.store()
 
         comp.configure(username='radames', port='22')
-        self.assertTrue(comp.is_user_configured(self.user))
+        assert comp.is_user_configured(self.user)
 
     def test_configure_ssh_invalid(self):
         """Try to configure computer with invalid auth params and check it fails."""
@@ -110,7 +114,7 @@ class TestComputerConfigure(AiidaTestCase):
         comp = self.comp_builder.new()
         comp.store()
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             comp.configure(username='radames', invalid_auth_param='TEST')
 
     def test_non_configure_error(self):
@@ -120,11 +124,11 @@ class TestComputerConfigure(AiidaTestCase):
         comp = self.comp_builder.new()
         comp.store()
 
-        with self.assertRaises(exceptions.NotExistent) as exc:
+        with pytest.raises(exceptions.NotExistent) as exc:
             comp.get_authinfo(self.user)
 
-        self.assertIn(str(comp.id), str(exc.exception))
-        self.assertIn(comp.label, str(exc.exception))
-        self.assertIn(self.user.get_short_name(), str(exc.exception))
-        self.assertIn(str(self.user.id), str(exc.exception))
-        self.assertIn('verdi computer configure', str(exc.exception))
+        assert str(comp.id) in str(exc)
+        assert comp.label in str(exc)
+        assert self.user.get_short_name() in str(exc)
+        assert str(self.user.id) in str(exc)
+        assert 'verdi computer configure' in str(exc)

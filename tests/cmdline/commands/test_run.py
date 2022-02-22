@@ -11,20 +11,20 @@
 import tempfile
 import textwrap
 
-from click.testing import CliRunner
 import pytest
 
 from aiida.cmdline.commands import cmd_run
 from aiida.common.log import override_log_level
-from aiida.storage.testbase import AiidaTestCase
 
 
-class TestVerdiRun(AiidaTestCase):
+class TestVerdiRun:
     """Tests for `verdi run`."""
 
-    def setUp(self):
-        super().setUp()
-        self.cli_runner = CliRunner()
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        self.cli_runner = run_cli_command
 
     @pytest.mark.requires_rmq
     def test_run_workfunction(self):
@@ -59,26 +59,26 @@ class TestVerdiRun(AiidaTestCase):
             fhandle.flush()
 
             options = [fhandle.name]
-            result = self.cli_runner.invoke(cmd_run.run, options)
-            self.assertClickResultNoException(result)
+            result = self.cli_runner(cmd_run.run, options)
 
             # Try to load the function calculation node from the printed pk in the output
             pk = int(result.output.splitlines()[-1])
             node = load_node(pk)
 
             # Verify that the node has the correct function name and content
-            self.assertTrue(isinstance(node, WorkFunctionNode))
-            self.assertEqual(node.function_name, 'wf')
-            self.assertEqual(node.get_function_source_code(), script_content)
+            assert isinstance(node, WorkFunctionNode)
+            assert node.function_name == 'wf'
+            assert node.get_function_source_code() == script_content
 
 
-class TestAutoGroups(AiidaTestCase):
+class TestAutoGroups:
     """Test the autogroup functionality."""
 
-    def setUp(self):
-        """Setup the CLI runner to run command line commands."""
-        super().setUp()
-        self.cli_runner = CliRunner()
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        self.cli_runner = run_cli_command
 
     def test_autogroup(self):
         """Check if the autogroup is properly generated."""
@@ -97,8 +97,7 @@ class TestAutoGroups(AiidaTestCase):
             fhandle.flush()
 
             options = ['--auto-group', fhandle.name]
-            result = self.cli_runner.invoke(cmd_run.run, options)
-            self.assertClickResultNoException(result)
+            result = self.cli_runner(cmd_run.run, options)
 
             pk = int(result.output)
             _ = load_node(pk)  # Check if the node can be loaded
@@ -106,9 +105,7 @@ class TestAutoGroups(AiidaTestCase):
             queryb = QueryBuilder().append(Node, filters={'id': pk}, tag='node')
             queryb.append(AutoGroup, with_node='node', project='*')
             all_auto_groups = queryb.all()
-            self.assertEqual(
-                len(all_auto_groups), 1, 'There should be only one autogroup associated with the node just created'
-            )
+            assert len(all_auto_groups) == 1, 'There should be only one autogroup associated with the node just created'
 
     def test_autogroup_custom_label(self):
         """Check if the autogroup is properly generated with the label specified."""
@@ -128,8 +125,7 @@ class TestAutoGroups(AiidaTestCase):
             fhandle.flush()
 
             options = [fhandle.name, '--auto-group', '--auto-group-label-prefix', autogroup_label]
-            result = self.cli_runner.invoke(cmd_run.run, options)
-            self.assertClickResultNoException(result)
+            result = self.cli_runner(cmd_run.run, options)
 
             pk = int(result.output)
             _ = load_node(pk)  # Check if the node can be loaded
@@ -137,10 +133,8 @@ class TestAutoGroups(AiidaTestCase):
             queryb = QueryBuilder().append(Node, filters={'id': pk}, tag='node')
             queryb.append(AutoGroup, with_node='node', project='*')
             all_auto_groups = queryb.all()
-            self.assertEqual(
-                len(all_auto_groups), 1, 'There should be only one autogroup associated with the node just created'
-            )
-            self.assertEqual(all_auto_groups[0][0].label, autogroup_label)
+            assert len(all_auto_groups) == 1, 'There should be only one autogroup associated with the node just created'
+            assert all_auto_groups[0][0].label == autogroup_label
 
     def test_no_autogroup(self):
         """Check if the autogroup is not generated if ``verdi run`` is asked not to."""
@@ -159,8 +153,7 @@ class TestAutoGroups(AiidaTestCase):
             fhandle.flush()
 
             options = [fhandle.name]  # Not storing an autogroup by default
-            result = self.cli_runner.invoke(cmd_run.run, options)
-            self.assertClickResultNoException(result)
+            result = self.cli_runner(cmd_run.run, options)
 
             pk = int(result.output)
             _ = load_node(pk)  # Check if the node can be loaded
@@ -168,7 +161,7 @@ class TestAutoGroups(AiidaTestCase):
             queryb = QueryBuilder().append(Node, filters={'id': pk}, tag='node')
             queryb.append(AutoGroup, with_node='node', project='*')
             all_auto_groups = queryb.all()
-            self.assertEqual(len(all_auto_groups), 0, 'There should be no autogroup generated')
+            assert len(all_auto_groups) == 0, 'There should be no autogroup generated'
 
     @pytest.mark.requires_rmq
     def test_autogroup_filter_class(self):  # pylint: disable=too-many-locals
@@ -270,8 +263,7 @@ class TestAutoGroups(AiidaTestCase):
 
                 options = ['--auto-group'] + flags + ['--', fhandle.name, str(idx)]
                 with override_log_level():
-                    result = self.cli_runner.invoke(cmd_run.run, options)
-                self.assertClickResultNoException(result)
+                    result = self.cli_runner(cmd_run.run, options)
 
                 pk1_str, pk2_str, pk3_str, pk4_str, pk5_str, pk6_str = result.output.split()
                 pk1 = int(pk1_str)
@@ -311,36 +303,24 @@ class TestAutoGroups(AiidaTestCase):
                 queryb.append(AutoGroup, with_node='node', project='*')
                 all_auto_groups_calcarithmetic = queryb.all()
 
-                self.assertEqual(
-                    len(all_auto_groups_kptdata), 1 if kptdata_in_autogroup else 0,
-                    'Wrong number of nodes in autogroup associated with the KpointsData node '
+                assert len(all_auto_groups_kptdata) == (1 if kptdata_in_autogroup else 0), \
+                    'Wrong number of nodes in autogroup associated with the KpointsData node ' \
                     "just created with flags '{}'".format(' '.join(flags))
-                )
-                self.assertEqual(
-                    len(all_auto_groups_arraydata), 1 if arraydata_in_autogroup else 0,
-                    'Wrong number of nodes in autogroup associated with the ArrayData node '
+                assert len(all_auto_groups_arraydata) == (1 if arraydata_in_autogroup else 0), \
+                    'Wrong number of nodes in autogroup associated with the ArrayData node ' \
                     "just created with flags '{}'".format(' '.join(flags))
-                )
-                self.assertEqual(
-                    len(all_auto_groups_int), 1 if int_in_autogroup else 0,
-                    'Wrong number of nodes in autogroup associated with the Int node '
+                assert len(all_auto_groups_int) == (1 if int_in_autogroup else 0), \
+                    'Wrong number of nodes in autogroup associated with the Int node ' \
                     "just created with flags '{}'".format(' '.join(flags))
-                )
-                self.assertEqual(
-                    len(all_auto_groups_calc), 1 if calc_in_autogroup else 0,
-                    'Wrong number of nodes in autogroup associated with the CalculationNode '
+                assert len(all_auto_groups_calc) == (1 if calc_in_autogroup else 0), \
+                    'Wrong number of nodes in autogroup associated with the CalculationNode ' \
                     "just created with flags '{}'".format(' '.join(flags))
-                )
-                self.assertEqual(
-                    len(all_auto_groups_wf), 1 if wf_in_autogroup else 0,
-                    'Wrong number of nodes in autogroup associated with the WorkflowNode '
+                assert len(all_auto_groups_wf) == (1 if wf_in_autogroup else 0), \
+                    'Wrong number of nodes in autogroup associated with the WorkflowNode ' \
                     "just created with flags '{}'".format(' '.join(flags))
-                )
-                self.assertEqual(
-                    len(all_auto_groups_calcarithmetic), 1 if calcarithmetic_in_autogroup else 0,
-                    'Wrong number of nodes in autogroup associated with the ArithmeticAdd CalcJobNode '
+                assert len(all_auto_groups_calcarithmetic) == (1 if calcarithmetic_in_autogroup else 0), \
+                    'Wrong number of nodes in autogroup associated with the ArithmeticAdd CalcJobNode ' \
                     "just created with flags '{}'".format(' '.join(flags))
-                )
 
     def test_autogroup_clashing_label(self):
         """Check if the autogroup label is properly (re)generated when it clashes with an existing group name."""
@@ -361,31 +341,27 @@ class TestAutoGroups(AiidaTestCase):
 
             # First run
             options = [fhandle.name, '--auto-group', '--auto-group-label-prefix', autogroup_label]
-            result = self.cli_runner.invoke(cmd_run.run, options)
-            self.assertClickResultNoException(result)
+            result = self.cli_runner(cmd_run.run, options)
 
             pk = int(result.output)
             _ = load_node(pk)  # Check if the node can be loaded
             queryb = QueryBuilder().append(Node, filters={'id': pk}, tag='node')
             queryb.append(AutoGroup, with_node='node', project='*')
             all_auto_groups = queryb.all()
-            self.assertEqual(
-                len(all_auto_groups), 1, 'There should be only one autogroup associated with the node just created'
-            )
-            self.assertEqual(all_auto_groups[0][0].label, autogroup_label)
+            assert len(all_auto_groups) == 1, 'There should be only one autogroup associated with the node just created'
+            assert all_auto_groups[0][0].label == autogroup_label
 
             # A few more runs with the same label - it should not crash but append something to the group name
             for _ in range(10):
                 options = [fhandle.name, '--auto-group', '--auto-group-label-prefix', autogroup_label]
-                result = self.cli_runner.invoke(cmd_run.run, options)
-                self.assertClickResultNoException(result)
+                result = self.cli_runner(cmd_run.run, options)
 
                 pk = int(result.output)
                 _ = load_node(pk)  # Check if the node can be loaded
                 queryb = QueryBuilder().append(Node, filters={'id': pk}, tag='node')
                 queryb.append(AutoGroup, with_node='node', project='*')
                 all_auto_groups = queryb.all()
-                self.assertEqual(
-                    len(all_auto_groups), 1, 'There should be only one autogroup associated with the node just created'
-                )
-                self.assertTrue(all_auto_groups[0][0].label.startswith(autogroup_label))
+                assert len(
+                    all_auto_groups
+                ) == 1, 'There should be only one autogroup associated with the node just created'
+                assert all_auto_groups[0][0].label.startswith(autogroup_label)

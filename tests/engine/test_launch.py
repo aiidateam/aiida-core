@@ -7,13 +7,16 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Module to test processess launch."""
+import os
+import shutil
+
 import pytest
 
 from aiida import orm
 from aiida.common import exceptions
 from aiida.engine import CalcJob, Process, WorkChain, calcfunction, launch
-from aiida.storage.testbase import AiidaTestCase
 
 
 @calcfunction
@@ -65,53 +68,52 @@ class AddWorkChain(WorkChain):
 
 
 @pytest.mark.requires_rmq
-class TestLaunchers(AiidaTestCase):
+class TestLaunchers:
     """Class to test process launchers."""
 
-    def setUp(self):
-        super().setUp()
-        self.assertIsNone(Process.current())
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        assert Process.current() is None
         self.term_a = orm.Int(1)
         self.term_b = orm.Int(2)
         self.result = 3
-
-    def tearDown(self):
-        super().tearDown()
-        self.assertIsNone(Process.current())
+        assert Process.current() is None
 
     def test_calcfunction_run(self):
         """Test calcfunction run."""
         result = launch.run(add, term_a=self.term_a, term_b=self.term_b)
-        self.assertEqual(result, self.result)
+        assert result == self.result
 
     def test_calcfunction_run_get_node(self):
         """Test calcfunction run by run_get_node."""
         result, node = launch.run_get_node(add, term_a=self.term_a, term_b=self.term_b)
-        self.assertEqual(result, self.result)
-        self.assertTrue(isinstance(node, orm.CalcFunctionNode))
+        assert result == self.result
+        assert isinstance(node, orm.CalcFunctionNode)
 
     def test_calcfunction_run_get_pk(self):
         """Test calcfunction run by run_get_pk."""
         result, pk = launch.run_get_pk(add, term_a=self.term_a, term_b=self.term_b)
-        self.assertEqual(result, self.result)
-        self.assertTrue(isinstance(pk, int))
+        assert result == self.result
+        assert isinstance(pk, int)
 
     def test_workchain_run(self):
         """Test workchain run."""
         result = launch.run(AddWorkChain, term_a=self.term_a, term_b=self.term_b)
-        self.assertEqual(result['result'], self.result)
+        assert result['result'] == self.result
 
     def test_workchain_run_get_node(self):
         """Test workchain run by run_get_node."""
         result, node = launch.run_get_node(AddWorkChain, term_a=self.term_a, term_b=self.term_b)
-        self.assertEqual(result['result'], self.result)
-        self.assertTrue(isinstance(node, orm.WorkChainNode))
+        assert result['result'] == self.result
+        assert isinstance(node, orm.WorkChainNode)
 
     def test_workchain_run_get_pk(self):
         """Test workchain run by run_get_pk."""
         result, pk = launch.run_get_pk(AddWorkChain, term_a=self.term_a, term_b=self.term_b)
-        self.assertEqual(result['result'], self.result)
-        self.assertTrue(isinstance(pk, int))
+        assert result['result'] == self.result
+        assert isinstance(pk, int)
 
     def test_workchain_builder_run(self):
         """Test workchain builder run."""
@@ -119,7 +121,7 @@ class TestLaunchers(AiidaTestCase):
         builder.term_a = self.term_a
         builder.term_b = self.term_b
         result = launch.run(builder)
-        self.assertEqual(result['result'], self.result)
+        assert result['result'] == self.result
 
     def test_workchain_builder_run_get_node(self):
         """Test workchain builder that run by run_get_node."""
@@ -127,8 +129,8 @@ class TestLaunchers(AiidaTestCase):
         builder.term_a = self.term_a
         builder.term_b = self.term_b
         result, node = launch.run_get_node(builder)
-        self.assertEqual(result['result'], self.result)
-        self.assertTrue(isinstance(node, orm.WorkChainNode))
+        assert result['result'] == self.result
+        assert isinstance(node, orm.WorkChainNode)
 
     def test_workchain_builder_run_get_pk(self):
         """Test workchain builder that run by run_get_pk."""
@@ -136,32 +138,28 @@ class TestLaunchers(AiidaTestCase):
         builder.term_a = self.term_a
         builder.term_b = self.term_b
         result, pk = launch.run_get_pk(builder)
-        self.assertEqual(result['result'], self.result)
-        self.assertTrue(isinstance(pk, int))
+        assert result['result'] == self.result
+        assert isinstance(pk, int)
 
     def test_submit_store_provenance_false(self):
         """Verify that submitting with `store_provenance=False` raises."""
-        with self.assertRaises(exceptions.InvalidOperation):
+        with pytest.raises(exceptions.InvalidOperation):
             launch.submit(AddWorkChain, term_a=self.term_a, term_b=self.term_b, metadata={'store_provenance': False})
 
 
 @pytest.mark.requires_rmq
-class TestLaunchersDryRun(AiidaTestCase):
+class TestLaunchersDryRun:
     """Test the launchers when performing a dry-run."""
 
-    def setUp(self):
-        super().setUp()
-        self.assertIsNone(Process.current())
-
-    def tearDown(self):
-        import os
-        import shutil
-
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
         from aiida.common.folders import CALC_JOB_DRY_RUN_BASE_PATH
-
-        super().tearDown()
-        self.assertIsNone(Process.current())
-
+        assert Process.current() is None
+        self.computer = aiida_localhost
+        yield
+        assert Process.current() is None
         # Make sure to clean the test directory that will be generated by the dry-run
         filepath = os.path.join(os.getcwd(), CALC_JOB_DRY_RUN_BASE_PATH)
         try:
@@ -194,21 +192,21 @@ class TestLaunchersDryRun(AiidaTestCase):
         }
 
         result = launch.run(ArithmeticAddCalculation, **inputs)
-        self.assertEqual(result, {})
+        assert result == {}
 
         result, pk = launch.run_get_pk(ArithmeticAddCalculation, **inputs)
-        self.assertEqual(result, {})
-        self.assertIsInstance(pk, int)
+        assert result == {}
+        assert isinstance(pk, int)
 
         result, node = launch.run_get_node(ArithmeticAddCalculation, **inputs)
-        self.assertEqual(result, {})
-        self.assertIsInstance(node, orm.CalcJobNode)
-        self.assertIsInstance(node.dry_run_info, dict)
-        self.assertIn('folder', node.dry_run_info)
-        self.assertIn('script_filename', node.dry_run_info)
+        assert result == {}
+        assert isinstance(node, orm.CalcJobNode)
+        assert isinstance(node.dry_run_info, dict)
+        assert 'folder' in node.dry_run_info
+        assert 'script_filename' in node.dry_run_info
 
         node = launch.submit(ArithmeticAddCalculation, **inputs)
-        self.assertIsInstance(node, orm.CalcJobNode)
+        assert isinstance(node, orm.CalcJobNode)
 
     def test_launchers_dry_run_no_provenance(self):
         """Test the launchers in `dry_run` mode with `store_provenance=False`."""
@@ -236,23 +234,23 @@ class TestLaunchersDryRun(AiidaTestCase):
         }
 
         result = launch.run(ArithmeticAddCalculation, **inputs)
-        self.assertEqual(result, {})
+        assert result == {}
 
         result, pk = launch.run_get_pk(ArithmeticAddCalculation, **inputs)
-        self.assertEqual(result, {})
-        self.assertIsNone(pk)
+        assert result == {}
+        assert pk is None
 
         result, node = launch.run_get_node(ArithmeticAddCalculation, **inputs)
-        self.assertEqual(result, {})
-        self.assertIsInstance(node, orm.CalcJobNode)
-        self.assertFalse(node.is_stored)
-        self.assertIsInstance(node.dry_run_info, dict)
-        self.assertIn('folder', node.dry_run_info)
-        self.assertIn('script_filename', node.dry_run_info)
+        assert result == {}
+        assert isinstance(node, orm.CalcJobNode)
+        assert not node.is_stored
+        assert isinstance(node.dry_run_info, dict)
+        assert 'folder' in node.dry_run_info
+        assert 'script_filename' in node.dry_run_info
 
         node = launch.submit(ArithmeticAddCalculation, **inputs)
-        self.assertIsInstance(node, orm.CalcJobNode)
-        self.assertFalse(node.is_stored)
+        assert isinstance(node, orm.CalcJobNode)
+        assert not node.is_stored
 
     def test_calcjob_dry_run_no_provenance(self):
         """Test that dry run with `store_provenance=False` still works for unstored inputs.
@@ -262,7 +260,6 @@ class TestLaunchersDryRun(AiidaTestCase):
         which is not the case in the `store_provenance=False` mode with unstored nodes. Note that it also explicitly
         tests nested namespaces as that is a non-trivial case.
         """
-        import os
         import tempfile
 
         code = orm.Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[self.computer,
@@ -295,6 +292,6 @@ class TestLaunchersDryRun(AiidaTestCase):
         }
 
         _, node = launch.run_get_node(FileCalcJob, **inputs)
-        self.assertIn('folder', node.dry_run_info)
+        assert 'folder' in node.dry_run_info
         for filename in ['path', 'file_one', 'file_two']:
-            self.assertIn(filename, os.listdir(node.dry_run_info['folder']))
+            assert filename in os.listdir(node.dry_run_info['folder'])

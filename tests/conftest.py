@@ -447,7 +447,7 @@ def run_cli_command(reset_log_level):  # pylint: disable=unused-argument
         :param user_input: string with data to be provided at the prompt. Can include newline characters to simulate
             responses to multiple prompts.
         :param raises: whether the command is expected to raise an exception.
-        :param catch_exceptions: if True and ``raise == False``, will assert that the exception is ``None`` and the exit
+        :param catch_exceptions: if True and ``raise is False``, will assert that the exception is ``None`` and the exit
             code of the result of the invoked command equals zero.
         :param kwargs: keyword arguments that will be psased to the command invocation.
         :return: test result.

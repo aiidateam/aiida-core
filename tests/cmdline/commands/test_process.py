@@ -12,7 +12,6 @@ import asyncio
 from concurrent.futures import Future
 import time
 
-from click.testing import CliRunner
 import kiwipy
 import plumpy
 import pytest
@@ -22,7 +21,6 @@ from aiida.cmdline.commands import cmd_process
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.orm import CalcJobNode, WorkChainNode, WorkflowNode, WorkFunctionNode
-from aiida.storage.testbase import AiidaTestCase
 from tests.utils import processes as test_processes
 
 
@@ -30,19 +28,20 @@ def get_result_lines(result):
     return [e for e in result.output.split('\n') if e]
 
 
-class TestVerdiProcess(AiidaTestCase):
+class TestVerdiProcess:
     """Tests for `verdi process`."""
 
     TEST_TIMEOUT = 5.
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
         from aiida.engine import ProcessState
         from aiida.orm.groups import Group
 
-        cls.calcs = []
-        cls.process_label = 'SomeDummyWorkFunctionNode'
+        self.calcs = []
+        self.process_label = 'SomeDummyWorkFunctionNode'
 
         # Create 6 WorkFunctionNodes and WorkChainNodes (one for each ProcessState)
         for state in ProcessState:
@@ -55,10 +54,10 @@ class TestVerdiProcess(AiidaTestCase):
                 calc.set_exit_status(0)
 
             # Give a `process_label` to the `WorkFunctionNodes` so the `--process-label` option can be tested
-            calc.set_attribute('process_label', cls.process_label)
+            calc.set_attribute('process_label', self.process_label)
 
             calc.store()
-            cls.calcs.append(calc)
+            self.calcs.append(calc)
 
             calc = WorkChainNode()
             calc.set_process_state(state)
@@ -72,118 +71,112 @@ class TestVerdiProcess(AiidaTestCase):
                 calc.pause()
 
             calc.store()
-            cls.calcs.append(calc)
+            self.calcs.append(calc)
 
-        cls.group = Group('some_group').store()
-        cls.group.add_nodes(cls.calcs[0])
-
-    def setUp(self):
-        super().setUp()
-        self.cli_runner = CliRunner()
+        self.group = Group('some_group').store()
+        self.group.add_nodes(self.calcs[0])
+        self.cli_runner = run_cli_command
 
     def test_list_non_raw(self):
         """Test the list command as the user would run it (e.g. without -r)."""
 
-        result = self.cli_runner.invoke(cmd_process.process_list)
-        self.assertIsNone(result.exception, result.output)
-        self.assertIn('Total results:', result.output)
-        self.assertIn('last time an entry changed state', result.output)
+        result = self.cli_runner(cmd_process.process_list)
+
+        assert 'Total results:' in result.output
+        assert 'last time an entry changed state' in result.output
 
     def test_list(self):
         """Test the list command."""
         # pylint: disable=too-many-branches
 
         # Default behavior should yield all active states (CREATED, RUNNING and WAITING) so six in total
-        result = self.cli_runner.invoke(cmd_process.process_list, ['-r'])
-        self.assertIsNone(result.exception, result.output)
-        self.assertEqual(len(get_result_lines(result)), 6)
+        result = self.cli_runner(cmd_process.process_list, ['-r'])
+
+        assert len(get_result_lines(result)) == 6
 
         # Ordering shouldn't change the number of results,
         for flag in ['-O', '--order-by']:
             for flag_value in ['id', 'ctime']:
-                result = self.cli_runner.invoke(cmd_process.process_list, ['-r', flag, flag_value])
-                self.assertIsNone(result.exception, result.output)
-                self.assertEqual(len(get_result_lines(result)), 6)
+                result = self.cli_runner(cmd_process.process_list, ['-r', flag, flag_value])
+
+                assert len(get_result_lines(result)) == 6
 
         # but the orders should be inverse
         for flag in ['-D', '--order-direction']:
 
             flag_value = 'asc'
-            result = self.cli_runner.invoke(cmd_process.process_list, ['-r', '-O', 'id', flag, flag_value])
-            self.assertIsNone(result.exception, result.output)
+            result = self.cli_runner(cmd_process.process_list, ['-r', '-O', 'id', flag, flag_value])
+
             result_num_asc = [line.split()[0] for line in get_result_lines(result)]
-            self.assertEqual(len(result_num_asc), 6)
+            assert len(result_num_asc) == 6
 
             flag_value = 'desc'
-            result = self.cli_runner.invoke(cmd_process.process_list, ['-r', '-O', 'id', flag, flag_value])
-            self.assertIsNone(result.exception, result.output)
-            result_num_desc = [line.split()[0] for line in get_result_lines(result)]
-            self.assertEqual(len(result_num_desc), 6)
+            result = self.cli_runner(cmd_process.process_list, ['-r', '-O', 'id', flag, flag_value])
 
-            self.assertEqual(result_num_asc, list(reversed(result_num_desc)))
+            result_num_desc = [line.split()[0] for line in get_result_lines(result)]
+            assert len(result_num_desc) == 6
+
+            assert result_num_asc == list(reversed(result_num_desc))
 
         # Adding the all option should return all entries regardless of process state
         for flag in ['-a', '--all']:
-            result = self.cli_runner.invoke(cmd_process.process_list, ['-r', flag])
-            self.assertIsNone(result.exception, result.output)
-            self.assertEqual(len(get_result_lines(result)), 12)
+            result = self.cli_runner(cmd_process.process_list, ['-r', flag])
+
+            assert len(get_result_lines(result)) == 12
 
         # Passing the limit option should limit the results
         for flag in ['-l', '--limit']:
-            result = self.cli_runner.invoke(cmd_process.process_list, ['-r', flag, '6'])
-            self.assertIsNone(result.exception, result.output)
-            self.assertEqual(len(get_result_lines(result)), 6)
+            result = self.cli_runner(cmd_process.process_list, ['-r', flag, '6'])
+            assert len(get_result_lines(result)) == 6
 
         # Filtering for a specific process state
         for flag in ['-S', '--process-state']:
             for flag_value in ['created', 'running', 'waiting', 'killed', 'excepted', 'finished']:
-                result = self.cli_runner.invoke(cmd_process.process_list, ['-r', flag, flag_value])
-                self.assertIsNone(result.exception, result.output)
-                self.assertEqual(len(get_result_lines(result)), 2)
+                result = self.cli_runner(cmd_process.process_list, ['-r', flag, flag_value])
+                assert len(get_result_lines(result)) == 2
 
         # Filtering for exit status should only get us one
         for flag in ['-E', '--exit-status']:
             for exit_status in ['0', '1']:
-                result = self.cli_runner.invoke(cmd_process.process_list, ['-r', flag, exit_status])
-                self.assertIsNone(result.exception, result.output)
-                self.assertEqual(len(get_result_lines(result)), 1)
+                result = self.cli_runner(cmd_process.process_list, ['-r', flag, exit_status])
+                assert len(get_result_lines(result)) == 1
 
         # Passing the failed flag as a shortcut for FINISHED + non-zero exit status
         for flag in ['-X', '--failed']:
-            result = self.cli_runner.invoke(cmd_process.process_list, ['-r', flag])
-            self.assertIsNone(result.exception, result.output)
-            self.assertEqual(len(get_result_lines(result)), 1)
+            result = self.cli_runner(cmd_process.process_list, ['-r', flag])
+
+            assert len(get_result_lines(result)) == 1
 
         # Projecting on pk should allow us to verify all the pks
         for flag in ['-P', '--project']:
-            result = self.cli_runner.invoke(cmd_process.process_list, ['-r', flag, 'pk'])
-            self.assertIsNone(result.exception, result.output)
-            self.assertEqual(len(get_result_lines(result)), 6)
+            result = self.cli_runner(cmd_process.process_list, ['-r', flag, 'pk'])
+
+            assert len(get_result_lines(result)) == 6
 
             for line in get_result_lines(result):
-                self.assertIn(line.strip(), [str(calc.pk) for calc in self.calcs])
+                assert line.strip() in [str(calc.pk) for calc in self.calcs]
 
         # The group option should limit the query set to nodes in the group
         for flag in ['-G', '--group']:
-            result = self.cli_runner.invoke(cmd_process.process_list, ['-r', '-P', 'pk', flag, str(self.group.pk)])
-            self.assertClickResultNoException(result)
-            self.assertEqual(len(get_result_lines(result)), 1)
-            self.assertEqual(get_result_lines(result)[0], str(self.calcs[0].pk))
+            result = self.cli_runner(cmd_process.process_list, ['-r', '-P', 'pk', flag, str(self.group.pk)])
+
+            assert len(get_result_lines(result)) == 1
+            assert get_result_lines(result)[0] == str(self.calcs[0].pk)
 
         # The process label should limit the query set to nodes with the given `process_label` attribute
         for flag in ['-L', '--process-label']:
             for process_label in [self.process_label, self.process_label.replace('Dummy', '%')]:
-                result = self.cli_runner.invoke(cmd_process.process_list, ['-r', flag, process_label])
-                self.assertClickResultNoException(result)
-                self.assertEqual(len(get_result_lines(result)), 3)  # Should only match the active `WorkFunctionNodes`
+                result = self.cli_runner(cmd_process.process_list, ['-r', flag, process_label])
+
+                assert len(get_result_lines(result)) == 3  # Should only match the active `WorkFunctionNodes`
                 for line in get_result_lines(result):
-                    self.assertIn(self.process_label, line.strip())
+                    assert self.process_label in line.strip()
 
         # There should be exactly one paused
         for flag in ['--paused']:
-            result = self.cli_runner.invoke(cmd_process.process_list, ['-r', flag])
-            self.assertClickResultNoException(result)
-            self.assertEqual(len(get_result_lines(result)), 1)
+            result = self.cli_runner(cmd_process.process_list, ['-r', flag])
+
+            assert len(get_result_lines(result)) == 1
 
     def test_process_show(self):
         """Test verdi process show"""
@@ -210,25 +203,25 @@ class TestVerdiProcess(AiidaTestCase):
 
         # Running without identifiers should not except and not print anything
         options = []
-        result = self.cli_runner.invoke(cmd_process.process_show, options)
-        self.assertIsNone(result.exception, result.output)
-        self.assertEqual(len(get_result_lines(result)), 0)
+        result = self.cli_runner(cmd_process.process_show, options)
+
+        assert len(get_result_lines(result)) == 0
 
         # Giving a single identifier should print a non empty string message
         options = [str(workchain_one.pk)]
-        result = self.cli_runner.invoke(cmd_process.process_show, options)
+        result = self.cli_runner(cmd_process.process_show, options)
         lines = get_result_lines(result)
-        self.assertClickResultNoException(result)
-        self.assertTrue(len(lines) > 0)
-        self.assertIn('workchain_one_caller', result.output)
-        self.assertIn('process_label_one', lines[-2])
-        self.assertIn('process_label_two', lines[-1])
+
+        assert len(lines) > 0
+        assert 'workchain_one_caller' in result.output
+        assert 'process_label_one' in lines[-2]
+        assert 'process_label_two' in lines[-1]
 
         # Giving multiple identifiers should print a non empty string message
         options = [str(node.pk) for node in workchains]
-        result = self.cli_runner.invoke(cmd_process.process_show, options)
-        self.assertIsNone(result.exception, result.output)
-        self.assertTrue(len(get_result_lines(result)) > 0)
+        result = self.cli_runner(cmd_process.process_show, options)
+
+        assert len(get_result_lines(result)) > 0
 
     def test_process_report(self):
         """Test verdi process report"""
@@ -236,21 +229,21 @@ class TestVerdiProcess(AiidaTestCase):
 
         # Running without identifiers should not except and not print anything
         options = []
-        result = self.cli_runner.invoke(cmd_process.process_report, options)
-        self.assertIsNone(result.exception, result.output)
-        self.assertEqual(len(get_result_lines(result)), 0)
+        result = self.cli_runner(cmd_process.process_report, options)
+
+        assert len(get_result_lines(result)) == 0
 
         # Giving a single identifier should print a non empty string message
         options = [str(node.pk)]
-        result = self.cli_runner.invoke(cmd_process.process_report, options)
-        self.assertIsNone(result.exception, result.output)
-        self.assertTrue(len(get_result_lines(result)) > 0)
+        result = self.cli_runner(cmd_process.process_report, options)
+
+        assert len(get_result_lines(result)) > 0
 
         # Giving multiple identifiers should print a non empty string message
         options = [str(calc.pk) for calc in [node]]
-        result = self.cli_runner.invoke(cmd_process.process_report, options)
-        self.assertIsNone(result.exception, result.output)
-        self.assertTrue(len(get_result_lines(result)) > 0)
+        result = self.cli_runner(cmd_process.process_report, options)
+
+        assert len(get_result_lines(result)) > 0
 
     def test_report(self):
         """Test the report command."""
@@ -267,33 +260,31 @@ class TestVerdiProcess(AiidaTestCase):
         parent.logger.log(LOG_LEVEL_REPORT, 'parent_message')
         child.logger.log(LOG_LEVEL_REPORT, 'child_message')
 
-        result = self.cli_runner.invoke(cmd_process.process_report, [str(grandparent.pk)])
-        self.assertClickResultNoException(result)
-        self.assertEqual(len(get_result_lines(result)), 3)
+        result = self.cli_runner(cmd_process.process_report, [str(grandparent.pk)])
 
-        result = self.cli_runner.invoke(cmd_process.process_report, [str(parent.pk)])
-        self.assertIsNone(result.exception, result.output)
-        self.assertEqual(len(get_result_lines(result)), 2)
+        assert len(get_result_lines(result)) == 3
 
-        result = self.cli_runner.invoke(cmd_process.process_report, [str(child.pk)])
-        self.assertIsNone(result.exception, result.output)
-        self.assertEqual(len(get_result_lines(result)), 1)
+        result = self.cli_runner(cmd_process.process_report, [str(parent.pk)])
+
+        assert len(get_result_lines(result)) == 2
+
+        result = self.cli_runner(cmd_process.process_report, [str(child.pk)])
+
+        assert len(get_result_lines(result)) == 1
 
         # Max depth should limit nesting level
         for flag in ['-m', '--max-depth']:
             for flag_value in [1, 2]:
-                result = self.cli_runner.invoke(
-                    cmd_process.process_report, [str(grandparent.pk), flag, str(flag_value)]
-                )
-                self.assertIsNone(result.exception, result.output)
-                self.assertEqual(len(get_result_lines(result)), flag_value)
+                result = self.cli_runner(cmd_process.process_report, [str(grandparent.pk), flag, str(flag_value)])
+
+                assert len(get_result_lines(result)) == flag_value
 
         # Filtering for other level name such as WARNING should not have any hits and only print the no log message
         for flag in ['-l', '--levelname']:
-            result = self.cli_runner.invoke(cmd_process.process_report, [str(grandparent.pk), flag, 'WARNING'])
-            self.assertIsNone(result.exception, result.output)
-            self.assertEqual(len(get_result_lines(result)), 1, get_result_lines(result))
-            self.assertEqual(get_result_lines(result)[0], 'No log messages recorded for this entry')
+            result = self.cli_runner(cmd_process.process_report, [str(grandparent.pk), flag, 'WARNING'])
+
+            assert len(get_result_lines(result)) == 1, get_result_lines(result)
+            assert get_result_lines(result)[0] == 'No log messages recorded for this entry'
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -336,55 +327,51 @@ def test_list_worker_slot_warning(run_cli_command, monkeypatch):
     assert any(warning_phrase in line for line in result.output_lines)
 
 
-class TestVerdiProcessCallRoot(AiidaTestCase):
+class TestVerdiProcessCallRoot:
     """Tests for `verdi process call-root`."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
-        cls.node_root = WorkflowNode()
-        cls.node_middle = WorkflowNode()
-        cls.node_terminal = WorkflowNode()
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        self.node_root = WorkflowNode()
+        self.node_middle = WorkflowNode()
+        self.node_terminal = WorkflowNode()
 
-        cls.node_root.store()
+        self.node_root.store()
 
-        cls.node_middle.add_incoming(cls.node_root, link_type=LinkType.CALL_WORK, link_label='call_middle')
-        cls.node_middle.store()
+        self.node_middle.add_incoming(self.node_root, link_type=LinkType.CALL_WORK, link_label='call_middle')
+        self.node_middle.store()
 
-        cls.node_terminal.add_incoming(cls.node_middle, link_type=LinkType.CALL_WORK, link_label='call_terminal')
-        cls.node_terminal.store()
+        self.node_terminal.add_incoming(self.node_middle, link_type=LinkType.CALL_WORK, link_label='call_terminal')
+        self.node_terminal.store()
 
-    def setUp(self):
-        super().setUp()
-        self.cli_runner = CliRunner()
+        self.cli_runner = run_cli_command
 
     def test_no_caller(self):
         """Test `verdi process call-root` when passing single process without caller."""
         options = [str(self.node_root.pk)]
-        result = self.cli_runner.invoke(cmd_process.process_call_root, options)
-        self.assertClickResultNoException(result)
-        self.assertTrue(len(get_result_lines(result)) == 1)
-        self.assertIn('No callers found', get_result_lines(result)[0])
+        result = self.cli_runner(cmd_process.process_call_root, options)
+        assert len(get_result_lines(result)) == 1
+        assert 'No callers found' in get_result_lines(result)[0]
 
     def test_single_caller(self):
         """Test `verdi process call-root` when passing single process with call root."""
         # Both the middle and terminal node should have the `root` node as call root.
         for node in [self.node_middle, self.node_terminal]:
             options = [str(node.pk)]
-            result = self.cli_runner.invoke(cmd_process.process_call_root, options)
-            self.assertClickResultNoException(result)
-            self.assertTrue(len(get_result_lines(result)) == 1)
-            self.assertIn(str(self.node_root.pk), get_result_lines(result)[0])
+            result = self.cli_runner(cmd_process.process_call_root, options)
+            assert len(get_result_lines(result)) == 1
+            assert str(self.node_root.pk) in get_result_lines(result)[0]
 
     def test_multiple_processes(self):
         """Test `verdi process call-root` when passing multiple processes."""
         options = [str(self.node_root.pk), str(self.node_middle.pk), str(self.node_terminal.pk)]
-        result = self.cli_runner.invoke(cmd_process.process_call_root, options)
-        self.assertClickResultNoException(result)
-        self.assertTrue(len(get_result_lines(result)) == 3)
-        self.assertIn('No callers found', get_result_lines(result)[0])
-        self.assertIn(str(self.node_root.pk), get_result_lines(result)[1])
-        self.assertIn(str(self.node_root.pk), get_result_lines(result)[2])
+        result = self.cli_runner(cmd_process.process_call_root, options)
+        assert len(get_result_lines(result)) == 3
+        assert 'No callers found' in get_result_lines(result)[0]
+        assert str(self.node_root.pk) in get_result_lines(result)[1]
+        assert str(self.node_root.pk) in get_result_lines(result)[2]
 
 
 @pytest.mark.skip(reason='fails to complete randomly (see issue #4731)')

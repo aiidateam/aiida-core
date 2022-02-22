@@ -1,24 +1,25 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=no-self-use
 """Tests for the `TrajectoryData` class."""
-
 import numpy as np
+import pytest
 
 from aiida.orm import TrajectoryData, load_node
-from aiida.storage.testbase import AiidaTestCase
 
 
-class TestTrajectory(AiidaTestCase):
+class TestTrajectory:
     """Test for the `TrajectoryData` class."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
 
         n_atoms = 5
         n_steps = 30
 
-        cls.symbols = [chr(_) for _ in range(ord('A'), ord('A') + n_atoms)]
-        cls.positions = np.array(np.arange(n_steps * n_atoms * 3).reshape(n_steps, n_atoms, 3), dtype=float)
+        self.symbols = [chr(_) for _ in range(ord('A'), ord('A') + n_atoms)]
+        self.positions = np.array(np.arange(n_steps * n_atoms * 3).reshape(n_steps, n_atoms, 3), dtype=float)
 
     def test_get_attribute_tryexcept_default(self):
         """
@@ -36,7 +37,7 @@ class TestTrajectory(AiidaTestCase):
             positions_unit = 'A'
         except KeyError:
             times_unit = 'FAILED_tryexc'
-        self.assertEqual(positions_unit, 'A')
+        assert positions_unit == 'A'
 
         try:
             times_unit = tjd.get_attribute('units|times')
@@ -44,7 +45,7 @@ class TestTrajectory(AiidaTestCase):
             times_unit = 'ps'
         except KeyError:
             times_unit = 'FAILED_tryexc'
-        self.assertEqual(times_unit, 'ps')
+        assert times_unit == 'ps'
 
         positions = 1
         try:
@@ -55,21 +56,21 @@ class TestTrajectory(AiidaTestCase):
             pass
         except KeyError:
             positions = 'FAILED_tryexc'
-        self.assertEqual(positions, 1)
+        assert positions == 1
 
     def test_units(self):
         """Test the setting of units attributes."""
         tjd = TrajectoryData()
 
         tjd.set_attribute('units|positions', 'some_random_pos_unit')
-        self.assertEqual(tjd.get_attribute('units|positions'), 'some_random_pos_unit')
+        assert tjd.get_attribute('units|positions') == 'some_random_pos_unit'
 
         tjd.set_attribute('units|times', 'some_random_time_unit')
-        self.assertEqual(tjd.get_attribute('units|times'), 'some_random_time_unit')
+        assert tjd.get_attribute('units|times') == 'some_random_time_unit'
 
         # Test after storing
         tjd.set_trajectory(self.symbols, self.positions)
         tjd.store()
         tjd2 = load_node(tjd.pk)
-        self.assertEqual(tjd2.get_attribute('units|positions'), 'some_random_pos_unit')
-        self.assertEqual(tjd2.get_attribute('units|times'), 'some_random_time_unit')
+        assert tjd2.get_attribute('units|positions') == 'some_random_pos_unit'
+        assert tjd2.get_attribute('units|times') == 'some_random_time_unit'

@@ -7,14 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Tests for subclasses of DbImporter, DbSearchResults and DbEntry"""
-import unittest
+import pytest
 
-from aiida.storage.testbase import AiidaTestCase
 from tests.static import STATIC_DIR
 
 
-class TestCodDbImporter(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean_class')
+class TestCodDbImporter:
     """Test the CodDbImporter class."""
     from aiida.orm.nodes.data.cif import has_pycifrw
 
@@ -45,28 +46,28 @@ class TestCodDbImporter(AiidaTestCase):
         q_sql = re.sub(r'(\d\.\d{6})\d+', r'\1', q_sql)
         q_sql = re.sub(r'(120.00)39+', r'\g<1>4', q_sql)
 
-        self.assertEqual(q_sql, \
-                          'SELECT file, svnrevision FROM data WHERE '
-                          "(status IS NULL OR status != 'retracted') AND "
-                          '(a BETWEEN 3.332333 AND 3.334333 OR '
-                          'a BETWEEN 0.999 AND 1.001) AND '
-                          '(alpha BETWEEN 1.665666 AND 1.667666 OR '
-                          'alpha BETWEEN -0.001 AND 0.001) AND '
-                          "(chemname LIKE '%caffeine%' OR "
-                          "chemname LIKE '%serotonine%') AND "
-                          "(method IN ('single crystal') OR method IS NULL) AND "
-                          "(formula REGEXP ' C[0-9 ]' AND "
-                          "formula REGEXP ' H[0-9 ]' AND "
-                          "formula REGEXP ' Cl[0-9 ]') AND "
-                          "(formula IN ('- C6 H6 -')) AND "
-                          '(file IN (1000000, 3000000)) AND '
-                          '(cellpressure BETWEEN 999 AND 1001 OR '
-                          'cellpressure BETWEEN 1000 AND 1002) AND '
-                          '(celltemp BETWEEN -0.001 AND 0.001 OR '
-                          'celltemp BETWEEN 10.499 AND 10.501) AND '
-                          "(nel IN (5)) AND (sg IN ('P -1')) AND "
-                          '(vol BETWEEN 99.999 AND 100.001 OR '
-                          'vol BETWEEN 120.004 AND 120.006)')
+        assert q_sql == \
+                          'SELECT file, svnrevision FROM data WHERE ' \
+                          "(status IS NULL OR status != 'retracted') AND " \
+                          '(a BETWEEN 3.332333 AND 3.334333 OR ' \
+                          'a BETWEEN 0.999 AND 1.001) AND ' \
+                          '(alpha BETWEEN 1.665666 AND 1.667666 OR ' \
+                          'alpha BETWEEN -0.001 AND 0.001) AND ' \
+                          "(chemname LIKE '%caffeine%' OR " \
+                          "chemname LIKE '%serotonine%') AND " \
+                          "(method IN ('single crystal') OR method IS NULL) AND " \
+                          "(formula REGEXP ' C[0-9 ]' AND " \
+                          "formula REGEXP ' H[0-9 ]' AND " \
+                          "formula REGEXP ' Cl[0-9 ]') AND " \
+                          "(formula IN ('- C6 H6 -')) AND " \
+                          '(file IN (1000000, 3000000)) AND ' \
+                          '(cellpressure BETWEEN 999 AND 1001 OR ' \
+                          'cellpressure BETWEEN 1000 AND 1002) AND ' \
+                          '(celltemp BETWEEN -0.001 AND 0.001 OR ' \
+                          'celltemp BETWEEN 10.499 AND 10.501) AND ' \
+                          "(nel IN (5)) AND (sg IN ('P -1')) AND " \
+                          '(vol BETWEEN 99.999 AND 100.001 OR ' \
+                          'vol BETWEEN 120.004 AND 120.006)'
 
     def test_datatype_checks(self):
         """Rather complicated, but wide-coverage test for data types, accepted
@@ -100,7 +101,7 @@ class TestCodDbImporter(AiidaTestCase):
                     methods[i]('test', 'test', [values[j]])
                 except ValueError as exc:
                     message = str(exc)
-                self.assertEqual(message, messages[results[i][j]])
+                assert message == messages[results[i][j]]
 
     def test_dbentry_creation(self):
         """Tests the creation of CodEntry from CodSearchResults."""
@@ -116,25 +117,23 @@ class TestCodDbImporter(AiidaTestCase):
             'id': '2000000',
             'svnrevision': '1234'
         }])
-        self.assertEqual(len(results), 3)
-        self.assertEqual(
-            results.at(1).source, {
-                'db_name': 'Crystallography Open Database',
-                'db_uri': 'http://www.crystallography.net/cod',
-                'extras': {},
-                'id': '1000001',
-                'license': 'CC0',
-                'source_md5': None,
-                'uri': 'http://www.crystallography.net/cod/1000001.cif@1234',
-                'version': '1234',
-            }
-        )
-        self.assertEqual([x.source['uri'] for x in results], [
+        assert len(results) == 3
+        assert results.at(1).source == {
+            'db_name': 'Crystallography Open Database',
+            'db_uri': 'http://www.crystallography.net/cod',
+            'extras': {},
+            'id': '1000001',
+            'license': 'CC0',
+            'source_md5': None,
+            'uri': 'http://www.crystallography.net/cod/1000001.cif@1234',
+            'version': '1234',
+        }
+        assert [x.source['uri'] for x in results] == [
             'http://www.crystallography.net/cod/1000000.cif', 'http://www.crystallography.net/cod/1000001.cif@1234',
             'http://www.crystallography.net/cod/2000000.cif@1234'
-        ])
+        ]
 
-    @unittest.skipIf(not has_pycifrw(), 'Unable to import PyCifRW')
+    @pytest.mark.skipif(not has_pycifrw(), reason='Unable to import PyCifRW')
     def test_dbentry_to_cif_node(self):
         """Tests the creation of CifData node from CodEntry."""
         from aiida.orm import CifData
@@ -144,23 +143,22 @@ class TestCodDbImporter(AiidaTestCase):
         entry.cif = "data_test _publ_section_title 'Test structure'"
 
         cif = entry.get_cif_node()
-        self.assertEqual(isinstance(cif, CifData), True)
-        self.assertEqual(cif.get_attribute('md5'), '070711e8e99108aade31d20cd5c94c48')
-        self.assertEqual(
-            cif.source, {
-                'db_name': 'Crystallography Open Database',
-                'db_uri': 'http://www.crystallography.net/cod',
-                'id': None,
-                'version': None,
-                'extras': {},
-                'source_md5': '070711e8e99108aade31d20cd5c94c48',
-                'uri': 'http://www.crystallography.net/cod/1000000.cif',
-                'license': 'CC0',
-            }
-        )
+        assert isinstance(cif, CifData) is True
+        assert cif.get_attribute('md5') == '070711e8e99108aade31d20cd5c94c48'
+        assert cif.source == {
+            'db_name': 'Crystallography Open Database',
+            'db_uri': 'http://www.crystallography.net/cod',
+            'id': None,
+            'version': None,
+            'extras': {},
+            'source_md5': '070711e8e99108aade31d20cd5c94c48',
+            'uri': 'http://www.crystallography.net/cod/1000000.cif',
+            'license': 'CC0',
+        }
 
 
-class TestTcodDbImporter(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean_class')
+class TestTcodDbImporter:
     """Test the TcodDbImporter class."""
 
     def test_dbentry_creation(self):
@@ -177,26 +175,25 @@ class TestTcodDbImporter(AiidaTestCase):
             'id': '20000000',
             'svnrevision': '1234'
         }])
-        self.assertEqual(len(results), 3)
-        self.assertEqual(
-            results.at(1).source, {
-                'db_name': 'Theoretical Crystallography Open Database',
-                'db_uri': 'http://www.crystallography.net/tcod',
-                'extras': {},
-                'id': '10000001',
-                'license': 'CC0',
-                'source_md5': None,
-                'uri': 'http://www.crystallography.net/tcod/10000001.cif@1234',
-                'version': '1234',
-            }
-        )
-        self.assertEqual([x.source['uri'] for x in results], [
+        assert len(results) == 3
+        assert results.at(1).source == {
+            'db_name': 'Theoretical Crystallography Open Database',
+            'db_uri': 'http://www.crystallography.net/tcod',
+            'extras': {},
+            'id': '10000001',
+            'license': 'CC0',
+            'source_md5': None,
+            'uri': 'http://www.crystallography.net/tcod/10000001.cif@1234',
+            'version': '1234',
+        }
+        assert [x.source['uri'] for x in results] == [
             'http://www.crystallography.net/tcod/10000000.cif', 'http://www.crystallography.net/tcod/10000001.cif@1234',
             'http://www.crystallography.net/tcod/20000000.cif@1234'
-        ])
+        ]
 
 
-class TestPcodDbImporter(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean_class')
+class TestPcodDbImporter:
     """Test the PcodDbImporter class."""
 
     def test_dbentry_creation(self):
@@ -204,22 +201,21 @@ class TestPcodDbImporter(AiidaTestCase):
         from aiida.tools.dbimporters.plugins.pcod import PcodSearchResults
 
         results = PcodSearchResults([{'id': '12345678'}])
-        self.assertEqual(len(results), 1)
-        self.assertEqual(
-            results.at(0).source, {
-                'db_name': 'Predicted Crystallography Open Database',
-                'db_uri': 'http://www.crystallography.net/pcod',
-                'extras': {},
-                'id': '12345678',
-                'license': 'CC0',
-                'source_md5': None,
-                'uri': 'http://www.crystallography.net/pcod/cif/1/123/12345678.cif',
-                'version': None,
-            }
-        )
+        assert len(results) == 1
+        assert results.at(0).source == {
+            'db_name': 'Predicted Crystallography Open Database',
+            'db_uri': 'http://www.crystallography.net/pcod',
+            'extras': {},
+            'id': '12345678',
+            'license': 'CC0',
+            'source_md5': None,
+            'uri': 'http://www.crystallography.net/pcod/cif/1/123/12345678.cif',
+            'version': None,
+        }
 
 
-class TestMpodDbImporter(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean_class')
+class TestMpodDbImporter:
     """Test the MpodDbImporter class."""
 
     def test_dbentry_creation(self):
@@ -227,22 +223,21 @@ class TestMpodDbImporter(AiidaTestCase):
         from aiida.tools.dbimporters.plugins.mpod import MpodSearchResults
 
         results = MpodSearchResults([{'id': '1234567'}])
-        self.assertEqual(len(results), 1)
-        self.assertEqual(
-            results.at(0).source, {
-                'db_name': 'Material Properties Open Database',
-                'db_uri': 'http://mpod.cimav.edu.mx',
-                'extras': {},
-                'id': '1234567',
-                'license': None,
-                'source_md5': None,
-                'uri': 'http://mpod.cimav.edu.mx/datafiles/1234567.mpod',
-                'version': None,
-            }
-        )
+        assert len(results) == 1
+        assert results.at(0).source == {
+            'db_name': 'Material Properties Open Database',
+            'db_uri': 'http://mpod.cimav.edu.mx',
+            'extras': {},
+            'id': '1234567',
+            'license': None,
+            'source_md5': None,
+            'uri': 'http://mpod.cimav.edu.mx/datafiles/1234567.mpod',
+            'version': None,
+        }
 
 
-class TestNnincDbImporter(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean_class')
+class TestNnincDbImporter:
     """Test the UpfEntry class."""
 
     def test_upfentry_creation(self):
@@ -262,7 +257,7 @@ class TestNnincDbImporter(AiidaTestCase):
             entry._contents = fpntr.read()  # pylint: disable=protected-access
 
         upfnode = entry.get_upf_node()
-        self.assertEqual(upfnode.element, 'Ba')
+        assert upfnode.element == 'Ba'
 
         entry.source = {'id': 'O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF'}
 
@@ -270,5 +265,5 @@ class TestNnincDbImporter(AiidaTestCase):
         # thus UpfData parser will complain about the mismatch of chemical
         # element, mentioned in file name, and the one described in the
         # pseudopotential file.
-        with self.assertRaises(ParsingError):
+        with pytest.raises(ParsingError):
             upfnode = entry.get_upf_node()

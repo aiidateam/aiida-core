@@ -8,27 +8,24 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the links utilities."""
+import pytest
 
 from aiida.common.links import validate_link_label
-from aiida.storage.testbase import AiidaTestCase
 
 
-class TestValidateLinkLabel(AiidaTestCase):
-    """Tests for `validate_link_label` function."""
+def test_validate_link_label():
+    """Test that illegal link labels will raise a `ValueError`."""
 
-    def test_validate_link_label(self):
-        """Test that illegal link labels will raise a `ValueError`."""
+    illegal_link_labels = [
+        '_leading_underscore',
+        'trailing_underscore_',
+        'non_numeric_%',
+        'including.period',
+        'disallowed👻unicodecharacters',
+        'white space',
+        'das-hes',
+    ]
 
-        illegal_link_labels = [
-            '_leading_underscore',
-            'trailing_underscore_',
-            'non_numeric_%',
-            'including.period',
-            'disallowed👻unicodecharacters',
-            'white space',
-            'das-hes',
-        ]
-
-        for link_label in illegal_link_labels:
-            with self.assertRaises(ValueError):
-                validate_link_label(link_label)
+    for link_label in illegal_link_labels:
+        with pytest.raises(ValueError):
+            validate_link_label(link_label)

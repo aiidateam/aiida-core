@@ -7,23 +7,25 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """A module to test class loader factories."""
+import pytest
+
 import aiida
 from aiida.engine import Process
 from aiida.plugins import CalculationFactory
-from aiida.storage.testbase import AiidaTestCase
 
 
-class TestCalcJob(AiidaTestCase):
+class TestCalcJob:
     """Test CalcJob."""
 
-    def setUp(self):
-        super().setUp()
-        self.assertIsNone(Process.current())
-
-    def tearDown(self):
-        super().tearDown()
-        self.assertIsNone(Process.current())
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        assert Process.current() is None
+        yield
+        assert Process.current() is None
 
     def test_class_loader(self):
         """Test that CalculationFactory works."""
@@ -33,5 +35,5 @@ class TestCalcJob(AiidaTestCase):
         class_name = loader.identify_object(process)
         loaded_class = loader.load_object(class_name)
 
-        self.assertEqual(process.__name__, loaded_class.__name__)
-        self.assertEqual(class_name, loader.identify_object(loaded_class))
+        assert process.__name__ == loaded_class.__name__
+        assert class_name == loader.identify_object(loaded_class)

@@ -7,10 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=import-error,no-name-in-module
+# pylint: disable=import-error,no-name-in-module,no-self-use
 """Test object relationships in the database."""
 import warnings
 
+import pytest
 from sqlalchemy import exc as sa_exc
 
 from aiida.common.links import LinkType
@@ -19,10 +20,10 @@ from aiida.manage import get_manager
 from aiida.orm import CalculationNode, Data
 from aiida.storage.psql_dos.models.node import DbNode
 from aiida.storage.psql_dos.models.user import DbUser
-from aiida.storage.testbase import AiidaTestCase
 
 
-class TestRelationshipsSQLA(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean')
+class TestRelationshipsSQLA:
     """Class of tests concerning the schema and the correct
     implementation of relationships within the AiiDA ORM
 
@@ -44,17 +45,17 @@ class TestRelationshipsSQLA(AiidaTestCase):
         n_3.add_incoming(n_2, link_type=LinkType.CREATE, link_label='N2')
 
         # Check that the result of outputs is a list
-        self.assertIsInstance(n_1.backend_entity.bare_model.outputs, list, 'This is expected to be a list')
+        assert isinstance(n_1.backend_entity.bare_model.outputs, list), 'This is expected to be a list'
 
         # Check that the result of outputs_q is a query
         from sqlalchemy.orm.dynamic import AppenderQuery
-        self.assertIsInstance(
-            n_1.backend_entity.bare_model.outputs_q, AppenderQuery, 'This is expected to be an AppenderQuery'
-        )
+        assert isinstance(
+            n_1.backend_entity.bare_model.outputs_q, AppenderQuery
+        ), 'This is expected to be an AppenderQuery'
 
         # Check that the result of outputs is correct
         out = {_.pk for _ in n_1.backend_entity.bare_model.outputs}
-        self.assertEqual(out, set([n_2.pk]))
+        assert out == set([n_2.pk])
 
     def test_inputs_parents_relationship(self):
         """This test checks that the inputs_q, parents_q relationship and the
@@ -69,17 +70,17 @@ class TestRelationshipsSQLA(AiidaTestCase):
         n_3.add_incoming(n_2, link_type=LinkType.CREATE, link_label='N2')
 
         # Check that the result of outputs is a list
-        self.assertIsInstance(n_1.backend_entity.bare_model.inputs, list, 'This is expected to be a list')
+        assert isinstance(n_1.backend_entity.bare_model.inputs, list), 'This is expected to be a list'
 
         # Check that the result of outputs_q is a query
         from sqlalchemy.orm.dynamic import AppenderQuery
-        self.assertIsInstance(
-            n_1.backend_entity.bare_model.inputs_q, AppenderQuery, 'This is expected to be an AppenderQuery'
-        )
+        assert isinstance(
+            n_1.backend_entity.bare_model.inputs_q, AppenderQuery
+        ), 'This is expected to be an AppenderQuery'
 
         # Check that the result of inputs is correct
         out = {_.pk for _ in n_3.backend_entity.bare_model.inputs}
-        self.assertEqual(out, set([n_2.pk]))
+        assert out == set([n_2.pk])
 
     def test_user_node_1(self):
         """Test that when a user and a node having that user are created,
@@ -95,8 +96,8 @@ class TestRelationshipsSQLA(AiidaTestCase):
         dbn_1 = DbNode(**node_dict)
 
         # Check that the two are neither flushed nor committed
-        self.assertIsNone(dbu1.id)
-        self.assertIsNone(dbn_1.id)
+        assert dbu1.id is None
+        assert dbn_1.id is None
 
         session = get_manager().get_profile_storage().get_session()
         # Add only the node and commit
@@ -105,8 +106,8 @@ class TestRelationshipsSQLA(AiidaTestCase):
 
         # Check that a pk has been assigned, which means that things have
         # been flushed into the database
-        self.assertIsNotNone(dbn_1.id)
-        self.assertIsNotNone(dbu1.id)
+        assert dbn_1.id is not None
+        assert dbu1.id is not None
 
     def test_user_node_2(self):
         """Test that when a user and a node having that user are created,
@@ -121,8 +122,8 @@ class TestRelationshipsSQLA(AiidaTestCase):
         dbn_1 = DbNode(**node_dict)
 
         # Check that the two are neither flushed nor committed
-        self.assertIsNone(dbu1.id)
-        self.assertIsNone(dbn_1.id)
+        assert dbu1.id is None
+        assert dbn_1.id is None
 
         session = get_manager().get_profile_storage().get_session()
 
@@ -136,8 +137,8 @@ class TestRelationshipsSQLA(AiidaTestCase):
 
         # Check that a pk has been assigned (or not), which means that things
         # have been flushed into the database
-        self.assertIsNotNone(dbu1.id)
-        self.assertIsNone(dbn_1.id)
+        assert dbu1.id is not None
+        assert dbn_1.id is None
 
     def test_user_node_3(self):
         """Test that when a user and two nodes having that user are created,
@@ -155,9 +156,9 @@ class TestRelationshipsSQLA(AiidaTestCase):
         dbn_2 = DbNode(**node_dict)
 
         # Check that the two are neither flushed nor committed
-        self.assertIsNone(dbu1.id)
-        self.assertIsNone(dbn_1.id)
-        self.assertIsNone(dbn_2.id)
+        assert dbu1.id is None
+        assert dbn_1.id is None
+        assert dbn_2.id is None
 
         session = get_manager().get_profile_storage().get_session()
 
@@ -170,9 +171,9 @@ class TestRelationshipsSQLA(AiidaTestCase):
 
         # Check for which object a pk has been assigned, which means that
         # things have been at least flushed into the database
-        self.assertIsNotNone(dbu1.id)
-        self.assertIsNotNone(dbn_1.id)
-        self.assertIsNone(dbn_2.id)
+        assert dbu1.id is not None
+        assert dbn_1.id is not None
+        assert dbn_2.id is None
 
     def test_user_node_4(self):
         """Test that when several nodes are created with the same user and each
@@ -195,8 +196,8 @@ class TestRelationshipsSQLA(AiidaTestCase):
             dbn_1 = DbNode(user=dbu1, uuid=get_new_uuid())
 
         # Check that the two are neither flushed nor committed
-        self.assertIsNone(dbu1.id)
-        self.assertIsNone(dbn_1.id)
+        assert dbu1.id is None
+        assert dbn_1.id is None
 
         session = get_manager().get_profile_storage().get_session()
 
@@ -209,5 +210,5 @@ class TestRelationshipsSQLA(AiidaTestCase):
 
         # Check for which object a pk has been assigned, which means that
         # things have been at least flushed into the database
-        self.assertIsNotNone(dbu1.id)
-        self.assertIsNotNone(dbn_1.id)
+        assert dbu1.id is not None
+        assert dbn_1.id is not None

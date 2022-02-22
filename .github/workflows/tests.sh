@@ -8,7 +8,6 @@ SYSTEM_TESTS="${GITHUB_WORKSPACE}/.github/system_tests"
 pytest --cov aiida --verbose --noconftest ${SYSTEM_TESTS}/test_test_manager.py
 pytest --cov aiida --verbose --noconftest ${SYSTEM_TESTS}/test_ipython_magics.py
 pytest --cov aiida --verbose --noconftest ${SYSTEM_TESTS}/test_profile_manager.py
-python ${SYSTEM_TESTS}/test_plugin_testcase.py  # uses custom unittest test runner
 
 # Until the `${SYSTEM_TESTS}/pytest` tests are moved within `tests` we have to run them separately and pass in the path to the
 # `conftest.py` explicitly, because otherwise it won't be able to find the fixtures it provides

@@ -7,21 +7,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Test for the Group ORM class."""
 import pytest
 
 from aiida import orm
 from aiida.common import exceptions
-from aiida.storage.testbase import AiidaTestCase
 
 
-class TestGroups(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean')
+class TestGroups:
     """Test backend entities and their collections"""
-
-    def setUp(self):
-        """Remove all existing Groups."""
-        for group in orm.Group.objects.all():
-            orm.Group.objects.delete(group.id)
 
     def test_count(self):
         """Test the `count` method."""
@@ -32,7 +28,7 @@ class TestGroups(AiidaTestCase):
         group = orm.Group(label='label', description='description').store()
         group.add_nodes(nodes)
 
-        self.assertEqual(group.count(), len(nodes))
+        assert group.count() == len(nodes)
 
     def test_creation(self):
         """Test the creation of Groups."""
@@ -41,25 +37,25 @@ class TestGroups(AiidaTestCase):
 
         group = orm.Group(label='testgroup')
 
-        with self.assertRaises(exceptions.ModificationNotAllowed):
+        with pytest.raises(exceptions.ModificationNotAllowed):
             # group unstored
             group.add_nodes(node)
 
-        with self.assertRaises(exceptions.ModificationNotAllowed):
+        with pytest.raises(exceptions.ModificationNotAllowed):
             # group unstored
             group.add_nodes(stored_node)
 
         group.store()
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             # node unstored
             group.add_nodes(node)
 
         group.add_nodes(stored_node)
 
         nodes = list(group.nodes)
-        self.assertEqual(len(nodes), 1)
-        self.assertEqual(nodes[0].pk, stored_node.pk)
+        assert len(nodes) == 1
+        assert nodes[0].pk == stored_node.pk
 
     def test_node_iterator(self):
         """Test the indexing and slicing functionality of the node iterator."""
@@ -74,15 +70,15 @@ class TestGroups(AiidaTestCase):
 
         # Indexing
         node_indexed = group.nodes[0]
-        self.assertTrue(isinstance(node_indexed, orm.Data))
-        self.assertIn(node_indexed.uuid, [node.uuid for node in nodes])
+        assert isinstance(node_indexed, orm.Data)
+        assert node_indexed.uuid in [node.uuid for node in nodes]
 
         # Slicing
         nodes_sliced = group.nodes[1:3]
-        self.assertTrue(isinstance(nodes_sliced, list))
-        self.assertEqual(len(nodes_sliced), 2)
-        self.assertTrue(all(isinstance(node, orm.Data) for node in nodes_sliced))
-        self.assertTrue(all(node.uuid in set(node.uuid for node in nodes) for node in nodes_sliced))
+        assert isinstance(nodes_sliced, list)
+        assert len(nodes_sliced) == 2
+        assert all(isinstance(node, orm.Data) for node in nodes_sliced)
+        assert all(node.uuid in set(node.uuid for node in nodes) for node in nodes_sliced)
 
     def test_description(self):
         """Test the update of the description both for stored and unstored groups."""
@@ -94,10 +90,10 @@ class TestGroups(AiidaTestCase):
         group_02 = orm.Group(label='testgroupdescription2', description='group_02')
 
         # Preliminary checks
-        self.assertTrue(group_01.is_stored)
-        self.assertFalse(group_02.is_stored)
-        self.assertEqual(group_01.description, 'group_01')
-        self.assertEqual(group_02.description, 'group_02')
+        assert group_01.is_stored
+        assert not group_02.is_stored
+        assert group_01.description == 'group_01'
+        assert group_02.description == 'group_02'
 
         # Change
         group_01.description = 'new1'
@@ -105,15 +101,15 @@ class TestGroups(AiidaTestCase):
 
         # Test that the groups remained in their proper stored state and that
         # the description was updated
-        self.assertTrue(group_01.is_stored)
-        self.assertFalse(group_02.is_stored)
-        self.assertEqual(group_01.description, 'new1')
-        self.assertEqual(group_02.description, 'new2')
+        assert group_01.is_stored
+        assert not group_02.is_stored
+        assert group_01.description == 'new1'
+        assert group_02.description == 'new2'
 
         # Store group_02 and check that the description is OK
         group_02.store()
-        self.assertTrue(group_02.is_stored)
-        self.assertEqual(group_02.description, 'new2')
+        assert group_02.is_stored
+        assert group_02.description == 'new2'
 
     def test_add_nodes(self):
         """Test different ways of adding nodes."""
@@ -129,11 +125,11 @@ class TestGroups(AiidaTestCase):
         group.add_nodes([node_02, node_03])
 
         # Check
-        self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
+        assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
 
         # Try to add a node that is already present: there should be no problem
         group.add_nodes(node_01)
-        self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
+        assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
 
     def test_remove_nodes(self):
         """Test node removal."""
@@ -146,22 +142,22 @@ class TestGroups(AiidaTestCase):
 
         # Add initial nodes
         group.add_nodes(nodes)
-        self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
+        assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
 
         # Remove a node that is not in the group: nothing should happen
         group.remove_nodes(node_04)
-        self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
+        assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
 
         # Remove one orm.Node
         nodes.remove(node_03)
         group.remove_nodes(node_03)
-        self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
+        assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
 
         # Remove a list of Nodes and check
         nodes.remove(node_01)
         nodes.remove(node_02)
         group.remove_nodes([node_01, node_02])
-        self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
+        assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
 
     def test_clear(self):
         """Test the `clear` method to remove all nodes."""
@@ -173,23 +169,23 @@ class TestGroups(AiidaTestCase):
 
         # Add initial nodes
         group.add_nodes(nodes)
-        self.assertEqual(set(_.pk for _ in nodes), set(_.pk for _ in group.nodes))
+        assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
 
         group.clear()
-        self.assertEqual(list(group.nodes), [])
+        assert list(group.nodes) == []
 
     def test_name_desc(self):
         """Test Group description."""
         group = orm.Group(label='testgroup2', description='some desc')
-        self.assertEqual(group.label, 'testgroup2')
-        self.assertEqual(group.description, 'some desc')
-        self.assertTrue(group.is_user_defined)
+        assert group.label == 'testgroup2'
+        assert group.description == 'some desc'
+        assert group.is_user_defined
         group.store()
 
         # Same checks after storing
-        self.assertEqual(group.label, 'testgroup2')
-        self.assertTrue(group.is_user_defined)
-        self.assertEqual(group.description, 'some desc')
+        assert group.label == 'testgroup2'
+        assert group.is_user_defined
+        assert group.description == 'some desc'
 
         # To avoid to find it in further tests
         orm.Group.objects.delete(group.pk)
@@ -200,14 +196,14 @@ class TestGroups(AiidaTestCase):
         group = orm.Group(label='testgroup3', description='some other desc').store()
 
         group_copy = orm.Group.get(label='testgroup3')
-        self.assertEqual(group.uuid, group_copy.uuid)
+        assert group.uuid == group_copy.uuid
 
         group.add_nodes(node)
-        self.assertEqual(len(group.nodes), 1)
+        assert len(group.nodes) == 1
 
         orm.Group.objects.delete(group.pk)
 
-        with self.assertRaises(exceptions.NotExistent):
+        with pytest.raises(exceptions.NotExistent):
             # The group does not exist anymore
             orm.Group.get(label='testgroup3')
 
@@ -219,18 +215,18 @@ class TestGroups(AiidaTestCase):
         group = orm.Group(label=label_original, description='I will be renamed')
 
         # Check name changes work before storing
-        self.assertEqual(group.label, label_original)
+        assert group.label == label_original
         group.label = label_changed
-        self.assertEqual(group.label, label_changed)
+        assert group.label == label_changed
 
         # Revert the name to its original and store it
         group.label = label_original
         group.store()
 
         # Check name changes work after storing
-        self.assertEqual(group.label, label_original)
+        assert group.label == label_original
         group.label = label_changed
-        self.assertEqual(group.label, label_changed)
+        assert group.label == label_changed
 
     def test_rename_existing(self):
         """Test that renaming to an already existing name is not permitted."""
@@ -243,7 +239,7 @@ class TestGroups(AiidaTestCase):
         group_b = orm.Group(label=label_group_a, description='They will try to rename me')
 
         # Storing for duplicate group name should trigger UniquenessError
-        with self.assertRaises(exceptions.IntegrityError):
+        with pytest.raises(exceptions.IntegrityError):
             group_b.store()
 
         # Reverting to unique name before storing
@@ -251,7 +247,7 @@ class TestGroups(AiidaTestCase):
         group_b.store()
 
         # After storing name change to existing should raise
-        with self.assertRaises(exceptions.IntegrityError):
+        with pytest.raises(exceptions.IntegrityError):
             group_b.label = label_group_a
 
     def test_group_uuid_hashing_for_querybuidler(self):
@@ -272,17 +268,13 @@ class TestGroups(AiidaTestCase):
         builder.all()
 
         # And that the results are correct
-        self.assertEqual(builder.count(), 1)
-        self.assertEqual(builder.first()[0], group.id)
+        assert builder.count() == 1
+        assert builder.first()[0] == group.id
 
 
-class TestGroupsSubclasses(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean')
+class TestGroupsSubclasses:
     """Test rules around creating `Group` subclasses."""
-
-    def setUp(self):
-        """Remove all existing Groups."""
-        for group in orm.Group.objects.all():
-            orm.Group.objects.delete(group.id)
 
     @staticmethod
     def test_creation_registered():
@@ -405,13 +397,13 @@ class TestGroupsSubclasses(AiidaTestCase):
         assert loaded.pk == group.pk
 
 
-class TestGroupExtras(AiidaTestCase):
+class TestGroupExtras:
     """Test the property and methods of group extras."""
 
-    def setUp(self):
-        super().setUp()
-        for group in orm.Group.objects.all():
-            orm.Group.objects.delete(group.id)
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
         self.group = orm.Group('test_extras')
 
     def test_extras(self):
@@ -420,10 +412,10 @@ class TestGroupExtras(AiidaTestCase):
 
         self.group.set_extra('key', original_extra)
         group_extras = self.group.extras
-        self.assertEqual(group_extras['key'], original_extra)
+        assert group_extras['key'] == original_extra
         group_extras['key']['nested']['a'] = 2
 
-        self.assertEqual(original_extra['nested']['a'], 2)
+        assert original_extra['nested']['a'] == 2
 
         # Now store the group and verify that `extras` then returns a deep copy
         self.group.store()
@@ -431,7 +423,7 @@ class TestGroupExtras(AiidaTestCase):
 
         # We change the returned group extras but the original extra should remain unchanged
         group_extras['key']['nested']['a'] = 3
-        self.assertEqual(original_extra['nested']['a'], 2)
+        assert original_extra['nested']['a'] == 2
 
     def test_get_extra(self):
         """Test the `Group.get_extra` method."""
@@ -439,14 +431,14 @@ class TestGroupExtras(AiidaTestCase):
 
         self.group.set_extra('key', original_extra)
         group_extra = self.group.get_extra('key')
-        self.assertEqual(group_extra, original_extra)
+        assert group_extra == original_extra
         group_extra['nested']['a'] = 2
 
-        self.assertEqual(original_extra['nested']['a'], 2)
+        assert original_extra['nested']['a'] == 2
 
         default = 'default'
-        self.assertEqual(self.group.get_extra('not_existing', default=default), default)
-        with self.assertRaises(AttributeError):
+        assert self.group.get_extra('not_existing', default=default) == default
+        with pytest.raises(AttributeError):
             self.group.get_extra('not_existing')
 
         # Now store the group and verify that `get_extra` then returns a deep copy
@@ -455,11 +447,11 @@ class TestGroupExtras(AiidaTestCase):
 
         # We change the returned group extras but the original extra should remain unchanged
         group_extra['nested']['a'] = 3
-        self.assertEqual(original_extra['nested']['a'], 2)
+        assert original_extra['nested']['a'] == 2
 
         default = 'default'
-        self.assertEqual(self.group.get_extra('not_existing', default=default), default)
-        with self.assertRaises(AttributeError):
+        assert self.group.get_extra('not_existing', default=default) == default
+        with pytest.raises(AttributeError):
             self.group.get_extra('not_existing')
 
     def test_get_extra_many(self):
@@ -468,10 +460,10 @@ class TestGroupExtras(AiidaTestCase):
 
         self.group.set_extra('key', original_extra)
         group_extra = self.group.get_extra_many(['key'])[0]
-        self.assertEqual(group_extra, original_extra)
+        assert group_extra == original_extra
         group_extra['nested']['a'] = 2
 
-        self.assertEqual(original_extra['nested']['a'], 2)
+        assert original_extra['nested']['a'] == 2
 
         # Now store the group and verify that `get_extra` then returns a deep copy
         self.group.store()
@@ -479,29 +471,29 @@ class TestGroupExtras(AiidaTestCase):
 
         # We change the returned group extras but the original extra should remain unchanged
         group_extra['nested']['a'] = 3
-        self.assertEqual(original_extra['nested']['a'], 2)
+        assert original_extra['nested']['a'] == 2
 
     def test_set_extra(self):
         """Test the `Group.set_extra` method."""
-        with self.assertRaises(exceptions.ValidationError):
+        with pytest.raises(exceptions.ValidationError):
             self.group.set_extra('illegal.key', 'value')
 
         self.group.set_extra('valid_key', 'value')
         self.group.store()
 
         self.group.set_extra('valid_key', 'changed')
-        self.assertEqual(orm.load_group(self.group.pk).get_extra('valid_key'), 'changed')
+        assert orm.load_group(self.group.pk).get_extra('valid_key') == 'changed'
 
     def test_set_extra_many(self):
         """Test the `Group.set_extra` method."""
-        with self.assertRaises(exceptions.ValidationError):
+        with pytest.raises(exceptions.ValidationError):
             self.group.set_extra_many({'illegal.key': 'value', 'valid_key': 'value'})
 
         self.group.set_extra_many({'valid_key': 'value'})
         self.group.store()
 
         self.group.set_extra_many({'valid_key': 'changed'})
-        self.assertEqual(orm.load_group(self.group.pk).get_extra('valid_key'), 'changed')
+        assert orm.load_group(self.group.pk).get_extra('valid_key') == 'changed'
 
     def test_reset_extra(self):
         """Test the `Group.reset_extra` method."""
@@ -510,25 +502,25 @@ class TestGroupExtras(AiidaTestCase):
         extras_illegal = {'extra.illegal': 'value', 'extra_four': 'value'}
 
         self.group.set_extra_many(extras_before)
-        self.assertEqual(self.group.extras, extras_before)
+        assert self.group.extras == extras_before
         self.group.reset_extras(extras_after)
-        self.assertEqual(self.group.extras, extras_after)
+        assert self.group.extras == extras_after
 
-        with self.assertRaises(exceptions.ValidationError):
+        with pytest.raises(exceptions.ValidationError):
             self.group.reset_extras(extras_illegal)
 
         self.group.store()
 
         self.group.reset_extras(extras_after)
-        self.assertEqual(orm.load_group(self.group.pk).extras, extras_after)
+        assert orm.load_group(self.group.pk).extras == extras_after
 
     def test_delete_extra(self):
         """Test the `Group.delete_extra` method."""
         self.group.set_extra('valid_key', 'value')
-        self.assertEqual(self.group.get_extra('valid_key'), 'value')
+        assert self.group.get_extra('valid_key') == 'value'
         self.group.delete_extra('valid_key')
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             self.group.delete_extra('valid_key')
 
         # Repeat with stored group
@@ -536,7 +528,7 @@ class TestGroupExtras(AiidaTestCase):
         self.group.store()
 
         self.group.delete_extra('valid_key')
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             orm.load_group(self.group.pk).get_extra('valid_key')
 
     def test_delete_extra_many(self):
@@ -546,39 +538,39 @@ class TestGroupExtras(AiidaTestCase):
         invalid_keys = ['extra_one', 'invalid_key']
 
         self.group.set_extra_many(extras_valid)
-        self.assertEqual(self.group.extras, extras_valid)
+        assert self.group.extras == extras_valid
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             self.group.delete_extra_many(invalid_keys)
 
         self.group.store()
 
         self.group.delete_extra_many(valid_keys)
-        self.assertEqual(orm.load_group(self.group.pk).extras, {})
+        assert orm.load_group(self.group.pk).extras == {}
 
     def test_clear_extras(self):
         """Test the `Group.clear_extras` method."""
         extras = {'extra_one': 'value', 'extra_two': 'value'}
         self.group.set_extra_many(extras)
-        self.assertEqual(self.group.extras, extras)
+        assert self.group.extras == extras
 
         self.group.clear_extras()
-        self.assertEqual(self.group.extras, {})
+        assert self.group.extras == {}
 
         # Repeat for stored group
         self.group.store()
 
         self.group.clear_extras()
-        self.assertEqual(orm.load_group(self.group.pk).extras, {})
+        assert orm.load_group(self.group.pk).extras == {}
 
     def test_extras_items(self):
         """Test the `Group.extras_items` generator."""
         extras = {'extra_one': 'value', 'extra_two': 'value'}
         self.group.set_extra_many(extras)
-        self.assertEqual(dict(self.group.extras_items()), extras)
+        assert dict(self.group.extras_items()) == extras
 
     def test_extras_keys(self):
         """Test the `Group.extras_keys` generator."""
         extras = {'extra_one': 'value', 'extra_two': 'value'}
         self.group.set_extra_many(extras)
-        self.assertEqual(set(self.group.extras_keys()), set(extras))
+        assert set(self.group.extras_keys()) == set(extras)

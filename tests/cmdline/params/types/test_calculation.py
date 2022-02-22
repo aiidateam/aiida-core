@@ -8,38 +8,37 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `CalculationParamType`."""
+import pytest
 
 from aiida.cmdline.params.types import CalculationParamType
 from aiida.orm import CalcFunctionNode, CalcJobNode, CalculationNode, WorkChainNode, WorkFunctionNode
 from aiida.orm.utils.loaders import OrmEntityLoader
-from aiida.storage.testbase import AiidaTestCase
 
 
-class TestCalculationParamType(AiidaTestCase):
+class TestCalculationParamType:
     """Tests for the `CalculationParamType`."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
         """
         Create some code to test the CalculationParamType parameter type for the command line infrastructure
         We create an initial code with a random name and then on purpose create two code with a name
         that matches exactly the ID and UUID, respectively, of the first one. This allows us to test
         the rules implemented to solve ambiguities that arise when determing the identifier type
         """
-        super().setUpClass(*args, **kwargs)
+        # pylint: disable=attribute-defined-outside-init
+        self.param = CalculationParamType()
+        self.entity_01 = CalculationNode().store()
+        self.entity_02 = CalculationNode().store()
+        self.entity_03 = CalculationNode().store()
+        self.entity_04 = WorkFunctionNode()
+        self.entity_05 = CalcFunctionNode()
+        self.entity_06 = CalcJobNode()
+        self.entity_07 = WorkChainNode()
 
-        cls.param = CalculationParamType()
-        cls.entity_01 = CalculationNode().store()
-        cls.entity_02 = CalculationNode().store()
-        cls.entity_03 = CalculationNode().store()
-        cls.entity_04 = WorkFunctionNode()
-        cls.entity_05 = CalcFunctionNode()
-        cls.entity_06 = CalcJobNode()
-        cls.entity_07 = WorkChainNode()
-
-        cls.entity_01.label = 'calculation_01'
-        cls.entity_02.label = str(cls.entity_01.pk)
-        cls.entity_03.label = str(cls.entity_01.uuid)
+        self.entity_01.label = 'calculation_01'
+        self.entity_02.label = str(self.entity_01.pk)
+        self.entity_03.label = str(self.entity_01.uuid)
 
     def test_get_by_id(self):
         """
@@ -47,7 +46,7 @@ class TestCalculationParamType(AiidaTestCase):
         """
         identifier = f'{self.entity_01.pk}'
         result = self.param.convert(identifier, None, None)
-        self.assertEqual(result.uuid, self.entity_01.uuid)
+        assert result.uuid == self.entity_01.uuid
 
     def test_get_by_uuid(self):
         """
@@ -55,7 +54,7 @@ class TestCalculationParamType(AiidaTestCase):
         """
         identifier = f'{self.entity_01.uuid}'
         result = self.param.convert(identifier, None, None)
-        self.assertEqual(result.uuid, self.entity_01.uuid)
+        assert result.uuid == self.entity_01.uuid
 
     def test_get_by_label(self):
         """
@@ -63,7 +62,7 @@ class TestCalculationParamType(AiidaTestCase):
         """
         identifier = f'{self.entity_01.label}'
         result = self.param.convert(identifier, None, None)
-        self.assertEqual(result.uuid, self.entity_01.uuid)
+        assert result.uuid == self.entity_01.uuid
 
     def test_ambiguous_label_pk(self):
         """
@@ -74,11 +73,11 @@ class TestCalculationParamType(AiidaTestCase):
         """
         identifier = f'{self.entity_02.label}'
         result = self.param.convert(identifier, None, None)
-        self.assertEqual(result.uuid, self.entity_01.uuid)
+        assert result.uuid == self.entity_01.uuid
 
         identifier = f'{self.entity_02.label}{OrmEntityLoader.label_ambiguity_breaker}'
         result = self.param.convert(identifier, None, None)
-        self.assertEqual(result.uuid, self.entity_02.uuid)
+        assert result.uuid == self.entity_02.uuid
 
     def test_ambiguous_label_uuid(self):
         """
@@ -89,8 +88,8 @@ class TestCalculationParamType(AiidaTestCase):
         """
         identifier = f'{self.entity_03.label}'
         result = self.param.convert(identifier, None, None)
-        self.assertEqual(result.uuid, self.entity_01.uuid)
+        assert result.uuid == self.entity_01.uuid
 
         identifier = f'{self.entity_03.label}{OrmEntityLoader.label_ambiguity_breaker}'
         result = self.param.convert(identifier, None, None)
-        self.assertEqual(result.uuid, self.entity_03.uuid)
+        assert result.uuid == self.entity_03.uuid

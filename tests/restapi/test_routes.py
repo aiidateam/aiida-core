@@ -7,21 +7,22 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines
+# pylint: disable=too-many-lines,too-many-public-methods
 """Unittests for REST API."""
 from datetime import date
 import io
 
 from flask_cors.core import ACL_ORIGIN
+import pytest
 
 from aiida import orm
 from aiida.common import json
 from aiida.common.links import LinkType
+from aiida.manage import get_manager
 from aiida.restapi.run_api import configure_api
-from aiida.storage.testbase import AiidaTestCase
 
 
-class RESTApiTestCase(AiidaTestCase):
+class TestRestApi:
     """
     Setup of the tests for the AiiDA RESTful-api
     """
@@ -30,16 +31,16 @@ class RESTApiTestCase(AiidaTestCase):
     _PERPAGE_DEFAULT = 20
     _LIMIT_DEFAULT = 400
 
-    @classmethod
-    def setUpClass(cls):  # pylint: disable=too-many-locals, too-many-statements
-        """
-        Add objects to the database for different requests/filters/orderings etc.
-        """
-        super().setUpClass()
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init,disable=too-many-locals,too-many-statements
 
         api = configure_api(catch_internal_server=True)
-        cls.app = api.app
-        cls.app.config['TESTING'] = True
+        self.app = api.app
+        self.app.config['TESTING'] = True
+
+        self.user = orm.User.objects.get_default()
 
         # create test inputs
         cell = ((2., 0., 0.), (0., 2., 0.), (0., 0., 2.))
@@ -64,10 +65,11 @@ class RESTApiTestCase(AiidaTestCase):
 
         resources = {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
 
-        calcfunc = orm.CalcFunctionNode(computer=cls.computer)
+        self.computer = aiida_localhost
+        calcfunc = orm.CalcFunctionNode(computer=self.computer)
         calcfunc.store()
 
-        calc = orm.CalcJobNode(computer=cls.computer)
+        calc = orm.CalcJobNode(computer=self.computer)
         calc.set_option('resources', resources)
         calc.set_attribute('attr1', 'OK')
         calc.set_attribute('attr2', 'OK')
@@ -106,7 +108,7 @@ class RESTApiTestCase(AiidaTestCase):
 
         kpoint.add_incoming(calc, link_type=LinkType.CREATE, link_label='create')
 
-        calc1 = orm.CalcJobNode(computer=cls.computer)
+        calc1 = orm.CalcJobNode(computer=self.computer)
         calc1.set_option('resources', resources)
         calc1.store()
 
@@ -137,15 +139,14 @@ class RESTApiTestCase(AiidaTestCase):
             computer.store()
 
         # Prepare typical REST responses
-        cls.process_dummy_data()
+        self.process_dummy_data()
 
-    @classmethod
-    def tearDownClass(cls):
-        # we need to reset the default user here,
-        # because the REST API's close_thread_connection decorator wil have closed its session,
-        # meaning the `PsqlDosBackend._clear` method will fail
-        orm.User.objects.reset()
-        super().tearDownClass()
+        yield
+
+        # because the `close_thread_connection` decorator, currently, directly closes the SQLA session,
+        # the default user will be detached from the session, and the `_clean` method will fail.
+        # So, we need to reattach the default user to the session.
+        get_manager().get_profile_storage().get_session().add(self.user.backend_entity.bare_model)
 
     def get_dummy_data(self):
         return self._dummy_data
@@ -153,8 +154,7 @@ class RESTApiTestCase(AiidaTestCase):
     def get_url_prefix(self):
         return self._url_prefix
 
-    @classmethod
-    def process_dummy_data(cls):
+    def process_dummy_data(self):
         # pylint: disable=fixme
         """
         This functions prepare atomic chunks of typical responses from the
@@ -178,7 +178,7 @@ class RESTApiTestCase(AiidaTestCase):
         for comp in computers:
             if comp['uuid'] is not None:
                 comp['uuid'] = str(comp['uuid'])
-        cls._dummy_data['computers'] = computers
+        self._dummy_data['computers'] = computers
 
         calculation_projections = ['id', 'uuid', 'user_id', 'node_type']
         calculations = orm.QueryBuilder().append(orm.CalculationNode, tag='calc',
@@ -194,7 +194,7 @@ class RESTApiTestCase(AiidaTestCase):
         for calc in calculations:
             if calc['uuid'] is not None:
                 calc['uuid'] = str(calc['uuid'])
-        cls._dummy_data['calculations'] = calculations
+        self._dummy_data['calculations'] = calculations
 
         data_projections = ['id', 'uuid', 'user_id', 'node_type']
         data_types = {
@@ -217,7 +217,7 @@ class RESTApiTestCase(AiidaTestCase):
                 if datum['uuid'] is not None:
                     datum['uuid'] = str(datum['uuid'])
 
-            cls._dummy_data[label] = data
+            self._dummy_data[label] = data
 
     def split_path(self, url):
         # pylint: disable=no-self-use
@@ -250,13 +250,13 @@ class RESTApiTestCase(AiidaTestCase):
         """
         path, query_string = self.split_path(url)
 
-        self.assertEqual(response['method'], 'GET')
-        self.assertEqual(response['resource_type'], node_type)
-        self.assertEqual(response['path'], path)
-        self.assertEqual(response['id'], uuid)
-        self.assertEqual(response['query_string'], query_string)
-        self.assertEqual(response['url'], f'http://localhost{url}')
-        self.assertEqual(response['url_root'], 'http://localhost/')
+        assert response['method'] == 'GET'
+        assert response['resource_type'] == node_type
+        assert response['path'] == path
+        assert response['id'] == uuid
+        assert response['query_string'] == query_string
+        assert response['url'] == f'http://localhost{url}'
+        assert response['url_root'] == 'http://localhost/'
 
     # node details and list with limit, offset, page, perpage
     def process_test(
@@ -305,7 +305,7 @@ class RESTApiTestCase(AiidaTestCase):
             response = json.loads(rv_response.data)
 
             if expected_errormsg:
-                self.assertEqual(response['message'], expected_errormsg)
+                assert response['message'] == expected_errormsg
             else:
                 if full_list:
                     expected_data = self._dummy_data[result_node_type]
@@ -321,16 +321,9 @@ class RESTApiTestCase(AiidaTestCase):
 
                 expected_node_uuids = [node['uuid'] for node in expected_data]
                 result_node_uuids = [node['uuid'] for node in response['data'][result_name]]
-                self.assertEqual(expected_node_uuids, result_node_uuids)
+                assert expected_node_uuids == result_node_uuids
 
                 self.compare_extra_response_data(entity_type, url, response, uuid)
-
-
-class RESTApiTestSuite(RESTApiTestCase):
-    # pylint: disable=too-many-public-methods
-    """
-    Define unittests for rest api
-    """
 
     ############### generic endpoints ########################
 
@@ -345,8 +338,8 @@ class RESTApiTestSuite(RESTApiTestCase):
             response = client.get(url)
             data = json.loads(response.data)['data']
 
-            self.assertEqual(__version__, data['AiiDA_version'])
-            self.assertEqual(self.get_url_prefix(), data['API_prefix'])
+            assert __version__ == data['AiiDA_version']
+            assert self.get_url_prefix() == data['API_prefix']
 
     def test_base_url(self):
         """
@@ -356,8 +349,8 @@ class RESTApiTestSuite(RESTApiTestCase):
             data_base = json.loads(client.get(self.get_url_prefix() + '/').data)['data']
             data_server = json.loads(client.get(self.get_url_prefix() + '/server/endpoints').data)['data']
 
-            self.assertTrue(len(data_base['available_endpoints']) > 0)
-            self.assertDictEqual(data_base, data_server)
+            assert len(data_base['available_endpoints']) > 0
+            assert data_base == data_server
 
     def test_cors_headers(self):
         """
@@ -368,7 +361,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             response = client.get(url)
             headers = response.headers
-            self.assertEqual(headers.get(ACL_ORIGIN), '*')
+            assert headers.get(ACL_ORIGIN) == '*'
 
     ############### computers endpoint ########################
 
@@ -377,15 +370,13 @@ class RESTApiTestSuite(RESTApiTestCase):
         Requests the details of single computer
         """
         node_uuid = self.get_dummy_data()['computers'][1]['uuid']
-        RESTApiTestCase.process_test(
-            self, 'computers', f'/computers/{str(node_uuid)}', expected_list_ids=[1], uuid=node_uuid
-        )
+        self.process_test('computers', f'/computers/{str(node_uuid)}', expected_list_ids=[1], uuid=node_uuid)
 
     def test_computers_list(self):
         """
         Get the full list of computers from database
         """
-        RESTApiTestCase.process_test(self, 'computers', '/computers?orderby=+id', full_list=True)
+        self.process_test('computers', '/computers?orderby=+id', full_list=True)
 
     def test_computers_list_limit_offset(self):
         """
@@ -394,9 +385,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         It should return the no of rows specified in limit from
         database starting from the no. specified in offset
         """
-        RESTApiTestCase.process_test(
-            self, 'computers', '/computers?limit=2&offset=2&orderby=+id', expected_range=[2, 4]
-        )
+        self.process_test('computers', '/computers?limit=2&offset=2&orderby=+id', expected_range=[2, 4])
 
     def test_computers_list_limit_only(self):
         """
@@ -405,7 +394,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         It should return the no of rows specified in limit from
         database.
         """
-        RESTApiTestCase.process_test(self, 'computers', '/computers?limit=2&orderby=+id', expected_range=[None, 2])
+        self.process_test('computers', '/computers?limit=2&orderby=+id', expected_range=[None, 2])
 
     def test_computers_list_offset_only(self):
         """
@@ -414,7 +403,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         It should return all the rows from database starting from
         the no. specified in offset
         """
-        RESTApiTestCase.process_test(self, 'computers', '/computers?offset=2&orderby=+id', expected_range=[2, None])
+        self.process_test('computers', '/computers?offset=2&orderby=+id', expected_range=[2, None])
 
     def test_computers_list_limit_offset_perpage(self):
         """
@@ -422,8 +411,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         would return the error message.
         """
         expected_error = 'perpage key is incompatible with limit and offset'
-        RESTApiTestCase.process_test(
-            self, 'computers', '/computers?offset=2&limit=1&perpage=2&orderby=+id', expected_errormsg=expected_error
+        self.process_test(
+            'computers', '/computers?offset=2&limit=1&perpage=2&orderby=+id', expected_errormsg=expected_error
         )
 
     def test_computers_list_page_limit_offset(self):
@@ -433,8 +422,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         expected_error = 'requesting a specific page is incompatible with ' \
                          'limit and offset'
-        RESTApiTestCase.process_test(
-            self, 'computers', '/computers/page/2?offset=2&limit=1&orderby=+id', expected_errormsg=expected_error
+        self.process_test(
+            'computers', '/computers/page/2?offset=2&limit=1&orderby=+id', expected_errormsg=expected_error
         )
 
     def test_complist_pagelimitoffset_perpage(self):
@@ -443,11 +432,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         would return the error message.
         """
         expected_error = 'perpage key is incompatible with limit and offset'
-        RESTApiTestCase.process_test(
-            self,
-            'computers',
-            '/computers/page/2?offset=2&limit=1&perpage=2&orderby=+id',
-            expected_errormsg=expected_error
+        self.process_test(
+            'computers', '/computers/page/2?offset=2&limit=1&perpage=2&orderby=+id', expected_errormsg=expected_error
         )
 
     def test_computers_list_page_default(self):
@@ -459,16 +445,14 @@ class RESTApiTestSuite(RESTApiTestCase):
         "/page" acts as "/page/1?perpage=default_value"
 
         """
-        RESTApiTestCase.process_test(self, 'computers', '/computers/page?orderby=+id', full_list=True)
+        self.process_test('computers', '/computers/page?orderby=+id', full_list=True)
 
     def test_computers_list_page_perpage(self):
         """
         no.of pages = total no. of computers in database / perpage
         Using this formula it returns the no. of rows for requested page
         """
-        RESTApiTestCase.process_test(
-            self, 'computers', '/computers/page/1?perpage=2&orderby=+id', expected_range=[None, 2]
-        )
+        self.process_test('computers', '/computers/page/1?perpage=2&orderby=+id', expected_range=[None, 2])
 
     def test_computers_list_page_perpage_exceed(self):
         """
@@ -479,9 +463,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         expected_error = 'Non existent page requested. The page range is [1 : ' \
                          '3]'
-        RESTApiTestCase.process_test(
-            self, 'computers', '/computers/page/4?perpage=2&orderby=+id', expected_errormsg=expected_error
-        )
+        self.process_test('computers', '/computers/page/4?perpage=2&orderby=+id', expected_errormsg=expected_error)
 
     ############### list filters ########################
     def test_computers_filter_id1(self):
@@ -491,7 +473,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         """
         node_pk = self.get_dummy_data()['computers'][1]['id']
 
-        RESTApiTestCase.process_test(self, 'computers', f'/computers?id={str(node_pk)}', expected_list_ids=[1])
+        self.process_test('computers', f'/computers?id={str(node_pk)}', expected_list_ids=[1])
 
     def test_computers_filter_id2(self):
         """
@@ -499,9 +481,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         list (e.g. id > 2)
         """
         node_pk = self.get_dummy_data()['computers'][1]['id']
-        RESTApiTestCase.process_test(
-            self, 'computers', f'/computers?id>{str(node_pk)}&orderby=+id', expected_range=[2, None]
-        )
+        self.process_test('computers', f'/computers?id>{str(node_pk)}&orderby=+id', expected_range=[2, None])
 
     def test_computers_filter_pk(self):
         """
@@ -509,21 +489,21 @@ class RESTApiTestSuite(RESTApiTestCase):
         list (e.g. id=1)
         """
         node_pk = self.get_dummy_data()['computers'][1]['id']
-        RESTApiTestCase.process_test(self, 'computers', f'/computers?pk={str(node_pk)}', expected_list_ids=[1])
+        self.process_test('computers', f'/computers?pk={str(node_pk)}', expected_list_ids=[1])
 
     def test_computers_filter_name(self):
         """
         Add filter for the label of computer and get the filtered computer
         list
         """
-        RESTApiTestCase.process_test(self, 'computers', '/computers?label="test1"', expected_list_ids=[1])
+        self.process_test('computers', '/computers?label="test1"', expected_list_ids=[1])
 
     def test_computers_filter_hostname(self):
         """
         Add filter for the hostname of computer and get the filtered computer
         list
         """
-        RESTApiTestCase.process_test(self, 'computers', '/computers?hostname="test1.epfl.ch"', expected_list_ids=[1])
+        self.process_test('computers', '/computers?hostname="test1.epfl.ch"', expected_list_ids=[1])
 
     def test_computers_filter_transport_type(self):
         """
@@ -531,11 +511,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         computer
         list
         """
-        RESTApiTestCase.process_test(
-            self,
-            'computers',
-            '/computers?transport_type="core.local"&label="test3"&orderby=+id',
-            expected_list_ids=[3]
+        self.process_test(
+            'computers', '/computers?transport_type="core.local"&label="test3"&orderby=+id', expected_list_ids=[3]
         )
 
     ############### list orderby ########################
@@ -544,21 +521,21 @@ class RESTApiTestSuite(RESTApiTestCase):
         Returns the computers list ordered by "id" in ascending
         order
         """
-        RESTApiTestCase.process_test(self, 'computers', '/computers?orderby=id', full_list=True)
+        self.process_test('computers', '/computers?orderby=id', full_list=True)
 
     def test_computers_orderby_id_asc_sign(self):
         """
         Returns the computers list ordered by "+id" in ascending
         order
         """
-        RESTApiTestCase.process_test(self, 'computers', '/computers?orderby=+id', full_list=True)
+        self.process_test('computers', '/computers?orderby=+id', full_list=True)
 
     def test_computers_orderby_id_desc(self):
         """
         Returns the computers list ordered by "id" in descending
         order
         """
-        RESTApiTestCase.process_test(self, 'computers', '/computers?orderby=-id', expected_list_ids=[4, 3, 2, 1, 0])
+        self.process_test('computers', '/computers?orderby=-id', expected_list_ids=[4, 3, 2, 1, 0])
 
     def test_computers_orderby_label_asc(self):
         """
@@ -566,9 +543,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         order
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
-        RESTApiTestCase.process_test(
-            self, 'computers', f'/computers?pk>{str(node_pk)}&orderby=label', expected_list_ids=[1, 2, 3, 4]
-        )
+        self.process_test('computers', f'/computers?pk>{str(node_pk)}&orderby=label', expected_list_ids=[1, 2, 3, 4])
 
     def test_computers_orderby_label_asc_sign(self):
         """
@@ -576,9 +551,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         order
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
-        RESTApiTestCase.process_test(
-            self, 'computers', f'/computers?pk>{str(node_pk)}&orderby=+label', expected_list_ids=[1, 2, 3, 4]
-        )
+        self.process_test('computers', f'/computers?pk>{str(node_pk)}&orderby=+label', expected_list_ids=[1, 2, 3, 4])
 
     def test_computers_orderby_label_desc(self):
         """
@@ -586,9 +559,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         order
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
-        RESTApiTestCase.process_test(
-            self, 'computers', f'/computers?pk>{str(node_pk)}&orderby=-label', expected_list_ids=[4, 3, 2, 1]
-        )
+        self.process_test('computers', f'/computers?pk>{str(node_pk)}&orderby=-label', expected_list_ids=[4, 3, 2, 1])
 
     def test_computers_orderby_scheduler_type_asc(self):
         """
@@ -596,8 +567,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         order
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
-        RESTApiTestCase.process_test(
-            self,
+        self.process_test(
             'computers',
             f"/computers?transport_type=\"core.ssh\"&pk>{str(node_pk)}&orderby=scheduler_type",
             expected_list_ids=[1, 4, 2]
@@ -609,8 +579,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         order
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
-        RESTApiTestCase.process_test(
-            self,
+        self.process_test(
             'computers',
             f"/computers?transport_type=\"core.ssh\"&pk>{str(node_pk)}&orderby=+scheduler_type",
             expected_list_ids=[1, 4, 2]
@@ -622,8 +591,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         order
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
-        RESTApiTestCase.process_test(
-            self,
+        self.process_test(
             'computers',
             f"/computers?pk>{str(node_pk)}&transport_type=\"core.ssh\"&orderby=-scheduler_type",
             expected_list_ids=[2, 4, 1]
@@ -637,11 +605,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         by "id"
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
-        RESTApiTestCase.process_test(
-            self,
-            'computers',
-            f'/computers?pk>{str(node_pk)}&orderby=transport_type,id',
-            expected_list_ids=[3, 1, 2, 4]
+        self.process_test(
+            'computers', f'/computers?pk>{str(node_pk)}&orderby=transport_type,id', expected_list_ids=[3, 1, 2, 4]
         )
 
     def test_computers_orderby_mixed2(self):
@@ -651,11 +616,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         by "name"
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
-        RESTApiTestCase.process_test(
-            self,
-            'computers',
-            f'/computers?pk>{str(node_pk)}&orderby=-scheduler_type,label',
-            expected_list_ids=[2, 3, 4, 1]
+        self.process_test(
+            'computers', f'/computers?pk>{str(node_pk)}&orderby=-scheduler_type,label', expected_list_ids=[2, 3, 4, 1]
         )
 
     def test_computers_orderby_mixed3(self):
@@ -680,7 +642,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         test1 test4
 
 
-        RESTApiTestCase.process_test(self, "computers",
+        self.process_test("computers",
                                   "/computers?orderby=+scheduler_type,
                                   -hostname",
                                   expected_list_ids=[1,0,4,3,2])
@@ -693,8 +655,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         filtered computer list
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
-        RESTApiTestCase.process_test(
-            self, 'computers', f"/computers?id>{str(node_pk)}&hostname=\"test1.epfl.ch\"", expected_list_ids=[1]
+        self.process_test(
+            'computers', f"/computers?id>{str(node_pk)}&hostname=\"test1.epfl.ch\"", expected_list_ids=[1]
         )
 
     def test_computers_filter_mixed2(self):
@@ -703,8 +665,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         and get the filtered computer list
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
-        RESTApiTestCase.process_test(
-            self,
+        self.process_test(
             'computers',
             f"/computers?id>{str(node_pk)}&hostname=\"test3.epfl.ch\"&transport_type=\"core.ssh\"",
             empty_list=True
@@ -716,8 +677,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         url parameters: id, limit and offset
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
-        RESTApiTestCase.process_test(
-            self, 'computers', f'/computers?id>{str(node_pk)}&limit=2&offset=3&orderby=+id', expected_list_ids=[4]
+        self.process_test(
+            'computers', f'/computers?id>{str(node_pk)}&limit=2&offset=3&orderby=+id', expected_list_ids=[4]
         )
 
     def test_computers_mixed2(self):
@@ -725,8 +686,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         url parameters: id, page, perpage
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
-        RESTApiTestCase.process_test(
-            self, 'computers', f'/computers/page/2?id>{str(node_pk)}&perpage=2&orderby=+id', expected_list_ids=[3, 4]
+        self.process_test(
+            'computers', f'/computers/page/2?id>{str(node_pk)}&perpage=2&orderby=+id', expected_list_ids=[3, 4]
         )
 
     def test_computers_mixed3(self):
@@ -734,8 +695,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         url parameters: id, transport_type, orderby
         """
         node_pk = self.get_dummy_data()['computers'][0]['id']
-        RESTApiTestCase.process_test(
-            self,
+        self.process_test(
             'computers',
             f"/computers?id>={str(node_pk)}&transport_type=\"core.ssh\"&orderby=-id&limit=2",
             expected_list_ids=[4, 2]
@@ -747,7 +707,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         url parameters: id, limit and offset
 
         from aiida.common.exceptions import InputValidationError
-        RESTApiTestCase.node_exception(self, "/computers?aa=bb&id=2", InputValidationError)
+        self.node_exception("/computers?aa=bb&id=2", InputValidationError)
         """
 
     ############### calculation retrieved_inputs and retrieved_outputs  #############
@@ -760,7 +720,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
-            self.assertEqual(response['data'], [{'name': 'calcjob_inputs', 'type': 'DIRECTORY'}])
+            assert response['data'] == [{'name': 'calcjob_inputs', 'type': 'DIRECTORY'}]
 
     def test_calculation_retrieved_outputs(self):
         """
@@ -771,7 +731,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
-            self.assertEqual(response['data'], [{'name': 'calcjob_outputs', 'type': 'DIRECTORY'}])
+            assert response['data'] == [{'name': 'calcjob_outputs', 'type': 'DIRECTORY'}]
 
     ############### calculation incoming  #############
     def test_calculation_inputs(self):
@@ -811,17 +771,17 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
-            self.assertEqual(len(response['data']['nodes']), 1)
-            self.assertEqual(len(response['data']['nodes'][0]['incoming']), 1)
-            self.assertEqual(len(response['data']['nodes'][0]['outgoing']), 1)
-            self.assertEqual(len(response['data']['metadata']), 1)
+            assert len(response['data']['nodes']) == 1
+            assert len(response['data']['nodes'][0]['incoming']) == 1
+            assert len(response['data']['nodes'][0]['outgoing']) == 1
+            assert len(response['data']['metadata']) == 1
             expected_attr = [
                 'ctime', 'mtime', 'id', 'node_label', 'node_type', 'uuid', 'description', 'incoming', 'outgoing'
             ]
             received_attr = response['data']['nodes'][0].keys()
             for attr in expected_attr:
-                self.assertIn(attr, received_attr)
-            RESTApiTestCase.compare_extra_response_data(self, 'nodes', url, response, uuid=node_uuid)
+                assert attr in received_attr
+            self.compare_extra_response_data('nodes', url, response, uuid=node_uuid)
 
     ############### calculation attributes #############
     def test_calculation_attributes(self):
@@ -841,9 +801,9 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
-            self.assertNotIn('message', response)
-            self.assertEqual(response['data']['attributes'], attributes)
-            RESTApiTestCase.compare_extra_response_data(self, 'nodes', url, response, uuid=node_uuid)
+            assert 'message' not in response
+            assert response['data']['attributes'] == attributes
+            self.compare_extra_response_data('nodes', url, response, uuid=node_uuid)
 
     def test_contents_attributes_filter(self):
         """
@@ -854,9 +814,9 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
-            self.assertNotIn('message', response)
-            self.assertEqual(response['data']['attributes'], {'attr1': 'OK'})
-            RESTApiTestCase.compare_extra_response_data(self, 'nodes', url, response, uuid=node_uuid)
+            assert 'message' not in response
+            assert response['data']['attributes'] == {'attr1': 'OK'}
+            self.compare_extra_response_data('nodes', url, response, uuid=node_uuid)
 
     ############### calculation node attributes filter  #############
     def test_calculation_attributes_filter(self):
@@ -876,7 +836,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
-            self.assertEqual(response['data']['nodes'][0]['attributes'], attributes)
+            assert response['data']['nodes'][0]['attributes'] == attributes
 
     ############### calculation node extras_filter  #############
     def test_calculation_extras_filter(self):
@@ -889,8 +849,8 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
-            self.assertEqual(response['data']['nodes'][0]['extras']['extra1'], extras['extra1'])
-            self.assertEqual(response['data']['nodes'][0]['extras']['extra2'], extras['extra2'])
+            assert response['data']['nodes'][0]['extras']['extra1'] == extras['extra1']
+            assert response['data']['nodes'][0]['extras']['extra2'] == extras['extra2']
 
     ############### structure node attributes filter #############
     def test_structure_attributes_filter(self):
@@ -903,7 +863,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
-            self.assertEqual(response['data']['nodes'][0]['attributes']['cell'], cell)
+            assert response['data']['nodes'][0]['attributes']['cell'] == cell
 
     ############### node attributes_filter with pagination #############
     def test_node_attributes_filter_pagination(self):
@@ -916,14 +876,14 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
-            self.assertNotEqual(len(response['data']['nodes']), 0)
+            assert len(response['data']['nodes']) != 0
             for node in response['data']['nodes']:
-                self.assertIn('attributes', node)
-                self.assertNotIn('attributes.resources', node)
-                self.assertNotIn('attributes.cell', node)
-                self.assertEqual(len(node['attributes']), len(expected_attributes))
+                assert 'attributes' in node
+                assert 'attributes.resources' not in node
+                assert 'attributes.cell' not in node
+                assert len(node['attributes']) == len(expected_attributes)
                 for attr in expected_attributes:
-                    self.assertIn(attr, node['attributes'])
+                    assert attr in node['attributes']
 
     ############### node get one attributes_filter with pagination #############
     def test_node_single_attributes_filter(self):
@@ -936,9 +896,9 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
-            self.assertNotEqual(len(response['data']['nodes']), 0)
+            assert len(response['data']['nodes']) != 0
             for node in response['data']['nodes']:
-                self.assertEqual(list(node['attributes'].keys()), expected_attribute)
+                assert list(node['attributes'].keys()) == expected_attribute
 
     ############### node extras_filter with pagination #############
     def test_node_extras_filter_pagination(self):
@@ -951,14 +911,14 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
-            self.assertNotEqual(len(response['data']['nodes']), 0)
+            assert len(response['data']['nodes']) != 0
             for node in response['data']['nodes']:
-                self.assertIn('extras', node)
-                self.assertNotIn('extras.extra1', node)
-                self.assertNotIn('extras.extra2', node)
-                self.assertEqual(len(node['extras']), len(expected_extras))
+                assert 'extras' in node
+                assert 'extras.extra1' not in node
+                assert 'extras.extra2' not in node
+                assert len(node['extras']) == len(expected_extras)
                 for extra in expected_extras:
-                    self.assertIn(extra, node['extras'])
+                    assert extra in node['extras']
 
     ############### node get one extras_filter with pagination #############
     def test_node_single_extras_filter(self):
@@ -971,9 +931,9 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
-            self.assertNotEqual(len(response['data']['nodes']), 0)
+            assert len(response['data']['nodes']) != 0
             for node in response['data']['nodes']:
-                self.assertEqual(list(node['extras'].keys()), expected_extra)
+                assert list(node['extras'].keys()) == expected_extra
 
     ############### node full_type filter #############
     def test_nodes_full_type_filter(self):
@@ -990,7 +950,7 @@ class RESTApiTestSuite(RESTApiTestCase):
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
             for node in response['data']['nodes']:
-                self.assertIn(node['uuid'], expected_node_uuids)
+                assert node['uuid'] in expected_node_uuids
 
     def test_nodes_time_filters(self):
         """
@@ -1009,7 +969,7 @@ class RESTApiTestSuite(RESTApiTestCase):
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
             for node in response['data']['nodes']:
-                self.assertIn(node['uuid'], expected_node_uuids)
+                assert node['uuid'] in expected_node_uuids
 
         # mtime filter test
         url = f"{self.get_url_prefix()}/nodes/?mtime={today}&full_type=\"process.calculation.calcjob.CalcJobNode.|\""
@@ -1017,7 +977,7 @@ class RESTApiTestSuite(RESTApiTestCase):
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
             for node in response['data']['nodes']:
-                self.assertIn(node['uuid'], expected_node_uuids)
+                assert node['uuid'] in expected_node_uuids
 
     ############### Structure visualization and download #############
     def test_structure_derived_properties(self):
@@ -1029,16 +989,14 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)
-            self.assertNotIn('message', response)
-            self.assertEqual(
-                response['data']['derived_properties']['dimensionality'], {
-                    'dim': 3,
-                    'value': 8.0,
-                    'label': 'volume'
-                }
-            )
-            self.assertEqual(response['data']['derived_properties']['formula'], 'Ba')
-            RESTApiTestCase.compare_extra_response_data(self, 'nodes', url, response, uuid=node_uuid)
+            assert 'message' not in response
+            assert response['data']['derived_properties']['dimensionality'] == {
+                'dim': 3,
+                'value': 8.0,
+                'label': 'volume'
+            }
+            assert response['data']['derived_properties']['formula'] == 'Ba'
+            self.compare_extra_response_data('nodes', url, response, uuid=node_uuid)
 
     def test_structure_download(self):
         """
@@ -1051,7 +1009,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             rv_obj = client.get(url)
         structure_data = load_node(node_uuid)._exportcontent('xsf')[0]  # pylint: disable=protected-access
-        self.assertEqual(rv_obj.data, structure_data)
+        assert rv_obj.data == structure_data
 
     def test_cif(self):
         """
@@ -1064,7 +1022,7 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             rv_obj = client.get(url)
         cif = load_node(node_uuid)._prepare_cif()[0]  # pylint: disable=protected-access
-        self.assertEqual(rv_obj.data, cif)
+        assert rv_obj.data == cif
 
     ############### projectable_properties #############
     def test_projectable_properties(self):
@@ -1076,7 +1034,7 @@ class RESTApiTestSuite(RESTApiTestCase):
             with self.app.test_client() as client:
                 rv_obj = client.get(url)
                 response = json.loads(rv_obj.data)
-                self.assertNotIn('message', response)
+                assert 'message' not in response
 
                 expected_keys = ['display_name', 'help_text', 'is_display', 'is_foreign_key', 'type']
 
@@ -1084,12 +1042,12 @@ class RESTApiTestSuite(RESTApiTestCase):
                 for _, pinfo in response['data']['fields'].items():
                     available_keys = pinfo.keys()
                     for prop in expected_keys:
-                        self.assertIn(prop, available_keys)
+                        assert prop in available_keys
 
                 # check order
                 available_properties = response['data']['fields'].keys()
                 for prop in response['data']['ordering']:
-                    self.assertIn(prop, available_properties)
+                    assert prop in available_properties
 
     def test_node_namespace(self):
         """
@@ -1107,8 +1065,8 @@ class RESTApiTestSuite(RESTApiTestCase):
                 response = json.loads(rv_obj.data)
                 response_keys = response['data'].keys()
                 for dkay in expected_data_keys:
-                    self.assertIn(dkay, response_keys)
-                RESTApiTestCase.compare_extra_response_data(self, 'nodes', url, response)
+                    assert dkay in response_keys
+                self.compare_extra_response_data('nodes', url, response)
 
     def test_comments(self):
         """
@@ -1122,7 +1080,7 @@ class RESTApiTestSuite(RESTApiTestCase):
             all_comments = []
             for comment in response:
                 all_comments.append(comment['message'])
-            self.assertEqual(sorted(all_comments), sorted(['This is test comment.', 'Add another comment.']))
+            assert sorted(all_comments) == sorted(['This is test comment.', 'Add another comment.'])
 
     def test_repo(self):
         """
@@ -1135,13 +1093,13 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             response_value = client.get(url)
             response = json.loads(response_value.data)
-            self.assertEqual(response['data']['repo_list'], [{'type': 'FILE', 'name': 'aiida.in'}])
+            assert response['data']['repo_list'] == [{'type': 'FILE', 'name': 'aiida.in'}]
 
         url = f"{self.get_url_prefix()}/nodes/{str(node_uuid)}/repo/contents?filename=\"calcjob_inputs/aiida.in\""
         with self.app.test_client() as client:
             response_obj = client.get(url)
             input_file = load_node(node_uuid).get_object_content('calcjob_inputs/aiida.in', mode='rb')
-            self.assertEqual(response_obj.data, input_file)
+            assert response_obj.data == input_file
 
     def test_process_report(self):
         """
@@ -1155,11 +1113,11 @@ class RESTApiTestSuite(RESTApiTestCase):
 
             expected_keys = response['data'].keys()
             for key in ['logs']:
-                self.assertIn(key, expected_keys)
+                assert key in expected_keys
 
             expected_log_keys = response['data']['logs'][0].keys()
             for key in ['time', 'loggername', 'levelname', 'dbnode_id', 'message']:
-                self.assertIn(key, expected_log_keys)
+                assert key in expected_log_keys
 
     def test_download_formats(self):
         """
@@ -1171,10 +1129,10 @@ class RESTApiTestSuite(RESTApiTestCase):
             response = json.loads(response_value.data)
 
             for key in ['data.core.structure.StructureData.|', 'data.core.cif.CifData.|']:
-                self.assertIn(key, response['data'].keys())
+                assert key in response['data'].keys()
             for key in ['cif', 'xsf', 'xyz']:
-                self.assertIn(key, response['data']['data.core.structure.StructureData.|'])
-            self.assertIn('cif', response['data']['data.core.cif.CifData.|'])
+                assert key in response['data']['data.core.structure.StructureData.|']
+            assert 'cif' in response['data']['data.core.cif.CifData.|']
 
     ############### querybuilder ###############
     def test_querybuilder(self):
@@ -1203,23 +1161,19 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             response = client.post(f'{self.get_url_prefix()}/querybuilder', json=query_dict).json
 
-        self.assertEqual('POST', response.get('method', ''))
-        self.assertEqual('QueryBuilder', response.get('resource_type', ''))
+        assert response.get('method', '') == 'POST'
+        assert response.get('resource_type', '') == 'QueryBuilder'
 
-        self.assertEqual(
-            len(expected_node_uuids),
-            len(response.get('data', {}).get('calc', [])),
-            msg=json.dumps(response, indent=2),
-        )
-        self.assertListEqual(
-            expected_node_uuids,
-            [_.get('uuid', '') for _ in response.get('data', {}).get('calc', [])],
-        )
+        assert len(expected_node_uuids) == \
+            len(response.get('data', {}).get('calc', [])), \
+            json.dumps(response, indent=2)
+        assert expected_node_uuids == \
+            [_.get('uuid', '') for _ in response.get('data', {}).get('calc', [])]
         for entities in response.get('data', {}).values():
             for entity in entities:
                 # All are Nodes, but neither `node_type` or `process_type` are requested,
                 # hence `full_type` should not be present.
-                self.assertFalse('full_type' in entity)
+                assert 'full_type' not in entity
 
     def test_get_querybuilder(self):
         """Test GETting the /querybuilder endpoint
@@ -1233,12 +1187,12 @@ class RESTApiTestSuite(RESTApiTestCase):
             response_value = client.get(f'{self.get_url_prefix()}/querybuilder')
             response = response_value.json
 
-        self.assertEqual(response_value.status_code, 405)
-        self.assertEqual(response_value.status, '405 METHOD NOT ALLOWED')
+        assert response_value.status_code == 405
+        assert response_value.status == '405 METHOD NOT ALLOWED'
 
-        self.assertEqual('GET', response.get('method', ''))
-        self.assertEqual('QueryBuilder', response.get('resource_type', ''))
-        self.assertEqual(qb_api.GET_MESSAGE, response.get('data', {}).get('message', ''))
+        assert response.get('method', '') == 'GET'
+        assert response.get('resource_type', '') == 'QueryBuilder'
+        assert qb_api.GET_MESSAGE == response.get('data', {}).get('message', '')
 
     def test_querybuilder_user(self):
         """Retrieve a User through the use of the /querybuilder endpoint
@@ -1270,26 +1224,20 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             response = client.post(f'{self.get_url_prefix()}/querybuilder', json=query_dict).json
 
-        self.assertEqual('POST', response.get('method', ''))
-        self.assertEqual('QueryBuilder', response.get('resource_type', ''))
+        assert response.get('method', '') == 'POST'
+        assert response.get('resource_type', '') == 'QueryBuilder'
 
-        self.assertEqual(
-            len(expected_user_ids),
-            len(response.get('data', {}).get('users', [])),
-            msg=json.dumps(response, indent=2),
-        )
-        self.assertListEqual(
-            expected_user_ids,
-            [_.get('id', '') for _ in response.get('data', {}).get('users', [])],
-        )
-        self.assertListEqual(
-            expected_user_ids,
-            [_.get('user_id', '') for _ in response.get('data', {}).get('calc', [])],
-        )
+        assert len(expected_user_ids) == \
+            len(response.get('data', {}).get('users', [])), \
+            json.dumps(response, indent=2)
+        assert expected_user_ids == \
+            [_.get('id', '') for _ in response.get('data', {}).get('users', [])]
+        assert expected_user_ids == \
+            [_.get('user_id', '') for _ in response.get('data', {}).get('calc', [])]
         for entities in response.get('data', {}).values():
             for entity in entities:
                 # User is not a Node (no full_type)
-                self.assertFalse('full_type' in entity)
+                assert 'full_type' not in entity
 
     def test_querybuilder_project_explicit(self):
         """Expliticly project everything from the resulting entities
@@ -1323,32 +1271,24 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             response = client.post(f'{self.get_url_prefix()}/querybuilder', json=query_dict).json
 
-        self.assertEqual('POST', response.get('method', ''))
-        self.assertEqual('QueryBuilder', response.get('resource_type', ''))
+        assert response.get('method', '') == 'POST'
+        assert response.get('resource_type', '') == 'QueryBuilder'
 
-        self.assertEqual(
-            len(expected_calc_uuids),
-            len(response.get('data', {}).get('calc', [])),
-            msg=json.dumps(response, indent=2),
-        )
-        self.assertEqual(
-            len(expected_data_uuids),
-            len(response.get('data', {}).get('data', [])),
-            msg=json.dumps(response, indent=2),
-        )
-        self.assertListEqual(
-            expected_calc_uuids,
-            [_.get('uuid', '') for _ in response.get('data', {}).get('calc', [])],
-        )
-        self.assertListEqual(
-            expected_data_uuids,
-            [_.get('uuid', '') for _ in response.get('data', {}).get('data', [])],
-        )
+        assert len(expected_calc_uuids) == \
+            len(response.get('data', {}).get('calc', [])), \
+            json.dumps(response, indent=2)
+        assert len(expected_data_uuids) == \
+            len(response.get('data', {}).get('data', [])), \
+            json.dumps(response, indent=2)
+        assert expected_calc_uuids == \
+            [_.get('uuid', '') for _ in response.get('data', {}).get('calc', [])]
+        assert expected_data_uuids == \
+            [_.get('uuid', '') for _ in response.get('data', {}).get('data', [])]
         for entities in response.get('data', {}).values():
             for entity in entities:
                 # All are Nodes, and all properties are projected, full_type should be present
-                self.assertTrue('full_type' in entity)
-                self.assertTrue('attributes' in entity)
+                assert 'full_type' in entity
+                assert 'attributes' in entity
 
     def test_querybuilder_project_implicit(self):
         """Implicitly project everything from the resulting entities
@@ -1374,21 +1314,17 @@ class RESTApiTestSuite(RESTApiTestCase):
         with self.app.test_client() as client:
             response = client.post(f'{self.get_url_prefix()}/querybuilder', json=query_dict).json
 
-        self.assertEqual('POST', response.get('method', ''))
-        self.assertEqual('QueryBuilder', response.get('resource_type', ''))
+        assert response.get('method', '') == 'POST'
+        assert response.get('resource_type', '') == 'QueryBuilder'
 
-        self.assertListEqual(['data'], list(response.get('data', {}).keys()))
-        self.assertEqual(
-            len(expected_data_uuids),
-            len(response.get('data', {}).get('data', [])),
-            msg=json.dumps(response, indent=2),
-        )
-        self.assertListEqual(
-            expected_data_uuids,
-            [_.get('uuid', '') for _ in response.get('data', {}).get('data', [])],
-        )
+        assert ['data'] == list(response.get('data', {}).keys())
+        assert len(expected_data_uuids) == \
+            len(response.get('data', {}).get('data', [])), \
+            json.dumps(response, indent=2)
+        assert expected_data_uuids == \
+            [_.get('uuid', '') for _ in response.get('data', {}).get('data', [])]
         for entities in response.get('data', {}).values():
             for entity in entities:
                 # All are Nodes, and all properties are projected, full_type should be present
-                self.assertTrue('full_type' in entity)
-                self.assertTrue('attributes' in entity)
+                assert 'full_type' in entity
+                assert 'attributes' in entity

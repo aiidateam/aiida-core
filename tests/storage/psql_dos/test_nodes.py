@@ -7,62 +7,66 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=import-error,no-name-in-module
+# pylint: disable=import-error,no-name-in-module,no-self-use
 """Tests for nodes, attributes and links."""
+import pytest
 
 from aiida import orm
-from aiida.orm import Data
-from aiida.storage.testbase import AiidaTestCase
+from aiida.orm import Data, load_node
 
 
-class TestNodeBasicSQLA(AiidaTestCase):
+class TestNodeBasicSQLA:
     """These tests check the basic features of nodes(setting of attributes, copying of files, ...)."""
+
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, backend):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        self.backend = backend
 
     def test_load_nodes(self):
         """Test for load_node() function."""
-        from aiida.orm import load_node
-
         a_obj = Data()
         a_obj.store()
 
-        self.assertEqual(a_obj.pk, load_node(identifier=a_obj.pk).pk)
-        self.assertEqual(a_obj.pk, load_node(identifier=a_obj.uuid).pk)
-        self.assertEqual(a_obj.pk, load_node(pk=a_obj.pk).pk)
-        self.assertEqual(a_obj.pk, load_node(uuid=a_obj.uuid).pk)
+        assert a_obj.pk == load_node(identifier=a_obj.pk).pk
+        assert a_obj.pk == load_node(identifier=a_obj.uuid).pk
+        assert a_obj.pk == load_node(pk=a_obj.pk).pk
+        assert a_obj.pk == load_node(uuid=a_obj.uuid).pk
 
         session = self.backend.get_session()
 
         try:
             session.begin_nested()
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 load_node(identifier=a_obj.pk, pk=a_obj.pk)
         finally:
             session.rollback()
 
         try:
             session.begin_nested()
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 load_node(pk=a_obj.pk, uuid=a_obj.uuid)
         finally:
             session.rollback()
 
         try:
             session.begin_nested()
-            with self.assertRaises(TypeError):
+            with pytest.raises(TypeError):
                 load_node(pk=a_obj.uuid)
         finally:
             session.rollback()
 
         try:
             session.begin_nested()
-            with self.assertRaises(TypeError):
+            with pytest.raises(TypeError):
                 load_node(uuid=a_obj.pk)
         finally:
             session.rollback()
 
         try:
             session.begin_nested()
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 load_node()
         finally:
             session.rollback()
@@ -77,7 +81,7 @@ class TestNodeBasicSQLA(AiidaTestCase):
         from aiida.storage.psql_dos.models.node import DbNode
 
         # Get the automatic user
-        dbuser = self.backend.users.create(f'{self.id()}@aiida.net').store().bare_model
+        dbuser = self.backend.users.create('user@aiida.net').store().bare_model
         # Create a new node but don't add it to the session
         node_uuid = get_new_uuid()
         DbNode(user=dbuser, uuid=node_uuid, node_type=None)
@@ -86,14 +90,14 @@ class TestNodeBasicSQLA(AiidaTestCase):
 
         # Query the session before commit
         res = session.query(DbNode.uuid).filter(DbNode.uuid == node_uuid).all()
-        self.assertEqual(len(res), 0, 'There should not be any nodes with this UUID in the session/DB.')
+        assert len(res) == 0, 'There should not be any nodes with this UUID in the session/DB.'
 
         # Commit the transaction
         session.commit()
 
         # Check again that the node is not in the DB
         res = session.query(DbNode.uuid).filter(DbNode.uuid == node_uuid).all()
-        self.assertEqual(len(res), 0, 'There should not be any nodes with this UUID in the session/DB.')
+        assert len(res) == 0, 'There should not be any nodes with this UUID in the session/DB.'
 
         # Get the automatic user
         dbuser = orm.User.objects.get_default().backend_entity.bare_model
@@ -104,11 +108,11 @@ class TestNodeBasicSQLA(AiidaTestCase):
 
         # Query the session before commit
         res = session.query(DbNode.uuid).filter(DbNode.uuid == node_uuid).all()
-        self.assertEqual(len(res), 1, f'There should be a node in the session/DB with the UUID {node_uuid}')
+        assert len(res) == 1, f'There should be a node in the session/DB with the UUID {node_uuid}'
 
         # Commit the transaction
         session.commit()
 
         # Check again that the node is in the db
         res = session.query(DbNode.uuid).filter(DbNode.uuid == node_uuid).all()
-        self.assertEqual(len(res), 1, f'There should be a node in the session/DB with the UUID {node_uuid}')
+        assert len(res) == 1, f'There should be a node in the session/DB with the UUID {node_uuid}'

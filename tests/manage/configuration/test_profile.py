@@ -7,36 +7,37 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Tests for the Profile class."""
-
 import os
 import uuid
 
+import pytest
+
 from aiida.manage.configuration import Profile
-from aiida.storage.testbase import AiidaTestCase
 from tests.utils.configuration import create_mock_profile
 
 
-class TestProfile(AiidaTestCase):
+class TestProfile:
     """Tests for the Profile class."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        """Setup a mock profile."""
-        super().setUpClass(*args, **kwargs)
-        cls.profile_name = 'test_profile'
-        cls.profile_dictionary = {
+    @pytest.fixture(autouse=True)
+    def init_profile(self):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        self.profile_name = 'test_profile'
+        self.profile_dictionary = {
             'default_user_email': 'dummy@localhost',
             'storage': {
                 'backend': 'psql_dos',
                 'config': {
                     'database_engine': 'postgresql_psycopg2',
-                    'database_name': cls.profile_name,
+                    'database_name': self.profile_name,
                     'database_port': '5432',
                     'database_hostname': 'localhost',
                     'database_username': 'user',
                     'database_password': 'pass',
-                    'repository_uri': f"file:///{os.path.join('/some/path', f'repository_{cls.profile_name}')}",
+                    'repository_uri': f"file:///{os.path.join('/some/path', f'repository_{self.profile_name}')}",
                 }
             },
             'process_control': {
@@ -51,25 +52,25 @@ class TestProfile(AiidaTestCase):
                 }
             }
         }
-        cls.profile = Profile(cls.profile_name, cls.profile_dictionary)
+        self.profile = Profile(self.profile_name, self.profile_dictionary)
 
     def test_base_properties(self):
         """Test the basic properties of a Profile instance."""
-        self.assertEqual(self.profile.name, self.profile_name)
+        assert self.profile.name == self.profile_name
 
-        self.assertEqual(self.profile.storage_backend, 'psql_dos')
-        self.assertEqual(self.profile.storage_config, self.profile_dictionary['storage']['config'])
-        self.assertEqual(self.profile.process_control_backend, 'rabbitmq')
-        self.assertEqual(self.profile.process_control_config, self.profile_dictionary['process_control']['config'])
+        assert self.profile.storage_backend == 'psql_dos'
+        assert self.profile.storage_config == self.profile_dictionary['storage']['config']
+        assert self.profile.process_control_backend == 'rabbitmq'
+        assert self.profile.process_control_config == self.profile_dictionary['process_control']['config']
 
         # Verify that the uuid property returns a valid UUID by attempting to construct an UUID instance from it
         uuid.UUID(self.profile.uuid)
 
         # Check that the default user email field is not None
-        self.assertIsNotNone(self.profile.default_user_email)
+        assert self.profile.default_user_email is not None
 
         # The RabbitMQ prefix should contain the profile UUID
-        self.assertIn(self.profile.uuid, self.profile.rmq_prefix)
+        assert self.profile.uuid in self.profile.rmq_prefix
 
     def test_is_test_profile(self):
         """Test that a profile whose name starts with `test_` is marked as a test profile."""
@@ -77,10 +78,10 @@ class TestProfile(AiidaTestCase):
         profile = create_mock_profile(name=profile_name)
 
         # The one constructed in the setUpClass should be a test profile
-        self.assertTrue(self.profile.is_test_profile)
+        assert self.profile.is_test_profile
 
         # The profile created here should *not* be a test profile
-        self.assertFalse(profile.is_test_profile)
+        assert not profile.is_test_profile
 
     def test_set_option(self):
         """Test the `set_option` method."""
@@ -90,12 +91,12 @@ class TestProfile(AiidaTestCase):
 
         # Setting an option if it does not exist should work
         self.profile.set_option(option_key, option_value_one)
-        self.assertEqual(self.profile.get_option(option_key), option_value_one)
+        assert self.profile.get_option(option_key) == option_value_one
 
         # Setting it again will override it by default
         self.profile.set_option(option_key, option_value_two)
-        self.assertEqual(self.profile.get_option(option_key), option_value_two)
+        assert self.profile.get_option(option_key) == option_value_two
 
         # If we set override to False, it should not override, big surprise
         self.profile.set_option(option_key, option_value_one, override=False)
-        self.assertEqual(self.profile.get_option(option_key), option_value_two)
+        assert self.profile.get_option(option_key) == option_value_two

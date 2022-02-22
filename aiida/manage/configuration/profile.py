@@ -127,9 +127,9 @@ class Profile:  # pylint: disable=too-many-public-methods
         if self.storage_backend == 'psql_dos':
             from aiida.storage.psql_dos.backend import PsqlDosBackend
             return PsqlDosBackend
-        if self.storage_backend == 'archive.sqlite':
-            from aiida.tools.archive.implementations.sqlite.backend import ArchiveReadOnlyBackend
-            return ArchiveReadOnlyBackend
+        if self.storage_backend == 'sqlite_zip':
+            from aiida.storage.sqlite_zip.backend import SqliteZipBackend
+            return SqliteZipBackend
         raise ValueError(f'unknown storage backend type: {self.storage_backend}')
 
     @property

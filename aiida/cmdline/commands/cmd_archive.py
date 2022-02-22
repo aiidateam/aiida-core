@@ -23,6 +23,8 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types import GroupParamType, PathOrUrl
 from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils.common import get_database_summary
+from aiida.common.exceptions import UnreachableStorage
 from aiida.common.links import GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
 
@@ -54,7 +56,7 @@ def inspect(archive, version, meta_data, database):
     latest_version = archive_format.latest_version
     try:
         current_version = archive_format.read_version(archive)
-    except UnreadableArchiveError as exc:
+    except (UnreadableArchiveError, UnreachableStorage) as exc:
         echo.echo_critical(f'archive file of unknown format: {exc}')
 
     if version:

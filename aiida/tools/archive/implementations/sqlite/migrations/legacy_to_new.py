@@ -24,11 +24,12 @@ from sqlalchemy.exc import IntegrityError
 from aiida.common.hashing import chunked_file_hash
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.repository.common import File, FileType
+from aiida.storage.sqlite_zip.utils import create_sqla_engine
 from aiida.tools.archive.common import MIGRATE_LOGGER, batch_iter
 from aiida.tools.archive.exceptions import CorruptArchive, MigrationValidationError
 
 from . import v1_db_schema as db
-from ..common import DB_FILENAME, META_FILENAME, REPO_FOLDER, create_sqla_engine
+from ..common import DB_FILENAME, META_FILENAME, REPO_FOLDER
 from .utils import update_metadata
 
 _NODE_ENTITY_NAME = 'Node'

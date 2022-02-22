@@ -12,41 +12,16 @@ import os
 from pathlib import Path
 import shutil
 import tempfile
-from typing import Callable, Sequence, Union
+from typing import Callable, Sequence
 
 from archive_path import TarPath, ZipPath
-from sqlalchemy import event
-from sqlalchemy.future.engine import Engine, create_engine
 
-from aiida.common import json
 from aiida.common.progress_reporter import create_callback, get_progress_reporter
 
 META_FILENAME = 'metadata.json'
 DB_FILENAME = 'db.sqlite3'
 # folder to store repository files in
 REPO_FOLDER = 'repo'
-
-
-def sqlite_enforce_foreign_keys(dbapi_connection, _):
-    """Enforce foreign key constraints, when using sqlite backend (off by default)"""
-    cursor = dbapi_connection.cursor()
-    cursor.execute('PRAGMA foreign_keys=ON;')
-    cursor.close()
-
-
-def create_sqla_engine(path: Union[str, Path], *, enforce_foreign_keys: bool = True, **kwargs) -> Engine:
-    """Create a new engine instance."""
-    engine = create_engine(
-        f'sqlite:///{path}',
-        json_serializer=json.dumps,
-        json_deserializer=json.loads,
-        encoding='utf-8',
-        future=True,
-        **kwargs
-    )
-    if enforce_foreign_keys:
-        event.listen(engine, 'connect', sqlite_enforce_foreign_keys)
-    return engine
 
 
 def copy_zip_to_zip(

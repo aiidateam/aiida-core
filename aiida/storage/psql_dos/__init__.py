@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module with implementation of the storage backend using SqlAlchemy and the disk-objectstore."""
+"""Module with implementation of the storage backend using PostGreSQL and the disk-objectstore."""
 
 # AUTO-GENERATED
 

@@ -11,10 +11,11 @@
 from pathlib import Path
 from typing import Any, List, Literal, Union, overload
 
+from aiida.storage.sqlite_zip.utils import read_version
 from aiida.tools.archive.abstract import ArchiveFormatAbstract
 
 from .migrations.main import ALL_VERSIONS, migrate
-from .reader import ArchiveReaderSqlZip, read_version
+from .reader import ArchiveReaderSqlZip
 from .writer import ArchiveAppenderSqlZip, ArchiveWriterSqlZip
 
 __all__ = ('ArchiveFormatSqlZip',)

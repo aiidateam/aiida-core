@@ -29,26 +29,26 @@ from aiida.common.exceptions import IntegrityError
 from aiida.common.hashing import chunked_file_hash
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.orm.entities import EntityTypes
+from aiida.storage.sqlite_zip import models, utils
 from aiida.tools.archive.abstract import ArchiveFormatAbstract, ArchiveWriterAbstract
 from aiida.tools.archive.exceptions import CorruptArchive, IncompatibleArchiveVersionError
 
-from . import backend as db
-from .common import DB_FILENAME, META_FILENAME, REPO_FOLDER, create_sqla_engine
+from .common import DB_FILENAME, META_FILENAME, REPO_FOLDER
 
 
 @functools.lru_cache(maxsize=10)
 def _get_model_from_entity(entity_type: EntityTypes):
     """Return the Sqlalchemy model and column names corresponding to the given entity."""
     model = {
-        EntityTypes.USER: db.DbUser,
-        EntityTypes.AUTHINFO: db.DbAuthInfo,
-        EntityTypes.GROUP: db.DbGroup,
-        EntityTypes.NODE: db.DbNode,
-        EntityTypes.COMMENT: db.DbComment,
-        EntityTypes.COMPUTER: db.DbComputer,
-        EntityTypes.LOG: db.DbLog,
-        EntityTypes.LINK: db.DbLink,
-        EntityTypes.GROUP_NODE: db.DbGroupNodes
+        EntityTypes.USER: models.DbUser,
+        EntityTypes.AUTHINFO: models.DbAuthInfo,
+        EntityTypes.GROUP: models.DbGroup,
+        EntityTypes.NODE: models.DbNode,
+        EntityTypes.COMMENT: models.DbComment,
+        EntityTypes.COMPUTER: models.DbComputer,
+        EntityTypes.LOG: models.DbLog,
+        EntityTypes.LINK: models.DbLink,
+        EntityTypes.GROUP_NODE: models.DbGroupNodes
     }[entity_type]
     mapper = inspect(model).mapper
     column_names = {col.name for col in mapper.c.values()}
@@ -106,10 +106,10 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
             info_order=(self.meta_name, self.db_name),
             name_to_info=self._central_dir,
         )
-        engine = create_sqla_engine(
+        engine = utils.create_sqla_engine(
             self._work_dir / self.db_name, enforce_foreign_keys=self._enforce_foreign_keys, echo=self._debug
         )
-        db.ArchiveDbBase.metadata.create_all(engine)
+        models.SqliteBase.metadata.create_all(engine)
         self._conn = engine.connect()
         self._in_context = True
         return self
@@ -251,7 +251,7 @@ class ArchiveAppenderSqlZip(ArchiveWriterSqlZip):
             except Exception as exc:
                 raise CorruptArchive(f'database could not be read: {exc}') from exc
         # open a connection to the database
-        engine = create_sqla_engine(
+        engine = utils.create_sqla_engine(
             self._work_dir / self.db_name, enforce_foreign_keys=self._enforce_foreign_keys, echo=self._debug
         )
         # to-do could check that the database has correct schema:

@@ -217,9 +217,13 @@ class PsqlDostoreMigrator:
                 # the database is a legacy django one,
                 # so we need to copy the version from the 'django_migrations' table to the 'alembic_version' one
                 legacy_version = self.get_schema_version_profile(connection, check_legacy=True)
+                if legacy_version is None:
+                    raise exceptions.StorageMigrationError(
+                        'No schema version could be read from the database. '
+                        "Check that either the 'alembic_version' or 'django_migrations' tables "
+                        'are present and accessible, using e.g. `verdi devel run-sql "SELECT * FROM alembic_version"`'
+                    )
                 # the version should be of the format '00XX_description'
-                assert legacy_version is not None
-                assert legacy_version[:4].startswith('00')
                 version = f'django_{legacy_version[:4]}'
                 with self._migration_context(connection) as context:
                     context.stamp(context.script, version)

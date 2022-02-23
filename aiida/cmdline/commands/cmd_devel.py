@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi devel` commands."""
+from pathlib import Path
 import sys
 
 import click
@@ -119,3 +120,12 @@ def devel_play():
     """Play the Aida triumphal march by Giuseppe Verdi."""
     import webbrowser
     webbrowser.open_new('http://upload.wikimedia.org/wikipedia/commons/3/32/Triumphal_March_from_Aida.ogg')
+
+
+@verdi_devel.command('migrate-plugin')
+@click.argument('path', type=click.Path(exists=True))
+def migrate_plugin(path):
+    """Migrate the files in a plugin to aiida-core v2.0."""
+    from aiida.cmdline.utils.devel import migrate_path
+
+    migrate_path(Path(path))

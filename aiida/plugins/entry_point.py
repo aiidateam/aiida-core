@@ -23,6 +23,8 @@ from importlib_metadata import entry_points as _eps
 from aiida.common.exceptions import LoadingEntryPointError, MissingEntryPointError, MultipleEntryPointError
 from aiida.common.warnings import AiidaDeprecationWarning
 
+from . import factories
+
 __all__ = ('load_entry_point', 'load_entry_point_from_string', 'parse_entry_point', 'get_entry_points')
 
 ENTRY_POINT_GROUP_PREFIX = 'aiida.'
@@ -89,6 +91,18 @@ DEPRECATED_ENTRY_POINTS_MAPPING = {
     'aiida.workflows': ['arithmetic.multiply_add', 'arithmetic.add_multiply'],
 }
 
+FACTORY_MAPPING = {
+    'aiida.calculations': factories.CalculationFactory,
+    'aiida.data': factories.DataFactory,
+    'aiida.groups': factories.GroupFactory,
+    'aiida.parsers': factories.ParserFactory,
+    'aiida.schedulers': factories.SchedulerFactory,
+    'aiida.transports': factories.TransportFactory,
+    'aiida.tools.dbimporters': factories.DbImporterFactory,
+    'aiida.tools.data.orbitals': factories.OrbitalFactory,
+    'aiida.workflows': factories.WorkflowFactory,
+}
+
 
 def parse_entry_point(group: str, spec: str) -> EntryPoint:
     """Return an entry point, given its group and spec (as formatted in the setup)"""
@@ -105,21 +119,7 @@ def validate_registered_entry_points() -> None:  # pylint: disable=invalid-name
         * The resource's type is incompatible with the entry point group that it is defined in.
 
     """
-    from . import factories
-
-    factory_mapping = {
-        'aiida.calculations': factories.CalculationFactory,
-        'aiida.data': factories.DataFactory,
-        'aiida.groups': factories.GroupFactory,
-        'aiida.parsers': factories.ParserFactory,
-        'aiida.schedulers': factories.SchedulerFactory,
-        'aiida.transports': factories.TransportFactory,
-        'aiida.tools.dbimporters': factories.DbImporterFactory,
-        'aiida.tools.data.orbital': factories.OrbitalFactory,
-        'aiida.workflows': factories.WorkflowFactory,
-    }
-
-    for entry_point_group, factory in factory_mapping.items():
+    for entry_point_group, factory in FACTORY_MAPPING.items():
         entry_points = get_entry_points(entry_point_group)
         for entry_point in entry_points:
             factory(entry_point.name)

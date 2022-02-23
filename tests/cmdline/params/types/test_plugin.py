@@ -177,22 +177,22 @@ class TestPluginParamType:
         entry_point_partial = 'transports:core.ssh'
         entry_point_full = 'aiida.transports:core.ssh'
 
-        options = [item[0] for item in param.complete(None, 'core.ss')]
+        options = [item.value for item in param.shell_complete(None, None, 'core.ss')]
         assert entry_point_minimal in options
 
-        options = [item[0] for item in param.complete(None, 'core.ssh')]
+        options = [item.value for item in param.shell_complete(None, None, 'core.ssh')]
         assert entry_point_minimal in options
 
-        options = [item[0] for item in param.complete(None, 'transports:core.ss')]
+        options = [item.value for item in param.shell_complete(None, None, 'transports:core.ss')]
         assert entry_point_partial in options
 
-        options = [item[0] for item in param.complete(None, 'transports:core.ssh')]
+        options = [item.value for item in param.shell_complete(None, None, 'transports:core.ssh')]
         assert entry_point_partial in options
 
-        options = [item[0] for item in param.complete(None, 'aiida.transports:core.ss')]
+        options = [item.value for item in param.shell_complete(None, None, 'aiida.transports:core.ss')]
         assert entry_point_full in options
 
-        options = [item[0] for item in param.complete(None, 'aiida.transports:core.ssh')]
+        options = [item.value for item in param.shell_complete(None, None, 'aiida.transports:core.ssh')]
         assert entry_point_full in options
 
     def test_complete_amibguity(self):
@@ -205,31 +205,31 @@ class TestPluginParamType:
         entry_point_full_calculations = 'aiida.calculations:core.arithmetic.add'
         entry_point_full_parsers = 'aiida.parsers:core.arithmetic.add'
 
-        options = [item[0] for item in param.complete(None, 'aiida.calculations:core.arith')]
+        options = [item.value for item in param.shell_complete(None, None, 'aiida.calculations:core.arith')]
         assert entry_point_full_calculations in options
 
-        options = [item[0] for item in param.complete(None, 'aiida.calculations:core.arithmetic.add')]
+        options = [item.value for item in param.shell_complete(None, None, 'aiida.calculations:core.arithmetic.add')]
         assert entry_point_full_calculations in options
 
-        options = [item[0] for item in param.complete(None, 'aiida.parsers:core.arith')]
+        options = [item.value for item in param.shell_complete(None, None, 'aiida.parsers:core.arith')]
         assert entry_point_full_parsers in options
 
-        options = [item[0] for item in param.complete(None, 'aiida.parsers:core.arithmetic.add')]
+        options = [item.value for item in param.shell_complete(None, None, 'aiida.parsers:core.arithmetic.add')]
         assert entry_point_full_parsers in options
 
         # PARTIAL or MINIMAL string formats will not be autocompleted
-        options = [item[0] for item in param.complete(None, 'parsers:core.arith')]
+        options = [item.value for item in param.shell_complete(None, None, 'parsers:core.arith')]
         assert entry_point_full_calculations not in options
         assert entry_point_full_parsers not in options
 
-        options = [item[0] for item in param.complete(None, 'parsers:core.arithmetic.add')]
+        options = [item.value for item in param.shell_complete(None, None, 'parsers:core.arithmetic.add')]
         assert entry_point_full_calculations not in options
         assert entry_point_full_parsers not in options
 
-        options = [item[0] for item in param.complete(None, 'core.arith')]
+        options = [item.value for item in param.shell_complete(None, None, 'core.arith')]
         assert entry_point_full_calculations not in options
         assert entry_point_full_parsers not in options
 
-        options = [item[0] for item in param.complete(None, 'core.arithmetic.add')]
+        options = [item.value for item in param.shell_complete(None, None, 'core.arithmetic.add')]
         assert entry_point_full_calculations not in options
         assert entry_point_full_parsers not in options

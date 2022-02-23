@@ -45,8 +45,8 @@ def setup_computers(aiida_profile_clean):  # pylint: disable=unused-argument
     return entity_01, entity_02, entity_03
 
 
-def test_complete(setup_computers, parameter_type):
-    """Test the `complete` method that provides auto-complete functionality."""
+def test_shell_complete(setup_computers, parameter_type):
+    """Test the `shell_complete` method that provides auto-complete functionality."""
     kwargs = {
         'hostname': 'localhost',
         'transport_type': 'core.local',
@@ -56,10 +56,10 @@ def test_complete(setup_computers, parameter_type):
     entity_01, entity_02, entity_03 = setup_computers
     entity_04 = orm.Computer(label='xavier', **kwargs).store()
 
-    options = [item[0] for item in parameter_type.complete(None, '')]
+    options = [item.value for item in parameter_type.shell_complete(None, None, '')]
     assert sorted(options) == sorted([entity_01.label, entity_02.label, entity_03.label, entity_04.label])
 
-    options = [item[0] for item in parameter_type.complete(None, 'xa')]
+    options = [item.value for item in parameter_type.shell_complete(None, None, 'xa')]
     assert sorted(options) == sorted([entity_04.label])
 
 

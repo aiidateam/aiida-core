@@ -10,7 +10,7 @@
 """
 Module for the custom click param type computer
 """
-
+from click.shell_completion import CompletionItem
 from click.types import StringParamType
 
 from ...utils import decorators  # pylint: disable=no-name-in-module
@@ -38,12 +38,12 @@ class ComputerParamType(IdentifierParamType):
         return ComputerEntityLoader
 
     @decorators.with_dbenv()
-    def complete(self, ctx, incomplete):  # pylint: disable=unused-argument
+    def shell_complete(self, ctx, param, incomplete):  # pylint: disable=unused-argument
         """Return possible completions based on an incomplete value.
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description
         """
-        return [(option, '') for option, in self.orm_class_loader.get_options(incomplete, project='label')]
+        return [CompletionItem(option) for option, in self.orm_class_loader.get_options(incomplete, project='label')]
 
 
 class ShebangParamType(StringParamType):

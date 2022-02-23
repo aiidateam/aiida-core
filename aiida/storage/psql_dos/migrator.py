@@ -222,7 +222,7 @@ class PsqlDostoreMigrator:
                         'No schema version could be read from the database. '
                         "Check that either the 'alembic_version' or 'django_migrations' tables "
                         'are present and accessible, using e.g. `verdi devel run-sql "SELECT * FROM alembic_version"`'
-                )
+                    )
                 # the version should be of the format '00XX_description'
                 version = f'django_{legacy_version[:4]}'
                 with self._migration_context(connection) as context:

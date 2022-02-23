@@ -271,6 +271,7 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
             flag to request more detailed information about the content of the storage.
 
         :returns:
-            a nested dict with the relevant information.
+            a nested dict with the relevant information (with at least one key for `database`
+            and one for `repository`).
 
         """

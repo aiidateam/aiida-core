@@ -399,4 +399,8 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
 
     def get_info(self, statistics: bool = False) -> dict:
         repository = self.get_repository()
-        return repository.get_info(statistics)
+        output_dict = {
+            'database': {},
+            'repository': repository.get_info(statistics),
+        }
+        return output_dict

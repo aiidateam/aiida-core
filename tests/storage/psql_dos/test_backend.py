@@ -123,12 +123,17 @@ def test_get_info(monkeypatch):
     RepoBackendClass = get_manager().get_profile_storage().get_repository().__class__  # pylint: disable=invalid-name
     monkeypatch.setattr(RepoBackendClass, 'get_info', mock_get_info)
 
-    repository_info_out = storage_backend.get_info()
+    storage_info_out = storage_backend.get_info()
+    assert 'database' in storage_info_out
+    assert 'repository' in storage_info_out
+
+    repository_info_out = storage_info_out['repository']
     assert 'value' in repository_info_out
     assert 'extra_value' not in repository_info_out
     assert repository_info_out['value'] == 42
 
-    repository_info_out = storage_backend.get_info(statistics=True)
+    storage_info_out = storage_backend.get_info(statistics=True)
+    repository_info_out = storage_info_out['repository']
     assert 'value' in repository_info_out
     assert 'extra_value' in repository_info_out
     assert repository_info_out['value'] == 42

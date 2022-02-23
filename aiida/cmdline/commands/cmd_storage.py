@@ -100,10 +100,8 @@ def storage_info(statistics):
     storage = manager.get_profile_storage()
 
     with spinner():
-        data = {
-            'database': get_database_summary(QueryBuilder, statistics),
-            'repository': storage.get_info(statistics=statistics),
-        }
+        data = storage.get_info(statistics=statistics)
+        data['database']['summary'] = get_database_summary(QueryBuilder, statistics)
 
     echo.echo_dictionary(data, sort_keys=False, fmt='yaml')
 

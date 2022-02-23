@@ -92,7 +92,7 @@ class Manager:
     def load_profile(self, profile: Union[None, str, 'Profile'] = None, allow_switch=False) -> 'Profile':
         """Load a global profile, unloading any previously loaded profile.
 
-        .. note:: if a profile is already loaded and no explicit profile is specified, nothing will be done
+        .. note:: If a profile is already loaded and no explicit profile is specified, nothing will be done.
 
         :param profile: the name of the profile to load, by default will use the one marked as default in the config
         :param allow_switch: if True, will allow switching to a different profile when storage is already loaded
@@ -104,6 +104,10 @@ class Manager:
         from aiida.common.exceptions import InvalidOperation
         from aiida.common.log import configure_logging
         from aiida.manage.configuration.profile import Profile
+
+        # If a profile is already loaded and no explicit profile is specified, we do nothing
+        if profile is None and self._profile:
+            return self._profile
 
         if profile is None or isinstance(profile, str):
             profile = self.get_config().get_profile(profile)

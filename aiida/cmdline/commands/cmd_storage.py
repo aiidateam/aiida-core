@@ -101,6 +101,7 @@ def storage_info(statistics):
 
     with spinner():
         data = storage.get_info(statistics=statistics)
+        data.setdefault('database', {})
         data['database']['summary'] = get_database_summary(QueryBuilder, statistics)
 
     echo.echo_dictionary(data, sort_keys=False, fmt='yaml')

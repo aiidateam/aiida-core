@@ -23,7 +23,6 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types import GroupParamType, PathOrUrl
 from aiida.cmdline.utils import decorators, echo
-from aiida.cmdline.utils.common import get_database_summary
 from aiida.common.links import GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
 
@@ -95,9 +94,7 @@ def inspect(archive, version, meta_data, database):
         echo.echo('-------------------')
         with spinner():
             with archive_format.open(archive, 'r') as archive_reader:
-                data = get_database_summary(archive_reader.querybuilder, True)
-                repo = archive_reader.get_backend().get_repository()
-                data['Repo Files'] = {'count': sum(1 for _ in repo.list_objects())}
+                data = archive_reader.get_backend().get_info(statistics=True)
         echo.echo_dictionary(data, sort_keys=False, fmt='yaml')
 
 

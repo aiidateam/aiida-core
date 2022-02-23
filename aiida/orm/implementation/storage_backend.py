@@ -255,22 +255,62 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
         stop any processes that is currently accessing the profile themselves or wait for it to
         finish on its own.
 
-        :param full:
-            flag to perform operations that require to stop using the profile to be maintained.
-
-        :param dry_run:
-            flag to only print the actions that would be taken without actually executing them.
-
+        :param full: flag to perform operations that require to stop using the profile to be maintained.
+        :param dry_run: flag to only print the actions that would be taken without actually executing them.
         """
 
-    @abc.abstractmethod
     def get_info(self, statistics: bool = False) -> dict:
         """Return general information on the storage.
 
-        :param statistics:
-            flag to request more detailed information about the content of the storage.
-
-        :returns:
-            a nested dict with the relevant information.
-
+        :param statistics: flag to request more detailed information about the content of the storage.
+        :returns: a nested dict with the relevant information.
         """
+        return {'entities': self.get_orm_entities(statistics=statistics)}
+
+    def get_orm_entities(self, statistics: bool = False) -> dict:
+        """Return a mapping with an overview of the storage contents regarding ORM entities.
+
+        :param statistics: flag to request more detailed information about the content of the storage.
+        :returns: a nested dict with the relevant information.
+        """
+        from aiida.orm import Comment, Computer, Group, Log, Node, QueryBuilder, User
+
+        data = {}
+
+        query_user = QueryBuilder(self).append(User, project=['email'])
+        data['Users'] = {'count': query_user.count()}
+        if statistics:
+            data['Users']['emails'] = sorted({email for email, in query_user.iterall() if email is not None})
+
+        query_comp = QueryBuilder(self).append(Computer, project=['label'])
+        data['Computers'] = {'count': query_comp.count()}
+        if statistics:
+            data['Computers']['labels'] = sorted({comp for comp, in query_comp.iterall() if comp is not None})
+
+        count = QueryBuilder(self).append(Node).count()
+        data['Nodes'] = {'count': count}
+        if statistics:
+            node_types = sorted({
+                typ for typ, in QueryBuilder(self).append(Node, project=['node_type']).iterall() if typ is not None
+            })
+            data['Nodes']['node_types'] = node_types
+            process_types = sorted({
+                typ for typ, in QueryBuilder(self).append(Node, project=['process_type']).iterall() if typ is not None
+            })
+            data['Nodes']['process_types'] = [p for p in process_types if p]
+
+        query_group = QueryBuilder(self).append(Group, project=['type_string'])
+        data['Groups'] = {'count': query_group.count()}
+        if statistics:
+            data['Groups']['type_strings'] = sorted({typ for typ, in query_group.iterall() if typ is not None})
+
+        count = QueryBuilder(self).append(Comment).count()
+        data['Comments'] = {'count': count}
+
+        count = QueryBuilder(self).append(Log).count()
+        data['Logs'] = {'count': count}
+
+        count = QueryBuilder(self).append(entity_type='link').count()
+        data['Links'] = {'count': count}
+
+        return data

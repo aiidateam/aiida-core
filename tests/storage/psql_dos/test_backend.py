@@ -124,7 +124,7 @@ def test_get_info(monkeypatch):
     monkeypatch.setattr(RepoBackendClass, 'get_info', mock_get_info)
 
     storage_info_out = storage_backend.get_info()
-    assert 'database' in storage_info_out
+    assert 'entities' in storage_info_out
     assert 'repository' in storage_info_out
 
     repository_info_out = storage_info_out['repository']

@@ -202,7 +202,7 @@ class ZipfileBackendRepository(AbstractRepositoryBackend):
         raise NotImplementedError
 
     def get_info(self, statistics: bool = False, **kwargs) -> dict:
-        raise NotImplementedError
+        return {'objects': {'count': len(list(self.list_objects()))}}
 
 
 class ArchiveBackendQueryBuilder(SqlaQueryBuilder):
@@ -380,7 +380,9 @@ class ArchiveReadOnlyBackend(StorageBackend):  # pylint: disable=too-many-public
         raise NotImplementedError
 
     def get_info(self, statistics: bool = False) -> dict:
-        raise NotImplementedError
+        results = super().get_info(statistics=statistics)
+        results['repository'] = self.get_repository().get_info(statistics)
+        return results
 
 
 def create_backend_cls(base_class, model_cls):

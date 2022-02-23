@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Profile param type for click."""
+from click.shell_completion import CompletionItem
 
 from .strings import LabelStringType
 
@@ -65,7 +66,7 @@ class ProfileParamType(LabelStringType):
 
         return profile
 
-    def complete(self, ctx, incomplete):  # pylint: disable=unused-argument,no-self-use
+    def shell_complete(self, ctx, param, incomplete):  # pylint: disable=unused-argument,no-self-use
         """Return possible completions based on an incomplete value
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description
@@ -81,4 +82,4 @@ class ProfileParamType(LabelStringType):
         except MissingConfigurationError:
             return []
 
-        return [(profile.name, '') for profile in config.profiles if profile.name.startswith(incomplete)]
+        return [CompletionItem(profile.name) for profile in config.profiles if profile.name.startswith(incomplete)]

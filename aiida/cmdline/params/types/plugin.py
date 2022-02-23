@@ -159,13 +159,13 @@ class PluginParamType(EntryPointType):
 
         return possibilites
 
-    def complete(self, ctx, incomplete):  # pylint: disable=unused-argument
+    def shell_complete(self, ctx, param, incomplete):  # pylint: disable=unused-argument
         """
         Return possible completions based on an incomplete value
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description
         """
-        return [(p, '') for p in self.get_possibilities(incomplete=incomplete)]
+        return [click.shell_completion.CompletionItem(p) for p in self.get_possibilities(incomplete=incomplete)]
 
     def get_missing_message(self, param):  # pylint: disable=unused-argument
         return 'Possible arguments are:\n\n' + '\n'.join(self.get_valid_arguments())

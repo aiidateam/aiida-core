@@ -45,12 +45,15 @@ class CodeParamType(IdentifierParamType):
         return CodeEntityLoader
 
     @decorators.with_dbenv()
-    def complete(self, ctx, incomplete):  # pylint: disable=unused-argument
+    def shell_complete(self, ctx, param, incomplete):  # pylint: disable=unused-argument
         """Return possible completions based on an incomplete value.
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description
         """
-        return [(option, '') for option, in self.orm_class_loader.get_options(incomplete, project='label')]
+        return [
+            click.shell_completion.CompletionItem(option)
+            for option, in self.orm_class_loader.get_options(incomplete, project='label')
+        ]
 
     def convert(self, value, param, ctx):
         code = super().convert(value, param, ctx)

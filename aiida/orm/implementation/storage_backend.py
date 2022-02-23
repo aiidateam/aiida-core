@@ -246,7 +246,7 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
 
     @abc.abstractmethod
     def maintain(self, full: bool = False, dry_run: bool = False, **kwargs) -> None:
-        """Performs maintenance tasks on the storage.
+        """Perform maintenance tasks on the storage.
 
         If `full == True`, then this method may attempt to block the profile associated with the
         storage to guarantee the safety of its procedures. This will not only prevent any other
@@ -265,4 +265,12 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
 
     @abc.abstractmethod
     def get_info(self, statistics: bool = False) -> dict:
-        """Returns general information on the storage."""
+        """Return general information on the storage.
+
+        :param statistics:
+            flag to request more detailed information about the content of the storage.
+
+        :returns:
+            a nested dict with the relevant information.
+
+        """

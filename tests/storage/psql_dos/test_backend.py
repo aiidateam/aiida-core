@@ -63,7 +63,7 @@ def test_get_unreferenced_keyset():
     assert 'aborting' in str(exc.value).lower()
 
 
-#yapf: disable
+# yapf: disable
 @pytest.mark.parametrize(
     (
         'kwargs',

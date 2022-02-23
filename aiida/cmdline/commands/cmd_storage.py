@@ -120,12 +120,13 @@ def storage_info(statistics):
     help=
     'Run the maintenance in dry-run mode which will print actions that would be taken without actually executing them.'
 )
-def storage_maintain(full, dry_run):
+@click.pass_context
+def storage_maintain(ctx, full, dry_run):
     """Performs maintenance tasks on the repository."""
     from aiida.manage.manager import get_manager
 
     manager = get_manager()
-    profile = manager.get_profile()
+    profile = ctx.obj.profile
     storage = manager.get_profile_storage()
 
     if full:

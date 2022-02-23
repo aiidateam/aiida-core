@@ -11,7 +11,7 @@
 # pylint: disable=missing-function-docstring
 from contextlib import contextmanager, nullcontext
 import functools
-from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence, Set, Union
 
 from disk_objectstore import Container
 from sqlalchemy import table
@@ -22,6 +22,7 @@ from aiida.manage.configuration.profile import Profile
 from aiida.orm import User
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import BackendEntity, StorageBackend
+from aiida.storage.log import STORAGE_LOGGER
 from aiida.storage.psql_dos.migrator import REPOSITORY_UUID_KEY, PsqlDostoreMigrator
 from aiida.storage.psql_dos.models import base
 
@@ -346,3 +347,60 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
             if setting is None:
                 raise KeyError(f'No setting found with key {key}')
             return setting.val
+
+    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs) -> None:
+        from aiida.manage.profile_access import ProfileAccessManager
+
+        repository = self.get_repository()
+
+        if full:
+            maintenance_context = ProfileAccessManager(self._profile).lock
+        else:
+            maintenance_context = nullcontext
+
+        with maintenance_context():
+            unreferenced_objects = self.get_unreferenced_keyset()
+            STORAGE_LOGGER.info(f'Deleting {len(unreferenced_objects)} unreferenced objects ...')
+            if not dry_run:
+                repository.delete_objects(list(unreferenced_objects))
+
+            STORAGE_LOGGER.info('Starting repository-specific operations ...')
+            repository.maintain(live=not full, dry_run=dry_run, **kwargs)
+
+    def get_unreferenced_keyset(self, check_consistency: bool = True) -> Set[str]:
+        """Returns the keyset of objects that exist in the repository but are not tracked by AiiDA.
+
+        This should be all the soft-deleted files.
+
+        :param check_consistency:
+            toggle for a check that raises if there are references in the database with no actual object in the
+            underlying repository.
+
+        :return:
+            a set with all the objects in the underlying repository that are not referenced in the database.
+        """
+        from aiida import orm
+
+        STORAGE_LOGGER.info('Obtaining unreferenced object keys ...')
+
+        repository = self.get_repository()
+
+        keyset_repository = set(repository.list_objects())
+        keyset_database = set(orm.Node.objects(self).iter_repo_keys())
+
+        if check_consistency:
+            keyset_missing = keyset_database - keyset_repository
+            if len(keyset_missing) > 0:
+                raise RuntimeError(
+                    'There are objects referenced in the database that are not present in the repository. Aborting!'
+                )
+
+        return keyset_repository - keyset_database
+
+    def get_info(self, statistics: bool = False) -> dict:
+        repository = self.get_repository()
+        output_dict = {
+            'database': {},
+            'repository': repository.get_info(statistics),
+        }
+        return output_dict

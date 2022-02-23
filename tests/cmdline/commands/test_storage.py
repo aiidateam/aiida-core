@@ -118,15 +118,24 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch, caplog):
     """Test all the information and cases of the storage maintain command."""
     import logging
 
-    from aiida.storage import control
+    from aiida.manage import get_manager
+    storage = get_manager().get_profile_storage()
 
-    def mock_maintain(**kwargs):
-        logmsg = 'Provided kwargs:\n'
+    def mock_maintain(*args, **kwargs):
+        """Mocks for `maintain` method of `storage`, logging the inputs passed."""
+        log_message = ''
+
+        log_message += 'Provided args:\n'
+        for arg in args:
+            log_message += f' > {arg}\n'
+
+        log_message += 'Provided kwargs:\n'
         for key, val in kwargs.items():
-            logmsg += f' > {key}: {val}\n'
-        logging.info(logmsg)
+            log_message += f' > {key}: {val}\n'
 
-    monkeypatch.setattr(control, 'repository_maintain', mock_maintain)
+        logging.info(log_message)
+
+    monkeypatch.setattr(storage, 'maintain', mock_maintain)
 
     with caplog.at_level(logging.INFO):
         _ = run_cli_command(cmd_storage.storage_maintain, user_input='Y')

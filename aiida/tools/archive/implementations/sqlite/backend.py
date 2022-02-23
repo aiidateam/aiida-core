@@ -376,6 +376,12 @@ class ArchiveReadOnlyBackend(StorageBackend):  # pylint: disable=too-many-public
     def set_global_variable(self, key: str, value, description: Optional[str] = None, overwrite=True) -> None:
         raise ReadOnlyError()
 
+    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs) -> None:
+        raise NotImplementedError
+
+    def get_info(self, statistics: bool = False) -> dict:
+        raise NotImplementedError
+
 
 def create_backend_cls(base_class, model_cls):
     """Create an archive backend class for the given model class."""

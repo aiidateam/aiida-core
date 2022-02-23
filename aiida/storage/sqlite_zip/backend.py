@@ -30,6 +30,7 @@ from aiida.storage.psql_dos.orm.utils import ModelWrapper
 from aiida.tools.archive.exceptions import ArchiveClosedError, CorruptArchive, ReadOnlyError
 
 from . import models
+from .migrations.main import get_schema_version_head
 from .utils import DB_FILENAME, REPO_FOLDER, create_sqla_engine, read_version
 
 
@@ -38,7 +39,7 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
 
     @classmethod
     def version_head(cls) -> str:
-        raise NotImplementedError
+        return get_schema_version_head()
 
     @classmethod
     def version_profile(cls, profile: Profile) -> None:
@@ -167,6 +168,12 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
 
     def set_global_variable(self, key: str, value, description: Optional[str] = None, overwrite=True) -> None:
         raise ReadOnlyError()
+
+    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
+        raise NotImplementedError
+
+    def get_info(self, statistics: bool = False, **kwargs) -> dict:
+        raise NotImplementedError
 
 
 class ZipfileBackendRepository(AbstractRepositoryBackend):

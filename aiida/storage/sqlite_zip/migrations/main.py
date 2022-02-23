@@ -21,13 +21,14 @@ from alembic.script import ScriptDirectory
 from archive_path import open_file_in_tar, open_file_in_zip
 
 from aiida.common import json
+from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, StorageMigrationError
 from aiida.common.progress_reporter import get_progress_reporter
-from aiida.storage.sqlite_zip.migrations.utils import copy_tar_to_zip, copy_zip_to_zip
 from aiida.tools.archive.common import MIGRATE_LOGGER
-from aiida.tools.archive.exceptions import ArchiveMigrationError, CorruptArchive
 
+from ..utils import read_version
 from .legacy import FINAL_LEGACY_VERSION, LEGACY_MIGRATE_FUNCTIONS
 from .legacy_to_main import MIGRATED_TO_REVISION, perform_v1_migration
+from .utils import copy_tar_to_zip, copy_zip_to_zip
 
 
 def _alembic_config() -> Config:
@@ -49,6 +50,26 @@ def list_versions() -> List[str]:
         entry.revision for entry in reversed(list(ScriptDirectory.from_config(_alembic_config()).walk_revisions()))
     ]
     return legacy_versions + alembic_versions
+
+
+def validate_storage(inpath: Path) -> None:
+    """Validate that the storage is at the head version.
+
+    :raises: :class:`aiida.common.exceptions.UnreachableStorage` if the file does not exist
+    :raises: :class:`aiida.common.exceptions.CorruptStorage`
+        if the version cannot be read from the storage.
+    :raises: :class:`aiida.common.exceptions.IncompatibleStorageSchema`
+        if the storage is not compatible with the code API.
+    """
+    schema_version_code = get_schema_version_head()
+    schema_version_archive = read_version(inpath)
+    if schema_version_archive != schema_version_code:
+        raise IncompatibleStorageSchema(
+            f'Archive schema version `{schema_version_archive}` '
+            f'is incompatible with the required schema version `{schema_version_code}`. '
+            'To migrate the archive schema version to the current one, '
+            f'run the following command: verdi archive migrate {str(inpath)!r}'
+        )
 
 
 def migrate(  # pylint: disable=too-many-branches,too-many-statements
@@ -77,34 +98,34 @@ def migrate(  # pylint: disable=too-many-branches,too-many-statements
     elif zipfile.is_zipfile(str(inpath)):
         is_tar = False
     else:
-        raise CorruptArchive(f'The input file is neither a tar nor a zip file: {inpath}')
+        raise CorruptStorage(f'The input file is neither a tar nor a zip file: {inpath}')
 
     # read the metadata.json which should always be present
     try:
         metadata = _read_json(inpath, 'metadata.json', is_tar)
     except FileNotFoundError:
-        raise CorruptArchive('No metadata.json file found')
+        raise CorruptStorage('No metadata.json file found')
     except IOError as exc:
-        raise CorruptArchive(f'No input file could not be read: {exc}') from exc
+        raise CorruptStorage(f'No input file could not be read: {exc}') from exc
 
-    # opbtain the current version
+    # obtain the current version
     if 'export_version' not in metadata:
-        raise CorruptArchive('No export_version found in metadata.json')
+        raise CorruptStorage('No export_version found in metadata.json')
     current_version = metadata['export_version']
 
     # check versions are valid
     # versions 0.1, 0.2, 0.3 are no longer supported,
     # since 0.3 -> 0.4 requires costly migrations of repo files (you would need to unpack all of them)
     if current_version in ('0.1', '0.2', '0.3') or version in ('0.1', '0.2', '0.3'):
-        raise ArchiveMigrationError(
+        raise StorageMigrationError(
             f"Legacy migration from '{current_version}' -> '{version}' is not supported in aiida-core v2"
         )
 
     all_versions = list_versions()
     if current_version not in all_versions:
-        raise ArchiveMigrationError(f"Unknown current version '{current_version}'")
+        raise StorageMigrationError(f"Unknown current version '{current_version}'")
     if version not in all_versions:
-        raise ArchiveMigrationError(f"Unknown target version '{version}'")
+        raise StorageMigrationError(f"Unknown target version '{version}'")
 
     # if we are already at the desired version, then no migration is required
     if current_version == version:
@@ -161,7 +182,7 @@ def migrate(  # pylint: disable=too-many-branches,too-many-statements
             current_version = MIGRATED_TO_REVISION
 
         if not current_version == version:
-            raise ArchiveMigrationError(f"Migration from '{current_version}' -> '{version}' failed")
+            raise StorageMigrationError(f"Migration from '{current_version}' -> '{version}' failed")
 
         if outpath.exists() and force:
             outpath.unlink()
@@ -196,9 +217,9 @@ def _perform_legacy_migrations(current_version: str, to_version: str, metadata: 
     pathway: List[str] = []
     while prev_version != to_version:
         if prev_version not in LEGACY_MIGRATE_FUNCTIONS:
-            raise ArchiveMigrationError(f"No migration pathway available for '{current_version}' to '{to_version}'")
+            raise StorageMigrationError(f"No migration pathway available for '{current_version}' to '{to_version}'")
         if prev_version in pathway:
-            raise ArchiveMigrationError(
+            raise StorageMigrationError(
                 f'cyclic migration pathway encountered: {" -> ".join(pathway + [prev_version])}'
             )
         pathway.append(prev_version)

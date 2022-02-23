@@ -21,12 +21,12 @@ from archive_path import ZipPath
 from sqlalchemy import insert, select
 from sqlalchemy.exc import IntegrityError
 
+from aiida.common.exceptions import CorruptStorage, StorageMigrationError
 from aiida.common.hashing import chunked_file_hash
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.repository.common import File, FileType
 from aiida.storage.sqlite_zip.utils import create_sqla_engine
 from aiida.tools.archive.common import MIGRATE_LOGGER, batch_iter
-from aiida.tools.archive.exceptions import CorruptArchive, MigrationValidationError
 
 from . import v1_db_schema as v1_schema
 from .legacy.utils import update_metadata
@@ -176,7 +176,7 @@ def _json_to_sqlite(
                     try:
                         connection.execute(insert(backend_cls.__table__), rows)  # type: ignore
                     except IntegrityError as exc:
-                        raise MigrationValidationError(f'Database integrity error: {exc}') from exc
+                        raise StorageMigrationError(f'Database integrity error: {exc}') from exc
                     progress.update(nrows)
 
     if not (data['groups_uuid'] or data['links_uuid']):
@@ -243,9 +243,9 @@ def _iter_entity_fields(
         extras = data.get('node_extras', {})
         for pk, all_fields in data['export_data'].get(name, {}).items():
             if pk not in attributes:
-                raise CorruptArchive(f'Unable to find attributes info for Node with Pk={pk}')
+                raise CorruptStorage(f'Unable to find attributes info for Node with Pk={pk}')
             if pk not in extras:
-                raise CorruptArchive(f'Unable to find extra info for Node with Pk={pk}')
+                raise CorruptStorage(f'Unable to find extra info for Node with Pk={pk}')
             uuid = all_fields['uuid']
             repository_metadata = _create_repo_metadata(node_repos[uuid]) if uuid in node_repos else {}
             yield {

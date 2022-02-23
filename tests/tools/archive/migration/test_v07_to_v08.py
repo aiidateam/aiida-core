@@ -25,7 +25,7 @@ def test_migrate_external(migrate_from_func):
 
 
 def test_migration_0043_default_link_label():
-    """Check CorruptArchive is raised for different cases during migration 0040"""
+    """Check link labels are migrated properly."""
     # data has one "valid" link, in the form of <label="a_good_label">.
     # data also has one "invalid" link, in form of <label="_return">.
     # After the migration, the "invalid" link should have been updated to the "valid" link <label="result">

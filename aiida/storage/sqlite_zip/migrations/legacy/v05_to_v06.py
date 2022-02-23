@@ -31,7 +31,7 @@ from .utils import update_metadata, verify_metadata_version  # pylint: disable=n
 
 def migrate_deserialized_datetime(data, conversion):
     """Deserialize datetime strings from export archives, meaning to reattach the UTC timezone information."""
-    from aiida.tools.archive.exceptions import ArchiveMigrationError
+    from aiida.common.exceptions import StorageMigrationError
 
     ret_data: Union[str, dict, list]
 
@@ -62,7 +62,7 @@ def migrate_deserialized_datetime(data, conversion):
                 # Since we know that all strings will be UTC, here we are simply reattaching that information.
                 ret_data = f'{data}+00:00'
             else:
-                raise ArchiveMigrationError(f"Unknown convert_type '{conversion}'")
+                raise StorageMigrationError(f"Unknown convert_type '{conversion}'")
 
     return ret_data
 

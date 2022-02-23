@@ -24,7 +24,7 @@ from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types import GroupParamType, PathOrUrl
 from aiida.cmdline.utils import decorators, echo
 from aiida.cmdline.utils.common import get_database_summary
-from aiida.common.exceptions import UnreachableStorage
+from aiida.common.exceptions import CorruptStorage, UnreachableStorage
 from aiida.common.links import GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
 
@@ -50,13 +50,12 @@ def inspect(archive, version, meta_data, database):
     The various options can be used to change exactly what information is displayed.
     """
     from aiida.tools.archive.abstract import get_format
-    from aiida.tools.archive.exceptions import UnreadableArchiveError
 
     archive_format = get_format()
     latest_version = archive_format.latest_version
     try:
         current_version = archive_format.read_version(archive)
-    except (UnreadableArchiveError, UnreachableStorage) as exc:
+    except (UnreachableStorage, CorruptStorage) as exc:
         echo.echo_critical(f'archive file of unknown format: {exc}')
 
     if version:
@@ -426,12 +425,12 @@ def _import_archive_and_migrate(archive: str, web_based: bool, import_kwargs: di
     :param archive: the path or URL to the archive
     :param web_based: If the archive needs to be downloaded first
     :param import_kwargs: keyword arguments to pass to the import function
-    :param try_migration: whether to try a migration if the import raises IncompatibleArchiveVersionError
+    :param try_migration: whether to try a migration if the import raises `IncompatibleStorageSchema`
 
     """
+    from aiida.common.exceptions import IncompatibleStorageSchema
     from aiida.common.folders import SandboxFolder
     from aiida.tools.archive.abstract import get_format
-    from aiida.tools.archive.exceptions import IncompatibleArchiveVersionError
     from aiida.tools.archive.imports import import_archive as _import_archive
 
     archive_format = get_format()
@@ -454,7 +453,7 @@ def _import_archive_and_migrate(archive: str, web_based: bool, import_kwargs: di
         echo.echo_report(f'starting import: {archive}')
         try:
             _import_archive(archive_path, archive_format=archive_format, **import_kwargs)
-        except IncompatibleArchiveVersionError as exception:
+        except IncompatibleStorageSchema as exception:
             if try_migration:
 
                 echo.echo_report(f'incompatible version detected for {archive}, trying migration')

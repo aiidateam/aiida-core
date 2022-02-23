@@ -141,7 +141,7 @@ class ArchiveReaderAbstract(ABC):
     def get_metadata(self) -> Dict[str, Any]:
         """Return the top-level metadata.
 
-        :raises: ``UnreadableArchiveError`` if the top-level metadata cannot be read from the archive
+        :raises: ``CorruptStorage`` if the top-level metadata cannot be read from the archive
         """
 
     @abstractmethod
@@ -196,8 +196,8 @@ class ArchiveFormatAbstract(ABC):
 
         :param path: archive path
 
-        :raises: ``FileNotFoundError`` if the file does not exist
-        :raises: ``UnreadableArchiveError`` if a version cannot be read from the archive
+        :raises: ``UnreachableStorage`` if the file does not exist
+        :raises: ``CorruptStorage`` if a version cannot be read from the archive
         """
 
     @overload

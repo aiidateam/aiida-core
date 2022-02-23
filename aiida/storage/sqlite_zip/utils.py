@@ -18,7 +18,7 @@ from sqlalchemy import event
 from sqlalchemy.future.engine import Engine, create_engine
 
 from aiida.common import json
-from aiida.common.exceptions import UnreachableStorage
+from aiida.common.exceptions import CorruptStorage, UnreachableStorage
 
 META_FILENAME = 'metadata.json'
 """The filename containing meta information about the storage instance."""
@@ -76,16 +76,16 @@ def read_version(path: Union[str, Path]) -> str:
         try:
             metadata = extract_metadata(path, search_limit=None)
         except Exception as exc:
-            raise UnreachableStorage(f'Could not read metadata for version: {exc}') from exc
+            raise CorruptStorage(f'Could not read metadata for version: {exc}') from exc
     elif tarfile.is_tarfile(path):
         try:
             metadata = json.loads(read_file_in_tar(path, META_FILENAME))
         except Exception as exc:
-            raise UnreachableStorage(f'Could not read metadata for version: {exc}') from exc
+            raise CorruptStorage(f'Could not read metadata for version: {exc}') from exc
     else:
-        raise UnreachableStorage('Not a zip or tar file')
+        raise CorruptStorage('Not a zip or tar file')
 
     if 'export_version' in metadata:
         return metadata['export_version']
 
-    raise UnreachableStorage("Metadata does not contain 'export_version' key")
+    raise CorruptStorage("Metadata does not contain 'export_version' key")

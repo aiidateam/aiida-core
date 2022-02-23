@@ -46,14 +46,14 @@ def data_migration_legacy_process_attributes(data):
     `process_state` attribute. If they have it, it is checked whether the state is active or not, if not, the `sealed`
     attribute is created and set to `True`.
 
-    :raises `~aiida.tools.archive.exceptions.CorruptArchive`: if a Node, found to have attributes,
+    :raises `~aiida.common.exceptions.CorruptStorage`: if a Node, found to have attributes,
         cannot be found in the list of exported entities.
-    :raises `~aiida.tools.archive.exceptions.CorruptArchive`: if the 'sealed' attribute does not exist and
+    :raises `~aiida.common.exceptions.CorruptStorage`: if the 'sealed' attribute does not exist and
         the ProcessNode is in an active state, i.e. `process_state` is one of ('created', 'running', 'waiting').
         A log-file, listing all illegal ProcessNodes, will be produced in the current directory.
     """
+    from aiida.common.exceptions import CorruptStorage
     from aiida.storage.psql_dos.migrations.utils.integrity import write_database_integrity_violation
-    from aiida.tools.archive.exceptions import CorruptArchive
 
     attrs_to_remove = ['_sealed', '_finished', '_failed', '_aborted', '_do_abort']
     active_states = {'created', 'running', 'waiting'}
@@ -68,7 +68,7 @@ def data_migration_legacy_process_attributes(data):
                 if process_state in active_states:
                     # The ProcessNode is in an active state, and should therefore never have been allowed
                     # to be exported. The Node will be added to a log that is saved in the working directory,
-                    # then a CorruptArchive will be raised, since the archive needs to be migrated manually.
+                    # then a CorruptStorage will be raised, since the archive needs to be migrated manually.
                     uuid_pk = data['export_data']['Node'][node_pk].get('uuid', node_pk)
                     illegal_cases.append([uuid_pk, process_state])
                     continue  # No reason to do more now
@@ -81,7 +81,7 @@ def data_migration_legacy_process_attributes(data):
                 for attr in attrs_to_remove:
                     content.pop(attr, None)
         except KeyError as exc:
-            raise CorruptArchive(f'Your export archive is corrupt! Org. exception: {exc}')
+            raise CorruptStorage(f'Your export archive is corrupt! Org. exception: {exc}')
 
     if illegal_cases:
         headers = ['UUID/PK', 'process_state']
@@ -89,7 +89,7 @@ def data_migration_legacy_process_attributes(data):
                           'that should never have been allowed to be exported.'
         write_database_integrity_violation(illegal_cases, headers, warning_message)
 
-        raise CorruptArchive(
+        raise CorruptStorage(
             'Your export archive is corrupt! '
             'Please see the log-file in your current directory for more details.'
         )

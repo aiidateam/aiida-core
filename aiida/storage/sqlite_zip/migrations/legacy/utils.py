@@ -9,7 +9,7 @@
 ###########################################################################
 """Utility functions for migration of export-files."""
 
-from aiida.tools.archive import exceptions
+from aiida.common import exceptions
 
 
 def verify_metadata_version(metadata, version=None):
@@ -23,13 +23,13 @@ def verify_metadata_version(metadata, version=None):
     try:
         metadata_version = metadata['export_version']
     except KeyError:
-        raise exceptions.ArchiveMigrationError("metadata is missing the 'export_version' key")
+        raise exceptions.StorageMigrationError("metadata is missing the 'export_version' key")
 
     if version is None:
         return metadata_version
 
     if metadata_version != version:
-        raise exceptions.MigrationValidationError(
+        raise exceptions.StorageMigrationError(
             f'expected archive file with version {version} but found version {metadata_version}'
         )
 

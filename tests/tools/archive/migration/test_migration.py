@@ -12,7 +12,8 @@
 import pytest
 
 from aiida import orm
-from aiida.tools.archive import ArchiveFormatSqlZip, ArchiveMigrationError
+from aiida.common.exceptions import StorageMigrationError
+from aiida.tools.archive import ArchiveFormatSqlZip
 from tests.utils.archives import get_archive_file
 
 # archives to test migration against
@@ -84,10 +85,10 @@ def test_partial_migrations(core_archive, tmp_path):
 
     new_archive = tmp_path / 'out.aiida'
 
-    with pytest.raises(ArchiveMigrationError, match='Unknown target version'):
+    with pytest.raises(StorageMigrationError, match='Unknown target version'):
         archive_format.migrate(filepath_archive, new_archive, 0.2)
 
-    with pytest.raises(ArchiveMigrationError, match='No migration pathway available'):
+    with pytest.raises(StorageMigrationError, match='No migration pathway available'):
         archive_format.migrate(filepath_archive, new_archive, '0.4')
 
     archive_format.migrate(filepath_archive, new_archive, '0.7')
@@ -119,7 +120,7 @@ def test_wrong_versions(core_archive, tmp_path, version):
     filepath_archive = get_archive_file('export_v0.4_simple.aiida', **core_archive)
     archive_format = ArchiveFormatSqlZip()
     new_archive = tmp_path / 'out.aiida'
-    with pytest.raises(ArchiveMigrationError, match='Unknown target version'):
+    with pytest.raises(StorageMigrationError, match='Unknown target version'):
         archive_format.migrate(filepath_archive, new_archive, version)
     assert not new_archive.exists()
 

@@ -19,7 +19,7 @@ from zipfile import ZipFile
 from archive_path import extract_file_in_zip
 from sqlalchemy.orm import Session
 
-from aiida.common.exceptions import UnreachableStorage
+from aiida.common.exceptions import ClosedStorage, CorruptStorage
 from aiida.manage import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
@@ -27,10 +27,9 @@ from aiida.repository.backend.abstract import AbstractRepositoryBackend
 from aiida.storage.psql_dos.orm import authinfos, comments, computers, entities, groups, logs, nodes, users
 from aiida.storage.psql_dos.orm.querybuilder import SqlaQueryBuilder
 from aiida.storage.psql_dos.orm.utils import ModelWrapper
-from aiida.tools.archive.exceptions import ArchiveClosedError, CorruptArchive, ReadOnlyError
 
 from . import models
-from .migrations.main import get_schema_version_head
+from .migrations.main import get_schema_version_head, validate_storage
 from .utils import DB_FILENAME, REPO_FOLDER, create_sqla_engine, read_version
 
 
@@ -52,8 +51,7 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
     def __init__(self, profile: Profile):
         super().__init__(profile)
         self._path = Path(profile.storage_config['path'])
-        if not self._path.is_file():
-            raise UnreachableStorage(f'archive file `{self._path}` does not exist.')
+        validate_storage(self._path)
         # lazy open the archive zipfile and extract the database file
         self._db_file: Optional[Path] = None
         self._session: Optional[Session] = None
@@ -84,7 +82,7 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
     def get_session(self) -> Session:
         """Return an SQLAlchemy session."""
         if self._closed:
-            raise ArchiveClosedError()
+            raise ClosedStorage(str(self))
         if self._db_file is None:
             _, path = tempfile.mkstemp()
             self._db_file = Path(path)
@@ -92,14 +90,14 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
                 try:
                     extract_file_in_zip(self._path, DB_FILENAME, handle, search_limit=4)
                 except Exception as exc:
-                    raise CorruptArchive(f'database could not be read: {exc}') from exc
+                    raise CorruptStorage(f'database could not be read: {exc}') from exc
         if self._session is None:
             self._session = Session(create_sqla_engine(self._db_file))
         return self._session
 
     def get_repository(self) -> 'ZipfileBackendRepository':
         if self._closed:
-            raise ArchiveClosedError()
+            raise ClosedStorage(str(self))
         if self._zipfile is None:
             self._zipfile = ZipFile(self._path, mode='r')  # pylint: disable=consider-using-with
         return ZipfileBackendRepository(self._zipfile)
@@ -176,6 +174,13 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
         raise NotImplementedError
 
 
+class ReadOnlyError(IOError):
+    """Raised when a write operation is called on a read-only archive."""
+
+    def __init__(self, msg='Archive is read-only'):  # pylint: disable=useless-super-delegation
+        super().__init__(msg)
+
+
 class ZipfileBackendRepository(AbstractRepositoryBackend):
     """A read-only backend for an open zip file."""
 
@@ -185,7 +190,7 @@ class ZipfileBackendRepository(AbstractRepositoryBackend):
     @property
     def zipfile(self) -> ZipFile:
         if self._zipfile.fp is None:
-            raise ArchiveClosedError()
+            raise ClosedStorage(f'zipfile closed: {self._zipfile}')
         return self._zipfile
 
     @property
@@ -332,7 +337,7 @@ def create_backend_cls(base_class, model_cls):
             return True
 
         def store(self):  # pylint: disable=no-self-use
-            return ReadOnlyError()
+            raise ReadOnlyError()
 
     return ReadOnlyEntityBackend
 

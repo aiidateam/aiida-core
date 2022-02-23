@@ -10,11 +10,11 @@
 """Test archive file migration from export version 0.6 to 0.7"""
 import pytest
 
+from aiida.common.exceptions import CorruptStorage
 from aiida.storage.sqlite_zip.migrations.legacy.v06_to_v07 import (
     data_migration_legacy_process_attributes,
     migrate_v6_to_v7,
 )
-from aiida.tools.archive.exceptions import CorruptArchive
 
 
 def test_migrate_external(migrate_from_func):
@@ -49,7 +49,7 @@ def test_migrate_external(migrate_from_func):
 
 
 def test_migration_0040_corrupt_archive():
-    """Check CorruptArchive is raised for different cases during migration 0040"""
+    """Check CorruptStorage is raised for different cases during migration 0040"""
     # data has one "valid" entry, in the form of Node <PK=42>.
     # At least it has the needed key `node_type`.
     # data also has one "invalid" entry, in form of Node <PK=25>.
@@ -73,7 +73,7 @@ def test_migration_0040_corrupt_archive():
         }
     }
 
-    with pytest.raises(CorruptArchive, match='Your export archive is corrupt! Org. exception:'):
+    with pytest.raises(CorruptStorage, match='Your export archive is corrupt! Org. exception:'):
         data_migration_legacy_process_attributes(data)
 
     # data has one "valid" entry, in the form of Node <PK=52>.
@@ -101,7 +101,7 @@ def test_migration_0040_corrupt_archive():
         }
     }
 
-    with pytest.raises(CorruptArchive, match='Your export archive is corrupt! Please see the log-file'):
+    with pytest.raises(CorruptStorage, match='Your export archive is corrupt! Please see the log-file'):
         data_migration_legacy_process_attributes(data)
 
 

@@ -11,11 +11,11 @@
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
+from aiida.common.exceptions import CorruptStorage
 from aiida.manage import Profile
 from aiida.storage.sqlite_zip.backend import SqliteZipBackend
 from aiida.storage.sqlite_zip.utils import extract_metadata
 from aiida.tools.archive.abstract import ArchiveReaderAbstract
-from aiida.tools.archive.exceptions import CorruptArchive
 
 
 class ArchiveReaderSqlZip(ArchiveReaderAbstract):
@@ -43,7 +43,7 @@ class ArchiveReaderSqlZip(ArchiveReaderAbstract):
         try:
             return extract_metadata(self.path)
         except Exception as exc:
-            raise CorruptArchive('metadata could not be read') from exc
+            raise CorruptStorage('metadata could not be read') from exc
 
     def get_backend(self) -> SqliteZipBackend:
         if not self._in_context:

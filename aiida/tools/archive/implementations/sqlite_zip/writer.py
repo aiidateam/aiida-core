@@ -25,13 +25,12 @@ from sqlalchemy.exc import IntegrityError as SqlaIntegrityError
 from sqlalchemy.future.engine import Connection
 
 from aiida import get_version
-from aiida.common.exceptions import IntegrityError
+from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, IntegrityError
 from aiida.common.hashing import chunked_file_hash
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.orm.entities import EntityTypes
 from aiida.storage.sqlite_zip import models, utils
 from aiida.tools.archive.abstract import ArchiveFormatAbstract, ArchiveWriterAbstract
-from aiida.tools.archive.exceptions import CorruptArchive, IncompatibleArchiveVersionError
 
 
 @functools.lru_cache(maxsize=10)
@@ -220,7 +219,7 @@ class ArchiveAppenderSqlZip(ArchiveWriterSqlZip):
         # the file should be an archive with the correct version
         version = self._format.read_version(self._path)
         if not version == self._format.latest_version:
-            raise IncompatibleArchiveVersionError(
+            raise IncompatibleStorageSchema(
                 f'Archive is version {version!r} but expected {self._format.latest_version!r}'
             )
         # load the metadata
@@ -247,7 +246,7 @@ class ArchiveAppenderSqlZip(ArchiveWriterSqlZip):
             try:
                 extract_file_in_zip(self.path, utils.DB_FILENAME, handle, search_limit=4)
             except Exception as exc:
-                raise CorruptArchive(f'database could not be read: {exc}') from exc
+                raise CorruptStorage(f'archive database could not be read: {exc}') from exc
         # open a connection to the database
         engine = utils.create_sqla_engine(
             self._work_dir / self.db_name, enforce_foreign_keys=self._enforce_foreign_keys, echo=self._debug

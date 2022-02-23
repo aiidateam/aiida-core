@@ -18,11 +18,6 @@ from archive_path import TarPath, ZipPath
 
 from aiida.common.progress_reporter import create_callback, get_progress_reporter
 
-META_FILENAME = 'metadata.json'
-DB_FILENAME = 'db.sqlite3'
-# folder to store repository files in
-REPO_FOLDER = 'repo'
-
 
 def copy_zip_to_zip(
     inpath: Path,

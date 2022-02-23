@@ -22,12 +22,12 @@ from archive_path import open_file_in_tar, open_file_in_zip
 
 from aiida.common import json
 from aiida.common.progress_reporter import get_progress_reporter
+from aiida.storage.sqlite_zip.migrations.utils import copy_tar_to_zip, copy_zip_to_zip
 from aiida.tools.archive.common import MIGRATE_LOGGER
 from aiida.tools.archive.exceptions import ArchiveMigrationError, CorruptArchive
-from aiida.tools.archive.implementations.sqlite_zip.common import copy_tar_to_zip, copy_zip_to_zip
 
 from .legacy import FINAL_LEGACY_VERSION, LEGACY_MIGRATE_FUNCTIONS
-from .legacy_to_new import MIGRATED_TO_REVISION, perform_v1_migration
+from .legacy_to_main import MIGRATED_TO_REVISION, perform_v1_migration
 
 
 def _alembic_config() -> Config:

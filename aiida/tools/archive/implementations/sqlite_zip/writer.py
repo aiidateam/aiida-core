@@ -33,8 +33,6 @@ from aiida.storage.sqlite_zip import models, utils
 from aiida.tools.archive.abstract import ArchiveFormatAbstract, ArchiveWriterAbstract
 from aiida.tools.archive.exceptions import CorruptArchive, IncompatibleArchiveVersionError
 
-from .common import DB_FILENAME, META_FILENAME, REPO_FOLDER
-
 
 @functools.lru_cache(maxsize=10)
 def _get_model_from_entity(entity_type: EntityTypes):
@@ -58,8 +56,8 @@ def _get_model_from_entity(entity_type: EntityTypes):
 class ArchiveWriterSqlZip(ArchiveWriterAbstract):
     """AiiDA archive writer implementation."""
 
-    meta_name = META_FILENAME
-    db_name = DB_FILENAME
+    meta_name = utils.META_FILENAME
+    db_name = utils.DB_FILENAME
 
     def __init__(
         self,
@@ -197,8 +195,8 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
         if key is None:
             key = chunked_file_hash(stream, hashlib.sha256)
             stream.seek(0)
-        if f'{REPO_FOLDER}/{key}' not in self._central_dir:
-            self._stream_binary(f'{REPO_FOLDER}/{key}', stream, buffer_size=buffer_size)
+        if f'{utils.REPO_FOLDER}/{key}' not in self._central_dir:
+            self._stream_binary(f'{utils.REPO_FOLDER}/{key}', stream, buffer_size=buffer_size)
         return key
 
     def delete_object(self, key: str) -> None:
@@ -210,9 +208,9 @@ class ArchiveAppenderSqlZip(ArchiveWriterSqlZip):
 
     def delete_object(self, key: str) -> None:
         self._assert_in_context()
-        if f'{REPO_FOLDER}/{key}' in self._central_dir:
+        if f'{utils.REPO_FOLDER}/{key}' in self._central_dir:
             raise IOError(f'Cannot delete object {key!r} that has been added in the same append context')
-        self._deleted_paths.add(f'{REPO_FOLDER}/{key}')
+        self._deleted_paths.add(f'{utils.REPO_FOLDER}/{key}')
 
     def __enter__(self) -> 'ArchiveAppenderSqlZip':
         """Start appending to the archive"""
@@ -226,7 +224,7 @@ class ArchiveAppenderSqlZip(ArchiveWriterSqlZip):
                 f'Archive is version {version!r} but expected {self._format.latest_version!r}'
             )
         # load the metadata
-        self._metadata = json.loads(read_file_in_zip(self._path, META_FILENAME, 'utf8', search_limit=4))
+        self._metadata = json.loads(read_file_in_zip(self._path, utils.META_FILENAME, 'utf8', search_limit=4))
         # overwrite metadata
         self._metadata['mtime'] = datetime.now().isoformat()
         self._metadata['compression'] = self._compression
@@ -247,7 +245,7 @@ class ArchiveAppenderSqlZip(ArchiveWriterSqlZip):
         db_file = self._work_dir / self.db_name
         with db_file.open('wb') as handle:
             try:
-                extract_file_in_zip(self.path, DB_FILENAME, handle, search_limit=4)
+                extract_file_in_zip(self.path, utils.DB_FILENAME, handle, search_limit=4)
             except Exception as exc:
                 raise CorruptArchive(f'database could not be read: {exc}') from exc
         # open a connection to the database

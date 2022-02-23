@@ -7,10 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Test common functions."""
+"""Test utility functions."""
 from archive_path import TarPath, ZipPath
 
-from aiida.tools.archive.implementations.sqlite_zip.common import copy_tar_to_zip, copy_zip_to_zip
+from aiida.storage.sqlite_zip.migrations.utils import copy_tar_to_zip, copy_zip_to_zip
 
 
 def test_copy_zip_to_zip(tmp_path):

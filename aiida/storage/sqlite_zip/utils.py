@@ -23,6 +23,12 @@ from aiida.common.exceptions import UnreachableStorage
 META_FILENAME = 'metadata.json'
 """The filename containing meta information about the storage instance."""
 
+DB_FILENAME = 'db.sqlite3'
+"""The filename of the SQLite database."""
+
+REPO_FOLDER = 'repo'
+"""The name of the folder containing the repository files."""
+
 
 def sqlite_enforce_foreign_keys(dbapi_connection, _):
     """Enforce foreign key constraints, when using sqlite backend (off by default)"""

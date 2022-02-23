@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Migration from the "legacy" JSON format, to an sqlite database."""
+"""Migration from the "legacy" JSON format, to an sqlite database, and node uuid based repository to hash based."""
 from contextlib import contextmanager
 from datetime import datetime
 from hashlib import sha256
@@ -29,7 +29,6 @@ from aiida.tools.archive.common import MIGRATE_LOGGER, batch_iter
 from aiida.tools.archive.exceptions import CorruptArchive, MigrationValidationError
 
 from . import v1_db_schema as v1_schema
-from ....tools.archive.implementations.sqlite_zip.common import DB_FILENAME, META_FILENAME, REPO_FOLDER
 from .legacy.utils import update_metadata
 
 _NODE_ENTITY_NAME = 'Node'
@@ -65,6 +64,10 @@ aiida_orm_to_backend = {
     _COMPUTER_ENTITY_NAME: v1_schema.DbComputer,
     _LOG_ENTITY_NAME: v1_schema.DbLog,
 }
+
+_META_FILENAME = 'metadata.json'
+_DB_FILENAME = 'db.sqlite3'
+_REPO_FOLDER = 'repo'
 
 MIGRATED_TO_REVISION = 'main_0001'
 
@@ -103,7 +106,7 @@ def perform_v1_migration(  # pylint: disable=too-many-locals
         mode='w',
         compresslevel=compression,
         name_to_info=central_dir,
-        info_order=(META_FILENAME, DB_FILENAME)
+        info_order=(_META_FILENAME, _DB_FILENAME)
     ) as new_path:
         with in_archive_context(inpath) as path:
             length = sum(1 for _ in path.glob('**/*'))
@@ -121,18 +124,18 @@ def perform_v1_migration(  # pylint: disable=too-many-locals
                     if subpath.is_file():
                         with subpath.open('rb') as handle:
                             hashkey = chunked_file_hash(handle, sha256)
-                        if f'{REPO_FOLDER}/{hashkey}' not in central_dir:
+                        if f'{_REPO_FOLDER}/{hashkey}' not in central_dir:
                             with subpath.open('rb') as handle:
-                                with (new_path / f'{REPO_FOLDER}/{hashkey}').open(mode='wb') as handle2:
+                                with (new_path / f'{_REPO_FOLDER}/{hashkey}').open(mode='wb') as handle2:
                                     shutil.copyfileobj(handle, handle2)
                     node_repos.setdefault(uuid, []).append((posix_rel.as_posix(), hashkey))
             MIGRATE_LOGGER.report(f'Unique files written: {len(central_dir)}')
 
-        _json_to_sqlite(working / DB_FILENAME, data, node_repos)
+        _json_to_sqlite(working / _DB_FILENAME, data, node_repos)
 
         MIGRATE_LOGGER.report('Finalising archive')
-        with (working / DB_FILENAME).open('rb') as handle:
-            with (new_path / DB_FILENAME).open(mode='wb') as handle2:
+        with (working / _DB_FILENAME).open('rb') as handle:
+            with (new_path / _DB_FILENAME).open(mode='wb') as handle2:
                 shutil.copyfileobj(handle, handle2)
 
         # remove legacy keys from metadata and store
@@ -144,7 +147,7 @@ def perform_v1_migration(  # pylint: disable=too-many-locals
         metadata['key_format'] = 'sha256'
         metadata['mtime'] = datetime.now().isoformat()
         update_metadata(metadata, MIGRATED_TO_REVISION)
-        (new_path / META_FILENAME).write_text(json.dumps(metadata))
+        (new_path / _META_FILENAME).write_text(json.dumps(metadata))
 
 
 def _json_to_sqlite(

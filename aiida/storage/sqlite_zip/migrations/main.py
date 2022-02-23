@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA archive migrator implementation."""
+import os
 from pathlib import Path
 import shutil
 import tarfile
@@ -15,24 +16,44 @@ import tempfile
 from typing import Any, Dict, List, Optional, Union
 import zipfile
 
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from archive_path import open_file_in_tar, open_file_in_zip
 
 from aiida.common import json
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.tools.archive.common import MIGRATE_LOGGER
 from aiida.tools.archive.exceptions import ArchiveMigrationError, CorruptArchive
+from aiida.tools.archive.implementations.sqlite_zip.common import copy_tar_to_zip, copy_zip_to_zip
 
-from ..common import copy_tar_to_zip, copy_zip_to_zip
 from .legacy import FINAL_LEGACY_VERSION, LEGACY_MIGRATE_FUNCTIONS
-from .legacy_to_new import perform_v1_migration
+from .legacy_to_new import MIGRATED_TO_REVISION, perform_v1_migration
 
-ALL_VERSIONS = ['0.4', '0.5', '0.6', '0.7', '0.8', '0.9', '0.10', '0.11', '0.12', '1.0']
+
+def _alembic_config() -> Config:
+    """Return an instance of an Alembic `Config`."""
+    config = Config()
+    config.set_main_option('script_location', os.path.dirname(os.path.realpath(__file__)))
+    return config
+
+
+def get_schema_version_head() -> str:
+    """Return the head schema version for this storage, i.e. the latest schema this storage can be migrated to."""
+    return ScriptDirectory.from_config(_alembic_config()).revision_map.get_current_head('main')
+
+
+def list_versions() -> List[str]:
+    """Return all available schema versions (oldest to latest)."""
+    legacy_versions = list(LEGACY_MIGRATE_FUNCTIONS) + [FINAL_LEGACY_VERSION]
+    alembic_versions = [
+        entry.revision for entry in reversed(list(ScriptDirectory.from_config(_alembic_config()).walk_revisions()))
+    ]
+    return legacy_versions + alembic_versions
 
 
 def migrate(  # pylint: disable=too-many-branches,too-many-statements
     inpath: Union[str, Path],
     outpath: Union[str, Path],
-    current_version: str,
     version: str,
     *,
     force: bool = False,
@@ -50,16 +71,39 @@ def migrate(  # pylint: disable=too-many-branches,too-many-statements
     if outpath.exists() and not outpath.is_file():
         raise IOError('Existing output path is not a file')
 
+    # the file should be either a tar (legacy only) or zip file
+    if tarfile.is_tarfile(str(inpath)):
+        is_tar = True
+    elif zipfile.is_zipfile(str(inpath)):
+        is_tar = False
+    else:
+        raise CorruptArchive(f'The input file is neither a tar nor a zip file: {inpath}')
+
+    # read the metadata.json which should always be present
+    try:
+        metadata = _read_json(inpath, 'metadata.json', is_tar)
+    except FileNotFoundError:
+        raise CorruptArchive('No metadata.json file found')
+    except IOError as exc:
+        raise CorruptArchive(f'No input file could not be read: {exc}') from exc
+
+    # opbtain the current version
+    if 'export_version' not in metadata:
+        raise CorruptArchive('No export_version found in metadata.json')
+    current_version = metadata['export_version']
+
     # check versions are valid
     # versions 0.1, 0.2, 0.3 are no longer supported,
     # since 0.3 -> 0.4 requires costly migrations of repo files (you would need to unpack all of them)
     if current_version in ('0.1', '0.2', '0.3') or version in ('0.1', '0.2', '0.3'):
         raise ArchiveMigrationError(
-            f"Migration from '{current_version}' -> '{version}' is not supported in aiida-core v2"
+            f"Legacy migration from '{current_version}' -> '{version}' is not supported in aiida-core v2"
         )
-    if current_version not in ALL_VERSIONS:
+
+    all_versions = list_versions()
+    if current_version not in all_versions:
         raise ArchiveMigrationError(f"Unknown current version '{current_version}'")
-    if version not in ALL_VERSIONS:
+    if version not in all_versions:
         raise ArchiveMigrationError(f"Unknown target version '{version}'")
 
     # if we are already at the desired version, then no migration is required
@@ -70,16 +114,6 @@ def migrate(  # pylint: disable=too-many-branches,too-many-statements
             shutil.copyfile(inpath, outpath)
         return
 
-    # the file should be either a tar (legacy only) or zip file
-    if tarfile.is_tarfile(str(inpath)):
-        is_tar = True
-    elif zipfile.is_zipfile(str(inpath)):
-        is_tar = False
-    else:
-        raise CorruptArchive(f'The input file is neither a tar nor a zip file: {inpath}')
-
-    # read the metadata.json which should always be present
-    metadata = _read_json(inpath, 'metadata.json', is_tar)
     # data.json will only be read from legacy archives
     data: Optional[Dict[str, Any]] = None
 
@@ -123,9 +157,8 @@ def migrate(  # pylint: disable=too-many-branches,too-many-statements
             if data is None:
                 MIGRATE_LOGGER.report('Extracting data.json ...')
                 data = _read_json(inpath, 'data.json', is_tar)
-            current_version = perform_v1_migration(
-                inpath, Path(tmpdirname), 'new.zip', is_tar, metadata, data, compression
-            )
+            perform_v1_migration(inpath, Path(tmpdirname), 'new.zip', is_tar, metadata, data, compression)
+            current_version = MIGRATED_TO_REVISION
 
         if not current_version == version:
             raise ArchiveMigrationError(f"Migration from '{current_version}' -> '{version}' failed")

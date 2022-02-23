@@ -10,7 +10,7 @@
 """Test common functions."""
 from archive_path import TarPath, ZipPath
 
-from aiida.tools.archive.implementations.sqlite.common import copy_tar_to_zip, copy_zip_to_zip
+from aiida.tools.archive.implementations.sqlite_zip.common import copy_tar_to_zip, copy_zip_to_zip
 
 
 def test_copy_zip_to_zip(tmp_path):

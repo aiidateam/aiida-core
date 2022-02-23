@@ -15,6 +15,7 @@ import pytest
 
 from aiida.cmdline.commands import cmd_archive
 from aiida.orm import Code, Computer, Dict, Group
+from aiida.storage.sqlite_zip.migrations.main import list_versions
 from aiida.tools.archive import ArchiveFormatSqlZip
 from tests.utils.archives import get_archive_file
 
@@ -85,7 +86,7 @@ def test_create_basic(run_cli_command, tmp_path):
         assert archive.querybuilder().append(Dict, project=['uuid']).all(flat=True) == [node.uuid]
 
 
-@pytest.mark.parametrize('version', ArchiveFormatSqlZip().versions[:-1])
+@pytest.mark.parametrize('version', ('0.4', '0.5', '0.6', '0.7', '0.8', '0.9', '0.10', '0.11', '0.12'))
 def test_migrate_versions_old(run_cli_command, tmp_path, version):
     """Migrating archives with a version older than the current should work."""
     archive = f'export_v{version}_simple.aiida'
@@ -177,7 +178,7 @@ def test_migrate_low_verbosity(run_cli_command, tmp_path):
     assert ArchiveFormatSqlZip().read_version(filename_output) == ArchiveFormatSqlZip().latest_version
 
 
-@pytest.mark.parametrize('version', ArchiveFormatSqlZip().versions)
+@pytest.mark.parametrize('version', list_versions())
 def test_inspect_version(run_cli_command, version):
     """Test the functionality of `verdi export inspect --version`."""
     archive = f'export_v{version}_simple.aiida'

@@ -28,7 +28,7 @@ from aiida.storage.psql_dos.orm import authinfos, comments, computers, entities,
 from aiida.storage.psql_dos.orm.querybuilder import SqlaQueryBuilder
 from aiida.storage.psql_dos.orm.utils import ModelWrapper
 from aiida.tools.archive.exceptions import ArchiveClosedError, CorruptArchive, ReadOnlyError
-from aiida.tools.archive.implementations.sqlite.common import DB_FILENAME, REPO_FOLDER
+from aiida.tools.archive.implementations.sqlite_zip.common import DB_FILENAME, REPO_FOLDER
 
 from . import models
 from .utils import create_sqla_engine, read_version

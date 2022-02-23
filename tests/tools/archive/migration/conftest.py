@@ -10,7 +10,7 @@
 """Module with tests for export archive migrations."""
 import pytest
 
-from aiida.tools.archive.implementations.sqlite.migrations.utils import verify_metadata_version
+from aiida.storage.sqlite_zip.migrations.legacy.utils import verify_metadata_version
 from tests.utils.archives import get_archive_file, read_json_files
 
 

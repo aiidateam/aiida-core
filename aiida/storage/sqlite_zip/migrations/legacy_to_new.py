@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Migration from legacy JSON format."""
+"""Migration from the "legacy" JSON format, to an sqlite database."""
 from contextlib import contextmanager
 from datetime import datetime
 from hashlib import sha256
@@ -28,9 +28,9 @@ from aiida.storage.sqlite_zip.utils import create_sqla_engine
 from aiida.tools.archive.common import MIGRATE_LOGGER, batch_iter
 from aiida.tools.archive.exceptions import CorruptArchive, MigrationValidationError
 
-from . import v1_db_schema as db
-from ..common import DB_FILENAME, META_FILENAME, REPO_FOLDER
-from .utils import update_metadata
+from . import v1_db_schema as v1_schema
+from ....tools.archive.implementations.sqlite_zip.common import DB_FILENAME, META_FILENAME, REPO_FOLDER
+from .legacy.utils import update_metadata
 
 _NODE_ENTITY_NAME = 'Node'
 _GROUP_ENTITY_NAME = 'Group'
@@ -58,18 +58,20 @@ file_fields_to_model_fields: Dict[str, Dict[str, str]] = {
 }
 
 aiida_orm_to_backend = {
-    _USER_ENTITY_NAME: db.DbUser,
-    _GROUP_ENTITY_NAME: db.DbGroup,
-    _NODE_ENTITY_NAME: db.DbNode,
-    _COMMENT_ENTITY_NAME: db.DbComment,
-    _COMPUTER_ENTITY_NAME: db.DbComputer,
-    _LOG_ENTITY_NAME: db.DbLog,
+    _USER_ENTITY_NAME: v1_schema.DbUser,
+    _GROUP_ENTITY_NAME: v1_schema.DbGroup,
+    _NODE_ENTITY_NAME: v1_schema.DbNode,
+    _COMMENT_ENTITY_NAME: v1_schema.DbComment,
+    _COMPUTER_ENTITY_NAME: v1_schema.DbComputer,
+    _LOG_ENTITY_NAME: v1_schema.DbLog,
 }
+
+MIGRATED_TO_REVISION = 'main_0001'
 
 
 def perform_v1_migration(  # pylint: disable=too-many-locals
     inpath: Path, working: Path, archive_name: str, is_tar: bool, metadata: dict, data: dict, compression: int
-) -> str:
+) -> None:
     """Perform the repository and JSON to SQLite migration.
 
     1. Iterate though the repository paths in the archive
@@ -141,10 +143,8 @@ def perform_v1_migration(  # pylint: disable=too-many-locals
         metadata['compression'] = compression
         metadata['key_format'] = 'sha256'
         metadata['mtime'] = datetime.now().isoformat()
-        update_metadata(metadata, '1.0')
+        update_metadata(metadata, MIGRATED_TO_REVISION)
         (new_path / META_FILENAME).write_text(json.dumps(metadata))
-
-    return '1.0'
 
 
 def _json_to_sqlite(
@@ -154,7 +154,7 @@ def _json_to_sqlite(
     MIGRATE_LOGGER.report('Converting DB to SQLite')
 
     engine = create_sqla_engine(outpath)
-    db.ArchiveV1Base.metadata.create_all(engine)
+    v1_schema.ArchiveV1Base.metadata.create_all(engine)
 
     with engine.begin() as connection:
         # proceed in order of relationships
@@ -169,6 +169,7 @@ def _json_to_sqlite(
             with get_progress_reporter()(desc=f'Adding {entity_type}s', total=length) as progress:
                 for nrows, rows in batch_iter(_iter_entity_fields(data, entity_type, node_repos), batch_size):
                     # to-do check for unused keys?
+                    # to-do handle null values?
                     try:
                         connection.execute(insert(backend_cls.__table__), rows)  # type: ignore
                     except IntegrityError as exc:
@@ -181,7 +182,9 @@ def _json_to_sqlite(
     with engine.begin() as connection:
 
         # get mapping of node IDs to node UUIDs
-        node_uuid_map = {uuid: pk for uuid, pk in connection.execute(select(db.DbNode.uuid, db.DbNode.id))}  # pylint: disable=unnecessary-comprehension
+        node_uuid_map = {
+            uuid: pk for uuid, pk in connection.execute(select(v1_schema.DbNode.uuid, v1_schema.DbNode.id))  # pylint: disable=unnecessary-comprehension
+        }
 
         # links
         if data['links_uuid']:
@@ -196,19 +199,21 @@ def _json_to_sqlite(
 
             with get_progress_reporter()(desc='Adding Links', total=len(data['links_uuid'])) as progress:
                 for nrows, rows in batch_iter(data['links_uuid'], batch_size, transform=_transform_link):
-                    connection.execute(insert(db.DbLink.__table__), rows)
+                    connection.execute(insert(v1_schema.DbLink.__table__), rows)
                     progress.update(nrows)
 
         # groups to nodes
         if data['groups_uuid']:
             # get mapping of node IDs to node UUIDs
-            group_uuid_map = {uuid: pk for uuid, pk in connection.execute(select(db.DbGroup.uuid, db.DbGroup.id))}  # pylint: disable=unnecessary-comprehension
+            group_uuid_map = {
+                uuid: pk for uuid, pk in connection.execute(select(v1_schema.DbGroup.uuid, v1_schema.DbGroup.id))  # pylint: disable=unnecessary-comprehension
+            }
             length = sum(len(uuids) for uuids in data['groups_uuid'].values())
             with get_progress_reporter()(desc='Adding Group-Nodes', total=length) as progress:
                 for group_uuid, node_uuids in data['groups_uuid'].items():
                     group_id = group_uuid_map[group_uuid]
                     connection.execute(
-                        insert(db.DbGroupNodes.__table__), [{
+                        insert(v1_schema.DbGroupNodes.__table__), [{
                             'dbnode_id': node_uuid_map[uuid],
                             'dbgroup_id': group_id
                         } for uuid in node_uuids]

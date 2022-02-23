@@ -21,7 +21,7 @@ from tests.utils.archives import get_archive_file
 @pytest.fixture()
 def archive(tmp_path):
     """Yield the archive open in read mode."""
-    filepath_archive = get_archive_file('export_v1.0_simple.aiida', filepath='export/migrate')
+    filepath_archive = get_archive_file('export_main_0001_simple.aiida', filepath='export/migrate')
     archive_format = ArchiveFormatSqlZip()
     new_archive = tmp_path / 'out.aiida'
     archive_format.migrate(filepath_archive, new_archive, archive_format.latest_version)

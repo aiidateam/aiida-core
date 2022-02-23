@@ -26,7 +26,7 @@ Where id is a SQLA id and migration-name is the name of the particular migration
 # pylint: disable=invalid-name
 from typing import Union
 
-from ..utils import update_metadata, verify_metadata_version  # pylint: disable=no-name-in-module
+from .utils import update_metadata, verify_metadata_version  # pylint: disable=no-name-in-module
 
 
 def migrate_deserialized_datetime(data, conversion):

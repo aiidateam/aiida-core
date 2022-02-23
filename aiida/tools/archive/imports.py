@@ -29,7 +29,7 @@ from aiida.repository import Repository
 from .abstract import ArchiveFormatAbstract
 from .common import batch_iter, entity_type_to_orm
 from .exceptions import ImportTestRun, ImportUniquenessError, ImportValidationError, IncompatibleArchiveVersionError
-from .implementations.sqlite import ArchiveFormatSqlZip
+from .implementations.sqlite_zip import ArchiveFormatSqlZip
 
 __all__ = ('IMPORT_LOGGER', 'import_archive')
 
@@ -127,8 +127,8 @@ def import_archive(
     # its a bit weird at the moment because django/sqlalchemy have different versioning
     if not archive_format.read_version(path) == archive_format.latest_version:
         raise IncompatibleArchiveVersionError(
-            f'The archive version {archive_format.read_version(path)} '
-            f'is not the latest version {archive_format.latest_version}'
+            f'The archive version {archive_format.read_version(path)!r} '
+            f'is not the latest version {archive_format.latest_version!r}'
         )
 
     IMPORT_LOGGER.report(

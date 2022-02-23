@@ -9,12 +9,12 @@
 ###########################################################################
 """The file format implementation"""
 from pathlib import Path
-from typing import Any, List, Literal, Union, overload
+from typing import Any, Literal, Union, overload
 
+from aiida.storage.sqlite_zip.migrations.main import get_schema_version_head, migrate
 from aiida.storage.sqlite_zip.utils import read_version
 from aiida.tools.archive.abstract import ArchiveFormatAbstract
 
-from .migrations.main import ALL_VERSIONS, migrate
 from .reader import ArchiveReaderSqlZip
 from .writer import ArchiveAppenderSqlZip, ArchiveWriterSqlZip
 
@@ -37,8 +37,8 @@ class ArchiveFormatSqlZip(ArchiveFormatAbstract):
     """
 
     @property
-    def versions(self) -> List[str]:
-        return ALL_VERSIONS
+    def latest_version(self) -> str:
+        return get_schema_version_head()
 
     def read_version(self, path: Union[str, Path]) -> str:
         return read_version(path)
@@ -107,5 +107,4 @@ class ArchiveFormatSqlZip(ArchiveFormatAbstract):
 
         :param path: archive path
         """
-        current_version = self.read_version(inpath)
-        return migrate(inpath, outpath, current_version, version, force=force, compression=compression)
+        return migrate(inpath, outpath, version, force=force, compression=compression)

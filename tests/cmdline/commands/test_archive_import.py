@@ -14,6 +14,7 @@ import pytest
 
 from aiida.cmdline.commands import cmd_archive
 from aiida.orm import Group
+from aiida.storage.sqlite_zip.migrations.main import list_versions
 from aiida.tools.archive import ArchiveFormatSqlZip
 from tests.utils.archives import get_archive_file
 
@@ -176,7 +177,7 @@ class TestVerdiImport:
         """ Test import of old local archives
         Expected behavior: Automatically migrate to newest version and import correctly.
         """
-        for version in ArchiveFormatSqlZip().versions:
+        for version in list_versions():
             archive, version = (f'export_v{version}_simple.aiida', f'{version}')
             options = [get_archive_file(archive, filepath=self.archive_path)]
             result = self.cli_runner.invoke(cmd_archive.import_archive, options)

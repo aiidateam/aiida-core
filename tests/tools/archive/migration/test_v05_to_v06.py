@@ -9,8 +9,8 @@
 ###########################################################################
 """Test archive file migration from export version 0.5 to 0.6"""
 from aiida.storage.psql_dos.migrations.utils.calc_state import STATE_MAPPING
-from aiida.tools.archive.implementations.sqlite.migrations.legacy import migrate_v5_to_v6
-from aiida.tools.archive.implementations.sqlite.migrations.utils import verify_metadata_version
+from aiida.storage.sqlite_zip.migrations.legacy import migrate_v5_to_v6
+from aiida.storage.sqlite_zip.migrations.legacy.utils import verify_metadata_version
 from tests.utils.archives import get_archive_file, read_json_files
 
 

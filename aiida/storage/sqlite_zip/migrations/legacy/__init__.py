@@ -24,8 +24,7 @@ from .v10_to_v11 import migrate_v10_to_v11
 from .v11_to_v12 import migrate_v11_to_v12
 
 # version from -> version to, function which modifies metadata, data in-place
-_vtype = Dict[str, Tuple[str, Callable[[dict, dict], None]]]
-LEGACY_MIGRATE_FUNCTIONS: _vtype = {
+LEGACY_MIGRATE_FUNCTIONS: Dict[str, Tuple[str, Callable[[dict, dict], None]]] = {
     '0.4': ('0.5', migrate_v4_to_v5),
     '0.5': ('0.6', migrate_v5_to_v6),
     '0.6': ('0.7', migrate_v6_to_v7),

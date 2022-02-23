@@ -180,13 +180,8 @@ class ArchiveFormatAbstract(ABC):
 
     @property
     @abstractmethod
-    def versions(self) -> List[str]:
-        """Return ordered list of versions of the archive format, oldest -> latest."""
-
-    @property
     def latest_version(self) -> str:
-        """Return the latest version of the archive format."""
-        return self.versions[-1]
+        """Return the latest schema version of the archive format."""
 
     @property
     @abstractmethod
@@ -279,13 +274,13 @@ class ArchiveFormatAbstract(ABC):
         """
 
 
-def get_format(name: str = 'sqlitezip') -> ArchiveFormatAbstract:
+def get_format(name: str = 'sqlite_zip') -> ArchiveFormatAbstract:
     """Get the archive format instance.
 
     :param name: name of the archive format
     :return: archive format instance
     """
     # to-do entry point for archive formats?
-    assert name == 'sqlitezip'
-    from aiida.tools.archive.implementations.sqlite.main import ArchiveFormatSqlZip
+    assert name == 'sqlite_zip'
+    from aiida.tools.archive.implementations.sqlite_zip.main import ArchiveFormatSqlZip
     return ArchiveFormatSqlZip()

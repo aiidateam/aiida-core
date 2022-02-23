@@ -12,9 +12,11 @@
 These models are intended to be identical to those of the `psql_dos` backend,
 except for changes to the database specific types:
 
-- UUID
-- DateTime
-- JSONB
+- UUID -> CHAR(32)
+- DateTime -> TZDateTime
+- JSONB -> JSON
+
+Also, `varchar_pattern_ops` indexes are not possible in sqlite.
 """
 from datetime import datetime
 from typing import Optional
@@ -69,7 +71,9 @@ class TZDateTime(sa.TypeDecorator):  # pylint: disable=abstract-method
         return value.astimezone(pytz.utc)
 
 
-SqliteBase = sa.orm.declarative_base(cls=SqliteModel, name='SqliteModel')
+SqliteBase = sa.orm.declarative_base(
+    cls=SqliteModel, name='SqliteModel', metadata=sa.MetaData(naming_convention=dict(base.naming_convention))
+)
 
 
 def pg_to_sqlite(pg_table: sa.Table):

@@ -16,7 +16,7 @@ def run_migrations_online():
 
     The connection should have been passed to the config, which we use to configue the migration context.
     """
-    from aiida.storage.psql_dos.models.base import get_orm_metadata
+    from aiida.storage.sqlite_zip.models import SqliteBase
 
     config = context.config  # pylint: disable=no-member
 
@@ -27,13 +27,10 @@ def run_migrations_online():
     if connection is None:
         from aiida.common.exceptions import ConfigurationError
         raise ConfigurationError('An initialized connection is expected for the AiiDA online migrations.')
-    if aiida_profile is None:
-        from aiida.common.exceptions import ConfigurationError
-        raise ConfigurationError('An aiida_profile is expected for the AiiDA online migrations.')
 
     context.configure(  # pylint: disable=no-member
         connection=connection,
-        target_metadata=get_orm_metadata(),
+        target_metadata=SqliteBase.metadata,
         transaction_per_migration=True,
         aiida_profile=aiida_profile,
         on_version_apply=on_version_apply

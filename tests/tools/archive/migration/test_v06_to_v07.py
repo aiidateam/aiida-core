@@ -10,11 +10,11 @@
 """Test archive file migration from export version 0.6 to 0.7"""
 import pytest
 
-from aiida.tools.archive.exceptions import CorruptArchive
-from aiida.tools.archive.implementations.sqlite.migrations.legacy.v06_to_v07 import (
+from aiida.storage.sqlite_zip.migrations.legacy.v06_to_v07 import (
     data_migration_legacy_process_attributes,
     migrate_v6_to_v7,
 )
+from aiida.tools.archive.exceptions import CorruptArchive
 
 
 def test_migrate_external(migrate_from_func):

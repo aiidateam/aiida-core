@@ -23,7 +23,6 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types import GroupParamType, PathOrUrl
 from aiida.cmdline.utils import decorators, echo
-from aiida.cmdline.utils.common import get_database_summary
 from aiida.common.exceptions import CorruptStorage, UnreachableStorage
 from aiida.common.links import GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER

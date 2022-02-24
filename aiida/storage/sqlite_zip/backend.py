@@ -190,8 +190,10 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
     def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
         raise NotImplementedError
 
-    def get_info(self, statistics: bool = False, **kwargs) -> dict:
-        raise NotImplementedError
+    def get_info(self, statistics: bool = False) -> dict:
+        results = super().get_info(statistics=statistics)
+        results['repository'] = self.get_repository().get_info(statistics)
+        return results
 
 
 class ReadOnlyError(AiidaException):
@@ -315,14 +317,6 @@ class SqliteBackendQueryBuilder(SqlaQueryBuilder):
     @property
     def table_groups_nodes(self):
         return models.DbGroupNodes.__table__  # type: ignore[attr-defined] # pylint: disable=no-member
-
-    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs) -> None:
-        raise NotImplementedError
-
-    def get_info(self, statistics: bool = False) -> dict:
-        results = super().get_info(statistics=statistics)
-        results['repository'] = self.get_repository().get_info(statistics)
-        return results
 
 
 def create_backend_cls(base_class, model_cls):

@@ -52,7 +52,8 @@ _DEFAULT_PROFILE_INFO = {
     'broker_password': 'guest',
     'broker_host': '127.0.0.1',
     'broker_port': 5672,
-    'broker_virtual_host': ''
+    'broker_virtual_host': '',
+    'test_profile': True,
 }
 
 
@@ -251,6 +252,7 @@ class TemporaryProfileManager(ProfileManager):
         Used to set up AiiDA profile from self.profile_info dictionary.
         """
         dictionary = {
+            'test_profile': True,
             'storage': {
                 'backend': self.profile_info.get('storage_backend'),
                 'config': {

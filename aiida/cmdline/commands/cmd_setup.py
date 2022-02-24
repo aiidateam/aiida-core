@@ -39,11 +39,12 @@ from aiida.manage.configuration import Profile, load_profile
 @options_setup.SETUP_BROKER_PORT()
 @options_setup.SETUP_BROKER_VIRTUAL_HOST()
 @options_setup.SETUP_REPOSITORY_URI()
+@options_setup.SETUP_TEST_PROFILE()
 @options.CONFIG_FILE()
 def setup(
     non_interactive, profile: Profile, email, first_name, last_name, institution, db_engine, db_backend, db_host,
     db_port, db_name, db_username, db_password, broker_protocol, broker_username, broker_password, broker_host,
-    broker_port, broker_virtual_host, repository
+    broker_port, broker_virtual_host, repository, test_profile
 ):
     """Setup a new profile.
 
@@ -74,6 +75,7 @@ def setup(
             'broker_virtual_host': broker_virtual_host,
         }
     )
+    profile.is_test_profile = test_profile
 
     config = get_config()
 
@@ -142,12 +144,13 @@ def setup(
 @options_setup.QUICKSETUP_BROKER_PORT()
 @options_setup.QUICKSETUP_BROKER_VIRTUAL_HOST()
 @options_setup.QUICKSETUP_REPOSITORY_URI()
+@options_setup.QUICKSETUP_TEST_PROFILE()
 @options.CONFIG_FILE()
 @click.pass_context
 def quicksetup(
     ctx, non_interactive, profile, email, first_name, last_name, institution, db_engine, db_backend, db_host, db_port,
     db_name, db_username, db_password, su_db_name, su_db_username, su_db_password, broker_protocol, broker_username,
-    broker_password, broker_host, broker_port, broker_virtual_host, repository
+    broker_password, broker_host, broker_port, broker_virtual_host, repository, test_profile
 ):
     """Setup a new profile in a fully automated fashion."""
     # pylint: disable=too-many-arguments,too-many-locals
@@ -202,5 +205,6 @@ def quicksetup(
         'broker_port': broker_port,
         'broker_virtual_host': broker_virtual_host,
         'repository': repository,
+        'test_profile': test_profile,
     }
     ctx.invoke(setup, **setup_parameters)

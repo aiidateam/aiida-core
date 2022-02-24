@@ -360,3 +360,9 @@ SETUP_REPOSITORY_URI = QUICKSETUP_REPOSITORY_URI.clone(
     contextual_default=get_repository_uri_default,
     cls=options.interactive.InteractiveOption
 )
+
+SETUP_TEST_PROFILE = options.OverridableOption(
+    '--test-profile', is_flag=True, help='Designate the profile to be used for running the test suite only.'
+)
+
+QUICKSETUP_TEST_PROFILE = SETUP_TEST_PROFILE.clone()

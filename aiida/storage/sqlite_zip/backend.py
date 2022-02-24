@@ -19,7 +19,7 @@ from zipfile import ZipFile
 from archive_path import extract_file_in_zip
 from sqlalchemy.orm import Session
 
-from aiida.common.exceptions import ClosedStorage, CorruptStorage
+from aiida.common.exceptions import AiidaException, ClosedStorage, CorruptStorage
 from aiida.manage import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
@@ -174,10 +174,10 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
         raise NotImplementedError
 
 
-class ReadOnlyError(IOError):
+class ReadOnlyError(AiidaException):
     """Raised when a write operation is called on a read-only archive."""
 
-    def __init__(self, msg='Archive is read-only'):  # pylint: disable=useless-super-delegation
+    def __init__(self, msg='sqlite_zip storage is read-only'):  # pylint: disable=useless-super-delegation
         super().__init__(msg)
 
 

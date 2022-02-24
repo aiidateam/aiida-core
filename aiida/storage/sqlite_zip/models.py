@@ -19,7 +19,8 @@ except for changes to the database specific types:
 Also, `varchar_pattern_ops` indexes are not possible in sqlite.
 """
 from datetime import datetime
-from typing import Optional
+import functools
+from typing import Any, Optional, Set, Tuple
 
 import pytz
 import sqlalchemy as sa
@@ -27,6 +28,7 @@ from sqlalchemy import orm as sa_orm
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.dialects.sqlite import JSON
 
+from aiida.orm.entities import EntityTypes
 # we need to import all models, to ensure they are loaded on the SQLA Metadata
 from aiida.storage.psql_dos.models import authinfo, base, comment, computer, group, log, node, user
 
@@ -121,3 +123,22 @@ DbNode.dbcomputer = sa_orm.relationship('DbComputer', backref='dbnodes')  # type
 DbGroup.dbnodes = sa_orm.relationship(  # type: ignore[attr-defined]
     'DbNode', secondary='db_dbgroup_dbnodes', backref='dbgroups', lazy='dynamic'
 )
+
+
+@functools.lru_cache(maxsize=10)
+def get_model_from_entity(entity_type: EntityTypes) -> Tuple[Any, Set[str]]:
+    """Return the Sqlalchemy model and column names corresponding to the given entity."""
+    model = {
+        EntityTypes.USER: DbUser,
+        EntityTypes.AUTHINFO: DbAuthInfo,
+        EntityTypes.GROUP: DbGroup,
+        EntityTypes.NODE: DbNode,
+        EntityTypes.COMMENT: DbComment,
+        EntityTypes.COMPUTER: DbComputer,
+        EntityTypes.LOG: DbLog,
+        EntityTypes.LINK: DbLink,
+        EntityTypes.GROUP_NODE: DbGroupNodes
+    }[entity_type]
+    mapper = sa.inspect(model).mapper
+    column_names = {col.name for col in mapper.c.values()}
+    return model, column_names

@@ -9,7 +9,6 @@
 ###########################################################################
 """AiiDA archive writer implementation."""
 from datetime import datetime
-import functools
 import hashlib
 from io import BytesIO
 import json
@@ -20,7 +19,7 @@ from typing import Any, BinaryIO, Dict, List, Literal, Optional, Set, Union
 import zipfile
 
 from archive_path import NOTSET, ZipPath, extract_file_in_zip, read_file_in_zip
-from sqlalchemy import insert, inspect
+from sqlalchemy import insert
 from sqlalchemy.exc import IntegrityError as SqlaIntegrityError
 from sqlalchemy.future.engine import Connection
 
@@ -31,25 +30,6 @@ from aiida.common.progress_reporter import get_progress_reporter
 from aiida.orm.entities import EntityTypes
 from aiida.storage.sqlite_zip import models, utils
 from aiida.tools.archive.abstract import ArchiveFormatAbstract, ArchiveWriterAbstract
-
-
-@functools.lru_cache(maxsize=10)
-def _get_model_from_entity(entity_type: EntityTypes):
-    """Return the Sqlalchemy model and column names corresponding to the given entity."""
-    model = {
-        EntityTypes.USER: models.DbUser,
-        EntityTypes.AUTHINFO: models.DbAuthInfo,
-        EntityTypes.GROUP: models.DbGroup,
-        EntityTypes.NODE: models.DbNode,
-        EntityTypes.COMMENT: models.DbComment,
-        EntityTypes.COMPUTER: models.DbComputer,
-        EntityTypes.LOG: models.DbLog,
-        EntityTypes.LINK: models.DbLink,
-        EntityTypes.GROUP_NODE: models.DbGroupNodes
-    }[entity_type]
-    mapper = inspect(model).mapper
-    column_names = {col.name for col in mapper.c.values()}
-    return model, column_names
 
 
 class ArchiveWriterSqlZip(ArchiveWriterAbstract):
@@ -147,7 +127,7 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
             return
         self._assert_in_context()
         assert self._conn is not None
-        model, col_keys = _get_model_from_entity(entity_type)
+        model, col_keys = models.get_model_from_entity(entity_type)
         if allow_defaults:
             for row in rows:
                 if not col_keys.issuperset(row):

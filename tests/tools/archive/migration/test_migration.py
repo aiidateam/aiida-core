@@ -48,7 +48,7 @@ NODE_REPOS = {
 }
 
 
-@pytest.mark.parametrize('archive_name', ('export_v0.4_simple.aiida', 'export_v0.4_simple.tar.gz'))
+@pytest.mark.parametrize('archive_name', ('export_0.4_simple.aiida', 'export_0.4_simple.tar.gz'))
 def test_full_migration(tmp_path, core_archive, archive_name):
     """Test a migration from the first to newest archive version."""
 
@@ -78,7 +78,7 @@ def test_full_migration(tmp_path, core_archive, archive_name):
 
 def test_partial_migrations(core_archive, tmp_path):
     """Test migrations from a specific version (0.5) to other versions."""
-    filepath_archive = get_archive_file('export_v0.5_simple.aiida', **core_archive)
+    filepath_archive = get_archive_file('export_0.5_simple.aiida', **core_archive)
     archive_format = ArchiveFormatSqlZip()
 
     assert archive_format.read_version(filepath_archive) == '0.5'
@@ -97,7 +97,7 @@ def test_partial_migrations(core_archive, tmp_path):
 
 def test_no_node_migration(tmp_path, core_archive):
     """Test migration of archive file that has no Node entities."""
-    filepath_archive = get_archive_file('export_v0.4_no_Nodes.aiida', **core_archive)
+    filepath_archive = get_archive_file('export_0.4_no_Nodes.aiida', **core_archive)
     archive_format = ArchiveFormatSqlZip()
     new_archive = tmp_path / 'output_file.aiida'
 
@@ -117,7 +117,7 @@ def test_no_node_migration(tmp_path, core_archive):
 @pytest.mark.parametrize('version', ['0.0', '0.1.0', '0.99'])
 def test_wrong_versions(core_archive, tmp_path, version):
     """Test correct errors are raised if archive files have wrong version numbers"""
-    filepath_archive = get_archive_file('export_v0.4_simple.aiida', **core_archive)
+    filepath_archive = get_archive_file('export_0.4_simple.aiida', **core_archive)
     archive_format = ArchiveFormatSqlZip()
     new_archive = tmp_path / 'out.aiida'
     with pytest.raises(StorageMigrationError, match='Unknown target version'):

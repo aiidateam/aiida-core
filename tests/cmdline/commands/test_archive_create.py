@@ -89,7 +89,7 @@ def test_create_basic(run_cli_command, tmp_path):
 @pytest.mark.parametrize('version', ('0.4', '0.5', '0.6', '0.7', '0.8', '0.9', '0.10', '0.11', '0.12'))
 def test_migrate_versions_old(run_cli_command, tmp_path, version):
     """Migrating archives with a version older than the current should work."""
-    archive = f'export_v{version}_simple.aiida'
+    archive = f'export_{version}_simple.aiida'
     filename_input = get_archive_file(archive, filepath='export/migrate')
     filename_output = tmp_path / 'archive.aiida'
 
@@ -101,7 +101,7 @@ def test_migrate_versions_old(run_cli_command, tmp_path, version):
 
 def test_migrate_version_specific(run_cli_command, tmp_path):
     """Test the `-v/--version` option to migrate to a specific version instead of the latest."""
-    archive = 'export_v0.5_simple.aiida'
+    archive = 'export_0.5_simple.aiida'
     target_version = '0.8'
     filename_input = get_archive_file(archive, filepath='export/migrate')
     filename_output = tmp_path / 'archive.aiida'
@@ -118,7 +118,7 @@ def test_migrate_file_already_exists(run_cli_command, tmp_path):
     """Test that using a file that already exists will raise."""
     outpath = tmp_path / 'archive.aiida'
     outpath.touch()
-    filename_input = get_archive_file('export_v0.6_simple.aiida', filepath='export/migrate')
+    filename_input = get_archive_file('export_0.6_simple.aiida', filepath='export/migrate')
     options = [filename_input, outpath]
     run_cli_command(cmd_archive.migrate, options, raises=True)
 
@@ -127,7 +127,7 @@ def test_migrate_force(run_cli_command, tmp_path):
     """Test that using a file that already exists will work when the ``-f/--force`` parameter is used."""
     outpath = tmp_path / 'archive.aiida'
     outpath.touch()
-    filename_input = get_archive_file('export_v0.6_simple.aiida', filepath='export/migrate')
+    filename_input = get_archive_file('export_0.6_simple.aiida', filepath='export/migrate')
     options = ['--force', filename_input, outpath]
     run_cli_command(cmd_archive.migrate, options)
     assert ArchiveFormatSqlZip().read_version(outpath) == ArchiveFormatSqlZip().latest_version
@@ -135,7 +135,7 @@ def test_migrate_force(run_cli_command, tmp_path):
 
 def test_migrate_in_place(run_cli_command, tmp_path):
     """Test that passing the -i/--in-place option will overwrite the passed file."""
-    archive = 'export_v0.6_simple.aiida'
+    archive = 'export_0.6_simple.aiida'
     target_version = '0.8'
     filename_input = get_archive_file(archive, filepath='export/migrate')
     filename_clone = tmp_path / 'archive.aiida'
@@ -167,7 +167,7 @@ def test_migrate_low_verbosity(run_cli_command, tmp_path):
     Note that we use the ``config_with_profile`` fixture to create a dummy profile, since the ``--verbosity`` option
     will change the profile configuration which could potentially influence the other tests.
     """
-    filename_input = get_archive_file('export_v0.6_simple.aiida', filepath='export/migrate')
+    filename_input = get_archive_file('export_0.6_simple.aiida', filepath='export/migrate')
     filename_output = tmp_path / 'archive.aiida'
 
     options = ['--verbosity', 'WARNING', filename_input, filename_output]
@@ -181,7 +181,7 @@ def test_migrate_low_verbosity(run_cli_command, tmp_path):
 @pytest.mark.parametrize('version', list_versions())
 def test_inspect_version(run_cli_command, version):
     """Test the functionality of `verdi export inspect --version`."""
-    archive = f'export_v{version}_simple.aiida'
+    archive = f'export_{version}_simple.aiida'
     filename_input = get_archive_file(archive, filepath='export/migrate')
     options = ['--version', filename_input]
     result = run_cli_command(cmd_archive.inspect, options)
@@ -190,7 +190,7 @@ def test_inspect_version(run_cli_command, version):
 
 def test_inspect_metadata(run_cli_command):
     """Test the functionality of `verdi export inspect --meta-data`."""
-    archive = f'export_v{ArchiveFormatSqlZip().latest_version}_simple.aiida'
+    archive = f'export_{ArchiveFormatSqlZip().latest_version}_simple.aiida'
     filename_input = get_archive_file(archive, filepath='export/migrate')
     options = ['--meta-data', filename_input]
     result = run_cli_command(cmd_archive.inspect, options)
@@ -199,7 +199,7 @@ def test_inspect_metadata(run_cli_command):
 
 def test_inspect_database(run_cli_command):
     """Test the functionality of `verdi export inspect --meta-data`."""
-    archive = f'export_v{ArchiveFormatSqlZip().latest_version}_simple.aiida'
+    archive = f'export_{ArchiveFormatSqlZip().latest_version}_simple.aiida'
     filename_input = get_archive_file(archive, filepath='export/migrate')
     options = ['--database', filename_input]
     result = run_cli_command(cmd_archive.inspect, options)

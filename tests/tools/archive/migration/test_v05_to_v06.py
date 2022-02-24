@@ -31,7 +31,7 @@ def test_migrate_v5_to_v6_calc_states(core_archive, migrate_from_func):
     module does not include a `CalcJobNode` with a legacy `state` attribute.
     """
     # Get metadata.json and data.json as dicts from v0.5 file archive
-    archive_path = get_archive_file('export_v0.5_simple.aiida', **core_archive)
+    archive_path = get_archive_file('export_0.5_simple.aiida', **core_archive)
     metadata, data = read_json_files(archive_path)  # pylint: disable=unbalanced-tuple-unpacking
 
     verify_metadata_version(metadata, version='0.5')
@@ -45,7 +45,7 @@ def test_migrate_v5_to_v6_calc_states(core_archive, migrate_from_func):
             calc_jobs[pk] = data['node_attributes'][pk]['state']
 
     # Migrate to v0.6
-    metadata, data = migrate_from_func('export_v0.5_simple.aiida', '0.5', '0.6', migrate_v5_to_v6, core_archive)
+    metadata, data = migrate_from_func('export_0.5_simple.aiida', '0.5', '0.6', migrate_v5_to_v6, core_archive)
     verify_metadata_version(metadata, version='0.6')
 
     node_attributes = data['node_attributes']
@@ -73,10 +73,10 @@ def test_migrate_v5_to_v6_datetime(core_archive, migrate_from_func):
     Datetime attributes were serialized into strings, by first converting to UTC and then printing with the format
     '%Y-%m-%dT%H:%M:%S.%f'. In the database migration, datetimes were serialized *including* timezone information.
     Here we test that the archive migration correctly reattaches the timezone information. The archive that we are
-    using `export_v0.5_simple.aiida` contains a node with the attribute "scheduler_lastchecktime".
+    using `export_0.5_simple.aiida` contains a node with the attribute "scheduler_lastchecktime".
     """
     # Get metadata.json and data.json as dicts from v0.5 file archive
-    archive_path = get_archive_file('export_v0.5_simple.aiida', **core_archive)
+    archive_path = get_archive_file('export_0.5_simple.aiida', **core_archive)
     metadata, data = read_json_files(archive_path)  # pylint: disable=unbalanced-tuple-unpacking
 
     verify_metadata_version(metadata, version='0.5')
@@ -90,7 +90,7 @@ def test_migrate_v5_to_v6_datetime(core_archive, migrate_from_func):
         assert '+' not in serialized_original, msg
 
         # Migrate to v0.6
-        metadata, data = migrate_from_func('export_v0.5_simple.aiida', '0.5', '0.6', migrate_v5_to_v6, core_archive)
+        metadata, data = migrate_from_func('export_0.5_simple.aiida', '0.5', '0.6', migrate_v5_to_v6, core_archive)
         verify_metadata_version(metadata, version='0.6')
 
         serialized_migrated = data['node_attributes'][key]['scheduler_lastchecktime']
@@ -99,6 +99,6 @@ def test_migrate_v5_to_v6_datetime(core_archive, migrate_from_func):
 
     else:
         raise RuntimeError(
-            'the archive `export_v0.5_simple.aiida` did not contain a node with the attribute '
+            'the archive `export_0.5_simple.aiida` did not contain a node with the attribute '
             '`scheduler_lastchecktime` which is required for this test.'
         )

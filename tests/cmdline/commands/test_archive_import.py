@@ -31,7 +31,7 @@ class TestVerdiImport:
         self.url_path = 'https://raw.githubusercontent.com/aiidateam/aiida-core/' \
             '0599dabf0887bee172a04f308307e99e3c3f3ff2/aiida/backends/tests/fixtures/export/migrate/'
         self.archive_path = 'export/migrate'
-        self.newest_archive = f'export_v{ArchiveFormatSqlZip().latest_version}_simple.aiida'
+        self.newest_archive = f'export_{ArchiveFormatSqlZip().latest_version}_simple.aiida'
 
     def test_import_no_archives(self):
         """Test that passing no valid archives will lead to command failure."""
@@ -178,7 +178,7 @@ class TestVerdiImport:
         Expected behavior: Automatically migrate to newest version and import correctly.
         """
         for version in list_versions():
-            archive, version = (f'export_v{version}_simple.aiida', f'{version}')
+            archive, version = (f'export_{version}_simple.aiida', f'{version}')
             options = [get_archive_file(archive, filepath=self.archive_path)]
             result = self.cli_runner.invoke(cmd_archive.import_archive, options)
 
@@ -244,7 +244,7 @@ class TestVerdiImport:
         `migration` = True (default), Expected: No query, migrate
         `migration` = False, Expected: No query, no migrate
         """
-        archive = get_archive_file('export_v0.4_simple.aiida', filepath=self.archive_path)
+        archive = get_archive_file('export_0.4_simple.aiida', filepath=self.archive_path)
         success_message = f'Success: imported archive {archive}'
 
         # Import "normally", but explicitly specifying `--migration`, make sure confirm message is present

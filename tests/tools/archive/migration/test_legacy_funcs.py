@@ -26,13 +26,13 @@ def test_migrations(migration_data):
     """Test each migration method from the `aiida.tools.archive.archive.migrations` module."""
     version_old, (version_new, migration_method) = migration_data
 
-    filepath_archive_new = get_archive_file(f'export_v{version_new}_simple.aiida', filepath='export/migrate')
+    filepath_archive_new = get_archive_file(f'export_{version_new}_simple.aiida', filepath='export/migrate')
 
     metadata_new = read_json_files(filepath_archive_new, names=['metadata.json'])[0]
     verify_metadata_version(metadata_new, version=version_new)
     data_new = read_json_files(filepath_archive_new, names=['data.json'])[0]
 
-    filepath_archive_old = get_archive_file(f'export_v{version_old}_simple.aiida', filepath='export/migrate')
+    filepath_archive_old = get_archive_file(f'export_{version_old}_simple.aiida', filepath='export/migrate')
 
     metadata_old, data_old = read_json_files(filepath_archive_old, names=['metadata.json', 'data.json'])  # pylint: disable=unbalanced-tuple-unpacking
 

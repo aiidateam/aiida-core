@@ -17,7 +17,6 @@ of subsets of the provenance graph, to a single file
 # pylint: disable=wildcard-import
 
 from .abstract import *
-from .common import *
 from .create import *
 from .exceptions import *
 from .implementations import *
@@ -37,7 +36,6 @@ __all__ = (
     'ImportTestRun',
     'ImportUniquenessError',
     'ImportValidationError',
-    'MIGRATE_LOGGER',
     'create_archive',
     'get_format',
     'import_archive',

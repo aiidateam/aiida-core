@@ -23,18 +23,18 @@ from archive_path import open_file_in_tar, open_file_in_zip
 from aiida.common import json
 from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, StorageMigrationError
 from aiida.common.progress_reporter import get_progress_reporter
-from aiida.tools.archive.common import MIGRATE_LOGGER
+from aiida.storage.log import MIGRATE_LOGGER
 
-from ..utils import read_version
-from .legacy import FINAL_LEGACY_VERSION, LEGACY_MIGRATE_FUNCTIONS
-from .legacy_to_main import MIGRATED_TO_REVISION, perform_v1_migration
-from .utils import copy_tar_to_zip, copy_zip_to_zip
+from .migrations.legacy import FINAL_LEGACY_VERSION, LEGACY_MIGRATE_FUNCTIONS
+from .migrations.legacy_to_main import MIGRATED_TO_REVISION, perform_v1_migration
+from .migrations.utils import copy_tar_to_zip, copy_zip_to_zip
+from .utils import read_version
 
 
 def _alembic_config() -> Config:
     """Return an instance of an Alembic `Config`."""
     config = Config()
-    config.set_main_option('script_location', os.path.dirname(os.path.realpath(__file__)))
+    config.set_main_option('script_location', str(Path(os.path.realpath(__file__)).parent / 'migrations'))
     return config
 
 

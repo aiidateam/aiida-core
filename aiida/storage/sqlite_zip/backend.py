@@ -31,7 +31,7 @@ from aiida.storage.psql_dos.orm.querybuilder import SqlaQueryBuilder
 from aiida.storage.psql_dos.orm.utils import ModelWrapper
 
 from . import models
-from .migrations.main import get_schema_version_head, validate_storage
+from .migrator import get_schema_version_head, validate_storage
 from .utils import DB_FILENAME, REPO_FOLDER, create_sqla_engine, read_version
 
 

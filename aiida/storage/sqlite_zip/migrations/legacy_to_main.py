@@ -25,10 +25,10 @@ from aiida.common.exceptions import CorruptStorage, StorageMigrationError
 from aiida.common.hashing import chunked_file_hash
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.repository.common import File, FileType
-from aiida.storage.sqlite_zip.utils import create_sqla_engine
-from aiida.tools.archive.common import MIGRATE_LOGGER, batch_iter
+from aiida.storage.log import MIGRATE_LOGGER
 
 from . import v1_db_schema as v1_schema
+from ..utils import create_sqla_engine
 from .legacy.utils import update_metadata
 
 _NODE_ENTITY_NAME = 'Node'
@@ -154,6 +154,8 @@ def _json_to_sqlite(
     outpath: Path, data: dict, node_repos: Dict[str, List[Tuple[str, Optional[str]]]], batch_size: int = 100
 ) -> None:
     """Convert a JSON archive format to SQLite."""
+    from aiida.tools.archive.common import batch_iter
+
     MIGRATE_LOGGER.report('Converting DB to SQLite')
 
     engine = create_sqla_engine(outpath)

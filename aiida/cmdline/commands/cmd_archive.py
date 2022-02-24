@@ -248,7 +248,7 @@ def migrate(input_file, output_file, force, in_place, version):
             f'{error.__class__.__name__}:{error}'
         )
 
-    echo.echo_success(f'migrated the archive to version {version}')
+    echo.echo_success(f'migrated the archive to version {version!r}')
 
 
 class ExtrasImportCode(Enum):

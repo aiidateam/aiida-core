@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
 from aiida.common.exceptions import CorruptStorage
-from aiida.manage import Profile
 from aiida.storage.sqlite_zip.backend import SqliteZipBackend
 from aiida.storage.sqlite_zip.utils import extract_metadata
 from aiida.tools.archive.abstract import ArchiveReaderAbstract
@@ -50,19 +49,6 @@ class ArchiveReaderSqlZip(ArchiveReaderAbstract):
             raise AssertionError('Not in context')
         if self._backend is not None:
             return self._backend
-        profile = Profile(
-            'default', {
-                'storage': {
-                    'backend': 'sqlite_zip',
-                    'config': {
-                        'path': str(self.path)
-                    }
-                },
-                'process_control': {
-                    'backend': 'null',
-                    'config': {}
-                }
-            }
-        )
+        profile = SqliteZipBackend.create_profile(self.path)
         self._backend = SqliteZipBackend(profile)
         return self._backend

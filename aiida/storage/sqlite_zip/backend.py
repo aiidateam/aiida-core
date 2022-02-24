@@ -8,11 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """The table models are dynamically generated from the sqlalchemy backend models."""
+from __future__ import annotations
+
 from contextlib import contextmanager
 from functools import singledispatch
 from pathlib import Path
 import tempfile
-from typing import BinaryIO, Iterable, Iterator, List, Optional, Sequence, Tuple, Type, cast
+from typing import BinaryIO, Iterable, Iterator, Optional, Sequence, Tuple, Type, cast
 import zipfile
 from zipfile import ZipFile
 
@@ -39,6 +41,24 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
     @classmethod
     def version_head(cls) -> str:
         return get_schema_version_head()
+
+    @staticmethod
+    def create_profile(path: str | Path) -> Profile:
+        """Create a new profile instance for this backend, from the path to the zip file."""
+        return Profile(
+            'default', {
+                'storage': {
+                    'backend': 'sqlite_zip',
+                    'config': {
+                        'path': str(path)
+                    }
+                },
+                'process_control': {
+                    'backend': 'null',
+                    'config': {}
+                }
+            }
+        )
 
     @classmethod
     def version_profile(cls, profile: Profile) -> None:
@@ -152,10 +172,10 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
     def in_transaction(self) -> bool:
         return False
 
-    def bulk_insert(self, entity_type: EntityTypes, rows: List[dict], allow_defaults: bool = False) -> List[int]:
+    def bulk_insert(self, entity_type: EntityTypes, rows: list[dict], allow_defaults: bool = False) -> list[int]:
         raise ReadOnlyError()
 
-    def bulk_update(self, entity_type: EntityTypes, rows: List[dict]) -> None:
+    def bulk_update(self, entity_type: EntityTypes, rows: list[dict]) -> None:
         raise ReadOnlyError()
 
     def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]):
@@ -221,7 +241,7 @@ class ZipfileBackendRepository(AbstractRepositoryBackend):
             return False
         return True
 
-    def has_objects(self, keys: List[str]) -> List[bool]:
+    def has_objects(self, keys: list[str]) -> list[bool]:
         return [self.has_object(key) for key in keys]
 
     def list_objects(self) -> Iterable[str]:
@@ -239,12 +259,12 @@ class ZipfileBackendRepository(AbstractRepositoryBackend):
         finally:
             handle.close()
 
-    def iter_object_streams(self, keys: List[str]) -> Iterator[Tuple[str, BinaryIO]]:
+    def iter_object_streams(self, keys: list[str]) -> Iterator[Tuple[str, BinaryIO]]:
         for key in keys:
             with self.open(key) as handle:  # pylint: disable=not-context-manager
                 yield key, handle
 
-    def delete_objects(self, keys: List[str]) -> None:
+    def delete_objects(self, keys: list[str]) -> None:
         raise ReadOnlyError()
 
     def get_object_hash(self, key: str) -> str:

@@ -27,6 +27,7 @@ class TestProfile:
         # pylint: disable=attribute-defined-outside-init
         self.profile_name = 'test_profile'
         self.profile_dictionary = {
+            'test_profile': True,
             'default_user_email': 'dummy@localhost',
             'storage': {
                 'backend': 'psql_dos',
@@ -73,9 +74,9 @@ class TestProfile:
         assert self.profile.uuid in self.profile.rmq_prefix
 
     def test_is_test_profile(self):
-        """Test that a profile whose name starts with `test_` is marked as a test profile."""
-        profile_name = 'not_a_test_profile'
-        profile = create_mock_profile(name=profile_name)
+        """Test the :meth:`aiida.manage.configuration.profile.is_test_profile` property."""
+        profile = create_mock_profile(name='not_test_profile')
+        profile.is_test_profile = False
 
         # The one constructed in the setUpClass should be a test profile
         assert self.profile.is_test_profile

@@ -398,9 +398,6 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         return keyset_repository - keyset_database
 
     def get_info(self, statistics: bool = False) -> dict:
-        repository = self.get_repository()
-        output_dict = {
-            'database': {},
-            'repository': repository.get_info(statistics),
-        }
-        return output_dict
+        results = super().get_info(statistics=statistics)
+        results['repository'] = self.get_repository().get_info(statistics)
+        return results

@@ -9,6 +9,7 @@
 ###########################################################################
 """Implementation of the CalcJob process."""
 import io
+import json
 import os
 import shutil
 from typing import Any, Dict, Hashable, Optional, Type, Union
@@ -582,7 +583,6 @@ class CalcJob(Process):
 
         """
         # pylint: disable=too-many-locals,too-many-statements,too-many-branches
-        from aiida.common import json
         from aiida.common.datastructures import CodeInfo, CodeRunMode
         from aiida.common.exceptions import InputValidationError, InvalidOperation, PluginInternalError, ValidationError
         from aiida.common.utils import validate_list_of_string_tuples

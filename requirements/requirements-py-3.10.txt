@@ -132,7 +132,6 @@ seekpath==1.9.7
 Send2Trash==1.8.0
 setuptools-scm==6.3.2
 shortuuid==1.0.8
-simplejson==3.17.6
 six==1.16.0
 snowballstemmer==2.2.0
 soupsieve==2.3.1

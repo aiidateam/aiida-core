@@ -9,6 +9,7 @@
 ###########################################################################
 # pylint: disable=import-error,no-name-in-module
 """Utility functions specific to the SqlAlchemy backend."""
+import json
 from typing import TypedDict
 
 
@@ -32,8 +33,6 @@ def create_sqlalchemy_engine(config: PsqlConfig):
         more info.
     """
     from sqlalchemy import create_engine
-
-    from aiida.common import json
 
     # The hostname may be `None`, which is a valid value in the case of peer authentication for example. In this case
     # it should be converted to an empty string, because otherwise the `None` will be converted to string literal "None"

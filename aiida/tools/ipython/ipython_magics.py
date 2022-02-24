@@ -33,6 +33,7 @@ Usage
 
    In [2]: %aiida
 """
+import json
 
 from IPython import get_ipython, version_info
 from IPython.core import magic
@@ -97,8 +98,6 @@ class AiiDALoaderMagics(magic.Magics):
         """
         Output in JSON format.
         """
-        from aiida.common import json
-
         obj = {'current_state': self.current_state}
         if version_info[0] >= 3:
             return obj

@@ -10,11 +10,11 @@
 """"Implementation of `DbImporter` for the MPDS database."""
 import copy
 import enum
+import json
 import os
 
 import requests
 
-from aiida.common import json
 from aiida.tools.dbimporters.baseclasses import CifEntry, DbEntry, DbImporter, DbSearchResults
 
 

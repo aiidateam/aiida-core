@@ -16,6 +16,7 @@ the data structure that is returned when querying for jobs in the scheduler
 """
 import abc
 import enum
+import json
 
 from aiida.common import AIIDA_LOGGER
 from aiida.common.extendeddicts import AttributeDict, DefaultFieldsAttributeDict
@@ -543,8 +544,6 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
 
         :return: A string with serialised representation of the current data.
         """
-        from aiida.common import json
-
         return json.dumps(self.get_dict())
 
     def get_dict(self):
@@ -574,6 +573,4 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
 
         :param data: The string with the JSON-serialised data to load from
         """
-        from aiida.common import json
-
         return cls.load_from_dict(json.loads(data))

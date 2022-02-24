@@ -14,8 +14,8 @@ Adapted from: `aiida/backends/djsite/db/migrations/__init__.py`
 from __future__ import annotations
 
 import datetime
+import json
 
-from aiida.common import json
 from aiida.common.exceptions import ValidationError
 from aiida.common.timezone import get_current_timezone, is_naive, make_aware
 

@@ -26,6 +26,7 @@ from aiida.cmdline.commands.cmd_data import (
     cmd_cif,
     cmd_dict,
     cmd_remote,
+    cmd_show,
     cmd_singlefile,
     cmd_structure,
     cmd_trajectory,
@@ -506,7 +507,7 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
     def test_showhelp(self):
         res = self.cli_runner(cmd_trajectory.trajectory_show, ['--help'])
         assert b'Usage:' in res.stdout_bytes, 'The string "Usage: " was not found in the output' \
-            ' of verdi data trajecotry show --help'
+            ' of verdi data trajectory show --help'
 
     def test_list(self):
         self.data_listing_test(TrajectoryData, str(self.pks[DummyVerdiDataListable.NODE_ID_STR]), self.pks)
@@ -516,6 +517,15 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
     def test_export(self, output_flag, tmp_path):
         new_supported_formats = list(cmd_trajectory.EXPORT_FORMATS)
         self.data_export_test(TrajectoryData, self.pks, new_supported_formats, output_flag, tmp_path)
+
+    @pytest.mark.parametrize('fmt', cmd_trajectory.VISUALIZATION_FORMATS)
+    def test_trajectoryshow(self, fmt):
+        """Test showing the trajectory data in different formats"""
+        if fmt in ['xcrysden', 'jmol'] and not cmd_show.has_executable(fmt):
+            pytest.skip()
+        options = ['--format', fmt, str(self.ids[DummyVerdiDataListable.NODE_ID_STR])]
+        res = self.cli_runner(cmd_trajectory.trajectory_show, options, catch_exceptions=False)
+        assert res.exit_code == 0
 
 
 class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):

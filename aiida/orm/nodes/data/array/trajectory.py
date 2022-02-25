@@ -652,8 +652,6 @@ class TrajectoryData(ArrayData):
             from ase.data.colors import cpk_colors as colors
         else:
             raise ValueError(f'Unknown color spec {colors}')
-        if kwargs:
-            raise ValueError(f'Unrecognized keyword {kwargs.keys()}')
 
         if element_list is None:
             # If not all elements are allowed
@@ -703,12 +701,8 @@ class TrajectoryData(ArrayData):
             from mayavi import mlab
         except ImportError:
             raise ImportError(
-                'Unable to import the mayavi package, that is required to'
-                'use the plotting feature you requested. '
-                'Please install it first and then call this command again '
-                '(note that the installation of mayavi is quite complicated '
-                'and requires that you already installed the python numpy '
-                'package, as well as the vtk package'
+                'The plotting feature you requested requires the mayavi package.'
+                'Try `pip install mayavi` or consult the documentation.'
             )
         from ase.data import atomic_numbers
         from ase.data.colors import jmol_colors
@@ -847,7 +841,7 @@ def plot_positions_XYZ(  # pylint: disable=too-many-arguments,too-many-locals,in
         dont_block=False,
         mintime=None,
         maxtime=None,
-        label_sparsity=10):
+        n_labels=10):
     """
     Plot with matplotlib the positions of the coordinates of the atoms
     over time for a trajectory
@@ -862,14 +856,14 @@ def plot_positions_XYZ(  # pylint: disable=too-many-arguments,too-many-locals,in
     :param dont_block: passed to plt.show() as ``block=not dont_block``
     :param mintime: if specified, cut the time axis at the specified min value
     :param maxtime: if specified, cut the time axis at the specified max value
-    :param label_sparsity: how often to put a label with the pair (t, coord)
+    :param n_labels: how many labels (t, coord) to put
     """
     from matplotlib import pyplot as plt
     from matplotlib.gridspec import GridSpec
     import numpy as np
 
     tlim = [times[0], times[-1]]
-    index_range = [0, len(times)]
+    index_range = [0, len(times) - 1]
     if mintime is not None:
         tlim[0] = mintime
         index_range[0] = np.argmax(times > mintime)
@@ -896,7 +890,8 @@ def plot_positions_XYZ(  # pylint: disable=too-many-arguments,too-many-locals,in
     plt.ylabel(r'Z Position $\left[{}\right]$'.format(positions_unit))
     plt.xlabel(f'Time [{times_unit}]')
     plt.xlim(*tlim)
-    sparse_indices = np.linspace(*index_range, num=label_sparsity, dtype=int)
+    n_labels = np.minimum(n_labels, len(times))  # don't need more labels than times
+    sparse_indices = np.linspace(*index_range, num=n_labels, dtype=int)
 
     for index, traj in enumerate(trajectories):
         if index not in indices_to_show:

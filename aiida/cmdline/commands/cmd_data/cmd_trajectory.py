@@ -14,7 +14,6 @@ import click
 from aiida.cmdline.commands.cmd_data import cmd_show, verdi_data
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export, export_options
 from aiida.cmdline.commands.cmd_data.cmd_list import data_list, list_options
-from aiida.cmdline.commands.cmd_data.cmd_show import show_options
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 
@@ -66,16 +65,38 @@ def trajectory_list(raw, past_days, groups, all_users):
 @trajectory.command('show')
 @arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:core.array.trajectory',)))
 @options.VISUALIZATION_FORMAT(type=click.Choice(VISUALIZATION_FORMATS), default='jmol')
-@show_options
+@options.TRAJECTORY_INDEX()
+@options.WITH_ELEMENTS()
+@click.option(
+    '-c', '--contour', type=click.FLOAT, cls=options.MultipleValueOption, default=None, help='Isovalues to plot'
+)
+@click.option(
+    '--sampling-stepsize',
+    type=click.INT,
+    default=None,
+    help='Sample positions in plot every sampling_stepsize timestep'
+)
+@click.option(
+    '--stepsize',
+    type=click.INT,
+    default=None,
+    help='The stepsize for the trajectory, set it higher to reduce number of points'
+)
+@click.option('--mintime', type=click.INT, default=None, help='The time to plot from')
+@click.option('--maxtime', type=click.INT, default=None, help='The time to plot to')
+@click.option(
+    '--indices', type=click.INT, cls=options.MultipleValueOption, default=None, help='Show only these indices'
+)
+@click.option('--dont-block', 'block', is_flag=True, default=True, help="Don't block interpreter when showing plot.")
 @decorators.with_dbenv()
-def trajectory_show(data, fmt):
+def trajectory_show(data, fmt, **kwargs):
     """Visualize a trajectory."""
     try:
         show_function = getattr(cmd_show, f'_show_{fmt}')
     except AttributeError:
         echo.echo_critical(f'visualization format {fmt} is not supported')
 
-    show_function(fmt, data)
+    show_function(exec_name=fmt, trajectory_list=data, **kwargs)
 
 
 @trajectory.command('export')

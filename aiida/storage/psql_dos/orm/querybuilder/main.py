@@ -333,7 +333,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             # LINK-PROJECTIONS #########################
 
             for vertex in self._data['path'][1:]:
-                edge_tag = vertex.get('edge_tag', None)
+                edge_tag = vertex.get('edge_tag', None)  # type: ignore
 
                 QUERYBUILD_LOGGER.debug(
                     'Checking projections for edges: This is edge %s from %s, %s of %s', edge_tag, vertex.get('tag'),

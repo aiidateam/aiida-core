@@ -41,6 +41,7 @@ from .joiner import SqlaJoiner
 
 class jsonb_array_length(FunctionElement):  # pylint: disable=abstract-method,invalid-name
     name = 'jsonb_array_len'
+    inherit_cache = True
 
 
 @compiles(jsonb_array_length)

@@ -11,7 +11,7 @@
 """Module to manage authentification information for the SQLA backend."""
 from sqlalchemy import ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import backref, relationship
 from sqlalchemy.schema import Column, UniqueConstraint
 from sqlalchemy.types import Boolean, Integer
 
@@ -44,8 +44,8 @@ class DbAuthInfo(Base):
     auth_params = Column(JSONB, default=dict, nullable=False)
     enabled = Column(Boolean, default=True, nullable=False)
 
-    aiidauser = relationship('DbUser', backref='authinfos')
-    dbcomputer = relationship('DbComputer', backref='authinfos')
+    aiidauser = relationship('DbUser', backref=backref('authinfos', passive_deletes=True, cascade='all, delete'))
+    dbcomputer = relationship('DbComputer', backref=backref('authinfos', passive_deletes=True, cascade='all, delete'))
 
     __table_args__ = (UniqueConstraint('aiidauser_id', 'dbcomputer_id'),)
 

@@ -18,6 +18,8 @@ from aiida.storage.sqlite_zip.migrator import list_versions
 from aiida.tools.archive import ArchiveFormatSqlZip
 from tests.utils.archives import get_archive_file
 
+ARCHIVE_PATH = 'export/migrate'
+
 
 class TestVerdiImport:
     """Tests for `verdi import`."""
@@ -30,7 +32,6 @@ class TestVerdiImport:
         # Helper variables
         self.url_path = 'https://raw.githubusercontent.com/aiidateam/aiida-core/' \
             '0599dabf0887bee172a04f308307e99e3c3f3ff2/aiida/backends/tests/fixtures/export/migrate/'
-        self.archive_path = 'export/migrate'
         self.newest_archive = f'export_{ArchiveFormatSqlZip().latest_version}_simple.aiida'
 
     def test_import_no_archives(self):
@@ -56,7 +57,7 @@ class TestVerdiImport:
         """
         archives = [
             get_archive_file('arithmetic.add.aiida', filepath='calcjob'),
-            get_archive_file(self.newest_archive, filepath=self.archive_path)
+            get_archive_file(self.newest_archive, filepath=ARCHIVE_PATH)
         ]
 
         options = [] + archives
@@ -72,7 +73,7 @@ class TestVerdiImport:
         """
         archives = [
             get_archive_file('arithmetic.add.aiida', filepath='calcjob'),
-            get_archive_file(self.newest_archive, filepath=self.archive_path)
+            get_archive_file(self.newest_archive, filepath=ARCHIVE_PATH)
         ]
 
         group_label = 'import_madness'
@@ -116,7 +117,7 @@ class TestVerdiImport:
         """Make sure imported entities are saved in new Group"""
         # Initialization
         group_label = 'new_group_for_verdi_import'
-        archives = [get_archive_file(self.newest_archive, filepath=self.archive_path)]
+        archives = [get_archive_file(self.newest_archive, filepath=ARCHIVE_PATH)]
 
         # Check Group does not already exist
         group_search = Group.objects.find(filters={'label': group_label})
@@ -135,7 +136,7 @@ class TestVerdiImport:
 
     def test_no_import_group(self):
         """Test '--import-group/--no-import-group' options."""
-        archives = [get_archive_file(self.newest_archive, filepath=self.archive_path)]
+        archives = [get_archive_file(self.newest_archive, filepath=ARCHIVE_PATH)]
 
         assert Group.objects.count() == 0, 'There should be no Groups.'
 
@@ -166,26 +167,12 @@ class TestVerdiImport:
     @pytest.mark.skip('Due to summary being logged, this can not be checked against `results.output`.')  # pylint: disable=not-callable
     def test_comment_mode(self):
         """Test toggling comment mode flag"""
-        archives = [get_archive_file(self.newest_archive, filepath=self.archive_path)]
+        archives = [get_archive_file(self.newest_archive, filepath=ARCHIVE_PATH)]
         for mode in ['leave', 'newest', 'overwrite']:
             options = ['--comment-mode', mode] + archives
             result = self.cli_runner.invoke(cmd_archive.import_archive, options)
             assert result.exception is None, result.output
             assert result.exit_code == 0, result.output
-
-    def test_import_old_local_archives(self):
-        """ Test import of old local archives
-        Expected behavior: Automatically migrate to newest version and import correctly.
-        """
-        for version in list_versions():
-            archive, version = (f'export_{version}_simple.aiida', f'{version}')
-            options = [get_archive_file(archive, filepath=self.archive_path)]
-            result = self.cli_runner.invoke(cmd_archive.import_archive, options)
-
-            assert result.exception is None, result.output
-            assert result.exit_code == 0, result.output
-            assert version in result.output, result.exception
-            assert f'Success: imported archive {options[0]}' in result.output, result.exception
 
     def test_import_old_url_archives(self):
         """ Test import of old URL archives
@@ -208,8 +195,8 @@ class TestVerdiImport:
         local_archive = self.newest_archive
 
         options = [
-            get_archive_file(local_archive, filepath=self.archive_path), self.url_path + url_archive,
-            get_archive_file(local_archive, filepath=self.archive_path)
+            get_archive_file(local_archive, filepath=ARCHIVE_PATH), self.url_path + url_archive,
+            get_archive_file(local_archive, filepath=ARCHIVE_PATH)
         ]
         result = self.cli_runner.invoke(cmd_archive.import_archive, options)
 
@@ -244,7 +231,7 @@ class TestVerdiImport:
         `migration` = True (default), Expected: No query, migrate
         `migration` = False, Expected: No query, no migrate
         """
-        archive = get_archive_file('export_0.4_simple.aiida', filepath=self.archive_path)
+        archive = get_archive_file('export_0.4_simple.aiida', filepath=ARCHIVE_PATH)
         success_message = f'Success: imported archive {archive}'
 
         # Import "normally", but explicitly specifying `--migration`, make sure confirm message is present
@@ -268,3 +255,17 @@ class TestVerdiImport:
 
         assert 'trying migration' not in result.output, result.exception
         assert success_message not in result.output, result.exception
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize('version', list_versions())
+def test_import_old_local_archives(version, run_cli_command):
+    """ Test import of old local archives
+    Expected behavior: Automatically migrate to newest version and import correctly.
+    """
+    archive, version = (f'export_{version}_simple.aiida', f'{version}')
+    options = [get_archive_file(archive, filepath=ARCHIVE_PATH)]
+    result = run_cli_command(cmd_archive.import_archive, options)
+
+    assert version in result.output, result.exception
+    assert f'Success: imported archive {options[0]}' in result.output, result.exception

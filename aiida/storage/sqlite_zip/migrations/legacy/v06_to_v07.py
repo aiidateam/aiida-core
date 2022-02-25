@@ -24,7 +24,7 @@ The individual SQLAlchemy database migrations may be found at:
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
 # pylint: disable=invalid-name
-from .utils import update_metadata, verify_metadata_version  # pylint: disable=no-name-in-module
+from ..utils import update_metadata, verify_metadata_version  # pylint: disable=no-name-in-module
 
 
 def data_migration_legacy_process_attributes(data):

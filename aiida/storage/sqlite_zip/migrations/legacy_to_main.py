@@ -11,7 +11,6 @@
 from contextlib import contextmanager
 from datetime import datetime
 from hashlib import sha256
-import json
 from pathlib import Path, PurePosixPath
 import shutil
 import tarfile
@@ -28,8 +27,8 @@ from aiida.repository.common import File, FileType
 from aiida.storage.log import MIGRATE_LOGGER
 
 from . import v1_db_schema as v1_schema
-from ..utils import create_sqla_engine
-from .legacy.utils import update_metadata
+from ..utils import DB_FILENAME, REPO_FOLDER, create_sqla_engine
+from .utils import update_metadata
 
 _NODE_ENTITY_NAME = 'Node'
 _GROUP_ENTITY_NAME = 'Group'
@@ -65,16 +64,18 @@ aiida_orm_to_backend = {
     _LOG_ENTITY_NAME: v1_schema.DbLog,
 }
 
-_META_FILENAME = 'metadata.json'
-_DB_FILENAME = 'db.sqlite3'
-_REPO_FOLDER = 'repo'
-
-MIGRATED_TO_REVISION = 'main_0001'
+LEGACY_TO_MAIN_REVISION = 'main_0000'
 
 
 def perform_v1_migration(  # pylint: disable=too-many-locals
-    inpath: Path, working: Path, archive_name: str, is_tar: bool, metadata: dict, data: dict, compression: int
-) -> None:
+    inpath: Path,
+    working: Path,
+    new_zip: ZipPath,
+    central_dir: Dict[str, Any],
+    is_tar: bool,
+    metadata: dict,
+    data: dict,
+) -> Path:
     """Perform the repository and JSON to SQLite migration.
 
     1. Iterate though the repository paths in the archive
@@ -84,10 +85,11 @@ def perform_v1_migration(  # pylint: disable=too-many-locals
     :param inpath: the input path to the old archive
     :param metadata: the metadata to migrate
     :param data: the data to migrate
+
+    :returns:the path to the sqlite database file
     """
     MIGRATE_LOGGER.report('Initialising new archive...')
     node_repos: Dict[str, List[Tuple[str, Optional[str]]]] = {}
-    central_dir: Dict[str, Any] = {}
     if is_tar:
         # we cannot stream from a tar file performantly, so we extract it to disk first
         @contextmanager
@@ -101,53 +103,44 @@ def perform_v1_migration(  # pylint: disable=too-many-locals
             shutil.rmtree(temp_folder)
     else:
         in_archive_context = ZipPath  # type: ignore
-    with ZipPath(
-        working / archive_name,
-        mode='w',
-        compresslevel=compression,
-        name_to_info=central_dir,
-        info_order=(_META_FILENAME, _DB_FILENAME)
-    ) as new_path:
-        with in_archive_context(inpath) as path:
-            length = sum(1 for _ in path.glob('**/*'))
-            base_parts = len(path.parts)
-            with get_progress_reporter()(desc='Converting repo', total=length) as progress:
-                for subpath in path.glob('**/*'):
-                    progress.update()
-                    parts = subpath.parts[base_parts:]
-                    # repository file are stored in the legacy archive as `nodes/uuid[0:2]/uuid[2:4]/uuid[4:]/path/...`
-                    if len(parts) < 6 or parts[0] != 'nodes' or parts[4] not in ('raw_input', 'path'):
-                        continue
-                    uuid = ''.join(parts[1:4])
-                    posix_rel = PurePosixPath(*parts[5:])
-                    hashkey = None
-                    if subpath.is_file():
+
+    with in_archive_context(inpath) as path:
+        length = sum(1 for _ in path.glob('**/*'))
+        base_parts = len(path.parts)
+        with get_progress_reporter()(desc='Converting repo', total=length) as progress:
+            for subpath in path.glob('**/*'):
+                progress.update()
+                parts = subpath.parts[base_parts:]
+                # repository file are stored in the legacy archive as `nodes/uuid[0:2]/uuid[2:4]/uuid[4:]/path/...`
+                if len(parts) < 6 or parts[0] != 'nodes' or parts[4] not in ('raw_input', 'path'):
+                    continue
+                uuid = ''.join(parts[1:4])
+                posix_rel = PurePosixPath(*parts[5:])
+                hashkey = None
+                if subpath.is_file():
+                    with subpath.open('rb') as handle:
+                        hashkey = chunked_file_hash(handle, sha256)
+                    if f'{REPO_FOLDER}/{hashkey}' not in central_dir:
                         with subpath.open('rb') as handle:
-                            hashkey = chunked_file_hash(handle, sha256)
-                        if f'{_REPO_FOLDER}/{hashkey}' not in central_dir:
-                            with subpath.open('rb') as handle:
-                                with (new_path / f'{_REPO_FOLDER}/{hashkey}').open(mode='wb') as handle2:
-                                    shutil.copyfileobj(handle, handle2)
-                    node_repos.setdefault(uuid, []).append((posix_rel.as_posix(), hashkey))
-            MIGRATE_LOGGER.report(f'Unique files written: {len(central_dir)}')
+                            with (new_zip / f'{REPO_FOLDER}/{hashkey}').open(mode='wb') as handle2:
+                                shutil.copyfileobj(handle, handle2)
+                node_repos.setdefault(uuid, []).append((posix_rel.as_posix(), hashkey))
+        MIGRATE_LOGGER.report(f'Unique files written: {len(central_dir)}')
 
-        _json_to_sqlite(working / _DB_FILENAME, data, node_repos)
+    # convert the JSON database to SQLite
+    _json_to_sqlite(working / DB_FILENAME, data, node_repos)
 
-        MIGRATE_LOGGER.report('Finalising archive')
-        with (working / _DB_FILENAME).open('rb') as handle:
-            with (new_path / _DB_FILENAME).open(mode='wb') as handle2:
-                shutil.copyfileobj(handle, handle2)
+    # remove legacy keys from metadata and store
+    metadata.pop('unique_identifiers', None)
+    metadata.pop('all_fields_info', None)
+    # remove legacy key nesting
+    metadata['creation_parameters'] = metadata.pop('export_parameters', {})
+    metadata['key_format'] = 'sha256'
 
-        # remove legacy keys from metadata and store
-        metadata.pop('unique_identifiers', None)
-        metadata.pop('all_fields_info', None)
-        # remove legacy key nesting
-        metadata['creation_parameters'] = metadata.pop('export_parameters', {})
-        metadata['compression'] = compression
-        metadata['key_format'] = 'sha256'
-        metadata['mtime'] = datetime.now().isoformat()
-        update_metadata(metadata, MIGRATED_TO_REVISION)
-        (new_path / _META_FILENAME).write_text(json.dumps(metadata))
+    # update the version in the metadata
+    update_metadata(metadata, LEGACY_TO_MAIN_REVISION)
+
+    return working / DB_FILENAME
 
 
 def _json_to_sqlite(

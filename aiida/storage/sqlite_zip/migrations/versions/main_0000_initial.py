@@ -10,16 +10,16 @@
 # pylint: disable=invalid-name,no-member
 """Initial main branch schema
 
-Revision ID: main_0001
+Revision ID: main_0000
 Revises:
 Create Date: 2021-02-02
 
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects.sqlite import JSON
 
-revision = 'main_0001'
+revision = 'main_0000'
 down_revision = None
 branch_labels = ('main',)
 depends_on = None
@@ -30,13 +30,13 @@ def upgrade():
     op.create_table(
         'db_dbcomputer',
         sa.Column('id', sa.Integer(), nullable=False, primary_key=True),
-        sa.Column('uuid', postgresql.UUID(as_uuid=True), nullable=False, unique=True),
+        sa.Column('uuid', sa.CHAR(32), nullable=False, unique=True),
         sa.Column('label', sa.String(length=255), nullable=False, unique=True),
         sa.Column('hostname', sa.String(length=255), nullable=False),
         sa.Column('description', sa.Text(), nullable=False),
         sa.Column('scheduler_type', sa.String(length=255), nullable=False),
         sa.Column('transport_type', sa.String(length=255), nullable=False),
-        sa.Column('metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column('metadata', JSON(), nullable=False),
     )
     op.create_table(
         'db_dbuser',
@@ -51,8 +51,8 @@ def upgrade():
         sa.Column('id', sa.Integer(), nullable=False, primary_key=True),
         sa.Column('aiidauser_id', sa.Integer(), nullable=False, index=True),
         sa.Column('dbcomputer_id', sa.Integer(), nullable=False, index=True),
-        sa.Column('metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-        sa.Column('auth_params', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column('metadata', JSON(), nullable=False),
+        sa.Column('auth_params', JSON(), nullable=False),
         sa.Column('enabled', sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(
             ['aiidauser_id'],
@@ -73,12 +73,12 @@ def upgrade():
     op.create_table(
         'db_dbgroup',
         sa.Column('id', sa.Integer(), nullable=False, primary_key=True),
-        sa.Column('uuid', postgresql.UUID(as_uuid=True), nullable=False, unique=True),
+        sa.Column('uuid', sa.CHAR(32), nullable=False, unique=True),
         sa.Column('label', sa.String(length=255), nullable=False, index=True),
         sa.Column('type_string', sa.String(length=255), nullable=False, index=True),
         sa.Column('time', sa.DateTime(timezone=True), nullable=False),
         sa.Column('description', sa.Text(), nullable=False),
-        sa.Column('extras', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column('extras', JSON(), nullable=False),
         sa.Column('user_id', sa.Integer(), nullable=False, index=True),
         sa.ForeignKeyConstraint(
             ['user_id'],
@@ -93,16 +93,16 @@ def upgrade():
     op.create_table(
         'db_dbnode',
         sa.Column('id', sa.Integer(), nullable=False, primary_key=True),
-        sa.Column('uuid', postgresql.UUID(as_uuid=True), nullable=False, unique=True),
+        sa.Column('uuid', sa.CHAR(32), nullable=False, unique=True),
         sa.Column('node_type', sa.String(length=255), nullable=False, index=True),
         sa.Column('process_type', sa.String(length=255), nullable=True, index=True),
         sa.Column('label', sa.String(length=255), nullable=False, index=True),
         sa.Column('description', sa.Text(), nullable=False),
         sa.Column('ctime', sa.DateTime(timezone=True), nullable=False, index=True),
         sa.Column('mtime', sa.DateTime(timezone=True), nullable=False, index=True),
-        sa.Column('attributes', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-        sa.Column('extras', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-        sa.Column('repository_metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column('attributes', JSON(), nullable=True),
+        sa.Column('extras', JSON(), nullable=True),
+        sa.Column('repository_metadata', JSON(), nullable=False),
         sa.Column('dbcomputer_id', sa.Integer(), nullable=True, index=True),
         sa.Column('user_id', sa.Integer(), nullable=False, index=True),
         sa.ForeignKeyConstraint(
@@ -124,7 +124,7 @@ def upgrade():
     op.create_table(
         'db_dbcomment',
         sa.Column('id', sa.Integer(), nullable=False, primary_key=True),
-        sa.Column('uuid', postgresql.UUID(as_uuid=True), nullable=False, unique=True),
+        sa.Column('uuid', sa.CHAR(32), nullable=False, unique=True),
         sa.Column('dbnode_id', sa.Integer(), nullable=False, index=True),
         sa.Column('ctime', sa.DateTime(timezone=True), nullable=False),
         sa.Column('mtime', sa.DateTime(timezone=True), nullable=False),
@@ -175,13 +175,13 @@ def upgrade():
     op.create_table(
         'db_dblog',
         sa.Column('id', sa.Integer(), nullable=False, primary_key=True),
-        sa.Column('uuid', postgresql.UUID(as_uuid=True), nullable=False, unique=True),
+        sa.Column('uuid', sa.CHAR(32), nullable=False, unique=True),
         sa.Column('time', sa.DateTime(timezone=True), nullable=False),
         sa.Column('loggername', sa.String(length=255), nullable=False, index=True),
         sa.Column('levelname', sa.String(length=50), nullable=False, index=True),
         sa.Column('dbnode_id', sa.Integer(), nullable=False, index=True),
         sa.Column('message', sa.Text(), nullable=False),
-        sa.Column('metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column('metadata', JSON(), nullable=False),
         sa.ForeignKeyConstraint(
             ['dbnode_id'],
             ['db_dbnode.id'],
@@ -194,4 +194,4 @@ def upgrade():
 
 def downgrade():
     """Migrations for the downgrade."""
-    raise NotImplementedError('Downgrade of main_0001.')
+    raise NotImplementedError('Downgrade of main_0000.')

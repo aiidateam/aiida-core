@@ -7,18 +7,24 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""AiiDA archive migrator implementation."""
+"""Versioning and migration implementation for the sqlite_zip format."""
+import contextlib
+from datetime import datetime
 import os
 from pathlib import Path
 import shutil
 import tarfile
 import tempfile
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Iterator, List, Optional, Union
 import zipfile
 
+from alembic.command import upgrade
 from alembic.config import Config
+from alembic.runtime.environment import EnvironmentContext
+from alembic.runtime.migration import MigrationContext, MigrationInfo
 from alembic.script import ScriptDirectory
-from archive_path import open_file_in_tar, open_file_in_zip
+from archive_path import ZipPath, extract_file_in_zip, open_file_in_tar, open_file_in_zip
+from sqlalchemy.future.engine import Connection
 
 from aiida.common import json
 from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, StorageMigrationError
@@ -26,29 +32,20 @@ from aiida.common.progress_reporter import get_progress_reporter
 from aiida.storage.log import MIGRATE_LOGGER
 
 from .migrations.legacy import FINAL_LEGACY_VERSION, LEGACY_MIGRATE_FUNCTIONS
-from .migrations.legacy_to_main import MIGRATED_TO_REVISION, perform_v1_migration
-from .migrations.utils import copy_tar_to_zip, copy_zip_to_zip
-from .utils import read_version
-
-
-def _alembic_config() -> Config:
-    """Return an instance of an Alembic `Config`."""
-    config = Config()
-    config.set_main_option('script_location', str(Path(os.path.realpath(__file__)).parent / 'migrations'))
-    return config
+from .migrations.legacy_to_main import LEGACY_TO_MAIN_REVISION, perform_v1_migration
+from .migrations.utils import copy_tar_to_zip, copy_zip_to_zip, update_metadata
+from .utils import DB_FILENAME, META_FILENAME, REPO_FOLDER, create_sqla_engine, read_version
 
 
 def get_schema_version_head() -> str:
     """Return the head schema version for this storage, i.e. the latest schema this storage can be migrated to."""
-    return ScriptDirectory.from_config(_alembic_config()).revision_map.get_current_head('main')
+    return _alembic_script().revision_map.get_current_head('main')
 
 
 def list_versions() -> List[str]:
     """Return all available schema versions (oldest to latest)."""
     legacy_versions = list(LEGACY_MIGRATE_FUNCTIONS) + [FINAL_LEGACY_VERSION]
-    alembic_versions = [
-        entry.revision for entry in reversed(list(ScriptDirectory.from_config(_alembic_config()).walk_revisions()))
-    ]
+    alembic_versions = [entry.revision for entry in reversed(list(_alembic_script().walk_revisions()))]
     return legacy_versions + alembic_versions
 
 
@@ -72,7 +69,7 @@ def validate_storage(inpath: Path) -> None:
         )
 
 
-def migrate(  # pylint: disable=too-many-branches,too-many-statements
+def migrate(  # pylint: disable=too-many-branches,too-many-statements,too-many-locals
     inpath: Union[str, Path],
     outpath: Union[str, Path],
     version: str,
@@ -80,17 +77,40 @@ def migrate(  # pylint: disable=too-many-branches,too-many-statements
     force: bool = False,
     compression: int = 6
 ) -> None:
-    """Migrate an archive to a specific version.
+    """Migrate an sqlite_zip storage file to a specific version.
 
-    :param path: archive path
+    Historically, this format could be a zip or a tar file,
+    contained the database as a bespoke JSON format, and the repository files in the "legacy" per-node format.
+    For these versions, we first migrate the JSON database to the final legacy schema,
+    then we convert this file to the SQLite database, whilst sequentially migrating the repository files.
+
+    Once any legacy migrations have been performed, we can then migrate the SQLite database to the final schema,
+    using alembic.
+
+    Note that, to minimise disk space usage, we never fully extract/uncompress the input file
+    (except when migrating from a legacy tar file, whereby we cannot extract individual files):
+
+    1. The sqlite database is extracted to a temporary location and migrated
+    2. A new zip file is opened, within a temporary folder
+    3. The repository files are "streamed" directly between the input file and the new zip file
+    4. The sqlite database and metadata JSON are written to the new zip file
+    5. The new zip file is closed (which writes its final central directory)
+    6. The new zip file is moved to the output location, removing any existing file if `force=True`
+
+    :param path: Path to the file
+    :param outpath: Path to output the migrated file
+    :param version: Target version
+    :param force: If True, overwrite the output file if it exists
+    :param compression: Compression level for the output file
     """
     inpath = Path(inpath)
     outpath = Path(outpath)
 
+    # halt immediately, if we could not write to the output file
     if outpath.exists() and not force:
-        raise IOError('Output path already exists and force=False')
+        raise StorageMigrationError('Output path already exists and force=False')
     if outpath.exists() and not outpath.is_file():
-        raise IOError('Existing output path is not a file')
+        raise StorageMigrationError('Existing output path is not a file')
 
     # the file should be either a tar (legacy only) or zip file
     if tarfile.is_tarfile(str(inpath)):
@@ -108,10 +128,13 @@ def migrate(  # pylint: disable=too-many-branches,too-many-statements
     except IOError as exc:
         raise CorruptStorage(f'No input file could not be read: {exc}') from exc
 
-    # obtain the current version
+    # obtain the current version from the metadata
     if 'export_version' not in metadata:
         raise CorruptStorage('No export_version found in metadata.json')
     current_version = metadata['export_version']
+    # update the modified time of the file and the compression
+    metadata['mtime'] = datetime.now().isoformat()
+    metadata['compression'] = compression
 
     # check versions are valid
     # versions 0.1, 0.2, 0.3 are no longer supported,
@@ -120,14 +143,13 @@ def migrate(  # pylint: disable=too-many-branches,too-many-statements
         raise StorageMigrationError(
             f"Legacy migration from '{current_version}' -> '{version}' is not supported in aiida-core v2"
         )
-
     all_versions = list_versions()
     if current_version not in all_versions:
         raise StorageMigrationError(f"Unknown current version '{current_version}'")
     if version not in all_versions:
         raise StorageMigrationError(f"Unknown target version '{version}'")
 
-    # if we are already at the desired version, then no migration is required
+    # if we are already at the desired version, then no migration is required, so simply copy the file if necessary
     if current_version == version:
         if inpath != outpath:
             if outpath.exists() and force:
@@ -135,10 +157,8 @@ def migrate(  # pylint: disable=too-many-branches,too-many-statements
             shutil.copyfile(inpath, outpath)
         return
 
-    # data.json will only be read from legacy archives
+    # if the archive is a "legacy" format, i.e. has a data.json file, migrate it to the target/final legacy schema
     data: Optional[Dict[str, Any]] = None
-
-    # if the archive is a "legacy" format, i.e. has a data.json file, migrate to latest one
     if current_version in LEGACY_MIGRATE_FUNCTIONS:
         MIGRATE_LOGGER.report('Legacy migrations required')
         MIGRATE_LOGGER.report('Extracting data.json ...')
@@ -147,6 +167,7 @@ def migrate(  # pylint: disable=too-many-branches,too-many-statements
         to_version = FINAL_LEGACY_VERSION if version not in LEGACY_MIGRATE_FUNCTIONS else version
         current_version = _perform_legacy_migrations(current_version, to_version, metadata, data)
 
+    # if we are now at the target version, then write the updated files to a new zip file and exit
     if current_version == version:
         # create new legacy archive with updated metadata & data
         def path_callback(inpath, outpath) -> bool:
@@ -171,22 +192,90 @@ def migrate(  # pylint: disable=too-many-branches,too-many-statements
         )
         return
 
+    # open the temporary directory, to perform further migrations
     with tempfile.TemporaryDirectory() as tmpdirname:
 
-        if current_version == FINAL_LEGACY_VERSION:
-            MIGRATE_LOGGER.report('aiida-core v1 -> v2 migration required')
-            if data is None:
-                MIGRATE_LOGGER.report('Extracting data.json ...')
-                data = _read_json(inpath, 'data.json', is_tar)
-            perform_v1_migration(inpath, Path(tmpdirname), 'new.zip', is_tar, metadata, data, compression)
-            current_version = MIGRATED_TO_REVISION
+        # open the new zip file, within which to write the migrated content
+        new_zip_path = Path(tmpdirname) / 'new.zip'
+        central_dir: Dict[str, Any] = {}
+        with ZipPath(
+            new_zip_path,
+            mode='w',
+            compresslevel=compression,
+            name_to_info=central_dir,
+            # this ensures that the metadata and database files are written above the repository files,
+            # in in the central directory, so that they can be accessed easily
+            info_order=(META_FILENAME, DB_FILENAME)
+        ) as new_zip:
 
-        if not current_version == version:
-            raise StorageMigrationError(f"Migration from '{current_version}' -> '{version}' failed")
+            written_repo = False
+            if current_version == FINAL_LEGACY_VERSION:
+                # migrate from the legacy format,
+                # streaming the repository files directly to the new zip file
+                MIGRATE_LOGGER.report(
+                    f'legacy {FINAL_LEGACY_VERSION!r} -> {LEGACY_TO_MAIN_REVISION!r} conversion required'
+                )
+                if data is None:
+                    MIGRATE_LOGGER.report('Extracting data.json ...')
+                    data = _read_json(inpath, 'data.json', is_tar)
+                db_path = perform_v1_migration(inpath, Path(tmpdirname), new_zip, central_dir, is_tar, metadata, data)
+                # the migration includes adding the repository files to the new zip file
+                written_repo = True
+                current_version = LEGACY_TO_MAIN_REVISION
+            else:
+                if is_tar:
+                    raise CorruptStorage('Tar files are not supported for this format')
+                # extract the sqlite database, for alembic migrations
+                db_path = Path(tmpdirname) / DB_FILENAME
+                with db_path.open('wb') as handle:
+                    try:
+                        extract_file_in_zip(inpath, DB_FILENAME, handle)
+                    except Exception as exc:
+                        raise CorruptStorage(f'database could not be read: {exc}') from exc
 
+            # perform alembic migrations
+            # note, we do this before writing the repository files (unless a legacy migration),
+            # so that we don't waste time doing that (which could be slow), only for alembic to fail
+            if current_version != version:
+                MIGRATE_LOGGER.report('Performing SQLite migrations:')
+                with _migration_context(db_path) as context:
+                    context.stamp(context.script, current_version)
+                    context.connection.commit()
+                with _alembic_connect(db_path) as config:
+                    upgrade(config, version)
+                update_metadata(metadata, version)
+
+            if not written_repo:
+                # stream the repository files directly to the new zip file
+                with ZipPath(inpath, mode='r') as old_zip:
+                    length = sum(1 for _ in old_zip.glob('**/*', include_virtual=False))
+                    title = 'Copying repository files'
+                    with get_progress_reporter()(desc=title, total=length) as progress:
+                        for subpath in old_zip.glob('**/*', include_virtual=False):
+                            new_path_sub = new_zip.joinpath(subpath.at)
+                            if subpath.parts[0] == REPO_FOLDER:
+                                if subpath.is_dir():
+                                    new_path_sub.mkdir(exist_ok=True)
+                                else:
+                                    new_path_sub.putfile(subpath)
+                            progress.update()
+
+            MIGRATE_LOGGER.report('Finalising the migration ...')
+
+            # write the final database file to the new zip file
+            with db_path.open('rb') as handle:
+                with (new_zip / DB_FILENAME).open(mode='wb') as handle2:
+                    shutil.copyfileobj(handle, handle2)
+
+            # write the final metadata.json file to the new zip file
+            (new_zip / META_FILENAME).write_text(json.dumps(metadata))
+
+            # on exiting the the ZipPath context, the zip file is closed and the central directory written
+
+        # move the new zip file to the final location
         if outpath.exists() and force:
             outpath.unlink()
-        shutil.move(Path(tmpdirname) / 'new.zip', outpath)  # type: ignore[arg-type]
+        shutil.move(new_zip_path, outpath)  # type: ignore[arg-type]
 
 
 def _read_json(inpath: Path, filename: str, is_tar: bool) -> Dict[str, Any]:
@@ -239,3 +328,50 @@ def _perform_legacy_migrations(current_version: str, to_version: str, metadata: 
             progress.update()
 
     return to_version
+
+
+def _alembic_config() -> Config:
+    """Return an instance of an Alembic `Config`."""
+    config = Config()
+    config.set_main_option('script_location', str(Path(os.path.realpath(__file__)).parent / 'migrations'))
+    return config
+
+
+def _alembic_script() -> ScriptDirectory:
+    """Return an instance of an Alembic `ScriptDirectory`."""
+    return ScriptDirectory.from_config(_alembic_config())
+
+
+@contextlib.contextmanager
+def _alembic_connect(db_path: Path) -> Iterator[Connection]:
+    """Context manager to return an instance of an Alembic configuration.
+
+    The profiles's database connection is added in the `attributes` property, through which it can then also be
+    retrieved, also in the `env.py` file, which is run when the database is migrated.
+    """
+    with create_sqla_engine(db_path).connect() as connection:
+        config = _alembic_config()
+        config.attributes['connection'] = connection  # pylint: disable=unsupported-assignment-operation
+
+        def _callback(step: MigrationInfo, **kwargs):  # pylint: disable=unused-argument
+            """Callback to be called after a migration step is executed."""
+            from_rev = step.down_revision_ids[0] if step.down_revision_ids else '<base>'
+            MIGRATE_LOGGER.report(f'- {from_rev} -> {step.up_revision_id}')
+
+        config.attributes['on_version_apply'] = _callback  # pylint: disable=unsupported-assignment-operation
+
+        yield config
+
+
+@contextlib.contextmanager
+def _migration_context(db_path: Path) -> Iterator[MigrationContext]:
+    """Context manager to return an instance of an Alembic migration context.
+
+    This migration context will have been configured with the current database connection, which allows this context
+    to be used to inspect the contents of the database, such as the current revision.
+    """
+    with _alembic_connect(db_path) as config:
+        script = ScriptDirectory.from_config(config)
+        with EnvironmentContext(config, script) as context:
+            context.configure(context.config.attributes['connection'])
+            yield context.get_context()

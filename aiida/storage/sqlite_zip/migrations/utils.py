@@ -16,7 +16,51 @@ from typing import Callable, Sequence
 
 from archive_path import TarPath, ZipPath
 
+from aiida.common import exceptions
 from aiida.common.progress_reporter import create_callback, get_progress_reporter
+
+
+def update_metadata(metadata, version):
+    """Update the metadata with a new version number and a notification of the conversion that was executed.
+
+    :param metadata: the content of an export archive metadata.json file
+    :param version: string version number that the updated metadata should get
+    """
+    from aiida import get_version
+
+    old_version = metadata['export_version']
+    conversion_info = metadata.get('conversion_info', [])
+
+    conversion_message = f'Converted from version {old_version} to {version} with AiiDA v{get_version()}'
+    conversion_info.append(conversion_message)
+
+    metadata['aiida_version'] = get_version()
+    metadata['export_version'] = version
+    metadata['conversion_info'] = conversion_info
+
+
+def verify_metadata_version(metadata, version=None):
+    """Utility function to verify that the metadata has the correct version number.
+
+    If no version number is passed, it will just extract the version number and return it.
+
+    :param metadata: the content of an export archive metadata.json file
+    :param version: string version number that the metadata is expected to have
+    """
+    try:
+        metadata_version = metadata['export_version']
+    except KeyError:
+        raise exceptions.StorageMigrationError("metadata is missing the 'export_version' key")
+
+    if version is None:
+        return metadata_version
+
+    if metadata_version != version:
+        raise exceptions.StorageMigrationError(
+            f'expected archive file with version {version} but found version {metadata_version}'
+        )
+
+    return None
 
 
 def copy_zip_to_zip(

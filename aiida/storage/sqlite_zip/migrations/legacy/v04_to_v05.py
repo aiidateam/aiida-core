@@ -24,7 +24,27 @@ The individual SQLAlchemy database migrations may be found at:
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
 # pylint: disable=invalid-name
-from .utils import remove_fields, update_metadata, verify_metadata_version  # pylint: disable=no-name-in-module
+from ..utils import update_metadata, verify_metadata_version  # pylint: disable=no-name-in-module
+
+
+def remove_fields(metadata, data, entities, fields):
+    """Remove fields under entities from data.json and metadata.json.
+
+    :param metadata: the content of an export archive metadata.json file
+    :param data: the content of an export archive data.json file
+    :param entities: list of ORM entities
+    :param fields: list of fields to be removed from the export archive files
+    """
+    # data.json
+    for entity in entities:
+        for content in data['export_data'].get(entity, {}).values():
+            for field in fields:
+                content.pop(field, None)
+
+    # metadata.json
+    for entity in entities:
+        for field in fields:
+            metadata['all_fields_info'][entity].pop(field, None)
 
 
 def migration_drop_node_columns_nodeversion_public(metadata, data):

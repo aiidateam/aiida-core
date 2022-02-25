@@ -17,8 +17,10 @@ depends_on = ${repr(depends_on)}
 
 
 def upgrade():
+    """Migrations for the upgrade."""
     ${upgrades if upgrades else "pass"}
 
 
 def downgrade():
+    """Migrations for the downgrade."""
     ${downgrades if downgrades else "pass"}

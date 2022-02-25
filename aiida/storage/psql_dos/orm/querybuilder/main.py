@@ -20,16 +20,14 @@ from sqlalchemy import func as sa_func
 from sqlalchemy import not_, or_
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import SAWarning
-from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import aliased
 from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.util import AliasedClass
-from sqlalchemy.sql.compiler import SQLCompiler, TypeCompiler
+from sqlalchemy.sql.compiler import SQLCompiler
 from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList, Cast, ColumnClause, ColumnElement, Label
 from sqlalchemy.sql.expression import case, text
-from sqlalchemy.sql.functions import FunctionElement
 from sqlalchemy.types import Boolean, DateTime, Float, Integer, String
 
 from aiida.common.exceptions import NotExistent
@@ -38,42 +36,9 @@ from aiida.orm.implementation.querybuilder import QUERYBUILD_LOGGER, BackendQuer
 
 from .joiner import SqlaJoiner
 
-
-class jsonb_array_length(FunctionElement):  # pylint: disable=abstract-method,invalid-name
-    name = 'jsonb_array_len'
-    inherit_cache = True
-
-
-@compiles(jsonb_array_length)
-def compile(element, compiler: TypeCompiler, **kwargs):  # pylint: disable=function-redefined, redefined-builtin
-    """
-    Get length of array defined in a JSONB column
-    """
-    return f'jsonb_array_length({compiler.process(element.clauses, **kwargs)})'
-
-
-class array_length(FunctionElement):  # pylint: disable=abstract-method,invalid-name
-    name = 'array_len'
-
-
-@compiles(array_length)  # type: ignore[no-redef]
-def compile(element, compiler: TypeCompiler, **kwargs):  # pylint: disable=function-redefined
-    """
-    Get length of array defined in a JSONB column
-    """
-    return f'array_length({compiler.process(element.clauses, **kwargs)})'
-
-
-class jsonb_typeof(FunctionElement):  # pylint: disable=abstract-method,invalid-name
-    name = 'jsonb_typeof'
-
-
-@compiles(jsonb_typeof)  # type: ignore[no-redef]
-def compile(element, compiler: TypeCompiler, **kwargs):  # pylint: disable=function-redefined
-    """
-    Get length of array defined in a JSONB column
-    """
-    return f'jsonb_typeof({compiler.process(element.clauses, **kwargs)})'
+jsonb_typeof = sa_func.jsonb_typeof
+jsonb_array_length = sa_func.jsonb_array_length
+array_length = sa_func.array_length
 
 
 class SqlaQueryBuilder(BackendQueryBuilder):
@@ -368,7 +333,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             # LINK-PROJECTIONS #########################
 
             for vertex in self._data['path'][1:]:
-                edge_tag = vertex.get('edge_tag', None)  # type: ignore
+                edge_tag = vertex.get('edge_tag', None)
 
                 QUERYBUILD_LOGGER.debug(
                     'Checking projections for edges: This is edge %s from %s, %s of %s', edge_tag, vertex.get('tag'),

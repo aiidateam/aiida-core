@@ -40,7 +40,7 @@ def verdi_archive():
 @verdi_archive.command('version')
 @click.argument('path', nargs=1, type=click.Path(exists=True, readable=True))
 def archive_version(path):
-    """Print the current version of the archive schema."""
+    """Print the current version of an archive's schema."""
     # note: this mirrors `cmd_storage:storage_version`
     # it is currently hardcoded to the `SqliteZipBackend`, but could be generalized in the future
     from aiida.storage.sqlite_zip.backend import SqliteZipBackend
@@ -59,7 +59,7 @@ def archive_version(path):
 @click.argument('path', nargs=1, type=click.Path(exists=True, readable=True))
 @click.option('--statistics', is_flag=True, help='Provides more in-detail statistically relevant data.')
 def archive_info(path, statistics):
-    """Summarise the contents of the archive."""
+    """Summarise the contents of an archive."""
     # note: this mirrors `cmd_storage:storage_info`
     # it is currently hardcoded to the `SqliteZipBackend`, but could be generalized in the future
     from aiida.storage.sqlite_zip.backend import SqliteZipBackend
@@ -139,7 +139,7 @@ def create(
     create_backward, return_backward, call_calc_backward, call_work_backward, include_comments, include_logs,
     include_authinfos, compress, batch_size, test_run
 ):
-    """Write subsets of the provenance graph to a single file.
+    """Create an archive from all or part of a profiles's data.
 
     Besides Nodes of the provenance graph, you can archive Groups, Codes, Computers, Comments and Logs.
 
@@ -217,7 +217,7 @@ def create(
     help='Archive format version to migrate to (defaults to latest version).',
 )
 def migrate(input_file, output_file, force, in_place, version):
-    """Migrate an export archive to a more recent format version."""
+    """Migrate an archive to a more recent schema version."""
     from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
     from aiida.tools.archive.abstract import get_format
 
@@ -336,7 +336,7 @@ def import_archive(
     ctx, archives, webpages, extras_mode_existing, extras_mode_new, comment_mode, include_authinfos, migration,
     batch_size, import_group, group, test_run
 ):
-    """Import data from an AiiDA archive file.
+    """Import archived data to a profile.
 
     The archive can be specified by its relative or absolute file path, or its HTTP URL.
     """

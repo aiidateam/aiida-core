@@ -1,6 +1,9 @@
+---
+# Metadata parsed by the workflow community initiative, https://workflows.community/systems
+# Registered at https://github.com/workflowscommunity/workflowscommunity.github.io/blob/main/_data/workflow_systems.yml
 name: AiiDA
 
-headline: A workflow manager for computational science with a strong focus on provenance, performance and extensibility. # will use GitHub repository description if not provided
+headline: A workflow manager for computational science with a strong focus on provenance, performance and extensibility.
 
 description: |
   AiiDA is an open-source Python infrastructure to help researchers with automating, managing, persisting, sharing and reproducing
@@ -15,15 +18,15 @@ social:
   twitter: aiidateam
   youtube: https://www.youtube.com/c/MaterialsCloud
 
-execution_environment: # nothing will be used if not provided
-  interfaces: # list of interfaces
+execution_environment:
+  interfaces:
     - Python
     - Command Line
     - REST
-  resource_managers: # list of supported resource managers
+  resource_managers:
     - Slurm
     - LSF
     - PBS
     - SGE
-  transfer_protocols: # list of supported transfer protocols
+  transfer_protocols:
     - SCP

@@ -83,7 +83,7 @@ def pg_to_sqlite(pg_table: sa.Table):
     new = pg_table.to_metadata(SqliteBase.metadata)
     for column in new.columns:
         if isinstance(column.type, UUID):
-            column.type = sa.CHAR(32)
+            column.type = sa.String(32)
         elif isinstance(column.type, sa.DateTime):
             column.type = TZDateTime()
         elif isinstance(column.type, JSONB):

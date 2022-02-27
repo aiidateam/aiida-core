@@ -14,7 +14,7 @@ we auto-generate the schema from the models in ``aiida.storage.psql_dos.models``
 However, when migrating an archive from the old format, we require a fixed revision of the schema.
 
 The only difference between the PostGreSQL schema and SQLite one,
-is the replacement of ``JSONB`` with ``JSON``, and ``UUID`` with ``CHAR(36)``.
+is the replacement of ``JSONB`` with ``JSON``, and ``UUID`` with ``CHAR(32)``.
 """
 from sqlalchemy import ForeignKey, MetaData, orm
 from sqlalchemy.dialects.sqlite import JSON
@@ -66,7 +66,7 @@ class DbComment(ArchiveV1Base):
     __tablename__ = 'db_dbcomment'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-    uuid = Column(CHAR(36), default=get_new_uuid, nullable=False, unique=True)
+    uuid = Column(CHAR(32), default=get_new_uuid, nullable=False, unique=True)
     dbnode_id = Column(
         Integer,
         ForeignKey('db_dbnode.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
@@ -81,7 +81,7 @@ class DbComment(ArchiveV1Base):
         nullable=False,
         index=True
     )
-    content = Column(Text, default='', nullable=True)
+    content = Column(Text, default='', nullable=False)
 
 
 class DbComputer(ArchiveV1Base):
@@ -89,10 +89,10 @@ class DbComputer(ArchiveV1Base):
     __tablename__ = 'db_dbcomputer'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-    uuid = Column(CHAR(36), default=get_new_uuid, nullable=False, unique=True)
+    uuid = Column(CHAR(32), default=get_new_uuid, nullable=False, unique=True)
     label = Column(String(255), unique=True, nullable=False)
     hostname = Column(String(255), default='', nullable=False)
-    description = Column(Text, default='', nullable=True)
+    description = Column(Text, default='', nullable=False)
     scheduler_type = Column(String(255), default='', nullable=False)
     transport_type = Column(String(255), default='', nullable=False)
     _metadata = Column('metadata', JSON, default=dict, nullable=False)
@@ -120,7 +120,7 @@ class DbGroup(ArchiveV1Base):
     __table_args__ = (UniqueConstraint('label', 'type_string'),)
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-    uuid = Column(CHAR(36), default=get_new_uuid, nullable=False, unique=True)
+    uuid = Column(CHAR(32), default=get_new_uuid, nullable=False, unique=True)
     label = Column(String(255), nullable=False, index=True)
     type_string = Column(String(255), default='', nullable=False, index=True)
     time = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
@@ -140,10 +140,10 @@ class DbLog(ArchiveV1Base):
     __tablename__ = 'db_dblog'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-    uuid = Column(CHAR(36), default=get_new_uuid, nullable=False, unique=True)
+    uuid = Column(CHAR(32), default=get_new_uuid, nullable=False, unique=True)
     time = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
     loggername = Column(String(255), default='', nullable=False, index=True)
-    levelname = Column(String(255), default='', nullable=False, index=True)
+    levelname = Column(String(50), default='', nullable=False, index=True)
     dbnode_id = Column(
         Integer,
         ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED', ondelete='CASCADE'),
@@ -160,7 +160,7 @@ class DbNode(ArchiveV1Base):
     __tablename__ = 'db_dbnode'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
-    uuid = Column(CHAR(36), default=get_new_uuid, nullable=False, unique=True)
+    uuid = Column(CHAR(32), default=get_new_uuid, nullable=False, unique=True)
     node_type = Column(String(255), default='', nullable=False, index=True)
     process_type = Column(String(255), index=True)
     label = Column(String(255), default='', index=True, nullable=False)

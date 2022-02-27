@@ -12,7 +12,7 @@
 import pytest
 
 from aiida.common import exceptions
-from aiida.orm import authinfos
+from aiida.orm import authinfos, computers
 
 
 class TestAuthinfo:
@@ -32,7 +32,7 @@ class TestAuthinfo:
         self.auth_info.set_auth_params(auth_params)
         assert self.auth_info.get_auth_params() == auth_params
 
-    def test_delete(self):
+    def test_delete_authinfo(self):
         """Test deleting a single AuthInfo."""
         pk = self.auth_info.pk
 
@@ -40,5 +40,13 @@ class TestAuthinfo:
         authinfos.AuthInfo.objects.delete(pk)
         assert len(authinfos.AuthInfo.objects.all()) == 0
 
+        with pytest.raises(exceptions.NotExistent):
+            authinfos.AuthInfo.objects.delete(pk)
+
+    def test_delete_computer(self):
+        """Test that deleting a computer also deletes the associated Authinfo."""
+        pk = self.auth_info.pk
+
+        computers.Computer.objects.delete(self.computer.pk)
         with pytest.raises(exceptions.NotExistent):
             authinfos.AuthInfo.objects.delete(pk)

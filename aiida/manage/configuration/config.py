@@ -26,7 +26,7 @@ from .profile import Profile
 
 __all__ = ('Config', 'config_schema', 'ConfigValidationError')
 
-SCHEMA_FILE = 'config-v7.schema.json'
+SCHEMA_FILE = 'config-v8.schema.json'
 
 
 @lru_cache(1)

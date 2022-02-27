@@ -56,11 +56,17 @@ def restapi(hostname, port, config_dir, debug, wsgi_profile, posting):
     from aiida.restapi.run_api import run_api
 
     # Invoke the runner
-    run_api(
-        hostname=hostname,
-        port=port,
-        config=config_dir,
-        debug=debug,
-        wsgi_profile=wsgi_profile,
-        posting=posting,
-    )
+    try:
+        run_api(
+            hostname=hostname,
+            port=port,
+            config=config_dir,
+            debug=debug,
+            wsgi_profile=wsgi_profile,
+            posting=posting,
+        )
+    except ImportError as exc:
+        raise ImportError(
+            'Failed to import modules required for the REST API. '
+            'You may need to install the `rest` extra, e.g. via `pip install aiida-core[rest]`.'
+        ) from exc

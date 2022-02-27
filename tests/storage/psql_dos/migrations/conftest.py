@@ -76,6 +76,7 @@ def uninitialised_profile(empty_pg_cluster: PGTest, tmp_path):  # pylint: disabl
 
     yield Profile(
         'test_migrate', {
+            'test_profile': True,
             'storage': {
                 'backend': 'psql_dos',
                 'config': {

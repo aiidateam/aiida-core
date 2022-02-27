@@ -17,7 +17,7 @@ from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators
 
 
-@verdi.group('database')
+@verdi.group('database', hidden=True)
 def verdi_database():
     """Inspect and manage the database.
 

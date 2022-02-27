@@ -25,8 +25,8 @@ ConfigType = Dict[str, Any]
 # When the configuration file format is changed in a backwards-incompatible way, the oldest compatible version should
 # be set to the new current version.
 
-CURRENT_CONFIG_VERSION = 7
-OLDEST_COMPATIBLE_CONFIG_VERSION = 7
+CURRENT_CONFIG_VERSION = 8
+OLDEST_COMPATIBLE_CONFIG_VERSION = 8
 
 CONFIG_LOGGER = AIIDA_LOGGER.getChild('config')
 
@@ -296,6 +296,53 @@ class MergeStorageBackendTypes(SingleMigration):
                 CONFIG_LOGGER.warning(f'profile {profile_name!r} had no expected "storage._v6_backend" key')
 
 
+class AddTestProfileKey(SingleMigration):
+    """Add the ``test_profile`` key."""
+    down_revision = 7
+    down_compatible = 7
+    up_revision = 8
+    up_compatible = 8
+
+    def upgrade(self, config: ConfigType) -> None:
+        for profile_name, profile in config.get('profiles', {}).items():
+            profile['test_profile'] = profile_name.startswith('test_')
+
+    def downgrade(self, config: ConfigType) -> None:
+        profiles = config.get('profiles', {})
+        profile_names = list(profiles.keys())
+
+        # Iterate over the fixed list of the profile names, since we are mutating the profiles dictionary.
+        for profile_name in profile_names:
+
+            profile = profiles.pop(profile_name)
+            profile_name_new = None
+            test_profile = profile.pop('test_profile', False)  # If absent, assume it is not a test profile
+
+            if test_profile and not profile_name.startswith('test_'):
+                profile_name_new = f'test_{profile_name}'
+                CONFIG_LOGGER.warning(
+                    f'profile `{profile_name}` is a test profile but does not start with the required `test_` prefix.'
+                )
+
+            if not test_profile and profile_name.startswith('test_'):
+                profile_name_new = profile_name[5:]
+                CONFIG_LOGGER.warning(
+                    f'profile `{profile_name}` is not a test profile but starts with the `test_` prefix.'
+                )
+
+            if profile_name_new is not None:
+
+                if profile_name_new in profile_names:
+                    raise exceptions.ConfigurationError(
+                        f'cannot change `{profile_name}` to `{profile_name_new}` because it already exists.'
+                    )
+
+                CONFIG_LOGGER.warning(f'changing profile name from `{profile_name}` to `{profile_name_new}`.')
+                profile_name = profile_name_new
+
+            profiles[profile_name] = profile
+
+
 MIGRATIONS = (
     Initial,
     AddProfileUuid,
@@ -304,6 +351,7 @@ MIGRATIONS = (
     SimplifyOptions,
     AbstractStorageAndProcess,
     MergeStorageBackendTypes,
+    AddTestProfileKey,
 )
 
 

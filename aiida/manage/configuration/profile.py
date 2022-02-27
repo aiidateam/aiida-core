@@ -47,6 +47,7 @@ class Profile:  # pylint: disable=too-many-public-methods
     KEY_PROCESS_BACKEND = 'backend'
     KEY_PROCESS_CONFIG = 'config'
     KEY_OPTIONS = 'options'
+    KEY_TEST_PROFILE = 'test_profile'
 
     # keys that are expected to be in the parsed configuration
     REQUIRED_KEYS = (
@@ -199,8 +200,17 @@ class Profile:  # pylint: disable=too-many-public-methods
 
         :return: boolean, True if test profile, False otherwise
         """
-        # Currently, whether a profile is a test profile is solely determined by its name starting with 'test_'
-        return self.name.startswith('test_')
+        # Check explicitly for ``True`` for safety. If an invalid value is defined, we default to treating it as not
+        # a test profile as that can unintentionally clear the database.
+        return self._attributes.get(self.KEY_TEST_PROFILE, False) is True
+
+    @is_test_profile.setter
+    def is_test_profile(self, value: bool) -> None:
+        """Set whether the profile is a test profile.
+
+        :param value: boolean indicating whether this profile is a test profile.
+        """
+        self._attributes[self.KEY_TEST_PROFILE] = value
 
     @property
     def repository_path(self) -> pathlib.Path:

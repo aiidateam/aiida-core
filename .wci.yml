@@ -1,0 +1,29 @@
+name: AiiDA
+
+headline: A workflow manager for computational science with a strong focus on provenance, performance and extensibility. # will use GitHub repository description if not provided
+
+description: |
+  AiiDA is an open-source Python infrastructure to help researchers with automating, managing, persisting, sharing and reproducing
+  the complex workflows associated with modern computational science and all associated data.
+
+documentation:
+  general: http://aiida-core.readthedocs.io
+  installation: https://aiida.readthedocs.io/projects/aiida-core/en/latest/intro/get_started.html
+  tutorial: https://aiida.readthedocs.io/projects/aiida-core/en/latest/intro/tutorial.html
+
+social:
+  twitter: aiidateam
+  youtube: https://www.youtube.com/c/MaterialsCloud
+
+execution_environment: # nothing will be used if not provided
+  interfaces: # list of interfaces
+    - Python
+    - Command Line
+    - REST
+  resource_managers: # list of supported resource managers
+    - Slurm
+    - LSF
+    - PBS
+    - SGE
+  transfer_protocols: # list of supported transfer protocols
+    - SCP

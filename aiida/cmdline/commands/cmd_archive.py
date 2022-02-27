@@ -11,19 +11,19 @@
 """`verdi archive` command."""
 from enum import Enum
 import logging
+from pathlib import Path
 import traceback
 from typing import List, Tuple
 import urllib.request
 
 import click
 from click_spinner import spinner
-import tabulate
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types import GroupParamType, PathOrUrl
 from aiida.cmdline.utils import decorators, echo
-from aiida.common.exceptions import CorruptStorage, UnreachableStorage
+from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, UnreachableStorage
 from aiida.common.links import GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
 
@@ -37,65 +37,68 @@ def verdi_archive():
     """Create, inspect and import AiiDA archives."""
 
 
-@verdi_archive.command('inspect')
+@verdi_archive.command('version')
+@click.argument('path', nargs=1, type=click.Path(exists=True, readable=True))
+def archive_version(path):
+    """Print the current version of the archive schema."""
+    # note: this mirrors `cmd_storage:storage_version`
+    # it is currently hardcoded to the `SqliteZipBackend`, but could be generalized in the future
+    from aiida.storage.sqlite_zip.backend import SqliteZipBackend
+    storage_cls = SqliteZipBackend
+    profile = storage_cls.create_profile(path)
+    head_version = storage_cls.version_head()
+    try:
+        profile_version = storage_cls.version_profile(profile)
+    except (UnreachableStorage, CorruptStorage) as exc:
+        echo.echo_critical(f'archive file version unreadable: {exc}')
+    echo.echo(f'Latest archive schema version: {head_version!r}')
+    echo.echo(f'Archive schema version of {Path(path).name!r}: {profile_version!r}')
+
+
+@verdi_archive.command('info')
+@click.argument('path', nargs=1, type=click.Path(exists=True, readable=True))
+@click.option('--statistics', is_flag=True, help='Provides more in-detail statistically relevant data.')
+def archive_info(path, statistics):
+    """Summarise the contents of the archive."""
+    # note: this mirrors `cmd_storage:storage_info`
+    # it is currently hardcoded to the `SqliteZipBackend`, but could be generalized in the future
+    from aiida.storage.sqlite_zip.backend import SqliteZipBackend
+    try:
+        storage = SqliteZipBackend(SqliteZipBackend.create_profile(path))
+    except (UnreachableStorage, CorruptStorage) as exc:
+        echo.echo_critical(f'archive file unreadable: {exc}')
+    except IncompatibleStorageSchema as exc:
+        echo.echo_critical(f'archive version incompatible: {exc}')
+    with spinner():
+        try:
+            data = storage.get_info(statistics=statistics)
+        finally:
+            storage.close()
+
+    echo.echo_dictionary(data, sort_keys=False, fmt='yaml')
+
+
+@verdi_archive.command('inspect', hidden=True)
 @click.argument('archive', nargs=1, type=click.Path(exists=True, readable=True))
 @click.option('-v', '--version', is_flag=True, help='Print the archive format version and exit.')
 @click.option('-m', '--meta-data', is_flag=True, help='Print the meta data contents and exit.')
 @click.option('-d', '--database', is_flag=True, help='Include information on entities in the database.')
-def inspect(archive, version, meta_data, database):
+@decorators.deprecated_command(
+    'This command has been deprecated and will be removed soon. '
+    'Please call `verdi archive version` or `verdi archive info` instead.\n'
+)
+@click.pass_context
+def inspect(ctx, archive, version, meta_data, database):  # pylint: disable=unused-argument
     """Inspect contents of an archive without importing it.
 
-    By default a summary of the archive contents will be printed.
-    The various options can be used to change exactly what information is displayed.
+    .. deprecated:: v2.0.0, use `verdi archive version` or `verdi archive info` instead.
     """
-    from aiida.tools.archive.abstract import get_format
-
-    archive_format = get_format()
-    latest_version = archive_format.latest_version
-    try:
-        current_version = archive_format.read_version(archive)
-    except (UnreachableStorage, CorruptStorage) as exc:
-        echo.echo_critical(f'archive file of unknown format: {exc}')
-
     if version:
-        echo.echo(current_version)
-        return
-
-    if current_version != latest_version:
-        echo.echo_critical(
-            f"Archive version is not the latest: '{current_version}' != '{latest_version}'. "
-            'Use `verdi migrate` to upgrade to the latest version'
-        )
-
-    with archive_format.open(archive, 'r') as archive_reader:
-        metadata = archive_reader.get_metadata()
-
-    if meta_data:
-        echo.echo_dictionary(metadata, sort_keys=False)
-        return
-
-    statistics = {
-        name: metadata[key] for key, name in [
-            ['export_version', 'Version archive'],
-            ['aiida_version', 'Version aiida'],
-            ['compression', 'Compression'],
-            ['ctime', 'Created'],
-            ['mtime', 'Modified'],
-        ] if key in metadata
-    }
-    if 'conversion_info' in metadata:
-        statistics['Conversion info'] = '\n'.join(metadata['conversion_info'])
-
-    echo.echo(tabulate.tabulate(statistics.items()))
-
-    if database:
-        echo.echo('')
-        echo.echo('Database statistics')
-        echo.echo('-------------------')
-        with spinner():
-            with archive_format.open(archive, 'r') as archive_reader:
-                data = archive_reader.get_backend().get_info(statistics=True)
-        echo.echo_dictionary(data, sort_keys=False, fmt='yaml')
+        ctx.invoke(archive_version, path=archive)
+    elif database:
+        ctx.invoke(archive_info, path=archive, statistics=True)
+    else:
+        ctx.invoke(archive_info, path=archive, statistics=False)
 
 
 @verdi_archive.command('create')
@@ -427,7 +430,6 @@ def _import_archive_and_migrate(archive: str, web_based: bool, import_kwargs: di
     :param try_migration: whether to try a migration if the import raises `IncompatibleStorageSchema`
 
     """
-    from aiida.common.exceptions import IncompatibleStorageSchema
     from aiida.common.folders import SandboxFolder
     from aiida.tools.archive.abstract import get_format
     from aiida.tools.archive.imports import import_archive as _import_archive

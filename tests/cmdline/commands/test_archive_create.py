@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for `verdi export`."""
+"""Tests for `verdi archive`."""
 import shutil
 import zipfile
 
@@ -179,35 +179,35 @@ def test_migrate_low_verbosity(run_cli_command, tmp_path):
 
 
 @pytest.mark.parametrize('version', list_versions())
-def test_inspect_version(run_cli_command, version):
-    """Test the functionality of `verdi export inspect --version`."""
+def test_version(run_cli_command, version):
+    """Test the functionality of `verdi archive version`."""
     archive = f'export_{version}_simple.aiida'
     filename_input = get_archive_file(archive, filepath='export/migrate')
-    options = ['--version', filename_input]
-    result = run_cli_command(cmd_archive.inspect, options)
-    assert result.output.strip() == f'{version}'
+    options = [filename_input]
+    result = run_cli_command(cmd_archive.archive_version, options)
+    assert version in result.output
 
 
-def test_inspect_metadata(run_cli_command):
-    """Test the functionality of `verdi export inspect --meta-data`."""
+def test_info(run_cli_command):
+    """Test the functionality of `verdi archive info`."""
     archive = f'export_{ArchiveFormatSqlZip().latest_version}_simple.aiida'
     filename_input = get_archive_file(archive, filepath='export/migrate')
-    options = ['--meta-data', filename_input]
-    result = run_cli_command(cmd_archive.inspect, options)
+    options = [filename_input]
+    result = run_cli_command(cmd_archive.archive_info, options)
     assert 'export_version' in result.output
 
 
-def test_inspect_database(run_cli_command):
-    """Test the functionality of `verdi export inspect --meta-data`."""
+def test_info_detailed(run_cli_command):
+    """Test the functionality of `verdi archive info --statistics`."""
     archive = f'export_{ArchiveFormatSqlZip().latest_version}_simple.aiida'
     filename_input = get_archive_file(archive, filepath='export/migrate')
-    options = ['--database', filename_input]
-    result = run_cli_command(cmd_archive.inspect, options)
+    options = ['--statistics', filename_input]
+    result = run_cli_command(cmd_archive.archive_info, options)
     assert 'Nodes:' in result.output
 
 
-def test_inspect_empty_archive(run_cli_command):
-    """Test the functionality of `verdi export inspect` for an empty archive."""
+def test_info_empty_archive(run_cli_command):
+    """Test the functionality of `verdi archive info` for an empty archive."""
     filename_input = get_archive_file('empty.aiida', filepath='export/migrate')
-    result = run_cli_command(cmd_archive.inspect, [filename_input], raises=True)
-    assert 'archive file of unknown format' in result.output
+    result = run_cli_command(cmd_archive.archive_info, [filename_input], raises=True)
+    assert 'archive file unreadable' in result.output

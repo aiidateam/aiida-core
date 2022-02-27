@@ -32,7 +32,7 @@ from aiida.storage.psql_dos.orm.utils import ModelWrapper
 
 from . import models
 from .migrator import get_schema_version_head, validate_storage
-from .utils import DB_FILENAME, REPO_FOLDER, create_sqla_engine, read_version
+from .utils import DB_FILENAME, REPO_FOLDER, create_sqla_engine, extract_metadata, read_version
 
 
 class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-methods
@@ -45,8 +45,9 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
     @staticmethod
     def create_profile(path: str | Path) -> Profile:
         """Create a new profile instance for this backend, from the path to the zip file."""
+        profile_name = Path(path).name
         return Profile(
-            'default', {
+            profile_name, {
                 'storage': {
                     'backend': 'sqlite_zip',
                     'config': {
@@ -191,8 +192,11 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
         raise NotImplementedError
 
     def get_info(self, statistics: bool = False) -> dict:
-        results = super().get_info(statistics=statistics)
-        results['repository'] = self.get_repository().get_info(statistics)
+        # since extracting the database file is expensive, we only do it if statistics is True
+        results = {'metadata': extract_metadata(self._path)}
+        if statistics:
+            results.update(super().get_info(statistics=statistics))
+            results['repository'] = self.get_repository().get_info(statistics)
         return results
 
 

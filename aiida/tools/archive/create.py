@@ -281,13 +281,12 @@ def create_archive(
             writer.update_metadata({
                 'ctime': datetime.now().isoformat(),
                 'creation_parameters': {
-                    'entities_starting_set':
+                    'entities_starting_set': None if entities is None else
                     {etype.value: list(unique) for etype, unique in starting_uuids.items() if unique},
                     'include_authinfos': include_authinfos,
                     'include_comments': include_comments,
                     'include_logs': include_logs,
                     'graph_traversal_rules': full_traversal_rules,
-                    'entity_counts': dict(count_summary),  # type: ignore
                 }
             })
             # stream entity data to the archive

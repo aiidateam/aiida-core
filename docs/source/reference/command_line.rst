@@ -27,8 +27,9 @@ Below is a list with all available subcommands.
     Commands:
       create   Write subsets of the provenance graph to a single file.
       import   Import data from an AiiDA archive file.
-      inspect  Inspect contents of an archive without importing it.
+      info     Summarise the contents of the archive.
       migrate  Migrate an export archive to a more recent format version.
+      version  Print the current version of the archive schema.
 
 
 .. _reference:command-line:verdi-calcjob:

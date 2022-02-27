@@ -666,24 +666,26 @@ class TestVerdiComputerCommands:
         from aiida.common.exceptions import NotExistent
 
         # Setup a computer to delete during the test
+        label = 'computer_for_test_label'
         orm.Computer(
-            label='computer_for_test_delete',
+            label=label,
             hostname='localhost',
             transport_type='core.local',
             scheduler_type='core.direct',
             workdir='/tmp/aiida'
         ).store()
+        # and configure it
+        options = ['core.local', label, '--non-interactive', '--safe-interval', '0']
+        self.cli_runner(computer_configure, options, catch_exceptions=False)
 
         # See if the command complains about not getting an invalid computer
-        options = ['non_existent_computer_name']
-        self.cli_runner(computer_delete, options, raises=True)
+        self.cli_runner(computer_delete, ['computer_that_does_not_exist'], raises=True)
 
         # Delete a computer name successully.
-        options = ['computer_for_test_delete']
-        self.cli_runner(computer_delete, options)
+        self.cli_runner(computer_delete, [label])
         # Check that the computer really was deleted
         with pytest.raises(NotExistent):
-            orm.Computer.objects.get(label='computer_for_test_delete')
+            orm.Computer.objects.get(label=label)
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

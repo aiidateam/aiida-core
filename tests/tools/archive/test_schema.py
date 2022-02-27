@@ -22,7 +22,6 @@ from aiida.storage.sqlite_zip import models, utils
 from aiida.storage.sqlite_zip.migrator import get_schema_version_head, migrate
 from tests.utils.archives import get_archive_file
 
-
 # @pytest.mark.usefixtures('aiida_profile_clean')
 # def test_psql_sync_init(tmp_path):
 #     """Test the schema is in-sync with the ``psql_dos`` backend, when initialising a new archive."""
@@ -35,7 +34,6 @@ from tests.utils.archives import get_archive_file
 #     diffs = diff_schemas(psql_insp, sqlite_insp)
 #     if diffs:
 #         raise AssertionError(f'Schema is not in-sync with the psql backend:\n{yaml.safe_dump(diffs)}')
-
 
 # @pytest.mark.usefixtures('aiida_profile_clean')
 # def test_psql_sync_migrate(tmp_path):

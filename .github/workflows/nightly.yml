@@ -3,6 +3,10 @@ name: nightly
 on:
     schedule:
     -   cron: '0 0 * * *'  # Run every day at midnight
+    pull_request:
+        paths:
+        - 'aiida/storage/psql_dos/migrations/**'
+        - 'tests/storage/psql_dos/migrations/**'
 
 jobs:
 

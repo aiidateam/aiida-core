@@ -13,6 +13,7 @@ import pytest
 
 from aiida import orm
 from aiida.common import exceptions
+from aiida.tools.graph.deletions import delete_nodes
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -206,6 +207,15 @@ class TestGroups:
         with pytest.raises(exceptions.NotExistent):
             # The group does not exist anymore
             orm.Group.get(label='testgroup3')
+
+    def test_delete_node(self):
+        """Test deletion of a node that has been assigned to a group."""
+        node = orm.Data().store()
+        group = orm.Group(label='testgroup', description='some desc').store()
+        group.add_nodes(node)
+        assert len(group.nodes) == 1
+        delete_nodes([node.pk], dry_run=False)
+        assert len(group.nodes) == 0
 
     def test_rename(self):
         """Test the renaming of a Group."""

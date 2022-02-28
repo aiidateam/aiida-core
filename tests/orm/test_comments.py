@@ -14,6 +14,7 @@ import pytest
 from aiida import orm
 from aiida.common import exceptions
 from aiida.orm.comments import Comment
+from aiida.tools.graph.deletions import delete_nodes
 
 
 class TestComment:
@@ -194,3 +195,11 @@ class TestComment:
         comment = node.add_comment('Check out the comment on _this_ one')
         gotten_comment = Comment.objects.get(id=comment.id)
         assert isinstance(gotten_comment, Comment)
+
+    def test_delete_node_with_comments(self):
+        """Test deleting a node with comments."""
+        node = orm.Data().store()
+        node.add_comment('Check out the comment on _this_ one')
+        assert len(Comment.objects.all()) == 2
+        delete_nodes([node.pk], dry_run=False)
+        assert len(Comment.objects.all()) == 1

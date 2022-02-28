@@ -17,43 +17,50 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.engine import Inspector
 import yaml
 
-from aiida.manage.manager import get_manager
+from aiida import get_profile
+from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
 from aiida.storage.sqlite_zip import models, utils
 from aiida.storage.sqlite_zip.migrator import get_schema_version_head, migrate
 from tests.utils.archives import get_archive_file
 
-# @pytest.mark.usefixtures('aiida_profile_clean')
-# def test_psql_sync_init(tmp_path):
-#     """Test the schema is in-sync with the ``psql_dos`` backend, when initialising a new archive."""
-#     psql_insp = inspect(get_manager().get_profile_storage().get_session().bind)
 
-#     engine = utils.create_sqla_engine(tmp_path / 'archive.sqlite')
-#     models.SqliteBase.metadata.create_all(engine)
-#     sqlite_insp = inspect(engine)
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_psql_sync_init(tmp_path):
+    """Test the schema is in-sync with the ``psql_dos`` backend, when initialising a new archive."""
+    # note, directly using the global profile's engine here left connections open
+    with create_sqlalchemy_engine(get_profile().storage_config).connect() as conn:
+        psql_insp = inspect(conn)
 
-#     diffs = diff_schemas(psql_insp, sqlite_insp)
-#     if diffs:
-#         raise AssertionError(f'Schema is not in-sync with the psql backend:\n{yaml.safe_dump(diffs)}')
+        engine = utils.create_sqla_engine(tmp_path / 'archive.sqlite')
+        models.SqliteBase.metadata.create_all(engine)
+        sqlite_insp = inspect(engine)
 
-# @pytest.mark.usefixtures('aiida_profile_clean')
-# def test_psql_sync_migrate(tmp_path):
-#     """Test the schema is in-sync with the ``psql_dos`` backend, when migrating an old archive to the latest version."""
-#     psql_insp = inspect(get_manager().get_profile_storage().get_session().bind)
+        diffs = diff_schemas(psql_insp, sqlite_insp)
+        if diffs:
+            raise AssertionError(f'Schema is not in-sync with the psql backend:\n{yaml.safe_dump(diffs)}')
 
-#     # migrate an old archive
-#     filepath_archive = get_archive_file('export_0.4_simple.aiida', 'export/migrate')
-#     migrate(filepath_archive, tmp_path / 'archive.aiida', get_schema_version_head())
 
-#     # extract the database
-#     with tmp_path.joinpath('archive.sqlite').open('wb') as handle:
-#         extract_file_in_zip(tmp_path / 'archive.aiida', 'db.sqlite3', handle)
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_psql_sync_migrate(tmp_path):
+    """Test the schema is in-sync with the ``psql_dos`` backend, when migrating an old archive to the latest version."""
+    # note, directly using the global profile's engine here left connections open
+    with create_sqlalchemy_engine(get_profile().storage_config).connect() as conn:
+        psql_insp = inspect(conn)
 
-#     engine = utils.create_sqla_engine(tmp_path / 'archive.sqlite')
-#     sqlite_insp = inspect(engine)
+        # migrate an old archive
+        filepath_archive = get_archive_file('export_0.4_simple.aiida', 'export/migrate')
+        migrate(filepath_archive, tmp_path / 'archive.aiida', get_schema_version_head())
 
-#     diffs = diff_schemas(psql_insp, sqlite_insp)
-#     if diffs:
-#         raise AssertionError(f'Schema is not in-sync with the psql backend:\n{yaml.safe_dump(diffs)}')
+        # extract the database
+        with tmp_path.joinpath('archive.sqlite').open('wb') as handle:
+            extract_file_in_zip(tmp_path / 'archive.aiida', 'db.sqlite3', handle)
+
+        engine = utils.create_sqla_engine(tmp_path / 'archive.sqlite')
+        sqlite_insp = inspect(engine)
+
+        diffs = diff_schemas(psql_insp, sqlite_insp)
+        if diffs:
+            raise AssertionError(f'Schema is not in-sync with the psql backend:\n{yaml.safe_dump(diffs)}')
 
 
 def diff_schemas(psql_insp: Inspector, sqlite_insp: Inspector):  # pylint: disable=too-many-branches

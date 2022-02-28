@@ -3,6 +3,11 @@ name: nightly
 on:
     schedule:
     -   cron: '0 0 * * *'  # Run every day at midnight
+    pull_request:
+        paths:
+        - '.github/workflows/nightly.yml'
+        - 'aiida/storage/psql_dos/migrations/**'
+        - 'tests/storage/psql_dos/migrations/**'
 
 jobs:
 

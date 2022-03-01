@@ -944,12 +944,14 @@ class Process(plumpy.processes.Process):
     def is_valid_cache(cls, node: orm.ProcessNode) -> bool:
         """Check if the given node can be cached from.
 
-        .. warning :: When overriding this method, make sure to call
-            super().is_valid_cache(node) and respect its output. Otherwise,
-            the 'invalidates_cache' keyword on exit codes will not work.
+        Overriding this method allows ``Process`` sub-classes to modify when
+        corresponding process nodes are considered as a cache.
 
-        This method allows extending the behavior of `ProcessNode.is_valid_cache`
-        from `Process` sub-classes, for example in plug-ins.
+        .. warning :: When overriding this method, make sure to return ``False``
+            *at least* in all cases when ``super().is_valid_cache(node)``
+            returns ``False``. Otherwise, the ``invalidates_cache`` keyword on exit
+            codes may have no effect.
+
         """
         try:
             return not cls.spec().exit_codes(node.exit_status).invalidates_cache

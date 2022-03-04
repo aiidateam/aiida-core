@@ -125,7 +125,7 @@ def perform_v1_migration(  # pylint: disable=too-many-locals
                             with (new_zip / f'{REPO_FOLDER}/{hashkey}').open(mode='wb') as handle2:
                                 shutil.copyfileobj(handle, handle2)
                 node_repos.setdefault(uuid, []).append((posix_rel.as_posix(), hashkey))
-        MIGRATE_LOGGER.report(f'Unique files written: {len(central_dir)}')
+        MIGRATE_LOGGER.report(f'Unique repository files written: {len(central_dir)}')
 
     # convert the JSON database to SQLite
     _json_to_sqlite(working / DB_FILENAME, data, node_repos)
@@ -143,7 +143,7 @@ def perform_v1_migration(  # pylint: disable=too-many-locals
     return working / DB_FILENAME
 
 
-def _json_to_sqlite(
+def _json_to_sqlite(  # pylint: disable=too-many-branches,too-many-locals
     outpath: Path, data: dict, node_repos: Dict[str, List[Tuple[str, Optional[str]]]], batch_size: int = 100
 ) -> None:
     """Convert a JSON archive format to SQLite."""
@@ -188,9 +188,17 @@ def _json_to_sqlite(
         if data['links_uuid']:
 
             def _transform_link(link_row):
+                try:
+                    input_id = node_uuid_map[link_row['input']]
+                except KeyError:
+                    raise StorageMigrationError(f'Database contains link with unknown input node: {link_row}')
+                try:
+                    output_id = node_uuid_map[link_row['output']]
+                except KeyError:
+                    raise StorageMigrationError(f'Database contains link with unknown output node: {link_row}')
                 return {
-                    'input_id': node_uuid_map[link_row['input']],
-                    'output_id': node_uuid_map[link_row['output']],
+                    'input_id': input_id,
+                    'output_id': output_id,
                     'label': link_row['label'],
                     'type': link_row['type']
                 }
@@ -207,16 +215,20 @@ def _json_to_sqlite(
                 uuid: pk for uuid, pk in connection.execute(select(v1_schema.DbGroup.uuid, v1_schema.DbGroup.id))  # pylint: disable=unnecessary-comprehension
             }
             length = sum(len(uuids) for uuids in data['groups_uuid'].values())
+            unknown_nodes = {}
             with get_progress_reporter()(desc='Adding Group-Nodes', total=length) as progress:
                 for group_uuid, node_uuids in data['groups_uuid'].items():
                     group_id = group_uuid_map[group_uuid]
-                    connection.execute(
-                        insert(v1_schema.DbGroupNodes.__table__), [{
-                            'dbnode_id': node_uuid_map[uuid],
-                            'dbgroup_id': group_id
-                        } for uuid in node_uuids]
-                    )
+                    rows = []
+                    for uuid in node_uuids:
+                        if uuid in node_uuid_map:
+                            rows.append({'dbnode_id': node_uuid_map[uuid], 'dbgroup_id': group_id})
+                        else:
+                            unknown_nodes.setdefault(group_uuid, set()).add(uuid)
+                    connection.execute(insert(v1_schema.DbGroupNodes.__table__), rows)
                     progress.update(len(node_uuids))
+            if unknown_nodes:
+                MIGRATE_LOGGER.warning(f'Dropped unknown nodes in groups: {unknown_nodes}')
 
 
 def _convert_datetime(key, value):

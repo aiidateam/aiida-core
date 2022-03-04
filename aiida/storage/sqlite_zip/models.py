@@ -88,6 +88,8 @@ def pg_to_sqlite(pg_table: sa.Table):
             column.type = TZDateTime()
         elif isinstance(column.type, JSONB):
             column.type = JSON()
+    # remove any postgresql specific indexes, e.g. varchar_pattern_ops
+    new.indexes.difference_update([idx for idx in new.indexes if idx.dialect_kwargs])
     return new
 
 

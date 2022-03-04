@@ -10,6 +10,13 @@
 # pylint: disable=invalid-name,no-member
 """Initial main branch schema
 
+This schema is mainly equivalent to the `main_0001` schema of the `psql_dos` backend.
+The difference are:
+
+1. Data types: the replacement of ``JSONB`` with ``JSON``, and ``UUID`` with ``CHAR(32)``.
+2. Some more fields are nullable, to allow migrations from legacy to main.
+   The nullable fields are then filled with default values, and set to non-nullable, in subsequent migrations.
+
 Revision ID: main_0000
 Revises:
 Create Date: 2021-02-02

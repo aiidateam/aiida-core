@@ -7,7 +7,8 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""This is the sqlite DB schema, coresponding to the `main_0001` revision of the `psql_dos` backend.
+"""This is the sqlite DB schema, coresponding to the `main_0000` revision of the `sqlite_zip` backend,
+see: `versions/main_0000_initial.py`
 
 For normal operation of the archive,
 we auto-generate the schema from the models in ``aiida.storage.psql_dos.models``.
@@ -46,18 +47,18 @@ class DbAuthInfo(ArchiveV1Base):
     aiidauser_id = Column(
         Integer,
         ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
-        nullable=False,
+        nullable=True,
         index=True
     )
     dbcomputer_id = Column(
         Integer,
         ForeignKey('db_dbcomputer.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
-        nullable=False,
+        nullable=True,
         index=True
     )
-    _metadata = Column('metadata', JSON, default=dict, nullable=False)
-    auth_params = Column(JSON, default=dict, nullable=False)
-    enabled = Column(Boolean, default=True, nullable=False)
+    _metadata = Column('metadata', JSON, default=dict, nullable=True)
+    auth_params = Column(JSON, default=dict, nullable=True)
+    enabled = Column(Boolean, default=True, nullable=True)
 
 
 class DbComment(ArchiveV1Base):
@@ -70,18 +71,18 @@ class DbComment(ArchiveV1Base):
     dbnode_id = Column(
         Integer,
         ForeignKey('db_dbnode.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
-        nullable=False,
+        nullable=True,
         index=True
     )
-    ctime = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
-    mtime = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
+    ctime = Column(DateTime(timezone=True), default=timezone.now, nullable=True)
+    mtime = Column(DateTime(timezone=True), default=timezone.now, nullable=True)
     user_id = Column(
         Integer,
         ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
-        nullable=False,
+        nullable=True,
         index=True
     )
-    content = Column(Text, default='', nullable=False)
+    content = Column(Text, default='', nullable=True)
 
 
 class DbComputer(ArchiveV1Base):
@@ -91,11 +92,11 @@ class DbComputer(ArchiveV1Base):
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
     uuid = Column(CHAR(32), default=get_new_uuid, nullable=False, unique=True)
     label = Column(String(255), unique=True, nullable=False)
-    hostname = Column(String(255), default='', nullable=False)
-    description = Column(Text, default='', nullable=False)
-    scheduler_type = Column(String(255), default='', nullable=False)
-    transport_type = Column(String(255), default='', nullable=False)
-    _metadata = Column('metadata', JSON, default=dict, nullable=False)
+    hostname = Column(String(255), default='', nullable=True)
+    description = Column(Text, default='', nullable=True)
+    scheduler_type = Column(String(255), default='', nullable=True)
+    transport_type = Column(String(255), default='', nullable=True)
+    _metadata = Column('metadata', JSON, default=dict, nullable=True)
 
 
 class DbGroupNodes(ArchiveV1Base):
@@ -122,9 +123,9 @@ class DbGroup(ArchiveV1Base):
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
     uuid = Column(CHAR(32), default=get_new_uuid, nullable=False, unique=True)
     label = Column(String(255), nullable=False, index=True)
-    type_string = Column(String(255), default='', nullable=False, index=True)
-    time = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
-    description = Column(Text, default='', nullable=False)
+    type_string = Column(String(255), default='', nullable=True, index=True)
+    time = Column(DateTime(timezone=True), default=timezone.now, nullable=True)
+    description = Column(Text, default='', nullable=True)
     extras = Column(JSON, default=dict, nullable=False)
     user_id = Column(
         Integer,
@@ -141,17 +142,17 @@ class DbLog(ArchiveV1Base):
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
     uuid = Column(CHAR(32), default=get_new_uuid, nullable=False, unique=True)
-    time = Column(DateTime(timezone=True), default=timezone.now, nullable=False)
-    loggername = Column(String(255), default='', nullable=False, index=True)
-    levelname = Column(String(50), default='', nullable=False, index=True)
+    time = Column(DateTime(timezone=True), default=timezone.now, nullable=True)
+    loggername = Column(String(255), default='', nullable=True, index=True)
+    levelname = Column(String(50), default='', nullable=True, index=True)
     dbnode_id = Column(
         Integer,
         ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED', ondelete='CASCADE'),
         nullable=False,
         index=True
     )
-    message = Column(Text(), default='', nullable=False)
-    _metadata = Column('metadata', JSON, default=dict, nullable=False)
+    message = Column(Text(), default='', nullable=True)
+    _metadata = Column('metadata', JSON, default=dict, nullable=True)
 
 
 class DbNode(ArchiveV1Base):
@@ -163,20 +164,24 @@ class DbNode(ArchiveV1Base):
     uuid = Column(CHAR(32), default=get_new_uuid, nullable=False, unique=True)
     node_type = Column(String(255), default='', nullable=False, index=True)
     process_type = Column(String(255), index=True)
-    label = Column(String(255), default='', index=True, nullable=False)
-    description = Column(Text(), default='', nullable=False)
-    ctime = Column(DateTime(timezone=True), default=timezone.now, nullable=False, index=True)
-    mtime = Column(DateTime(timezone=True), default=timezone.now, nullable=False, index=True)
+    label = Column(String(255), default='', index=True, nullable=True)
+    description = Column(Text(), default='', nullable=True)
+    ctime = Column(DateTime(timezone=True), default=timezone.now, nullable=True, index=True)
+    mtime = Column(DateTime(timezone=True), default=timezone.now, nullable=True, index=True)
     attributes = Column(JSON)
     extras = Column(JSON)
     repository_metadata = Column(JSON, nullable=False, default=dict, server_default='{}')
     dbcomputer_id = Column(
         Integer,
         ForeignKey('db_dbcomputer.id', deferrable=True, initially='DEFERRED', ondelete='RESTRICT'),
-        nullable=True
+        nullable=True,
+        index=True
     )
     user_id = Column(
-        Integer, ForeignKey('db_dbuser.id', deferrable=True, initially='DEFERRED', ondelete='restrict'), nullable=False
+        Integer,
+        ForeignKey('db_dbuser.id', deferrable=True, initially='DEFERRED', ondelete='restrict'),
+        nullable=False,
+        index=True
     )
 
 
@@ -206,6 +211,6 @@ class DbUser(ArchiveV1Base):
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
     email = Column(String(254), nullable=False, unique=True)
-    first_name = Column(String(254), default='', nullable=False)
-    last_name = Column(String(254), default='', nullable=False)
-    institution = Column(String(254), default='', nullable=False)
+    first_name = Column(String(254), default='', nullable=True)
+    last_name = Column(String(254), default='', nullable=True)
+    institution = Column(String(254), default='', nullable=True)

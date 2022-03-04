@@ -232,7 +232,7 @@ def _json_to_sqlite(  # pylint: disable=too-many-branches,too-many-locals
 
 
 def _convert_datetime(key, value):
-    if key in ('time', 'ctime', 'mtime'):
+    if key in ('time', 'ctime', 'mtime') and value is not None:
         return datetime.strptime(value, '%Y-%m-%dT%H:%M:%S.%f')
     return value
 

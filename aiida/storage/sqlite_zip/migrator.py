@@ -241,7 +241,9 @@ def migrate(  # pylint: disable=too-many-branches,too-many-statements,too-many-l
                 with _migration_context(db_path) as context:
                     context.stamp(context.script, current_version)
                     context.connection.commit()
-                with _alembic_connect(db_path) as config:
+                # see https://alembic.sqlalchemy.org/en/latest/batch.html#dealing-with-referencing-foreign-keys
+                # for why we do not enforce foreign keys here
+                with _alembic_connect(db_path, enforce_foreign_keys=False) as config:
                     upgrade(config, version)
                 update_metadata(metadata, version)
 
@@ -343,13 +345,13 @@ def _alembic_script() -> ScriptDirectory:
 
 
 @contextlib.contextmanager
-def _alembic_connect(db_path: Path) -> Iterator[Connection]:
+def _alembic_connect(db_path: Path, enforce_foreign_keys=True) -> Iterator[Connection]:
     """Context manager to return an instance of an Alembic configuration.
 
     The profiles's database connection is added in the `attributes` property, through which it can then also be
     retrieved, also in the `env.py` file, which is run when the database is migrated.
     """
-    with create_sqla_engine(db_path).connect() as connection:
+    with create_sqla_engine(db_path, enforce_foreign_keys=enforce_foreign_keys).connect() as connection:
         config = _alembic_config()
         config.attributes['connection'] = connection  # pylint: disable=unsupported-assignment-operation
 

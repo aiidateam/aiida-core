@@ -63,7 +63,7 @@ def test_psql_sync_migrate(tmp_path):
             raise AssertionError(f'Schema is not in-sync with the psql backend:\n{yaml.safe_dump(diffs)}')
 
 
-def diff_schemas(psql_insp: Inspector, sqlite_insp: Inspector):  # pylint: disable=too-many-branches
+def diff_schemas(psql_insp: Inspector, sqlite_insp: Inspector):  # pylint: disable=too-many-branches,too-many-statements
     """Compare the reflected schemas of the two databases."""
     diffs = {}
 
@@ -128,5 +128,19 @@ def diff_schemas(psql_insp: Inspector, sqlite_insp: Inspector):  # pylint: disab
         for fk_constraint in sqlite_fk_constraints:
             if fk_constraint not in psql_fk_constraints:
                 diffs.setdefault(table_name, {}).setdefault('fk_constraints', {})[fk_constraint] = 'additional'
+
+        # compare indexes (discarding any postgresql specific ones, e.g. varchar_pattern_ops)
+        psql_indexes = [
+            idx['name']
+            for idx in psql_insp.get_indexes(table_name)
+            if not idx['unique'] and not idx['name'].startswith('ix_pat_')
+        ]
+        sqlite_indexes = [idx['name'] for idx in sqlite_insp.get_indexes(table_name) if not idx['unique']]
+        for index in psql_indexes:
+            if index not in sqlite_indexes:
+                diffs.setdefault(table_name, {}).setdefault('indexes', {})[index] = 'missing'
+        for index in sqlite_indexes:
+            if index not in psql_indexes:
+                diffs.setdefault(table_name, {}).setdefault('indexes', {})[index] = 'additional'
 
     return diffs

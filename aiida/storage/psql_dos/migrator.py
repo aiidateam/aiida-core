@@ -283,7 +283,7 @@ class PsqlDostoreMigrator:
         return ScriptDirectory.from_config(cls._alembic_config())
 
     @contextlib.contextmanager
-    def _alembic_connect(self, _connection: Optional[Connection] = None):
+    def _alembic_connect(self, _connection: Optional[Connection] = None) -> Iterator[Config]:
         """Context manager to return an instance of an Alembic configuration.
 
         The profiles's database connection is added in the `attributes` property, through which it can then also be
@@ -304,7 +304,7 @@ class PsqlDostoreMigrator:
             yield config
 
     @contextlib.contextmanager
-    def _migration_context(self, _connection: Optional[Connection] = None) -> MigrationContext:
+    def _migration_context(self, _connection: Optional[Connection] = None) -> Iterator[MigrationContext]:
         """Context manager to return an instance of an Alembic migration context.
 
         This migration context will have been configured with the current database connection, which allows this context

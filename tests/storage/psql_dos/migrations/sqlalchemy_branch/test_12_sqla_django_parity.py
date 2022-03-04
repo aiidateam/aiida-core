@@ -51,9 +51,14 @@ def test_non_nullable(perform_migrations: PsqlDostoreMigrator):
         authinfo = DbAuthInfo(
             aiidauser_id=user_id, dbcomputer_id=computer_id, enabled=None, auth_params=None, metadata=None
         )
-        session.add(authinfo)
+        # this could be the result of a computer being deleted, and should be removed in the migration
+        authinfo_dangling = DbAuthInfo(
+            aiidauser_id=user_id, dbcomputer_id=None, enabled=None, auth_params=None, metadata=None
+        )
+        session.add_all([authinfo, authinfo_dangling])
         session.commit()
         authinfo_id = authinfo.id
+        authinfo_dangling_id = authinfo_dangling.id
         node = DbNode(
             user_id=user_id,
             ctime=None,
@@ -115,6 +120,8 @@ def test_non_nullable(perform_migrations: PsqlDostoreMigrator):
         assert authinfo.enabled is not None
         assert authinfo.auth_params is not None
         assert authinfo.metadata is not None
+        authinfo_dangling = session.query(DbAuthInfo).filter(DbAuthInfo.id == authinfo_dangling_id).one_or_none()
+        assert authinfo_dangling is None
         node = session.query(DbNode).filter(DbNode.id == node_id).one()
         assert node.ctime is not None
         assert node.mtime is not None

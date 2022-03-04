@@ -53,10 +53,16 @@ def upgrade():  # pylint: disable=too-many-statements
     """
     db_dbauthinfo = sa.sql.table(
         'db_dbauthinfo',
+        sa.sql.column('aiidauser_id', sa.Integer),
+        sa.sql.column('dbcomputer_id', sa.Integer),
         sa.Column('enabled', sa.Boolean),
         sa.Column('auth_params', JSONB),
         sa.Column('metadata', JSONB),
     )
+
+    # remove rows with null values, which may have previously resulted from deletion of a user or computer
+    op.execute(db_dbauthinfo.delete().where(db_dbauthinfo.c.aiidauser_id.is_(None)))
+    op.execute(db_dbauthinfo.delete().where(db_dbauthinfo.c.dbcomputer_id.is_(None)))
 
     op.execute(db_dbauthinfo.update().where(db_dbauthinfo.c.enabled.is_(None)).values(enabled=True))
     op.execute(db_dbauthinfo.update().where(db_dbauthinfo.c.auth_params.is_(None)).values(auth_params={}))
@@ -66,11 +72,17 @@ def upgrade():  # pylint: disable=too-many-statements
 
     db_dbcomment = sa.sql.table(
         'db_dbcomment',
+        sa.sql.column('dbnode_id', sa.Integer),
+        sa.sql.column('user_id', sa.Integer),
         sa.Column('content', sa.Text),
         sa.Column('ctime', sa.DateTime(timezone=True)),
         sa.Column('mtime', sa.DateTime(timezone=True)),
         sa.Column('uuid', UUID(as_uuid=True)),
     )
+
+    # remove rows with null values, which may have previously resulted from deletion of a node or user
+    op.execute(db_dbcomment.delete().where(db_dbcomment.c.dbnode_id.is_(None)))
+    op.execute(db_dbcomment.delete().where(db_dbcomment.c.user_id.is_(None)))
 
     op.execute(db_dbcomment.update().where(db_dbcomment.c.content.is_(None)).values(content=''))
     op.execute(db_dbcomment.update().where(db_dbcomment.c.mtime.is_(None)).values(mtime=timezone.now()))
@@ -109,6 +121,15 @@ def upgrade():  # pylint: disable=too-many-statements
     op.execute(db_dbgroup.update().where(db_dbgroup.c.time.is_(None)).values(time=timezone.now()))
     op.execute(db_dbgroup.update().where(db_dbgroup.c.type_string.is_(None)).values(type_string='core'))
     op.execute(db_dbgroup.update().where(db_dbgroup.c.uuid.is_(None)).values(uuid=get_new_uuid()))
+
+    db_dbgroup_dbnode = sa.sql.table(
+        'db_dbgroup_dbnodes',
+        sa.Column('dbgroup_id', sa.Integer),
+        sa.Column('dbnode_id', sa.Integer),
+    )
+    # remove rows with null values, which may have previously resulted from deletion of a group or nodes
+    op.execute(db_dbgroup_dbnode.delete().where(db_dbgroup_dbnode.c.dbgroup_id.is_(None)))
+    op.execute(db_dbgroup_dbnode.delete().where(db_dbgroup_dbnode.c.dbnode_id.is_(None)))
 
     db_dblog = sa.sql.table(
         'db_dblog',

@@ -178,7 +178,7 @@ def test_migrate_low_verbosity(run_cli_command, tmp_path):
     assert ArchiveFormatSqlZip().read_version(filename_output) == ArchiveFormatSqlZip().latest_version
 
 
-@pytest.mark.parametrize('version', list_versions())
+@pytest.mark.parametrize('version', [v for v in list_versions() if v not in ('main_0000a', 'main_0000b')])
 def test_version(run_cli_command, version):
     """Test the functionality of `verdi archive version`."""
     archive = f'export_{version}_simple.aiida'

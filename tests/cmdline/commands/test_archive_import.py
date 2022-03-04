@@ -258,7 +258,7 @@ class TestVerdiImport:
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.parametrize('version', list_versions())
+@pytest.mark.parametrize('version', [v for v in list_versions() if v not in ('main_0000a', 'main_0000b')])
 def test_import_old_local_archives(version, run_cli_command):
     """ Test import of old local archives
     Expected behavior: Automatically migrate to newest version and import correctly.

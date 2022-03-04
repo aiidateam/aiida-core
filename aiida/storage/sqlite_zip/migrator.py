@@ -160,7 +160,7 @@ def migrate(  # pylint: disable=too-many-branches,too-many-statements,too-many-l
     # if the archive is a "legacy" format, i.e. has a data.json file, migrate it to the target/final legacy schema
     data: Optional[Dict[str, Any]] = None
     if current_version in LEGACY_MIGRATE_FUNCTIONS:
-        MIGRATE_LOGGER.report('Legacy migrations required')
+        MIGRATE_LOGGER.report(f'Legacy migrations required from {"tar" if is_tar else "zip"} format')
         MIGRATE_LOGGER.report('Extracting data.json ...')
         # read the data.json file
         data = _read_json(inpath, 'data.json', is_tar)

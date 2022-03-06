@@ -446,7 +446,7 @@ def check_rabbitmq_version(communicator: 'RmqThreadCommunicator'):
 
     from aiida.cmdline.utils import echo
     version = get_rabbitmq_version(communicator)
-    if version >= parse('3.8'):
+    if version >= parse('3.8.15'):
         echo.echo_warning(f'RabbitMQ v{version} is not supported and will cause unexpected problems!')
         echo.echo_warning('It can cause long-running workflows to crash and jobs to be submitted multiple times.')
         echo.echo_warning('See https://github.com/aiidateam/aiida-core/wiki/RabbitMQ-version-to-use for details.')

@@ -24,7 +24,6 @@ from alembic.runtime.environment import EnvironmentContext
 from alembic.runtime.migration import MigrationContext, MigrationInfo
 from alembic.script import ScriptDirectory
 from archive_path import ZipPath, extract_file_in_zip, open_file_in_tar, open_file_in_zip
-from sqlalchemy.future.engine import Connection
 
 from aiida.common import json
 from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, StorageMigrationError
@@ -34,12 +33,12 @@ from aiida.storage.log import MIGRATE_LOGGER
 from .migrations.legacy import FINAL_LEGACY_VERSION, LEGACY_MIGRATE_FUNCTIONS
 from .migrations.legacy_to_main import LEGACY_TO_MAIN_REVISION, perform_v1_migration
 from .migrations.utils import copy_tar_to_zip, copy_zip_to_zip, update_metadata
-from .utils import DB_FILENAME, META_FILENAME, REPO_FOLDER, create_sqla_engine, read_version
+from .utils import DB_FILENAME, META_FILENAME, REPO_FOLDER, create_sqla_engine, extract_metadata, read_version
 
 
 def get_schema_version_head() -> str:
     """Return the head schema version for this storage, i.e. the latest schema this storage can be migrated to."""
-    return _alembic_script().revision_map.get_current_head('main')
+    return _alembic_script().revision_map.get_current_head('main') or ''
 
 
 def list_versions() -> List[str]:
@@ -121,16 +120,11 @@ def migrate(  # pylint: disable=too-many-branches,too-many-statements,too-many-l
         raise CorruptStorage(f'The input file is neither a tar nor a zip file: {inpath}')
 
     # read the metadata.json which should always be present
-    try:
-        metadata = _read_json(inpath, 'metadata.json', is_tar)
-    except FileNotFoundError:
-        raise CorruptStorage('No metadata.json file found')
-    except IOError as exc:
-        raise CorruptStorage(f'No input file could not be read: {exc}') from exc
+    metadata = extract_metadata(inpath, search_limit=None)
 
     # obtain the current version from the metadata
     if 'export_version' not in metadata:
-        raise CorruptStorage('No export_version found in metadata.json')
+        raise CorruptStorage('No export_version found in metadata')
     current_version = metadata['export_version']
     # update the modified time of the file and the compression
     metadata['mtime'] = datetime.now().isoformat()
@@ -141,7 +135,8 @@ def migrate(  # pylint: disable=too-many-branches,too-many-statements,too-many-l
     # since 0.3 -> 0.4 requires costly migrations of repo files (you would need to unpack all of them)
     if current_version in ('0.1', '0.2', '0.3') or version in ('0.1', '0.2', '0.3'):
         raise StorageMigrationError(
-            f"Legacy migration from '{current_version}' -> '{version}' is not supported in aiida-core v2"
+            f"Legacy migration from '{current_version}' -> '{version}' is not supported in aiida-core v2. "
+            'First migrate them to the latest version in aiida-core v1.'
         )
     all_versions = list_versions()
     if current_version not in all_versions:
@@ -239,8 +234,9 @@ def migrate(  # pylint: disable=too-many-branches,too-many-statements,too-many-l
             if current_version != version:
                 MIGRATE_LOGGER.report('Performing SQLite migrations:')
                 with _migration_context(db_path) as context:
+                    assert context.script is not None
                     context.stamp(context.script, current_version)
-                    context.connection.commit()
+                    context.connection.commit()  # type: ignore
                 # see https://alembic.sqlalchemy.org/en/latest/batch.html#dealing-with-referencing-foreign-keys
                 # for why we do not enforce foreign keys here
                 with _alembic_connect(db_path, enforce_foreign_keys=False) as config:
@@ -345,7 +341,7 @@ def _alembic_script() -> ScriptDirectory:
 
 
 @contextlib.contextmanager
-def _alembic_connect(db_path: Path, enforce_foreign_keys=True) -> Iterator[Connection]:
+def _alembic_connect(db_path: Path, enforce_foreign_keys=True) -> Iterator[Config]:
     """Context manager to return an instance of an Alembic configuration.
 
     The profiles's database connection is added in the `attributes` property, through which it can then also be

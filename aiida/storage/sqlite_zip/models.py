@@ -120,11 +120,32 @@ DbComment = create_orm_cls(comment.DbComment)
 DbLog = create_orm_cls(log.DbLog)
 DbLink = create_orm_cls(node.DbLink)
 
-# to-do This was the minimum for creating a graph, but really all relationships should be copied
-DbNode.dbcomputer = sa_orm.relationship('DbComputer', backref='dbnodes')  # type: ignore[attr-defined]
+# to-do ideally these relationships should be auto-generated in `create_orm_cls`, but this proved difficult
+DbAuthInfo.aiidauser = sa_orm.relationship(  # type: ignore[attr-defined]
+    'DbUser', backref=sa_orm.backref('authinfos', passive_deletes=True, cascade='all, delete')
+)
+DbAuthInfo.dbcomputer = sa_orm.relationship(  # type: ignore[attr-defined]
+    'DbComputer', backref=sa_orm.backref('authinfos', passive_deletes=True, cascade='all, delete')
+)
+DbComment.dbnode = sa_orm.relationship('DbNode', backref='dbcomments')  # type: ignore[attr-defined]
+DbComment.user = sa_orm.relationship('DbUser')  # type: ignore[attr-defined]
+DbGroup.user = sa_orm.relationship(  # type: ignore[attr-defined]
+    'DbUser', backref=sa_orm.backref('dbgroups', cascade='merge')
+)
 DbGroup.dbnodes = sa_orm.relationship(  # type: ignore[attr-defined]
     'DbNode', secondary='db_dbgroup_dbnodes', backref='dbgroups', lazy='dynamic'
 )
+DbLog.dbnode = sa_orm.relationship(  # type: ignore[attr-defined]
+    'DbNode', backref=sa_orm.backref('dblogs', passive_deletes='all', cascade='merge')
+)
+DbNode.dbcomputer = sa_orm.relationship(  # type: ignore[attr-defined]
+    'DbComputer', backref=sa_orm.backref('dbnodes', passive_deletes='all', cascade='merge')
+)
+DbNode.user = sa_orm.relationship('DbUser', backref=sa_orm.backref(  # type: ignore[attr-defined]
+    'dbnodes',
+    passive_deletes='all',
+    cascade='merge',
+))
 
 
 @functools.lru_cache(maxsize=10)

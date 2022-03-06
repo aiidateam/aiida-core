@@ -55,7 +55,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         return cls.migrator.get_schema_version_head()
 
     @classmethod
-    def version_profile(cls, profile: Profile) -> None:
+    def version_profile(cls, profile: Profile) -> Optional[str]:
         return cls.migrator(profile).get_schema_version_profile(check_legacy=True)
 
     @classmethod

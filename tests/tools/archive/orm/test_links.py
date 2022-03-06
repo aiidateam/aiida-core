@@ -532,10 +532,10 @@ def test_link_flags(tmp_path, aiida_profile_clean, aiida_localhost_factory):
         )
     )
 
-    link_flags_import_helper(input_links_forward, aiida_profile_clean.reset_db)
-    link_flags_import_helper(create_return_links_backward, aiida_profile_clean.reset_db)
-    link_flags_import_helper(call_links_backward_calc1, aiida_profile_clean.reset_db)
-    link_flags_import_helper(call_links_backward_work2, aiida_profile_clean.reset_db)
+    link_flags_import_helper(input_links_forward, aiida_profile_clean.clear_profile)
+    link_flags_import_helper(create_return_links_backward, aiida_profile_clean.clear_profile)
+    link_flags_import_helper(call_links_backward_calc1, aiida_profile_clean.clear_profile)
+    link_flags_import_helper(call_links_backward_work2, aiida_profile_clean.clear_profile)
 
 
 def test_double_return_links_for_workflows(tmp_path, aiida_profile_clean):

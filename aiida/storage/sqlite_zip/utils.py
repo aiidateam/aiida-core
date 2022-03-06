@@ -61,21 +61,21 @@ def extract_metadata(path: Union[str, Path], *, search_limit: Optional[int] = 10
     if not path.exists():
         raise UnreachableStorage(f'path not found: {path}')
 
-    if zipfile.is_zipfile(path):
+    if path.is_dir():
+        if not path.joinpath(META_FILENAME).is_file():
+            raise CorruptStorage('Could not find metadata file')
+        try:
+            metadata = json.loads(path.joinpath(META_FILENAME).read_text(encoding='utf8'))
+        except Exception as exc:
+            raise CorruptStorage(f'Could not read metadata: {exc}') from exc
+    elif path.is_file() and zipfile.is_zipfile(path):
         try:
             metadata = json.loads(read_file_in_zip(path, META_FILENAME, search_limit=search_limit))
         except Exception as exc:
             raise CorruptStorage(f'Could not read metadata: {exc}') from exc
-    elif tarfile.is_tarfile(path):
+    elif path.is_file() and tarfile.is_tarfile(path):
         try:
             metadata = json.loads(read_file_in_tar(path, META_FILENAME))
-        except Exception as exc:
-            raise CorruptStorage(f'Could not read metadata: {exc}') from exc
-    elif path.is_dir():
-        if not path.joinpath(META_FILENAME).is_file():
-            raise CorruptStorage('Could not find metadata file')
-        try:
-            metadata = json.loads(path.joinpath(META_FILENAME))
         except Exception as exc:
             raise CorruptStorage(f'Could not read metadata: {exc}') from exc
     else:

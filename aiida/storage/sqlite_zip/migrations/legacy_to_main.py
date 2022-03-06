@@ -215,7 +215,7 @@ def _json_to_sqlite(  # pylint: disable=too-many-branches,too-many-locals
                 uuid: pk for uuid, pk in connection.execute(select(v1_schema.DbGroup.uuid, v1_schema.DbGroup.id))  # pylint: disable=unnecessary-comprehension
             }
             length = sum(len(uuids) for uuids in data['groups_uuid'].values())
-            unknown_nodes = {}
+            unknown_nodes: Dict[str, set] = {}
             with get_progress_reporter()(desc='Adding Group-Nodes', total=length) as progress:
                 for group_uuid, node_uuids in data['groups_uuid'].items():
                     group_id = group_uuid_map[group_uuid]

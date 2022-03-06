@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with implementation of the storage backend,
-using an SQLite database and repository files within a zipfile.
+using an SQLite database and repository files, within a zipfile.
 
 The content of the zip file is::
 

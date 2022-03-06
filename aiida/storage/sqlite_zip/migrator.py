@@ -77,7 +77,7 @@ def migrate(  # pylint: disable=too-many-branches,too-many-statements,too-many-l
     force: bool = False,
     compression: int = 6
 ) -> None:
-    """Migrate an sqlite_zip storage file to a specific version.
+    """Migrate an `sqlite_zip` storage file to a specific version.
 
     Historically, this format could be a zip or a tar file,
     contained the database as a bespoke JSON format, and the repository files in the "legacy" per-node format.

@@ -15,8 +15,7 @@ from functools import singledispatch
 from pathlib import Path
 import tempfile
 from typing import BinaryIO, Iterable, Iterator, Optional, Sequence, Tuple, Type, cast
-import zipfile
-from zipfile import ZipFile
+from zipfile import ZipFile, is_zipfile
 
 from archive_path import extract_file_in_zip
 from sqlalchemy.orm import Session
@@ -36,7 +35,20 @@ from .utils import DB_FILENAME, REPO_FOLDER, create_sqla_engine, extract_metadat
 
 
 class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-methods
-    """A read-only backend for a sqlite/zip format."""
+    """A read-only backend for a sqlite/zip format.
+
+    The storage format uses an SQLite database and repository files, within a folder or zipfile.
+
+    The content of the folder/zipfile is::
+
+        |- metadata.json
+        |- db.sqlite3
+        |- repo/
+            |- hashkey1
+            |- hashkey2
+            ...
+
+    """
 
     @classmethod
     def version_head(cls) -> str:
@@ -63,11 +75,11 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
 
     @classmethod
     def version_profile(cls, profile: Profile) -> None:
-        return read_version(profile.storage_config['path'])
+        return read_version(profile.storage_config['path'], search_limit=None)
 
     @classmethod
     def migrate(cls, profile: Profile):
-        raise ReadOnlyError()
+        raise NotImplementedError('use the migrate function directly.')
 
     def __init__(self, profile: Profile):
         super().__init__(profile)
@@ -76,7 +88,7 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
         # lazy open the archive zipfile and extract the database file
         self._db_file: Optional[Path] = None
         self._session: Optional[Session] = None
-        self._zipfile: Optional[zipfile.ZipFile] = None
+        self._repo: Optional[ZipfileBackendRepository] = None
         self._closed = False
 
     def __str__(self) -> str:
@@ -93,35 +105,42 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
             self._session.close()
         if self._db_file and self._db_file.exists():
             self._db_file.unlink()
-        if self._zipfile:
-            self._zipfile.close()
+        if self._repo:
+            self._repo.close()
         self._session = None
         self._db_file = None
-        self._zipfile = None
+        self._repo = None
         self._closed = True
 
     def get_session(self) -> Session:
         """Return an SQLAlchemy session."""
         if self._closed:
             raise ClosedStorage(str(self))
-        if self._db_file is None:
-            _, path = tempfile.mkstemp()
-            self._db_file = Path(path)
-            with self._db_file.open('wb') as handle:
-                try:
-                    extract_file_in_zip(self._path, DB_FILENAME, handle, search_limit=4)
-                except Exception as exc:
-                    raise CorruptStorage(f'database could not be read: {exc}') from exc
         if self._session is None:
-            self._session = Session(create_sqla_engine(self._db_file))
+            if is_zipfile(self._path):
+                _, path = tempfile.mkstemp()
+                db_file = self._db_file = Path(path)
+                with db_file.open('wb') as handle:
+                    try:
+                        extract_file_in_zip(self._path, DB_FILENAME, handle, search_limit=4)
+                    except Exception as exc:
+                        raise CorruptStorage(f'database could not be read: {exc}') from exc
+            else:
+                db_file = self._path / DB_FILENAME
+                if not db_file.exists():
+                    raise CorruptStorage(f'database could not be read: non-existent {db_file}')
+            self._session = Session(create_sqla_engine(db_file))
         return self._session
 
     def get_repository(self) -> 'ZipfileBackendRepository':
         if self._closed:
             raise ClosedStorage(str(self))
-        if self._zipfile is None:
-            self._zipfile = ZipFile(self._path, mode='r')  # pylint: disable=consider-using-with
-        return ZipfileBackendRepository(self._zipfile)
+        if self._repo is None:
+            if is_zipfile(self._path):
+                self._repo = ZipfileBackendRepository(self._path)
+            else:
+                self._repo = ZipfileBackendRepository(self._path / REPO_FOLDER, folder=None)
+        return self._repo
 
     def query(self) -> 'SqliteBackendQueryBuilder':
         return SqliteBackendQueryBuilder(self)
@@ -208,13 +227,35 @@ class ReadOnlyError(AiidaException):
 
 
 class ZipfileBackendRepository(AbstractRepositoryBackend):
-    """A read-only backend for an open zip file."""
+    """A read-only backend for a zip file.
 
-    def __init__(self, file: ZipFile):
-        self._zipfile = file
+    The zip file should contain repository files with the key format: ``<folder>/<sha256 hash>``,
+    i.e. files named by the sha256 hash of the file contents, inside a ``<folder>`` directory.
+    """
+
+    def __init__(self, path: str | Path, folder: str | None = REPO_FOLDER):
+        """Initialise the repository backend.
+
+        :param path: the path to the zip file
+        :param folder: the folder inside the zip file to look for repository files
+        """
+        self._path = Path(path)
+        self._zipfile: None | ZipFile = None
+        self._prefix = folder + '/' if folder else ''
+
+    def close(self):
+        """Close the zip file."""
+        if self._zipfile:
+            self._zipfile.close()
 
     @property
     def zipfile(self) -> ZipFile:
+        """Return the zip file."""
+        if self._zipfile is None:
+            try:
+                self._zipfile = ZipFile(self._path, mode='r')  # pylint: disable=consider-using-with
+            except Exception as exc:
+                raise CorruptStorage(f'repository could not be read: {exc}') from exc
         if self._zipfile.fp is None:
             raise ClosedStorage(f'zipfile closed: {self._zipfile}')
         return self._zipfile
@@ -242,7 +283,7 @@ class ZipfileBackendRepository(AbstractRepositoryBackend):
 
     def has_object(self, key: str) -> bool:
         try:
-            self.zipfile.getinfo(f'{REPO_FOLDER}/{key}')
+            self.zipfile.getinfo(f'{self._prefix}{key}')
         except KeyError:
             return False
         return True
@@ -252,13 +293,13 @@ class ZipfileBackendRepository(AbstractRepositoryBackend):
 
     def list_objects(self) -> Iterable[str]:
         for name in self.zipfile.namelist():
-            if name.startswith(REPO_FOLDER + '/') and name[len(REPO_FOLDER) + 1:]:
-                yield name[len(REPO_FOLDER) + 1:]
+            if name.startswith(self._prefix) and name[len(self._prefix):]:
+                yield name[len(self._prefix):]
 
     @contextmanager
     def open(self, key: str) -> Iterator[BinaryIO]:
         try:
-            handle = self.zipfile.open(f'{REPO_FOLDER}/{key}')
+            handle = self.zipfile.open(f'{self._prefix}{key}')
             yield cast(BinaryIO, handle)
         except KeyError:
             raise FileNotFoundError(f'object with key `{key}` does not exist.')
@@ -277,7 +318,7 @@ class ZipfileBackendRepository(AbstractRepositoryBackend):
         return key
 
     def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
-        raise NotImplementedError
+        pass
 
     def get_info(self, statistics: bool = False, **kwargs) -> dict:
         return {'objects': {'count': len(list(self.list_objects()))}}

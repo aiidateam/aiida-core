@@ -52,39 +52,52 @@ def create_sqla_engine(path: Union[str, Path], *, enforce_foreign_keys: bool = T
     return engine
 
 
-def extract_metadata(path: Union[str, Path], search_limit: Optional[int] = 10) -> Dict[str, Any]:
-    """Extract the metadata dictionary from the archive"""
-    # we fail if not one of the first record in central directory (as expected)
-    # so we don't have to iter all repo files to fail
-    return json.loads(read_file_in_zip(path, META_FILENAME, 'utf8', search_limit=search_limit))
+def extract_metadata(path: Union[str, Path], *, search_limit: Optional[int] = 10) -> Dict[str, Any]:
+    """Extract the metadata dictionary from the archive.
 
-
-def read_version(path: Union[str, Path]) -> str:
-    """Read the version of the storage instance from the file.
-
-    This is intended to work for all versions of the storage format.
-
-    :param path: path to storage instance
-
-    :raises: ``UnreachableStorage`` if a version cannot be read from the file
+    :param search_limit: the maximum number of records to search for the metadata file in a zip file.
     """
     path = Path(path)
-    if not path.is_file():
-        raise UnreachableStorage('archive file not found')
+    if not path.exists():
+        raise UnreachableStorage(f'path not found: {path}')
 
     if zipfile.is_zipfile(path):
         try:
-            metadata = extract_metadata(path, search_limit=None)
+            metadata = json.loads(read_file_in_zip(path, META_FILENAME, search_limit=search_limit))
         except Exception as exc:
-            raise CorruptStorage(f'Could not read metadata for version: {exc}') from exc
+            raise CorruptStorage(f'Could not read metadata: {exc}') from exc
     elif tarfile.is_tarfile(path):
         try:
             metadata = json.loads(read_file_in_tar(path, META_FILENAME))
         except Exception as exc:
-            raise CorruptStorage(f'Could not read metadata for version: {exc}') from exc
+            raise CorruptStorage(f'Could not read metadata: {exc}') from exc
+    elif path.is_dir():
+        if not path.joinpath(META_FILENAME).is_file():
+            raise CorruptStorage('Could not find metadata file')
+        try:
+            metadata = json.loads(path.joinpath(META_FILENAME))
+        except Exception as exc:
+            raise CorruptStorage(f'Could not read metadata: {exc}') from exc
     else:
-        raise CorruptStorage('Not a zip or tar file')
+        raise CorruptStorage('Path not a folder, zip or tar file')
 
+    if not isinstance(metadata, dict):
+        raise CorruptStorage(f'Metadata is not a dictionary: {type(metadata)}')
+
+    return metadata
+
+
+def read_version(path: Union[str, Path], *, search_limit: Optional[int] = None) -> str:
+    """Read the version of the storage instance from the path.
+
+    This is intended to work for all versions of the storage format.
+
+    :param path: path to storage instance, either a folder, zip file or tar file.
+    :param search_limit: the maximum number of records to search for the metadata file in a zip file.
+
+    :raises: ``UnreachableStorage`` if a version cannot be read from the file
+    """
+    metadata = extract_metadata(path, search_limit=search_limit)
     if 'export_version' in metadata:
         return metadata['export_version']
 

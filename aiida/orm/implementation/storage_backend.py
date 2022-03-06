@@ -259,18 +259,18 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
         :param dry_run: flag to only print the actions that would be taken without actually executing them.
         """
 
-    def get_info(self, statistics: bool = False) -> dict:
+    def get_info(self, detailed: bool = False) -> dict:
         """Return general information on the storage.
 
-        :param statistics: flag to request more detailed information about the content of the storage.
+        :param detailed: flag to request more detailed information about the content of the storage.
         :returns: a nested dict with the relevant information.
         """
-        return {'entities': self.get_orm_entities(statistics=statistics)}
+        return {'entities': self.get_orm_entities(detailed=detailed)}
 
-    def get_orm_entities(self, statistics: bool = False) -> dict:
+    def get_orm_entities(self, detailed: bool = False) -> dict:
         """Return a mapping with an overview of the storage contents regarding ORM entities.
 
-        :param statistics: flag to request more detailed information about the content of the storage.
+        :param detailed: flag to request more detailed information about the content of the storage.
         :returns: a nested dict with the relevant information.
         """
         from aiida.orm import Comment, Computer, Group, Log, Node, QueryBuilder, User
@@ -279,17 +279,17 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
 
         query_user = QueryBuilder(self).append(User, project=['email'])
         data['Users'] = {'count': query_user.count()}
-        if statistics:
+        if detailed:
             data['Users']['emails'] = sorted({email for email, in query_user.iterall() if email is not None})
 
         query_comp = QueryBuilder(self).append(Computer, project=['label'])
         data['Computers'] = {'count': query_comp.count()}
-        if statistics:
+        if detailed:
             data['Computers']['labels'] = sorted({comp for comp, in query_comp.iterall() if comp is not None})
 
         count = QueryBuilder(self).append(Node).count()
         data['Nodes'] = {'count': count}
-        if statistics:
+        if detailed:
             node_types = sorted({
                 typ for typ, in QueryBuilder(self).append(Node, project=['node_type']).iterall() if typ is not None
             })
@@ -301,7 +301,7 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
 
         query_group = QueryBuilder(self).append(Group, project=['type_string'])
         data['Groups'] = {'count': query_group.count()}
-        if statistics:
+        if detailed:
             data['Groups']['type_strings'] = sorted({typ for typ, in query_group.iterall() if typ is not None})
 
         count = QueryBuilder(self).append(Comment).count()

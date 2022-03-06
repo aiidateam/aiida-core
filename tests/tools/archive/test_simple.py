@@ -13,9 +13,9 @@ import pytest
 
 from aiida import orm
 from aiida.common import json
-from aiida.common.exceptions import LicensingException
+from aiida.common.exceptions import IncompatibleStorageSchema, LicensingException
 from aiida.common.links import LinkType
-from aiida.tools.archive import create_archive, exceptions, import_archive
+from aiida.tools.archive import create_archive, import_archive
 
 
 @pytest.mark.parametrize('entities', ['all', 'specific'])
@@ -102,7 +102,7 @@ def test_check_for_export_format_version(aiida_profile_clean, tmp_path):
 
     # then try to import it
     aiida_profile_clean.clear_profile()
-    with pytest.raises(exceptions.IncompatibleArchiveVersionError):
+    with pytest.raises(IncompatibleStorageSchema):
         import_archive(filename2)
 
 

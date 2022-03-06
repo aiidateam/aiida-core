@@ -12,3 +12,4 @@
 from aiida.common.log import AIIDA_LOGGER
 
 STORAGE_LOGGER = AIIDA_LOGGER.getChild('storage')
+MIGRATE_LOGGER = STORAGE_LOGGER.getChild('migrate')

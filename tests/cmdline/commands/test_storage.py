@@ -25,11 +25,11 @@ def tests_storage_version(run_cli_command):
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def tests_storage_info(aiida_localhost, run_cli_command):
-    """Test the ``verdi storage info`` command with the ``-statistics`` option."""
+    """Test the ``verdi storage info`` command with the ``--detailed`` option."""
     from aiida import orm
     node = orm.Dict().store()
 
-    result = run_cli_command(cmd_storage.storage_info, options=['--statistics'])
+    result = run_cli_command(cmd_storage.storage_info, options=['--detailed'])
 
     assert aiida_localhost.label in result.output
     assert node.node_type in result.output

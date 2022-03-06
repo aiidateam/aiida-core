@@ -36,7 +36,7 @@ from aiida.tools.graph.graph_traversers import get_nodes_export, validate_traver
 from .abstract import ArchiveFormatAbstract, ArchiveWriterAbstract
 from .common import batch_iter, entity_type_to_orm
 from .exceptions import ArchiveExportError, ExportValidationError
-from .implementations.sqlite import ArchiveFormatSqlZip
+from .implementations.sqlite_zip import ArchiveFormatSqlZip
 
 __all__ = ('create_archive', 'EXPORT_LOGGER')
 
@@ -281,13 +281,12 @@ def create_archive(
             writer.update_metadata({
                 'ctime': datetime.now().isoformat(),
                 'creation_parameters': {
-                    'entities_starting_set':
+                    'entities_starting_set': None if entities is None else
                     {etype.value: list(unique) for etype, unique in starting_uuids.items() if unique},
                     'include_authinfos': include_authinfos,
                     'include_comments': include_comments,
                     'include_logs': include_logs,
                     'graph_traversal_rules': full_traversal_rules,
-                    'entity_counts': dict(count_summary),  # type: ignore
                 }
             })
             # stream entity data to the archive

@@ -212,12 +212,12 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
     def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
         raise NotImplementedError
 
-    def get_info(self, statistics: bool = False) -> dict:
-        # since extracting the database file is expensive, we only do it if statistics is True
+    def get_info(self, detailed: bool = False) -> dict:
+        # since extracting the database file is expensive, we only do it if detailed is True
         results = {'metadata': extract_metadata(self._path)}
-        if statistics:
-            results.update(super().get_info(statistics=statistics))
-            results['repository'] = self.get_repository().get_info(statistics)
+        if detailed:
+            results.update(super().get_info(detailed=detailed))
+            results['repository'] = self.get_repository().get_info(detailed)
         return results
 
 
@@ -281,7 +281,7 @@ class _RoBackendRepository(AbstractRepositoryBackend):  # pylint: disable=abstra
     def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
         pass
 
-    def get_info(self, statistics: bool = False, **kwargs) -> dict:
+    def get_info(self, detailed: bool = False, **kwargs) -> dict:
         return {'objects': {'count': len(list(self.list_objects()))}}
 
 

@@ -114,9 +114,9 @@ def test_get_info(monkeypatch):
 
     storage_backend = get_manager().get_profile_storage()
 
-    def mock_get_info(self, statistics=False, **kwargs):  # pylint: disable=unused-argument
+    def mock_get_info(self, detailed=False, **kwargs):  # pylint: disable=unused-argument
         output = {'value': 42}
-        if statistics:
+        if detailed:
             output['extra_value'] = 0
         return output
 
@@ -132,7 +132,7 @@ def test_get_info(monkeypatch):
     assert 'extra_value' not in repository_info_out
     assert repository_info_out['value'] == 42
 
-    storage_info_out = storage_backend.get_info(statistics=True)
+    storage_info_out = storage_backend.get_info(detailed=True)
     repository_info_out = storage_info_out['repository']
     assert 'value' in repository_info_out
     assert 'extra_value' in repository_info_out

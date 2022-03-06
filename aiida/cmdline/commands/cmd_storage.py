@@ -89,8 +89,8 @@ def storage_integrity():
 
 
 @verdi_storage.command('info')
-@click.option('--statistics', is_flag=True, help='Provides more in-detail statistically relevant data.')
-def storage_info(statistics):
+@click.option('--detailed', is_flag=True, help='Provides more detailed information.')
+def storage_info(detailed):
     """Summarise the contents of the storage."""
     from aiida.manage.manager import get_manager
 
@@ -98,7 +98,7 @@ def storage_info(statistics):
     storage = manager.get_profile_storage()
 
     with spinner():
-        data = storage.get_info(statistics=statistics)
+        data = storage.get_info(detailed=detailed)
 
     echo.echo_dictionary(data, sort_keys=False, fmt='yaml')
 

@@ -198,10 +198,10 @@ def test_info(run_cli_command):
 
 
 def test_info_detailed(run_cli_command):
-    """Test the functionality of `verdi archive info --statistics`."""
+    """Test the functionality of `verdi archive info --detailed`."""
     archive = f'export_{ArchiveFormatSqlZip().latest_version}_simple.aiida'
     filename_input = get_archive_file(archive, filepath='export/migrate')
-    options = ['--statistics', filename_input]
+    options = ['--detailed', filename_input]
     result = run_cli_command(cmd_archive.archive_info, options)
     assert 'Nodes:' in result.output
 

@@ -125,7 +125,7 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
     def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
         raise NotImplementedError
 
-    def get_info(self, statistics: bool = False, **kwargs) -> dict:
+    def get_info(self, detailed: bool = False, **kwargs) -> dict:
         raise NotImplementedError
 
 

@@ -16,18 +16,8 @@ def run_migrations_online():
 
     The connection should have been passed to the config, which we use to configue the migration context.
     """
+    from aiida.storage.psql_dos.models.base import get_orm_metadata
 
-    # pylint: disable=unused-import
-    from aiida.common.exceptions import DbContentError
-    from aiida.storage.psql_dos.models.authinfo import DbAuthInfo
-    from aiida.storage.psql_dos.models.base import Base
-    from aiida.storage.psql_dos.models.comment import DbComment
-    from aiida.storage.psql_dos.models.computer import DbComputer
-    from aiida.storage.psql_dos.models.group import DbGroup
-    from aiida.storage.psql_dos.models.log import DbLog
-    from aiida.storage.psql_dos.models.node import DbLink, DbNode
-    from aiida.storage.psql_dos.models.settings import DbSetting
-    from aiida.storage.psql_dos.models.user import DbUser
     config = context.config  # pylint: disable=no-member
 
     connection = config.attributes.get('connection', None)
@@ -43,7 +33,7 @@ def run_migrations_online():
 
     context.configure(  # pylint: disable=no-member
         connection=connection,
-        target_metadata=Base.metadata,
+        target_metadata=get_orm_metadata(),
         transaction_per_migration=True,
         aiida_profile=aiida_profile,
         on_version_apply=on_version_apply

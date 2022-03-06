@@ -33,6 +33,7 @@ from sqlalchemy.orm import Session
 
 from aiida.common import exceptions
 from aiida.manage.configuration.profile import Profile
+from aiida.storage.log import MIGRATE_LOGGER
 from aiida.storage.psql_dos.models.settings import DbSetting
 from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
 
@@ -197,8 +198,6 @@ class PsqlDostoreMigrator:
 
         :raises: :class:`~aiida.common.exceptions.UnreachableStorage` if the storage cannot be accessed
         """
-        from aiida.cmdline.utils import echo
-
         # the database can be in one of a few states:
         # 1. Completely empty -> we can simply initialise it with the current ORM schema
         # 2. Legacy django database -> we transfer the version to alembic, migrate to the head of the django branch,
@@ -211,7 +210,7 @@ class PsqlDostoreMigrator:
             if not inspect(connection).has_table(self.alembic_version_tbl_name):
                 if not inspect(connection).has_table(self.django_version_table.name):
                     # the database is assumed to be empty, so we need to initialise it
-                    echo.echo_report('initialising empty storage schema')
+                    MIGRATE_LOGGER.report('initialising empty storage schema')
                     self.initialise()
                     return
                 # the database is a legacy django one,
@@ -238,10 +237,10 @@ class PsqlDostoreMigrator:
         if 'django' in branches or 'sqlalchemy' in branches:
             # migrate up to the top of the respective legacy branches
             if 'django' in branches:
-                echo.echo_report('Migrating to the head of the legacy django branch')
+                MIGRATE_LOGGER.report('Migrating to the head of the legacy django branch')
                 self.migrate_up('django@head')
             elif 'sqlalchemy' in branches:
-                echo.echo_report('Migrating to the head of the legacy sqlalchemy branch')
+                MIGRATE_LOGGER.report('Migrating to the head of the legacy sqlalchemy branch')
                 self.migrate_up('sqlalchemy@head')
             # now re-stamp with the comparable revision on the main branch
             with self._connection_context() as connection:
@@ -251,7 +250,7 @@ class PsqlDostoreMigrator:
                 connection.commit()
 
         # finally migrate to the main head revision
-        echo.echo_report('Migrating to the head of the main branch')
+        MIGRATE_LOGGER.report('Migrating to the head of the main branch')
         self.migrate_up('main@head')
 
     def migrate_up(self, version: str) -> None:
@@ -284,7 +283,7 @@ class PsqlDostoreMigrator:
         return ScriptDirectory.from_config(cls._alembic_config())
 
     @contextlib.contextmanager
-    def _alembic_connect(self, _connection: Optional[Connection] = None):
+    def _alembic_connect(self, _connection: Optional[Connection] = None) -> Iterator[Config]:
         """Context manager to return an instance of an Alembic configuration.
 
         The profiles's database connection is added in the `attributes` property, through which it can then also be
@@ -297,16 +296,15 @@ class PsqlDostoreMigrator:
 
             def _callback(step: MigrationInfo, **kwargs):  # pylint: disable=unused-argument
                 """Callback to be called after a migration step is executed."""
-                from aiida.cmdline.utils import echo
                 from_rev = step.down_revision_ids[0] if step.down_revision_ids else '<base>'
-                echo.echo_report(f'- {from_rev} -> {step.up_revision_id}')
+                MIGRATE_LOGGER.report(f'- {from_rev} -> {step.up_revision_id}')
 
             config.attributes['on_version_apply'] = _callback  # pylint: disable=unsupported-assignment-operation
 
             yield config
 
     @contextlib.contextmanager
-    def _migration_context(self, _connection: Optional[Connection] = None) -> MigrationContext:
+    def _migration_context(self, _connection: Optional[Connection] = None) -> Iterator[MigrationContext]:
         """Context manager to return an instance of an Alembic migration context.
 
         This migration context will have been configured with the current database connection, which allows this context

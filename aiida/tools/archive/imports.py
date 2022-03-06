@@ -16,6 +16,7 @@ from tabulate import tabulate
 
 from aiida import orm
 from aiida.common import timezone
+from aiida.common.exceptions import IncompatibleStorageSchema
 from aiida.common.lang import type_check
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
@@ -28,8 +29,8 @@ from aiida.repository import Repository
 
 from .abstract import ArchiveFormatAbstract
 from .common import batch_iter, entity_type_to_orm
-from .exceptions import ImportTestRun, ImportUniquenessError, ImportValidationError, IncompatibleArchiveVersionError
-from .implementations.sqlite import ArchiveFormatSqlZip
+from .exceptions import ImportTestRun, ImportUniquenessError, ImportValidationError
+from .implementations.sqlite_zip import ArchiveFormatSqlZip
 
 __all__ = ('IMPORT_LOGGER', 'import_archive')
 
@@ -95,10 +96,9 @@ def import_archive(
 
     :returns: Primary Key of the import Group
 
-    :raises `~aiida.tools.archive.exceptions.IncompatibleArchiveVersionError`: if the provided archive's
-        version is not equal to the version of AiiDA at the moment of import.
-    :raises `~aiida.tools.archive.exceptions.ImportValidationError`: if parameters or the contents of
-    :raises `~aiida.tools.archive.exceptions.CorruptArchive`: if the provided archive cannot be read.
+    :raises `~aiida.common.exceptions.CorruptStorage`: if the provided archive cannot be read.
+    :raises `~aiida.common.exceptions.IncompatibleStorageSchema`: if the archive version is not at head.
+    :raises `~aiida.tools.archive.exceptions.ImportValidationError`: if invalid entities are found in the archive.
     :raises `~aiida.tools.archive.exceptions.ImportUniquenessError`: if a new unique entity can not be created.
     """
     archive_format = archive_format or ArchiveFormatSqlZip()
@@ -126,9 +126,9 @@ def import_archive(
     # i.e. its not whether the version is the latest that matters, it is that it is compatible with the backend version
     # its a bit weird at the moment because django/sqlalchemy have different versioning
     if not archive_format.read_version(path) == archive_format.latest_version:
-        raise IncompatibleArchiveVersionError(
-            f'The archive version {archive_format.read_version(path)} '
-            f'is not the latest version {archive_format.latest_version}'
+        raise IncompatibleStorageSchema(
+            f'The archive version {archive_format.read_version(path)!r} '
+            f'is not the latest version {archive_format.latest_version!r}'
         )
 
     IMPORT_LOGGER.report(

@@ -157,7 +157,7 @@ if __name__ == '__main__':
         # skipped since this is for testing only not general use
         'manage': ['tests'],
         # skipped since we don't want to expose the implementation at the top-level
-        'storage': ['psql_dos'],
+        'storage': ['psql_dos', 'sqlite_zip'],
         'orm': ['implementation'],
         # skip all since the module requires extra requirements
         'restapi': ['*'],

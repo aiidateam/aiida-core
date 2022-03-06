@@ -52,6 +52,7 @@ py:class SelfType
 py:class Profile
 py:class PsqlDosBackend
 py:class str | list[str]
+py:class str | Path
 
 ### AiiDA
 
@@ -70,7 +71,6 @@ py:class aiida.tools.groups.paths.WalkNodeResult
 py:meth aiida.orm.groups.GroupCollection.delete
 
 py:class AbstractRepositoryBackend
-py:class Backend
 py:class BackendEntity
 py:class BackendEntityType
 py:class BackendNode
@@ -116,6 +116,7 @@ py:class ReturnType
 py:class Runner
 py:class Scheduler
 py:class SelfType
+py:class StorageBackend
 py:class TransactionType
 py:class Transport
 py:class TransportQueue
@@ -127,6 +128,7 @@ py:class orm.implementation.Backend
 py:class aiida.common.exceptions.UnreachableStorage
 py:class aiida.common.exceptions.IncompatibleDatabaseSchema
 py:class aiida.common.exceptions.DatabaseMigrationError
+py:class aiida.storage.sqlite_zip.models.DbGroupNode
 
 py:class AuthInfoCollection
 py:class CommentCollection

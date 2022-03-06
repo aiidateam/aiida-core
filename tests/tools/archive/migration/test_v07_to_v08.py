@@ -8,10 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test archive file migration from export version 0.7 to 0.8"""
-from aiida.tools.archive.implementations.sqlite.migrations.legacy.v07_to_v08 import (
-    migrate_v7_to_v8,
-    migration_default_link_label,
-)
+from aiida.storage.sqlite_zip.migrations.legacy.v07_to_v08 import migrate_v7_to_v8, migration_default_link_label
 
 
 def test_migrate_external(migrate_from_func):
@@ -28,7 +25,7 @@ def test_migrate_external(migrate_from_func):
 
 
 def test_migration_0043_default_link_label():
-    """Check CorruptArchive is raised for different cases during migration 0040"""
+    """Check link labels are migrated properly."""
     # data has one "valid" link, in the form of <label="a_good_label">.
     # data also has one "invalid" link, in form of <label="_return">.
     # After the migration, the "invalid" link should have been updated to the "valid" link <label="result">

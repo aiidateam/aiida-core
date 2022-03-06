@@ -138,7 +138,7 @@ class Manager:
 
         # Check whether a development version is being run. Note that needs to be called after ``configure_logging``
         # because this function relies on the logging being properly configured for the warning to show.
-        check_version()
+        self.check_version()
 
         return self._profile
 
@@ -309,8 +309,10 @@ class Manager:
             # testing_mode cannot be set.
             testing_mode=profile.is_test_profile,
         )
+
         # Check whether a compatible version of RabbitMQ is being used.
-        check_rabbitmq_version(communicator)
+        self.check_rabbitmq_version(communicator)
+
         return communicator
 
     def get_daemon_client(self) -> 'DaemonClient':
@@ -423,16 +425,59 @@ class Manager:
 
         return runner
 
+    def check_rabbitmq_version(self, communicator: 'RmqThreadCommunicator'):
+        """Check the version of RabbitMQ that is being connected to and emit warning if the version is not compatible.
+
+        Versions 3.8.15 and above are not compatible with AiiDA with default configuration.
+        """
+        from packaging.version import parse
+
+        from aiida.cmdline.utils import echo
+
+        show_warning = self.get_option('warnings.rabbitmq_version')
+        version = get_rabbitmq_version(communicator)
+
+        if show_warning and version >= parse('3.8.15'):
+            echo.echo_warning(f'RabbitMQ v{version} is not supported and will cause unexpected problems!')
+            echo.echo_warning('It can cause long-running workflows to crash and jobs to be submitted multiple times.')
+            echo.echo_warning('See https://github.com/aiidateam/aiida-core/wiki/RabbitMQ-version-to-use for details.')
+            return version, False
+
+        return version, True
+
+    def check_version(self):
+        """Check the currently installed version of ``aiida-core`` and warn if it is a post release development version.
+
+        The ``aiida-core`` package maintains the protocol that the ``develop`` branch will use a post release version
+        number. This means it will always append `.post0` to the version of the latest release. This should mean that if
+        this protocol is maintained properly, this method will print a warning if the currently installed version is a
+        post release development branch and not an actual release.
+        """
+        from packaging.version import parse
+
+        from aiida import __version__
+        from aiida.cmdline.utils import echo
+
+        # Showing of the warning can be turned off by setting the following option to false.
+        show_warning = self.get_option('warnings.development_version')
+        version = parse(__version__)
+
+        if version.is_postrelease and show_warning:
+            echo.echo_warning(f'You are currently using a post release development version of AiiDA: {version}')
+            echo.echo_warning('Be aware that this is not recommended for production and is not officially supported.')
+            echo.echo_warning('Databases used with this version may not be compatible with future releases of AiiDA')
+            echo.echo_warning('as you might not be able to automatically migrate your data.\n')
+
 
 def is_rabbitmq_version_supported(communicator: 'RmqThreadCommunicator') -> bool:
     """Return whether the version of RabbitMQ configured for the current profile is supported.
 
-    Versions 3.8 and above are not compatible with AiiDA with default configuration.
+    Versions 3.8.15 and above are not compatible with AiiDA with default configuration.
 
     :return: boolean whether the current RabbitMQ version is supported.
     """
     from packaging.version import parse
-    return get_rabbitmq_version(communicator) < parse('3.8')
+    return get_rabbitmq_version(communicator) < parse('3.8.15')
 
 
 def get_rabbitmq_version(communicator: 'RmqThreadCommunicator'):
@@ -442,43 +487,3 @@ def get_rabbitmq_version(communicator: 'RmqThreadCommunicator'):
     """
     from packaging.version import parse
     return parse(communicator.server_properties['version'].decode('utf-8'))
-
-
-def check_rabbitmq_version(communicator: 'RmqThreadCommunicator'):
-    """Check the version of RabbitMQ that is being connected to and emit warning if the version is not compatible."""
-    from packaging.version import parse
-
-    from aiida.cmdline.utils import echo
-    version = get_rabbitmq_version(communicator)
-    if version >= parse('3.8.15'):
-        echo.echo_warning(f'RabbitMQ v{version} is not supported and will cause unexpected problems!')
-        echo.echo_warning('It can cause long-running workflows to crash and jobs to be submitted multiple times.')
-        echo.echo_warning('See https://github.com/aiidateam/aiida-core/wiki/RabbitMQ-version-to-use for details.')
-        return version, False
-    return version, True
-
-
-def check_version():
-    """Check the currently installed version of ``aiida-core`` and warn if it is a post release development version.
-
-    The ``aiida-core`` package maintains the protocol that the ``develop`` branch will use a post release version
-    number. This means it will always append `.post0` to the version of the latest release. This should mean that if
-    this protocol is maintained properly, this method will print a warning if the currently installed version is a
-    post release development branch and not an actual release.
-    """
-    from packaging.version import parse
-
-    from aiida import __version__
-    from aiida.cmdline.utils import echo
-    from aiida.manage.configuration import get_config_option
-
-    version = parse(__version__)
-
-    # Showing of the warning can be turned off by setting the following option to false.
-    show_warning = get_config_option('warnings.development_version')
-
-    if version.is_postrelease and show_warning:
-        echo.echo_warning(f'You are currently using a post release development version of AiiDA: {version}')
-        echo.echo_warning('Be aware that this is not recommended for production and is not officially supported.')
-        echo.echo_warning('Databases used with this version may not be compatible with future releases of AiiDA')
-        echo.echo_warning('as you might not be able to automatically migrate your data.\n')

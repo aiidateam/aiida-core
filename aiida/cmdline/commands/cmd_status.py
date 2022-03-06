@@ -60,7 +60,7 @@ def verdi_status(print_traceback, no_rmq):
     from aiida.cmdline.utils.daemon import delete_stale_pid_file, get_daemon_status
     from aiida.common.utils import Capturing
     from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
-    from aiida.manage.manager import check_rabbitmq_version, get_manager
+    from aiida.manage.manager import get_manager
 
     exit_code = ExitCode.SUCCESS
 
@@ -125,7 +125,7 @@ def verdi_status(print_traceback, no_rmq):
             print_status(ServiceStatus.ERROR, 'rabbitmq', message, exception=exc, print_traceback=print_traceback)
             exit_code = ExitCode.CRITICAL
         else:
-            version, supported = check_rabbitmq_version(comm)
+            version, supported = manager.check_rabbitmq_version(comm)
             connection = f'Connected to RabbitMQ v{version} as {profile.get_rmq_url()}'
             if supported:
                 print_status(ServiceStatus.UP, 'rabbitmq', connection)

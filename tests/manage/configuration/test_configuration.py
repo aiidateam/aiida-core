@@ -3,11 +3,11 @@
 import pytest
 
 import aiida
-from aiida.manage.manager import check_version
+from aiida.manage.manager import get_manager
 
 
 def test_check_version_release(monkeypatch, capsys, isolated_config):
-    """Test that ``check_version`` prints nothing for a release version.
+    """Test that ``Manager.check_version`` prints nothing for a release version.
 
     If a warning is emitted, it should be printed to stdout. So even though it will go through the logging system, the
     logging configuration of AiiDA will interfere with that of pytest and the ultimately the output will simply be
@@ -19,7 +19,7 @@ def test_check_version_release(monkeypatch, capsys, isolated_config):
     # Explicitly setting the default in case the test profile has it changed.
     isolated_config.set_option('warnings.development_version', True)
 
-    check_version()
+    get_manager().check_version()
     captured = capsys.readouterr()
     assert not captured.err
     assert not captured.out
@@ -27,7 +27,7 @@ def test_check_version_release(monkeypatch, capsys, isolated_config):
 
 @pytest.mark.parametrize('suppress_warning', (True, False))
 def test_check_version_development(monkeypatch, capsys, isolated_config, suppress_warning):
-    """Test that ``check_version`` prints a warning for a post release development version.
+    """Test that ``Manager.check_version`` prints a warning for a post release development version.
 
     The warning can be suppressed by setting the option ``warnings.development_version`` to ``False``.
 
@@ -40,7 +40,7 @@ def test_check_version_development(monkeypatch, capsys, isolated_config, suppres
 
     isolated_config.set_option('warnings.development_version', not suppress_warning)
 
-    check_version()
+    get_manager().check_version()
     captured = capsys.readouterr()
     assert not captured.err
 

@@ -989,12 +989,15 @@ class QueryBuilder:
         except TypeError:
             return value
 
-    def first(self) -> Optional[List[Any]]:
-        """Executes the query, asking for the first row of results.
+    def first(self, flat: bool = False) -> Optional[Union[List[Any], Any]]:
+        """Return the first result of the query.
 
-        Note, this may change if several rows are valid for the query,
-        as persistent ordering is not guaranteed unless explicitly specified.
+        Calling ``first`` results in an execution of the underlying query.
 
+        Note, this may change if several rows are valid for the query, as persistent ordering is not guaranteed unless
+        explicitly specified.
+
+        :param flat: if True, return just the projected quantity if there is just a single projection.
         :returns: One row of results as a list, or None if no result returned.
         """
         result = self._impl.first(self.as_dict())
@@ -1002,7 +1005,12 @@ class QueryBuilder:
         if result is None:
             return None
 
-        return [self._get_aiida_entity_res(rowitem) for rowitem in result]
+        result = [self._get_aiida_entity_res(rowitem) for rowitem in result]
+
+        if flat and len(result) == 1:
+            return result[0]
+
+        return result
 
     def count(self) -> int:
         """

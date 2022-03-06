@@ -198,7 +198,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
 
     def get_info( # type: ignore[override] # pylint: disable=arguments-differ
         self,
-        statistics=False,
+        detailed=False,
     ) -> t.Dict[str, t.Union[int, str, t.Dict[str, int], t.Dict[str, float]]]:
         """Return information on configuration and content of the repository."""
         output_info: t.Dict[str, t.Union[int, str, t.Dict[str, int], t.Dict[str, float]]] = {}
@@ -207,7 +207,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
             output_info['SHA-hash algorithm'] = container.hash_type
             output_info['Compression algorithm'] = container.compression_algorithm
 
-            if not statistics:
+            if not detailed:
                 return output_info
 
             files_data = container.count_objects()

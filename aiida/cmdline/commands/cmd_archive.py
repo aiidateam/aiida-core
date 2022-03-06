@@ -57,8 +57,8 @@ def archive_version(path):
 
 @verdi_archive.command('info')
 @click.argument('path', nargs=1, type=click.Path(exists=True, readable=True))
-@click.option('--statistics', is_flag=True, help='Provides more in-detail statistically relevant data.')
-def archive_info(path, statistics):
+@click.option('--detailed', is_flag=True, help='Provides more detailed information.')
+def archive_info(path, detailed):
     """Summarise the contents of an archive."""
     # note: this mirrors `cmd_storage:storage_info`
     # it is currently hardcoded to the `SqliteZipBackend`, but could be generalized in the future
@@ -71,7 +71,7 @@ def archive_info(path, statistics):
         echo.echo_critical(f'archive version incompatible: {exc}')
     with spinner():
         try:
-            data = storage.get_info(statistics=statistics)
+            data = storage.get_info(detailed=detailed)
         finally:
             storage.close()
 
@@ -96,9 +96,9 @@ def inspect(ctx, archive, version, meta_data, database):  # pylint: disable=unus
     if version:
         ctx.invoke(archive_version, path=archive)
     elif database:
-        ctx.invoke(archive_info, path=archive, statistics=True)
+        ctx.invoke(archive_info, path=archive, detailed=True)
     else:
-        ctx.invoke(archive_info, path=archive, statistics=False)
+        ctx.invoke(archive_info, path=archive, detailed=False)
 
 
 @verdi_archive.command('create')

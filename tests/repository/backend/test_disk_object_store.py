@@ -218,7 +218,7 @@ def test_get_info(populated_repository):
     assert repository_info['SHA-hash algorithm'] == 'sha256'
     assert repository_info['Compression algorithm'] == 'zlib+1'
 
-    repository_info = populated_repository.get_info(statistics=True)
+    repository_info = populated_repository.get_info(detailed=True)
     assert 'SHA-hash algorithm' in repository_info
     assert 'Compression algorithm' in repository_info
     assert repository_info['SHA-hash algorithm'] == 'sha256'

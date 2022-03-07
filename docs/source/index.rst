@@ -4,9 +4,30 @@
 Welcome to AiiDA's documentation!
 #################################
 
-**aiida-core version:** |release|
+.. grid::
+   :reverse:
+   :gutter: 2 3 3 3
+   :margin: 1 3 1 2
 
-`AiiDA`_ is an open-source Python infrastructure to help researchers with automating, managing, persisting, sharing and reproducing the complex workflows associated with modern computational science and all associated data (see :ref:`features<intro:about>`).
+   .. grid-item::
+      :columns: 12 4 4 4
+
+      .. image:: images/aiida-icon.svg
+         :width: 200px
+         :class: sd-m-auto
+
+   .. grid-item::
+      :columns: 12 8 8 8
+      :child-align: justify
+      :class: sd-fs-5
+
+      .. rubric:: AiiDA
+
+      An open-source Python infrastructure to help researchers with automating, managing, persisting, sharing and reproducing the complex workflows associated with modern computational science and all associated data (see :ref:`features<intro:about>`).
+
+      **aiida-core version:** |release|
+
+------------------------------
 
 .. grid:: 1 2 2 2
    :gutter: 3
@@ -106,6 +127,8 @@ Welcome to AiiDA's documentation!
          :outline:
 
          To the architecture guide
+
+------------------------------
 
 .. admonition:: Development Contributions
    :class: title-icon-code-fork

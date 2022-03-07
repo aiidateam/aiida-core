@@ -1,5 +1,27 @@
 # Changelog
 
+## v1.6.6 - 2022-03-07
+
+[full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.5...v1.6.6)
+
+### Bug fixes
+
+- `DirectScheduler`: remove the `-e` option for bash invocation [[#5264]](https://github.com/aiidateam/aiida-core/pull/5264)
+- Replace deprecated matplotlib config option 'text.latex.preview' [[#5233]](https://github.com/aiidateam/aiida-core/pull/5233)
+
+### Dependencies
+
+- Add upper limit `markupsafe<2.1` to fix the documentation build [[#5371]](https://github.com/aiidateam/aiida-core/pull/5371)
+- Add upper limit `pytest-asyncio<0.17` [[#5309]](https://github.com/aiidateam/aiida-core/pull/5309)
+
+### Devops
+
+- CI: move Jenkins workflow to nightly GHA workflow [[#5277]](https://github.com/aiidateam/aiida-core/pull/5277)
+- Docs: replace CircleCI build with ReadTheDocs [[#5279]](https://github.com/aiidateam/aiida-core/pull/5279)
+- CI: run certain workflows only on main repo, not on forks [[#5091]](https://github.com/aiidateam/aiida-core/pull/5091)
+- Revise Docker image build [[#4997]](https://github.com/aiidateam/aiida-core/pull/4997)
+
+
 ## v1.6.5 - 2021-08-13
 
 [full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.4...v1.6.5)

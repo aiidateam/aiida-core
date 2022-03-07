@@ -29,9 +29,9 @@ Which of those is optimal depends on your environment and use case.
 If you are unsure, use the :ref:`system-wide installation <intro:get_started:system-wide-install>` method.
 
 .. grid:: 1 2 2 2
-   :gutter: 2
+   :gutter: 3
 
-   .. grid-item-card:: :fa:`desktop;mr-1` **System-wide installation**
+   .. grid-item-card:: :fa:`desktop;mr-1` System-wide installation
 
       .. button-ref:: intro:get_started:system-wide-install
          :ref-type: ref
@@ -42,7 +42,7 @@ If you are unsure, use the :ref:`system-wide installation <intro:get_started:sys
 
       Install the prerequisite services using standard package managers (apt, homebrew, etc.) with administrative privileges.
 
-   .. grid-item-card:: :fa:`folder;mr-1` **Installation into Conda environment**
+   .. grid-item-card:: :fa:`folder;mr-1` Installation into Conda environment
 
       .. button-ref:: intro:get_started:conda-install
          :ref-type: ref
@@ -53,7 +53,7 @@ If you are unsure, use the :ref:`system-wide installation <intro:get_started:sys
 
       This method does not require administrative privileges, but involves manual management of start-up and shut-down of services.
 
-   .. grid-item-card:: :fa:`cube;mr-1` **Run via docker container**
+   .. grid-item-card:: :fa:`cube;mr-1` Run via docker container
 
       .. button-ref:: intro:get_started:docker
          :ref-type: ref
@@ -65,7 +65,7 @@ If you are unsure, use the :ref:`system-wide installation <intro:get_started:sys
       Does not require the separate installation of prerequisite services.
       Especially well-suited to get directly started on the **tutorials**.
 
-   .. grid-item-card:: :fa:`cloud;mr-1` **Run via virtual machine**
+   .. grid-item-card:: :fa:`cloud;mr-1` Run via virtual machine
 
       .. button-link:: https://quantum-mobile.readthedocs.io/
          :click-parent:

@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.6.7 - 2022-03-07
+
+[full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.6...v1.6.7)
+
+### Dependencies
+
+- Dependencies: move `markupsafe` specification to `install_requires`
+
+
 ## v1.6.6 - 2022-03-07
 
 [full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.5...v1.6.6)

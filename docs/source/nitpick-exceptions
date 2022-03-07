@@ -124,7 +124,8 @@ py:class User
 py:class WorkChain
 py:class WorkChainSpec
 py:func QueryBuilder._get_ormclass
-py:class orm.implementation.Backend
+py:class StorageBackend
+py:class orm.implementation.StorageBackend
 py:class aiida.common.exceptions.UnreachableStorage
 py:class aiida.common.exceptions.IncompatibleDatabaseSchema
 py:class aiida.common.exceptions.DatabaseMigrationError
@@ -207,6 +208,7 @@ py:class psycopg2.extensions.cursor
 py:class alembic.config.Config
 py:class alembic.op
 py:class alembic.runtime.migration.MigrationContext
+py:class alembic.script.base.ScriptDirectory
 
 py:class pgsu.PGSU
 py:meth  pgsu.PGSU.__init__

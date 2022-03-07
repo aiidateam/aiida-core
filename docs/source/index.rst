@@ -7,7 +7,7 @@ Welcome to AiiDA's documentation!
 .. grid::
    :reverse:
    :gutter: 2 3 3 3
-   :margin: 1 3 1 2
+   :margin: 1 2 1 2
 
    .. grid-item::
       :columns: 12 4 4 4
@@ -32,8 +32,9 @@ Welcome to AiiDA's documentation!
 .. grid:: 1 2 2 2
    :gutter: 3
 
-   .. grid-item-card:: :fa:`rocket;mr-1` **Getting Started**
+   .. grid-item-card:: :fa:`rocket;mr-1` Getting Started
       :text-align: center
+      :shadow: md
 
       AiiDA installation, configuration and troubleshooting.
 
@@ -48,8 +49,9 @@ Welcome to AiiDA's documentation!
 
          To the installation guides
 
-   .. grid-item-card:: :fa:`info-circle;mr-1` **Tutorial**
+   .. grid-item-card:: :fa:`info-circle;mr-1` Tutorial
       :text-align: center
+      :shadow: md
 
       First time users: Get your feet wet with AiiDA basics!
 
@@ -64,8 +66,9 @@ Welcome to AiiDA's documentation!
 
          To the tutorials
 
-   .. grid-item-card:: :fa:`question-circle;mr-1` **How-To Guides**
+   .. grid-item-card:: :fa:`question-circle;mr-1` How-To Guides
       :text-align: center
+      :shadow: md
 
       Learn how to use AiiDA to power your own work.
 
@@ -80,8 +83,9 @@ Welcome to AiiDA's documentation!
 
          To the how-to guides
 
-   .. grid-item-card:: :fa:`bookmark;mr-1` **Topics**
+   .. grid-item-card:: :fa:`bookmark;mr-1` Topics
       :text-align: center
+      :shadow: md
 
       Background information on AiiDA's underlying concepts.
 
@@ -96,8 +100,9 @@ Welcome to AiiDA's documentation!
 
          To the topics
 
-   .. grid-item-card:: :fa:`cogs;mr-1` **API Reference**
+   .. grid-item-card:: :fa:`cogs;mr-1` API Reference
       :text-align: center
+      :shadow: md
 
       Comprehensive documentation of AiiDA components: command-line interface, Python interface, and RESTful API.
 
@@ -112,8 +117,9 @@ Welcome to AiiDA's documentation!
 
          To the reference guide
 
-   .. grid-item-card:: :fa:`sitemap;mr-1` **Internal Architecture**
+   .. grid-item-card:: :fa:`sitemap;mr-1` Internal Architecture
       :text-align: center
+      :shadow: md
 
       Notes on AiiDA's design and architecture aimed at core developers.
 

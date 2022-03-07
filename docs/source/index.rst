@@ -9,7 +9,7 @@ Welcome to AiiDA's documentation!
 `AiiDA`_ is an open-source Python infrastructure to help researchers with automating, managing, persisting, sharing and reproducing the complex workflows associated with modern computational science and all associated data (see :ref:`features<intro:about>`).
 
 .. grid:: 1 2 2 2
-   :gutter: 2
+   :gutter: 3
 
    .. grid-item-card:: :fa:`rocket;mr-1` **Getting Started**
       :text-align: center

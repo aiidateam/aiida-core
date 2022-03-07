@@ -208,6 +208,7 @@ py:class psycopg2.extensions.cursor
 py:class alembic.config.Config
 py:class alembic.op
 py:class alembic.runtime.migration.MigrationContext
+py:class alembic.script.base.ScriptDirectory
 
 py:class pgsu.PGSU
 py:meth  pgsu.PGSU.__init__

@@ -12,6 +12,7 @@ Welcome to AiiDA's documentation!
    :gutter: 2
 
    .. grid-item-card:: :fa:`rocket;mr-1` **Getting Started**
+      :text-align: center
 
       AiiDA installation, configuration and troubleshooting.
 
@@ -27,6 +28,7 @@ Welcome to AiiDA's documentation!
          To the installation guides
 
    .. grid-item-card:: :fa:`info-circle;mr-1` **Tutorial**
+      :text-align: center
 
       First time users: Get your feet wet with AiiDA basics!
 
@@ -42,6 +44,7 @@ Welcome to AiiDA's documentation!
          To the tutorials
 
    .. grid-item-card:: :fa:`question-circle;mr-1` **How-To Guides**
+      :text-align: center
 
       Learn how to use AiiDA to power your own work.
 
@@ -57,6 +60,7 @@ Welcome to AiiDA's documentation!
          To the how-to guides
 
    .. grid-item-card:: :fa:`bookmark;mr-1` **Topics**
+      :text-align: center
 
       Background information on AiiDA's underlying concepts.
 
@@ -72,6 +76,7 @@ Welcome to AiiDA's documentation!
          To the topics
 
    .. grid-item-card:: :fa:`cogs;mr-1` **API Reference**
+      :text-align: center
 
       Comprehensive documentation of AiiDA components: command-line interface, Python interface, and RESTful API.
 
@@ -87,6 +92,7 @@ Welcome to AiiDA's documentation!
          To the reference guide
 
    .. grid-item-card:: :fa:`sitemap;mr-1` **Internal Architecture**
+      :text-align: center
 
       Notes on AiiDA's design and architecture aimed at core developers.
 

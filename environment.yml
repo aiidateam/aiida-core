@@ -22,6 +22,7 @@ dependencies:
 - jinja2~=2.10
 - jsonschema~=3.0
 - kiwipy[rmq]~=0.7.4
+- markupsafe<2.1
 - numpy~=1.17
 - pamqp~=2.3
 - paramiko>=2.7.2,~=2.7

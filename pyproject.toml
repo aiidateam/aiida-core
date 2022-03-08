@@ -83,7 +83,8 @@ docs = [
     "sphinx-design~=0.0.13",
     "sphinx-notfound-page~=0.5",
     "sphinxext-rediraffe~=0.2.4",
-    "sphinx-sqlalchemy~=0.1.1"
+    "sphinx-sqlalchemy~=0.1.1",
+    "myst-parser~=0.15.2",
 ]
 atomic_tools = [
     "PyCifRW~=4.4",

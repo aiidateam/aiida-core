@@ -19,7 +19,7 @@ from .base import Base
 
 
 class DbAuthInfo(Base):
-    """Database model to keep computer authentication data, per user.
+    """Database model to store data for :py:class:`aiida.orm.AuthInfo`, and keep computer authentication data, per user.
 
     Specifications are user-specific of how to submit jobs in the computer.
     The model also has an ``enabled`` logical switch that indicates whether the device is available for use or not.

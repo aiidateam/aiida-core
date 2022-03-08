@@ -100,6 +100,7 @@ def create_orm_cls(klass: base.Base) -> SqliteBase:
         klass.__name__,
         (SqliteBase,),
         {
+            '__doc__': klass.__doc__,
             '__tablename__': tbl.name,
             '__table__': tbl,
             **{col.name if col.name != 'metadata' else '_metadata': col for col in tbl.columns},

@@ -20,7 +20,10 @@ from aiida.storage.psql_dos.models.base import Base
 
 
 class DbComment(Base):
-    """Database model to store comments, relating to a node."""
+    """Database model to store data for :py:class:`aiida.orm.Comment`.
+
+    Comments can be attach to the nodes by the users.
+    """
 
     __tablename__ = 'db_dbcomment'
 

@@ -31,7 +31,7 @@ The frontend interface therefore needs to allow users to store and address files
 With that guarantee, the backend implementation is free to store the files in any way imaginable in order to meet the requirements specified above.
 
 .. _fig:internal-architecture:repository:design-node-repository:
-.. figure:: include/images/repository/schematic_design_node_repo.png
+.. figure:: static/repository/schematic_design_node_repo.png
     :align: center
     :width: 450px
 
@@ -41,6 +41,8 @@ With that guarantee, the backend implementation is free to store the files in an
 
 To satisfy the requirements of the frontend interface and the actual data store at the same time, the file repository solution in AiiDA is divided into two components: a *backend* and a *frontend*.
 In the following, the current backend implementation, the disk object store, is described.
+
+.. _internal-architecture:repository:dostore:
 
 The disk object store
 ---------------------
@@ -55,7 +57,7 @@ The *loose* directory applies one level of sharding based on the first two chara
 A schematic overview of the folder structure of a disk object store *container* is shown in :numref:`fig:internal-architecture:repository:design-dos`.
 
 .. _fig:internal-architecture:repository:design-dos:
-.. figure:: include/images/repository/schematic_design_dos.png
+.. figure:: static/repository/schematic_design_dos.png
     :align: center
     :width: 550px
 
@@ -98,7 +100,7 @@ In a clear separation of responsibilities, the backend is solely tasked with sto
 For simplicity, the repository backend only deals with raw byte streams and does not maintain any sort of file hierarchy.
 The interface that any backend file repository should implement is defined by the :class:`~aiida.repository.backend.abstract.AbstractRepositoryBackend` abstract class.
 
-.. literalinclude:: ../../../aiida/repository/backend/abstract.py
+.. literalinclude:: ../../../../aiida/repository/backend/abstract.py
     :language: python
     :pyobject: AbstractRepositoryBackend
 
@@ -113,7 +115,7 @@ The latter implementation simply implements the interface using a temporary scra
 File objects are stored in a flat manner where the filename, that functions as the unique key, is based on a randomly generated UUID, as shown in :numref:`fig:internal-architecture:repository:design-sandbox`.
 
 .. _fig:internal-architecture:repository:design-sandbox:
-.. figure:: include/images/repository/schematic_design_sandbox.png
+.. figure:: static/repository/schematic_design_sandbox.png
     :align: center
     :width: 550px
 
@@ -138,7 +140,7 @@ The file repository frontend
 To understand how the file repository frontend integrates the ORM and the file repository backend, consider the following class diagram:
 
 .. _fig:internal-architecture:repository:class-hierarchy:
-.. figure:: include/images/repository/schematic_design_class_hierarchy.png
+.. figure:: static/repository/schematic_design_class_hierarchy.png
     :align: center
     :width: 550px
 
@@ -212,7 +214,7 @@ Starting from the third level, however, the file hierarchy would once again be f
 A schematic overview of the resulting file hierarchy is shown in :numref:`fig:internal-architecture:repository:design-original`.
 
 .. _fig:internal-architecture:repository:design-original:
-.. figure:: include/images/repository/schematic_design_original.png
+.. figure:: static/repository/schematic_design_original.png
     :align: center
     :width: 550px
 

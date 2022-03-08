@@ -39,7 +39,9 @@ table_groups_nodes = DbGroupNode.__table__
 
 
 class DbGroup(Base):
-    """Database model to store groups of nodes.
+    """Database model to store :py:class:`aiida.orm.Group` data.
+
+    A group may contain many different nodes, but also each node can be included in different groups.
 
     Users will typically identify and handle groups by using their ``label``
     (which, unlike the ``labels`` in other models, must be unique).

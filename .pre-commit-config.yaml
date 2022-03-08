@@ -11,7 +11,8 @@ repos:
     -   id: end-of-file-fixer
         exclude: &exclude_pre_commit_hooks >
             (?x)^(
-                tests/.*(?<!\.py)$
+                tests/.*(?<!\.py)$|
+                docs/source/.+\.aiida/repo/.+|
             )$
     -   id: fix-encoding-pragma
     -   id: mixed-line-ending

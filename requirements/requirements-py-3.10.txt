@@ -68,7 +68,7 @@ mistune==0.8.4
 monty==2021.8.17
 mpmath==1.2.1
 multidict==5.2.0
-myst-parser==0.15.2
+myst-nb==0.13.2
 nbclient==0.5.9
 nbconvert==6.3.0
 nbformat==5.1.3

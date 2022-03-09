@@ -21,6 +21,7 @@ from tests.static import STATIC_DIR
 @pytest.fixture
 @pytest.mark.usefixtures('aiida_profile_clean')
 def generate_class_instance():
+    # pylint: disable=too-many-return-statements, too-many-statements
     """Generate a dummy `Data` instance for the given sub class."""
 
     def _generate_class_instance(data_class):
@@ -59,6 +60,57 @@ def generate_class_instance():
             filepath_base = os.path.abspath(os.path.join(STATIC_DIR, 'pseudos'))
             filepath_carbon = os.path.join(filepath_base, 'C_pbe_v1.2.uspp.F.UPF')
             instance = data_class(file=filepath_carbon)
+            return instance
+
+        if data_class is orm.ArrayData:
+            instance = data_class()
+            array_data = numpy.identity(3)
+            instance.set_array('data', array_data)
+            instance.set_array('contains_nan_inf', numpy.array([float('NaN'), float('Inf')]))
+            return instance
+
+        if data_class is orm.KpointsData:
+            instance = data_class()
+            cell = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+            instance.set_cell(cell)
+            instance.set_kpoints_mesh_from_density(0.5)
+            return instance
+
+        if data_class is orm.XyData:
+            instance = data_class()
+            instance.set_x(numpy.arange(5), 'xdata', 'm')
+            instance.set_y(numpy.arange(5), 'ydata', 'm')
+            return instance
+
+        if data_class is orm.ProjectionData:
+
+            my_real_hydrogen_dict = {
+                'angular_momentum': -3,
+                'diffusivity': None,
+                'kind_name': 'As',
+                'magnetic_number': 0,
+                'position': [-1.420047044832945, 1.420047044832945, 1.420047044832945],
+                'radial_nodes': 0,
+                'spin': 0,
+                'spin_orientation': None,
+                'x_orientation': None,
+                'z_orientation': None
+            }
+            kpoints = orm.KpointsData()
+            kpoints.set_cell([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+            kpoints.set_kpoints([[0., 0., 0.]])
+            bands = orm.BandsData()
+            bands.set_kpointsdata(kpoints)
+            bands.set_bands([[1.0]])
+
+            RealHydrogen = plugins.OrbitalFactory('core.realhydrogen')  # pylint: disable=invalid-name
+            orbital = RealHydrogen(**my_real_hydrogen_dict)
+
+            instance = data_class()
+            instance.set_reference_bandsdata(bands)
+            instance.set_projectiondata(
+                orbital, list_of_pdos=numpy.asarray([1.0]), list_of_energy=numpy.asarray([1.0]), bands_check=False
+            )
             return instance
 
         raise RuntimeError(

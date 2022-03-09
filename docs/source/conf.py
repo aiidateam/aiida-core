@@ -60,10 +60,10 @@ numfig = True
 # -- Extension configuration -----------------------------------------------------
 
 extensions = [
-    'sphinx.ext.intersphinx', 'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.viewcode', 'sphinx.ext.coverage',
-    'sphinx.ext.mathjax', 'sphinx.ext.ifconfig', 'sphinx.ext.todo', 'IPython.sphinxext.ipython_console_highlighting',
-    'IPython.sphinxext.ipython_directive', 'aiida.sphinxext', 'sphinx_design', 'sphinx_copybutton',
-    'sphinxext.rediraffe', 'notfound.extension', 'sphinx_sqlalchemy'
+    'myst_parser', 'sphinx.ext.intersphinx', 'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.viewcode',
+    'sphinx.ext.coverage', 'sphinx.ext.mathjax', 'sphinx.ext.ifconfig', 'sphinx.ext.todo',
+    'IPython.sphinxext.ipython_console_highlighting', 'IPython.sphinxext.ipython_directive', 'aiida.sphinxext',
+    'sphinx_design', 'sphinx_copybutton', 'sphinxext.rediraffe', 'notfound.extension', 'sphinx_sqlalchemy'
 ]
 
 intersphinx_mapping = {
@@ -79,6 +79,8 @@ intersphinx_mapping = {
 
 todo_include_todos = False
 ipython_mplbackend = ''
+
+myst_enable_extensions = []
 
 # -- Options for HTML output ---------------------------------------------------
 
@@ -131,6 +133,7 @@ linkcheck_ignore = [
     r'http://127.0.0.1:\d+/',
     r'http://www.wannier.org/support/',
     r'https://github.com/aiidateam/aiida-diff/blob/92c61bdcc2db201d69da4d8b83a2b3f5dd529bf1/aiida_diff/data/__init__.py#L14-L20',
+    r'https://github.com/aiidateam/aiida-core/pull/\d+',
 ]
 
 # -- API documentation ---------------------------------------------------

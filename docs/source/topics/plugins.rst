@@ -59,7 +59,7 @@ The following guidelines are useful to keep in mind when wrapping external codes
 
      #. parse into the database for querying (:py:class:`~aiida.orm.nodes.data.dict.Dict`, ...)
      #. store in the file repository for safe-keeping (:py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`, ...)
-     #. leave on the computer where the calculation ran (:py:class:`~aiida.orm.nodes.data.remote.RemoteData`, ...)
+     #. leave on the computer where the calculation ran (:py:class:`~aiida.orm.RemoteData`, ...)
 
 
 .. _topics:plugins:entrypoints:
@@ -388,9 +388,9 @@ AiiDA ships with a number of fixtures in :py:mod:`aiida.manage.tests.pytest_fixt
 
 In particular:
 
-  * The :py:func:`~aiida.manage.tests.pytest_fixtures.aiida_profile` fixture initializes the :py:class:`~aiida.manage.tests.TestManager` and yields it to the test function.
+  * The :py:func:`~aiida.manage.tests.pytest_fixtures.aiida_profile` fixture initializes the :py:class:`~aiida.manage.tests.main.TestManager` and yields it to the test function.
     Its parameters ``scope='session', autouse=True`` cause this fixture to automatically run once per test session, even if you don't explicitly require it.
-  * The :py:func:`~aiida.manage.tests.pytest_fixtures.clear_database` fixture depends on the :py:func:`~aiida.manage.tests.pytest_fixtures.aiida_profile` fixture and tells the received :py:class:`~aiida.manage.tests.TestManager` instance to reset the database.
+  * The :py:func:`~aiida.manage.tests.pytest_fixtures.clear_database` fixture depends on the :py:func:`~aiida.manage.tests.pytest_fixtures.aiida_profile` fixture and tells the received :py:class:`~aiida.manage.tests.main.TestManager` instance to reset the database.
     This fixture lets each test start in a fresh AiiDA environment.
   * The :py:func:`~aiida.manage.tests.pytest_fixtures.temp_dir` fixture returns a temporary directory for file operations and deletes it after the test is finished.
   * ... you may want to add your own fixtures tailored for your plugins to set up specific ``Data`` nodes & more.

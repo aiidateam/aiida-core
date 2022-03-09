@@ -31,7 +31,7 @@ decorator==5.1.0
 defusedxml==0.7.1
 deprecation==2.1.0
 disk-objectstore==0.6.0
-docutils==0.15.2
+docutils==0.16
 entrypoints==0.3
 Flask==2.0.3
 Flask-Cors==3.0.10
@@ -101,8 +101,8 @@ py==1.11.0
 py-cpuinfo==8.0.0
 PyCifRW==4.4.3
 pycparser==2.21
-pydata-sphinx-theme==0.6.3
-Pygments==2.10.0
+pydata-sphinx-theme==0.8.0
+Pygments==2.11.2
 pymatgen==2022.0.16
 Pympler==0.9
 PyMySQL==0.9.3
@@ -139,8 +139,8 @@ six==1.16.0
 snowballstemmer==2.2.0
 soupsieve==2.3.1
 spglib==1.16.1
-Sphinx==3.2.1
-sphinx-copybutton==0.3.3
+sphinx==4.4.0
+sphinx-copybutton==0.5.0
 sphinx-design==0.0.13
 sphinx-notfound-page==0.8
 sphinx-sqlalchemy==0.1.1

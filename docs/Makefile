@@ -24,7 +24,7 @@ default:
 
 # Same as 'default' but does not exit at the first warning
 debug:
-	$(SPHINXBUILD) -b html -n $(ALLSPHINXOPTS) $(BUILDDIR)/html
+	$(SPHINXBUILD) -b html -nW --keep-going $(ALLSPHINXOPTS) $(BUILDDIR)/html
 
 all: html
 

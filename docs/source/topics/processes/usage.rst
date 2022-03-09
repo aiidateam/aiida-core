@@ -62,7 +62,7 @@ Creating an output is just as easy, but one should use the :py:meth:`~plumpy.Pro
     spec = ProcessSpec()
     spec.output('result')
 
-This will cause an instance of :py:class:`~aiida.engine.processes.ports.OutputPort`, also a sub class of the base :py:class:`~plumpy.Port`, to be created and to be added to the ``outputs`` specifcation attribute.
+This will cause an instance of :py:class:`~aiida.engine.processes.ports.CalcJobOutputPort`, also a sub class of the base :py:class:`~plumpy.Port`, to be created and to be added to the ``outputs`` specifcation attribute.
 Recall, that the ``inputs`` and ``output`` are instances of a :py:class:`~aiida.engine.processes.ports.PortNamespace`, which means that they can contain any port.
 But the :py:class:`~aiida.engine.processes.ports.PortNamespace` itself is also a port itself, so it can be added to another port namespace, allowing one to create nested port namespaces.
 Creating a new namespace in for example the inputs namespace is as simple as:

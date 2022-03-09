@@ -359,7 +359,7 @@ If there is no neighboring output with the given link label, a :class:`~aiida.co
 .. note::
 
     The ``inputs`` and ``outputs`` properties are only defined for :class:`~aiida.orm.nodes.process.process.ProcessNode`'s.
-    This means that you cannot *chain* these calls, because an input or output of a process node is guaranteed to be a :class:`~aiida.orm.nodes.data.Data` node, which does not have inputs or outputs.
+    This means that you cannot *chain* these calls, because an input or output of a process node is guaranteed to be a :class:`~aiida.orm.Data` node, which does not have inputs or outputs.
 
 
 .. _how-to:query:shortcuts:creator-caller-called:
@@ -373,7 +373,7 @@ Similar to the ``inputs`` and ``outputs`` properties of process nodes, there are
       If this process node did not call any other processes, this property returns an empty list.
     * :meth:`~aiida.orm.nodes.process.process.ProcessNode.caller`: defined for :class:`~aiida.orm.nodes.process.process.ProcessNode`'s and returns the process node that called this node.
       If this node was not called by a process, this property returns ``None``.
-    * :meth:`~aiida.orm.nodes.data.Data.creator`: defined for :class:`~aiida.orm.nodes.data.Data` nodes and returns the process node that created it.
+    * :meth:`~aiida.orm.Data.creator`: defined for :class:`~aiida.orm.Data` nodes and returns the process node that created it.
       If the node was not created by a process, this property returns ``None``.
 
 .. note::

@@ -1,169 +1,94 @@
 ### python builtins
-
-# note: there doesn't seem to be a standard way of indicating a callable in python3
-# https://stackoverflow.com/questions/23571253/how-to-define-a-callable-parameter-in-a-python-docstring
-py:class callable
-
-# For some reason, "filter" does not seem to be found
-py:class filter
-
-py:class unittest.case.TestCase
-py:class unittest.runner.TextTestRunner
-
-# required for metaclasses(?)
-py:class builtins.bool
-py:class builtins.float
-py:class builtins.int
-py:class builtins.object
-py:class builtins.str
-py:class builtins.dict
-
-# typing
 py:class _io.BufferedReader
+py:class AliasedClass
 py:class asyncio.events.AbstractEventLoop
 py:class AbstractContextManager
-py:class EntityType
-py:class EntityTypes
-py:class ModelType
-py:class TransactionType
-py:class ReturnType
+py:obj typing.AbstractContextManager
+py:class callable
 py:class function
 py:class traceback
-py:class a
-py:class c
-py:class d
-py:class k
-py:class l
-py:class n
-py:class r
-py:class u
-py:class w
-py:class x
-py:class leave
-py:class newest
-py:class overwrite
 py:class AbstractContextManager
 py:class BinaryIO
-py:class EntityType
-py:class EntityTypes
 py:class IO
-py:class QueryBuilder
-py:class SelfType
-py:class Profile
-py:class PsqlDosBackend
+py:class Path
 py:class str | list[str]
 py:class str | Path
+py:class typing.AbstractContextManager
+py:class TypeDecorator
+py:class json.encoder.JSONEncoder
+py:class EXPOSED_TYPE
+py:class EVENT_CALLBACK_TYPE
 
 ### AiiDA
-
-# issues with order of object processing and type hinting
-py:class aiida.engine.runners.ResultAndNode
-py:class aiida.engine.runners.ResultAndPk
-py:class aiida.engine.processes.workchains.workchain.WorkChainSpec
-py:class aiida.manage.manager.Manager
-py:class aiida.orm.entities.EntityTypes
-py:class aiida.orm.nodes.node.WarnWhenNotEntered
-py:class aiida.orm.implementation.querybuilder.QueryDictType
-py:class aiida.orm.querybuilder.Classifier
-py:class aiida.orm.utils.links.LinkQuadruple
-py:class aiida.tools.archive.implementations.sqlite.backend.DbGroupNode
-py:class aiida.tools.groups.paths.WalkNodeResult
-py:meth aiida.orm.groups.GroupCollection.delete
-
-py:class AbstractRepositoryBackend
-py:class BackendEntity
-py:class BackendEntityType
-py:class BackendNode
-py:class BackendNodeType
-py:class BackendUser
-py:class AuthInfo
-py:class CalcJob
-py:class CalcJobImporter
-py:class CalcJobNode
-py:class Code
-py:class CollectionType
-py:class Computer
-py:class Data
-py:class DbImporter
-py:class DiskObjectStoreRepositoryBackend
-py:class EntityType
-py:class EntityTypes
-py:class EnumType
-py:class ExitCode
-py:class File
-py:class FilterType
-py:class FolderData
-py:class Graph
-py:class Group
-py:class JobInfo
-py:class JobState
-py:class LinkTriple
-py:class ModelType
-py:class Node
-py:class Orbital
-py:class OrderByType
-py:class Parser
-py:class PersistenceError
-py:class Process
-py:class ProcessBuilder
-py:class ProcessNode
-py:class ProcessSpec
-py:class Port
-py:class PortNamespace
-py:class QueryBuilder
-py:class Repository
 py:class ReturnType
-py:class Runner
-py:class Scheduler
 py:class SelfType
-py:class StorageBackend
+py:class CollectionType
+py:class EntityType
+py:class BackendEntityType
+py:class BackendNodeType
 py:class TransactionType
-py:class Transport
-py:class TransportQueue
-py:class User
-py:class WorkChain
-py:class WorkChainSpec
+py:class NodeType
+py:class ModelType
+py:obj ReturnType
+py:obj SelfType
+py:obj CollectionType
+py:obj EntityType
+py:obj BackendEntityType
+py:obj BackendNodeType
+py:obj TransactionType
+py:obj NodeType
+py:obj ModelType
+py:class aiida.common.ReturnType
+py:class aiida.common.SelfType
+py:class aiida.orm.entitites.CollectionType
+py:class aiida.orm.entitites.EntityType
+py:class aiida.orm.entitites.BackendEntityType
+py:class aiida.orm.groups.SelfType
+py:class aiida.orm.implementation.entitites.EntityType
+py:class aiida.orm.implementation.nodes.BackendNodeType
+py:class aiida.orm.implementation.storage_backend.TransactionType
+py:class aiida.orm.nodes.NodeType
+py:class aiida.storage.psql_dos.orm.ModelType
+py:class aiida.storage.psql_dos.orm.SelfType
+py:class aiida.tools.archive.SelfType
+py:class aiida.tools.archive.EntityType
+py:obj aiida.common.ReturnType
+py:obj aiida.common.SelfType
+py:obj aiida.orm.entitites.CollectionType
+py:obj aiida.orm.entitites.EntityType
+py:obj aiida.orm.entitites.BackendEntityType
+py:obj aiida.orm.groups.SelfType
+py:obj aiida.orm.implementation.entitites.EntityType
+py:obj aiida.orm.implementation.nodes.BackendNodeType
+py:obj aiida.orm.implementation.storage_backend.TransactionType
+py:obj aiida.orm.nodes.NodeType
+py:obj aiida.storage.psql_dos.orm.ModelType
+py:obj aiida.storage.psql_dos.orm.SelfType
+py:obj aiida.tools.archive.SelfType
+py:obj aiida.tools.archive.EntityType
 py:func QueryBuilder._get_ormclass
-py:class StorageBackend
-py:class orm.implementation.StorageBackend
-py:class aiida.common.exceptions.UnreachableStorage
-py:class aiida.common.exceptions.IncompatibleDatabaseSchema
-py:class aiida.common.exceptions.DatabaseMigrationError
 py:class aiida.storage.sqlite_zip.models.DbGroupNode
+py:class aiida.engine.processes.workchains.context.ToContext
+py:func aiida.orm.implementation.BackendQueryBuilder
 
-py:class AuthInfoCollection
-py:class CommentCollection
-py:class ComputerCollection
-py:class GroupCollection
-py:class LogCollection
-py:class NodeCollection
-py:class UserCollection
-
-py:class kiwipy.communications.Communicator
-py:class plumpy.process_states.State
-py:class plumpy.workchains._If
-py:class plumpy.workchains._While
-
-### python packages
+### third-party packages
 # Note: These exceptions are needed if
 # * the objects are referenced e.g. as param/return types types in method docstrings (without intersphinx mapping)
 # * the documentation linked via intersphinx lists the objects at a different (usually lower) import hierarchy
+
 py:class archive_path.zip_path.ZipPath
 
 py:class click.core.Group
 py:class click.core.Option
-py:class click.types.ParamType
 py:class click.types.Choice
-py:class click.types.IntParamType
-py:class click.types.StringParamType
 py:class click.types.Path
 py:class click.types.File
 py:meth  click.Option.get_default
-py:meth  fail
+py:meth fail
 
 py:class concurrent.futures._base.TimeoutError
 
-py:class sphinx.util.docutils.SphinxDirective
+py:class disk_objectstore.utils.LazyOpener
 
 py:class frozenset
 
@@ -174,6 +99,17 @@ py:class paramiko.proxy.ProxyCommand
 # These can be removed once they are properly included in the `__all__` in `plumpy`
 py:class plumpy.ports.PortNamespace
 py:class plumpy.utils.AttributesDict
+py:class plumpy.process_states.State
+py:class plumpy.workchains._If
+py:class plumpy.workchains._While
+py:class PersistenceError
+py:class State
+py:class Stepper
+py:class utils.AttributesFrozendict
+
+py:class kiwipy.communications.Communicator
+py:class RemoteProcessThreadController
+py:class RmqThreadCommunicator
 
 py:class _asyncio.Future
 
@@ -194,6 +130,9 @@ py:class sqlalchemy.sql.compiler.TypeCompiler
 py:class sqlalchemy.sql.elements.BooleanClauseList
 
 py:class sphinx.ext.autodoc.ClassDocumenter
+py:class sphinx.util.docutils.SphinxDirective
+py:class ModuleAnalyzer
+py:class BuildEnvironment
 
 py:class yaml.Dumper
 py:class yaml.Loader
@@ -210,6 +149,8 @@ py:class alembic.op
 py:class alembic.runtime.migration.MigrationContext
 py:class alembic.script.base.ScriptDirectory
 
+py:class CircusClient
+
 py:class pgsu.PGSU
 py:meth  pgsu.PGSU.__init__
 
@@ -217,7 +158,6 @@ py:class jsonschema.exceptions._Error
 
 py:class Session
 py:class Query
-py:class BackendQueryBuilder
 py:class importlib_metadata.EntryPoint
 py:class importlib_metadata.EntryPoints
 py:class Command
@@ -226,3 +166,6 @@ py:class BooleanClauseList
 py:class SQLCompiler
 py:class sqlalchemy.orm.decl_api.Model
 py:class sqlalchemy.sql.elements.ColumnElement
+
+py:class packaging.version.Version
+py:exc seekpath.hpkot.EdgeCaseWarning

@@ -11,7 +11,7 @@
 import pytest
 
 
-def test_workchain_build(sphinx_build_factory, xml_equal, reference_result):
+def test_workchain_build(sphinx_build_factory, reference_result, xml_equal):
     """Test building sphinx documentation for WorkChain.
 
     Builds Sphinx documentation for workchain and compares against expected XML result.

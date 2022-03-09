@@ -1310,7 +1310,7 @@ Regular filters can be compounded, requiring all specified filters to apply.
     Examples:
 
     - ``node_type="data.core.code.Code."`` selects only objects of type |Code|.
-    - ``node_type="data.core.remote.RemoteData."`` selects only objects of type :py:class:`~aiida.orm.nodes.data.remote.RemoteData`.
+    - ``node_type="data.core.remote.RemoteData."`` selects only objects of type :py:class:`~aiida.orm.RemoteData`.
 
 .. note:: When using the *links/incoming* (*links/outgoing*) endpoints in combination with one or more filters, the filters are applied to the incoming (outgoing) nodes of the selected *id*.
     For example, the request::
@@ -1462,9 +1462,9 @@ Filter values should be specified as follows:
 
 
 .. |Computer| replace:: :py:class:`~aiida.orm.computers.Computer`
-.. |Code| replace:: :py:class:`~aiida.orm.nodes.Code`
-.. |Node| replace:: :py:class:`~aiida.orm.nodes.Node`
-.. |ProcessNode| replace:: :py:class:`~aiida.orm.nodes.process.ProcessNode`
-.. |CalcJobNode| replace:: :py:class:`~aiida.orm.nodes.process.CalcJobNode`
+.. |Code| replace:: :py:class:`~aiida.orm.Code`
+.. |Node| replace:: :py:class:`~aiida.orm.Node`
+.. |ProcessNode| replace:: :py:class:`~aiida.orm.ProcessNode`
+.. |CalcJobNode| replace:: :py:class:`~aiida.orm.CalcJobNode`
 .. |User| replace:: :py:class:`~aiida.orm.users.User`
 .. |Group| replace:: :py:class:`~aiida.orm.groups.Group`

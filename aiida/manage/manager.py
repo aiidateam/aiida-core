@@ -44,14 +44,18 @@ class Manager:
     AiiDA can have the following global resources loaded:
 
     1. A single configuration object that contains:
+
         - Global options overrides
         - The name of a default profile
         - A mapping of profile names to their configuration and option overrides
+
     2. A single profile object that contains:
+
         - The name of the profile
         - The UUID of the profile
         - The configuration of the profile, for connecting to storage and processing resources
         - The option overrides for the profile
+
     3. A single storage backend object for the profile, to connect to data storage resources
     5. A single daemon client object for the profile, to connect to the AiiDA daemon
     4. A single communicator object for the profile, to connect to the process control resources

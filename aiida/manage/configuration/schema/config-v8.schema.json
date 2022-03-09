@@ -107,6 +107,11 @@
           "description": "Whether to print a warning when a profile is loaded while a development version is installed",
           "global_only": true
         },
+        "warnings.rabbitmq_version": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to print a warning when an incompatible version of RabbitMQ is configured"
+        },
         "transport.task_retry_initial_interval": {
           "type": "integer",
           "default": 20,

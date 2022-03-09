@@ -9,6 +9,7 @@
 ###########################################################################
 # pylint: disable=no-self-use
 """ORM Log tests"""
+import json
 import logging
 
 import pytest
@@ -279,8 +280,6 @@ class TestBackendLog:
         Test a TypeError exception is thrown with string metadata.
         Also test that metadata is correctly created.
         """
-        from aiida.common import json
-
         # Create CalculationNode
         calc = orm.CalculationNode().store()
 

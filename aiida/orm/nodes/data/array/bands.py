@@ -12,6 +12,7 @@
 This module defines the classes related to band structures or dispersions
 in a Brillouin zone, and how to operate on them.
 """
+import json
 from string import Template
 
 import numpy
@@ -811,8 +812,6 @@ class BandsData(KpointsData):
         For the possible parameters, see documentation of
         :py:meth:`~aiida.orm.nodes.data.array.bands.BandsData._matplotlib_get_dict`
         """
-        from aiida.common import json
-
         all_data = self._matplotlib_get_dict(*args, **kwargs)
 
         s_header = MATPLOTLIB_HEADER_TEMPLATE.substitute()
@@ -833,8 +832,6 @@ class BandsData(KpointsData):
         :py:meth:`~aiida.orm.nodes.data.array.bands.BandsData._matplotlib_get_dict`
         """
         import os
-
-        from aiida.common import json
 
         all_data = self._matplotlib_get_dict(*args, main_file_name=main_file_name, **kwargs)
 
@@ -865,8 +862,6 @@ class BandsData(KpointsData):
         import subprocess
         import sys
         import tempfile
-
-        from aiida.common import json
 
         all_data = self._matplotlib_get_dict(*args, **kwargs)
 
@@ -911,7 +906,6 @@ class BandsData(KpointsData):
         For the possible parameters, see documentation of
         :py:meth:`~aiida.orm.nodes.data.array.bands.BandsData._matplotlib_get_dict`
         """
-        import json
         import os
         import subprocess
         import sys
@@ -1237,7 +1231,6 @@ class BandsData(KpointsData):
             format)
         """
         from aiida import get_file_header
-        from aiida.common import json
 
         json_dict = self._get_band_segments(cartesian=True)
         json_dict['original_uuid'] = self.uuid

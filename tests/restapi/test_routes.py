@@ -11,12 +11,12 @@
 """Unittests for REST API."""
 from datetime import date
 import io
+import json
 
 from flask_cors.core import ACL_ORIGIN
 import pytest
 
 from aiida import orm
-from aiida.common import json
 from aiida.common.links import LinkType
 from aiida.manage import get_manager
 from aiida.restapi.run_api import configure_api

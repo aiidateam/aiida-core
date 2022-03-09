@@ -10,6 +10,7 @@
 """Versioning and migration implementation for the sqlite_zip format."""
 import contextlib
 from datetime import datetime
+import json
 import os
 from pathlib import Path
 import shutil
@@ -25,7 +26,6 @@ from alembic.runtime.migration import MigrationContext, MigrationInfo
 from alembic.script import ScriptDirectory
 from archive_path import ZipPath, extract_file_in_zip, open_file_in_tar, open_file_in_zip
 
-from aiida.common import json
 from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, StorageMigrationError
 from aiida.common.progress_reporter import get_progress_reporter
 from aiida.storage.log import MIGRATE_LOGGER

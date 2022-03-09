@@ -8,11 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Simple tests for the export and import routines"""
+import json
+
 from archive_path import ZipPath
 import pytest
 
 from aiida import orm
-from aiida.common import json
 from aiida.common.exceptions import IncompatibleStorageSchema, LicensingException
 from aiida.common.links import LinkType
 from aiida.tools.archive import create_archive, import_archive

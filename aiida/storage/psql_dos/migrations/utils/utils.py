@@ -12,6 +12,7 @@
 import datetime
 import functools
 import io
+import json
 import os
 import pathlib
 import re
@@ -21,7 +22,7 @@ from disk_objectstore import Container
 from disk_objectstore.utils import LazyOpener
 import numpy
 
-from aiida.common import exceptions, json
+from aiida.common import exceptions
 from aiida.repository.backend import AbstractRepositoryBackend
 from aiida.repository.common import File, FileType
 from aiida.repository.repository import Repository

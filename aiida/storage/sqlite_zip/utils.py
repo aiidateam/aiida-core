@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for this backend."""
+import json
 from pathlib import Path
 import tarfile
 from typing import Any, Dict, Optional, Union
@@ -17,7 +18,6 @@ from archive_path import read_file_in_tar, read_file_in_zip
 from sqlalchemy import event
 from sqlalchemy.future.engine import Engine, create_engine
 
-from aiida.common import json
 from aiida.common.exceptions import CorruptStorage, UnreachableStorage
 
 META_FILENAME = 'metadata.json'

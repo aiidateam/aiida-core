@@ -22,7 +22,7 @@ class TestConfigurationOptions(AiidaTestCase):
     def test_get_option_names(self):
         """Test `get_option_names` function."""
         self.assertIsInstance(get_option_names(), list)
-        self.assertEqual(len(get_option_names()), 26)
+        self.assertEqual(len(get_option_names()), 27)
 
     def test_get_option(self):
         """Test `get_option` function."""

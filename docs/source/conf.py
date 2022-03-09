@@ -188,8 +188,6 @@ with open('nitpick-exceptions', 'r') as handle:
     nitpick_ignore = [
         tuple(line.strip().split(None, 1)) for line in handle.readlines() if line.strip() and not line.startswith('#')
     ]
-# ignore anything ending in `Type`, since it is likely a `typing.TypeVar`, which sphinx-apidoc doesn't handle
-nitpick_ignore_regex = [('py:.*', '.+Type')]
 
 # -- Non-html output formats options ---------------------------------------------------
 

@@ -288,8 +288,8 @@ class _RoBackendRepository(AbstractRepositoryBackend):  # pylint: disable=abstra
 class ZipfileBackendRepository(_RoBackendRepository):
     """A read-only backend for a zip file.
 
-    The zip file should contain repository files with the key format: ``<folder>/<sha256 hash>``,
-    i.e. files named by the sha256 hash of the file contents, inside a ``<folder>`` directory.
+    The zip file should contain repository files with the key format: ``repo/<sha256 hash>``,
+    i.e. files named by the sha256 hash of the file contents, inside a ``repo`` directory.
     """
 
     def __init__(self, path: str | Path):

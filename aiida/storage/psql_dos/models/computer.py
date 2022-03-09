@@ -19,7 +19,10 @@ from aiida.storage.psql_dos.models.base import Base
 
 
 class DbComputer(Base):
-    """Database model to store computers.
+    """Database model to store data for :py:class:`aiida.orm.Computer`.
+
+    Computers represent (and contain the information of) the physical hardware resources available.
+    Nodes can be associated with computers if they are remote codes, remote folders, or processes that had run remotely.
 
     Computers are identified within AiiDA by their ``label`` (and thus it must be unique for each one in the database),
     whereas the ``hostname`` is the label that identifies the computer within the network from which one can access it.

@@ -21,7 +21,7 @@ from aiida.storage.psql_dos.models.base import Base
 
 
 class DbLog(Base):
-    """Database model to store log levels and messages relating to a process node."""
+    """Database model to data for :py:class:`aiida.orm.Log`, corresponding to :py:class:`aiida.orm.ProcessNode`."""
     __tablename__ = 'db_dblog'
 
     id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name

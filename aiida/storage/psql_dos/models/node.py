@@ -21,7 +21,7 @@ from aiida.storage.psql_dos.models.base import Base
 
 
 class DbNode(Base):
-    """Database model to store nodes.
+    """Database model to store data for :py:class:`aiida.orm.Node`.
 
     Each node can be categorized according to its ``node_type``,
     which indicates what kind of data or process node it is.
@@ -170,7 +170,7 @@ class DbNode(Base):
 
 
 class DbLink(Base):
-    """Database model to store links between nodes.
+    """Database model to store links between :py:class:`aiida.orm.Node`.
 
     Each entry in this table contains not only the ``id`` information of the two nodes that are linked,
     but also some extra properties of the link themselves.

@@ -18,7 +18,9 @@ from aiida.storage.psql_dos.models.base import Base
 
 
 class DbUser(Base):
-    """Database model to store users.
+    """Database model to store data for :py:class:`aiida.orm.User`.
+
+    Every node that is created has a single user as its author.
 
     The user information consists of the most basic personal contact details.
     """

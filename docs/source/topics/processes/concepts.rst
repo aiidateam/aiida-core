@@ -11,8 +11,8 @@ This can be a local runner or one of the daemon runners in case of the daemon ru
 
 In addition to those run instructions, any ``Process`` that has been executed needs some sort of record in the database to store what happened during its execution.
 For example it needs to record what its exact inputs were, the log messages that were reported and what the final outputs were.
-For this purpose, every process will utilize an instance of a sub class of the :py:class:`~aiida.orm.nodes.process.ProcessNode` class.
-This ``ProcessNode`` class is a sub class of :py:class:`~aiida.orm.nodes.Node` and serves as the record of the process' execution in the database and by extension the provenance graph.
+For this purpose, every process will utilize an instance of a sub class of the :py:class:`~aiida.orm.ProcessNode` class.
+This ``ProcessNode`` class is a sub class of :py:class:`~aiida.orm.Node` and serves as the record of the process' execution in the database and by extension the provenance graph.
 
 It is very important to understand this division of labor.
 A ``Process`` describes how something should be run, and the ``ProcessNode`` serves as a mere record in the database of what actually happened during execution.
@@ -82,7 +82,7 @@ Note that this does not automatically mean that the result of the process can al
 To distinguish between a successful and a failed execution, there is the :ref:`exit status<topics:processes:concepts:exit_codes>`.
 This is another attribute that is stored in the node of the process and is an integer that can be set by the process.
 A ``0`` (zero) means that the result of the process was successful, and a non-zero value indicates a failure.
-All the process nodes used by the various processes are sub-classes of :py:class:`~aiida.orm.nodes.process.ProcessNode`, which defines handy properties to query the process state and exit status.
+All the process nodes used by the various processes are sub-classes of :py:class:`~aiida.orm.ProcessNode`, which defines handy properties to query the process state and exit status.
 
 ===================   ============================================================================================
 Property              Meaning

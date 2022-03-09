@@ -151,8 +151,8 @@ For all of the base data types, their value is stored in the database in the att
 ArrayData
 ---------
 
-The :py:class:`~aiida.orm.nodes.data.array.ArrayData` class can be used to represent `numpy <https://numpy.org/>`_ arrays in the provenance.
-Each array is assigned to a name specified by the user using the :py:meth:`~aiida.orm.nodes.data.array.ArrayData.set_array()` method:
+The :py:class:`~aiida.orm.ArrayData` class can be used to represent `numpy <https://numpy.org/>`_ arrays in the provenance.
+Each array is assigned to a name specified by the user using the :py:meth:`~aiida.orm.ArrayData.set_array()` method:
 
 .. code-block:: ipython
 
@@ -162,20 +162,20 @@ Each array is assigned to a name specified by the user using the :py:meth:`~aiid
 
   In [3]: array.set_array('matrix', np.array([[1, 2], [3, 4]]))
 
-Note that one :py:class:`~aiida.orm.nodes.data.array.ArrayData` instance can store multiple arrays under different names:
+Note that one :py:class:`~aiida.orm.ArrayData` instance can store multiple arrays under different names:
 
 .. code-block:: ipython
 
   In [4]: array.set_array('vector', np.array([[1, 2, 3, 4]]))
 
-To see the list of array names stored in the :py:class:`~aiida.orm.nodes.data.array.ArrayData` instance, you can use the :py:meth:`~aiida.orm.nodes.data.array.ArrayData.get_arraynames()` method:
+To see the list of array names stored in the :py:class:`~aiida.orm.ArrayData` instance, you can use the :py:meth:`~aiida.orm.ArrayData.get_arraynames()` method:
 
 .. code-block:: ipython
 
   In [5]: array.get_arraynames()
   Out[5]: ['matrix', 'vector']
 
-If you want the array corresponding to a certain name, simply supply the name to the :py:meth:`~aiida.orm.nodes.data.array.ArrayData.get_array()` method:
+If you want the array corresponding to a certain name, simply supply the name to the :py:meth:`~aiida.orm.ArrayData.get_array()` method:
 
 .. code-block:: ipython
 
@@ -184,14 +184,14 @@ If you want the array corresponding to a certain name, simply supply the name to
   array([[1, 2],
         [3, 4]])
 
-As with all nodes, you can store the :py:class:`~aiida.orm.nodes.data.array.ArrayData` node using the :py:meth:`~aiida.orm.nodes.node.Node.store()` method. However, only the names and shapes of the arrays are stored to the database, the content of the arrays is stored to the repository in the `numpy format <https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html#npy-format>`_ (``.npy``).
+As with all nodes, you can store the :py:class:`~aiida.orm.ArrayData` node using the :py:meth:`~aiida.orm.nodes.node.Node.store()` method. However, only the names and shapes of the arrays are stored to the database, the content of the arrays is stored to the repository in the `numpy format <https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html#npy-format>`_ (``.npy``).
 
 .. _topics:data_types:core:array:xy:
 
 XyData
 ------
 
-In case you are working with arrays that have a relationship with each other, i.e. ``y`` as a function of ``x``, you can use the :py:class:`~aiida.orm.nodes.data.array.XyData` class:
+In case you are working with arrays that have a relationship with each other, i.e. ``y`` as a function of ``x``, you can use the :py:class:`~aiida.orm.XyData` class:
 
 .. code-block:: ipython
 
@@ -209,7 +209,7 @@ The user also has to specify the units for both ``x`` and ``y``:
   In [4]: xy.set_y(np.array([1, 2, 3, 4]), 'Volume Expansion', '%')
 
 Note that you can set multiple ``y`` values that correspond to the ``x`` grid.
-Same as for the :py:class:`~aiida.orm.nodes.data.array.ArrayData`, the names and shapes of the arrays are stored to the database, the content of the arrays is stored to the repository in the `numpy format <https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html#npy-format>`_ (``.npy``).
+Same as for the :py:class:`~aiida.orm.ArrayData`, the names and shapes of the arrays are stored to the database, the content of the arrays is stored to the repository in the `numpy format <https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html#npy-format>`_ (``.npy``).
 
 .. _topics:data_types:core:singlefile:
 
@@ -300,9 +300,9 @@ Since the :py:class:`~aiida.orm.nodes.data.folder.FolderData` node is simply a c
 RemoteData
 ----------
 
-The :py:class:`~aiida.orm.nodes.data.remote.RemoteData` node represents a "symbolic link" to a specific folder on a remote computer.
+The :py:class:`~aiida.orm.RemoteData` node represents a "symbolic link" to a specific folder on a remote computer.
 Its main use is to allow users to persist the provenance when e.g. a calculation produces data in a raw/scratch folder, and the whole folder needs to be provided to restart/continue.
-To create a :py:class:`~aiida.orm.nodes.data.remote.RemoteData` instance, simply pass the remote path to the folder and the computer on which it is stored:
+To create a :py:class:`~aiida.orm.RemoteData` instance, simply pass the remote path to the folder and the computer on which it is stored:
 
 .. code-block:: ipython
 
@@ -312,14 +312,14 @@ To create a :py:class:`~aiida.orm.nodes.data.remote.RemoteData` instance, simply
 
   In [3]: remote = RemoteData(remote_path='/absolute/path/to/remote/directory' computer=local)
 
-You can see the contents of the remote folder by using the :py:meth:`~aiida.orm.nodes.data.remote.RemoteData.listdir()` method:
+You can see the contents of the remote folder by using the :py:meth:`~aiida.orm.RemoteData.listdir()` method:
 
 .. code-block:: ipython
 
   In [4]: remote.listdir()
   Out[4]: ['file2.txt', 'file1.txt', 'subdir']
 
-To see the contents of a subdirectory, pass the relative path to the :py:meth:`~aiida.orm.nodes.data.remote.RemoteData.listdir()` method:
+To see the contents of a subdirectory, pass the relative path to the :py:meth:`~aiida.orm.RemoteData.listdir()` method:
 
 .. code-block:: ipython
 
@@ -328,7 +328,7 @@ To see the contents of a subdirectory, pass the relative path to the :py:meth:`~
 
 .. warning::
 
-  Using the :py:meth:`~aiida.orm.nodes.data.remote.RemoteData.listdir()` method, or any method that retrieves information from the remote computer, opens a connection to the remote computer using its transport type.
+  Using the :py:meth:`~aiida.orm.RemoteData.listdir()` method, or any method that retrieves information from the remote computer, opens a connection to the remote computer using its transport type.
   Their use is strongly discouraged when writing scripts and/or workflows.
 
 .. todo::
@@ -537,14 +537,14 @@ Automatic computation of k-point paths
 
 AiiDA provides a number of tools and wrappers to automatically compute k-point paths given a cell or a crystal structure.
 
-The main interface is provided by the two methods :py:func:`aiida.tools.data.array.kpoints.get_kpoints_path` and :py:func:`aiida.tools.data.array.kpoints.get_explicit_kpoints_path`.
+The main interface is provided by the two methods :py:func:`aiida.tools.data.array.kpoints.main.get_kpoints_path` and :py:func:`aiida.tools.data.array.kpoints.main.get_explicit_kpoints_path`.
 
 These methods are also conveniently exported directly as, e.g., ``aiida.tools.get_kpoints_path``.
 
 The difference between the two methods is the following:
 
-- :py:func:`~aiida.tools.data.array.kpoints.get_kpoints_path` returns a dictionary of k-point coordinates (e.g. ``{'GAMMA': [0. ,0. ,0. ], 'X': [0.5, 0., 0.], 'L': [0.5, 0.5, 0.5]}``, and then a list of tuples of endpoints of each segment, e.g. ``[('GAMMA', 'X'), ('X', 'L'), ('L', 'GAMMA')]`` for the :math:`\Gamma-X-L-\Gamma` path.
-- :py:func:`~aiida.tools.data.array.kpoints.get_explicit_kpoints_path`, instead, returns a list of kpoints that follow that path, with some predefined (but user-customizable) distance between points, e.g. something like ``[[0., 0., 0.], [0.05, 0., 0.], [0.1, 0., 0.], ...]``.
+- :py:func:`~aiida.tools.data.array.kpoints.main.get_kpoints_path` returns a dictionary of k-point coordinates (e.g. ``{'GAMMA': [0. ,0. ,0. ], 'X': [0.5, 0., 0.], 'L': [0.5, 0.5, 0.5]}``, and then a list of tuples of endpoints of each segment, e.g. ``[('GAMMA', 'X'), ('X', 'L'), ('L', 'GAMMA')]`` for the :math:`\Gamma-X-L-\Gamma` path.
+- :py:func:`~aiida.tools.data.array.kpoints.main.get_explicit_kpoints_path`, instead, returns a list of kpoints that follow that path, with some predefined (but user-customizable) distance between points, e.g. something like ``[[0., 0., 0.], [0.05, 0., 0.], [0.1, 0., 0.], ...]``.
 
 Depending on how the underlying code works, one method might be preferred on the other.
 

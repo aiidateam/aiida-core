@@ -28,8 +28,8 @@ The hash of a :class:`~aiida.orm.ProcessNode` includes, on top of this, the hash
 
 Once a node is stored in the database, its hash is stored in the ``_aiida_hash`` extra, and this extra is used to find matching nodes.
 If a node of the same class with the same hash already exists in the database, this is considered a cache match.
-You can use the :meth:`~aiida.orm.nodes.Node.get_hash` method to check the hash of any node.
-In order to figure out why a calculation is *not* being reused, the :meth:`~aiida.orm.nodes.Node._get_objects_to_hash` method may be useful:
+You can use the :meth:`~aiida.orm.Node.get_hash` method to check the hash of any node.
+In order to figure out why a calculation is *not* being reused, the :meth:`~aiida.orm.Node._get_objects_to_hash` method may be useful:
 
 .. code-block:: ipython
 
@@ -68,13 +68,13 @@ Data nodes
 
 The hashing of *Data nodes* can be customized both when implementing a new data node class and during runtime.
 
-In the :py:class:`~aiida.orm.nodes.Node` subclass:
+In the :py:class:`~aiida.orm.Node` subclass:
 
 * Use the ``_hash_ignored_attributes`` to exclude a list of node attributes ``['attr1', 'attr2']`` from computing the hash.
-* Include extra information in computing the hash by overriding the :meth:`~aiida.orm.nodes.Node._get_objects_to_hash` method.
+* Include extra information in computing the hash by overriding the :meth:`~aiida.orm.Node._get_objects_to_hash` method.
   Use the ``super()`` method, and then append to the list of objects to hash.
 
-You can also modify hashing behavior during runtime by passing a keyword argument to :meth:`~aiida.orm.nodes.Node.get_hash`, which are forwarded to :meth:`~aiida.common.hashing.make_hash`.
+You can also modify hashing behavior during runtime by passing a keyword argument to :meth:`~aiida.orm.Node.get_hash`, which are forwarded to :meth:`~aiida.common.hashing.make_hash`.
 
 Process nodes
 .............

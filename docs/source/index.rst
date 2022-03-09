@@ -1,91 +1,140 @@
+:sd_hide_title:
+
 #################################
 Welcome to AiiDA's documentation!
 #################################
 
-**aiida-core version:** |release|
+.. grid::
+   :reverse:
+   :gutter: 2 3 3 3
+   :margin: 1 2 1 2
 
-`AiiDA`_ is an open-source Python infrastructure to help researchers with automating, managing, persisting, sharing and reproducing the complex workflows associated with modern computational science and all associated data (see :ref:`features<intro:about>`).
+   .. grid-item::
+      :columns: 12 4 4 4
 
-.. panels::
-   :body: bg-light text-center
-   :footer: bg-light border-0
+      .. image:: images/aiida-icon.svg
+         :width: 200px
+         :class: sd-m-auto
 
+   .. grid-item::
+      :columns: 12 8 8 8
+      :child-align: justify
+      :class: sd-fs-5
 
-   :fa:`rocket,mr-1` **Getting Started**
+      .. rubric:: AiiDA
 
-   AiiDA installation, configuration and troubleshooting.
+      An open-source Python infrastructure to help researchers with automating, managing, persisting, sharing and reproducing the complex workflows associated with modern computational science and all associated data (see :ref:`features<intro:about>`).
 
-   +++++++++++++++++++++++++++++++++++++++++++++
+      **aiida-core version:** |release|
 
-   .. link-button:: intro/get_started
-      :type: ref
-      :text: To the installation guides
-      :classes: btn-outline-primary btn-block stretched-link
+------------------------------
 
-   ----------------------------------------------
+.. grid:: 1 2 2 2
+   :gutter: 3
 
-   :fa:`info-circle,mr-1` **Tutorial**
+   .. grid-item-card:: :fa:`rocket;mr-1` Getting Started
+      :text-align: center
+      :shadow: md
 
-   First time users: Get your feet wet with AiiDA basics!
+      AiiDA installation, configuration and troubleshooting.
 
-   +++++++++++++++++++++++++++++++++++++++++++++
+      +++++++++++++++++++++++++++++++++++++++++++++
 
-   .. link-button:: intro/tutorial
-      :type: ref
-      :text: To the tutorials
-      :classes: btn-outline-primary btn-block stretched-link
+      .. button-ref:: intro/get_started
+         :ref-type: doc
+         :click-parent:
+         :expand:
+         :color: primary
+         :outline:
 
-   ----------------------------------------------
+         To the installation guides
 
-   :fa:`question-circle,mr-1` **How-To Guides**
+   .. grid-item-card:: :fa:`info-circle;mr-1` Tutorial
+      :text-align: center
+      :shadow: md
 
-   Learn how to use AiiDA to power your own work.
+      First time users: Get your feet wet with AiiDA basics!
 
-   +++++++++++++++++++++++++++++++++++++++++++++
+      +++++++++++++++++++++++++++++++++++++++++++++
 
-   .. link-button:: howto/index
-      :type: ref
-      :text: To the how-to guides
-      :classes: btn-outline-primary btn-block stretched-link
+      .. button-ref:: intro/tutorial
+         :ref-type: doc
+         :click-parent:
+         :expand:
+         :color: primary
+         :outline:
 
-   ----------------------------------------------
+         To the tutorials
 
-   :fa:`bookmark,mr-1` **Topics**
+   .. grid-item-card:: :fa:`question-circle;mr-1` How-To Guides
+      :text-align: center
+      :shadow: md
 
-   Background information on AiiDA's underlying concepts.
+      Learn how to use AiiDA to power your own work.
 
-   +++++++++++++++++++++++++++++++++++++++++++++
+      +++++++++++++++++++++++++++++++++++++++++++++
 
-   .. link-button:: topics/index
-      :type: ref
-      :text: To the topics
-      :classes: btn-outline-primary btn-block stretched-link
+      .. button-ref:: howto/index
+         :ref-type: doc
+         :click-parent:
+         :expand:
+         :color: primary
+         :outline:
 
-   ----------------------------------------------
+         To the how-to guides
 
-   :fa:`cogs,mr-1` **API Reference**
+   .. grid-item-card:: :fa:`bookmark;mr-1` Topics
+      :text-align: center
+      :shadow: md
 
-   Comprehensive documentation of AiiDA components: command-line interface, Python interface, and RESTful API.
+      Background information on AiiDA's underlying concepts.
 
-   +++++++++++++++++++++++++++++++++++++++++++++
+      +++++++++++++++++++++++++++++++++++++++++++++
 
-   .. link-button:: reference/index
-      :type: ref
-      :text: To the reference guide
-      :classes: btn-outline-primary btn-block stretched-link
+      .. button-ref:: topics/index
+         :ref-type: doc
+         :click-parent:
+         :expand:
+         :color: primary
+         :outline:
 
-   ----------------------------------------------
+         To the topics
 
-   :fa:`sitemap,mr-1` **Internal Architecture**
+   .. grid-item-card:: :fa:`cogs;mr-1` API Reference
+      :text-align: center
+      :shadow: md
 
-   Notes on AiiDA's design and architecture aimed at core developers.
+      Comprehensive documentation of AiiDA components: command-line interface, Python interface, and RESTful API.
 
-   +++++++++++++++++++++++++++++++++++++++++++++
+      +++++++++++++++++++++++++++++++++++++++++++++
 
-   .. link-button:: internals/index
-      :type: ref
-      :text: To the architecture guide
-      :classes: btn-outline-primary btn-block stretched-link
+      .. button-ref:: reference/index
+         :ref-type: doc
+         :click-parent:
+         :expand:
+         :color: primary
+         :outline:
+
+         To the reference guide
+
+   .. grid-item-card:: :fa:`sitemap;mr-1` Internal Architecture
+      :text-align: center
+      :shadow: md
+
+      Notes on AiiDA's design and architecture aimed at core developers.
+
+      +++++++++++++++++++++++++++++++++++++++++++++
+
+      .. button-ref:: internals/index
+         :ref-type: doc
+         :click-parent:
+         :expand:
+         :color: primary
+         :outline:
+
+         To the architecture guide
+
+------------------------------
 
 .. admonition:: Development Contributions
    :class: title-icon-code-fork

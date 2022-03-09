@@ -18,16 +18,16 @@ Controlling caching
 
 There are several methods which the internal classes of AiiDA use to control the caching mechanism:
 
-On the level of the generic :class:`orm.Node <aiida.orm.nodes.Node>` class:
+On the level of the generic :class:`orm.Node <aiida.orm.Node>` class:
 
-* The :meth:`~aiida.orm.nodes.Node.is_valid_cache` property determines whether a particular node can be used as a cache.
+* The :meth:`~aiida.orm.Node.is_valid_cache` property determines whether a particular node can be used as a cache.
   This is used for example to disable caching from failed calculations.
 * Node classes have a ``_cachable`` attribute, which can be set to ``False`` to completely switch off caching for nodes of that class.
   This avoids performing queries for the hash altogether.
 
-On the level of the :class:`Process <aiida.engine.processes.process.Process>` and :class:`orm.ProcessNode <aiida.orm.nodes.process.ProcessNode>` classes:
+On the level of the :class:`Process <aiida.engine.processes.process.Process>` and :class:`orm.ProcessNode <aiida.orm.ProcessNode>` classes:
 
-* The :meth:`ProcessNode.is_valid_cache <aiida.orm.nodes.process.ProcessNode.is_valid_cache>` calls :meth:`Process.is_valid_cache <aiida.engine.processes.process.Process.is_valid_cache>`, passing the node itself.
+* The :meth:`ProcessNode.is_valid_cache <aiida.orm.ProcessNode.is_valid_cache>` calls :meth:`Process.is_valid_cache <aiida.engine.processes.process.Process.is_valid_cache>`, passing the node itself.
   This can be used in :class:`~aiida.engine.processes.process.Process` subclasses (e.g. in calculation plugins) to implement custom ways of invalidating the cache.
 * The :meth:`ProcessNode._hash_ignored_inputs <aiida.orm.nodes.process.process.ProcessNode._hash_ignored_inputs>` attribute lists the inputs that should be ignored when creating the hash.
   This is checked by the :meth:`ProcessNode._get_objects_to_hash <aiida.orm.nodes.process.process.ProcessNode._get_objects_to_hash>` method.
@@ -40,7 +40,7 @@ The ``WorkflowNode`` example
 As discussed in the :ref:`topic section <topics:provenance:caching:limitations>`, nodes which can have ``RETURN`` links cannot be cached.
 This is enforced on two levels:
 
-* The ``_cachable`` property is set to ``False`` in the :class:`~aiida.orm.nodes.Node`, and only re-enabled in :class:`~aiida.orm.nodes.process.calculation.calculation.CalculationNode` (which affects CalcJobs and calcfunctions).
+* The ``_cachable`` property is set to ``False`` in the :class:`~aiida.orm.Node`, and only re-enabled in :class:`~aiida.orm.nodes.process.calculation.calculation.CalculationNode` (which affects CalcJobs and calcfunctions).
   This means that a :class:`~aiida.orm.nodes.process.workflow.workflow.WorkflowNode` will not be cached.
 * The ``_store_from_cache`` method, which is used to "clone" an existing node, will raise an error if the existing node has any ``RETURN`` links.
   This extra safe-guard prevents cases where a user might incorrectly override the ``_cachable`` property on a ``WorkflowNode`` subclass.

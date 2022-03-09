@@ -75,17 +75,15 @@ rest = [
     "seekpath~=1.9,>=1.9.3"
 ]
 docs = [
-    "docutils==0.15.2",
-    "pygments~=2.5",
-    "pydata-sphinx-theme~=0.6.3",
-    "markupsafe<2.1",
-    "sphinx~=3.2.1",
+    "pydata-sphinx-theme~=0.8.0",
+    "sphinx~=4.1",
     "sphinxcontrib-details-directive~=0.1.0",
-    "sphinx-panels~=0.5.0",
-    "sphinx-copybutton~=0.3.0",
+    "sphinx-copybutton~=0.5.0",
+    "sphinx-design~=0.0.13",
     "sphinx-notfound-page~=0.5",
     "sphinxext-rediraffe~=0.2.4",
-    "sphinx-sqlalchemy~=0.1.1"
+    "sphinx-sqlalchemy~=0.1.1",
+    "myst-parser~=0.15.2",
 ]
 atomic_tools = [
     "PyCifRW~=4.4",
@@ -125,7 +123,8 @@ tests = [
     "pympler~=0.9",
     "coverage<5.0",
     "sqlalchemy-utils~=0.37.2",
-    "sphinx~=3.2.1"
+    "sphinx~=4.0",
+    "docutils==0.16",
 ]
 bpython = [
     "bpython~=0.18.0"

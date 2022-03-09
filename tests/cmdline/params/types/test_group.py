@@ -93,12 +93,13 @@ def test_ambiguous_label_uuid(setup_groups, parameter_type):
     assert result.uuid == entity_03.uuid
 
 
-def test_create_if_not_exist(setup_groups):
+def test_create_if_not_exist(aiida_profile_clean):
     """Test the `create_if_not_exist` constructor argument."""
     label = 'non-existing-label-01'
     parameter_type = GroupParamType(create_if_not_exist=True)
     result = parameter_type.convert(label, None, None)
     assert isinstance(result, Group)
+    assert result.is_stored
 
     label = 'non-existing-label-02'
     parameter_type = GroupParamType(create_if_not_exist=True, sub_classes=('aiida.groups:core.auto',))

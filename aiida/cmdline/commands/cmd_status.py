@@ -57,7 +57,6 @@ def verdi_status(print_traceback, no_rmq):
     # pylint: disable=broad-except,too-many-statements,too-many-branches,too-many-locals
     from aiida.cmdline.utils.daemon import get_daemon_status, delete_stale_pid_file
     from aiida.common.utils import Capturing
-    from aiida.manage.configuration import get_rabbitmq_version, is_rabbitmq_version_supported
     from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
     from aiida.manage.manager import get_manager
 
@@ -113,16 +112,15 @@ def verdi_status(print_traceback, no_rmq):
         try:
             with Capturing(capture_stderr=True):
                 with override_log_level():  # temporarily suppress noisy logging
-                    comm = manager.create_communicator(with_orm=False)
-                    comm.close()
+                    comm = manager.get_communicator()
         except Exception as exc:
             message = f'Unable to connect to rabbitmq with URL: {profile.get_rmq_url()}'
             print_status(ServiceStatus.ERROR, 'rabbitmq', message, exception=exc, print_traceback=print_traceback)
             exit_code = ExitCode.CRITICAL
         else:
-            version = get_rabbitmq_version()
+            version, supported = manager.check_rabbitmq_version(comm)
             connection = f'Connected to RabbitMQ v{version} as {profile.get_rmq_url()}'
-            if is_rabbitmq_version_supported():
+            if supported:
                 print_status(ServiceStatus.UP, 'rabbitmq', connection)
             else:
                 print_status(ServiceStatus.WARNING, 'rabbitmq', 'Incompatible RabbitMQ version detected! ' + connection)

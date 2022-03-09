@@ -63,7 +63,7 @@ class TestVerdiRun(AiidaTestCase):
             self.assertClickResultNoException(result)
 
             # Try to load the function calculation node from the printed pk in the output
-            pk = int(result.output)
+            pk = int(result.output.strip().split('\n')[-1])
             node = load_node(pk)
 
             # Verify that the node has the correct function name and content
@@ -285,7 +285,7 @@ class TestAutoGroups(AiidaTestCase):
                 result = self.cli_runner.invoke(cmd_run.run, options)
                 self.assertClickResultNoException(result)
 
-                pk1_str, pk2_str, pk3_str, pk4_str, pk5_str, pk6_str = result.output.split()
+                pk1_str, pk2_str, pk3_str, pk4_str, pk5_str, pk6_str = result.output.strip().split('\n')[-6:]
                 pk1 = int(pk1_str)
                 pk2 = int(pk2_str)
                 pk3 = int(pk3_str)

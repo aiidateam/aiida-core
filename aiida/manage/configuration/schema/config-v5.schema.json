@@ -164,6 +164,11 @@
                     "default": true,
                     "description": "Whether to print AiiDA deprecation warnings"
                 },
+                "warnings.rabbitmq_version": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Whether to print a warning when an incompatible version of RabbitMQ is configured"
+                },
                 "transport.task_retry_initial_interval": {
                     "type": "integer",
                     "default": 20,

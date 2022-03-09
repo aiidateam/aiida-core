@@ -250,7 +250,7 @@ class Manager:
             encoder = functools.partial(json.dumps, encoding='utf-8')
             decoder = json.loads
 
-        return kiwipy.rmq.RmqThreadCommunicator.connect(
+        communicator = kiwipy.rmq.RmqThreadCommunicator.connect(
             connection_params={'url': profile.get_rmq_url()},
             message_exchange=rmq.get_message_exchange_name(prefix),
             encoder=encoder,
@@ -263,6 +263,11 @@ class Manager:
             # testing_mode cannot be set.
             testing_mode=profile.is_test_profile,
         )
+
+        # Check whether a compatible version of RabbitMQ is being used.
+        self.check_rabbitmq_version(communicator)
+
+        return communicator
 
     def get_daemon_client(self) -> 'DaemonClient':
         """Return the daemon client for the current profile.
@@ -373,6 +378,37 @@ class Manager:
         runner.communicator.add_task_subscriber(task_receiver)
 
         return runner
+
+    def check_rabbitmq_version(self, communicator: 'RmqThreadCommunicator'):
+        """Check the version of RabbitMQ that is being connected to and emit warning if the version is not compatible.
+
+        Versions 3.8.15 and above are not compatible with AiiDA with default configuration.
+        """
+        from packaging.version import parse
+
+        from aiida.cmdline.utils import echo
+
+        config = self.get_config()
+        profile = self.get_profile()
+        show_warning = config.get_option('warnings.rabbitmq_version', profile.name if profile else None)
+        version = get_rabbitmq_version(communicator)
+
+        if show_warning and version >= parse('3.8.15'):
+            echo.echo_warning(f'RabbitMQ v{version} is not supported and will cause unexpected problems!')
+            echo.echo_warning('It can cause long-running workflows to crash and jobs to be submitted multiple times.')
+            echo.echo_warning('See https://github.com/aiidateam/aiida-core/wiki/RabbitMQ-version-to-use for details.')
+            return version, False
+
+        return version, True
+
+
+def get_rabbitmq_version(communicator: 'RmqThreadCommunicator'):
+    """Return the version of the RabbitMQ server that the current profile connects to.
+
+    :return: :class:`packaging.version.Version`
+    """
+    from packaging.version import parse
+    return parse(communicator.server_properties['version'].decode('utf-8'))
 
 
 MANAGER: Optional[Manager] = None

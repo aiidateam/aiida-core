@@ -61,3 +61,12 @@ There are currently two core backend implementations:
 
 - ``psql_dos`` is implemented as the primary storage backend, see :ref:`internal_architecture:storage:psql_dos`.
 - ``sqlite_zip`` is implemented as a storage backend for the AiiDA archive, see :ref:`internal_architecture:storage:sqlite_zip`.
+
+Storage maintenance and profile locking
+---------------------------------------
+
+The :py:meth:`~aiida.orm.implementation.storage_backend.StorageBackend.maintain` method is allows for maintenance operations on the storage (for example, to optimise memory usage), and is called by `verdi storage maintain`.
+
+During "full" maintenance, to guarantee the safety of its procedures, it may be necessary that the storage is not accessed by other processes.
+The :py:class`~aiida.manage.profile_access.ProfileAccessManager` allows for profile access requests, and locking of profiles during such procedures.
+:py:meth:`~aiida.manage.profile_access.ProfileAccessManager.request_access` is called within :py:meth:`~aiida.manage.manager.Manager.get_profile_storage`.

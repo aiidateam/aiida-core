@@ -24,7 +24,7 @@ class TestConfigurationOptions:
     def test_get_option_names(self):
         """Test `get_option_names` function."""
         assert isinstance(get_option_names(), list)
-        assert len(get_option_names()) == 27
+        assert len(get_option_names()) == 28
 
     def test_get_option(self):
         """Test `get_option` function."""

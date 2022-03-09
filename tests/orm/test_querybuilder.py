@@ -716,13 +716,16 @@ class TestMultipleProjections:
         orm.Data().store()
         orm.Data().store()
 
-        result = orm.QueryBuilder().append(orm.User, tag='user',
-                                           project=['email']).append(orm.Data, with_user='user', project=['*']).first()
+        query = orm.QueryBuilder()
+        query.append(orm.User, tag='user', project=['email'])
+        query.append(orm.Data, with_user='user', project=['*'])
+
+        result = query.first()
 
         assert isinstance(result, list)
         assert len(result) == 2
-        assert isinstance(result[0], str)
-        assert isinstance(result[1], orm.Data)
+        assert isinstance(result[0], str)  # pylint: disable=unsubscriptable-object
+        assert isinstance(result[1], orm.Data)  # pylint: disable=unsubscriptable-object
 
 
 class TestRepresentations:

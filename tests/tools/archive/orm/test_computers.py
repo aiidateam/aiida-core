@@ -79,17 +79,17 @@ def test_same_computer_import(tmp_path, aiida_profile_clean, aiida_localhost):
     builder = orm.QueryBuilder()
     builder.append(orm.CalcJobNode, project=['label'])
     assert builder.count() == 1, 'Only one calculation should be found.'
-    assert str(builder.first()[0]) == calc1_label, 'The calculation label is not correct.'
+    assert str(builder.first(flat=True)) == calc1_label, 'The calculation label is not correct.'
 
     # Check that the referenced computer is imported correctly.
     builder = orm.QueryBuilder()
     builder.append(orm.Computer, project=['label', 'uuid', 'id'])
     assert builder.count() == 1, 'Only one computer should be found.'
-    assert str(builder.first()[0]) == comp_name, 'The computer name is not correct.'
-    assert str(builder.first()[1]) == comp_uuid, 'The computer uuid is not correct.'
+    assert str(builder.first()[0]) == comp_name, 'The computer name is not correct.'  # pylint: disable=unsubscriptable-object
+    assert str(builder.first()[1]) == comp_uuid, 'The computer uuid is not correct.'  # pylint: disable=unsubscriptable-object
 
     # Store the id of the computer
-    comp_id = builder.first()[2]
+    comp_id = builder.first()[2]  # pylint: disable=unsubscriptable-object
 
     # Import the second calculation
     import_archive(filename2)
@@ -99,9 +99,9 @@ def test_same_computer_import(tmp_path, aiida_profile_clean, aiida_localhost):
     builder = orm.QueryBuilder()
     builder.append(orm.Computer, project=['label', 'uuid', 'id'])
     assert builder.count() == 1, f'Found {builder.count()} computersbut only one computer should be found.'
-    assert str(builder.first()[0]) == comp_name, 'The computer name is not correct.'
-    assert str(builder.first()[1]) == comp_uuid, 'The computer uuid is not correct.'
-    assert builder.first()[2] == comp_id, 'The computer id is not correct.'
+    assert str(builder.first()[0]) == comp_name, 'The computer name is not correct.'  # pylint: disable=unsubscriptable-object
+    assert str(builder.first()[1]) == comp_uuid, 'The computer uuid is not correct.'  # pylint: disable=unsubscriptable-object
+    assert builder.first()[2] == comp_id, 'The computer id is not correct.'  # pylint: disable=unsubscriptable-object
 
     # Check that now you have two calculations attached to the same
     # computer.
@@ -175,13 +175,13 @@ def test_same_computer_different_name_import(tmp_path, aiida_profile_clean, aiid
     builder = orm.QueryBuilder()
     builder.append(orm.CalcJobNode, project=['label'])
     assert builder.count() == 1, 'Only one calculation should be found.'
-    assert str(builder.first()[0]) == calc1_label, 'The calculation label is not correct.'
+    assert str(builder.first(flat=True)) == calc1_label, 'The calculation label is not correct.'
 
     # Check that the referenced computer is imported correctly.
     builder = orm.QueryBuilder()
     builder.append(orm.Computer, project=['label', 'uuid', 'id'])
     assert builder.count() == 1, 'Only one computer should be found.'
-    assert str(builder.first()[0]) == comp1_name, 'The computer name is not correct.'
+    assert str(builder.first()[0]) == comp1_name, 'The computer name is not correct.'  # pylint: disable=unsubscriptable-object
 
     # Import the second calculation
     import_archive(filename2)
@@ -191,7 +191,7 @@ def test_same_computer_different_name_import(tmp_path, aiida_profile_clean, aiid
     builder = orm.QueryBuilder()
     builder.append(orm.Computer, project=['label'])
     assert builder.count() == 1, f'Found {builder.count()} computersbut only one computer should be found.'
-    assert str(builder.first()[0]) == comp1_name, 'The computer name is not correct.'
+    assert str(builder.first(flat=True)) == comp1_name, 'The computer name is not correct.'
 
 
 def test_different_computer_same_name_import(tmp_path, aiida_profile_clean, aiida_localhost_factory):

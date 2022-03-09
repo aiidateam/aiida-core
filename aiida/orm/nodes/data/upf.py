@@ -122,7 +122,7 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
         md5sum = md5_file(filename)
         builder = orm.QueryBuilder(backend=backend)
         builder.append(UpfData, filters={'attributes.md5': {'==': md5sum}})
-        existing_upf = builder.first()
+        existing_upf = builder.first(flat=True)
 
         if existing_upf is None:
             # return the upfdata instances, not stored
@@ -133,7 +133,6 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
         else:
             if stop_if_existing:
                 raise ValueError(f'A UPF with identical MD5 to  {filename} cannot be added with stop_if_existing')
-            existing_upf = existing_upf[0]
             pseudo_and_created.append((existing_upf, False))
 
     # check whether pseudo are unique per element

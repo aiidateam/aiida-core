@@ -77,7 +77,7 @@ class GroupParamType(IdentifierParamType):
             if self._create_if_not_exist:
                 # The particular subclass to load will be stored in `_sub_classes` as loaded by `convert` of the super.
                 cls = self._sub_classes[0]
-                group = cls(label=value)
+                group = cls(label=value).store()
             else:
                 raise
 

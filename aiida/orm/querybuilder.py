@@ -19,6 +19,8 @@ an interface classes which enforces the implementation of its defined methods.
 An instance of one of the implementation classes becomes a member of the :func:`QueryBuilder` instance
 when instantiated by the user.
 """
+from __future__ import annotations
+
 from copy import deepcopy
 from inspect import isclass as inspect_isclass
 from typing import (
@@ -27,6 +29,7 @@ from typing import (
     Dict,
     Iterable,
     List,
+    Literal,
     NamedTuple,
     Optional,
     Sequence,
@@ -35,6 +38,7 @@ from typing import (
     Type,
     Union,
     cast,
+    overload,
 )
 import warnings
 
@@ -989,12 +993,23 @@ class QueryBuilder:
         except TypeError:
             return value
 
-    def first(self) -> Optional[List[Any]]:
-        """Executes the query, asking for the first row of results.
+    @overload
+    def first(self, flat: Literal[False]) -> Optional[list[Any]]:
+        ...
 
-        Note, this may change if several rows are valid for the query,
-        as persistent ordering is not guaranteed unless explicitly specified.
+    @overload
+    def first(self, flat: Literal[True]) -> Optional[Any]:
+        ...
 
+    def first(self, flat: bool = False) -> Optional[list[Any] | Any]:
+        """Return the first result of the query.
+
+        Calling ``first`` results in an execution of the underlying query.
+
+        Note, this may change if several rows are valid for the query, as persistent ordering is not guaranteed unless
+        explicitly specified.
+
+        :param flat: if True, return just the projected quantity if there is just a single projection.
         :returns: One row of results as a list, or None if no result returned.
         """
         result = self._impl.first(self.as_dict())
@@ -1002,7 +1017,12 @@ class QueryBuilder:
         if result is None:
             return None
 
-        return [self._get_aiida_entity_res(rowitem) for rowitem in result]
+        result = [self._get_aiida_entity_res(rowitem) for rowitem in result]
+
+        if flat and len(result) == 1:
+            return result[0]
+
+        return result
 
     def count(self) -> int:
         """

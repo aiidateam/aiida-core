@@ -254,7 +254,7 @@ class NodeTranslator(BaseTranslator):
             return {}
 
         # otherwise ...
-        node = self.qbobj.first()[0]
+        node = self.qbobj.first()[0]  # pylint: disable=unsubscriptable-object
 
         # content/attributes
         if self._content_type == 'attributes':
@@ -643,7 +643,7 @@ class NodeTranslator(BaseTranslator):
         nodes = []
 
         if qb_obj.count() > 0:
-            main_node = qb_obj.first()[0]
+            main_node = qb_obj.first(flat=True)
             pk = main_node.pk
             uuid = main_node.uuid
             nodetype = main_node.node_type

@@ -649,7 +649,7 @@ class TestBasic:
         assert res2 == {d2.id, d4.id}
 
     @staticmethod
-    def test_flat():
+    def test_all_flat():
         """Test the `flat` keyword for the `QueryBuilder.all()` method."""
         pks = []
         uuids = []
@@ -665,12 +665,25 @@ class TestBasic:
         assert len(result) == 10
         assert result == pks
 
-        # Mutltiple projections
+        # Multiple projections
         builder = orm.QueryBuilder().append(orm.Data, project=['id', 'uuid']).order_by({orm.Data: 'id'})
         result = builder.all(flat=True)
         assert isinstance(result, list)
         assert len(result) == 20
         assert result == list(chain.from_iterable(zip(pks, uuids)))
+
+    @staticmethod
+    def test_first_flat():
+        """Test the `flat` keyword for the `QueryBuilder.first()` method."""
+        node = orm.Data().store()
+
+        # Single projected property
+        query = orm.QueryBuilder().append(orm.Data, project='id', filters={'id': node.pk})
+        assert query.first(flat=True) == node.pk
+
+        # Mutltiple projections
+        query = orm.QueryBuilder().append(orm.Data, project=['id', 'uuid'], filters={'id': node.pk})
+        assert query.first(flat=True) == [node.pk, node.uuid]
 
     def test_query_links(self):
         """Test querying for links"""
@@ -703,13 +716,16 @@ class TestMultipleProjections:
         orm.Data().store()
         orm.Data().store()
 
-        result = orm.QueryBuilder().append(orm.User, tag='user',
-                                           project=['email']).append(orm.Data, with_user='user', project=['*']).first()
+        query = orm.QueryBuilder()
+        query.append(orm.User, tag='user', project=['email'])
+        query.append(orm.Data, with_user='user', project=['*'])
+
+        result = query.first()
 
         assert isinstance(result, list)
         assert len(result) == 2
-        assert isinstance(result[0], str)
-        assert isinstance(result[1], orm.Data)
+        assert isinstance(result[0], str)  # pylint: disable=unsubscriptable-object
+        assert isinstance(result[1], orm.Data)  # pylint: disable=unsubscriptable-object
 
 
 class TestRepresentations:

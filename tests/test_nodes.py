@@ -89,7 +89,7 @@ class TestNodeHashing:
         # Search for the UUID of the stored node
         qb = orm.QueryBuilder()
         qb.append(orm.Data, project=['uuid'], filters={'id': {'==': n.id}})
-        [uuid] = qb.first()
+        uuid = qb.first(flat=True)
 
         # Look the node with the previously returned UUID
         qb = orm.QueryBuilder()
@@ -99,7 +99,7 @@ class TestNodeHashing:
         qb.all()
         # And that the results are correct
         assert qb.count() == 1
-        assert qb.first()[0] == n.id
+        assert qb.first(flat=True) == n.id
 
     @staticmethod
     def create_folderdata_with_empty_file():

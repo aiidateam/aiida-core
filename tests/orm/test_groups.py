@@ -268,7 +268,7 @@ class TestGroups:
         # Search for the UUID of the stored group
         builder = orm.QueryBuilder()
         builder.append(orm.Group, project=['uuid'], filters={'label': {'==': 'test_group'}})
-        [uuid] = builder.first()
+        uuid = builder.first(flat=True)
 
         # Look the node with the previously returned UUID
         builder = orm.QueryBuilder()
@@ -279,7 +279,7 @@ class TestGroups:
 
         # And that the results are correct
         assert builder.count() == 1
-        assert builder.first()[0] == group.id
+        assert builder.first(flat=True) == group.id
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

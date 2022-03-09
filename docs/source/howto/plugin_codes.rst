@@ -587,9 +587,9 @@ Continue with :ref:`how-to:plugins-develop` in order to learn how to quickly cre
 .. |Int| replace:: :py:class:`~aiida.orm.nodes.data.int.Int`
 .. |SinglefileData| replace:: :py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`
 .. |StructureData| replace:: :py:class:`~aiida.orm.nodes.data.structure.StructureData`
-.. |RemoteData| replace:: :py:class:`~aiida.orm.nodes.data.remote.RemoteData`
+.. |RemoteData| replace:: :py:class:`~aiida.orm.RemoteData`
 .. |Dict| replace:: :py:class:`~aiida.orm.nodes.data.dict.Dict`
-.. |Code| replace:: :py:class:`~aiida.orm.nodes.data.Code`
+.. |Code| replace:: :py:class:`~aiida.orm.Code`
 .. |Parser| replace:: :py:class:`~aiida.parsers.parser.Parser`
 .. |parse| replace:: :py:class:`~aiida.parsers.parser.Parser.parse`
 .. |folder| replace:: :py:class:`~aiida.common.folders.Folder`
@@ -600,8 +600,8 @@ Continue with :ref:`how-to:plugins-develop` in order to learn how to quickly cre
 .. |CodeInfo| replace:: :py:class:`~aiida.common.CodeInfo`
 .. |FolderData| replace:: :py:class:`~aiida.orm.nodes.data.folder.FolderData`
 .. |spec| replace:: ``spec``
-.. |define| replace:: :py:class:`~aiida.engine.processes.calcjobs.CalcJob.define`
-.. |prepare_for_submission| replace:: :py:meth:`~aiida.engine.processes.calcjobs.CalcJob.prepare_for_submission`
+.. |define| replace:: :py:class:`~aiida.engine.CalcJob.define`
+.. |prepare_for_submission| replace:: :py:meth:`~aiida.engine.CalcJob.prepare_for_submission`
 .. _aiida-diff: https://github.com/aiidateam/aiida-diff
 .. _voluptuous: https://github.com/alecthomas/voluptuous
 .. _pydantic: https://github.com/samuelcolvin/pydantic/

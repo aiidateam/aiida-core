@@ -342,7 +342,7 @@ Finally, to delete a code use:
 
 .. note::
 
-    Codes are a subclass of :py:class:`Node <aiida.orm.nodes.Node>` and, as such, you can attach ``extras`` to a code, for example:
+    Codes are a subclass of :py:class:`Node <aiida.orm.Node>` and, as such, you can attach ``extras`` to a code, for example:
 
     .. code-block:: python
 
@@ -525,7 +525,7 @@ For the available entry-points in your environment, you can list which are enabl
 
 For calculations which do not have an entry point, you need to specify the fully qualified Python name instead.
 For example, the ``seekpath_structure_analysis`` calcfunction defined in ``aiida_quantumespresso.workflows.functions.seekpath_structure_analysis`` is labelled as ``aiida_quantumespresso.workflows.functions.seekpath_structure_analysis.seekpath_structure_analysis``.
-From an existing :class:`~aiida.orm.nodes.process.calculation.CalculationNode`, you can get the identifier string through the ``process_type`` attribute.
+From an existing :class:`~aiida.orm.CalculationNode`, you can get the identifier string through the ``process_type`` attribute.
 
 The caching configuration also accepts ``*`` wildcards.
 For example, the following configuration disables caching for all calculation entry points.

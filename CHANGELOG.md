@@ -183,7 +183,7 @@ See [AiiDA REST API documentation](https://aiida.readthedocs.io/projects/aiida-c
 
 - Refactored `.ci/` folder to make tests more portable and easier to understand ([#4565](https://github.com/aiidateam/aiida-core/pull/4565))
   The `ci/` folder had become cluttered, containing configuration and scripts for both the GitHub Actions and Jenkins CI.
-  This change moved the GH actions specific scripts to `.github/system_tests`, and refactored the Jenkins setup/tests to use [molecule](molecule.readthedocs.io) in the `.molecule/` folder.
+  This change moved the GH actions specific scripts to `.github/system_tests`, and refactored the Jenkins setup/tests to use [molecule](https://molecule.readthedocs.io) in the `.molecule/` folder.
 
 - For aiida-core development, the pytest `requires_rmq` marker and `config_with_profile` fixture have been added ([#4739](https://github.com/aiidateam/aiida-core/pull/4739) and [#4764](https://github.com/aiidateam/aiida-core/pull/4764))
 
@@ -253,11 +253,11 @@ This version is compatible with all current Python versions that are not end-of-
 - The export logic has been re-written; to minimise required queries (faster), and to allow for "streaming" datainto the writer (minimise RAM requirement with new format). It is intended that a similiar PR will be made for the import code.
 - A general progress bar implementation is now available in `aiida/common/progress_reporter.py`. All correspondingCLI commands now also have `--verbosity` option.
 - Merged PRs:
-    - Refactor export archive ([#4448](https://github.com/aiidateam/aiida-core/pull/4448) & [#4534](https://githubcom/aiidateam/aiida-core/pull/4534))
+    - Refactor export archive ([#4448](https://github.com/aiidateam/aiida-core/pull/4448) & [#4534](https://github.com/aiidateam/aiida-core/pull/4534))
     - Refactor import archive ([#4510](https://github.com/aiidateam/aiida-core/pull/4510))
     - Refactor migrate archive ([#4532](https://github.com/aiidateam/aiida-core/pull/4532))
     - Add group extras to archive ([#4521](https://github.com/aiidateam/aiida-core/pull/4521))
-    - Refactor cmdline progress bar ([#4504](https://github.com/aiidateam/aiida-core/pull/4504) & [#4522](https:/github.com/aiidateam/aiida-core/pull/4522))
+    - Refactor cmdline progress bar ([#4504](https://github.com/aiidateam/aiida-core/pull/4504) & [#4522](https://github.com/aiidateam/aiida-core/pull/4522))
 - Updated archive version from `0.9` -> `0.10` ([#4561](https://github.com/aiidateam/aiida-core/pull/4561)
 - Deprecations: `export_zip`, `export_tar`, `export_tree`, `extract_zip`, `extract_tar` and `extract_tree`functions. `silent` key-word in the `export` function
 - Removed: `ZipFolder` class

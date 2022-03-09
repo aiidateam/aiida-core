@@ -23,14 +23,14 @@ This can happen for example when you have updated your AiiDA installation or ins
 Make sure to also restart all daemons, to ensure that the changes are picked up by the daemons as well.
 
 
-I have updated the code of a :py:class:`~aiida.engine.processes.workchains.WorkChain`, :py:class:`~aiida.engine.processes.calcjobs.CalcJob` or whatever other Python code, but the daemon does not seem to pick up the changes?
+I have updated the code of a :py:class:`~aiida.engine.WorkChain`, :py:class:`~aiida.engine.CalcJob` or whatever other Python code, but the daemon does not seem to pick up the changes?
 ===============================================================================================================================================================================================================================
 Each time that you change your code, you should restart the daemon for the changes to take effect.
 Each daemon worker actually is its own system process with its own Python interpreter instance, and since we don't support automated hot==swapping, the daemon workers will not automatically detect the changes in the code.
 Simply calling ``verdi daemon restart`` will do the trick.
 
 
-I have updated the code of a :py:class:`~aiida.engine.processes.workchains.WorkChain`, :py:class:`~aiida.engine.processes.calcjobs.CalcJob` or whatever other Python code, but my Python shell instance does not seem to pick up the changes?
+I have updated the code of a :py:class:`~aiida.engine.WorkChain`, :py:class:`~aiida.engine.CalcJob` or whatever other Python code, but my Python shell instance does not seem to pick up the changes?
 =============================================================================================================================================================================================================================================
 The ``verdi shell`` is its own Python interpreter and does not automatically detect code changes.
 Simply reloading your shell will solve the problem.

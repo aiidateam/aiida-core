@@ -235,7 +235,6 @@ def loop_scope(loop) -> Iterator[None]:
     Make an event loop current for the scope of the context
 
     :param loop: The event loop to make current for the duration of the scope
-    :type loop: asyncio event loop
     """
     current = asyncio.get_event_loop()
 

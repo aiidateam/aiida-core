@@ -14,7 +14,7 @@ Note that the backend implementation is enforced and handled with a composition 
 :func:`QueryBuilder` is the frontend class that the user can use. It inherits from *object* and contains
 backend-specific functionality. Backend specific functionality is provided by the implementation classes.
 
-These inherit from :func:`aiida.orm.implementation.BackendQueryBuilder`,
+These inherit from :func:`aiida.orm.implementation.querybuilder.BackendQueryBuilder`,
 an interface classes which enforces the implementation of its defined methods.
 An instance of one of the implementation classes becomes a member of the :func:`QueryBuilder` instance
 when instantiated by the user.

@@ -8,3 +8,4 @@ Reference
    command_line
    api/index
    rest_api
+   _changelog.md

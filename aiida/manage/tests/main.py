@@ -89,7 +89,7 @@ class TestManager:
     def use_temporary_profile(self, backend=None, pgtest=None):
         """Set up Test manager to use temporary AiiDA profile.
 
-         Uses :py:class:`aiida.manage.tests.TemporaryProfileManager` internally.
+         Uses :py:class:`aiida.manage.tests.main.TemporaryProfileManager` internally.
 
         :param backend: Backend to use.
         :param pgtest: a dictionary of arguments to be passed to PGTest() for starting the postgresql cluster,
@@ -108,7 +108,7 @@ class TestManager:
     def use_profile(self, profile_name):
         """Set up Test manager to use existing profile.
 
-         Uses :py:class:`aiida.manage.tests.ProfileManager` internally.
+         Uses :py:class:`aiida.manage.tests.main.ProfileManager` internally.
 
         :param profile_name: Name of existing test profile to use.
         """

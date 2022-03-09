@@ -8,7 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test migration adding the `repository_metadata` column to the `Node` model."""
-from aiida.common import json, timezone
+import json
+
+from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
 from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
 

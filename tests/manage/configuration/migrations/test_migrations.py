@@ -10,12 +10,12 @@
 # pylint: disable=redefined-outer-name
 """Tests for the configuration migration functionality."""
 import copy
+import json
 import pathlib
 import uuid
 
 import pytest
 
-from aiida.common import json
 from aiida.common.exceptions import ConfigurationError
 from aiida.manage.configuration.migrations import check_and_migrate_config
 from aiida.manage.configuration.migrations.migrations import MIGRATIONS, Initial, downgrade_config, upgrade_config

@@ -9,13 +9,14 @@
 ###########################################################################
 # pylint: disable=invalid-name
 """Utilities for removing legacy workflows."""
+import codecs
+import json
 import sys
 
 import click
 from sqlalchemy.sql import func, select, table
 
 from aiida.cmdline.utils import echo
-from aiida.common import json
 
 
 def json_serializer(obj):
@@ -70,7 +71,7 @@ def export_workflow_data(connection, profile):
         prefix='legacy-workflows', suffix='.json', dir='.', delete=delete_on_close, mode='wb'
     ) as handle:
         filename = handle.name
-        json.dump(data, handle, default=json_serializer)
+        json.dump(data, codecs.getwriter('utf-8')(handle), default=json_serializer)
 
     # If delete_on_close is False, we are running for the user and add additional message of file location
     if not delete_on_close:

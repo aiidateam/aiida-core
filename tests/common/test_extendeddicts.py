@@ -9,12 +9,12 @@
 ###########################################################################
 """Tests for the extended dictionary classes."""
 # pylint: disable=pointless-statement,attribute-defined-outside-init
-
 import copy
+import json
 import pickle
 import unittest
 
-from aiida.common import exceptions, extendeddicts, json
+from aiida.common import exceptions, extendeddicts
 
 
 class FFADExample(extendeddicts.FixedFieldsAttributeDict):

@@ -10,8 +10,8 @@
 """`verdi run` command."""
 import contextlib
 import os
-import sys
 import pathlib
+import sys
 
 import click
 

@@ -11,6 +11,7 @@
 import contextlib
 import os
 import sys
+import pathlib
 
 import click
 
@@ -50,7 +51,7 @@ def validate_entry_point_strings(ctx, param, value):  # pylint: disable=unused-a
 
 
 @verdi.command('run', context_settings=dict(ignore_unknown_options=True,))
-@click.argument('scriptname', type=click.STRING)
+@click.argument('scriptname', type=click.Path(exists=True, path_type=pathlib.Path, dir_okay=False))
 @click.argument('varargs', nargs=-1, type=click.UNPROCESSED)
 @click.option('--auto-group', is_flag=True, help='Enables the autogrouping')
 @click.option(

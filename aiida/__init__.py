@@ -84,3 +84,8 @@ def get_file_header(comment_char: str = '# ') -> str:
     """
     lines = _get_raw_file_header().splitlines()
     return '\n'.join(f'{comment_char}{line}' for line in lines)
+
+
+def load_ipython_extension(ipython):
+    from .tools.ipython.ipython_magics import AiiDALoaderMagics
+    ipython.register_magics(AiiDALoaderMagics)

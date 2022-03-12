@@ -84,13 +84,13 @@ class InteractiveOption(ConditionalOption):
         if not self.is_interactive(ctx):
             return self.get_default(ctx)
 
+        if self._prompt_fn is not None and self._prompt_fn(ctx) is False:
+            return None
+
         if not hasattr(ctx, 'prompt_loop_info_printed'):
             echo.echo_report(f'enter {self.CHARACTER_PROMPT_HELP} for help.')
             echo.echo_report(f'enter {self.CHARACTER_IGNORE_DEFAULT} to ignore the default and set no value.')
             ctx.prompt_loop_info_printed = True
-
-        if self._prompt_fn is not None and self._prompt_fn(ctx) is False:
-            return None
 
         return super().prompt_for_value(ctx)
 

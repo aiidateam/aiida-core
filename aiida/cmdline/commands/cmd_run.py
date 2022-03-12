@@ -9,14 +9,14 @@
 ###########################################################################
 """`verdi run` command."""
 import contextlib
-import os
+import pathlib
 import sys
 
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params.options.multivalue import MultipleValueOption
-from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils import decorators
 
 
 @contextlib.contextmanager
@@ -28,7 +28,7 @@ def update_environment(argv):
         _argv = sys.argv[:]
 
         # Add the current working directory to the path, such that local modules can be imported
-        sys.path.append(os.getcwd())
+        sys.path.append(pathlib.Path.cwd().resolve())
         sys.argv = argv[:]
         yield
     finally:
@@ -37,7 +37,7 @@ def update_environment(argv):
         sys.path = _path
 
 
-def validate_entry_point_strings(ctx, param, value):  # pylint: disable=unused-argument,invalid-name
+def validate_entry_point_strings(_, __, value):
     """Validate that `value` is a valid entrypoint string."""
     from aiida.orm import autogroup
 
@@ -50,7 +50,7 @@ def validate_entry_point_strings(ctx, param, value):  # pylint: disable=unused-a
 
 
 @verdi.command('run', context_settings=dict(ignore_unknown_options=True,))
-@click.argument('scriptname', type=click.STRING)
+@click.argument('filepath', type=click.Path(exists=True, readable=True, dir_okay=False, path_type=pathlib.Path))
 @click.argument('varargs', nargs=-1, type=click.UNPROCESSED)
 @click.option('--auto-group', is_flag=True, help='Enables the autogrouping')
 @click.option(
@@ -80,17 +80,18 @@ def validate_entry_point_strings(ctx, param, value):  # pylint: disable=unused-a
     callback=validate_entry_point_strings
 )
 @decorators.with_dbenv()
-def run(scriptname, varargs, auto_group, auto_group_label_prefix, exclude, include):
-    # pylint: disable=too-many-arguments,exec-used
+def run(filepath, varargs, auto_group, auto_group_label_prefix, exclude, include):
     """Execute scripts with preloaded AiiDA environment."""
     from aiida.cmdline.utils.shell import DEFAULT_MODULES_LIST
     from aiida.manage import get_manager
+
+    filepath.resolve()
 
     # Prepare the environment for the script to be run
     globals_dict = {
         '__builtins__': globals()['__builtins__'],
         '__name__': '__main__',
-        '__file__': scriptname,
+        '__file__': filepath.name,
         '__doc__': None,
         '__package__': None
     }
@@ -107,27 +108,14 @@ def run(scriptname, varargs, auto_group, auto_group_label_prefix, exclude, inclu
         storage_backend.autogroup.set_exclude(exclude)
         storage_backend.autogroup.set_include(include)
 
-    # Initialize the variable here, otherwise we get UnboundLocalError in the finally clause if it fails to open
-    handle = None
-
     try:
-        # Here we use a standard open and not open, as exec will later fail if passed a unicode type string.
-        handle = open(scriptname, 'r')  # pylint: disable=consider-using-with,unspecified-encoding
-    except IOError:
-        echo.echo_critical(f"Unable to load file '{scriptname}'")
-    else:
-        try:
-            # Must add also argv[0]
-            argv = [scriptname] + list(varargs)
-            with update_environment(argv=argv):
+        with filepath.open('r', encoding='utf-8') as handle:
+            with update_environment(argv=[str(filepath)] + list(varargs)):
                 # Compile the script for execution and pass it to exec with the globals_dict
-                exec(compile(handle.read(), scriptname, 'exec', dont_inherit=True), globals_dict)  # yapf: disable # pylint: disable=exec-used
-        except SystemExit:  # pylint: disable=try-except-raise
-            # Script called sys.exit()
-            # Re-raise the exception to have the error code properly returned at the end
-            raise
+                exec(compile(handle.read(), str(filepath), 'exec', dont_inherit=True), globals_dict)  # pylint: disable=exec-used
+    except SystemExit:  # pylint: disable=try-except-raise
+        # Script called ``sys.exit()``, re-raise the exception to have the error code properly returned at the end
+        raise
     finally:
         storage_backend = get_manager().get_profile_storage()
         storage_backend.autogroup.disable()
-        if handle:
-            handle.close()

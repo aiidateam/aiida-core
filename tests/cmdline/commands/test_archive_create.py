@@ -109,9 +109,9 @@ def test_migrate_version_specific(run_cli_command, tmp_path):
     options = [filename_input, filename_output, '--version', target_version]
     run_cli_command(cmd_archive.migrate, options)
     assert filename_output.is_file()
-    assert zipfile.ZipFile(filename_output).testzip() is None  # pylint: disable=consider-using-with
-
     assert ArchiveFormatSqlZip().read_version(filename_output) == target_version
+    with zipfile.ZipFile(filename_output) as handle:
+        assert handle.testzip() is None
 
 
 def test_migrate_file_already_exists(run_cli_command, tmp_path):
@@ -155,9 +155,9 @@ def test_migrate_in_place(run_cli_command, tmp_path):
     options = [filename_clone, '--in-place', '--version', target_version]
     run_cli_command(cmd_archive.migrate, options)
     assert filename_clone.is_file()
-    assert zipfile.ZipFile(filename_clone).testzip() is None  # pylint: disable=consider-using-with
-
     assert ArchiveFormatSqlZip().read_version(filename_clone) == target_version
+    with zipfile.ZipFile(filename_clone) as handle:
+        assert handle.testzip() is None
 
 
 @pytest.mark.usefixtures('config_with_profile')
@@ -174,8 +174,9 @@ def test_migrate_low_verbosity(run_cli_command, tmp_path):
     result = run_cli_command(cmd_archive.migrate, options)
     assert result.output == ''
     assert filename_output.is_file()
-    assert zipfile.ZipFile(filename_output).testzip() is None  # pylint: disable=consider-using-with
     assert ArchiveFormatSqlZip().read_version(filename_output) == ArchiveFormatSqlZip().latest_version
+    with zipfile.ZipFile(filename_output) as handle:
+        assert handle.testzip() is None
 
 
 @pytest.mark.parametrize('version', [v for v in list_versions() if v not in ('main_0000a', 'main_0000b')])

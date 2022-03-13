@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines,fixme,consider-using-with
+# pylint: disable=too-many-lines,fixme
 """
 This module contains a set of unittest test classes that can be loaded from
 the plugin.
@@ -16,6 +16,7 @@ Plugin specific tests will be written in the plugin itself.
 """
 import io
 import os
+import pathlib
 import random
 import shutil
 import signal
@@ -583,8 +584,7 @@ class TestPutGetFile(unittest.TestCase):
             remote_file_name = 'file_remote.txt'
             retrieved_file_name = os.path.join(local_dir, directory, 'file_retrieved.txt')
 
-            fhandle = open(local_file_name, 'w', encoding='utf8')
-            fhandle.close()
+            pathlib.Path(local_file_name).touch()
 
             # partial_file_name is not an abs path
             with self.assertRaises(ValueError):
@@ -1067,9 +1067,7 @@ class TestPutGetTree(unittest.TestCase):
 
             transport.chdir(directory)
             local_file_name = os.path.join(local_subfolder, 'file.txt')
-
-            fhandle = open(local_file_name, 'w', encoding='utf8')
-            fhandle.close()
+            pathlib.Path(local_file_name).touch()
 
             # 'tmp1' is not an abs path
             with self.assertRaises(ValueError):

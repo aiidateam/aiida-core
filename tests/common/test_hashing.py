@@ -175,10 +175,10 @@ class TestMakeHashTest:
     def test_folder(self):
         # create directories for the Folder test
         with SandboxFolder(sandbox_in_repo=False) as folder:
-            folder.open('file1', 'a').close()
-            fhandle = folder.open('file2', 'w')
-            fhandle.write('hello there!\n')
-            fhandle.close()
+            with folder.open('file1', 'a') as handle:
+                pass
+            with folder.open('file2', 'w') as handle:
+                handle.write('hello there!\n')
 
             folder_hash = make_hash(folder)
             assert folder_hash == '47d9cdb2247e75eca492035f60f09fdd0daf87bbba40bb658d2d7e84f21f26c5'

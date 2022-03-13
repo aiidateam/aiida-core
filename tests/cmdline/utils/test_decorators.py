@@ -9,6 +9,8 @@
 ###########################################################################
 # pylint: disable=redefined-outer-name
 """Tests for the :mod:`aiida.cmdline.utils.decorators` module."""
+from unittest import mock
+
 import pytest
 
 from aiida.cmdline.utils.decorators import load_backend_if_not_loaded
@@ -67,3 +69,32 @@ def test_load_backend_if_not_loaded_with_loaded_profile(config, manager):
     # Calling the method again should keep the currently loaded profile, and not switch to the default profile
     load_backend_if_not_loaded()
     assert manager.get_profile().name == 'profile-two'
+
+
+def test_load_backend_if_not_loaded_load_once(manager, monkeypatch):
+    """Test :meth:`aiida.cmdline.utils.decorators.load_backend_if_not_loaded` calls ``get_profile_storage`` once."""
+    mocked = mock.Mock()
+
+    # This test assumes the ``load_backend_if_not_loaded`` uses ``get_profile_storage`` to load the profile, so we need
+    # to first check that this is the case. If this changes, this first test will fail alerting that it needs to be
+    # adapted.
+    with monkeypatch.context() as context:
+        context.setattr(manager.__class__, 'get_profile_storage', mocked)
+        load_backend_if_not_loaded()
+        assert mocked.call_count == 1
+        assert not manager.profile_storage_loaded
+
+    # This is necessary, despite the previous change being in a context, and it is unknown why. Without it, subsequent
+    # tests that require the profile storage will fail.
+    monkeypatch.undo()
+
+    # The first call to ``get_profile_storage`` through ``load_backend_if_not_loaded`` was mocked and thus did not use
+    # the actual method, so we need to explicitly call it here to load the profile storage for the test as the
+    # implementation of ``load_backend_if_not_loaded`` currently relies on it.
+    manager.get_profile_storage()
+    assert manager.profile_storage_loaded
+
+    with monkeypatch.context() as context:
+        context.setattr(manager.__class__, 'get_profile_storage', mocked)
+        load_backend_if_not_loaded()
+        assert mocked.call_count == 1, 'Apparently `Manager.get_profile_storage` got called again, which is a bug'

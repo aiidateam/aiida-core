@@ -23,6 +23,7 @@ from . import convert, entities, extras, users
 if TYPE_CHECKING:
     from aiida.orm import Node, User
     from aiida.orm.implementation import BackendGroup, StorageBackend
+    from aiida.plugins.entry_point import EntryPoint
 
 __all__ = ('Group', 'AutoGroup', 'ImportGroup', 'UpfFamily')
 
@@ -184,6 +185,16 @@ class Group(entities.Entity['BackendGroup'], metaclass=GroupMeta):
             raise exceptions.StoringNotAllowed('`type_string` is `None` so the group cannot be stored.')
 
         return super().store()
+
+    @classproperty
+    def entry_point(cls) -> Optional['EntryPoint']:
+        """Return the entry point associated this group type.
+
+        :return: the associated entry point or ``None`` if it isn't known.
+        """
+        # pylint: disable=no-self-use
+        from aiida.plugins.entry_point import get_entry_point_from_class
+        return get_entry_point_from_class(cls.__module__, cls.__name__)[1]
 
     @property
     def uuid(self) -> str:

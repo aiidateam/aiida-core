@@ -16,7 +16,8 @@ How-To Guides
    data
    query
    share_data
-   visualising_graphs/visualising_graphs
+   archive_profile
+   visualising_graphs
    installation
    plugins_develop
    cookbook

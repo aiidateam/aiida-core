@@ -17,6 +17,8 @@ You have performed your calculations with AiiDA and you would like to share your
 Since AiiDA keeps track of the provenance of every computed result, this step is easy:
 Tell AiiDA the **final results** you would like to be reproducible, and AiiDA will automatically include their entire provenance using the :ref:`topics:provenance:consistency:traversal-rules`.
 
+.. seealso:: :ref:`internal_architecture:storage:sqlite_zip` and :ref:`how-to:data:share:archive:profile`.
+
 Exporting individual nodes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -142,16 +144,7 @@ In order to get a quick overview of an archive file *without* importing it into 
         objects:
             count: 71
 
-You can also use the Python API to inspect an archive file, using the :py:class:`~aiida.orm.querybuilder.QueryBuilder` to query the database:
-
-.. code-block:: python
-
-    from aiida import orm
-    from aiida.tools.archive import get_format
-    archive_format = get_format()
-    with archive_format.open('', mode='r') as reader:
-        qb = reader.querybuilder()
-        print(qb.append(orm.Node).count())
+You can also use the Python API to inspect the archive file as a profile, see :ref:`how-to:data:share:archive:profile`.
 
 Importing an archive
 ^^^^^^^^^^^^^^^^^^^^

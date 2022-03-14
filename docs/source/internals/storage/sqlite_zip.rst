@@ -3,7 +3,9 @@
 ``sqlite_zip`` (archive) format
 *******************************
 
-The :py:class:`~aiida.storage.sqlite_zip.backend.SqliteZipBackend` is the storage format used for the AiiDA archive.
+The :py:class:`~aiida.storage.sqlite_zip.backend.SqliteZipBackend` is the storage format used for the AiiDA archive,
+whose design draws from consideration outlined in :doc:`aep:005_exportformat/readme`.
+
 An AiiDA archive is a single file format (with canonical extension ``.aiida``), for long term storage of an AiiDA provenance graph.
 It provides a data storage backend, integrating a database and file repository.
 

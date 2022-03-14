@@ -67,6 +67,7 @@ extensions = [
 ]
 
 intersphinx_mapping = {
+    'aep': ('https://aep.readthedocs.io/en/latest/', None),
     'click': ('https://click.palletsprojects.com/', None),
     'flask': ('http://flask.pocoo.org/docs/latest/', None),
     'flask_restful': ('https://flask-restful.readthedocs.io/en/latest/', None),

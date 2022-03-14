@@ -4,8 +4,10 @@
 Repository
 **********
 
-The file repository in AiiDA, often referred to simply as the repository, is the data store where all the files are persisted that belong to the nodes in the provenance graph.
-In this chapter, the design and implementation of the file repository is described.
+The file repository in AiiDA, often referred to simply as the repository, is the data store where all binary data is persisted, that belong to the :py:class:`~aiida.orm.Node` in the provenance graph.
+In this chapter, the design and implementation of the file repository is described,
+which largely draws from :doc:`aep:007_improved_file_repository/readme` and :doc:`aep:006_efficient_object_store_for_repository/readme`.
+
 The current architecture is heavily influenced by lessons learned from the original design of the file repository in the earliest version of AiiDA that had difficulty scaling to large numbers of files.
 For that reason, at end of the chapter there is a description of the original design and its limitations.
 This can be instructive in understanding the design of the current solution.
@@ -39,98 +41,8 @@ With that guarantee, the backend implementation is free to store the files in an
     From a user's perspective, each node can contain an arbitrary number of files and directories with a certain file hierarchy.
     The hierarchy is completely virtual, however, in the sense that the hierarchy is not necessarily maintained literally in the data store containing the file content.
 
-To satisfy the requirements of the frontend interface and the actual data store at the same time, the file repository solution in AiiDA is divided into two components: a *backend* and a *frontend*.
-In the following, the current backend implementation, the disk object store, is described.
-
-.. _internal-architecture:repository:dostore:
-
-The disk object store
----------------------
-
-The disk object store was designed from scratch in order to satisfy the technical requirements of the file repository described in the previous section.
-The concept is simple: the file repository is represented by a *container* which is a directory on the local file system and contains all the file content.
-When a file is written to the container, it is first written to the *scratch* directory.
-Once this operation has finished successfully, the file is moved atomically to the *loose* directory.
-It is called *loose* because each file in this directory is stored as an individual or *loose* object.
-The name of the object is given by the hash computed from its content, currently using the `sha256 algorithm <https://en.wikipedia.org/wiki/SHA-2>`_.
-The *loose* directory applies one level of sharding based on the first two characters of the object hashes, in order to make the lookup of objects more performant as described in :ref:`internal-architecture:repository:original-design`.
-A schematic overview of the folder structure of a disk object store *container* is shown in :numref:`fig:internal-architecture:repository:design-dos`.
-
-.. _fig:internal-architecture:repository:design-dos:
-.. figure:: static/repository/schematic_design_dos.png
-    :align: center
-    :width: 550px
-
-    Schematic representation of the file hierarchy in a *container* of the `disk object store <https://pypi.org/project/disk-objectstore/>`_ package.
-    When writing files to the container, they are first written to a *scratch* sandbox folder and then moved atomically to the *loose* directory.
-    During maintenance operations, *loose* files can be concatenated to pack files that are stored in the *packed* directory.
-
-The approach of creating new files in the repository by first writing them to the scratch sandbox folder before atomically moving them to the *loose* object directory, directly addresses the requirement of *concurrency*.
-By relying on the *atomic* file move operation of the operating system, all *loose* objects are guaranteed to be protected from data corruptions, within the limits of the atomicity guarantees of the local file system.
-The usage of the file content's hash checksum as the filename automatically fulfils the *efficiency* requirement.
-Assuming that the hashing algorithm used has no collisions, two objects with the same hash are guaranteed to have the same content and so therefore can be stored as a single object.
-Although the computation of a file's hash before storing it incurs a non-negligible overhead, the chosen hashing algorithm is fast enough that it justifies that cost given that it gives a significant reduction in required storage space due to the automatic and implicit data deduplication.
-
-While the approach of the *scratch* and *loose* directories address the criteria of *concurrency* and *efficiency*, the solution is not *scalable*.
-Just as the :ref:`original design <internal-architecture:repository:original-design>`, this solution does not scale to file repositories of multiple millions of nodes, since every object is stored as an individual file on disk.
-As described there, this makes the repository impractical to backup since merely constructing the list of files present is an expensive operation.
-To tackle this problem, the disk object store implements the concept of packing.
-In this maintenance operation, the contents of all loose objects stored in the *loose* directory are concatenated into single files that are stored in the *packed* folder.
-The pack files have a configurable maximum size and once it is reached the next pack file is created, whose filenames are named by consecutive integers.
-
-A `sqlite <https://sqlite.org/index.html>`_ database is used to track in which pack file each object is stored, the byte offset at which it starts and its total byte length.
-Such an index file is necessary once individual objects are packed into a smaller number of files, and to respect the *simplicity* requirement, a sqlite database was chosen, since it is serverless and efficient.
-The loose objects are concatenated in a random order, which is to say that the disk object store undertakes no effort to order objects according to their content size in any way, such as to align them with blocks on the file system, unlike some other key-value store solutions.
-Files of any size are treated equally and as such there is no optimization towards storing smaller files nor larger files.
-This is done intentionally because the disk object store is expected to be able to store files that are strongly heterogeneous in size and as such can not make optimizations for a particular range of file sizes.
-
-Currently, the packing operation is seen as a maintenance operation, and therefore, unlike the writing of new *loose* objects, cannot be operated concurrently by multiple processes.
-Despite this current limitation, the packing mechanism satisfies the final *scalability* requirement.
-By reducing the total number of files and the packing strategy, the pack files can be copied to a backup copy very efficiently.
-Since new objects are concatenated to the end of existing pack files and existing pack files are in principle never touched after they have reached their maximum size (unless the pack files are forcefully repacked), backup up tools, such as `rsync <https://en.wikipedia.org/wiki/Rsync>`_, can reduce the transfer of content to the bare minimum.
-
-
-.. _internal-architecture:repository:design:repository-backend:
-
-The file repository backend
----------------------------
-
-To be able to respect the divergent requirements (as laid out :ref:`at the start of this section <internal-architecture:repository:design>`) of the file repository regarding its user interface and the actual data store, the implementation is divided into a backend and frontend interface.
-In a clear separation of responsibilities, the backend is solely tasked with storing the content of files and returning them upon request as efficiently as possible, both when retrieving files individual as well as in bulk.
-For simplicity, the repository backend only deals with raw byte streams and does not maintain any sort of file hierarchy.
-The interface that any backend file repository should implement is defined by the :class:`~aiida.repository.backend.abstract.AbstractRepositoryBackend` abstract class.
-
-.. literalinclude:: ../../../../aiida/repository/backend/abstract.py
-    :language: python
-    :pyobject: AbstractRepositoryBackend
-
-The :meth:`~aiida.repository.backend.abstract.AbstractRepositoryBackend.put_object_from_filelike` is the main method that, given a stream or filelike-object of bytes, will write it as an object to the repository and return a key.
-The :meth:`~aiida.repository.backend.abstract.AbstractRepositoryBackend.put_object_from_file` is a convenience method that allows to store a file object directly from a file on the local file system, and simply calls through to :meth:`~aiida.repository.backend.abstract.AbstractRepositoryBackend.put_object_from_filelike`.
-The key returned by the *put*-methods, which could be any type of string, should uniquely identify the stored object.
-Using the key, :meth:`~aiida.repository.backend.abstract.AbstractRepositoryBackend.open` and :meth:`~aiida.repository.backend.abstract.AbstractRepositoryBackend.get_object_content` can be used to obtain a handle to the object or its entire content read into memory, respectively.
-Finally, the :meth:`~aiida.repository.backend.abstract.AbstractRepositoryBackend.has_object` and :meth:`~aiida.repository.backend.abstract.AbstractRepositoryBackend.delete_object` can be used to determine whether the repository contains an object with a certain key, or delete it, respectively.
-
-The abstract repository backend interface is implemented for the `disk object store`_ (:class:`~aiida.repository.backend.disk_object_store.DiskObjectStoreRepositoryBackend`) as well as a scratch sandbox (:class:`~aiida.repository.backend.sandbox.SandboxRepositoryBackend`).
-The latter implementation simply implements the interface using a temporary scratch folder on the local file system to store the file content.
-File objects are stored in a flat manner where the filename, that functions as the unique key, is based on a randomly generated UUID, as shown in :numref:`fig:internal-architecture:repository:design-sandbox`.
-
-.. _fig:internal-architecture:repository:design-sandbox:
-.. figure:: static/repository/schematic_design_sandbox.png
-    :align: center
-    :width: 550px
-
-    The file structure created by the :class:`~aiida.repository.backend.sandbox.SandboxRepositoryBackend` implementation of the file repository backend.
-    Files are stored in a completely flat structure with the name determined by a randomly generated UUID.
-    This is the most efficient method for writing and reading files on a local file system.
-    Since these sandbox repositories are intended to have very short lifetimes and contain relatively few objects, the typical drawbacks of a flat file store do not apply.
-
-The simple flat structure of this sandbox implementation should not be a limitation since this backend should only be used for short-lived temporary file repositories.
-The use case is to provide a file repository for unstored nodes.
-New node instances that created in interactive shell sessions are often discarded before being stored, so it is important that not only the creation of new files, but also their deletion once the node is deleted, is as efficient as possible.
-The disk object store is not optimized for efficient ad-hoc object deletion, but rather, object deletion is implemented as a soft-delete and the actual deletion should be performed during maintenance operations, such as the packing of loose objects.
-That is why a new node instance upon instantiation gets an instance of the class:`~aiida.repository.backend.sandbox.SandboxRepositoryBackend` repository.
-Only when the node gets stored, are the files copied to the permanent :class:`~aiida.repository.backend.disk_object_store.DiskObjectStoreRepositoryBackend` file repository.
-
+To satisfy the requirements of the frontend interface and the actual data store at the same time, the file repository solution in AiiDA is divided into two components:
+a *frontend*, which is agnostic of any particular storage technology, and a *backend*, which implements the interface to the storage.
 
 .. _internal-architecture:repository:design:repository-front:
 
@@ -178,6 +90,93 @@ The only additional requirement for operating with strings instead of bytes is t
 Since the file repository backend does not store any sort of metadata, it is impossible to deduce the file encoding and automatically decode it.
 Likewise, using the default file encoding of the system may yield the wrong result since the file could have been imported and actually have been originally written on another system with a different encoding.
 Encoding and decoding of file objects is therefore the responsibility of the frontend user.
+
+.. _internal-architecture:repository:design:repository-backend:
+
+The file repository backend
+---------------------------
+
+In a clear separation of responsibilities, the backend is solely tasked with storing the content of files and returning them upon request as efficiently as possible, both when retrieving files individual as well as in bulk.
+For simplicity, the repository backend only deals with raw byte streams and does not maintain any sort of file hierarchy.
+The interface that any backend file repository should implement is defined by the :class:`~aiida.repository.backend.abstract.AbstractRepositoryBackend` abstract class.
+
+.. literalinclude:: ../../../../aiida/repository/backend/abstract.py
+    :language: python
+    :pyobject: AbstractRepositoryBackend
+
+The :meth:`~aiida.repository.backend.abstract.AbstractRepositoryBackend.put_object_from_filelike` is the main method that, given a stream or filelike-object of bytes, will write it as an object to the repository and return a key.
+The :meth:`~aiida.repository.backend.abstract.AbstractRepositoryBackend.put_object_from_file` is a convenience method that allows to store a file object directly from a file on the local file system, and simply calls through to :meth:`~aiida.repository.backend.abstract.AbstractRepositoryBackend.put_object_from_filelike`.
+The key returned by the *put*-methods, which could be any type of string, should uniquely identify the stored object.
+Using the key, :meth:`~aiida.repository.backend.abstract.AbstractRepositoryBackend.open` and :meth:`~aiida.repository.backend.abstract.AbstractRepositoryBackend.get_object_content` can be used to obtain a handle to the object or its entire content read into memory, respectively.
+Finally, the :meth:`~aiida.repository.backend.abstract.AbstractRepositoryBackend.has_object` and :meth:`~aiida.repository.backend.abstract.AbstractRepositoryBackend.delete_object` can be used to determine whether the repository contains an object with a certain key, or delete it, respectively.
+
+The abstract repository backend interface is implemented for the `disk object store`_ (:class:`~aiida.repository.backend.disk_object_store.DiskObjectStoreRepositoryBackend`) as well as a scratch sandbox (:class:`~aiida.repository.backend.sandbox.SandboxRepositoryBackend`).
+The latter implementation simply implements the interface using a temporary scratch folder on the local file system to store the file content.
+File objects are stored in a flat manner where the filename, that functions as the unique key, is based on a randomly generated UUID, as shown in :numref:`fig:internal-architecture:repository:design-sandbox`.
+
+.. _fig:internal-architecture:repository:design-sandbox:
+.. figure:: static/repository/schematic_design_sandbox.png
+    :align: center
+    :width: 550px
+
+    The file structure created by the :class:`~aiida.repository.backend.sandbox.SandboxRepositoryBackend` implementation of the file repository backend.
+    Files are stored in a completely flat structure with the name determined by a randomly generated UUID.
+    This is the most efficient method for writing and reading files on a local file system.
+    Since these sandbox repositories are intended to have very short lifetimes and contain relatively few objects, the typical drawbacks of a flat file store do not apply.
+
+The simple flat structure of this sandbox implementation should not be a limitation since this backend should only be used for short-lived temporary file repositories.
+The use case is to provide a file repository for unstored nodes.
+New node instances that created in interactive shell sessions are often discarded before being stored, so it is important that not only the creation of new files, but also their deletion once the node is deleted, is as efficient as possible.
+The disk object store is not optimized for efficient ad-hoc object deletion, but rather, object deletion is implemented as a soft-delete and the actual deletion should be performed during maintenance operations, such as the packing of loose objects.
+That is why a new node instance upon instantiation gets an instance of the class:`~aiida.repository.backend.sandbox.SandboxRepositoryBackend` repository.
+Only when the node gets stored, are the files copied to the permanent backend file repository (such as the :class:`~aiida.repository.backend.disk_object_store.DiskObjectStoreRepositoryBackend`).
+
+.. _internal-architecture:repository:dostore:
+
+The disk object store
+.....................
+
+The disk object store was designed from scratch in order to satisfy the technical requirements of the file repository described in the previous section.
+The concept is simple: the file repository is represented by a *container* which is a directory on the local file system and contains all the file content.
+When a file is written to the container, it is first written to the *scratch* directory.
+Once this operation has finished successfully, the file is moved atomically to the *loose* directory.
+It is called *loose* because each file in this directory is stored as an individual or *loose* object.
+The name of the object is given by the hash computed from its content, currently using the `sha256 algorithm <https://en.wikipedia.org/wiki/SHA-2>`_.
+The *loose* directory applies one level of sharding based on the first two characters of the object hashes, in order to make the lookup of objects more performant as described in :ref:`internal-architecture:repository:original-design`.
+A schematic overview of the folder structure of a disk object store *container* is shown in :numref:`fig:internal-architecture:repository:design-dos`.
+
+.. _fig:internal-architecture:repository:design-dos:
+.. figure:: static/repository/schematic_design_dos.png
+    :align: center
+    :width: 550px
+
+    Schematic representation of the file hierarchy in a *container* of the `disk object store <https://pypi.org/project/disk-objectstore/>`_ package.
+    When writing files to the container, they are first written to a *scratch* sandbox folder and then moved atomically to the *loose* directory.
+    During maintenance operations, *loose* files can be concatenated to pack files that are stored in the *packed* directory.
+
+The approach of creating new files in the repository by first writing them to the scratch sandbox folder before atomically moving them to the *loose* object directory, directly addresses the requirement of *concurrency*.
+By relying on the *atomic* file move operation of the operating system, all *loose* objects are guaranteed to be protected from data corruptions, within the limits of the atomicity guarantees of the local file system.
+The usage of the file content's hash checksum as the filename automatically fulfils the *efficiency* requirement.
+Assuming that the hashing algorithm used has no collisions, two objects with the same hash are guaranteed to have the same content and so therefore can be stored as a single object.
+Although the computation of a file's hash before storing it incurs a non-negligible overhead, the chosen hashing algorithm is fast enough that it justifies that cost given that it gives a significant reduction in required storage space due to the automatic and implicit data deduplication.
+
+While the approach of the *scratch* and *loose* directories address the criteria of *concurrency* and *efficiency*, the solution is not *scalable*.
+Just as the :ref:`original design <internal-architecture:repository:original-design>`, this solution does not scale to file repositories of multiple millions of nodes, since every object is stored as an individual file on disk.
+As described there, this makes the repository impractical to backup since merely constructing the list of files present is an expensive operation.
+To tackle this problem, the disk object store implements the concept of packing.
+In this maintenance operation, the contents of all loose objects stored in the *loose* directory are concatenated into single files that are stored in the *packed* folder.
+The pack files have a configurable maximum size and once it is reached the next pack file is created, whose filenames are named by consecutive integers.
+
+A `sqlite <https://sqlite.org/index.html>`_ database is used to track in which pack file each object is stored, the byte offset at which it starts and its total byte length.
+Such an index file is necessary once individual objects are packed into a smaller number of files, and to respect the *simplicity* requirement, a sqlite database was chosen, since it is serverless and efficient.
+The loose objects are concatenated in a random order, which is to say that the disk object store undertakes no effort to order objects according to their content size in any way, such as to align them with blocks on the file system, unlike some other key-value store solutions.
+Files of any size are treated equally and as such there is no optimization towards storing smaller files nor larger files.
+This is done intentionally because the disk object store is expected to be able to store files that are strongly heterogeneous in size and as such can not make optimizations for a particular range of file sizes.
+
+Currently, the packing operation is seen as a maintenance operation, and therefore, unlike the writing of new *loose* objects, cannot be operated concurrently by multiple processes.
+Despite this current limitation, the packing mechanism satisfies the final *scalability* requirement.
+By reducing the total number of files and the packing strategy, the pack files can be copied to a backup copy very efficiently.
+Since new objects are concatenated to the end of existing pack files and existing pack files are in principle never touched after they have reached their maximum size (unless the pack files are forcefully repacked), backup up tools, such as `rsync <https://en.wikipedia.org/wiki/Rsync>`_, can reduce the transfer of content to the bare minimum.
 
 The lifetime of a node
 ----------------------

@@ -40,31 +40,35 @@ Below is a list of the core data types already provided with AiiDA, along with t
 .. table::
   :widths: 20 20 45 45
 
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
-  | **Class**                                                 | **Entry point**   | **Stored in database**                            | **Stored in repository**          |
-  +===========================================================+===================+===================================================+===================================+
-  | :ref:`Int <topics:data_types:core:base>`                  | ``int``           | The integer value                                 | \\-                               |
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`Float <topics:data_types:core:base>`                | ``float``         | The float value                                   | \\-                               |
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`Str <topics:data_types:core:base>`                  | ``str``           | The string                                        | \\-                               |
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`Bool <topics:data_types:core:base>`                 | ``bool``          | The boolean value                                 | \\-                               |
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`List <topics:data_types:core:base:iterable>`        | ``list``          | The complete list                                 | \\-                               |
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`Dict <topics:data_types:core:base:iterable>`        | ``dict``          | The complete dictionary                           | \\-                               |
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`ArrayData <topics:data_types:core:array>`           | ``array``         | The array names and corresponding shapes          | The array data in ``.npy`` format |
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`XyData <topics:data_types:core:array:xy>`           | ``array.xy``      | The array names and corresponding shapes          | The array data in ``.npy`` format |
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`SinglefileData <topics:data_types:core:singlefile>` | ``singlefile``    | The filename                                      | The file                          |
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`FolderData <topics:data_types:core:folder>`         | ``folder``        | \\-                                               | All files and folders             |
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`RemoteData <topics:data_types:core:remote>`         | ``remote``        | The computer and the absolute path to the folder  | All files and folders             |
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | **Class**                                                 | **Entry point**        | **Stored in database**                            | **Stored in repository**          |
+  +===========================================================+========================+===================================================+===================================+
+  | :ref:`Int <topics:data_types:core:base>`                  | ``core.int``           | The integer value                                 | \\-                               |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`Float <topics:data_types:core:base>`                | ``core.float``         | The float value                                   | \\-                               |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`Str <topics:data_types:core:base>`                  | ``core.str``           | The string                                        | \\-                               |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`Bool <topics:data_types:core:base>`                 | ``core.bool``          | The boolean value                                 | \\-                               |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`List <topics:data_types:core:base:iterable>`        | ``core.list``          | The complete list                                 | \\-                               |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`Dict <topics:data_types:core:base:iterable>`        | ``core.dict``          | The complete dictionary                           | \\-                               |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`EnumData <topics:data_types:core:base:enum>`        | ``core.enum``          | The value, name and the class identifier          | \\-                               |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`JsonableData <topics:data_types:core:jsonable>`     | ``core.jsonable``      | The JSON data and the class identifier            | \\-                               |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`ArrayData <topics:data_types:core:array>`           | ``core.array``         | The array names and corresponding shapes          | The array data in ``.npy`` format |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`XyData <topics:data_types:core:array:xy>`           | ``core.array.xy``      | The array names and corresponding shapes          | The array data in ``.npy`` format |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`SinglefileData <topics:data_types:core:singlefile>` | ``core.singlefile``    | The filename                                      | The file                          |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`FolderData <topics:data_types:core:folder>`         | ``core.folder``        | \\-                                               | All files and folders             |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`RemoteData <topics:data_types:core:remote>`         | ``core.remote``        | The computer and the absolute path to the folder  | All files and folders             |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
 
 .. _topics:data_types:core:base:
 
@@ -143,8 +147,73 @@ For all of the base data types, their value is stored in the database in the att
 
 .. warning::
 
-  The :py:class:`~aiida.orm.nodes.data.list.List` and :py:class:`~aiida.orm.nodes.data.dict.Dict` only store the Python base types, not the corresponding AiiDA data type.
-  These will be converted to their corresponding Python base type when storing the :py:class:`~aiida.orm.nodes.data.list.List` or :py:class:`~aiida.orm.nodes.data.dict.Dict` node in the database.
+  The :py:class:`~aiida.orm.List` and :py:class:`~aiida.orm.Dict` only store the Python base types, not the corresponding AiiDA data type.
+  These will be converted to their corresponding Python base type when storing the :py:class:`~aiida.orm.List` or :py:class:`~aiida.orm.Dict` node in the database.
+
+.. _topics:data_types:core:base:enum:
+
+EnumData
+--------
+
+.. versionadded:: 2.0
+
+An `Enum` member is represented by three attributes in the :py:class:`~aiida.orm.EnumData` class:
+
+- ``name``: the member's name
+- ``value``: the member's value
+- ``identifier``: the string representation of the enum's identifier
+
+.. code-block:: ipython
+
+    In [1]: from enum import Enum
+       ...: class Color(Enum):
+       ...: RED = 1
+       ...: GREEN = 2
+
+    In [2]: from aiida.orm import EnumData
+       ...: color = EnumData(Color.RED)
+
+    In [3]: color.name
+    Out[3]: 'RED'
+
+    In [4]: color.value
+    Out[4]: 1
+
+    In [5]: color.get_member()
+    Out[5]: <Color.RED: 1>
+
+.. _topics:data_types:core:jsonable:
+
+JsonableData
+------------
+
+.. versionadded:: 2.0
+
+:py:class:`~aiida.orm.JsonableData` is a data plugin that allows one to easily wrap existing objects that are JSON-able.
+
+Any class that implements an ``as_dict`` method, returning a dictionary that is a JSON serializable representation of the object, can be wrapped and stored by this data plugin.
+To deserialize it should also implement a ``from_dict`` method, which takes the dictionary as input and returns the object.
+
+.. code-block:: ipython
+
+    In [1]: from aiida.orm import JsonableData
+       ...: class MyClass:
+       ...:     def __init__(self, a: int, b: int):
+       ...:         self.a = a
+       ...:         self.b = b
+       ...:     def __str__(self):
+       ...:         return f'MyClass({self.a}, {self.b})'
+       ...:     def as_dict(self) -> dict:
+       ...:         return {'a': self.a, 'b': self.b}
+       ...:     @classmethod
+       ...:     def from_dict(cls, d: dict):
+       ...:         return cls(d['a'], d['b'])
+       ...:
+       ...: my_object = MyClass(1, 2)
+       ...: my_jsonable = JsonableData(my_object)
+       ...: str(my_jsonable.obj)
+    Out[1]: 'MyClass(1, 2)'
+
 
 .. _topics:data_types:core:array:
 
@@ -424,6 +493,8 @@ From the :py:class:`~aiida.orm.nodes.data.structure.StructureData` node you can 
         C : 0.0 0.0 3.5
   PeriodicSite: Li (0.0000, 0.0000, 0.0000) [0.0000, 0.0000, 0.0000]
   PeriodicSite: Li (1.5000, 1.5000, 1.5000) [0.4286, 0.4286, 0.4286]
+
+.. seealso:: :ref:`topics:data_types:core:jsonable`, which can store any other Pymatgen class.
 
 Exporting
 ^^^^^^^^^

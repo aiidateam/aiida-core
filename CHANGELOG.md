@@ -1,5 +1,471 @@
 # Changelog
 
+## v2.0.0b1 - 2022-03-15
+
+[Full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.7...v2.0.0b1)
+
+The version 2 release of `aiida-core` largely focusses on major improvements to the design of data storage within AiiDA, as well as updates to core dependencies and removal of deprecated APIs.
+
+Assuming users have already addressed deprecation warnings from `aiida-core` v1.6.x, there should be limited impact on existing code.
+For plugin developers, the [AiiDA 2.0 plugin migration guide](https://github.com/aiidateam/aiida-core/wiki/AiiDA-2.0-plugin-migration-guide) provides a step-by-step guide on how to update their plugins.
+
+For existing profiles and archives, a migration will be required, before they are compatible with the new version.
+
+:::{tip}
+Before updating your `aiida-core` installation, it is advisable to make sure you create a full backup of your profiles,
+using the current version of `aiida-core` you have installed.
+For backup instructions, using aiida-core v1.6.7, see [this documentation](https://aiida.readthedocs.io/projects/aiida-core/en/v1.6.7/howto/installation.html#backing-up-your-installation).
+:::
+
+### Python support updated to 3.8 - 3.10 ⬆️
+
+Following the [NEP 029](https://numpy.org/neps/nep-0029-deprecation_policy.html) timeline, support for Python 3.7 is dropped as of December 26 2021, and support for Python 3.10 is added.
+
+### Plugin entry point updates 🧩
+
+AiiDA's use of entry points, to allow plugins to extend the functionality of AiiDA, is described in the [plugins topic section](docs/source/topics/plugins.rst).
+
+The use of `reentry scan`, for loading plugin entry points, is no longer necessary.
+
+Use of the [reentry](https://pypi.org/project/reentry/) dependency has been replaced by the built-in [importlib.metadata](https://docs.python.org/3/library/importlib.metadata.html) library.
+This library requires no additional loading step.
+
+All entry points provided by `aiida-core` now start with a `core.` prefix, to make their origin more explicit and respect the naming guidelines of entry points in the AiiDA ecosystem.
+The old names are still supported so as to not suddenly break existing code based on them, but they have now been deprecated.
+For example:
+
+```python
+from aiida.plugins import DataFactory
+Int = DataFactory('int')  # Old name
+Int = DataFactory('core.int')  # New name
+```
+
+Note that entry point names are also used on the command line. For example:
+
+```console
+$ verdi computer setup -L localhost -T local -S direct
+# now changed to
+$ verdi computer setup -L localhost -T local -S core.direct
+```
+
+### Improvements to the AiiDA storage architecture ♻️
+
+Full details on the AiiDA storage architecture are available in the [storage architecture section](docs/source/internals/storage/architecture.rst).
+
+The storage refactor incorporates four major changes:
+
+- The `django` and `sqlalchemy` storage backends have been merged into a single `psql_dos` backend (PostgreSQL + Disk-Objectstore).
+  - See the [`psql_dos` storage format](docs/source/internals/storage/psql_dos.rst) for details.
+  - This has allowed for the `django` dependency to be dropped.
+
+- The file system node repository has been replaced with an object store implementation.
+  - The object store automatically deduplicates files, and allows for the compression of many objects into a single file, thus significantly reducing the number of files on the file system and memory utilisation (by orders of magnitude).
+  - Note, to make full use of object compression, one should periodically run `verdi storage maintain`.
+  - See the [repository design section](docs/source/internals/storage/repository.rst) for details.
+
+- Command-line interaction with a profile's storage has been moved from `verdi database` to `verdi storage`.
+
+- The AiiDA archive format has been redesigned as the `sqlite_zip` storage backend.
+  - See the [`sqlite_zip` storage format](docs/source/internals/storage/sqlite_zip.rst) for details.
+  - The new format allows for streaming of data during exports and imports, significantly reducing both the time and memory utilisation of these actions.
+  - The archive can now be loaded directly as a (read-only) profile, without the need to import it first, see [this Jupyter Notebook tutorial](docs/source/howto/archive_profile.md).
+
+The storage redesign also allows for profile switching, within the same Python process, and profile access within a context manager.
+For example:
+
+```python
+from aiida import load_profile, profile_context, orm
+
+with profile_context('my_profile_1'):
+    # The profile will be loaded within the context
+    node_from_profile_1 = orm.load_node(1)
+    # then the profile will be unloaded automatically
+
+# load a global profile
+load_profile('my_profile_2')
+node_from_profile_2 = orm.load_node(1)
+
+# switch to a different global profile
+load_profile('my_profile_3', allow_switch=True)
+node_from_profile_3 = orm.load_node(1)
+```
+
+See [How to interact with AiiDA](docs/source/howto/interact.rst) for more details.
+
+On first using `aiida-core` v2.0, your AiiDA configuration will be automatically migrated to the new version (this can be reverted by `verdi config downgrade`).
+To update existing profiles and archives to the new storage formats, simply use `verdi storage migrate` and `verdi archive migrate`, respectively.
+
+:::{important}
+The migration of large storage repositories is a potentially time-consuming process.
+It may take several hours to complete, depending on the size of the repository.
+It is also advisable to make a full manual backup of any AiiDA setup with important data: see [the installation management section](docs/source/howto/installation.rst) for more information.
+
+See also this [testing of profile migrations](https://github.com/aiidateam/aiida-core/discussions/5379), for some indicative timings.
+:::
+
+### Improvements to the AiiDA ORM 👌
+
+#### Node repository
+
+Inline with the storage improvements, {class}`~aiida.orm.Node` methods associated with the repository have some backwards incompatible changes:
+
+:::{dropdown} `Node` repository method changes
+
+Altered:
+
+- `FileType`: moved from `aiida.orm.utils.repository` to `aiida.repository.common`
+- `File`: moved from `aiida.orm.utils.repository` to `aiida.repository.common`
+- `File`: changed from namedtuple to class
+- `File`: can no longer be iterated over
+- `File`: `type` attribute was renamed to `file_type`
+- `Node.put_object_from_tree`: `path` argument was renamed to `filepath`
+- `Node.put_object_from_file`: `path` argument was renamed to `filepath`
+- `Node.put_object_from_tree`: `key` argument was renamed to `path`
+- `Node.put_object_from_file`: `key` argument was renamed to `path`
+- `Node.put_object_from_filelike`: `key` argument was renamed to `path`
+- `Node.get_object`: `key` argument was renamed to `path`
+- `Node.get_object_content`: `key` argument was renamed to `path`
+- `Node.open`: `key` argument was renamed to `path`
+- `Node.list_objects`: `key` argument was renamed to `path`
+- `Node.list_object_names`: `key` argument was renamed to `path`
+- `SinglefileData.open`: `key` argument was renamed to `path`
+- `Node.open`: can no longer be called without context manager
+- `Node.open`: only mode `r` and `rb` are supported, [use `put_object_from_` methods instead](https://github.com/aiidateam/aiida-core/issues/4721#issuecomment-920100415)
+- `Node.get_object_content`: only mode `r` and `rb` are supported
+- `Node.put_object_from_tree`: argument `contents_only` was removed
+- `Node.put_object_from_tree`: argument `force` was removed
+- `Node.put_object_from_file`: argument `force` was removed
+- `Node.put_object_from_filelike`: argument `force` was removed
+- `Node.delete_object`: argument `force` was removed
+
+Added:
+
+- `Node.walk`
+- `Node.copy_tree`
+- `Node.is_valid_cache` setter
+- `Node.objects.iter_repo_keys`
+
+Additionally, `Node.open` should always be used as a context manager, for example:
+
+```python
+with node.open('filename.txt') as handle:
+    content = handle.read()
+```
+
+:::
+
+#### QueryBuilder
+
+When using the {class}`~aiida.orm.QueryBuilder` to query the database, the following changes have been made:
+
+- The `Computer`'s `name` field is now replaced with `label` (as previously deprecated in v1.6)
+- The `QueryBuilder.queryhelp` attribute is deprecated, for the `as_dict` (and `from_dict`) methods
+- The `QueryBuilder.first` method now allows the `flat` argument, which will return a single item, instead of a list of one item, if only a single projection is defined.
+
+For example:
+
+```python
+from aiida.orm import QueryBuilder, Computer
+query = QueryBuilder().append(Computer, filters={'label': 'localhost'}, project=['label']).as_dict()
+QueryBuilder.from_dict(query).first(flat=True)  # -> 'localhost'
+```
+
+For further information, see [How to find and query for data](docs/source/howto/query.rst).
+
+#### Dict usage
+
+The {class}`~aiida.orm.Dict` class has been updated to support more native `dict` behaviour:
+
+- Initialisation can now use `Dict({'a': 1})`, instead of `Dict(dict={'a': 1})`. This is also the case for `List([1, 2])`.
+- Equality (`==`/`!=`) comparisons now compare the dictionaries, rather than the UUIDs
+- The contains (`in`) operator now returns `True` if the dictionary contains the key
+- The `items` method iterates a list of `(key, value)` pairs
+
+For example:
+
+```python
+from aiida.orm import Dict
+
+d1 = Dict({'a': 1})
+d2 = Dict({'a': 1})
+
+assert d1.uuid != d2.uuid
+assert d1 == d2
+assert not d1 != d2
+
+assert 'a' in d1
+
+assert list(d1.items()) == [('a', 1)]
+```
+
+#### New data types
+
+Two new built-in data types have been added:
+
+{class}`~aiida.orm.EnumData`
+: A data plugin that wraps a Python `enum.Enum` instance.
+
+{class}`~aiida.orm.JsonableData`
+: A data plugin that allows one to easily wrap existing objects that are JSON-able (via an `as_dict` method).
+
+See the [data types section](docs/source/topics/data_types.rst) for more information.
+
+### Improvements to the AiiDA process engine 👌
+
+#### CalcJob API
+
+A number of minor improvements have been made to the `CalcJob` API:
+
+- Both numpy arrays and `Enum` instances can now be serialized on process checkpoints.
+- The `Calcjob.spec.metadata.options.rerunnable` option allows to specify whether the calculation can be rerun or requeued (dependent on the scheduler). Note, this should only be applied for idempotent codes.
+- The `Calcjob.spec.metadata.options.environment_variables_double_quotes` option allows for double-quoting of environment variable declarations. In particular, this allows for use of the `$` character in the environment variable name, e.g. `export MY_FILE="$HOME/path/my_file"`.
+- `CalcJob.local_copy_list` now allows for specifying entire directories to be copied to the local computer, in addition to individual files. Note that the directory itself won't be copied, just its contents.
+- `WorkChain.to_context` now allows `.` delimited namespacing, which generate nested dictionaries. See [Nested context keys](docs/source/topics/workflows/usage.rst) for more information.
+
+#### Importing existing computations
+
+The new `CalcJobImporter` class has been added, to define importers for computations completed outside of AiiDA.
+These can help onboard new users to your AiiDA plugin.
+For more information, see [Writing importers for existing computations](docs/source/howto/plugin_codes.rst).
+
+#### Scheduler plugins
+
+Plugin's implementation of `Scheduler._get_submit_script_header` should now utilise `Scheduler._get_submit_script_environment_variables`, to format environment variable declarations, rather than handling it themselves. See the exemplar changes in [#5283](https://github.com/aiidateam/aiida-core/pull/5283).
+
+The `Scheduler.get_valid_transports()` method has also been removed, use `get_entry_point_names('aiida.schedulers')` instead (see {func}`~aiida.plugins.entry_point.get_entry_point_names`).
+
+See [Scheduler plugins](docs/source/topics/schedulers.rst) for more information.
+
+#### Transport plugins
+
+The `SshTransport` now supports the SSH `ProxyJump` option, for tunnelling through other SSH hosts.
+See [How to setup SSH connections](docs/source/howto/ssh.rst) for more information.
+
+Transport plugins now support also transferring bytes (rather than only Unicode strings) in the stdout/stderr of "remote" commands (see [#3787](https://github.com/aiidateam/aiida-core/pull/3787)).
+The required changes for transport plugins:
+
+- rename the `exec_command_wait` function in your plugin implementation with `exec_command_wait_bytes`
+- ensure the method signature follows {meth}`~aiida.transports.transport.Transport.exec_command_wait_bytes`, and that `stdin` accepts a `bytes` object.
+- return bytes for stdout and stderr (most probably internally you are already getting bytes - just do not decode them to strings)
+
+For an exemplar implementation, see {meth}`~aiida.transports.plugins.local.LocalTransport.exec_command_wait_bytes`,
+or see [Transport plugins](docs/source/topics/transport.rst) for more information.
+
+The `Transport.get_valid_transports()` method has also been removed, use `get_entry_point_names('aiida.transports')` instead (see {func}`~aiida.plugins.entry_point.get_entry_point_names`).
+
+## Improvements to the AiiDA command-line 👌
+
+The AiiDA command-line interface (CLI) can now be accessed as both `verdi` and `/path/to/bin/python -m aiida`.
+
+The underlying dependency for this CLI, `click`, has been updated to version 8, which contains built-in tab-completion support, to replace the old `click-completion`.
+The completion works the same, except that the string that should be put in the activation script to enable it is now shell-dependent.
+See [Activating tab-completion](docs/source/howto/installation.rst) for more information.
+
+Logging for the CLI has been updated, to standardise its use across all CLI commands.
+This means that all commands include the option:
+
+```console
+  -v, --verbosity [notset|debug|info|report|warning|error|critical]
+                                  Set the verbosity of the output.
+```
+
+By default the verbosity is set to `REPORT` (see `verdi config list`), which relates to using `Logger.report`, as defined in {func}`~aiida.common.log.report`.
+
+The following specific changes and improvements have been made to the CLI commands:
+
+`verdi storage` (replaces `verdi database`)
+: This command group replaces the `verdi database` command group, which is now deprecated, in order to represent its interaction with the full profile storage (not just database).
+: `verdi storage info` provides information about the entities contained for a profile.
+: `verdi storage maintain` has also been added, to allow for maintenance of the storage, for example, to optimise the storage size.
+
+`verdi archive version` and `verdi archive info` (replace `verdi archive inspect`)
+: This change synchronises the commands with the new `verdi storage version` and `verdi storage info` commands.
+
+`verdi group move-nodes`
+: This command moves nodes from a source group to a target group (removing them from one and adding them to the other).
+
+`verdi code setup`
+: There is a small change to the order of prompts, in interactive mode.
+: The uniqueness of labels is now validated, for both remote and local codes.
+
+`verdi code test`
+: Run tests for a given code to check whether it is usable, including whether remote executable files are available.
+
+See [AiiDA Command Line](docs/source/reference/command_line.rst) for more information.
+
+### Development improvements
+
+The build tool for `aiida-core` has been changed from `setuptools` to [`flit`](https://github.com/pypa/flit).
+This allows for the project metadata to be fully specified in the `pyproject.toml` file, using the [PEP 621](https://www.python.org/dev/peps/pep-0621) format.
+Note, editable installs (using the `-e` flag for `pip install`) of `aiida-core` now require `pip>=21`.
+
+[Type annotations](https://peps.python.org/pep-0526/) have been added to most of the code base.
+Plugin developers can use [mypy](https://mypy.readthedocs.io) to check their code against the new type annotations.
+
+All module level imports are now defined explicitly in `__all__`.
+See [Overview of public API](docs/source/reference/api/public.rst) for more information.
+
+The `aiida.common.json` module is now deprecated.
+Use the `json` standard library instead.
+
+#### Changes to the plugin test fixtures 🧪
+
+The deprecated `AiidaTestCase` class has been removed, in favour of the AiiDA pytest fixtures, which can be loaded in your `conftest.py` using:
+
+```python
+pytest_plugins = ['aiida.manage.tests.pytest_fixtures']
+```
+
+The fixtures `clear_database`, `clear_database_after_test`, `clear_database_before_test` are now deprecated, in favour of the `aiida_profile_clean` fixture, which ensures (before the test) the default profile is reset with clean storage, and that all previous resources are closed
+If you only require the profile to be reset before a class of tests, then you can use `aiida_profile_clean_class`.
+
+### Key Pull Requests
+
+Below is a list of some key pull requests that have been merged into version `2.0.0b1`:
+
+- Storage and migrations:
+  - ♻️ REFACTOR: Implement the new file repository by @sphuber in [#4345](https://github.com/aiidateam/aiida-core/pull/4345)
+  - ♻️ REFACTOR: New archive format by @chrisjsewell in [#5145](https://github.com/aiidateam/aiida-core/pull/5145)
+  - ♻️ REFACTOR: Remove `QueryManager` by @chrisjsewell in [#5101](https://github.com/aiidateam/aiida-core/pull/5101)
+  - ♻️ REFACTOR: Fully abstract QueryBuilder by @chrisjsewell in [#5093](https://github.com/aiidateam/aiida-core/pull/5093)
+  - ✨ NEW: Add `Backend` bulk methods by @chrisjsewell in [#5171](https://github.com/aiidateam/aiida-core/pull/5171)
+  - ⬆️ UPDATE: SQLAlchemy v1.4 (v2 API) by @chrisjsewell in [#5103](https://github.com/aiidateam/aiida-core/pull/5103) and [#5122](https://github.com/aiidateam/aiida-core/pull/5122)
+  - 👌 IMPROVE: Configuration migrations by @chrisjsewell in [#5319](https://github.com/aiidateam/aiida-core/pull/5319)
+  - ♻️ REFACTOR: Remove Django storage backend by @chrisjsewell in [#5330](https://github.com/aiidateam/aiida-core/pull/5330)
+  - ♻️ REFACTOR: Move archive backend to `aiida/storage` by @chrisjsewell in [5375](https://github.com/aiidateam/aiida-core/pull/5375)
+  - 👌 IMPROVE: Use `sqlalchemy.func` for JSONB QB filters by @ltalirz in [#5393](https://github.com/aiidateam/aiida-core/pull/5393)
+  - ✨ NEW: Add Mechanism to lock profile access by @ramirezfranciscof in [#5270](https://github.com/aiidateam/aiida-core/pull/5270)
+  - ✨ NEW: Add `verdi storage` CLI by @ramirezfranciscof in [#4965](https://github.com/aiidateam/aiida-core/pull/4965) and [#5156](https://github.com/aiidateam/aiida-core/pull/5156)
+
+- ORM API:
+  - ♻️ REFACTOR: Add the `core.` prefix to all entry points by @sphuber in [#5073](https://github.com/aiidateam/aiida-core/pull/5073)
+  - 👌 IMPROVE: Replace `InputValidationError` with `ValueError` and `TypeError` by @sphuber in [#4888](https://github.com/aiidateam/aiida-core/pull/4888)
+  - 👌 IMPROVE: Add `Node.walk` method to iterate over repository content by @sphuber in [#4935](https://github.com/aiidateam/aiida-core/pull/4935)
+  - 👌 IMPROVE: Add `Node.copy_tree` method  by @sphuber in [#5114](https://github.com/aiidateam/aiida-core/pull/5114)
+  - 👌 IMPROVE: Add `Node.is_valid_cache` setter property  by @sphuber in [#5114](https://github.com/aiidateam/aiida-core/pull/5207)
+  - 👌 IMPROVE: Add `Node.objects.iter_repo_keys` by @chrisjsewell in [#5114](https://github.com/aiidateam/aiida-core/pull/4922)
+  - 👌 IMPROVE: Allow storing `Decimal` in `Node.attributes` by @dev-zero in [#4964](https://github.com/aiidateam/aiida-core/pull/4964)
+  - 🐛 FIX: Initialising a `Node` with a `User` by @chrisjsewell in [#5114](https://github.com/aiidateam/aiida-core/pull/4977)
+  - 🐛 FIX: Deprecate double underscores in `LinkManager` contains by @sphuber in [#5067](https://github.com/aiidateam/aiida-core/pull/5067)
+  - ♻️ REFACTOR: Rename `name` field of `Computer` to `label` by @sphuber in [#4882](https://github.com/aiidateam/aiida-core/pull/4882)
+  - ♻️ REFACTOR: `QueryBuilder.queryhelp` -> `QueryBuilder.as_dict` by @chrisjsewell in [#5081](https://github.com/aiidateam/aiida-core/pull/5081)
+  - 👌 IMPROVE: Add `AuthInfo` joins to `QueryBuilder` by @chrisjsewell in [#5195](https://github.com/aiidateam/aiida-core/pull/5195)
+  - 👌 IMPROVE: `QueryBuilder.first` add `flat` keyword by @sphuber in [#5410](https://github.com/aiidateam/aiida-core/pull/5410)
+  - 👌 IMPROVE: Add `Computer.default_memory_per_machine` attribute by @yakutovicha in [#5260](https://github.com/aiidateam/aiida-core/pull/5260)
+  - 👌 IMPROVE: Add `Code.validate_remote_exec_path` method to check executable by @sphuber in [#5184](https://github.com/aiidateam/aiida-core/pull/5184)
+  - 👌 IMPROVE: Allow `source` to be passed as a keyword to `Data.__init__` by @sphuber in [#5163](https://github.com/aiidateam/aiida-core/pull/5163)
+  - 👌 IMPROVE: `Dict.__init__` and `List.__init__` by @mbercx in [#5165](https://github.com/aiidateam/aiida-core/pull/5165)
+  - ‼️ BREAKING: Compare `Dict` nodes by content by @mbercx in [#5251](https://github.com/aiidateam/aiida-core/pull/5251)
+  - 👌 IMPROVE: Implement the `Dict.__contains__` method by @sphuber in [#5251](https://github.com/aiidateam/aiida-core/pull/5328)
+  - 👌 IMPROVE: Implement `Dict.items()` method by @mbercx in [#5251](https://github.com/aiidateam/aiida-core/pull/5333)
+  - 🐛 FIX: `BandsData.show_mpl` allow NaN values by @PhilippRue in [#5024](https://github.com/aiidateam/aiida-core/pull/5024)
+  - 🐛 FIX: Replace `KeyError` with `AttributeError` in `TrajectoryData` methods by @Crivella in [#5015](https://github.com/aiidateam/aiida-core/pull/5015)
+  - ✨ NEW: `EnumData` data plugin by @sphuber in [#5225](https://github.com/aiidateam/aiida-core/pull/5225)
+  - ✨ NEW: `JsonableData` data plugin by @sphuber in [#5017](https://github.com/aiidateam/aiida-core/pull/5017)
+  - 👌 IMPROVE: Register `List` class with `to_aiida_type` dispatch by @sphuber in [#5142](https://github.com/aiidateam/aiida-core/pull/5142)
+  - 👌 IMPROVE: Register `EnumData` class with `to_aiida_type` dispatch by @sphuber in [#5314](https://github.com/aiidateam/aiida-core/pull/5314)
+
+- Processing:
+  - ✨ NEW: `CalcJob.get_importer()` to import existing calculations, run outside of AiiDA by @sphuber in [#5086](https://github.com/aiidateam/aiida-core/pull/5086)
+  - ✨ NEW: `ProcessBuilder._repr_pretty_` ipython representation by @mbercx in [#4970](https://github.com/aiidateam/aiida-core/pull/4970)
+  - 👌 IMPROVE: Allow `Enum` types to be serialized on `ProcessNode.checkpoint` by @sphuber in [#5218](https://github.com/aiidateam/aiida-core/pull/5218)
+  - 👌 IMPROVE: Allow numpy arrays to be serialized on `ProcessNode.checkpoint` by @greschd in [#4730](https://github.com/aiidateam/aiida-core/pull/4730)
+  - 👌 IMPROVE: Add `Calcjob.spec.metadata.options.rerunnable` to requeue/rerun calculations by @greschd in [#4707](https://github.com/aiidateam/aiida-core/pull/4707)
+  - 👌 IMPROVE: Add `Calcjob.spec.metadata.options.environment_variables_double_quotes` to escape environment variables by @unkcpz in [#5349](https://github.com/aiidateam/aiida-core/pull/5349)
+  - 👌 IMPROVE: Allow directories in `CalcJob.local_copy_list` by @sphuber in [#5115](https://github.com/aiidateam/aiida-core/pull/5115)
+  - 👌 IMPROVE: Add support for `.` namespacing in the keys for `WorkChain.to_context` by @dev-zero in [#4871](https://github.com/aiidateam/aiida-core/pull/4871)
+  - 👌 IMPROVE: Handle namespaced outputs in `BaseRestartWorkChain` by @unkcpz in [#4961](https://github.com/aiidateam/aiida-core/pull/4961)
+  - 🐛 FIX: Nested namespaces in `ProcessBuilderNamespace` by @sphuber in [#4983](https://github.com/aiidateam/aiida-core/pull/4983)
+  - 🐛 FIX: Ensure `ProcessBuilder` instances do not interfere  by @sphuber in [#4984](https://github.com/aiidateam/aiida-core/pull/4984)
+  - 🐛 FIX: Raise when `Process.exposed_outputs` gets non-existing `namespace` by @sphuber in [#5265](https://github.com/aiidateam/aiida-core/pull/5265)
+  - 🐛 FIX: Catch `AttributeError` for unloadable identifier in `ProcessNode.is_valid_cache` by @sphuber in [#5222](https://github.com/aiidateam/aiida-core/pull/5222)
+  - 🐛 FIX: Handle `CalcInfo.codes_run_mode` when `CalcInfo.codes_info` contains multiple codes by @unkcpz in [#4990](https://github.com/aiidateam/aiida-core/pull/4990)
+  - 🐛 FIX: Check for recycled circus PID by @dev-zero in [#5086](https://github.com/aiidateam/aiida-core/pull/4858)
+
+- Scheduler/Transport:
+  - 👌 IMPROVE: Specify abstract methods on `Transport` by @chrisjsewell in [#5242](https://github.com/aiidateam/aiida-core/pull/5242)
+  - ✨ NEW: Add support for SSH proxy_jump by @dev-zero in [#4951](https://github.com/aiidateam/aiida-core/pull/4951)
+  - 🐛 FIX: Daemon hang when passing `None` as `job_id` by @ramirezfranciscof in [#4967](https://github.com/aiidateam/aiida-core/pull/4967)
+  - 🐛 FIX: Avoid deadlocks when retrieving stdout/stderr via SSH by @giovannipizzi in [#3787](https://github.com/aiidateam/aiida-core/pull/3787)
+  - 🐛 FIX: Use sanitised variable name in SGE scheduler job title by @mjclarke94 in [#4994](https://github.com/aiidateam/aiida-core/pull/4994)
+  - 🐛 FIX: `listdir` method with pattern for SSH by @giovannipizzi in [#5252](https://github.com/aiidateam/aiida-core/pull/5252)
+  - 👌 IMPROVE: `DirectScheduler`: use `num_cores_per_mpiproc` if defined in resources by @sphuber in [#5126](https://github.com/aiidateam/aiida-core/pull/5126)
+  - 👌 IMPROVE: Add abstract generation of submit script env variables to `Scheduler` by @sphuber in [#5283](https://github.com/aiidateam/aiida-core/pull/5283)
+
+- CLI:
+  - ✨ NEW: Allow for CLI usage via `python -m aiida` by @chrisjsewell in [#5356](https://github.com/aiidateam/aiida-core/pull/5356)
+  - ⬆️ UPDATE: `click==8.0` and remove `click-completion` by @sphuber in [#5111](https://github.com/aiidateam/aiida-core/pull/5111)
+  - ♻️ REFACTOR: Replace `verdi database` commands with `verdi storage` by @ramirezfranciscof in [#5228](https://github.com/aiidateam/aiida-core/pull/5228)
+  - ✨ NEW: Add verbosity control by @sphuber in [#5085](https://github.com/aiidateam/aiida-core/pull/5085)
+  - ♻️ REFACTOR: Logging verbosity implementation by @sphuber in [#5119](https://github.com/aiidateam/aiida-core/pull/5119)
+  - ✨ NEW: Add `verdi group move-nodes` command by @mbercx in [#4428](https://github.com/aiidateam/aiida-core/pull/4428)
+  - 👌 IMPROVE: `verdi code setup`: validate the uniqueness of label for local codes by @sphuber in [#5215](https://github.com/aiidateam/aiida-core/pull/5215)
+  - 👌 IMPROVE: `GroupParamType`: store group if created by @sphuber in [#5411](https://github.com/aiidateam/aiida-core/pull/5411)
+  - 👌 IMPROVE: Show #procs/machine in `verdi computer show` by @dev-zero in [#4945](https://github.com/aiidateam/aiida-core/pull/4945)
+  - 👌 IMPROVE: Notify users of runner usage in `verdi process list` by @ltalirz in [#4663](https://github.com/aiidateam/aiida-core/pull/4663)
+  - 👌 IMPROVE: Set `localhost` as default for database hostname in `verdi setup` by @sphuber in [#4908](https://github.com/aiidateam/aiida-core/pull/4908)
+  - 👌 IMPROVE: Make `verdi group` messages consistent by @CasperWA in [#4999](https://github.com/aiidateam/aiida-core/pull/4999)
+  - 🐛 FIX: `verdi calcjob cleanworkdir` command by @zhubonan in [#5209](https://github.com/aiidateam/aiida-core/pull/5209)
+  - 🔧 MAINTAIN: Add `verdi devel run-sql` by @chrisjsewell in [#5094](https://github.com/aiidateam/aiida-core/pull/5094)
+
+- REST API:
+  - ⬆️ UPDATE: Update to `flask~=2.0` for `rest` extra by @sphuber in [#5366](https://github.com/aiidateam/aiida-core/pull/5366)
+  - 👌 IMPROVE: Error message when flask not installed by @ltalirz in [#5398](https://github.com/aiidateam/aiida-core/pull/5398)
+  - 👌 IMPROVE: Allow serving of contents of `ArrayData` by @JPchico in [#5425](https://github.com/aiidateam/aiida-core/pull/5425)
+  - 🐛 FIX: REST API date-time query by @NinadBhat in [#4959](https://github.com/aiidateam/aiida-core/pull/4959)
+
+- Developers:
+  - 🔧 MAINTAIN: Move to flit for PEP 621 compliant package build by @chrisjsewell in [#5312](https://github.com/aiidateam/aiida-core/pull/5312)
+  - 🔧 MAINTAIN: Make `__all__` imports explicit by @chrisjsewell in [#5061](https://github.com/aiidateam/aiida-core/pull/5061)
+  - 🔧 MAINTAIN: Add `pre-commit.ci` by @chrisjsewell in [#5062](https://github.com/aiidateam/aiida-core/pull/5062)
+  - 🔧 MAINTAIN: Add isort pre-commit hook by @chrisjsewell in [#5151](https://github.com/aiidateam/aiida-core/pull/5151)
+  - ⬆️ UPDATE: Drop support for Python 3.7 by @sphuber in [#5307](https://github.com/aiidateam/aiida-core/pull/5307)
+  - ⬆️ UPDATE: Support Python 3.10 by @csadorf in [#5188](https://github.com/aiidateam/aiida-core/pull/5188)
+  - ♻️ REFACTOR: Remove `reentry` requirement by @chrisjsewell in [#5058](https://github.com/aiidateam/aiida-core/pull/5058)
+  - ♻️ REFACTOR: Remove `simplejson` by @sphuber in [#5391](https://github.com/aiidateam/aiida-core/pull/5391)
+  - ♻️ REFACTOR: Remove `ete3` dependency by @ltalirz in [#4956](https://github.com/aiidateam/aiida-core/pull/4956)
+  - 👌 IMPROVE: Replace deprecated imp with importlib by @DirectriX01 in [#4848](https://github.com/aiidateam/aiida-core/pull/4848)
+  - ⬆️ UPDATE: `sphinx~=4.1` (+ sphinx extensions) by @chrisjsewell in [#5420](https://github.com/aiidateam/aiida-core/pull/5420)
+  - 🧪 CI: Move time consuming tests to separate nightly workflow by @sphuber in [#5354](https://github.com/aiidateam/aiida-core/pull/5354)
+  - 🧪 TESTS: Entirely remove `AiidaTestCase` by @chrisjsewell in [#5372](https://github.com/aiidateam/aiida-core/pull/5372)
+
+### Contributors 🎉
+
+Thanks to all contributors: [Contributor Graphs](https://github.com/aiidateam/aiida-core/graphs/contributors?from=2021-01-01&to=2022-15-03&type=c)
+
+Including first-time contributors:
+
+- @DirectriX01 made their first contribution in [[#4848]](https://github.com/aiidateam/aiida-core/pull/4848)
+- @mjclarke94 made their first contribution in [[#4994]](https://github.com/aiidateam/aiida-core/pull/4994)
+- @janssenhenning made their first contribution in [[#5064]](https://github.com/aiidateam/aiida-core/pull/5064)
+
+## v1.6.7 - 2022-03-07
+
+[full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.6...v1.6.7)
+
+The `markupsafe` dependency specification was moved to `install_requires`
+
+## v1.6.6 - 2022-03-07
+
+[full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.5...v1.6.6)
+
+### Bug fixes 🐛
+
+- `DirectScheduler`: remove the `-e` option for bash invocation [[#5264]](https://github.com/aiidateam/aiida-core/pull/5264)
+- Replace deprecated matplotlib config option 'text.latex.preview' [[#5233]](https://github.com/aiidateam/aiida-core/pull/5233)
+
+### Dependencies
+
+- Add upper limit `markupsafe<2.1` to fix the documentation build [[#5371]](https://github.com/aiidateam/aiida-core/pull/5371)
+- Add upper limit `pytest-asyncio<0.17` [[#5309]](https://github.com/aiidateam/aiida-core/pull/5309)
+
+### Devops 🔧
+
+- CI: move Jenkins workflow to nightly GHA workflow [[#5277]](https://github.com/aiidateam/aiida-core/pull/5277)
+- Docs: replace CircleCI build with ReadTheDocs [[#5279]](https://github.com/aiidateam/aiida-core/pull/5279)
+- CI: run certain workflows only on main repo, not on forks [[#5091]](https://github.com/aiidateam/aiida-core/pull/5091)
+- Revise Docker image build [[#4997]](https://github.com/aiidateam/aiida-core/pull/4997)
+
 ## v1.6.5 - 2021-08-13
 
 [full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.4...v1.6.5)

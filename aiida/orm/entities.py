@@ -189,7 +189,7 @@ class Entity(abc.ABC, Generic[BackendEntityType]):
 
         type_check(backend_entity, BackendEntity)
         entity = cls.__new__(cls)
-        entity.init_from_backend(backend_entity)
+        entity._backend_entity = backend_entity
         call_with_super_check(entity.initialize)
         return entity
 
@@ -199,12 +199,6 @@ class Entity(abc.ABC, Generic[BackendEntityType]):
         """
         self._backend_entity = backend_entity
         call_with_super_check(self.initialize)
-
-    def init_from_backend(self, backend_entity: BackendEntityType) -> None:
-        """
-        :param backend_entity: the backend model supporting this entity
-        """
-        self._backend_entity = backend_entity
 
     @super_check
     def initialize(self) -> None:

@@ -81,7 +81,8 @@ intersphinx_mapping = {
 todo_include_todos = False
 ipython_mplbackend = ''
 
-myst_enable_extensions = []
+myst_enable_extensions = ['colon_fence', 'deflist']
+nb_merge_streams = True
 
 # -- Options for HTML output ---------------------------------------------------
 

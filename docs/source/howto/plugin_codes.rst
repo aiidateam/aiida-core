@@ -568,22 +568,6 @@ This marks the end of this how-to.
 The |CalcJob| and |Parser| plugins are still rather basic and the ``aiida-diff-tutorial`` plugin package is missing a number of useful features, such as package metadata, documentation, tests, CI, etc.
 Continue with :ref:`how-to:plugins-develop` in order to learn how to quickly create a feature-rich new plugin package from scratch.
 
-
-.. todo::
-
-    .. _how-to:plugin-codes:scheduler:
-
-    title: Adding support for a custom scheduler
-
-    `#3989`_
-
-
-    .. _how-to:plugin-codes:transport:
-
-    title: Adding support for a custom transport
-
-    `#3990`_
-
 .. |Int| replace:: :py:class:`~aiida.orm.nodes.data.int.Int`
 .. |SinglefileData| replace:: :py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`
 .. |StructureData| replace:: :py:class:`~aiida.orm.nodes.data.structure.StructureData`

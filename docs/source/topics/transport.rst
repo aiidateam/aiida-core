@@ -11,6 +11,7 @@ The ``aiida-core`` package ships with two transport plugins: the :py:class:`~aii
 The ``local`` transport can be used to connect with the `localhost` and makes use only of some standard python modules like ``os`` and ``shutil``.
 The ``ssh`` transport, which can be used for machines that can be connected to over ssh, is simply a wrapper around the library `paramiko <https://www.paramiko.org/>`_ that is installed as a required dependency of ``aiida-core``.
 
+.. _topics:transport:develop_plugin:
 
 Developing a plugin
 -------------------

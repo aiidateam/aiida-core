@@ -152,8 +152,6 @@ if __name__ == '__main__':
     _skip = {
         # skipped since some arguments and options share the same name
         'cmdline/params': ['arguments', 'options'],
-        # skipped since the module and its method share the same name
-        'cmdline/utils': ['echo'],
         # skipped since this is for testing only not general use
         'manage': ['tests'],
         # skipped since we don't want to expose the implementation at the top-level

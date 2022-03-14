@@ -20,7 +20,7 @@ from aiida.common.log import AIIDA_LOGGER
 
 CMDLINE_LOGGER = AIIDA_LOGGER.getChild('cmdline')
 
-__all__ = ('echo', 'echo_info', 'echo_success', 'echo_warning', 'echo_error', 'echo_critical', 'echo_dictionary')
+__all__ = ('echo_report', 'echo_info', 'echo_success', 'echo_warning', 'echo_error', 'echo_critical', 'echo_dictionary')
 
 
 class ExitCode(enum.IntEnum):

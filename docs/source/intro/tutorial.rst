@@ -642,7 +642,7 @@ We have compiled how-to guides that are especially relevant for the following us
     .. dropdown:: Run computations on High Performance Computers
 
         Connecting to supercomputers
-            To setup up a computer which can communicate with a high-performance computer over SSH, see the :ref:`how-to for running external codes <how-to:run-codes>`, or add a :ref:`custom transport <how-to:plugin-codes:transport>`.
+            To setup up a computer which can communicate with a high-performance computer over SSH, see the :ref:`how-to for running external codes <how-to:run-codes>`, or add a :ref:`custom transport <topics:transport:develop_plugin>`.
             AiiDA has pre-written scheduler plugins to work with LSF, PBSPro, SGE, Slurm and Torque.
 
         Working with external codes
@@ -662,4 +662,4 @@ We have compiled how-to guides that are especially relevant for the following us
 
 .. todo::
 
-    Add to "Connecting to supercomputers": , or you can add a :ref:`custom scheduler <how-to:plugin-codes:scheduler>`.
+    Add to "Connecting to supercomputers": , or you can add a :ref:`custom scheduler <topics:schedulers:develop_plugin>`.

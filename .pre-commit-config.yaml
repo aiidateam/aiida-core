@@ -97,6 +97,7 @@ repos:
                 aiida/orm/nodes/data/jsonable.py|
                 aiida/orm/nodes/node.py|
                 aiida/orm/nodes/process/.*py|
+                aiida/orm/utils/links.py|
                 aiida/plugins/entry_point.py|
                 aiida/plugins/factories.py|
                 aiida/repository/.*py|

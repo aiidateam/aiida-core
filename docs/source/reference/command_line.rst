@@ -438,7 +438,7 @@ Below is a list with all available subcommands.
 
 .. code:: console
 
-    Usage:  [OPTIONS] [--] SCRIPTNAME [VARARGS]...
+    Usage:  [OPTIONS] [--] FILEPATH [VARARGS]...
 
       Execute scripts with preloaded AiiDA environment.
 

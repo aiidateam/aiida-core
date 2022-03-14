@@ -61,6 +61,7 @@ __all__ = (
     'GroupEntityLoader',
     'ImportGroup',
     'Int',
+    'JsonableData',
     'Kind',
     'KpointsData',
     'LinkManager',

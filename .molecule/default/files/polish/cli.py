@@ -187,7 +187,7 @@ def run_via_daemon(workchains, inputs, sleep, timeout):
     except AttributeError:
         click.secho('Failed: ', fg='red', bold=True, nl=False)
         click.secho(f'the workchain<{workchain.pk}> did not return a result output node', bold=True)
-        click.echo(str(workchain.attributes))
+        click.echo(str(workchain.base.attributes.all))
         return None
 
     return result, workchain, total_time

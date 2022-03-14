@@ -29,7 +29,7 @@ class OrbitalData(Data):
         Remove all orbitals that were added to the class
         Cannot work if OrbitalData has been already stored
         """
-        self.set_attribute('orbital_dicts', [])
+        self.base.attributes.set('orbital_dicts', [])
 
     def get_orbitals(self, **kwargs):
         """
@@ -43,7 +43,7 @@ class OrbitalData(Data):
         :return list_of_outputs: a list of orbitals
         """
 
-        orbital_dicts = copy.deepcopy(self.get_attribute('orbital_dicts', None))
+        orbital_dicts = copy.deepcopy(self.base.attributes.get('orbital_dicts', None))
         if orbital_dicts is None:
             raise AttributeError('Orbitals must be set before being retrieved')
 
@@ -83,7 +83,7 @@ class OrbitalData(Data):
             except KeyError:
                 raise ValueError(f'No _orbital_type found in: {orbital_dict}')
             orbital_dicts.append(orbital_dict)
-        self.set_attribute('orbital_dicts', orbital_dicts)
+        self.base.attributes.set('orbital_dicts', orbital_dicts)
 
 
 ##########################################################################

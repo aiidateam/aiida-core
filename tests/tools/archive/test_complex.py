@@ -128,7 +128,7 @@ def test_reexport(aiida_profile, tmp_path):
     calc = orm.CalculationNode()
     # setting also trial dict as attributes, but randomizing the keys)
     for key, value in trial_dict.items():
-        calc.set_attribute(str(int(key) + np.random.randint(10)), value)
+        calc.base.attributes.set(str(int(key) + np.random.randint(10)), value)
     array = orm.ArrayData()
     array.set_array('array', nparr)
     array.store()

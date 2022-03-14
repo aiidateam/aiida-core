@@ -82,39 +82,39 @@ class TestProcessNode:
         }
 
         for key, value in attrs_to_set.items():
-            node.set_attribute(key, value)
+            node.base.attributes.set(key, value)
 
         # Check before storing
-        node.set_attribute(CalculationNode.PROCESS_STATE_KEY, self.stateval)
-        assert node.get_attribute(CalculationNode.PROCESS_STATE_KEY) == self.stateval
+        node.base.attributes.set(CalculationNode.PROCESS_STATE_KEY, self.stateval)
+        assert node.base.attributes.get(CalculationNode.PROCESS_STATE_KEY) == self.stateval
 
         node.store()
 
         # Check after storing
-        assert node.get_attribute(CalculationNode.PROCESS_STATE_KEY) == self.stateval
+        assert node.base.attributes.get(CalculationNode.PROCESS_STATE_KEY) == self.stateval
 
         # I should be able to mutate the updatable attribute but not the others
-        node.set_attribute(CalculationNode.PROCESS_STATE_KEY, 'FINISHED')
-        node.delete_attribute(CalculationNode.PROCESS_STATE_KEY)
+        node.base.attributes.set(CalculationNode.PROCESS_STATE_KEY, 'FINISHED')
+        node.base.attributes.delete(CalculationNode.PROCESS_STATE_KEY)
 
         # Deleting non-existing attribute should raise attribute error
         with pytest.raises(AttributeError):
-            node.delete_attribute(CalculationNode.PROCESS_STATE_KEY)
+            node.base.attributes.delete(CalculationNode.PROCESS_STATE_KEY)
 
         with pytest.raises(ModificationNotAllowed):
-            node.set_attribute('bool', False)
+            node.base.attributes.set('bool', False)
 
         with pytest.raises(ModificationNotAllowed):
-            node.delete_attribute('bool')
+            node.base.attributes.delete('bool')
 
         node.seal()
 
         # After sealing, even updatable attributes should be immutable
         with pytest.raises(ModificationNotAllowed):
-            node.set_attribute(CalculationNode.PROCESS_STATE_KEY, 'FINISHED')
+            node.base.attributes.set(CalculationNode.PROCESS_STATE_KEY, 'FINISHED')
 
         with pytest.raises(ModificationNotAllowed):
-            node.delete_attribute(CalculationNode.PROCESS_STATE_KEY)
+            node.base.attributes.delete(CalculationNode.PROCESS_STATE_KEY)
 
     def test_get_description(self):
         assert self.calcjob.get_description() == ''

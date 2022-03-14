@@ -440,7 +440,7 @@ class CalcJob(Process):
                     )
                     retrieve_calculation(self.node, transport, retrieved_temporary_folder.abspath)
                     self.node.set_state(CalcJobState.PARSING)
-                    self.node.set_attribute(orm.CalcJobNode.IMMIGRATED_KEY, True)
+                    self.node.base.attributes.set(orm.CalcJobNode.IMMIGRATED_KEY, True)
                     return self.parse(retrieved_temporary_folder.abspath)
 
     def parse(self, retrieved_temporary_folder: Optional[str] = None) -> ExitCode:

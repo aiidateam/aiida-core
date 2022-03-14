@@ -228,25 +228,25 @@ class TestBasic:
 
         n1 = orm.Data()
         n1.label = 'node1'
-        n1.set_attribute('foo', ['hello', 'goodbye'])
+        n1.base.attributes.set('foo', ['hello', 'goodbye'])
         n1.store()
 
         n2 = orm.CalculationNode()
         n2.label = 'node2'
-        n2.set_attribute('foo', 1)
+        n2.base.attributes.set('foo', 1)
 
         n3 = orm.Data()
         n3.label = 'node3'
-        n3.set_attribute('foo', 1.0000)  # Stored as fval
+        n3.base.attributes.set('foo', 1.0000)  # Stored as fval
         n3.store()
 
         n4 = orm.CalculationNode()
         n4.label = 'node4'
-        n4.set_attribute('foo', 'bar')
+        n4.base.attributes.set('foo', 'bar')
 
         n5 = orm.Data()
         n5.label = 'node5'
-        n5.set_attribute('foo', None)
+        n5.base.attributes.set('foo', None)
         n5.store()
 
         n2.add_incoming(n1, link_type=LinkType.INPUT_CALC, link_label='link1')
@@ -295,7 +295,7 @@ class TestBasic:
         n0 = orm.Data()
         n0.label = 'hello'
         n0.description = ''
-        n0.set_attribute('foo', 'bar')
+        n0.base.attributes.set('foo', 'bar')
 
         n1 = orm.CalculationNode()
         n1.label = 'foo'
@@ -405,14 +405,14 @@ class TestBasic:
     def test_operators_eq_lt_gt(self):
         nodes = [orm.Data() for _ in range(8)]
 
-        nodes[0].set_attribute('fa', 1)
-        nodes[1].set_attribute('fa', 1.0)
-        nodes[2].set_attribute('fa', 1.01)
-        nodes[3].set_attribute('fa', 1.02)
-        nodes[4].set_attribute('fa', 1.03)
-        nodes[5].set_attribute('fa', 1.04)
-        nodes[6].set_attribute('fa', 1.05)
-        nodes[7].set_attribute('fa', 1.06)
+        nodes[0].base.attributes.set('fa', 1)
+        nodes[1].base.attributes.set('fa', 1.0)
+        nodes[2].base.attributes.set('fa', 1.01)
+        nodes[3].base.attributes.set('fa', 1.02)
+        nodes[4].base.attributes.set('fa', 1.03)
+        nodes[5].base.attributes.set('fa', 1.04)
+        nodes[6].base.attributes.set('fa', 1.05)
+        nodes[7].base.attributes.set('fa', 1.06)
 
         for n in nodes:
             n.store()
@@ -426,11 +426,11 @@ class TestBasic:
 
     def test_subclassing(self):
         s = orm.StructureData()
-        s.set_attribute('cat', 'miau')
+        s.base.attributes.set('cat', 'miau')
         s.store()
 
         d = orm.Data()
-        d.set_attribute('cat', 'miau')
+        d.base.attributes.set('cat', 'miau')
         d.store()
 
         p = orm.Dict(dict=dict(cat='miau'))
@@ -794,7 +794,7 @@ class TestRepresentations:
         g = orm.Group(label='helloworld').store()
         for cls in (orm.StructureData, orm.Dict, orm.Data):
             obj = cls()
-            obj.set_attribute('foo-qh2', 'bar')
+            obj.base.attributes.set('foo-qh2', 'bar')
             obj.store()
             g.add_nodes(obj)
 
@@ -845,7 +845,7 @@ class TestQueryBuilderCornerCases:
         """
         n1 = orm.CalculationNode()
         n1.label = 'node2'
-        n1.set_attribute('foo', 1)
+        n1.base.attributes.set('foo', 1)
         n1.store()
 
         # Checking the correct retrieval of _metadata which is
@@ -872,8 +872,8 @@ class TestAttributes:
         val = 1.
         res_uuids = set()
         n1 = orm.Data()
-        n1.set_attribute('whatever', 3.)
-        n1.set_attribute('test_case', 'test_attribute_existence')
+        n1.base.attributes.set('whatever', 3.)
+        n1.base.attributes.set('test_case', 'test_attribute_existence')
         n1.store()
 
         # I want all the nodes where whatever is smaller than 1. or there is no such value:
@@ -900,12 +900,12 @@ class TestAttributes:
     def test_attribute_type(self):
         key = 'value_test_attr_type'
         n_int, n_float, n_str, n_str2, n_bool, n_arr = [orm.Data() for _ in range(6)]
-        n_int.set_attribute(key, 1)
-        n_float.set_attribute(key, 1.0)
-        n_bool.set_attribute(key, True)
-        n_str.set_attribute(key, '1')
-        n_str2.set_attribute(key, 'one')
-        n_arr.set_attribute(key, [4, 3, 5])
+        n_int.base.attributes.set(key, 1)
+        n_float.base.attributes.set(key, 1.0)
+        n_bool.base.attributes.set(key, True)
+        n_str.base.attributes.set(key, '1')
+        n_str2.base.attributes.set(key, 'one')
+        n_arr.base.attributes.set(key, [4, 3, 5])
 
         for n in (n_str2, n_str, n_int, n_float, n_bool, n_arr):
             n.store()
@@ -951,7 +951,7 @@ class TestQueryBuilderLimitOffsets:
         # Creating 10 nodes with an attribute that can be ordered
         for i in range(10):
             n = orm.Data()
-            n.set_attribute('foo', i)
+            n.base.attributes.set('foo', i)
             n.store()
 
         qb = orm.QueryBuilder().append(orm.Node, project='attributes.foo').order_by({orm.Node: 'ctime'})
@@ -1023,11 +1023,11 @@ class TestQueryBuilderJoins:
 
         good_child = orm.CalculationNode()
         good_child.label = 'good_child'
-        good_child.set_attribute('is_good', True)
+        good_child.base.attributes.set('is_good', True)
 
         bad_child = orm.CalculationNode()
         bad_child.label = 'bad_child'
-        bad_child.set_attribute('is_good', False)
+        bad_child.base.attributes.set('is_good', False)
 
         unrelated = orm.CalculationNode()
         unrelated.label = 'unrelated'
@@ -1056,7 +1056,7 @@ class TestQueryBuilderJoins:
         advisors = [orm.CalculationNode() for i in range(3)]
         for i, a in enumerate(advisors):
             a.label = f'advisor {i}'
-            a.set_attribute('advisor_id', i)
+            a.base.attributes.set('advisor_id', i)
 
         for n in advisors + students:
             n.store()
@@ -1167,22 +1167,22 @@ class TestQueryBuilderJoins:
         # Create nodes and add them to the created group
         n1 = orm.Data()
         n1.label = 'node1'
-        n1.set_attribute('foo', ['hello', 'goodbye'])
+        n1.base.attributes.set('foo', ['hello', 'goodbye'])
         n1.store()
 
         n2 = orm.CalculationNode()
         n2.label = 'node2'
-        n2.set_attribute('foo', 1)
+        n2.base.attributes.set('foo', 1)
         n2.store()
 
         n3 = orm.Data()
         n3.label = 'node3'
-        n3.set_attribute('foo', 1.0000)  # Stored as fval
+        n3.base.attributes.set('foo', 1.0000)  # Stored as fval
         n3.store()
 
         n4 = orm.CalculationNode()
         n4.label = 'node4'
-        n4.set_attribute('foo', 'bar')
+        n4.base.attributes.set('foo', 'bar')
         n4.store()
 
         group.add_nodes([n1, n2, n3, n4])

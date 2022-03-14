@@ -144,7 +144,7 @@ class TestCodDbImporter:
 
         cif = entry.get_cif_node()
         assert isinstance(cif, CifData) is True
-        assert cif.get_attribute('md5') == '070711e8e99108aade31d20cd5c94c48'
+        assert cif.base.attributes.get('md5') == '070711e8e99108aade31d20cd5c94c48'
         assert cif.source == {
             'db_name': 'Crystallography Open Database',
             'db_uri': 'http://www.crystallography.net/cod',

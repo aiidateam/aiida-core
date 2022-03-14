@@ -130,7 +130,7 @@ def test_walk_nodes(aiida_profile_clean):
     """Test the ``GroupPath.walk_nodes()`` function."""
     group, _ = orm.Group.objects.get_or_create('a')
     node = orm.Data()
-    node.set_attribute_many({'i': 1, 'j': 2})
+    node.base.attributes.set_many({'i': 1, 'j': 2})
     node.store()
     group.add_nodes(node)
     group_path = GroupPath()

@@ -99,7 +99,7 @@ def test_get_member_module_not_importable():
     """Test the ``get_member`` property when the enum cannot be imported from the identifier."""
     member = DummyEnum.OPTION_A
     node = EnumData(member)
-    node.set_attribute(EnumData.KEY_IDENTIFIER, 'aiida.common.links:NonExistingEnum')
+    node.base.attributes.set(EnumData.KEY_IDENTIFIER, 'aiida.common.links:NonExistingEnum')
     node.store()
 
     loaded = load_node(node.pk)
@@ -139,9 +139,9 @@ def test_eq():
     assert node_a != DummyEnum.OPTION_A.value
 
     # If the identifier cannot be resolved, the equality should not raise but simply return ``False``.
-    node_a.set_attribute(EnumData.KEY_IDENTIFIER, 'aiida.common.links:NonExistingEnum')
+    node_a.base.attributes.set(EnumData.KEY_IDENTIFIER, 'aiida.common.links:NonExistingEnum')
     assert node_a != DummyEnum.OPTION_A
 
     # If the value is incorrect for the resolved identifier, the equality should not raise but simply return ``False``.
-    node_b.set_attribute(EnumData.KEY_VALUE, 'c')
+    node_b.base.attributes.set(EnumData.KEY_VALUE, 'c')
     assert node_b != DummyEnum.OPTION_B

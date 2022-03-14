@@ -13,6 +13,7 @@ import pytest
 
 from aiida.cmdline.params.options import NON_INTERACTIVE
 from aiida.cmdline.params.options.interactive import InteractiveOption
+from aiida.cmdline.params.types.plugin import PluginParamType
 
 
 class Only42IntParamType(click.types.IntParamType):
@@ -473,3 +474,17 @@ def test_not_required_interactive_default(run_cli_command):
     result = run_cli_command(cmd, user_input='\nnot needed\n')
     expected = 'Opt []: \n\n'
     assert expected in result.output
+
+
+def test_get_help_message():
+    """Test the :meth:`aiida.cmdline.params.options.interactive.InteractiveOption.get_help_message`."""
+    option = InteractiveOption('-s', type=click.STRING)
+    message = option.get_help_message()
+    assert message == 'Expecting text'
+
+    option = InteractiveOption('-P', type=PluginParamType(group='aiida.groups'))
+    message = option.get_help_message()
+    assert 'Expecting plugin' in message
+    assert 'Select one of:' in message
+    assert 'core' in message
+    assert 'core.auto' in message

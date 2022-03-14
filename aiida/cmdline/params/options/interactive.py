@@ -128,18 +128,19 @@ class InteractiveOption(ConditionalOption):
     def get_help_message(self):
         """Return a message to be displayed for in-prompt help."""
         message = self.help or f'Expecting {self.type.name}'
-        choices = getattr(self.type, 'complete', lambda x, y: [])(None, '')
 
-        if choices:
-            choice_table = []
+        choices = getattr(self.type, 'shell_complete', lambda x, y, z: [])(self.type, None, '')
+        choices_string = []
+
+        for choice in choices:
+            if choice.value and choice.help:
+                choices_string.append(f' * {choice.value:<12} {choice.help}')
+            elif choice.value:
+                choices_string.append(f' * {choice.value}')
+
+        if any(choices_string):
             message += '\nSelect one of:\n'
-
-            for choice in choices:
-                if isinstance(choice, tuple):
-                    choice_table.append('\t{:<12} {}'.format(*choice))
-                else:
-                    choice_table.append(f'\t{choice:<12}')
-            message += '\n'.join(choice_table)
+            message += '\n'.join([choice for choice in choices_string if choice.strip()])
 
         return message
 

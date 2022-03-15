@@ -31,3 +31,16 @@ This is because sqlite and zip are not suitable for concurrent write access.
 The archive format originally used a JSON file to store the database,
 and these revisions are handled by the `version_profile` and `migrate` backend methods.
 """
+
+# AUTO-GENERATED
+
+# yapf: disable
+# pylint: disable=wildcard-import
+
+from .backend import *
+
+__all__ = (
+    'SqliteZipBackend',
+)
+
+# yapf: enable

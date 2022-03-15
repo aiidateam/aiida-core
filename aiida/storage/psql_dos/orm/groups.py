@@ -13,10 +13,11 @@ import logging
 from aiida.common.exceptions import UniquenessError
 from aiida.common.lang import type_check
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
-from aiida.storage.psql_dos.models.group import DbGroup
+from aiida.storage.psql_dos.models.group import DbGroup, DbGroupNode
 
 from . import entities, users, utils
 from .extras_mixin import ExtrasMixin
+from .nodes import SqlaNode
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,6 +28,9 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
     """The SQLAlchemy Group object"""
 
     MODEL_CLASS = DbGroup
+    USER_CLASS = users.SqlaUser
+    NODE_CLASS = SqlaNode
+    GROUP_NODE_CLASS = DbGroupNode
 
     def __init__(self, backend, label, user, description='', type_string=''):
         """
@@ -38,7 +42,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
         :param description: an optional group description
         :param type_string: an optional type for the group to contain
         """
-        type_check(user, users.SqlaUser)
+        type_check(user, self.USER_CLASS)
         super().__init__(backend)
 
         dbgroup = self.MODEL_CLASS(label=label, description=description, user=user.bare_model, type_string=type_string)
@@ -89,7 +93,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
 
     @user.setter
     def user(self, new_user):
-        type_check(new_user, users.SqlaUser)
+        type_check(new_user, self.USER_CLASS)
         self.model.user = new_user.bare_model
 
     @property
@@ -177,16 +181,13 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
         from sqlalchemy.dialects.postgresql import insert  # pylint: disable=import-error, no-name-in-module
         from sqlalchemy.exc import IntegrityError  # pylint: disable=import-error, no-name-in-module
 
-        from aiida.storage.psql_dos.models.base import Base
-        from aiida.storage.psql_dos.orm.nodes import SqlaNode
-
         super().add_nodes(nodes)
         skip_orm = kwargs.get('skip_orm', False)
 
         def check_node(given_node):
             """ Check if given node is of correct type and stored """
-            if not isinstance(given_node, SqlaNode):
-                raise TypeError(f'invalid type {type(given_node)}, has to be {SqlaNode}')
+            if not isinstance(given_node, self.NODE_CLASS):
+                raise TypeError(f'invalid type {type(given_node)}, has to be {self.NODE_CLASS}')
 
             if not given_node.is_stored:
                 raise ValueError('At least one of the provided nodes is unstored, stopping...')
@@ -214,8 +215,8 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
                     check_node(node)
                     ins_dict.append({'dbnode_id': node.id, 'dbgroup_id': self.id})
 
-                my_table = Base.metadata.tables['db_dbgroup_dbnodes']
-                ins = insert(my_table).values(ins_dict)
+                table = self.GROUP_NODE_CLASS.__table__
+                ins = insert(table).values(ins_dict)
                 session.execute(ins.on_conflict_do_nothing(index_elements=['dbnode_id', 'dbgroup_id']))
 
             # Commit everything as up till now we've just flushed
@@ -233,9 +234,6 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
         """
         from sqlalchemy import and_
 
-        from aiida.storage.psql_dos.models.base import Base
-        from aiida.storage.psql_dos.orm.nodes import SqlaNode
-
         super().remove_nodes(nodes)
 
         # Get dbnodes here ONCE, otherwise each call to dbnodes will re-read the current value in the database
@@ -243,8 +241,8 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
         skip_orm = kwargs.get('skip_orm', False)
 
         def check_node(node):
-            if not isinstance(node, SqlaNode):
-                raise TypeError(f'invalid type {type(node)}, has to be {SqlaNode}')
+            if not isinstance(node, self.NODE_CLASS):
+                raise TypeError(f'invalid type {type(node)}, has to be {self.NODE_CLASS}')
 
             if node.id is None:
                 raise ValueError('At least one of the provided nodes is unstored, stopping...')
@@ -263,7 +261,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
                 for node in list_nodes:
                     dbnodes.remove(node)
             else:
-                table = Base.metadata.tables['db_dbgroup_dbnodes']
+                table = self.GROUP_NODE_CLASS.__table__
                 for node in nodes:
                     check_node(node)
                     clause = and_(table.c.dbnode_id == node.id, table.c.dbgroup_id == self.id)

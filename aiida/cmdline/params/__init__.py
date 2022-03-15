@@ -7,3 +7,41 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Commandline parameters."""
+
+# AUTO-GENERATED
+
+# yapf: disable
+# pylint: disable=wildcard-import
+
+from .types import *
+
+__all__ = (
+    'AbsolutePathParamType',
+    'CalculationParamType',
+    'CodeParamType',
+    'ComputerParamType',
+    'ConfigOptionParamType',
+    'DataParamType',
+    'EmailType',
+    'EntryPointType',
+    'FileOrUrl',
+    'GroupParamType',
+    'HostnameType',
+    'IdentifierParamType',
+    'LabelStringType',
+    'LazyChoice',
+    'MpirunCommandParamType',
+    'MultipleValueParamType',
+    'NodeParamType',
+    'NonEmptyStringParamType',
+    'PathOrUrl',
+    'PluginParamType',
+    'ProcessParamType',
+    'ProfileParamType',
+    'ShebangParamType',
+    'UserParamType',
+    'WorkflowParamType',
+)
+
+# yapf: enable

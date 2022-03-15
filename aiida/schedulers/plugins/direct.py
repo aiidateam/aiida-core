@@ -11,10 +11,10 @@
 Plugin for direct execution.
 """
 
-import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
+import aiida.schedulers
 from aiida.schedulers import SchedulerError
-from aiida.schedulers.datastructures import (JobInfo, JobState, NodeNumberJobResource)
+from aiida.schedulers.datastructures import JobInfo, JobState, NodeNumberJobResource
 
 ## From the ps man page on Mac OS X 10.12
 #     state     The state is given by a sequence of characters, for example,
@@ -150,21 +150,16 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)
 
-        # Job environment variables are to be set on one single line.
-        # This is a tough job due to the escaping of commas, etc.
-        # moreover, I am having issues making it work.
-        # Therefore, I assume that this is bash and export variables by
-        # and.
+        if job_tmpl.job_resource and job_tmpl.job_resource.num_cores_per_mpiproc:
+            lines.append(f'export OMP_NUM_THREADS={job_tmpl.job_resource.num_cores_per_mpiproc}')
 
         if job_tmpl.job_environment:
-            lines.append(empty_line)
-            lines.append('# ENVIRONMENT VARIABLES BEGIN ###')
-            if not isinstance(job_tmpl.job_environment, dict):
-                raise ValueError('If you provide job_environment, it must be a dictionary')
-            for key, value in job_tmpl.job_environment.items():
-                lines.append(f'export {key.strip()}={escape_for_bash(value)}')
-            lines.append('# ENVIRONMENT VARIABLES  END  ###')
-            lines.append(empty_line)
+            lines.append(self._get_submit_script_environment_variables(job_tmpl))
+
+        if job_tmpl.rerunnable:
+            self.logger.warning(
+                "The 'rerunnable' option is set to 'True', but has no effect when using the direct scheduler."
+            )
 
         lines.append(empty_line)
 
@@ -219,10 +214,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
 
         filtered_stderr = '\n'.join(l for l in stderr.split('\n'))
         if filtered_stderr.strip():
-            self.logger.warning(
-                'Warning in _parse_joblist_output, non-empty '
-                "(filtered) stderr='{}'".format(filtered_stderr)
-            )
+            self.logger.warning(f"Warning in _parse_joblist_output, non-empty (filtered) stderr='{filtered_stderr}'")
             if retval != 0:
                 raise SchedulerError('Error during direct execution parsing (_parse_joblist_output function)')
 
@@ -238,10 +230,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
             this_job.job_id = job[0]
 
             if len(job) < 3:
-                raise SchedulerError(
-                    'Unexpected output from the scheduler, '
-                    "not enough fields in line '{}'".format(line)
-                )
+                raise SchedulerError(f"Unexpected output from the scheduler, not enough fields in line '{line}'")
 
             try:
                 job_state_string = job[1][0]  # I just check the first character
@@ -253,10 +242,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
                     this_job.job_state = \
                         _MAP_STATUS_PS[job_state_string]
                 except KeyError:
-                    self.logger.warning(
-                        "Unrecognized job_state '{}' for job "
-                        'id {}'.format(job_state_string, this_job.job_id)
-                    )
+                    self.logger.warning(f"Unrecognized job_state '{job_state_string}' for job id {this_job.job_id}")
                     this_job.job_state = JobState.UNDETERMINED
 
             try:

@@ -10,7 +10,6 @@
 """Utilities to operate on `Node` classes."""
 from abc import ABCMeta
 import logging
-
 import warnings
 
 from aiida.common import exceptions
@@ -85,7 +84,7 @@ def get_type_string_from_class(class_module, class_name):
     :param class_module: module of the class
     :param class_name: name of the class
     """
-    from aiida.plugins.entry_point import get_entry_point_from_class, ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP
+    from aiida.plugins.entry_point import ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP, get_entry_point_from_class
 
     group, entry_point = get_entry_point_from_class(class_module, class_name)
 

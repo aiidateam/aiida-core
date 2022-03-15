@@ -62,7 +62,7 @@ Creating an output is just as easy, but one should use the :py:meth:`~plumpy.Pro
     spec = ProcessSpec()
     spec.output('result')
 
-This will cause an instance of :py:class:`~aiida.engine.processes.ports.OutputPort`, also a sub class of the base :py:class:`~plumpy.Port`, to be created and to be added to the ``outputs`` specifcation attribute.
+This will cause an instance of :py:class:`~aiida.engine.processes.ports.CalcJobOutputPort`, also a sub class of the base :py:class:`~plumpy.Port`, to be created and to be added to the ``outputs`` specifcation attribute.
 Recall, that the ``inputs`` and ``output`` are instances of a :py:class:`~aiida.engine.processes.ports.PortNamespace`, which means that they can contain any port.
 But the :py:class:`~aiida.engine.processes.ports.PortNamespace` itself is also a port itself, so it can be added to another port namespace, allowing one to create nested port namespaces.
 Creating a new namespace in for example the inputs namespace is as simple as:
@@ -223,7 +223,7 @@ Exit codes
 Any ``Process`` most likely will have one or multiple expected failure modes.
 To clearly communicate to the caller what went wrong, the ``Process`` supports setting its ``exit_status``.
 This ``exit_status``, a positive integer, is an attribute of the process node and by convention, when it is zero means the process was successful, whereas any other value indicates failure.
-This concept of an exit code, with a positive integer as the exit status, `is a common concept in programming <https://shapeshed.com/unix-exit-codes/>`_ and a standard way for programs to communicate the result of their execution.
+This concept of an exit code, with a positive integer as the exit status, `is a common concept in programming <https://en.wikipedia.org/wiki/Exit_status>`_ and a standard way for programs to communicate the result of their execution.
 
 Potential exit codes for the ``Process`` can be defined through the ``ProcessSpec``, just like inputs and outputs.
 Any exit code consists of a positive non-zero integer, a string label to reference it and a more detailed description of the problem that triggers the exit code.
@@ -391,10 +391,10 @@ The process builder is essentially a tool that helps you build the inputs for th
 To get a *builder* for a particular ``CalcJob`` or a ``WorkChain`` implementation, all you need is the class itself, which can be loaded through the :py:class:`~aiida.plugins.factories.CalculationFactory` and :py:class:`~aiida.plugins.factories.WorkflowFactory`, respectively.
 Let's take the :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation` as an example::
 
-    ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+    ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
     builder = ArithmeticAddCalculation.get_builder()
 
-The string ``arithmetic.add`` is the entry point of the ``ArithmeticAddCalculation`` and passing it to the ``CalculationFactory`` will return the corresponding class.
+The string ``core.arithmetic.add`` is the entry point of the ``ArithmeticAddCalculation`` and passing it to the ``CalculationFactory`` will return the corresponding class.
 Calling the ``get_builder`` method on that class will return an instance of the :py:class:`~aiida.engine.processes.builder.ProcessBuilder` class that is tailored for the ``ArithmeticAddCalculation``.
 The builder will help you in defining the inputs that the ``ArithmeticAddCalculation`` requires and has a few handy tools to simplify this process.
 

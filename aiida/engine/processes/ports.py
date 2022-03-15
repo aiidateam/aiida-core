@@ -41,7 +41,7 @@ class WithNonDb:
     def __init__(self, *args, **kwargs) -> None:
         self._non_db_explicitly_set: bool = bool('non_db' in kwargs)
         non_db = kwargs.pop('non_db', False)
-        super().__init__(*args, **kwargs)  # type: ignore[call-arg]
+        super().__init__(*args, **kwargs)
         self._non_db: bool = non_db
 
     @property
@@ -76,7 +76,7 @@ class WithSerialize:
 
     def __init__(self, *args, **kwargs) -> None:
         serializer = kwargs.pop('serializer', None)
-        super().__init__(*args, **kwargs)  # type: ignore[call-arg]
+        super().__init__(*args, **kwargs)
         self._serializer: Callable[[Any], 'Data'] = serializer
 
     def serialize(self, value: Any) -> 'Data':
@@ -109,7 +109,7 @@ class InputPort(WithSerialize, WithNonDb, ports.InputPort):
                     ' It is advised to use a lambda instead, e.g.: `default=lambda: orm.Int(5)`.'.format(args[0])
                 warnings.warn(UserWarning(message))  # pylint: disable=no-member
 
-        super(InputPort, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def get_description(self) -> Dict[str, str]:
         """
@@ -189,7 +189,7 @@ class PortNamespace(WithNonDb, ports.PortNamespace):
         # `('___', '_')`, where the first element is the matched group of consecutive underscores.
         consecutive_underscores = [match[0] for match in re.findall(r'((_)\2+)', port_name)]
 
-        if any([len(entry) > PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES for entry in consecutive_underscores]):
+        if any(len(entry) > PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES for entry in consecutive_underscores):
             raise ValueError(f'invalid port name `{port_name}`: more than two consecutive underscores')
 
     def serialize(self, mapping: Optional[Dict[str, Any]], breadcrumbs: Sequence[str] = ()) -> Optional[Dict[str, Any]]:

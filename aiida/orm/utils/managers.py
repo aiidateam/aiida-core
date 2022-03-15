@@ -15,8 +15,8 @@ to access members of other classes via TAB-completable attributes
 import warnings
 
 from aiida.common import AttributeDict
-from aiida.common.links import LinkType
 from aiida.common.exceptions import NotExistent, NotExistentAttributeError, NotExistentKeyError
+from aiida.common.links import LinkType
 from aiida.common.warnings import AiidaDeprecationWarning
 
 __all__ = ('NodeLinksManager', 'AttributeManager')
@@ -104,7 +104,7 @@ class NodeLinksManager:
                     'dereferencing nodes with links containing double underscores is deprecated, simply replace '
                     'the double underscores with a single dot instead. For example: \n'
                     '`self.inputs.some__label` can be written as `self.inputs.some.label` instead.\n'
-                    'Support for double underscores will be removed in the future.', AiidaDeprecationWarning
+                    'Support for double underscores will be removed in `v3.0`.', AiidaDeprecationWarning
                 )  # pylint: disable=no-member
                 namespaces = label.split(self._namespace_separator)
                 try:

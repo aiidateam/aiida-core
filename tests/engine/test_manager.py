@@ -7,71 +7,70 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Tests for the classes in `aiida.engine.processes.calcjobs.manager`."""
-
-import time
 import asyncio
+import time
 
-from aiida.orm import AuthInfo, User
-from aiida.backends.testbase import AiidaTestCase
+import pytest
+
 from aiida.engine.processes.calcjobs.manager import JobManager, JobsList
 from aiida.engine.transports import TransportQueue
+from aiida.orm import User
 
 
-class TestJobManager(AiidaTestCase):
+class TestJobManager:
     """Test the `aiida.engine.processes.calcjobs.manager.JobManager` class."""
 
-    def setUp(self):
-        super().setUp()
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
         self.loop = asyncio.get_event_loop()
         self.transport_queue = TransportQueue(self.loop)
         self.user = User.objects.get_default()
-        self.auth_info = AuthInfo(self.computer, self.user).store()
+        self.computer = aiida_localhost
+        self.auth_info = self.computer.get_authinfo(self.user)
         self.manager = JobManager(self.transport_queue)
-
-    def tearDown(self):
-        super().tearDown()
-        AuthInfo.objects.delete(self.auth_info.pk)
 
     def test_get_jobs_list(self):
         """Test the `JobManager.get_jobs_list` method."""
         jobs_list = self.manager.get_jobs_list(self.auth_info)
-        self.assertIsInstance(jobs_list, JobsList)
+        assert isinstance(jobs_list, JobsList)
 
         # Calling the method again, should return the exact same instance of `JobsList`
-        self.assertEqual(self.manager.get_jobs_list(self.auth_info), jobs_list)
+        assert self.manager.get_jobs_list(self.auth_info) == jobs_list
 
     def test_request_job_info_update(self):
         """Test the `JobManager.request_job_info_update` method."""
         with self.manager.request_job_info_update(self.auth_info, job_id=1) as request:
-            self.assertIsInstance(request, asyncio.Future)
+            assert isinstance(request, asyncio.Future)
 
 
-class TestJobsList(AiidaTestCase):
+class TestJobsList:
     """Test the `aiida.engine.processes.calcjobs.manager.JobsList` class."""
 
-    def setUp(self):
-        super().setUp()
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
         self.loop = asyncio.get_event_loop()
         self.transport_queue = TransportQueue(self.loop)
         self.user = User.objects.get_default()
-        self.auth_info = AuthInfo(self.computer, self.user).store()
+        self.computer = aiida_localhost
+        self.auth_info = self.computer.get_authinfo(self.user)
         self.jobs_list = JobsList(self.auth_info, self.transport_queue)
-
-    def tearDown(self):
-        super().tearDown()
-        AuthInfo.objects.delete(self.auth_info.pk)
 
     def test_get_minimum_update_interval(self):
         """Test the `JobsList.get_minimum_update_interval` method."""
         minimum_poll_interval = self.auth_info.computer.get_minimum_job_poll_interval()
-        self.assertEqual(self.jobs_list.get_minimum_update_interval(), minimum_poll_interval)
+        assert self.jobs_list.get_minimum_update_interval() == minimum_poll_interval
 
     def test_last_updated(self):
         """Test the `JobsList.last_updated` method."""
         jobs_list = JobsList(self.auth_info, self.transport_queue)
-        self.assertEqual(jobs_list.last_updated, None)
+        assert jobs_list.last_updated is None
 
         last_updated = time.time()
         jobs_list = JobsList(self.auth_info, self.transport_queue, last_updated=last_updated)
-        self.assertEqual(jobs_list.last_updated, last_updated)
+        assert jobs_list.last_updated == last_updated

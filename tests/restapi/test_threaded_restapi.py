@@ -12,18 +12,21 @@
 Threaded mode is the default (and only) way to run the AiiDA REST API (see `aiida.restapi.run_api:run_api()`).
 This test file's layout is inspired by https://gist.github.com/prschmid/4643738
 """
-import time
 from threading import Thread
+import time
 
-import requests
 import pytest
+import requests
 
 NO_OF_REQUESTS = 100
 
 
-@pytest.mark.usefixtures('clear_database_before_test', 'restrict_sqlalchemy_queuepool')
+@pytest.mark.usefixtures('aiida_profile_clean', 'restrict_db_connections')
 def test_run_threaded_server(restapi_server, server_url, aiida_localhost):
-    """Run AiiDA REST API threaded in a separate thread and perform many sequential requests"""
+    """Run AiiDA REST API threaded in a separate thread and perform many sequential requests.
+
+    This test will fail, if database connections are not being properly closed by the end-point calls.
+    """
 
     server = restapi_server()
     computer_id = aiida_localhost.uuid
@@ -63,7 +66,7 @@ def test_run_threaded_server(restapi_server, server_url, aiida_localhost):
 
 
 @pytest.mark.skip('Is often failing on Python 3.8 and 3.9: see https://github.com/aiidateam/aiida-core/issues/4281')
-@pytest.mark.usefixtures('clear_database_before_test', 'restrict_sqlalchemy_queuepool')
+@pytest.mark.usefixtures('aiida_profile_clean', 'restrict_db_connections')
 def test_run_without_close_session(restapi_server, server_url, aiida_localhost, capfd):
     """Run AiiDA REST API threaded in a separate thread and perform many sequential requests"""
     from aiida.restapi.api import AiidaApi

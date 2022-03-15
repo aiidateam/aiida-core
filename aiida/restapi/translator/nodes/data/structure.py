@@ -25,7 +25,7 @@ class StructureDataTranslator(DataTranslator):
     from aiida.orm import StructureData
     _aiida_class = StructureData
     # The string name of the AiiDA class
-    _aiida_type = 'data.structure.StructureData'
+    _aiida_type = 'data.core.structure.StructureData'
 
     _result_type = __label__
 

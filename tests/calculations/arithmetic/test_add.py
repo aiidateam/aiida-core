@@ -11,15 +11,15 @@
 import pytest
 
 from aiida import orm
-from aiida.common import datastructures
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+from aiida.common import datastructures
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_add_default(fixture_sandbox, aiida_localhost, generate_calc_job):
     """Test a default `ArithmeticAddCalculation`."""
-    entry_point_name = 'arithmetic.add'
+    entry_point_name = 'core.arithmetic.add'
     inputs = {'x': orm.Int(1), 'y': orm.Int(2), 'code': orm.Code(remote_computer_exec=(aiida_localhost, '/bin/bash'))}
 
     calc_info = generate_calc_job(fixture_sandbox, entry_point_name, inputs)
@@ -45,10 +45,10 @@ def test_add_default(fixture_sandbox, aiida_localhost, generate_calc_job):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_add_custom_filenames(fixture_sandbox, aiida_localhost, generate_calc_job):
     """Test an `ArithmeticAddCalculation` with non-default input and output filenames."""
-    entry_point_name = 'arithmetic.add'
+    entry_point_name = 'core.arithmetic.add'
     input_filename = 'custom.in'
     output_filename = 'custom.out'
     inputs = {

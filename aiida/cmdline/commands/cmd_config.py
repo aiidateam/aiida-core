@@ -8,44 +8,20 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi config` command."""
+import json
+from pathlib import Path
 import textwrap
 
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments
-from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils import echo
+from aiida.manage.configuration import MIGRATIONS, downgrade_config, get_config_path
+from aiida.manage.configuration.settings import DEFAULT_CONFIG_INDENT_SIZE
 
 
-class _DeprecateConfigCommandsGroup(click.Group):
-    """Overloads the get_command with one that identifies deprecated commands."""
-
-    def get_command(self, ctx, cmd_name):
-        """Override the default click.Group get_command with one that identifies deprecated commands."""
-        cmd = click.Group.get_command(self, ctx, cmd_name)
-
-        if cmd is not None:
-            return cmd
-
-        if cmd_name in [
-            'daemon.default_workers', 'logging.plumpy_loglevel', 'daemon.timeout', 'logging.sqlalchemy_loglevel',
-            'daemon.worker_process_slots', 'logging.tornado_loglevel', 'db.batch_size', 'runner.poll.interval',
-            'logging.aiida_loglevel', 'user.email', 'logging.alembic_loglevel', 'user.first_name',
-            'logging.circus_loglevel', 'user.institution', 'logging.db_loglevel', 'user.last_name',
-            'logging.kiwipy_loglevel', 'verdi.shell.auto_import', 'logging.paramiko_loglevel',
-            'warnings.showdeprecations', 'autofill.user.email', 'autofill.user.first_name', 'autofill.user.last_name',
-            'autofill.user.institution'
-        ]:
-            ctx.obj.deprecated_name = cmd_name
-            cmd = click.Group.get_command(self, ctx, '_deprecated')
-            return cmd
-
-        ctx.fail(f"'{cmd_name}' is not a verdi config command.")
-
-        return None
-
-
-@verdi.group('config', cls=_DeprecateConfigCommandsGroup)
+@verdi.group('config')
 def verdi_config():
     """Manage the AiiDA configuration."""
 
@@ -142,7 +118,7 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
 
     List values are split by whitespace, e.g. "a b" becomes ["a", "b"].
     """
-    from aiida.manage.configuration import Config, Profile, ConfigValidationError
+    from aiida.manage.configuration import Config, ConfigValidationError, Profile
 
     if append and remove:
         echo.echo_critical('Cannot flag both append and remove')
@@ -207,8 +183,8 @@ def verdi_config_unset(ctx, option, globally):
 @click.option('-d', '--disabled', is_flag=True, help='List disabled types instead.')
 def verdi_config_caching(disabled):
     """List caching-enabled process types for the current profile."""
-    from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR, get_entry_point_names
     from aiida.manage.caching import get_use_cache
+    from aiida.plugins.entry_point import ENTRY_POINT_STRING_SEPARATOR, get_entry_point_names
 
     for group in ['aiida.calculations', 'aiida.workflows']:
         for entry_point in get_entry_point_names(group):
@@ -220,19 +196,13 @@ def verdi_config_caching(disabled):
                 echo.echo(identifier)
 
 
-@verdi_config.command('_deprecated', hidden=True)
-@decorators.deprecated_command("This command has been deprecated. Please use 'verdi config show/set/unset' instead.")
-@click.argument('value', metavar='OPTION_VALUE', required=False)
-@click.option('--global', 'globally', is_flag=True, help='Apply the option configuration wide.')
-@click.option('--unset', is_flag=True, help='Remove the line matching the option name from the config file.')
-@click.pass_context
-def verdi_config_deprecated(ctx, value, globally, unset):
-    """"This command has been deprecated. Please use 'verdi config show/set/unset' instead."""
-    from aiida.manage.configuration import get_option
-    option = get_option(ctx.obj.deprecated_name)
-    if unset:
-        ctx.invoke(verdi_config_unset, option=option, globally=globally)
-    elif value is not None:
-        ctx.invoke(verdi_config_set, option=option, value=value, globally=globally)
-    else:
-        ctx.invoke(verdi_config_get, option=option)
+@verdi_config.command('downgrade')
+@click.argument('version', type=click.Choice({str(m.down_revision) for m in MIGRATIONS}))
+def verdi_config_downgrade(version):
+    """Print a configuration, downgraded to a specific version."""
+    path = Path(get_config_path())
+    echo.echo_report(f'Downgrading configuration to v{version}: {path}')
+    config = json.loads(path.read_text(encoding='utf8'))
+    downgrade_config(config, int(version))
+    path.write_text(json.dumps(config, indent=DEFAULT_CONFIG_INDENT_SIZE), encoding='utf8')
+    echo.echo_success('Downgraded')

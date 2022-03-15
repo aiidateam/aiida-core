@@ -15,11 +15,11 @@ import contextlib
 import json
 from pathlib import Path
 
-import yaml
 import pytest
+import yaml
 
 from aiida.common import exceptions
-from aiida.manage.caching import get_use_cache, enable_caching, disable_caching
+from aiida.manage.caching import disable_caching, enable_caching, get_use_cache
 
 
 @pytest.fixture
@@ -49,29 +49,31 @@ def test_merge_deprecated_yaml(tmp_path):
     An AiidaDeprecationWarning should also be raised.
     """
     from aiida.common.warnings import AiidaDeprecationWarning
-    from aiida.manage import configuration
-    from aiida.manage.configuration import settings, load_profile, reset_profile, get_config_option
+    from aiida.manage import configuration, get_manager
+    from aiida.manage.configuration import get_config_option, load_profile, settings
 
     # Store the current configuration instance and config directory path
     current_config = configuration.CONFIG
     current_config_path = current_config.dirpath
-    current_profile_name = configuration.PROFILE.name
+    current_profile_name = configuration.get_profile().name
 
     try:
-        reset_profile()
+        get_manager().unload_profile()
         configuration.CONFIG = None
 
         # Create a temporary folder, set it as the current config directory path
         settings.AIIDA_CONFIG_FOLDER = str(tmp_path)
         config_dictionary = json.loads(
-            Path(__file__).parent.joinpath('configuration/migrations/test_samples/reference/5.json').read_text()
+            Path(__file__).parent.joinpath('configuration/migrations/test_samples/reference/6.json').read_text(
+                encoding='utf-8'
+            )
         )
-        config_dictionary['profiles']['default']['AIIDADB_REPOSITORY_URI'] = f"file:///{tmp_path/'repo'}"
+        config_dictionary['profiles']['default']['storage']['config']['repository_uri'] = f"file:///{tmp_path/'repo'}"
         cache_dictionary = {
             'default': {
                 'default': True,
                 'enabled': ['aiida.calculations:quantumespresso.pw'],
-                'disabled': ['aiida.calculations:templatereplacer']
+                'disabled': ['aiida.calculations:core.templatereplacer']
             }
         }
         tmp_path.joinpath('config.json').write_text(json.dumps(config_dictionary))
@@ -82,13 +84,13 @@ def test_merge_deprecated_yaml(tmp_path):
 
         assert get_config_option('caching.default_enabled') is True
         assert get_config_option('caching.enabled_for') == ['aiida.calculations:quantumespresso.pw']
-        assert get_config_option('caching.disabled_for') == ['aiida.calculations:templatereplacer']
+        assert get_config_option('caching.disabled_for') == ['aiida.calculations:core.templatereplacer']
         # should have now been moved to cache_config.yml.<DATETIME>
         assert not tmp_path.joinpath('cache_config.yml').exists()
     finally:
         # Reset the config folder path and the config instance. Note this will always be executed after the yield no
         # matter what happened in the test that used this fixture.
-        reset_profile()
+        get_manager().unload_profile()
         settings.AIIDA_CONFIG_FOLDER = current_config_path
         configuration.CONFIG = current_config
         load_profile(current_profile_name)
@@ -104,7 +106,7 @@ def test_no_enabled_disabled(configure_caching):
     """
     with configure_caching(config_dict={'default_enabled': False}):
         # Check that `get_use_cache` also does not except, and works as expected
-        assert not get_use_cache(identifier='aiida.calculations:templatereplacer')
+        assert not get_use_cache(identifier='aiida.calculations:core.templatereplacer')
 
 
 @pytest.mark.parametrize(
@@ -156,34 +158,34 @@ def test_default(configure_caching):
     ({
         'default_enabled': True,
         'enabled_for': ['aiida.calculations:arithmetic.add'],
-        'disabled_for': ['aiida.calculations:templatereplacer']
+        'disabled_for': ['aiida.calculations:core.templatereplacer']
     }, ['some_identifier', 'aiida.calculations:arithmetic.add', 'aiida.calculations:TEMPLATEREPLACER'
-        ], ['aiida.calculations:templatereplacer']),
+        ], ['aiida.calculations:core.templatereplacer']),
     ({
         'default_enabled': False,
         'enabled_for': ['aiida.calculations:arithmetic.add'],
-        'disabled_for': ['aiida.calculations:templatereplacer']
-    }, ['aiida.calculations:arithmetic.add'], ['aiida.calculations:templatereplacer', 'some_identifier']),
+        'disabled_for': ['aiida.calculations:core.templatereplacer']
+    }, ['aiida.calculations:arithmetic.add'], ['aiida.calculations:core.templatereplacer', 'some_identifier']),
     ({
         'default_enabled': False,
         'enabled_for': ['aiida.calculations:*'],
-    }, ['aiida.calculations:templatereplacer', 'aiida.calculations:arithmetic.add'], ['some_identifier']),
+    }, ['aiida.calculations:core.templatereplacer', 'aiida.calculations:arithmetic.add'], ['some_identifier']),
     ({
         'default_enabled': False,
         'enabled_for': ['aiida.calcul*'],
-    }, ['aiida.calculations:templatereplacer', 'aiida.calculations:arithmetic.add'], ['some_identifier']),
+    }, ['aiida.calculations:core.templatereplacer', 'aiida.calculations:arithmetic.add'], ['some_identifier']),
     ({
         'default_enabled': False,
         'enabled_for': ['aiida.calculations:*'],
         'disabled_for': ['aiida.calculations:arithmetic.add']
-    }, ['aiida.calculations:templatereplacer', 'aiida.calculations:ARIthmetic.add'
+    }, ['aiida.calculations:core.templatereplacer', 'aiida.calculations:ARIthmetic.add'
         ], ['some_identifier', 'aiida.calculations:arithmetic.add']),
     ({
         'default_enabled': False,
         'enabled_for': ['aiida.calculations:ar*thmetic.add'],
         'disabled_for': ['aiida.calculations:*'],
     }, ['aiida.calculations:arithmetic.add', 'aiida.calculations:arblarghthmetic.add'
-        ], ['some_identifier', 'aiida.calculations:templatereplacer']),
+        ], ['some_identifier', 'aiida.calculations:core.templatereplacer']),
 ])
 def test_configuration(configure_caching, config_dict, enabled_for, disabled_for):
     """Check that different caching configurations give the expected result.
@@ -201,12 +203,12 @@ def test_configuration(configure_caching, config_dict, enabled_for, disabled_for
         'default_enabled': False,
         'enabled_for': ['aiida.calculations:*thmetic.add'],
         'disabled_for': ['aiida.calculations:arith*ic.add']
-    }, ['some_identifier', 'aiida.calculations:templatereplacer'], ['aiida.calculations:arithmetic.add']),
+    }, ['some_identifier', 'aiida.calculations:core.templatereplacer'], ['aiida.calculations:arithmetic.add']),
      ({
          'default_enabled': False,
          'enabled_for': ['aiida.calculations:arithmetic.add'],
          'disabled_for': ['aiida.calculations:arithmetic.add']
-     }, ['some_identifier', 'aiida.calculations:templatereplacer'], ['aiida.calculations:arithmetic.add'])]
+     }, ['some_identifier', 'aiida.calculations:core.templatereplacer'], ['aiida.calculations:arithmetic.add'])]
 )
 def test_ambiguous_configuration(configure_caching, config_dict, valid_identifiers, invalid_identifiers):
     """

@@ -16,9 +16,10 @@ import click
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
+from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, UnreachableStorage
 from aiida.common.log import override_log_level
-from aiida.common.exceptions import IncompatibleDatabaseSchema
-from ..utils.echo import ExitCode
+
+from ..utils.echo import ExitCode  # pylint: disable=import-error,no-name-in-module
 
 
 class ServiceStatus(enum.IntEnum):
@@ -54,72 +55,82 @@ STATUS_SYMBOLS = {
 @click.option('--no-rmq', is_flag=True, help='Do not check RabbitMQ status')
 def verdi_status(print_traceback, no_rmq):
     """Print status of AiiDA services."""
-    # pylint: disable=broad-except,too-many-statements,too-many-branches
-    from aiida.cmdline.utils.daemon import get_daemon_status, delete_stale_pid_file
+    # pylint: disable=broad-except,too-many-statements,too-many-branches,too-many-locals,
+    from aiida import __version__
+    from aiida.cmdline.utils.daemon import delete_stale_pid_file, get_daemon_status
     from aiida.common.utils import Capturing
-    from aiida.manage.manager import get_manager
     from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
+    from aiida.manage.manager import get_manager
 
     exit_code = ExitCode.SUCCESS
 
-    print_status(ServiceStatus.UP, 'config dir', AIIDA_CONFIG_FOLDER)
+    print_status(ServiceStatus.UP, 'version', f'AiiDA v{__version__}')
+    print_status(ServiceStatus.UP, 'config', AIIDA_CONFIG_FOLDER)
 
     manager = get_manager()
-    profile = manager.get_profile()
-
-    if profile is None:
-        print_status(ServiceStatus.WARNING, 'profile', 'no profile configured yet')
-        echo.echo_info('Configure a profile by running `verdi quicksetup` or `verdi setup`.')
-        return
 
     try:
         profile = manager.get_profile()
-        print_status(ServiceStatus.UP, 'profile', f'On profile {profile.name}')
+
+        if profile is None:
+            print_status(ServiceStatus.WARNING, 'profile', 'no profile configured yet')
+            echo.echo_report('Configure a profile by running `verdi quicksetup` or `verdi setup`.')
+            return
+
+        print_status(ServiceStatus.UP, 'profile', profile.name)
+
     except Exception as exc:
         message = 'Unable to read AiiDA profile'
         print_status(ServiceStatus.ERROR, 'profile', message, exception=exc, print_traceback=print_traceback)
         sys.exit(ExitCode.CRITICAL)  # stop here - without a profile we cannot access anything
 
-    # Getting the repository
-    try:
-        repo_folder = profile.repository_path
-    except Exception as exc:
-        message = 'Error with repository folder'
-        print_status(ServiceStatus.ERROR, 'repository', message, exception=exc, print_traceback=print_traceback)
-        exit_code = ExitCode.CRITICAL
-    else:
-        print_status(ServiceStatus.UP, 'repository', repo_folder)
-
-    # Getting the postgres status by trying to get a database cursor
-    database_data = [profile.database_username, profile.database_hostname, profile.database_port]
+    # Check the backend storage
+    storage_head_version = None
     try:
         with override_log_level():  # temporarily suppress noisy logging
-            backend = manager.get_backend()
-            backend.cursor()
-    except IncompatibleDatabaseSchema:
-        message = 'Database schema version is incompatible with the code: run `verdi database migrate`.'
-        print_status(ServiceStatus.DOWN, 'postgres', message)
+            storage_cls = profile.storage_cls
+            storage_head_version = storage_cls.version_head()
+            storage_backend = storage_cls(profile)
+    except UnreachableStorage as exc:
+        message = 'Unable to connect to profile\'s storage.'
+        print_status(ServiceStatus.DOWN, 'storage', message, exception=exc, print_traceback=print_traceback)
+        exit_code = ExitCode.CRITICAL
+    except IncompatibleStorageSchema as exc:
+        message = (
+            f'Storage schema version is incompatible with the code version {storage_head_version!r}. '
+            'Run `verdi storage migrate` to solve this.'
+        )
+        print_status(ServiceStatus.DOWN, 'storage', message)
+        exit_code = ExitCode.CRITICAL
+    except CorruptStorage as exc:
+        message = 'Storage is corrupted.'
+        print_status(ServiceStatus.DOWN, 'storage', message, exception=exc, print_traceback=print_traceback)
         exit_code = ExitCode.CRITICAL
     except Exception as exc:
-        message = 'Unable to connect as {}@{}:{}'.format(*database_data)
-        print_status(ServiceStatus.DOWN, 'postgres', message, exception=exc, print_traceback=print_traceback)
+        message = 'Unable to instatiate profile\'s storage.'
+        print_status(ServiceStatus.ERROR, 'storage', message, exception=exc, print_traceback=print_traceback)
         exit_code = ExitCode.CRITICAL
     else:
-        print_status(ServiceStatus.UP, 'postgres', 'Connected as {}@{}:{}'.format(*database_data))
+        message = str(storage_backend)
+        print_status(ServiceStatus.UP, 'storage', message)
 
     # Getting the rmq status
     if not no_rmq:
         try:
             with Capturing(capture_stderr=True):
                 with override_log_level():  # temporarily suppress noisy logging
-                    comm = manager.create_communicator(with_orm=False)
-                    comm.close()
+                    comm = manager.get_communicator()
         except Exception as exc:
             message = f'Unable to connect to rabbitmq with URL: {profile.get_rmq_url()}'
             print_status(ServiceStatus.ERROR, 'rabbitmq', message, exception=exc, print_traceback=print_traceback)
             exit_code = ExitCode.CRITICAL
         else:
-            print_status(ServiceStatus.UP, 'rabbitmq', f'Connected as {profile.get_rmq_url()}')
+            version, supported = manager.check_rabbitmq_version(comm)
+            connection = f'Connected to RabbitMQ v{version} as {profile.get_rmq_url()}'
+            if supported:
+                print_status(ServiceStatus.UP, 'rabbitmq', connection)
+            else:
+                print_status(ServiceStatus.WARNING, 'rabbitmq', 'Incompatible RabbitMQ version detected! ' + connection)
 
     # Getting the daemon status
     try:
@@ -127,7 +138,7 @@ def verdi_status(print_traceback, no_rmq):
         delete_stale_pid_file(client)
         daemon_status = get_daemon_status(client)
 
-        daemon_status = daemon_status.split('\n')[0]  # take only the first line
+        daemon_status = daemon_status.split('\n', maxsplit=1)[0]  # take only the first line
         if client.is_daemon_running:
             print_status(ServiceStatus.UP, 'daemon', daemon_status)
         else:
@@ -152,8 +163,8 @@ def print_status(status, service, msg='', exception=None, print_traceback=False)
     :param msg:  message string
     """
     symbol = STATUS_SYMBOLS[status]
-    click.secho(f" {symbol['string']} ", fg=symbol['color'], nl=False)
-    click.secho(f"{service + ':':12s} {msg}")
+    echo.echo(f" {symbol['string']} ", fg=symbol['color'], nl=False)
+    echo.echo(f"{service + ':':12s} {msg}")
 
     if exception is not None:
         echo.echo_error(f'{type(exception).__name__}: {exception}')

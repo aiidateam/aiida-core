@@ -9,14 +9,14 @@
 ###########################################################################
 # pylint: disable=redefined-outer-name
 """Module to test process runners."""
-import threading
 import asyncio
+import threading
 
 import plumpy
 import pytest
 
 from aiida.engine import Process
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 from aiida.orm import WorkflowNode
 
 
@@ -45,7 +45,7 @@ def the_hans_klok_comeback(loop):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_call_on_process_finish(create_runner):
     """Test call on calculation finish."""
     runner = create_runner()

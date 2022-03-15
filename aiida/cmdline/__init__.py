@@ -7,16 +7,54 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=wildcard-import,undefined-variable
 """The command line interface of AiiDA."""
 
-from .params.arguments import *
-from .params.options import *
-from .params.types import *
-from .utils.decorators import *
-from .utils.echo import *
+# AUTO-GENERATED
+
+# yapf: disable
+# pylint: disable=wildcard-import
+
+from .params import *
+from .utils import *
 
 __all__ = (
-    params.arguments.__all__ + params.options.__all__ + params.types.__all__ + utils.decorators.__all__ +
-    utils.echo.__all__
+    'AbsolutePathParamType',
+    'CalculationParamType',
+    'CodeParamType',
+    'ComputerParamType',
+    'ConfigOptionParamType',
+    'DataParamType',
+    'EmailType',
+    'EntryPointType',
+    'FileOrUrl',
+    'GroupParamType',
+    'HostnameType',
+    'IdentifierParamType',
+    'LabelStringType',
+    'LazyChoice',
+    'MpirunCommandParamType',
+    'MultipleValueParamType',
+    'NodeParamType',
+    'NonEmptyStringParamType',
+    'PathOrUrl',
+    'PluginParamType',
+    'ProcessParamType',
+    'ProfileParamType',
+    'ShebangParamType',
+    'UserParamType',
+    'WorkflowParamType',
+    'dbenv',
+    'echo_critical',
+    'echo_dictionary',
+    'echo_error',
+    'echo_info',
+    'echo_report',
+    'echo_success',
+    'echo_warning',
+    'format_call_graph',
+    'is_verbose',
+    'only_if_daemon_running',
+    'with_dbenv',
 )
+
+# yapf: enable

@@ -23,7 +23,7 @@ from aiida.cmdline.utils import decorators
 @click.argument('expression', type=click.STRING, required=False)
 @click.option('-d', '--daemon', is_flag=True, help='Submit the workchains to the daemon.')
 @options.CODE(
-    type=types.CodeParamType(entry_point='arithmetic.add'),
+    type=types.CodeParamType(entry_point='core.arithmetic.add'),
     required=False,
     help='Code to perform the add operations with. Required if -C flag is specified'
 )
@@ -99,8 +99,8 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
     If no expression is specified, a random one will be generated that adheres to these rules
     """
     # pylint: disable=too-many-arguments,too-many-locals,too-many-statements,too-many-branches
-    from aiida.orm import Code, Int, Str
     from aiida.engine import run_get_node
+    from aiida.orm import Code, Int, Str
 
     lib_expression = importlib.import_module('lib.expression')
     lib_workchain = importlib.import_module('lib.workchain')

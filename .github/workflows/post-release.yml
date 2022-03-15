@@ -23,15 +23,16 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Python 3.7
+    - name: Set up Python 3.8
       uses: actions/setup-python@v2
       with:
-        python-version: 3.7
+        python-version: '3.8'
 
     - name: Install python dependencies
       run: |
+        pip install --upgrade pip
         pip install transifex-client sphinx-intl
-        pip install -e .[docs,tests]
+        pip install -e .[docs,tests,rest,atomic_tools]
 
     - name: Build pot files
       env:

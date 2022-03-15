@@ -14,32 +14,43 @@ from collections.abc import Mapping
 import enum
 import inspect
 import logging
-from uuid import UUID
 import traceback
 from types import TracebackType
 from typing import (
-    Any, cast, Dict, Iterable, Iterator, List, MutableMapping, Optional, Type, Tuple, Union, TYPE_CHECKING
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    MutableMapping,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+    cast,
 )
+from uuid import UUID
 
 from aio_pika.exceptions import ConnectionClosed
+from kiwipy.communications import UnroutableError
 import plumpy.exceptions
 import plumpy.futures
-import plumpy.processes
 import plumpy.persistence
-from plumpy.process_states import ProcessState, Finished
-from kiwipy.communications import UnroutableError
+from plumpy.process_states import Finished, ProcessState
+import plumpy.processes
 
 from aiida import orm
-from aiida.orm.utils import serialize
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.orm.utils import serialize
 
-from .exit_code import ExitCode, ExitCodesNamespace
 from .builder import ProcessBuilder
-from .ports import InputPort, OutputPort, PortNamespace, PORT_NAMESPACE_SEPARATOR
+from .exit_code import ExitCode, ExitCodesNamespace
+from .ports import PORT_NAMESPACE_SEPARATOR, InputPort, OutputPort, PortNamespace
 from .process_spec import ProcessSpec
 
 if TYPE_CHECKING:
@@ -892,6 +903,8 @@ class Process(plumpy.processes.Process):
         for port_namespace in self._get_namespace_list(namespace=namespace, agglomerate=agglomerate):
             # only the top-level key is stored in _exposed_outputs
             for top_name in top_namespace_map:
+                if namespace is not None and namespace not in self.spec()._exposed_outputs:  # pylint: disable=protected-access
+                    raise KeyError(f'the namespace `{namespace}` is not an exposed namespace.')
                 if top_name in self.spec()._exposed_outputs[port_namespace][process_class]:  # pylint: disable=protected-access
                     output_key_map[top_name] = port_namespace
 
@@ -931,12 +944,14 @@ class Process(plumpy.processes.Process):
     def is_valid_cache(cls, node: orm.ProcessNode) -> bool:
         """Check if the given node can be cached from.
 
-        .. warning :: When overriding this method, make sure to call
-            super().is_valid_cache(node) and respect its output. Otherwise,
-            the 'invalidates_cache' keyword on exit codes will not work.
+        Overriding this method allows ``Process`` sub-classes to modify when
+        corresponding process nodes are considered as a cache.
 
-        This method allows extending the behavior of `ProcessNode.is_valid_cache`
-        from `Process` sub-classes, for example in plug-ins.
+        .. warning :: When overriding this method, make sure to return ``False``
+            *at least* in all cases when ``super().is_valid_cache(node)``
+            returns ``False``. Otherwise, the ``invalidates_cache`` keyword on exit
+            codes may have no effect.
+
         """
         try:
             return not cls.spec().exit_codes(node.exit_status).invalidates_cache

@@ -8,8 +8,11 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Profile param type for click."""
+from click.shell_completion import CompletionItem
 
 from .strings import LabelStringType
+
+__all__ = ('ProfileParamType',)
 
 
 class ProfileParamType(LabelStringType):
@@ -28,8 +31,14 @@ class ProfileParamType(LabelStringType):
 
     def convert(self, value, param, ctx):
         """Attempt to match the given value to a valid profile."""
+        from aiida.common import extendeddicts
         from aiida.common.exceptions import MissingConfigurationError, ProfileConfigurationError
-        from aiida.manage.configuration import get_config, load_profile, Profile
+        from aiida.manage.configuration import Profile, get_config, load_profile
+
+        # If the value is already of the expected return type, simply return it. This behavior is new in `click==8.0`:
+        # https://click.palletsprojects.com/en/8.0.x/parameters/#implementing-custom-types
+        if isinstance(value, Profile):
+            return value
 
         value = super().convert(value, param, ctx)
 
@@ -41,7 +50,7 @@ class ProfileParamType(LabelStringType):
                 self.fail(str(exception))
 
             # Create a new empty profile
-            profile = Profile(value, {})
+            profile = Profile(value, {}, validate=False)
         else:
             if self._cannot_exist:
                 self.fail(str(f'the profile `{value}` already exists'))
@@ -49,9 +58,15 @@ class ProfileParamType(LabelStringType):
         if self._load_profile:
             load_profile(profile.name)
 
+        if ctx.obj is None:
+            ctx.obj = extendeddicts.AttributeDict()
+
+        ctx.obj.config = config
+        ctx.obj.profile = profile
+
         return profile
 
-    def complete(self, ctx, incomplete):  # pylint: disable=unused-argument,no-self-use
+    def shell_complete(self, ctx, param, incomplete):  # pylint: disable=unused-argument,no-self-use
         """Return possible completions based on an incomplete value
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description
@@ -67,4 +82,4 @@ class ProfileParamType(LabelStringType):
         except MissingConfigurationError:
             return []
 
-        return [(profile.name, '') for profile in config.profiles if profile.name.startswith(incomplete)]
+        return [CompletionItem(profile.name) for profile in config.profiles if profile.name.startswith(incomplete)]

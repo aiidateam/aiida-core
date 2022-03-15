@@ -17,8 +17,11 @@ You have performed your calculations with AiiDA and you would like to share your
 Since AiiDA keeps track of the provenance of every computed result, this step is easy:
 Tell AiiDA the **final results** you would like to be reproducible, and AiiDA will automatically include their entire provenance using the :ref:`topics:provenance:consistency:traversal-rules`.
 
+.. seealso:: :ref:`internal_architecture:storage:sqlite_zip` and :ref:`how-to:data:share:archive:profile`.
+
 Exporting individual nodes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 Let's say the key results of your study are contained in three AiiDA nodes with PKs ``12``, ``123``, ``1234``.
 Exporting those results together with their provenance is as easy as:
 
@@ -34,19 +37,16 @@ See ``verdi archive create --help`` for ways to modify the traversal rules.
 
 .. tip::
 
-    If you want to make sure the archive includes everything you intended, you can create a new profile and import it:
+    To see what would be exported, before exporting, you can use the ``--test-run`` option:
 
     .. code-block:: console
 
-        $ verdi quicksetup --profile test-export  # create new profile
-        $ verdi --profile test-export import my-calculations.aiida
-
-    Now use, e.g. the :py:class:`~aiida.orm.querybuilder.QueryBuilder` to query the database.
+        $ verdi archive create --test-run my-calculations.aiida
 
 Please remember to use **UUIDs** when pointing your colleagues to data *inside* an AiiDA archive, since UUIDs are guaranteed to be universally unique (while PKs aren't).
 
-Using groups for data exporting
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Exporting large numbers of nodes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If the number of results to be exported is large, for example in a high-throughput study, use the ``QueryBuilder`` to add the corresponding nodes to a group ``my-results`` (see :ref:`how-to:data:organize:group`).
 Then export the group:
@@ -54,6 +54,12 @@ Then export the group:
 .. code-block:: console
 
     $ verdi archive create my-calculations.aiida --groups my-results
+
+Alternatively, export your entire profile with:
+
+.. code-block:: console
+
+    $ verdi archive create my-calculations.aiida --all
 
 Publishing AiiDA archive files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -65,6 +71,80 @@ When publishing AiiDA archives on the `Materials Cloud Archive`_, you also get a
 .. _Open Science Framework: https://osf.io
 .. _Materials Cloud Archive: https://archive.materialscloud.org
 
+Inspecting an archive
+^^^^^^^^^^^^^^^^^^^^^
+
+In order to get a quick overview of an archive file *without* importing it into your AiiDA profile, use ``verdi archive info``:
+
+.. code-block:: console
+
+    $ verdi archive info --detailed test.aiida
+    metadata:
+        export_version: main_0001
+        aiida_version: 2.0.0
+        key_format: sha256
+        compression: 6
+        ctime: '2022-03-06T23:50:57.964429'
+        creation_parameters:
+            entities_starting_set:
+            node:
+            - 6af3f8a0-cf0d-4427-8472-f8907acfc87a
+            include_authinfos: false
+            include_comments: true
+            include_logs: true
+            graph_traversal_rules:
+            input_calc_forward: false
+            input_calc_backward: true
+            create_forward: true
+            create_backward: true
+            return_forward: true
+            return_backward: false
+            input_work_forward: false
+            input_work_backward: true
+            call_calc_forward: true
+            call_calc_backward: true
+            call_work_forward: true
+            call_work_backward: true
+    entities:
+        Users:
+            count: 1
+            emails:
+            - aiida@epfl.ch
+        Computers:
+            count: 2
+            labels:
+            - computer1
+            - computer2
+        Nodes:
+            count: 53
+            node_types:
+            - data.core.array.trajectory.TrajectoryData.
+            - data.core.cif.CifData.
+            - data.core.code.Code.
+            - data.core.dict.Dict.
+            - data.core.folder.FolderData.
+            - data.core.remote.RemoteData.
+            - data.core.singlefile.SinglefileData.
+            - data.core.structure.StructureData.
+            - process.calculation.calcfunction.CalcFunctionNode.
+            - process.calculation.calcjob.CalcJobNode.
+            process_types:
+            - aiida.calculations:codtools.ciffilter
+            - aiida.calculations:quantumespresso.pw
+        Groups:
+            count: 0
+            type_strings: []
+        Comments:
+            count: 0
+        Logs:
+            count: 0
+        Links:
+            count: 59
+    repository:
+        objects:
+            count: 71
+
+You can also use the Python API to inspect the archive file as a profile, see :ref:`how-to:data:share:archive:profile`.
 
 Importing an archive
 ^^^^^^^^^^^^^^^^^^^^
@@ -80,28 +160,16 @@ During import, AiiDA will avoid identifier collisions and node duplication based
 By default, existing entities will be updated with the most recent changes.
 Node extras and comments have special modes for determining how to import them - for more details, see ``verdi archive import --help``.
 
+To see what would be imported, before importing, you can use the ``--test-run`` option:
+
+.. code-block:: console
+
+    $ verdi archive import --test-run my-calculations.aiida
+
 .. tip:: The AiiDA archive format has evolved over time, but you can still import archives created with previous AiiDA versions.
     If an outdated archive version is detected during import, the archive file will be automatically migrated to the newest version (within a temporary folder) and the import retried.
 
     You can also use ``verdi archive migrate`` to create updated archive files from existing archive files (or update them in place).
-
-.. tip:: In order to get a quick overview of an archive file *without* importing it into your AiiDA profile, use ``verdi archive inspect``:
-
-    .. code-block:: console
-
-        $ verdi archive inspect sssp-efficiency.aiida
-        --------------  -----
-        Version aiida   1.2.1
-        Version format  0.9
-        Computers       0
-        Groups          0
-        Links           0
-        Nodes           85
-        Users           1
-        --------------  -----
-
-    Note: For archive versions 0.2 and below, the overview may be inaccurate.
-
 
 .. _how-to:share:serve:
 
@@ -215,7 +283,7 @@ Deploying a REST API server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``verdi restapi`` command runs the REST API through the ``werkzeug`` python-based HTTP server.
-In order to deploy production instances of the REST API for serving your data to others, we recommend using a fully fledged web server, such as `Apache <https://httpd.apache.org/>`_ or `NGINX <https://www.nginx.com/>`_, which then runs the REST API python application through the `web server gateway interface (WSGI) <wsgi.readthedocs.io/>`_.
+In order to deploy production instances of the REST API for serving your data to others, we recommend using a fully fledged web server, such as `Apache <https://httpd.apache.org/>`_ or `NGINX <https://www.nginx.com/>`_, which then runs the REST API python application through the `web server gateway interface (WSGI) <https://wsgi.readthedocs.io/>`_.
 
 .. note::
     One Apache/NGINX server can host multiple instances of the REST APIs, e.g. serving data from different AiiDA profiles.
@@ -228,7 +296,7 @@ A ``myprofile-rest.wsgi`` script for an AiiDA profile ``myprofile`` would look l
 
 In the following, we explain how to run this wsgi application using Apache on Ubuntu.
 
-    #. Install and enable the ``mod_wsgi`` `WSGI module <modwsgi.readthedocs.io/>`_ module:
+    #. Install and enable the ``mod_wsgi`` `WSGI module <https://modwsgi.readthedocs.io/>`_ module:
 
     .. code-block:: console
 

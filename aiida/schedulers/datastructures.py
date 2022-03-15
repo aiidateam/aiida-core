@@ -16,6 +16,7 @@ the data structure that is returned when querying for jobs in the scheduler
 """
 import abc
 import enum
+import json
 
 from aiida.common import AIIDA_LOGGER
 from aiida.common.extendeddicts import AttributeDict, DefaultFieldsAttributeDict
@@ -62,7 +63,8 @@ class JobResource(DefaultFieldsAttributeDict, metaclass=abc.ABCMeta):
     """
     _default_fields = tuple()
 
-    @abc.abstractclassmethod
+    @classmethod
+    @abc.abstractmethod
     def validate_resources(cls, **kwargs):
         """Validate the resources against the job resource class of this scheduler.
 
@@ -76,7 +78,8 @@ class JobResource(DefaultFieldsAttributeDict, metaclass=abc.ABCMeta):
         """Return a list of valid keys to be passed to the constructor."""
         return list(cls._default_fields)
 
-    @abc.abstractclassmethod
+    @classmethod
+    @abc.abstractmethod
     def accepts_default_mpiprocs_per_machine(cls):
         """Return True if this subclass accepts a `default_mpiprocs_per_machine` key, False otherwise."""
 
@@ -246,6 +249,9 @@ class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-insta
       * ``rerunnable``: if the job is rerunnable (boolean)
       * ``job_environment``: a dictionary with environment variables to set
         before the execution of the code.
+      * ``environment_variables_double_quotes``: if set to True, use double quotes
+        instead of single quotes to escape the environment variables specified
+        in ``environment_variables``.
       * ``working_directory``: the working directory for this job. During
         submission, the transport will first do a 'chdir' to this directory,
         and then possibly set a scheduler parameter, if this is supported
@@ -326,6 +332,7 @@ class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-insta
         'submit_as_hold',
         'rerunnable',
         'job_environment',
+        'environment_variables_double_quotes',
         'working_directory',
         'email',
         'email_on_started',
@@ -458,6 +465,7 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
         """
 
         import datetime
+
         import pytz
 
         if value is None:
@@ -482,6 +490,7 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
         :return: The deserialised date
         """
         import datetime
+
         import pytz
 
         if value is None:
@@ -535,8 +544,6 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
 
         :return: A string with serialised representation of the current data.
         """
-        from aiida.common import json
-
         return json.dumps(self.get_dict())
 
     def get_dict(self):
@@ -566,6 +573,4 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
 
         :param data: The string with the JSON-serialised data to load from
         """
-        from aiida.common import json
-
         return cls.load_from_dict(json.loads(data))

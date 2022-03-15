@@ -70,13 +70,6 @@ class CalcInfo(DefaultFieldsAttributeDict):
         and stored temporarily in a FolderData, that will be available only during the parsing call.
         The format of the list is the same as that of 'retrieve_list'
 
-    * retrieve_singlefile_list: a list of tuples with format
-        ('linkname_from calc to singlefile', 'subclass of singlefile', 'filename')
-        Each tuple represents a file that will be retrieved from cluster and saved in SinglefileData nodes
-
-        .. deprecated:: 1.0.0
-            Will be removed in `v2.0.0`, use `retrieve_temporary_list` instead.
-
     * local_copy_list: a list of tuples with format ('node_uuid', 'filename', relativedestpath')
     * remote_copy_list: a list of tuples with format ('remotemachinename', 'remoteabspath', 'relativedestpath')
     * remote_symlink_list: a list of tuples with format ('remotemachinename', 'remoteabspath', 'relativedestpath')
@@ -87,35 +80,17 @@ class CalcInfo(DefaultFieldsAttributeDict):
         either, for example, because they contain proprietary information or because they are big and their content is
         already indirectly present in the repository through one of the data nodes passed as input to the calculation.
     * codes_info: a list of dictionaries used to pass the info of the execution of a code
-    * codes_run_mode: a string used to specify the order in which multi codes can be executed
+    * codes_run_mode: the mode of execution in which the codes will be run (`CodeRunMode.SERIAL` by default,
+        but can also be `CodeRunMode.PARALLEL`)
     * skip_submit: a flag that, when set to True, orders the engine to skip the submit/update steps (so no code will
         run, it will only upload the files and then retrieve/parse).
     """
 
     _default_fields = (
-        'job_environment',
-        'email',
-        'email_on_started',
-        'email_on_terminated',
-        'uuid',
-        'prepend_text',
-        'append_text',
-        'num_machines',
-        'num_mpiprocs_per_machine',
-        'priority',
-        'max_wallclock_seconds',
-        'max_memory_kb',
-        'rerunnable',
-        'retrieve_list',
-        'retrieve_temporary_list',
-        'retrieve_singlefile_list',  # Deprecated as of 1.0.0, use instead `retrieve_temporary_list`
-        'local_copy_list',
-        'remote_copy_list',
-        'remote_symlink_list',
-        'provenance_exclude_list',
-        'codes_info',
-        'codes_run_mode',
-        'skip_submit'
+        'job_environment', 'email', 'email_on_started', 'email_on_terminated', 'uuid', 'prepend_text', 'append_text',
+        'num_machines', 'num_mpiprocs_per_machine', 'priority', 'max_wallclock_seconds', 'max_memory_kb', 'rerunnable',
+        'retrieve_list', 'retrieve_temporary_list', 'local_copy_list', 'remote_copy_list', 'remote_symlink_list',
+        'provenance_exclude_list', 'codes_info', 'codes_run_mode', 'skip_submit'
     )
 
 
@@ -190,39 +165,3 @@ class CodeRunMode(IntEnum):
 
     SERIAL = 0
     PARALLEL = 1
-
-
-class LazyStore:
-    """
-    A container that provides a mapping to objects based on a key, if the object is not
-    found in the container when it is retrieved it will created using a provided factory
-    method
-    """
-
-    def __init__(self):
-        self._store = {}
-
-    def get(self, key, factory):
-        """
-        Get a value in the store based on the key, if it doesn't exist it will be created
-        using the factory method and returned
-
-        :param key: the key of the object to get
-        :param factory: the factory used to create the object if necessary
-        :return: the object
-        """
-        try:
-            return self._store[key]
-        except KeyError:
-            obj = factory()
-            self._store[key] = obj
-            return obj
-
-    def pop(self, key):
-        """
-        Pop an object from the store based on the given key
-
-        :param key: the object key
-        :return: the object that was popped
-        """
-        return self._store.pop(key)

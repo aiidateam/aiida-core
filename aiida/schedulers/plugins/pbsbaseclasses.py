@@ -14,7 +14,7 @@ import logging
 
 from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import Scheduler, SchedulerError, SchedulerParsingError
-from aiida.schedulers.datastructures import (JobInfo, JobState, MachineInfo, NodeNumberJobResource)
+from aiida.schedulers.datastructures import JobInfo, JobState, MachineInfo, NodeNumberJobResource
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -297,21 +297,8 @@ class PbsBaseClass(Scheduler):
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)
 
-        # Job environment variables are to be set on one single line.
-        # This is a tough job due to the escaping of commas, etc.
-        # moreover, I am having issues making it work.
-        # Therefore, I assume that this is bash and export variables by
-        # and.
-
         if job_tmpl.job_environment:
-            lines.append(empty_line)
-            lines.append('# ENVIRONMENT VARIABLES BEGIN ###')
-            if not isinstance(job_tmpl.job_environment, dict):
-                raise ValueError('If you provide job_environment, it must be a dictionary')
-            for key, value in job_tmpl.job_environment.items():
-                lines.append(f'export {key.strip()}={escape_for_bash(value)}')
-            lines.append('# ENVIRONMENT VARIABLES  END  ###')
-            lines.append(empty_line)
+            lines.append(self._get_submit_script_environment_variables(job_tmpl))
 
         # Required to change directory to the working directory, that is
         # the one from which the job was submitted
@@ -677,8 +664,8 @@ class PbsBaseClass(Scheduler):
         Parse a time string in the format returned from qstat -f and
         returns a datetime object.
         """
-        import time
         import datetime
+        import time
 
         try:
             time_struct = time.strptime(string, fmt)

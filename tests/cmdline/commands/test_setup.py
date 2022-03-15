@@ -8,30 +8,36 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi profile`."""
+import os
+import tempfile
 
-import traceback
-from click.testing import CliRunner
+from pgtest.pgtest import PGTest
 import pytest
 
 from aiida import orm
-from aiida.backends import BACKEND_DJANGO
-from aiida.backends.testbase import AiidaPostgresTestCase
 from aiida.cmdline.commands import cmd_setup
 from aiida.manage import configuration
 from aiida.manage.external.postgres import Postgres
 
 
-@pytest.mark.usefixtures('config_with_profile')
-class TestVerdiSetup(AiidaPostgresTestCase):
+@pytest.fixture(scope='class')
+def pg_test_cluster():
+    """Create a standalone Postgres cluster, for setup tests."""
+    pg_test = PGTest()
+    yield pg_test
+    pg_test.close()
+
+
+class TestVerdiSetup:
     """Tests for `verdi setup` and `verdi quicksetup`."""
 
-    def setUp(self):
-        """Create a CLI runner to invoke the CLI commands."""
-        if configuration.PROFILE.database_backend == BACKEND_DJANGO:
-            pytest.skip('Reenable when #2813 is addressed')
-        super().setUp()
-        self.backend = configuration.PROFILE.database_backend
-        self.cli_runner = CliRunner()
+    @pytest.fixture(autouse=True)
+    def init_profile(self, pg_test_cluster, empty_config, run_cli_command):  # pylint: disable=redefined-outer-name,unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        self.storage_backend_name = 'psql_dos'
+        self.pg_test = pg_test_cluster
+        self.cli_runner = run_cli_command
 
     def test_help(self):
         """Check that the `--help` option is eager, is not overruled and will properly display the help message.
@@ -39,13 +45,11 @@ class TestVerdiSetup(AiidaPostgresTestCase):
         If this test hangs, most likely the `--help` eagerness is overruled by another option that has started the
         prompt cycle, which by waiting for input, will block the test from continuing.
         """
-        self.cli_runner.invoke(cmd_setup.setup, ['--help'], catch_exceptions=False)
-        self.cli_runner.invoke(cmd_setup.quicksetup, ['--help'], catch_exceptions=False)
+        self.cli_runner(cmd_setup.setup, ['--help'], catch_exceptions=False)
+        self.cli_runner(cmd_setup.quicksetup, ['--help'], catch_exceptions=False)
 
     def test_quicksetup(self):
         """Test `verdi quicksetup`."""
-        configuration.reset_profile()
-
         profile_name = 'testing'
         user_email = 'some@email.com'
         user_first_name = 'John'
@@ -55,32 +59,31 @@ class TestVerdiSetup(AiidaPostgresTestCase):
         options = [
             '--non-interactive', '--profile', profile_name, '--email', user_email, '--first-name', user_first_name,
             '--last-name', user_last_name, '--institution', user_institution, '--db-port', self.pg_test.dsn['port'],
-            '--db-backend', self.backend
+            '--db-backend', self.storage_backend_name
         ]
 
-        result = self.cli_runner.invoke(cmd_setup.quicksetup, options)
-        self.assertClickResultNoException(result)
-        self.assertClickSuccess(result)
+        self.cli_runner(cmd_setup.quicksetup, options)
 
         config = configuration.get_config()
-        self.assertIn(profile_name, config.profile_names)
+        assert profile_name in config.profile_names
 
         profile = config.get_profile(profile_name)
-        profile.default_user = user_email
+        profile.default_user_email = user_email
 
         # Verify that the backend type of the created profile matches that of the profile for the current test session
-        self.assertEqual(self.backend, profile.database_backend)
+        assert self.storage_backend_name == profile.storage_backend
 
         user = orm.User.objects.get(email=user_email)
-        self.assertEqual(user.first_name, user_first_name)
-        self.assertEqual(user.last_name, user_last_name)
-        self.assertEqual(user.institution, user_institution)
+        assert user.first_name == user_first_name
+        assert user.last_name == user_last_name
+        assert user.institution == user_institution
+
+        # Check that the repository UUID was stored in the database
+        backend = profile.storage_cls(profile)
+        assert backend.get_global_variable('repository|uuid') == backend.get_repository().uuid
 
     def test_quicksetup_from_config_file(self):
         """Test `verdi quicksetup` from configuration file."""
-        import tempfile
-        import os
-
         with tempfile.NamedTemporaryFile('w') as handle:
             handle.write(
                 f"""---
@@ -88,17 +91,15 @@ profile: testing
 first_name: Leopold
 last_name: Talirz
 institution: EPFL
-db_backend: {self.backend}
+db_backend: {self.storage_backend_name}
+db_port: {self.pg_test.dsn['port']}
 email: 123@234.de"""
             )
             handle.flush()
-            result = self.cli_runner.invoke(cmd_setup.quicksetup, ['--config', os.path.realpath(handle.name)])
-        self.assertClickResultNoException(result)
+            self.cli_runner(cmd_setup.quicksetup, ['--config', os.path.realpath(handle.name)])
 
     def test_quicksetup_wrong_port(self):
         """Test `verdi quicksetup` exits if port is wrong."""
-        configuration.reset_profile()
-
         profile_name = 'testing'
         user_email = 'some@email.com'
         user_first_name = 'John'
@@ -111,8 +112,7 @@ email: 123@234.de"""
             self.pg_test.dsn['port'] + 100
         ]
 
-        result = self.cli_runner.invoke(cmd_setup.quicksetup, options)
-        self.assertIsNotNone(result.exception, ''.join(traceback.format_exception(*result.exc_info)))
+        self.cli_runner(cmd_setup.quicksetup, options, raises=True)
 
     def test_setup(self):
         """Test `verdi setup` (non-interactive)."""
@@ -123,7 +123,6 @@ email: 123@234.de"""
         db_pass = 'aiida_test_setup'
         postgres.create_dbuser(db_user, db_pass)
         postgres.create_db(db_user, db_name)
-        configuration.reset_profile()
 
         profile_name = 'testing'
         user_email = 'some@email.com'
@@ -137,23 +136,25 @@ email: 123@234.de"""
         options = [
             '--non-interactive', '--email', user_email, '--first-name', user_first_name, '--last-name', user_last_name,
             '--institution', user_institution, '--db-name', db_name, '--db-username', db_user, '--db-password', db_pass,
-            '--db-port', self.pg_test.dsn['port'], '--db-backend', self.backend, '--profile', profile_name
+            '--db-port', self.pg_test.dsn['port'], '--db-backend', self.storage_backend_name, '--profile', profile_name
         ]
 
-        result = self.cli_runner.invoke(cmd_setup.setup, options)
-        self.assertClickResultNoException(result)
-        self.assertClickSuccess(result)
+        self.cli_runner(cmd_setup.setup, options)
 
         config = configuration.get_config()
-        self.assertIn(profile_name, config.profile_names)
+        assert profile_name in config.profile_names
 
         profile = config.get_profile(profile_name)
-        profile.default_user = user_email
+        profile.default_user_email = user_email
 
         # Verify that the backend type of the created profile matches that of the profile for the current test session
-        self.assertEqual(self.backend, profile.database_backend)
+        assert self.storage_backend_name == profile.storage_backend
 
         user = orm.User.objects.get(email=user_email)
-        self.assertEqual(user.first_name, user_first_name)
-        self.assertEqual(user.last_name, user_last_name)
-        self.assertEqual(user.institution, user_institution)
+        assert user.first_name == user_first_name
+        assert user.last_name == user_last_name
+        assert user.institution == user_institution
+
+        # Check that the repository UUID was stored in the database
+        backend = profile.storage_cls(profile)
+        assert backend.get_global_variable('repository|uuid') == backend.get_repository().uuid

@@ -8,21 +8,24 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Common password and hash generation functions."""
+from collections import OrderedDict, abc
 import datetime
+from decimal import Decimal
+from functools import singledispatch
 import hashlib
+from itertools import chain
 import numbers
+from operator import itemgetter
 import random
 import time
+import typing
 import uuid
-from collections import abc, OrderedDict
-from functools import singledispatch
-from itertools import chain
-from operator import itemgetter
 
 import pytz
 
 from aiida.common.constants import AIIDA_FLOAT_PRECISION
 from aiida.common.exceptions import HashingError
+from aiida.common.utils import DatetimePrecision
 
 from .folders import Folder
 
@@ -37,9 +40,6 @@ UNUSABLE_PASSWORD_PREFIX = '!'  # noqa
 UNUSABLE_PASSWORD_SUFFIX_LENGTH = 40
 
 HASHING_KEY = 'HashingKey'
-
-# The key that is used to store the hash in the node extras
-_HASH_EXTRA_KEY = '_aiida_hash'
 
 ###################################################################
 # THE FOLLOWING WAS TAKEN FROM DJANGO BUT IT CAN BE EASILY REPLACED
@@ -80,6 +80,31 @@ BLAKE2B_OPTIONS = {
     'digest_size': 32,  # we do not need a cryptographically relevant digest
     'inner_size': 64,  # ... but still use 64 as the inner size
 }
+
+
+def chunked_file_hash(
+    handle: typing.BinaryIO, hash_cls: typing.Any, chunksize: int = 524288, **kwargs: typing.Any
+) -> str:
+    """Return the hash for the given file handle
+
+    Will read the file in chunks, which should be opened in 'rb' mode.
+
+    :param handle: a file handle, opened in 'rb' mode.
+    :param hash_cls: a class implementing hashlib._Hash
+    :param chunksize: number of bytes to chunk the file read in
+    :param kwargs: arguments to pass to the hasher initialisation
+    :return: the hash hexdigest (the hash key)
+    """
+    hasher = hash_cls(**kwargs)
+    while True:
+        chunk = handle.read(chunksize)
+        hasher.update(chunk)
+
+        if not chunk:
+            # Empty returned value: EOF
+            break
+
+    return hasher.hexdigest()
 
 
 def make_hash(object_to_hash, **kwargs):
@@ -196,9 +221,22 @@ def _(mapping, **kwargs):
 def _(val, **kwargs):
     """
     Before hashing a float, convert to a string (via rounding) and with a fixed number of digits after the comma.
-    Note that the `_singe_digest` requires a bytes object so we need to encode the utf-8 string first
+    Note that the `_single_digest` requires a bytes object so we need to encode the utf-8 string first
     """
     return [_single_digest('float', float_to_text(val, sig=AIIDA_FLOAT_PRECISION).encode('utf-8'))]
+
+
+@_make_hash.register(Decimal)
+def _(val, **kwargs):
+    """
+    While a decimal can be converted exactly to a string which captures all characteristics of the underlying
+    implementation, we also need compatibility with "equal" representations as int or float. Hence we are checking
+    for the exponent (which is negative if there is a fractional component, 0 otherwise) and get the same hash
+    as for a corresponding float or int.
+    """
+    if val.as_tuple().exponent < 0:
+        return [_single_digest('float', float_to_text(val, sig=AIIDA_FLOAT_PRECISION).encode('utf-8'))]
+    return [_single_digest('int', f'{val}'.encode('utf-8'))]
 
 
 @_make_hash.register(numbers.Complex)
@@ -251,6 +289,15 @@ def _(val, **kwargs):
 @_make_hash.register(uuid.UUID)
 def _(val, **kwargs):
     return [_single_digest('uuid', val.bytes)]
+
+
+@_make_hash.register(DatetimePrecision)
+def _(datetime_precision, **kwargs):
+    """ Hashes for DatetimePrecision object
+    """
+    return [_single_digest('dt_prec')] + list(
+        chain.from_iterable(_make_hash(i, **kwargs) for i in [datetime_precision.dtobj, datetime_precision.precision])
+    ) + [_END_DIGEST]
 
 
 @_make_hash.register(Folder)

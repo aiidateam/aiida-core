@@ -9,17 +9,16 @@
 ###########################################################################
 """`verdi code` command."""
 from functools import partial
-import logging
 
 import click
 import tabulate
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import options, arguments
+from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import code as options_code
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
-from aiida.common.exceptions import InputValidationError
+from aiida.common import exceptions
 
 
 @verdi.group('code')
@@ -60,12 +59,16 @@ def set_code_builder(ctx, param, value):
     return value
 
 
+# Defining the ``COMPUTER`` option first guarantees that the user is prompted for the computer first. This is necessary
+# because the ``LABEL`` option has a callback that relies on the computer being already set. Execution order is
+# guaranteed only for the interactive case, however. For the non-interactive case, the callback is called explicitly
+# once more in the command body to cover the case when the label is specified before the computer.
 @verdi_code.command('setup')
+@options_code.ON_COMPUTER()
+@options_code.COMPUTER()
 @options_code.LABEL()
 @options_code.DESCRIPTION()
 @options_code.INPUT_PLUGIN()
-@options_code.ON_COMPUTER()
-@options_code.COMPUTER()
 @options_code.REMOTE_ABS_PATH()
 @options_code.FOLDER()
 @options_code.REL_PATH()
@@ -73,40 +76,70 @@ def set_code_builder(ctx, param, value):
 @options_code.APPEND_TEXT()
 @options.NON_INTERACTIVE()
 @options.CONFIG_FILE()
+@click.pass_context
 @with_dbenv()
-def setup_code(non_interactive, **kwargs):
+def setup_code(ctx, non_interactive, **kwargs):
     """Setup a new code."""
-    from aiida.common.exceptions import ValidationError
     from aiida.orm.utils.builders.code import CodeBuilder
+
+    options_code.validate_label_uniqueness(ctx, None, kwargs['label'])
 
     if kwargs.pop('on_computer'):
         kwargs['code_type'] = CodeBuilder.CodeType.ON_COMPUTER
     else:
         kwargs['code_type'] = CodeBuilder.CodeType.STORE_AND_UPLOAD
 
+    # Convert entry point to its name
+    if kwargs['input_plugin']:
+        kwargs['input_plugin'] = kwargs['input_plugin'].name
+
     code_builder = CodeBuilder(**kwargs)
 
     try:
         code = code_builder.new()
-    except InputValidationError as exception:
+    except ValueError as exception:
         echo.echo_critical(f'invalid inputs: {exception}')
 
     try:
         code.store()
-        code.reveal()
-    except ValidationError as exception:
+    except Exception as exception:  # pylint: disable=broad-except
         echo.echo_critical(f'Unable to store the Code: {exception}')
 
+    code.reveal()
     echo.echo_success(f'Code<{code.pk}> {code.full_label} created')
 
 
+@verdi_code.command('test')
+@arguments.CODE(callback=set_code_builder)
+@with_dbenv()
+def code_test(code):
+    """Run tests for the given code to check whether it is usable.
+
+    For remote codes the following checks are performed:
+
+     * Whether the remote executable exists.
+
+    """
+    if not code.is_local():
+        try:
+            code.validate_remote_exec_path()
+        except exceptions.ValidationError as exception:
+            echo.echo_critical(f'validation failed: {exception}')
+
+    echo.echo_success('all tests succeeded.')
+
+
+# Defining the ``COMPUTER`` option first guarantees that the user is prompted for the computer first. This is necessary
+# because the ``LABEL`` option has a callback that relies on the computer being already set. Execution order is
+# guaranteed only for the interactive case, however. For the non-interactive case, the callback is called explicitly
+# once more in the command body to cover the case when the label is specified before the computer.
 @verdi_code.command('duplicate')
 @arguments.CODE(callback=set_code_builder)
+@options_code.ON_COMPUTER(contextual_default=get_on_computer)
+@options_code.COMPUTER(contextual_default=get_computer_name)
 @options_code.LABEL(contextual_default=partial(get_default, 'label'))
 @options_code.DESCRIPTION(contextual_default=partial(get_default, 'description'))
 @options_code.INPUT_PLUGIN(contextual_default=partial(get_default, 'input_plugin'))
-@options_code.ON_COMPUTER(contextual_default=get_on_computer)
-@options_code.COMPUTER(contextual_default=get_computer_name)
 @options_code.REMOTE_ABS_PATH(contextual_default=partial(get_default, 'remote_abs_path'))
 @options_code.FOLDER(contextual_default=partial(get_default, 'code_folder'))
 @options_code.REL_PATH(contextual_default=partial(get_default, 'code_rel_path'))
@@ -121,6 +154,8 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
     from aiida.common.exceptions import ValidationError
     from aiida.orm.utils.builders.code import CodeBuilder
 
+    options_code.validate_label_uniqueness(ctx, None, kwargs['label'])
+
     if kwargs.pop('on_computer'):
         kwargs['code_type'] = CodeBuilder.CodeType.ON_COMPUTER
     else:
@@ -129,10 +164,12 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
     if kwargs.pop('hide_original'):
         code.hide()
 
+    # Convert entry point to its name
+    kwargs['input_plugin'] = kwargs['input_plugin'].name
+
     code_builder = ctx.code_builder
     for key, value in kwargs.items():
-        if value is not None:
-            setattr(code_builder, key, value)
+        setattr(code_builder, key, value)
     new_code = code_builder.new()
 
     try:
@@ -146,10 +183,10 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 
 @verdi_code.command()
 @arguments.CODE()
-@options.VERBOSE()
 @with_dbenv()
-def show(code, verbose):
+def show(code):
     """Display detailed information for a code."""
+    from aiida.cmdline import is_verbose
     from aiida.repository import FileType
 
     table = []
@@ -176,28 +213,23 @@ def show(code, verbose):
     table.append(['Prepend text', code.get_prepend_text()])
     table.append(['Append text', code.get_append_text()])
 
-    if verbose:
+    if is_verbose():
         table.append(['Calculations', len(code.get_outgoing().all())])
 
-    click.echo(tabulate.tabulate(table))
+    echo.echo(tabulate.tabulate(table))
 
 
 @verdi_code.command()
 @arguments.CODES()
-@options.VERBOSE()
 @options.DRY_RUN()
 @options.FORCE()
 @with_dbenv()
-def delete(codes, verbose, dry_run, force):
+def delete(codes, dry_run, force):
     """Delete a code.
 
     Note that codes are part of the data provenance, and deleting a code will delete all calculations using it.
     """
-    from aiida.common.log import override_log_formatter_context
-    from aiida.tools import delete_nodes, DELETE_LOGGER
-
-    verbosity = logging.DEBUG if verbose else logging.INFO
-    DELETE_LOGGER.setLevel(verbosity)
+    from aiida.tools import delete_nodes
 
     node_pks_to_delete = [code.pk for code in codes]
 
@@ -207,8 +239,7 @@ def delete(codes, verbose, dry_run, force):
         echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
         return not click.confirm('Shall I continue?', abort=True)
 
-    with override_log_formatter_context('%(message)s'):
-        _, was_deleted = delete_nodes(node_pks_to_delete, dry_run=dry_run or _dry_run_callback)
+    was_deleted = delete_nodes(node_pks_to_delete, dry_run=dry_run or _dry_run_callback)
 
     if was_deleted:
         echo.echo_success('Finished deletion.')
@@ -244,7 +275,7 @@ def relabel(code, label):
 
     try:
         code.relabel(label)
-    except InputValidationError as exception:
+    except (TypeError, ValueError) as exception:
         echo.echo_critical(f'invalid code label: {exception}')
     else:
         echo.echo_success(f'Code<{code.pk}> relabeled from {old_label} to {code.full_label}')
@@ -259,19 +290,19 @@ def relabel(code, label):
 @with_dbenv()
 def code_list(computer, input_plugin, all_entries, all_users, show_owner):
     """List the available codes."""
-    from aiida.orm import Code  # pylint: disable=redefined-outer-name
     from aiida import orm
+    from aiida.orm import Code  # pylint: disable=redefined-outer-name
 
-    qb_user_filters = dict()
+    qb_user_filters = {}
     if not all_users:
         user = orm.User.objects.get_default()
         qb_user_filters['email'] = user.email
 
-    qb_computer_filters = dict()
+    qb_computer_filters = {}
     if computer is not None:
-        qb_computer_filters['name'] = computer.label
+        qb_computer_filters['label'] = computer.label
 
-    qb_code_filters = dict()
+    qb_code_filters = {}
     if input_plugin is not None:
         qb_code_filters['attributes.input_plugin'] = input_plugin.name
 
@@ -303,7 +334,7 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
         # return codes that have a computer (and of course satisfy the
         # other filters). The codes that have a computer attached are the
         # remote codes.
-        qb.append(orm.Computer, with_node='code', project=['name'], filters=qb_computer_filters)
+        qb.append(orm.Computer, with_node='code', project=['label'], filters=qb_computer_filters)
         qb.order_by({Code: {'id': 'asc'}})
         showed_results = qb.count() > 0
         print_list_res(qb, show_owner)
@@ -317,7 +348,7 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
         # We have a user assigned to the code so we can ask for the
         # presence of a user even if there is no user filter
         qb.append(orm.User, with_node='code', project=['email'], filters=qb_user_filters)
-        qb.append(orm.Computer, with_node='code', project=['name'])
+        qb.append(orm.Computer, with_node='code', project=['label'])
         qb.order_by({Code: {'id': 'asc'}})
         print_list_res(qb, show_owner)
         showed_results = showed_results or qb.count() > 0

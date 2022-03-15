@@ -11,6 +11,7 @@
 import os
 
 from aiida.orm import AuthInfo
+
 from ..data import Data
 
 __all__ = ('RemoteData',)
@@ -23,18 +24,12 @@ class RemoteData(Data):
     Remember to pass a computer!
     """
 
+    KEY_EXTRA_CLEANED = 'cleaned'
+
     def __init__(self, remote_path=None, **kwargs):
         super().__init__(**kwargs)
         if remote_path is not None:
             self.set_remote_path(remote_path)
-
-    def get_computer_name(self):
-        """Get label of this node's computer.
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `self.computer.label` property instead.
-        """
-        return self.computer.label  # pylint: disable=no-member
 
     def get_remote_path(self):
         return self.get_attribute('remote_path')
@@ -96,7 +91,7 @@ class RemoteData(Data):
                 full_path = os.path.join(self.get_remote_path(), relpath)
                 transport.chdir(full_path)
             except IOError as exception:
-                if exception.errno == 2 or exception.errno == 20:  # directory not existing or not a directory
+                if exception.errno in (2, 20):  # directory not existing or not a directory
                     exc = IOError(
                         'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.
                         format(full_path, self.computer.label)  # pylint: disable=no-member
@@ -109,7 +104,7 @@ class RemoteData(Data):
             try:
                 return transport.listdir()
             except IOError as exception:
-                if exception.errno == 2 or exception.errno == 20:  # directory not existing or not a directory
+                if exception.errno in (2, 20):  # directory not existing or not a directory
                     exc = IOError(
                         'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.
                         format(full_path, self.computer.label)  # pylint: disable=no-member
@@ -133,7 +128,7 @@ class RemoteData(Data):
                 full_path = os.path.join(self.get_remote_path(), path)
                 transport.chdir(full_path)
             except IOError as exception:
-                if exception.errno == 2 or exception.errno == 20:  # directory not existing or not a directory
+                if exception.errno in (2, 20):  # directory not existing or not a directory
                     exc = IOError(
                         'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.
                         format(full_path, self.computer.label)  # pylint: disable=no-member
@@ -146,7 +141,7 @@ class RemoteData(Data):
             try:
                 return transport.listdir_withattributes()
             except IOError as exception:
-                if exception.errno == 2 or exception.errno == 20:  # directory not existing or not a directory
+                if exception.errno in (2, 20):  # directory not existing or not a directory
                     exc = IOError(
                         'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.
                         format(full_path, self.computer.label)  # pylint: disable=no-member
@@ -156,18 +151,32 @@ class RemoteData(Data):
                 else:
                     raise
 
-    def _clean(self):
-        """
-        Remove all content of the remote folder on the remote computer
+    def _clean(self, transport=None):
+        """Remove all content of the remote folder on the remote computer.
+
+        When the cleaning operation is successful, the extra with the key ``RemoteData.KEY_EXTRA_CLEANED`` is set.
+
+        :param transport: Provide an optional transport that is already open. If not provided, a transport will be
+            automatically opened, based on the current default user and the computer of this data node. Passing in the
+            transport can be used for efficiency if a great number of nodes need to be cleaned for the same computer.
+            Note that the user should take care that the correct transport is passed.
+        :raises ValueError: If the hostname of the provided transport does not match that of the node's computer.
         """
         from aiida.orm.utils.remote import clean_remote
 
-        authinfo = self.get_authinfo()
-        transport = authinfo.get_transport()
         remote_dir = self.get_remote_path()
 
-        with transport:
+        if transport is None:
+            with self.get_authinfo().get_transport() as transport:  # pylint: disable=redefined-argument-from-local
+                clean_remote(transport, remote_dir)
+        else:
+            if transport.hostname != self.computer.hostname:
+                raise ValueError(
+                    f'Transport hostname `{transport.hostname}` does not equal `{self.computer.hostname}` of {self}.'
+                )
             clean_remote(transport, remote_dir)
+
+        self.set_extra(self.KEY_EXTRA_CLEANED, True)
 
     def _validate(self):
         from aiida.common.exceptions import ValidationError
@@ -184,4 +193,4 @@ class RemoteData(Data):
             raise ValidationError('Remote computer not set.')
 
     def get_authinfo(self):
-        return AuthInfo.objects.get(dbcomputer=self.computer, aiidauser=self.user)
+        return AuthInfo.objects(self.backend).get(dbcomputer=self.computer, aiidauser=self.user)

@@ -14,9 +14,10 @@ How-To Guides
    write_workflows
    workchains_restart
    data
-   exploring
+   query
    share_data
-   visualising_graphs/visualising_graphs
+   archive_profile
+   visualising_graphs
    installation
    plugins_develop
    cookbook

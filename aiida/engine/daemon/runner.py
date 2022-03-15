@@ -8,22 +8,21 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Function that starts a daemon runner."""
+import asyncio
 import logging
 import signal
-import asyncio
 
 from aiida.common.log import configure_logging
 from aiida.engine.daemon.client import get_daemon_client
 from aiida.engine.runners import Runner
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 
 LOGGER = logging.getLogger(__name__)
 
 
 async def shutdown_runner(runner: Runner) -> None:
     """Cleanup tasks tied to the service's shutdown."""
-    from asyncio import all_tasks
-    from asyncio import current_task
+    from asyncio import all_tasks, current_task
 
     LOGGER.info('Received signal to shut down the daemon runner')
     tasks = [task for task in all_tasks() if task is not current_task()]

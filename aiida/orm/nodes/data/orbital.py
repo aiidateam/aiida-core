@@ -10,8 +10,9 @@
 """Data plugin to model an atomic orbital."""
 import copy
 
-from aiida.common.exceptions import ValidationError, InputValidationError
+from aiida.common.exceptions import ValidationError
 from aiida.plugins import OrbitalFactory
+
 from .data import Data
 
 __all__ = ('OrbitalData',)
@@ -49,8 +50,8 @@ class OrbitalData(Data):
         filter_dict = {}
         filter_dict.update(kwargs)
         # prevents KeyError from occuring
-        orbital_dicts = [x for x in orbital_dicts if all([y in x for y in filter_dict])]
-        orbital_dicts = [x for x in orbital_dicts if all([x[y] == filter_dict[y] for y in filter_dict])]
+        orbital_dicts = [x for x in orbital_dicts if all(y in x for y in filter_dict)]
+        orbital_dicts = [x for x in orbital_dicts if all(x[y] == z for y, z in filter_dict.items())]
 
         list_of_outputs = []
         for orbital_dict in orbital_dicts:
@@ -80,7 +81,7 @@ class OrbitalData(Data):
             try:
                 _orbital_type = orbital_dict['_orbital_type']
             except KeyError:
-                raise InputValidationError(f'No _orbital_type found in: {orbital_dict}')
+                raise ValueError(f'No _orbital_type found in: {orbital_dict}')
             orbital_dicts.append(orbital_dict)
         self.set_attribute('orbital_dicts', orbital_dicts)
 

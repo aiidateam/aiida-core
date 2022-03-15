@@ -8,57 +8,49 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for verdi node"""
-
-import os
-import io
 import errno
+import gzip
+import io
+import os
 import pathlib
 import tempfile
-import gzip
-import warnings
 
-from click.testing import CliRunner
+import pytest
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_node
-from aiida.common.utils import Capturing
-from aiida.common.warnings import AiidaDeprecationWarning
 
 
 def get_result_lines(result):
     return [e for e in result.output.split('\n') if e]
 
 
-class TestVerdiNode(AiidaTestCase):
+class TestVerdiNode:
     """Tests for `verdi node`."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
-
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init,invalid-name
         node = orm.Data()
 
-        cls.ATTR_KEY_ONE = 'a'
-        cls.ATTR_VAL_ONE = '1'
-        cls.ATTR_KEY_TWO = 'b'
-        cls.ATTR_VAL_TWO = 'test'
+        self.ATTR_KEY_ONE = 'a'
+        self.ATTR_VAL_ONE = '1'
+        self.ATTR_KEY_TWO = 'b'
+        self.ATTR_VAL_TWO = 'test'
 
-        node.set_attribute_many({cls.ATTR_KEY_ONE: cls.ATTR_VAL_ONE, cls.ATTR_KEY_TWO: cls.ATTR_VAL_TWO})
+        node.set_attribute_many({self.ATTR_KEY_ONE: self.ATTR_VAL_ONE, self.ATTR_KEY_TWO: self.ATTR_VAL_TWO})
 
-        cls.EXTRA_KEY_ONE = 'x'
-        cls.EXTRA_VAL_ONE = '2'
-        cls.EXTRA_KEY_TWO = 'y'
-        cls.EXTRA_VAL_TWO = 'other'
+        self.EXTRA_KEY_ONE = 'x'
+        self.EXTRA_VAL_ONE = '2'
+        self.EXTRA_KEY_TWO = 'y'
+        self.EXTRA_VAL_TWO = 'other'
 
-        node.set_extra_many({cls.EXTRA_KEY_ONE: cls.EXTRA_VAL_ONE, cls.EXTRA_KEY_TWO: cls.EXTRA_VAL_TWO})
+        node.set_extra_many({self.EXTRA_KEY_ONE: self.EXTRA_VAL_ONE, self.EXTRA_KEY_TWO: self.EXTRA_VAL_TWO})
 
         node.store()
-
-        cls.node = node
-
-    def setUp(self):
-        self.cli_runner = CliRunner()
+        self.node = node
+        self.cli_runner = run_cli_command
 
     @classmethod
     def get_unstored_folder_node(cls):
@@ -75,46 +67,20 @@ class TestVerdiNode(AiidaTestCase):
         folder_node.put_object_from_filelike(io.StringIO(cls.content_file2), cls.key_file2)
         return folder_node
 
-    def test_node_tree(self):
-        """Test `verdi node tree`"""
-        options = [str(self.node.pk)]
-
-        # This command (and so the test as well) will go away in 2.0
-        # Note: I cannot use simply pytest.mark.filterwarnings as below, as the warning is issued in an invoked command
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', category=AiidaDeprecationWarning)
-            result = self.cli_runner.invoke(cmd_node.tree, options)
-        self.assertClickResultNoException(result)
-
-    # This command (and so this test as well) will go away in 2.0
-    def test_node_tree_printer(self):
-        """Test the `NodeTreePrinter` utility."""
-        from aiida.cmdline.utils.ascii_vis import NodeTreePrinter
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', category=AiidaDeprecationWarning)
-
-            with Capturing():
-                NodeTreePrinter.print_node_tree(self.node, max_depth=1)
-
-            with Capturing():
-                NodeTreePrinter.print_node_tree(self.node, max_depth=1, follow_links=())
-
     def test_node_show(self):
         """Test `verdi node show`"""
         node = orm.Data().store()
         node.label = 'SOMELABEL'
         options = [str(node.pk)]
-        result = self.cli_runner.invoke(cmd_node.node_show, options)
-        self.assertClickResultNoException(result)
+        result = self.cli_runner(cmd_node.node_show, options)
 
         # Let's check some content in the output. At least the UUID and the label should be in there
-        self.assertIn(node.label, result.output)
-        self.assertIn(node.uuid, result.output)
+        assert node.label in result.output
+        assert node.uuid in result.output
 
-        ## Let's now test the '--print-groups' option
+        # Let's now test the '--print-groups' option
         options.append('--print-groups')
-        result = self.cli_runner.invoke(cmd_node.node_show, options)
-        self.assertClickResultNoException(result)
+        result = self.cli_runner(cmd_node.node_show, options)
         # I don't check the list of groups - it might be in an autogroup
 
         # Let's create a group and put the node in there
@@ -122,106 +88,96 @@ class TestVerdiNode(AiidaTestCase):
         group = orm.Group(group_name).store()
         group.add_nodes(node)
 
-        result = self.cli_runner.invoke(cmd_node.node_show, options)
-        self.assertClickResultNoException(result)
+        result = self.cli_runner(cmd_node.node_show, options)
+
         # Now the group should be in there
-        self.assertIn(group_name, result.output)
+        assert group_name in result.output
 
     def test_node_attributes(self):
         """Test verdi node attributes"""
         options = [str(self.node.uuid)]
-        result = self.cli_runner.invoke(cmd_node.attributes, options)
-        self.assertIsNone(result.exception, result.output)
-        self.assertIn(self.ATTR_KEY_ONE, result.output)
-        self.assertIn(self.ATTR_VAL_ONE, result.output)
-        self.assertIn(self.ATTR_KEY_TWO, result.output)
-        self.assertIn(self.ATTR_VAL_TWO, result.output)
+        result = self.cli_runner(cmd_node.attributes, options)
+        assert self.ATTR_KEY_ONE in result.output
+        assert self.ATTR_VAL_ONE in result.output
+        assert self.ATTR_KEY_TWO in result.output
+        assert self.ATTR_VAL_TWO in result.output
 
         for flag in ['-k', '--keys']:
             options = [flag, self.ATTR_KEY_ONE, '--', str(self.node.uuid)]
-            result = self.cli_runner.invoke(cmd_node.attributes, options)
-            self.assertIsNone(result.exception, result.output)
-            self.assertIn(self.ATTR_KEY_ONE, result.output)
-            self.assertIn(self.ATTR_VAL_ONE, result.output)
-            self.assertNotIn(self.ATTR_KEY_TWO, result.output)
-            self.assertNotIn(self.ATTR_VAL_TWO, result.output)
+            result = self.cli_runner(cmd_node.attributes, options)
+            assert self.ATTR_KEY_ONE in result.output
+            assert self.ATTR_VAL_ONE in result.output
+            assert self.ATTR_KEY_TWO not in result.output
+            assert self.ATTR_VAL_TWO not in result.output
 
         for flag in ['-r', '--raw']:
             options = [flag, str(self.node.uuid)]
-            result = self.cli_runner.invoke(cmd_node.attributes, options)
-            self.assertIsNone(result.exception, result.output)
+            self.cli_runner(cmd_node.attributes, options)
 
         for flag in ['-f', '--format']:
             for fmt in ['json+date', 'yaml', 'yaml_expanded']:
                 options = [flag, fmt, str(self.node.uuid)]
-                result = self.cli_runner.invoke(cmd_node.attributes, options)
-                self.assertIsNone(result.exception, result.output)
+                self.cli_runner(cmd_node.attributes, options)
 
         for flag in ['-i', '--identifier']:
             for fmt in ['pk', 'uuid']:
                 options = [flag, fmt, str(self.node.uuid)]
-                result = self.cli_runner.invoke(cmd_node.attributes, options)
-                self.assertIsNone(result.exception, result.output)
+                self.cli_runner(cmd_node.attributes, options)
 
     def test_node_extras(self):
         """Test verdi node extras"""
         options = [str(self.node.uuid)]
-        result = self.cli_runner.invoke(cmd_node.extras, options)
-        self.assertIsNone(result.exception, result.output)
-        self.assertIn(self.EXTRA_KEY_ONE, result.output)
-        self.assertIn(self.EXTRA_VAL_ONE, result.output)
-        self.assertIn(self.EXTRA_KEY_TWO, result.output)
-        self.assertIn(self.EXTRA_VAL_TWO, result.output)
+        result = self.cli_runner(cmd_node.extras, options)
+        assert self.EXTRA_KEY_ONE in result.output
+        assert self.EXTRA_VAL_ONE in result.output
+        assert self.EXTRA_KEY_TWO in result.output
+        assert self.EXTRA_VAL_TWO in result.output
 
         for flag in ['-k', '--keys']:
             options = [flag, self.EXTRA_KEY_ONE, '--', str(self.node.uuid)]
-            result = self.cli_runner.invoke(cmd_node.extras, options)
-            self.assertIsNone(result.exception, result.output)
-            self.assertIn(self.EXTRA_KEY_ONE, result.output)
-            self.assertIn(self.EXTRA_VAL_ONE, result.output)
-            self.assertNotIn(self.EXTRA_KEY_TWO, result.output)
-            self.assertNotIn(self.EXTRA_VAL_TWO, result.output)
+            result = self.cli_runner(cmd_node.extras, options)
+            assert self.EXTRA_KEY_ONE in result.output
+            assert self.EXTRA_VAL_ONE in result.output
+            assert self.EXTRA_KEY_TWO not in result.output
+            assert self.EXTRA_VAL_TWO not in result.output
 
         for flag in ['-r', '--raw']:
             options = [flag, str(self.node.uuid)]
-            result = self.cli_runner.invoke(cmd_node.extras, options)
-            self.assertIsNone(result.exception, result.output)
+            result = self.cli_runner(cmd_node.extras, options)
 
         for flag in ['-f', '--format']:
             for fmt in ['json+date', 'yaml', 'yaml_expanded']:
                 options = [flag, fmt, str(self.node.uuid)]
-                result = self.cli_runner.invoke(cmd_node.extras, options)
-                self.assertIsNone(result.exception, result.output)
+                self.cli_runner(cmd_node.extras, options)
 
         for flag in ['-i', '--identifier']:
             for fmt in ['pk', 'uuid']:
                 options = [flag, fmt, str(self.node.uuid)]
-                result = self.cli_runner.invoke(cmd_node.extras, options)
-                self.assertIsNone(result.exception, result.output)
+                self.cli_runner(cmd_node.extras, options)
 
     def test_node_repo_ls(self):
         """Test 'verdi node repo ls' command."""
         folder_node = self.get_unstored_folder_node().store()
 
         options = [str(folder_node.pk), 'some/nested/folder']
-        result = self.cli_runner.invoke(cmd_node.repo_ls, options, catch_exceptions=False)
-        self.assertClickResultNoException(result)
-        self.assertIn('filename.txt', result.output)
+        result = self.cli_runner(cmd_node.repo_ls, options, catch_exceptions=False)
+
+        assert 'filename.txt' in result.output
 
         options = [str(folder_node.pk), 'some/non-existing-folder']
-        result = self.cli_runner.invoke(cmd_node.repo_ls, options, catch_exceptions=False)
-        self.assertIsNotNone(result.exception)
-        self.assertIn('does not exist for the given node', result.output)
+        result = self.cli_runner(cmd_node.repo_ls, options, catch_exceptions=False, raises=True)
+        assert 'does not exist for the given node' in result.output
 
     def test_node_repo_cat(self):
         """Test 'verdi node repo cat' command."""
         # Test cat binary files
-        folder_node = self.get_unstored_folder_node()
-        folder_node.put_object_from_filelike(io.BytesIO(gzip.compress(b'COMPRESS')), 'filename.txt.gz', mode='wb')
+        folder_node = orm.FolderData()
+        bytestream = gzip.compress(b'COMPRESS')
+        folder_node.put_object_from_filelike(io.BytesIO(bytestream), 'filename.txt.gz')
         folder_node.store()
 
         options = [str(folder_node.pk), 'filename.txt.gz']
-        result = self.cli_runner.invoke(cmd_node.repo_cat, options)
+        result = self.cli_runner(cmd_node.repo_cat, options)
         assert gzip.decompress(result.stdout_bytes) == b'COMPRESS'
 
     def test_node_repo_dump(self):
@@ -231,16 +187,16 @@ class TestVerdiNode(AiidaTestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             out_path = pathlib.Path(tmp_dir) / 'out_dir'
             options = [str(folder_node.uuid), str(out_path)]
-            res = self.cli_runner.invoke(cmd_node.repo_dump, options, catch_exceptions=False)
-            self.assertFalse(res.stdout)
+            res = self.cli_runner(cmd_node.repo_dump, options, catch_exceptions=False)
+            assert not res.stdout
 
             for file_key, content in [(self.key_file1, self.content_file1), (self.key_file2, self.content_file2)]:
                 curr_path = out_path
                 for key_part in file_key.split('/'):
                     curr_path /= key_part
-                    self.assertTrue(curr_path.exists())
+                    assert curr_path.exists()
                 with curr_path.open('r') as res_file:
-                    self.assertEqual(res_file.read(), content)
+                    assert res_file.read() == content
 
     def test_node_repo_dump_to_nested_folder(self):
         """Test 'verdi node repo dump' command, with an output folder whose parent does not exist."""
@@ -249,16 +205,16 @@ class TestVerdiNode(AiidaTestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             out_path = pathlib.Path(tmp_dir) / 'out_dir' / 'nested' / 'path'
             options = [str(folder_node.uuid), str(out_path)]
-            res = self.cli_runner.invoke(cmd_node.repo_dump, options, catch_exceptions=False)
-            self.assertFalse(res.stdout)
+            res = self.cli_runner(cmd_node.repo_dump, options, catch_exceptions=False)
+            assert not res.stdout
 
             for file_key, content in [(self.key_file1, self.content_file1), (self.key_file2, self.content_file2)]:
                 curr_path = out_path
                 for key_part in file_key.split('/'):
                     curr_path /= key_part
-                    self.assertTrue(curr_path.exists())
+                    assert curr_path.exists()
                 with curr_path.open('r') as res_file:
-                    self.assertEqual(res_file.read(), content)
+                    assert res_file.read() == content
 
     def test_node_repo_existing_out_dir(self):
         """Test 'verdi node repo dump' command, check that an existing output directory is not overwritten."""
@@ -273,9 +229,9 @@ class TestVerdiNode(AiidaTestCase):
             with some_file.open('w') as file_handle:
                 file_handle.write(some_file_content)
             options = [str(folder_node.uuid), str(out_path)]
-            res = self.cli_runner.invoke(cmd_node.repo_dump, options, catch_exceptions=False)
-            self.assertIn('exists', res.stdout)
-            self.assertIn('Critical:', res.stdout)
+            res = self.cli_runner(cmd_node.repo_dump, options, catch_exceptions=False)
+            assert 'exists' in res.stdout
+            assert 'Critical:' in res.stdout
 
             # Make sure the directory content is still there
             with some_file.open('r') as file_handle:
@@ -298,29 +254,26 @@ def delete_temporary_file(filepath):
             pass
 
 
-class TestVerdiGraph(AiidaTestCase):
+class TestVerdiGraph:
     """Tests for the ``verdi node graph`` command."""
 
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, run_cli_command, tmp_path):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
         from aiida.orm import Data
 
-        cls.node = Data().store()
+        self.node = Data().store()
+        self.cli_runner = run_cli_command
 
         # some of the export tests write in the current directory,
         # make sure it is writeable and we don't pollute the current one
-        cls.old_cwd = os.getcwd()
-        cls.cwd = tempfile.mkdtemp(__name__)
-        os.chdir(cls.cwd)
-
-    @classmethod
-    def tearDownClass(cls):
-        os.chdir(cls.old_cwd)
-        os.rmdir(cls.cwd)
-
-    def setUp(self):
-        self.cli_runner = CliRunner()
+        self.old_cwd = os.getcwd()
+        self.cwd = str(tmp_path.absolute())
+        os.chdir(self.cwd)
+        yield
+        os.chdir(self.old_cwd)
+        os.rmdir(self.cwd)
 
     def test_generate_graph(self):
         """
@@ -332,9 +285,8 @@ class TestVerdiGraph(AiidaTestCase):
         filename = f'{root_node}.dot.pdf'
         options = [root_node]
         try:
-            result = self.cli_runner.invoke(cmd_node.graph_generate, options)
-            self.assertIsNone(result.exception, result.output)
-            self.assertTrue(os.path.isfile(filename))
+            self.cli_runner(cmd_node.graph_generate, options)
+            assert os.path.isfile(filename)
         finally:
             delete_temporary_file(filename)
 
@@ -343,17 +295,16 @@ class TestVerdiGraph(AiidaTestCase):
         Test that an invalid root_node pk (non-numeric, negative, or decimal),
         or non-existent pk will produce an error
         """
-        from aiida.orm import load_node
         from aiida.common.exceptions import NotExistent
+        from aiida.orm import load_node
 
         # Forbidden pk
         for root_node in ['xyz', '-5', '3.14']:
             options = [root_node]
             filename = f'{root_node}.dot.pdf'
             try:
-                result = self.cli_runner.invoke(cmd_node.graph_generate, options)
-                self.assertIsNotNone(result.exception)
-                self.assertFalse(os.path.isfile(filename))
+                self.cli_runner(cmd_node.graph_generate, options, raises=True)
+                assert not os.path.isfile(filename)
             finally:
                 delete_temporary_file(filename)
 
@@ -363,16 +314,15 @@ class TestVerdiGraph(AiidaTestCase):
         root_node = 123456789
         try:
             node = load_node(pk=root_node)
-            self.assertIsNone(node)
+            assert node is None
         except NotExistent:
             pass
         #  Make sure verdi graph rejects this non-existant pk
         try:
             filename = f'{str(root_node)}.dot.pdf'
             options = [str(root_node)]
-            result = self.cli_runner.invoke(cmd_node.graph_generate, options)
-            self.assertIsNotNone(result.exception)
-            self.assertFalse(os.path.isfile(filename))
+            self.cli_runner(cmd_node.graph_generate, options, raises=True)
+            assert not os.path.isfile(filename)
         finally:
             delete_temporary_file(filename)
 
@@ -389,9 +339,8 @@ class TestVerdiGraph(AiidaTestCase):
         for opt in ['-a', '--ancestor-depth', '-d', '--descendant-depth']:
             options = [opt, None, root_node]
             try:
-                result = self.cli_runner.invoke(cmd_node.graph_generate, options)
-                self.assertIsNone(result.exception, result.output)
-                self.assertTrue(os.path.isfile(filename))
+                self.cli_runner(cmd_node.graph_generate, options)
+                assert os.path.isfile(filename)
             finally:
                 delete_temporary_file(filename)
 
@@ -400,9 +349,8 @@ class TestVerdiGraph(AiidaTestCase):
             for value in ['0', '1']:
                 options = [opt, value, root_node]
                 try:
-                    result = self.cli_runner.invoke(cmd_node.graph_generate, options)
-                    self.assertIsNone(result.exception, result.output)
-                    self.assertTrue(os.path.isfile(filename))
+                    self.cli_runner(cmd_node.graph_generate, options)
+                    assert os.path.isfile(filename)
                 finally:
                     delete_temporary_file(filename)
 
@@ -411,9 +359,8 @@ class TestVerdiGraph(AiidaTestCase):
             for badvalue in ['xyz', '3.14', '-5']:
                 options = [flag, badvalue, root_node]
                 try:
-                    result = self.cli_runner.invoke(cmd_node.graph_generate, options)
-                    self.assertIsNotNone(result.exception)
-                    self.assertFalse(os.path.isfile(filename))
+                    self.cli_runner(cmd_node.graph_generate, options, raises=True)
+                    assert not os.path.isfile(filename)
                 finally:
                     delete_temporary_file(filename)
 
@@ -427,9 +374,8 @@ class TestVerdiGraph(AiidaTestCase):
         for flag in ['-i', '--process-in', '-o', '--process-out']:
             options = [flag, root_node]
             try:
-                result = self.cli_runner.invoke(cmd_node.graph_generate, options)
-                self.assertIsNone(result.exception, result.output)
-                self.assertTrue(os.path.isfile(filename))
+                self.cli_runner(cmd_node.graph_generate, options)
+                assert os.path.isfile(filename)
             finally:
                 delete_temporary_file(filename)
 
@@ -449,9 +395,8 @@ class TestVerdiGraph(AiidaTestCase):
                 filename = f'{root_node}.dot.{fileformat}'
                 options = [option, fileformat, root_node]
                 try:
-                    result = self.cli_runner.invoke(cmd_node.graph_generate, options)
-                    self.assertIsNone(result.exception, result.output)
-                    self.assertTrue(os.path.isfile(filename))
+                    self.cli_runner(cmd_node.graph_generate, options)
+                    assert os.path.isfile(filename)
                 finally:
                     delete_temporary_file(filename)
 
@@ -465,9 +410,8 @@ class TestVerdiGraph(AiidaTestCase):
         for id_label_type in ['uuid', 'pk', 'label']:
             options = ['--identifier', id_label_type, root_node]
             try:
-                result = self.cli_runner.invoke(cmd_node.graph_generate, options)
-                self.assertIsNone(result.exception, result.output)
-                self.assertTrue(os.path.isfile(filename))
+                self.cli_runner(cmd_node.graph_generate, options)
+                assert os.path.isfile(filename)
             finally:
                 delete_temporary_file(filename)
 
@@ -475,204 +419,182 @@ class TestVerdiGraph(AiidaTestCase):
 COMMENT = 'Well I never...'
 
 
-class TestVerdiUserCommand(AiidaTestCase):
+class TestVerdiUserCommand:
     """Tests for the ``verdi node comment`` command."""
 
-    def setUp(self):
-        self.cli_runner = CliRunner()
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init,invalid-name
+        self.cli_runner = run_cli_command
         self.node = orm.Data().store()
 
     def test_comment_show_simple(self):
         """Test simply calling the show command (without data to show)."""
-        result = self.cli_runner.invoke(cmd_node.comment_show, [], catch_exceptions=False)
-        self.assertEqual(result.output, '')
-        self.assertEqual(result.exit_code, 0)
+        result = self.cli_runner(cmd_node.comment_show, [], catch_exceptions=False)
+        assert result.output == ''
+        assert result.exit_code == 0
 
     def test_comment_show(self):
         """Test showing an existing comment."""
         self.node.add_comment(COMMENT)
 
         options = [str(self.node.pk)]
-        result = self.cli_runner.invoke(cmd_node.comment_show, options, catch_exceptions=False)
-        self.assertNotEqual(result.output.find(COMMENT), -1)
-        self.assertEqual(result.exit_code, 0)
+        result = self.cli_runner(cmd_node.comment_show, options, catch_exceptions=False)
+        assert result.output.find(COMMENT) != -1
+        assert result.exit_code == 0
 
     def test_comment_add(self):
         """Test adding a comment."""
         options = ['-N', str(self.node.pk), '--', f'{COMMENT}']
-        result = self.cli_runner.invoke(cmd_node.comment_add, options, catch_exceptions=False)
-        self.assertEqual(result.exit_code, 0)
+        result = self.cli_runner(cmd_node.comment_add, options, catch_exceptions=False)
+        assert result.exit_code == 0
 
         comment = self.node.get_comments()
-        self.assertEqual(len(comment), 1)
-        self.assertEqual(comment[0].content, COMMENT)
+        assert len(comment) == 1
+        assert comment[0].content == COMMENT
 
     def test_comment_remove(self):
         """Test removing a comment."""
         comment = self.node.add_comment(COMMENT)
 
-        self.assertEqual(len(self.node.get_comments()), 1)
+        assert len(self.node.get_comments()) == 1
 
         options = [str(comment.pk), '--force']
-        result = self.cli_runner.invoke(cmd_node.comment_remove, options, catch_exceptions=False)
-        self.assertEqual(result.exit_code, 0, result.output)
-        self.assertEqual(len(self.node.get_comments()), 0)
+        result = self.cli_runner(cmd_node.comment_remove, options, catch_exceptions=False)
+        assert result.exit_code == 0, result.output
+        assert len(self.node.get_comments()) == 0
 
 
-class TestVerdiRehash(AiidaTestCase):
+class TestVerdiRehash:
     """Tests for the ``verdi node rehash`` command."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
-        from aiida.orm import Data, Bool, Float, Int
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init,invalid-name
+        from aiida.orm import Bool, Data, Float, Int
+        self.cli_runner = run_cli_command
 
-        cls.node_base = Data().store()
-        cls.node_bool_true = Bool(True).store()
-        cls.node_bool_false = Bool(False).store()
-        cls.node_float = Float(1.0).store()
-        cls.node_int = Int(1).store()
-
-    def setUp(self):
-        self.cli_runner = CliRunner()
+        self.node_base = Data().store()
+        self.node_bool_true = Bool(True).store()
+        self.node_bool_false = Bool(False).store()
+        self.node_float = Float(1.0).store()
+        self.node_int = Int(1).store()
 
     def test_rehash_interactive_yes(self):
         """Passing no options and answering 'Y' to the command will rehash all 5 nodes."""
         expected_node_count = 5
         options = []  # no option, will ask in the prompt
-        result = self.cli_runner.invoke(cmd_node.rehash, options, input='y')
-        self.assertClickResultNoException(result)
-        self.assertTrue(f'{expected_node_count} nodes' in result.output)
+        result = self.cli_runner(cmd_node.rehash, options, user_input='y')
+        assert f'{expected_node_count} nodes' in result.output
 
     def test_rehash_interactive_no(self):
         """Passing no options and answering 'N' to the command will abort the command."""
         options = []  # no option, will ask in the prompt
-        result = self.cli_runner.invoke(cmd_node.rehash, options, input='n')
-        self.assertIsInstance(result.exception, SystemExit)
-        self.assertIn('ExitCode.CRITICAL', str(result.exception))
+        result = self.cli_runner(cmd_node.rehash, options, user_input='n', raises=True)
+        assert isinstance(result.exception, SystemExit)
+        assert 'ExitCode.CRITICAL' in str(result.exception)
 
     def test_rehash(self):
         """Passing no options to the command will rehash all 5 nodes."""
         expected_node_count = 5
         options = ['-f']  # force, so no questions are asked
-        result = self.cli_runner.invoke(cmd_node.rehash, options)
-        self.assertClickResultNoException(result)
-        self.assertTrue(f'{expected_node_count} nodes' in result.output)
+        result = self.cli_runner(cmd_node.rehash, options)
+        assert f'{expected_node_count} nodes' in result.output
 
     def test_rehash_bool(self):
         """Limiting the queryset by defining an entry point, in this case bool, should limit nodes to 2."""
         expected_node_count = 2
-        options = ['-f', '-e', 'aiida.data:bool']
-        result = self.cli_runner.invoke(cmd_node.rehash, options)
-        self.assertClickResultNoException(result)
-        self.assertTrue(f'{expected_node_count} nodes' in result.output)
+        options = ['-f', '-e', 'aiida.data:core.bool']
+        result = self.cli_runner(cmd_node.rehash, options)
+
+        assert f'{expected_node_count} nodes' in result.output
 
     def test_rehash_float(self):
         """Limiting the queryset by defining an entry point, in this case float, should limit nodes to 1."""
         expected_node_count = 1
-        options = ['-f', '-e', 'aiida.data:float']
-        result = self.cli_runner.invoke(cmd_node.rehash, options)
-        self.assertClickResultNoException(result)
-        self.assertTrue(f'{expected_node_count} nodes' in result.output)
+        options = ['-f', '-e', 'aiida.data:core.float']
+        result = self.cli_runner(cmd_node.rehash, options)
+
+        assert f'{expected_node_count} nodes' in result.output
 
     def test_rehash_int(self):
         """Limiting the queryset by defining an entry point, in this case int, should limit nodes to 1."""
         expected_node_count = 1
-        options = ['-f', '-e', 'aiida.data:int']
-        result = self.cli_runner.invoke(cmd_node.rehash, options)
-        self.assertClickResultNoException(result)
-        self.assertTrue(f'{expected_node_count} nodes' in result.output)
+        options = ['-f', '-e', 'aiida.data:core.int']
+        result = self.cli_runner(cmd_node.rehash, options)
+
+        assert f'{expected_node_count} nodes' in result.output
 
     def test_rehash_explicit_pk(self):
         """Limiting the queryset by defining explicit identifiers, should limit nodes to 2 in this example."""
         expected_node_count = 2
         options = ['-f', str(self.node_bool_true.pk), str(self.node_float.uuid)]
-        result = self.cli_runner.invoke(cmd_node.rehash, options)
-        self.assertClickResultNoException(result)
-        self.assertTrue(f'{expected_node_count} nodes' in result.output)
+        result = self.cli_runner(cmd_node.rehash, options)
+
+        assert f'{expected_node_count} nodes' in result.output
 
     def test_rehash_explicit_pk_and_entry_point(self):
         """Limiting the queryset by defining explicit identifiers and entry point, should limit nodes to 1."""
         expected_node_count = 1
-        options = ['-f', '-e', 'aiida.data:bool', str(self.node_bool_true.pk), str(self.node_float.uuid)]
-        result = self.cli_runner.invoke(cmd_node.rehash, options)
-        self.assertClickResultNoException(result)
-        self.assertTrue(f'{expected_node_count} nodes' in result.output)
+        options = ['-f', '-e', 'aiida.data:core.bool', str(self.node_bool_true.pk), str(self.node_float.uuid)]
+        result = self.cli_runner(cmd_node.rehash, options)
+
+        assert f'{expected_node_count} nodes' in result.output
 
     def test_rehash_entry_point_no_matches(self):
         """Limiting the queryset by defining explicit entry point, with no nodes should exit with non-zero status."""
-        options = ['-f', '-e', 'aiida.data:structure']
-        result = self.cli_runner.invoke(cmd_node.rehash, options)
-        self.assertIsNotNone(result.exception)
+        options = ['-f', '-e', 'aiida.data:core.structure']
+        self.cli_runner(cmd_node.rehash, options, raises=True)
 
     def test_rehash_invalid_entry_point(self):
         """Passing an invalid entry point should exit with non-zero status."""
 
         # Incorrect entry point group
-        options = ['-f', '-e', 'data:structure']
-        result = self.cli_runner.invoke(cmd_node.rehash, options)
-        self.assertIsNotNone(result.exception)
+        options = ['-f', '-e', 'data:core.structure']
+        self.cli_runner(cmd_node.rehash, options, raises=True)
 
         # Non-existent entry point name
         options = ['-f', '-e', 'aiida.data:inexistant']
-        result = self.cli_runner.invoke(cmd_node.rehash, options)
-        self.assertIsNotNone(result.exception)
+        self.cli_runner(cmd_node.rehash, options, raises=True)
 
         # Incorrect syntax, no colon to join entry point group and name
         options = ['-f', '-e', 'aiida.data.structure']
-        result = self.cli_runner.invoke(cmd_node.rehash, options)
-        self.assertIsNotNone(result.exception)
+        self.cli_runner(cmd_node.rehash, options, raises=True)
 
 
-class TestVerdiDelete(AiidaTestCase):
+@pytest.mark.parametrize(
+    'options', (
+        ['--verbosity', 'info'],
+        ['--verbosity', 'info', '--force'],
+        ['--create-forward'],
+        ['--call-calc-forward'],
+        ['--call-work-forward'],
+        ['--force'],
+    )
+)
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_node_delete_basics(run_cli_command, options):
     """
-    Tests for the ``verdi node delete`` command.
-    These test do not test the delete functionality, just that the command internal
-    logic does not create any problems before the call to the function.
-    For the actual functionality, see:
-    * source: manage.database.delete.nodes.py
-    * test: backends.tests.test_nodes.py
+    Testing the correct translation for the `--force` and `--verbosity` options.
+    This just checks that the calls do not except and that in all cases with the
+    force flag there is no messages.
     """
+    from aiida.common.exceptions import NotExistent
 
-    def setUp(self):
-        self.cli_runner = CliRunner()
+    node = orm.Data().store()
+    pk = node.pk
 
-    def test_basics(self):
-        """
-        Testing the correct translation for the `--force` and `--verbose` options.
-        This just checks that the calls do not except and that in all cases with the
-        force flag there is no messages.
-        """
-        from aiida.common.exceptions import NotExistent
+    run_cli_command(cmd_node.node_delete, options + [str(pk), '--dry-run'])
 
-        newnode = orm.Data().store()
-        newnodepk = newnode.pk
-        options_list = []
-        options_list.append(['--create-forward'])
-        options_list.append(['--call-calc-forward'])
-        options_list.append(['--call-work-forward'])
-        options_list.append(['--force'])
-        options_list.append(['--verbose'])
-        options_list.append(['--verbose', '--force'])
+    # To delete the created node
+    run_cli_command(cmd_node.node_delete, [str(pk), '--force'])
 
-        for options in options_list:
-            run_options = [str(newnodepk)]
-            run_options.append('--dry-run')
-            for an_option in options:
-                run_options.append(an_option)
-            result = self.cli_runner.invoke(cmd_node.node_delete, run_options)
-            self.assertClickResultNoException(result)
+    with pytest.raises(NotExistent):
+        orm.load_node(pk)
 
-        # To delete the created node
-        run_options = [str(newnodepk)]
-        run_options.append('--force')
-        result = self.cli_runner.invoke(cmd_node.node_delete, run_options)
-        self.assertClickResultNoException(result)
 
-        with self.assertRaises(NotExistent):
-            orm.load_node(newnodepk)
-
-    def test_missing_pk(self):
-        """Check that no exception is raised when a non-existent pk is given (just warns)."""
-        result = self.cli_runner.invoke(cmd_node.node_delete, ['999'])
-        self.assertClickResultNoException(result)
+def test_node_delete_missing_pk(run_cli_command):
+    """Check that no exception is raised when a non-existent pk is given (just warns)."""
+    run_cli_command(cmd_node.node_delete, ['999'])

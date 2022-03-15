@@ -24,7 +24,7 @@ def parameter_type():
 
 
 @pytest.fixture
-def setup_codes(clear_database_before_test, aiida_localhost):
+def setup_codes(aiida_profile_clean, aiida_localhost):
     """Create some `Code` instances to test the `CodeParamType` parameter type for the command line infrastructure.
 
     We create an initial code with a random name and then on purpose create two code with a name that matches exactly
@@ -32,8 +32,10 @@ def setup_codes(clear_database_before_test, aiida_localhost):
     that arise when determing the identifier type.
     """
     entity_01 = Code(remote_computer_exec=(aiida_localhost, '/bin/true')).store()
-    entity_02 = Code(remote_computer_exec=(aiida_localhost, '/bin/true'), input_plugin_name='arithmetic.add').store()
-    entity_03 = Code(remote_computer_exec=(aiida_localhost, '/bin/true'), input_plugin_name='templatereplacer').store()
+    entity_02 = Code(remote_computer_exec=(aiida_localhost, '/bin/true'),
+                     input_plugin_name='core.arithmetic.add').store()
+    entity_03 = Code(remote_computer_exec=(aiida_localhost, '/bin/true'),
+                     input_plugin_name='core.templatereplacer').store()
 
     entity_01.label = 'computer_01'
     entity_02.label = str(entity_01.pk)
@@ -109,7 +111,7 @@ def test_ambiguous_label_uuid(setup_codes, parameter_type):
 def test_entry_point_validation(setup_codes):
     """Verify that when an `entry_point` is defined in the constructor, it is respected in the validation."""
     entity_01, entity_02, entity_03 = setup_codes
-    parameter_type = CodeParamType(entry_point='arithmetic.add')
+    parameter_type = CodeParamType(entry_point='core.arithmetic.add')
     identifier = f'{entity_02.pk}'
     result = parameter_type.convert(identifier, None, None)
     assert result.uuid == entity_02.uuid
@@ -119,13 +121,13 @@ def test_entry_point_validation(setup_codes):
         result = parameter_type.convert(identifier, None, None)
 
 
-def test_complete(setup_codes, parameter_type, aiida_localhost):
-    """Test the `complete` method that provides auto-complete functionality."""
+def test_shell_complete(setup_codes, parameter_type, aiida_localhost):
+    """Test the `shell_complete` method that provides auto-complete functionality."""
     entity_01, entity_02, entity_03 = setup_codes
     entity_04 = Code(label='xavier', remote_computer_exec=(aiida_localhost, '/bin/true')).store()
 
-    options = [item[0] for item in parameter_type.complete(None, '')]
+    options = [item.value for item in parameter_type.shell_complete(None, None, '')]
     assert sorted(options) == sorted([entity_01.label, entity_02.label, entity_03.label, entity_04.label])
 
-    options = [item[0] for item in parameter_type.complete(None, 'xa')]
+    options = [item.value for item in parameter_type.shell_complete(None, None, 'xa')]
     assert sorted(options) == sorted([entity_04.label])

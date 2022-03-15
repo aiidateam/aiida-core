@@ -9,7 +9,7 @@
 ###########################################################################
 # pylint: disable=no-self-use
 """"Implementation of `DbImporter` for the OQMD database."""
-from aiida.tools.dbimporters.baseclasses import DbImporter, DbSearchResults, CifEntry
+from aiida.tools.dbimporters.baseclasses import CifEntry, DbImporter, DbSearchResults
 
 
 class OqmdDbImporter(DbImporter):
@@ -38,7 +38,7 @@ class OqmdDbImporter(DbImporter):
         :return: a strings for HTTP GET statement.
         """
         elements = []
-        if 'element' in kwargs.keys():
+        if 'element' in kwargs:
             elements = kwargs.pop('element')
         if not isinstance(elements, list):
             elements = [elements]
@@ -53,16 +53,18 @@ class OqmdDbImporter(DbImporter):
         :return: an instance of
             :py:class:`aiida.tools.dbimporters.plugins.oqmd.OqmdSearchResults`.
         """
-        from urllib.request import urlopen
         import re
+        from urllib.request import urlopen
 
         query_statement = self.query_get(**kwargs)
-        response = urlopen(query_statement).read()
+        with urlopen(query_statement) as handle:
+            response = handle.read()
         entries = re.findall(r'(/materials/entry/\d+)', response)
 
         results = []
         for entry in entries:
-            response = urlopen(f'{self._query_url}{entry}').read()
+            with urlopen(f'{self._query_url}{entry}') as handle:
+                response = handle.read()
             structures = re.findall(r'/materials/export/conventional/cif/(\d+)', response)
             for struct in structures:
                 results.append({'id': struct})

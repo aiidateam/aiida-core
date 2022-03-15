@@ -1,0 +1,44 @@
+name: docs-build
+
+on:
+  push:
+    branches-ignore: [gh-pages]
+  pull_request:
+    branches-ignore: [gh-pages]
+    paths: ['docs/**']
+
+jobs:
+
+  docs-linkcheck:
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+    - name: Install python dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -e .[docs,tests,rest,atomic_tools]
+    - name: Build HTML docs
+      id: linkcheck
+      run: |
+        make -C docs html linkcheck 2>&1 | tee check.log
+        echo "::set-output name=broken::$(grep '(line\s*[0-9]*)\(\s\)broken\(\s\)' check.log)"
+      env:
+        SPHINXOPTS: -nW --keep-going
+
+    - name: Show docs build check results
+      run: |
+        if [ -z "${{ steps.linkcheck.outputs.broken }}" ]; then
+            echo "No broken links found."
+            exit 0
+        else
+            echo "Broken links found:"
+            echo "${{ steps.linkcheck.outputs.broken }}"
+            exit 1
+        fi

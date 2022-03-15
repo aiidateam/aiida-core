@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions to operate on filesystem folders."""
+import contextlib
 import errno
 import fnmatch
 import os
@@ -15,6 +16,7 @@ import shutil
 import tempfile
 
 from aiida.manage.configuration import get_profile
+
 from . import timezone
 
 # If True, tries to make everything (dirs, files) group-writable.
@@ -271,6 +273,7 @@ class Folder:
 
         return dest_abs_path
 
+    @contextlib.contextmanager
     def open(self, name, mode='r', encoding='utf8', check_existence=False):
         """
         Open a file in the current folder and return the corresponding file object.
@@ -282,7 +285,8 @@ class Folder:
         if 'b' in mode:
             encoding = None
 
-        return open(self.get_abs_path(name, check_existence=check_existence), mode, encoding=encoding)
+        with open(self.get_abs_path(name, check_existence=check_existence), mode, encoding=encoding) as handle:
+            yield handle
 
     @property
     def abspath(self):
@@ -483,74 +487,3 @@ class SubmitTestFolder(Folder):
 
     def __exit__(self, exc_type, exc_value, traceback):
         """When context manager is exited, do not delete the folder."""
-
-
-class RepositoryFolder(Folder):
-    """
-    A class to manage the local AiiDA repository folders.
-    """
-
-    def __init__(self, section, uuid, subfolder=os.curdir):
-        """
-        Initializes the object by pointing it to a folder in the repository.
-
-        Pass the uuid as a string.
-        """
-        if section not in VALID_SECTIONS:
-            retstr = (f"Repository section '{section}' not allowed. Valid sections are: {','.join(VALID_SECTIONS)}")
-            raise ValueError(retstr)
-        self._section = section
-        self._uuid = uuid
-
-        # If you want to change the sharding scheme, this is the only place
-        # where changes should be needed FOR NODES AND WORKFLOWS
-        # Of course, remember to migrate data!
-        # We set a sharding of level 2+2
-        # Note that a similar sharding should probably has to be done
-        # independently for calculations sent to remote computers in the
-        # execmanager.
-        # Note: I don't do any os.path.abspath (that internally calls
-        # normpath, that may be slow): this is done abywat by the super
-        # class.
-        entity_dir = os.path.join(
-            get_profile().repository_path, 'repository', str(section),
-            str(uuid)[:2],
-            str(uuid)[2:4],
-            str(uuid)[4:]
-        )
-        dest = os.path.join(entity_dir, str(subfolder))
-
-        # Internal variable of this class
-        self._subfolder = subfolder
-
-        # This will also do checks on the folder limits
-        super().__init__(abspath=dest, folder_limit=entity_dir)
-
-    @property
-    def section(self):
-        """
-        The section to which this folder belongs.
-        """
-        return self._section
-
-    @property
-    def uuid(self):
-        """
-        The uuid to which this folder belongs.
-        """
-        return self._uuid
-
-    @property
-    def subfolder(self):
-        """
-        The subfolder within the section/uuid folder.
-        """
-        return self._subfolder
-
-    def get_topdir(self):
-        """
-        Returns the top directory, i.e., the section/uuid folder object.
-        """
-        return RepositoryFolder(self.section, self.uuid)
-
-        # NOTE! The get_subfolder method will return a Folder object, and not a RepositoryFolder object

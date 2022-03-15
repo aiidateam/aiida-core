@@ -8,7 +8,23 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with resources dealing with the file repository."""
-# pylint: disable=undefined-variable
-from .common import *
 
-__all__ = (common.__all__)
+# AUTO-GENERATED
+
+# yapf: disable
+# pylint: disable=wildcard-import
+
+from .backend import *
+from .common import *
+from .repository import *
+
+__all__ = (
+    'AbstractRepositoryBackend',
+    'DiskObjectStoreRepositoryBackend',
+    'File',
+    'FileType',
+    'Repository',
+    'SandboxRepositoryBackend',
+)
+
+# yapf: enable

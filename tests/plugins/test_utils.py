@@ -9,17 +9,16 @@
 ###########################################################################
 """Tests for utilities dealing with plugins and entry points."""
 from aiida import __version__ as version_core
-from aiida.backends.testbase import AiidaTestCase
-from aiida.engine import calcfunction, WorkChain
+from aiida.engine import WorkChain, calcfunction
 from aiida.plugins import CalculationFactory
 from aiida.plugins.utils import PluginVersionProvider
 
 
-class TestPluginVersionProvider(AiidaTestCase):
+class TestPluginVersionProvider:
     """Tests for the :py:class:`~aiida.plugins.utils.PluginVersionProvider` utility class."""
 
-    def setUp(self):
-        super().setUp()
+    def setup_method(self):
+        # pylint: disable=attribute-defined-outside-init
         self.provider = PluginVersionProvider()
 
     @staticmethod
@@ -58,7 +57,7 @@ class TestPluginVersionProvider(AiidaTestCase):
         dynamic_plugin = self.create_dynamic_plugin_module(DummyCalcJob, version_plugin, add_module_to_sys=False)
 
         expected_version = {'version': {'core': version_core}}
-        self.assertEqual(self.provider.get_version_info(dynamic_plugin), expected_version)
+        assert self.provider.get_version_info(dynamic_plugin) == expected_version
 
     def test_external_module_no_version_attribute(self):
         """Test that mapper does not except even if external module does not define `__version__` attribute."""
@@ -70,7 +69,7 @@ class TestPluginVersionProvider(AiidaTestCase):
         dynamic_plugin = self.create_dynamic_plugin_module(DummyCalcJob, version_plugin, add_version=False)
 
         expected_version = {'version': {'core': version_core}}
-        self.assertEqual(self.provider.get_version_info(dynamic_plugin), expected_version)
+        assert self.provider.get_version_info(dynamic_plugin) == expected_version
 
     def test_external_module_class(self):
         """Test the mapper works for a class from an external module."""
@@ -82,7 +81,7 @@ class TestPluginVersionProvider(AiidaTestCase):
         dynamic_plugin = self.create_dynamic_plugin_module(DummyCalcJob, version_plugin)
 
         expected_version = {'version': {'core': version_core, 'plugin': version_plugin}}
-        self.assertEqual(self.provider.get_version_info(dynamic_plugin), expected_version)
+        assert self.provider.get_version_info(dynamic_plugin) == expected_version
 
     def test_external_module_function(self):
         """Test the mapper works for a function from an external module."""
@@ -95,7 +94,7 @@ class TestPluginVersionProvider(AiidaTestCase):
         dynamic_plugin = self.create_dynamic_plugin_module(test_calcfunction, version_plugin)
 
         expected_version = {'version': {'core': version_core, 'plugin': version_plugin}}
-        self.assertEqual(self.provider.get_version_info(dynamic_plugin), expected_version)
+        assert self.provider.get_version_info(dynamic_plugin) == expected_version
 
     def test_calcfunction(self):
         """Test the mapper for a `calcfunction`."""
@@ -105,14 +104,14 @@ class TestPluginVersionProvider(AiidaTestCase):
             return
 
         expected_version = {'version': {'core': version_core, 'plugin': version_core}}
-        self.assertEqual(self.provider.get_version_info(test_calcfunction), expected_version)
+        assert self.provider.get_version_info(test_calcfunction) == expected_version
 
     def test_calc_job(self):
         """Test the mapper for a `CalcJob`."""
-        AddArithmeticCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
+        AddArithmeticCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 
         expected_version = {'version': {'core': version_core, 'plugin': version_core}}
-        self.assertEqual(self.provider.get_version_info(AddArithmeticCalculation), expected_version)
+        assert self.provider.get_version_info(AddArithmeticCalculation) == expected_version
 
     def test_work_chain(self):
         """Test the mapper for a `WorkChain`."""
@@ -121,4 +120,4 @@ class TestPluginVersionProvider(AiidaTestCase):
             """Need to create a dummy class since there is no built-in work chain with entry point in `aiida-core`."""
 
         expected_version = {'version': {'core': version_core, 'plugin': version_core}}
-        self.assertEqual(self.provider.get_version_info(SomeWorkChain), expected_version)
+        assert self.provider.get_version_info(SomeWorkChain) == expected_version

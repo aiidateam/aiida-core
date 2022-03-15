@@ -7,106 +7,124 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for common command line utilities."""
+"""Tests for the :mod:`aiida.cmdline.utils.common` module."""
+import pytest
 
-from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
-from aiida.common.links import LinkType
+from aiida.cmdline.utils import common
+from aiida.common import LinkType
+from aiida.engine import Process, calcfunction
+from aiida.orm import CalcFunctionNode, CalculationNode, WorkflowNode
 
 
-class TestCommonUtilities(AiidaTestCase):
-    """Tests for common command line utilities."""
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_get_node_summary(aiida_local_code_factory):
+    """Test the ``get_node_summary`` utility."""
+    code = aiida_local_code_factory(entry_point='core.arithmetic.add', executable='/bin/bash')
+    node = CalculationNode()
+    node.computer = code.computer
+    node.add_incoming(code, link_type=LinkType.INPUT_CALC, link_label='code')
+    node.store()
 
-    def test_get_node_summary(self):
-        """Test the `get_node_summary` utility."""
-        from aiida.cmdline.utils.common import get_node_summary
+    summary = common.get_node_summary(node)
+    assert node.uuid in summary
+    assert node.computer.label in summary
 
-        computer_label = self.computer.label  # pylint: disable=no-member
 
-        code = orm.Code(
-            input_plugin_name='arithmetic.add',
-            remote_computer_exec=[self.computer, '/remote/abs/path'],
-        )
-        code.store()
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_get_node_info_multiple_call_links():
+    """Test the ``get_node_info`` utility.
 
-        node = orm.CalculationNode()
-        node.computer = self.computer
-        node.add_incoming(code, link_type=LinkType.INPUT_CALC, link_label='code')
-        node.store()
+    Regression test for #2868:
+        Verify that all `CALL` links are included in the formatted string even if link labels are identical.
+    """
+    workflow = WorkflowNode().store()
+    node_one = CalculationNode()
+    node_two = CalculationNode()
 
-        summary = get_node_summary(node)
-        self.assertIn(node.uuid, summary)
-        self.assertIn(computer_label, summary)
+    node_one.add_incoming(workflow, link_type=LinkType.CALL_CALC, link_label='CALL_IDENTICAL')
+    node_two.add_incoming(workflow, link_type=LinkType.CALL_CALC, link_label='CALL_IDENTICAL')
+    node_one.store()
+    node_two.store()
 
-    def test_get_node_info_multiple_call_links(self):
-        """Test the `get_node_info` utility.
+    node_info = common.get_node_info(workflow)
+    assert 'CALL_IDENTICAL' in node_info
+    assert str(node_one.pk) in node_info
+    assert str(node_two.pk) in node_info
 
-        Regression test for #2868:
-            Verify that all `CALL` links are included in the formatted string even if link labels are identical.
-        """
-        from aiida.cmdline.utils.common import get_node_info
 
-        workflow = orm.WorkflowNode().store()
-        node_one = orm.CalculationNode()
-        node_two = orm.CalculationNode()
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_get_process_function_report():
+    """Test the ``get_process_function_report`` utility."""
+    warning = 'You have been warned'
+    node = CalcFunctionNode()
+    node.store()
 
-        node_one.add_incoming(workflow, link_type=LinkType.CALL_CALC, link_label='CALL_IDENTICAL')
-        node_two.add_incoming(workflow, link_type=LinkType.CALL_CALC, link_label='CALL_IDENTICAL')
-        node_one.store()
-        node_two.store()
+    node.logger.warning(warning)
+    assert warning in common.get_process_function_report(node)
 
-        node_info = get_node_info(workflow)
-        self.assertTrue('CALL_IDENTICAL' in node_info)
-        self.assertTrue(str(node_one.pk) in node_info)
-        self.assertTrue(str(node_two.pk) in node_info)
 
-    def test_get_process_function_report(self):
-        """Test the `get_process_function_report` utility."""
-        from aiida.cmdline.utils.common import get_process_function_report
+def test_print_process_info():
+    """Test the ``print_process_info`` method."""
 
-        warning = 'You have been warned'
+    class TestProcessWithoutDocstring(Process):
+        # pylint: disable=missing-docstring
 
-        node = orm.CalcFunctionNode()
-        node.store()
+        @classmethod
+        def define(cls, spec):
+            super().define(spec)
+            spec.input('some_input')
 
-        # Add a log message through the logger
-        node.logger.warning(warning)
+    class TestProcessWithDocstring(Process):
+        """Some docstring."""
 
-        self.assertIn(warning, get_process_function_report(node))
+        @classmethod
+        def define(cls, spec):
+            super().define(spec)
+            spec.input('some_input')
 
-    def test_print_process_info(self):
-        """Test the `print_process_info` method."""
-        from aiida.cmdline.utils.common import print_process_info
-        from aiida.common.utils import Capturing
-        from aiida.engine import Process, calcfunction
+    @calcfunction
+    def test_without_docstring():
+        pass
 
-        class TestProcessWithoutDocstring(Process):
-            # pylint: disable=missing-docstring
+    @calcfunction
+    def test_with_docstring():
+        """Some docstring."""
 
-            @classmethod
-            def define(cls, spec):
-                super().define(spec)
-                spec.input('some_input')
+    # We are just checking that the command does not except
+    common.print_process_info(TestProcessWithoutDocstring)
+    common.print_process_info(TestProcessWithDocstring)
+    common.print_process_info(test_without_docstring)
+    common.print_process_info(test_with_docstring)
 
-        class TestProcessWithDocstring(Process):
-            """Some docstring."""
 
-            @classmethod
-            def define(cls, spec):
-                super().define(spec)
-                spec.input('some_input')
+@pytest.mark.parametrize(
+    'active_workers, active_slots, expected', (
+        (None, None, 'No active daemon workers.'),
+        (1, 0, 'Report: Using 0% of the available daemon worker slots.'),
+        (1, 200, 'Warning: 100% of the available daemon worker slots have been used!'),
+    )
+)
+def test_check_worker_load(monkeypatch, capsys, active_workers, active_slots, expected):
+    """Test the ``check_worker_load`` function.
 
-        @calcfunction
-        def test_without_docstring():
-            pass
+    We monkeypatch the ``get_num_workers`` method which is called by ``check_worker_load`` to return the number of
+    active workers that we parametrize.
+    """
+    monkeypatch.setattr(common, 'get_num_workers', lambda: active_workers)
+    common.check_worker_load(active_slots)
+    assert expected in capsys.readouterr().out
 
-        @calcfunction
-        def test_with_docstring():
-            """Some docstring."""
 
-        # We are just checking that the command does not except
-        with Capturing():
-            print_process_info(TestProcessWithoutDocstring)
-            print_process_info(TestProcessWithDocstring)
-            print_process_info(test_without_docstring)
-            print_process_info(test_with_docstring)
+def test_check_worker_load_fail(monkeypatch, capsys):
+    """Test the ``check_worker_load`` function when ``get_num_workers`` will except with ``CircusCallError``."""
+
+    def get_num_workers():
+        from aiida.common.exceptions import CircusCallError
+        raise CircusCallError
+
+    monkeypatch.setattr(common, 'get_num_workers', get_num_workers)
+
+    with pytest.raises(SystemExit):
+        common.check_worker_load(None)
+
+    assert 'Could not contact Circus to get the number of active workers.' in capsys.readouterr().err

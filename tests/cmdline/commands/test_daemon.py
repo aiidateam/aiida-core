@@ -7,138 +7,89 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for `verdi daemon`."""
-from click.testing import CliRunner
+# pylint: disable=redefined-outer-name
+"""Tests for ``verdi daemon``."""
 import pytest
 
-from aiida.backends.testbase import AiidaTestCase
+from aiida import get_profile
 from aiida.cmdline.commands import cmd_daemon
-from aiida.common.extendeddicts import AttributeDict
-from aiida.engine.daemon.client import DaemonClient
-from aiida.manage.configuration import get_config
 
 
-class VerdiRunner(CliRunner):
-    """Subclass of `click`'s `CliRunner` that injects an object in the context containing current config and profile."""
+def test_daemon_start(run_cli_command, daemon_client):
+    """Test ``verdi daemon start``."""
+    run_cli_command(cmd_daemon.start)
 
-    def __init__(self, config, profile, **kwargs):
-        """Construct an instance and define the `obj` dictionary that is required by the `Context`."""
-        super().__init__(**kwargs)
-        self.obj = AttributeDict({'config': config, 'profile': profile})
+    daemon_response = daemon_client.get_daemon_info()
+    worker_response = daemon_client.get_worker_info()
 
-    def invoke(self, *args, **extra):  # pylint: disable=signature-differs
-        """Invoke the command but add the `obj` to the `extra` keywords.
+    assert 'status' in daemon_response
+    assert daemon_response['status'] == 'ok'
 
-        The `**extra` keywords will be forwarded all the way to the `Context` that finally invokes the command. Some
-        `verdi` commands will rely on this `obj` to be there to retrieve the current active configuration and profile.
-        """
-        extra['obj'] = self.obj
-        return super().invoke(*args, **extra)
+    assert 'info' in worker_response
+    assert len(worker_response['info']) == 1
 
 
-class TestVerdiDaemon(AiidaTestCase):
-    """Tests for `verdi daemon` commands."""
+def test_daemon_restart(run_cli_command, daemon_client):
+    """Test ``verdi daemon restart`` both with and without ``--reset`` flag."""
+    run_cli_command(cmd_daemon.start, [])
+    run_cli_command(cmd_daemon.restart, [])
+    run_cli_command(cmd_daemon.restart, ['--reset'])
 
-    def setUp(self):
-        super().setUp()
-        self.config = get_config()
-        self.profile = self.config.current_profile
-        self.daemon_client = DaemonClient(self.profile)
-        self.cli_runner = VerdiRunner(self.config, self.profile)
+    daemon_response = daemon_client.get_daemon_info()
+    worker_response = daemon_client.get_worker_info()
 
-    def test_daemon_start(self):
-        """Test `verdi daemon start`."""
-        try:
-            result = self.cli_runner.invoke(cmd_daemon.start, [])
-            self.assertClickResultNoException(result)
+    assert 'status' in daemon_response
+    assert daemon_response['status'] == 'ok'
 
-            daemon_response = self.daemon_client.get_daemon_info()
-            worker_response = self.daemon_client.get_worker_info()
+    assert 'info' in worker_response
+    assert len(worker_response['info']) == 1
 
-            self.assertIn('status', daemon_response, daemon_response)
-            self.assertEqual(daemon_response['status'], 'ok', daemon_response)
 
-            self.assertIn('info', worker_response, worker_response)
-            self.assertEqual(len(worker_response['info']), 1, worker_response)
-        finally:
-            self.daemon_client.stop_daemon(wait=True)
+def test_daemon_start_number(run_cli_command, daemon_client):
+    """Test ``verdi daemon start`` with a specific number of workers."""
+    number = 4
+    run_cli_command(cmd_daemon.start, [str(number)])
 
-    def test_daemon_restart(self):
-        """Test `verdi daemon restart` both with and without `--reset` flag."""
-        try:
-            result = self.cli_runner.invoke(cmd_daemon.start, [])
-            self.assertClickResultNoException(result)
+    daemon_response = daemon_client.get_daemon_info()
+    worker_response = daemon_client.get_worker_info()
 
-            result = self.cli_runner.invoke(cmd_daemon.restart, [])
-            self.assertClickResultNoException(result)
+    assert 'status' in daemon_response
+    assert daemon_response['status'] == 'ok'
 
-            result = self.cli_runner.invoke(cmd_daemon.restart, ['--reset'])
-            self.assertClickResultNoException(result)
+    assert 'info' in worker_response
+    assert len(worker_response['info']) == number
 
-            daemon_response = self.daemon_client.get_daemon_info()
-            worker_response = self.daemon_client.get_worker_info()
 
-            self.assertIn('status', daemon_response, daemon_response)
-            self.assertEqual(daemon_response['status'], 'ok', daemon_response)
+def test_daemon_start_number_config(run_cli_command, daemon_client, isolated_config):
+    """Test ``verdi daemon start`` with ``daemon.default_workers`` config option being set."""
+    number = 3
+    isolated_config.set_option('daemon.default_workers', number, scope=get_profile().name)
+    isolated_config.store()
 
-            self.assertIn('info', worker_response, worker_response)
-            self.assertEqual(len(worker_response['info']), 1, worker_response)
-        finally:
-            self.daemon_client.stop_daemon(wait=True)
+    run_cli_command(cmd_daemon.start)
 
-    # Tracked in issue #3051
-    @pytest.mark.flaky(reruns=2)
-    def test_daemon_start_number(self):
-        """Test `verdi daemon start` with a specific number of workers."""
+    daemon_response = daemon_client.get_daemon_info()
+    worker_response = daemon_client.get_worker_info()
 
-        # The `number` argument should be a positive non-zero integer
-        for invalid_number in ['string', 0, -1]:
-            result = self.cli_runner.invoke(cmd_daemon.start, [str(invalid_number)])
-            self.assertIsNotNone(result.exception)
+    assert 'status' in daemon_response
+    assert daemon_response['status'] == 'ok'
 
-        try:
-            number = 4
-            result = self.cli_runner.invoke(cmd_daemon.start, [str(number)])
-            self.assertClickResultNoException(result)
+    assert 'info' in worker_response
+    assert len(worker_response['info']) == number
 
-            daemon_response = self.daemon_client.get_daemon_info()
-            worker_response = self.daemon_client.get_worker_info()
 
-            self.assertIn('status', daemon_response, daemon_response)
-            self.assertEqual(daemon_response['status'], 'ok', daemon_response)
+@pytest.mark.usefixtures('daemon_client')
+def test_foreground_multiple_workers(run_cli_command):
+    """Test `verdi daemon start` in foreground with more than one worker will fail."""
+    run_cli_command(cmd_daemon.start, ['--foreground', str(4)], raises=True)
 
-            self.assertIn('info', worker_response, worker_response)
-            self.assertEqual(len(worker_response['info']), number, worker_response)
-        finally:
-            self.daemon_client.stop_daemon(wait=True)
 
-    # Tracked in issue #3051
-    @pytest.mark.flaky(reruns=2)
-    def test_daemon_start_number_config(self):
-        """Test `verdi daemon start` with `daemon.default_workers` config option being set."""
-        number = 3
-        self.config.set_option('daemon.default_workers', number, self.profile.name)
+@pytest.mark.usefixtures('daemon_client', 'isolated_config')
+def test_daemon_status(run_cli_command):
+    """Test ``verdi daemon status``."""
+    run_cli_command(cmd_daemon.start)
+    result = run_cli_command(cmd_daemon.status)
+    last_line = result.output_lines[-1]
 
-        try:
-            result = self.cli_runner.invoke(cmd_daemon.start)
-            self.assertClickResultNoException(result)
-
-            daemon_response = self.daemon_client.get_daemon_info()
-            worker_response = self.daemon_client.get_worker_info()
-
-            self.assertIn('status', daemon_response, daemon_response)
-            self.assertEqual(daemon_response['status'], 'ok', daemon_response)
-
-            self.assertIn('info', worker_response, worker_response)
-            self.assertEqual(len(worker_response['info']), number, worker_response)
-        finally:
-            self.daemon_client.stop_daemon(wait=True)
-
-    def test_foreground_multiple_workers(self):
-        """Test `verdi daemon start` in foreground with more than one worker will fail."""
-        try:
-            number = 4
-            result = self.cli_runner.invoke(cmd_daemon.start, ['--foreground', str(number)])
-            self.assertIsNotNone(result.exception)
-        finally:
-            self.daemon_client.stop_daemon(wait=True)
+    assert f'Profile: {get_profile().name}' in result.output
+    assert last_line == 'Use verdi daemon [incr | decr] [num] to increase / decrease the amount of workers'

@@ -8,14 +8,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the CalculationNode and CalcJobNode class."""
+import pytest
 
-from aiida.backends.testbase import AiidaTestCase
-from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.datastructures import CalcJobState
-from aiida.orm import CalculationNode, CalcJobNode
+from aiida.common.exceptions import ModificationNotAllowed
+from aiida.orm import CalcJobNode, CalculationNode
 
 
-class TestProcessNode(AiidaTestCase):
+class TestProcessNode:
     """
     These tests check the features of process nodes that differ from the base Node type
     """
@@ -45,29 +45,28 @@ class TestProcessNode(AiidaTestCase):
     emptydict = {}
     emptylist = []
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
-        cls.computer.configure()  # pylint: disable=no-member
-        cls.construction_options = {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}}
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        self.calcjob = CalcJobNode()
+        self.calcjob.computer = aiida_localhost
+        self.calcjob.set_options({'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}})
+        self.calcjob.store()
 
-        cls.calcjob = CalcJobNode()
-        cls.calcjob.computer = cls.computer
-        cls.calcjob.set_options(cls.construction_options)
-        cls.calcjob.store()
-
-    def test_process_state(self):
+    @staticmethod
+    def test_process_state():
         """
         Check the properties of a newly created bare CalculationNode
         """
         process_node = CalculationNode()
 
-        self.assertEqual(process_node.is_terminated, False)
-        self.assertEqual(process_node.is_excepted, False)
-        self.assertEqual(process_node.is_killed, False)
-        self.assertEqual(process_node.is_finished, False)
-        self.assertEqual(process_node.is_finished_ok, False)
-        self.assertEqual(process_node.is_failed, False)
+        assert process_node.is_terminated is False
+        assert process_node.is_excepted is False
+        assert process_node.is_killed is False
+        assert process_node.is_finished is False
+        assert process_node.is_finished_ok is False
+        assert process_node.is_failed is False
 
     def test_process_node_updatable_attribute(self):
         """Check that updatable attributes and only those can be mutated for a stored but unsealed CalculationNode."""
@@ -87,49 +86,49 @@ class TestProcessNode(AiidaTestCase):
 
         # Check before storing
         node.set_attribute(CalculationNode.PROCESS_STATE_KEY, self.stateval)
-        self.assertEqual(node.get_attribute(CalculationNode.PROCESS_STATE_KEY), self.stateval)
+        assert node.get_attribute(CalculationNode.PROCESS_STATE_KEY) == self.stateval
 
         node.store()
 
         # Check after storing
-        self.assertEqual(node.get_attribute(CalculationNode.PROCESS_STATE_KEY), self.stateval)
+        assert node.get_attribute(CalculationNode.PROCESS_STATE_KEY) == self.stateval
 
         # I should be able to mutate the updatable attribute but not the others
         node.set_attribute(CalculationNode.PROCESS_STATE_KEY, 'FINISHED')
         node.delete_attribute(CalculationNode.PROCESS_STATE_KEY)
 
         # Deleting non-existing attribute should raise attribute error
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             node.delete_attribute(CalculationNode.PROCESS_STATE_KEY)
 
-        with self.assertRaises(ModificationNotAllowed):
+        with pytest.raises(ModificationNotAllowed):
             node.set_attribute('bool', False)
 
-        with self.assertRaises(ModificationNotAllowed):
+        with pytest.raises(ModificationNotAllowed):
             node.delete_attribute('bool')
 
         node.seal()
 
         # After sealing, even updatable attributes should be immutable
-        with self.assertRaises(ModificationNotAllowed):
+        with pytest.raises(ModificationNotAllowed):
             node.set_attribute(CalculationNode.PROCESS_STATE_KEY, 'FINISHED')
 
-        with self.assertRaises(ModificationNotAllowed):
+        with pytest.raises(ModificationNotAllowed):
             node.delete_attribute(CalculationNode.PROCESS_STATE_KEY)
 
     def test_get_description(self):
-        self.assertEqual(self.calcjob.get_description(), '')
+        assert self.calcjob.get_description() == ''
         self.calcjob.set_state(CalcJobState.PARSING)
-        self.assertEqual(self.calcjob.get_description(), CalcJobState.PARSING.value)
+        assert self.calcjob.get_description() == CalcJobState.PARSING.value
 
     def test_get_authinfo(self):
         """Test that we can get the AuthInfo object from the calculation instance."""
         from aiida.orm import AuthInfo
         authinfo = self.calcjob.get_authinfo()
-        self.assertIsInstance(authinfo, AuthInfo)
+        assert isinstance(authinfo, AuthInfo)
 
     def test_get_transport(self):
         """Test that we can get the Transport object from the calculation instance."""
         from aiida.transports import Transport
         transport = self.calcjob.get_transport()
-        self.assertIsInstance(transport, Transport)
+        assert isinstance(transport, Transport)

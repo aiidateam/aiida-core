@@ -250,8 +250,8 @@ If you're running this tutorial in the Quantum Mobile VM or on Binder, these hav
 
     .. code-block:: console
 
-        $ verdi computer setup -L tutor -H localhost -T local -S direct -w `echo $PWD/work` -n
-        $ verdi computer configure local tutor --safe-interval 5 -n
+        $ verdi computer setup -L tutor -H localhost -T core.local -S core.direct -w `echo $PWD/work` -n
+        $ verdi computer configure core.local tutor --safe-interval 5 -n
 
     The first commands sets up the computer with the following options:
 
@@ -268,9 +268,9 @@ If you're running this tutorial in the Quantum Mobile VM or on Binder, these hav
 
     .. code-block:: console
 
-        $ verdi code setup -L add --on-computer --computer=tutor -P arithmetic.add --remote-abs-path=/bin/bash -n
+        $ verdi code setup -L add --on-computer --computer=tutor -P core.arithmetic.add --remote-abs-path=/bin/bash -n
 
-    This command sets up a code with *label* ``add`` on the *computer* ``tutor``, using the *plugin* ``arithmetic.add``.
+    This command sets up a code with *label* ``add`` on the *computer* ``tutor``, using the *plugin* ``core.arithmetic.add``.
 
 A typical real-world example of a computer is a remote supercomputing facility.
 Codes can be anything from a Python script to powerful *ab initio* codes such as Quantum Espresso or machine learning tools like Tensorflow.
@@ -449,7 +449,7 @@ Instead of the *result* of the calculation, it returns the node of the ``CalcJob
 
 .. code-block:: ipython
 
-    Out[1]: <CalcJobNode: uuid: e221cf69-5027-4bb4-a3c9-e649b435393b (pk: 12) (aiida.calculations:arithmetic.add)>
+    Out[1]: <CalcJobNode: uuid: e221cf69-5027-4bb4-a3c9-e649b435393b (pk: 12) (aiida.calculations:core.arithmetic.add)>
 
 Let's exit the IPython shell and have a look at the process list:
 
@@ -524,9 +524,9 @@ Start up the ``verdi shell`` and load the ``MultiplyAddWorkChain`` using the ``W
 
 .. code-block:: ipython
 
-    In [1]: MultiplyAddWorkChain = WorkflowFactory('arithmetic.multiply_add')
+    In [1]: MultiplyAddWorkChain = WorkflowFactory('core.arithmetic.multiply_add')
 
-The ``WorkflowFactory`` is a useful and robust tool for loading workflows based on their *entry point*, e.g. ``'arithmetic.multiply_add'`` in this case.
+The ``WorkflowFactory`` is a useful and robust tool for loading workflows based on their *entry point*, e.g. ``'core.arithmetic.multiply_add'`` in this case.
 Similar to a ``CalcJob``, the ``WorkChain`` input can be set up using a builder:
 
 .. code-block:: ipython
@@ -606,12 +606,11 @@ Next Steps
 
 Congratulations! You have completed the first step to becoming an AiiDA expert.
 
-We have also compiled useful how-to guides that are especially relevant for the following use cases:
+We have compiled how-to guides that are especially relevant for the following use cases:
 
 .. div:: dropdown-group
 
     .. dropdown:: Run pure Python lightweight computations
-        :container:
 
         Designing a workflow
             After reading the :ref:`Basic Tutorial <tutorial:basic>`, you may want to learn about how to encode the logic of a typical scientific workflow in the :ref:`writing workflows how-to <how-to:write-workflows>`.
@@ -619,8 +618,8 @@ We have also compiled useful how-to guides that are especially relevant for the 
         Reusable data types
             If you have a certain input or output data type, which you use often, then you may wish to turn it into its own :ref:`data plugin <topics:data_types:plugin>`.
 
-        Exploring your data
-            Once you have run multiple computations, the :ref:`find and query data how-to <how-to:data:find>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <how-to:data:visualise-provenance>`.
+        Finding and querying for your data
+            Once you have run multiple computations, the :ref:`find and query data how-to <how-to:query>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <how-to:data:visualise-provenance>`.
 
         Sharing your data
             You can export all or part of your data to file with the :ref:`export/import functionality<how-to:share:archives>` or you can even serve your data over HTTP(S) using the :ref:`AiiDA REST API <how-to:share:serve>`.
@@ -629,7 +628,6 @@ We have also compiled useful how-to guides that are especially relevant for the 
             Once you have a working computation workflow, you may also wish to :ref:`package it into a python module <how-to:plugins-develop>` for others to use.
 
     .. dropdown:: Run compute-intensive codes
-        :container:
 
         Working with external codes
             Existing calculation plugins, for interfacing with external codes, are available on the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_.
@@ -644,7 +642,7 @@ We have also compiled useful how-to guides that are especially relevant for the 
     .. dropdown:: Run computations on High Performance Computers
 
         Connecting to supercomputers
-            To setup up a computer which can communicate with a high-performance computer over SSH, see the :ref:`how-to for running external codes <how-to:run-codes>`, or add a :ref:`custom transport <how-to:plugin-codes:transport>`.
+            To setup up a computer which can communicate with a high-performance computer over SSH, see the :ref:`how-to for running external codes <how-to:run-codes>`, or add a :ref:`custom transport <topics:transport:develop_plugin>`.
             AiiDA has pre-written scheduler plugins to work with LSF, PBSPro, SGE, Slurm and Torque.
 
         Working with external codes
@@ -652,7 +650,7 @@ We have also compiled useful how-to guides that are especially relevant for the 
             If none meet your needs, then the :ref:`external codes how-to <how-to:plugin-codes>` can show you how to create your own calculation plugin.
 
         Exploring your data
-            Once you have run multiple computations, the :ref:`find and query data how-to <how-to:data:find>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <how-to:data:visualise-provenance>`.
+            Once you have run multiple computations, the :ref:`find and query data how-to <how-to:query>` can show you how to efficiently explore your data. The data lineage can also be visualised as a :ref:`provenance graph <how-to:data:visualise-provenance>`.
 
         Sharing your data
             You can export all or part of your data to file with the :ref:`export/import functionality<how-to:share:archives>` or you can even serve your data over HTTP(S) using the :ref:`AiiDA REST API <how-to:share:serve>`.
@@ -664,4 +662,4 @@ We have also compiled useful how-to guides that are especially relevant for the 
 
 .. todo::
 
-    Add to "Connecting to supercomputers": , or you can add a :ref:`custom scheduler <how-to:plugin-codes:scheduler>`.
+    Add to "Connecting to supercomputers": , or you can add a :ref:`custom scheduler <topics:schedulers:develop_plugin>`.

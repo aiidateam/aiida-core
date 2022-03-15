@@ -13,10 +13,9 @@ This has been tested on SLURM 14.03.7 on the CSCS.ch machines.
 """
 import re
 
-from aiida.common.escaping import escape_for_bash
 from aiida.common.lang import type_check
 from aiida.schedulers import Scheduler, SchedulerError
-from aiida.schedulers.datastructures import (JobInfo, JobState, NodeNumberJobResource)
+from aiida.schedulers.datastructures import JobInfo, JobState, NodeNumberJobResource
 
 # This maps SLURM state codes to our own status list
 
@@ -263,8 +262,6 @@ class SlurmScheduler(Scheduler):
         # pylint: disable=too-many-statements,too-many-branches
         import string
 
-        empty_line = ''
-
         lines = []
         if job_tmpl.submit_as_hold:
             lines.append('#SBATCH -H')
@@ -387,9 +384,7 @@ class SlurmScheduler(Scheduler):
                     raise ValueError
             except ValueError:
                 raise ValueError(
-                    'max_memory_kb must be '
-                    "a positive integer (in kB)! It is instead '{}'"
-                    ''.format((job_tmpl.max_memory_kb))
+                    f'max_memory_kb must be a positive integer (in kB)! It is instead `{job_tmpl.max_memory_kb}`'
                 )
             # --mem: Specify the real memory required per node in MegaBytes.
             # --mem and  --mem-per-cpu  are  mutually exclusive.
@@ -398,23 +393,8 @@ class SlurmScheduler(Scheduler):
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)
 
-        # Job environment variables are to be set on one single line.
-        # This is a tough job due to the escaping of commas, etc.
-        # moreover, I am having issues making it work.
-        # Therefore, I assume that this is bash and export variables by
-        # and.
-
         if job_tmpl.job_environment:
-            lines.append(empty_line)
-            lines.append('# ENVIRONMENT VARIABLES BEGIN ###')
-            if not isinstance(job_tmpl.job_environment, dict):
-                raise ValueError('If you provide job_environment, it must be a dictionary')
-            for key, value in job_tmpl.job_environment.items():
-                lines.append(f'export {key.strip()}={escape_for_bash(value)}')
-            lines.append('# ENVIRONMENT VARIABLES  END  ###')
-            lines.append(empty_line)
-
-        lines.append(empty_line)
+            lines.append(self._get_submit_script_environment_variables(job_tmpl))
 
         return '\n'.join(lines)
 
@@ -530,10 +510,7 @@ stderr='{stderr.strip()}'"""
             try:
                 job_state_string = _MAP_STATUS_SLURM[job_state_raw]
             except KeyError:
-                self.logger.warning(
-                    "Unrecognized job_state '{}' for job "
-                    'id {}'.format(job_state_raw, this_job.job_id)
-                )
+                self.logger.warning(f"Unrecognized job_state '{job_state_raw}' for job id {this_job.job_id}")
                 job_state_string = JobState.UNDETERMINED
             # QUEUED_HELD states are not specific states in SLURM;
             # they are instead set with state QUEUED, and then the
@@ -567,9 +544,7 @@ stderr='{stderr.strip()}'"""
                 # gathered up to now, and continue to the next job
                 # Also print a warning
                 self.logger.warning(
-                    'Wrong line length in squeue output!'
-                    "Skipping optional fields. Line: '{}'"
-                    ''.format(jobdata_raw)
+                    f'Wrong line length in squeue output!Skipping optional fields. Line: `{jobdata_raw}`'
                 )
                 # I append this job before continuing
                 job_list.append(this_job)
@@ -683,8 +658,8 @@ stderr='{stderr.strip()}'"""
         Parse a time string in the format returned from qstat -f and
         returns a datetime object.
         """
-        import time
         import datetime
+        import time
 
         try:
             time_struct = time.strptime(string, fmt)

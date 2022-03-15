@@ -7,22 +7,21 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Test for the `Parser` base class."""
-
 import io
 
 import pytest
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common import LinkType
 from aiida.engine import CalcJob
 from aiida.parsers import Parser
-from aiida.plugins import CalculationFactory, ParserFactory
 from aiida.parsers.plugins.arithmetic.add import SimpleArithmeticAddParser  # for demonstration purposes only
+from aiida.plugins import CalculationFactory, ParserFactory
 
-ArithmeticAddCalculation = CalculationFactory('arithmetic.add')  # pylint: disable=invalid-name
-ArithmeticAddParser = ParserFactory('arithmetic.add')  # pylint: disable=invalid-name
+ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
+ArithmeticAddParser = ParserFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 
 
 class CustomCalcJob(CalcJob):
@@ -39,12 +38,18 @@ class CustomCalcJob(CalcJob):
         pass
 
 
-class TestParser(AiidaTestCase):
+class TestParser:
     """Test backend entities and their collections"""
+
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        self.computer = aiida_localhost
 
     def test_abstract_parse_method(self):
         """Verify that trying to instantiate base class will raise `TypeError` because of abstract `parse` method."""
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             Parser()  # pylint: disable=abstract-class-instantiated,no-value-for-parameter
 
     def test_parser_retrieved(self):
@@ -58,14 +63,14 @@ class TestParser(AiidaTestCase):
         retrieved.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
 
         parser = ArithmeticAddParser(node)
-        self.assertEqual(parser.node.uuid, node.uuid)
-        self.assertEqual(parser.retrieved.uuid, retrieved.uuid)
+        assert parser.node.uuid == node.uuid
+        assert parser.retrieved.uuid == retrieved.uuid
 
     def test_parser_exit_codes(self):
         """Ensure that exit codes from the `CalcJob` can be retrieved through the parser instance."""
         node = orm.CalcJobNode(computer=self.computer, process_type=ArithmeticAddCalculation.build_process_type())
         parser = ArithmeticAddParser(node)
-        self.assertEqual(parser.exit_codes, ArithmeticAddCalculation.spec().exit_codes)
+        assert parser.exit_codes == ArithmeticAddCalculation.spec().exit_codes
 
     def test_parser_get_outputs_for_parsing(self):
         """Make sure that the `get_output_for_parsing` method returns the correct output nodes."""
@@ -83,10 +88,10 @@ class TestParser(AiidaTestCase):
 
         parser = ArithmeticAddParser(node)
         outputs_for_parsing = parser.get_outputs_for_parsing()
-        self.assertIn('retrieved', outputs_for_parsing)
-        self.assertEqual(outputs_for_parsing['retrieved'].uuid, retrieved.uuid)
-        self.assertIn('output', outputs_for_parsing)
-        self.assertEqual(outputs_for_parsing['output'].uuid, output.uuid)
+        assert 'retrieved' in outputs_for_parsing
+        assert outputs_for_parsing['retrieved'].uuid == retrieved.uuid
+        assert 'output' in outputs_for_parsing
+        assert outputs_for_parsing['output'].uuid == output.uuid
 
     @pytest.mark.requires_rmq
     def test_parse_from_node(self):
@@ -113,10 +118,10 @@ class TestParser(AiidaTestCase):
         for cls in [ArithmeticAddParser, SimpleArithmeticAddParser]:
             result, calcfunction = cls.parse_from_node(node)
 
-            self.assertIsInstance(result['sum'], orm.Int)
-            self.assertEqual(result['sum'].value, summed)
-            self.assertIsInstance(calcfunction, orm.CalcFunctionNode)
-            self.assertEqual(calcfunction.exit_status, 0)
+            assert isinstance(result['sum'], orm.Int)
+            assert result['sum'].value == summed
+            assert isinstance(calcfunction, orm.CalcFunctionNode)
+            assert calcfunction.exit_status == 0
 
         # Verify that the `retrieved_temporary_folder` keyword can be passed, there is no validation though
         result, calcfunction = ArithmeticAddParser.parse_from_node(node, retrieved_temporary_folder='/some/path')

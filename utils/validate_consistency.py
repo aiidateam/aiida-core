@@ -10,60 +10,18 @@
 ###########################################################################
 """Validate consistency of versions and dependencies.
 
-Validates consistency of setup.json and
+Validates consistency of
 
+ * pyproject.toml
  * environment.yml
- * version in aiida/__init__.py
- * reentry dependency in pyproject.toml
 
 """
-import collections
-import json
 import os
-import sys
 
 import click
 
-FILENAME_TOML = 'pyproject.toml'
-FILENAME_SETUP_JSON = 'setup.json'
 SCRIPT_PATH = os.path.split(os.path.realpath(__file__))[0]
 ROOT_DIR = os.path.join(SCRIPT_PATH, os.pardir)
-FILEPATH_SETUP_JSON = os.path.join(ROOT_DIR, FILENAME_SETUP_JSON)
-FILEPATH_TOML = os.path.join(ROOT_DIR, FILENAME_TOML)
-
-
-def get_setup_json():
-    """Return the `setup.json` as a python dictionary """
-    with open(FILEPATH_SETUP_JSON, 'r') as fil:
-        return json.load(fil, object_pairs_hook=collections.OrderedDict)
-
-
-def write_setup_json(data):
-    """Write the contents of `data` to the `setup.json`.
-
-    If an exception is encountered during writing, the old content is restored.
-
-    :param data: the dictionary to write to the `setup.json`
-    """
-    backup = get_setup_json()
-
-    try:
-        dump_setup_json(data)
-    except Exception:  # pylint: disable=broad-except
-        dump_setup_json(backup)
-
-
-def dump_setup_json(data):
-    """Write the contents of `data` to the `setup.json`.
-
-    .. warning:: If the writing of the file excepts, the current file will be overwritten and will be left in an
-        incomplete state. To write with a backup safety use the `write_setup_json` function instead.
-
-    :param data: the dictionary to write to the `setup.json`
-    """
-    with open(FILEPATH_SETUP_JSON, 'w') as handle:
-        # Write with indentation of four spaces and explicitly define separators to not have spaces at end of lines
-        return json.dump(data, handle, indent=4, separators=(',', ': '))
 
 
 def determine_block_positions(lines, block_start_marker, block_end_marker):
@@ -117,7 +75,7 @@ def replace_block_in_file(filepath, block_start_marker, block_end_marker, block)
     :param block_end_marker: string marking the end of the block
     :param block: list of lines representing the new block that should be inserted after old block is removed
     """
-    with open(filepath) as handle:
+    with open(filepath, encoding='utf8') as handle:
         lines = handle.readlines()
 
     try:
@@ -127,7 +85,7 @@ def replace_block_in_file(filepath, block_start_marker, block_end_marker, block)
 
     lines = replace_line_block(lines, block, index_start, index_end)
 
-    with open(filepath, 'w') as handle:
+    with open(filepath, 'w', encoding='utf8') as handle:
         for line in lines:
             handle.write(line)
 
@@ -141,6 +99,11 @@ def cli():
 def validate_verdi_documentation():
     """Auto-generate the documentation for `verdi` through `click`."""
     from click import Context
+
+    from aiida.manage.configuration import load_documentation_profile
+
+    load_documentation_profile()
+
     from aiida.cmdline.commands.cmd_verdi import verdi
 
     width = 90  # The maximum width of the formatted help strings in characters
@@ -183,34 +146,6 @@ def validate_verdi_documentation():
     block.append('\n')
 
     replace_block_in_file(filepath_verdi_commands, commands_block_start_marker, commands_block_end_marker, block)
-
-
-@cli.command('version')
-def validate_version():
-    """Check that version numbers match.
-
-    Check version number in setup.json and aiida-core/__init__.py and make sure they match.
-    """
-    import pkgutil
-
-    # Get version from python package
-    loaders = [
-        module_loader for (module_loader, name, ispkg) in pkgutil.iter_modules(path=[ROOT_DIR])
-        if name == 'aiida' and ispkg
-    ]
-    version = loaders[0].find_module('aiida').load_module('aiida').__version__
-
-    setup_content = get_setup_json()
-    if version != setup_content['version']:
-        click.echo('Version number mismatch detected:')
-        click.echo(f"Version number in '{FILENAME_SETUP_JSON}': {setup_content['version']}")
-        click.echo(f"Version number in 'aiida/__init__.py': {version}")
-        click.echo(f"Updating version in '{FILENAME_SETUP_JSON}' to: {version}")
-
-        setup_content['version'] = version
-        write_setup_json(setup_content)
-
-        sys.exit(1)
 
 
 if __name__ == '__main__':

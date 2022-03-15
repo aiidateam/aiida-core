@@ -7,29 +7,30 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines,invalid-name,protected-access
-# pylint: disable=missing-docstring,too-many-locals,too-many-statements
-# pylint: disable=too-many-public-methods
+# pylint: disable=too-many-lines,invalid-name,protected-access,missing-docstring,too-many-locals,too-many-statements
+# pylint: disable=too-many-public-methods,no-member,no-self-use
 import copy
 import io
 import tempfile
 
-from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
+import pytest
+
+from aiida import get_profile, orm
 from aiida.common.exceptions import InvalidOperation, ModificationNotAllowed, StoringNotAllowed, ValidationError
 from aiida.common.links import LinkType
-from aiida.tools import delete_nodes, delete_group_nodes
+from aiida.tools import delete_group_nodes, delete_nodes
 
 
-class TestNodeIsStorable(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean_class')
+class TestNodeIsStorable:
     """Test that checks on storability of certain node sub classes work correctly."""
 
     def test_base_classes(self):
         """Test storability of `Node` base sub classes."""
-        with self.assertRaises(StoringNotAllowed):
+        with pytest.raises(StoringNotAllowed):
             orm.Node().store()
 
-        with self.assertRaises(StoringNotAllowed):
+        with pytest.raises(StoringNotAllowed):
             orm.ProcessNode().store()
 
         # The following base classes are storable
@@ -43,27 +44,29 @@ class TestNodeIsStorable(AiidaTestCase):
         class SubData(orm.Data):
             pass
 
-        with self.assertRaises(StoringNotAllowed):
+        with pytest.raises(StoringNotAllowed):
             SubData().store()
 
 
-class TestNodeCopyDeepcopy(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean_class')
+class TestNodeCopyDeepcopy:
     """Test that calling copy and deepcopy on a Node does the right thing."""
 
     def test_copy_not_supported(self):
         """Copying a base Node instance is not supported."""
         node = orm.Node()
-        with self.assertRaises(InvalidOperation):
+        with pytest.raises(InvalidOperation):
             copy.copy(node)
 
     def test_deepcopy_not_supported(self):
         """Deep copying a base Node instance is not supported."""
         node = orm.Node()
-        with self.assertRaises(InvalidOperation):
+        with pytest.raises(InvalidOperation):
             copy.deepcopy(node)
 
 
-class TestNodeHashing(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean_class')
+class TestNodeHashing:
     """
     Tests the functionality of hashing a node
     """
@@ -86,7 +89,7 @@ class TestNodeHashing(AiidaTestCase):
         # Search for the UUID of the stored node
         qb = orm.QueryBuilder()
         qb.append(orm.Data, project=['uuid'], filters={'id': {'==': n.id}})
-        [uuid] = qb.first()
+        uuid = qb.first(flat=True)
 
         # Look the node with the previously returned UUID
         qb = orm.QueryBuilder()
@@ -95,8 +98,8 @@ class TestNodeHashing(AiidaTestCase):
         # Check that the query doesn't fail
         qb.all()
         # And that the results are correct
-        self.assertEqual(qb.count(), 1)
-        self.assertEqual(qb.first()[0], n.id)
+        assert qb.count() == 1
+        assert qb.first(flat=True) == n.id
 
     @staticmethod
     def create_folderdata_with_empty_file():
@@ -127,11 +130,12 @@ class TestNodeHashing(AiidaTestCase):
         hash1 = node.get_hash()
         node.set_process_state('finished')
         hash2 = node.get_hash()
-        self.assertNotEqual(hash1, None)
-        self.assertEqual(hash1, hash2)
+        assert hash1 is not None
+        assert hash1 == hash2
 
 
-class TestTransitiveNoLoops(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean_class')
+class TestTransitiveNoLoops:
     """
     Test the transitive closure functionality
     """
@@ -148,11 +152,12 @@ class TestTransitiveNoLoops(AiidaTestCase):
         c2.add_incoming(d2, link_type=LinkType.INPUT_CALC, link_label='link')
         c2.store()
 
-        with self.assertRaises(ValueError):  # This would generate a loop
+        with pytest.raises(ValueError):  # This would generate a loop
             d1.add_incoming(c2, link_type=LinkType.CREATE, link_label='link')
 
 
-class TestTypes(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean_class')
+class TestTypes:
     """
     Generic test class to test types
     """
@@ -166,22 +171,28 @@ class TestTypes(AiidaTestCase):
 
         results = orm.QueryBuilder().append(orm.Data, project=('uuid', '*')).all()
         for uuid, data in results:
-            self.assertTrue(isinstance(uuid, str))
-            self.assertTrue(isinstance(data.uuid, str))
+            assert isinstance(uuid, str)
+            assert isinstance(data.uuid, str)
 
 
-class TestQueryWithAiidaObjects(AiidaTestCase):
+class TestQueryWithAiidaObjects:
     """
     Test if queries work properly also with aiida.orm.Node classes instead of
-    aiida.backends.djsite.db.models.DbNode objects.
+    backend model objects.
     """
+
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        self.computer = aiida_localhost
 
     def test_with_subclasses(self):
         from aiida.plugins import DataFactory
 
         extra_name = f'{self.__class__.__name__}/test_with_subclasses'
 
-        Dict = DataFactory('dict')
+        Dict = DataFactory('core.dict')
 
         a1 = orm.CalcJobNode(computer=self.computer)
         a1.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
@@ -206,28 +217,28 @@ class TestQueryWithAiidaObjects(AiidaTestCase):
         results = qb.all(flat=True)
         # a3, a4 should not be found because they are not CalcJobNodes.
         # a6, a7 should not be found because they have not the attribute set.
-        self.assertEqual({i.pk for i in results}, {a1.pk})
+        assert {i.pk for i in results} == {a1.pk}
 
         # Same query, but by the generic Node class
         qb = orm.QueryBuilder()
         qb.append(orm.Node, filters={'extras': {'has_key': extra_name}})
         results = qb.all(flat=True)
-        self.assertEqual({i.pk for i in results}, {a1.pk, a3.pk, a4.pk})
+        assert {i.pk for i in results} == {a1.pk, a3.pk, a4.pk}
 
         # Same query, but by the Data class
         qb = orm.QueryBuilder()
         qb.append(orm.Data, filters={'extras': {'has_key': extra_name}})
         results = qb.all(flat=True)
-        self.assertEqual({i.pk for i in results}, {a3.pk, a4.pk})
+        assert {i.pk for i in results} == {a3.pk, a4.pk}
 
         # Same query, but by the Dict subclass
         qb = orm.QueryBuilder()
         qb.append(orm.Dict, filters={'extras': {'has_key': extra_name}})
         results = qb.all(flat=True)
-        self.assertEqual({i.pk for i in results}, {a4.pk})
+        assert {i.pk for i in results} == {a4.pk}
 
 
-class TestNodeBasic(AiidaTestCase):
+class TestNodeBasic:
     """
     These tests check the basic features of nodes
     (setting of attributes, copying of files, ...)
@@ -258,19 +269,24 @@ class TestNodeBasic(AiidaTestCase):
     emptydict = {}
     emptylist = []
 
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        self.computer = aiida_localhost
+
     def test_uuid_uniquess(self):
         """
         A uniqueness constraint on the UUID column of the Node model should prevent multiple nodes with identical UUID
         """
-        from django.db import IntegrityError as DjIntegrityError
         from sqlalchemy.exc import IntegrityError as SqlaIntegrityError
 
         a = orm.Data()
         b = orm.Data()
-        b.backend_entity.dbmodel.uuid = a.uuid
+        b.backend_entity.bare_model.uuid = a.uuid
         a.store()
 
-        with self.assertRaises((DjIntegrityError, SqlaIntegrityError)):
+        with pytest.raises(SqlaIntegrityError):
             b.store()
 
     def test_attribute_mutability(self):
@@ -284,10 +300,10 @@ class TestNodeBasic(AiidaTestCase):
         a.store()
 
         # After storing attributes should now be immutable
-        with self.assertRaises(ModificationNotAllowed):
+        with pytest.raises(ModificationNotAllowed):
             a.delete_attribute('bool')
 
-        with self.assertRaises(ModificationNotAllowed):
+        with pytest.raises(ModificationNotAllowed):
             a.set_attribute('integer', self.intval)
 
     def test_attr_before_storing(self):
@@ -303,15 +319,15 @@ class TestNodeBasic(AiidaTestCase):
         a.set_attribute('k9', None)
 
         # Now I check if I can retrieve them, before the storage
-        self.assertEqual(self.boolval, a.get_attribute('k1'))
-        self.assertEqual(self.intval, a.get_attribute('k2'))
-        self.assertEqual(self.floatval, a.get_attribute('k3'))
-        self.assertEqual(self.stringval, a.get_attribute('k4'))
-        self.assertEqual(self.dictval, a.get_attribute('k5'))
-        self.assertEqual(self.listval, a.get_attribute('k6'))
-        self.assertEqual(self.emptydict, a.get_attribute('k7'))
-        self.assertEqual(self.emptylist, a.get_attribute('k8'))
-        self.assertIsNone(a.get_attribute('k9'))
+        assert self.boolval == a.get_attribute('k1')
+        assert self.intval == a.get_attribute('k2')
+        assert self.floatval == a.get_attribute('k3')
+        assert self.stringval == a.get_attribute('k4')
+        assert self.dictval == a.get_attribute('k5')
+        assert self.listval == a.get_attribute('k6')
+        assert self.emptydict == a.get_attribute('k7')
+        assert self.emptylist == a.get_attribute('k8')
+        assert a.get_attribute('k9') is None
 
         # And now I try to delete the keys
         a.delete_attribute('k1')
@@ -324,19 +340,19 @@ class TestNodeBasic(AiidaTestCase):
         a.delete_attribute('k8')
         a.delete_attribute('k9')
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             # I delete twice the same attribute
             a.delete_attribute('k1')
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             # I delete a non-existing attribute
             a.delete_attribute('nonexisting')
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             # I get a deleted attribute
             a.get_attribute('k1')
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             # I get a non-existing attribute
             a.get_attribute('nonexisting')
 
@@ -365,7 +381,7 @@ class TestNodeBasic(AiidaTestCase):
         }
 
         # Now I check if I can retrieve them, before the storage
-        self.assertEqual(a.attributes, target_attrs)
+        assert a.attributes == target_attrs
 
         # And now I try to delete the keys
         a.delete_attribute('k1')
@@ -378,7 +394,7 @@ class TestNodeBasic(AiidaTestCase):
         a.delete_attribute('k8')
         a.delete_attribute('k9')
 
-        self.assertEqual(a.attributes, {})
+        assert a.attributes == {}
 
     def test_get_attrs_after_storing(self):
         a = orm.Data()
@@ -407,19 +423,19 @@ class TestNodeBasic(AiidaTestCase):
         }
 
         # Now I check if I can retrieve them, before the storage
-        self.assertEqual(a.attributes, target_attrs)
+        assert a.attributes == target_attrs
 
     def test_store_object(self):
         """Trying to set objects as attributes should fail, because they are not json-serializable."""
         a = orm.Data()
 
         a.set_attribute('object', object())
-        with self.assertRaises(ValidationError):
+        with pytest.raises(ValidationError):
             a.store()
 
         b = orm.Data()
         b.set_attribute('object_list', [object(), object()])
-        with self.assertRaises(ValidationError):
+        with pytest.raises(ValidationError):
             b.store()
 
     def test_attributes_on_clone(self):
@@ -450,9 +466,9 @@ class TestNodeBasic(AiidaTestCase):
         b_expected_attributes['new'] = 'cvb'
 
         # I check before storing that the attributes are ok
-        self.assertEqual(b.attributes, b_expected_attributes)
+        assert b.attributes == b_expected_attributes
         # Note that during copy, I do not copy the extras!
-        self.assertEqual(b.extras, {})
+        assert b.extras == {}
 
         # I store now
         b.store()
@@ -461,11 +477,11 @@ class TestNodeBasic(AiidaTestCase):
         b_expected_extras = {'meta': 'textofext', '_aiida_hash': AnyValue()}
 
         # Now I check that the attributes of the original node have not changed
-        self.assertEqual(a.attributes, attrs_to_set)
+        assert a.attributes == attrs_to_set
 
         # I check then on the 'b' copy
-        self.assertEqual(b.attributes, b_expected_attributes)
-        self.assertEqual(b.extras, b_expected_extras)
+        assert b.attributes == b_expected_attributes
+        assert b.extras == b_expected_extras
 
     def test_files(self):
         a = orm.Data()
@@ -479,21 +495,21 @@ class TestNodeBasic(AiidaTestCase):
             a.put_object_from_file(handle.name, 'file1.txt')
             a.put_object_from_file(handle.name, 'file2.txt')
 
-        self.assertEqual(set(a.list_object_names()), set(['file1.txt', 'file2.txt']))
+        assert set(a.list_object_names()) == set(['file1.txt', 'file2.txt'])
         with a.open('file1.txt') as fhandle:
-            self.assertEqual(fhandle.read(), file_content)
+            assert fhandle.read() == file_content
         with a.open('file2.txt') as fhandle:
-            self.assertEqual(fhandle.read(), file_content)
+            assert fhandle.read() == file_content
 
         b = a.clone()
-        self.assertNotEqual(a.uuid, b.uuid)
+        assert a.uuid != b.uuid
 
         # Check that the content is there
-        self.assertEqual(set(b.list_object_names()), set(['file1.txt', 'file2.txt']))
+        assert set(b.list_object_names()) == set(['file1.txt', 'file2.txt'])
         with b.open('file1.txt') as handle:
-            self.assertEqual(handle.read(), file_content)
+            assert handle.read() == file_content
         with b.open('file2.txt') as handle:
-            self.assertEqual(handle.read(), file_content)
+            assert handle.read() == file_content
 
         # I overwrite a file and create a new one in the clone only
         with tempfile.NamedTemporaryFile(mode='w+') as handle:
@@ -503,18 +519,18 @@ class TestNodeBasic(AiidaTestCase):
             b.put_object_from_file(handle.name, 'file3.txt')
 
         # I check the new content, and that the old one has not changed
-        self.assertEqual(set(a.list_object_names()), set(['file1.txt', 'file2.txt']))
+        assert set(a.list_object_names()) == set(['file1.txt', 'file2.txt'])
         with a.open('file1.txt') as handle:
-            self.assertEqual(handle.read(), file_content)
+            assert handle.read() == file_content
         with a.open('file2.txt') as handle:
-            self.assertEqual(handle.read(), file_content)
-        self.assertEqual(set(b.list_object_names()), set(['file1.txt', 'file2.txt', 'file3.txt']))
+            assert handle.read() == file_content
+        assert set(b.list_object_names()) == set(['file1.txt', 'file2.txt', 'file3.txt'])
         with b.open('file1.txt') as handle:
-            self.assertEqual(handle.read(), file_content)
+            assert handle.read() == file_content
         with b.open('file2.txt') as handle:
-            self.assertEqual(handle.read(), file_content_different)
+            assert handle.read() == file_content_different
         with b.open('file3.txt') as handle:
-            self.assertEqual(handle.read(), file_content_different)
+            assert handle.read() == file_content_different
 
         # This should in principle change the location of the files,
         # so I recheck
@@ -529,27 +545,28 @@ class TestNodeBasic(AiidaTestCase):
             c.put_object_from_file(handle.name, 'file1.txt')
             c.put_object_from_file(handle.name, 'file4.txt')
 
-        self.assertEqual(set(a.list_object_names()), set(['file1.txt', 'file2.txt']))
+        assert set(a.list_object_names()) == set(['file1.txt', 'file2.txt'])
         with a.open('file1.txt') as handle:
-            self.assertEqual(handle.read(), file_content)
+            assert handle.read() == file_content
         with a.open('file2.txt') as handle:
-            self.assertEqual(handle.read(), file_content)
+            assert handle.read() == file_content
 
-        self.assertEqual(set(c.list_object_names()), set(['file1.txt', 'file2.txt', 'file4.txt']))
+        assert set(c.list_object_names()) == set(['file1.txt', 'file2.txt', 'file4.txt'])
         with c.open('file1.txt') as handle:
-            self.assertEqual(handle.read(), file_content_different)
+            assert handle.read() == file_content_different
         with c.open('file2.txt') as handle:
-            self.assertEqual(handle.read(), file_content)
+            assert handle.read() == file_content
         with c.open('file4.txt') as handle:
-            self.assertEqual(handle.read(), file_content_different)
+            assert handle.read() == file_content_different
 
+    @pytest.mark.skip('relies on deleting folders from the repo which is not yet implemented')
     def test_folders(self):
         """
         Similar as test_files, but I manipulate a tree of folders
         """
         import os
-        import shutil
         import random
+        import shutil
         import string
 
         a = orm.Data()
@@ -580,30 +597,30 @@ class TestNodeBasic(AiidaTestCase):
         a.put_object_from_tree(tree_1, 'tree_1')
 
         # verify if the node has the structure I expect
-        self.assertEqual(set(a.list_object_names()), set(['tree_1']))
-        self.assertEqual(set(a.list_object_names('tree_1')), set(['file1.txt', 'dir1']))
-        self.assertEqual(set(a.list_object_names(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
+        assert set(a.list_object_names()) == set(['tree_1'])
+        assert set(a.list_object_names('tree_1')) == set(['file1.txt', 'dir1'])
+        assert set(a.list_object_names(os.path.join('tree_1', 'dir1'))) == set(['dir2', 'file2.txt'])
         with a.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
-            self.assertEqual(fhandle.read(), file_content)
+            assert fhandle.read() == file_content
         with a.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
-            self.assertEqual(fhandle.read(), file_content)
+            assert fhandle.read() == file_content
 
         # try to exit from the folder
-        with self.assertRaises(ValueError):
+        with pytest.raises(FileNotFoundError):
             a.list_object_names('..')
 
         # clone into a new node
         b = a.clone()
-        self.assertNotEqual(a.uuid, b.uuid)
+        assert a.uuid != b.uuid
 
         # Check that the content is there
-        self.assertEqual(set(b.list_object_names('.')), set(['tree_1']))
-        self.assertEqual(set(b.list_object_names('tree_1')), set(['file1.txt', 'dir1']))
-        self.assertEqual(set(b.list_object_names(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
+        assert set(b.list_object_names()) == set(['tree_1'])
+        assert set(b.list_object_names('tree_1')) == set(['file1.txt', 'dir1'])
+        assert set(b.list_object_names(os.path.join('tree_1', 'dir1'))) == set(['dir2', 'file2.txt'])
         with b.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
-            self.assertEqual(fhandle.read(), file_content)
+            assert fhandle.read() == file_content
         with b.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
-            self.assertEqual(fhandle.read(), file_content)
+            assert fhandle.read() == file_content
 
         # I overwrite a file and create a new one in the copy only
         dir3 = os.path.join(directory, 'dir3')
@@ -611,28 +628,28 @@ class TestNodeBasic(AiidaTestCase):
 
         b.put_object_from_tree(dir3, os.path.join('tree_1', 'dir3'))
         # no absolute path here
-        with self.assertRaises(ValueError):
+        with pytest.raises(TypeError):
             b.put_object_from_tree('dir3', os.path.join('tree_1', 'dir3'))
 
         stream = io.StringIO(file_content_different)
         b.put_object_from_filelike(stream, 'file3.txt')
 
         # I check the new content, and that the old one has not changed old
-        self.assertEqual(set(a.list_object_names('.')), set(['tree_1']))
-        self.assertEqual(set(a.list_object_names('tree_1')), set(['file1.txt', 'dir1']))
-        self.assertEqual(set(a.list_object_names(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
+        assert set(a.list_object_names()) == set(['tree_1'])
+        assert set(a.list_object_names('tree_1')) == set(['file1.txt', 'dir1'])
+        assert set(a.list_object_names(os.path.join('tree_1', 'dir1'))) == set(['dir2', 'file2.txt'])
         with a.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
-            self.assertEqual(fhandle.read(), file_content)
+            assert fhandle.read() == file_content
         with a.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
-            self.assertEqual(fhandle.read(), file_content)
+            assert fhandle.read() == file_content
         # new
-        self.assertEqual(set(b.list_object_names('.')), set(['tree_1', 'file3.txt']))
-        self.assertEqual(set(b.list_object_names('tree_1')), set(['file1.txt', 'dir1', 'dir3']))
-        self.assertEqual(set(b.list_object_names(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
+        assert set(b.list_object_names()) == set(['tree_1', 'file3.txt'])
+        assert set(b.list_object_names('tree_1')) == set(['file1.txt', 'dir1', 'dir3'])
+        assert set(b.list_object_names(os.path.join('tree_1', 'dir1'))) == set(['dir2', 'file2.txt'])
         with b.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
-            self.assertEqual(fhandle.read(), file_content)
+            assert fhandle.read() == file_content
         with b.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
-            self.assertEqual(fhandle.read(), file_content)
+            assert fhandle.read() == file_content
 
         # This should in principle change the location of the files, so I recheck
         a.store()
@@ -647,22 +664,22 @@ class TestNodeBasic(AiidaTestCase):
         c.delete_object(os.path.join('tree_1', 'dir1', 'dir2'))
 
         # check old
-        self.assertEqual(set(a.list_object_names('.')), set(['tree_1']))
-        self.assertEqual(set(a.list_object_names('tree_1')), set(['file1.txt', 'dir1']))
-        self.assertEqual(set(a.list_object_names(os.path.join('tree_1', 'dir1'))), set(['dir2', 'file2.txt']))
+        assert set(a.list_object_names()) == set(['tree_1'])
+        assert set(a.list_object_names('tree_1')) == set(['file1.txt', 'dir1'])
+        assert set(a.list_object_names(os.path.join('tree_1', 'dir1'))) == set(['dir2', 'file2.txt'])
         with a.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
-            self.assertEqual(fhandle.read(), file_content)
+            assert fhandle.read() == file_content
         with a.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
-            self.assertEqual(fhandle.read(), file_content)
+            assert fhandle.read() == file_content
 
         # check new
-        self.assertEqual(set(c.list_object_names('.')), set(['tree_1']))
-        self.assertEqual(set(c.list_object_names('tree_1')), set(['file1.txt', 'dir1']))
-        self.assertEqual(set(c.list_object_names(os.path.join('tree_1', 'dir1'))), set(['file2.txt', 'file4.txt']))
+        assert set(c.list_object_names()) == set(['tree_1'])
+        assert set(c.list_object_names('tree_1')) == set(['file1.txt', 'dir1'])
+        assert set(c.list_object_names(os.path.join('tree_1', 'dir1'))) == set(['file2.txt', 'file4.txt'])
         with c.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
-            self.assertEqual(fhandle.read(), file_content_different)
+            assert fhandle.read() == file_content_different
         with c.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
-            self.assertEqual(fhandle.read(), file_content)
+            assert fhandle.read() == file_content
 
         # garbage cleaning
         shutil.rmtree(directory)
@@ -680,13 +697,13 @@ class TestNodeBasic(AiidaTestCase):
         a.store()
 
         # Now I check if I can retrieve them, before the storage
-        self.assertIsNone(a.get_attribute('none'))
-        self.assertEqual(self.boolval, a.get_attribute('bool'))
-        self.assertEqual(self.intval, a.get_attribute('integer'))
-        self.assertEqual(self.floatval, a.get_attribute('float'))
-        self.assertEqual(self.stringval, a.get_attribute('string'))
-        self.assertEqual(self.dictval, a.get_attribute('dict'))
-        self.assertEqual(self.listval, a.get_attribute('list'))
+        assert a.get_attribute('none') is None
+        assert self.boolval == a.get_attribute('bool')
+        assert self.intval == a.get_attribute('integer')
+        assert self.floatval == a.get_attribute('float')
+        assert self.stringval == a.get_attribute('string')
+        assert self.dictval == a.get_attribute('dict')
+        assert self.listval == a.get_attribute('list')
 
     def test_attr_with_reload(self):
         a = orm.Data()
@@ -701,13 +718,13 @@ class TestNodeBasic(AiidaTestCase):
         a.store()
 
         b = orm.load_node(uuid=a.uuid)
-        self.assertIsNone(a.get_attribute('none'))
-        self.assertEqual(self.boolval, b.get_attribute('bool'))
-        self.assertEqual(self.intval, b.get_attribute('integer'))
-        self.assertEqual(self.floatval, b.get_attribute('float'))
-        self.assertEqual(self.stringval, b.get_attribute('string'))
-        self.assertEqual(self.dictval, b.get_attribute('dict'))
-        self.assertEqual(self.listval, b.get_attribute('list'))
+        assert a.get_attribute('none') is None
+        assert self.boolval == b.get_attribute('bool')
+        assert self.intval == b.get_attribute('integer')
+        assert self.floatval == b.get_attribute('float')
+        assert self.stringval == b.get_attribute('string')
+        assert self.dictval == b.get_attribute('dict')
+        assert self.listval == b.get_attribute('list')
 
     def test_extra_with_reload(self):
         a = orm.Data()
@@ -720,42 +737,42 @@ class TestNodeBasic(AiidaTestCase):
         a.set_extra('list', self.listval)
 
         # Check before storing
-        self.assertEqual(self.boolval, a.get_extra('bool'))
-        self.assertEqual(self.intval, a.get_extra('integer'))
-        self.assertEqual(self.floatval, a.get_extra('float'))
-        self.assertEqual(self.stringval, a.get_extra('string'))
-        self.assertEqual(self.dictval, a.get_extra('dict'))
-        self.assertEqual(self.listval, a.get_extra('list'))
+        assert self.boolval == a.get_extra('bool')
+        assert self.intval == a.get_extra('integer')
+        assert self.floatval == a.get_extra('float')
+        assert self.stringval == a.get_extra('string')
+        assert self.dictval == a.get_extra('dict')
+        assert self.listval == a.get_extra('list')
 
         a.store()
 
         # Check after storing
-        self.assertEqual(self.boolval, a.get_extra('bool'))
-        self.assertEqual(self.intval, a.get_extra('integer'))
-        self.assertEqual(self.floatval, a.get_extra('float'))
-        self.assertEqual(self.stringval, a.get_extra('string'))
-        self.assertEqual(self.dictval, a.get_extra('dict'))
-        self.assertEqual(self.listval, a.get_extra('list'))
+        assert self.boolval == a.get_extra('bool')
+        assert self.intval == a.get_extra('integer')
+        assert self.floatval == a.get_extra('float')
+        assert self.stringval == a.get_extra('string')
+        assert self.dictval == a.get_extra('dict')
+        assert self.listval == a.get_extra('list')
 
         b = orm.load_node(uuid=a.uuid)
-        self.assertIsNone(a.get_extra('none'))
-        self.assertEqual(self.boolval, b.get_extra('bool'))
-        self.assertEqual(self.intval, b.get_extra('integer'))
-        self.assertEqual(self.floatval, b.get_extra('float'))
-        self.assertEqual(self.stringval, b.get_extra('string'))
-        self.assertEqual(self.dictval, b.get_extra('dict'))
-        self.assertEqual(self.listval, b.get_extra('list'))
+        assert a.get_extra('none') is None
+        assert self.boolval == b.get_extra('bool')
+        assert self.intval == b.get_extra('integer')
+        assert self.floatval == b.get_extra('float')
+        assert self.stringval == b.get_extra('string')
+        assert self.dictval == b.get_extra('dict')
+        assert self.listval == b.get_extra('list')
 
     def test_get_extras_with_default(self):
         a = orm.Data()
         a.store()
         a.set_extra('a', 'b')
 
-        self.assertEqual(a.get_extra('a'), 'b')
-        with self.assertRaises(AttributeError):
+        assert a.get_extra('a') == 'b'
+        with pytest.raises(AttributeError):
             a.get_extra('c')
 
-        self.assertEqual(a.get_extra('c', 'def'), 'def')
+        assert a.get_extra('c', 'def') == 'def'
 
     @staticmethod
     def test_attr_and_extras_multikey():
@@ -799,12 +816,12 @@ class TestNodeBasic(AiidaTestCase):
 
         all_extras = dict(_aiida_hash=AnyValue(), **extras_to_set)
 
-        self.assertEqual(set(list(a.attributes.keys())), set(attrs_to_set.keys()))
-        self.assertEqual(set(list(a.extras.keys())), set(all_extras.keys()))
+        assert set(list(a.attributes.keys())) == set(attrs_to_set.keys())
+        assert set(list(a.extras.keys())) == set(all_extras.keys())
 
-        self.assertEqual(a.attributes, attrs_to_set)
+        assert a.attributes == attrs_to_set
 
-        self.assertEqual(a.extras, all_extras)
+        assert a.extras == all_extras
 
     def test_delete_extras(self):
         """
@@ -828,7 +845,7 @@ class TestNodeBasic(AiidaTestCase):
         for k, v in extras_to_set.items():
             a.set_extra(k, v)
 
-        self.assertEqual(a.extras, all_extras)
+        assert a.extras == all_extras
 
         # I pregenerate it, it cannot change during iteration
         list_keys = list(extras_to_set.keys())
@@ -837,7 +854,7 @@ class TestNodeBasic(AiidaTestCase):
             # performed correctly
             a.delete_extra(k)
             del all_extras[k]
-            self.assertEqual(a.extras, all_extras)
+            assert a.extras == all_extras
 
     def test_replace_extras_1(self):
         """
@@ -880,7 +897,7 @@ class TestNodeBasic(AiidaTestCase):
         for k, v in extras_to_set.items():
             a.set_extra(k, v)
 
-        self.assertEqual(a.extras, all_extras)
+        assert a.extras == all_extras
 
         for k, v in new_extras.items():
             # I delete one by one the keys and check if the operation is
@@ -890,7 +907,7 @@ class TestNodeBasic(AiidaTestCase):
         # I update extras_to_set with the new entries, and do the comparison
         # again
         all_extras.update(new_extras)
-        self.assertEqual(a.extras, all_extras)
+        assert a.extras == all_extras
 
     def test_basetype_as_attr(self):
         """
@@ -908,28 +925,28 @@ class TestNodeBasic(AiidaTestCase):
         # Manages to store, and value is converted to its base type
         p = orm.Dict(dict={'b': orm.Str('sometext'), 'c': l1})
         p.store()
-        self.assertEqual(p.get_attribute('b'), 'sometext')
-        self.assertIsInstance(p.get_attribute('b'), str)
-        self.assertEqual(p.get_attribute('c'), ['b', [1, 2]])
-        self.assertIsInstance(p.get_attribute('c'), (list, tuple))
+        assert p.get_attribute('b') == 'sometext'
+        assert isinstance(p.get_attribute('b'), str)
+        assert p.get_attribute('c') == ['b', [1, 2]]
+        assert isinstance(p.get_attribute('c'), (list, tuple))
 
         # Check also before storing
         n = orm.Data()
         n.set_attribute('a', orm.Str('sometext2'))
         n.set_attribute('b', l2)
-        self.assertEqual(n.get_attribute('a').value, 'sometext2')
-        self.assertIsInstance(n.get_attribute('a'), orm.Str)
-        self.assertEqual(n.get_attribute('b').get_list(), ['f', True, {'gg': None}])
-        self.assertIsInstance(n.get_attribute('b'), orm.List)
+        assert n.get_attribute('a').value == 'sometext2'
+        assert isinstance(n.get_attribute('a'), orm.Str)
+        assert n.get_attribute('b').get_list() == ['f', True, {'gg': None}]
+        assert isinstance(n.get_attribute('b'), orm.List)
 
         # Check also deep in a dictionary/list
         n = orm.Data()
         n.set_attribute('a', {'b': [orm.Str('sometext3')]})
-        self.assertEqual(n.get_attribute('a')['b'][0].value, 'sometext3')
-        self.assertIsInstance(n.get_attribute('a')['b'][0], orm.Str)
+        assert n.get_attribute('a')['b'][0].value == 'sometext3'
+        assert isinstance(n.get_attribute('a')['b'][0], orm.Str)
         n.store()
-        self.assertEqual(n.get_attribute('a')['b'][0], 'sometext3')
-        self.assertIsInstance(n.get_attribute('a')['b'][0], str)
+        assert n.get_attribute('a')['b'][0] == 'sometext3'
+        assert isinstance(n.get_attribute('a')['b'][0], str)
 
     def test_basetype_as_extra(self):
         """
@@ -950,36 +967,37 @@ class TestNodeBasic(AiidaTestCase):
         n.set_extra('a', orm.Str('sometext2'))
         n.set_extra('c', l1)
         n.set_extra('d', l2)
-        self.assertEqual(n.get_extra('a'), 'sometext2')
-        self.assertIsInstance(n.get_extra('a'), str)
-        self.assertEqual(n.get_extra('c'), ['b', [1, 2]])
-        self.assertIsInstance(n.get_extra('c'), (list, tuple))
-        self.assertEqual(n.get_extra('d'), ['f', True, {'gg': None}])
-        self.assertIsInstance(n.get_extra('d'), (list, tuple))
+        assert n.get_extra('a') == 'sometext2'
+        assert isinstance(n.get_extra('a'), str)
+        assert n.get_extra('c') == ['b', [1, 2]]
+        assert isinstance(n.get_extra('c'), (list, tuple))
+        assert n.get_extra('d') == ['f', True, {'gg': None}]
+        assert isinstance(n.get_extra('d'), (list, tuple))
 
         # Check also deep in a dictionary/list
         n = orm.Data()
         n.store()
         n.set_extra('a', {'b': [orm.Str('sometext3')]})
-        self.assertEqual(n.get_extra('a')['b'][0], 'sometext3')
-        self.assertIsInstance(n.get_extra('a')['b'][0], str)
+        assert n.get_extra('a')['b'][0] == 'sometext3'
+        assert isinstance(n.get_extra('a')['b'][0], str)
 
     def test_comments(self):
         # This is the best way to compare dates with the stored ones, instead
         # of directly loading datetime.datetime.now(), or you can get a
         # "can't compare offset-naive and offset-aware datetimes" error
         from datetime import timedelta
-        from aiida.common import timezone
         from time import sleep
+
+        from aiida.common import timezone
 
         user = orm.User.objects.get_default()
 
         a = orm.Data()
-        with self.assertRaises(ModificationNotAllowed):
+        with pytest.raises(ModificationNotAllowed):
             a.add_comment('text', user=user)
 
         a.store()
-        self.assertEqual(a.get_comments(), [])
+        assert a.get_comments() == []
 
         before = timezone.now() - timedelta(seconds=1)
         a.add_comment('text', user=user)
@@ -994,19 +1012,21 @@ class TestNodeBasic(AiidaTestCase):
         times = [i.ctime for i in comments]
 
         for time in times:
-            self.assertTrue(time > before)
-            self.assertTrue(time < after)
+            assert time > before
+            assert time < after
 
-        self.assertEqual([(i.user.email, i.content) for i in comments], [
-            (self.user_email, 'text'),
-            (self.user_email, 'text2'),
-        ])
+        default_user_email = get_profile().default_user_email
+
+        assert [(i.user.email, i.content) for i in comments] == [
+            (default_user_email, 'text'),
+            (default_user_email, 'text2'),
+        ]
 
     def test_code_loading_from_string(self):
         """
         Checks that the method Code.get_from_string works correctly.
         """
-        from aiida.common.exceptions import NotExistent, MultipleObjectsError, InputValidationError
+        from aiida.common.exceptions import MultipleObjectsError, NotExistent
 
         # Create some code nodes
         code1 = orm.Code()
@@ -1021,22 +1041,22 @@ class TestNodeBasic(AiidaTestCase):
 
         # Test that the code1 can be loaded correctly with its label
         q_code_1 = orm.Code.get_from_string(code1.label)
-        self.assertEqual(q_code_1.id, code1.id)
-        self.assertEqual(q_code_1.label, code1.label)
-        self.assertEqual(q_code_1.get_remote_exec_path(), code1.get_remote_exec_path())
+        assert q_code_1.id == code1.id
+        assert q_code_1.label == code1.label
+        assert q_code_1.get_remote_exec_path() == code1.get_remote_exec_path()
 
         # Test that the code2 can be loaded correctly with its label
         q_code_2 = orm.Code.get_from_string(f'{code2.label}@{self.computer.label}')  # pylint: disable=no-member
-        self.assertEqual(q_code_2.id, code2.id)
-        self.assertEqual(q_code_2.label, code2.label)
-        self.assertEqual(q_code_2.get_remote_exec_path(), code2.get_remote_exec_path())
+        assert q_code_2.id == code2.id
+        assert q_code_2.label == code2.label
+        assert q_code_2.get_remote_exec_path() == code2.get_remote_exec_path()
 
         # Calling get_from_string for a non string type raises exception
-        with self.assertRaises(InputValidationError):
+        with pytest.raises(TypeError):
             orm.Code.get_from_string(code1.id)
 
         # Test that the lookup of a nonexistent code works as expected
-        with self.assertRaises(NotExistent):
+        with pytest.raises(NotExistent):
             orm.Code.get_from_string('nonexistent_code')
 
         # Add another code with the label of code1
@@ -1046,14 +1066,14 @@ class TestNodeBasic(AiidaTestCase):
         code3.store()
 
         # Query with the common label
-        with self.assertRaises(MultipleObjectsError):
+        with pytest.raises(MultipleObjectsError):
             orm.Code.get_from_string(code3.label)
 
     def test_code_loading_using_get(self):
         """
         Checks that the method Code.get(pk) works correctly.
         """
-        from aiida.common.exceptions import NotExistent, MultipleObjectsError
+        from aiida.common.exceptions import MultipleObjectsError, NotExistent
 
         # Create some code nodes
         code1 = orm.Code()
@@ -1068,30 +1088,30 @@ class TestNodeBasic(AiidaTestCase):
 
         # Test that the code1 can be loaded correctly with its label only
         q_code_1 = orm.Code.get(label=code1.label)
-        self.assertEqual(q_code_1.id, code1.id)
-        self.assertEqual(q_code_1.label, code1.label)
-        self.assertEqual(q_code_1.get_remote_exec_path(), code1.get_remote_exec_path())
+        assert q_code_1.id == code1.id
+        assert q_code_1.label == code1.label
+        assert q_code_1.get_remote_exec_path() == code1.get_remote_exec_path()
 
         # Test that the code1 can be loaded correctly with its id/pk
         q_code_1 = orm.Code.get(code1.id)
-        self.assertEqual(q_code_1.id, code1.id)
-        self.assertEqual(q_code_1.label, code1.label)
-        self.assertEqual(q_code_1.get_remote_exec_path(), code1.get_remote_exec_path())
+        assert q_code_1.id == code1.id
+        assert q_code_1.label == code1.label
+        assert q_code_1.get_remote_exec_path() == code1.get_remote_exec_path()
 
         # Test that the code2 can be loaded correctly with its label and computername
         q_code_2 = orm.Code.get(label=code2.label, machinename=self.computer.label)  # pylint: disable=no-member
-        self.assertEqual(q_code_2.id, code2.id)
-        self.assertEqual(q_code_2.label, code2.label)
-        self.assertEqual(q_code_2.get_remote_exec_path(), code2.get_remote_exec_path())
+        assert q_code_2.id == code2.id
+        assert q_code_2.label == code2.label
+        assert q_code_2.get_remote_exec_path() == code2.get_remote_exec_path()
 
         # Test that the code2 can be loaded correctly with its id/pk
         q_code_2 = orm.Code.get(code2.id)
-        self.assertEqual(q_code_2.id, code2.id)
-        self.assertEqual(q_code_2.label, code2.label)
-        self.assertEqual(q_code_2.get_remote_exec_path(), code2.get_remote_exec_path())
+        assert q_code_2.id == code2.id
+        assert q_code_2.label == code2.label
+        assert q_code_2.get_remote_exec_path() == code2.get_remote_exec_path()
 
         # Test that the lookup of a nonexistent code works as expected
-        with self.assertRaises(NotExistent):
+        with pytest.raises(NotExistent):
             orm.Code.get(label='nonexistent_code')
 
         # Add another code with the label of code1
@@ -1101,7 +1121,7 @@ class TestNodeBasic(AiidaTestCase):
         code3.store()
 
         # Query with the common label
-        with self.assertRaises(MultipleObjectsError):
+        with pytest.raises(MultipleObjectsError):
             orm.Code.get(label=code3.label)
 
         # Add another code whose label is equal to pk of another code
@@ -1115,9 +1135,9 @@ class TestNodeBasic(AiidaTestCase):
         # Code.get(pk_label_duplicate) should return code1, as the pk takes
         # precedence
         q_code_4 = orm.Code.get(code4.label)
-        self.assertEqual(q_code_4.id, code1.id)
-        self.assertEqual(q_code_4.label, code1.label)
-        self.assertEqual(q_code_4.get_remote_exec_path(), code1.get_remote_exec_path())
+        assert q_code_4.id == code1.id
+        assert q_code_4.label == code1.label
+        assert q_code_4.get_remote_exec_path() == code1.get_remote_exec_path()
 
     def test_code_description(self):
         """
@@ -1132,10 +1152,10 @@ class TestNodeBasic(AiidaTestCase):
         code.store()
 
         q_code1 = orm.Code.get(label=code.label)
-        self.assertEqual(code.description, str(q_code1.description))
+        assert code.description == str(q_code1.description)
 
         q_code2 = orm.Code.get(code.id)
-        self.assertEqual(code.description, str(q_code2.description))
+        assert code.description == str(q_code2.description)
 
     def test_list_for_plugin(self):
         """
@@ -1154,10 +1174,10 @@ class TestNodeBasic(AiidaTestCase):
         code2.store()
 
         retrieved_pks = set(orm.Code.list_for_plugin('plugin_name', labels=False))
-        self.assertEqual(retrieved_pks, set([code1.pk, code2.pk]))
+        assert retrieved_pks == set([code1.pk, code2.pk])
 
         retrieved_labels = set(orm.Code.list_for_plugin('plugin_name', labels=True))
-        self.assertEqual(retrieved_labels, set([code1.label, code2.label]))
+        assert retrieved_labels == set([code1.label, code2.label])
 
     def test_load_node(self):
         """
@@ -1169,38 +1189,44 @@ class TestNodeBasic(AiidaTestCase):
         node = orm.Data().store()
         uuid_stored = node.uuid  # convenience to store the uuid
         # Simple test to see whether I load correctly from the pk:
-        self.assertEqual(uuid_stored, orm.load_node(pk=node.pk).uuid)
+        assert uuid_stored == orm.load_node(pk=node.pk).uuid
         # Testing the loading with the uuid:
-        self.assertEqual(uuid_stored, orm.load_node(uuid=uuid_stored).uuid)
+        assert uuid_stored == orm.load_node(uuid=uuid_stored).uuid
 
         # Here I'm testing whether loading the node with the beginnings of a uuid works
         for i in range(10, len(uuid_stored), 2):
             start_uuid = uuid_stored[:i]
-            self.assertEqual(uuid_stored, orm.load_node(uuid=start_uuid).uuid)
+            assert uuid_stored == orm.load_node(uuid=start_uuid).uuid
 
         # Testing whether loading the node with part of UUID works, removing the dashes
         for i in range(10, len(uuid_stored), 2):
             start_uuid = uuid_stored[:i].replace('-', '')
-            self.assertEqual(uuid_stored, orm.load_node(uuid=start_uuid).uuid)
+            assert uuid_stored == orm.load_node(uuid=start_uuid).uuid
             # If I don't allow load_node to fix the dashes, this has to raise:
-            with self.assertRaises(NotExistent):
+            with pytest.raises(NotExistent):
                 orm.load_node(uuid=start_uuid, query_with_dashes=False)
 
         # Now I am reverting the order of the uuid, this will raise a NotExistent error:
-        with self.assertRaises(NotExistent):
+        with pytest.raises(NotExistent):
             orm.load_node(uuid=uuid_stored[::-1])
 
         # I am giving a non-sensical pk, this should also raise
-        with self.assertRaises(NotExistent):
+        with pytest.raises(NotExistent):
             orm.load_node(-1)
 
         # Last check, when asking for specific subclass, this should raise:
         for spec in (node.pk, uuid_stored):
-            with self.assertRaises(NotExistent):
+            with pytest.raises(NotExistent):
                 orm.load_node(spec, sub_classes=(orm.ArrayData,))
 
 
-class TestSubNodesAndLinks(AiidaTestCase):
+class TestSubNodesAndLinks:
+
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        self.computer = aiida_localhost
 
     def test_cachelink(self):
         """Test the proper functionality of the links cache, with different scenarios."""
@@ -1215,29 +1241,28 @@ class TestSubNodesAndLinks(AiidaTestCase):
         # Try also reverse storage
         endcalc.add_incoming(n2, LinkType.INPUT_CALC, 'N2')
 
-        self.assertEqual({(i.link_label, i.node.uuid) for i in endcalc.get_incoming()}, {('N1', n1.uuid),
-                                                                                         ('N2', n2.uuid)})
+        assert {(i.link_label, i.node.uuid) for i in endcalc.get_incoming()} == {('N1', n1.uuid), ('N2', n2.uuid)}
 
         # Endnode not stored yet, n3 and n4 already stored
         endcalc.add_incoming(n3, LinkType.INPUT_CALC, 'N3')
         # Try also reverse storage
         endcalc.add_incoming(n4, LinkType.INPUT_CALC, 'N4')
 
-        self.assertEqual({(i.link_label, i.node.uuid) for i in endcalc.get_incoming()},
-                         {('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)})
+        assert {(i.link_label, i.node.uuid) for i in endcalc.get_incoming()} == \
+                         {('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)}
 
         # Some parent nodes are not stored yet
-        with self.assertRaises(ModificationNotAllowed):
+        with pytest.raises(ModificationNotAllowed):
             endcalc.store()
 
-        self.assertEqual({(i.link_label, i.node.uuid) for i in endcalc.get_incoming()},
-                         {('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)})
+        assert {(i.link_label, i.node.uuid) for i in endcalc.get_incoming()} == \
+                         {('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)}
 
         # This will also store n1 and n2!
         endcalc.store_all()
 
-        self.assertEqual({(i.link_label, i.node.uuid) for i in endcalc.get_incoming()},
-                         {('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)})
+        assert {(i.link_label, i.node.uuid) for i in endcalc.get_incoming()} == \
+                         {('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)}
 
     def test_store_with_unstored_parents(self):
         """
@@ -1251,15 +1276,14 @@ class TestSubNodesAndLinks(AiidaTestCase):
         endcalc.add_incoming(n2, LinkType.INPUT_CALC, 'N2')
 
         # Some parent nodes are not stored yet
-        with self.assertRaises(ModificationNotAllowed):
+        with pytest.raises(ModificationNotAllowed):
             endcalc.store()
 
         n1.store()
         # Now I can store
         endcalc.store()
 
-        self.assertEqual({(i.link_label, i.node.uuid) for i in endcalc.get_incoming()}, {('N1', n1.uuid),
-                                                                                         ('N2', n2.uuid)})
+        assert {(i.link_label, i.node.uuid) for i in endcalc.get_incoming()} == {('N1', n1.uuid), ('N2', n2.uuid)}
 
     def test_storeall_with_unstored_grandparents(self):
         """
@@ -1273,7 +1297,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         endcalc.add_incoming(n2, LinkType.INPUT_CALC, 'N2')
 
         # Grandparents are unstored
-        with self.assertRaises(ModificationNotAllowed):
+        with pytest.raises(ModificationNotAllowed):
             endcalc.store_all()
 
         n1.store()
@@ -1281,10 +1305,9 @@ class TestSubNodesAndLinks(AiidaTestCase):
         endcalc.store_all()
 
         # Check the parents...
-        self.assertEqual({(i.link_label, i.node.uuid) for i in n2.get_incoming()}, {('N1', n1.uuid)})
-        self.assertEqual({(i.link_label, i.node.uuid) for i in endcalc.get_incoming()}, {('N2', n2.uuid)})
+        assert {(i.link_label, i.node.uuid) for i in n2.get_incoming()} == {('N1', n1.uuid)}
+        assert {(i.link_label, i.node.uuid) for i in endcalc.get_incoming()} == {('N2', n2.uuid)}
 
-    # pylint: disable=unused-variable,no-member,no-self-use
     def test_calculation_load(self):
         from aiida.orm import CalcJobNode
 
@@ -1293,7 +1316,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         calc.store()
 
-        with self.assertRaises(Exception):
+        with pytest.raises(Exception):
             # I should get an error if I ask for a computer id/pk that doesn't exist
             CalcJobNode(computer=self.computer.id + 100000).store()
 
@@ -1308,7 +1331,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         calc2b = orm.CalculationNode()
 
         calc.add_incoming(d1, LinkType.INPUT_CALC, link_label='label1')
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             calc.add_incoming(d1bis, LinkType.INPUT_CALC, link_label='label1')
         calc.store()
 
@@ -1320,7 +1343,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         # This shouldn't be allowed, it's an output CREATE link with
         # the same same of an existing output CREATE link
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             d4.add_incoming(calc, LinkType.CREATE, link_label='label2')
 
         # instead, for outputs, I can have multiple times the same label
@@ -1344,29 +1367,29 @@ class TestSubNodesAndLinks(AiidaTestCase):
         n3.add_incoming(n2, link_type=LinkType.CALL_CALC, link_label='l2')
 
         # Twice the same link name
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             n3.add_incoming(n4, link_type=LinkType.INPUT_CALC, link_label='l3')
 
         n2.store_all()
         n3.store_all()
 
         n2_in_links = [(n.link_label, n.node.uuid) for n in n2.get_incoming()]
-        self.assertEqual(sorted(n2_in_links), sorted([
+        assert sorted(n2_in_links) == sorted([
             ('l1', n1.uuid),
-        ]))
+        ])
         n3_in_links = [(n.link_label, n.node.uuid) for n in n3.get_incoming()]
-        self.assertEqual(sorted(n3_in_links), sorted([
+        assert sorted(n3_in_links) == sorted([
             ('l2', n2.uuid),
             ('l3', n1.uuid),
-        ]))
+        ])
 
         n1_out_links = [(entry.link_label, entry.node.pk) for entry in n1.get_outgoing()]
-        self.assertEqual(sorted(n1_out_links), sorted([
+        assert sorted(n1_out_links) == sorted([
             ('l1', n2.pk),
             ('l3', n3.pk),
-        ]))
+        ])
         n2_out_links = [(entry.link_label, entry.node.pk) for entry in n2.get_outgoing()]
-        self.assertEqual(sorted(n2_out_links), sorted([('l2', n3.pk)]))
+        assert sorted(n2_out_links) == sorted([('l2', n3.pk)])
 
     def test_multiple_create_links(self):
         """
@@ -1378,13 +1401,13 @@ class TestSubNodesAndLinks(AiidaTestCase):
 
         # Caching the links
         n3.add_incoming(n1, link_type=LinkType.CREATE, link_label='CREATE')
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             n3.add_incoming(n2, link_type=LinkType.CREATE, link_label='CREATE')
 
     def test_valid_links(self):
         from aiida.plugins import DataFactory
 
-        SinglefileData = DataFactory('singlefile')
+        SinglefileData = DataFactory('core.singlefile')
 
         # I create some objects
         d1 = orm.Data().store()
@@ -1392,10 +1415,10 @@ class TestSubNodesAndLinks(AiidaTestCase):
             d2 = SinglefileData(file=handle).store()
 
         unsavedcomputer = orm.Computer(
-            label='localhost2', hostname='localhost', scheduler_type='direct', transport_type='local'
+            label='localhost2', hostname='localhost', scheduler_type='core.direct', transport_type='core.local'
         )
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             # I need to save the localhost entry first
             orm.CalcJobNode(computer=unsavedcomputer).store()
 
@@ -1411,17 +1434,17 @@ class TestSubNodesAndLinks(AiidaTestCase):
         calc.add_incoming(d2, link_type=LinkType.INPUT_CALC, link_label='some_label')
 
         # Cannot link to itself
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             d1.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link')
 
         # I try to add wrong links (data to data, calc to calc, etc.)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             d2.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link')
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             d1.add_incoming(d2, link_type=LinkType.INPUT_CALC, link_label='link')
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             calc.add_incoming(calc2, link_type=LinkType.INPUT_CALC, link_label='link')
 
         calc.store()
@@ -1436,13 +1459,13 @@ class TestSubNodesAndLinks(AiidaTestCase):
         data_node = orm.Data().store()
         data_node.add_incoming(calc_a, link_type=LinkType.CREATE, link_label='link')
         # A data cannot have two input calculations
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             data_node.add_incoming(calc_b, link_type=LinkType.CREATE, link_label='link')
 
         calculation_inputs = calc.get_incoming().all()
 
         # This calculation has two data inputs
-        self.assertEqual(len(calculation_inputs), 2)
+        assert len(calculation_inputs) == 2
 
     def test_check_single_calc_source(self):
         """
@@ -1460,7 +1483,7 @@ class TestSubNodesAndLinks(AiidaTestCase):
         d1.add_incoming(calc, link_type=LinkType.CREATE, link_label='link')
 
         # more than one input to the same data object!
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             d1.add_incoming(calc2, link_type=LinkType.CREATE, link_label='link')
 
     def test_node_get_incoming_outgoing_links(self):
@@ -1491,19 +1514,19 @@ class TestSubNodesAndLinks(AiidaTestCase):
         node_return.add_incoming(node_origin, link_type=LinkType.RETURN, link_label='return2')
 
         # All incoming and outgoing
-        self.assertEqual(len(node_origin.get_incoming().all()), 2)
-        self.assertEqual(len(node_origin.get_outgoing().all()), 3)
+        assert len(node_origin.get_incoming().all()) == 2
+        assert len(node_origin.get_outgoing().all()) == 3
 
         # Link specific incoming
-        self.assertEqual(len(node_origin.get_incoming(link_type=LinkType.CALL_WORK).all()), 1)
-        self.assertEqual(len(node_origin2.get_incoming(link_type=LinkType.CALL_WORK).all()), 1)
-        self.assertEqual(len(node_origin.get_incoming(link_type=LinkType.INPUT_WORK).all()), 1)
-        self.assertEqual(len(node_origin.get_incoming(link_label_filter='in_ut%').all()), 1)
-        self.assertEqual(len(node_origin.get_incoming(node_class=orm.Node).all()), 2)
+        assert len(node_origin.get_incoming(link_type=LinkType.CALL_WORK).all()) == 1
+        assert len(node_origin2.get_incoming(link_type=LinkType.CALL_WORK).all()) == 1
+        assert len(node_origin.get_incoming(link_type=LinkType.INPUT_WORK).all()) == 1
+        assert len(node_origin.get_incoming(link_label_filter='in_ut%').all()) == 1
+        assert len(node_origin.get_incoming(node_class=orm.Node).all()) == 2
 
         # Link specific outgoing
-        self.assertEqual(len(node_origin.get_outgoing(link_type=LinkType.CALL_WORK).all()), 1)
-        self.assertEqual(len(node_origin.get_outgoing(link_type=LinkType.RETURN).all()), 2)
+        assert len(node_origin.get_outgoing(link_type=LinkType.CALL_WORK).all()) == 1
+        assert len(node_origin.get_outgoing(link_type=LinkType.RETURN).all()) == 2
 
 
 class AnyValue:
@@ -1515,7 +1538,8 @@ class AnyValue:
         return True
 
 
-class TestNodeDeletion(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean_class')
+class TestNodeDeletion:
 
     def _check_existence(self, uuids_check_existence, uuids_check_deleted):
         """
@@ -1536,7 +1560,7 @@ class TestNodeDeletion(AiidaTestCase):
             orm.load_node(uuid)
         for uuid in uuids_check_deleted:
             # I check that it raises
-            with self.assertRaises(NotExistent):
+            with pytest.raises(NotExistent):
                 orm.load_node(uuid)
 
     @staticmethod
@@ -1550,8 +1574,8 @@ class TestNodeDeletion(AiidaTestCase):
         node = orm.Data().store()
         node_pk = node.pk
         deleted_pks, was_deleted = delete_nodes([node_pk], dry_run=True)
-        self.assertTrue(not was_deleted)
-        self.assertSetEqual(deleted_pks, {node_pk})
+        assert not was_deleted
+        assert deleted_pks == {node_pk}
         orm.load_node(node_pk)
 
     def test_deletion_dry_run_callback(self):
@@ -1566,11 +1590,11 @@ class TestNodeDeletion(AiidaTestCase):
             return False
 
         deleted_pks, was_deleted = delete_nodes([node_pk], dry_run=_callback)
-        self.assertTrue(was_deleted)
-        self.assertSetEqual(deleted_pks, {node_pk})
-        with self.assertRaises(NotExistent):
+        assert was_deleted
+        assert deleted_pks == {node_pk}
+        with pytest.raises(NotExistent):
             orm.load_node(node_pk)
-        self.assertListEqual(callback_pks, [node_pk])
+        assert callback_pks == [node_pk]
 
 
 #   TEST BASIC CASES
@@ -2054,8 +2078,8 @@ class TestNodeDeletion(AiidaTestCase):
         node_uuids = {node.uuid for node in nodes}
         group.add_nodes(nodes)
         deleted_pks, was_deleted = delete_group_nodes([group.pk], dry_run=False)
-        self.assertTrue(was_deleted)
-        self.assertSetEqual(deleted_pks, node_pks)
+        assert was_deleted
+        assert deleted_pks == node_pks
         self._check_existence([], node_uuids)
 
     def test_delete_group_nodes_dry_run_true(self):
@@ -2066,6 +2090,6 @@ class TestNodeDeletion(AiidaTestCase):
         node_uuids = {node.uuid for node in nodes}
         group.add_nodes(nodes)
         deleted_pks, was_deleted = delete_group_nodes([group.pk], dry_run=True)
-        self.assertTrue(not was_deleted)
-        self.assertSetEqual(deleted_pks, node_pks)
+        assert not was_deleted
+        assert deleted_pks == node_pks
         self._check_existence(node_uuids, [])

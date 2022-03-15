@@ -8,10 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub class `Data` to be used as a base class for data structures."""
-
 from aiida.common import exceptions
-from aiida.common.links import LinkType
 from aiida.common.lang import override
+from aiida.common.links import LinkType
 
 from ..node import Node
 
@@ -26,7 +25,7 @@ class Data(Node):
 
     Architecture note:
     Calculation plugins are responsible for converting raw output data from simulation codes to Data nodes.
-    Data nodes are responsible for validating their content (see _validate method).
+    Nodes are responsible for validating their content (see _validate method).
     """
     _source_attributes = ['db_name', 'db_uri', 'uri', 'id', 'version', 'extras', 'source_md5', 'description', 'license']
 
@@ -43,32 +42,35 @@ class Data(Node):
     _storable = True
     _unstorable_message = 'storing for this node has been disabled'
 
+    def __init__(self, *args, source=None, **kwargs):
+        """Construct a new instance, setting the ``source`` attribute if provided as a keyword argument."""
+        super().__init__(*args, **kwargs)
+        if source is not None:
+            self.source = source
+
     def __copy__(self):
         """Copying a Data node is not supported, use copy.deepcopy or call Data.clone()."""
         raise exceptions.InvalidOperation('copying a Data node is not supported, use copy.deepcopy')
 
     def __deepcopy__(self, memo):
         """
-        Create a clone of the Data node by pipiong through to the clone method and return the result.
+        Create a clone of the Data node by piping through to the clone method and return the result.
 
         :returns: an unstored clone of this Data node
         """
         return self.clone()
 
     def clone(self):
-        """
-        Create a clone of the Data node.
+        """Create a clone of the Data node.
 
         :returns: an unstored clone of this Data node
         """
-        # pylint: disable=no-member
         import copy
 
         backend_clone = self.backend_entity.clone()
         clone = self.__class__.from_backend_entity(backend_clone)
-
-        clone.reset_attributes(copy.deepcopy(self.attributes))
-        clone.put_object_from_tree(self._repository._get_base_folder().abspath)  # pylint: disable=protected-access
+        clone.reset_attributes(copy.deepcopy(self.attributes))  # pylint: disable=no-member
+        clone._repository.clone(self._repository)  # pylint: disable=no-member,protected-access
 
         return clone
 
@@ -355,23 +357,3 @@ class Data(Node):
         valid_format_names = [i[len(exporter_prefix):] for i in method_names if i.startswith(exporter_prefix)]
         valid_formats = {k: getattr(self, exporter_prefix + k) for k in valid_format_names}
         return valid_formats
-
-    def _validate(self):
-        """
-        Perform validation of the Data object.
-
-        .. note:: validation of data source checks license and requires
-            attribution to be provided in field 'description' of source in
-            the case of any CC-BY* license. If such requirement is too
-            strict, one can remove/comment it out.
-        """
-        # Validation of ``source`` is commented out due to Issue #9
-        # (https://bitbucket.org/epfl_theos/aiida_epfl/issues/9/)
-        # super()._validate()
-        # if self.source is not None and \
-        #    self.source.get('license', None) and \
-        #    self.source['license'].startswith('CC-BY') and \
-        #    self.source.get('description', None) is None:
-        #     raise ValidationError("License of the object ({}) requires "
-        #                           "attribution, while none is given in the "
-        #                           "description".format(self.source['license']))

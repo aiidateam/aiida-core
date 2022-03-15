@@ -8,8 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module that defines the configuration file of an AiiDA instance and functions to create and load it."""
+import codecs
 from functools import lru_cache
 from importlib import resources
+import json
 import os
 import shutil
 import tempfile
@@ -17,16 +19,15 @@ from typing import Any, Dict, Optional, Sequence, Tuple
 
 import jsonschema
 
-from aiida.common import json
 from aiida.common.exceptions import ConfigurationError
 
 from . import schema as schema_module
-from .options import get_option, get_option_names, Option, parse_option, NO_DEFAULT
+from .options import NO_DEFAULT, Option, get_option, get_option_names, parse_option
 from .profile import Profile
 
 __all__ = ('Config', 'config_schema', 'ConfigValidationError')
 
-SCHEMA_FILE = 'config-v5.schema.json'
+SCHEMA_FILE = 'config-v8.schema.json'
 
 
 @lru_cache(1)
@@ -77,10 +78,11 @@ class Config:  # pylint: disable=too-many-public-methods
         :return: `Config` instance
         """
         from aiida.cmdline.utils import echo
+
         from .migrations import check_and_migrate_config, config_needs_migrating
 
         try:
-            with open(filepath, 'r', encoding='utf8') as handle:
+            with open(filepath, 'rb') as handle:
                 config = json.load(handle)
         except FileNotFoundError:
             config = Config(filepath, check_and_migrate_config({}))
@@ -89,7 +91,7 @@ class Config:  # pylint: disable=too-many-public-methods
             migrated = False
 
             # If the configuration file needs to be migrated first create a specific backup so it can easily be reverted
-            if config_needs_migrating(config):
+            if config_needs_migrating(config, filepath):
                 migrated = True
                 echo.echo_warning(f'current configuration file `{filepath}` is outdated and will be migrated')
                 filepath_backup = cls._backup(filepath)
@@ -172,9 +174,7 @@ class Config:  # pylint: disable=too-many-public-methods
             self._default_profile = None
 
         for name, config_profile in config.get(self.KEY_PROFILES, {}).items():
-            if Profile.contains_unknown_keys(config_profile):
-                self.handle_invalid(f'encountered unknown keys in profile `{name}` which have been removed')
-            self._profiles[name] = Profile(name, config_profile, from_config=True)
+            self._profiles[name] = Profile(name, config_profile)
 
     def __eq__(self, other):
         """Two configurations are considered equal, when their dictionaries are equal."""
@@ -257,15 +257,6 @@ class Config:  # pylint: disable=too-many-public-methods
         return self._default_profile
 
     @property
-    def current_profile(self):
-        """Return the currently loaded profile.
-
-        :return: the current profile or None if not defined
-        """
-        from . import get_profile
-        return get_profile()
-
-    @property
     def profile_names(self):
         """Return the list of profile names.
 
@@ -293,7 +284,7 @@ class Config:  # pylint: disable=too-many-public-methods
         if name not in self.profile_names:
             raise exceptions.ProfileConfigurationError(f'profile `{name}` does not exist')
 
-    def get_profile(self, name=None):
+    def get_profile(self, name: Optional[str] = None) -> Profile:
         """Return the profile for the given name or the default one if not specified.
 
         :return: the profile instance or None if it does not exist
@@ -341,6 +332,39 @@ class Config:  # pylint: disable=too-many-public-methods
         self.validate_profile(name)
         self._profiles.pop(name)
         return self
+
+    def delete_profile(
+        self,
+        name: str,
+        include_database: bool = True,
+        include_database_user: bool = False,
+        include_repository: bool = True
+    ):
+        """Delete a profile including its storage.
+
+        :param include_database: also delete the database configured for the profile.
+        :param include_database_user: also delete the database user configured for the profile.
+        :param include_repository: also delete the repository configured for the profile.
+        """
+        from aiida.manage.external.postgres import Postgres
+
+        profile = self.get_profile(name)
+
+        if include_repository:
+            folder = profile.repository_path
+            if folder.exists():
+                shutil.rmtree(folder)
+
+        if include_database:
+            postgres = Postgres.from_profile(profile)
+            if postgres.db_exists(profile.storage_config['database_name']):
+                postgres.drop_db(profile.storage_config['database_name'])
+
+        if include_database_user and postgres.dbuser_exists(profile.storage_config['database_username']):
+            postgres.drop_dbuser(profile.storage_config['database_username'])
+
+        self.remove_profile(name)
+        self.store()
 
     def set_default_profile(self, name, overwrite=False):
         """Set the given profile as the new default.
@@ -457,7 +481,8 @@ class Config:  # pylint: disable=too-many-public-methods
 
         :return: self
         """
-        from aiida.common.files import md5_from_filelike, md5_file
+        from aiida.common.files import md5_file, md5_from_filelike
+
         from .settings import DEFAULT_CONFIG_INDENT_SIZE
 
         # If the filepath of this configuration does not yet exist, simply write it.
@@ -468,7 +493,7 @@ class Config:  # pylint: disable=too-many-public-methods
         # Otherwise, we write the content to a temporary file and compare its md5 checksum with the current config on
         # disk. When the checksums differ, we first create a backup and only then overwrite the existing file.
         with tempfile.NamedTemporaryFile() as handle:
-            json.dump(self.dictionary, handle, indent=DEFAULT_CONFIG_INDENT_SIZE)
+            json.dump(self.dictionary, codecs.getwriter('utf-8')(handle), indent=DEFAULT_CONFIG_INDENT_SIZE)
             handle.seek(0)
 
             if md5_from_filelike(handle) != md5_file(self.filepath):
@@ -488,7 +513,7 @@ class Config:  # pylint: disable=too-many-public-methods
 
         :param filepath: optional filepath to write the contents to, if not specified, the default filename is used.
         """
-        from .settings import DEFAULT_UMASK, DEFAULT_CONFIG_INDENT_SIZE
+        from .settings import DEFAULT_CONFIG_INDENT_SIZE, DEFAULT_UMASK
 
         umask = os.umask(DEFAULT_UMASK)
 
@@ -498,7 +523,7 @@ class Config:  # pylint: disable=too-many-public-methods
         # Create a temporary file in the same directory as the target filepath, which guarantees that the temporary
         # file is on the same filesystem, which is necessary to be able to use ``os.rename``. Since we are moving the
         # temporary file, we should also tell the tempfile to not be automatically deleted as that will raise.
-        with tempfile.NamedTemporaryFile(dir=os.path.dirname(filepath), delete=False) as handle:
+        with tempfile.NamedTemporaryFile(dir=os.path.dirname(filepath), delete=False, mode='w') as handle:
             try:
                 json.dump(self.dictionary, handle, indent=DEFAULT_CONFIG_INDENT_SIZE)
             finally:

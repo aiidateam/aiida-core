@@ -63,7 +63,7 @@ class TemplatereplacerCalculation(CalcJob):
     def define(cls, spec):
         # yapf: disable
         super().define(spec)
-        spec.inputs['metadata']['options']['parser_name'].default = 'templatereplacer.doubler'
+        spec.inputs['metadata']['options']['parser_name'].default = 'core.templatereplacer.doubler'
         spec.input('template', valid_type=orm.Dict,
             help='A template for the input file.')
         spec.input('parameters', valid_type=orm.Dict, required=False,
@@ -92,8 +92,8 @@ class TemplatereplacerCalculation(CalcJob):
         :param folder: a aiida.common.folders.Folder subclass where the plugin should put all its files.
         """
         # pylint: disable=too-many-locals,too-many-statements,too-many-branches
-        from aiida.common.utils import validate_list_of_string_tuples
         from aiida.common.exceptions import ValidationError
+        from aiida.common.utils import validate_list_of_string_tuples
 
         code = self.inputs.code
         template = self.inputs.template.get_dict()

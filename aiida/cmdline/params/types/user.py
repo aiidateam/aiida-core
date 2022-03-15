@@ -12,6 +12,8 @@ import click
 
 from aiida.cmdline.utils.decorators import with_dbenv
 
+__all__ = ('UserParamType',)
+
 
 class UserParamType(click.ParamType):
     """
@@ -43,7 +45,7 @@ class UserParamType(click.ParamType):
         return results[0]
 
     @with_dbenv()
-    def complete(self, ctx, incomplete):  # pylint: disable=unused-argument,no-self-use
+    def shell_complete(self, ctx, param, incomplete):  # pylint: disable=unused-argument,no-self-use
         """
         Return possible completions based on an incomplete value
 
@@ -53,4 +55,6 @@ class UserParamType(click.ParamType):
 
         users = orm.User.objects.find()
 
-        return [(user.email, '') for user in users if user.email.startswith(incomplete)]
+        return [
+            click.shell_completion.CompletionItem(user.email) for user in users if user.email.startswith(incomplete)
+        ]

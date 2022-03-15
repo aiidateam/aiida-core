@@ -10,9 +10,9 @@
 """"Implementation of `DbImporter` for the Materials Project database."""
 import datetime
 import os
-import requests
 
 from pymatgen.ext.matproj import MPRester
+import requests
 
 from aiida.tools.dbimporters.baseclasses import CifEntry, DbImporter, DbSearchResults
 

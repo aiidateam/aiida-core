@@ -7,8 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=wildcard-import,undefined-variable,redefined-builtin,cyclic-import
 """Main module to expose all orm classes and methods"""
+
+# AUTO-GENERATED
+
+# yapf: disable
+# pylint: disable=wildcard-import
 
 from .authinfos import *
 from .comments import *
@@ -22,6 +26,90 @@ from .users import *
 from .utils import *
 
 __all__ = (
-    authinfos.__all__ + comments.__all__ + computers.__all__ + entities.__all__ + groups.__all__ + logs.__all__ +
-    nodes.__all__ + querybuilder.__all__ + users.__all__ + utils.__all__
+    'ASCENDING',
+    'AbstractNodeMeta',
+    'ArrayData',
+    'AttributeManager',
+    'AuthInfo',
+    'AutoGroup',
+    'BandsData',
+    'BaseType',
+    'Bool',
+    'CalcFunctionNode',
+    'CalcJobNode',
+    'CalcJobResultManager',
+    'CalculationEntityLoader',
+    'CalculationNode',
+    'CifData',
+    'Code',
+    'CodeEntityLoader',
+    'Collection',
+    'Comment',
+    'Computer',
+    'ComputerEntityLoader',
+    'DESCENDING',
+    'Data',
+    'Dict',
+    'Entity',
+    'EntityAttributesMixin',
+    'EntityExtrasMixin',
+    'EntityTypes',
+    'EnumData',
+    'Float',
+    'FolderData',
+    'Group',
+    'GroupEntityLoader',
+    'ImportGroup',
+    'Int',
+    'JsonableData',
+    'Kind',
+    'KpointsData',
+    'LinkManager',
+    'LinkPair',
+    'LinkTriple',
+    'List',
+    'Log',
+    'Node',
+    'NodeEntityLoader',
+    'NodeLinksManager',
+    'NodeRepositoryMixin',
+    'NumericType',
+    'OrbitalData',
+    'OrderSpecifier',
+    'OrmEntityLoader',
+    'ProcessNode',
+    'ProjectionData',
+    'QueryBuilder',
+    'RemoteData',
+    'RemoteStashData',
+    'RemoteStashFolderData',
+    'SinglefileData',
+    'Site',
+    'Str',
+    'StructureData',
+    'TrajectoryData',
+    'UpfData',
+    'UpfFamily',
+    'User',
+    'WorkChainNode',
+    'WorkFunctionNode',
+    'WorkflowNode',
+    'XyData',
+    'cif_from_ase',
+    'find_bandgap',
+    'get_loader',
+    'get_query_type_from_type_string',
+    'get_type_string_from_class',
+    'has_pycifrw',
+    'load_code',
+    'load_computer',
+    'load_entity',
+    'load_group',
+    'load_node',
+    'load_node_class',
+    'pycifrw_from_cif',
+    'to_aiida_type',
+    'validate_link',
 )
+
+# yapf: enable

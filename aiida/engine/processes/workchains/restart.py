@@ -11,14 +11,14 @@
 import functools
 from inspect import getmembers
 from types import FunctionType
-from typing import Any, Dict, List, Optional, Type, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, Union
 
 from aiida import orm
 from aiida.common import AttributeDict
 
 from .context import ToContext, append_
+from .utils import ProcessHandlerReport, process_handler  # pylint: disable=no-name-in-module
 from .workchain import WorkChain
-from .utils import ProcessHandlerReport, process_handler
 
 if TYPE_CHECKING:
     from aiida.engine.processes import ExitCode, PortNamespace, Process, ProcessSpec
@@ -31,7 +31,7 @@ def validate_handler_overrides(
     handler_overrides: Optional[orm.Dict],
     ctx: 'PortNamespace'  # pylint: disable=unused-argument
 ) -> Optional[str]:
-    """Validator for the `handler_overrides` input port of the `BaseRestartWorkChain.
+    """Validator for the `handler_overrides` input port of the `BaseRestartWorkChain`.
 
     The `handler_overrides` should be a dictionary where keys are strings that are the name of a process handler, i.e. a
     instance method of the `process_class` that has been decorated with the `process_handler` decorator. The values
@@ -311,7 +311,10 @@ class BaseRestartWorkChain(WorkChain):
                 output = exposed_outputs[name]
             except KeyError:
                 if port.required:
-                    self.report(f"required output '{name}' was not an output of {self.ctx.process_name}<{node.pk}>")
+                    self.report(
+                        f'required output \'{name}\' was not an output of {self.ctx.process_name}<{node.pk}> '
+                        f'(or an incorrect class/output is being exposed).'
+                    )
             else:
                 self.out(name, output)
 

@@ -22,7 +22,6 @@ class DBLogHandler(logging.Handler):
             self.format(record)
 
         from aiida import orm
-        from django.core.exceptions import ImproperlyConfigured  # pylint: disable=no-name-in-module, import-error
 
         try:
             try:
@@ -32,11 +31,6 @@ class DBLogHandler(logging.Handler):
                 # The backend should be set. We silently absorb this error
                 pass
 
-        except ImproperlyConfigured:
-            # Probably, the logger was called without the
-            # Django settings module loaded. Then,
-            # This ignore should be a no-op.
-            pass
         except Exception:  # pylint: disable=broad-except
             # To avoid loops with the error handler, I just print.
             # Hopefully, though, this should not happen!
@@ -55,7 +49,7 @@ def get_dblogger_extra(node):
     # If the object is not a Node or it is not stored, then any associated log records should bot be stored. This is
     # accomplished by returning an empty dictionary because the `dbnode_id` is required to successfully store it.
     if not isinstance(node, Node) or not node.is_stored:
-        return dict()
+        return {}
 
     return {'dbnode_id': node.id, 'backend': node.backend}
 

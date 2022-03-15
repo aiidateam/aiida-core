@@ -14,13 +14,13 @@ This has been tested on GE 6.2u3.
 Plugin originally written by Marco Dorigo.
 Email: marco(DOT)dorigo(AT)rub(DOT)de
 """
-import xml.parsers.expat
 import xml.dom.minidom
+import xml.parsers.expat
 
 from aiida.common.escaping import escape_for_bash
 import aiida.schedulers
 from aiida.schedulers import SchedulerError, SchedulerParsingError
-from aiida.schedulers.datastructures import (JobInfo, JobState, ParEnvJobResource)
+from aiida.schedulers.datastructures import JobInfo, JobState, ParEnvJobResource
 
 # 'http://www.loni.ucla.edu/twiki/bin/view/Infrastructure/GridComputing?skin=plain':
 # Jobs Status:
@@ -150,8 +150,6 @@ class SgeScheduler(aiida.schedulers.Scheduler):
         import re
         import string
 
-        empty_line = ''
-
         lines = []
 
         # SGE provides flags for wd and cwd
@@ -168,8 +166,9 @@ class SgeScheduler(aiida.schedulers.Scheduler):
             lines.append(f'#$ -h {job_tmpl.submit_as_hold}')
 
         if job_tmpl.rerunnable:
-            # if isinstance(job_tmpl.rerunnable, str):
-            lines.append(f'#$ -r {job_tmpl.rerunnable}')
+            lines.append('#$ -r yes')
+        else:
+            lines.append('#$ -r no')
 
         if job_tmpl.email:
             # If not specified, but email events are set, PBSPro
@@ -266,21 +265,8 @@ class SgeScheduler(aiida.schedulers.Scheduler):
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)
 
-        # TAKEN FROM PBSPRO:
-        # Job environment variables are to be set on one single line.
-        # This is a tough job due to the escaping of commas, etc.
-        # moreover, I am having issues making it work.
-        # Therefore, I assume that this is bash and export variables by
-        # and.
         if job_tmpl.job_environment:
-            lines.append(empty_line)
-            lines.append('# ENVIRONMENT VARIABLES BEGIN ###')
-            if not isinstance(job_tmpl.job_environment, dict):
-                raise ValueError('If you provide job_environment, it must be a dictionary')
-            for key, value in job_tmpl.job_environment.items():
-                lines.append(f'export {key.strip()}={escape_for_bash(value)}')
-            lines.append('# ENVIRONMENT VARIABLES  END  ###')
-            lines.append(empty_line)
+            lines.append(self._get_submit_script_environment_variables(job_tmpl))
 
         return '\n'.join(lines)
 
@@ -322,7 +308,7 @@ class SgeScheduler(aiida.schedulers.Scheduler):
             raise SchedulerError('Error during joblist retrieval, no stdout produced')
 
         try:
-            first_child = xmldata.firstChild
+            first_child = xmldata.firstChild  # pylint: disable=no-member
             second_childs = first_child.childNodes
             tag_names_sec = [elem.tagName for elem in second_childs \
                              if elem.nodeType == 1]
@@ -365,9 +351,7 @@ class SgeScheduler(aiida.schedulers.Scheduler):
                 self.logger.error(f'Error in sge._parse_joblist_output:no job id is given, stdout={stdout}')
                 raise SchedulerError('Error in sge._parse_joblist_output: no job id is given')
             except IndexError:
-                self.logger.error("No 'job_number' given for job index {} in "
-                                  'job list, stdout={}'.format(jobs.index(job) \
-                                                               , stdout))
+                self.logger.error(f"No 'job_number' given for job index {jobs.index(job)} in job list, stdout={stdout}")
                 raise IndexError('Error in sge._parse_joblist_output: no job id is given')
 
             try:
@@ -377,13 +361,10 @@ class SgeScheduler(aiida.schedulers.Scheduler):
                 try:
                     this_job.job_state = _MAP_STATUS_SGE[job_state_string]
                 except KeyError:
-                    self.logger.warning(
-                        "Unrecognized job_state '{}' for job "
-                        'id {}'.format(job_state_string, this_job.job_id)
-                    )
+                    self.logger.warning(f"Unrecognized job_state '{job_state_string}' for job id {this_job.job_id}")
                     this_job.job_state = JobState.UNDETERMINED
             except IndexError:
-                self.logger.warning("No 'job_state' field for job id {} in" 'stdout={}'.format(this_job.job_id, stdout))
+                self.logger.warning(f"No 'job_state' field for job id {this_job.job_id} instdout={stdout}")
                 this_job.job_state = JobState.UNDETERMINED
 
             try:
@@ -431,9 +412,7 @@ class SgeScheduler(aiida.schedulers.Scheduler):
                         )
                 except IndexError:
                     self.logger.warning(
-                        "No 'JB_submission_time' and no "
-                        "'JAT_start_time' field for job "
-                        'id {}'.format(this_job.job_id)
+                        f"No 'JB_submission_time' and no 'JAT_start_time' field for job id {this_job.job_id}"
                     )
 
             # There is also cpu_usage, mem_usage, io_usage information available:
@@ -475,8 +454,8 @@ class SgeScheduler(aiida.schedulers.Scheduler):
         returns a datetime object.
         Example format: 2013-06-13T11:53:11
         """
-        import time
         import datetime
+        import time
 
         try:
             time_struct = time.strptime(string, fmt)

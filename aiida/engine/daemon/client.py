@@ -7,17 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Controls the daemon
-"""
-
+"""Client to interact with the daemon."""
 import enum
 import os
 import shutil
 import socket
 import tempfile
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
+from aiida import get_profile
 from aiida.manage.configuration import get_config, get_config_option
 from aiida.manage.configuration.profile import Profile
 
@@ -30,6 +28,8 @@ VIRTUALENV = os.environ.get('VIRTUAL_ENV', None)
 
 # see https://github.com/python/typing/issues/182
 JsonDictType = Dict[str, Any]
+
+__all__ = ('DaemonClient',)
 
 
 class ControllerProtocol(enum.Enum):
@@ -56,7 +56,7 @@ def get_daemon_client(profile_name: Optional[str] = None) -> 'DaemonClient':
     if profile_name:
         profile = config.get_profile(profile_name)
     else:
-        profile = config.current_profile
+        profile = get_profile()
 
     return DaemonClient(profile)
 

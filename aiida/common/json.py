@@ -7,64 +7,73 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Abstracts JSON usage to ensure compatibility with Python2 and Python3.
+"""Abstracts JSON usage to ensure compatibility with Python2 and Python3.
 
 Use this module prefentially over standard json to ensure compatibility.
 
+.. deprecated:: This module is deprecated in v2.0.0 and should no longer be used. Python 2 support has long since been
+    dropped and for Python 3, one should simply use the ``json`` module of the standard library directly.
+
 """
+import codecs
+import json
+import warnings
 
-import simplejson
+from aiida.common.warnings import AiidaDeprecationWarning
+
+warnings.warn(
+    'This module has been deprecated and should no longer be used. Use the `json` standard library instead.',
+    AiidaDeprecationWarning
+)
 
 
-def dump(data, fhandle, **kwargs):
+def dump(data, handle, **kwargs):
+    """Serialize ``data`` as a JSON formatted stream to ``handle``.
+
+    We use ``ensure_ascii=False`` to write unicode characters specifically as this improves the readability of the json
+    and reduces the file size.
     """
-    Write JSON encoded 'data' to a file-like object, fhandle
-    Use open(filename, 'wb') to write.
-    The utf8write object is used to ensure that the resulting serialised data is
-    encoding as UTF8.
-    Any strings with non-ASCII characters need to be unicode strings.
-    We use ensure_ascii=False to write unicode characters specifically
-    as this improves the readability of the json and reduces the file size.
-    """
-    import codecs
-    utf8writer = codecs.getwriter('utf8')
-    simplejson.dump(data, utf8writer(fhandle), ensure_ascii=False, encoding='utf8', **kwargs)
+    try:
+        if 'b' in handle.mode:
+            handle = codecs.getwriter('utf-8')(handle)
+    except AttributeError:
+        pass
+
+    return json.dump(data, handle, ensure_ascii=False, **kwargs)
 
 
 def dumps(data, **kwargs):
+    """Serialize ``data`` as a JSON formatted string.
+
+    We use ``ensure_ascii=False`` to write unicode characters specifically as this improves the readability of the json
+    and reduces the file size.
     """
-    Write JSON encoded 'data' to a string.
-    simplejson is useful here as it always returns unicode if ensure_ascii=False is used,
-    unlike the standard library json, rather than being dependant on the input.
-    We use also ensure_ascii=False to write unicode characters specifically
-    as this improves the readability of the json and reduces the file size.
-    When writing to file, use open(filename, 'w', encoding='utf8')
-    """
-    return simplejson.dumps(data, ensure_ascii=False, encoding='utf8', **kwargs)
+    return json.dumps(data, ensure_ascii=False, **kwargs)
 
 
-def load(fhandle, **kwargs):
-    """
-    Deserialise a JSON file.
+def load(handle, **kwargs):
+    """Deserialize ``handle`` text or binary file containing a JSON document to a Python object.
 
-    For encoding consistency, open(filename, 'r', encoding='utf8') should be used.
-
-    :raises ValueError: if no valid JSON object could be decoded
+    :raises ValueError: if no valid JSON object could be decoded.
     """
+    if 'b' in handle.mode:
+        handle = codecs.getreader('utf-8')(handle)
+
     try:
-        return simplejson.load(fhandle, encoding='utf8', **kwargs)
-    except simplejson.errors.JSONDecodeError:
-        raise ValueError
+        return json.load(handle, **kwargs)
+    except json.JSONDecodeError as exc:
+        raise ValueError from exc
 
 
-def loads(json_string, **kwargs):
+def loads(string, **kwargs):
+    """Deserialize text or binary ``string`` containing a JSON document to a Python object.
+
+    :raises ValueError: if no valid JSON object could be decoded.
     """
-    Deserialise a JSON string.
+    if isinstance(string, bytes):
+        string = string.decode('utf-8')
 
-    :raises ValueError: if no valid JSON object could be decoded
-    """
     try:
-        return simplejson.loads(json_string, encoding='utf8', **kwargs)
-    except simplejson.errors.JSONDecodeError:
-        raise ValueError
+        return json.loads(string, **kwargs)
+    except json.JSONDecodeError as exc:
+        raise ValueError from exc

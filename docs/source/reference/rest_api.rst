@@ -6,6 +6,20 @@ AiiDA REST API
 
 AiiDA's `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`_ `API <https://en.wikipedia.org/wiki/Application_programming_interface>`_ is implemented using the `Flask RESTful framework <https://flask-restful.readthedocs.io/en/latest/>`_ and returns responses in `JSON <https://www.json.org/json-en.html>`_ format.
 
+To use AiiDA's REST API, you must install this component during the AiiDA installation:
+
+.. code-block:: console
+
+  $ pip install aiida-core[rest]
+
+Then, the REST service can be started with:
+
+.. code-block:: console
+
+  $ verdi restapi
+
+See :ref:`here <reference:command-line:verdi-restapi>` for more details.
+
 .. _reference:rest-api:endpoints-responses:
 
 Available endpoints and responses
@@ -58,22 +72,22 @@ Nodes
             "nodes  ": [
               {
                 "ctime": "Sun, 21 Jul 2019 11:45:52 GMT",
-                "full_type": "data.dict.Dict.|",
+                "full_type": "data.core.dict.Dict.|",
                 "id": 102618,
                 "label": "",
                 "mtime": "Sun, 21 Jul 2019 11:45:52 GMT",
-                "node_type": "data.dict.Dict.",
+                "node_type": "data.core.dict.Dict.",
                 "process_type": null,
                 "user_id": 4,
                 "uuid": "a43596fe-3d95-4d9b-b34a-acabc21d7a1e"
               },
               {
                 "ctime": "Sun, 21 Jul 2019 18:18:26 GMT",
-                "full_type": "data.remote.RemoteData.|",
+                "full_type": "data.core.remote.RemoteData.|",
                 "id": 102617,
                 "label": "",
                 "mtime": "Sun, 21 Jul 2019 18:18:26 GMT",
-                "node_type": "data.remote.RemoteData.",
+                "node_type": "data.core.remote.RemoteData.",
                 "process_type": null,
                 "user_id": 4,
                 "uuid": "12f95e1c-69df-4a4b-9b06-8e69072e6108"
@@ -108,11 +122,11 @@ Nodes
               {
                 "attributes.pbc1": true,
                 "ctime": "Sun, 21 Jul 2019 15:36:30 GMT",
-                "full_type": "data.structure.StructureData.|",
+                "full_type": "data.core.structure.StructureData.|",
                 "id": 51310,
                 "label": "",
                 "mtime": "Sun, 21 Jul 2019 15:36:30 GMT",
-                "node_type": "data.structure.StructureData.",
+                "node_type": "data.core.structure.StructureData.",
                 "process_type": null,
                 "user_id": 4,
                 "uuid": "98de8d6d-f533-4f97-a8ad-7720cc5ca8f6"
@@ -120,11 +134,11 @@ Nodes
               {
                 "attributes.pbc1": null,
                 "ctime": "Sun, 21 Jul 2019 15:44:14 GMT",
-                "full_type": "data.dict.Dict.|",
+                "full_type": "data.core.dict.Dict.|",
                 "id": 51311,
                 "label": "",
                 "mtime": "Sun, 21 Jul 2019 15:44:14 GMT",
-                "node_type": "data.dict.Dict.",
+                "node_type": "data.core.dict.Dict.",
                 "process_type": null,
                 "user_id": 4,
                 "uuid": "321795fa-338e-4852-ae72-2eb30e33386e"
@@ -184,7 +198,7 @@ Nodes
 
         {
             "data": {
-                "data.array.bands.BandsData.|": [
+                "data.core.array.bands.BandsData.|": [
                     "agr",
                     "agr_batch",
                     "dat_blocks",
@@ -196,20 +210,20 @@ Nodes
                     "mpl_singlefile",
                     "mpl_withjson"
                 ],
-                "data.array.trajectory.TrajectoryData.|": [
+                "data.core.array.trajectory.TrajectoryData.|": [
                     "cif",
                     "xsf"
                 ],
-                "data.cif.CifData.|": [
+                "data.core.cif.CifData.|": [
                     "cif"
                 ],
-                "data.structure.StructureData.|": [
+                "data.core.structure.StructureData.|": [
                     "chemdoodle",
                     "cif",
                     "xsf",
                     "xyz"
                 ],
-                "data.upf.UpfData.|": [
+                "data.core.upf.UpfData.|": [
                     "upf"
                 ]
             },
@@ -239,11 +253,11 @@ Nodes
             "nodes  ": [
               {
                 "ctime": "Sun, 21 Jul 2019 18:18:26 GMT",
-                "full_type": "data.remote.RemoteData.|",
+                "full_type": "data.core.remote.RemoteData.|",
                 "id": 102617,
                 "label": "",
                 "mtime": "Sun, 21 Jul 2019 18:18:26 GMT",
-                "node_type": "data.remote.RemoteData.",
+                "node_type": "data.core.remote.RemoteData.",
                 "process_type": null,
                 "user_id": 4,
                 "uuid": "12f95e1c-69df-4a4b-9b06-8e69072e6108"
@@ -276,26 +290,26 @@ Nodes
             "incoming": [
               {
                 "ctime": "Sun, 21 Jul 2019 08:02:23 GMT",
-                "full_type": "data.dict.Dict.|",
+                "full_type": "data.core.dict.Dict.|",
                 "id": 53770,
                 "label": "",
                 "link_label": "settings",
                 "link_type": "input_calc",
                 "mtime": "Sun, 21 Jul 2019 08:02:23 GMT",
-                "node_type": "data.dict.Dict.",
+                "node_type": "data.core.dict.Dict.",
                 "process_type": null,
                 "user_id": 4,
                 "uuid": "31993382-c1ab-4822-a116-bd88697f2796"
               },
               {
                 "ctime": "Fri, 28 Jun 2019 10:54:25 GMT",
-                "full_type": "data.upf.UpfData.|",
+                "full_type": "data.core.upf.UpfData.|",
                 "id": 54502,
                 "label": "",
                 "link_label": "pseudos__N",
                 "link_type": "input_calc",
                 "mtime": "Fri, 28 Jun 2019 10:54:28 GMT",
-                "node_type": "data.upf.UpfData.",
+                "node_type": "data.core.upf.UpfData.",
                 "process_type": null,
                 "user_id": 4,
                 "uuid": "2e2df55d-27a5-4b34-bf7f-911b16da95f0"
@@ -315,7 +329,7 @@ Nodes
 
     REST URL::
 
-        http://localhost:5000/api/v4/nodes/de83b1/links/incoming?full_type="data.dict.Dict.|"
+        http://localhost:5000/api/v4/nodes/de83b1/links/incoming?full_type="data.core.dict.Dict.|"
 
     Description:
 
@@ -328,13 +342,13 @@ Nodes
             "incoming": [
               {
                 "ctime": "Sun, 21 Jul 2019 08:02:23 GMT",
-                "full_type": "data.dict.Dict.|",
+                "full_type": "data.core.dict.Dict.|",
                 "id": 53770,
                 "label": "",
                 "link_label": "settings",
                 "link_type": "input_calc",
                 "mtime": "Sun, 21 Jul 2019 08:02:23 GMT",
-                "node_type": "data.dict.Dict.",
+                "node_type": "data.core.dict.Dict.",
                 "process_type": null,
                 "user_id": 4,
                 "uuid": "31993382-c1ab-4822-a116-bd88697f2796"
@@ -344,15 +358,15 @@ Nodes
           "id": "de83b1",
           "method": "GET",
           "path": "/api/v4/nodes/de83b1/links/incoming",
-          "query_string": "full_type=%22data.dict.Dict.|%22",
+          "query_string": "full_type=%22data.core.dict.Dict.|%22",
           "resource_type": "nodes",
-          "url": "http://localhost:5000/api/v4/nodes/de83b1/links/incoming?full_type=\"data.dict.Dict.|\"",
+          "url": "http://localhost:5000/api/v4/nodes/de83b1/links/incoming?full_type=\"data.core.dict.Dict.|\"",
           "url_root": "http://localhost:5000/"
         }
 
     REST URL::
 
-        http://localhost:5000/api/v4/nodes/de83b1/links/outgoing?full_type="data.dict.Dict.|"
+        http://localhost:5000/api/v4/nodes/de83b1/links/outgoing?full_type="data.core.dict.Dict.|"
 
     Description:
 
@@ -365,13 +379,13 @@ Nodes
             "outgoing": [
               {
                 "ctime": "Sun, 21 Jul 2019 09:08:05 GMT",
-                "full_type": "data.dict.Dict.|",
+                "full_type": "data.core.dict.Dict.|",
                 "id": 67440,
                 "label": "",
                 "link_label": "output_parameters",
                 "link_type": "create",
                 "mtime": "Sun, 21 Jul 2019 09:08:05 GMT",
-                "node_type": "data.dict.Dict.",
+                "node_type": "data.core.dict.Dict.",
                 "process_type": null,
                 "user_id": 4,
                 "uuid": "861e1108-33a1-4495-807b-8c5189ad74e3"
@@ -381,9 +395,9 @@ Nodes
           "id": "de83b1",
           "method": "GET",
           "path": "/api/v4/nodes/de83b1/links/outgoing",
-          "query_string": "full_type=%22data.dict.Dict.|%22",
+          "query_string": "full_type=%22data.core.dict.Dict.|%22",
           "resource_type": "nodes",
-          "url": "http://localhost:5000/api/v4/nodes/de83b1/links/outgoing?full_type=\"data.dict.Dict.|\"",
+          "url": "http://localhost:5000/api/v4/nodes/de83b1/links/outgoing?full_type=\"data.core.dict.Dict.|\"",
           "url_root": "http://localhost:5000/"
         }
 
@@ -696,8 +710,8 @@ Computers
                 "hostname": "alpha.aiida.net",
                 "id": 3,
                 "name": "Alpha",
-                "scheduler_type": "slurm",
-                "transport_type": "ssh",
+                "scheduler_type": "core.slurm",
+                "transport_type": "core.ssh",
                 "uuid": "9b5c84bb-4575-4fbe-b18c-b23fc30ec55e"
               },
               {
@@ -705,8 +719,8 @@ Computers
                 "hostname": "beta.aiida.net",
                 "id": 4,
                 "name": "Beta",
-                "scheduler_type": "slurm",
-                "transport_type": "ssh",
+                "scheduler_type": "core.slurm",
+                "transport_type": "core.ssh",
                 "uuid": "5d490d77-638d-4d4b-8288-722f930783c8"
               },
               {
@@ -714,8 +728,8 @@ Computers
                 "hostname": "gamma.aiida.net",
                 "id": 5,
                 "name": "Gamma",
-                "scheduler_type": "slurm",
-                "transport_type": "ssh",
+                "scheduler_type": "core.slurm",
+                "transport_type": "core.ssh",
                 "uuid": "7a0c3ff9-1caf-405c-8e89-2369cf91b634"
               }
             ]
@@ -749,8 +763,8 @@ Computers
                 "hostname": "beta.aiida.net",
                 "id": 4,
                 "name": "Beta",
-                "scheduler_type": "slurm",
-                "transport_type": "ssh",
+                "scheduler_type": "core.slurm",
+                "transport_type": "core.ssh",
                 "uuid": "5d490d77-638d-4d4b-8288-722f930783c8"
               }
             ]
@@ -904,7 +918,7 @@ Groups
                 "description": "GBRV US pseudos, version 1.2",
                 "id": 23,
                 "label": "GBRV_1.2",
-                "type_string": "data.upf.family",
+                "type_string": "data.core.upf.family",
                 "user_email": "aiida@theossrv5.epfl.ch",
                 "user_id": 2,
                 "uuid": "a6e5b6c6-9d47-445b-bfea-024cf8333c55"
@@ -919,6 +933,203 @@ Groups
           "url": "http://localhost:5000/api/v4/groups/a6e5b",
           "url_root": "http://localhost:5000/"
         }
+
+Querybuilder
+------------
+
+    REST URL::
+
+        http://localhost:5000/api/v4/querybuilder
+
+    Description:
+
+        Posts a query to the database. The content of the query is passed in a attached JSON file.
+
+To use this endpoint, you need a http operator that allows to pass attachments.
+We will demonstrate two options, the `HTTPie <https://httpie.io/>`_ (to use in the terminal) and the python library `Requests <https://docs.python-requests.org/en/latest/#>`_ (to use in python).
+
+Option 1: HTTPie
+
+  Install `HTTPie <https://httpie.io/>`_ by typing in the terminal:
+
+  .. code-block:: console
+
+    $ pip install httpie
+
+  Then execute the REST API call with
+
+  .. code-block:: console
+
+    $ http localhost:5000/api/v4/querybuilder < my_query.json
+
+  where ``my_query.json`` is the file containing the query dictionary of in the json format.
+
+  Response:
+
+  .. dropdown::
+
+    .. code-block:: python
+
+      {
+          "data": {
+              "Code_1": [
+                  {
+                      "attributes": {
+                          "append_text": " ",
+                          "input_plugin": "quantumespresso.ph",
+                          "is_local": false,
+                          "prepend_text": "ulimit -s unlimited",
+                          "remote_exec_path": "/home/ubuntu/codes/q-e/bin/ph.x"
+                      },
+                      "ctime": "Wed, 16 Dec 2020 11:50:03 GMT",
+                      "dbcomputer_id": 1,
+                      "description": "phonon quantum_espresso v6.6",
+                      "extras": {
+                          "_aiida_hash": "045368af9cfeafa6fe3b0c6707e71b85cbef4fec55514ad0068c3ff19193e11f",
+                          "hidden": false
+                      },
+                      "full_type": "data.code.Code.|",
+                      "id": 3428,
+                      "label": "q-e_6.6_ph",
+                      "mtime": "Wed, 16 Dec 2020 11:50:03 GMT",
+                      "node_type": "data.code.Code.",
+                      "process_type": null,
+                      "user_id": 1,
+                      "uuid": "7565cf2a-8219-4c2b-bbae-9c6cd3d95aa2"
+                  },
+                  {
+                      "attributes": {
+                          "append_text": " ",
+                          "input_plugin": "quantumespresso.pp",
+                          "is_local": false,
+                          "prepend_text": "ulimit -s unlimited",
+                          "remote_exec_path": "/home/ubuntu/codes/q-e/bin/pp.x"
+                      },
+                      "ctime": "Mon, 14 Dec 2020 16:44:20 GMT",
+                      "dbcomputer_id": 1,
+                      "description": "postproc quantum_espresso v6.6",
+                      "extras": {
+                          "_aiida_hash": "1dca299bb587e002ac7aa745b5fd0b8893105dc0a16acefdfbc6188637dad05f",
+                          "hidden": false
+                      },
+                      "full_type": "data.code.Code.|",
+                      "id": 1822,
+                      "label": "q-e_6.6_pp",
+                      "mtime": "Mon, 14 Dec 2020 16:44:20 GMT",
+                      "node_type": "data.code.Code.",
+                      "process_type": null,
+                      "user_id": 1,
+                      "uuid": "a1b0530d-1a8d-413c-a4bd-af79868926c8"
+                  },
+                  {
+                      "attributes": {
+                          "append_text": " ",
+                          "input_plugin": "quantumespresso.pw",
+                          "is_local": false,
+                          "prepend_text": "ulimit -s unlimited",
+                          "remote_exec_path": "/home/ubuntu/codes/q-e/bin/pw.x"
+                      },
+                      "ctime": "Thu, 19 Nov 2020 14:38:42 GMT",
+                      "dbcomputer_id": 1,
+                      "description": "quantum_espresso v6.6",
+                      "extras": {
+                          "_aiida_hash": "e714b9e79656a0cf1c24d19a92f3553c3052d103b4f5b25bd2ae89581cb4886e",
+                          "hidden": false
+                      },
+                      "full_type": "data.code.Code.|",
+                      "id": 1,
+                      "label": "q-e_6.6_pw",
+                      "mtime": "Thu, 19 Nov 2020 14:38:42 GMT",
+                      "node_type": "data.code.Code.",
+                      "process_type": null,
+                      "user_id": 1,
+                      "uuid": "e48ec85b-3034-435b-ac96-d5ba37df393e"
+                  }
+              ]
+          },
+          "method": "POST",
+          "path": "/api/v4/querybuilder",
+          "query_string": "",
+          "resource_type": "QueryBuilder",
+          "url": "http://localhost:5000/api/v4/querybuilder",
+          "url_root": "http://localhost:5000/"
+      }
+
+  The easiest way to construct the query json file is by using the :ref:`QueryBuilder <topics:database:advancedquery>` from AiiDA as we will demonstrate next.
+  Open a ``verdi shell`` section:
+
+  .. code-block:: console
+
+    $ verdi shell
+
+  Build your query and save it in a file:
+
+  .. code-block:: ipython
+
+    In [1]: qb = QueryBuilder()
+
+    In [2]: qb.append(Code)
+    Out[2]: <aiida.orm.querybuilder.QueryBuilder at 0x7f2bbeedd700>
+
+    In [3]: qb_dict = qb.queryhelp
+
+    In [4]: import json
+
+    In [5]: with open('my_query.json', 'w') as file:
+      ...:     json.dump(qb_dict, file)
+
+  Check the content of the ``my_query.json``:
+
+  .. code-block:: python
+
+    {
+      "path": [
+        {
+          "entity_type": "data.code.Code.",
+          "tag": "Code_1",
+          "joining_keyword": null,
+          "joining_value": null,
+          "outerjoin": false,
+          "edge_tag": null
+        }
+      ],
+      "filters": {
+        "Code_1": {
+          "node_type": {
+            "like": "data.code.%"
+          }
+        }
+      },
+      "project": {
+        "Code_1": []
+      },
+      "order_by": {},
+      "limit": null,
+      "offset": null
+    }
+
+Option 2: Resquests library (all python approach)
+
+  Here is a short example on how to do it in python:
+
+  .. code-block:: python
+
+    from aiida.orm import QueryBuilder, Code
+    from aiida import load_profile
+    import requests
+
+    load_profile('my_profile')
+
+    qb = QueryBuilder()
+    qb.append(Code)
+
+    qb_dict = qb.queryhelp
+
+    response = requests.post('http://localhost:5000/api/v4/querybuilder/', json=qb_dict)
+
+    response.json()
+
+  One should then have the same response as before.
 
 
 .. _reference:rest-api:pagination:
@@ -1098,15 +1309,15 @@ Regular filters can be compounded, requiring all specified filters to apply.
 .. note:: Node types are specified by a string that defines their position in the AiiDA source tree, ending with a dot.
     Examples:
 
-    - ``node_type="data.code.Code."`` selects only objects of type |Code|.
-    - ``node_type="data.remote.RemoteData."`` selects only objects of type :py:class:`~aiida.orm.nodes.data.remote.RemoteData`.
+    - ``node_type="data.core.code.Code."`` selects only objects of type |Code|.
+    - ``node_type="data.core.remote.RemoteData."`` selects only objects of type :py:class:`~aiida.orm.RemoteData`.
 
 .. note:: When using the *links/incoming* (*links/outgoing*) endpoints in combination with one or more filters, the filters are applied to the incoming (outgoing) nodes of the selected *id*.
     For example, the request::
 
-            http://localhost:5000/api/v4/nodes/a67fba41/links/outgoing?full_type="data.dict.Dict.|"
+            http://localhost:5000/api/v4/nodes/a67fba41/links/outgoing?full_type="data.core.dict.Dict.|"
 
-    would first search for the outgoing of the node with *uuid* starting with "a67fba41" and then select only those nodes of full_type *data.dict.Dict.|*.
+    would first search for the outgoing of the node with *uuid* starting with "a67fba41" and then select only those nodes of full_type *data.core.core.dict.Dict.|*.
 
 
 
@@ -1193,7 +1404,7 @@ The condition is fulfilled if the column value of an object is an element of the
 Examples::
 
     http://localhost:5000/api/v4/nodes?id=in=45,56,78
-    http://localhost:5000/api/v4/computers/?scheduler_type=in="slurm","pbs"
+    http://localhost:5000/api/v4/computers/?scheduler_type=in="core.slurm","core.pbs"
 
 Comparison
 ^^^^^^^^^^^^^^^^^^^^
@@ -1251,9 +1462,9 @@ Filter values should be specified as follows:
 
 
 .. |Computer| replace:: :py:class:`~aiida.orm.computers.Computer`
-.. |Code| replace:: :py:class:`~aiida.orm.nodes.Code`
-.. |Node| replace:: :py:class:`~aiida.orm.nodes.Node`
-.. |ProcessNode| replace:: :py:class:`~aiida.orm.nodes.process.ProcessNode`
-.. |CalcJobNode| replace:: :py:class:`~aiida.orm.nodes.process.CalcJobNode`
+.. |Code| replace:: :py:class:`~aiida.orm.Code`
+.. |Node| replace:: :py:class:`~aiida.orm.Node`
+.. |ProcessNode| replace:: :py:class:`~aiida.orm.ProcessNode`
+.. |CalcJobNode| replace:: :py:class:`~aiida.orm.CalcJobNode`
 .. |User| replace:: :py:class:`~aiida.orm.users.User`
 .. |Group| replace:: :py:class:`~aiida.orm.groups.Group`

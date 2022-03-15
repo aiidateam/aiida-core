@@ -23,6 +23,51 @@ def is_not_on_computer(ctx):
     return bool(not is_on_computer(ctx))
 
 
+def validate_label_uniqueness(ctx, _, value):
+    """Validate the uniqueness of the label of the code.
+
+    The exact uniqueness criterion depends on the type of the code, whether it is "local" or "remote". For the former,
+    the `label` itself should be unique, whereas for the latter it is the full label, i.e., `label@computer.label`.
+
+    .. note:: For this to work in the case of the remote code, the computer parameter already needs to have been parsed
+        In interactive mode, this means that the computer parameter needs to be defined after the label parameter in the
+        command definition. For non-interactive mode, the parsing order will always be determined by the order the
+        parameters are specified by the caller and so this validator may get called before the computer is parsed. For
+        that reason, this validator should also be called in the command itself, to ensure it has both the label and
+        computer parameter available.
+
+    """
+    from aiida.common import exceptions
+    from aiida.orm import load_code
+
+    computer = ctx.params.get('computer', None)
+    on_computer = ctx.params.get('on_computer', None)
+
+    if on_computer is False:
+        try:
+            load_code(value)
+        except exceptions.NotExistent:
+            pass
+        except exceptions.MultipleObjectsError:
+            raise click.BadParameter(f'multiple copies of the remote code `{value}` already exist.')
+        else:
+            raise click.BadParameter(f'the code `{value}` already exists.')
+
+    if computer is not None:
+        full_label = f'{value}@{computer.label}'
+
+        try:
+            load_code(full_label)
+        except exceptions.NotExistent:
+            pass
+        except exceptions.MultipleObjectsError:
+            raise click.BadParameter(f'multiple copies of the local code `{full_label}` already exist.')
+        else:
+            raise click.BadParameter(f'the code `{full_label}` already exists.')
+
+    return value
+
+
 ON_COMPUTER = OverridableOption(
     '--on-computer/--store-in-db',
     is_eager=False,
@@ -66,6 +111,7 @@ REL_PATH = OverridableOption(
 
 LABEL = options.LABEL.clone(
     prompt='Label',
+    callback=validate_label_uniqueness,
     cls=InteractiveOption,
     help="This label can be used to identify the code (using 'label@computerlabel'), as long as labels are unique per "
     'computer.'
@@ -78,6 +124,7 @@ DESCRIPTION = options.DESCRIPTION.clone(
 )
 
 INPUT_PLUGIN = options.INPUT_PLUGIN.clone(
+    required=False,
     prompt='Default calculation input plugin',
     cls=InteractiveOption,
     help="Entry point name of the default calculation plugin (as listed in 'verdi plugin list aiida.calculations')."

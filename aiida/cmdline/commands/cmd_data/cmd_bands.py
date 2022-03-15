@@ -11,8 +11,7 @@
 
 import click
 
-from aiida.cmdline.commands.cmd_data import verdi_data
-from aiida.cmdline.commands.cmd_data import cmd_show
+from aiida.cmdline.commands.cmd_data import cmd_show, verdi_data
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export
 from aiida.cmdline.commands.cmd_data.cmd_list import list_options
 from aiida.cmdline.params import arguments, options, types
@@ -41,11 +40,11 @@ def bands():
 @options.FORMULA_MODE()
 def bands_list(elements, elements_exclusive, raw, formula_mode, past_days, groups, all_users):
     """List BandsData objects."""
-    from aiida.manage.manager import get_manager
-    from tabulate import tabulate
     from argparse import Namespace
 
-    backend = get_manager().get_backend()
+    from tabulate import tabulate
+
+    from aiida.orm.nodes.data.array.bands import get_bands_and_parents_structure
 
     args = Namespace()
     args.element = elements
@@ -59,11 +58,10 @@ def bands_list(elements, elements_exclusive, raw, formula_mode, past_days, group
         args.group_pk = None
     args.all_users = all_users
 
-    query = backend.query_manager
-    entry_list = query.get_bands_and_parents_structure(args)
+    entry_list = get_bands_and_parents_structure(args)
 
     counter = 0
-    bands_list_data = list()
+    bands_list_data = []
     if not raw:
         bands_list_data.append(LIST_PROJECT_HEADERS)
     for entry in entry_list:
@@ -82,7 +80,7 @@ def bands_list(elements, elements_exclusive, raw, formula_mode, past_days, group
 
 
 @bands.command('show')
-@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:array.bands',)))
+@arguments.DATA(type=types.DataParamType(sub_classes=('aiida.data:core.array.bands',)))
 @options.VISUALIZATION_FORMAT(type=click.Choice(VISUALIZATION_FORMATS), default='xmgrace')
 @decorators.with_dbenv()
 def bands_show(data, fmt):
@@ -96,7 +94,7 @@ def bands_show(data, fmt):
 
 
 @bands.command('export')
-@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:array.bands',)))
+@arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:core.array.bands',)))
 @options.EXPORT_FORMAT(type=click.Choice(EXPORT_FORMATS), default='json')
 @click.option(
     '--y-min-lim',

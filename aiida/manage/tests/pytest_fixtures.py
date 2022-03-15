@@ -12,7 +12,8 @@
 Collection of pytest fixtures using the TestManager for easy testing of AiiDA plugins.
 
  * aiida_profile
- * clear_database
+ * aiida_profile_clean
+ * aiida_profile_clean_class
  * aiida_localhost
  * aiida_local_code_factory
 
@@ -20,10 +21,13 @@ Collection of pytest fixtures using the TestManager for easy testing of AiiDA pl
 import asyncio
 import shutil
 import tempfile
+import warnings
+
 import pytest
 
 from aiida.common.log import AIIDA_LOGGER
-from aiida.manage.tests import test_manager, get_test_backend_name, get_test_profile_name
+from aiida.common.warnings import AiidaDeprecationWarning
+from aiida.manage.tests import get_test_backend_name, get_test_profile_name, test_manager
 
 
 @pytest.fixture(scope='function')
@@ -48,6 +52,20 @@ def aiida_profile():
 
 
 @pytest.fixture(scope='function')
+def aiida_profile_clean(aiida_profile):
+    """Provide an AiiDA test profile, with the storage reset at test function setup."""
+    aiida_profile.clear_profile()
+    yield aiida_profile
+
+
+@pytest.fixture(scope='class')
+def aiida_profile_clean_class(aiida_profile):
+    """Provide an AiiDA test profile, with the storage reset at test class setup."""
+    aiida_profile.clear_profile()
+    yield aiida_profile
+
+
+@pytest.fixture(scope='function')
 def clear_database(clear_database_after_test):
     """Alias for 'clear_database_after_test'.
 
@@ -59,21 +77,31 @@ def clear_database(clear_database_after_test):
 @pytest.fixture(scope='function')
 def clear_database_after_test(aiida_profile):
     """Clear the database after the test."""
-    yield
-    aiida_profile.reset_db()
+    warnings.warn(
+        'the clear_database_after_test fixture is deprecated, use aiida_profile_clean instead', AiidaDeprecationWarning
+    )
+    yield aiida_profile
+    aiida_profile.clear_profile()
 
 
 @pytest.fixture(scope='function')
 def clear_database_before_test(aiida_profile):
     """Clear the database before the test."""
-    aiida_profile.reset_db()
-    yield
+    warnings.warn(
+        'the clear_database_before_test fixture deprecated, use aiida_profile_clean instead', AiidaDeprecationWarning
+    )
+    aiida_profile.clear_profile()
+    yield aiida_profile
 
 
 @pytest.fixture(scope='class')
 def clear_database_before_test_class(aiida_profile):
     """Clear the database before a test class."""
-    aiida_profile.reset_db()
+    warnings.warn(
+        'the clear_database_before_test_class is deprecated, use aiida_profile_clean_class instead',
+        AiidaDeprecationWarning
+    )
+    aiida_profile.clear_profile()
     yield
 
 
@@ -115,15 +143,15 @@ def aiida_localhost(temp_dir):
     Usage::
 
       def test_1(aiida_localhost):
-          label = aiida_localhost.get_label()
+          label = aiida_localhost.label
           # proceed to set up code or use 'aiida_local_code_factory' instead
 
 
     :return: The computer node
     :rtype: :py:class:`aiida.orm.Computer`
     """
-    from aiida.orm import Computer
     from aiida.common.exceptions import NotExistent
+    from aiida.orm import Computer
 
     label = 'localhost-test'
 
@@ -135,11 +163,13 @@ def aiida_localhost(temp_dir):
             description='localhost computer set up by test manager',
             hostname=label,
             workdir=temp_dir,
-            transport_type='local',
-            scheduler_type='direct'
+            transport_type='core.local',
+            scheduler_type='core.direct'
         )
         computer.store()
         computer.set_minimum_job_poll_interval(0.)
+        computer.set_default_mpiprocs_per_machine(1)
+        computer.set_default_memory_per_machine(100000)
         computer.configure()
 
     return computer

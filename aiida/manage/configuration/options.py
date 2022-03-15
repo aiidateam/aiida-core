@@ -64,8 +64,9 @@ class Option:
 
         """
         # pylint: disable=too-many-branches
-        from .config import ConfigValidationError
         from aiida.manage.caching import _validate_identifier_pattern
+
+        from .config import ConfigValidationError
 
         if cast:
             try:

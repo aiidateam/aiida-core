@@ -14,8 +14,8 @@ Database
 Advanced querying
 =================
 
-The basics on using the :class:`~aiida.orm.querybuilder.QueryBuilder` to find the data you are interested in is explained in the :ref:`finding and querying how-to<how-to:data:find>`.
-This section explains some more advanced methods for querying your database and the :ref:`queryhelp dictionary<topics:database:advancedquery>`.
+The basics on using the :class:`~aiida.orm.querybuilder.QueryBuilder` to find the data you are interested in is explained in the :ref:`finding and querying how-to<how-to:query>`.
+This section explains some more advanced methods for querying your database and the :ref:`QueryBuilder dictionary<topics:database:advancedquery>`.
 
 .. _topics:database:advancedquery:edges:
 
@@ -222,12 +222,17 @@ List of all relationships:
 +------------------+---------------+--------------------+-------------------------------------------------+
 
 .. _topics:database:advancedquery:queryhelp:
+.. _topics:database:advancedquery:querydict:
 
-The queryhelp
--------------
+Converting the QueryBuilder to/from a dictionary
+------------------------------------------------
 
-The ``queryhelp`` dictionary is a property of the :class:`~aiida.orm.querybuilder.QueryBuilder` class.
-Once you have built your query using the appender method explained in the :ref:`finding and querying for data how-to<how-to:data:find>` and the advanced sections above, you can easily store your query by saving the ``QueryBuilder.queryhelp`` dictionary as a JSON file for later use:
+.. important::
+
+    In aiida-core version 1, this dictionary was accessed with ``QueryBuilder.queryhelp``, which is now deprecated.
+
+The :class:`~aiida.orm.querybuilder.QueryBuilder` class can be converted to a dictionary and also loaded from a dictionary, for easy serialisation and storage.
+Once you have built your query using the appender method explained in the :ref:`finding and querying for data how-to<how-to:query>` and the advanced sections above, you can easily store your query by saving the ``QueryBuilder.as_dict()`` dictionary as a JSON file for later use:
 
 .. code-block:: python
 
@@ -237,26 +242,26 @@ Once you have built your query using the appender method explained in the :ref:`
     qb = QueryBuilder()
     qb.append(CalcJobNode)
 
-    with open("queryhelp.json", "w") as file:
-        file.write(json.dumps(qb.queryhelp, indent=4))
+    with open("querydict.json", "w") as file:
+        file.write(json.dumps(qb.as_dict(), indent=4))
 
-To use the queryhelp to instantiate the :class:`~aiida.orm.querybuilder.QueryBuilder`, you can use `Python's automatic keyword expansion <https://docs.python.org/3/tutorial/controlflow.html#unpacking-argument-lists>`_:
+To use this dictionary to instantiate the :class:`~aiida.orm.querybuilder.QueryBuilder`, you can use the ``from_dict`` class method:
 
 .. code-block:: python
 
-    with open("queryhelp.json", "r") as file:
-        queryhelp = json.load(file)
+    with open("querydict.json", "r") as file:
+        query_dict = json.load(file)
 
-    qb = QueryBuilder(**queryhelp)
+    qb = QueryBuilder.from_dict(query_dict)
 
-Alternatively, you can also use the ``queryhelp`` to set up your query by specifying the path, filters and projections and constructing the ``queryhelp`` dictionary by hand.
+Alternatively, you can also use a dictionary to set up your query by specifying the path, filters and projections and constructing the dictionary by hand.
 To do this, you have to specify:
 
 *   the ``path``:
     Here, the user specifies the path along which to join tables as a list of dictionaries, where each list item identifies a vertex in your path.
     You define the vertex class with the ``cls`` key::
 
-        queryhelp = {
+        query_dict = {
             'path':[
                 {'cls': Data}
             ]
@@ -267,7 +272,7 @@ To do this, you have to specify:
     However, this will not work if you choose the same class twice in the query.
     In this case you have to provide the tag using the ``tag`` key::
 
-        queryhelp = {
+        query_dict = {
             'path':[
                 {
                     'cls':Node,
@@ -287,7 +292,7 @@ To do this, you have to specify:
         That other node can be specified by an integer or the class or type.
         The following examples are all valid joining instructions, assuming there is a structure defined at index 2 of the path with tag "struc1"::
 
-            edge_specification = queryhelp['path'][3]
+            edge_specification = query_dict['path'][3]
             edge_specification['with_incoming'] = 2
             edge_specification['with_incoming'] = StructureData
             edge_specification['with_incoming'] = 'struc1'
@@ -295,7 +300,7 @@ To do this, you have to specify:
             edge_specification['with_outgoing']  = StructureData
             edge_specification['with_outgoing']  = 'struc1'
 
-    *   queryhelp_item['direction'] = integer
+    *   ``query_dict['path'][<i>]['direction'] = integer``
 
         If any of the above specs ("with_outgoing", "with_incoming") were not specified, the key "direction" is looked for.
         Directions are defined as distances in the tree.
@@ -305,12 +310,12 @@ To do this, you have to specify:
         A negative number reverse the direction of the link.
         The absolute value of the direction defines the table to join to with respect to your own position in the list.
         An absolute value of 1 joins one table above, a value of 2 to the table defined 2 indices above.
-        The two following queryhelps yield the same query::
+        The two following dictionaries yield the same query::
 
             from aiida.orm import TrajectoryData
             from aiida_quantumespresso.calculations.pw import PwCalculation
             from aiida.orm import Dict
-            qh1 = {
+            query_dict_1 = {
                 'path': [
                     {
                         'cls':PwCalculation
@@ -327,7 +332,7 @@ To do this, you have to specify:
 
             # returns same query as:
 
-            qh2 = {
+            query_dict_2 = {
                 'path':[
                     {
                         'cls':PwCalculation
@@ -344,7 +349,7 @@ To do this, you have to specify:
 
             # Shorter version:
 
-            qh3 = {
+            query_dict_3 = {
                 'path':[
                     Dict,
                     PwCalculation,
@@ -352,9 +357,9 @@ To do this, you have to specify:
                 ]
             }
 
-*   what to ``project``: Determing which columns the query will return::
+*   what to ``project``: Determining which columns the query will return::
 
-        queryhelp = {
+        query_dict = {
             'path':[PwCalculation],
             'project':{
                 PwCalculation:['user_id', 'id'],
@@ -363,7 +368,7 @@ To do this, you have to specify:
 
     If you are using JSONB columns, you can also project a value stored inside the json::
 
-        queryhelp = {
+        query_dict = {
             'path':[
                 PwCalculation,
                 StructureData,
@@ -384,7 +389,7 @@ To do this, you have to specify:
         from aiida.common import timezone
         from datetime import timedelta
 
-        queryhelp = {
+        query_dict = {
             'path':[
                 {'cls':PwCalculation}, # PwCalculation with structure as output
                 {'cls':StructureData}
@@ -397,10 +402,10 @@ To do this, you have to specify:
             }
         }
 
-If you want to include filters and projections on links between nodes, you will have to add these to filters and projections in the queryhelp.
+If you want to include filters and projections on links between nodes, you will have to add these to filters and projections in the query dictionary.
 Let's take an example from before and add a few filters on the link::
 
-    queryhelp = {
+    query_dict = {
         'path':[
             {'cls':PwCalculation, 'tag':'relax'}, # PwCalculation with structure as output
             {'cls':StructureData, 'tag':'structure'}
@@ -424,7 +429,7 @@ Notice that the tag for the link, by default, is the tag of the two connecting n
 
 Alternatively, you can choose the tag for the edge in the path when defining the entity to join using ``edge_tag``::
 
-    queryhelp = {
+    query_dict = {
         'path':[
             {'cls':PwCalculation, 'tag':'relax'},         # Relaxation with structure as output
             {
@@ -450,10 +455,10 @@ Alternatively, you can choose the tag for the edge in the path when defining the
 
 Limits and offset can be set directly like this::
 
-    queryhelp = {
+    query_dict = {
         'path':[Node],
         'limit':10,
         'offset':20
     }
 
-That queryhelp would tell the QueryBuilder to return 10 rows after the first 20 have been skipped.
+That ``query_dict`` would tell the QueryBuilder to return 10 rows after the first 20 have been skipped.

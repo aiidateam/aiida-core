@@ -46,8 +46,8 @@ The :py:class:`~aiida.orm.nodes.node.Node` class has two important attributes:
 
 The convention for all the :py:class:`~aiida.orm.nodes.node.Node` subclasses is that if a ``class B`` is inherited by a ``class A`` then there should be a package ``A`` under ``aiida/orm`` that has a file ``__init__.py`` and a ``B.py`` in that directory (or a ``B`` package with the corresponding ``__init__.py``)
 
-An example of this is the :py:class:`~aiida.orm.nodes.data.array.ArrayData` and the :py:class:`~aiida.orm.nodes.data.array.kpoints.KpointsData`.
-:py:class:`~aiida.orm.nodes.data.array.ArrayData` is placed in ``aiida/orm/data/array/__init__.py`` and :py:class:`~aiida.orm.nodes.data.array.kpoints.KpointsData` which inherits from :py:class:`~aiida.orm.nodes.data.array.ArrayData` is placed in ``aiida/orm/data/array/kpoints.py``
+An example of this is the :py:class:`~aiida.orm.ArrayData` and the :py:class:`~aiida.orm.nodes.data.array.kpoints.KpointsData`.
+:py:class:`~aiida.orm.ArrayData` is placed in ``aiida/orm/data/array/__init__.py`` and :py:class:`~aiida.orm.nodes.data.array.kpoints.KpointsData` which inherits from :py:class:`~aiida.orm.ArrayData` is placed in ``aiida/orm/data/array/kpoints.py``
 
 This is an implicit & quick way to check the inheritance of the :py:class:`~aiida.orm.nodes.node.Node` subclasses.
 
@@ -244,21 +244,6 @@ The available methods are:
 
 - :py:meth:`~aiida.common.folders.Folder.create` creates the ``folder``, :py:meth:`~aiida.common.folders.Folder.erase` deletes the ``folder`` and :py:meth:`~aiida.common.folders.Folder.replace_with_folder` copies/moves a given folder.
 
-:py:class:`~aiida.common.folders.RepositoryFolder`
-**************************************************
-Objects of this class correspond to the repository folders.
-The :py:class:`~aiida.common.folders.RepositoryFolder` specific methods are:
-
-- :py:meth:`~aiida.common.folders.RepositoryFolder.__init__` initializes the object with the necessary folder names and limits.
-
-- :py:meth:`~aiida.common.folders.RepositoryFolder.get_topdir` returns the top directory.
-
-- :py:meth:`~aiida.common.folders.RepositoryFolder.section` returns the section to which the ``folder`` belongs. This can be for the moment only  ``node``.
-
-- :py:meth:`~aiida.common.folders.RepositoryFolder.subfolder` returns the subfolder within the section/uuid folder.
-
-- :py:meth:`~aiida.common.folders.RepositoryFolder.uuid` the UUID of the corresponding ``node``.
-
 
 :py:class:`~aiida.common.folders.SandboxFolder`
 ***********************************************
@@ -275,7 +260,7 @@ Data
 
 Navigating inputs and outputs
 *****************************
-- :py:meth:`~aiida.orm.nodes.data.Data.creator` returns either the :py:class:`~aiida.orm.nodes.process.calculation.CalculationNode` that created it or ``None`` if it was not created by a calculation.
+- :py:meth:`~aiida.orm.Data.creator` returns either the :py:class:`~aiida.orm.CalculationNode` that created it or ``None`` if it was not created by a calculation.
 
 
 ProcessNode
@@ -283,14 +268,14 @@ ProcessNode
 
 Navigating inputs and outputs
 *****************************
-- :py:meth:`~aiida.orm.nodes.process.ProcessNode.caller` returns either the caller :py:class:`~aiida.orm.nodes.process.workflow.WorkflowNode` or ``None`` if it was not called by any process.
+- :py:meth:`~aiida.orm.ProcessNode.caller` returns either the caller :py:class:`~aiida.orm.nodes.process.workflow.WorkflowNode` or ``None`` if it was not called by any process.
 
 CalculationNode
 +++++++++++++++
 
 Navigating inputs and outputs
 *****************************
-- :py:meth:`~aiida.orm.nodes.process.calculation.CalculationNode.inputs` returns a :py:meth:`~aiida.orm.utils.managers.NodeLinksManager` object that can be used to access the node's incoming ``INPUT_CALC`` links.
+- :py:meth:`~aiida.orm.CalculationNode.inputs` returns a :py:meth:`~aiida.orm.utils.managers.NodeLinksManager` object that can be used to access the node's incoming ``INPUT_CALC`` links.
 
   The ``NodeLinksManager`` can be used to quickly go from a node to a neighboring node.
   For example::
@@ -347,14 +332,14 @@ Navigating inputs and outputs
 
   The ``.inputs`` manager for ``WorkflowNode`` and the ``.outputs`` manager both for ``CalculationNode`` and ``WorkflowNode`` work in the same way (see below).
 
-- :py:meth:`~aiida.orm.nodes.process.calculation.CalculationNode.outputs` returns a :py:meth:`~aiida.orm.utils.managers.NodeLinksManager` object that can be used to access the node's outgoing ``CREATE`` links.
+- :py:meth:`~aiida.orm.CalculationNode.outputs` returns a :py:meth:`~aiida.orm.utils.managers.NodeLinksManager` object that can be used to access the node's outgoing ``CREATE`` links.
 
 
 .. _calculation updatable attributes:
 
 Updatable attributes
 ********************
-The :py:class:`~aiida.orm.nodes.process.ProcessNode` class is a subclass of the :py:class:`~aiida.orm.nodes.node.Node` class, which means that its attributes become immutable once stored.
+The :py:class:`~aiida.orm.ProcessNode` class is a subclass of the :py:class:`~aiida.orm.nodes.node.Node` class, which means that its attributes become immutable once stored.
 However, for a ``Calculation`` to be runnable it needs to be stored, but that would mean that its state, which is stored in an attribute can no longer be updated.
 To solve this issue the :py:class:`~aiida.orm.utils.mixins.Sealable` mixin is introduced.
 This mixin can be used for subclasses of ``Node`` that need to have updatable attributes even after the node has been stored in the database.

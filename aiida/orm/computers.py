@@ -10,21 +10,59 @@
 """Module for Computer entities"""
 import logging
 import os
-import warnings
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 from aiida.common import exceptions
-from aiida.common.warnings import AiidaDeprecationWarning
-from aiida.manage.manager import get_manager
-from aiida.orm.implementation import Backend
+from aiida.common.lang import classproperty
+from aiida.manage import get_manager
 from aiida.plugins import SchedulerFactory, TransportFactory
 
-from . import entities
-from . import users
+from . import entities, users
+
+if TYPE_CHECKING:
+    from aiida.orm import AuthInfo, User
+    from aiida.orm.implementation import BackendComputer, StorageBackend
+    from aiida.schedulers import Scheduler
+    from aiida.transports import Transport
 
 __all__ = ('Computer',)
 
 
-class Computer(entities.Entity):
+class ComputerCollection(entities.Collection['Computer']):
+    """The collection of Computer entries."""
+
+    @staticmethod
+    def _entity_base_cls() -> Type['Computer']:
+        return Computer
+
+    def get_or_create(self, label: Optional[str] = None, **kwargs) -> Tuple[bool, 'Computer']:
+        """
+        Try to retrieve a Computer from the DB with the given arguments;
+        create (and store) a new Computer if such a Computer was not present yet.
+
+        :param label: computer label
+
+        :return: (computer, created) where computer is the computer (new or existing,
+            in any case already stored) and created is a boolean saying
+        """
+        if not label:
+            raise ValueError('Computer label must be provided')
+
+        try:
+            return False, self.get(label=label)
+        except exceptions.NotExistent:
+            return True, Computer(backend=self.backend, label=label, **kwargs)
+
+    def list_labels(self) -> List[str]:
+        """Return a list with all the labels of the computers in the DB."""
+        return self._backend.computers.list_names()
+
+    def delete(self, pk: int) -> None:
+        """Delete the computer with the given id"""
+        return self._backend.computers.delete(pk)
+
+
+class Computer(entities.Entity['BackendComputer']):
     """
     Computer entity.
     """
@@ -37,95 +75,26 @@ class Computer(entities.Entity):
     PROPERTY_WORKDIR = 'workdir'
     PROPERTY_SHEBANG = 'shebang'
 
-    class Collection(entities.Collection):
-        """The collection of Computer entries."""
+    Collection = ComputerCollection
 
-        def get(self, **filters):
-            """Get a single collection entry that matches the filter criteria.
-
-            :param filters: the filters identifying the object to get
-            :type filters: dict
-
-            :return: the entry
-            """
-            if 'name' in filters:
-                warnings.warn('keyword `name` is deprecated, use `label` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-
-            # This switch needs to be here until we fully remove `name` and replace it with `label` even on the backend
-            # entities and database models.
-            if 'label' in filters:
-                filters['name'] = filters.pop('label')
-
-            return super().get(**filters)
-
-        def get_or_create(self, label=None, **kwargs):
-            """
-            Try to retrieve a Computer from the DB with the given arguments;
-            create (and store) a new Computer if such a Computer was not present yet.
-
-            :param label: computer label
-            :type label: str
-
-            :return: (computer, created) where computer is the computer (new or existing,
-              in any case already stored) and created is a boolean saying
-            :rtype: (:class:`aiida.orm.Computer`, bool)
-            """
-            if not label:
-                raise ValueError('Computer label must be provided')
-
-            try:
-                return False, self.get(label=label)
-            except exceptions.NotExistent:
-                return True, Computer(backend=self.backend, label=label, **kwargs)
-
-        def list_names(self):
-            """Return a list with all the names of the computers in the DB.
-
-            .. deprecated:: 1.4.0
-                Will be removed in `v2.0.0`, use `list_labels` instead.
-            """
-            return self._backend.computers.list_names()
-
-        def list_labels(self):
-            """Return a list with all the labels of the computers in the DB."""
-            return self._backend.computers.list_names()
-
-        def delete(self, id):  # pylint: disable=redefined-builtin,invalid-name
-            """Delete the computer with the given id"""
-            return self._backend.computers.delete(id)
+    @classproperty
+    def objects(cls: Type['Computer']) -> ComputerCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
+        return ComputerCollection.get_cached(cls, get_manager().get_profile_storage())
 
     def __init__(  # pylint: disable=too-many-arguments
         self,
         label: str = None,
-        hostname: str = None,
+        hostname: str = '',
         description: str = '',
         transport_type: str = '',
         scheduler_type: str = '',
         workdir: str = None,
-        backend: Backend = None,
-        name: str = None
-    ) -> 'Computer':
-        """Construct a new computer
-
-            .. deprecated:: 1.4.0
-                The `name` keyword will be removed in `v2.0.0`, use `label` instead.
-        """
-
-        # This needs to be here because `label` needed to get a default, since it was replacing `name` and during the
-        # deprecation period, it needs to be automatically set to whatever `name` is passed. As a knock-on effect, since
-        # a keyword argument cannot preceed a normal argument, `hostname` also needed to become a keyword argument,
-        # forcing us to set a default, which we set to `None`. We raise the same exception that Python would normally
-        # raise if a normally positional argument is not specified.
-        if hostname is None:
-            raise TypeError("missing 1 required positional argument: 'hostname'")
-
-        if name is not None:
-            warnings.warn('keyword `name` is deprecated, use `label` instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-            label = name
-
-        backend = backend or get_manager().get_backend()
+        backend: Optional['StorageBackend'] = None,
+    ) -> None:
+        """Construct a new computer."""
+        backend = backend or get_manager().get_profile_storage()
         model = backend.computers.create(
-            name=label,
+            label=label,
             hostname=hostname,
             description=description,
             transport_type=transport_type,
@@ -142,78 +111,44 @@ class Computer(entities.Entity):
         return f'{self.label} ({self.hostname}), pk: {self.pk}'
 
     @property
-    def full_text_info(self):
+    def uuid(self) -> str:
+        """Return the UUID for this computer.
+
+        This identifier is unique across all entities types and backend instances.
+
+        :return: the entity uuid
         """
-        Return a (multiline) string with a human-readable detailed information on this computer.
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`.
-
-        :rtype: str
-        """
-        warnings.warn('this property is deprecated', AiidaDeprecationWarning)  # pylint: disable=no-member
-        ret_lines = []
-        ret_lines.append(f'Computer name:     {self.label}')
-        ret_lines.append(f' * PK:             {self.pk}')
-        ret_lines.append(f' * UUID:           {self.uuid}')
-        ret_lines.append(f' * Description:    {self.description}')
-        ret_lines.append(f' * Hostname:       {self.hostname}')
-        ret_lines.append(f' * Transport type: {self.transport_type}')
-        ret_lines.append(f' * Scheduler type: {self.scheduler_type}')
-        ret_lines.append(f' * Work directory: {self.get_workdir()}')
-        ret_lines.append(f' * Shebang:        {self.get_shebang()}')
-        ret_lines.append(f" * mpirun command: {' '.join(self.get_mpirun_command())}")
-        def_cpus_machine = self.get_default_mpiprocs_per_machine()
-        if def_cpus_machine is not None:
-            ret_lines.append(f' * Default number of cpus per machine: {def_cpus_machine}')
-        # pylint: disable=fixme
-        # TODO: Put back following line when we port Node to new backend system
-        # ret_lines.append(" * Used by:        {} nodes".format(len(self._dbcomputer.dbnodes.all())))
-
-        ret_lines.append(' * prepend text:')
-        if self.get_prepend_text().strip():
-            for line in self.get_prepend_text().split('\n'):
-                ret_lines.append(f'   {line}')
-        else:
-            ret_lines.append('   # No prepend text.')
-        ret_lines.append(' * append text:')
-        if self.get_append_text().strip():
-            for line in self.get_append_text().split('\n'):
-                ret_lines.append(f'   {line}')
-        else:
-            ret_lines.append('   # No append text.')
-
-        return '\n'.join(ret_lines)
+        return self._backend_entity.uuid
 
     @property
-    def logger(self):
+    def logger(self) -> logging.Logger:
         return self._logger
 
     @classmethod
-    def _name_validator(cls, name):
+    def _label_validator(cls, label: str) -> None:
         """
-        Validates the name.
+        Validates the label.
         """
-        if not name.strip():
-            raise exceptions.ValidationError('No name specified')
+        if not label.strip():
+            raise exceptions.ValidationError('No label specified')
 
     @classmethod
-    def _hostname_validator(cls, hostname):
+    def _hostname_validator(cls, hostname: str) -> None:
         """
         Validates the hostname.
         """
-        if not hostname.strip():
+        if not (hostname or hostname.strip()):
             raise exceptions.ValidationError('No hostname specified')
 
     @classmethod
-    def _description_validator(cls, description):
+    def _description_validator(cls, description: str) -> None:
         """
         Validates the description.
         """
         # The description is always valid
 
     @classmethod
-    def _transport_type_validator(cls, transport_type):
+    def _transport_type_validator(cls, transport_type: str) -> None:
         """
         Validates the transport string.
         """
@@ -222,30 +157,30 @@ class Computer(entities.Entity):
             raise exceptions.ValidationError('The specified transport is not a valid one')
 
     @classmethod
-    def _scheduler_type_validator(cls, scheduler_type):
+    def _scheduler_type_validator(cls, scheduler_type: str) -> None:
         """
         Validates the transport string.
         """
         from aiida.plugins.entry_point import get_entry_point_names
         if scheduler_type not in get_entry_point_names('aiida.schedulers'):
-            raise exceptions.ValidationError('The specified scheduler is not a valid one')
+            raise exceptions.ValidationError(f'The specified scheduler `{scheduler_type}` is not a valid one')
 
     @classmethod
-    def _prepend_text_validator(cls, prepend_text):
+    def _prepend_text_validator(cls, prepend_text: str) -> None:
         """
         Validates the prepend text string.
         """
         # no validation done
 
     @classmethod
-    def _append_text_validator(cls, append_text):
+    def _append_text_validator(cls, append_text: str) -> None:
         """
         Validates the append text string.
         """
         # no validation done
 
     @classmethod
-    def _workdir_validator(cls, workdir):
+    def _workdir_validator(cls, workdir: str) -> None:
         """
         Validates the transport string.
         """
@@ -262,7 +197,7 @@ class Computer(entities.Entity):
         if not os.path.isabs(convertedwd):
             raise exceptions.ValidationError('The workdir must be an absolute path')
 
-    def _mpirun_command_validator(self, mpirun_cmd):
+    def _mpirun_command_validator(self, mpirun_cmd: Union[List[str], Tuple[str, ...]]) -> None:
         """
         Validates the mpirun_command variable. MUST be called after properly
         checking for a valid scheduler.
@@ -286,7 +221,7 @@ class Computer(entities.Entity):
         except ValueError as exc:
             raise exceptions.ValidationError(f"Error in the string: '{exc}'")
 
-    def validate(self):
+    def validate(self) -> None:
         """
         Check if the attributes and files retrieved from the DB are valid.
         Raise a ValidationError if something is wrong.
@@ -300,11 +235,13 @@ class Computer(entities.Entity):
         if not self.label.strip():
             raise exceptions.ValidationError('No name specified')
 
+        self._label_validator(self.label)
         self._hostname_validator(self.hostname)
         self._description_validator(self.description)
         self._transport_type_validator(self.transport_type)
         self._scheduler_type_validator(self.scheduler_type)
         self._workdir_validator(self.get_workdir())
+        self.default_memory_per_machine_validator(self.get_default_memory_per_machine())
 
         try:
             mpirun_cmd = self.get_mpirun_command()
@@ -315,7 +252,7 @@ class Computer(entities.Entity):
         self._mpirun_command_validator(mpirun_cmd)
 
     @classmethod
-    def _default_mpiprocs_per_machine_validator(cls, def_cpus_per_machine):
+    def _default_mpiprocs_per_machine_validator(cls, def_cpus_per_machine: Optional[int]) -> None:
         """
         Validates the default number of CPUs per machine (node)
         """
@@ -328,13 +265,24 @@ class Computer(entities.Entity):
                 'do not want to provide a default value.'
             )
 
-    def copy(self):
+    @classmethod
+    def default_memory_per_machine_validator(cls, def_memory_per_machine: Optional[int]) -> None:
+        """Validates the default amount of memory (kB) per machine (node)"""
+        if def_memory_per_machine is None:
+            return
+
+        if not isinstance(def_memory_per_machine, int) or def_memory_per_machine <= 0:
+            raise exceptions.ValidationError(
+                f'Invalid value for def_memory_per_machine, must be a positive int, got: {def_memory_per_machine}'
+            )
+
+    def copy(self) -> 'Computer':
         """
         Return a copy of the current object to work with, not stored yet.
         """
         return Computer.from_backend_entity(self._backend_entity.copy())
 
-    def store(self):
+    def store(self) -> 'Computer':
         """
         Store the computer in the DB.
 
@@ -350,15 +298,15 @@ class Computer(entities.Entity):
 
         :return: the label.
         """
-        return self._backend_entity.name
+        return self._backend_entity.label
 
     @label.setter
-    def label(self, value: str):
+    def label(self, value: str) -> None:
         """Set the computer label.
 
         :param value: the label to set.
         """
-        self._backend_entity.set_name(value)
+        self._backend_entity.set_label(value)
 
     @property
     def description(self) -> str:
@@ -369,7 +317,7 @@ class Computer(entities.Entity):
         return self._backend_entity.description
 
     @description.setter
-    def description(self, value: str):
+    def description(self, value: str) -> None:
         """Set the computer description.
 
         :param value: the description to set.
@@ -385,7 +333,7 @@ class Computer(entities.Entity):
         return self._backend_entity.hostname
 
     @hostname.setter
-    def hostname(self, value: str):
+    def hostname(self, value: str) -> None:
         """Set the computer hostname.
 
         :param value: the hostname to set.
@@ -401,7 +349,7 @@ class Computer(entities.Entity):
         return self._backend_entity.get_scheduler_type()
 
     @scheduler_type.setter
-    def scheduler_type(self, value: str):
+    def scheduler_type(self, value: str) -> None:
         """Set the computer scheduler type.
 
         :param value: the scheduler type to set.
@@ -417,7 +365,7 @@ class Computer(entities.Entity):
         return self._backend_entity.get_transport_type()
 
     @transport_type.setter
-    def transport_type(self, value: str):
+    def transport_type(self, value: str) -> None:
         """Set the computer transport type.
 
         :param value: the transport_type to set.
@@ -425,7 +373,7 @@ class Computer(entities.Entity):
         self._backend_entity.set_transport_type(value)
 
     @property
-    def metadata(self) -> str:
+    def metadata(self) -> Dict[str, Any]:
         """Return the computer metadata.
 
         :return: the metadata.
@@ -433,22 +381,19 @@ class Computer(entities.Entity):
         return self._backend_entity.get_metadata()
 
     @metadata.setter
-    def metadata(self, value: str):
+    def metadata(self, value: Dict[str, Any]) -> None:
         """Set the computer metadata.
 
         :param value: the metadata to set.
         """
         self._backend_entity.set_metadata(value)
 
-    def delete_property(self, name, raise_exception=True):
+    def delete_property(self, name: str, raise_exception: bool = True) -> None:
         """
         Delete a property from this computer
 
         :param name: the name of the property
-        :type name: str
-
         :param raise_exception: if True raise if the property does not exist, otherwise return None
-        :type raise_exception: bool
         """
         olddata = self.metadata
         try:
@@ -458,9 +403,8 @@ class Computer(entities.Entity):
             if raise_exception:
                 raise AttributeError(f"'{name}' property not found")
 
-    def set_property(self, name, value):
-        """
-        Set a property on this computer
+    def set_property(self, name: str, value: Any) -> None:
+        """Set a property on this computer
 
         :param name: the property name
         :param value: the new value
@@ -469,13 +413,10 @@ class Computer(entities.Entity):
         metadata[name] = value
         self.metadata = metadata
 
-    def get_property(self, name, *args):
-        """
-        Get a property of this computer
+    def get_property(self, name: str, *args: Any) -> Any:
+        """Get a property of this computer
 
         :param name: the property name
-        :type name: str
-
         :param args: additional arguments
 
         :return: the property value
@@ -490,19 +431,19 @@ class Computer(entities.Entity):
                 raise AttributeError(f"'{name}' property not found")
             return args[0]
 
-    def get_prepend_text(self):
+    def get_prepend_text(self) -> str:
         return self.get_property('prepend_text', '')
 
-    def set_prepend_text(self, val):
+    def set_prepend_text(self, val: str) -> None:
         self.set_property('prepend_text', str(val))
 
-    def get_append_text(self):
+    def get_append_text(self) -> str:
         return self.get_property('append_text', '')
 
-    def set_append_text(self, val):
+    def set_append_text(self, val: str) -> None:
         self.set_property('append_text', str(val))
 
-    def get_mpirun_command(self):
+    def get_mpirun_command(self) -> List[str]:
         """
         Return the mpirun command. Must be a list of strings, that will be
         then joined with spaces when submitting.
@@ -511,7 +452,7 @@ class Computer(entities.Entity):
         """
         return self.get_property('mpirun_command', ['mpirun', '-np', '{tot_num_mpiprocs}'])
 
-    def set_mpirun_command(self, val):
+    def set_mpirun_command(self, val: Union[List[str], Tuple[str, ...]]) -> None:
         """
         Set the mpirun command. It must be a list of strings (you can use
         string.split() if you have a single, space-separated string).
@@ -520,62 +461,73 @@ class Computer(entities.Entity):
             raise TypeError('the mpirun_command must be a list of strings')
         self.set_property('mpirun_command', val)
 
-    def get_default_mpiprocs_per_machine(self):
+    def get_default_mpiprocs_per_machine(self) -> Optional[int]:
         """
         Return the default number of CPUs per machine (node) for this computer,
         or None if it was not set.
         """
         return self.get_property('default_mpiprocs_per_machine', None)
 
-    def set_default_mpiprocs_per_machine(self, def_cpus_per_machine):
+    def set_default_mpiprocs_per_machine(self, def_cpus_per_machine: Optional[int]) -> None:
         """
         Set the default number of CPUs per machine (node) for this computer.
         Accepts None if you do not want to set this value.
         """
         if def_cpus_per_machine is None:
             self.delete_property('default_mpiprocs_per_machine', raise_exception=False)
-        else:
-            if not isinstance(def_cpus_per_machine, int):
-                raise TypeError('def_cpus_per_machine must be an integer (or None)')
+        elif not isinstance(def_cpus_per_machine, int):
+            raise TypeError('def_cpus_per_machine must be an integer (or None)')
         self.set_property('default_mpiprocs_per_machine', def_cpus_per_machine)
 
-    def get_minimum_job_poll_interval(self):
+    def get_default_memory_per_machine(self) -> Optional[int]:
+        """
+        Return the default amount of memory (kB) per machine (node) for this computer,
+        or None if it was not set.
+        """
+        return self.get_property('default_memory_per_machine', None)
+
+    def set_default_memory_per_machine(self, def_memory_per_machine: Optional[int]) -> None:
+        """
+        Set the default amount of memory (kB) per machine (node) for this computer.
+        Accepts None if you do not want to set this value.
+        """
+        self.default_memory_per_machine_validator(def_memory_per_machine)
+        self.set_property('default_memory_per_machine', def_memory_per_machine)
+
+    def get_minimum_job_poll_interval(self) -> float:
         """
         Get the minimum interval between subsequent requests to update the list
         of jobs currently running on this computer.
 
         :return: The minimum interval (in seconds)
-        :rtype: float
         """
         return self.get_property(
             self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL, self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT
         )
 
-    def set_minimum_job_poll_interval(self, interval):
+    def set_minimum_job_poll_interval(self, interval: float) -> None:
         """
         Set the minimum interval between subsequent requests to update the list
         of jobs currently running on this computer.
 
         :param interval: The minimum interval in seconds
-        :type interval: float
         """
         self.set_property(self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL, interval)
 
-    def get_workdir(self):
+    def get_workdir(self) -> str:
         """
         Get the working directory for this computer
         :return: The currently configured working directory
-        :rtype: str
         """
         return self.get_property(self.PROPERTY_WORKDIR, '/scratch/{username}/aiida_run/')
 
-    def set_workdir(self, val):
+    def set_workdir(self, val: str) -> None:
         self.set_property(self.PROPERTY_WORKDIR, val)
 
-    def get_shebang(self):
+    def get_shebang(self) -> str:
         return self.get_property(self.PROPERTY_SHEBANG, '#!/bin/bash')
 
-    def set_shebang(self, val):
+    def set_shebang(self, val: str) -> None:
         """
         :param str val: A valid shebang line
         """
@@ -587,7 +539,7 @@ class Computer(entities.Entity):
         metadata['shebang'] = val
         self.metadata = metadata
 
-    def get_authinfo(self, user):
+    def get_authinfo(self, user: 'User') -> 'AuthInfo':
         """
         Return the aiida.orm.authinfo.AuthInfo instance for the
         given user on this computer, if the computer
@@ -610,13 +562,12 @@ class Computer(entities.Entity):
 
         return authinfo
 
-    def is_user_configured(self, user):
+    def is_user_configured(self, user: 'User') -> bool:
         """
         Is the user configured on this computer?
 
         :param user: the user to check
         :return: True if configured, False otherwise
-        :rtype: bool
         """
         try:
             self.get_authinfo(user)
@@ -624,13 +575,12 @@ class Computer(entities.Entity):
         except exceptions.NotExistent:
             return False
 
-    def is_user_enabled(self, user):
+    def is_user_enabled(self, user: 'User') -> bool:
         """
         Is the given user enabled to run on this computer?
 
         :param user: the user to check
         :return: True if enabled, False otherwise
-        :rtype: bool
         """
         try:
             authinfo = self.get_authinfo(user)
@@ -639,7 +589,7 @@ class Computer(entities.Entity):
             # Return False if the user is not configured (in a sense, it is disabled for that user)
             return False
 
-    def get_transport(self, user=None):
+    def get_transport(self, user: Optional['User'] = None) -> 'Transport':
         """
         Return a Transport class, configured with all correct parameters.
         The Transport is closed (meaning that if you want to run any operation with
@@ -664,12 +614,8 @@ class Computer(entities.Entity):
         authinfo = authinfos.AuthInfo.objects(self.backend).get(dbcomputer=self, aiidauser=user)
         return authinfo.get_transport()
 
-    def get_transport_class(self):
-        """
-        Get the transport class for this computer.  Can be used to instantiate a transport instance.
-
-        :return: the transport class
-        """
+    def get_transport_class(self) -> Type['Transport']:
+        """Get the transport class for this computer.  Can be used to instantiate a transport instance."""
         try:
             return TransportFactory(self.transport_type)
         except exceptions.EntryPointError as exception:
@@ -677,13 +623,8 @@ class Computer(entities.Entity):
                 f'No transport found for {self.label} [type {self.transport_type}], message: {exception}'
             )
 
-    def get_scheduler(self):
-        """
-        Get a scheduler instance for this computer
-
-        :return: the scheduler instance
-        :rtype: :class:`aiida.schedulers.Scheduler`
-        """
+    def get_scheduler(self) -> 'Scheduler':
+        """Get a scheduler instance for this computer"""
         try:
             scheduler_class = SchedulerFactory(self.scheduler_type)
             # I call the init without any parameter
@@ -693,14 +634,12 @@ class Computer(entities.Entity):
                 f'No scheduler found for {self.label} [type {self.scheduler_type}], message: {exception}'
             )
 
-    def configure(self, user=None, **kwargs):
-        """
-        Configure a computer for a user with valid auth params passed via kwargs
+    def configure(self, user: Optional['User'] = None, **kwargs: Any) -> 'AuthInfo':
+        """Configure a computer for a user with valid auth params passed via kwargs
 
         :param user: the user to configure the computer for
         :kwargs: the configuration keywords with corresponding values
         :return: the authinfo object for the configured user
-        :rtype: :class:`aiida.orm.AuthInfo`
         """
         from . import authinfos
 
@@ -726,274 +665,16 @@ class Computer(entities.Entity):
 
         return authinfo
 
-    def get_configuration(self, user=None):
-        """
-        Get the configuration of computer for the given user as a dictionary
+    def get_configuration(self, user: Optional['User'] = None) -> Dict[str, Any]:
+        """Get the configuration of computer for the given user as a dictionary
 
-        :param user: the user to to get the configuration for.  Uses default user if `None`
-        :type user: :class:`aiida.orm.User`
+        :param user: the user to to get the configuration for, otherwise default user
         """
-
-        backend = self.backend
         user = user or users.User.objects(self.backend).get_default()
 
-        config = {}
         try:
-            # Need to pass the backend entity here, not just self
-            authinfo = backend.authinfos.get(self._backend_entity, user)
-            config = authinfo.get_auth_params()
+            authinfo = self.get_authinfo(user)
         except exceptions.NotExistent:
-            pass
+            return {}
 
-        return config
-
-    @property
-    def name(self):
-        """Return the computer name.
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `label` property instead.
-        """
-        warnings.warn('this property is deprecated, use the `label` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        return self.label
-
-    def get_name(self):
-        """Return the computer name.
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `label` property instead.
-        """
-        warnings.warn('this property is deprecated, use the `label` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        return self.label
-
-    def set_name(self, val):
-        """Set the computer name.
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `label` property instead.
-        """
-        warnings.warn('this method is deprecated, use the `label` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        self.label = val
-
-    def get_hostname(self):
-        """Get this computer hostname
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `hostname` property instead.
-
-        :rtype: str
-        """
-        warnings.warn('this method is deprecated, use the `hostname` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        return self.hostname
-
-    def set_hostname(self, val):
-        """
-        Set the hostname of this computer
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `hostname` property instead.
-
-        :param val: The new hostname
-        :type val: str
-        """
-        warnings.warn('this method is deprecated, use the `hostname` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        self.hostname = val
-
-    def get_description(self):
-        """
-        Get the description for this computer
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `description` property instead.
-
-        :return: the description
-        :rtype: str
-        """
-        warnings.warn('this method is deprecated, use the `description` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        return self.description
-
-    def set_description(self, val):
-        """
-        Set the description for this computer
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `description` property instead.
-
-        :param val: the new description
-        :type val: str
-        """
-        warnings.warn('this method is deprecated, use the `description` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        self.description = val
-
-    def get_scheduler_type(self):
-        """
-        Get the scheduler type for this computer
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `scheduler_type` property instead.
-
-        :return: the scheduler type
-        :rtype: str
-        """
-        warnings.warn('this method is deprecated, use the `scheduler_type` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        return self.scheduler_type
-
-    def set_scheduler_type(self, scheduler_type):
-        """
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `scheduler_type` property instead.
-
-        :param scheduler_type: the new scheduler type
-        """
-        warnings.warn('this method is deprecated, use the `scheduler_type` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        self._scheduler_type_validator(scheduler_type)
-        self.scheduler_type = scheduler_type
-
-    def get_transport_type(self):
-        """
-        Get the current transport type for this computer
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `transport_type` property instead.
-
-        :return: the transport type
-        :rtype: str
-        """
-        warnings.warn('this method is deprecated, use the `transport_type` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        return self.transport_type
-
-    def set_transport_type(self, transport_type):
-        """
-        Set the transport type for this computer
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `transport_type` property instead.
-
-        :param transport_type: the new transport type
-        :type transport_type: str
-        """
-        warnings.warn('this method is deprecated, use the `transport_type` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        self.transport_type = transport_type
-
-    def get_metadata(self):
-        """
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `metadata` property instead.
-
-        """
-        warnings.warn('this method is deprecated, use the `metadata` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        return self.metadata
-
-    def set_metadata(self, metadata):
-        """
-        Set the metadata.
-
-        .. deprecated:: 1.4.0
-            Will be removed in `v2.0.0`, use the `metadata` property instead.
-
-        .. note: You still need to call the .store() method to actually save
-           data to the database! (The store method can be called multiple
-           times, differently from AiiDA Node objects).
-        """
-        warnings.warn('this method is deprecated, use the `metadata` property instead', AiidaDeprecationWarning)  # pylint: disable=no-member
-        self.metadata = metadata
-
-    @staticmethod
-    def get_schema():
-        """
-        Every node property contains:
-            - display_name: display name of the property
-            - help text: short help text of the property
-            - is_foreign_key: is the property foreign key to other type of the node
-            - type: type of the property. e.g. str, dict, int
-
-        :return: get schema of the computer
-
-        .. deprecated:: 1.0.0
-
-            Will be removed in `v2.0.0`.
-            Use :meth:`~aiida.restapi.translator.base.BaseTranslator.get_projectable_properties` instead.
-
-        """
-        message = 'method is deprecated, use' \
-            '`aiida.restapi.translator.base.BaseTranslator.get_projectable_properties` instead'
-        warnings.warn(message, AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        return {
-            'description': {
-                'display_name': 'Description',
-                'help_text': 'short description of the Computer',
-                'is_foreign_key': False,
-                'type': 'str'
-            },
-            'hostname': {
-                'display_name': 'Host',
-                'help_text': 'Name of the host',
-                'is_foreign_key': False,
-                'type': 'str'
-            },
-            'id': {
-                'display_name': 'Id',
-                'help_text': 'Id of the object',
-                'is_foreign_key': False,
-                'type': 'int'
-            },
-            'name': {
-                'display_name': 'Name',
-                'help_text': 'Name of the object',
-                'is_foreign_key': False,
-                'type': 'str'
-            },
-            'scheduler_type': {
-                'display_name': 'Scheduler',
-                'help_text': 'Scheduler type',
-                'is_foreign_key': False,
-                'type': 'str',
-                'valid_choices': {
-                    'direct': {
-                        'doc': 'Support for the direct execution bypassing schedulers.'
-                    },
-                    'pbsbaseclasses.PbsBaseClass': {
-                        'doc': 'Base class with support for the PBSPro scheduler'
-                    },
-                    'pbspro': {
-                        'doc': 'Subclass to support the PBSPro scheduler'
-                    },
-                    'sge': {
-                        'doc':
-                        'Support for the Sun Grid Engine scheduler and its variants/forks (Son of Grid Engine, '
-                        'Oracle Grid Engine, ...)'
-                    },
-                    'slurm': {
-                        'doc': 'Support for the SLURM scheduler (http://slurm.schedmd.com/).'
-                    },
-                    'torque': {
-                        'doc': 'Subclass to support the Torque scheduler.'
-                    }
-                }
-            },
-            'transport_type': {
-                'display_name': 'Transport type',
-                'help_text': 'Transport Type',
-                'is_foreign_key': False,
-                'type': 'str',
-                'valid_choices': {
-                    'local': {
-                        'doc':
-                        'Support copy and command execution on the same host on which AiiDA is running via direct '
-                        'file copy and execution commands.'
-                    },
-                    'ssh': {
-                        'doc':
-                        'Support connection, command execution and data transfer to remote computers via SSH+SFTP.'
-                    }
-                }
-            },
-            'uuid': {
-                'display_name': 'Unique ID',
-                'help_text': 'Universally Unique Identifier',
-                'is_foreign_key': False,
-                'type': 'unicode'
-            }
-        }
+        return authinfo.get_auth_params()

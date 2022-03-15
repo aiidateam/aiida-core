@@ -10,6 +10,7 @@
 """
 Translator for bands data
 """
+import json
 
 from aiida.restapi.translator.nodes.data import DataTranslator
 
@@ -25,7 +26,7 @@ class BandsDataTranslator(DataTranslator):
     from aiida.orm import BandsData
     _aiida_class = BandsData
     # The string name of the AiiDA class
-    _aiida_type = 'data.array.bands.BandsData'
+    _aiida_type = 'data.core.array.bands.BandsData'
 
     _result_type = __label__
 
@@ -44,7 +45,6 @@ class BandsDataTranslator(DataTranslator):
         """
         response = {}
 
-        from aiida.common import json
         json_string = node._exportcontent('json', comments=False)  # pylint: disable=protected-access
         json_content = json.loads(json_string[0])
         response['bands'] = json_content

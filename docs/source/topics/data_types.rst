@@ -11,7 +11,7 @@ The different data types can be accessed through the :py:func:`~aiida.plugins.fa
 
 .. code-block:: ipython
 
-  In [1]: ArrayData = DataFactory('array')
+  In [1]: ArrayData = DataFactory('core.array')
 
 .. important::
 
@@ -22,11 +22,11 @@ The different data types can be accessed through the :py:func:`~aiida.plugins.fa
 
     from aiida.plugins import DataFactory
 
-    ArrayData = DataFactory('array')
+    ArrayData = DataFactory('core.array')
 
 A list of all the data entry points can be obtain running the command ``verdi plugin list aiida.data``.
 
-For all data types, you can follow the link to the corresponding data class in the API reference to read more about the class and its methods. We also detail what is stored in the database (mostly as attributes, so the information can be easily queried e.g. with the :ref:`QueryBuilder <how-to:data:find>`) and what is stored as a raw file in the AiiDA file repository (providing access to the file contents, but not efficiently queryable: this is useful for e.g. big data files that don't need to be queried for).
+For all data types, you can follow the link to the corresponding data class in the API reference to read more about the class and its methods. We also detail what is stored in the database (mostly as attributes, so the information can be easily queried e.g. with the :ref:`QueryBuilder <how-to:query>`) and what is stored as a raw file in the AiiDA file repository (providing access to the file contents, but not efficiently queryable: this is useful for e.g. big data files that don't need to be queried for).
 
 If you need to work with some specific type of data, first check the list of data types/plugins below, and if you don't find what you need, give a look to :ref:`Adding support for custom data types <topics:data_types:plugin>`.
 
@@ -40,31 +40,35 @@ Below is a list of the core data types already provided with AiiDA, along with t
 .. table::
   :widths: 20 20 45 45
 
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
-  | **Class**                                                 | **Entry point**   | **Stored in database**                            | **Stored in repository**          |
-  +===========================================================+===================+===================================================+===================================+
-  | :ref:`Int <topics:data_types:core:base>`                  | ``int``           | The integer value                                 | \\-                               |
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`Float <topics:data_types:core:base>`                | ``float``         | The float value                                   | \\-                               |
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`Str <topics:data_types:core:base>`                  | ``str``           | The string                                        | \\-                               |
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`Bool <topics:data_types:core:base>`                 | ``bool``          | The boolean value                                 | \\-                               |
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`List <topics:data_types:core:base:iterable>`        | ``list``          | The complete list                                 | \\-                               |
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`Dict <topics:data_types:core:base:iterable>`        | ``dict``          | The complete dictionary                           | \\-                               |
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`ArrayData <topics:data_types:core:array>`           | ``array``         | The array names and corresponding shapes          | The array data in ``.npy`` format |
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`XyData <topics:data_types:core:array:xy>`           | ``array.xy``      | The array names and corresponding shapes          | The array data in ``.npy`` format |
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`SinglefileData <topics:data_types:core:singlefile>` | ``singlefile``    | The filename                                      | The file                          |
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`FolderData <topics:data_types:core:folder>`         | ``folder``        | \\-                                               | All files and folders             |
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`RemoteData <topics:data_types:core:remote>`         | ``remote``        | The computer and the absolute path to the folder  | All files and folders             |
-  +-----------------------------------------------------------+-------------------+---------------------------------------------------+-----------------------------------+
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | **Class**                                                 | **Entry point**        | **Stored in database**                            | **Stored in repository**          |
+  +===========================================================+========================+===================================================+===================================+
+  | :ref:`Int <topics:data_types:core:base>`                  | ``core.int``           | The integer value                                 | \\-                               |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`Float <topics:data_types:core:base>`                | ``core.float``         | The float value                                   | \\-                               |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`Str <topics:data_types:core:base>`                  | ``core.str``           | The string                                        | \\-                               |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`Bool <topics:data_types:core:base>`                 | ``core.bool``          | The boolean value                                 | \\-                               |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`List <topics:data_types:core:base:iterable>`        | ``core.list``          | The complete list                                 | \\-                               |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`Dict <topics:data_types:core:base:iterable>`        | ``core.dict``          | The complete dictionary                           | \\-                               |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`EnumData <topics:data_types:core:base:enum>`        | ``core.enum``          | The value, name and the class identifier          | \\-                               |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`JsonableData <topics:data_types:core:jsonable>`     | ``core.jsonable``      | The JSON data and the class identifier            | \\-                               |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`ArrayData <topics:data_types:core:array>`           | ``core.array``         | The array names and corresponding shapes          | The array data in ``.npy`` format |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`XyData <topics:data_types:core:array:xy>`           | ``core.array.xy``      | The array names and corresponding shapes          | The array data in ``.npy`` format |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`SinglefileData <topics:data_types:core:singlefile>` | ``core.singlefile``    | The filename                                      | The file                          |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`FolderData <topics:data_types:core:folder>`         | ``core.folder``        | \\-                                               | All files and folders             |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  | :ref:`RemoteData <topics:data_types:core:remote>`         | ``core.remote``        | The computer and the absolute path to the folder  | All files and folders             |
+  +-----------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
 
 .. _topics:data_types:core:base:
 
@@ -143,39 +147,104 @@ For all of the base data types, their value is stored in the database in the att
 
 .. warning::
 
-  The :py:class:`~aiida.orm.nodes.data.list.List` and :py:class:`~aiida.orm.nodes.data.dict.Dict` only store the Python base types, not the corresponding AiiDA data type.
-  These will be converted to their corresponding Python base type when storing the :py:class:`~aiida.orm.nodes.data.list.List` or :py:class:`~aiida.orm.nodes.data.dict.Dict` node in the database.
+  The :py:class:`~aiida.orm.List` and :py:class:`~aiida.orm.Dict` only store the Python base types, not the corresponding AiiDA data type.
+  These will be converted to their corresponding Python base type when storing the :py:class:`~aiida.orm.List` or :py:class:`~aiida.orm.Dict` node in the database.
+
+.. _topics:data_types:core:base:enum:
+
+EnumData
+--------
+
+.. versionadded:: 2.0
+
+An `Enum` member is represented by three attributes in the :py:class:`~aiida.orm.EnumData` class:
+
+- ``name``: the member's name
+- ``value``: the member's value
+- ``identifier``: the string representation of the enum's identifier
+
+.. code-block:: ipython
+
+    In [1]: from enum import Enum
+       ...: class Color(Enum):
+       ...: RED = 1
+       ...: GREEN = 2
+
+    In [2]: from aiida.orm import EnumData
+       ...: color = EnumData(Color.RED)
+
+    In [3]: color.name
+    Out[3]: 'RED'
+
+    In [4]: color.value
+    Out[4]: 1
+
+    In [5]: color.get_member()
+    Out[5]: <Color.RED: 1>
+
+.. _topics:data_types:core:jsonable:
+
+JsonableData
+------------
+
+.. versionadded:: 2.0
+
+:py:class:`~aiida.orm.JsonableData` is a data plugin that allows one to easily wrap existing objects that are JSON-able.
+
+Any class that implements an ``as_dict`` method, returning a dictionary that is a JSON serializable representation of the object, can be wrapped and stored by this data plugin.
+To deserialize it should also implement a ``from_dict`` method, which takes the dictionary as input and returns the object.
+
+.. code-block:: ipython
+
+    In [1]: from aiida.orm import JsonableData
+       ...: class MyClass:
+       ...:     def __init__(self, a: int, b: int):
+       ...:         self.a = a
+       ...:         self.b = b
+       ...:     def __str__(self):
+       ...:         return f'MyClass({self.a}, {self.b})'
+       ...:     def as_dict(self) -> dict:
+       ...:         return {'a': self.a, 'b': self.b}
+       ...:     @classmethod
+       ...:     def from_dict(cls, d: dict):
+       ...:         return cls(d['a'], d['b'])
+       ...:
+       ...: my_object = MyClass(1, 2)
+       ...: my_jsonable = JsonableData(my_object)
+       ...: str(my_jsonable.obj)
+    Out[1]: 'MyClass(1, 2)'
+
 
 .. _topics:data_types:core:array:
 
 ArrayData
 ---------
 
-The :py:class:`~aiida.orm.nodes.data.array.ArrayData` class can be used to represent `numpy <https://numpy.org/>`_ arrays in the provenance.
-Each array is assigned to a name specified by the user using the :py:meth:`~aiida.orm.nodes.data.array.ArrayData.set_array()` method:
+The :py:class:`~aiida.orm.ArrayData` class can be used to represent `numpy <https://numpy.org/>`_ arrays in the provenance.
+Each array is assigned to a name specified by the user using the :py:meth:`~aiida.orm.ArrayData.set_array()` method:
 
 .. code-block:: ipython
 
-  In [1]: ArrayData = DataFactory('array'); import numpy as np
+  In [1]: ArrayData = DataFactory('core.array'); import numpy as np
 
   In [2]: array = ArrayData()
 
   In [3]: array.set_array('matrix', np.array([[1, 2], [3, 4]]))
 
-Note that one :py:class:`~aiida.orm.nodes.data.array.ArrayData` instance can store multiple arrays under different names:
+Note that one :py:class:`~aiida.orm.ArrayData` instance can store multiple arrays under different names:
 
 .. code-block:: ipython
 
   In [4]: array.set_array('vector', np.array([[1, 2, 3, 4]]))
 
-To see the list of array names stored in the :py:class:`~aiida.orm.nodes.data.array.ArrayData` instance, you can use the :py:meth:`~aiida.orm.nodes.data.array.ArrayData.get_arraynames()` method:
+To see the list of array names stored in the :py:class:`~aiida.orm.ArrayData` instance, you can use the :py:meth:`~aiida.orm.ArrayData.get_arraynames()` method:
 
 .. code-block:: ipython
 
   In [5]: array.get_arraynames()
   Out[5]: ['matrix', 'vector']
 
-If you want the array corresponding to a certain name, simply supply the name to the :py:meth:`~aiida.orm.nodes.data.array.ArrayData.get_array()` method:
+If you want the array corresponding to a certain name, simply supply the name to the :py:meth:`~aiida.orm.ArrayData.get_array()` method:
 
 .. code-block:: ipython
 
@@ -184,18 +253,18 @@ If you want the array corresponding to a certain name, simply supply the name to
   array([[1, 2],
         [3, 4]])
 
-As with all nodes, you can store the :py:class:`~aiida.orm.nodes.data.array.ArrayData` node using the :py:meth:`~aiida.orm.nodes.node.Node.store()` method. However, only the names and shapes of the arrays are stored to the database, the content of the arrays is stored to the repository in the `numpy format <https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html#npy-format>`_ (``.npy``).
+As with all nodes, you can store the :py:class:`~aiida.orm.ArrayData` node using the :py:meth:`~aiida.orm.nodes.node.Node.store()` method. However, only the names and shapes of the arrays are stored to the database, the content of the arrays is stored to the repository in the `numpy format <https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html#npy-format>`_ (``.npy``).
 
 .. _topics:data_types:core:array:xy:
 
 XyData
 ------
 
-In case you are working with arrays that have a relationship with each other, i.e. ``y`` as a function of ``x``, you can use the :py:class:`~aiida.orm.nodes.data.array.XyData` class:
+In case you are working with arrays that have a relationship with each other, i.e. ``y`` as a function of ``x``, you can use the :py:class:`~aiida.orm.XyData` class:
 
 .. code-block:: ipython
 
-  In [1]: XyData = DataFactory('array.xy'); import numpy as np
+  In [1]: XyData = DataFactory('core.array.xy'); import numpy as np
 
   In [2]: xy = XyData()
 
@@ -209,7 +278,7 @@ The user also has to specify the units for both ``x`` and ``y``:
   In [4]: xy.set_y(np.array([1, 2, 3, 4]), 'Volume Expansion', '%')
 
 Note that you can set multiple ``y`` values that correspond to the ``x`` grid.
-Same as for the :py:class:`~aiida.orm.nodes.data.array.ArrayData`, the names and shapes of the arrays are stored to the database, the content of the arrays is stored to the repository in the `numpy format <https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html#npy-format>`_ (``.npy``).
+Same as for the :py:class:`~aiida.orm.ArrayData`, the names and shapes of the arrays are stored to the database, the content of the arrays is stored to the repository in the `numpy format <https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html#npy-format>`_ (``.npy``).
 
 .. _topics:data_types:core:singlefile:
 
@@ -221,7 +290,7 @@ This class can be initialized via the **absolute** path to the file you want to 
 
 .. code-block:: ipython
 
-  In [1]: SinglefileData = DataFactory('singlefile')
+  In [1]: SinglefileData = DataFactory('core.singlefile')
 
   In [2]: single_file = SinglefileData('/absolute/path/to/file')
 
@@ -244,7 +313,7 @@ To store a complete directory, simply use the ``tree`` keyword:
 
 .. code-block:: ipython
 
-  In [1]: FolderData = DataFactory('folder')
+  In [1]: FolderData = DataFactory('core.folder')
 
   In [2]: folder = FolderData(tree='/absolute/path/to/directory')
 
@@ -264,14 +333,14 @@ or from `file-like objects <https://docs.python.org/3/glossary.html#term-file-li
 
   In [4]: folder.put_object_from_filelike(filelike_object, path='file2.txt')
 
-Inversely, the content of the files stored in the :py:class:`~aiida.orm.nodes.data.folder.FolderData` node can be accessed using the :py:class:`~aiida.orm.nodes.node.Node.get_object_content()` method:
+Inversely, the content of the files stored in the :py:class:`~aiida.orm.nodes.data.folder.FolderData` node can be accessed using the :py:meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.get_object_content()` method:
 
 .. code-block:: ipython
 
   In [5]: folder.get_object_content('file1.txt')
   Out[5]: 'File 1 content\n'
 
-To see the files that are stored in the :py:class:`~aiida.orm.nodes.data.folder.FolderData`, you can use the :py:class:`~aiida.orm.nodes.node.Node.list_object_names()` method:
+To see the files that are stored in the :py:class:`~aiida.orm.nodes.data.folder.FolderData`, you can use the :py:meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.list_object_names()` method:
 
 .. code-block:: ipython
 
@@ -279,14 +348,14 @@ To see the files that are stored in the :py:class:`~aiida.orm.nodes.data.folder.
   Out[6]: ['subdir', 'file1.txt', 'file2.txt']
 
 In this example, ``subdir`` was a sub directory of ``/absolute/path/to/directory``, whose contents where added above.
-to list the contents of the ``subdir`` directory, you can pass its path to the :py:meth:`~aiida.orm.nodes.node.Node.list_object_names()` method:
+to list the contents of the ``subdir`` directory, you can pass its path to the :py:meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.list_object_names()` method:
 
 .. code-block:: ipython
 
   In [7]: folder.list_object_names('subdir')
   Out[7]: ['file3.txt', 'module.py']
 
-The content can once again be shown using the :py:meth:`~aiida.orm.nodes.node.Node.get_object_content()` method by passing the correct path:
+The content can once again be shown using the :py:meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.get_object_content()` method by passing the correct path:
 
 .. code-block:: ipython
 
@@ -300,26 +369,26 @@ Since the :py:class:`~aiida.orm.nodes.data.folder.FolderData` node is simply a c
 RemoteData
 ----------
 
-The :py:class:`~aiida.orm.nodes.data.remote.RemoteData` node represents a "symbolic link" to a specific folder on a remote computer.
+The :py:class:`~aiida.orm.RemoteData` node represents a "symbolic link" to a specific folder on a remote computer.
 Its main use is to allow users to persist the provenance when e.g. a calculation produces data in a raw/scratch folder, and the whole folder needs to be provided to restart/continue.
-To create a :py:class:`~aiida.orm.nodes.data.remote.RemoteData` instance, simply pass the remote path to the folder and the computer on which it is stored:
+To create a :py:class:`~aiida.orm.RemoteData` instance, simply pass the remote path to the folder and the computer on which it is stored:
 
 .. code-block:: ipython
 
-  In [1]: RemoteData = DataFactory('remote')
+  In [1]: RemoteData = DataFactory('core.remote')
 
   In [2]: computer = load_computer(label='computer_label')
 
   In [3]: remote = RemoteData(remote_path='/absolute/path/to/remote/directory' computer=local)
 
-You can see the contents of the remote folder by using the :py:meth:`~aiida.orm.nodes.data.remote.RemoteData.listdir()` method:
+You can see the contents of the remote folder by using the :py:meth:`~aiida.orm.RemoteData.listdir()` method:
 
 .. code-block:: ipython
 
   In [4]: remote.listdir()
   Out[4]: ['file2.txt', 'file1.txt', 'subdir']
 
-To see the contents of a subdirectory, pass the relative path to the :py:meth:`~aiida.orm.nodes.data.remote.RemoteData.listdir()` method:
+To see the contents of a subdirectory, pass the relative path to the :py:meth:`~aiida.orm.RemoteData.listdir()` method:
 
 .. code-block:: ipython
 
@@ -328,7 +397,7 @@ To see the contents of a subdirectory, pass the relative path to the :py:meth:`~
 
 .. warning::
 
-  Using the :py:meth:`~aiida.orm.nodes.data.remote.RemoteData.listdir()` method, or any method that retrieves information from the remote computer, opens a connection to the remote computer using its transport type.
+  Using the :py:meth:`~aiida.orm.RemoteData.listdir()` method, or any method that retrieves information from the remote computer, opens a connection to the remote computer using its transport type.
   Their use is strongly discouraged when writing scripts and/or workflows.
 
 .. todo::
@@ -377,7 +446,7 @@ Let's begin with creating the instance by defining its unit cell:
 
 .. code-block:: ipython
 
-  In [1]: StructureData = DataFactory('structure')
+  In [1]: StructureData = DataFactory('core.structure')
 
   In [2]: unit_cell = [[3.0, 0.0, 0.0], [0.0, 3.0, 0.0], [0.0, 0.0, 3.0]]
 
@@ -425,6 +494,8 @@ From the :py:class:`~aiida.orm.nodes.data.structure.StructureData` node you can 
   PeriodicSite: Li (0.0000, 0.0000, 0.0000) [0.0000, 0.0000, 0.0000]
   PeriodicSite: Li (1.5000, 1.5000, 1.5000) [0.4286, 0.4286, 0.4286]
 
+.. seealso:: :ref:`topics:data_types:core:jsonable`, which can store any other Pymatgen class.
+
 Exporting
 ^^^^^^^^^
 
@@ -454,7 +525,7 @@ If you have a list of :py:class:`~aiida.orm.nodes.data.structure.StructureData` 
 
 .. code-block:: ipython
 
-  In [1]: TrajectoryData = DataFactory('array.trajectory')
+  In [1]: TrajectoryData = DataFactory('core.array.trajectory')
 
   In [2]: trajectory = TrajectoryData(structure_list)
 
@@ -508,7 +579,7 @@ To create a :py:class:`~aiida.orm.nodes.data.array.kpoints.KpointsData` instance
 
 .. code-block:: ipython
 
-  In [1]: KpointsData = DataFactory('array.kpoints')
+  In [1]: KpointsData = DataFactory('core.array.kpoints')
      ...: kpoints_mesh = KpointsData()
      ...: kpoints_mesh.set_kpoints_mesh([2, 2, 2])
 
@@ -537,14 +608,14 @@ Automatic computation of k-point paths
 
 AiiDA provides a number of tools and wrappers to automatically compute k-point paths given a cell or a crystal structure.
 
-The main interface is provided by the two methods :py:func:`aiida.tools.data.array.kpoints.get_kpoints_path` and :py:func:`aiida.tools.data.array.kpoints.get_explicit_kpoints_path`.
+The main interface is provided by the two methods :py:func:`aiida.tools.data.array.kpoints.main.get_kpoints_path` and :py:func:`aiida.tools.data.array.kpoints.main.get_explicit_kpoints_path`.
 
 These methods are also conveniently exported directly as, e.g., ``aiida.tools.get_kpoints_path``.
 
 The difference between the two methods is the following:
 
-- :py:func:`~aiida.tools.data.array.kpoints.get_kpoints_path` returns a dictionary of k-point coordinates (e.g. ``{'GAMMA': [0. ,0. ,0. ], 'X': [0.5, 0., 0.], 'L': [0.5, 0.5, 0.5]}``, and then a list of tuples of endpoints of each segment, e.g. ``[('GAMMA', 'X'), ('X', 'L'), ('L', 'GAMMA')]`` for the :math:`\Gamma-X-L-\Gamma` path.
-- :py:func:`~aiida.tools.data.array.kpoints.get_explicit_kpoints_path`, instead, returns a list of kpoints that follow that path, with some predefined (but user-customizable) distance between points, e.g. something like ``[[0., 0., 0.], [0.05, 0., 0.], [0.1, 0., 0.], ...]``.
+- :py:func:`~aiida.tools.data.array.kpoints.main.get_kpoints_path` returns a dictionary of k-point coordinates (e.g. ``{'GAMMA': [0. ,0. ,0. ], 'X': [0.5, 0., 0.], 'L': [0.5, 0.5, 0.5]}``, and then a list of tuples of endpoints of each segment, e.g. ``[('GAMMA', 'X'), ('X', 'L'), ('L', 'GAMMA')]`` for the :math:`\Gamma-X-L-\Gamma` path.
+- :py:func:`~aiida.tools.data.array.kpoints.main.get_explicit_kpoints_path`, instead, returns a list of kpoints that follow that path, with some predefined (but user-customizable) distance between points, e.g. something like ``[[0., 0., 0.], [0.05, 0., 0.], [0.1, 0., 0.], ...]``.
 
 Depending on how the underlying code works, one method might be preferred on the other.
 
@@ -614,7 +685,7 @@ The dropdown panels below explain some expanded use cases on how to create a :py
   .. code-block:: python
 
     from aiida.plugins import DataFactory
-    BandsData = DataFactory('array.bands')
+    BandsData = DataFactory('core.array.bands')
     bands_data = BandsData()
 
   To import the bands we need to make sure to have two arrays: one containing kpoints and another containing bands.

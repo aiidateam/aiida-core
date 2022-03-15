@@ -9,14 +9,15 @@
 ###########################################################################
 """Unittests for TestManager"""
 import os
+import sys
 import unittest
 import warnings
-import sys
 
 from pgtest import pgtest
+import pytest
 
-from aiida.manage.tests import TemporaryProfileManager, TestManagerError, get_test_backend_name
 from aiida.common.utils import Capturing
+from aiida.manage.tests import TemporaryProfileManager, TestManagerError, get_test_backend_name
 
 
 class TemporaryProfileManagerTestCase(unittest.TestCase):
@@ -42,6 +43,7 @@ class TemporaryProfileManagerTestCase(unittest.TestCase):
         self.profile_manager.create_aiida_db()
         self.assertTrue(self.profile_manager.postgres.db_exists(self.profile_manager.profile_info['database_name']))
 
+    @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
     def test_create_use_destroy_profile2(self):
         """
         Test temporary test profile creation
@@ -66,7 +68,7 @@ class TemporaryProfileManagerTestCase(unittest.TestCase):
 
         from aiida.orm import load_node
         from aiida.plugins import DataFactory
-        data = DataFactory('dict')(dict={'key': 'value'})
+        data = DataFactory('core.dict')(dict={'key': 'value'})
         data.store()
         data_pk = data.pk
         self.assertTrue(load_node(data_pk))
@@ -74,7 +76,7 @@ class TemporaryProfileManagerTestCase(unittest.TestCase):
         with self.assertRaises(TestManagerError):
             self.test_create_aiida_db()
 
-        self.profile_manager.reset_db()
+        self.profile_manager.clear_profile()
         with self.assertRaises(Exception):
             load_node(data_pk)
 

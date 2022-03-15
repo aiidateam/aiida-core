@@ -7,16 +7,19 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Tests for the ORM mixin classes."""
 
-from aiida.backends.testbase import AiidaTestCase
+import pytest
+
 from aiida.common import exceptions
 from aiida.common.links import LinkType
-from aiida.orm import Int, CalculationNode
+from aiida.orm import CalculationNode, Int
 from aiida.orm.utils.mixins import Sealable
 
 
-class TestSealable(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean')
+class TestSealable:
     """Tests for the `Sealable` mixin class."""
 
     @staticmethod
@@ -35,7 +38,7 @@ class TestSealable(AiidaTestCase):
         node = CalculationNode().store()
         node.seal()
 
-        with self.assertRaises(exceptions.ModificationNotAllowed):
+        with pytest.raises(exceptions.ModificationNotAllowed):
             node.validate_incoming(data, link_type=LinkType.INPUT_CALC, link_label='input')
 
     def test_validate_outgoing_sealed(self):
@@ -44,5 +47,5 @@ class TestSealable(AiidaTestCase):
         node = CalculationNode().store()
         node.seal()
 
-        with self.assertRaises(exceptions.ModificationNotAllowed):
+        with pytest.raises(exceptions.ModificationNotAllowed):
             node.validate_outgoing(data, link_type=LinkType.CREATE, link_label='create')

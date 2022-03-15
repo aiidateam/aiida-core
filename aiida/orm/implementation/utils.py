@@ -8,10 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility methods for backend non-specific implementations."""
+from collections.abc import Iterable, Mapping
+from decimal import Decimal
 import math
 import numbers
-
-from collections.abc import Iterable, Mapping
 
 from aiida.common import exceptions
 from aiida.common.constants import AIIDA_FLOAT_PRECISION
@@ -77,7 +77,7 @@ def clean_value(value):
 
         # This is for float-like types, like ``numpy.float128`` that are not json-serializable
         # Note that `numbers.Real` also match booleans but they are already returned above
-        if isinstance(val, numbers.Real):
+        if isinstance(val, (numbers.Real, Decimal)):
             string_representation = f'{{:.{AIIDA_FLOAT_PRECISION}g}}'.format(val)
             new_val = float(string_representation)
             if 'e' in string_representation and new_val.is_integer():

@@ -7,39 +7,47 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Module to test orm utilities to load nodes, codes etc."""
-from aiida.backends.testbase import AiidaTestCase
+import pytest
+
 from aiida.common.exceptions import NotExistent
-from aiida.orm import Node, Group, Data
-from aiida.orm.utils import load_entity, load_code, load_computer, load_group, load_node
+from aiida.orm import Data, Group, Node
+from aiida.orm.utils import load_code, load_computer, load_entity, load_group, load_node
 from aiida.orm.utils.loaders import NodeEntityLoader
 
 
-class TestOrmUtils(AiidaTestCase):
+class TestOrmUtils:
     """Test orm utils."""
+
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        self.computer = aiida_localhost
 
     def test_load_entity(self):
         """Test the functionality of load_entity which is the base function for the other loader functions."""
         entity_loader = NodeEntityLoader
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             load_entity(entity_loader=None)
 
         # No identifier keyword arguments specified
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             load_entity(entity_loader)
 
         # More than one identifier keyword arguments specified
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             load_entity(entity_loader, identifier='a', pk=1)
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             load_entity(entity_loader, pk='1')
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             load_entity(entity_loader, uuid=1)
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             load_entity(entity_loader, label=1)
 
     def test_load_code(self):
@@ -54,45 +62,45 @@ class TestOrmUtils(AiidaTestCase):
 
         # Load through full label
         loaded_code = load_code(code.full_label)
-        self.assertEqual(loaded_code.uuid, code.uuid)
+        assert loaded_code.uuid == code.uuid
 
         # Load through label
         loaded_code = load_code(code.label)
-        self.assertEqual(loaded_code.uuid, code.uuid)
+        assert loaded_code.uuid == code.uuid
 
         # Load through uuid
         loaded_code = load_code(code.uuid)
-        self.assertEqual(loaded_code.uuid, code.uuid)
+        assert loaded_code.uuid == code.uuid
 
         # Load through pk
         loaded_code = load_code(code.pk)
-        self.assertEqual(loaded_code.uuid, code.uuid)
+        assert loaded_code.uuid == code.uuid
 
         # Load through full label explicitly
         loaded_code = load_code(label=code.full_label)
-        self.assertEqual(loaded_code.uuid, code.uuid)
+        assert loaded_code.uuid == code.uuid
 
         # Load through label explicitly
         loaded_code = load_code(label=code.label)
-        self.assertEqual(loaded_code.uuid, code.uuid)
+        assert loaded_code.uuid == code.uuid
 
         # Load through uuid explicitly
         loaded_code = load_code(uuid=code.uuid)
-        self.assertEqual(loaded_code.uuid, code.uuid)
+        assert loaded_code.uuid == code.uuid
 
         # Load through pk explicitly
         loaded_code = load_code(pk=code.pk)
-        self.assertEqual(loaded_code.uuid, code.uuid)
+        assert loaded_code.uuid == code.uuid
 
         # Load through partial uuid without a dash
         loaded_code = load_code(uuid=code.uuid[:8])
-        self.assertEqual(loaded_code.uuid, code.uuid)
+        assert loaded_code.uuid == code.uuid
 
         # Load through partial uuid including a dash
         loaded_code = load_code(uuid=code.uuid[:10])
-        self.assertEqual(loaded_code.uuid, code.uuid)
+        assert loaded_code.uuid == code.uuid
 
-        with self.assertRaises(NotExistent):
+        with pytest.raises(NotExistent):
             load_code('non-existent-uuid')
 
     def test_load_computer(self):
@@ -102,37 +110,37 @@ class TestOrmUtils(AiidaTestCase):
 
         # Load through label
         loaded_computer = load_computer(computer.label)
-        self.assertEqual(loaded_computer.uuid, computer.uuid)
+        assert loaded_computer.uuid == computer.uuid
 
         # Load through uuid
         loaded_computer = load_computer(computer.uuid)
-        self.assertEqual(loaded_computer.uuid, computer.uuid)
+        assert loaded_computer.uuid == computer.uuid
 
         # Load through pk
         loaded_computer = load_computer(computer.pk)
-        self.assertEqual(loaded_computer.uuid, computer.uuid)
+        assert loaded_computer.uuid == computer.uuid
 
         # Load through label explicitly
         loaded_computer = load_computer(label=computer.label)
-        self.assertEqual(loaded_computer.uuid, computer.uuid)
+        assert loaded_computer.uuid == computer.uuid
 
         # Load through uuid explicitly
         loaded_computer = load_computer(uuid=computer.uuid)
-        self.assertEqual(loaded_computer.uuid, computer.uuid)
+        assert loaded_computer.uuid == computer.uuid
 
         # Load through pk explicitly
         loaded_computer = load_computer(pk=computer.pk)
-        self.assertEqual(loaded_computer.uuid, computer.uuid)
+        assert loaded_computer.uuid == computer.uuid
 
         # Load through partial uuid without a dash
         loaded_computer = load_computer(uuid=computer.uuid[:8])
-        self.assertEqual(loaded_computer.uuid, computer.uuid)
+        assert loaded_computer.uuid == computer.uuid
 
         # Load through partial uuid including a dash
         loaded_computer = load_computer(uuid=computer.uuid[:10])
-        self.assertEqual(loaded_computer.uuid, computer.uuid)
+        assert loaded_computer.uuid == computer.uuid
 
-        with self.assertRaises(NotExistent):
+        with pytest.raises(NotExistent):
             load_computer('non-existent-uuid')
 
     def test_load_group(self):
@@ -142,37 +150,37 @@ class TestOrmUtils(AiidaTestCase):
 
         # Load through label
         loaded_group = load_group(group.label)
-        self.assertEqual(loaded_group.uuid, group.uuid)
+        assert loaded_group.uuid == group.uuid
 
         # Load through uuid
         loaded_group = load_group(group.uuid)
-        self.assertEqual(loaded_group.uuid, group.uuid)
+        assert loaded_group.uuid == group.uuid
 
         # Load through pk
         loaded_group = load_group(group.pk)
-        self.assertEqual(loaded_group.uuid, group.uuid)
+        assert loaded_group.uuid == group.uuid
 
         # Load through label explicitly
         loaded_group = load_group(label=group.label)
-        self.assertEqual(loaded_group.uuid, group.uuid)
+        assert loaded_group.uuid == group.uuid
 
         # Load through uuid explicitly
         loaded_group = load_group(uuid=group.uuid)
-        self.assertEqual(loaded_group.uuid, group.uuid)
+        assert loaded_group.uuid == group.uuid
 
         # Load through pk explicitly
         loaded_group = load_group(pk=group.pk)
-        self.assertEqual(loaded_group.uuid, group.uuid)
+        assert loaded_group.uuid == group.uuid
 
         # Load through partial uuid without a dash
         loaded_group = load_group(uuid=group.uuid[:8])
-        self.assertEqual(loaded_group.uuid, group.uuid)
+        assert loaded_group.uuid == group.uuid
 
         # Load through partial uuid including a dash
         loaded_group = load_group(uuid=group.uuid[:10])
-        self.assertEqual(loaded_group.uuid, group.uuid)
+        assert loaded_group.uuid == group.uuid
 
-        with self.assertRaises(NotExistent):
+        with pytest.raises(NotExistent):
             load_group('non-existent-uuid')
 
     def test_load_node(self):
@@ -181,33 +189,33 @@ class TestOrmUtils(AiidaTestCase):
 
         # Load through uuid
         loaded_node = load_node(node.uuid)
-        self.assertIsInstance(loaded_node, Node)
-        self.assertEqual(loaded_node.uuid, node.uuid)
+        assert isinstance(loaded_node, Node)
+        assert loaded_node.uuid == node.uuid
 
         # Load through pk
         loaded_node = load_node(node.pk)
-        self.assertIsInstance(loaded_node, Node)
-        self.assertEqual(loaded_node.uuid, node.uuid)
+        assert isinstance(loaded_node, Node)
+        assert loaded_node.uuid == node.uuid
 
         # Load through uuid explicitly
         loaded_node = load_node(uuid=node.uuid)
-        self.assertIsInstance(loaded_node, Node)
-        self.assertEqual(loaded_node.uuid, node.uuid)
+        assert isinstance(loaded_node, Node)
+        assert loaded_node.uuid == node.uuid
 
         # Load through pk explicitly
         loaded_node = load_node(pk=node.pk)
-        self.assertIsInstance(loaded_node, Node)
-        self.assertEqual(loaded_node.uuid, node.uuid)
+        assert isinstance(loaded_node, Node)
+        assert loaded_node.uuid == node.uuid
 
         # Load through partial uuid without a dash
         loaded_node = load_node(uuid=node.uuid[:8])
-        self.assertIsInstance(loaded_node, Node)
-        self.assertEqual(loaded_node.uuid, node.uuid)
+        assert isinstance(loaded_node, Node)
+        assert loaded_node.uuid == node.uuid
 
         # Load through partial uuid including a dashs
         loaded_node = load_node(uuid=node.uuid[:10])
-        self.assertIsInstance(loaded_node, Node)
-        self.assertEqual(loaded_node.uuid, node.uuid)
+        assert isinstance(loaded_node, Node)
+        assert loaded_node.uuid == node.uuid
 
-        with self.assertRaises(NotExistent):
+        with pytest.raises(NotExistent):
             load_group('non-existent-uuid')

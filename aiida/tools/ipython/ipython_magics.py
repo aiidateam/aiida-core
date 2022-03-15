@@ -33,8 +33,9 @@ Usage
 
    In [2]: %aiida
 """
+import json
 
-from IPython import version_info, get_ipython
+from IPython import get_ipython, version_info
 from IPython.core import magic
 
 
@@ -75,8 +76,8 @@ class AiiDALoaderMagics(magic.Magics):
         .. todo:: implement parameters, e.g. for the profile to load.
         """
         # pylint: disable=unused-argument,attribute-defined-outside-init
-        from aiida.manage.configuration import load_profile
         from aiida.cmdline.utils.shell import get_start_namespace
+        from aiida.manage.configuration import load_profile
 
         self.is_warning = False
         lcontent = line.strip()
@@ -97,8 +98,6 @@ class AiiDALoaderMagics(magic.Magics):
         """
         Output in JSON format.
         """
-        from aiida.common import json
-
         obj = {'current_state': self.current_state}
         if version_info[0] >= 3:
             return obj

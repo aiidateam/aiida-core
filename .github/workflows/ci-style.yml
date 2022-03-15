@@ -1,4 +1,4 @@
-name: continuous-integration
+name: continuous-integration-style
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
     - name: Set up Python 3.8
       uses: actions/setup-python@v2
       with:
-        python-version: 3.8
+        python-version: '3.8'
 
     - name: Install system dependencies
       # note libkrb5-dev is required as a dependency for the gssapi pip install
@@ -29,7 +29,9 @@ jobs:
 
     - name: Install python dependencies
       run: |
-        pip install -e .[all]
+        pip install --upgrade pip
+        pip install -r requirements/requirements-py-3.8.txt
+        pip install -e .[pre-commit]
         pip freeze
 
     - name: Run pre-commit

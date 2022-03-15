@@ -8,13 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for testing memory leakage."""
-from tests.utils import processes as test_processes  # pylint: disable=no-name-in-module,import-error
-from tests.utils.memory import get_instances  # pylint: disable=no-name-in-module,import-error
+from aiida import orm
 from aiida.engine import processes, run_get_node
 from aiida.plugins import CalculationFactory
-from aiida import orm
+from tests.utils import processes as test_processes  # pylint: disable=no-name-in-module,import-error
+from tests.utils.memory import get_instances  # pylint: disable=no-name-in-module,import-error
 
-ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 
 
 def run_finished_ok(*args, **kwargs):
@@ -36,7 +36,7 @@ def test_leak_run_process():
 
 def test_leak_local_calcjob(aiida_local_code_factory):
     """Test whether running a local CalcJob leaks memory."""
-    inputs = {'x': orm.Int(1), 'y': orm.Int(2), 'code': aiida_local_code_factory('arithmetic.add', '/bin/bash')}
+    inputs = {'x': orm.Int(1), 'y': orm.Int(2), 'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash')}
     run_finished_ok(ArithmeticAddCalculation, **inputs)
 
     # check that no reference to the process is left in memory
@@ -51,7 +51,7 @@ def test_leak_ssh_calcjob():
     Note: This relies on the 'slurm-ssh' computer being set up.
     """
     code = orm.Code(
-        input_plugin_name='arithmetic.add', remote_computer_exec=[orm.load_computer('slurm-ssh'), '/bin/bash']
+        input_plugin_name='core.arithmetic.add', remote_computer_exec=[orm.load_computer('slurm-ssh'), '/bin/bash']
     )
     inputs = {'x': orm.Int(1), 'y': orm.Int(2), 'code': code}
     run_finished_ok(ArithmeticAddCalculation, **inputs)

@@ -8,11 +8,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Convenience classes to help building the input dictionaries for Processes."""
-import collections
-from typing import Any, Type, TYPE_CHECKING
+from collections.abc import Mapping, MutableMapping
+import json
+from typing import TYPE_CHECKING, Any, Type
+from uuid import uuid4
 
-from aiida.orm import Node
+import yaml
+
 from aiida.engine.processes.ports import PortNamespace
+from aiida.orm import Dict, Node
+from aiida.orm.nodes.data.base import BaseType
 
 if TYPE_CHECKING:
     from aiida.engine.processes.process import Process
@@ -20,7 +25,21 @@ if TYPE_CHECKING:
 __all__ = ('ProcessBuilder', 'ProcessBuilderNamespace')
 
 
-class ProcessBuilderNamespace(collections.abc.MutableMapping):
+class PrettyEncoder(json.JSONEncoder):
+    """JSON encoder for returning a pretty representation of an AiiDA ``ProcessBuilder``."""
+
+    def default(self, o):  # pylint: disable=arguments-differ
+        if isinstance(o, (ProcessBuilder, ProcessBuilderNamespace)):
+            return dict(o)
+        if isinstance(o, Dict):
+            return o.get_dict()
+        if isinstance(o, BaseType):
+            return o.value
+        if isinstance(o, Node):
+            return o.get_description()
+
+
+class ProcessBuilderNamespace(MutableMapping):
     """Input namespace for the `ProcessBuilder`.
 
     Dynamically generates the getters and setters for the input ports of a given PortNamespace
@@ -40,6 +59,8 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
         self._port_namespace = port_namespace
         self._valid_fields = []
         self._data = {}
+
+        dynamic_properties = {}
 
         # The name and port objects have to be passed to the defined functions as defaults for
         # their arguments, because this way the content at the time of defining the method is
@@ -69,7 +90,15 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
             fgetter.__doc__ = str(port)
             getter = property(fgetter)
             getter.setter(fsetter)  # pylint: disable=too-many-function-args
-            setattr(self.__class__, name, getter)
+            dynamic_properties[name] = getter
+
+        # The dynamic property can only be attached to a class and not an instance, however, we cannot attach it to
+        # the ``ProcessBuilderNamespace`` class since it would interfere with other instances that may already
+        # exist. The workaround is to create a new class on the fly that derives from ``ProcessBuilderNamespace``
+        # and add the dynamic property to that instead
+        class_name = f'{self.__class__.__name__}-{uuid4()}'
+        child_class = type(class_name, (self.__class__,), dynamic_properties)
+        self.__class__ = child_class
 
     def __setattr__(self, attr: str, value: Any) -> None:
         """Assign the given value to the port with key `attr`.
@@ -86,10 +115,10 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
             except KeyError as exception:
                 if not self._port_namespace.dynamic:
                     raise AttributeError(f'Unknown builder parameter: {attr}') from exception
-                port = None  # type: ignore[assignment]
+                port = None
             else:
                 value = port.serialize(value)  # type: ignore[union-attr]
-                validation_error = port.validate(value)
+                validation_error = port.validate(value)  # type: ignore[union-attr]
                 if validation_error:
                     raise ValueError(f'invalid attribute value {validation_error.message}')
 
@@ -133,7 +162,7 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
 
     def _recursive_merge(self, dictionary, key, value):
         """Recursively merge the contents of ``dictionary`` setting its ``key`` to ``value``."""
-        if isinstance(value, collections.abc.Mapping):
+        if isinstance(value, Mapping):
             for inner_key, inner_value in value.items():
                 self._recursive_merge(dictionary[key], inner_key, inner_value)
         else:
@@ -172,13 +201,13 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
         """
         if args:
             for key, value in args[0].items():
-                if isinstance(value, collections.abc.Mapping):
+                if isinstance(value, Mapping):
                     self[key].update(value)
                 else:
                     self.__setattr__(key, value)
 
         for key, value in kwds.items():
-            if isinstance(value, collections.abc.Mapping):
+            if isinstance(value, Mapping):
                 self[key].update(value)
             else:
                 self.__setattr__(key, value)
@@ -203,12 +232,12 @@ class ProcessBuilderNamespace(collections.abc.MutableMapping):
         :param value: a nested mapping of port values
         :return: the same mapping but without any nested namespace that is completely empty.
         """
-        if isinstance(value, collections.abc.Mapping) and not isinstance(value, Node):
+        if isinstance(value, Mapping) and not isinstance(value, Node):
             result = {}
             for key, sub_value in value.items():
                 pruned = self._prune(sub_value)
                 # If `pruned` is an "empty'ish" mapping and not an instance of `Node`, skip it, otherwise keep it.
-                if not (isinstance(pruned, collections.abc.Mapping) and not pruned and not isinstance(pruned, Node)):
+                if not (isinstance(pruned, Mapping) and not pruned and not isinstance(pruned, Node)):
                     result[key] = pruned
             return result
 
@@ -231,3 +260,10 @@ class ProcessBuilder(ProcessBuilderNamespace):  # pylint: disable=too-many-ances
     def process_class(self) -> Type['Process']:
         """Return the process class for which this builder is constructed."""
         return self._process_class
+
+    def _repr_pretty_(self, p, _) -> str:  # pylint: disable=invalid-name
+        """Pretty representation for in the IPython console and notebooks."""
+        return p.text(
+            f'Process class: {self._process_class.__name__}\n'
+            f'Inputs:\n{yaml.safe_dump(json.JSONDecoder().decode(PrettyEncoder().encode(self)))}'
+        )

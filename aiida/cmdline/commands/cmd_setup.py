@@ -15,8 +15,7 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.params.options.commands import setup as options_setup
 from aiida.cmdline.utils import echo
-from aiida.manage.configuration import load_profile
-from aiida.manage.manager import get_manager
+from aiida.manage.configuration import Profile, load_profile
 
 
 @verdi.command('setup')
@@ -40,54 +39,64 @@ from aiida.manage.manager import get_manager
 @options_setup.SETUP_BROKER_PORT()
 @options_setup.SETUP_BROKER_VIRTUAL_HOST()
 @options_setup.SETUP_REPOSITORY_URI()
+@options_setup.SETUP_TEST_PROFILE()
 @options.CONFIG_FILE()
 def setup(
-    non_interactive, profile, email, first_name, last_name, institution, db_engine, db_backend, db_host, db_port,
-    db_name, db_username, db_password, broker_protocol, broker_username, broker_password, broker_host, broker_port,
-    broker_virtual_host, repository
+    non_interactive, profile: Profile, email, first_name, last_name, institution, db_engine, db_backend, db_host,
+    db_port, db_name, db_username, db_password, broker_protocol, broker_username, broker_password, broker_host,
+    broker_port, broker_virtual_host, repository, test_profile
 ):
-    """Setup a new profile."""
+    """Setup a new profile.
+
+    This method assumes that an empty PSQL database has been created and that the database user has been created.
+    """
     # pylint: disable=too-many-arguments,too-many-locals,unused-argument
     from aiida import orm
     from aiida.manage.configuration import get_config
 
-    profile.database_engine = db_engine
-    profile.database_backend = db_backend
-    profile.database_name = db_name
-    profile.database_port = db_port
-    profile.database_hostname = db_host
-    profile.database_username = db_username
-    profile.database_password = db_password
-    profile.broker_protocol = broker_protocol
-    profile.broker_username = broker_username
-    profile.broker_password = broker_password
-    profile.broker_host = broker_host
-    profile.broker_port = broker_port
-    profile.broker_virtual_host = broker_virtual_host
-    profile.repository_uri = f'file://{repository}'
+    profile.set_storage(
+        db_backend, {
+            'database_engine': db_engine,
+            'database_hostname': db_host,
+            'database_port': db_port,
+            'database_name': db_name,
+            'database_username': db_username,
+            'database_password': db_password,
+            'repository_uri': f'file://{repository}',
+        }
+    )
+    profile.set_process_controller(
+        'rabbitmq', {
+            'broker_protocol': broker_protocol,
+            'broker_username': broker_username,
+            'broker_password': broker_password,
+            'broker_host': broker_host,
+            'broker_port': broker_port,
+            'broker_virtual_host': broker_virtual_host,
+        }
+    )
+    profile.is_test_profile = test_profile
 
     config = get_config()
 
-    # Creating the profile
+    # Create the profile, set it as the default and load it
     config.add_profile(profile)
     config.set_default_profile(profile.name)
-
-    # Load the profile
     load_profile(profile.name)
     echo.echo_success(f'created new profile `{profile.name}`.')
 
-    # Migrate the database
-    echo.echo_info('migrating the database.')
-    backend = get_manager()._load_backend(schema_check=False)  # pylint: disable=protected-access
+    # Initialise the storage
+    echo.echo_report('initialising the profile storage.')
+    storage_cls = profile.storage_cls
 
     try:
-        backend.migrate()
+        storage_cls.migrate(profile)
     except Exception as exception:  # pylint: disable=broad-except
         echo.echo_critical(
-            f'database migration failed, probably because connection details are incorrect:\n{exception}'
+            f'storage initialisation failed, probably because connection details are incorrect:\n{exception}'
         )
     else:
-        echo.echo_success('database migration completed.')
+        echo.echo_success('storage initialisation completed.')
 
     # Optionally setting configuration default user settings
     config.set_option('autofill.user.email', email, override=False)
@@ -101,8 +110,10 @@ def setup(
     )
     if created:
         user.store()
-    profile.default_user = user.email
+    profile.default_user_email = user.email
     config.update_profile(profile)
+
+    # store the updated configuration
     config.store()
 
 
@@ -133,12 +144,13 @@ def setup(
 @options_setup.QUICKSETUP_BROKER_PORT()
 @options_setup.QUICKSETUP_BROKER_VIRTUAL_HOST()
 @options_setup.QUICKSETUP_REPOSITORY_URI()
+@options_setup.QUICKSETUP_TEST_PROFILE()
 @options.CONFIG_FILE()
 @click.pass_context
 def quicksetup(
     ctx, non_interactive, profile, email, first_name, last_name, institution, db_engine, db_backend, db_host, db_port,
     db_name, db_username, db_password, su_db_name, su_db_username, su_db_password, broker_protocol, broker_username,
-    broker_password, broker_host, broker_port, broker_virtual_host, repository
+    broker_password, broker_host, broker_port, broker_virtual_host, repository, test_profile
 ):
     """Setup a new profile in a fully automated fashion."""
     # pylint: disable=too-many-arguments,too-many-locals
@@ -193,5 +205,6 @@ def quicksetup(
         'broker_port': broker_port,
         'broker_virtual_host': broker_virtual_host,
         'repository': repository,
+        'test_profile': test_profile,
     }
     ctx.invoke(setup, **setup_parameters)

@@ -7,11 +7,62 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=wildcard-import,undefined-variable
 """Module with `Node` sub classes for data and processes."""
 
-from .data import *
-from .process import *
-from .node import *
+# AUTO-GENERATED
 
-__all__ = (data.__all__ + process.__all__ + node.__all__)
+# yapf: disable
+# pylint: disable=wildcard-import
+
+from .data import *
+from .node import *
+from .process import *
+from .repository import *
+
+__all__ = (
+    'ArrayData',
+    'BandsData',
+    'BaseType',
+    'Bool',
+    'CalcFunctionNode',
+    'CalcJobNode',
+    'CalculationNode',
+    'CifData',
+    'Code',
+    'Data',
+    'Dict',
+    'EnumData',
+    'Float',
+    'FolderData',
+    'Int',
+    'JsonableData',
+    'Kind',
+    'KpointsData',
+    'List',
+    'Node',
+    'NodeRepositoryMixin',
+    'NumericType',
+    'OrbitalData',
+    'ProcessNode',
+    'ProjectionData',
+    'RemoteData',
+    'RemoteStashData',
+    'RemoteStashFolderData',
+    'SinglefileData',
+    'Site',
+    'Str',
+    'StructureData',
+    'TrajectoryData',
+    'UpfData',
+    'WorkChainNode',
+    'WorkFunctionNode',
+    'WorkflowNode',
+    'XyData',
+    'cif_from_ase',
+    'find_bandgap',
+    'has_pycifrw',
+    'pycifrw_from_cif',
+    'to_aiida_type',
+)
+
+# yapf: enable

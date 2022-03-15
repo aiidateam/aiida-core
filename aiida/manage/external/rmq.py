@@ -14,7 +14,7 @@ from collections.abc import Mapping
 import logging
 import traceback
 
-from kiwipy import communications, Future
+from kiwipy import Future, communications
 import pamqp.encode
 import plumpy
 
@@ -175,12 +175,12 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         """
         from aiida.common import exceptions
         from aiida.engine.exceptions import PastException
-        from aiida.orm import load_node, Data
+        from aiida.orm import Data, load_node
         from aiida.orm.utils import serialize
 
         try:
             node = load_node(pk=pid)
-        except (exceptions.MultipleObjectsError, exceptions.NotExistent) as exception:
+        except (exceptions.MultipleObjectsError, exceptions.NotExistent):
             # In this case, the process node corresponding to the process id, cannot be resolved uniquely or does not
             # exist. The latter being the most common case, where someone deleted the node, before the process was
             # properly terminated. Since the node is never coming back and so the process will never be able to continue

@@ -9,100 +9,101 @@
 ###########################################################################
 # pylint: disable=too-many-lines,too-many-arguments
 """Package for node ORM classes."""
+import copy
 import datetime
 import importlib
 from logging import Logger
-import warnings
-import traceback
-from typing import Any, Dict, IO, Iterator, List, Optional, Sequence, Tuple, Type, Union
-from typing import TYPE_CHECKING
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Dict,
+    Generic,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 from uuid import UUID
 
 from aiida.common import exceptions
 from aiida.common.escaping import sql_string_match
-from aiida.common.hashing import make_hash, _HASH_EXTRA_KEY
+from aiida.common.hashing import make_hash
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
-from aiida.common.warnings import AiidaDeprecationWarning
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 from aiida.orm.utils.links import LinkManager, LinkTriple
-from aiida.orm.utils._repository import Repository
 from aiida.orm.utils.node import AbstractNodeMeta
-from aiida.orm import autogroup
 
 from ..comments import Comment
 from ..computers import Computer
-from ..entities import Entity, EntityExtrasMixin, EntityAttributesMixin
 from ..entities import Collection as EntityCollection
+from ..entities import Entity, EntityAttributesMixin, EntityExtrasMixin
 from ..querybuilder import QueryBuilder
 from ..users import User
+from .repository import NodeRepositoryMixin
 
 if TYPE_CHECKING:
-    from aiida.repository import File
-    from ..implementation import Backend
-    from ..implementation.nodes import BackendNode
+    from ..implementation import BackendNode, StorageBackend
 
 __all__ = ('Node',)
 
-_NO_DEFAULT = tuple()  # type: ignore[var-annotated]
+NodeType = TypeVar('NodeType', bound='Node')
 
 
-class WarnWhenNotEntered:
-    """Temporary wrapper to warn when `Node.open` is called outside of a context manager."""
+class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
+    """The collection of nodes."""
 
-    def __init__(self, fileobj: Union[IO[str], IO[bytes]], name: str) -> None:
-        self._fileobj: Union[IO[str], IO[bytes]] = fileobj
-        self._name = name
-        self._was_entered = False
+    @staticmethod
+    def _entity_base_cls() -> Type['Node']:
+        return Node
 
-    def _warn_if_not_entered(self, method) -> None:
-        """Fire a warning if the object wrapper has not yet been entered."""
-        if not self._was_entered:
-            msg = f'\nThe method `{method}` was called on the return value of `{self._name}.open()`' + \
-                    ' outside of a context manager.\n' + \
-                  'Please wrap this call inside `with <node instance>.open(): ...` to silence this warning. ' + \
-                  'This will raise an exception, starting from `aiida-core==2.0.0`.\n'
+    def delete(self, pk: int) -> None:
+        """Delete a `Node` from the collection with the given id
 
-            try:
-                caller = traceback.format_stack()[-3]
-            except Exception:  # pylint: disable=broad-except
-                msg += 'Could not determine the line of code responsible for triggering this warning.'
-            else:
-                msg += f'The offending call comes from:\n{caller}'
+        :param pk: the node id
+        """
+        node = self.get(id=pk)
 
-            warnings.warn(msg, AiidaDeprecationWarning)  # pylint: disable=no-member
+        if not node.is_stored:
+            return
 
-    def __enter__(self) -> Union[IO[str], IO[bytes]]:
-        self._was_entered = True
-        return self._fileobj.__enter__()
+        if node.get_incoming().all():
+            raise exceptions.InvalidOperation(f'cannot delete Node<{node.pk}> because it has incoming links')
 
-    def __exit__(self, *args: Any) -> None:
-        self._fileobj.__exit__(*args)
+        if node.get_outgoing().all():
+            raise exceptions.InvalidOperation(f'cannot delete Node<{node.pk}> because it has outgoing links')
 
-    def __getattr__(self, key: str):
-        if key == '_fileobj':
-            return self._fileobj
-        return getattr(self._fileobj, key)
+        self._backend.nodes.delete(pk)
 
-    def __del__(self) -> None:
-        self._warn_if_not_entered('del')
+    def iter_repo_keys(self,
+                       filters: Optional[dict] = None,
+                       subclassing: bool = True,
+                       batch_size: int = 100) -> Iterator[str]:
+        """Iterate over all repository object keys for this ``Node`` class
 
-    def __iter__(self) -> Iterator[Union[str, bytes]]:
-        return self._fileobj.__iter__()
+        .. note:: keys will not be deduplicated, wrap in a ``set`` to achieve this
 
-    def __next__(self) -> Union[str, bytes]:
-        return self._fileobj.__next__()
-
-    def read(self, *args: Any, **kwargs: Any) -> Union[str, bytes]:
-        self._warn_if_not_entered('read')
-        return self._fileobj.read(*args, **kwargs)
-
-    def close(self, *args: Any, **kwargs: Any) -> None:
-        self._warn_if_not_entered('close')
-        return self._fileobj.close(*args, **kwargs)  # type: ignore[call-arg]
+        :param filters: Filters for the node query
+        :param subclassing: Whether to include subclasses of the given class
+        :param batch_size: The number of nodes to fetch data for at once
+        """
+        from aiida.repository import Repository
+        query = QueryBuilder(backend=self.backend)
+        query.append(self.entity_type, subclassing=subclassing, filters=filters, project=['repository_metadata'])
+        for metadata, in query.iterall(batch_size=batch_size):
+            for key in Repository.flatten(metadata).values():
+                if key is not None:
+                    yield key
 
 
-class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractNodeMeta):
+class Node(
+    Entity['BackendNode'], NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractNodeMeta
+):
     """
     Base class for all nodes in AiiDA.
 
@@ -117,31 +118,15 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
     In the plugin, also set the _plugin_type_string, to be set in the DB in
     the 'type' field.
     """
-
     # pylint: disable=too-many-public-methods
 
-    class Collection(EntityCollection):
-        """The collection of nodes."""
+    # The keys in the extras that are used to store the hash of the node and whether it should be used in caching.
+    _HASH_EXTRA_KEY: str = '_aiida_hash'
+    _VALID_CACHE_KEY: str = '_aiida_valid_cache'
 
-        def delete(self, node_id: int) -> None:
-            """Delete a `Node` from the collection with the given id
-
-            :param node_id: the node id
-            """
-            node = self.get(id=node_id)
-
-            if not node.is_stored:
-                return
-
-            if node.get_incoming().all():
-                raise exceptions.InvalidOperation(f'cannot delete Node<{node.pk}> because it has incoming links')
-
-            if node.get_outgoing().all():
-                raise exceptions.InvalidOperation(f'cannot delete Node<{node.pk}> because it has outgoing links')
-
-            repository = node._repository  # pylint: disable=protected-access
-            self._backend.nodes.delete(node_id)
-            repository.erase(force=True)
+    # added by metaclass
+    _plugin_type_string: ClassVar[str]
+    _query_type_string: ClassVar[str]
 
     # This will be set by the metaclass call
     _logger: Optional[Logger] = None
@@ -156,30 +141,27 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
     # Flag that determines whether the class can be cached.
     _cachable = False
 
-    # Base path within the repository where to put objects by default
-    _repository_base_path = 'path'
-
     # Flag that determines whether the class can be stored.
     _storable = False
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
     # These are to be initialized in the `initialization` method
     _incoming_cache: Optional[List[LinkTriple]] = None
-    _repository: Optional[Repository] = None
 
-    @classmethod
-    def from_backend_entity(cls, backend_entity: 'BackendNode') -> 'Node':
-        entity = super().from_backend_entity(backend_entity)
-        return entity
+    Collection = NodeCollection
+
+    @classproperty
+    def objects(cls: Type[NodeType]) -> NodeCollection[NodeType]:  # pylint: disable=no-self-argument
+        return NodeCollection.get_cached(cls, get_manager().get_profile_storage())  # type: ignore[arg-type]
 
     def __init__(
         self,
-        backend: Optional['Backend'] = None,
+        backend: Optional['StorageBackend'] = None,
         user: Optional[User] = None,
         computer: Optional[Computer] = None,
         **kwargs: Any
     ) -> None:
-        backend = backend or get_manager().get_backend()
+        backend = backend or get_manager().get_profile_storage()
 
         if computer and not computer.is_stored:
             raise ValueError('the computer is not stored')
@@ -194,10 +176,6 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
             node_type=self.class_node_type, user=user.backend_entity, computer=computer, **kwargs
         )
         super().__init__(backend_entity)
-
-    @property
-    def backend_entity(self) -> 'BackendNode':
-        return super().backend_entity
 
     def __eq__(self, other: Any) -> bool:
         """Fallback equality comparison by uuid (can be overwritten by specific types)"""
@@ -235,19 +213,18 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         super().initialize()
 
         # A cache of incoming links represented as a list of LinkTriples instances
-        self._incoming_cache = list()
-
-        # Calls the initialisation from the RepositoryMixin
-        self._repository = Repository(uuid=self.uuid, is_stored=self.is_stored, base_path=self._repository_base_path)
+        self._incoming_cache = []
 
     def _validate(self) -> bool:
-        """Check if the attributes and files retrieved from the database are valid.
+        """Validate information stored in Node object.
 
-        Must be able to work even before storing: therefore, use the `get_attr` and similar methods that automatically
-        read either from the DB or from the internal attribute cache.
+        For the :py:class:`~aiida.orm.Node` base class, this check is always valid.
+        Subclasses can override this method to perform additional checks
+        and should usually call ``super()._validate()`` first!
 
-        For the base class, this is always valid. Subclasses will reimplement this.
-        In the subclass, always call the super()._validate() method first!
+        This method is called automatically before storing the node in the DB.
+        Therefore, use :py:meth:`~aiida.orm.entities.EntityAttributesMixin.get_attribute()` and similar methods that
+        automatically read either from the DB or from the internal attribute cache.
         """
         # pylint: disable=no-self-use
         return True
@@ -263,8 +240,11 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
             raise exceptions.StoringNotAllowed(self._unstorable_message)
 
         if not is_registered_entry_point(self.__module__, self.__class__.__name__, groups=('aiida.node', 'aiida.data')):
-            msg = f'class `{self.__module__}:{self.__class__.__name__}` does not have registered entry point'
-            raise exceptions.StoringNotAllowed(msg)
+            raise exceptions.StoringNotAllowed(
+                f'class `{self.__module__}:{self.__class__.__name__}` does not have a registered entry point. '
+                'Check that the corresponding plugin is installed '
+                'and that the entry point shows up in `verdi plugin list`.'
+            )
 
     @classproperty
     def class_node_type(cls) -> str:
@@ -346,12 +326,24 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         self.backend_entity.description = value
 
     @property
-    def computer(self) -> Optional[Computer]:
-        """Return the computer of this node.
+    def repository_metadata(self) -> Dict[str, Any]:
+        """Return the node repository metadata.
 
-        :return: the computer or None
-        :rtype: `Computer` or None
+        :return: the repository metadata
         """
+        return self.backend_entity.repository_metadata
+
+    @repository_metadata.setter
+    def repository_metadata(self, value: Dict[str, Any]) -> None:
+        """Set the repository metadata.
+
+        :param value: the new value to set
+        """
+        self.backend_entity.repository_metadata = value
+
+    @property
+    def computer(self) -> Optional[Computer]:
+        """Return the computer of this node."""
         if self.backend_entity.computer:
             return Computer.from_backend_entity(self.backend_entity.computer)
 
@@ -368,18 +360,11 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
         type_check(computer, Computer, allow_none=True)
 
-        if computer is not None:
-            computer = computer.backend_entity
-
-        self.backend_entity.computer = computer
+        self.backend_entity.computer = None if computer is None else computer.backend_entity
 
     @property
     def user(self) -> User:
-        """Return the user of this node.
-
-        :return: the user
-        :rtype: `User`
-        """
+        """Return the user of this node."""
         return User.from_backend_entity(self.backend_entity.user)
 
     @user.setter
@@ -410,341 +395,6 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         """
         return self.backend_entity.mtime
 
-    def list_objects(self, path: Optional[str] = None, key: Optional[str] = None) -> List['File']:
-        """Return a list of the objects contained in this repository, optionally in the given sub directory.
-
-        .. deprecated:: 1.4.0
-            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
-
-        :param path: the relative path of the object within the repository.
-        :param key: fully qualified identifier for the object within the repository
-        :return: a list of `File` named tuples representing the objects present in directory with the given path
-        :raises FileNotFoundError: if the `path` does not exist in the repository of this node
-        """
-        assert self._repository is not None, 'repository not initialised'
-
-        if key is not None:
-            if path is not None:
-                raise ValueError('cannot specify both `path` and `key`.')
-            warnings.warn(
-                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
-                AiidaDeprecationWarning
-            )  # pylint: disable=no-member
-            path = key
-
-        return self._repository.list_objects(path)
-
-    def list_object_names(self, path: Optional[str] = None, key: Optional[str] = None) -> List[str]:
-        """Return a list of the object names contained in this repository, optionally in the given sub directory.
-
-        .. deprecated:: 1.4.0
-            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
-
-        :param path: the relative path of the object within the repository.
-        :param key: fully qualified identifier for the object within the repository
-
-        """
-        assert self._repository is not None, 'repository not initialised'
-
-        if key is not None:
-            if path is not None:
-                raise ValueError('cannot specify both `path` and `key`.')
-            warnings.warn(
-                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
-                AiidaDeprecationWarning
-            )  # pylint: disable=no-member
-            path = key
-
-        return self._repository.list_object_names(path)
-
-    def open(self, path: Optional[str] = None, mode: str = 'r', key: Optional[str] = None) -> WarnWhenNotEntered:
-        """Open a file handle to the object with the given path.
-
-        .. deprecated:: 1.4.0
-            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
-
-        .. deprecated:: 1.4.0
-            Starting from `v2.0.0` this will raise if not used in a context manager.
-
-        :param path: the relative path of the object within the repository.
-        :param key: fully qualified identifier for the object within the repository
-        :param mode: the mode under which to open the handle
-        """
-        assert self._repository is not None, 'repository not initialised'
-
-        if key is not None:
-            if path is not None:
-                raise ValueError('cannot specify both `path` and `key`.')
-            warnings.warn(
-                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
-                AiidaDeprecationWarning
-            )  # pylint: disable=no-member
-            path = key
-
-        if path is None:
-            raise TypeError("open() missing 1 required positional argument: 'path'")
-
-        if mode not in ['r', 'rb']:
-            warnings.warn("from v2.0 only the modes 'r' and 'rb' will be accepted", AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        return WarnWhenNotEntered(self._repository.open(path, mode), repr(self))
-
-    def get_object(self, path: Optional[str] = None, key: Optional[str] = None) -> 'File':
-        """Return the object with the given path.
-
-        .. deprecated:: 1.4.0
-            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
-
-        :param path: the relative path of the object within the repository.
-        :param key: fully qualified identifier for the object within the repository
-        :return: a `File` named tuple
-        """
-        assert self._repository is not None, 'repository not initialised'
-
-        if key is not None:
-            if path is not None:
-                raise ValueError('cannot specify both `path` and `key`.')
-            warnings.warn(
-                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
-                AiidaDeprecationWarning
-            )  # pylint: disable=no-member
-            path = key
-
-        if path is None:
-            raise TypeError("get_object() missing 1 required positional argument: 'path'")
-
-        return self._repository.get_object(path)
-
-    def get_object_content(self,
-                           path: Optional[str] = None,
-                           mode: str = 'r',
-                           key: Optional[str] = None) -> Union[str, bytes]:
-        """Return the content of a object with the given path.
-
-        .. deprecated:: 1.4.0
-            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
-
-        :param path: the relative path of the object within the repository.
-        :param key: fully qualified identifier for the object within the repository
-        """
-        assert self._repository is not None, 'repository not initialised'
-
-        if key is not None:
-            if path is not None:
-                raise ValueError('cannot specify both `path` and `key`.')
-            warnings.warn(
-                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
-                AiidaDeprecationWarning
-            )  # pylint: disable=no-member
-            path = key
-
-        if path is None:
-            raise TypeError("get_object_content() missing 1 required positional argument: 'path'")
-
-        if mode not in ['r', 'rb']:
-            warnings.warn("from v2.0 only the modes 'r' and 'rb' will be accepted", AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        return self._repository.get_object_content(path, mode)
-
-    def put_object_from_tree(
-        self,
-        filepath: str,
-        path: Optional[str] = None,
-        contents_only: bool = True,
-        force: bool = False,
-        key: Optional[str] = None
-    ) -> None:
-        """Store a new object under `path` with the contents of the directory located at `filepath` on this file system.
-
-        .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
-            This check can be avoided by using the `force` flag, but this should be used with extreme caution!
-
-        .. deprecated:: 1.4.0
-            First positional argument `path` has been deprecated and renamed to `filepath`.
-
-        .. deprecated:: 1.4.0
-            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
-
-        .. deprecated:: 1.4.0
-            Keyword `force` is deprecated and will be removed in `v2.0.0`.
-
-        .. deprecated:: 1.4.0
-            Keyword `contents_only` is deprecated and will be removed in `v2.0.0`.
-
-        :param filepath: absolute path of directory whose contents to copy to the repository
-        :param path: the relative path of the object within the repository.
-        :param key: fully qualified identifier for the object within the repository
-        :param contents_only: boolean, if True, omit the top level directory of the path and only copy its contents.
-        :param force: boolean, if True, will skip the mutability check
-        :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
-        """
-        assert self._repository is not None, 'repository not initialised'
-
-        if force:
-            warnings.warn('the `force` keyword is deprecated and will be removed in `v2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        if contents_only is False:
-            warnings.warn(
-                'the `contents_only` keyword is deprecated and will be removed in `v2.0.0`.', AiidaDeprecationWarning
-            )  # pylint: disable=no-member
-
-        if key is not None:
-            if path is not None:
-                raise ValueError('cannot specify both `path` and `key`.')
-            warnings.warn(
-                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
-                AiidaDeprecationWarning
-            )  # pylint: disable=no-member
-            path = key
-
-        self._repository.put_object_from_tree(filepath, path, contents_only, force)
-
-    def put_object_from_file(
-        self,
-        filepath: str,
-        path: Optional[str] = None,
-        mode: Optional[str] = None,
-        encoding: Optional[str] = None,
-        force: bool = False,
-        key: Optional[str] = None
-    ) -> None:
-        """Store a new object under `path` with contents of the file located at `filepath` on this file system.
-
-        .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
-            This check can be avoided by using the `force` flag, but this should be used with extreme caution!
-
-        .. deprecated:: 1.4.0
-            First positional argument `path` has been deprecated and renamed to `filepath`.
-
-        .. deprecated:: 1.4.0
-            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
-
-        .. deprecated:: 1.4.0
-            Keyword `force` is deprecated and will be removed in `v2.0.0`.
-
-        :param filepath: absolute path of file whose contents to copy to the repository
-        :param path: the relative path where to store the object in the repository.
-        :param key: fully qualified identifier for the object within the repository
-        :param mode: the file mode with which the object will be written
-            Deprecated: will be removed in `v2.0.0`
-        :param encoding: the file encoding with which the object will be written
-            Deprecated: will be removed in `v2.0.0`
-        :param force: boolean, if True, will skip the mutability check
-        :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
-        """
-        assert self._repository is not None, 'repository not initialised'
-
-        # Note that the defaults of `mode` and `encoding` had to be change to `None` from `w` and `utf-8` resptively, in
-        # order to detect when they were being passed such that the deprecation warning can be emitted. The defaults did
-        # not make sense and so ignoring them is justified, since the side-effect of this function, a file being copied,
-        # will continue working the same.
-        if force:
-            warnings.warn('the `force` keyword is deprecated and will be removed in `v2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        if mode is not None:
-            warnings.warn('the `mode` argument is deprecated and will be removed in `v2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        if encoding is not None:
-            warnings.warn(  # pylint: disable=no-member
-                'the `encoding` argument is deprecated and will be removed in `v2.0.0`', AiidaDeprecationWarning
-            )
-
-        if key is not None:
-            if path is not None:
-                raise ValueError('cannot specify both `path` and `key`.')
-            warnings.warn(
-                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
-                AiidaDeprecationWarning
-            )  # pylint: disable=no-member
-            path = key
-
-        if path is None:
-            raise TypeError("put_object_from_file() missing 1 required positional argument: 'path'")
-
-        self._repository.put_object_from_file(filepath, path, mode, encoding, force)
-
-    def put_object_from_filelike(
-        self,
-        handle: IO[Any],
-        path: Optional[str] = None,
-        mode: str = 'w',
-        encoding: str = 'utf8',
-        force: bool = False,
-        key: Optional[str] = None
-    ) -> None:
-        """Store a new object under `path` with contents of filelike object `handle`.
-
-        .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
-            This check can be avoided by using the `force` flag, but this should be used with extreme caution!
-
-        .. deprecated:: 1.4.0
-            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
-
-        .. deprecated:: 1.4.0
-            Keyword `force` is deprecated and will be removed in `v2.0.0`.
-
-        :param handle: filelike object with the content to be stored
-        :param path: the relative path where to store the object in the repository.
-        :param key: fully qualified identifier for the object within the repository
-        :param mode: the file mode with which the object will be written
-        :param encoding: the file encoding with which the object will be written
-        :param force: boolean, if True, will skip the mutability check
-        :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
-        """
-        assert self._repository is not None, 'repository not initialised'
-
-        if force:
-            warnings.warn('the `force` keyword is deprecated and will be removed in `v2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        if key is not None:
-            if path is not None:
-                raise ValueError('cannot specify both `path` and `key`.')
-            warnings.warn(
-                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
-                AiidaDeprecationWarning
-            )  # pylint: disable=no-member
-            path = key
-
-        if path is None:
-            raise TypeError("put_object_from_filelike() missing 1 required positional argument: 'path'")
-
-        self._repository.put_object_from_filelike(handle, path, mode, encoding, force)
-
-    def delete_object(self, path: Optional[str] = None, force: bool = False, key: Optional[str] = None) -> None:
-        """Delete the object from the repository.
-
-        .. warning:: If the repository belongs to a stored node, a `ModificationNotAllowed` exception will be raised.
-            This check can be avoided by using the `force` flag, but this should be used with extreme caution!
-
-        .. deprecated:: 1.4.0
-            Keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.
-
-        .. deprecated:: 1.4.0
-            Keyword `force` is deprecated and will be removed in `v2.0.0`.
-
-        :param key: fully qualified identifier for the object within the repository
-        :param force: boolean, if True, will skip the mutability check
-        :raises aiida.common.ModificationNotAllowed: if repository is immutable and `force=False`
-        """
-        assert self._repository is not None, 'repository not initialised'
-
-        if force:
-            warnings.warn('the `force` keyword is deprecated and will be removed in `v2.0.0`.', AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        if key is not None:
-            if path is not None:
-                raise ValueError('cannot specify both `path` and `key`.')
-            warnings.warn(
-                'keyword `key` is deprecated and will be removed in `v2.0.0`. Use `path` instead.',
-                AiidaDeprecationWarning
-            )  # pylint: disable=no-member
-            path = key
-
-        if path is None:
-            raise TypeError("delete_object() missing 1 required positional argument: 'path'")
-
-        self._repository.delete_object(path, force)
-
     def add_comment(self, content: str, user: Optional[User] = None) -> Comment:
         """Add a new comment.
 
@@ -752,7 +402,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         :param user: the user to associate with the comment, will use default if not supplied
         :return: the newly created comment
         """
-        user = user or User.objects.get_default()
+        user = user or User.objects(self.backend).get_default()
         return Comment(node=self, user=user, content=content).store()
 
     def get_comment(self, identifier: int) -> Comment:
@@ -763,14 +413,14 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
         :return: the comment
         """
-        return Comment.objects.get(dbnode_id=self.pk, id=identifier)
+        return Comment.objects(self.backend).get(dbnode_id=self.pk, id=identifier)
 
     def get_comments(self) -> List[Comment]:
         """Return a sorted list of comments for this node.
 
         :return: the list of comments, sorted by pk
         """
-        return Comment.objects.find(filters={'dbnode_id': self.pk}, order_by=[{'id': 'asc'}])
+        return Comment.objects(self.backend).find(filters={'dbnode_id': self.pk}, order_by=[{'id': 'asc'}])
 
     def update_comment(self, identifier: int, content: str) -> None:
         """Update the content of an existing comment.
@@ -780,7 +430,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         :raise aiida.common.NotExistent: if the comment with the given id does not exist
         :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
         """
-        comment = Comment.objects.get(dbnode_id=self.pk, id=identifier)
+        comment = Comment.objects(self.backend).get(dbnode_id=self.pk, id=identifier)
         comment.set_content(content)
 
     def remove_comment(self, identifier: int) -> None:  # pylint: disable=no-self-use
@@ -788,7 +438,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
         :param identifier: the comment pk
         """
-        Comment.objects.delete(identifier)
+        Comment.objects(self.backend).delete(identifier)
 
     def add_incoming(self, source: 'Node', link_type: LinkType, link_label: str) -> None:
         """Add a link of the given type from a given node to ourself.
@@ -824,11 +474,11 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         """
         from aiida.orm.utils.links import validate_link
 
-        validate_link(source, self, link_type, link_label)
+        validate_link(source, self, link_type, link_label, backend=self.backend)
 
         # Check if the proposed link would introduce a cycle in the graph following ancestor/descendant rules
         if link_type in [LinkType.CREATE, LinkType.INPUT_CALC, LinkType.INPUT_WORK]:
-            builder = QueryBuilder().append(
+            builder = QueryBuilder(backend=self.backend).append(
                 Node, filters={'id': self.pk}, tag='parent').append(
                 Node, filters={'id': source.pk}, tag='child', with_ancestors='parent')  # yapf:disable
             if builder.count() > 0:
@@ -892,7 +542,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         if not isinstance(link_type, tuple):
             link_type = (link_type,)
 
-        if link_type and not all([isinstance(t, LinkType) for t in link_type]):
+        if link_type and not all(isinstance(t, LinkType) for t in link_type):
             raise TypeError(f'link_type should be a LinkType or tuple of LinkType: got {link_type}')
 
         node_class = node_class or Node
@@ -905,7 +555,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         if link_label_filter:
             edge_filters['label'] = {'like': link_label_filter}
 
-        builder = QueryBuilder()
+        builder = QueryBuilder(backend=self.backend)
         builder.append(Node, filters=node_filters, tag='main')
 
         node_project = ['uuid'] if only_uuid else ['*']
@@ -1005,7 +655,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         assert self._incoming_cache is not None, 'incoming_cache not initialised'
         return bool(self._incoming_cache)
 
-    def store_all(self, with_transaction: bool = True, use_cache=None) -> 'Node':
+    def store_all(self, with_transaction: bool = True) -> 'Node':
         """Store the node, together with all input links.
 
         Unstored nodes from cached incoming linkswill also be stored.
@@ -1013,11 +663,6 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         :parameter with_transaction: if False, do not use a transaction because the caller will already have opened one.
         """
         assert self._incoming_cache is not None, 'incoming_cache not initialised'
-
-        if use_cache is not None:
-            warnings.warn(  # pylint: disable=no-member
-                'the `use_cache` argument is deprecated and will be removed in `v2.0.0`', AiidaDeprecationWarning
-            )
 
         if self.is_stored:
             raise exceptions.ModificationNotAllowed(f'Node<{self.id}> is already stored')
@@ -1032,7 +677,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
 
         return self.store(with_transaction)
 
-    def store(self, with_transaction: bool = True, use_cache=None) -> 'Node':  # pylint: disable=arguments-differ
+    def store(self, with_transaction: bool = True) -> 'Node':  # pylint: disable=arguments-differ
         """Store the node in the database while saving its attributes and repository directory.
 
         After being called attributes cannot be changed anymore! Instead, extras can be changed only AFTER calling
@@ -1044,11 +689,6 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         :parameter with_transaction: if False, do not use a transaction because the caller will already have opened one.
         """
         from aiida.manage.caching import get_use_cache
-
-        if use_cache is not None:
-            warnings.warn(  # pylint: disable=no-member
-                'the `use_cache` argument is deprecated and will be removed in `v2.0.0`', AiidaDeprecationWarning
-            )
 
         if not self.is_stored:
 
@@ -1074,9 +714,8 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
             else:
                 self._store(with_transaction=with_transaction, clean=True)
 
-            # Set up autogrouping used by verdi run
-            if autogroup.CURRENT_AUTOGROUP is not None and autogroup.CURRENT_AUTOGROUP.is_to_be_grouped(self):
-                group = autogroup.CURRENT_AUTOGROUP.get_or_create_group()
+            if self.backend.autogroup.is_to_be_grouped(self):
+                group = self.backend.autogroup.get_or_create_group()
                 group.add_nodes(self)
 
         return self
@@ -1087,23 +726,24 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         :param with_transaction: if False, do not use a transaction because the caller will already have opened one.
         :param clean: boolean, if True, will clean the attributes and extras before attempting to store
         """
-        assert self._repository is not None, 'repository not initialised'
+        from aiida.repository import Repository
+        from aiida.repository.backend import SandboxRepositoryBackend
 
-        # First store the repository folder such that if this fails, there won't be an incomplete node in the database.
-        # On the flipside, in the case that storing the node does fail, the repository will now have an orphaned node
-        # directory which will have to be cleaned manually sometime.
-        self._repository.store()
+        # Only if the backend repository is a sandbox do we have to clone its contents to the permanent repository.
+        if isinstance(self._repository.backend, SandboxRepositoryBackend):
+            repository_backend = self.backend.get_repository()
+            repository = Repository(backend=repository_backend)
+            repository.clone(self._repository)
+            # Swap the sandbox repository for the new permanent repository instance which should delete the sandbox
+            self._repository_instance = repository
 
-        try:
-            links = self._incoming_cache
-            self._backend_entity.store(links, with_transaction=with_transaction, clean=clean)
-        except Exception:
-            # I put back the files in the sandbox folder since the transaction did not succeed
-            self._repository.restore()
-            raise
+        self.repository_metadata = self._repository.serialize()
 
-        self._incoming_cache = list()
-        self._backend_entity.set_extra(_HASH_EXTRA_KEY, self.get_hash())
+        links = self._incoming_cache
+        self._backend_entity.store(links, with_transaction=with_transaction, clean=clean)
+
+        self._incoming_cache = []
+        self._backend_entity.set_extra(self._HASH_EXTRA_KEY, self.get_hash())
 
         return self
 
@@ -1121,11 +761,18 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
                 )
 
     def _store_from_cache(self, cache_node: 'Node', with_transaction: bool) -> None:
-        """Store this node from an existing cache node."""
-        assert self._repository is not None, 'repository not initialised'
-        assert cache_node._repository is not None, 'cache repository not initialised'  # pylint: disable=protected-access
+        """Store this node from an existing cache node.
 
+        .. note::
+
+            With the current implementation of the backend repository, which automatically deduplicates the content that
+            it contains, we do not have to copy the contents of the source node. Since the content should be exactly
+            equal, the repository will already contain it and there is nothing to copy. We simply replace the current
+            ``repository`` instance with a clone of that of the source node, which does not actually copy any files.
+
+        """
         from aiida.orm.utils.mixins import Sealable
+        from aiida.repository import Repository
         assert self.node_type == cache_node.node_type
 
         # Make sure the node doesn't have any RETURN links
@@ -1135,16 +782,12 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         self.label = cache_node.label
         self.description = cache_node.description
 
+        # Make sure to reinitialize the repository instance of the clone to that of the source node.
+        self._repository: Repository = copy.copy(cache_node._repository)  # pylint: disable=protected-access
+
         for key, value in cache_node.attributes.items():
             if key != Sealable.SEALED_KEY:
                 self.set_attribute(key, value)
-
-        # The erase() removes the current content of the sandbox folder.
-        # If this was not done, the content of the sandbox folder could
-        # become mangled when copying over the content of the cache
-        # source repository folder.
-        self._repository.erase()
-        self.put_object_from_tree(cache_node._repository._get_base_folder().abspath)  # pylint: disable=protected-access
 
         self._store(with_transaction=with_transaction, clean=False)
         self._add_outputs_from_cache(cache_node)
@@ -1189,7 +832,7 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         assert self._repository is not None, 'repository not initialised'
         top_level_module = self.__module__.split('.', 1)[0]
         try:
-            version = importlib.import_module(top_level_module).__version__  # type: ignore[attr-defined]
+            version = importlib.import_module(top_level_module).__version__
         except (ImportError, AttributeError) as exc:
             raise exceptions.HashingError("The node's package version could not be determined") from exc
         objects = [
@@ -1199,18 +842,18 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
                 for key, val in self.attributes_items()
                 if key not in self._hash_ignored_attributes and key not in self._updatable_attributes  # pylint: disable=unsupported-membership-test
             },
-            self._repository._get_base_folder(),  # pylint: disable=protected-access
+            self._repository.hash(),
             self.computer.uuid if self.computer is not None else None
         ]
         return objects
 
     def rehash(self) -> None:
         """Regenerate the stored hash of the Node."""
-        self.set_extra(_HASH_EXTRA_KEY, self.get_hash())
+        self.set_extra(self._HASH_EXTRA_KEY, self.get_hash())
 
     def clear_hash(self) -> None:
         """Sets the stored hash of the Node to None."""
-        self.set_extra(_HASH_EXTRA_KEY, None)
+        self.set_extra(self._HASH_EXTRA_KEY, None)
 
     def get_cache_source(self) -> Optional[str]:
         """Return the UUID of the node that was used in creating this node from the cache, or None if it was not cached.
@@ -1263,22 +906,38 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         """
         if not allow_before_store and not self.is_stored:
             raise exceptions.InvalidOperation('You can get the hash only after having stored the node')
+
         node_hash = self._get_hash()
 
         if not node_hash or not self._cachable:
             return iter(())
 
-        builder = QueryBuilder()
-        builder.append(self.__class__, filters={'extras._aiida_hash': node_hash}, project='*', subclassing=False)
-        nodes_identical = (n[0] for n in builder.iterall())
+        builder = QueryBuilder(backend=self.backend)
+        builder.append(self.__class__, filters={f'extras.{self._HASH_EXTRA_KEY}': node_hash}, subclassing=False)
 
-        return (node for node in nodes_identical if node.is_valid_cache)
+        return (node for node in builder.all(flat=True) if node.is_valid_cache)  # type: ignore[misc,union-attr]
 
     @property
     def is_valid_cache(self) -> bool:
-        """Hook to exclude certain `Node` instances from being considered a valid cache."""
-        # pylint: disable=no-self-use
-        return True
+        """Hook to exclude certain ``Node`` classes from being considered a valid cache.
+
+        The base class assumes that all node instances are valid to cache from, unless the ``_VALID_CACHE_KEY`` extra
+        has been set to ``False`` explicitly. Subclasses can override this property with more specific logic, but should
+        probably also consider the value returned by this base class.
+        """
+        return self.get_extra(self._VALID_CACHE_KEY, True)
+
+    @is_valid_cache.setter
+    def is_valid_cache(self, valid: bool) -> None:
+        """Set whether this node instance is considered valid for caching or not.
+
+        If a node instance has this property set to ``False``, it will never be used in the caching mechanism, unless
+        the subclass overrides the ``is_valid_cache`` property and ignores it implementation completely.
+
+        :param valid: whether the node is valid or invalid for use in caching.
+        """
+        type_check(valid, bool)
+        self.set_extra(self._VALID_CACHE_KEY, valid)
 
     def get_description(self) -> str:
         """Return a string with a description of the node.
@@ -1287,95 +946,3 @@ class Node(Entity, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractN
         """
         # pylint: disable=no-self-use
         return ''
-
-    @staticmethod
-    def get_schema() -> Dict[str, Any]:
-        """
-        Every node property contains:
-            - display_name: display name of the property
-            - help text: short help text of the property
-            - is_foreign_key: is the property foreign key to other type of the node
-            - type: type of the property. e.g. str, dict, int
-
-        :return: get schema of the node
-
-        .. deprecated:: 1.0.0
-
-            Will be removed in `v2.0.0`.
-            Use :meth:`~aiida.restapi.translator.base.BaseTranslator.get_projectable_properties` instead.
-
-        """
-        message = 'method is deprecated, use' \
-            '`aiida.restapi.translator.base.BaseTranslator.get_projectable_properties` instead'
-        warnings.warn(message, AiidaDeprecationWarning)  # pylint: disable=no-member
-
-        return {
-            'attributes': {
-                'display_name': 'Attributes',
-                'help_text': 'Attributes of the node',
-                'is_foreign_key': False,
-                'type': 'dict'
-            },
-            'attributes.state': {
-                'display_name': 'State',
-                'help_text': 'AiiDA state of the calculation',
-                'is_foreign_key': False,
-                'type': ''
-            },
-            'ctime': {
-                'display_name': 'Creation time',
-                'help_text': 'Creation time of the node',
-                'is_foreign_key': False,
-                'type': 'datetime.datetime'
-            },
-            'extras': {
-                'display_name': 'Extras',
-                'help_text': 'Extras of the node',
-                'is_foreign_key': False,
-                'type': 'dict'
-            },
-            'id': {
-                'display_name': 'Id',
-                'help_text': 'Id of the object',
-                'is_foreign_key': False,
-                'type': 'int'
-            },
-            'label': {
-                'display_name': 'Label',
-                'help_text': 'User-assigned label',
-                'is_foreign_key': False,
-                'type': 'str'
-            },
-            'mtime': {
-                'display_name': 'Last Modification time',
-                'help_text': 'Last modification time',
-                'is_foreign_key': False,
-                'type': 'datetime.datetime'
-            },
-            'node_type': {
-                'display_name': 'Type',
-                'help_text': 'Node type',
-                'is_foreign_key': False,
-                'type': 'str'
-            },
-            'user_id': {
-                'display_name': 'Id of creator',
-                'help_text': 'Id of the user that created the node',
-                'is_foreign_key': True,
-                'related_column': 'id',
-                'related_resource': '_dbusers',
-                'type': 'int'
-            },
-            'uuid': {
-                'display_name': 'Unique ID',
-                'help_text': 'Universally Unique Identifier',
-                'is_foreign_key': False,
-                'type': 'unicode'
-            },
-            'process_type': {
-                'display_name': 'Process type',
-                'help_text': 'Process type',
-                'is_foreign_key': False,
-                'type': 'str'
-            }
-        }

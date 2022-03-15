@@ -1,0 +1,35 @@
+{
+  "export_version": "1.0",
+  "aiida_version": "2.0.0",
+  "key_format": "sha256",
+  "compression": 6,
+  "ctime": "2021-12-01T03:43:11.909061",
+  "creation_parameters": {
+    "entities_starting_set": {},
+    "include_authinfos": false,
+    "include_comments": true,
+    "include_logs": true,
+    "graph_traversal_rules": {
+      "input_calc_forward": false,
+      "input_calc_backward": true,
+      "create_forward": true,
+      "create_backward": true,
+      "return_forward": true,
+      "return_backward": false,
+      "input_work_forward": false,
+      "input_work_backward": true,
+      "call_calc_forward": true,
+      "call_calc_backward": true,
+      "call_work_forward": true,
+      "call_work_backward": true
+    },
+    "entity_counts": {
+      "users": 8,
+      "computers": 14,
+      "groups": 2,
+      "nodes": 109547,
+      "links": 159905,
+      "group_nodes": 219094
+    }
+  }
+}

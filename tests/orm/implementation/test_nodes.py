@@ -7,33 +7,33 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-public-methods
+# pylint: disable=too-many-public-methods,no-self-use
 """Unit tests for the BackendNode and BackendNodeCollection classes."""
 
 from collections import OrderedDict
 from datetime import datetime
 from uuid import UUID
 
-from aiida.backends.testbase import AiidaTestCase
-from aiida.common import timezone
-from aiida.common import exceptions
+import pytest
+import pytz
+
+from aiida.common import exceptions, timezone
 
 
-class TestBackendNode(AiidaTestCase):
+class TestBackendNode:
     """Test BackendNode."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
-        cls.computer = cls.computer.backend_entity  # Unwrap the `Computer` instance to `BackendComputer`
-        cls.user = cls.backend.users.create(email='tester@localhost').store()
-
-    def setUp(self):
-        super().setUp()
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, aiida_localhost, backend):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        self.backend = backend
+        self.computer = aiida_localhost.backend_entity  # Unwrap the `Computer` instance to `BackendComputer`
+        self.user = backend.users.create(email='tester@localhost').store()
         self.node_type = ''
         self.node_label = 'label'
         self.node_description = 'description'
-        self.node = self.backend.nodes.create(
+        self.node = backend.nodes.create(
             node_type=self.node_type,
             user=self.user,
             computer=self.computer,
@@ -51,62 +51,62 @@ class TestBackendNode(AiidaTestCase):
         )
 
         # Before storing
-        self.assertIsNone(node.id)
-        self.assertIsNone(node.pk)
-        self.assertTrue(isinstance(node.uuid, str))
-        self.assertTrue(isinstance(node.ctime, datetime))
-        self.assertIsNone(node.mtime)
-        self.assertIsNone(node.process_type)
-        self.assertEqual(node.attributes, dict())
-        self.assertEqual(node.extras, dict())
-        self.assertEqual(node.node_type, self.node_type)
-        self.assertEqual(node.label, self.node_label)
-        self.assertEqual(node.description, self.node_description)
+        assert node.id is None
+        assert node.pk is None
+        assert isinstance(node.uuid, str)
+        assert isinstance(node.ctime, datetime)
+        assert node.mtime is None
+        assert node.process_type is None
+        assert node.attributes == {}
+        assert node.extras == {}
+        assert node.repository_metadata == {}
+        assert node.node_type == self.node_type
+        assert node.label == self.node_label
+        assert node.description == self.node_description
 
         # Store the node.ctime before the store as a reference
         now = timezone.now()
         node_ctime_before_store = node.ctime
-        self.assertTrue(now > node.ctime, f'{node.ctime} is not smaller than now {now}')
+        assert now > node.ctime, f'{node.ctime} is not smaller than now {now}'
 
         node.store()
         node_ctime = node.ctime
         node_mtime = node.mtime
 
         # The node.ctime should have been unchanged, but the node.mtime should have changed
-        self.assertEqual(node.ctime, node_ctime_before_store)
-        self.assertIsNotNone(node.mtime)
-        self.assertTrue(now < node.mtime, f'{node.mtime} is not larger than now {now}')
+        assert node.ctime == node_ctime_before_store
+        assert node.mtime is not None
+        assert now < node.mtime, f'{node.mtime} is not larger than now {now}'
 
         # After storing
-        self.assertTrue(isinstance(node.id, int))
-        self.assertTrue(isinstance(node.pk, int))
-        self.assertTrue(isinstance(node.uuid, str))
-        self.assertTrue(isinstance(node.ctime, datetime))
-        self.assertTrue(isinstance(node.mtime, datetime))
-        self.assertIsNone(node.process_type)
-        self.assertEqual(node.attributes, dict())
-        self.assertEqual(node.extras, dict())
-        self.assertEqual(node.node_type, self.node_type)
-        self.assertEqual(node.label, self.node_label)
-        self.assertEqual(node.description, self.node_description)
+        assert isinstance(node.id, int)
+        assert isinstance(node.pk, int)
+        assert isinstance(node.uuid, str)
+        assert isinstance(node.ctime, datetime)
+        assert isinstance(node.mtime, datetime)
+        assert node.process_type is None
+        assert node.attributes == {}
+        assert node.extras == {}
+        assert node.repository_metadata == {}
+        assert node.node_type == self.node_type
+        assert node.label == self.node_label
+        assert node.description == self.node_description
 
         # Try to construct a UUID from the UUID value to prove that it has a valid UUID
         UUID(node.uuid)
 
         # Change a column, which should trigger the save, update the mtime but leave the ctime untouched
         node.label = 'test'
-        self.assertEqual(node.ctime, node_ctime)
-        self.assertTrue(node.mtime > node_mtime)
+        assert node.ctime == node_ctime
+        assert node.mtime > node_mtime
 
     def test_creation_with_time(self):
         """
         Test creation of a BackendNode when passing the mtime and the ctime. The passed ctime and mtime
         should be respected since it is important for the correct import of nodes at the AiiDA import/export.
         """
-        from aiida.tools.importexport.dbimport.utils import deserialize_attributes
-
-        ctime = deserialize_attributes('2019-02-27T16:20:12.245738', 'date')
-        mtime = deserialize_attributes('2019-02-27T16:27:14.798838', 'date')
+        ctime = datetime(2019, 2, 27, 16, 20, 12, 245738, pytz.utc)
+        mtime = datetime(2019, 2, 27, 16, 27, 14, 798838, pytz.utc)
 
         node = self.backend.nodes.create(
             node_type=self.node_type,
@@ -118,14 +118,14 @@ class TestBackendNode(AiidaTestCase):
         )
 
         # Check that the ctime and mtime are the given ones
-        self.assertEqual(node.ctime, ctime)
-        self.assertEqual(node.mtime, mtime)
+        assert node.ctime == ctime
+        assert node.mtime == mtime
 
         node.store()
 
         # Check that the given values remain even after storing
-        self.assertEqual(node.ctime, ctime)
-        self.assertEqual(node.mtime, mtime)
+        assert node.ctime == ctime
+        assert node.mtime == mtime
 
     def test_mtime(self):
         """Test the `mtime` is automatically updated when a database field is updated."""
@@ -133,7 +133,7 @@ class TestBackendNode(AiidaTestCase):
         node_mtime = node.mtime
 
         node.label = 'changed label'
-        self.assertTrue(node.mtime > node_mtime)
+        assert node.mtime > node_mtime
 
     def test_clone(self):
         """Test the `clone` method."""
@@ -141,14 +141,14 @@ class TestBackendNode(AiidaTestCase):
         clone = node.clone()
 
         # Check that the clone is unstored, i.e. has *no* id, has a different UUID, but all other props are the same
-        self.assertIsNone(clone.id)
-        self.assertNotEqual(clone.uuid, node.uuid)
-        self.assertEqual(clone.label, node.label)
-        self.assertEqual(clone.description, node.description)
-        self.assertEqual(clone.user.id, node.user.id)
-        self.assertEqual(clone.computer.id, node.computer.id)
-        self.assertEqual(clone.attributes, node.attributes)
-        self.assertEqual(clone.extras, node.extras)
+        assert clone.id is None
+        assert clone.uuid != node.uuid
+        assert clone.label == node.label
+        assert clone.description == node.description
+        assert clone.user.id == node.user.id
+        assert clone.computer.id == node.computer.id
+        assert clone.attributes == node.attributes
+        assert clone.extras == node.extras
 
     def test_property_setters(self):
         """Test the property setters of a BackendNode."""
@@ -158,22 +158,22 @@ class TestBackendNode(AiidaTestCase):
         self.node.label = label
         self.node.description = description
 
-        self.assertEqual(self.node.label, label)
-        self.assertEqual(self.node.description, description)
+        assert self.node.label == label
+        assert self.node.description == description
 
     def test_computer_methods(self):
         """Test the computer methods of a BackendNode."""
-        new_computer = self.backend.computers.create(name='localhost2', hostname='localhost').store()
-        self.assertEqual(self.node.computer.id, self.computer.id)
+        new_computer = self.backend.computers.create(label='localhost2', hostname='localhost').store()
+        assert self.node.computer.id == self.computer.id
         self.node.computer = new_computer
-        self.assertEqual(self.node.computer.id, new_computer.id)
+        assert self.node.computer.id == new_computer.id
 
     def test_user_methods(self):
         """Test the user methods of a BackendNode."""
         new_user = self.backend.users.create(email='newuser@localhost').store()
-        self.assertEqual(self.node.user.id, self.user.id)
+        assert self.node.user.id == self.user.id
         self.node.user = new_user
-        self.assertEqual(self.node.user.id, new_user.id)
+        assert self.node.user.id == new_user.id
 
     def test_get_set_attribute(self):
         """Test the `get_attribute` and `set_attribute` method of a BackendNode."""
@@ -184,45 +184,45 @@ class TestBackendNode(AiidaTestCase):
         attribute_2_value = '2'
         attribute_3_value = '3'
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             self.node.get_attribute(attribute_1_name)
 
-        self.assertFalse(self.node.is_stored)
+        assert not self.node.is_stored
         self.node.set_attribute(attribute_1_name, attribute_1_value)
 
         # Check that the attribute is set, but the node is not stored
-        self.assertFalse(self.node.is_stored)
-        self.assertEqual(self.node.get_attribute(attribute_1_name), attribute_1_value)
+        assert not self.node.is_stored
+        assert self.node.get_attribute(attribute_1_name) == attribute_1_value
 
         self.node.store()
 
         # Check that the attribute is set, and the node is stored
-        self.assertTrue(self.node.is_stored)
-        self.assertEqual(self.node.get_attribute(attribute_1_name), attribute_1_value)
+        assert self.node.is_stored
+        assert self.node.get_attribute(attribute_1_name) == attribute_1_value
 
         self.node.set_attribute(attribute_2_name, attribute_2_value)
-        self.assertEqual(self.node.get_attribute(attribute_1_name), attribute_1_value)
-        self.assertEqual(self.node.get_attribute(attribute_2_name), attribute_2_value)
+        assert self.node.get_attribute(attribute_1_name) == attribute_1_value
+        assert self.node.get_attribute(attribute_2_name) == attribute_2_value
 
         reloaded = self.backend.nodes.get(self.node.pk)
-        self.assertEqual(self.node.get_attribute(attribute_1_name), attribute_1_value)
-        self.assertEqual(self.node.get_attribute(attribute_2_name), attribute_2_value)
+        assert self.node.get_attribute(attribute_1_name) == attribute_1_value
+        assert self.node.get_attribute(attribute_2_name) == attribute_2_value
 
         reloaded.set_attribute(attribute_3_name, attribute_3_value)
-        self.assertEqual(reloaded.get_attribute(attribute_1_name), attribute_1_value)
-        self.assertEqual(reloaded.get_attribute(attribute_2_name), attribute_2_value)
-        self.assertEqual(reloaded.get_attribute(attribute_3_name), attribute_3_value)
+        assert reloaded.get_attribute(attribute_1_name) == attribute_1_value
+        assert reloaded.get_attribute(attribute_2_name) == attribute_2_value
+        assert reloaded.get_attribute(attribute_3_name) == attribute_3_value
 
         # Check deletion of a single
         reloaded.delete_attribute(attribute_1_name)
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             reloaded.get_attribute(attribute_1_name)
 
-        self.assertEqual(reloaded.get_attribute(attribute_2_name), attribute_2_value)
-        self.assertEqual(reloaded.get_attribute(attribute_3_name), attribute_3_value)
+        assert reloaded.get_attribute(attribute_2_name) == attribute_2_value
+        assert reloaded.get_attribute(attribute_3_name) == attribute_3_value
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             self.node.get_attribute(attribute_1_name)
 
     def test_get_set_extras(self):
@@ -234,86 +234,86 @@ class TestBackendNode(AiidaTestCase):
         extra_2_value = '2'
         extra_3_value = '3'
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             self.node.get_extra(extra_1_name)
 
-        self.assertFalse(self.node.is_stored)
+        assert not self.node.is_stored
         self.node.set_extra(extra_1_name, extra_1_value)
 
         # Check that the extra is set, but the node is not stored
-        self.assertFalse(self.node.is_stored)
-        self.assertEqual(self.node.get_extra(extra_1_name), extra_1_value)
+        assert not self.node.is_stored
+        assert self.node.get_extra(extra_1_name) == extra_1_value
 
         self.node.store()
 
         # Check that the extra is set, and the node is stored
-        self.assertTrue(self.node.is_stored)
-        self.assertEqual(self.node.get_extra(extra_1_name), extra_1_value)
+        assert self.node.is_stored
+        assert self.node.get_extra(extra_1_name) == extra_1_value
 
         self.node.set_extra(extra_2_name, extra_2_value)
-        self.assertEqual(self.node.get_extra(extra_1_name), extra_1_value)
-        self.assertEqual(self.node.get_extra(extra_2_name), extra_2_value)
+        assert self.node.get_extra(extra_1_name) == extra_1_value
+        assert self.node.get_extra(extra_2_name) == extra_2_value
 
         reloaded = self.backend.nodes.get(self.node.pk)
-        self.assertEqual(self.node.get_extra(extra_1_name), extra_1_value)
-        self.assertEqual(self.node.get_extra(extra_2_name), extra_2_value)
+        assert self.node.get_extra(extra_1_name) == extra_1_value
+        assert self.node.get_extra(extra_2_name) == extra_2_value
 
         reloaded.set_extra(extra_3_name, extra_3_value)
-        self.assertEqual(reloaded.get_extra(extra_1_name), extra_1_value)
-        self.assertEqual(reloaded.get_extra(extra_2_name), extra_2_value)
-        self.assertEqual(reloaded.get_extra(extra_3_name), extra_3_value)
+        assert reloaded.get_extra(extra_1_name) == extra_1_value
+        assert reloaded.get_extra(extra_2_name) == extra_2_value
+        assert reloaded.get_extra(extra_3_name) == extra_3_value
 
         # Check deletion of a single
         reloaded.delete_extra(extra_1_name)
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             reloaded.get_extra(extra_1_name)
 
-        self.assertEqual(reloaded.get_extra(extra_2_name), extra_2_value)
-        self.assertEqual(reloaded.get_extra(extra_3_name), extra_3_value)
+        assert reloaded.get_extra(extra_2_name) == extra_2_value
+        assert reloaded.get_extra(extra_3_name) == extra_3_value
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             self.node.get_extra(extra_1_name)
 
     def test_attributes(self):
         """Test the `BackendNode.attributes` property."""
         node = self.create_node()
-        self.assertEqual(node.attributes, {})
+        assert node.attributes == {}
         node.set_attribute('attribute', 'value')
-        self.assertEqual(node.attributes, {'attribute': 'value'})
+        assert node.attributes == {'attribute': 'value'}
 
         node.store()
-        self.assertEqual(node.attributes, {'attribute': 'value'})
+        assert node.attributes == {'attribute': 'value'}
 
     def test_get_attribute(self):
         """Test the `BackendNode.get_attribute` method."""
         node = self.create_node()
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             node.get_attribute('attribute')
 
         node.set_attribute('attribute', 'value')
-        self.assertEqual(node.get_attribute('attribute'), 'value')
+        assert node.get_attribute('attribute') == 'value'
 
         node.store()
-        self.assertEqual(node.get_attribute('attribute'), 'value')
+        assert node.get_attribute('attribute') == 'value'
 
     def test_get_attribute_many(self):
         """Test the `BackendNode.get_attribute_many` method."""
         node = self.create_node()
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             node.get_attribute_many(['attribute'])
 
         node.set_attribute_many({'attribute': 'value', 'another': 'case'})
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             node.get_attribute_many(['attribute', 'unexisting'])
 
-        self.assertEqual(node.get_attribute_many(['attribute', 'another']), ['value', 'case'])
+        assert node.get_attribute_many(['attribute', 'another']) == ['value', 'case']
 
         node.store()
-        self.assertEqual(node.get_attribute_many(['attribute', 'another']), ['value', 'case'])
+        assert node.get_attribute_many(['attribute', 'another']) == ['value', 'case']
 
     def test_set_attribute(self):
         """Test the `BackendNode.set_attribute` method."""
@@ -324,16 +324,16 @@ class TestBackendNode(AiidaTestCase):
         node.set_attribute('attribute_valid', 'value')
 
         # Calling store should cause the values to be cleaned which should raise
-        with self.assertRaises(exceptions.ValidationError):
+        with pytest.raises(exceptions.ValidationError):
             node.store()
 
         # Replace the original invalid with a valid value
         node.set_attribute('attribute_invalid', 'actually valid')
         node.store()
-        self.assertEqual(node.get_attribute_many(['attribute_invalid', 'attribute_valid']), ['actually valid', 'value'])
+        assert node.get_attribute_many(['attribute_invalid', 'attribute_valid']) == ['actually valid', 'value']
 
         # Raises immediately when setting it if already stored
-        with self.assertRaises(exceptions.ValidationError):
+        with pytest.raises(exceptions.ValidationError):
             node.set_attribute('attribute', object())
 
     def test_set_attribute_many(self):
@@ -345,23 +345,23 @@ class TestBackendNode(AiidaTestCase):
         node.set_attribute_many({'attribute_invalid': object(), 'attribute_valid': 'value'})
 
         # Calling store should cause the values to be cleaned which should raise
-        with self.assertRaises(exceptions.ValidationError):
+        with pytest.raises(exceptions.ValidationError):
             node.store()
 
         # Replace the original invalid with a valid value
         node.set_attribute_many({'attribute_invalid': 'actually valid'})
         node.store()
-        self.assertEqual(node.get_attribute_many(['attribute_invalid', 'attribute_valid']), ['actually valid', 'value'])
+        assert node.get_attribute_many(['attribute_invalid', 'attribute_valid']) == ['actually valid', 'value']
 
         attributes = OrderedDict()
         attributes['another_attribute'] = 'value'
         attributes['attribute_invalid'] = object()
 
         # Raises immediately when setting it if already stored
-        with self.assertRaises(exceptions.ValidationError):
+        with pytest.raises(exceptions.ValidationError):
             node.set_attribute_many(attributes)
 
-        self.assertTrue('another_attribute' not in node.attributes)
+        assert 'another_attribute' not in node.attributes
 
         attributes = {'attribute_one': 1, 'attribute_two': 2}
         # Calling `set_attribute_many` on a stored node
@@ -369,7 +369,7 @@ class TestBackendNode(AiidaTestCase):
         node.store()
 
         node.set_attribute_many(attributes)
-        self.assertEqual(node.attributes, attributes)
+        assert node.attributes == attributes
 
     def test_reset_attributes(self):
         """Test the `BackendNode.reset_attributes` method."""
@@ -379,79 +379,79 @@ class TestBackendNode(AiidaTestCase):
 
         # Reset attributes on an unstored node
         node.set_attribute_many(attributes_before)
-        self.assertEqual(node.attributes, attributes_before)
+        assert node.attributes == attributes_before
 
         node.reset_attributes(attributes_after)
-        self.assertEqual(node.attributes, attributes_after)
+        assert node.attributes == attributes_after
 
         # Reset attributes on stored node
         node = self.create_node()
         node.store()
 
         node.set_attribute_many(attributes_before)
-        self.assertEqual(node.attributes, attributes_before)
+        assert node.attributes == attributes_before
 
         node.reset_attributes(attributes_after)
-        self.assertEqual(node.attributes, attributes_after)
+        assert node.attributes == attributes_after
 
     def test_delete_attribute(self):
         """Test the `BackendNode.delete_attribute` method."""
         node = self.create_node()
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             node.delete_attribute('notexisting')
 
         node.set_attribute('attribute', 'value')
         node.delete_attribute('attribute')
-        self.assertEqual(node.attributes, {})
+        assert node.attributes == {}
 
         # Now for a stored node
         node = self.create_node().store()
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             node.delete_attribute('notexisting')
 
         node.set_attribute('attribute', 'value')
         node.delete_attribute('attribute')
-        self.assertEqual(node.attributes, {})
+        assert node.attributes == {}
 
     def test_delete_attribute_many(self):
         """Test the `BackendNode.delete_attribute_many` method."""
         node = self.create_node()
         attributes = {'attribute_one': 1, 'attribute_two': 2}
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             node.delete_attribute_many(['notexisting', 'some'])
 
         node.set_attribute_many(attributes)
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             node.delete_attribute_many(['attribute_one', 'notexisting'])
 
         # Because one key failed during delete, none of the attributes should have been deleted
-        self.assertTrue('attribute_one' in node.attributes)
+        assert 'attribute_one' in node.attributes
 
         # Now delete the keys that actually should exist
         node.delete_attribute_many(attributes.keys())
-        self.assertEqual(node.attributes, {})
+        assert node.attributes == {}
 
         # Now for a stored node
         node = self.create_node().store()
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             node.delete_attribute_many(['notexisting', 'some'])
 
         node.set_attribute_many(attributes)
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             node.delete_attribute_many(['attribute_one', 'notexisting'])
 
         # Because one key failed during delete, none of the attributes should have been deleted
-        self.assertTrue('attribute_one' in node.attributes)
+        assert 'attribute_one' in node.attributes
 
         # Now delete the keys that actually should exist
         node.delete_attribute_many(attributes.keys())
-        self.assertEqual(node.attributes, {})
+        assert node.attributes == {}
 
     def test_clear_attributes(self):
         """Test the `BackendNode.clear_attributes` method."""
@@ -459,17 +459,17 @@ class TestBackendNode(AiidaTestCase):
         attributes = {'attribute_one': 1, 'attribute_two': 2}
         node.set_attribute_many(attributes)
 
-        self.assertEqual(node.attributes, attributes)
+        assert node.attributes == attributes
         node.clear_attributes()
-        self.assertEqual(node.attributes, {})
+        assert node.attributes == {}
 
         # Now for a stored node
         node = self.create_node().store()
         node.set_attribute_many(attributes)
 
-        self.assertEqual(node.attributes, attributes)
+        assert node.attributes == attributes
         node.clear_attributes()
-        self.assertEqual(node.attributes, {})
+        assert node.attributes == {}
 
     def test_attribute_items(self):
         """Test the `BackendNode.attribute_items` generator."""
@@ -477,14 +477,14 @@ class TestBackendNode(AiidaTestCase):
         attributes = {'attribute_one': 1, 'attribute_two': 2}
 
         node.set_attribute_many(attributes)
-        self.assertEqual(attributes, dict(node.attributes_items()))
+        assert attributes == dict(node.attributes_items())
 
         # Repeat for a stored node
         node = self.create_node().store()
         attributes = {'attribute_one': 1, 'attribute_two': 2}
 
         node.set_attribute_many(attributes)
-        self.assertEqual(attributes, dict(node.attributes_items()))
+        assert attributes == dict(node.attributes_items())
 
     def test_attribute_keys(self):
         """Test the `BackendNode.attribute_keys` generator."""
@@ -492,14 +492,14 @@ class TestBackendNode(AiidaTestCase):
         attributes = {'attribute_one': 1, 'attribute_two': 2}
 
         node.set_attribute_many(attributes)
-        self.assertEqual(set(attributes), set(node.attributes_keys()))
+        assert set(attributes) == set(node.attributes_keys())
 
         # Repeat for a stored node
         node = self.create_node().store()
         attributes = {'attribute_one': 1, 'attribute_two': 2}
 
         node.set_attribute_many(attributes)
-        self.assertEqual(set(attributes), set(node.attributes_keys()))
+        assert set(attributes) == set(node.attributes_keys())
 
     def test_attribute_flush_specifically(self):
         """Test that changing `attributes` only flushes that property and does not affect others like extras.
@@ -521,47 +521,47 @@ class TestBackendNode(AiidaTestCase):
 
         # Reload the node yet again and verify that the `extra_three` extra is still there
         rereloaded = self.backend.nodes.get(node.pk)
-        self.assertIn('extra_three', rereloaded.extras.keys())
+        assert 'extra_three' in rereloaded.extras.keys()
 
     def test_extras(self):
         """Test the `BackendNode.extras` property."""
         node = self.create_node()
-        self.assertEqual(node.extras, {})
+        assert node.extras == {}
         node.set_extra('extra', 'value')
-        self.assertEqual(node.extras, {'extra': 'value'})
+        assert node.extras == {'extra': 'value'}
 
         node.store()
-        self.assertEqual(node.extras, {'extra': 'value'})
+        assert node.extras == {'extra': 'value'}
 
     def test_get_extra(self):
         """Test the `BackendNode.get_extra` method."""
         node = self.create_node()
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             node.get_extra('extra')
 
         node.set_extra('extra', 'value')
-        self.assertEqual(node.get_extra('extra'), 'value')
+        assert node.get_extra('extra') == 'value'
 
         node.store()
-        self.assertEqual(node.get_extra('extra'), 'value')
+        assert node.get_extra('extra') == 'value'
 
     def test_get_extra_many(self):
         """Test the `BackendNode.get_extra_many` method."""
         node = self.create_node()
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             node.get_extra_many(['extra'])
 
         node.set_extra_many({'extra': 'value', 'another': 'case'})
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             node.get_extra_many(['extra', 'unexisting'])
 
-        self.assertEqual(node.get_extra_many(['extra', 'another']), ['value', 'case'])
+        assert node.get_extra_many(['extra', 'another']) == ['value', 'case']
 
         node.store()
-        self.assertEqual(node.get_extra_many(['extra', 'another']), ['value', 'case'])
+        assert node.get_extra_many(['extra', 'another']) == ['value', 'case']
 
     def test_set_extra(self):
         """Test the `BackendNode.set_extra` method."""
@@ -572,16 +572,16 @@ class TestBackendNode(AiidaTestCase):
         node.set_extra('extra_valid', 'value')
 
         # Calling store should cause the values to be cleaned which should raise
-        with self.assertRaises(exceptions.ValidationError):
+        with pytest.raises(exceptions.ValidationError):
             node.store()
 
         # Replace the original invalid with a valid value
         node.set_extra('extra_invalid', 'actually valid')
         node.store()
-        self.assertEqual(node.get_extra_many(['extra_invalid', 'extra_valid']), ['actually valid', 'value'])
+        assert node.get_extra_many(['extra_invalid', 'extra_valid']) == ['actually valid', 'value']
 
         # Raises immediately when setting it if already stored
-        with self.assertRaises(exceptions.ValidationError):
+        with pytest.raises(exceptions.ValidationError):
             node.set_extra('extra', object())
 
     def test_set_extra_many(self):
@@ -593,23 +593,23 @@ class TestBackendNode(AiidaTestCase):
         node.set_extra_many({'extra_invalid': object(), 'extra_valid': 'value'})
 
         # Calling store should cause the values to be cleaned which should raise
-        with self.assertRaises(exceptions.ValidationError):
+        with pytest.raises(exceptions.ValidationError):
             node.store()
 
         # Replace the original invalid with a valid value
         node.set_extra_many({'extra_invalid': 'actually valid'})
         node.store()
-        self.assertEqual(node.get_extra_many(['extra_invalid', 'extra_valid']), ['actually valid', 'value'])
+        assert node.get_extra_many(['extra_invalid', 'extra_valid']) == ['actually valid', 'value']
 
         extras = OrderedDict()
         extras['another_extra'] = 'value'
         extras['extra_invalid'] = object()
 
         # Raises immediately when setting it if already stored
-        with self.assertRaises(exceptions.ValidationError):
+        with pytest.raises(exceptions.ValidationError):
             node.set_extra_many(extras)
 
-        self.assertTrue('another_extra' not in node.extras)
+        assert 'another_extra' not in node.extras
 
         extras = {'extra_one': 1, 'extra_two': 2}
         # Calling `set_extra_many` on a stored node
@@ -617,7 +617,7 @@ class TestBackendNode(AiidaTestCase):
         node.store()
 
         node.set_extra_many(extras)
-        self.assertEqual(node.extras, extras)
+        assert node.extras == extras
 
     def test_reset_extras(self):
         """Test the `BackendNode.reset_extras` method."""
@@ -627,79 +627,79 @@ class TestBackendNode(AiidaTestCase):
 
         # Reset extras on an unstored node
         node.set_extra_many(extras_before)
-        self.assertEqual(node.extras, extras_before)
+        assert node.extras == extras_before
 
         node.reset_extras(extras_after)
-        self.assertEqual(node.extras, extras_after)
+        assert node.extras == extras_after
 
         # Reset extras on stored node
         node = self.create_node()
         node.store()
 
         node.set_extra_many(extras_before)
-        self.assertEqual(node.extras, extras_before)
+        assert node.extras == extras_before
 
         node.reset_extras(extras_after)
-        self.assertEqual(node.extras, extras_after)
+        assert node.extras == extras_after
 
     def test_delete_extra(self):
         """Test the `BackendNode.delete_extra` method."""
         node = self.create_node()
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             node.delete_extra('notexisting')
 
         node.set_extra('extra', 'value')
         node.delete_extra('extra')
-        self.assertEqual(node.extras, {})
+        assert node.extras == {}
 
         # Now for a stored node
         node = self.create_node().store()
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             node.delete_extra('notexisting')
 
         node.set_extra('extra', 'value')
         node.delete_extra('extra')
-        self.assertEqual(node.extras, {})
+        assert node.extras == {}
 
     def test_delete_extra_many(self):
         """Test the `BackendNode.delete_extra_many` method."""
         node = self.create_node()
         extras = {'extra_one': 1, 'extra_two': 2}
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             node.delete_extra_many(['notexisting', 'some'])
 
         node.set_extra_many(extras)
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             node.delete_extra_many(['extra_one', 'notexisting'])
 
         # Because one key failed during delete, none of the extras should have been deleted
-        self.assertTrue('extra_one' in node.extras)
+        assert 'extra_one' in node.extras
 
         # Now delete the keys that actually should exist
         node.delete_extra_many(extras.keys())
-        self.assertEqual(node.extras, {})
+        assert node.extras == {}
 
         # Now for a stored node
         node = self.create_node().store()
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             node.delete_extra_many(['notexisting', 'some'])
 
         node.set_extra_many(extras)
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             node.delete_extra_many(['extra_one', 'notexisting'])
 
         # Because one key failed during delete, none of the extras should have been deleted
-        self.assertTrue('extra_one' in node.extras)
+        assert 'extra_one' in node.extras
 
         # Now delete the keys that actually should exist
         node.delete_extra_many(extras.keys())
-        self.assertEqual(node.extras, {})
+        assert node.extras == {}
 
     def test_clear_extras(self):
         """Test the `BackendNode.clear_extras` method."""
@@ -707,17 +707,17 @@ class TestBackendNode(AiidaTestCase):
         extras = {'extra_one': 1, 'extra_two': 2}
         node.set_extra_many(extras)
 
-        self.assertEqual(node.extras, extras)
+        assert node.extras == extras
         node.clear_extras()
-        self.assertEqual(node.extras, {})
+        assert node.extras == {}
 
         # Now for a stored node
         node = self.create_node().store()
         node.set_extra_many(extras)
 
-        self.assertEqual(node.extras, extras)
+        assert node.extras == extras
         node.clear_extras()
-        self.assertEqual(node.extras, {})
+        assert node.extras == {}
 
     def test_extra_items(self):
         """Test the `BackendNode.extra_items` generator."""
@@ -725,14 +725,14 @@ class TestBackendNode(AiidaTestCase):
         extras = {'extra_one': 1, 'extra_two': 2}
 
         node.set_extra_many(extras)
-        self.assertEqual(extras, dict(node.extras_items()))
+        assert extras == dict(node.extras_items())
 
         # Repeat for a stored node
         node = self.create_node().store()
         extras = {'extra_one': 1, 'extra_two': 2}
 
         node.set_extra_many(extras)
-        self.assertEqual(extras, dict(node.extras_items()))
+        assert extras == dict(node.extras_items())
 
     def test_extra_keys(self):
         """Test the `BackendNode.extra_keys` generator."""
@@ -740,14 +740,14 @@ class TestBackendNode(AiidaTestCase):
         extras = {'extra_one': 1, 'extra_two': 2}
 
         node.set_extra_many(extras)
-        self.assertEqual(set(extras), set(node.extras_keys()))
+        assert set(extras) == set(node.extras_keys())
 
         # Repeat for a stored node
         node = self.create_node().store()
         extras = {'extra_one': 1, 'extra_two': 2}
 
         node.set_extra_many(extras)
-        self.assertEqual(set(extras), set(node.extras_keys()))
+        assert set(extras) == set(node.extras_keys())
 
     def test_extra_flush_specifically(self):
         """Test that changing `extras` only flushes that property and does not affect others like attributes.
@@ -769,4 +769,4 @@ class TestBackendNode(AiidaTestCase):
 
         # Reload the node yet again and verify that the `attribute_three` attribute is still there
         rereloaded = self.backend.nodes.get(node.pk)
-        self.assertIn('attribute_three', rereloaded.attributes.keys())
+        assert 'attribute_three' in rereloaded.attributes.keys()

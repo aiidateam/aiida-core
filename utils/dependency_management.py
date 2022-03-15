@@ -9,19 +9,20 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility CLI to manage dependencies for aiida-core."""
-import os
-import sys
-import re
-import json
-import subprocess
-from pathlib import Path
 from collections import OrderedDict, defaultdict
-from pkg_resources import Requirement, parse_requirements
-from packaging.utils import canonicalize_name
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
 
 import click
+from packaging.utils import canonicalize_name
+from packaging.version import parse
+from pkg_resources import Requirement, parse_requirements
+import requests
+import tomli
 import yaml
-import tomlkit as toml
 
 ROOT = Path(__file__).resolve().parent.parent  # repository root
 
@@ -38,21 +39,21 @@ class DependencySpecificationError(click.ClickException):
     """Indicates an issue in a dependency specification."""
 
 
-def _load_setup_cfg():
-    """Load the setup configuration from the 'setup.json' file."""
+def _load_pyproject():
+    """Load the setup configuration from the 'pyproject.toml' file."""
     try:
-        with open(ROOT / 'setup.json') as setup_json_file:
-            return json.load(setup_json_file)
-    except json.decoder.JSONDecodeError as error:  # pylint: disable=no-member
-        raise DependencySpecificationError(f"Error while parsing 'setup.json' file: {error}")
+        with open(ROOT / 'pyproject.toml', 'rb') as handle:
+            return tomli.load(handle)
+    except tomli.TOMLDecodeError as error:  # pylint: disable=no-member
+        raise DependencySpecificationError(f"Error while parsing 'pyproject.toml' file: {error}")
     except FileNotFoundError:
-        raise DependencySpecificationError("The 'setup.json' file is missing!")
+        raise DependencySpecificationError("The 'pyproject.toml' file is missing!")
 
 
 def _load_environment_yml():
     """Load the conda environment specification from the 'environment.yml' file."""
     try:
-        with open(ROOT / 'environment.yml') as file:
+        with open(ROOT / 'environment.yml', encoding='utf8') as file:
             return yaml.load(file, Loader=yaml.SafeLoader)
     except yaml.error.YAMLError as error:
         raise DependencySpecificationError(f"Error while parsing 'environment.yml':\n{error}")
@@ -79,19 +80,19 @@ def _setuptools_to_conda(req):
     return Requirement.parse(str(req))
 
 
-def _find_linenos_of_requirements_in_setup_json(requirements):
-    """Determine the line numbers of requirements specified in 'setup.json'.
+def _find_linenos_of_requirements_in_pyproject(requirements):
+    """Determine the line numbers of requirements specified in 'pyproject.toml'.
 
     Returns a dict that maps a requirement, e.g., `numpy~=1.15.0` to the
-    line numbers at which said requirement is defined within the 'setup.json'
+    line numbers at which said requirement is defined within the 'pyproject.toml'
     file.
     """
     linenos = defaultdict(list)
 
-    with open(ROOT / 'setup.json') as setup_json_file:
+    with open(ROOT / 'pyproject.toml', encoding='utf8') as setup_json_file:
         lines = list(setup_json_file)
 
-    # Determine the lines that correspond to affected requirements in setup.json.
+    # Determine the lines that correspond to affected requirements in pyproject.toml.
     for requirement in requirements:
         for lineno, line in enumerate(lines):
             if str(requirement) in line:
@@ -133,14 +134,14 @@ def generate_environment_yml():
         Dumper=yaml.SafeDumper
     )
 
-    # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
-    install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
+    # Read the requirements from 'pyproject.toml'
+    pyproject = _load_pyproject()
+    install_requirements = [Requirement.parse(r) for r in pyproject['project']['dependencies']]
 
     # python version cannot be overriden from outside environment.yml
     # (even if it is not specified at all in environment.yml)
     # https://github.com/conda/conda/issues/9506
-    conda_requires = ['python~=3.7']
+    conda_requires = ['python~=3.8']
     for req in install_requirements:
         if req.name == 'python' or any(re.match(ignore, str(req)) for ignore in CONDA_IGNORE):
             continue
@@ -152,7 +153,7 @@ def generate_environment_yml():
         ('dependencies', conda_requires),
     ])
 
-    with open(ROOT / 'environment.yml', 'w') as env_file:
+    with open(ROOT / 'environment.yml', 'w', encoding='utf8') as env_file:
         env_file.write('# Usage: conda env create -n myenvname -f environment.yml\n')
         yaml.safe_dump(
             environment, env_file, explicit_start=True, default_flow_style=False, encoding='utf-8', allow_unicode=True
@@ -160,59 +161,20 @@ def generate_environment_yml():
 
 
 @cli.command()
-def update_pyproject_toml():
-    """Generate a 'pyproject.toml' file, or update an existing one.
-
-    This function generates/updates the ``build-system`` section,
-    to be consistent with the 'setup.json' file.
-    """
-
-    # read the current file
-    toml_path = ROOT / 'pyproject.toml'
-    if toml_path.exists():
-        pyproject = toml.loads(toml_path.read_text(encoding='utf8'))
-    else:
-        pyproject = {}
-
-    # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
-    install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
-    for requirement in install_requirements:
-        if requirement.name == 'reentry':
-            reentry_requirement = requirement
-            break
-    else:
-        raise DependencySpecificationError("Failed to find reentry requirement in 'setup.json'.")
-
-    # update the build-system key
-    pyproject.setdefault('build-system', {})
-    pyproject['build-system'].update({
-        'requires': ['setuptools>=40.8.0', 'wheel',
-                     str(reentry_requirement), 'fastentrypoints~=0.12'],
-        'build-backend':
-        'setuptools.build_meta',
-    })
-
-    # write the new file
-    toml_path.write_text(toml.dumps(pyproject), encoding='utf8')
-
-
-@cli.command()
 @click.pass_context
 def generate_all(ctx):
     """Generate all dependent requirement files."""
     ctx.invoke(generate_environment_yml)
-    ctx.invoke(update_pyproject_toml)
 
 
 @cli.command('validate-environment-yml', help="Validate 'environment.yml'.")
 def validate_environment_yml():  # pylint: disable=too-many-branches
-    """Validate that 'environment.yml' is consistent with 'setup.json'."""
+    """Validate that 'environment.yml' is consistent with 'pyproject.toml'."""
 
-    # Read the requirements from 'setup.json' and 'environment.yml'.
-    setup_cfg = _load_setup_cfg()
-    install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
-    python_requires = Requirement.parse('python' + setup_cfg['python_requires'])
+    # Read the requirements from 'pyproject.toml' and 'environment.yml'.
+    pyproject = _load_pyproject()
+    install_requirements = [Requirement.parse(r) for r in pyproject['project']['dependencies']]
+    python_requires = Requirement.parse('python' + pyproject['project']['requires-python'])
 
     environment_yml = _load_environment_yml()
     try:
@@ -237,24 +199,26 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
     else:  # Failed to find Python dependency specification
         raise DependencySpecificationError("Did not find specification of Python version in 'environment.yml'.")
 
-    # The Python version specified in 'setup.json' should be listed as trove classifiers.
+    # The Python version specified in 'pyproject.toml' should be listed as trove classifiers.
     for spec in conda_python_dependency.specifier:
         expected_classifier = 'Programming Language :: Python :: ' + spec.version
-        if expected_classifier not in setup_cfg['classifiers']:
-            raise DependencySpecificationError(f"Trove classifier '{expected_classifier}' missing from 'setup.json'.")
+        if expected_classifier not in pyproject['project']['classifiers']:
+            raise DependencySpecificationError(
+                f"Trove classifier '{expected_classifier}' missing from 'pyproject.toml'."
+            )
 
-        # The Python version should be specified as supported in 'setup.json'.
+        # The Python version should be specified as supported in 'pyproject.toml'.
         if not any(spec.version >= other_spec.version for other_spec in python_requires.specifier):
             raise DependencySpecificationError(
                 f"Required Python version {spec.version} from 'environment.yaml' is not consistent with " +
-                "required version in 'setup.json'."
+                "required version in 'pyproject.toml'."
             )
 
         break
     else:
         raise DependencySpecificationError(f"Missing specifier: '{conda_python_dependency}'.")
 
-    # Check that all requirements specified in the setup.json file are found in the
+    # Check that all requirements specified in the pyproject.toml file are found in the
     # conda environment specification.
     for req in install_requirements:
         if any(re.match(ignore, str(req)) for ignore in CONDA_IGNORE):
@@ -270,38 +234,10 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
     if conda_dependencies:
         raise DependencySpecificationError(
             "The 'environment.yml' file contains dependencies that are missing "
-            "in 'setup.json':\n- {}".format('\n- '.join(map(str, conda_dependencies)))
+            "in 'pyproject.toml':\n- {}".format('\n- '.join(map(str, conda_dependencies)))
         )
 
     click.secho('Conda dependency specification is consistent.', fg='green')
-
-
-@cli.command('validate-pyproject-toml', help="Validate 'pyproject.toml'.")
-def validate_pyproject_toml():
-    """Validate that 'pyproject.toml' is consistent with 'setup.json'."""
-
-    # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
-    install_requirements = [Requirement.parse(r) for r in setup_cfg['install_requires']]
-
-    for requirement in install_requirements:
-        if requirement.name == 'reentry':
-            reentry_requirement = requirement
-            break
-    else:
-        raise DependencySpecificationError("Failed to find reentry requirement in 'setup.json'.")
-
-    pyproject_file = ROOT / 'pyproject.toml'
-    if not pyproject_file.exists():
-        raise DependencySpecificationError("The 'pyproject.toml' file is missing!")
-
-    pyproject = toml.loads(pyproject_file.read_text(encoding='utf8'))
-    pyproject_requires = [Requirement.parse(r) for r in pyproject['build-system']['requires']]
-
-    if reentry_requirement not in pyproject_requires:
-        raise DependencySpecificationError(f"Missing requirement '{reentry_requirement}' in 'pyproject.toml'.")
-
-    click.secho('Pyproject.toml dependency specification is consistent.', fg='green')
 
 
 @cli.command('validate-all', help='Validate consistency of all requirements.')
@@ -312,14 +248,12 @@ def validate_all(ctx):
     Validates that the specification of requirements/dependencies is consistent across
     the following files:
 
-    - setup.py
-    - setup.json
-    - environment.yml
     - pyproject.toml
+    - environment.yml
+
     """
 
     ctx.invoke(validate_environment_yml)
-    ctx.invoke(validate_pyproject_toml)
 
 
 @cli.command()
@@ -336,7 +270,7 @@ def check_requirements(extras, github_annotate):  # pylint disable: too-many-loc
     """Check the 'requirements/*.txt' files.
 
     Checks that the environments specified in the requirements files
-    match all the dependencies specified in 'setup.json.
+    match all the dependencies specified in 'pyproject.toml'.
 
     The arguments allow to specify which 'extra' requirements to expect.
     Use 'DEFAULT' to select 'atomic_tools', 'docs', 'notebook', 'rest', and 'tests'.
@@ -346,11 +280,11 @@ def check_requirements(extras, github_annotate):  # pylint disable: too-many-loc
     if len(extras) == 1 and extras[0] == 'DEFAULT':
         extras = ['atomic_tools', 'docs', 'notebook', 'rest', 'tests']
 
-    # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
-    install_requires = setup_cfg['install_requires']
+    # Read the requirements from 'pyproject.toml''
+    pyproject = _load_pyproject()
+    install_requires = pyproject['project']['dependencies']
     for extra in extras:
-        install_requires.extend(setup_cfg['extras_require'][extra])
+        install_requires.extend(pyproject['project']['optional-dependencies'][extra])
     install_requires = set(parse_requirements(install_requires))
 
     not_installed = defaultdict(list)
@@ -361,7 +295,7 @@ def check_requirements(extras, github_annotate):  # pylint disable: too-many-loc
         env = {'python_version': match.groups()[0]}
         required = {r for r in install_requires if r.marker is None or r.marker.evaluate(env)}
 
-        with open(fn_req) as req_file:
+        with open(fn_req, encoding='utf8') as req_file:
             working_set = list(_parse_working_set(req_file))
             installed = {req for req in required for entry in working_set if entry.fulfills(req)}
 
@@ -369,12 +303,12 @@ def check_requirements(extras, github_annotate):  # pylint disable: too-many-loc
             not_installed[dependency].append(fn_req)
 
     if any(not_installed.values()):
-        setup_json_linenos = _find_linenos_of_requirements_in_setup_json(not_installed)
+        setup_json_linenos = _find_linenos_of_requirements_in_pyproject(not_installed)
 
         # Format error message to be presented to user.
-        error_msg = ["The requirements/ files are missing dependencies specified in the 'setup.json' file.", '']
+        error_msg = ["The requirements/ files are missing dependencies specified in the 'pyproject.toml' file.", '']
         for dependency, fn_reqs in not_installed.items():
-            src = 'setup.json:' + ','.join(str(lineno + 1) for lineno in setup_json_linenos[dependency])
+            src = 'pyproject.toml' + ','.join(str(lineno + 1) for lineno in setup_json_linenos[dependency])
             error_msg.append(f'{src}: No match for dependency `{dependency}` in:')
             for fn_req in sorted(fn_reqs):
                 error_msg.append(f' - {fn_req.relative_to(ROOT)}')
@@ -384,18 +318,18 @@ def check_requirements(extras, github_annotate):  # pylint disable: too-many-loc
             print('::set-output name=error::' + '%0A'.join(error_msg))
 
         if GITHUB_ACTIONS and github_annotate:
-            # Annotate the setup.json file with specific warnings.
+            # Annotate the pyproject.toml' file with specific warnings.
             for dependency, fn_reqs in not_installed.items():
                 for lineno in setup_json_linenos[dependency]:
                     print(
-                        f'::warning file=setup.json,line={lineno+1}::'
+                        f'::warning file=pyproject.toml,line={lineno+1}::'
                         f"No match for dependency '{dependency}' in: " +
                         ','.join(str(fn_req.relative_to(ROOT)) for fn_req in fn_reqs)
                     )
 
         raise DependencySpecificationError('\n'.join(error_msg))
 
-    click.secho("Requirements files appear to be in sync with specifications in 'setup.json'.", fg='green')
+    click.secho("Requirements files appear to be in sync with specifications in 'pyproject.toml''.", fg='green')
 
 
 @cli.command()
@@ -411,15 +345,15 @@ def show_requirements(extras, fmt):
     This will show all reqiurements including *all* extras in Pipfile format.
     """
 
-    # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
+    # Read the requirements from 'pyproject.toml''
+    pyproject = _load_pyproject()
 
     if 'all' in extras:
-        extras = list(setup_cfg['extras_require'])
+        extras = list(pyproject['project']['optional-dependencies'])
 
-    to_install = {Requirement.parse(r) for r in setup_cfg['install_requires']}
+    to_install = {Requirement.parse(r) for r in pyproject['project']['dependencies']}
     for key in extras:
-        to_install.update(Requirement.parse(r) for r in setup_cfg['extras_require'][key])
+        to_install.update(Requirement.parse(r) for r in pyproject['project']['optional-dependencies'][key])
 
     if fmt == 'pip':
         click.echo('\n'.join(sorted(map(str, to_install))))
@@ -441,15 +375,53 @@ def pip_install_extras(extras):
     This will install *only* the extra the requirements for docs, but without triggering
     the installation of the main installations requirements of the aiida-core package.
     """
-    # Read the requirements from 'setup.json'
-    setup_cfg = _load_setup_cfg()
+    # Read the requirements from 'pyproject.toml''
+    pyproject = _load_pyproject()
 
     to_install = set()
     for key in extras:
-        to_install.update(Requirement.parse(r) for r in setup_cfg['extras_require'][key])
+        to_install.update(Requirement.parse(r) for r in pyproject['project']['optional-dependencies'][key])
 
     cmd = [sys.executable, '-m', 'pip', 'install'] + [str(r) for r in to_install]
     subprocess.run(cmd, check=True)
+
+
+@cli.command()
+@click.argument('extras', nargs=-1)
+@click.option('--pre-releases', is_flag=True, help='Include pre-releases.')
+def identify_outdated(extras, pre_releases):
+    """Identify outdated dependencies.
+
+    For example:
+
+        identify-outdated all
+
+    This command will analyze the current dependencies and compare them against
+    the latest versions released on PyPI. It then lists all dependencies where
+    the latest release is not compatible with the dependency specification.
+    This function can thus be used to identify dependencies where the
+    specification must be loosened.
+    """
+
+    # Read the requirements from 'pyproject.toml''
+    pyproject = _load_pyproject()
+
+    to_install = {Requirement.parse(r) for r in pyproject['project']['dependencies']}
+    for key in extras:
+        to_install.update(Requirement.parse(r) for r in pyproject['project']['optional-dependencies'][key])
+
+    def get_package_data(name):
+        req = requests.get(f'https://pypi.python.org/pypi/{name}/json')
+        req.raise_for_status()
+        return req.json()
+
+    release_data = {requirement: get_package_data(requirement.name)['releases'] for requirement in to_install}
+    for requirement, releases in release_data.items():
+        releases_ = list(sorted(map(parse, releases)))
+        latest_release = [r for r in releases_ if pre_releases or not r.is_prerelease][-1]
+
+        if str(latest_release) not in requirement.specifier:
+            print(requirement, latest_release)
 
 
 if __name__ == '__main__':

@@ -10,12 +10,13 @@
 """ Resources for REST API """
 from urllib.parse import unquote
 
-from flask import request, make_response
+from flask import make_response, request
 from flask_restful import Resource
 
 from aiida.common.lang import classproperty
 from aiida.restapi.common.exceptions import RestInputValidationError
-from aiida.restapi.common.utils import Utils, close_session
+from aiida.restapi.common.utils import Utils, close_thread_connection
+from aiida.restapi.translator.nodes.node import NodeTranslator
 
 
 class ServerInfo(Resource):
@@ -49,8 +50,8 @@ class ServerInfo(Resource):
 
         response = {}
 
-        from aiida.restapi.common.config import API_CONFIG
         from aiida import __version__
+        from aiida.restapi.common.config import API_CONFIG
 
         if resource_type == 'info':
             response = {}
@@ -98,7 +99,7 @@ class BaseResource(Resource):
     _translator_class = BaseTranslator
     _parse_pk_uuid = None  # Flag to tell the path parser whether to expect a pk or a uuid pattern
 
-    method_decorators = [close_session]  # Close SQLA session after any method call
+    method_decorators = [close_thread_connection]  # Close the thread's storage connection after any method call
 
     ## TODO add the caching support. I cache total count, results, and possibly
 
@@ -209,14 +210,20 @@ class BaseResource(Resource):
 
 class QueryBuilder(BaseResource):
     """
-    Representation of a QueryBuilder REST API resource (instantiated with a queryhelp JSON).
+    Representation of a QueryBuilder REST API resource (instantiated with a serialised QueryBuilder instance).
 
-    It supports POST requests taking in JSON :py:func:`~aiida.orm.querybuilder.QueryBuilder.queryhelp`
+    It supports POST requests taking in JSON :py:func:`~aiida.orm.querybuilder.QueryBuilder.as_dict`
     objects and returning the :py:class:`~aiida.orm.querybuilder.QueryBuilder` result accordingly.
     """
-    from aiida.restapi.translator.nodes.node import NodeTranslator
-
     _translator_class = NodeTranslator
+
+    GET_MESSAGE = (
+        'Method Not Allowed. Use HTTP POST requests to use the AiiDA QueryBuilder. '
+        'POST JSON data, which MUST be a valid QueryBuilder.as_dict() dictionary as a JSON object. '
+        'See the documentation at '
+        'https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/database.html'
+        '#converting-the-querybuilder-to-from-a-dictionary for more information.'
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -227,15 +234,6 @@ class QueryBuilder(BaseResource):
 
     def get(self):  # pylint: disable=arguments-differ
         """Static return to state information about this endpoint."""
-        data = {
-            'message': (
-                'Method Not Allowed. Use HTTP POST requests to use the AiiDA QueryBuilder. '
-                'POST JSON data, which MUST be a valid QueryBuilder.queryhelp dictionary as a JSON object. '
-                'See the documentation at https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/'
-                'database.html?highlight=QueryBuilder#the-queryhelp for more information.'
-            ),
-        }
-
         headers = self.utils.build_headers(url=request.url, total_count=1)
         return self.utils.build_response(
             status=405,  # Method Not Allowed
@@ -247,7 +245,7 @@ class QueryBuilder(BaseResource):
                 'path': unquote(request.path),
                 'query_string': request.query_string.decode('utf-8'),
                 'resource_type': self.__class__.__name__,
-                'data': data,
+                'data': {'message': self.GET_MESSAGE},
             },
         )
 
@@ -255,7 +253,8 @@ class QueryBuilder(BaseResource):
         """
         POST method to pass query help JSON.
 
-        If the posted JSON is not a valid QueryBuilder queryhelp, the request will fail with an internal server error.
+        If the posted JSON is not a valid QueryBuilder serialisation,
+        the request will fail with an internal server error.
 
         This uses the NodeTranslator in order to best return Nodes according to the general AiiDA
         REST API data format, while still allowing the return of other AiiDA entities.
@@ -265,9 +264,9 @@ class QueryBuilder(BaseResource):
         # pylint: disable=protected-access
         self.trans._query_help = request.get_json(force=True)
         # While the data may be correct JSON, it MUST be a single JSON Object,
-        # equivalent of a QuieryBuilder.queryhelp dictionary.
+        # equivalent of a QueryBuilder.as_dict() dictionary.
         assert isinstance(self.trans._query_help, dict), (
-            'POSTed data MUST be a valid QueryBuilder.queryhelp dictionary. '
+            'POSTed data MUST be a valid QueryBuilder.as_dict() dictionary. '
             f'Got instead (type: {type(self.trans._query_help)}): {self.trans._query_help}'
         )
         self.trans.__label__ = self.trans._result_type = self.trans._query_help['path'][-1]['tag']
@@ -287,7 +286,7 @@ class QueryBuilder(BaseResource):
                 pass
 
         if empty_projections_counter == number_projections:
-            # No projections have been specified in the queryhelp.
+            # No projections have been specified in the dictionary.
             # To be true to the QueryBuilder response, the last entry in path
             # is the only entry to be returned, all without edges/links.
             self.trans._query_help['project'][self.trans.__label__] = self.trans._default
@@ -339,8 +338,6 @@ class Node(BaseResource):
     Differs from BaseResource in trans.set_query() mostly because it takes
     query_type as an input and the presence of additional result types like "tree"
     """
-    from aiida.restapi.translator.nodes.node import NodeTranslator
-
     _translator_class = NodeTranslator
     _parse_pk_uuid = 'uuid'  # Parse a uuid pattern in the URL path (not a pk)
 

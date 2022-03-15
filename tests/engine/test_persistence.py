@@ -7,28 +7,26 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Test persisting via the AiiDAPersister."""
 import plumpy
 import pytest
 
-from aiida.backends.testbase import AiidaTestCase
-from aiida.engine.persistence import AiiDAPersister
 from aiida.engine import Process, run
-
+from aiida.engine.persistence import AiiDAPersister
 from tests.utils.processes import DummyProcess
 
 
 @pytest.mark.requires_rmq
-class TestProcess(AiidaTestCase):
+class TestProcess:
     """Test the basic saving and loading of process states."""
 
-    def setUp(self):
-        super().setUp()
-        self.assertIsNone(Process.current())
-
-    def tearDown(self):
-        super().tearDown()
-        self.assertIsNone(Process.current())
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        assert Process.current() is None
+        yield
+        assert Process.current() is None
 
     def test_save_load(self):
         """Test load saved state."""
@@ -39,16 +37,18 @@ class TestProcess(AiidaTestCase):
         loaded_process = saved_state.unbundle()
         run(loaded_process)
 
-        self.assertEqual(loaded_process.state, plumpy.ProcessState.FINISHED)
+        assert loaded_process.state == plumpy.ProcessState.FINISHED
 
 
 @pytest.mark.requires_rmq
-class TestAiiDAPersister(AiidaTestCase):
+class TestAiiDAPersister:
     """Test AiiDAPersister."""
     maxDiff = 1024
 
-    def setUp(self):
-        super().setUp()
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
         self.persister = AiiDAPersister()
 
     def test_save_load_checkpoint(self):
@@ -57,14 +57,14 @@ class TestAiiDAPersister(AiidaTestCase):
         bundle_saved = self.persister.save_checkpoint(process)
         bundle_loaded = self.persister.load_checkpoint(process.node.pk)
 
-        self.assertDictEqual(bundle_saved, bundle_loaded)
+        assert bundle_saved == bundle_loaded
 
     def test_delete_checkpoint(self):
         """Test checkpoint deletion."""
         process = DummyProcess()
 
         self.persister.save_checkpoint(process)
-        self.assertTrue(isinstance(process.node.checkpoint, str))
+        assert isinstance(process.node.checkpoint, str)
 
         self.persister.delete_checkpoint(process.pid)
-        self.assertEqual(process.node.checkpoint, None)
+        assert process.node.checkpoint is None

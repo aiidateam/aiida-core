@@ -12,10 +12,11 @@ Plugin for LSF.
 This has been tested on the CERN lxplus cluster (LSF 9.1.3)
 """
 
-import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
+from aiida.common.extendeddicts import AttributeDict
+import aiida.schedulers
 from aiida.schedulers import SchedulerError, SchedulerParsingError
-from aiida.schedulers.datastructures import (JobInfo, JobState, JobResource)
+from aiida.schedulers.datastructures import JobInfo, JobResource, JobState
 
 # This maps LSF status codes to our own state list
 #
@@ -104,6 +105,40 @@ class LsfJobResource(JobResource):
         'default_mpiprocs_per_machine',
     )
 
+    @classmethod
+    def validate_resources(cls, **kwargs):
+        """Validate the resources against the job resource class of this scheduler.
+
+        :param kwargs: dictionary of values to define the job resources
+        :return: attribute dictionary with the parsed parameters populated
+        :raises ValueError: if the resources are invalid or incomplete
+        """
+        from aiida.common.exceptions import ConfigurationError
+
+        resources = AttributeDict()
+
+        resources.parallel_env = kwargs.pop('parallel_env', '')
+        if not isinstance(resources.parallel_env, str):
+            raise TypeError("When specified, 'parallel_env' must be a string")
+
+        try:
+            resources.tot_num_mpiprocs = int(kwargs.pop('tot_num_mpiprocs'))
+        except (KeyError, ValueError) as exc:
+            raise TypeError('tot_num_mpiprocs must be specified and must be an integer') from exc
+
+        default_mpiprocs_per_machine = kwargs.pop('default_mpiprocs_per_machine', None)
+        if default_mpiprocs_per_machine is not None:
+            raise ConfigurationError('default_mpiprocs_per_machine cannot be set for LSF scheduler')
+
+        num_machines = resources.pop('num_machines', None)
+        if num_machines is not None:
+            raise ConfigurationError('num_machines cannot be set for LSF scheduler')
+
+        if resources.tot_num_mpiprocs <= 0:
+            raise ValueError('tot_num_mpiprocs must be >= 1')
+
+        return resources
+
     def __init__(self, **kwargs):
         """
         Initialize the job resources from the passed arguments (the valid keys can be
@@ -114,28 +149,8 @@ class LsfJobResource(JobResource):
         :raise aiida.common.ConfigurationError: if default_mpiprocs_per_machine was set for this
             computer, since LsfJobResource cannot accept this parameter.
         """
-        from aiida.common.exceptions import ConfigurationError
-        super().__init__()
-
-        self.parallel_env = kwargs.pop('parallel_env', '')
-        if not isinstance(self.parallel_env, str):
-            raise TypeError("When specified, 'parallel_env' must be a string")
-
-        try:
-            self.tot_num_mpiprocs = int(kwargs.pop('tot_num_mpiprocs'))
-        except (KeyError, ValueError) as exc:
-            raise TypeError('tot_num_mpiprocs must be specified and must be an integer') from exc
-
-        default_mpiprocs_per_machine = kwargs.pop('default_mpiprocs_per_machine', None)
-        if default_mpiprocs_per_machine is not None:
-            raise ConfigurationError('default_mpiprocs_per_machine cannot be set for LSF scheduler')
-
-        num_machines = kwargs.pop('num_machines', None)
-        if num_machines is not None:
-            raise ConfigurationError('num_machines cannot be set for LSF scheduler')
-
-        if self.tot_num_mpiprocs <= 0:
-            raise ValueError('tot_num_mpiprocs must be >= 1')
+        resources = self.validate_resources(**kwargs)
+        super().__init__(resources)
 
     def get_tot_num_mpiprocs(self):
         """
@@ -293,10 +308,8 @@ class LsfScheduler(aiida.schedulers.Scheduler):
         :param job_tmpl: an JobTemplate instance with relevant parameters set.
         """
         # pylint: disable=too-many-statements,too-many-branches
-        import string
         import re
-
-        empty_line = ''
+        import string
 
         lines = []
         if job_tmpl.submit_as_hold:
@@ -408,9 +421,7 @@ class LsfScheduler(aiida.schedulers.Scheduler):
                     raise ValueError
             except ValueError as exc:
                 raise ValueError(
-                    'max_memory_kb must be '
-                    "a positive integer (in kB)! It is instead '{}'"
-                    ''.format((job_tmpl.max_memory_kb))
+                    f'max_memory_kb must be a positive integer (in kB)! It is instead `{job_tmpl.max_memory_kb}`'
                 ) from exc
             # The -M option sets a per-process (soft) memory limit for all the
             # processes that belong to this job
@@ -419,22 +430,8 @@ class LsfScheduler(aiida.schedulers.Scheduler):
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)
 
-        # Job environment variables are to be set on one single line.
-        # This is a tough job due to the escaping of commas, etc.
-        # moreover, I am having issues making it work.
-        # Therefore, I assume that this is bash and export variables by
-        # hand.
         if job_tmpl.job_environment:
-            lines.append(empty_line)
-            lines.append('# ENVIRONMENT VARIABLES BEGIN ###')
-            if not isinstance(job_tmpl.job_environment, dict):
-                raise ValueError('If you provide job_environment, it must be a dictionary')
-            for key, value in job_tmpl.job_environment.items():
-                lines.append(f'export {key.strip()}={escape_for_bash(value)}')
-            lines.append('# ENVIRONMENT VARIABLES END  ###')
-            lines.append(empty_line)
-
-        lines.append(empty_line)
+            lines.append(self._get_submit_script_environment_variables(job_tmpl))
 
         # The following seems to be the only way to copy the input files
         # to the node where the computation are actually launched (the
@@ -540,10 +537,7 @@ fi
             try:
                 job_state_string = _MAP_STATUS_LSF[job_state_raw]
             except KeyError:
-                self.logger.warning(
-                    "Unrecognized job_state '{}' for job "
-                    'id {}'.format(job_state_raw, this_job.job_id)
-                )
+                self.logger.warning(f"Unrecognized job_state '{job_state_raw}' for job id {this_job.job_id}")
                 job_state_string = JobState.UNDETERMINED
 
             this_job.job_state = job_state_string

@@ -13,7 +13,7 @@ import click
 import pytest
 
 from aiida.cmdline.params.types import GroupParamType
-from aiida.orm import Group, AutoGroup, ImportGroup
+from aiida.orm import AutoGroup, Group, ImportGroup
 from aiida.orm.utils.loaders import OrmEntityLoader
 
 
@@ -24,7 +24,7 @@ def parameter_type():
 
 
 @pytest.fixture
-def setup_groups(clear_database_before_test):
+def setup_groups(aiida_profile_clean):
     """Create some groups to test the `GroupParamType` parameter type for the command line infrastructure.
 
     We create an initial group with a random name and then on purpose create two groups with a name that matches exactly
@@ -93,12 +93,13 @@ def test_ambiguous_label_uuid(setup_groups, parameter_type):
     assert result.uuid == entity_03.uuid
 
 
-def test_create_if_not_exist(setup_groups):
+def test_create_if_not_exist(aiida_profile_clean):
     """Test the `create_if_not_exist` constructor argument."""
     label = 'non-existing-label-01'
     parameter_type = GroupParamType(create_if_not_exist=True)
     result = parameter_type.convert(label, None, None)
     assert isinstance(result, Group)
+    assert result.is_stored
 
     label = 'non-existing-label-02'
     parameter_type = GroupParamType(create_if_not_exist=True, sub_classes=('aiida.groups:core.auto',))
@@ -133,13 +134,13 @@ def test_sub_classes(setup_groups, sub_classes, expected):
     assert tuple(results) == expected
 
 
-def test_complete(setup_groups, parameter_type):
-    """Test the `complete` method that provides auto-complete functionality."""
+def test_shell_complete(setup_groups, parameter_type):
+    """Test the `shell_complete` method that provides auto-complete functionality."""
     entity_01, entity_02, entity_03 = setup_groups
     entity_04 = Group(label='xavier').store()
 
-    options = [item[0] for item in parameter_type.complete(None, '')]
+    options = [item.value for item in parameter_type.shell_complete(None, None, '')]
     assert sorted(options) == sorted([entity_01.label, entity_02.label, entity_03.label, entity_04.label])
 
-    options = [item[0] for item in parameter_type.complete(None, 'xa')]
+    options = [item.value for item in parameter_type.shell_complete(None, None, 'xa')]
     assert sorted(options) == sorted([entity_04.label])

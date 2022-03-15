@@ -1,0 +1,338 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "description": "Schema for AiiDA configuration files, format version 6",
+  "type": "object",
+  "definitions": {
+    "options": {
+      "type": "object",
+      "properties": {
+        "runner.poll.interval": {
+          "type": "integer",
+          "default": 60,
+          "minimum": 0,
+          "description": "Polling interval in seconds to be used by process runners"
+        },
+        "daemon.default_workers": {
+          "type": "integer",
+          "default": 1,
+          "minimum": 1,
+          "description": "Default number of workers to be launched by `verdi daemon start`"
+        },
+        "daemon.timeout": {
+          "type": "integer",
+          "default": 20,
+          "minimum": 0,
+          "description": "Timeout in seconds for calls to the circus client"
+        },
+        "daemon.worker_process_slots": {
+          "type": "integer",
+          "default": 200,
+          "minimum": 1,
+          "description": "Maximum number of concurrent process tasks that each daemon worker can handle"
+        },
+        "db.batch_size": {
+          "type": "integer",
+          "default": 100000,
+          "minimum": 1,
+          "description": "Batch size for bulk CREATE operations in the database. Avoids hitting MaxAllocSize of PostgreSQL (1GB) when creating large numbers of database records in one go."
+        },
+        "verdi.shell.auto_import": {
+          "type": "string",
+          "default": "",
+          "description": "Additional modules/functions/classes to be automatically loaded in `verdi shell`, split by ':'"
+        },
+        "logging.aiida_loglevel": {
+          "type": "string",
+          "enum": ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"],
+          "default": "REPORT",
+          "description": "Minimum level to log to daemon log and the `DbLog` table for the `aiida` logger"
+        },
+        "logging.db_loglevel": {
+          "type": "string",
+          "enum": ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"],
+          "default": "REPORT",
+          "description": "Minimum level to log to the DbLog table"
+        },
+        "logging.plumpy_loglevel": {
+          "type": "string",
+          "enum": ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"],
+          "default": "WARNING",
+          "description": "Minimum level to log to daemon log and the `DbLog` table for the `plumpy` logger"
+        },
+        "logging.kiwipy_loglevel": {
+          "type": "string",
+          "enum": ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"],
+          "default": "WARNING",
+          "description": "Minimum level to log to daemon log and the `DbLog` table for the `kiwipy` logger"
+        },
+        "logging.paramiko_loglevel": {
+          "key": "logging_paramiko_log_level",
+          "type": "string",
+          "enum": ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"],
+          "default": "WARNING",
+          "description": "Minimum level to log to daemon log and the `DbLog` table for the `paramiko` logger"
+        },
+        "logging.alembic_loglevel": {
+          "type": "string",
+          "enum": ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"],
+          "default": "WARNING",
+          "description": "Minimum level to log to daemon log and the `DbLog` table for the `alembic` logger"
+        },
+        "logging.sqlalchemy_loglevel": {
+          "type": "string",
+          "enum": ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"],
+          "default": "WARNING",
+          "description": "Minimum level to log to daemon log and the `DbLog` table for the `sqlalchemy` logger"
+        },
+        "logging.circus_loglevel": {
+          "type": "string",
+          "enum": ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"],
+          "default": "INFO",
+          "description": "Minimum level to log to daemon log and the `DbLog` table for the `circus` logger"
+        },
+        "logging.aiopika_loglevel": {
+          "type": "string",
+          "enum": ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"],
+          "default": "WARNING",
+          "description": "Minimum level to log to daemon log and the `DbLog` table for the `aio_pika` logger"
+        },
+        "warnings.showdeprecations": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to print AiiDA deprecation warnings"
+        },
+        "warnings.development_version": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to print a warning when a profile is loaded while a development version is installed",
+          "global_only": true
+        },
+        "transport.task_retry_initial_interval": {
+          "type": "integer",
+          "default": 20,
+          "minimum": 1,
+          "description": "Initial time interval for the exponential backoff mechanism."
+        },
+        "transport.task_maximum_attempts": {
+          "type": "integer",
+          "default": 5,
+          "minimum": 1,
+          "description": "Maximum number of transport task attempts before a Process is Paused."
+        },
+        "rmq.task_timeout": {
+          "type": "integer",
+          "default": 10,
+          "minimum": 1,
+          "description": "Timeout in seconds for communications with RabbitMQ"
+        },
+        "caching.default_enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable calculation caching by default"
+        },
+        "caching.enabled_for": {
+          "description": "Calculation entry points to enable caching on",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "caching.disabled_for": {
+          "description": "Calculation entry points to disable caching on",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "autofill.user.email": {
+          "type": "string",
+          "global_only": true,
+          "description": "Default user email to use when creating new profiles."
+        },
+        "autofill.user.first_name": {
+          "type": "string",
+          "global_only": true,
+          "description": "Default user first name to use when creating new profiles."
+        },
+        "autofill.user.last_name": {
+          "type": "string",
+          "global_only": true,
+          "description": "Default user last name to use when creating new profiles."
+        },
+        "autofill.user.institution": {
+          "type": "string",
+          "global_only": true,
+          "description": "Default user institution to use when creating new profiles."
+        }
+      }
+    },
+    "profile": {
+      "type": "object",
+      "required": ["storage", "process_control"],
+      "properties": {
+        "PROFILE_UUID": {
+          "description": "The profile's unique key",
+          "type": "string"
+        },
+        "storage": {
+          "description": "The storage configuration",
+          "type": "object",
+          "required": ["backend", "config"],
+          "properties": {
+            "backend": {
+              "description": "The storage backend type to use",
+              "type": "string",
+              "default": "sqlalchemy"
+            },
+            "config": {
+              "description": "The configuration to pass to the storage backend",
+              "type": "object",
+              "properties": {
+                "database_engine": {
+                  "type": "string",
+                  "default": "postgresql_psycopg2"
+                },
+                "database_port": {
+                  "type": ["integer", "string"],
+                  "minimum": 1,
+                  "pattern": "\\d+",
+                  "default": 5432
+                },
+                "database_hostname": {
+                  "type": ["string", "null"],
+                  "default": null
+                },
+                "database_username": {
+                  "type": "string"
+                },
+                "database_password": {
+                  "type": ["string", "null"],
+                  "default": null
+                },
+                "database_name": {
+                  "type": "string"
+                },
+                "repository_uri": {
+                  "description": "URI to the AiiDA object store",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "process_control": {
+          "description": "The process control configuration",
+          "type": "object",
+          "required": ["backend", "config"],
+          "properties": {
+            "backend": {
+              "description": "The process execution backend type to use",
+              "type": "string",
+              "default": "rabbitmq"
+            },
+            "config": {
+              "description": "The configuration to pass to the process execution backend",
+              "type": "object",
+              "parameters": {
+                "broker_protocol": {
+                  "description": "Protocol for connecting to the RabbitMQ server",
+                  "type": "string",
+                  "enum": ["amqp", "amqps"],
+                  "default": "amqp"
+                },
+                "broker_username": {
+                  "description": "Username for RabbitMQ authentication",
+                  "type": "string",
+                  "default": "guest"
+                },
+                "broker_password": {
+                  "description": "Password for RabbitMQ authentication",
+                  "type": "string",
+                  "default": "guest"
+                },
+                "broker_host": {
+                  "description": "Hostname of the RabbitMQ server",
+                  "type": "string",
+                  "default": "127.0.0.1"
+                },
+                "broker_port": {
+                  "description": "Port of the RabbitMQ server",
+                  "type": "integer",
+                  "minimum": 1,
+                  "default": 5672
+                },
+                "broker_virtual_host": {
+                  "description": "RabbitMQ virtual host to connect to",
+                  "type": "string",
+                  "default": ""
+                },
+                "broker_parameters": {
+                  "description": "RabbitMQ arguments that will be encoded as query parameters",
+                  "type": "object",
+                  "default": {
+                    "heartbeat": 600
+                  },
+                  "properties": {
+                    "heartbeat": {
+                      "description": "After how many seconds the peer TCP connection should be considered unreachable",
+                      "type": "integer",
+                      "default": 600,
+                      "minimum": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "default_user_email": {
+          "type": ["string", "null"],
+          "default": null
+        },
+        "options": {
+          "description": "Profile specific options",
+          "$ref": "#/definitions/options"
+        }
+      }
+    }
+  },
+  "required": [],
+  "properties": {
+    "CONFIG_VERSION": {
+      "description": "The configuration version",
+      "type": "object",
+      "required": ["CURRENT", "OLDEST_COMPATIBLE"],
+      "properties": {
+        "CURRENT": {
+          "description": "Version number of configuration file format",
+          "type": "integer",
+          "const": 6
+        },
+        "OLDEST_COMPATIBLE": {
+          "description": "Version number of oldest configuration file format this file is compatible with",
+          "type": "integer",
+          "const": 6
+        }
+      }
+    },
+    "profiles": {
+      "description": "Configured profiles",
+      "type": "object",
+      "patternProperties": {
+        ".+": {
+          "$ref": "#/definitions/profile"
+        }
+      }
+    },
+    "default_profile": {
+      "description": "Default profile to use",
+      "type": "string"
+    },
+    "options": {
+      "description": "Global options",
+      "$ref": "#/definitions/options"
+    }
+  }
+}

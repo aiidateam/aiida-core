@@ -20,10 +20,10 @@ while true; do
     load_time=$(/usr/bin/time -q -f "%e" $VERDI 2>&1 > /dev/null)
 
     if (( $(echo "$load_time < $LOAD_LIMIT" | bc -l) )); then
-        echo "SUCCESS: loading time $load_time at iteration $iteration below $load_limit"
+        echo "SUCCESS: loading time $load_time at iteration $iteration below $LOAD_LIMIT"
         break
     else
-        echo "WARNING: loading time $load_time at iteration $iteration above $load_limit"
+        echo "WARNING: loading time $load_time at iteration $iteration above $LOAD_LIMIT"
 
         if [ $iteration -eq $MAX_NUMBER_ATTEMPTS ]; then
             echo "ERROR: loading time exceeded the load limit $iteration consecutive times."
@@ -37,3 +37,19 @@ done
 
 $VERDI devel check-load-time
 $VERDI devel check-undesired-imports
+
+
+# Test that we can also run the CLI via `python -m aiida`,
+# that it returns a 0 exit code, and contains the expected stdout.
+echo "Invoking verdi via `python -m aiida`"
+OUTPUT=$(python -m aiida 2>&1)
+RETVAL=$?
+echo $OUTPUT
+if [ $RETVAL -ne 0 ]; then
+    echo "'python -m aiida' exitted with code $RETVAL"
+    exit 2
+fi
+if [[ $OUTPUT != *"command line interface of AiiDA"* ]]; then
+    echo "'python -m aiida' did not contain the expected stdout:"
+    exit 2
+fi

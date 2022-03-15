@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to define the custom click type for code."""
-
 import click
 
 __all__ = ('ConfigOptionParamType',)
@@ -27,7 +26,7 @@ class ConfigOptionParamType(click.types.StringParamType):
 
         return get_option(value)
 
-    def complete(self, ctx, incomplete):  # pylint: disable=unused-argument,no-self-use
+    def shell_complete(self, ctx, param, incomplete):  # pylint: disable=unused-argument,no-self-use
         """
         Return possible completions based on an incomplete value
 
@@ -35,4 +34,8 @@ class ConfigOptionParamType(click.types.StringParamType):
         """
         from aiida.manage.configuration.options import get_option_names
 
-        return [(option_name, '') for option_name in get_option_names() if option_name.startswith(incomplete)]
+        return [
+            click.shell_completion.CompletionItem(option_name)
+            for option_name in get_option_names()
+            if option_name.startswith(incomplete)
+        ]

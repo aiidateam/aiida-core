@@ -10,8 +10,9 @@
 """
 AiiDA ORM data class storing (numpy) arrays
 """
-
 from ..data import Data
+
+__all__ = ('ArrayData',)
 
 
 class ArrayData(Data):
@@ -148,6 +149,7 @@ class ArrayData(Data):
         """
         import re
         import tempfile
+
         import numpy
 
         if not isinstance(array, numpy.ndarray):
@@ -169,7 +171,7 @@ class ArrayData(Data):
             handle.seek(0)
 
             # Write the numpy array to the repository, keeping the byte representation
-            self.put_object_from_filelike(handle, f'{name}.npy', mode='wb', encoding=None)
+            self.put_object_from_filelike(handle, f'{name}.npy')
 
         # Store the array name and shape for querying purposes
         self.set_attribute(f'{self.array_prefix}{name}', list(array.shape))
@@ -191,3 +193,32 @@ class ArrayData(Data):
                 f'Mismatch of files and properties for ArrayData node (pk= {self.pk}): {files} vs. {properties}'
             )
         super()._validate()
+
+    def _get_array_entries(self):
+        """Return a dictionary with the different array entries.
+
+        The idea is that this dictionary contains the array name as a key and
+        the value is the numpy array transformed into a list. This is so that
+        it can be transformed into a json object.
+        """
+        array_dict = {}
+        for key, val in self.get_iterarrays():
+            array_dict[key] = val.tolist()
+        return array_dict
+
+    def _prepare_json(self, main_file_name='', comments=True):  # pylint: disable=unused-argument
+        """Dump the content of the arrays stored in this node into JSON format.
+
+        :param comments: if True, includes comments (if it makes sense for the given format)
+        """
+        import json
+
+        from aiida import get_file_header
+
+        json_dict = self._get_array_entries()
+        json_dict['original_uuid'] = self.uuid
+
+        if comments:
+            json_dict['comments'] = get_file_header(comment_char='')
+
+        return json.dumps(json_dict).encode('utf-8'), {}

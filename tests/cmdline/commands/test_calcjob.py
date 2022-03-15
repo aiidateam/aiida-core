@@ -261,7 +261,7 @@ class TestVerdiCalculation:
         assert result.exception is not None, result.output
 
         # The flag should have been set
-        assert self.result_job.outputs.remote_folder.get_extra('cleaned') is True
+        assert self.result_job.outputs.remote_folder.base.extras.get('cleaned') is True
 
         # Check applying both p and o filters
         for flag_p in ['-p', '--past-days']:
@@ -275,7 +275,7 @@ class TestVerdiCalculation:
                 result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
                 # This should pass fine
                 assert result.exception is None
-                self.result_job.outputs.remote_folder.delete_extra('cleaned')
+                self.result_job.outputs.remote_folder.base.extras.delete('cleaned')
 
                 options = [flag_p, '0', flag_o, '0', '-f']
                 result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
@@ -288,7 +288,7 @@ class TestVerdiCalculation:
         assert result.exception is not None
 
         # Should be fine because the exit code is 100
-        self.calcs[-1].outputs.remote_folder.set_extra('cleaned', False)
+        self.calcs[-1].outputs.remote_folder.base.extras.set('cleaned', False)
         options = [str(self.calcs[-1].uuid), '-E', '100', '-f']
         result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
         assert result.exception is None

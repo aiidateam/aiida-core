@@ -61,21 +61,21 @@ class Code(Data):
         """
         Hide the code (prevents from showing it in the verdi code list)
         """
-        self.set_extra(self.HIDDEN_KEY, True)
+        self.base.extras.set(self.HIDDEN_KEY, True)
 
     def reveal(self):
         """
         Reveal the code (allows to show it in the verdi code list)
         By default, it is revealed
         """
-        self.set_extra(self.HIDDEN_KEY, False)
+        self.base.extras.set(self.HIDDEN_KEY, False)
 
     @property
     def hidden(self):
         """
         Determines whether the Code is hidden or not
         """
-        return self.get_extra(self.HIDDEN_KEY, False)
+        return self.base.extras.get(self.HIDDEN_KEY, False)
 
     def set_files(self, files):
         """

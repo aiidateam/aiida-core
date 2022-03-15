@@ -73,8 +73,8 @@ class TestRestApi:
         calc.set_option('resources', resources)
         calc.set_attribute('attr1', 'OK')
         calc.set_attribute('attr2', 'OK')
-        calc.set_extra('extra1', False)
-        calc.set_extra('extra2', 'extra_info')
+        calc.base.extras.set('extra1', False)
+        calc.base.extras.set('extra2', 'extra_info')
 
         calc.add_incoming(structure, link_type=LinkType.INPUT_CALC, link_label='link_structure')
         calc.add_incoming(parameter1, link_type=LinkType.INPUT_CALC, link_label='link_parameter')

@@ -37,13 +37,14 @@ from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
+from aiida.orm.extras import EntityExtras
 from aiida.orm.utils.links import LinkManager, LinkTriple
 from aiida.orm.utils.node import AbstractNodeMeta
 
 from ..comments import Comment
 from ..computers import Computer
 from ..entities import Collection as EntityCollection
-from ..entities import Entity, EntityAttributesMixin, EntityExtrasMixin
+from ..entities import Entity, EntityAttributesMixin
 from ..querybuilder import QueryBuilder
 from ..users import User
 from .repository import NodeRepository
@@ -114,8 +115,13 @@ class NodeBase:
         """Return the repository for this node."""
         return NodeRepository(self._node)
 
+    @cached_property
+    def extras(self) -> 'EntityExtras':
+        """Return the extras of this node."""
+        return EntityExtras(self._node)
 
-class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractNodeMeta):
+
+class Node(Entity['BackendNode'], EntityAttributesMixin, metaclass=AbstractNodeMeta):
     """
     Base class for all nodes in AiiDA.
 
@@ -780,7 +786,7 @@ class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, meta
 
         self._store(with_transaction=with_transaction, clean=False)
         self._add_outputs_from_cache(cache_node)
-        self.set_extra('_aiida_cached_from', cache_node.uuid)
+        self.base.extras.set('_aiida_cached_from', cache_node.uuid)
 
     def _add_outputs_from_cache(self, cache_node: 'Node') -> None:
         """Replicate the output links and nodes from the cached node onto this node."""
@@ -837,18 +843,18 @@ class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, meta
 
     def rehash(self) -> None:
         """Regenerate the stored hash of the Node."""
-        self.set_extra(self._HASH_EXTRA_KEY, self.get_hash())
+        self.base.extras.set(self._HASH_EXTRA_KEY, self.get_hash())
 
     def clear_hash(self) -> None:
         """Sets the stored hash of the Node to None."""
-        self.set_extra(self._HASH_EXTRA_KEY, None)
+        self.base.extras.set(self._HASH_EXTRA_KEY, None)
 
     def get_cache_source(self) -> Optional[str]:
         """Return the UUID of the node that was used in creating this node from the cache, or None if it was not cached.
 
         :return: source node UUID or None
         """
-        return self.get_extra('_aiida_cached_from', None)
+        return self.base.extras.get('_aiida_cached_from', None)
 
     @property
     def is_created_from_cache(self) -> bool:
@@ -913,7 +919,7 @@ class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, meta
         has been set to ``False`` explicitly. Subclasses can override this property with more specific logic, but should
         probably also consider the value returned by this base class.
         """
-        return self.get_extra(self._VALID_CACHE_KEY, True)
+        return self.base.extras.get(self._VALID_CACHE_KEY, True)
 
     @is_valid_cache.setter
     def is_valid_cache(self, valid: bool) -> None:
@@ -925,7 +931,7 @@ class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, meta
         :param valid: whether the node is valid or invalid for use in caching.
         """
         type_check(valid, bool)
-        self.set_extra(self._VALID_CACHE_KEY, valid)
+        self.base.extras.set(self._VALID_CACHE_KEY, valid)
 
     def get_description(self) -> str:
         """Return a string with a description of the node.
@@ -951,12 +957,34 @@ class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, meta
         'repository_metadata': 'metadata',
     }
 
+    _deprecated_extra_methods = {
+        'extras': 'all',
+        'get_extra': 'get',
+        'get_extra_many': 'get_many',
+        'set_extra': 'set',
+        'set_extra_many': 'set_many',
+        'reset_extras': 'reset',
+        'delete_extra': 'delete',
+        'delete_extra_many': 'delete_many',
+        'clear_extras': 'clear',
+        'extras_items': 'items',
+        'extras_keys': 'keys',
+    }
+
     def __getattr__(self, name: str) -> Any:
         """
         This method is called when an attribute is not found in the instance.
 
         It allows for the handling of deprecated mixin methods.
         """
+        if name in self._deprecated_extra_methods:
+            new_name = self._deprecated_extra_methods[name]
+            kls = self.__class__.__name__
+            warn_deprecation(
+                f'`{kls}.{name}` is deprecated, use `{kls}.base.extras.{new_name}` instead.', version=3, stacklevel=3
+            )
+            return getattr(self.base.extras, new_name)
+
         if name in self._deprecated_repo_methods:
             new_name = self._deprecated_repo_methods[name]
             kls = self.__class__.__name__
@@ -966,4 +994,5 @@ class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, meta
                 stacklevel=3
             )
             return getattr(self.base.repository, new_name)
+
         raise AttributeError(name)

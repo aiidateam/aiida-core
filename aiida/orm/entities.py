@@ -24,13 +24,11 @@ if TYPE_CHECKING:
     from aiida.orm.implementation import BackendEntity, StorageBackend
     from aiida.orm.querybuilder import FilterType, OrderByType, QueryBuilder
 
-__all__ = ('Entity', 'Collection', 'EntityAttributesMixin', 'EntityExtrasMixin', 'EntityTypes')
+__all__ = ('Entity', 'Collection', 'EntityAttributesMixin', 'EntityTypes')
 
 CollectionType = TypeVar('CollectionType', bound='Collection')
 EntityType = TypeVar('EntityType', bound='Entity')
 BackendEntityType = TypeVar('BackendEntityType', bound='BackendEntity')
-
-_NO_DEFAULT: Any = tuple()
 
 
 class EntityTypes(Enum):
@@ -260,6 +258,9 @@ class EntityProtocol(Protocol):
         ...
 
 
+_NO_DEFAULT = tuple()  # type: ignore
+
+
 class EntityAttributesMixin:
     """Mixin class that adds all methods for the attributes column to an entity."""
 
@@ -417,139 +418,3 @@ class EntityAttributesMixin:
         :return: an iterator with attribute keys
         """
         return self.backend_entity.attributes_keys()
-
-
-class EntityExtrasMixin:
-    """Mixin class that adds all methods for the extras column to an entity."""
-
-    @property
-    def extras(self: EntityProtocol) -> Dict[str, Any]:
-        """Return the complete extras dictionary.
-
-        .. warning:: While the entity is unstored, this will return references of the extras on the database model,
-            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
-            automatically be reflected on the database model as well. As soon as the entity is stored, the returned
-            extras will be a deep copy and mutations of the database extras will have to go through the appropriate set
-            methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you only need the keys
-            or some values, use the iterators `extras_keys` and `extras_items`, or the getters `get_extra` and
-            `get_extra_many` instead.
-
-        :return: the extras as a dictionary
-        """
-        extras = self.backend_entity.extras
-
-        if self.is_stored:
-            extras = copy.deepcopy(extras)
-
-        return extras
-
-    def get_extra(self: EntityProtocol, key: str, default: Any = _NO_DEFAULT) -> Any:
-        """Return the value of an extra.
-
-        .. warning:: While the entity is unstored, this will return a reference of the extra on the database model,
-            meaning that changes on the returned value (if they are mutable themselves, e.g. a list or dictionary) will
-            automatically be reflected on the database model as well. As soon as the entity is stored, the returned
-            extra will be a deep copy and mutations of the database extras will have to go through the appropriate set
-            methods.
-
-        :param key: name of the extra
-        :param default: return this value instead of raising if the attribute does not exist
-        :return: the value of the extra
-        :raises AttributeError: if the extra does not exist and no default is specified
-        """
-        try:
-            extra = self.backend_entity.get_extra(key)
-        except AttributeError:
-            if default is _NO_DEFAULT:
-                raise
-            extra = default
-
-        if self.is_stored:
-            extra = copy.deepcopy(extra)
-
-        return extra
-
-    def get_extra_many(self: EntityProtocol, keys: List[str]) -> List[Any]:
-        """Return the values of multiple extras.
-
-        .. warning:: While the entity is unstored, this will return references of the extras on the database model,
-            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
-            automatically be reflected on the database model as well. As soon as the entity is stored, the returned
-            extras will be a deep copy and mutations of the database extras will have to go through the appropriate set
-            methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you only need the keys
-            or some values, use the iterators `extras_keys` and `extras_items`, or the getters `get_extra` and
-            `get_extra_many` instead.
-
-        :param keys: a list of extra names
-        :return: a list of extra values
-        :raises AttributeError: if at least one extra does not exist
-        """
-        extras = self.backend_entity.get_extra_many(keys)
-
-        if self.is_stored:
-            extras = copy.deepcopy(extras)
-
-        return extras
-
-    def set_extra(self: EntityProtocol, key: str, value: Any) -> None:
-        """Set an extra to the given value.
-
-        :param key: name of the extra
-        :param value: value of the extra
-        :raise aiida.common.ValidationError: if the key is invalid, i.e. contains periods
-        """
-        self.backend_entity.set_extra(key, value)
-
-    def set_extra_many(self: EntityProtocol, extras: Dict[str, Any]) -> None:
-        """Set multiple extras.
-
-        .. note:: This will override any existing extras that are present in the new dictionary.
-
-        :param extras: a dictionary with the extras to set
-        :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
-        """
-        self.backend_entity.set_extra_many(extras)
-
-    def reset_extras(self: EntityProtocol, extras: Dict[str, Any]) -> None:
-        """Reset the extras.
-
-        .. note:: This will completely clear any existing extras and replace them with the new dictionary.
-
-        :param extras: a dictionary with the extras to set
-        :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
-        """
-        self.backend_entity.reset_extras(extras)
-
-    def delete_extra(self: EntityProtocol, key: str) -> None:
-        """Delete an extra.
-
-        :param key: name of the extra
-        :raises AttributeError: if the extra does not exist
-        """
-        self.backend_entity.delete_extra(key)
-
-    def delete_extra_many(self: EntityProtocol, keys: List[str]) -> None:
-        """Delete multiple extras.
-
-        :param keys: names of the extras to delete
-        :raises AttributeError: if at least one of the extra does not exist
-        """
-        self.backend_entity.delete_extra_many(keys)
-
-    def clear_extras(self: EntityProtocol) -> None:
-        """Delete all extras."""
-        self.backend_entity.clear_extras()
-
-    def extras_items(self: EntityProtocol):
-        """Return an iterator over the extras.
-
-        :return: an iterator with extra key value pairs
-        """
-        return self.backend_entity.extras_items()
-
-    def extras_keys(self: EntityProtocol):
-        """Return an iterator over the extra keys.
-
-        :return: an iterator with extra keys
-        """
-        return self.backend_entity.extras_keys()

@@ -80,7 +80,7 @@ def test_group_export(tmp_path, aiida_profile_clean):
 
     # Create a group and add the node
     group = orm.Group(label='node_group')
-    group.set_extra('test', 1)
+    group.base.extras.set('test', 1)
     group.store()
     group.add_nodes([sd1])
     group_uuid = group.uuid
@@ -102,7 +102,7 @@ def test_group_export(tmp_path, aiida_profile_clean):
     builder.append(orm.Group, filters={'uuid': {'==': group_uuid}})
     assert builder.count() == 1, 'The group was not found.'
     imported_group = builder.all()[0][0]
-    assert imported_group.get_extra('test') == 1, 'Extra missing on imported group'
+    assert imported_group.base.extras.get('test') == 1, 'Extra missing on imported group'
 
 
 def test_group_import_existing(tmp_path, aiida_profile_clean):

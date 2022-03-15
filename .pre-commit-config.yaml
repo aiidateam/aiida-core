@@ -87,6 +87,7 @@ repos:
                 aiida/orm/implementation/users.py|
                 aiida/orm/implementation/querybuilder.py|
                 aiida/orm/entities.py|
+                aiida/orm/extras.py|
                 aiida/orm/authinfos.py|
                 aiida/orm/comments.py|
                 aiida/orm/computers.py|

@@ -346,8 +346,8 @@ Finally, to delete a code use:
 
     .. code-block:: python
 
-        load_code('<IDENTIFIER>').set_extra('version', '6.1')
-        load_code('<IDENTIFIER>').set_extra('family', 'cp2k')
+        load_code('<IDENTIFIER>').base.extras.set('version', '6.1')
+        load_code('<IDENTIFIER>').base.extras.set('family', 'cp2k')
 
     These can be useful for querying, for instance in order to find all runs done with the CP2K code of version 6.1 or later.
 

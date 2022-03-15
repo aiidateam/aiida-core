@@ -198,11 +198,11 @@ class TestQueryWithAiidaObjects:
         a1.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         a1.store()
         # To query only these nodes later
-        a1.set_extra(extra_name, True)
+        a1.base.extras.set(extra_name, True)
         a3 = orm.Data().store()
-        a3.set_extra(extra_name, True)
+        a3.base.extras.set(extra_name, True)
         a4 = Dict(dict={'a': 'b'}).store()
-        a4.set_extra(extra_name, True)
+        a4.base.extras.set(extra_name, True)
         # I don't set the extras, just to be sure that the filtering works
         # The filtering is needed because other tests will put stuff int he DB
         a6 = orm.CalcJobNode(computer=self.computer)
@@ -468,12 +468,12 @@ class TestNodeBasic:
         # I check before storing that the attributes are ok
         assert b.attributes == b_expected_attributes
         # Note that during copy, I do not copy the extras!
-        assert b.extras == {}
+        assert b.base.extras.all == {}
 
         # I store now
         b.store()
         # and I finally add a extras
-        b.set_extra('meta', 'textofext')
+        b.base.extras.set('meta', 'textofext')
         b_expected_extras = {'meta': 'textofext', '_aiida_hash': AnyValue()}
 
         # Now I check that the attributes of the original node have not changed
@@ -481,7 +481,7 @@ class TestNodeBasic:
 
         # I check then on the 'b' copy
         assert b.attributes == b_expected_attributes
-        assert b.extras == b_expected_extras
+        assert b.base.extras.all == b_expected_extras
 
     def test_files(self):
         a = orm.Data()
@@ -729,51 +729,51 @@ class TestNodeBasic:
 
     def test_extra_with_reload(self):
         a = orm.Data()
-        a.set_extra('none', None)
-        a.set_extra('bool', self.boolval)
-        a.set_extra('integer', self.intval)
-        a.set_extra('float', self.floatval)
-        a.set_extra('string', self.stringval)
-        a.set_extra('dict', self.dictval)
-        a.set_extra('list', self.listval)
+        a.base.extras.set('none', None)
+        a.base.extras.set('bool', self.boolval)
+        a.base.extras.set('integer', self.intval)
+        a.base.extras.set('float', self.floatval)
+        a.base.extras.set('string', self.stringval)
+        a.base.extras.set('dict', self.dictval)
+        a.base.extras.set('list', self.listval)
 
         # Check before storing
-        assert self.boolval == a.get_extra('bool')
-        assert self.intval == a.get_extra('integer')
-        assert self.floatval == a.get_extra('float')
-        assert self.stringval == a.get_extra('string')
-        assert self.dictval == a.get_extra('dict')
-        assert self.listval == a.get_extra('list')
+        assert self.boolval == a.base.extras.get('bool')
+        assert self.intval == a.base.extras.get('integer')
+        assert self.floatval == a.base.extras.get('float')
+        assert self.stringval == a.base.extras.get('string')
+        assert self.dictval == a.base.extras.get('dict')
+        assert self.listval == a.base.extras.get('list')
 
         a.store()
 
         # Check after storing
-        assert self.boolval == a.get_extra('bool')
-        assert self.intval == a.get_extra('integer')
-        assert self.floatval == a.get_extra('float')
-        assert self.stringval == a.get_extra('string')
-        assert self.dictval == a.get_extra('dict')
-        assert self.listval == a.get_extra('list')
+        assert self.boolval == a.base.extras.get('bool')
+        assert self.intval == a.base.extras.get('integer')
+        assert self.floatval == a.base.extras.get('float')
+        assert self.stringval == a.base.extras.get('string')
+        assert self.dictval == a.base.extras.get('dict')
+        assert self.listval == a.base.extras.get('list')
 
         b = orm.load_node(uuid=a.uuid)
-        assert a.get_extra('none') is None
-        assert self.boolval == b.get_extra('bool')
-        assert self.intval == b.get_extra('integer')
-        assert self.floatval == b.get_extra('float')
-        assert self.stringval == b.get_extra('string')
-        assert self.dictval == b.get_extra('dict')
-        assert self.listval == b.get_extra('list')
+        assert a.base.extras.get('none') is None
+        assert self.boolval == b.base.extras.get('bool')
+        assert self.intval == b.base.extras.get('integer')
+        assert self.floatval == b.base.extras.get('float')
+        assert self.stringval == b.base.extras.get('string')
+        assert self.dictval == b.base.extras.get('dict')
+        assert self.listval == b.base.extras.get('list')
 
     def test_get_extras_with_default(self):
         a = orm.Data()
         a.store()
-        a.set_extra('a', 'b')
+        a.base.extras.set('a', 'b')
 
-        assert a.get_extra('a') == 'b'
+        assert a.base.extras.get('a') == 'b'
         with pytest.raises(AttributeError):
-            a.get_extra('c')
+            a.base.extras.get('c')
 
-        assert a.get_extra('c', 'def') == 'def'
+        assert a.base.extras.get('c', 'def') == 'def'
 
     @staticmethod
     def test_attr_and_extras_multikey():
@@ -785,9 +785,9 @@ class TestNodeBasic:
         n1 = orm.Data().store()
         n2 = orm.Data().store()
 
-        n1.set_extra('samename', 1)
+        n1.base.extras.set('samename', 1)
         # No problem, they are two different nodes
-        n2.set_extra('samename', 1)
+        n2.base.extras.set('samename', 1)
 
     def test_attr_listing(self):
         """
@@ -813,16 +813,16 @@ class TestNodeBasic:
         extras_to_set = {'bool': 'some non-boolean value', 'some_other_name': 987}
 
         for k, v in extras_to_set.items():
-            a.set_extra(k, v)
+            a.base.extras.set(k, v)
 
         all_extras = dict(_aiida_hash=AnyValue(), **extras_to_set)
 
         assert set(list(a.attributes.keys())) == set(attrs_to_set.keys())
-        assert set(list(a.extras.keys())) == set(all_extras.keys())
+        assert set(list(a.base.extras.all.keys())) == set(all_extras.keys())
 
         assert a.attributes == attrs_to_set
 
-        assert a.extras == all_extras
+        assert a.base.extras.all == all_extras
 
     def test_delete_extras(self):
         """
@@ -844,18 +844,18 @@ class TestNodeBasic:
         all_extras = dict(_aiida_hash=AnyValue(), **extras_to_set)
 
         for k, v in extras_to_set.items():
-            a.set_extra(k, v)
+            a.base.extras.set(k, v)
 
-        assert a.extras == all_extras
+        assert a.base.extras.all == all_extras
 
         # I pregenerate it, it cannot change during iteration
         list_keys = list(extras_to_set.keys())
         for k in list_keys:
             # I delete one by one the keys and check if the operation is
             # performed correctly
-            a.delete_extra(k)
+            a.base.extras.delete(k)
             del all_extras[k]
-            assert a.extras == all_extras
+            assert a.base.extras.all == all_extras
 
     def test_replace_extras_1(self):
         """
@@ -896,19 +896,19 @@ class TestNodeBasic:
         }
 
         for k, v in extras_to_set.items():
-            a.set_extra(k, v)
+            a.base.extras.set(k, v)
 
-        assert a.extras == all_extras
+        assert a.base.extras.all == all_extras
 
         for k, v in new_extras.items():
             # I delete one by one the keys and check if the operation is
             # performed correctly
-            a.set_extra(k, v)
+            a.base.extras.set(k, v)
 
         # I update extras_to_set with the new entries, and do the comparison
         # again
         all_extras.update(new_extras)
-        assert a.extras == all_extras
+        assert a.base.extras.all == all_extras
 
     def test_basetype_as_attr(self):
         """
@@ -965,22 +965,22 @@ class TestNodeBasic:
         # Check also before storing
         n = orm.Data()
         n.store()
-        n.set_extra('a', orm.Str('sometext2'))
-        n.set_extra('c', l1)
-        n.set_extra('d', l2)
-        assert n.get_extra('a') == 'sometext2'
-        assert isinstance(n.get_extra('a'), str)
-        assert n.get_extra('c') == ['b', [1, 2]]
-        assert isinstance(n.get_extra('c'), (list, tuple))
-        assert n.get_extra('d') == ['f', True, {'gg': None}]
-        assert isinstance(n.get_extra('d'), (list, tuple))
+        n.base.extras.set('a', orm.Str('sometext2'))
+        n.base.extras.set('c', l1)
+        n.base.extras.set('d', l2)
+        assert n.base.extras.get('a') == 'sometext2'
+        assert isinstance(n.base.extras.get('a'), str)
+        assert n.base.extras.get('c') == ['b', [1, 2]]
+        assert isinstance(n.base.extras.get('c'), (list, tuple))
+        assert n.base.extras.get('d') == ['f', True, {'gg': None}]
+        assert isinstance(n.base.extras.get('d'), (list, tuple))
 
         # Check also deep in a dictionary/list
         n = orm.Data()
         n.store()
-        n.set_extra('a', {'b': [orm.Str('sometext3')]})
-        assert n.get_extra('a')['b'][0] == 'sometext3'
-        assert isinstance(n.get_extra('a')['b'][0], str)
+        n.base.extras.set('a', {'b': [orm.Str('sometext3')]})
+        assert n.base.extras.get('a')['b'][0] == 'sometext3'
+        assert isinstance(n.base.extras.get('a')['b'][0], str)
 
     def test_comments(self):
         # This is the best way to compare dates with the stored ones, instead

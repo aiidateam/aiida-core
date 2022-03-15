@@ -161,12 +161,9 @@ def logshow():
 
     client = get_daemon_client()
 
-    try:
-        currenv = get_env_with_venv_bin()
-        process = subprocess.Popen(['tail', '-f', client.daemon_log_file], env=currenv)  # pylint: disable=consider-using-with
+    currenv = get_env_with_venv_bin()
+    with subprocess.Popen(['tail', '-f', client.daemon_log_file], env=currenv) as process:
         process.wait()
-    except KeyboardInterrupt:
-        process.kill()
 
 
 @verdi_daemon.command()

@@ -10,6 +10,8 @@
 """
 This allows to manage showfunctionality to all data types.
 """
+import pathlib
+
 import click
 
 from aiida.cmdline.params import options
@@ -201,31 +203,31 @@ def _show_xmgrace(exec_name, list_bands):
 
     list_files = []
     current_band_number = 0
-    for iband, bnds in enumerate(list_bands):
-        # extract number of bands
-        nbnds = bnds.get_bands().shape[1]
-        # pylint: disable=protected-access
-        text, _ = bnds._exportcontent(
-            'agr', setnumber_offset=current_band_number, color_number=(iband + 1 % MAX_NUM_AGR_COLORS)
-        )
-        # write a tempfile
-        tempf = tempfile.NamedTemporaryFile('w+b', suffix='.agr')  # pylint: disable=consider-using-with
-        tempf.write(text)
-        tempf.flush()
-        list_files.append(tempf)
-        # update the number of bands already plotted
-        current_band_number += nbnds
 
-    try:
-        subprocess.check_output([exec_name] + [f.name for f in list_files])
-    except subprocess.CalledProcessError:
-        print(f'Note: the call to {exec_name} ended with an error.')
-    except OSError as err:
-        if err.errno == 2:
-            print(f"No executable '{exec_name}' found. Add to the path, or try with an absolute path.")
-            sys.exit(1)
-        else:
-            raise
-    finally:
-        for fhandle in list_files:
-            fhandle.close()
+    with tempfile.TemporaryDirectory() as tmpdir:
+
+        dirpath = pathlib.Path(tmpdir)
+
+        for iband, bnds in enumerate(list_bands):
+            # extract number of bands
+            nbnds = bnds.get_bands().shape[1]
+            text, _ = bnds._exportcontent(  # pylint: disable=protected-access
+                'agr', setnumber_offset=current_band_number, color_number=(iband + 1 % MAX_NUM_AGR_COLORS)
+            )
+            # write a tempfile
+            filepath = dirpath / f'{iband}.agr'
+            filepath.write_bytes(text)
+            list_files.append(str(filepath))
+            # update the number of bands already plotted
+            current_band_number += nbnds
+
+        try:
+            subprocess.check_output([exec_name] + [str(filepath) for filepath in list_files])
+        except subprocess.CalledProcessError:
+            print(f'Note: the call to {exec_name} ended with an error.')
+        except OSError as err:
+            if err.errno == 2:
+                print(f"No executable '{exec_name}' found. Add to the path, or try with an absolute path.")
+                sys.exit(1)
+            else:
+                raise

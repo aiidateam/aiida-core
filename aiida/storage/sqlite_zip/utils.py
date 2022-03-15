@@ -18,7 +18,7 @@ from archive_path import read_file_in_tar, read_file_in_zip
 from sqlalchemy import event
 from sqlalchemy.future.engine import Engine, create_engine
 
-from aiida.common.exceptions import CorruptStorage, UnreachableStorage
+from aiida.common.exceptions import AiidaException, CorruptStorage, UnreachableStorage
 
 META_FILENAME = 'metadata.json'
 """The filename containing meta information about the storage instance."""
@@ -102,3 +102,10 @@ def read_version(path: Union[str, Path], *, search_limit: Optional[int] = None) 
         return metadata['export_version']
 
     raise CorruptStorage("Metadata does not contain 'export_version' key")
+
+
+class ReadOnlyError(AiidaException):
+    """Raised when a write operation is called on a read-only archive."""
+
+    def __init__(self, msg='sqlite_zip storage is read-only'):  # pylint: disable=useless-super-delegation
+        super().__init__(msg)

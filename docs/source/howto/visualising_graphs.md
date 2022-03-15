@@ -31,7 +31,7 @@ We first load a profile, containing the provenance graph (in this case we load a
 from aiida import load_profile
 from aiida.common import LinkType
 from aiida.orm import LinkPair
-from aiida.storage.sqlite_zip.backend import SqliteZipBackend
+from aiida.storage.sqlite_zip import SqliteZipBackend
 from aiida.tools.visualization import Graph, pstate_node_styles
 
 profile = load_profile(SqliteZipBackend.create_profile('include/graph1.aiida'))

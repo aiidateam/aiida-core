@@ -23,6 +23,7 @@ import functools
 from typing import Any, Optional, Set, Tuple
 
 import sqlalchemy as sa
+from sqlalchemy import ColumnDefault
 from sqlalchemy import orm as sa_orm
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.dialects.sqlite import JSON
@@ -87,6 +88,7 @@ def pg_to_sqlite(pg_table: sa.Table):
             column.type = TZDateTime()
         elif isinstance(column.type, JSONB):
             column.type = JSON()
+            column.default = ColumnDefault(dict)
     # remove any postgresql specific indexes, e.g. varchar_pattern_ops
     new.indexes.difference_update([idx for idx in new.indexes if idx.dialect_kwargs])
     return new

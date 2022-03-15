@@ -34,6 +34,9 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
     # pylint: disable=too-many-public-methods
 
     MODEL_CLASS = models.DbNode
+    USER_CLASS = SqlaUser
+    COMPUTER_CLASS = SqlaComputer
+    LINK_CLASS = models.DbLink
 
     def __init__(
         self,
@@ -69,10 +72,10 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
             'description': description,
         }
 
-        type_check(user, SqlaUser)
+        type_check(user, self.USER_CLASS)
 
         if computer:
-            type_check(computer, SqlaComputer, f'computer is of type {type(computer)}')
+            type_check(computer, self.COMPUTER_CLASS, f'computer is of type {type(computer)}')
             arguments['dbcomputer'] = computer.bare_model
 
         if ctime:
@@ -163,7 +166,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
 
     @computer.setter
     def computer(self, computer):
-        type_check(computer, SqlaComputer, allow_none=True)
+        type_check(computer, self.COMPUTER_CLASS, allow_none=True)
 
         if computer is not None:
             computer = computer.bare_model
@@ -176,13 +179,13 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
 
     @user.setter
     def user(self, user):
-        type_check(user, SqlaUser)
+        type_check(user, self.USER_CLASS)
         self.model.user = user.bare_model
 
     def add_incoming(self, source, link_type, link_label):
         session = self.backend.get_session()
 
-        type_check(source, SqlaNode)
+        type_check(source, self.__class__)
 
         if not self.is_stored:
             raise exceptions.ModificationNotAllowed('node has to be stored when adding an incoming link')
@@ -195,13 +198,11 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
 
     def _add_link(self, source, link_type, link_label):
         """Add a single link"""
-        from aiida.storage.psql_dos.models.node import DbLink
-
         session = self.backend.get_session()
 
         try:
             with session.begin_nested():
-                link = DbLink(input_id=source.pk, output_id=self.pk, label=link_label, type=link_type.value)
+                link = self.LINK_CLASS(input_id=source.pk, output_id=self.pk, label=link_label, type=link_type.value)
                 session.add(link)
         except SQLAlchemyError as exception:
             raise exceptions.UniquenessError(f'failed to create the link: {exception}') from exception

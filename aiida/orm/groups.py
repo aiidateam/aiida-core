@@ -253,7 +253,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection], metaclass=GroupMet
         """
         :return: the user associated with this group
         """
-        return users.User.from_backend_entity(self._backend_entity.user)
+        return entities.from_backend_entity(users.User, self._backend_entity.user)
 
     @user.setter
     def user(self, user: 'User') -> None:

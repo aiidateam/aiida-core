@@ -995,20 +995,20 @@ class TestNodeBasic:
 
         a = orm.Data()
         with pytest.raises(ModificationNotAllowed):
-            a.add_comment('text', user=user)
+            a.base.comments.add('text', user=user)
 
         a.store()
-        assert a.get_comments() == []
+        assert a.base.comments.all() == []
 
         before = timezone.now() - timedelta(seconds=1)
-        a.add_comment('text', user=user)
+        a.base.comments.add('text', user=user)
         sleep(0.1)
-        a.add_comment('text2', user=user)
+        a.base.comments.add('text2', user=user)
         after = timezone.now() + timedelta(seconds=1)
 
         # Make sure comments are sorted to avoid
         # random test failures
-        comments = sorted(a.get_comments(), key=lambda comment: comment.ctime)
+        comments = sorted(a.base.comments.all(), key=lambda comment: comment.ctime)
 
         times = [i.ctime for i in comments]
 

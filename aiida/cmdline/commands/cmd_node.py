@@ -479,7 +479,7 @@ def comment_add(nodes, content):
         content = multi_line_input.edit_comment()
 
     for node in nodes:
-        node.add_comment(content)
+        node.base.comments.add(content)
 
     echo.echo_success(f'comment added to {len(nodes)} nodes')
 
@@ -517,7 +517,7 @@ def comment_show(user, nodes):
         echo.echo(msg)
         echo.echo('*' * len(msg))
 
-        all_comments = node.get_comments()
+        all_comments = node.base.comments.all()
 
         if user is not None:
             comments = [comment for comment in all_comments if comment.user.email == user.email]

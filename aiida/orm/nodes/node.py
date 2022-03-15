@@ -114,6 +114,11 @@ class NodeBase:
         """Return the repository for this node."""
         return NodeRepository(self._node)
 
+    @cached_property
+    def comments(self) -> 'NodeComments':
+        """Return the comments for this node."""
+        return NodeComments(self._node)
+
 
 class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractNodeMeta):
     """
@@ -395,51 +400,6 @@ class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, meta
         :return: the mtime
         """
         return self.backend_entity.mtime
-
-    def add_comment(self, content: str, user: Optional[User] = None) -> Comment:
-        """Add a new comment.
-
-        :param content: string with comment
-        :param user: the user to associate with the comment, will use default if not supplied
-        :return: the newly created comment
-        """
-        user = user or User.objects(self.backend).get_default()
-        return Comment(node=self, user=user, content=content).store()
-
-    def get_comment(self, identifier: int) -> Comment:
-        """Return a comment corresponding to the given identifier.
-
-        :param identifier: the comment pk
-        :raise aiida.common.NotExistent: if the comment with the given id does not exist
-        :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
-        :return: the comment
-        """
-        return Comment.objects(self.backend).get(dbnode_id=self.pk, id=identifier)
-
-    def get_comments(self) -> List[Comment]:
-        """Return a sorted list of comments for this node.
-
-        :return: the list of comments, sorted by pk
-        """
-        return Comment.objects(self.backend).find(filters={'dbnode_id': self.pk}, order_by=[{'id': 'asc'}])
-
-    def update_comment(self, identifier: int, content: str) -> None:
-        """Update the content of an existing comment.
-
-        :param identifier: the comment pk
-        :param content: the new comment content
-        :raise aiida.common.NotExistent: if the comment with the given id does not exist
-        :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
-        """
-        comment = Comment.objects(self.backend).get(dbnode_id=self.pk, id=identifier)
-        comment.set_content(content)
-
-    def remove_comment(self, identifier: int) -> None:  # pylint: disable=no-self-use
-        """Delete an existing comment.
-
-        :param identifier: the comment pk
-        """
-        Comment.objects(self.backend).delete(identifier)
 
     def add_incoming(self, source: 'Node', link_type: LinkType, link_label: str) -> None:
         """Add a link of the given type from a given node to ourself.
@@ -951,6 +911,14 @@ class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, meta
         'repository_metadata': 'metadata',
     }
 
+    _deprecated_comment_methods = {
+        'add_comment': 'add',
+        'get_comment': 'get',
+        'get_comments': 'all',
+        'remove_comment': 'remove',
+        'update_comment': 'update',
+    }
+
     def __getattr__(self, name: str) -> Any:
         """
         This method is called when an attribute is not found in the instance.
@@ -966,4 +934,66 @@ class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, meta
                 stacklevel=3
             )
             return getattr(self.base.repository, new_name)
+
+        if name in self._deprecated_comment_methods:
+            new_name = self._deprecated_comment_methods[name]
+            kls = self.__class__.__name__
+            warn_deprecation(
+                f'`{kls}.{name}` is deprecated, use `{kls}.base.comments.{new_name}` instead.', version=3, stacklevel=3
+            )
+            return getattr(self.base.comments, new_name)
+
         raise AttributeError(name)
+
+
+class NodeComments:
+    """Interface for comments of a node instance."""
+
+    def __init__(self, node: Node) -> None:
+        """Initialize the comments interface."""
+        self._node = node
+
+    def add(self, content: str, user: Optional[User] = None) -> Comment:
+        """Add a new comment.
+
+        :param content: string with comment
+        :param user: the user to associate with the comment, will use default if not supplied
+        :return: the newly created comment
+        """
+        user = user or User.objects(self._node.backend).get_default()
+        return Comment(node=self._node, user=user, content=content).store()
+
+    def get(self, identifier: int) -> Comment:
+        """Return a comment corresponding to the given identifier.
+
+        :param identifier: the comment pk
+        :raise aiida.common.NotExistent: if the comment with the given id does not exist
+        :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
+        :return: the comment
+        """
+        return Comment.objects(self._node.backend).get(dbnode_id=self._node.pk, id=identifier)
+
+    def all(self) -> List[Comment]:
+        """Return a sorted list of comments for this node.
+
+        :return: the list of comments, sorted by pk
+        """
+        return Comment.objects(self._node.backend).find(filters={'dbnode_id': self._node.pk}, order_by=[{'id': 'asc'}])
+
+    def update(self, identifier: int, content: str) -> None:
+        """Update the content of an existing comment.
+
+        :param identifier: the comment pk
+        :param content: the new comment content
+        :raise aiida.common.NotExistent: if the comment with the given id does not exist
+        :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
+        """
+        comment = Comment.objects(self._node.backend).get(dbnode_id=self._node.pk, id=identifier)
+        comment.set_content(content)
+
+    def remove(self, identifier: int) -> None:  # pylint: disable=no-self-use
+        """Delete an existing comment.
+
+        :param identifier: the comment pk
+        """
+        Comment.objects(self._node.backend).delete(identifier)

@@ -47,8 +47,8 @@ class TestRestApi:
         structure = orm.StructureData(cell=cell)
         structure.append_atom(position=(0., 0., 0.), symbols=['Ba'])
         structure.store()
-        structure.add_comment('This is test comment.')
-        structure.add_comment('Add another comment.')
+        structure.base.comments.add('This is test comment.')
+        structure.base.comments.add('Add another comment.')
 
         cif = orm.CifData(ase=structure.get_ase())
         cif.store()

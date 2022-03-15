@@ -527,7 +527,7 @@ class NodeTranslator(BaseTranslator):
         :param node: node object
         :return: node comments
         """
-        comments = node.get_comments()
+        comments = node.base.comments.all()
         response = []
         for cobj in comments:
             response.append({

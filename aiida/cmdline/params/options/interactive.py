@@ -84,13 +84,13 @@ class InteractiveOption(ConditionalOption):
         if not self.is_interactive(ctx):
             return self.get_default(ctx)
 
+        if self._prompt_fn is not None and self._prompt_fn(ctx) is False:
+            return None
+
         if not hasattr(ctx, 'prompt_loop_info_printed'):
             echo.echo_report(f'enter {self.CHARACTER_PROMPT_HELP} for help.')
             echo.echo_report(f'enter {self.CHARACTER_IGNORE_DEFAULT} to ignore the default and set no value.')
             ctx.prompt_loop_info_printed = True
-
-        if self._prompt_fn is not None and self._prompt_fn(ctx) is False:
-            return None
 
         return super().prompt_for_value(ctx)
 
@@ -128,18 +128,19 @@ class InteractiveOption(ConditionalOption):
     def get_help_message(self):
         """Return a message to be displayed for in-prompt help."""
         message = self.help or f'Expecting {self.type.name}'
-        choices = getattr(self.type, 'complete', lambda x, y: [])(None, '')
 
-        if choices:
-            choice_table = []
+        choices = getattr(self.type, 'shell_complete', lambda x, y, z: [])(self.type, None, '')
+        choices_string = []
+
+        for choice in choices:
+            if choice.value and choice.help:
+                choices_string.append(f' * {choice.value:<12} {choice.help}')
+            elif choice.value:
+                choices_string.append(f' * {choice.value}')
+
+        if any(choices_string):
             message += '\nSelect one of:\n'
-
-            for choice in choices:
-                if isinstance(choice, tuple):
-                    choice_table.append('\t{:<12} {}'.format(*choice))
-                else:
-                    choice_table.append(f'\t{choice:<12}')
-            message += '\n'.join(choice_table)
+            message += '\n'.join([choice for choice in choices_string if choice.strip()])
 
         return message
 

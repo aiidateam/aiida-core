@@ -8,20 +8,46 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for dealing with links between nodes."""
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 from collections.abc import Mapping
+from typing import TYPE_CHECKING, Generator, Iterator, List, NamedTuple, Optional
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 
+if TYPE_CHECKING:
+    from aiida.common.links import LinkType
+    from aiida.orm import Node
+    from aiida.orm.implementation.storage_backend import StorageBackend
+
 __all__ = ('LinkPair', 'LinkTriple', 'LinkManager', 'validate_link')
 
-LinkPair = namedtuple('LinkPair', ['link_type', 'link_label'])
-LinkTriple = namedtuple('LinkTriple', ['node', 'link_type', 'link_label'])
-LinkQuadruple = namedtuple('LinkQuadruple', ['source_id', 'target_id', 'link_type', 'link_label'])
+
+class LinkPair(NamedTuple):
+    link_type: 'LinkType'
+    link_label: str
 
 
-def link_triple_exists(source, target, link_type, link_label, backend=None):
+class LinkTriple(NamedTuple):
+    node: 'Node'
+    link_type: 'LinkType'
+    link_label: str
+
+
+class LinkQuadruple(NamedTuple):
+    source_id: int
+    target_id: int
+    link_type: 'LinkType'
+    link_label: str
+
+
+def link_triple_exists(
+    source: 'Node',
+    target: 'Node',
+    link_type: 'LinkType',
+    link_label: str,
+    backend: Optional['StorageBackend'] = None
+) -> bool:
     """Return whether a link with the given type and label exists between the given source and target node.
 
     :param source: node from which the link is outgoing
@@ -50,7 +76,13 @@ def link_triple_exists(source, target, link_type, link_label, backend=None):
     return builder.count() != 0
 
 
-def validate_link(source, target, link_type, link_label, backend=None):
+def validate_link(
+    source: 'Node',
+    target: 'Node',
+    link_type: 'LinkType',
+    link_label: str,
+    backend: Optional['StorageBackend'] = None
+) -> None:
     """
     Validate adding a link of the given type and label from a given node to ourself.
 
@@ -199,18 +231,18 @@ class LinkManager:
     incoming nodes or link labels, respectively.
     """
 
-    def __init__(self, link_triples):
+    def __init__(self, link_triples: List[LinkTriple]):
         """Initialise the collection."""
         self.link_triples = link_triples
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[LinkTriple]:
         """Return an iterator of LinkTriple instances.
 
         :return: iterator of LinkTriple instances
         """
         return iter(self.link_triples)
 
-    def __next__(self):
+    def __next__(self) -> Generator[LinkTriple, None, None]:
         """Return the next element in the iterator.
 
         :return: LinkTriple
@@ -221,14 +253,14 @@ class LinkManager:
     def __bool__(self):
         return bool(len(self.link_triples))
 
-    def next(self):
+    def next(self) -> Generator[LinkTriple, None, None]:
         """Return the next element in the iterator.
 
         :return: LinkTriple
         """
         return self.__next__()
 
-    def one(self):
+    def one(self) -> LinkTriple:
         """Return a single entry from the iterator.
 
         If the iterator contains no or more than one entry, an exception will be raised
@@ -242,7 +274,7 @@ class LinkManager:
 
         raise ValueError('no entries found')
 
-    def first(self):
+    def first(self) -> Optional[LinkTriple]:
         """Return the first entry from the iterator.
 
         :return: LinkTriple instance or None if no entries were matched
@@ -252,35 +284,35 @@ class LinkManager:
 
         return None
 
-    def all(self):
+    def all(self) -> List[LinkTriple]:
         """Return all entries from the list.
 
         :return: list of LinkTriple instances
         """
         return self.link_triples
 
-    def all_nodes(self):
+    def all_nodes(self) -> List['Node']:
         """Return a list of all nodes.
 
         :return: list of nodes
         """
         return [entry.node for entry in self.all()]
 
-    def all_link_pairs(self):
+    def all_link_pairs(self) -> List[LinkPair]:
         """Return a list of all link pairs.
 
         :return: list of LinkPair instances
         """
         return [LinkPair(entry.link_type, entry.link_label) for entry in self.all()]
 
-    def all_link_labels(self):
+    def all_link_labels(self) -> List[str]:
         """Return a list of all link labels.
 
         :return: list of link labels
         """
         return [entry.link_label for entry in self.all()]
 
-    def get_node_by_label(self, label):
+    def get_node_by_label(self, label: str) -> 'Node':
         """Return the node from list for given label.
 
         :return: node that corresponds to the given label
@@ -313,7 +345,7 @@ class LinkManager:
         """
         from aiida.engine.processes.ports import PORT_NAMESPACE_SEPARATOR
 
-        nested = {}
+        nested: dict = {}
 
         for entry in self.link_triples:
 

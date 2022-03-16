@@ -35,6 +35,7 @@ __all__ = (
     'Float',
     'FolderData',
     'Int',
+    'JsonableData',
     'Kind',
     'KpointsData',
     'List',

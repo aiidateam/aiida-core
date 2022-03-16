@@ -90,7 +90,8 @@ def setup_code(ctx, non_interactive, **kwargs):
         kwargs['code_type'] = CodeBuilder.CodeType.STORE_AND_UPLOAD
 
     # Convert entry point to its name
-    kwargs['input_plugin'] = kwargs['input_plugin'].name
+    if kwargs['input_plugin']:
+        kwargs['input_plugin'] = kwargs['input_plugin'].name
 
     code_builder = CodeBuilder(**kwargs)
 

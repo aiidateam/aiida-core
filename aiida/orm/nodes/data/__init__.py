@@ -25,6 +25,7 @@ from .enum import *
 from .float import *
 from .folder import *
 from .int import *
+from .jsonable import *
 from .list import *
 from .numeric import *
 from .orbital import *
@@ -47,6 +48,7 @@ __all__ = (
     'Float',
     'FolderData',
     'Int',
+    'JsonableData',
     'Kind',
     'KpointsData',
     'List',

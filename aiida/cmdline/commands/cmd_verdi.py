@@ -11,6 +11,7 @@
 import difflib
 
 import click
+from click import shell_completion
 
 from aiida import __version__
 from aiida.cmdline.params import options, types
@@ -31,6 +32,26 @@ GIU = (
     'R9k7rh<eeM8~?e5)U+OloQYk-ebZsXE8KFmR5;uE)C;wlw}@dIbx-{${l+HbC|PrK*6{Q(q6jMpni4Be``)PJJRU>(GH9y|jm){jY9_xAI4N_EfU#4'
     'taTUXFY4a4l$v=N-+f+w&wuH;Z(6p6#=n8XwlZ;*L&-rcL~T_vEm@#-Xi8&g06!MO+R(<NRBkE$(0Y_~^2C_k<o~_a3*HAHukZKXCs8^y%UZZVvze'
 )
+
+
+def _start_of_option(value: str) -> bool:
+    """Check if the value looks like the start of an option.
+
+    This is an adaptation of :py:func:`click.shell_completion._start_of_option` that simply add ``.``, ``~``, ``$`` as
+    the characters that are interpreted as the start of a filepath, and so not the start of an option. This will ensure
+    that filepaths starting with these characters are autocompleted once again.
+
+    Here ``.`` indicates a relative path, ``~`` indicates the home directory, and ``$`` allows to expand environment
+    variables such as ``$HOME`` and ``$PWD``.
+    """
+    if not value:
+        return False
+
+    # Allow characters that typically designate the start of a path.
+    return not value[0].isalnum() and value[0] not in ['/', '.', '~', '$']
+
+
+shell_completion._start_of_option = _start_of_option  # pylint: disable=protected-access
 
 
 class VerdiCommandGroup(click.Group):

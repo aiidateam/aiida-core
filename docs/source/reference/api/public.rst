@@ -28,147 +28,64 @@ It contains various sub-packages that we refer to as "second-level packages".
 Below we provide a list of the resources per second-level package that are exposed in this way.
 If a module is mentioned, then all the resources defined in its ``__all__`` are included
 
-
 ``aiida.cmdline``
 .................
 
-::
+.. autoattribute:: aiida.cmdline.__all__
 
-    params.arguments
-    params.options
-    params.types
-    utils.decorators
-    utils.echo
+Since some ``click`` argument and option decorators clash, these may be imported at a lower level:
+
+.. autoattribute:: aiida.cmdline.params.arguments.__all__
+
+.. autoattribute:: aiida.cmdline.params.options.__all__
 
 
 ``aiida.common``
 ................
 
-::
-
-    datastructures
-    exceptions
-    extendeddicts
-    links
-    log
+.. autoattribute:: aiida.common.__all__
 
 
 ``aiida.engine``
 ................
 
-::
+.. autoattribute:: aiida.engine.__all__
 
-    Process
-    ProcessState
-    ToContext
-    assign_
-    append_
-    WorkChain
-    while_
-    return_
-    if_
-    CalcJob
-    calcfunction
-    workfunction
-    ExitCode
-    run
-    run_get_node
-    run_get_pid
-    submit
+``aiida.manage``
+................
 
+.. autoattribute:: aiida.manage.__all__
 
 ``aiida.orm``
 .............
 
-::
-
-    Node
-    Data
-    ProcessNode
-    CalcFunctionNode
-    CalcJobNode
-    WorkFunctionNode
-    WorkChainNode
-    ArrayData
-    BandsData
-    KpointsData
-    ProjectionData
-    TrajectoryData
-    XyData
-    Bool
-    Float
-    Int
-    Str
-    List
-    ParameterData
-    CifData
-    Code
-    FolderData
-    OrbitalData
-    RemoteData
-    SinglefileData
-    StructureData
-    UpfData
-    Comment
-    Computer
-    Group
-    Log
-    QueryBuilder
-    User
-    load_node
-    load_code
-    load_computer
-    load_group
-    to_aiida_type
-
+.. autoattribute:: aiida.orm.__all__
 
 ``aiida.parsers``
 .................
 
-::
-
-    Parser
+.. autoattribute:: aiida.parsers.__all__
 
 
 ``aiida.plugins``
 .................
 
-::
-
-    entry_point
-    CalculationFactory
-    DataFactory
-    DbImporterFactory
-    ParserFactory
-    SchedulerFactory
-    TransportFactory
-    WorkflowFactory
+.. autoattribute:: aiida.plugins.__all__
 
 
-``aiida.scheduler``
-...................
+``aiida.schedulers``
+....................
 
-::
-
-    Scheduler
+.. autoattribute:: aiida.schedulers.__all__
 
 
 ``aiida.tools``
 ...............
 
-::
-
-    CalculationTools
-    get_kpoints_path
-    get_explicit_kpoints_path
-    structure_to_spglib_tuple
-    spglib_tuple_to_structure
-    DbImporter
+.. autoattribute:: aiida.tools.__all__
 
 
-``aiida.transport``
-...................
+``aiida.transports``
+....................
 
-::
-
-    Transport
+.. autoattribute:: aiida.transports.__all__

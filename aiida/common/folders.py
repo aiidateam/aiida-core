@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions to operate on filesystem folders."""
+import contextlib
 import errno
 import fnmatch
 import os
@@ -272,6 +273,7 @@ class Folder:
 
         return dest_abs_path
 
+    @contextlib.contextmanager
     def open(self, name, mode='r', encoding='utf8', check_existence=False):
         """
         Open a file in the current folder and return the corresponding file object.
@@ -283,9 +285,8 @@ class Folder:
         if 'b' in mode:
             encoding = None
 
-        return open(  # pylint: disable=consider-using-with
-            self.get_abs_path(name, check_existence=check_existence), mode, encoding=encoding
-        )
+        with open(self.get_abs_path(name, check_existence=check_existence), mode, encoding=encoding) as handle:
+            yield handle
 
     @property
     def abspath(self):

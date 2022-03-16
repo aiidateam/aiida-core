@@ -380,7 +380,7 @@ Here are a few tips for tuning AiiDA performance:
 
 .. dropdown:: Move the Postgresql database to a fast disk (SSD), ideally on a large partition.
 
-    1. Stop the AiiDA daemon and :ref:`back up your database <how-to:installation:backup:postgresql>`.
+    1. Stop the AiiDA daemon and :ref:`back up your database <how-to:installation:backup>`.
 
     2. Find the data directory of your postgres installation (something like ``/var/lib/postgresql/9.6/main``, ``/scratch/postgres/9.6/main``, ...).
 
@@ -484,71 +484,110 @@ Updating from 0.x.* to 1.*
 - `Additional instructions on how to migrate from versions 0.4 -- 0.11 <https://aiida.readthedocs.io/projects/aiida-core/en/v1.2.1/install/updating_installation.html#older-versions>`_.
 - For a list of breaking changes between the 0.x and the 1.x series of AiiDA, `see here <https://aiida.readthedocs.io/projects/aiida-core/en/v1.2.1/install/updating_installation.html#breaking-changes-from-0-12-to-1>`_.
 
+Updating from 1.* to 2.*
+------------------------
+
+See the :doc:`../reference/_changelog` for a list of breaking changes.
 
 .. _how-to:installation:backup:
-
-.. _how-to:installation:backup:software:
 
 Backing up your installation
 ============================
 
 A full backup of an AiiDA instance and AiiDA managed data requires a backup of:
 
-* the AiiDA configuration folder, which is typically named ``.aiida`` and located in the home folder (see also :ref:`intro:install:setup`).
+* the AiiDA configuration folder, which is named ``.aiida``.
+  The location of the folder is shown in the output of ``verdi status``.
   This folder contains, among other things, the ``config.json`` configuration file and log files.
 
-* files associated with nodes in the repository folder (one per profile). Typically located in the ``.aiida`` folder.
+* the data stored for each profile.
+  Where the data is stored, depends on the storage backend used by each profile.
 
-* queryable metadata in the PostgreSQL database (one per profile).
+The panels below provide instructions for storage backends provided by ``aiida-core``.
+To determine what storage backend a profile uses, call ``verdi profile show``.
 
+.. tip:: Before creating a backup, it is recommended to run ``verdi storage maintain``.
+    This will optimize the storage which can significantly reduce the time required to create the backup.
+    For optimal results, run ``verdi storage maintain --full``.
+    Note that this requires the profile to not be in use by any other process.
 
-.. todo::
+.. tab-set::
 
-    .. _how-to:installation:backup:repository:
+    .. tab-item:: psql_dos
 
-    title: Repository backup
+        The ``psql_dos`` storage backend is the default backend for AiiDA.
+        It stores its data in a PostgreSQL database and a file repository on the local filesystem.
+        To fully backup the data stored for a profile, you should backup the associated database and file repository.
 
+        **PostgreSQL database**
 
-.. _how-to:installation:backup:postgresql:
+        To export the entire database, we recommend to use the `pg_dump <https://www.postgresql.org/docs/12/app-pgdump.html>`_ utility:
 
-Database backup
----------------
+        .. code-block:: console
 
-PostgreSQL typically spreads database information over multiple files that, if backed up directly, are not guaranteed to restore the database.
-We therefore strongly recommend to periodically dump the database contents to a file (which you can then back up using your method of choice).
+            pg_dump -h <database_hostname> -p <database_port> -d <database_name> -W > aiida_backup.psql
 
-A few useful pointers:
+        The ``-W`` flag will ensure to prompt for the database password.
+        The parameters between brackets should be replaced with the values that have been configured for the profile.
+        You can retrieve these from the ``storage.config`` returned by the ``verdi profile show`` command.
 
-* In order to avoid having to enter your database password each time you use the script, you can create a file ``.pgpass`` in your home directory containing your database credentials, as described `in the PostgreSQL documentation <https://www.postgresql.org/docs/12/libpq-pgpass.html>`_.
+        .. tip::
 
-* In order to dump your database, use the `pg_dump utility from PostgreSQL <https://www.postgresql.org/docs/12/app-pgdump.html>`_. You can use as a starting example a bash script similar to :download:`this file <include/backup_postgresql.sh>`.
+            In order to avoid having to enter your database password each time you use the script, you can create a file ``.pgpass`` in your home directory containing your database credentials, as described `in the PostgreSQL documentation <https://www.postgresql.org/docs/12/libpq-pgpass.html>`_.
 
-* You can setup the backup script to run daily using cron (see notes in the :ref:`previous section <how-to:installation:backup:repository>`).
+        **File repository**
+
+        The file repository is a directory on the local file system.
+        The most efficient way to create a backup is to use the `rsync <https://en.wikipedia.org/wiki/Rsync>`_ utility.
+        The path of the repository is shown in the ``storage.config.repository_uri`` key returned by the ``verdi profile show`` command.
+        To create a backup, simply run:
+
+        .. code-block:: console
+
+            rsync -arvz <storage.config.repository_uri> /some/path/aiida_backup
+
 
 .. _how-to:installation:backup:restore:
 
-Restore backup
---------------
+Restoring your installation
+===========================
 
-In order to restore a backup, you will need to:
+Restoring a backed up AiiDA installation requires:
 
-1. Restore the repository folder that you backed up earlier in the same location as it used to be (you can check the location in the ``config.json`` file inside your ``.aiida`` folder, or simply using ``verdi profile show``).
+* restoring the backed up ``.aiida`` folder, with at the very least the ``config.json`` file it contains.
+  It should be placed in the path defined by the ``AIIDA_PATH`` environment variable.
+  To test the restoration worked, run ``verdi profile list`` to verify that all profiles are displayed.
 
-2. Create an empty database following the instructions described in :ref:`database <intro:install:database>` skipping the ``verdi setup`` phase.
-The database should have the same name and database username as the original one (i.e. if you are restoring on the original postgresql cluster, you may have to either rename or delete the original database).
+* restoring the data of each backed up profile.
+  Like the backup procedure, this is dependent on the storage backend used by the profile.
 
-3. Change directory to the folder containing the database dump created with ``pg_dump``, and load it using the ``psql`` command.
+The panels below provide instructions for storage backends provided by ``aiida-core``.
+To determine what storage backend a profile uses, call ``verdi profile show``.
 
-   .. dropdown:: Example commands on Linux Ubuntu
+.. tab-set::
 
-        This is an example command, assuming that your dump is named ``aiidadb-backup.psql``:
+    .. tab-item:: psql_dos
 
-        .. code-block:: bash
+        To fully backup the data stored for a profile using the ``psql_dos`` backend, you should restore the associated database and file repository.
 
-            psql -h localhost -U aiida -d aiidadb -f aiidadb-backup.psql
+        **PostgreSQL database**
 
-        After supplying your database password, the database should be restored.
-        Note that, if you installed the database on Ubuntu as a system service, you need to type ``sudo su - postgres`` to become the ``postgres`` UNIX user.
+        To restore the PostgreSQL database from the ``.psql`` file that was backed up, first you should create an empty database following the instructions described in :ref:`database <intro:install:database>` skipping the ``verdi setup`` phase.
+        The backed up data can then be imported by calling:
+
+        .. code-block:: console
+
+            psql -h <database_hostname> -p <database_port> -d <database_name> -W < aiida_backup.psql
+
+        **File repository**
+
+        To restore the file repository, simply copy the directory that was backed up to the location indicated by the ``storage.config.repository_uri`` key returned by the ``verdi profile show`` command.
+        Like the backing up process, we recommend using ``rsync`` for this:
+
+        .. code-block:: console
+
+            rsync -arvz /some/path/aiida_backup <storage.config.repository_uri>
+
 
 .. _how-to:installation:multi-user:
 

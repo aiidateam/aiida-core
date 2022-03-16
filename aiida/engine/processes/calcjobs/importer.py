@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Abstract utility class that helps to import calculation jobs completed outside of AiiDA."""
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import Dict, Union
 
 from aiida.orm import Node, RemoteData
@@ -8,7 +8,13 @@ from aiida.orm import Node, RemoteData
 __all__ = ('CalcJobImporter',)
 
 
-class CalcJobImporter:
+class CalcJobImporter(ABC):
+    """An abstract class, to define an importer for computations completed outside of AiiDA.
+
+    This class is used to import the results of a calculation that was completed outside of AiiDA.
+    The importer is responsible for parsing the output files of the calculation and creating the
+    corresponding AiiDA nodes.
+    """
 
     @staticmethod
     @abstractmethod

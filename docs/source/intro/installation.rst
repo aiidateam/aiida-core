@@ -91,7 +91,7 @@ If you use the same names as in the example commands above, then during the ``ve
 .. admonition:: Don't forget to backup your database!
    :class: tip title-icon-tip
 
-   See the :ref:`Database backup how-to <how-to:installation:backup:postgresql>`), and :ref:`how to move your database <how-to:installation:performance>`.
+   See the :ref:`Database backup how-to <how-to:installation:backup>`), and :ref:`how to move your database <how-to:installation:performance>`.
 
 Database setup using 'peer' authentication
 ------------------------------------------

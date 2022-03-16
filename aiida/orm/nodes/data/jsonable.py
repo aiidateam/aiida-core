@@ -4,7 +4,9 @@ import importlib
 import json
 import typing
 
-from aiida.orm import Data
+from .data import Data
+
+__all__ = ('JsonableData',)
 
 
 class JsonSerializableProtocol(typing.Protocol):

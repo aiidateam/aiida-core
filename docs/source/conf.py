@@ -67,6 +67,7 @@ extensions = [
 ]
 
 intersphinx_mapping = {
+    'aep': ('https://aep.readthedocs.io/en/latest/', None),
     'click': ('https://click.palletsprojects.com/', None),
     'flask': ('http://flask.pocoo.org/docs/latest/', None),
     'flask_restful': ('https://flask-restful.readthedocs.io/en/latest/', None),
@@ -80,7 +81,8 @@ intersphinx_mapping = {
 todo_include_todos = False
 ipython_mplbackend = ''
 
-myst_enable_extensions = []
+myst_enable_extensions = ['colon_fence', 'deflist']
+nb_merge_streams = True
 
 # -- Options for HTML output ---------------------------------------------------
 
@@ -187,6 +189,7 @@ def run_apidoc(_):
 
 
 # Warnings to ignore when using the -n (nitpicky) option
+nitpicky = True
 with open('nitpick-exceptions', 'r') as handle:
     nitpick_ignore = [
         tuple(line.strip().split(None, 1)) for line in handle.readlines() if line.strip() and not line.startswith('#')
@@ -265,7 +268,10 @@ autodoc_aliases_public = {
     'aiida.orm.AuthInfo': 'aiida.orm.authinfos.AuthInfo',
     'aiida.orm.Computer': 'aiida.orm.computers.Computer',
     'aiida.orm.Comment': 'aiida.orm.comments.Comment',
+    'aiida.orm.EnumData': 'aiida.orm.nodes.data.enum.EnumData',
     'aiida.orm.Group': 'aiida.orm.groups.Group',
+    'aiida.orm.JsonableData': 'aiida.orm.nodes.data.jsonable.JsonableData',
+    'aiida.orm.List': 'aiida.orm.nodes.data.list.List',
     'aiida.orm.Log': 'aiida.orm.logs.Log',
     'aiida.orm.Node': 'aiida.orm.nodes.node.Node',
     'aiida.orm.User': 'aiida.orm.users.User',

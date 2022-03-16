@@ -172,7 +172,7 @@ def profile_context(profile: Optional[str] = None, allow_switch=False) -> 'Profi
     """
     from aiida.manage import get_manager
     get_manager().load_profile(profile, allow_switch)
-    yield
+    yield profile
     get_manager().unload_profile()
 
 
@@ -248,6 +248,20 @@ def load_documentation_profile():
     """
     import tempfile
 
+    # imports required for docs/source/reference/api/public.rst
+    from aiida import (  # pylint: disable=unused-import
+        cmdline,
+        common,
+        engine,
+        manage,
+        orm,
+        parsers,
+        plugins,
+        schedulers,
+        tools,
+        transports,
+    )
+    from aiida.cmdline.params import arguments, options  # pylint: disable=unused-import
     from aiida.storage.psql_dos.models.base import get_orm_metadata
 
     from .config import Config

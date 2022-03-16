@@ -124,6 +124,7 @@ DESCRIPTION = options.DESCRIPTION.clone(
 )
 
 INPUT_PLUGIN = options.INPUT_PLUGIN.clone(
+    required=False,
     prompt='Default calculation input plugin',
     cls=InteractiveOption,
     help="Entry point name of the default calculation plugin (as listed in 'verdi plugin list aiida.calculations')."

@@ -50,14 +50,14 @@ def non_interactive_editor(request):
         else:
             environ = None
         try:
-            process = subprocess.Popen(  # pylint: disable=consider-using-with
+            with subprocess.Popen(
                 f'{editor} {filename}',  # This is the line that we change removing `shlex_quote`
                 env=environ,
                 shell=True,
-            )
-            exit_code = process.wait()
-            if exit_code != 0:
-                raise click.ClickException(f'{editor}: Editing failed!')
+            ) as process:
+                exit_code = process.wait()
+                if exit_code != 0:
+                    raise click.ClickException(f'{editor}: Editing failed!')
         except OSError as exception:
             raise click.ClickException(f'{editor}: Editing failed: {exception}')
 
@@ -375,7 +375,6 @@ def override_logging(isolated_config):
 @pytest.fixture
 def with_daemon():
     """Starts the daemon process and then makes sure to kill it once the test is done."""
-    import signal
     import subprocess
     import sys
 
@@ -389,17 +388,14 @@ def with_daemon():
     env['PYTHONPATH'] = ':'.join(sys.path)
 
     profile = get_profile()
-    daemon = subprocess.Popen(  # pylint: disable=consider-using-with
+
+    with subprocess.Popen(
         DaemonClient(profile).cmd_string.split(),
         stderr=sys.stderr,
         stdout=sys.stdout,
         env=env,
-    )
-
-    yield
-
-    # Note this will always be executed after the yield no matter what happened in the test that used this fixture.
-    os.kill(daemon.pid, signal.SIGTERM)
+    ):
+        yield
 
 
 @pytest.fixture

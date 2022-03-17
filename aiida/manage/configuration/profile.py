@@ -72,8 +72,8 @@ class Profile:  # pylint: disable=too-many-public-methods
             from uuid import uuid4
             self._attributes[self.KEY_UUID] = uuid4().hex
 
-    def __str__(self) -> str:
-        return f'Profile<{self.uuid!r} ({self.name!r})>'
+    def __repr__(self) -> str:
+        return f'Profile<uuid={self.uuid!r} name={self.name!r}>'
 
     def copy(self):
         """Return a copy of the profile."""

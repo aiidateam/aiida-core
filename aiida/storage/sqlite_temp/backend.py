@@ -25,7 +25,6 @@ from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import BackendEntity, StorageBackend
 from aiida.repository.backend.sandbox import SandboxRepositoryBackend
 from aiida.storage.sqlite_zip import models, orm
-from aiida.storage.sqlite_zip.backend import SqliteBackendQueryBuilder
 from aiida.storage.sqlite_zip.migrator import get_schema_version_head
 from aiida.storage.sqlite_zip.utils import create_sqla_engine
 
@@ -93,7 +92,7 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
 
     def __str__(self) -> str:
         state = 'closed' if self.is_closed else 'open'
-        return f'SqliteTemp storage [{state}]'
+        return f'SqliteTemp storage [{state}], sandbox: {self.profile.repository_path}'
 
     @property
     def is_closed(self) -> bool:
@@ -133,7 +132,7 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
         if self._closed:
             raise ClosedStorage(str(self))
         if self._repo is None:
-            # this does not seem to be removing the folder on garbage collection?
+            # to-do this does not seem to be removing the folder on garbage collection?
             self._repo = SandboxRepositoryBackend(sandbox_in_repo=True)
         return self._repo
 
@@ -164,8 +163,8 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
     def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
         pass
 
-    def query(self) -> 'SqliteBackendQueryBuilder':
-        return SqliteBackendQueryBuilder(self)
+    def query(self) -> orm.SqliteQueryBuilder:
+        return orm.SqliteQueryBuilder(self)
 
     def get_backend_entity(self, model) -> BackendEntity:
         """Return the backend entity that corresponds to the given Model instance."""

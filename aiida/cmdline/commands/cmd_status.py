@@ -116,17 +116,19 @@ def verdi_status(print_traceback, no_rmq):
 
     # Getting the rmq status
     if not no_rmq:
+        rmq_url = '<NOT SET>'
         try:
+            rmq_url = profile.get_rmq_url()
             with Capturing(capture_stderr=True):
                 with override_log_level():  # temporarily suppress noisy logging
                     comm = manager.get_communicator()
         except Exception as exc:
-            message = f'Unable to connect to rabbitmq with URL: {profile.get_rmq_url()}'
+            message = f'Unable to connect to rabbitmq with URL: {rmq_url}'
             print_status(ServiceStatus.ERROR, 'rabbitmq', message, exception=exc, print_traceback=print_traceback)
             exit_code = ExitCode.CRITICAL
         else:
             version, supported = manager.check_rabbitmq_version(comm)
-            connection = f'Connected to RabbitMQ v{version} as {profile.get_rmq_url()}'
+            connection = f'Connected to RabbitMQ v{version} as {rmq_url}'
             if supported:
                 print_status(ServiceStatus.UP, 'rabbitmq', connection)
             else:
@@ -150,7 +152,8 @@ def verdi_status(print_traceback, no_rmq):
         exit_code = ExitCode.CRITICAL
 
     # Note: click does not forward return values to the exit code, see https://github.com/pallets/click/issues/747
-    sys.exit(exit_code)
+    if exit_code != ExitCode.SUCCESS:
+        sys.exit(exit_code)
 
 
 def print_status(status, service, msg='', exception=None, print_traceback=False):

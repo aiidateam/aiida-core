@@ -89,7 +89,7 @@ class TestRelationshipsSQLA:
         Assert the correct storage of user and node."""
 
         # Create user
-        dbu1 = DbUser('test1@schema', 'spam', 'eggs', 'monty')
+        dbu1 = DbUser(email='test1@schema', first_name='spam', last_name='eggs', institution='monty')
 
         # Creat node
         node_dict = dict(user=dbu1)
@@ -115,7 +115,7 @@ class TestRelationshipsSQLA:
 
         Assert the correct storage of user and node."""
         # Create user
-        dbu1 = DbUser('tests2@schema', 'spam', 'eggs', 'monty')
+        dbu1 = DbUser(email='test2@schema', first_name='spam', last_name='eggs', institution='monty')
 
         # Creat node
         node_dict = dict(user=dbu1)
@@ -148,7 +148,7 @@ class TestRelationshipsSQLA:
         Assert the correct storage of the user and node. Assert the
         non-storage of the other node."""
         # Create user
-        dbu1 = DbUser('tests3@schema', 'spam', 'eggs', 'monty')
+        dbu1 = DbUser(email='test3@schema', first_name='spam', last_name='eggs', institution='monty')
 
         # Creat node
         node_dict = dict(user=dbu1)
@@ -184,7 +184,7 @@ class TestRelationshipsSQLA:
         Assert the correct storage of the user and node. Assert the
         non-storage of the other nodes."""
         # Create user
-        dbu1 = DbUser('tests4@schema', 'spam', 'eggs', 'monty')
+        dbu1 = DbUser(email='test4@schema', first_name='spam', last_name='eggs', institution='monty')
 
         # Creat node objects assigningd them to the same name
         # Check https://docs.python.org/2/tutorial/classes.html subsec. 9.1

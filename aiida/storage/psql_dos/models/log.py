@@ -57,8 +57,3 @@ class DbLog(Base):
 
     def __str__(self):
         return f'DbLog: {self.levelname} for node {self.dbnode.id}: {self.message}'
-
-    def __init__(self, *args, **kwargs):
-        """Construct new instance making sure the `_metadata` column is initialized to empty dict if `None`."""
-        super().__init__(*args, **kwargs)
-        self._metadata = kwargs.pop('metadata', {}) or {}

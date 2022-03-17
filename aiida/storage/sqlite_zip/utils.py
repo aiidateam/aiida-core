@@ -31,9 +31,22 @@ REPO_FOLDER = 'repo'
 
 
 def sqlite_enforce_foreign_keys(dbapi_connection, _):
-    """Enforce foreign key constraints, when using sqlite backend (off by default)"""
+    """Enforce foreign key constraints, when using sqlite backend (off by default).
+
+    See: https://www.sqlite.org/pragma.html#pragma_foreign_keys
+    """
     cursor = dbapi_connection.cursor()
     cursor.execute('PRAGMA foreign_keys=ON;')
+    cursor.close()
+
+
+def sqlite_case_sensitive_like(dbapi_connection, _):
+    """Enforce case sensitive like operations (off by default).
+
+    See: https://www.sqlite.org/pragma.html#pragma_case_sensitive_like
+    """
+    cursor = dbapi_connection.cursor()
+    cursor.execute('PRAGMA case_sensitive_like=ON;')
     cursor.close()
 
 
@@ -47,6 +60,7 @@ def create_sqla_engine(path: Union[str, Path], *, enforce_foreign_keys: bool = T
         future=True,
         **kwargs
     )
+    event.listen(engine, 'connect', sqlite_case_sensitive_like)
     if enforce_foreign_keys:
         event.listen(engine, 'connect', sqlite_enforce_foreign_keys)
     return engine

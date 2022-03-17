@@ -25,9 +25,8 @@ from aiida.manage import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
 from aiida.repository.backend.abstract import AbstractRepositoryBackend
-from aiida.storage.psql_dos.orm.querybuilder import SqlaQueryBuilder
 
-from . import models, orm
+from . import orm
 from .migrator import get_schema_version_head, validate_storage
 from .utils import DB_FILENAME, REPO_FOLDER, ReadOnlyError, create_sqla_engine, extract_metadata, read_version
 
@@ -146,8 +145,8 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
                 raise CorruptStorage(f'repository could not be read: non-existent {self._path / REPO_FOLDER}')
         return self._repo
 
-    def query(self) -> 'SqliteBackendQueryBuilder':
-        return SqliteBackendQueryBuilder(self)
+    def query(self) -> orm.SqliteQueryBuilder:
+        return orm.SqliteQueryBuilder(self)
 
     def get_backend_entity(self, model):  # pylint: disable=no-self-use
         """Return the backend entity that corresponds to the given Model instance."""
@@ -349,43 +348,3 @@ class FolderBackendRepository(_RoBackendRepository):
             raise FileNotFoundError(f'object with key `{key}` does not exist.')
         with self._path.joinpath(key).open('rb') as handle:
             yield handle
-
-
-class SqliteBackendQueryBuilder(SqlaQueryBuilder):
-    """Archive query builder"""
-
-    @property
-    def Node(self):
-        return models.DbNode
-
-    @property
-    def Link(self):
-        return models.DbLink
-
-    @property
-    def Computer(self):
-        return models.DbComputer
-
-    @property
-    def User(self):
-        return models.DbUser
-
-    @property
-    def Group(self):
-        return models.DbGroup
-
-    @property
-    def AuthInfo(self):
-        return models.DbAuthInfo
-
-    @property
-    def Comment(self):
-        return models.DbComment
-
-    @property
-    def Log(self):
-        return models.DbLog
-
-    @property
-    def table_groups_nodes(self):
-        return models.DbGroupNodes.__table__  # type: ignore[attr-defined] # pylint: disable=no-member

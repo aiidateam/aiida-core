@@ -34,6 +34,6 @@ pip-wheel-metadata
 # Docs
 docs/build
 docs/source/reference/apidoc
-docs/**/_sandbox
+_sandbox
 
 pplot_out/

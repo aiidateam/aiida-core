@@ -24,7 +24,7 @@ class SinglefileData(Data):
 
     DEFAULT_FILENAME = 'file.txt'
 
-    def __init__(self, file, filename=None, **kwargs):
+    def __init__(self, file=None, filename=None, **kwargs):
         """Construct a new instance and set the contents to that of the file.
 
         :param file: an absolute filepath or filelike object whose contents to copy.

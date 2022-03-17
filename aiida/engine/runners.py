@@ -299,8 +299,6 @@ class Runner:  # pylint: disable=too-many-public-methods
         :param pk: pk of the process
         :param callback: function to be called upon process termination
         """
-        assert self.communicator is not None, 'communicator not set for runner'
-
         node = load_node(pk=pk)
         subscriber_identifier = str(uuid.uuid4())
         event = threading.Event()
@@ -318,14 +316,16 @@ class Runner:  # pylint: disable=too-many-public-methods
                 callback()
             finally:
                 event.set()
-                self.communicator.remove_broadcast_subscriber(subscriber_identifier)  # type: ignore[union-attr]
+                if self.communicator:
+                    self.communicator.remove_broadcast_subscriber(subscriber_identifier)
 
         broadcast_filter = kiwipy.BroadcastFilter(functools.partial(inline_callback, event), sender=pk)
         for state in [ProcessState.FINISHED, ProcessState.KILLED, ProcessState.EXCEPTED]:
             broadcast_filter.add_subject_filter(f'state_changed.*.{state.value}')
 
-        LOGGER.info('adding subscriber for broadcasts of %d', pk)
-        self.communicator.add_broadcast_subscriber(broadcast_filter, subscriber_identifier)
+        if self.communicator:
+            LOGGER.info('adding subscriber for broadcasts of %d', pk)
+            self.communicator.add_broadcast_subscriber(broadcast_filter, subscriber_identifier)
         self._poll_process(node, functools.partial(inline_callback, event))
 
     def get_process_future(self, pk: int) -> futures.ProcessFuture:

@@ -24,7 +24,7 @@ def test_status(run_cli_command):
 
     # Even though the daemon should not be running, the return value should still be 0 corresponding to success
     assert 'The daemon is not running' in result.output
-    assert result.exit_code is ExitCode.SUCCESS
+    assert result.exit_code is ExitCode.SUCCESS.value
 
     for string in ['config', 'profile', 'postgres', 'rabbitmq', 'daemon']:
         assert string in result.output
@@ -46,7 +46,7 @@ def test_status_no_rmq(run_cli_command):
     result = run_cli_command(cmd_status.verdi_status, options)
 
     assert 'rabbitmq' not in result.output
-    assert result.exit_code is ExitCode.SUCCESS
+    assert result.exit_code is ExitCode.SUCCESS.value
 
     for string in ['config', 'profile', 'postgres', 'daemon']:
         assert string in result.output

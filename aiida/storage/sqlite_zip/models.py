@@ -40,10 +40,13 @@ class SqliteModel:
         """Return a representation of the row columns"""
         string = f'<{self.__class__.__name__}'
         for col in self.__table__.columns:  # type: ignore[attr-defined] # pylint: disable=no-member
-            # don't include columns with potentially large values
-            if isinstance(col.type, (JSON, sa.Text)):
-                continue
-            string += f' {col.name}={getattr(self, col.name)}'
+            col_name = col.name
+            if col_name == 'metadata':
+                col_name = '_metadata'
+            val = f'{getattr(self, col_name)!r}'
+            if len(val) > 10:  # truncate long values
+                val = val[:10] + '...'
+            string += f' {col_name}={val},'
         return string + '>'
 
 
@@ -76,6 +79,7 @@ class TZDateTime(sa.TypeDecorator):  # pylint: disable=abstract-method
 SqliteBase = sa.orm.declarative_base(
     cls=SqliteModel, name='SqliteModel', metadata=sa.MetaData(naming_convention=dict(base.naming_convention))
 )
+sa.event.listen(SqliteBase, 'init', base.instant_defaults_listener, propagate=True)
 
 
 def pg_to_sqlite(pg_table: sa.Table):

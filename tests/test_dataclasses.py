@@ -2023,7 +2023,7 @@ class TestStructureDataFromAse:
         """
         Tests StructureData -> ASE, with all sorts of kind names
         """
-        a = StructureData()
+        a = StructureData(cell=[[1, 0, 0], [0, 1, 0], [0, 0, 1]])
         a.append_atom(position=(0., 0., 0.), symbols='Ba', name='Ba')
         a.append_atom(position=(0., 0., 0.), symbols='Ba', name='Ba1')
         a.append_atom(position=(0., 0., 0.), symbols='Cu', name='Cu')

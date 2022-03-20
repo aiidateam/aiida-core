@@ -207,7 +207,6 @@ def import_aiida_xyz(filename, vacuum_factor, vacuum_addition, pbc, label, group
     try:
         new_structure._parse_xyz(xyz_txt)  # pylint: disable=protected-access
         new_structure._adjust_default_cell(  # pylint: disable=protected-access
-            new_structure,
             vacuum_addition=vacuum_addition,
             vacuum_factor=vacuum_factor,
             pbc=pbc_bools)

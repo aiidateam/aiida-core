@@ -427,6 +427,7 @@ class TestBasic:
     def test_subclassing(self):
         s = orm.StructureData()
         s.set_attribute('cat', 'miau')
+        s.set_pbc(False)
         s.store()
 
         d = orm.Data()

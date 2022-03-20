@@ -2490,7 +2490,7 @@ def _get_dimensionality(pbc, cell):
         vectors = cell[pbc]
         retdict['value'] = np.linalg.norm(np.cross(vectors[0], vectors[1]))
     elif dim == 3:
-        retdict['value'] = calc_cell_volume(vectors)
+        retdict['value'] = calc_cell_volume(cell)
 
         return retdict
 

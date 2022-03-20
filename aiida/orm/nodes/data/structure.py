@@ -132,6 +132,17 @@ def has_spglib():
     return True
 
 
+def calc_cell_volume(cell):
+    """
+    Compute the three-dimensional cell volume in Angstrom^3.
+
+    :param cell: the cell vectors; the must be a 3x3 list of lists of floats
+    :returns: the cell volume.
+    """
+    import numpy as np
+    return np.abs(np.dot(cell[0], np.cross(cell[1], cell[2])))
+
+
 def _create_symbols_tuple(symbols):
     """
     Returns a tuple with the symbols provided. If a string is provided,
@@ -695,7 +706,7 @@ class StructureData(Data):
 
     def __init__(
         self,
-        cell=_DEFAULT_CELL,
+        cell=None,
         pbc=None,
         ase=None,
         pymatgen=None,
@@ -733,11 +744,12 @@ class StructureData(Data):
                 self.set_pymatgen_molecule(pymatgen_molecule)
 
         else:
-            if pbc is None:
-                # If a cell is provided by the user, we default to pbc
-                # If not
-                pbc = [True, True, True]
+            if cell is None:
+                cell = _DEFAULT_CELL
             self.set_cell(cell)
+
+            if pbc is None:
+                pbc = [True, True, True]
             self.set_pbc(pbc)
 
     def get_dimensionality(self):
@@ -1080,8 +1092,6 @@ class StructureData(Data):
         """
         If the structure was imported from an xyz file, it lacks a cell.
         This method will adjust the cell
-
-        Note: This helper method is not used by the StructureData class directly.
         """
         # pylint: disable=invalid-name
         import numpy as np
@@ -1640,11 +1650,6 @@ class StructureData(Data):
             raise ModificationNotAllowed('The StructureData object cannot be modified, it has already been stored')
         the_pbc = get_valid_pbc(value)
 
-        # In order to introduce this consistency check, we would need to change the default value of `pbc`
-        # (at least for cases where the user does not provide a cell).
-        # if any(the_pbc):
-        #     assert self.cell is not None, 'Must provide cell when specifying periodic boundary conditions.'
-
         # self._pbc = the_pbc
         self.set_attribute('pbc1', the_pbc[0])
         self.set_attribute('pbc2', the_pbc[1])
@@ -1822,8 +1827,6 @@ class StructureData(Data):
 
         if self.pbc != (True, True, True):
             raise ValueError('Periodic boundary conditions must apply in all three dimensions of real space')
-        if self.cell == _DEFAULT_CELL:
-            raise ValueError('Must specify cell in order to create pymatgen structure')
 
         species = []
         additional_kwargs = {}
@@ -2452,17 +2455,6 @@ class Site:
 
     def __str__(self):
         return f"kind name '{self.kind_name}' @ {self.position[0]},{self.position[1]},{self.position[2]}"
-
-
-def calc_cell_volume(cell):
-    """
-    Compute the three-dimensional cell volume in Angstrom^3.
-
-    :param cell: the cell vectors; the must be a 3x3 list of lists of floats
-    :returns: the cell volume.
-    """
-    import numpy as np
-    return np.abs(np.dot(cell[0], np.cross(cell[1], cell[2])))
 
 
 def _get_dimensionality(pbc, cell):

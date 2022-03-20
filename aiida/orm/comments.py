@@ -12,13 +12,13 @@ from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional, Type
 
 from aiida.common.lang import classproperty
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 
 from . import entities, users
 
 if TYPE_CHECKING:
     from aiida.orm import Node, User
-    from aiida.orm.implementation import Backend, BackendComment
+    from aiida.orm.implementation import BackendComment, StorageBackend
 
 __all__ = ('Comment',)
 
@@ -70,9 +70,11 @@ class Comment(entities.Entity['BackendComment']):
 
     @classproperty
     def objects(cls: Type['Comment']) -> CommentCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
-        return CommentCollection.get_cached(cls, get_manager().get_backend())
+        return CommentCollection.get_cached(cls, get_manager().get_profile_storage())
 
-    def __init__(self, node: 'Node', user: 'User', content: Optional[str] = None, backend: Optional['Backend'] = None):
+    def __init__(
+        self, node: 'Node', user: 'User', content: Optional[str] = None, backend: Optional['StorageBackend'] = None
+    ):
         """Create a Comment for a given node and user
 
         :param node: a Node instance
@@ -82,7 +84,7 @@ class Comment(entities.Entity['BackendComment']):
 
         :return: a Comment object associated to the given node and user
         """
-        backend = backend or get_manager().get_backend()
+        backend = backend or get_manager().get_profile_storage()
         model = backend.comments.create(node=node.backend_entity, user=user.backend_entity, content=content)
         super().__init__(model)
 

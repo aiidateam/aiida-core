@@ -154,6 +154,8 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
     will cause a 'daemon_handler' to be added to all the configured loggers, that is a
     RotatingFileHandler that writes to the log file.
 
+    :param with_orm: configure logging to the backend storage.
+        We don't configure this by default, since it would load the modules that slow the CLI
     :param daemon: configure the logging for a daemon task by adding a file handler instead
         of the default 'console' StreamHandler
     :param daemon_log_file: absolute filepath of the log file for the RotatingFileHandler

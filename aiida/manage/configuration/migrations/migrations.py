@@ -25,8 +25,8 @@ ConfigType = Dict[str, Any]
 # When the configuration file format is changed in a backwards-incompatible way, the oldest compatible version should
 # be set to the new current version.
 
-CURRENT_CONFIG_VERSION = 6
-OLDEST_COMPATIBLE_CONFIG_VERSION = 6
+CURRENT_CONFIG_VERSION = 8
+OLDEST_COMPATIBLE_CONFIG_VERSION = 8
 
 CONFIG_LOGGER = AIIDA_LOGGER.getChild('config')
 
@@ -103,16 +103,17 @@ class SimplifyDefaultProfiles(SingleMigration):
     up_compatible = 3
 
     def upgrade(self, config: ConfigType) -> None:
-        from aiida.manage.configuration import PROFILE
+        from aiida.manage.configuration import get_profile
 
+        global_profile = get_profile()
         default_profiles = config.pop('default_profiles', None)
 
         if default_profiles and 'daemon' in default_profiles:
             config['default_profile'] = default_profiles['daemon']
         elif default_profiles and 'verdi' in default_profiles:
             config['default_profile'] = default_profiles['verdi']
-        elif PROFILE is not None:
-            config['default_profile'] = PROFILE.name
+        elif global_profile is not None:
+            config['default_profile'] = global_profile.name
 
     def downgrade(self, config: ConfigType) -> None:
         if 'default_profile' in config:
@@ -231,11 +232,9 @@ class AbstractStorageAndProcess(SingleMigration):
     def upgrade(self, config: ConfigType) -> None:
         for profile_name, profile in config.get('profiles', {}).items():
             profile.setdefault('storage', {})
-            if 'AIIDADB_BACKEND' in profile:
-                profile['storage']['backend'] = profile.pop('AIIDADB_BACKEND')
-            else:
+            if 'AIIDADB_BACKEND' not in profile:
                 CONFIG_LOGGER.warning(f'profile {profile_name!r} had no expected "AIIDADB_BACKEND" key')
-                profile['storage']['backend'] = 'sqlalchemy'
+            profile['storage']['backend'] = profile.pop('AIIDADB_BACKEND', None)
             profile['storage'].setdefault('config', {})
             for old, new in self.storage_conversions:
                 if old in profile:
@@ -252,9 +251,10 @@ class AbstractStorageAndProcess(SingleMigration):
                     CONFIG_LOGGER.warning(f'profile {profile_name!r} had no expected {old!r} key')
 
     def downgrade(self, config: ConfigType) -> None:
-        for profile in config.get('profiles', {}).values():
-            if 'backend' in profile.get('storage', {}):
-                profile['AIIDADB_BACKEND'] = profile['storage']['backend']
+        for profile_name, profile in config.get('profiles', {}).items():
+            profile['AIIDADB_BACKEND'] = profile.get('storage', {}).get('backend', None)
+            if profile['AIIDADB_BACKEND'] is None:
+                CONFIG_LOGGER.warning(f'profile {profile_name!r} had no expected "storage.backend" key')
             for old, new in self.storage_conversions:
                 if new in profile.get('storage', {}).get('config', {}):
                     profile[old] = profile['storage']['config'].pop(new)
@@ -265,8 +265,93 @@ class AbstractStorageAndProcess(SingleMigration):
             profile.pop('process_control', None)
 
 
+class MergeStorageBackendTypes(SingleMigration):
+    """`django` and `sqlalchemy` are now merged into `psql_dos`.
+
+    The legacy name is stored under the `_v6_backend` key, to allow for downgrades.
+    """
+    down_revision = 6
+    down_compatible = 6
+    up_revision = 7
+    up_compatible = 7
+
+    def upgrade(self, config: ConfigType) -> None:
+        for profile_name, profile in config.get('profiles', {}).items():
+            if 'storage' in profile:
+                storage = profile['storage']
+                if 'backend' in storage:
+                    if storage['backend'] in ('django', 'sqlalchemy'):
+                        profile['storage']['_v6_backend'] = storage['backend']
+                        storage['backend'] = 'psql_dos'
+                    else:
+                        CONFIG_LOGGER.warning(
+                            f'profile {profile_name!r} had unknown storage backend {storage["backend"]!r}'
+                        )
+
+    def downgrade(self, config: ConfigType) -> None:
+        for profile_name, profile in config.get('profiles', {}).items():
+            if '_v6_backend' in profile.get('storage', {}):
+                profile.setdefault('storage', {})['backend'] = profile.pop('_v6_backend')
+            else:
+                CONFIG_LOGGER.warning(f'profile {profile_name!r} had no expected "storage._v6_backend" key')
+
+
+class AddTestProfileKey(SingleMigration):
+    """Add the ``test_profile`` key."""
+    down_revision = 7
+    down_compatible = 7
+    up_revision = 8
+    up_compatible = 8
+
+    def upgrade(self, config: ConfigType) -> None:
+        for profile_name, profile in config.get('profiles', {}).items():
+            profile['test_profile'] = profile_name.startswith('test_')
+
+    def downgrade(self, config: ConfigType) -> None:
+        profiles = config.get('profiles', {})
+        profile_names = list(profiles.keys())
+
+        # Iterate over the fixed list of the profile names, since we are mutating the profiles dictionary.
+        for profile_name in profile_names:
+
+            profile = profiles.pop(profile_name)
+            profile_name_new = None
+            test_profile = profile.pop('test_profile', False)  # If absent, assume it is not a test profile
+
+            if test_profile and not profile_name.startswith('test_'):
+                profile_name_new = f'test_{profile_name}'
+                CONFIG_LOGGER.warning(
+                    f'profile `{profile_name}` is a test profile but does not start with the required `test_` prefix.'
+                )
+
+            if not test_profile and profile_name.startswith('test_'):
+                profile_name_new = profile_name[5:]
+                CONFIG_LOGGER.warning(
+                    f'profile `{profile_name}` is not a test profile but starts with the `test_` prefix.'
+                )
+
+            if profile_name_new is not None:
+
+                if profile_name_new in profile_names:
+                    raise exceptions.ConfigurationError(
+                        f'cannot change `{profile_name}` to `{profile_name_new}` because it already exists.'
+                    )
+
+                CONFIG_LOGGER.warning(f'changing profile name from `{profile_name}` to `{profile_name_new}`.')
+                profile_name = profile_name_new
+
+            profiles[profile_name] = profile
+
+
 MIGRATIONS = (
-    Initial, AddProfileUuid, SimplifyDefaultProfiles, AddMessageBroker, SimplifyOptions, AbstractStorageAndProcess
+    Initial,
+    AddProfileUuid,
+    SimplifyDefaultProfiles,
+    AddMessageBroker,
+    SimplifyOptions,
+    AbstractStorageAndProcess,
+    MergeStorageBackendTypes,
+    AddTestProfileKey,
 )
 
 

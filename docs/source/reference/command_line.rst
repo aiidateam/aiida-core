@@ -25,10 +25,11 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      create   Write subsets of the provenance graph to a single file.
-      import   Import data from an AiiDA archive file.
-      inspect  Inspect contents of an archive without importing it.
-      migrate  Migrate an export archive to a more recent format version.
+      create   Create an archive from all or part of a profiles's data.
+      import   Import archived data to a profile.
+      info     Summarise the contents of an archive.
+      migrate  Migrate an archive to a more recent schema version.
+      version  Print the current version of an archive's schema.
 
 
 .. _reference:command-line:verdi-calcjob:
@@ -213,7 +214,7 @@ Below is a list with all available subcommands.
     Commands:
       check-load-time          Check for common indicators that slowdown `verdi`.
       check-undesired-imports  Check that verdi does not import python modules it shouldn't.
-      run-sql                  Run a raw SQL command on the database.
+      run-sql                  Run a raw SQL command on the profile database (only...
       run_daemon               Run a daemon instance in the current interpreter.
       validate-plugins         Validate all plugins by checking they can be loaded.
 
@@ -376,8 +377,7 @@ Below is a list with all available subcommands.
       --institution NONEMPTYSTRING    Institution of the user.  [required]
       --db-engine [postgresql_psycopg2]
                                       Engine to use to connect to the database.
-      --db-backend [django|sqlalchemy]
-                                      Database backend to use.
+      --db-backend [psql_dos]         Database backend to use.
       --db-host HOSTNAME              Database server host. Leave empty for "peer"
                                       authentication.
       --db-port INTEGER               Database server port.
@@ -400,6 +400,8 @@ Below is a list with all available subcommands.
       --broker-virtual-host TEXT      Name of the virtual host for the message broker without
                                       leading forward slash.
       --repository DIRECTORY          Absolute path to the file repository.
+      --test-profile                  Designate the profile to be used for running the test
+                                      suite only.
       --config FILEORURL              Load option values from configuration file in yaml
                                       format (local path or URL).
       --help                          Show this message and exit.
@@ -436,7 +438,7 @@ Below is a list with all available subcommands.
 
 .. code:: console
 
-    Usage:  [OPTIONS] [--] SCRIPTNAME [VARARGS]...
+    Usage:  [OPTIONS] [--] FILEPATH [VARARGS]...
 
       Execute scripts with preloaded AiiDA environment.
 
@@ -464,6 +466,9 @@ Below is a list with all available subcommands.
 
       Setup a new profile.
 
+      This method assumes that an empty PSQL database has been created and that the database
+      user has been created.
+
     Options:
       -n, --non-interactive           In non-interactive mode, the CLI never prompts but
                                       simply uses default values for options that define one.
@@ -476,8 +481,7 @@ Below is a list with all available subcommands.
       --institution NONEMPTYSTRING    Institution of the user.  [required]
       --db-engine [postgresql_psycopg2]
                                       Engine to use to connect to the database.
-      --db-backend [django|sqlalchemy]
-                                      Database backend to use.
+      --db-backend [psql_dos]         Database backend to use.
       --db-host HOSTNAME              Database server host. Leave empty for "peer"
                                       authentication.
       --db-port INTEGER               Database server port.
@@ -496,6 +500,8 @@ Below is a list with all available subcommands.
       --broker-virtual-host TEXT      Name of the virtual host for the message broker without
                                       leading forward slash.  [required]
       --repository DIRECTORY          Absolute path to the file repository.
+      --test-profile                  Designate the profile to be used for running the test
+                                      suite only.
       --config FILEORURL              Load option values from configuration file in yaml
                                       format (local path or URL).
       --help                          Show this message and exit.
@@ -557,6 +563,7 @@ Below is a list with all available subcommands.
       integrity  Checks for the integrity of the data storage.
       maintain   Performs maintenance tasks on the repository.
       migrate    Migrate the storage to the latest schema version.
+      version    Print the current version of the storage schema.
 
 
 .. _reference:command-line:verdi-user:

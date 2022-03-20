@@ -10,18 +10,12 @@
 """Abstraction for an archive file format."""
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Optional, Type, TypeVar, Union, overload
-
-try:
-    from typing import Literal  # pylint: disable=ungrouped-imports
-except ImportError:
-    # Python <3.8 backport
-    from typing_extensions import Literal  # type: ignore
+from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Literal, Optional, Type, TypeVar, Union, overload
 
 if TYPE_CHECKING:
     from aiida.orm import QueryBuilder
     from aiida.orm.entities import Entity, EntityTypes
-    from aiida.orm.implementation import Backend
+    from aiida.orm.implementation import StorageBackend
     from aiida.tools.visualization.graph import Graph
 
 SelfType = TypeVar('SelfType')
@@ -56,6 +50,7 @@ class ArchiveWriterAbstract(ABC):
             raise ValueError(f'compression not in range 0-9: {compression}')
         self._compression = compression
         self._format = fmt
+        self._kwargs = kwargs
 
     @property
     def path(self) -> Path:
@@ -123,7 +118,7 @@ class ArchiveWriterAbstract(ABC):
 class ArchiveReaderAbstract(ABC):
     """Reader of an archive, that will be used as a context manager."""
 
-    def __init__(self, path: Union[str, Path], **kwargs: Any):
+    def __init__(self, path: Union[str, Path], **kwargs: Any):  # pylint: disable=unused-argument
         """Initialise the reader.
 
         :param path: archive path
@@ -146,11 +141,11 @@ class ArchiveReaderAbstract(ABC):
     def get_metadata(self) -> Dict[str, Any]:
         """Return the top-level metadata.
 
-        :raises: ``UnreadableArchiveError`` if the top-level metadata cannot be read from the archive
+        :raises: ``CorruptStorage`` if the top-level metadata cannot be read from the archive
         """
 
     @abstractmethod
-    def get_backend(self) -> 'Backend':
+    def get_backend(self) -> 'StorageBackend':
         """Return a 'read-only' backend for the archive."""
 
     # below are convenience methods for some common use cases
@@ -185,13 +180,8 @@ class ArchiveFormatAbstract(ABC):
 
     @property
     @abstractmethod
-    def versions(self) -> List[str]:
-        """Return ordered list of versions of the archive format, oldest -> latest."""
-
-    @property
     def latest_version(self) -> str:
-        """Return the latest version of the archive format."""
-        return self.versions[-1]
+        """Return the latest schema version of the archive format."""
 
     @property
     @abstractmethod
@@ -206,8 +196,8 @@ class ArchiveFormatAbstract(ABC):
 
         :param path: archive path
 
-        :raises: ``FileNotFoundError`` if the file does not exist
-        :raises: ``UnreadableArchiveError`` if a version cannot be read from the archive
+        :raises: ``UnreachableStorage`` if the file does not exist
+        :raises: ``CorruptStorage`` if a version cannot be read from the archive
         """
 
     @overload
@@ -284,13 +274,13 @@ class ArchiveFormatAbstract(ABC):
         """
 
 
-def get_format(name: str = 'sqlitezip') -> ArchiveFormatAbstract:
+def get_format(name: str = 'sqlite_zip') -> ArchiveFormatAbstract:
     """Get the archive format instance.
 
     :param name: name of the archive format
     :return: archive format instance
     """
     # to-do entry point for archive formats?
-    assert name == 'sqlitezip'
-    from aiida.tools.archive.implementations.sqlite.main import ArchiveFormatSqlZip
+    assert name == 'sqlite_zip'
+    from aiida.tools.archive.implementations.sqlite_zip.main import ArchiveFormatSqlZip
     return ArchiveFormatSqlZip()

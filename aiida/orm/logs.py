@@ -14,13 +14,13 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
 
 from aiida.common import timezone
 from aiida.common.lang import classproperty
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 
 from . import entities
 
 if TYPE_CHECKING:
     from aiida.orm import Node
-    from aiida.orm.implementation import Backend, BackendLog
+    from aiida.orm.implementation import BackendLog, StorageBackend
     from aiida.orm.querybuilder import FilterType, OrderByType
 
 __all__ = ('Log', 'OrderSpecifier', 'ASCENDING', 'DESCENDING')
@@ -132,7 +132,7 @@ class Log(entities.Entity['BackendLog']):
 
     @classproperty
     def objects(cls: Type['Log']) -> LogCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
-        return LogCollection.get_cached(cls, get_manager().get_backend())
+        return LogCollection.get_cached(cls, get_manager().get_profile_storage())
 
     def __init__(
         self,
@@ -142,7 +142,7 @@ class Log(entities.Entity['BackendLog']):
         dbnode_id: int,
         message: str = '',
         metadata: Optional[Dict[str, Any]] = None,
-        backend: Optional['Backend'] = None
+        backend: Optional['StorageBackend'] = None
     ):  # pylint: disable=too-many-arguments
         """Construct a new log
 
@@ -162,7 +162,7 @@ class Log(entities.Entity['BackendLog']):
         if not loggername or not levelname:
             raise exceptions.ValidationError('The loggername and levelname cannot be empty')
 
-        backend = backend or get_manager().get_backend()
+        backend = backend or get_manager().get_profile_storage()
         model = backend.logs.create(
             time=time,
             loggername=loggername,

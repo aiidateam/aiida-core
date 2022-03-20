@@ -9,20 +9,14 @@
 ###########################################################################
 """Abstract `QueryBuilder` definition."""
 import abc
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Set, Union
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Literal, Optional, Set, TypedDict, Union
 
 from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
 from aiida.orm.entities import EntityTypes
 
-try:
-    from typing import Literal, TypedDict  # pylint: disable=ungrouped-imports
-except ImportError:
-    # Python <3.8 backport
-    from typing_extensions import Literal, TypedDict  # type: ignore
-
 if TYPE_CHECKING:
-    from aiida.orm.implementation import Backend
+    from aiida.orm.implementation import StorageBackend
 
 __all__ = ('BackendQueryBuilder',)
 
@@ -86,12 +80,12 @@ GROUP_ENTITY_TYPE_PREFIX = 'group.'
 class BackendQueryBuilder(abc.ABC):
     """Backend query builder interface"""
 
-    def __init__(self, backend: 'Backend'):
+    def __init__(self, backend: 'StorageBackend'):
         """
         :param backend: the backend
         """
-        from . import backends
-        type_check(backend, backends.Backend)
+        from .storage_backend import StorageBackend
+        type_check(backend, StorageBackend)
         self._backend = backend
 
     @abc.abstractmethod

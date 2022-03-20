@@ -14,7 +14,6 @@ import asyncio
 import pytest
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import calcfunction, workfunction
 from aiida.engine.utils import InterruptableFuture, exponential_backoff_retry, interruptable_task, is_process_function
 
@@ -22,15 +21,15 @@ ITERATION = 0
 MAX_ITERATIONS = 3
 
 
-class TestExponentialBackoffRetry(AiidaTestCase):
+class TestExponentialBackoffRetry:
     """Tests for the exponential backoff retry coroutine."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        """Set up a simple authinfo and for later use."""
-        super().setUpClass(*args, **kwargs)
-        cls.authinfo = orm.AuthInfo(computer=cls.computer, user=orm.User.objects.get_default())
-        cls.authinfo.store()
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        self.computer = aiida_localhost
+        self.authinfo = self.computer.get_authinfo(orm.User.objects.get_default())
 
     @staticmethod
     def test_exp_backoff_success():
@@ -63,39 +62,31 @@ class TestExponentialBackoffRetry(AiidaTestCase):
                 raise RuntimeError
 
         max_attempts = MAX_ITERATIONS - 1
-        with self.assertRaises(RuntimeError):
+        with pytest.raises(RuntimeError):
             loop.run_until_complete(exponential_backoff_retry(coro, initial_interval=0.1, max_attempts=max_attempts))
 
 
-class TestUtils(AiidaTestCase):
-    """ Tests for engine utils."""
+def test_is_process_function():
+    """Test the `is_process_function` utility."""
 
-    def test_is_process_function(self):
-        """Test the `is_process_function` utility."""
-
-        def normal_function():
-            pass
-
-        @calcfunction
-        def calc_function():
-            pass
-
-        @workfunction
-        def work_function():
-            pass
-
-        self.assertEqual(is_process_function(normal_function), False)
-        self.assertEqual(is_process_function(calc_function), True)
-        self.assertEqual(is_process_function(work_function), True)
-
-    def test_is_process_scoped(self):
+    def normal_function():
         pass
 
-    def test_loop_scope(self):
+    @calcfunction
+    def calc_function():
         pass
 
+    @workfunction
+    def work_function():
+        pass
 
-class TestInterruptable(AiidaTestCase):
+    assert is_process_function(normal_function) is False
+    assert is_process_function(calc_function) is True
+    assert is_process_function(work_function) is True
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+class TestInterruptable:
     """ Tests for InterruptableFuture and interruptable_task."""
 
     def test_normal_future(self):
@@ -109,8 +100,8 @@ class TestInterruptable(AiidaTestCase):
             fut.set_result('I am done')
 
         loop.run_until_complete(interruptable.with_interrupt(task()))
-        self.assertFalse(interruptable.done())
-        self.assertEqual(fut.result(), 'I am done')
+        assert not interruptable.done()
+        assert fut.result() == 'I am done'
 
     def test_interrupt(self):
         """Test interrupt future being interrupted"""
@@ -121,11 +112,11 @@ class TestInterruptable(AiidaTestCase):
         try:
             loop.run_until_complete(interruptable.with_interrupt(asyncio.sleep(10.)))
         except RuntimeError as err:
-            self.assertEqual(str(err), 'STOP')
+            assert str(err) == 'STOP'
         else:
-            self.fail('ExpectedException not raised')
+            pytest.fail('ExpectedException not raised')
 
-        self.assertTrue(interruptable.done())
+        assert interruptable.done()
 
     def test_inside_interrupted(self):
         """Test interrupt future being interrupted from inside of coroutine"""
@@ -142,12 +133,12 @@ class TestInterruptable(AiidaTestCase):
         try:
             loop.run_until_complete(interruptable.with_interrupt(task()))
         except RuntimeError as err:
-            self.assertEqual(str(err), 'STOP')
+            assert str(err) == 'STOP'
         else:
-            self.fail('ExpectedException not raised')
+            pytest.fail('ExpectedException not raised')
 
-        self.assertTrue(interruptable.done())
-        self.assertEqual(fut.result(), 'I got set.')
+        assert interruptable.done()
+        assert fut.result() == 'I got set.'
 
     def test_interruptable_future_set(self):
         """Test interrupt future being set before coroutine is done"""
@@ -162,11 +153,11 @@ class TestInterruptable(AiidaTestCase):
         try:
             loop.run_until_complete(interruptable.with_interrupt(asyncio.sleep(20.)))
         except RuntimeError as err:
-            self.assertEqual(str(err), "This interruptible future had it's result set unexpectedly to 'NOT ME!!!'")
+            assert str(err) == "This interruptible future had it's result set unexpectedly to 'NOT ME!!!'"
         else:
-            self.fail('ExpectedException not raised')
+            pytest.fail('ExpectedException not raised')
 
-        self.assertTrue(interruptable.done())
+        assert interruptable.done()
 
 
 @pytest.mark.requires_rmq

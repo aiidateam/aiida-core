@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-member,too-many-public-methods
+# pylint: disable=no-member,too-many-public-methods,no-self-use
 """Module to test AiiDA processes."""
 import threading
 
@@ -16,7 +16,6 @@ from plumpy.utils import AttributesFrozendict
 import pytest
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common.lang import override
 from aiida.engine import ExitCode, ExitCodesNamespace, Process, run, run_get_node, run_get_pk
 from aiida.engine.processes.ports import PortNamespace
@@ -37,16 +36,16 @@ class NameSpacedProcess(Process):
 
 
 @pytest.mark.requires_rmq
-class TestProcessNamespace(AiidaTestCase):
+class TestProcessNamespace:
     """Test process namespace"""
 
-    def setUp(self):
-        super().setUp()
-        self.assertIsNone(Process.current())
-
-    def tearDown(self):
-        super().tearDown()
-        self.assertIsNone(Process.current())
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        assert Process.current() is None
+        yield
+        assert Process.current() is None
 
     def test_namespaced_process(self):
         """Test that inputs in nested namespaces are properly validated and the link labels
@@ -54,21 +53,21 @@ class TestProcessNamespace(AiidaTestCase):
         proc = NameSpacedProcess(inputs={'some': {'name': {'space': {'a': orm.Int(5)}}}})
 
         # Test that the namespaced inputs are AttributesFrozenDicts
-        self.assertIsInstance(proc.inputs, AttributesFrozendict)
-        self.assertIsInstance(proc.inputs.some, AttributesFrozendict)
-        self.assertIsInstance(proc.inputs.some.name, AttributesFrozendict)
-        self.assertIsInstance(proc.inputs.some.name.space, AttributesFrozendict)
+        assert isinstance(proc.inputs, AttributesFrozendict)
+        assert isinstance(proc.inputs.some, AttributesFrozendict)
+        assert isinstance(proc.inputs.some.name, AttributesFrozendict)
+        assert isinstance(proc.inputs.some.name.space, AttributesFrozendict)
 
         # Test that the input node is in the inputs of the process
         input_node = proc.inputs.some.name.space.a
-        self.assertTrue(isinstance(input_node, orm.Int))
-        self.assertEqual(input_node.value, 5)
+        assert isinstance(input_node, orm.Int)
+        assert input_node.value == 5
 
         # Check that the link of the process node has the correct link name
-        self.assertTrue('some__name__space__a' in proc.node.get_incoming().all_link_labels())
-        self.assertEqual(proc.node.get_incoming().get_node_by_label('some__name__space__a'), 5)
-        self.assertEqual(proc.node.inputs.some.name.space.a, 5)
-        self.assertEqual(proc.node.inputs['some']['name']['space']['a'], 5)
+        assert 'some__name__space__a' in proc.node.get_incoming().all_link_labels()
+        assert proc.node.get_incoming().get_node_by_label('some__name__space__a') == 5
+        assert proc.node.inputs.some.name.space.a == 5
+        assert proc.node.inputs['some']['name']['space']['a'] == 5
 
 
 class ProcessStackTest(Process):
@@ -95,29 +94,30 @@ class ProcessStackTest(Process):
 
 
 @pytest.mark.requires_rmq
-class TestProcess(AiidaTestCase):
+class TestProcess:
     """Test AiiDA process."""
 
-    def setUp(self):
-        super().setUp()
-        self.assertIsNone(Process.current())
-
-    def tearDown(self):
-        super().tearDown()
-        self.assertIsNone(Process.current())
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        assert Process.current() is None
+        self.computer = aiida_localhost
+        yield
+        assert Process.current() is None
 
     @staticmethod
     def test_process_stack():
         run(ProcessStackTest)
 
     def test_inputs(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             run(test_processes.BadOutput)
 
     def test_spec_metadata_property(self):
         """`Process.spec_metadata` should return the metadata port namespace of its spec."""
-        self.assertIsInstance(Process.spec_metadata, PortNamespace)
-        self.assertEqual(Process.spec_metadata, Process.spec().inputs['metadata'])
+        assert isinstance(Process.spec_metadata, PortNamespace)
+        assert Process.spec_metadata == Process.spec().inputs['metadata']
 
     def test_input_link_creation(self):
         """Test input link creation."""
@@ -128,12 +128,12 @@ class TestProcess(AiidaTestCase):
         process = test_processes.DummyProcess(inputs)
 
         for entry in process.node.get_incoming().all():
-            self.assertTrue(entry.link_label in inputs)
-            self.assertEqual(entry.link_label, entry.node.value)
+            assert entry.link_label in inputs
+            assert entry.link_label == entry.node.value
             dummy_inputs.remove(entry.link_label)
 
         # Make sure there are no other inputs
-        self.assertFalse(dummy_inputs)
+        assert not dummy_inputs
 
     @staticmethod
     def test_none_input():
@@ -145,34 +145,34 @@ class TestProcess(AiidaTestCase):
         from aiida.common import LinkType
         process = test_processes.DummyProcess()
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             process.node.add_incoming(orm.Int(1), link_type=LinkType.INPUT_WORK, link_label='illegal_link')
 
     def test_seal(self):
         _, p_k = run_get_pk(test_processes.DummyProcess)
-        self.assertTrue(orm.load_node(pk=p_k).is_sealed)
+        assert orm.load_node(pk=p_k).is_sealed
 
     def test_description(self):
         """Testing setting a process description."""
         dummy_process = test_processes.DummyProcess(inputs={'metadata': {'description': "Rockin' process"}})
-        self.assertEqual(dummy_process.node.description, "Rockin' process")
+        assert dummy_process.node.description == "Rockin' process"
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             test_processes.DummyProcess(inputs={'metadata': {'description': 5}})
 
     def test_label(self):
         """Test setting a label."""
         dummy_process = test_processes.DummyProcess(inputs={'metadata': {'label': 'My label'}})
-        self.assertEqual(dummy_process.node.label, 'My label')
+        assert dummy_process.node.label == 'My label'
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             test_processes.DummyProcess(inputs={'label': 5})
 
     def test_work_calc_finish(self):
         process = test_processes.DummyProcess()
-        self.assertFalse(process.node.is_finished_ok)
+        assert not process.node.is_finished_ok
         run(process)
-        self.assertTrue(process.node.is_finished_ok)
+        assert process.node.is_finished_ok
 
     @staticmethod
     def test_save_instance_state():
@@ -188,16 +188,16 @@ class TestProcess(AiidaTestCase):
         ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 
         exit_codes = ArithmeticAddCalculation.exit_codes
-        self.assertIsInstance(exit_codes, ExitCodesNamespace)
+        assert isinstance(exit_codes, ExitCodesNamespace)
         for _, value in exit_codes.items():
-            self.assertIsInstance(value, ExitCode)
+            assert isinstance(value, ExitCode)
 
         exit_statuses = ArithmeticAddCalculation.get_exit_statuses(['ERROR_NO_RETRIEVED_FOLDER'])
-        self.assertIsInstance(exit_statuses, list)
+        assert isinstance(exit_statuses, list)
         for entry in exit_statuses:
-            self.assertIsInstance(entry, int)
+            assert isinstance(entry, int)
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             ArithmeticAddCalculation.get_exit_statuses(['NON_EXISTING_EXIT_CODE_LABEL'])
 
     def test_exit_codes_invalidate_cache(self):
@@ -209,14 +209,14 @@ class TestProcess(AiidaTestCase):
         with enable_caching():
             _, node1 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(False))
             _, node2 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(False))
-            self.assertEqual(node1.get_extra('_aiida_hash'), node2.get_extra('_aiida_hash'))
-            self.assertIn('_aiida_cached_from', node2.extras)
+            assert node1.get_extra('_aiida_hash') == node2.get_extra('_aiida_hash')
+            assert '_aiida_cached_from' in node2.extras
 
         with enable_caching():
             _, node3 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(True))
             _, node4 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(True))
-            self.assertEqual(node3.get_extra('_aiida_hash'), node4.get_extra('_aiida_hash'))
-            self.assertNotIn('_aiida_cached_from', node4.extras)
+            assert node3.get_extra('_aiida_hash') == node4.get_extra('_aiida_hash')
+            assert '_aiida_cached_from' not in node4.extras
 
     def test_valid_cache_hook(self):
         """
@@ -227,14 +227,14 @@ class TestProcess(AiidaTestCase):
         with enable_caching():
             _, node1 = run_get_node(test_processes.IsValidCacheHook)
             _, node2 = run_get_node(test_processes.IsValidCacheHook)
-            self.assertEqual(node1.get_extra('_aiida_hash'), node2.get_extra('_aiida_hash'))
-            self.assertIn('_aiida_cached_from', node2.extras)
+            assert node1.get_extra('_aiida_hash') == node2.get_extra('_aiida_hash')
+            assert '_aiida_cached_from' in node2.extras
 
         with enable_caching():
             _, node3 = run_get_node(test_processes.IsValidCacheHook, not_valid_cache=orm.Bool(True))
             _, node4 = run_get_node(test_processes.IsValidCacheHook, not_valid_cache=orm.Bool(True))
-            self.assertEqual(node3.get_extra('_aiida_hash'), node4.get_extra('_aiida_hash'))
-            self.assertNotIn('_aiida_cached_from', node4.extras)
+            assert node3.get_extra('_aiida_hash') == node4.get_extra('_aiida_hash')
+            assert '_aiida_cached_from' not in node4.extras
 
     def test_process_type_with_entry_point(self):
         """For a process with a registered entry point, the process_type will be its formatted entry point string."""
@@ -268,11 +268,11 @@ class TestProcess(AiidaTestCase):
         process = process_class(inputs=inputs)
 
         expected_process_type = f'aiida.calculations:{entry_point}'
-        self.assertEqual(process.node.process_type, expected_process_type)
+        assert process.node.process_type == expected_process_type
 
         # Verify that process_class on the calculation node returns the original entry point class
         recovered_process = process.node.process_class
-        self.assertEqual(recovered_process, process_class)
+        assert recovered_process == process_class
 
     def test_process_type_without_entry_point(self):
         """
@@ -281,11 +281,11 @@ class TestProcess(AiidaTestCase):
         """
         process = test_processes.DummyProcess()
         expected_process_type = f'{process.__class__.__module__}.{process.__class__.__name__}'
-        self.assertEqual(process.node.process_type, expected_process_type)
+        assert process.node.process_type == expected_process_type
 
         # Verify that process_class on the calculation node returns the original entry point class
         recovered_process = process.node.process_class
-        self.assertEqual(recovered_process, process.__class__)
+        assert recovered_process == process.__class__
 
     def test_output_dictionary(self):
         """Verify that a dictionary can be passed as an output for a namespace."""
@@ -306,9 +306,9 @@ class TestProcess(AiidaTestCase):
 
         results, node = run_get_node(TestProcess1, namespace={'alpha': orm.Int(1), 'beta': orm.Int(2)})
 
-        self.assertTrue(node.is_finished_ok)
-        self.assertEqual(results['namespace']['alpha'], orm.Int(1))
-        self.assertEqual(results['namespace']['beta'], orm.Int(2))
+        assert node.is_finished_ok
+        assert results['namespace']['alpha'] == orm.Int(1)
+        assert results['namespace']['beta'] == orm.Int(2)
 
     def test_output_validation_error(self):
         """Test that a process is marked as failed if its output namespace validation fails."""
@@ -334,23 +334,23 @@ class TestProcess(AiidaTestCase):
 
         # For default inputs, no outputs will be attached, causing the validation to fail at the end so an internal
         # exit status will be set, which is a negative integer
-        self.assertTrue(node.is_finished)
-        self.assertFalse(node.is_finished_ok)
-        self.assertEqual(node.exit_status, TestProcess1.exit_codes.ERROR_MISSING_OUTPUT.status)
-        self.assertEqual(node.exit_message, TestProcess1.exit_codes.ERROR_MISSING_OUTPUT.message)
+        assert node.is_finished
+        assert not node.is_finished_ok
+        assert node.exit_status == TestProcess1.exit_codes.ERROR_MISSING_OUTPUT.status
+        assert node.exit_message == TestProcess1.exit_codes.ERROR_MISSING_OUTPUT.message
 
         # When settings `add_outputs` to True, the outputs should be added and validation should pass
         _, node = run_get_node(TestProcess1, add_outputs=orm.Bool(True))
-        self.assertTrue(node.is_finished)
-        self.assertTrue(node.is_finished_ok)
-        self.assertEqual(node.exit_status, 0)
+        assert node.is_finished
+        assert node.is_finished_ok
+        assert node.exit_status == 0
 
     def test_exposed_outputs(self):
         """Test the ``Process.exposed_outputs`` method."""
         from aiida.common import AttributeDict
         from aiida.common.links import LinkType
         from aiida.engine.utils import instantiate_process
-        from aiida.manage.manager import get_manager
+        from aiida.manage import get_manager
 
         runner = get_manager().get_runner()
 
@@ -392,13 +392,13 @@ class TestProcess(AiidaTestCase):
             },
             'output': node_output,
         })
-        self.assertEqual(exposed_outputs, expected)
+        assert exposed_outputs == expected
 
     def test_exposed_outputs_non_existing_namespace(self):
         """Test the ``Process.exposed_outputs`` method for non-existing namespace."""
         from aiida.common.links import LinkType
         from aiida.engine.utils import instantiate_process
-        from aiida.manage.manager import get_manager
+        from aiida.manage import get_manager
 
         runner = get_manager().get_runner()
 
@@ -434,5 +434,5 @@ class TestProcess(AiidaTestCase):
         process = instantiate_process(runner, ParentProcess, input=orm.Int(1))
 
         # If the ``namespace`` does not exist, for example because it is slightly misspelled, a ``KeyError`` is raised
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             process.exposed_outputs(node_child, ChildProcess, namespace='cildh')

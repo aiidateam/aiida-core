@@ -13,7 +13,7 @@ import asyncio
 from plumpy.process_states import ProcessState
 import pytest
 
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 from tests.utils import processes as test_processes
 
 
@@ -22,7 +22,7 @@ async def reach_waiting_state(process):
         await asyncio.sleep(0.1)
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_cancel_process_task():
     """This test is designed to replicate how processes are cancelled in the current `shutdown_runner` callback.
 

@@ -13,26 +13,26 @@ import pytest
 
 from aiida import orm
 from aiida.common.exceptions import NotExistent
-from aiida.orm.implementation.backends import Backend
+from aiida.orm.implementation import StorageBackend
 from aiida.tools.archive import ArchiveFormatSqlZip, ArchiveReaderAbstract
 from tests.utils.archives import get_archive_file
 
 
 @pytest.fixture()
-def archive(tmp_path):
+def archive():
     """Yield the archive open in read mode."""
-    filepath_archive = get_archive_file('export_v1.0_simple.aiida', filepath='export/migrate')
     archive_format = ArchiveFormatSqlZip()
-    new_archive = tmp_path / 'out.aiida'
-    archive_format.migrate(filepath_archive, new_archive, archive_format.latest_version)
-    with archive_format.open(new_archive, 'r') as reader:
+    filepath_archive = get_archive_file(
+        f'export_{archive_format.latest_version}_simple.aiida', filepath='export/migrate'
+    )
+    with archive_format.open(filepath_archive, 'r') as reader:
         yield reader
 
 
 def test_get_backend(archive: ArchiveReaderAbstract):
     """Test retrieving the backend"""
     backend = archive.get_backend()
-    assert isinstance(backend, Backend)
+    assert isinstance(backend, StorageBackend)
 
 
 def test_get(archive: ArchiveReaderAbstract):

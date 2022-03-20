@@ -12,7 +12,7 @@ import abc
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, Iterable, List, Tuple, Type, TypeVar
 
 if TYPE_CHECKING:
-    from aiida.orm.implementation import Backend
+    from aiida.orm.implementation import StorageBackend
 
 __all__ = ('BackendEntity', 'BackendCollection', 'EntityType', 'BackendEntityExtrasMixin')
 
@@ -22,11 +22,11 @@ EntityType = TypeVar('EntityType', bound='BackendEntity')  # pylint: disable=inv
 class BackendEntity(abc.ABC):
     """An first-class entity in the backend"""
 
-    def __init__(self, backend: 'Backend', **kwargs: Any):
+    def __init__(self, backend: 'StorageBackend', **kwargs: Any):  # pylint: disable=unused-argument
         self._backend = backend
 
     @property
-    def backend(self) -> 'Backend':
+    def backend(self) -> 'StorageBackend':
         """Return the backend this entity belongs to
 
         :return: the backend instance
@@ -68,35 +68,21 @@ class BackendEntity(abc.ABC):
         :return: True if stored, False otherwise
         """
 
-    @classmethod
-    @abc.abstractmethod
-    def from_dbmodel(cls, dbmodel: Any, backend: 'Backend') -> EntityType:
-        """Create this entity from a dbmodel."""
-
 
 class BackendCollection(Generic[EntityType]):
     """Container class that represents a collection of entries of a particular backend entity."""
 
     ENTITY_CLASS: ClassVar[Type[EntityType]]  # type: ignore[misc]
 
-    def __init__(self, backend: 'Backend'):
+    def __init__(self, backend: 'StorageBackend'):
         """
         :param backend: the backend this collection belongs to
         """
         assert issubclass(self.ENTITY_CLASS, BackendEntity), 'Must set the ENTRY_CLASS class variable to an entity type'
         self._backend = backend
 
-    def from_dbmodel(self, dbmodel):
-        """
-        Create an entity from the backend dbmodel
-
-        :param dbmodel: the dbmodel to create the entity from
-        :return: the entity instance
-        """
-        return self.ENTITY_CLASS.from_dbmodel(dbmodel, self.backend)
-
     @property
-    def backend(self) -> 'Backend':
+    def backend(self) -> 'StorageBackend':
         """Return the backend."""
         return self._backend
 

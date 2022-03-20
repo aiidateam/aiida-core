@@ -7,21 +7,18 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=unspecified-encoding
+# pylint: disable=unspecified-encoding,no-self-use
 """
 This module contains tests for UpfData and UpfData related functions.
 """
-import errno
 import json
 import os
-import shutil
-import tempfile
 
 import numpy
 from numpy import array, isclose
+import pytest
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common.exceptions import ParsingError
 from aiida.orm.nodes.data.upf import parse_upf
 from tests.static import STATIC_DIR
@@ -77,48 +74,31 @@ def compare_dicts(dd1, dd2):
     return all(compare(dd1, dd2))
 
 
-class TestUpfParser(AiidaTestCase):
+class TestUpfParser:
     """Tests UPF version / element_name parser function."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, tmp_path):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
         filepath_base = os.path.abspath(os.path.join(STATIC_DIR, 'pseudos'))
-        cls.filepath_barium = os.path.join(filepath_base, 'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF')
-        cls.filepath_oxygen = os.path.join(filepath_base, 'O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF')
-        cls.filepath_carbon = os.path.join(filepath_base, 'C_pbe_v1.2.uspp.F.UPF')
-        cls.pseudo_barium = orm.UpfData(file=cls.filepath_barium).store()
-        cls.pseudo_oxygen = orm.UpfData(file=cls.filepath_oxygen).store()
-        cls.pseudo_carbon = orm.UpfData(file=cls.filepath_carbon).store()
-
-    def setUp(self):
-        """Setup a temporary directory to store UPF files."""
-        self.temp_dir = tempfile.mkdtemp()
-
-    def tearDown(self):
-        """Delete all groups and destroy the temporary directory created."""
-        for group in orm.UpfFamily.objects.find():
-            orm.UpfFamily.objects.delete(group.pk)
-
-        try:
-            shutil.rmtree(self.temp_dir)
-        except OSError as exception:
-            if exception.errno == errno.ENOENT:
-                pass
-            elif exception.errno == errno.ENOTDIR:
-                os.remove(self.temp_dir)
-            else:
-                raise IOError(exception)
+        self.filepath_barium = os.path.join(filepath_base, 'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF')
+        self.filepath_oxygen = os.path.join(filepath_base, 'O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF')
+        self.filepath_carbon = os.path.join(filepath_base, 'C_pbe_v1.2.uspp.F.UPF')
+        self.pseudo_barium = orm.UpfData(file=self.filepath_barium).store()
+        self.pseudo_oxygen = orm.UpfData(file=self.filepath_oxygen).store()
+        self.pseudo_carbon = orm.UpfData(file=self.filepath_carbon).store()
+        self.temp_dir = str(tmp_path)
 
     def test_constructor(self):
         """Tests for the constructor of `UpfData`."""
         filename = 'C.some_custom_filename.upf'
         upf = orm.UpfData(file=self.filepath_carbon, filename=filename)
-        self.assertEqual(upf.filename, filename)
+        assert upf.filename == filename
 
         # Store and check that the filename is unchanged
         upf.store()
-        self.assertEqual(upf.filename, filename)
+        assert upf.filename == filename
 
     def test_get_upf_family_names(self):
         """Test the `UpfData.get_upf_family_names` method."""
@@ -128,8 +108,8 @@ class TestUpfParser(AiidaTestCase):
         family.add_nodes([self.pseudo_barium])
         family.store()
 
-        self.assertEqual({group.label for group in orm.UpfFamily.objects.all()}, {label})
-        self.assertEqual(self.pseudo_barium.get_upf_family_names(), [label])
+        assert {group.label for group in orm.UpfFamily.objects.all()} == {label}
+        assert self.pseudo_barium.get_upf_family_names() == [label]
 
     def test_get_upf_groups(self):
         """Test the `UpfData.get_upf_groups` class method."""
@@ -138,36 +118,36 @@ class TestUpfParser(AiidaTestCase):
 
         user = orm.User(email='alternate@localhost').store()
 
-        self.assertEqual(orm.UpfFamily.objects.all(), [])
+        assert orm.UpfFamily.objects.all() == []
 
         # Create group with default user and add `Ba` pseudo
         family_01, _ = orm.UpfFamily.objects.get_or_create(label=label_01)
         family_01.add_nodes([self.pseudo_barium])
         family_01.store()
 
-        self.assertEqual({group.label for group in orm.UpfData.get_upf_groups()}, {label_01})
+        assert {group.label for group in orm.UpfData.get_upf_groups()} == {label_01}
 
         # Create group with different user and add `O` pseudo
         family_02, _ = orm.UpfFamily.objects.get_or_create(label=label_02, user=user)
         family_02.add_nodes([self.pseudo_oxygen])
         family_02.store()
 
-        self.assertEqual({group.label for group in orm.UpfData.get_upf_groups()}, {label_01, label_02})
+        assert {group.label for group in orm.UpfData.get_upf_groups()} == {label_01, label_02}
 
         # Filter on a given user
-        self.assertEqual({group.label for group in orm.UpfData.get_upf_groups(user=user.email)}, {label_02})
+        assert {group.label for group in orm.UpfData.get_upf_groups(user=user.email)} == {label_02}
 
         # Filter on a given element
         groups = {group.label for group in orm.UpfData.get_upf_groups(filter_elements='O')}
-        self.assertEqual(groups, {label_02})
+        assert groups == {label_02}
 
         # Filter on a given element and user
         groups = {group.label for group in orm.UpfData.get_upf_groups(filter_elements='O', user=user.email)}
-        self.assertEqual(groups, {label_02})
+        assert groups == {label_02}
 
         # Filter on element and user that should not match anything
         groups = {group.label for group in orm.UpfData.get_upf_groups(filter_elements='Ba', user=user.email)}
-        self.assertEqual(groups, set([]))
+        assert groups == set([])
 
     def test_upf_version_one(self):
         """Check if parsing for regular UPF file (version 1) succeeds."""
@@ -189,8 +169,8 @@ class TestUpfParser(AiidaTestCase):
         # try to parse version / element name from UPF file contents
         parsed_data = parse_upf(path_to_upf, check_filename=True)
         # check that parsed data matches the expected one
-        self.assertEqual(parsed_data['version'], '1')
-        self.assertEqual(parsed_data['element'], 'O')
+        assert parsed_data['version'] == '1'
+        assert parsed_data['element'] == 'O'
 
     def test_upf_version_two(self):
         """Check if parsing for regular UPF file (version 2) succeeds."""
@@ -212,8 +192,8 @@ class TestUpfParser(AiidaTestCase):
         # try to parse version / element name from UPF file contents
         parsed_data = parse_upf(path_to_upf, check_filename=True)
         # check that parsed data matches the expected one
-        self.assertEqual(parsed_data['version'], '2.0.1')
-        self.assertEqual(parsed_data['element'], 'Al')
+        assert parsed_data['version'] == '2.0.1'
+        assert parsed_data['element'] == 'Al'
 
     def test_additional_header_line(self):
         """Regression #2228: check if parsing succeeds if additional header line is present."""
@@ -237,8 +217,8 @@ class TestUpfParser(AiidaTestCase):
         # try to parse version / element name from UPF file contents
         parsed_data = parse_upf(path_to_upf, check_filename=True)
         # check that parsed data matches the expected one
-        self.assertEqual(parsed_data['version'], '2.0.1')
-        self.assertEqual(parsed_data['element'], 'Pt')
+        assert parsed_data['version'] == '2.0.1'
+        assert parsed_data['element'] == 'Pt'
 
     def test_check_filename(self):
         """Test built-in check for if file name matches element"""
@@ -258,7 +238,7 @@ class TestUpfParser(AiidaTestCase):
         with open(path_to_upf, 'w') as upf_file:
             upf_file.write(upf_contents)
         # Check if parser raises the desired ParsingError
-        with self.assertRaises(ParsingError):
+        with pytest.raises(ParsingError):
             _ = parse_upf(path_to_upf, check_filename=True)
 
     def test_missing_element_upf_v2(self):
@@ -279,7 +259,7 @@ class TestUpfParser(AiidaTestCase):
         with open(path_to_upf, 'w') as upf_file:
             upf_file.write(upf_contents)
         # Check if parser raises the desired ParsingError
-        with self.assertRaises(ParsingError):
+        with pytest.raises(ParsingError):
             _ = parse_upf(path_to_upf, check_filename=True)
 
     def test_invalid_element_upf_v2(self):
@@ -300,7 +280,7 @@ class TestUpfParser(AiidaTestCase):
         with open(path_to_upf, 'w') as upf_file:
             upf_file.write(upf_contents)
         # Check if parser raises the desired ParsingError
-        with self.assertRaises(ParsingError):
+        with pytest.raises(ParsingError):
             _ = parse_upf(path_to_upf, check_filename=True)
 
     def test_missing_element_upf_v1(self):
@@ -321,7 +301,7 @@ class TestUpfParser(AiidaTestCase):
         with open(path_to_upf, 'w') as upf_file:
             upf_file.write(upf_contents)
         # Check if parser raises the desired ParsingError
-        with self.assertRaises(ParsingError):
+        with pytest.raises(ParsingError):
             _ = parse_upf(path_to_upf, check_filename=True)
 
     def test_upf1_to_json_carbon(self):
@@ -335,7 +315,7 @@ class TestUpfParser(AiidaTestCase):
         # remove path information
         pp_dict['pseudo_potential']['header']['original_upf_file'] = ''
         reference_dict['pseudo_potential']['header']['original_upf_file'] = ''
-        self.assertTrue(compare_dicts(pp_dict, reference_dict))
+        assert compare_dicts(pp_dict, reference_dict)
 
     def test_upf2_to_json_barium(self):
         """Test UPF check Bariium UPF1 pp conversion"""
@@ -348,7 +328,7 @@ class TestUpfParser(AiidaTestCase):
         # remove path information
         pp_dict['pseudo_potential']['header']['original_upf_file'] = ''
         reference_dict['pseudo_potential']['header']['original_upf_file'] = ''
-        self.assertTrue(compare_dicts(pp_dict, reference_dict))
+        assert compare_dicts(pp_dict, reference_dict)
 
     def test_invalid_element_upf_v1(self):
         """Test parsers exception on invalid element name in UPF v1."""
@@ -368,5 +348,5 @@ class TestUpfParser(AiidaTestCase):
         with open(path_to_upf, 'w') as upf_file:
             upf_file.write(upf_contents)
         # Check if parser raises the desired ParsingError
-        with self.assertRaises(ParsingError):
+        with pytest.raises(ParsingError):
             _ = parse_upf(path_to_upf, check_filename=True)

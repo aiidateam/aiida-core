@@ -61,6 +61,24 @@ If, for whatever reason, ``verdi run`` nor the special shebang can be used, a pr
 
 One can pass a particular profile name to :meth:`~aiida.manage.configuration.load_profile`, otherwise the default profile is loaded.
 
+Within a script or Python instance, you can also switch to a different profile, or use one within a context manager:
+
+.. code-block:: python
+
+    from aiida import load_profile, profile_context, orm
+
+    with profile_context('my_profile_1'):
+        # The profile will be loaded within the context
+        node_from_profile_1 = orm.load_node(1)
+        # then the profile will be unloaded automatically
+
+    # load a global profile
+    load_profile('my_profile_2')
+    node_from_profile_2 = orm.load_node(1)
+
+    # switch to a different global profile
+    load_profile('my_profile_3', allow_switch=True)
+    node_from_profile_3 = orm.load_node(1)
 
 .. _how-to:interact-shell:
 

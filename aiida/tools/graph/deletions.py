@@ -12,7 +12,7 @@ import logging
 from typing import Callable, Iterable, Set, Tuple, Union
 
 from aiida.common.log import AIIDA_LOGGER
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 from aiida.orm import Group, Node, QueryBuilder
 from aiida.tools.graph.graph_traversers import get_nodes_delete
 
@@ -63,7 +63,7 @@ def delete_nodes(
     :returns: (pks to delete, whether they were deleted)
 
     """
-    backend = backend or get_manager().get_backend()
+    backend = backend or get_manager().get_profile_storage()
 
     # pylint: disable=too-many-arguments,too-many-branches,too-many-locals,too-many-statements
 

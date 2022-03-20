@@ -17,13 +17,9 @@ from aiida import orm
 from aiida.tools.archive import create_archive, import_archive
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_export_repository(aiida_profile, tmp_path):
     """Test exporting a node with files in the repository."""
-    from aiida.manage.manager import get_manager
-
-    repository = get_manager().get_backend().get_repository()
-
     node = orm.Data()
     node.put_object_from_filelike(io.BytesIO(b'file_a'), 'file_a')
     node.put_object_from_filelike(io.BytesIO(b'file_b'), 'relative/file_b')
@@ -34,9 +30,7 @@ def test_export_repository(aiida_profile, tmp_path):
     filepath = os.path.join(tmp_path / 'export.aiida')
     create_archive([node], filename=filepath)
 
-    aiida_profile.reset_db()
-    repository.erase()
-    repository.initialise()
+    aiida_profile.clear_profile()
     import_archive(filepath)
 
     loaded = orm.load_node(uuid=node_uuid)

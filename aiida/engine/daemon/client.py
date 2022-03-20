@@ -15,6 +15,7 @@ import socket
 import tempfile
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
+from aiida import get_profile
 from aiida.manage.configuration import get_config, get_config_option
 from aiida.manage.configuration.profile import Profile
 
@@ -55,7 +56,7 @@ def get_daemon_client(profile_name: Optional[str] = None) -> 'DaemonClient':
     if profile_name:
         profile = config.get_profile(profile_name)
     else:
-        profile = config.current_profile
+        profile = get_profile()
 
     return DaemonClient(profile)
 

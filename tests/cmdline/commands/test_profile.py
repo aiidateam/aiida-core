@@ -8,25 +8,33 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi profile`."""
-
-from click.testing import CliRunner
+from pgtest.pgtest import PGTest
 import pytest
 
-from aiida.backends.testbase import AiidaPostgresTestCase
 from aiida.cmdline.commands import cmd_profile, cmd_verdi
 from aiida.manage import configuration
 from tests.utils.configuration import create_mock_profile
 
 
-@pytest.mark.usefixtures('config_with_profile')
-class TestVerdiProfileSetup(AiidaPostgresTestCase):
+@pytest.fixture(scope='class')
+def pg_test_cluster():
+    """Create a standalone Postgres cluster, for setup tests."""
+    pg_test = PGTest()
+    yield pg_test
+    pg_test.close()
+
+
+class TestVerdiProfileSetup:
     """Tests for `verdi profile`."""
 
-    def setUp(self):
-        """Create a CLI runner to invoke the CLI commands."""
-        super().setUp()
-        self.cli_runner = CliRunner()
-        self.config = None
+    @pytest.fixture(autouse=True)
+    def init_profile(self, pg_test_cluster, empty_config, run_cli_command):  # pylint: disable=redefined-outer-name,unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        self.storage_backend_name = 'psql_dos'
+        self.pg_test = pg_test_cluster
+        self.cli_runner = run_cli_command
+        self.config = configuration.get_config()
         self.profile_list = []
 
     def mock_profiles(self, **kwargs):
@@ -35,7 +43,7 @@ class TestVerdiProfileSetup(AiidaPostgresTestCase):
         Note: this cannot be done in the `setUp` or `setUpClass` methods, because the temporary configuration instance
         is not generated until the test function is entered, which calls the `config_with_profile` test fixture.
         """
-        self.config = configuration.get_config()
+        # pylint: disable=attribute-defined-outside-init
         self.profile_list = ['mock_profile1', 'mock_profile2', 'mock_profile3', 'mock_profile4']
 
         for profile_name in self.profile_list:
@@ -50,45 +58,36 @@ class TestVerdiProfileSetup(AiidaPostgresTestCase):
 
         options = ['--help']
 
-        result = self.cli_runner.invoke(cmd_profile.profile_list, options)
-        self.assertClickSuccess(result)
-        self.assertIn('Usage', result.output)
+        result = self.cli_runner(cmd_profile.profile_list, options)
+        assert 'Usage' in result.output
 
-        result = self.cli_runner.invoke(cmd_profile.profile_setdefault, options)
-        self.assertClickSuccess(result)
-        self.assertIn('Usage', result.output)
+        result = self.cli_runner(cmd_profile.profile_setdefault, options)
+        assert 'Usage' in result.output
 
-        result = self.cli_runner.invoke(cmd_profile.profile_delete, options)
-        self.assertClickSuccess(result)
-        self.assertIn('Usage', result.output)
+        result = self.cli_runner(cmd_profile.profile_delete, options)
+        assert 'Usage' in result.output
 
-        result = self.cli_runner.invoke(cmd_profile.profile_show, options)
-        self.assertClickSuccess(result)
-        self.assertIn('Usage', result.output)
+        result = self.cli_runner(cmd_profile.profile_show, options)
+        assert 'Usage' in result.output
 
     def test_list(self):
         """Test the `verdi profile list` command."""
         self.mock_profiles()
 
-        result = self.cli_runner.invoke(cmd_profile.profile_list)
-        self.assertClickSuccess(result)
-        self.assertIn(f'Report: configuration folder: {self.config.dirpath}', result.output)
-        self.assertIn(f'* {self.profile_list[0]}', result.output)
-        self.assertIn(self.profile_list[1], result.output)
+        result = self.cli_runner(cmd_profile.profile_list)
+        assert f'Report: configuration folder: {self.config.dirpath}' in result.output
+        assert f'* {self.profile_list[0]}' in result.output
+        assert self.profile_list[1] in result.output
 
     def test_setdefault(self):
         """Test the `verdi profile setdefault` command."""
         self.mock_profiles()
 
-        result = self.cli_runner.invoke(cmd_profile.profile_setdefault, [self.profile_list[1]])
-        self.assertClickSuccess(result)
+        self.cli_runner(cmd_profile.profile_setdefault, [self.profile_list[1]])
+        result = self.cli_runner(cmd_profile.profile_list)
 
-        result = self.cli_runner.invoke(cmd_profile.profile_list)
-
-        self.assertClickSuccess(result)
-        self.assertIn(f'Report: configuration folder: {self.config.dirpath}', result.output)
-        self.assertIn(f'* {self.profile_list[1]}', result.output)
-        self.assertClickSuccess(result)
+        assert f'Report: configuration folder: {self.config.dirpath}' in result.output
+        assert f'* {self.profile_list[1]}' in result.output
 
     def test_show(self):
         """Test the `verdi profile show` command."""
@@ -98,12 +97,11 @@ class TestVerdiProfileSetup(AiidaPostgresTestCase):
         profile_name = self.profile_list[0]
         profile = config.get_profile(profile_name)
 
-        result = self.cli_runner.invoke(cmd_profile.profile_show, [profile_name])
-        self.assertClickSuccess(result)
+        result = self.cli_runner(cmd_profile.profile_show, [profile_name])
         for key, value in profile.dictionary.items():
             if isinstance(value, str):
-                self.assertIn(key.lower(), result.output)
-                self.assertIn(value, result.output)
+                assert key in result.output
+                assert value in result.output
 
     def test_show_with_profile_option(self):
         """Test the `verdi profile show` command in combination with `-p/--profile."""
@@ -112,14 +110,12 @@ class TestVerdiProfileSetup(AiidaPostgresTestCase):
         profile_name_non_default = self.profile_list[1]
 
         # Specifying the non-default profile as argument should override the default
-        result = self.cli_runner.invoke(cmd_profile.profile_show, [profile_name_non_default])
-        self.assertClickSuccess(result)
-        self.assertTrue(profile_name_non_default in result.output)
+        result = self.cli_runner(cmd_profile.profile_show, [profile_name_non_default])
+        assert profile_name_non_default in result.output
 
         # Specifying `-p/--profile` should not override the argument default (which should be the default profile)
-        result = self.cli_runner.invoke(cmd_verdi.verdi, ['-p', profile_name_non_default, 'profile', 'show'])
-        self.assertClickSuccess(result)
-        self.assertTrue(profile_name_non_default not in result.output)
+        result = self.cli_runner(cmd_verdi.verdi, ['-p', profile_name_non_default, 'profile', 'show'])
+        assert profile_name_non_default not in result.output
 
     def test_delete_partial(self):
         """Test the `verdi profile delete` command.
@@ -129,38 +125,24 @@ class TestVerdiProfileSetup(AiidaPostgresTestCase):
         """
         self.mock_profiles()
 
-        result = self.cli_runner.invoke(cmd_profile.profile_delete, ['--force', '--skip-db', self.profile_list[1]])
-        self.assertClickSuccess(result)
-
-        result = self.cli_runner.invoke(cmd_profile.profile_list)
-        self.assertClickSuccess(result)
-        self.assertNotIn(self.profile_list[1], result.output)
+        self.cli_runner(cmd_profile.profile_delete, ['--force', '--skip-db', self.profile_list[1]])
+        result = self.cli_runner(cmd_profile.profile_list)
+        assert self.profile_list[1] not in result.output
 
     def test_delete(self):
         """Test for verdi profile delete command."""
         from aiida.cmdline.commands.cmd_profile import profile_delete, profile_list
 
-        configuration.reset_profile()
-
         kwargs = {'database_port': self.pg_test.dsn['port']}
         self.mock_profiles(**kwargs)
 
         # Delete single profile
-        result = self.cli_runner.invoke(profile_delete, ['--force', self.profile_list[1]])
-        self.assertIsNone(result.exception, result.output)
-
-        result = self.cli_runner.invoke(profile_list)
-        self.assertIsNone(result.exception, result.output)
-
-        self.assertNotIn(self.profile_list[1], result.output)
-        self.assertIsNone(result.exception, result.output)
+        self.cli_runner(profile_delete, ['--force', self.profile_list[1]])
+        result = self.cli_runner(profile_list)
+        assert self.profile_list[1] not in result.output
 
         # Delete multiple profiles
-        result = self.cli_runner.invoke(profile_delete, ['--force', self.profile_list[2], self.profile_list[3]])
-        self.assertIsNone(result.exception, result.output)
-
-        result = self.cli_runner.invoke(profile_list)
-        self.assertIsNone(result.exception, result.output)
-        self.assertNotIn(self.profile_list[2], result.output)
-        self.assertNotIn(self.profile_list[3], result.output)
-        self.assertIsNone(result.exception, result.output)
+        self.cli_runner(profile_delete, ['--force', self.profile_list[2], self.profile_list[3]])
+        result = self.cli_runner(profile_list)
+        assert self.profile_list[2] not in result.output
+        assert self.profile_list[3] not in result.output

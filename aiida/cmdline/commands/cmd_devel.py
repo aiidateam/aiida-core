@@ -12,6 +12,7 @@ import sys
 
 import click
 
+from aiida import get_profile
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import decorators, echo
 
@@ -33,7 +34,7 @@ def devel_check_load_time():
 
     If either of these conditions are true, the command will raise a critical error
     """
-    from aiida.manage.manager import get_manager
+    from aiida.manage import get_manager
 
     loaded_aiida_modules = [key for key in sys.modules if key.startswith('aiida.')]
     aiida_modules_str = '\n- '.join(sorted(loaded_aiida_modules))
@@ -41,10 +42,10 @@ def devel_check_load_time():
 
     manager = get_manager()
 
-    if manager.backend_loaded:
+    if manager.profile_storage_loaded:
         echo.echo_critical('potential `verdi` speed problem: database backend is loaded.')
 
-    allowed = ('aiida.backends', 'aiida.cmdline', 'aiida.common', 'aiida.manage', 'aiida.plugins', 'aiida.restapi')
+    allowed = ('aiida.cmdline', 'aiida.common', 'aiida.manage', 'aiida.plugins', 'aiida.restapi')
     for loaded in loaded_aiida_modules:
         if not any(loaded.startswith(mod) for mod in allowed):
             echo.echo_critical(
@@ -97,12 +98,15 @@ def devel_validate_plugins():
 
 @verdi_devel.command('run-sql')
 @click.argument('sql', type=str)
-@decorators.with_dbenv()
 def devel_run_sql(sql):
-    """Run a raw SQL command on the database."""
-    from aiida.manage.manager import get_manager
-    manager = get_manager()
-    result = manager.get_backend().execute_raw(sql)
+    """Run a raw SQL command on the profile database (only available for 'psql_dos' storage)."""
+    from sqlalchemy import text
+
+    from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
+    assert get_profile().storage_backend == 'psql_dos'
+    with create_sqlalchemy_engine(get_profile().storage_config).connect() as connection:
+        result = connection.execute(text(sql)).fetchall()
+
     if isinstance(result, (list, tuple)):
         for row in result:
             echo.echo(str(row))

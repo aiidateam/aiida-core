@@ -10,6 +10,7 @@
 """Convenience functions for logging output from ``verdi`` commands."""
 import collections
 import enum
+import json
 import sys
 
 import click
@@ -19,7 +20,7 @@ from aiida.common.log import AIIDA_LOGGER
 
 CMDLINE_LOGGER = AIIDA_LOGGER.getChild('cmdline')
 
-__all__ = ('echo', 'echo_info', 'echo_success', 'echo_warning', 'echo_error', 'echo_critical', 'echo_dictionary')
+__all__ = ('echo_report', 'echo_info', 'echo_success', 'echo_warning', 'echo_error', 'echo_critical', 'echo_dictionary')
 
 
 class ExitCode(enum.IntEnum):
@@ -207,7 +208,6 @@ def echo_formatted_list(collection, attributes, sort=None, highlight=None, hide=
 
 def _format_dictionary_json_date(dictionary, sort_keys=True):
     """Return a dictionary formatted as a string using the json format and converting dates to strings."""
-    from aiida.common import json
 
     def default_jsondump(data):
         """Function needed to decode datetimes, that would otherwise not be JSON-decodable."""

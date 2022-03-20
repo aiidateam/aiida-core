@@ -7,12 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Tests for Path types"""
-from aiida.backends.testbase import AiidaTestCase
+import pytest
+
 from aiida.cmdline.params.types.path import PathOrUrl, check_timeout_seconds
 
 
-class TestPath(AiidaTestCase):
+class TestPath:
     """Tests for `PathOrUrl` and `FileOrUrl`"""
 
     def test_default_timeout(self):
@@ -21,7 +23,7 @@ class TestPath(AiidaTestCase):
 
         import_path = PathOrUrl()
 
-        self.assertEqual(import_path.timeout_seconds, URL_TIMEOUT_SECONDS)
+        assert import_path.timeout_seconds == URL_TIMEOUT_SECONDS
 
     def test_timeout_checks(self):
         """Test that timeout check handles different values.
@@ -34,12 +36,12 @@ class TestPath(AiidaTestCase):
         valid_values = [42, '42']
 
         for value in valid_values:
-            self.assertEqual(check_timeout_seconds(value), int(value))
+            assert check_timeout_seconds(value) == int(value)
 
         for invalid in [None, 'test']:
-            with self.assertRaises(TypeError):
+            with pytest.raises(TypeError):
                 check_timeout_seconds(invalid)
 
         for invalid in [-5, 65]:
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 check_timeout_seconds(invalid)

@@ -7,31 +7,39 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Tests for the `CalcJobNode` node sub class."""
 import io
 
-from aiida.backends.testbase import AiidaTestCase
+import pytest
+
 from aiida.common import CalcJobState, LinkType
 from aiida.orm import CalcJobNode, FolderData
 
 
-class TestCalcJobNode(AiidaTestCase):
+class TestCalcJobNode:
     """Tests for the `CalcJobNode` node sub class."""
+
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        self.computer = aiida_localhost
 
     def test_get_set_state(self):
         """Test the `get_state` and `set_state` method."""
         node = CalcJobNode(computer=self.computer,)
-        self.assertEqual(node.get_state(), None)
+        assert node.get_state() is None
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             node.set_state('INVALID')
 
         node.set_state(CalcJobState.UPLOADING)
-        self.assertEqual(node.get_state(), CalcJobState.UPLOADING)
+        assert node.get_state() == CalcJobState.UPLOADING
 
         # Setting an illegal calculation job state, the `get_state` should not fail but return `None`
         node.set_attribute(node.CALC_JOB_STATE_KEY, 'INVALID')
-        self.assertEqual(node.get_state(), None)
+        assert node.get_state() is None
 
     def test_get_scheduler_stdout(self):
         """Verify that the repository sandbox folder is cleaned after the node instance is garbage collected."""
@@ -57,7 +65,7 @@ class TestCalcJobNode(AiidaTestCase):
 
                 # It should return `None` if no scheduler output is there (file not there, or option not set),
                 # while it should return the content if both are set
-                self.assertEqual(node.get_scheduler_stdout(), stdout if with_file and with_option else None)
+                assert node.get_scheduler_stdout() == (stdout if with_file and with_option else None)
 
     def test_get_scheduler_stderr(self):
         """Verify that the repository sandbox folder is cleaned after the node instance is garbage collected."""
@@ -83,4 +91,4 @@ class TestCalcJobNode(AiidaTestCase):
 
                 # It should return `None` if no scheduler output is there (file not there, or option not set),
                 # while it should return the content if both are set
-                self.assertEqual(node.get_scheduler_stderr(), stderr if with_file and with_option else None)
+                assert node.get_scheduler_stderr() == (stderr if with_file and with_option else None)

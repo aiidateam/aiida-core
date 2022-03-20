@@ -15,6 +15,7 @@ functions to operate on them.
 import copy
 import functools
 import itertools
+import json
 
 from aiida.common.constants import elements
 from aiida.common.exceptions import UnsupportedSpeciesError
@@ -980,8 +981,6 @@ class StructureData(Data):
         from itertools import product
 
         import numpy as np
-
-        from aiida.common import json
 
         supercell_factors = [1, 1, 1]
 

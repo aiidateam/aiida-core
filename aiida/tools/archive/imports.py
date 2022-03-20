@@ -10,31 +10,27 @@
 # pylint: disable=too-many-branches,too-many-lines,too-many-locals,too-many-statements
 """Import an archive."""
 from pathlib import Path
-from typing import Callable, Dict, Optional, Set, Tuple, Union
+from typing import Callable, Dict, Literal, Optional, Set, Tuple, Union
 
 from tabulate import tabulate
 
 from aiida import orm
 from aiida.common import timezone
+from aiida.common.exceptions import IncompatibleStorageSchema
 from aiida.common.lang import type_check
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.progress_reporter import get_progress_reporter
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 from aiida.orm.entities import EntityTypes
-from aiida.orm.implementation import Backend
+from aiida.orm.implementation import StorageBackend
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.repository import Repository
 
 from .abstract import ArchiveFormatAbstract
 from .common import batch_iter, entity_type_to_orm
-from .exceptions import ImportTestRun, ImportUniquenessError, ImportValidationError, IncompatibleArchiveVersionError
-from .implementations.sqlite import ArchiveFormatSqlZip
-
-try:
-    from typing import Literal
-except ImportError:
-    from typing_extensions import Literal  # type: ignore
+from .exceptions import ImportTestRun, ImportUniquenessError, ImportValidationError
+from .implementations.sqlite_zip import ArchiveFormatSqlZip
 
 __all__ = ('IMPORT_LOGGER', 'import_archive')
 
@@ -70,7 +66,7 @@ def import_archive(
     create_group: bool = True,
     group: Optional[orm.Group] = None,
     test_run: bool = False,
-    backend: Optional[Backend] = None,
+    backend: Optional[StorageBackend] = None,
 ) -> Optional[int]:
     """Import an archive into the AiiDA backend.
 
@@ -100,10 +96,9 @@ def import_archive(
 
     :returns: Primary Key of the import Group
 
-    :raises `~aiida.tools.archive.exceptions.IncompatibleArchiveVersionError`: if the provided archive's
-        version is not equal to the version of AiiDA at the moment of import.
-    :raises `~aiida.tools.archive.exceptions.ImportValidationError`: if parameters or the contents of
-    :raises `~aiida.tools.archive.exceptions.CorruptArchive`: if the provided archive cannot be read.
+    :raises `~aiida.common.exceptions.CorruptStorage`: if the provided archive cannot be read.
+    :raises `~aiida.common.exceptions.IncompatibleStorageSchema`: if the archive version is not at head.
+    :raises `~aiida.tools.archive.exceptions.ImportValidationError`: if invalid entities are found in the archive.
     :raises `~aiida.tools.archive.exceptions.ImportUniquenessError`: if a new unique entity can not be created.
     """
     archive_format = archive_format or ArchiveFormatSqlZip()
@@ -120,8 +115,8 @@ def import_archive(
         raise ValueError(f"merge_comments not in {('leave', 'newest', 'overwrite')!r}")
     type_check(group, orm.Group, allow_none=True)
     type_check(test_run, bool)
-    backend = backend or get_manager().get_backend()
-    type_check(backend, Backend)
+    backend = backend or get_manager().get_profile_storage()
+    type_check(backend, StorageBackend)
 
     if group and not group.is_stored:
         group.store()
@@ -131,9 +126,9 @@ def import_archive(
     # i.e. its not whether the version is the latest that matters, it is that it is compatible with the backend version
     # its a bit weird at the moment because django/sqlalchemy have different versioning
     if not archive_format.read_version(path) == archive_format.latest_version:
-        raise IncompatibleArchiveVersionError(
-            f'The archive version {archive_format.read_version(path)} '
-            f'is not the latest version {archive_format.latest_version}'
+        raise IncompatibleStorageSchema(
+            f'The archive version {archive_format.read_version(path)!r} '
+            f'is not the latest version {archive_format.latest_version!r}'
         )
 
     IMPORT_LOGGER.report(
@@ -199,8 +194,8 @@ def import_archive(
 
 
 def _add_new_entities(
-    etype: EntityTypes, total: int, unique_field: str, backend_unique_id: dict, backend_from: Backend,
-    backend_to: Backend, batch_size: int, transform: Callable[[dict], dict]
+    etype: EntityTypes, total: int, unique_field: str, backend_unique_id: dict, backend_from: StorageBackend,
+    backend_to: StorageBackend, batch_size: int, transform: Callable[[dict], dict]
 ) -> None:
     """Add new entities to the output backend and update the mapping of unique field -> id."""
     IMPORT_LOGGER.report(f'Adding {total} new {etype.value}(s)')
@@ -221,7 +216,7 @@ def _add_new_entities(
             progress.update(nrows)
 
 
-def _import_users(backend_from: Backend, backend_to: Backend, batch_size: int) -> Dict[int, int]:
+def _import_users(backend_from: StorageBackend, backend_to: StorageBackend, batch_size: int) -> Dict[int, int]:
     """Import users from one backend to another.
 
     :returns: mapping of input backend id to output backend id
@@ -259,7 +254,7 @@ def _import_users(backend_from: Backend, backend_to: Backend, batch_size: int) -
     return {int(i): output_email_id[email] for i, email in input_id_email.items()}
 
 
-def _import_computers(backend_from: Backend, backend_to: Backend, batch_size: int) -> Dict[int, int]:
+def _import_computers(backend_from: StorageBackend, backend_to: StorageBackend, batch_size: int) -> Dict[int, int]:
     """Import computers from one backend to another.
 
     :returns: mapping of input backend id to output backend id
@@ -328,7 +323,7 @@ def _import_computers(backend_from: Backend, backend_to: Backend, batch_size: in
 
 
 def _import_authinfos(
-    backend_from: Backend, backend_to: Backend, batch_size: int, user_ids_archive_backend: Dict[int, int],
+    backend_from: StorageBackend, backend_to: StorageBackend, batch_size: int, user_ids_archive_backend: Dict[int, int],
     computer_ids_archive_backend: Dict[int, int]
 ) -> None:
     """Import logs from one backend to another.
@@ -407,7 +402,7 @@ def _import_authinfos(
 
 
 def _import_nodes(
-    backend_from: Backend, backend_to: Backend, batch_size: int, user_ids_archive_backend: Dict[int, int],
+    backend_from: StorageBackend, backend_to: StorageBackend, batch_size: int, user_ids_archive_backend: Dict[int, int],
     computer_ids_archive_backend: Dict[int, int], import_new_extras: bool, merge_extras: MergeExtrasType
 ) -> Dict[int, int]:
     """Import users from one backend to another.
@@ -485,8 +480,9 @@ class NodeTransform:
         return data
 
 
-def _import_logs(backend_from: Backend, backend_to: Backend, batch_size: int,
-                 node_ids_archive_backend: Dict[int, int]) -> Dict[int, int]:
+def _import_logs(
+    backend_from: StorageBackend, backend_to: StorageBackend, batch_size: int, node_ids_archive_backend: Dict[int, int]
+) -> Dict[int, int]:
     """Import logs from one backend to another.
 
     :returns: mapping of input backend id to output backend id
@@ -533,7 +529,8 @@ def _import_logs(backend_from: Backend, backend_to: Backend, batch_size: int,
 
 
 def _merge_node_extras(
-    backend_from: Backend, backend_to: Backend, batch_size: int, backend_uuid_id: Dict[str, int], mode: MergeExtrasType
+    backend_from: StorageBackend, backend_to: StorageBackend, batch_size: int, backend_uuid_id: Dict[str, int],
+    mode: MergeExtrasType
 ) -> None:
     """Merge extras from the input backend with the ones in the output backend.
 
@@ -677,8 +674,8 @@ class CommentTransform:
 
 
 def _import_comments(
-    backend_from: Backend,
-    backend: Backend,
+    backend_from: StorageBackend,
+    backend: StorageBackend,
     batch_size: int,
     user_ids_archive_backend: Dict[int, int],
     node_ids_archive_backend: Dict[int, int],
@@ -758,7 +755,7 @@ def _import_comments(
 
 
 def _import_links(
-    backend_from: Backend, backend_to: Backend, batch_size: int, node_ids_archive_backend: Dict[int, int]
+    backend_from: StorageBackend, backend_to: StorageBackend, batch_size: int, node_ids_archive_backend: Dict[int, int]
 ) -> None:
     """Import links from one backend to another."""
 
@@ -927,7 +924,7 @@ class GroupTransform:
 
 
 def _import_groups(
-    backend_from: Backend, backend_to: Backend, batch_size: int, user_ids_archive_backend: Dict[int, int],
+    backend_from: StorageBackend, backend_to: StorageBackend, batch_size: int, user_ids_archive_backend: Dict[int, int],
     node_ids_archive_backend: Dict[int, int]
 ) -> Set[str]:
     """Import groups from the input backend, and add group -> node records.
@@ -1007,7 +1004,7 @@ def _import_groups(
 
 
 def _make_import_group(
-    group: Optional[orm.Group], labels: Set[str], node_ids_archive_backend: Dict[int, int], backend_to: Backend,
+    group: Optional[orm.Group], labels: Set[str], node_ids_archive_backend: Dict[int, int], backend_to: StorageBackend,
     batch_size: int
 ) -> Optional[int]:
     """Make an import group containing all imported nodes.
@@ -1070,7 +1067,8 @@ def _make_import_group(
     return group_id
 
 
-def _get_new_object_keys(key_format: str, backend_from: Backend, backend_to: Backend, batch_size: int) -> Set[str]:
+def _get_new_object_keys(key_format: str, backend_from: StorageBackend, backend_to: StorageBackend,
+                         batch_size: int) -> Set[str]:
     """Return the object keys that need to be added to the backend."""
     archive_hashkeys: Set[str] = set()
     query = QueryBuilder(backend=backend_from).append(orm.Node, project='repository_metadata')
@@ -1097,7 +1095,7 @@ def _get_new_object_keys(key_format: str, backend_from: Backend, backend_to: Bac
     return new_hashkeys
 
 
-def _add_files_to_repo(backend_from: Backend, backend_to: Backend, new_keys: Set[str]) -> None:
+def _add_files_to_repo(backend_from: StorageBackend, backend_to: StorageBackend, new_keys: Set[str]) -> None:
     """Add the new files to the repository."""
     if not new_keys:
         return None

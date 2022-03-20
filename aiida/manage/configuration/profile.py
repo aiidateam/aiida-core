@@ -12,16 +12,15 @@ import collections
 from copy import deepcopy
 import os
 import pathlib
-from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional
+from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional, Type
 
 from aiida.common import exceptions
-from aiida.common.lang import classproperty
 
 from .options import parse_option
 from .settings import DAEMON_DIR, DAEMON_LOG_DIR
 
 if TYPE_CHECKING:
-    from aiida.repository import Repository  # pylint: disable=ungrouped-imports
+    from aiida.orm.implementation import StorageBackend
 
 __all__ = ('Profile',)
 
@@ -48,24 +47,13 @@ class Profile:  # pylint: disable=too-many-public-methods
     KEY_PROCESS_BACKEND = 'backend'
     KEY_PROCESS_CONFIG = 'config'
     KEY_OPTIONS = 'options'
+    KEY_TEST_PROFILE = 'test_profile'
 
     # keys that are expected to be in the parsed configuration
     REQUIRED_KEYS = (
         KEY_STORAGE,
         KEY_PROCESS,
     )
-
-    @classproperty
-    def defaults(cls):  # pylint: disable=no-self-use,no-self-argument
-        """Return the dictionary of default values for profile settings."""
-        return {
-            'repository': {
-                'pack_size_target': 4 * 1024 * 1024 * 1024,
-                'loose_prefix_len': 2,
-                'hash_type': 'sha256',
-                'compression_algorithm': 'zlib+1'
-            }
-        }
 
     def __init__(self, name: str, config: Mapping[str, Any], validate=True):
         """Load a profile with the profile configuration."""
@@ -84,8 +72,12 @@ class Profile:  # pylint: disable=too-many-public-methods
             from uuid import uuid4
             self._attributes[self.KEY_UUID] = uuid4().hex
 
-        # Currently, whether a profile is a test profile is solely determined by its name starting with 'test_'
-        self._test_profile = bool(self.name.startswith('test_'))
+    def __str__(self) -> str:
+        return f'Profile<{self.uuid!r} ({self.name!r})>'
+
+    def copy(self):
+        """Return a copy of the profile."""
+        return self.__class__(self.name, self._attributes)
 
     @property
     def uuid(self) -> str:
@@ -125,10 +117,20 @@ class Profile:  # pylint: disable=too-many-public-methods
         :param name: the name of the storage backend
         :param config: the configuration of the storage backend
         """
-        # to-do validation (by loading the storage backend, and using a classmethod to validate the config)
         self._attributes.setdefault(self.KEY_STORAGE, {})
         self._attributes[self.KEY_STORAGE][self.KEY_STORAGE_BACKEND] = name
         self._attributes[self.KEY_STORAGE][self.KEY_STORAGE_CONFIG] = config
+
+    @property
+    def storage_cls(self) -> Type['StorageBackend']:
+        """Return the storage backend class for this profile."""
+        if self.storage_backend == 'psql_dos':
+            from aiida.storage.psql_dos.backend import PsqlDosBackend
+            return PsqlDosBackend
+        if self.storage_backend == 'sqlite_zip':
+            from aiida.storage.sqlite_zip.backend import SqliteZipBackend
+            return SqliteZipBackend
+        raise ValueError(f'unknown storage backend type: {self.storage_backend}')
 
     @property
     def process_control_backend(self) -> str:
@@ -146,7 +148,6 @@ class Profile:  # pylint: disable=too-many-public-methods
         :param name: the name of the process backend
         :param config: the configuration of the process backend
         """
-        # to-do validation (by loading the process backend, and using a classmethod to validate the config)
         self._attributes.setdefault(self.KEY_PROCESS, {})
         self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_BACKEND] = name
         self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_CONFIG] = config
@@ -199,23 +200,27 @@ class Profile:  # pylint: disable=too-many-public-methods
 
         :return: boolean, True if test profile, False otherwise
         """
-        return self._test_profile
+        # Check explicitly for ``True`` for safety. If an invalid value is defined, we default to treating it as not
+        # a test profile as that can unintentionally clear the database.
+        return self._attributes.get(self.KEY_TEST_PROFILE, False) is True
+
+    @is_test_profile.setter
+    def is_test_profile(self, value: bool) -> None:
+        """Set whether the profile is a test profile.
+
+        :param value: boolean indicating whether this profile is a test profile.
+        """
+        self._attributes[self.KEY_TEST_PROFILE] = value
 
     @property
     def repository_path(self) -> pathlib.Path:
         """Return the absolute path of the repository configured for this profile.
 
-        :return: absolute filepath of the profile's file repository
-        """
-        return pathlib.Path(self._parse_repository_uri()[1])
-
-    def _parse_repository_uri(self):
-        """
-        This function validates the REPOSITORY_URI, that should be in the format protocol://address
+        The URI should be in the format `protocol://address`
 
         :note: At the moment, only the file protocol is supported.
 
-        :return: a tuple (protocol, address).
+        :return: absolute filepath of the profile's file repository
         """
         from urllib.parse import urlparse
 
@@ -227,7 +232,7 @@ class Profile:  # pylint: disable=too-many-public-methods
         if not os.path.isabs(parts.path):
             raise exceptions.ConfigurationError('invalid repository URI: the path has to be absolute')
 
-        return parts.scheme, os.path.expanduser(parts.path)
+        return pathlib.Path(os.path.expanduser(parts.path))
 
     @property
     def rmq_prefix(self) -> str:
@@ -238,7 +243,13 @@ class Profile:  # pylint: disable=too-many-public-methods
         return f'aiida-{self.uuid}'
 
     def get_rmq_url(self) -> str:
+        """Return the RMQ url for this profile."""
         from aiida.manage.external.rmq import get_rmq_url
+
+        if self.process_control_backend != 'rabbitmq':
+            raise exceptions.ConfigurationError(
+                f"invalid process control backend, only 'rabbitmq' is supported: {self.process_control_backend}"
+            )
         kwargs = {key[7:]: val for key, val in self.process_control_config.items() if key.startswith('broker_')}
         additional_kwargs = kwargs.pop('parameters', {})
         return get_rmq_url(**kwargs, **additional_kwargs)

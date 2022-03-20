@@ -17,6 +17,8 @@ You have performed your calculations with AiiDA and you would like to share your
 Since AiiDA keeps track of the provenance of every computed result, this step is easy:
 Tell AiiDA the **final results** you would like to be reproducible, and AiiDA will automatically include their entire provenance using the :ref:`topics:provenance:consistency:traversal-rules`.
 
+.. seealso:: :ref:`internal_architecture:storage:sqlite_zip` and :ref:`how-to:data:share:archive:profile`.
+
 Exporting individual nodes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -72,70 +74,77 @@ When publishing AiiDA archives on the `Materials Cloud Archive`_, you also get a
 Inspecting an archive
 ^^^^^^^^^^^^^^^^^^^^^
 
-In order to get a quick overview of an archive file *without* importing it into your AiiDA profile, use ``verdi archive inspect``:
+In order to get a quick overview of an archive file *without* importing it into your AiiDA profile, use ``verdi archive info``:
 
 .. code-block:: console
 
-    $ verdi archive inspect sssp-efficiency.aiida
-    ---------------  -------
-    Version archive  1.0
-    Version aiida    2.0.0
-    Compression      6
-    ---------------  -------
+    $ verdi archive info --detailed test.aiida
+    metadata:
+        export_version: main_0001
+        aiida_version: 2.0.0
+        key_format: sha256
+        compression: 6
+        ctime: '2022-03-06T23:50:57.964429'
+        creation_parameters:
+            entities_starting_set:
+            node:
+            - 6af3f8a0-cf0d-4427-8472-f8907acfc87a
+            include_authinfos: false
+            include_comments: true
+            include_logs: true
+            graph_traversal_rules:
+            input_calc_forward: false
+            input_calc_backward: true
+            create_forward: true
+            create_backward: true
+            return_forward: true
+            return_backward: false
+            input_work_forward: false
+            input_work_backward: true
+            call_calc_forward: true
+            call_calc_backward: true
+            call_work_forward: true
+            call_work_backward: true
+    entities:
+        Users:
+            count: 1
+            emails:
+            - aiida@epfl.ch
+        Computers:
+            count: 2
+            labels:
+            - computer1
+            - computer2
+        Nodes:
+            count: 53
+            node_types:
+            - data.core.array.trajectory.TrajectoryData.
+            - data.core.cif.CifData.
+            - data.core.code.Code.
+            - data.core.dict.Dict.
+            - data.core.folder.FolderData.
+            - data.core.remote.RemoteData.
+            - data.core.singlefile.SinglefileData.
+            - data.core.structure.StructureData.
+            - process.calculation.calcfunction.CalcFunctionNode.
+            - process.calculation.calcjob.CalcJobNode.
+            process_types:
+            - aiida.calculations:codtools.ciffilter
+            - aiida.calculations:quantumespresso.pw
+        Groups:
+            count: 0
+            type_strings: []
+        Comments:
+            count: 0
+        Logs:
+            count: 0
+        Links:
+            count: 59
+    repository:
+        objects:
+            count: 71
 
-    Database statistics
-    -------------------
-    Users:
-        count: 7
-        emails:
-        - a@b.com
-    Computers:
-        count: 1
-        labels:
-        - bellatrix
-    Nodes:
-        count: 109547
-        node_types:
-        - data.array.kpoints.KpointsData.
-        - data.core.array.ArrayData.
-        - data.core.array.bands.BandsData.
-        - data.core.array.trajectory.TrajectoryData.
-        - data.core.cif.CifData.
-        - data.core.code.Code.
-        - data.core.dict.Dict.
-        - data.core.folder.FolderData.
-        - data.core.remote.RemoteData.
-        - process.calculation.calcfunction.CalcFunctionNode.
-        - process.calculation.calcjob.CalcJobNode.
-        process_types:
-        - aiida.calculations:codtools.ciffilter
-        - aiida.calculations:quantumespresso.matdyn
-        - aiida.calculations:quantumespresso.ph
-        - aiida.calculations:quantumespresso.pw
-        - aiida.calculations:quantumespresso.q2r
-    Groups:
-        count: 1
-        type_strings:
-        - core.import
-    Comments:
-        count: 0
-    Logs:
-        count: 0
-    Links:
-        count: 159905
-    Repo Files:
-        count: 199565
-
-You can also use the Python API to inspect an archive file, using the :py:class:`~aiida.orm.querybuilder.QueryBuilder` to query the database:
-
-.. code-block:: python
-
-    from aiida import orm
-    from aiida.tools.archive import get_format
-    archive_format = get_format()
-    with archive_format.open('', mode='r') as reader:
-        qb = reader.querybuilder()
-        print(qb.append(orm.Node).count())
+You can also use the Python API to inspect the archive file as a profile, see :ref:`how-to:data:share:archive:profile`.
 
 Importing an archive
 ^^^^^^^^^^^^^^^^^^^^

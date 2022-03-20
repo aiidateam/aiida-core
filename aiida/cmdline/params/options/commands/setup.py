@@ -14,7 +14,6 @@ import hashlib
 
 import click
 
-from aiida.backends import BACKEND_DJANGO
 from aiida.cmdline.params import options, types
 from aiida.manage.configuration import Profile, get_config, get_config_option
 from aiida.manage.external.postgres import DEFAULT_DBINFO
@@ -260,7 +259,7 @@ SETUP_DATABASE_ENGINE = QUICKSETUP_DATABASE_ENGINE.clone(
 
 SETUP_DATABASE_BACKEND = QUICKSETUP_DATABASE_BACKEND.clone(
     prompt='Database backend',
-    contextual_default=functools.partial(get_profile_attribute_default, ('storage_backend', BACKEND_DJANGO)),
+    contextual_default=functools.partial(get_profile_attribute_default, ('storage_backend', 'psql_dos')),
     cls=options.interactive.InteractiveOption
 )
 
@@ -361,3 +360,9 @@ SETUP_REPOSITORY_URI = QUICKSETUP_REPOSITORY_URI.clone(
     contextual_default=get_repository_uri_default,
     cls=options.interactive.InteractiveOption
 )
+
+SETUP_TEST_PROFILE = options.OverridableOption(
+    '--test-profile', is_flag=True, help='Designate the profile to be used for running the test suite only.'
+)
+
+QUICKSETUP_TEST_PROFILE = SETUP_TEST_PROFILE.clone()

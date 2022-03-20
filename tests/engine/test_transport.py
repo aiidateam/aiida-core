@@ -7,25 +7,25 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Module to test transport."""
 import asyncio
 
+import pytest
+
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.engine.transports import TransportQueue
 
 
-class TestTransportQueue(AiidaTestCase):
+class TestTransportQueue:
     """Tests for the transport queue."""
 
-    def setUp(self, *args, **kwargs):  # pylint: disable=arguments-differ
-        """ Set up a simple authinfo and for later use """
-        super().setUp(*args, **kwargs)
-        self.authinfo = orm.AuthInfo(computer=self.computer, user=orm.User.objects.get_default()).store()
-
-    def tearDown(self, *args, **kwargs):  # pylint: disable=arguments-differ
-        orm.AuthInfo.objects.delete(self.authinfo.id)
-        super().tearDown(*args, **kwargs)
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        self.computer = aiida_localhost
+        self.authinfo = self.computer.get_authinfo(orm.User.objects.get_default())
 
     def test_simple_request(self):
         """ Test a simple transport request """
@@ -36,8 +36,8 @@ class TestTransportQueue(AiidaTestCase):
             trans = None
             with queue.request_transport(self.authinfo) as request:
                 trans = await request
-                self.assertTrue(trans.is_open)
-            self.assertFalse(trans.is_open)
+                assert trans.is_open
+            assert not trans.is_open
 
         loop.run_until_complete(test())
 
@@ -49,11 +49,11 @@ class TestTransportQueue(AiidaTestCase):
         async def nested(queue, authinfo):
             with queue.request_transport(authinfo) as request1:
                 trans1 = await request1
-                self.assertTrue(trans1.is_open)
+                assert trans1.is_open
                 with queue.request_transport(authinfo) as request2:
                     trans2 = await request2
-                    self.assertIs(trans1, trans2)
-                    self.assertTrue(trans2.is_open)
+                    assert trans1 is trans2
+                    assert trans2.is_open
 
         loop.run_until_complete(nested(transport_queue, self.authinfo))
 
@@ -79,7 +79,7 @@ class TestTransportQueue(AiidaTestCase):
                 return trans.is_open
 
         retval = loop.run_until_complete(test())
-        self.assertTrue(retval)
+        assert retval
 
     def test_open_fail(self):
         """Test that if opening fails."""
@@ -98,7 +98,7 @@ class TestTransportQueue(AiidaTestCase):
             # Let's put in a broken open method
             original = self.authinfo.get_transport().__class__.open
             self.authinfo.get_transport().__class__.open = broken_open
-            with self.assertRaises(RuntimeError):
+            with pytest.raises(RuntimeError):
                 loop.run_until_complete(test())
         finally:
             self.authinfo.get_transport().__class__.open = original
@@ -126,7 +126,7 @@ class TestTransportQueue(AiidaTestCase):
                     time_current = time.time()
                     time_elapsed = time_current - time_start
                     time_minimum = trans.get_safe_open_interval() * (iteration + 1)
-                    self.assertTrue(time_elapsed > time_minimum, 'transport safe interval was violated')
+                    assert time_elapsed > time_minimum, 'transport safe interval was violated'
 
             for iteration in range(5):
                 loop.run_until_complete(test(iteration))

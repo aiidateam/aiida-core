@@ -8,10 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module that contains the class definitions necessary to offer support for queries to Materials Project."""
-
 import pytest
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.plugins import DbImporterFactory
 
 
@@ -21,7 +19,8 @@ def run_materialsproject_api_tests():
     return profile.dictionary.get('run_materialsproject_api_tests', False)
 
 
-class TestMaterialsProject(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean')
+class TestMaterialsProject:
     """
     Contains the tests to verify the functionality of the Materials Project importer
     functions.

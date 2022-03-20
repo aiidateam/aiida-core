@@ -24,7 +24,7 @@ def parameter_type():
 
 
 @pytest.fixture
-def setup_codes(clear_database_before_test, aiida_localhost):
+def setup_codes(aiida_profile_clean, aiida_localhost):
     """Create some `Code` instances to test the `CodeParamType` parameter type for the command line infrastructure.
 
     We create an initial code with a random name and then on purpose create two code with a name that matches exactly
@@ -121,13 +121,13 @@ def test_entry_point_validation(setup_codes):
         result = parameter_type.convert(identifier, None, None)
 
 
-def test_complete(setup_codes, parameter_type, aiida_localhost):
-    """Test the `complete` method that provides auto-complete functionality."""
+def test_shell_complete(setup_codes, parameter_type, aiida_localhost):
+    """Test the `shell_complete` method that provides auto-complete functionality."""
     entity_01, entity_02, entity_03 = setup_codes
     entity_04 = Code(label='xavier', remote_computer_exec=(aiida_localhost, '/bin/true')).store()
 
-    options = [item[0] for item in parameter_type.complete(None, '')]
+    options = [item.value for item in parameter_type.shell_complete(None, None, '')]
     assert sorted(options) == sorted([entity_01.label, entity_02.label, entity_03.label, entity_04.label])
 
-    options = [item[0] for item in parameter_type.complete(None, 'xa')]
+    options = [item.value for item in parameter_type.shell_complete(None, None, 'xa')]
     assert sorted(options) == sorted([entity_04.label])

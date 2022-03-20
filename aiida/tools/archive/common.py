@@ -13,13 +13,8 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type
 import urllib.parse
 import urllib.request
 
-from aiida.common.log import AIIDA_LOGGER
 from aiida.orm import AuthInfo, Comment, Computer, Entity, Group, Log, Node, User
 from aiida.orm.entities import EntityTypes
-
-__all__ = ('MIGRATE_LOGGER',)
-
-MIGRATE_LOGGER = AIIDA_LOGGER.getChild('migrate')
 
 # Mapping from entity names to AiiDA classes
 entity_type_to_orm: Dict[EntityTypes, Type[Entity]] = {

@@ -152,14 +152,11 @@ if __name__ == '__main__':
     _skip = {
         # skipped since some arguments and options share the same name
         'cmdline/params': ['arguments', 'options'],
-        # skipped since the module and its method share the same name
-        'cmdline/utils': ['echo'],
         # skipped since this is for testing only not general use
         'manage': ['tests'],
-        # skipped since we don't want to expose the implmentation
+        # skipped since we don't want to expose the implementation at the top-level
+        'storage': ['psql_dos', 'sqlite_zip'],
         'orm': ['implementation'],
-        # skipped since both implementations share class/function names
-        'orm/implementation': ['django', 'sqlalchemy', 'sql'],
         # skip all since the module requires extra requirements
         'restapi': ['*'],
         # keep at aiida.tools.archive level

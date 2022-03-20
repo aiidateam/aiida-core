@@ -85,7 +85,7 @@ def test_hierarchy_utility(file_hierarchy, tmp_path):
 
 
 # yapf: disable
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('retrieve_list, expected_hierarchy', (
     # Single file or folder, either toplevel or nested
     (['file_a.txt'], {'file_a.txt': 'file_a'}),
@@ -130,7 +130,7 @@ def test_retrieve_files_from_list(
     assert serialize_file_hierarchy(target) == expected_hierarchy
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_upload_local_copy_list(fixture_sandbox, aiida_localhost, aiida_local_code_factory, file_hierarchy, tmp_path):
     """Test the ``local_copy_list`` functionality in ``upload_calculation``.
 

@@ -7,37 +7,35 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Module to test RabbitMQ."""
 import asyncio
 
 import plumpy
 import pytest
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import ProcessState
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 from aiida.orm import Int
 from tests.utils import processes as test_processes
 
 
 @pytest.mark.requires_rmq
-class TestProcessControl(AiidaTestCase):
+class TestProcessControl:
     """Test AiiDA's RabbitMQ functionalities."""
 
     TIMEOUT = 2.
 
-    def setUp(self):
-        super().setUp()
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
 
         # The coroutine defined in testcase should run in runner's loop
         # and process need submit by runner.submit rather than `submit` import from
         # aiida.engine, since the broad one will create its own loop
         manager = get_manager()
         self.runner = manager.get_runner()
-
-    def tearDown(self):
-        self.runner.close()
-        super().tearDown()
 
     def test_submit_simple(self):
         """"Launch the process."""
@@ -46,8 +44,8 @@ class TestProcessControl(AiidaTestCase):
             calc_node = self.runner.submit(test_processes.DummyProcess)
             await self.wait_for_process(calc_node)
 
-            self.assertTrue(calc_node.is_finished_ok)
-            self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.FINISHED.value)
+            assert calc_node.is_finished_ok
+            assert calc_node.process_state.value == plumpy.ProcessState.FINISHED.value
 
         self.runner.loop.run_until_complete(do_submit())
 
@@ -60,13 +58,13 @@ class TestProcessControl(AiidaTestCase):
 
             calc_node = self.runner.submit(test_processes.AddProcess, a=term_a, b=term_b)
             await self.wait_for_process(calc_node)
-            self.assertTrue(calc_node.is_finished_ok)
-            self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.FINISHED.value)
+            assert calc_node.is_finished_ok
+            assert calc_node.process_state.value == plumpy.ProcessState.FINISHED.value
 
         self.runner.loop.run_until_complete(do_launch())
 
     def test_submit_bad_input(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             self.runner.submit(test_processes.AddProcess, a=Int(5))
 
     def test_exception_process(self):
@@ -76,8 +74,8 @@ class TestProcessControl(AiidaTestCase):
             calc_node = self.runner.submit(test_processes.ExceptionProcess)
             await self.wait_for_process(calc_node)
 
-            self.assertFalse(calc_node.is_finished_ok)
-            self.assertEqual(calc_node.process_state.value, plumpy.ProcessState.EXCEPTED.value)
+            assert not calc_node.is_finished_ok
+            assert calc_node.process_state.value == plumpy.ProcessState.EXCEPTED.value
 
         self.runner.loop.run_until_complete(do_exception())
 
@@ -91,19 +89,19 @@ class TestProcessControl(AiidaTestCase):
             while calc_node.process_state != ProcessState.WAITING:
                 await asyncio.sleep(0.1)
 
-            self.assertFalse(calc_node.paused)
+            assert not calc_node.paused
 
             pause_future = controller.pause_process(calc_node.pk)
             future = await with_timeout(asyncio.wrap_future(pause_future))
             result = await self.wait_future(asyncio.wrap_future(future))
-            self.assertTrue(result)
-            self.assertTrue(calc_node.paused)
+            assert result
+            assert calc_node.paused
 
             kill_message = 'Sorry, you have to go mate'
             kill_future = controller.kill_process(calc_node.pk, msg=kill_message)
             future = await with_timeout(asyncio.wrap_future(kill_future))
             result = await self.wait_future(asyncio.wrap_future(future))
-            self.assertTrue(result)
+            assert result
 
         self.runner.loop.run_until_complete(do_pause())
 
@@ -114,7 +112,7 @@ class TestProcessControl(AiidaTestCase):
 
         async def do_pause_play():
             calc_node = self.runner.submit(test_processes.WaitProcess)
-            self.assertFalse(calc_node.paused)
+            assert not calc_node.paused
             while calc_node.process_state != ProcessState.WAITING:
                 await asyncio.sleep(0.1)
 
@@ -122,22 +120,22 @@ class TestProcessControl(AiidaTestCase):
             pause_future = controller.pause_process(calc_node.pk, msg=pause_message)
             future = await with_timeout(asyncio.wrap_future(pause_future))
             result = await self.wait_future(asyncio.wrap_future(future))
-            self.assertTrue(calc_node.paused)
-            self.assertEqual(calc_node.process_status, pause_message)
+            assert calc_node.paused
+            assert calc_node.process_status == pause_message
 
             play_future = controller.play_process(calc_node.pk)
             future = await with_timeout(asyncio.wrap_future(play_future))
             result = await self.wait_future(asyncio.wrap_future(future))
 
-            self.assertTrue(result)
-            self.assertFalse(calc_node.paused)
-            self.assertEqual(calc_node.process_status, None)
+            assert result
+            assert not calc_node.paused
+            assert calc_node.process_status is None
 
             kill_message = 'Sorry, you have to go mate'
             kill_future = controller.kill_process(calc_node.pk, msg=kill_message)
             future = await with_timeout(asyncio.wrap_future(kill_future))
             result = await self.wait_future(asyncio.wrap_future(future))
-            self.assertTrue(result)
+            assert result
 
         self.runner.loop.run_until_complete(do_pause_play())
 
@@ -148,7 +146,7 @@ class TestProcessControl(AiidaTestCase):
 
         async def do_kill():
             calc_node = self.runner.submit(test_processes.WaitProcess)
-            self.assertFalse(calc_node.is_killed)
+            assert not calc_node.is_killed
             while calc_node.process_state != ProcessState.WAITING:
                 await asyncio.sleep(0.1)
 
@@ -156,11 +154,11 @@ class TestProcessControl(AiidaTestCase):
             kill_future = controller.kill_process(calc_node.pk, msg=kill_message)
             future = await with_timeout(asyncio.wrap_future(kill_future))
             result = await self.wait_future(asyncio.wrap_future(future))
-            self.assertTrue(result)
+            assert result
 
             await self.wait_for_process(calc_node)
-            self.assertTrue(calc_node.is_killed)
-            self.assertEqual(calc_node.process_status, kill_message)
+            assert calc_node.is_killed
+            assert calc_node.process_status == kill_message
 
         self.runner.loop.run_until_complete(do_kill())
 

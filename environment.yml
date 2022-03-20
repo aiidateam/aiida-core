@@ -6,7 +6,6 @@ channels:
 - defaults
 dependencies:
 - python~=3.8
-- aldjemy~=2.4
 - alembic~=1.2
 - archive-path~=0.3.6
 - aio-pika~=6.6
@@ -15,7 +14,6 @@ dependencies:
 - click-spinner~=0.1.8
 - click>=8.0.3,~=8.0
 - disk-objectstore~=0.6.0
-- django~=2.2
 - python-graphviz~=0.13
 - ipython~=7.20
 - jinja2~=3.0
@@ -26,16 +24,14 @@ dependencies:
 - pamqp~=2.3
 - paramiko>=2.7.2,~=2.7
 - plumpy~=0.20.0
-- pgsu~=0.2.0
+- pgsu~=0.2.1
 - psutil~=5.6
-- psycopg2-binary~=2.8.3
+- psycopg2-binary~=2.8
 - python-dateutil~=2.8
 - pytz~=2021.1
 - pyyaml~=5.4
-- simplejson~=3.16
 - sqlalchemy~=1.4.22
 - tabulate~=0.8.5
-- typing-extensions
 - tqdm~=4.45
 - tzlocal~=2.0
 - upf_to_json~=0.9.2

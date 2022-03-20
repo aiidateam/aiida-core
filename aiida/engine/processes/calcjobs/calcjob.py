@@ -9,6 +9,7 @@
 ###########################################################################
 """Implementation of the CalcJob process."""
 import io
+import json
 import os
 import shutil
 from typing import Any, Dict, Hashable, Optional, Type, Union
@@ -244,6 +245,9 @@ class CalcJob(Process):
             help='If set to true, the submission script will load the system environment variables',)
         spec.input('metadata.options.environment_variables', valid_type=dict, default=lambda: {},
             help='Set a dictionary of custom environment variables for this calculation',)
+        spec.input('metadata.options.environment_variables_double_quotes', valid_type=bool, default=False,
+            help='If set to True, use double quotes instead of single quotes to escape the environment variables '
+                 'specified in ``environment_variables``.',)
         spec.input('metadata.options.priority', valid_type=str, required=False,
             help='Set the priority of the job to be queued')
         spec.input('metadata.options.max_memory_kb', valid_type=int, required=False,
@@ -579,7 +583,6 @@ class CalcJob(Process):
 
         """
         # pylint: disable=too-many-locals,too-many-statements,too-many-branches
-        from aiida.common import json
         from aiida.common.datastructures import CodeInfo, CodeRunMode
         from aiida.common.exceptions import InputValidationError, InvalidOperation, PluginInternalError, ValidationError
         from aiida.common.utils import validate_list_of_string_tuples
@@ -731,6 +734,7 @@ class CalcJob(Process):
         job_tmpl.import_sys_environment = self.node.get_option('import_sys_environment')
 
         job_tmpl.job_environment = self.node.get_option('environment_variables')
+        job_tmpl.environment_variables_double_quotes = self.node.get_option('environment_variables_double_quotes')
 
         queue_name = self.node.get_option('queue_name')
         account = self.node.get_option('account')

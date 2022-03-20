@@ -7,9 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Tests for aiida.tools.graph.graph_traversers"""
+import pytest
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common.links import LinkType
 from aiida.tools.graph.graph_traversers import get_nodes_delete, traverse_graph
 
@@ -82,7 +83,8 @@ def create_minimal_graph():
     return output_dict
 
 
-class TestTraverseGraph(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean')
+class TestTraverseGraph:
     """Test class for traverse_graph"""
 
     def _single_test(self, starting_nodes=(), expanded_nodes=(), links_forward=(), links_backward=()):
@@ -93,7 +95,7 @@ class TestTraverseGraph(AiidaTestCase):
             links_backward=links_backward,
         )['nodes']
         expected_nodes = set(starting_nodes + expanded_nodes)
-        self.assertEqual(obtained_nodes, expected_nodes)
+        assert obtained_nodes == expected_nodes
 
     def test_traversal_individually(self):
         """
@@ -302,7 +304,7 @@ class TestTraverseGraph(AiidaTestCase):
         for single_node in every_node:
             expected_nodes = set([single_node])
             obtained_nodes = traverse_graph([single_node])['nodes']
-            self.assertEqual(obtained_nodes, expected_nodes)
+            assert obtained_nodes == expected_nodes
 
         links_forward = [LinkType.INPUT_WORK, LinkType.RETURN]
         links_backward = []
@@ -311,18 +313,18 @@ class TestTraverseGraph(AiidaTestCase):
         obtained_nodes = traverse_graph([data_drop], links_forward=links_forward,
                                         links_backward=links_backward)['nodes']
         expected_nodes = set(every_node)
-        self.assertEqual(obtained_nodes, expected_nodes)
+        assert obtained_nodes == expected_nodes
 
         # Forward: data_take to (input) work_select (data_drop is not returned)
         obtained_nodes = traverse_graph([data_take], links_forward=links_forward,
                                         links_backward=links_backward)['nodes']
         expected_nodes = set([work_select, data_take])
-        self.assertEqual(obtained_nodes, expected_nodes)
+        assert obtained_nodes == expected_nodes
 
         # Forward: work_select to (return) data_take (data_drop is not returned)
         obtained_nodes = traverse_graph([work_select], links_forward=links_forward,
                                         links_backward=links_backward)['nodes']
-        self.assertEqual(obtained_nodes, expected_nodes)
+        assert obtained_nodes == expected_nodes
 
         links_forward = []
         links_backward = [LinkType.INPUT_WORK, LinkType.RETURN]
@@ -331,18 +333,18 @@ class TestTraverseGraph(AiidaTestCase):
         expected_nodes = set([data_drop])
         obtained_nodes = traverse_graph([data_drop], links_forward=links_forward,
                                         links_backward=links_backward)['nodes']
-        self.assertEqual(obtained_nodes, expected_nodes)
+        assert obtained_nodes == expected_nodes
 
         # Backward: data_take to (return) work_select to (input) data_drop
         expected_nodes = set(every_node)
         obtained_nodes = traverse_graph([data_take], links_forward=links_forward,
                                         links_backward=links_backward)['nodes']
-        self.assertEqual(obtained_nodes, expected_nodes)
+        assert obtained_nodes == expected_nodes
 
         # Backward: work_select to (input) data_take and data_drop
         obtained_nodes = traverse_graph([work_select], links_forward=links_forward,
                                         links_backward=links_backward)['nodes']
-        self.assertEqual(obtained_nodes, expected_nodes)
+        assert obtained_nodes == expected_nodes
 
     def test_traversal_errors(self):
         """This will test the errors of the traversers."""
@@ -352,19 +354,19 @@ class TestTraverseGraph(AiidaTestCase):
         test_node = orm.Data().store()
         false_node = -1
 
-        with self.assertRaises(NotExistent):
+        with pytest.raises(NotExistent):
             _ = traverse_graph([false_node])
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             _ = traverse_graph(['not a node'])
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             _ = traverse_graph('not a list')
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             _ = traverse_graph([test_node], links_forward=1984)
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             _ = traverse_graph([test_node], links_backward=['not a link'])
 
     def test_empty_input(self):
@@ -376,12 +378,12 @@ class TestTraverseGraph(AiidaTestCase):
         ]
 
         obtained_results = traverse_graph([], links_forward=all_links, links_backward=all_links)
-        self.assertEqual(obtained_results['nodes'], set())
-        self.assertEqual(obtained_results['links'], None)
+        assert obtained_results['nodes'] == set()
+        assert obtained_results['links'] is None
 
         obtained_results = traverse_graph([], get_links=True, links_forward=all_links, links_backward=all_links)
-        self.assertEqual(obtained_results['nodes'], set())
-        self.assertEqual(obtained_results['links'], set())
+        assert obtained_results['nodes'] == set()
+        assert obtained_results['links'] == set()
 
     def test_delete_aux(self):
         """Tests for the get_nodes_delete function"""
@@ -391,23 +393,23 @@ class TestTraverseGraph(AiidaTestCase):
 
         obtained_nodes = get_nodes_delete([nodes_dict['data_i'].pk])['nodes']
         expected_nodes = set(nodes_pklist)
-        self.assertEqual(obtained_nodes, expected_nodes)
+        assert obtained_nodes == expected_nodes
 
         obtained_nodes = get_nodes_delete([nodes_dict['data_o'].pk])['nodes']
         expected_nodes = set(nodes_pklist).difference(set([nodes_dict['data_i'].pk]))
-        self.assertEqual(obtained_nodes, expected_nodes)
+        assert obtained_nodes == expected_nodes
 
         obtained_nodes = get_nodes_delete([nodes_dict['work_1'].pk], call_calc_forward=False)['nodes']
         expected_nodes = set([nodes_dict['work_1'].pk, nodes_dict['work_2'].pk])
-        self.assertEqual(obtained_nodes, expected_nodes)
+        assert obtained_nodes == expected_nodes
 
         obtained_nodes = get_nodes_delete([nodes_dict['work_2'].pk], call_work_forward=False)['nodes']
         expected_nodes = set([nodes_dict['work_2'].pk])
-        self.assertEqual(obtained_nodes, expected_nodes)
+        assert obtained_nodes == expected_nodes
 
         obtained_nodes = get_nodes_delete([nodes_dict['calc_0'].pk], create_forward=False)['nodes']
         expected_nodes = set([nodes_dict['calc_0'].pk, nodes_dict['work_1'].pk, nodes_dict['work_2'].pk])
-        self.assertEqual(obtained_nodes, expected_nodes)
+        assert obtained_nodes == expected_nodes
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             _ = get_nodes_delete([nodes_dict['data_o'].pk], create_backward=False)

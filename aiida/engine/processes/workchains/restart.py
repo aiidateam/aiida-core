@@ -31,7 +31,7 @@ def validate_handler_overrides(
     handler_overrides: Optional[orm.Dict],
     ctx: 'PortNamespace'  # pylint: disable=unused-argument
 ) -> Optional[str]:
-    """Validator for the `handler_overrides` input port of the `BaseRestartWorkChain.
+    """Validator for the `handler_overrides` input port of the `BaseRestartWorkChain`.
 
     The `handler_overrides` should be a dictionary where keys are strings that are the name of a process handler, i.e. a
     instance method of the `process_class` that has been decorated with the `process_handler` decorator. The values

@@ -9,15 +9,10 @@
 ###########################################################################
 """Backend group module"""
 import abc
-from typing import TYPE_CHECKING, List, Optional, Sequence, Union
+from typing import TYPE_CHECKING, List, Optional, Protocol, Sequence, Union
 
 from .entities import BackendCollection, BackendEntity, BackendEntityExtrasMixin
 from .nodes import BackendNode
-
-try:
-    from typing import Protocol
-except ImportError:  # Python <3.8 doesn't have `Protocol` in the stdlib
-    from typing_extensions import Protocol  # type: ignore[misc]
 
 if TYPE_CHECKING:
     from .users import BackendUser

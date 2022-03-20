@@ -40,20 +40,28 @@ To display these parameters, use ``verdi profile show``:
 
 .. code:: bash
 
-    Info: Profile: project-one
-    ----------------------  ------------------------------------------------
-    aiidadb_backend         django
-    aiidadb_engine          postgresql_psycopg2
-    aiidadb_host            localhost
-    aiidadb_name            aiida_project_one
-    aiidadb_pass            correcthorsebatterystaple
-    aiidadb_port            5432
-    aiidadb_repository_uri  file:///home/user/.virtualenvs/aiida/repository/
-    aiidadb_user            aiida
-    default_user_email      user@email.com
-    options                 {'daemon_default_workers': 3}
-    profile_uuid            4c272a87d7f543b08da9fe738d88bb13
-    ----------------------  ------------------------------------------------
+    Report: Profile: a-import-sqla
+    PROFILE_UUID: fede89dae42b4df3bf46ab27e2b500ca
+    default_user_email: user@email.com
+    process_control:
+        backend: rabbitmq
+        config:
+            broker_host: 127.0.0.1
+            broker_password: guest
+            broker_port: 5672
+            broker_protocol: amqp
+            broker_username: guest
+            broker_virtual_host: ''
+    storage:
+        backend: psql_dos
+        config:
+            database_engine: postgresql_psycopg2
+            database_hostname: localhost
+            database_name: name
+            database_password: abc
+            database_port: 5432
+            database_username: username
+            repository_uri: file:///path/to/repository
 
 By default, the parameters of the default profile are shown, but one can pass the profile name of another, e.g., ``verdi profile show project-two`` to change that.
 
@@ -81,25 +89,23 @@ Activating tab-completion
 The ``verdi`` command line interface has many commands and parameters, which can be tab-completed to simplify its use.
 To enable tab-completion, the following shell command should be executed (depending on the shell you use):
 
-.. panels::
-    :container: container-lg pb-3
-    :column: col-lg-12 p-2
+Enable tab-completion for ``verdi`` one of the following supported shells
 
-    Enable tab-completion for ``verdi`` one of the following supported shells
+.. tab-set::
 
-    .. tabbed:: bash
+    .. tab-item:: bash
 
         .. code-block:: console
 
             eval "$(_VERDI_COMPLETE=bash_source verdi)"
 
-    .. tabbed:: zsh
+    .. tab-item:: zsh
 
         .. code-block:: console
 
             eval "$(_VERDI_COMPLETE=zsh_source verdi)"
 
-    .. tabbed:: fish
+    .. tab-item:: fish
 
         .. code-block:: console
 
@@ -339,105 +345,105 @@ However, optimal performance at that scale might require some tweaks to the AiiD
 Here are a few tips for tuning AiiDA performance:
 
 
-    .. dropdown:: Increase the number of daemon workers
+.. dropdown:: Increase the number of daemon workers
 
-        By default, the AiiDA daemon only uses a single worker, i.e. a single operating system process.
-        If ``verdi daemon status`` shows the daemon worker constantly at high CPU usage, you can use ``verdi daemon incr X`` to add ``X`` parallel daemon workers.
+    By default, the AiiDA daemon only uses a single worker, i.e. a single operating system process.
+    If ``verdi daemon status`` shows the daemon worker constantly at high CPU usage, you can use ``verdi daemon incr X`` to add ``X`` parallel daemon workers.
 
-        Keep in mind that other processes need to run on your computer (e.g. rabbitmq, the PostgreSQL database, ...), i.e. it's a good idea to stop increasing the number of workers before you reach the number of cores of your CPU.
+    Keep in mind that other processes need to run on your computer (e.g. rabbitmq, the PostgreSQL database, ...), i.e. it's a good idea to stop increasing the number of workers before you reach the number of cores of your CPU.
 
-        To make the change permanent, set
-        ::
+    To make the change permanent, set
+    ::
 
-            verdi config set daemon.default_workers 5
+        verdi config set daemon.default_workers 5
 
-    .. dropdown:: Increase the number of daemon worker slots
-
-
-        Each daemon worker accepts only a limited number of tasks at a time.
-        If ``verdi daemon status`` constantly warns about a high percentage of the available daemon worker slots being used, you can increase the number of tasks handled by each daemon worker (thus increasing the workload per worker).
-        Increasing it to 1000 should typically work.
-
-        Set the corresponding config variable and restart the daemon
-        ::
-
-            verdi config set daemon.worker_process_slots 1000
+.. dropdown:: Increase the number of daemon worker slots
 
 
+    Each daemon worker accepts only a limited number of tasks at a time.
+    If ``verdi daemon status`` constantly warns about a high percentage of the available daemon worker slots being used, you can increase the number of tasks handled by each daemon worker (thus increasing the workload per worker).
+    Increasing it to 1000 should typically work.
 
-    .. dropdown:: Prevent your operating system from indexing the file repository.
+    Set the corresponding config variable and restart the daemon
+    ::
 
-        Many Linux distributions include the ``locate`` command to quickly find files and folders, and run a daily cron job ``updatedb.mlocate`` to create the corresponding index.
-        A large file repository can take a long time to index, up to the point where the hard drive is constantly indexing.
+        verdi config set daemon.worker_process_slots 1000
 
-        In order to exclude the repository folder from indexing, add its path to the ``PRUNEPATH`` variable in the ``/etc/updatedb.conf`` configuration file (use ``sudo``).
 
-    .. dropdown:: Move the Postgresql database to a fast disk (SSD), ideally on a large partition.
 
-        1. Stop the AiiDA daemon and :ref:`back up your database <how-to:installation:backup:postgresql>`.
+.. dropdown:: Prevent your operating system from indexing the file repository.
 
-        2. Find the data directory of your postgres installation (something like ``/var/lib/postgresql/9.6/main``, ``/scratch/postgres/9.6/main``, ...).
+    Many Linux distributions include the ``locate`` command to quickly find files and folders, and run a daily cron job ``updatedb.mlocate`` to create the corresponding index.
+    A large file repository can take a long time to index, up to the point where the hard drive is constantly indexing.
 
-            The best way is to become the postgres UNIX user and enter the postgres shell::
+    In order to exclude the repository folder from indexing, add its path to the ``PRUNEPATH`` variable in the ``/etc/updatedb.conf`` configuration file (use ``sudo``).
 
-                psql
-                SHOW data_directory;
-                \q
+.. dropdown:: Move the Postgresql database to a fast disk (SSD), ideally on a large partition.
 
-            If you are unable to enter the postgres shell, try looking for the ``data_directory`` variable in a file ``/etc/postgresql/9.6/main/postgresql.conf`` or similar.
+    1. Stop the AiiDA daemon and :ref:`back up your database <how-to:installation:backup>`.
 
-        3. Stop the postgres database service::
+    2. Find the data directory of your postgres installation (something like ``/var/lib/postgresql/9.6/main``, ``/scratch/postgres/9.6/main``, ...).
 
-            service postgresql stop
-
-        4. Copy all files and folders from the postgres ``data_directory`` to the new location::
-
-            cp -a SOURCE_DIRECTORY DESTINATION_DIRECTORY
-
-            .. note:: Flag ``-a`` will create a directory within ``DESTINATION_DIRECTORY``, e.g.::
-
-            cp -a OLD_DIR/main/ NEW_DIR/
-
-            creates ``NEW_DIR/main``.
-            It will also keep the file permissions (necessary).
-
-            The file permissions of the new and old directory need to be identical (including subdirectories).
-            In particular, the owner and group should be both ``postgres`` (except for symbolic links in ``server.crt`` and ``server.key`` that may or may not be present).
-
-            .. note::
-
-                If the permissions of these links need to be changed, use the ``-h`` option of ``chown`` to avoid changing the permissions of the destination of the links.
-                In case you have changed the permission of the links destination by mistake, they should typically be (beware that this might depend on your actual distribution!)::
-
-                -rw-r--r-- 1 root root 989 Mar  1  2012 /etc/ssl/certs/ssl-cert-snakeoil.pem
-                -rw-r----- 1 root ssl-cert 1704 Mar  1  2012 /etc/ssl/private/ssl-cert-snakeoil.key
-
-        5. Point the ``data_directory`` variable in your postgres configuration file (e.g. ``/etc/postgresql/9.6/main/postgresql.conf``) to the new directory.
-
-        6. Restart the database daemon::
-
-            service postgresql start
-
-        Finally, check that the data directory has indeed changed::
+        The best way is to become the postgres UNIX user and enter the postgres shell::
 
             psql
             SHOW data_directory;
             \q
 
-        and try a simple AiiDA query with the new database.
-        If everything went fine, you can delete the old database location.
+        If you are unable to enter the postgres shell, try looking for the ``data_directory`` variable in a file ``/etc/postgresql/9.6/main/postgresql.conf`` or similar.
+
+    3. Stop the postgres database service::
+
+        service postgresql stop
+
+    4. Copy all files and folders from the postgres ``data_directory`` to the new location::
+
+        cp -a SOURCE_DIRECTORY DESTINATION_DIRECTORY
+
+        .. note:: Flag ``-a`` will create a directory within ``DESTINATION_DIRECTORY``, e.g.::
+
+        cp -a OLD_DIR/main/ NEW_DIR/
+
+        creates ``NEW_DIR/main``.
+        It will also keep the file permissions (necessary).
+
+        The file permissions of the new and old directory need to be identical (including subdirectories).
+        In particular, the owner and group should be both ``postgres`` (except for symbolic links in ``server.crt`` and ``server.key`` that may or may not be present).
+
+        .. note::
+
+            If the permissions of these links need to be changed, use the ``-h`` option of ``chown`` to avoid changing the permissions of the destination of the links.
+            In case you have changed the permission of the links destination by mistake, they should typically be (beware that this might depend on your actual distribution!)::
+
+            -rw-r--r-- 1 root root 989 Mar  1  2012 /etc/ssl/certs/ssl-cert-snakeoil.pem
+            -rw-r----- 1 root ssl-cert 1704 Mar  1  2012 /etc/ssl/private/ssl-cert-snakeoil.key
+
+    5. Point the ``data_directory`` variable in your postgres configuration file (e.g. ``/etc/postgresql/9.6/main/postgresql.conf``) to the new directory.
+
+    6. Restart the database daemon::
+
+        service postgresql start
+
+    Finally, check that the data directory has indeed changed::
+
+        psql
+        SHOW data_directory;
+        \q
+
+    and try a simple AiiDA query with the new database.
+    If everything went fine, you can delete the old database location.
 
 If you're still encountering performance issues, the following tips can help with pinpointing performance bottlenecks.
 
-    .. dropdown:: Analyze the RabbitMQ message rate
+.. dropdown:: Analyze the RabbitMQ message rate
 
-        If you're observing slow performance of the AiiDA engine, the `RabbitMQ management plugin <https://www.rabbitmq.com/management.html>`_ provides an intuitive dashboard that lets you monitor the message rate and check on what the AiiDA engine is up to.
+    If you're observing slow performance of the AiiDA engine, the `RabbitMQ management plugin <https://www.rabbitmq.com/management.html>`_ provides an intuitive dashboard that lets you monitor the message rate and check on what the AiiDA engine is up to.
 
-        Enable the management plugin via something like::
+    Enable the management plugin via something like::
 
-            sudo rabbitmq-plugins enable rabbitmq_management
+        sudo rabbitmq-plugins enable rabbitmq_management
 
-        Then, navigate to http://localhost:15672/ and log in with ``guest``/``guest``.
+    Then, navigate to http://localhost:15672/ and log in with ``guest``/``guest``.
 
 
 .. _how-to:installation:update:
@@ -448,24 +454,24 @@ Updating your installation
 Whenever updating your AiiDA installation, make sure you follow these instructions **very carefully**, even when merely upgrading the patch version!
 Failing to do so, may leave your installation in a broken state, or worse may even damage your data, potentially irreparably.
 
-    1. Activate the Python environment where AiiDA is installed.
-    2. Finish all running processes.
-       All finished processes will be automatically migrated, but it is not possible to resume unfinished processes.
-    3. Stop the daemon using ``verdi daemon stop``.
-    4. :ref:`Create a backup of your database and repository<how-to:installation:backup>`.
+1. Activate the Python environment where AiiDA is installed.
+2. Finish all running processes.
+    All finished processes will be automatically migrated, but it is not possible to resume unfinished processes.
+3. Stop the daemon using ``verdi daemon stop``.
+4. :ref:`Create a backup of your database and repository<how-to:installation:backup>`.
 
-       .. warning::
+   .. warning::
 
-          Once you have migrated your database, you can no longer go back to an older version of ``aiida-core`` (unless you restore your database and repository from a backup).
+       Once you have migrated your database, you can no longer go back to an older version of ``aiida-core`` (unless you restore your database and repository from a backup).
 
-    5. Update your ``aiida-core`` installation.
+5. Update your ``aiida-core`` installation.
 
-        * If you have installed AiiDA through ``conda`` simply run: ``conda update aiida-core``.
-        * If you have installed AiiDA through ``pip`` simply run: ``pip install --upgrade aiida-core``.
-        * If you have installed from the git repository using ``pip install -e .``, first delete all the ``.pyc`` files (``find . -name "*.pyc" -delete``) before updating your branch with ``git pull``.
+   * If you have installed AiiDA through ``conda`` simply run: ``conda update aiida-core``.
+   * If you have installed AiiDA through ``pip`` simply run: ``pip install --upgrade aiida-core``.
+   * If you have installed from the git repository using ``pip install -e .``, first delete all the ``.pyc`` files (``find . -name "*.pyc" -delete``) before updating your branch with ``git pull``.
 
-    6. Migrate your database with ``verdi -p <profile_name> storage migrate``.
-       Depending on the size of your database and the number of migrations to perform, data migration can take time, so please be patient.
+6. Migrate your database with ``verdi -p <profile_name> storage migrate``.
+    Depending on the size of your database and the number of migrations to perform, data migration can take time, so please be patient.
 
 After the database migration finishes, you will be able to continue working with your existing data.
 
@@ -478,71 +484,110 @@ Updating from 0.x.* to 1.*
 - `Additional instructions on how to migrate from versions 0.4 -- 0.11 <https://aiida.readthedocs.io/projects/aiida-core/en/v1.2.1/install/updating_installation.html#older-versions>`_.
 - For a list of breaking changes between the 0.x and the 1.x series of AiiDA, `see here <https://aiida.readthedocs.io/projects/aiida-core/en/v1.2.1/install/updating_installation.html#breaking-changes-from-0-12-to-1>`_.
 
+Updating from 1.* to 2.*
+------------------------
+
+See the :doc:`../reference/_changelog` for a list of breaking changes.
 
 .. _how-to:installation:backup:
-
-.. _how-to:installation:backup:software:
 
 Backing up your installation
 ============================
 
 A full backup of an AiiDA instance and AiiDA managed data requires a backup of:
 
-* the AiiDA configuration folder, which is typically named ``.aiida`` and located in the home folder (see also :ref:`intro:install:setup`).
+* the AiiDA configuration folder, which is named ``.aiida``.
+  The location of the folder is shown in the output of ``verdi status``.
   This folder contains, among other things, the ``config.json`` configuration file and log files.
 
-* files associated with nodes in the repository folder (one per profile). Typically located in the ``.aiida`` folder.
+* the data stored for each profile.
+  Where the data is stored, depends on the storage backend used by each profile.
 
-* queryable metadata in the PostgreSQL database (one per profile).
+The panels below provide instructions for storage backends provided by ``aiida-core``.
+To determine what storage backend a profile uses, call ``verdi profile show``.
 
+.. tip:: Before creating a backup, it is recommended to run ``verdi storage maintain``.
+    This will optimize the storage which can significantly reduce the time required to create the backup.
+    For optimal results, run ``verdi storage maintain --full``.
+    Note that this requires the profile to not be in use by any other process.
 
-.. todo::
+.. tab-set::
 
-    .. _how-to:installation:backup:repository:
+    .. tab-item:: psql_dos
 
-    title: Repository backup
+        The ``psql_dos`` storage backend is the default backend for AiiDA.
+        It stores its data in a PostgreSQL database and a file repository on the local filesystem.
+        To fully backup the data stored for a profile, you should backup the associated database and file repository.
 
+        **PostgreSQL database**
 
-.. _how-to:installation:backup:postgresql:
+        To export the entire database, we recommend to use the `pg_dump <https://www.postgresql.org/docs/12/app-pgdump.html>`_ utility:
 
-Database backup
----------------
+        .. code-block:: console
 
-PostgreSQL typically spreads database information over multiple files that, if backed up directly, are not guaranteed to restore the database.
-We therefore strongly recommend to periodically dump the database contents to a file (which you can then back up using your method of choice).
+            pg_dump -h <database_hostname> -p <database_port> -d <database_name> -W > aiida_backup.psql
 
-A few useful pointers:
+        The ``-W`` flag will ensure to prompt for the database password.
+        The parameters between brackets should be replaced with the values that have been configured for the profile.
+        You can retrieve these from the ``storage.config`` returned by the ``verdi profile show`` command.
 
-* In order to avoid having to enter your database password each time you use the script, you can create a file ``.pgpass`` in your home directory containing your database credentials, as described `in the PostgreSQL documentation <https://www.postgresql.org/docs/12/libpq-pgpass.html>`_.
+        .. tip::
 
-* In order to dump your database, use the `pg_dump utility from PostgreSQL <https://www.postgresql.org/docs/12/app-pgdump.html>`_. You can use as a starting example a bash script similar to :download:`this file <include/backup_postgresql.sh>`.
+            In order to avoid having to enter your database password each time you use the script, you can create a file ``.pgpass`` in your home directory containing your database credentials, as described `in the PostgreSQL documentation <https://www.postgresql.org/docs/12/libpq-pgpass.html>`_.
 
-* You can setup the backup script to run daily using cron (see notes in the :ref:`previous section <how-to:installation:backup:repository>`).
+        **File repository**
+
+        The file repository is a directory on the local file system.
+        The most efficient way to create a backup is to use the `rsync <https://en.wikipedia.org/wiki/Rsync>`_ utility.
+        The path of the repository is shown in the ``storage.config.repository_uri`` key returned by the ``verdi profile show`` command.
+        To create a backup, simply run:
+
+        .. code-block:: console
+
+            rsync -arvz <storage.config.repository_uri> /some/path/aiida_backup
+
 
 .. _how-to:installation:backup:restore:
 
-Restore backup
---------------
+Restoring your installation
+===========================
 
-In order to restore a backup, you will need to:
+Restoring a backed up AiiDA installation requires:
 
- 1. Restore the repository folder that you backed up earlier in the same location as it used to be (you can check the location in the ``config.json`` file inside your ``.aiida`` folder, or simply using ``verdi profile show``).
+* restoring the backed up ``.aiida`` folder, with at the very least the ``config.json`` file it contains.
+  It should be placed in the path defined by the ``AIIDA_PATH`` environment variable.
+  To test the restoration worked, run ``verdi profile list`` to verify that all profiles are displayed.
 
- 2. Create an empty database following the instructions described in :ref:`database <intro:install:database>` skipping the ``verdi setup`` phase.
-    The database should have the same name and database username as the original one (i.e. if you are restoring on the original postgresql cluster, you may have to either rename or delete the original database).
+* restoring the data of each backed up profile.
+  Like the backup procedure, this is dependent on the storage backend used by the profile.
 
- 3. Change directory to the folder containing the database dump created with ``pg_dump``, and load it using the ``psql`` command.
+The panels below provide instructions for storage backends provided by ``aiida-core``.
+To determine what storage backend a profile uses, call ``verdi profile show``.
 
-    .. dropdown:: Example commands on Linux Ubuntu
+.. tab-set::
 
-       This is an example command, assuming that your dump is named ``aiidadb-backup.psql``:
+    .. tab-item:: psql_dos
 
-        .. code-block:: bash
+        To fully backup the data stored for a profile using the ``psql_dos`` backend, you should restore the associated database and file repository.
 
-          psql -h localhost -U aiida -d aiidadb -f aiidadb-backup.psql
+        **PostgreSQL database**
 
-       After supplying your database password, the database should be restored.
-       Note that, if you installed the database on Ubuntu as a system service, you need to type ``sudo su - postgres`` to become the ``postgres`` UNIX user.
+        To restore the PostgreSQL database from the ``.psql`` file that was backed up, first you should create an empty database following the instructions described in :ref:`database <intro:install:database>` skipping the ``verdi setup`` phase.
+        The backed up data can then be imported by calling:
+
+        .. code-block:: console
+
+            psql -h <database_hostname> -p <database_port> -d <database_name> -W < aiida_backup.psql
+
+        **File repository**
+
+        To restore the file repository, simply copy the directory that was backed up to the location indicated by the ``storage.config.repository_uri`` key returned by the ``verdi profile show`` command.
+        Like the backing up process, we recommend using ``rsync`` for this:
+
+        .. code-block:: console
+
+            rsync -arvz /some/path/aiida_backup <storage.config.repository_uri>
+
 
 .. _how-to:installation:multi-user:
 

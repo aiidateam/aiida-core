@@ -45,120 +45,22 @@ __all__ = (
 # pylint: disable=global-statement,redefined-outer-name,wrong-import-order
 
 __all__ += (
-    'get_config', 'get_config_option', 'get_config_path', 'get_profile', 'load_documentation_profile', 'load_profile',
-    'reset_config', 'reset_profile', 'CONFIG', 'PROFILE', 'BACKEND_UUID'
+    'get_config', 'get_config_option', 'get_config_path', 'get_profile', 'load_profile', 'reset_config', 'CONFIG'
 )
 
+from contextlib import contextmanager
 import os
 import shutil
-from typing import Optional
+from typing import TYPE_CHECKING, Any, Optional
 import warnings
 
 from aiida.common.warnings import AiidaDeprecationWarning
 
-from . import options
+if TYPE_CHECKING:
+    from aiida.manage.configuration import Config, Profile  # pylint: disable=import-self
 
-CONFIG = None
-PROFILE = None
-BACKEND_UUID = None  # This will be set to the UUID of the profile as soon as its corresponding backend is loaded
-
-
-def is_rabbitmq_version_supported():
-    """Return whether the version of RabbitMQ configured for the current profile is supported.
-
-    Versions 3.8 and above are not compatible with AiiDA with default configuration.
-
-    :return: boolean whether the current RabbitMQ version is supported.
-    """
-    from packaging.version import parse
-    return get_rabbitmq_version() < parse('3.8')
-
-
-def get_rabbitmq_version():
-    """Return the version of the RabbitMQ server that the current profile connects to.
-
-    :return: :class:`packaging.version.Version`
-    """
-    from packaging.version import parse
-
-    from aiida.manage.manager import get_manager
-    communicator = get_manager().get_communicator()
-    return parse(communicator.server_properties['version'].decode('utf-8'))
-
-
-def check_rabbitmq_version():
-    """Check the version of RabbitMQ that is being connected to and emit warning if the version is not compatible."""
-    from aiida.cmdline.utils import echo
-    if not is_rabbitmq_version_supported():
-        echo.echo_warning(f'RabbitMQ v{get_rabbitmq_version()} is not supported and will cause unexpected problems!')
-        echo.echo_warning('It can cause long-running workflows to crash and jobs to be submitted multiple times.')
-        echo.echo_warning('See https://github.com/aiidateam/aiida-core/wiki/RabbitMQ-version-to-use for details.')
-
-
-def check_version():
-    """Check the currently installed version of ``aiida-core`` and warn if it is a post release development version.
-
-    The ``aiida-core`` package maintains the protocol that the ``develop`` branch will use a post release version
-    number. This means it will always append `.post0` to the version of the latest release. This should mean that if
-    this protocol is maintained properly, this method will print a warning if the currently installed version is a
-    post release development branch and not an actual release.
-    """
-    from packaging.version import parse
-
-    from aiida import __version__
-    from aiida.cmdline.utils import echo
-
-    version = parse(__version__)
-
-    # Showing of the warning can be turned off by setting the following option to false.
-    show_warning = get_config_option('warnings.development_version')
-
-    if version.is_postrelease and show_warning:
-        echo.echo_warning(f'You are currently using a post release development version of AiiDA: {version}')
-        echo.echo_warning('Be aware that this is not recommended for production and is not officially supported.')
-        echo.echo_warning('Databases used with this version may not be compatible with future releases of AiiDA')
-        echo.echo_warning('as you might not be able to automatically migrate your data.\n')
-
-
-def load_profile(profile: Optional[str] = None) -> Profile:
-    """Load a profile.
-
-    .. note:: if a profile is already loaded and no explicit profile is specified, nothing will be done
-
-    :param profile: the name of the profile to load, by default will use the one marked as default in the config
-
-    :return: the loaded `Profile` instance
-    :raises `aiida.common.exceptions.InvalidOperation`: if the backend of another profile has already been loaded
-    """
-    from aiida.common import InvalidOperation
-    from aiida.common.log import configure_logging
-
-    global PROFILE  # pylint: disable=global-variable-not-assigned
-    global BACKEND_UUID  # pylint: disable=global-variable-not-assigned
-
-    # If a profile is loaded and the specified profile name is None or that of the currently loaded, do nothing
-    if PROFILE and (profile is None or PROFILE.name is profile):
-        return PROFILE
-
-    PROFILE = get_config().get_profile(profile)
-
-    if BACKEND_UUID is not None and BACKEND_UUID != PROFILE.uuid:
-        # Once the switching of profiles with different backends becomes possible, the backend has to be reset properly
-        raise InvalidOperation('cannot switch profile because backend of another profile is already loaded')
-
-    # Reconfigure the logging to make sure that profile specific logging configuration options are taken into account.
-    # Note that we do not configure with `with_orm=True` because that will force the backend to be loaded. This should
-    # instead be done lazily in `Manager._load_backend`.
-    configure_logging()
-
-    # Check whether a development version is being run. Note that needs to be called after ``configure_logging`` because
-    # this function relies on the logging being properly configured for the warning to show.
-    check_version()
-
-    # Check whether a compatible version of RabbitMQ is being used.
-    check_rabbitmq_version()
-
-    return PROFILE
+# global variables for aiida
+CONFIG: Optional['Config'] = None
 
 
 def get_config_path():
@@ -168,7 +70,7 @@ def get_config_path():
     return os.path.join(AIIDA_CONFIG_FOLDER, DEFAULT_CONFIG_FILE_NAME)
 
 
-def load_config(create=False):
+def load_config(create=False) -> 'Config':
     """Instantiate Config object representing an AiiDA configuration file.
 
     Warning: Contrary to :func:`~aiida.manage.configuration.get_config`, this function is uncached and will always
@@ -234,25 +136,44 @@ def _merge_deprecated_cache_yaml(config, filepath):
     shutil.move(cache_path, cache_path_backup)
 
 
-def get_profile() -> Profile:
+def load_profile(profile: Optional[str] = None, allow_switch=False) -> 'Profile':
+    """Load a global profile, unloading any previously loaded profile.
+
+    .. note:: if a profile is already loaded and no explicit profile is specified, nothing will be done
+
+    :param profile: the name of the profile to load, by default will use the one marked as default in the config
+    :param allow_switch: if True, will allow switching to a different profile when storage is already loaded
+
+    :return: the loaded `Profile` instance
+    :raises `aiida.common.exceptions.InvalidOperation`:
+        if another profile has already been loaded and allow_switch is False
+    """
+    from aiida.manage import get_manager
+    return get_manager().load_profile(profile, allow_switch)
+
+
+def get_profile() -> Optional['Profile']:
     """Return the currently loaded profile.
 
     :return: the globally loaded `Profile` instance or `None`
     """
-    global PROFILE  # pylint: disable=global-variable-not-assigned
-    return PROFILE
+    from aiida.manage import get_manager
+    return get_manager().get_profile()
 
 
-def reset_profile():
-    """Reset the globally loaded profile.
+@contextmanager
+def profile_context(profile: Optional[str] = None, allow_switch=False) -> 'Profile':
+    """Return a context manager for temporarily loading a profile, and unloading on exit.
 
-    .. warning:: This is experimental functionality and should for now be used only internally. If the reset is unclean
-        weird unknown side-effects may occur that end up corrupting or destroying data.
+    :param profile: the name of the profile to load, by default will use the one marked as default in the config
+    :param allow_switch: if True, will allow switching to a different profile
+
+    :return: a context manager for temporarily loading a profile
     """
-    global PROFILE
-    global BACKEND_UUID
-    PROFILE = None
-    BACKEND_UUID = None
+    from aiida.manage import get_manager
+    get_manager().load_profile(profile, allow_switch)
+    yield profile
+    get_manager().unload_profile()
 
 
 def reset_config():
@@ -300,65 +221,58 @@ def get_config(create=False):
     return CONFIG
 
 
-def get_config_option(option_name):
-    """Return the value for the given configuration option.
+def get_config_option(option_name: str) -> Any:
+    """Return the value of a configuration option.
 
-    This function will attempt to load the value of the option as defined for the current profile or otherwise as
-    defined configuration wide. If no configuration is yet loaded, this function will fall back on the default that may
-    be defined for the option itself. This is useful for options that need to be defined at loading time of AiiDA when
-    no configuration is yet loaded or may not even yet exist. In cases where one expects a profile to be loaded,
-    preference should be given to retrieving the option through the Config instance and its `get_option` method.
+    In order of priority, the option is returned from:
 
-    :param option_name: the name of the configuration option
-    :type option_name: str
+    1. The current profile, if loaded and the option specified
+    2. The current configuration, if loaded and the option specified
+    3. The default value for the option
 
-    :return: option value as specified for the profile/configuration if loaded, otherwise option default
+    :param option_name: the name of the option to return
+    :return: the value of the option
+    :raises `aiida.common.exceptions.ConfigurationError`: if the option is not found
     """
-    from aiida.common import exceptions
-
-    option = options.get_option(option_name)
-
-    try:
-        config = get_config(create=True)
-    except exceptions.ConfigurationError:
-        value = option.default if option.default is not options.NO_DEFAULT else None
-    else:
-        if config.current_profile:
-            # Try to get the option for the profile, but do not return the option default
-            value_profile = config.get_option(option_name, scope=config.current_profile.name, default=False)
-        else:
-            value_profile = None
-
-        # Value is the profile value if defined or otherwise the global value, which will be None if not set
-        value = value_profile if value_profile else config.get_option(option_name)
-
-    return value
+    from aiida.manage import get_manager
+    return get_manager().get_option(option_name)
 
 
 def load_documentation_profile():
     """Load a dummy profile just for the purposes of being able to build the documentation.
 
     The building of the documentation will require importing the `aiida` package and some code will try to access the
-    loaded configuration and profile, which if not done will except. On top of that, Django will raise an exception if
-    the database models are loaded before its settings are loaded. This also is taken care of by loading a Django
-    profile and loading the corresponding backend. Calling this function will perform all these requirements allowing
-    the documentation to be built without having to install and configure AiiDA nor having an actual database present.
+    loaded configuration and profile, which if not done will except.
+    Calling this function allows the documentation to be built without having to install and configure AiiDA,
+    nor having an actual database present.
     """
     import tempfile
 
-    from aiida.manage.manager import get_manager
+    # imports required for docs/source/reference/api/public.rst
+    from aiida import (  # pylint: disable=unused-import
+        cmdline,
+        common,
+        engine,
+        manage,
+        orm,
+        parsers,
+        plugins,
+        schedulers,
+        tools,
+        transports,
+    )
+    from aiida.cmdline.params import arguments, options  # pylint: disable=unused-import
+    from aiida.storage.psql_dos.models.base import get_orm_metadata
 
     from .config import Config
-    from .profile import Profile
 
-    global PROFILE
     global CONFIG
 
     with tempfile.NamedTemporaryFile() as handle:
         profile_name = 'readthedocs'
         profile_config = {
             'storage': {
-                'backend': 'django',
+                'backend': 'psql_dos',
                 'config': {
                     'database_engine': 'postgresql_psycopg2',
                     'database_port': 5432,
@@ -382,6 +296,9 @@ def load_documentation_profile():
             },
         }
         config = {'default_profile': profile_name, 'profiles': {profile_name: profile_config}}
-        PROFILE = Profile(profile_name, profile_config)
         CONFIG = Config(handle.name, config)
-        get_manager()._load_backend(schema_check=False, repository_check=False)  # pylint: disable=protected-access
+        load_profile(profile_name)
+
+        # we call this to make sure the ORM metadata is fully populated,
+        # so that ORM models can be properly documented
+        get_orm_metadata()

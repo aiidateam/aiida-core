@@ -44,19 +44,18 @@ jobs:
     needs: [check-requirements]
 
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
 
     strategy:
       fail-fast: false
       matrix:
         python-version: ['3.8', '3.10']
-        backend: ['django', 'sqlalchemy']
 
     services:
       postgres:
         image: postgres:10
         env:
-          POSTGRES_DB: test_${{ matrix.backend }}
+          POSTGRES_DB: test_aiida
           POSTGRES_PASSWORD: ''
           POSTGRES_HOST_AUTH_METHOD: trust
         options: >-
@@ -90,7 +89,7 @@ jobs:
 
     - name: Upgrade pip and setuptools
       run: |
-        pip install --upgrade pip
+        pip install --upgrade pip setuptools
         pip --version
 
     - name: Build pymatgen with compatible numpy
@@ -116,14 +115,11 @@ jobs:
         pip freeze
 
     - name: Setup environment
-      env:
-        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
       run:
         .github/workflows/setup.sh
 
     - name: Run test suite
       env:
-        AIIDA_TEST_BACKEND: ${{ matrix.backend }}
         SQLALCHEMY_WARN_20: 1
       run:
         .github/workflows/tests.sh
@@ -132,8 +128,7 @@ jobs:
       if: matrix.python-version == 3.8 && github.repository == 'aiidateam/aiida-core'
       uses: codecov/codecov-action@v1
       with:
-        name: aiida-pytests-py3.8-${{ matrix.backend }}
-        flags: ${{ matrix.backend }}
+        name: aiida-pytests-py3.8
         file: ./coverage.xml
         fail_ci_if_error: false  # don't fail job, if coverage upload fails
 

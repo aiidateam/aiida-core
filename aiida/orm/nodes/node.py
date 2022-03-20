@@ -35,8 +35,7 @@ from aiida.common.escaping import sql_string_match
 from aiida.common.hashing import make_hash
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
-from aiida.manage.manager import get_manager
-from aiida.orm import autogroup
+from aiida.manage import get_manager
 from aiida.orm.utils.links import LinkManager, LinkTriple
 from aiida.orm.utils.node import AbstractNodeMeta
 
@@ -49,8 +48,7 @@ from ..users import User
 from .repository import NodeRepositoryMixin
 
 if TYPE_CHECKING:
-    from ..implementation import Backend
-    from ..implementation.nodes import BackendNode
+    from ..implementation import BackendNode, StorageBackend
 
 __all__ = ('Node',)
 
@@ -154,16 +152,16 @@ class Node(
 
     @classproperty
     def objects(cls: Type[NodeType]) -> NodeCollection[NodeType]:  # pylint: disable=no-self-argument
-        return NodeCollection.get_cached(cls, get_manager().get_backend())  # type: ignore[arg-type]
+        return NodeCollection.get_cached(cls, get_manager().get_profile_storage())  # type: ignore[arg-type]
 
     def __init__(
         self,
-        backend: Optional['Backend'] = None,
+        backend: Optional['StorageBackend'] = None,
         user: Optional[User] = None,
         computer: Optional[Computer] = None,
         **kwargs: Any
     ) -> None:
-        backend = backend or get_manager().get_backend()
+        backend = backend or get_manager().get_profile_storage()
 
         if computer and not computer.is_stored:
             raise ValueError('the computer is not stored')
@@ -293,7 +291,7 @@ class Node(
 
         :param value: the new value to set
         """
-        self.backend_entity.process_type = value  # type: ignore[misc]
+        self.backend_entity.process_type = value
 
     @property
     def label(self) -> str:
@@ -309,7 +307,7 @@ class Node(
 
         :param value: the new value to set
         """
-        self.backend_entity.label = value  # type: ignore[misc]
+        self.backend_entity.label = value
 
     @property
     def description(self) -> str:
@@ -325,7 +323,7 @@ class Node(
 
         :param value: the new value to set
         """
-        self.backend_entity.description = value  # type: ignore[misc]
+        self.backend_entity.description = value
 
     @property
     def repository_metadata(self) -> Dict[str, Any]:
@@ -341,7 +339,7 @@ class Node(
 
         :param value: the new value to set
         """
-        self.backend_entity.repository_metadata = value  # type: ignore[misc]
+        self.backend_entity.repository_metadata = value
 
     @property
     def computer(self) -> Optional[Computer]:
@@ -362,7 +360,7 @@ class Node(
 
         type_check(computer, Computer, allow_none=True)
 
-        self.backend_entity.computer = None if computer is None else computer.backend_entity  # type: ignore[misc]
+        self.backend_entity.computer = None if computer is None else computer.backend_entity
 
     @property
     def user(self) -> User:
@@ -379,7 +377,7 @@ class Node(
             raise exceptions.ModificationNotAllowed('cannot set the user on a stored node')
 
         type_check(user, User)
-        self.backend_entity.user = user.backend_entity  # type: ignore[misc]
+        self.backend_entity.user = user.backend_entity
 
     @property
     def ctime(self) -> datetime.datetime:
@@ -716,9 +714,8 @@ class Node(
             else:
                 self._store(with_transaction=with_transaction, clean=True)
 
-            # Set up autogrouping used by verdi run
-            if autogroup.CURRENT_AUTOGROUP is not None and autogroup.CURRENT_AUTOGROUP.is_to_be_grouped(self):
-                group = autogroup.CURRENT_AUTOGROUP.get_or_create_group()
+            if self.backend.autogroup.is_to_be_grouped(self):
+                group = self.backend.autogroup.get_or_create_group()
                 group.add_nodes(self)
 
         return self

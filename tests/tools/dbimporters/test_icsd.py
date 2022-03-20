@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """
 Tests for IcsdDbImporter
 """
@@ -14,7 +15,7 @@ import urllib.request
 
 import pytest
 
-from aiida.backends.testbase import AiidaTestCase
+from aiida import get_profile
 from aiida.tools.dbimporters.plugins import icsd
 
 
@@ -37,7 +38,6 @@ def has_icsd_config():
     """
     :return: True if the currently loaded profile has a ICSD configuration
     """
-    from aiida.manage.configuration import get_profile
     profile = get_profile()
 
     required_keywords = {
@@ -47,18 +47,17 @@ def has_icsd_config():
     return required_keywords <= set(profile.dictionary.keys())
 
 
-class TestIcsd(AiidaTestCase):
+class TestIcsd:
     """
     Tests for the ICSD importer
     """
 
-    def setUp(self):
-        """
-        Set up IcsdDbImporter for web and mysql db query.
-        """
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+        """Initialize the profile and set up IcsdDbImporter for web and mysql db query."""
+        # pylint: disable=attribute-defined-outside-init
         if not (has_mysqldb() and has_icsd_config()):
             pytest.skip('ICSD configuration in profile required')
-        from aiida.manage.configuration import get_profile
         profile = get_profile()
 
         self.server = profile.dictionary['ICSD_SERVER_URL']
@@ -94,7 +93,7 @@ class TestIcsd(AiidaTestCase):
         """
         No results should be obtained from year 3000.
         """
-        with self.assertRaises(icsd.NoResultsWebExp):
+        with pytest.raises(icsd.NoResultsWebExp):
             self.importerweb.query(year='3000')
 
     def test_web_collcode_155006(self):
@@ -103,13 +102,13 @@ class TestIcsd(AiidaTestCase):
         """
 
         queryresults = self.importerweb.query(id='155006')
-        self.assertEqual(queryresults.number_of_results, 1)
+        assert queryresults.number_of_results == 1
 
-        with self.assertRaises(StopIteration):
+        with pytest.raises(StopIteration):
             next(queryresults)
             next(queryresults)
 
-        with self.assertRaises(IndexError):
+        with pytest.raises(IndexError):
             queryresults.at(10)
 
     def test_dbquery_zero_results(self):
@@ -119,10 +118,10 @@ class TestIcsd(AiidaTestCase):
 
         importer = icsd.IcsdDbImporter(server=self.server, host=self.host)
         noresults = importer.query(year='3000')  # which should work at least for the next 85 years..
-        self.assertEqual(noresults.number_of_results, 0)
+        assert noresults.number_of_results == 0
 
-        with self.assertRaises(StopIteration):
+        with pytest.raises(StopIteration):
             next(noresults)
 
-        with self.assertRaises(IndexError):
+        with pytest.raises(IndexError):
             noresults.at(0)

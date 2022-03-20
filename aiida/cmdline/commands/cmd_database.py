@@ -12,13 +12,12 @@
 
 import click
 
-from aiida.backends.general.migrations.duplicate_uuids import TABLES_UUID_DEDUPLICATION
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators
 
 
-@verdi.group('database')
+@verdi.group('database', hidden=True)
 def verdi_database():
     """Inspect and manage the database.
 
@@ -29,7 +28,7 @@ def verdi_database():
 @verdi_database.command('version')
 @decorators.deprecated_command(
     'This command has been deprecated and no longer has any effect. It will be removed soon from the CLI (in v2.1).\n'
-    'The same information is now available through `verdi status`.\n'
+    'The same information is now available through `verdi storage version`.\n'
 )
 def database_version():
     """Show the version of the database.
@@ -68,8 +67,8 @@ def verdi_database_integrity():
 @click.option(
     '-t',
     '--table',
-    type=click.Choice(TABLES_UUID_DEDUPLICATION),
     default='db_dbnode',
+    type=click.Choice(('db_dbcomment', 'db_dbcomputer', 'db_dbgroup', 'db_dbnode')),
     help='The database table to operate on.'
 )
 @click.option(

@@ -10,6 +10,7 @@
 """`verdi storage` commands."""
 
 import click
+from click_spinner import spinner
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
@@ -22,12 +23,23 @@ def verdi_storage():
     """Inspect and manage stored data for a profile."""
 
 
+@verdi_storage.command('version')
+def storage_version():
+    """Print the current version of the storage schema."""
+    from aiida import get_profile
+    profile = get_profile()
+    head_version = profile.storage_cls.version_head()
+    profile_version = profile.storage_cls.version_profile(profile)
+    echo.echo(f'Latest storage schema version: {head_version!r}')
+    echo.echo(f'Storage schema version of {profile.name!r}: {profile_version!r}')
+
+
 @verdi_storage.command('migrate')
 @options.FORCE()
 def storage_migrate(force):
     """Migrate the storage to the latest schema version."""
     from aiida.engine.daemon.client import get_daemon_client
-    from aiida.manage.manager import get_manager
+    from aiida.manage import get_manager
 
     client = get_daemon_client()
     if client.is_daemon_running:
@@ -35,44 +47,40 @@ def storage_migrate(force):
 
     manager = get_manager()
     profile = manager.get_profile()
-    backend = manager._load_backend(schema_check=False)  # pylint: disable=protected-access
+    storage_cls = profile.storage_cls
 
-    if force:
+    if not force:
+
+        echo.echo_warning('Migrating your storage might take a while and is not reversible.')
+        echo.echo_warning('Before continuing, make sure you have completed the following steps:')
+        echo.echo_warning('')
+        echo.echo_warning(' 1. Make sure you have no active calculations and workflows.')
+        echo.echo_warning(' 2. If you do, revert the code to the previous version and finish running them first.')
+        echo.echo_warning(' 3. Stop the daemon using `verdi daemon stop`')
+        echo.echo_warning(' 4. Make a backup of your database and repository')
+        echo.echo_warning('')
+        echo.echo_warning('', nl=False)
+
+        expected_answer = 'MIGRATE NOW'
+        confirm_message = 'If you have completed the steps above and want to migrate profile "{}", type {}'.format(
+            profile.name, expected_answer
+        )
+
         try:
-            backend.migrate()
-        except (exceptions.ConfigurationError, exceptions.DatabaseMigrationError) as exception:
-            echo.echo_critical(str(exception))
-        return
-
-    echo.echo_warning('Migrating your storage might take a while and is not reversible.')
-    echo.echo_warning('Before continuing, make sure you have completed the following steps:')
-    echo.echo_warning('')
-    echo.echo_warning(' 1. Make sure you have no active calculations and workflows.')
-    echo.echo_warning(' 2. If you do, revert the code to the previous version and finish running them first.')
-    echo.echo_warning(' 3. Stop the daemon using `verdi daemon stop`')
-    echo.echo_warning(' 4. Make a backup of your database and repository')
-    echo.echo_warning('')
-    echo.echo_warning('', nl=False)
-
-    expected_answer = 'MIGRATE NOW'
-    confirm_message = 'If you have completed the steps above and want to migrate profile "{}", type {}'.format(
-        profile.name, expected_answer
-    )
+            response = click.prompt(confirm_message)
+            while response != expected_answer:
+                response = click.prompt(confirm_message)
+        except click.Abort:
+            echo.echo('\n')
+            echo.echo_critical('Migration aborted, the data has not been affected.')
+            return
 
     try:
-        response = click.prompt(confirm_message)
-        while response != expected_answer:
-            response = click.prompt(confirm_message)
-    except click.Abort:
-        echo.echo('\n')
-        echo.echo_critical('Migration aborted, the data has not been affected.')
+        storage_cls.migrate(profile)
+    except (exceptions.ConfigurationError, exceptions.StorageMigrationError) as exception:
+        echo.echo_critical(str(exception))
     else:
-        try:
-            backend.migrate()
-        except (exceptions.ConfigurationError, exceptions.DatabaseMigrationError) as exception:
-            echo.echo_critical(str(exception))
-        else:
-            echo.echo_success('migration completed')
+        echo.echo_success('migration completed')
 
 
 @verdi_storage.group('integrity')
@@ -81,17 +89,16 @@ def storage_integrity():
 
 
 @verdi_storage.command('info')
-@click.option('--statistics', is_flag=True, help='Provides more in-detail statistically relevant data.')
-def storage_info(statistics):
+@click.option('--detailed', is_flag=True, help='Provides more detailed information.')
+def storage_info(detailed):
     """Summarise the contents of the storage."""
-    from aiida.backends.control import get_repository_info
-    from aiida.cmdline.utils.common import get_database_summary
-    from aiida.orm import QueryBuilder
+    from aiida.manage.manager import get_manager
 
-    data = {
-        'database': get_database_summary(QueryBuilder, statistics),
-        'repository': get_repository_info(statistics=statistics),
-    }
+    manager = get_manager()
+    storage = manager.get_profile_storage()
+
+    with spinner():
+        data = storage.get_info(detailed=detailed)
 
     echo.echo_dictionary(data, sort_keys=False, fmt='yaml')
 
@@ -108,19 +115,25 @@ def storage_info(statistics):
     help=
     'Run the maintenance in dry-run mode which will print actions that would be taken without actually executing them.'
 )
-def storage_maintain(full, dry_run):
+@click.pass_context
+def storage_maintain(ctx, full, dry_run):
     """Performs maintenance tasks on the repository."""
-    from aiida.backends.control import repository_maintain
+    from aiida.manage.manager import get_manager
+
+    manager = get_manager()
+    profile = ctx.obj.profile
+    storage = manager.get_profile_storage()
 
     if full:
         echo.echo_warning(
-            '\nIn order to safely perform the full maintenance operations on the internal storage, no other '
-            'process should be using the AiiDA profile being maintained. '
-            'This includes daemon workers, verdi shells, scripts with the profile loaded, etc). '
-            'Please make sure there is nothing like this currently running and that none is started until '
-            'these procedures conclude. '
-            'For performing maintanance operations that are safe to run while actively using AiiDA, just run '
-            '`verdi storage maintain`, without the `--full` flag.\n'
+            '\nIn order to safely perform the full maintenance operations on the internal storage, the profile '
+            f'{profile.name} needs to be locked. '
+            'This means that no other process will be able to access it and will fail instead. '
+            'Moreover, if any process is already using the profile, the locking attempt will fail and you will '
+            'have to either look for these processes and kill them or wait for them to stop by themselves. '
+            'Note that this includes verdi shells, daemon workers, scripts that manually load it, etc.\n'
+            'For performing maintenance operations that are safe to run while actively using AiiDA, just run '
+            '`verdi storage maintain` without the `--full` flag.\n'
         )
 
     else:
@@ -128,7 +141,7 @@ def storage_maintain(full, dry_run):
             '\nThis command will perform all maintenance operations on the internal storage that can be safely '
             'executed while still running AiiDA. '
             'However, not all operations that are required to fully optimize disk usage and future performance '
-            'can be done in this way. '
+            'can be done in this way.\n'
             'Whenever you find the time or opportunity, please consider running `verdi repository maintenance '
             '--full` for a more complete optimization.\n'
         )
@@ -137,5 +150,5 @@ def storage_maintain(full, dry_run):
         if not click.confirm('Are you sure you want continue in this mode?'):
             return
 
-    repository_maintain(full=full, dry_run=dry_run)
+    storage.maintain(full=full, dry_run=dry_run)
     echo.echo_success('Requested maintenance procedures finished.')

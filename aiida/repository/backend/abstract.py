@@ -120,11 +120,11 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def get_info(self, statistics: bool = False, **kwargs) -> dict:
+    def get_info(self, detailed: bool = False, **kwargs) -> dict:
         """Returns relevant information about the content of the repository.
 
-        :param statistics:
-            flag to enable extra information (statistics=False by default, only returns basic information).
+        :param detailed:
+            flag to enable extra information (detailed=False by default, only returns basic information).
 
         :return: a dictionary with the information.
         """

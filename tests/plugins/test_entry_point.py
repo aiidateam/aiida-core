@@ -11,7 +11,7 @@
 import pytest
 
 from aiida.common.warnings import AiidaDeprecationWarning
-from aiida.plugins.entry_point import EntryPoint, get_entry_point, validate_registered_entry_points
+from aiida.plugins.entry_point import get_entry_point, validate_registered_entry_points
 
 
 def test_validate_registered_entry_points():
@@ -42,6 +42,4 @@ def test_get_entry_point_deprecated(group, name):
     warning = f'The entry point `{name}` is deprecated. Please replace it with `core.{name}`.'
 
     with pytest.warns(AiidaDeprecationWarning, match=warning):
-        entry_point = get_entry_point(group, name)
-
-    assert isinstance(entry_point, EntryPoint)
+        get_entry_point(group, name)

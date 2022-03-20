@@ -235,7 +235,6 @@ def loop_scope(loop) -> Iterator[None]:
     Make an event loop current for the scope of the context
 
     :param loop: The event loop to make current for the duration of the scope
-    :type loop: asyncio event loop
     """
     current = asyncio.get_event_loop()
 
@@ -255,8 +254,7 @@ def set_process_state_change_timestamp(process: 'Process') -> None:
     :param process: the Process instance that changed its state
     """
     from aiida.common import timezone
-    from aiida.common.exceptions import UniquenessError
-    from aiida.manage.manager import get_manager  # pylint: disable=cyclic-import
+    from aiida.manage import get_manager  # pylint: disable=cyclic-import
     from aiida.orm import CalculationNode, ProcessNode, WorkflowNode
 
     if isinstance(process.node, CalculationNode):
@@ -273,11 +271,8 @@ def set_process_state_change_timestamp(process: 'Process') -> None:
     description = PROCESS_STATE_CHANGE_DESCRIPTION.format(process_type)
     value = timezone.datetime_to_isoformat(timezone.now())
 
-    try:
-        manager = get_manager()
-        manager.get_backend_manager().get_settings_manager().set(key, value, description)
-    except UniquenessError as exception:
-        process.logger.debug(f'could not update the {key} setting because of a UniquenessError: {exception}')
+    backend = get_manager().get_profile_storage()
+    backend.set_global_variable(key, value, description)
 
 
 def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Optional[datetime]:
@@ -291,10 +286,8 @@ def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Op
     :return: a timestamp or None
     """
     from aiida.common import timezone
-    from aiida.common.exceptions import NotExistent
-    from aiida.manage.manager import get_manager  # pylint: disable=cyclic-import
+    from aiida.manage import get_manager  # pylint: disable=cyclic-import
 
-    manager = get_manager().get_backend_manager().get_settings_manager()
     valid_process_types = ['calculation', 'work']
 
     if process_type is not None and process_type not in valid_process_types:
@@ -307,13 +300,15 @@ def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Op
 
     timestamps: List[datetime] = []
 
+    backend = get_manager().get_profile_storage()
+
     for process_type_key in process_types:
         key = PROCESS_STATE_CHANGE_KEY.format(process_type_key)
         try:
-            time_stamp = timezone.isoformat_to_datetime(manager.get(key).value)
+            time_stamp = timezone.isoformat_to_datetime(backend.get_global_variable(key))
             if time_stamp is not None:
                 timestamps.append(time_stamp)
-        except NotExistent:
+        except KeyError:
             continue
 
     if not timestamps:

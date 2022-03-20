@@ -15,7 +15,8 @@ from flask_restful import Resource
 
 from aiida.common.lang import classproperty
 from aiida.restapi.common.exceptions import RestInputValidationError
-from aiida.restapi.common.utils import Utils, close_session
+from aiida.restapi.common.utils import Utils, close_thread_connection
+from aiida.restapi.translator.nodes.node import NodeTranslator
 
 
 class ServerInfo(Resource):
@@ -98,7 +99,7 @@ class BaseResource(Resource):
     _translator_class = BaseTranslator
     _parse_pk_uuid = None  # Flag to tell the path parser whether to expect a pk or a uuid pattern
 
-    method_decorators = [close_session]  # Close SQLA session after any method call
+    method_decorators = [close_thread_connection]  # Close the thread's storage connection after any method call
 
     ## TODO add the caching support. I cache total count, results, and possibly
 
@@ -214,8 +215,6 @@ class QueryBuilder(BaseResource):
     It supports POST requests taking in JSON :py:func:`~aiida.orm.querybuilder.QueryBuilder.as_dict`
     objects and returning the :py:class:`~aiida.orm.querybuilder.QueryBuilder` result accordingly.
     """
-    from aiida.restapi.translator.nodes.node import NodeTranslator
-
     _translator_class = NodeTranslator
 
     GET_MESSAGE = (
@@ -339,8 +338,6 @@ class Node(BaseResource):
     Differs from BaseResource in trans.set_query() mostly because it takes
     query_type as an input and the presence of additional result types like "tree"
     """
-    from aiida.restapi.translator.nodes.node import NodeTranslator
-
     _translator_class = NodeTranslator
     _parse_pk_uuid = 'uuid'  # Parse a uuid pattern in the URL path (not a pk)
 

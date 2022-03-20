@@ -16,13 +16,12 @@ import plumpy
 import pytest
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.common.utils import Capturing
 from aiida.engine import ExitCode, Process, ToContext, WorkChain, append_, calcfunction, if_, launch, return_, while_
 from aiida.engine.persistence import ObjectLoader
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 from aiida.orm import Bool, Float, Int, Str, load_node
 
 
@@ -187,7 +186,8 @@ class PotentialFailureWorkChain(WorkChain):
 
 
 @pytest.mark.requires_rmq
-class TestExitStatus(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean')
+class TestExitStatus:
     """
     This class should test the various ways that one can exit from the outline flow of a WorkChain, other than
     it running it all the way through. Currently this can be done directly in the outline by calling the `return_`
@@ -196,53 +196,49 @@ class TestExitStatus(AiidaTestCase):
 
     def test_failing_workchain_through_integer(self):
         _, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(False))
-        self.assertEqual(node.exit_status, PotentialFailureWorkChain.EXIT_STATUS)
-        self.assertEqual(node.exit_message, None)
-        self.assertEqual(node.is_finished, True)
-        self.assertEqual(node.is_finished_ok, False)
-        self.assertEqual(node.is_failed, True)
-        self.assertNotIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().all_link_labels())
+        assert node.exit_status == PotentialFailureWorkChain.EXIT_STATUS
+        assert node.exit_message is None
+        assert node.is_finished is True
+        assert node.is_finished_ok is False
+        assert node.is_failed is True
+        assert PotentialFailureWorkChain.OUTPUT_LABEL not in node.get_outgoing().all_link_labels()
 
     def test_failing_workchain_through_exit_code(self):
         _, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(False), through_exit_code=Bool(True))
-        self.assertEqual(node.exit_status, PotentialFailureWorkChain.EXIT_STATUS)
-        self.assertEqual(node.exit_message, PotentialFailureWorkChain.EXIT_MESSAGE)
-        self.assertEqual(node.is_finished, True)
-        self.assertEqual(node.is_finished_ok, False)
-        self.assertEqual(node.is_failed, True)
-        self.assertNotIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().all_link_labels())
+        assert node.exit_status == PotentialFailureWorkChain.EXIT_STATUS
+        assert node.exit_message == PotentialFailureWorkChain.EXIT_MESSAGE
+        assert node.is_finished is True
+        assert node.is_finished_ok is False
+        assert node.is_failed is True
+        assert PotentialFailureWorkChain.OUTPUT_LABEL not in node.get_outgoing().all_link_labels()
 
     def test_successful_workchain_through_integer(self):
         _, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(True))
-        self.assertEqual(node.exit_status, 0)
-        self.assertEqual(node.is_finished, True)
-        self.assertEqual(node.is_finished_ok, True)
-        self.assertEqual(node.is_failed, False)
-        self.assertIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().all_link_labels())
-        self.assertEqual(
-            node.get_outgoing().get_node_by_label(PotentialFailureWorkChain.OUTPUT_LABEL),
+        assert node.exit_status == 0
+        assert node.is_finished is True
+        assert node.is_finished_ok is True
+        assert node.is_failed is False
+        assert PotentialFailureWorkChain.OUTPUT_LABEL in node.get_outgoing().all_link_labels()
+        assert node.get_outgoing().get_node_by_label(PotentialFailureWorkChain.OUTPUT_LABEL) == \
             PotentialFailureWorkChain.OUTPUT_VALUE
-        )
 
     def test_successful_workchain_through_exit_code(self):
         _, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(True), through_exit_code=Bool(True))
-        self.assertEqual(node.exit_status, 0)
-        self.assertEqual(node.is_finished, True)
-        self.assertEqual(node.is_finished_ok, True)
-        self.assertEqual(node.is_failed, False)
-        self.assertIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().all_link_labels())
-        self.assertEqual(
-            node.get_outgoing().get_node_by_label(PotentialFailureWorkChain.OUTPUT_LABEL),
+        assert node.exit_status == 0
+        assert node.is_finished is True
+        assert node.is_finished_ok is True
+        assert node.is_failed is False
+        assert PotentialFailureWorkChain.OUTPUT_LABEL in node.get_outgoing().all_link_labels()
+        assert node.get_outgoing().get_node_by_label(PotentialFailureWorkChain.OUTPUT_LABEL) == \
             PotentialFailureWorkChain.OUTPUT_VALUE
-        )
 
     def test_return_out_of_outline(self):
         _, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(True), through_return=Bool(True))
-        self.assertEqual(node.exit_status, PotentialFailureWorkChain.EXIT_STATUS)
-        self.assertEqual(node.is_finished, True)
-        self.assertEqual(node.is_finished_ok, False)
-        self.assertEqual(node.is_failed, True)
-        self.assertNotIn(PotentialFailureWorkChain.OUTPUT_LABEL, node.get_outgoing().all_link_labels())
+        assert node.exit_status == PotentialFailureWorkChain.EXIT_STATUS
+        assert node.is_finished is True
+        assert node.is_finished_ok is False
+        assert node.is_failed is True
+        assert PotentialFailureWorkChain.OUTPUT_LABEL not in node.get_outgoing().all_link_labels()
 
 
 class IfTest(WorkChain):
@@ -269,55 +265,55 @@ class IfTest(WorkChain):
 
 
 @pytest.mark.requires_rmq
-class TestContext(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean')
+class TestContext:
 
     def test_attributes(self):
         wc = IfTest()
         wc.ctx.new_attr = 5
-        self.assertEqual(wc.ctx.new_attr, 5)
+        assert wc.ctx.new_attr == 5
 
         del wc.ctx.new_attr
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             wc.ctx.new_attr  # pylint: disable=pointless-statement
 
     def test_dict(self):
         wc = IfTest()
         wc.ctx['new_attr'] = 5
-        self.assertEqual(wc.ctx['new_attr'], 5)
+        assert wc.ctx['new_attr'] == 5
 
         del wc.ctx['new_attr']
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             wc.ctx['new_attr']  # pylint: disable=pointless-statement
 
 
 @pytest.mark.requires_rmq
-class TestWorkchain(AiidaTestCase):
+class TestWorkchain:
 
     # pylint: disable=too-many-public-methods
 
-    def setUp(self):
-        super().setUp()
-        self.assertIsNone(Process.current())
-
-    def tearDown(self):
-        super().tearDown()
-        self.assertIsNone(Process.current())
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        assert Process.current() is None
+        yield
+        assert Process.current() is None
 
     def test_run_base_class(self):
         """Verify that it is impossible to run, submit or instantiate a base `WorkChain` class."""
-        with self.assertRaises(exceptions.InvalidOperation):
+        with pytest.raises(exceptions.InvalidOperation):
             WorkChain()
 
-        with self.assertRaises(exceptions.InvalidOperation):
+        with pytest.raises(exceptions.InvalidOperation):
             launch.run(WorkChain)
 
-        with self.assertRaises(exceptions.InvalidOperation):
+        with pytest.raises(exceptions.InvalidOperation):
             launch.run.get_node(WorkChain)
 
-        with self.assertRaises(exceptions.InvalidOperation):
+        with pytest.raises(exceptions.InvalidOperation):
             launch.run.get_pk(WorkChain)
 
-        with self.assertRaises(exceptions.InvalidOperation):
+        with pytest.raises(exceptions.InvalidOperation):
             launch.submit(WorkChain)
 
     def test_run(self):
@@ -331,21 +327,21 @@ class TestWorkchain(AiidaTestCase):
         # Check the steps that should have been run
         for step, finished in Wf.finished_steps.items():
             if step not in ['step3', 'step4', 'is_b']:
-                self.assertTrue(finished, f'Step {step} was not called by workflow')
+                assert finished, f'Step {step} was not called by workflow'
 
         # Try the elif(..) part
         finished_steps = launch.run(Wf, value=B, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.items():
             if step not in ['is_a', 'step2', 'step4']:
-                self.assertTrue(finished, f'Step {step} was not called by workflow')
+                assert finished, f'Step {step} was not called by workflow'
 
         # Try the else... part
         finished_steps = launch.run(Wf, value=C, n=three)
         # Check the steps that should have been run
         for step, finished in finished_steps.items():
             if step not in ['is_a', 'step2', 'is_b', 'step3']:
-                self.assertTrue(finished, f'Step {step} was not called by workflow')
+                assert finished, f'Step {step} was not called by workflow'
 
     def test_incorrect_outline(self):
 
@@ -357,7 +353,7 @@ class TestWorkchain(AiidaTestCase):
                 # Try defining an invalid outline
                 spec.outline(5)
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             IncorrectOutline.spec()
 
     def test_define_not_calling_super(self):
@@ -369,7 +365,7 @@ class TestWorkchain(AiidaTestCase):
             def define(cls, spec):
                 pass
 
-        with self.assertRaises(AssertionError):
+        with pytest.raises(AssertionError):
             launch.run(IncompleteDefineWorkChain)
 
     def test_out_unstored(self):
@@ -389,7 +385,7 @@ class TestWorkchain(AiidaTestCase):
             def illegal(self):
                 self.out('not_allowed', orm.Int(2))
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             launch.run(IllegalWorkChain)
 
     def test_same_input_node(self):
@@ -414,8 +410,6 @@ class TestWorkchain(AiidaTestCase):
     def test_context(self):
         A = Str('a').store()
         B = Str('b').store()
-
-        test_case = self
 
         class ReturnA(WorkChain):
 
@@ -450,15 +444,15 @@ class TestWorkchain(AiidaTestCase):
                 return ToContext(r1=self.submit(ReturnA), r2=self.submit(ReturnB))
 
             def s2(self):
-                test_case.assertEqual(self.ctx.r1.outputs.res, A)
-                test_case.assertEqual(self.ctx.r2.outputs.res, B)
+                assert self.ctx.r1.outputs.res == A
+                assert self.ctx.r2.outputs.res == B
 
                 # Try overwriting r1
                 return ToContext(r1=self.submit(ReturnB))
 
             def s3(self):
-                test_case.assertEqual(self.ctx.r1.outputs.res, B)
-                test_case.assertEqual(self.ctx.r2.outputs.res, B)
+                assert self.ctx.r1.outputs.res == B
+                assert self.ctx.r2.outputs.res == B
 
         run_and_check_success(OverrideContextWorkChain)
 
@@ -481,7 +475,7 @@ class TestWorkchain(AiidaTestCase):
         run_and_check_success(TestWorkChain)
 
     def test_str(self):
-        self.assertIsInstance(str(Wf.spec()), str)
+        assert isinstance(str(Wf.spec()), str)
 
     def test_malformed_outline(self):
         """
@@ -491,11 +485,11 @@ class TestWorkchain(AiidaTestCase):
 
         spec = WorkChainSpec()
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             spec.outline(5)
 
         # Test a function with wrong number of args
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             spec.outline(lambda x, y: None)
 
     def test_checkpointing(self):
@@ -509,21 +503,21 @@ class TestWorkchain(AiidaTestCase):
         # Check the steps that should have been run
         for step, finished in finished_steps.items():
             if step not in ['step3', 'step4', 'is_b']:
-                self.assertTrue(finished, f'Step {step} was not called by workflow')
+                assert finished, f'Step {step} was not called by workflow'
 
         # Try the elif(..) part
         finished_steps = self._run_with_checkpoints(Wf, inputs={'value': B, 'n': three})
         # Check the steps that should have been run
         for step, finished in finished_steps.items():
             if step not in ['is_a', 'step2', 'step4']:
-                self.assertTrue(finished, f'Step {step} was not called by workflow')
+                assert finished, f'Step {step} was not called by workflow'
 
         # Try the else... part
         finished_steps = self._run_with_checkpoints(Wf, inputs={'value': C, 'n': three})
         # Check the steps that should have been run
         for step, finished in finished_steps.items():
             if step not in ['is_a', 'step2', 'is_b', 'step3']:
-                self.assertTrue(finished, f'Step {step} was not called by workflow')
+                assert finished, f'Step {step} was not called by workflow'
 
     def test_return(self):
 
@@ -579,11 +573,11 @@ class TestWorkchain(AiidaTestCase):
         # Verify that the `CALL` link of the calculation function is there with the correct label
         link_triple = process.node.get_outgoing(link_type=LinkType.CALL_CALC,
                                                 link_label_filter=label_calcfunction).one()
-        self.assertIsInstance(link_triple.node, orm.CalcFunctionNode)
+        assert isinstance(link_triple.node, orm.CalcFunctionNode)
 
         # Verify that the `CALL` link of the work chain is there with the correct label
         link_triple = process.node.get_outgoing(link_type=LinkType.CALL_WORK, link_label_filter=label_workchain).one()
-        self.assertIsInstance(link_triple.node, orm.WorkChainNode)
+        assert isinstance(link_triple.node, orm.WorkChainNode)
 
     def test_tocontext_submit_workchain_no_daemon(self):
 
@@ -691,8 +685,8 @@ class TestWorkchain(AiidaTestCase):
 
             # run the original workchain until paused
             await run_until_paused(workchain)
-            self.assertTrue(workchain.ctx.s1)
-            self.assertFalse(workchain.ctx.s2)
+            assert workchain.ctx.s1
+            assert not workchain.ctx.s2
 
             # Now bundle the workchain
             bundle = plumpy.Bundle(workchain)
@@ -701,19 +695,19 @@ class TestWorkchain(AiidaTestCase):
 
             # Load from saved state
             workchain2 = bundle.unbundle()
-            self.assertTrue(workchain2.ctx.s1)
-            self.assertFalse(workchain2.ctx.s2)
+            assert workchain2.ctx.s1
+            assert not workchain2.ctx.s2
 
             # check bundling again creates the same saved state
             bundle2 = plumpy.Bundle(workchain2)
-            self.assertDictEqual(bundle, bundle2)
+            assert bundle == bundle2
 
             # run the loaded workchain to completion
             runner.schedule(workchain2)
             workchain2.play()
             await workchain2.future()
-            self.assertTrue(workchain2.ctx.s1)
-            self.assertTrue(workchain2.ctx.s2)
+            assert workchain2.ctx.s1
+            assert workchain2.ctx.s2
 
             # ensure the original paused workchain future is finalised
             # to avoid warnings
@@ -750,8 +744,6 @@ class TestWorkchain(AiidaTestCase):
     def test_to_context(self):
         val = Int(5).store()
 
-        test_case = self
-
         class SimpleWc(WorkChain):
 
             @classmethod
@@ -775,15 +767,13 @@ class TestWorkchain(AiidaTestCase):
                 return ToContext(result_b=self.submit(SimpleWc))
 
             def result(self):
-                test_case.assertEqual(self.ctx.result_a.outputs.result, val)
-                test_case.assertEqual(self.ctx.result_b.outputs.result, val)
+                assert self.ctx.result_a.outputs.result == val
+                assert self.ctx.result_b.outputs.result == val
 
         run_and_check_success(Workchain)
 
     def test_nested_to_context(self):
         val = Int(5).store()
-
-        test_case = self
 
         class SimpleWc(WorkChain):
 
@@ -808,16 +798,14 @@ class TestWorkchain(AiidaTestCase):
                 return ToContext(**{'sub1.sub2.result_b': self.submit(SimpleWc)})
 
             def result(self):
-                test_case.assertEqual(self.ctx.sub1.sub2.result_a.outputs.result, val)
-                test_case.assertEqual(self.ctx.sub1.sub2.result_b.outputs.result, val)
+                assert self.ctx.sub1.sub2.result_a.outputs.result == val
+                assert self.ctx.sub1.sub2.result_b.outputs.result == val
 
         run_and_check_success(Workchain)
 
     def test_nested_to_context_with_append(self):
         val1 = Int(5).store()
         val2 = Int(6).store()
-
-        test_case = self
 
         class SimpleWc1(WorkChain):
 
@@ -853,8 +841,8 @@ class TestWorkchain(AiidaTestCase):
                 return ToContext(**{'sub1.workchains': append_(self.submit(SimpleWc2))})
 
             def result(self):
-                test_case.assertEqual(self.ctx.sub1.workchains[0].outputs.result, val1)
-                test_case.assertEqual(self.ctx.sub1.workchains[1].outputs.result, val2)
+                assert self.ctx.sub1.workchains[0].outputs.result == val1
+                assert self.ctx.sub1.workchains[1].outputs.result == val2
 
         run_and_check_success(Workchain)
 
@@ -1014,21 +1002,21 @@ class TestWorkchain(AiidaTestCase):
         wc = ExitCodeWorkChain()
 
         # The exit code can be gotten by calling it with the status or label, as well as using attribute dereferencing
-        self.assertEqual(wc.exit_codes(status).status, status)  # pylint: disable=too-many-function-args
-        self.assertEqual(wc.exit_codes(label).status, status)  # pylint: disable=too-many-function-args
-        self.assertEqual(wc.exit_codes.SOME_EXIT_CODE.status, status)  # pylint: disable=no-member
+        assert wc.exit_codes(status).status == status  # pylint: disable=too-many-function-args
+        assert wc.exit_codes(label).status == status  # pylint: disable=too-many-function-args
+        assert wc.exit_codes.SOME_EXIT_CODE.status == status  # pylint: disable=no-member
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             wc.exit_codes.NON_EXISTENT_ERROR  # pylint: disable=no-member,pointless-statement
 
-        self.assertEqual(ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.status, status)  # pylint: disable=no-member
-        self.assertEqual(ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.message, message)  # pylint: disable=no-member
+        assert ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.status == status  # pylint: disable=no-member
+        assert ExitCodeWorkChain.exit_codes.SOME_EXIT_CODE.message == message  # pylint: disable=no-member
 
-        self.assertEqual(ExitCodeWorkChain.exit_codes['SOME_EXIT_CODE'].status, status)  # pylint: disable=unsubscriptable-object
-        self.assertEqual(ExitCodeWorkChain.exit_codes['SOME_EXIT_CODE'].message, message)  # pylint: disable=unsubscriptable-object
+        assert ExitCodeWorkChain.exit_codes['SOME_EXIT_CODE'].status == status  # pylint: disable=unsubscriptable-object
+        assert ExitCodeWorkChain.exit_codes['SOME_EXIT_CODE'].message == message  # pylint: disable=unsubscriptable-object
 
-        self.assertEqual(ExitCodeWorkChain.exit_codes[label].status, status)  # pylint: disable=unsubscriptable-object
-        self.assertEqual(ExitCodeWorkChain.exit_codes[label].message, message)  # pylint: disable=unsubscriptable-object
+        assert ExitCodeWorkChain.exit_codes[label].status == status  # pylint: disable=unsubscriptable-object
+        assert ExitCodeWorkChain.exit_codes[label].message == message  # pylint: disable=unsubscriptable-object
 
     @staticmethod
     def _run_with_checkpoints(wf_class, inputs=None):
@@ -1039,18 +1027,17 @@ class TestWorkchain(AiidaTestCase):
 
 
 @pytest.mark.requires_rmq
-class TestWorkChainAbort(AiidaTestCase):
+class TestWorkChainAbort:
     """
     Test the functionality to abort a workchain
     """
 
-    def setUp(self):
-        super().setUp()
-        self.assertIsNone(Process.current())
-
-    def tearDown(self):
-        super().tearDown()
-        self.assertIsNone(Process.current())
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        assert Process.current() is None
+        yield
+        assert Process.current() is None
 
     class AbortableWorkChain(WorkChain):
 
@@ -1079,15 +1066,15 @@ class TestWorkChainAbort(AiidaTestCase):
             process.play()
 
             with Capturing():
-                with self.assertRaises(RuntimeError):
+                with pytest.raises(RuntimeError):
                     await process.future()
 
         runner.schedule(process)
         runner.loop.run_until_complete(run_async())
 
-        self.assertEqual(process.node.is_finished_ok, False)
-        self.assertEqual(process.node.is_excepted, True)
-        self.assertEqual(process.node.is_killed, False)
+        assert process.node.is_finished_ok is False
+        assert process.node.is_excepted is True
+        assert process.node.is_killed is False
 
     def test_simple_kill_through_process(self):
         """
@@ -1101,34 +1088,33 @@ class TestWorkChainAbort(AiidaTestCase):
         async def run_async():
             await run_until_paused(process)
 
-            self.assertTrue(process.paused)
+            assert process.paused
             process.kill()
 
-            with self.assertRaises(plumpy.ClosedError):
+            with pytest.raises(plumpy.ClosedError):
                 launch.run(process)
 
         runner.schedule(process)
         runner.loop.run_until_complete(run_async())
 
-        self.assertEqual(process.node.is_finished_ok, False)
-        self.assertEqual(process.node.is_excepted, False)
-        self.assertEqual(process.node.is_killed, True)
+        assert process.node.is_finished_ok is False
+        assert process.node.is_excepted is False
+        assert process.node.is_killed is True
 
 
 @pytest.mark.requires_rmq
-class TestWorkChainAbortChildren(AiidaTestCase):
+class TestWorkChainAbortChildren:
     """
     Test the functionality to abort a workchain and verify that children
     are also aborted appropriately
     """
 
-    def setUp(self):
-        super().setUp()
-        self.assertIsNone(Process.current())
-
-    def tearDown(self):
-        super().tearDown()
-        self.assertIsNone(Process.current())
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        assert Process.current() is None
+        yield
+        assert Process.current() is None
 
     class SubWorkChain(WorkChain):
 
@@ -1170,12 +1156,12 @@ class TestWorkChainAbortChildren(AiidaTestCase):
         process = TestWorkChainAbortChildren.MainWorkChain()
 
         with Capturing():
-            with self.assertRaises(RuntimeError):
+            with pytest.raises(RuntimeError):
                 launch.run(process)
 
-        self.assertEqual(process.node.is_finished_ok, False)
-        self.assertEqual(process.node.is_excepted, True)
-        self.assertEqual(process.node.is_killed, False)
+        assert process.node.is_finished_ok is False
+        assert process.node.is_excepted is True
+        assert process.node.is_killed is False
 
     def test_simple_kill_through_process(self):
         """
@@ -1192,41 +1178,39 @@ class TestWorkChainAbortChildren(AiidaTestCase):
             if asyncio.isfuture(result):
                 await result
 
-            with self.assertRaises(plumpy.KilledError):
+            with pytest.raises(plumpy.KilledError):
                 await process.future()
 
         runner.schedule(process)
         runner.loop.run_until_complete(run_async())
 
         child = process.node.get_outgoing(link_type=LinkType.CALL_WORK).first().node
-        self.assertEqual(child.is_finished_ok, False)
-        self.assertEqual(child.is_excepted, False)
-        self.assertEqual(child.is_killed, True)
+        assert child.is_finished_ok is False
+        assert child.is_excepted is False
+        assert child.is_killed is True
 
-        self.assertEqual(process.node.is_finished_ok, False)
-        self.assertEqual(process.node.is_excepted, False)
-        self.assertEqual(process.node.is_killed, True)
+        assert process.node.is_finished_ok is False
+        assert process.node.is_excepted is False
+        assert process.node.is_killed is True
 
 
 @pytest.mark.requires_rmq
-class TestImmutableInputWorkchain(AiidaTestCase):
+class TestImmutableInputWorkchain:
     """
     Test that inputs cannot be modified
     """
 
-    def setUp(self):
-        super().setUp()
-        self.assertIsNone(Process.current())
-
-    def tearDown(self):
-        super().tearDown()
-        self.assertIsNone(Process.current())
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        assert Process.current() is None
+        yield
+        assert Process.current() is None
 
     def test_immutable_input(self):
         """
         Check that from within the WorkChain self.inputs returns an AttributesFrozendict which should be immutable
         """
-        test_class = self
 
         class FrozenDictWorkChain(WorkChain):
 
@@ -1242,19 +1226,19 @@ class TestImmutableInputWorkchain(AiidaTestCase):
 
             def step_one(self):
                 # Attempt to manipulate the inputs dictionary which since it is a AttributesFrozendict should raise
-                with test_class.assertRaises(TypeError):
+                with pytest.raises(TypeError):
                     self.inputs['a'] = Int(3)
-                with test_class.assertRaises(AttributeError):
+                with pytest.raises(AttributeError):
                     self.inputs.pop('b')
-                with test_class.assertRaises(TypeError):
+                with pytest.raises(TypeError):
                     self.inputs['c'] = Int(4)
 
             def step_two(self):
                 # Verify that original inputs are still there with same value and no inputs were added
-                test_class.assertIn('a', self.inputs)
-                test_class.assertIn('b', self.inputs)
-                test_class.assertNotIn('c', self.inputs)
-                test_class.assertEqual(self.inputs['a'].value, 1)
+                assert 'a' in self.inputs
+                assert 'b' in self.inputs
+                assert 'c' not in self.inputs
+                assert self.inputs['a'].value == 1
 
         run_and_check_success(FrozenDictWorkChain, a=Int(1), b=Int(2))
 
@@ -1262,7 +1246,6 @@ class TestImmutableInputWorkchain(AiidaTestCase):
         """
         Check that namespaced inputs also return AttributeFrozendicts and are hence immutable
         """
-        test_class = self
 
         class ImmutableGroups(WorkChain):
 
@@ -1277,19 +1260,19 @@ class TestImmutableInputWorkchain(AiidaTestCase):
 
             def step_one(self):
                 # Attempt to manipulate the namespaced inputs dictionary which should raise
-                with test_class.assertRaises(TypeError):
+                with pytest.raises(TypeError):
                     self.inputs.subspace['one'] = Int(3)
-                with test_class.assertRaises(AttributeError):
+                with pytest.raises(AttributeError):
                     self.inputs.subspace.pop('two')
-                with test_class.assertRaises(TypeError):
+                with pytest.raises(TypeError):
                     self.inputs.subspace['four'] = Int(4)
 
             def step_two(self):
                 # Verify that original inputs are still there with same value and no inputs were added
-                test_class.assertIn('one', self.inputs.subspace)
-                test_class.assertIn('two', self.inputs.subspace)
-                test_class.assertNotIn('four', self.inputs.subspace)
-                test_class.assertEqual(self.inputs.subspace['one'].value, 1)
+                assert 'one' in self.inputs.subspace
+                assert 'two' in self.inputs.subspace
+                assert 'four' not in self.inputs.subspace
+                assert self.inputs.subspace['one'].value == 1
 
         run_and_check_success(ImmutableGroups, subspace={'one': Int(1), 'two': Int(2)})
 
@@ -1315,18 +1298,17 @@ class SerializeWorkChain(WorkChain):
 
 
 @pytest.mark.requires_rmq
-class TestSerializeWorkChain(AiidaTestCase):
+class TestSerializeWorkChain:
     """
     Test workchains with serialized input / output.
     """
 
-    def setUp(self):
-        super().setUp()
-        self.assertIsNone(Process.current())
-
-    def tearDown(self):
-        super().tearDown()
-        self.assertIsNone(Process.current())
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        assert Process.current() is None
+        yield
+        assert Process.current() is None
 
     @staticmethod
     def test_serialize():
@@ -1442,7 +1424,8 @@ class ChildExposeWorkChain(WorkChain):
 
 
 @pytest.mark.requires_rmq
-class TestWorkChainExpose(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean')
+class TestWorkChainExpose:
     """
     Test the expose inputs / outputs functionality
     """
@@ -1462,21 +1445,19 @@ class TestWorkChainExpose(AiidaTestCase):
                 }
             },
         )
-        self.assertEqual(
-            res, {
-                'a': Float(2.2),
-                'sub_1': {
-                    'b': Float(2.3),
-                    'c': Bool(True)
-                },
-                'sub_2': {
-                    'b': Float(1.2),
-                    'sub_3': {
-                        'c': Bool(False)
-                    }
+        assert res == {
+            'a': Float(2.2),
+            'sub_1': {
+                'b': Float(2.3),
+                'c': Bool(True)
+            },
+            'sub_2': {
+                'b': Float(1.2),
+                'sub_3': {
+                    'c': Bool(False)
                 }
             }
-        )
+        }
 
     def test_nested_expose(self):
         res = launch.run(
@@ -1497,25 +1478,23 @@ class TestWorkChainExpose(AiidaTestCase):
                 )
             )
         )
-        self.assertEqual(
-            res, {
+        assert res == {
+            'sub': {
                 'sub': {
-                    'sub': {
-                        'a': Float(2.2),
-                        'sub_1': {
-                            'b': Float(2.3),
-                            'c': Bool(True)
-                        },
-                        'sub_2': {
-                            'b': Float(1.2),
-                            'sub_3': {
-                                'c': Bool(False)
-                            }
+                    'a': Float(2.2),
+                    'sub_1': {
+                        'b': Float(2.3),
+                        'c': Bool(True)
+                    },
+                    'sub_2': {
+                        'b': Float(1.2),
+                        'sub_3': {
+                            'c': Bool(False)
                         }
                     }
                 }
             }
-        )
+        }
 
     @pytest.mark.filterwarnings('ignore::UserWarning')
     def test_issue_1741_expose_inputs(self):
@@ -1553,7 +1532,8 @@ class TestWorkChainExpose(AiidaTestCase):
 
 
 @pytest.mark.requires_rmq
-class TestWorkChainMisc(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean')
+class TestWorkChainMisc:
 
     class PointlessWorkChain(WorkChain):
 
@@ -1585,12 +1565,13 @@ class TestWorkChainMisc(AiidaTestCase):
 
     def test_global_submit_raises(self):
         """Using top-level submit should raise."""
-        with self.assertRaises(exceptions.InvalidOperation):
+        with pytest.raises(exceptions.InvalidOperation):
             launch.run(TestWorkChainMisc.IllegalSubmitWorkChain)
 
 
 @pytest.mark.requires_rmq
-class TestDefaultUniqueness(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean')
+class TestDefaultUniqueness:
     """Test that default inputs of exposed nodes will get unique UUIDS."""
 
     class Parent(WorkChain):
@@ -1638,4 +1619,4 @@ class TestDefaultUniqueness(AiidaTestCase):
         # Trying to load one of the inputs through the UUID should fail,
         # as both `child_one.a` and `child_two.a` should have the same UUID.
         node = load_node(uuid=node.get_incoming().get_node_by_label('child_one__a').uuid)
-        self.assertEqual(len(uuids), len(nodes), f'Only {len(uuids)} unique UUIDS for {len(nodes)} input nodes')
+        assert len(uuids) == len(nodes), f'Only {len(uuids)} unique UUIDS for {len(nodes)} input nodes'

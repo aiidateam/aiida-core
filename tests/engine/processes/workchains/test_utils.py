@@ -11,7 +11,6 @@
 """Tests for `aiida.engine.processes.workchains.utils` module."""
 import pytest
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import ExitCode, ProcessState
 from aiida.engine.processes.workchains.restart import BaseRestartWorkChain
 from aiida.engine.processes.workchains.utils import ProcessHandlerReport, process_handler
@@ -22,12 +21,13 @@ ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 
 
 @pytest.mark.requires_rmq
-class TestRegisterProcessHandler(AiidaTestCase):
+@pytest.mark.usefixtures('aiida_profile_clean')
+class TestRegisterProcessHandler:
     """Tests for the `process_handler` decorator."""
 
     def test_priority_keyword_only(self):
         """The `priority` should be keyword only."""
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
 
             class SomeWorkChain(BaseRestartWorkChain):
 
@@ -43,7 +43,7 @@ class TestRegisterProcessHandler(AiidaTestCase):
 
     def test_priority_type(self):
         """The `priority` should be an integer."""
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
 
             class SomeWorkChain(BaseRestartWorkChain):
 
@@ -109,7 +109,7 @@ class TestRegisterProcessHandler(AiidaTestCase):
 
     def test_exit_codes_keyword_only(self):
         """The `exit_codes` should be keyword only."""
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
 
             class SomeWorkChain(BaseRestartWorkChain):
 
@@ -132,7 +132,7 @@ class TestRegisterProcessHandler(AiidaTestCase):
             [400],
         ]
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             for incorrect_type in incorrect_types:
 
                 class SomeWorkChain(BaseRestartWorkChain):
@@ -188,7 +188,7 @@ class TestRegisterProcessHandler(AiidaTestCase):
 
     def test_enabled_keyword_only(self):
         """The `enabled` should be keyword only."""
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
 
             class SomeWorkChain(BaseRestartWorkChain):
 

@@ -40,8 +40,8 @@ def command_multi_non_eager(a_or_b, opt_a, opt_b):
     """Return a command that has two scenarios.
 
         * flag a_or_b (--a/--b)
-        * opt-a required if a_or_b == True
-        * opt-b required if a_or_b == False
+        * opt-a required if a_or_b is True
+        * opt-b required if a_or_b  is False
     """
     # pylint: disable=unused-argument
     click.echo(f'{opt_a} / {opt_b}')

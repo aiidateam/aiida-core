@@ -27,7 +27,7 @@ def test_base_data_type_change(tmp_path, aiida_profile):
     """ Base Data types type string changed
     Example: Bool: “data.base.Bool.” → “data.bool.Bool.”
     """
-    aiida_profile.reset_db()
+    aiida_profile.clear_profile()
 
     # Test content
     test_content = ('Hello', 6, -1.2399834e12, False)
@@ -58,7 +58,7 @@ def test_base_data_type_change(tmp_path, aiida_profile):
     create_archive(export_nodes, filename=filename)
 
     # Clean the database
-    aiida_profile.reset_db()
+    aiida_profile.clear_profile()
 
     # Import nodes again
     import_archive(filename)
@@ -89,7 +89,7 @@ def test_node_process_type(aiida_profile, tmp_path):
     from aiida.engine import run_get_node
     from tests.utils.processes import AddProcess
 
-    aiida_profile.reset_db()
+    aiida_profile.clear_profile()
 
     # Node types
     node_type = 'process.workflow.WorkflowNode.'
@@ -111,7 +111,7 @@ def test_node_process_type(aiida_profile, tmp_path):
     create_archive([node], filename=filename)
 
     # Clean the database and reimport data
-    aiida_profile.reset_db()
+    aiida_profile.clear_profile()
     import_archive(filename)
 
     # Retrieve node and check exactly one node is imported
@@ -133,7 +133,7 @@ def test_node_process_type(aiida_profile, tmp_path):
     assert node.process_type == node_process_type
 
 
-def test_code_type_change(clear_database_before_test, tmp_path, aiida_localhost):
+def test_code_type_change(aiida_profile_clean, tmp_path, aiida_localhost):
     """ Code type string changed
     Change: “code.Bool.” → “data.code.Code.”
     """
@@ -154,7 +154,7 @@ def test_code_type_change(clear_database_before_test, tmp_path, aiida_localhost)
     create_archive([code], filename=filename)
 
     # Clean the database and reimport
-    clear_database_before_test.reset_db()
+    aiida_profile_clean.clear_profile()
     import_archive(filename)
 
     # Retrieve Code node and make sure exactly 1 is retrieved
@@ -197,7 +197,7 @@ def test_group_name_and_type_change(tmp_path, aiida_profile):
     """
     from aiida.orm.nodes.data.upf import upload_upf_family
 
-    aiida_profile.reset_db()
+    aiida_profile.clear_profile()
 
     # To be saved
     groups_label = ['Users', 'UpfData']
@@ -238,7 +238,7 @@ def test_group_name_and_type_change(tmp_path, aiida_profile):
     create_archive([group_user, group_upf], filename=filename)
 
     # Clean the database and reimport
-    aiida_profile.reset_db()
+    aiida_profile.clear_profile()
     import_archive(filename)
 
     # Retrieve Groups and make sure exactly 3 are retrieved (including the "import group")

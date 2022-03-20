@@ -11,7 +11,7 @@
 import logging
 import os
 import sys
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from tabulate import tabulate
 
@@ -474,7 +474,7 @@ def get_num_workers():
     Get the number of active daemon workers from the circus client
     """
     from aiida.common.exceptions import CircusCallError
-    from aiida.manage.manager import get_manager
+    from aiida.manage import get_manager
 
     manager = get_manager()
     client = manager.get_daemon_client()
@@ -506,12 +506,11 @@ def check_worker_load(active_slots):
     :param active_slots: the number of currently active worker slots
     """
     from aiida.common.exceptions import CircusCallError
-    from aiida.manage.configuration import get_config
+    from aiida.manage import get_config_option
 
     warning_threshold = 0.9  # 90%
 
-    config = get_config()
-    slots_per_worker = config.get_option('daemon.worker_process_slots', config.current_profile.name)
+    slots_per_worker = get_config_option('daemon.worker_process_slots')
 
     try:
         active_workers = get_num_workers()
@@ -529,55 +528,3 @@ def check_worker_load(active_slots):
             echo.echo_report(f'Using {percent_load * 100:.0f}%% of the available daemon worker slots.')
     else:
         echo.echo_report('No active daemon workers.')
-
-
-def get_database_summary(querybuilder: Callable, verbose: bool) -> dict:
-    """Generate a summary of the database."""
-    from aiida.orm import Comment, Computer, Group, Log, Node, User
-
-    data = {}
-
-    # User
-    query_user = querybuilder().append(User, project=['email'])
-    data['Users'] = {'count': query_user.count()}
-    if verbose:
-        data['Users']['emails'] = sorted({email for email, in query_user.iterall() if email is not None})
-
-    # Computer
-    query_comp = querybuilder().append(Computer, project=['label'])
-    data['Computers'] = {'count': query_comp.count()}
-    if verbose:
-        data['Computers']['labels'] = sorted({comp for comp, in query_comp.iterall() if comp is not None})
-
-    # Node
-    count = querybuilder().append(Node).count()
-    data['Nodes'] = {'count': count}
-    if verbose:
-        node_types = sorted({
-            typ for typ, in querybuilder().append(Node, project=['node_type']).iterall() if typ is not None
-        })
-        data['Nodes']['node_types'] = node_types
-        process_types = sorted({
-            typ for typ, in querybuilder().append(Node, project=['process_type']).iterall() if typ is not None
-        })
-        data['Nodes']['process_types'] = [p for p in process_types if p]
-
-    # Group
-    query_group = querybuilder().append(Group, project=['type_string'])
-    data['Groups'] = {'count': query_group.count()}
-    if verbose:
-        data['Groups']['type_strings'] = sorted({typ for typ, in query_group.iterall() if typ is not None})
-
-    # Comment
-    count = querybuilder().append(Comment).count()
-    data['Comments'] = {'count': count}
-
-    # Log
-    count = querybuilder().append(Log).count()
-    data['Logs'] = {'count': count}
-
-    # Links
-    count = querybuilder().append(entity_type='link').count()
-    data['Links'] = {'count': count}
-
-    return data

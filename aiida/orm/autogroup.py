@@ -9,26 +9,26 @@
 ###########################################################################
 """Module to manage the autogrouping functionality by ``verdi run``."""
 import re
+from typing import List, Optional
 
 from aiida.common import exceptions, timezone
 from aiida.common.escaping import escape_for_sql_like, get_regex_pattern_from_sql
-from aiida.orm import AutoGroup
+from aiida.orm import AutoGroup, QueryBuilder
 from aiida.plugins.entry_point import get_entry_point_string_from_class
 
-CURRENT_AUTOGROUP = None
 
+class AutogroupManager:
+    """Class to automatically add all newly stored ``Node``s to an ``AutoGroup`` (whilst enabled).
 
-class Autogroup:
-    """Class to create a new `AutoGroup` instance that will, while active, automatically contain all nodes being stored.
+    This class should not be instantiated directly, but rather accessed through the backend storage instance.
 
-    The autogrouping is checked by the `Node.store()` method which, if `CURRENT_AUTOGROUP is not None` the method
-    `Autogroup.is_to_be_grouped` is called to decide whether to put the current node being stored in the current
-    `AutoGroup` instance.
+    The auto-grouping is checked by the ``Node.store()`` method which, if ``is_to_be_grouped`` is true,
+    will store the node in the associated ``AutoGroup``.
 
     The exclude/include lists are lists of strings like:
     ``aiida.data:core.int``, ``aiida.calculation:quantumespresso.pw``,
     ``aiida.data:core.array.%``, ...
-    i.e.: a string identifying the base class, followed a colona and by the path to the class
+    i.e.: a string identifying the base class, followed by a colon and the path to the class
     as accepted by CalculationFactory/DataFactory.
     Each string can contain one or more wildcard characters ``%``;
     in this case this is used in a ``like`` comparison with the QueryBuilder.
@@ -39,18 +39,49 @@ class Autogroup:
     If none of the two is set, everything is included.
     """
 
-    def __init__(self):
-        """Initialize with defaults."""
-        self._exclude = None
-        self._include = None
+    def __init__(self, backend):
+        """Initialize the manager for the storage backend."""
+        self._backend = backend
 
-        now = timezone.now()
-        default_label_prefix = f"Verdi autogroup on {now.strftime('%Y-%m-%d %H:%M:%S')}"
-        self._group_label_prefix = default_label_prefix
+        self._enabled = False
+        self._exclude: Optional[List[str]] = None
+        self._include: Optional[List[str]] = None
+
+        self._group_label_prefix = f"Verdi autogroup on {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}"
         self._group_label = None  # Actual group label, set by `get_or_create_group`
 
+    @property
+    def is_enabled(self) -> bool:
+        """Return whether auto-grouping is enabled."""
+        return self._enabled
+
+    def enable(self) -> None:
+        """Enable the auto-grouping."""
+        self._enabled = True
+
+    def disable(self) -> None:
+        """Disable the auto-grouping."""
+        self._enabled = False
+
+    def get_exclude(self) -> Optional[List[str]]:
+        """Return the list of classes to exclude from autogrouping.
+
+        Returns ``None`` if no exclusion list has been set."""
+        return self._exclude
+
+    def get_include(self) -> Optional[List[str]]:
+        """Return the list of classes to include in the autogrouping.
+
+        Returns ``None`` if no inclusion list has been set."""
+        return self._include
+
+    def get_group_label_prefix(self) -> str:
+        """Get the prefix of the label of the group.
+        If no group label prefix was set, it will set a default one by itself."""
+        return self._group_label_prefix
+
     @staticmethod
-    def validate(strings):
+    def validate(strings: Optional[List[str]]):
         """Validate the list of strings passed to set_include and set_exclude."""
         if strings is None:
             return
@@ -66,24 +97,7 @@ class Autogroup:
                     f"'{string}' has an invalid prefix, must be among: {sorted(valid_prefixes)}"
                 )
 
-    def get_exclude(self):
-        """Return the list of classes to exclude from autogrouping.
-
-        Returns ``None`` if no exclusion list has been set."""
-        return self._exclude
-
-    def get_include(self):
-        """Return the list of classes to include in the autogrouping.
-
-        Returns ``None`` if no inclusion list has been set."""
-        return self._include
-
-    def get_group_label_prefix(self):
-        """Get the prefix of the label of the group.
-        If no group label prefix was set, it will set a default one by itself."""
-        return self._group_label_prefix
-
-    def set_exclude(self, exclude):
+    def set_exclude(self, exclude: Optional[List[str]]) -> None:
         """Set the list of classes to exclude in the autogrouping.
 
         :param exclude: a list of valid entry point strings (might contain '%' to be used as
@@ -98,7 +112,7 @@ class Autogroup:
             raise exceptions.ValidationError('Cannot both specify exclude and include')
         self._exclude = exclude
 
-    def set_include(self, include):
+    def set_include(self, include: Optional[List[str]]) -> None:
         """Set the list of classes to include in the autogrouping.
 
         :param include: a list of valid entry point strings (might contain '%' to be used as
@@ -113,13 +127,14 @@ class Autogroup:
             raise exceptions.ValidationError('Cannot both specify exclude and include')
         self._include = include
 
-    def set_group_label_prefix(self, label_prefix):
-        """
-        Set the label of the group to be created
-        """
+    def set_group_label_prefix(self, label_prefix: Optional[str]) -> None:
+        """Set the label of the group to be created (or use a default)."""
+        if label_prefix is None:
+            label_prefix = f"Verdi autogroup on {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}"
         if not isinstance(label_prefix, str):
             raise exceptions.ValidationError('group label must be a string')
         self._group_label_prefix = label_prefix
+        self._group_label = None  # reset the actual group label
 
     @staticmethod
     def _matches(string, filter_string):
@@ -127,7 +142,7 @@ class Autogroup:
 
         If 'filter_string' does not contain any % sign, perform an exact match.
         Otherwise, match with a SQL-like query, where % means any character sequence,
-        and _ means a single character (these caracters can be escaped with a backslash).
+        and _ means a single character (these characters can be escaped with a backslash).
 
         :param string: the string to match.
         :param filter_string: the filter string.
@@ -137,12 +152,10 @@ class Autogroup:
             return re.match(regex_filter, string) is not None
         return string == filter_string
 
-    def is_to_be_grouped(self, node):
-        """
-        Return whether the given node has to be included in the autogroup according to include/exclude list
-
-        :return (bool): True if ``node`` is to be included in the autogroup
-        """
+    def is_to_be_grouped(self, node) -> bool:
+        """Return whether the given node is to be auto-grouped according to enable state and include/exclude lists."""
+        if not self._enabled:
+            return False
         # strings, including possibly 'all'
         include = self.get_include()
         exclude = self.get_exclude()
@@ -165,14 +178,7 @@ class Autogroup:
         # soon as any of the filters matches)
         return not any(self._matches(entry_point_string, filter_string) for filter_string in exclude)
 
-    def clear_group_cache(self):
-        """Clear the cache of the group name.
-
-        This is mostly used by tests when they reset the database.
-        """
-        self._group_label = None
-
-    def get_or_create_group(self):
+    def get_or_create_group(self) -> AutoGroup:
         """Return the current `AutoGroup`, or create one if None has been set yet.
 
         This function implements a somewhat complex logic that is however needed
@@ -186,15 +192,13 @@ class Autogroup:
         trying to create a group with a different label (with a numeric suffix appended),
         until it manages to create it.
         """
-        from aiida.orm import QueryBuilder
-
         # When this function is called, if it is the first time, just generate
         # a new group name (later on, after this ``if`` block`).
         # In that case, we will later cache in ``self._group_label`` the group label,
         # So the group with the same name can be returned quickly in future
         # calls of this method.
         if self._group_label is not None:
-            builder = QueryBuilder().append(AutoGroup, filters={'label': self._group_label})
+            builder = QueryBuilder(backend=self._backend).append(AutoGroup, filters={'label': self._group_label})
             results = [res[0] for res in builder.iterall()]
             if results:
                 # If it is not empty, it should have only one result due to the uniqueness constraints
@@ -207,7 +211,7 @@ class Autogroup:
         label_prefix = self.get_group_label_prefix()
         # Try to do a preliminary QB query to avoid to do too many try/except
         # if many of the prefix_NUMBER groups already exist
-        queryb = QueryBuilder().append(
+        queryb = QueryBuilder(self._backend).append(
             AutoGroup,
             filters={
                 'or': [{
@@ -243,7 +247,7 @@ class Autogroup:
         while True:
             try:
                 label = label_prefix if counter == 0 else f'{label_prefix}_{counter}'
-                group = AutoGroup(label=label).store()
+                group = AutoGroup(backend=self._backend, label=label).store()
                 self._group_label = group.label
             except exceptions.IntegrityError:
                 counter += 1

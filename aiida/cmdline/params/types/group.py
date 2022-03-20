@@ -59,12 +59,15 @@ class GroupParamType(IdentifierParamType):
         return GroupEntityLoader
 
     @decorators.with_dbenv()
-    def complete(self, ctx, incomplete):  # pylint: disable=unused-argument
+    def shell_complete(self, ctx, param, incomplete):  # pylint: disable=unused-argument
         """Return possible completions based on an incomplete value.
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description
         """
-        return [(option, '') for option, in self.orm_class_loader.get_options(incomplete, project='label')]
+        return [
+            click.shell_completion.CompletionItem(option)
+            for option, in self.orm_class_loader.get_options(incomplete, project='label')
+        ]
 
     @decorators.with_dbenv()
     def convert(self, value, param, ctx):
@@ -74,7 +77,7 @@ class GroupParamType(IdentifierParamType):
             if self._create_if_not_exist:
                 # The particular subclass to load will be stored in `_sub_classes` as loaded by `convert` of the super.
                 cls = self._sub_classes[0]
-                group = cls(label=value)
+                group = cls(label=value).store()
             else:
                 raise
 

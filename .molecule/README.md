@@ -12,7 +12,7 @@ The simplest way to run these tests is to use the `tox` environment provided in 
 
 ```console
 $ pip install tox
-$ tox -e molecule-django
+$ tox -e molecule
 ```
 
 **NOTE**: if you wan to run molecule directly, ensure that you set `export MOLECULE_GLOB=.molecule/*/config_local.yml`.
@@ -29,26 +29,19 @@ This runs the `test` scenario (defined in `config_local.yml`) which:
 If you wish to setup the container for manual inspection (i.e. only run steps 2 - 4) you can run:
 
 ```console
-$ tox -e molecule-django converge
+$ tox -e molecule converge
 ```
 
 Then you can jump into this container or run the tests (step 5) separately with:
 
 ```console
-$ tox -e molecule-django validate
+$ tox -e molecule validate
 ```
 
 and finally run step 6:
 
 ```console
-$ tox -e molecule-django destroy
-```
-
-You can set up the aiida profile with either django or sqla,
-and even run both in parallel:
-
-```console
-$ tox -e molecule-django,molecule-sqla -p -- test --parallel
+$ tox -e molecule destroy
 ```
 
 ## Additional variables
@@ -56,5 +49,5 @@ $ tox -e molecule-django,molecule-sqla -p -- test --parallel
 You can specify the number of daemon workers to spawn using the `AIIDA_TEST_WORKERS` environment variable:
 
 ```console
-$ AIIDA_TEST_WORKERS=4 tox -e molecule-django
+$ AIIDA_TEST_WORKERS=4 tox -e molecule
 ```

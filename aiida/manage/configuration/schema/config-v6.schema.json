@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema",
-  "description": "Schema for AiiDA configuration files, format version 5",
+  "description": "Schema for AiiDA configuration files, format version 6",
   "type": "object",
   "definitions": {
     "options": {
@@ -184,7 +184,7 @@
             "backend": {
               "description": "The storage backend type to use",
               "type": "string",
-              "default": "django"
+              "default": "sqlalchemy"
             },
             "config": {
               "description": "The configuration to pass to the storage backend",

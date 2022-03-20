@@ -11,69 +11,72 @@
 """AiiDA manager for global settings"""
 import asyncio
 import functools
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Union
+from warnings import warn
 
 if TYPE_CHECKING:
     from kiwipy.rmq import RmqThreadCommunicator
     from plumpy.process_comms import RemoteProcessThreadController
 
-    from aiida.backends.manager import BackendManager
     from aiida.engine.daemon.client import DaemonClient
     from aiida.engine.persistence import AiiDAPersister
     from aiida.engine.runners import Runner
     from aiida.manage.configuration.config import Config
     from aiida.manage.configuration.profile import Profile
-    from aiida.orm.implementation import Backend
+    from aiida.orm.implementation import StorageBackend
 
-__all__ = ('get_manager', 'reset_manager')
+__all__ = ('get_manager',)
+
+MANAGER: Optional['Manager'] = None
+
+
+def get_manager() -> 'Manager':
+    """Return the AiiDA global manager instance."""
+    global MANAGER  # pylint: disable=global-statement
+    if MANAGER is None:
+        MANAGER = Manager()
+    return MANAGER
 
 
 class Manager:
-    """
-    Manager singleton to provide global versions of commonly used profile/settings related objects
-    and methods to facilitate their construction.
+    """Manager singleton for globally loaded resources.
 
-    In AiiDA the settings of many objects are tied to options defined in the current profile.  This
-    means that certain objects should be constructed in a way that depends on the profile.  Instead of
-    having disparate parts of the code accessing the profile we put together here the profile and methods
-    to create objects based on the current settings.
+    AiiDA can have the following global resources loaded:
 
-    It is also a useful place to put objects where there can be a single 'global' (per profile) instance.
+    1. A single configuration object that contains:
 
-    Future plans:
-      * reset manager cache when loading a new profile
+        - Global options overrides
+        - The name of a default profile
+        - A mapping of profile names to their configuration and option overrides
+
+    2. A single profile object that contains:
+
+        - The name of the profile
+        - The UUID of the profile
+        - The configuration of the profile, for connecting to storage and processing resources
+        - The option overrides for the profile
+
+    3. A single storage backend object for the profile, to connect to data storage resources
+    5. A single daemon client object for the profile, to connect to the AiiDA daemon
+    4. A single communicator object for the profile, to connect to the process control resources
+    6. A single process controller object for the profile, which uses the communicator to control process tasks
+    7. A single runner object for the profile, which uses the process controller to start and stop processes
+    8. A single persister object for the profile, which can persist running processes to the profile storage
+
     """
 
     def __init__(self) -> None:
-        self._backend: Optional['Backend'] = None
-        self._backend_manager: Optional['BackendManager'] = None
-        self._config: Optional['Config'] = None
-        self._daemon_client: Optional['DaemonClient'] = None
+        # note: the config currently references the global variables
         self._profile: Optional['Profile'] = None
+        self._profile_storage: Optional['StorageBackend'] = None
+        self._daemon_client: Optional['DaemonClient'] = None
         self._communicator: Optional['RmqThreadCommunicator'] = None
         self._process_controller: Optional['RemoteProcessThreadController'] = None
         self._persister: Optional['AiiDAPersister'] = None
         self._runner: Optional['Runner'] = None
 
-    def close(self) -> None:
-        """Reset the global settings entirely and release any global objects."""
-        if self._communicator is not None:
-            self._communicator.close()
-        if self._runner is not None:
-            self._runner.stop()
-
-        self._backend = None
-        self._backend_manager = None
-        self._config = None
-        self._profile = None
-        self._communicator = None
-        self._daemon_client = None
-        self._process_controller = None
-        self._persister = None
-        self._runner = None
-
     @staticmethod
-    def get_config() -> 'Config':
+    def get_config(create=False) -> 'Config':
         """Return the current config.
 
         :return: current loaded config instance
@@ -81,139 +84,165 @@ class Manager:
 
         """
         from .configuration import get_config
-        return get_config()
+        return get_config(create=create)
 
-    @staticmethod
-    def get_profile() -> Optional['Profile']:
+    def get_profile(self) -> Optional['Profile']:
         """Return the current loaded profile, if any
 
         :return: current loaded profile instance
-
         """
-        from .configuration import get_profile
-        return get_profile()
+        return self._profile
 
-    def unload_backend(self) -> None:
-        """Unload the current backend and its corresponding database environment."""
-        manager = self.get_backend_manager()
-        manager.reset_backend_environment()
-        self._backend = None
+    def load_profile(self, profile: Union[None, str, 'Profile'] = None, allow_switch=False) -> 'Profile':
+        """Load a global profile, unloading any previously loaded profile.
 
-    def _load_backend(self, schema_check: bool = True, repository_check: bool = True) -> 'Backend':
-        """Load the backend for the currently configured profile and return it.
+        .. note:: If a profile is already loaded and no explicit profile is specified, nothing will be done.
 
-        .. note:: this will reconstruct the `Backend` instance in `self._backend` so the preferred method to load the
-            backend is to call `get_backend` which will create it only when not yet instantiated.
+        :param profile: the name of the profile to load, by default will use the one marked as default in the config
+        :param allow_switch: if True, will allow switching to a different profile when storage is already loaded
 
-        :param schema_check: force a database schema check if the database environment has not yet been loaded.
-        :param repository_check: force a check that the database is associated with the repository that is configured
-            for the current profile.
-        :return: the database backend.
+        :return: the loaded `Profile` instance
+        :raises `aiida.common.exceptions.InvalidOperation`:
+            if another profile has already been loaded and allow_switch is False
         """
-        from aiida.backends import BACKEND_DJANGO, BACKEND_SQLA, get_backend_manager
-        from aiida.common import ConfigurationError, InvalidOperation
+        from aiida.common.exceptions import InvalidOperation
         from aiida.common.log import configure_logging
-        from aiida.manage import configuration
+        from aiida.manage.configuration.profile import Profile
+
+        # If a profile is already loaded and no explicit profile is specified, we do nothing
+        if profile is None and self._profile:
+            return self._profile
+
+        if profile is None or isinstance(profile, str):
+            profile = self.get_config().get_profile(profile)
+        elif not isinstance(profile, Profile):
+            raise TypeError(f'profile must be None, a string, or a Profile instance, got: {type(profile)}')
+
+        # If a profile is loaded and the specified profile name is that of the currently loaded, do nothing
+        if self._profile and (self._profile.name == profile.name):
+            return self._profile
+
+        if self._profile and self.profile_storage_loaded and not allow_switch:
+            raise InvalidOperation(
+                f'cannot switch to profile {profile.name!r} because profile {self._profile.name!r} storage '
+                'is already loaded and allow_switch is False'
+            )
+
+        self.unload_profile()
+        self._profile = profile
+
+        # Reconfigure the logging to make sure that profile specific logging config options are taken into account.
+        # Note that we do not configure with `with_orm=True` because that will force the backend to be loaded.
+        # This should instead be done lazily in `Manager.get_profile_storage`.
+        configure_logging()
+
+        # Check whether a development version is being run. Note that needs to be called after ``configure_logging``
+        # because this function relies on the logging being properly configured for the warning to show.
+        self.check_version()
+
+        return self._profile
+
+    def reset_profile(self) -> None:
+        """Close and reset any associated resources for the current profile."""
+        if self._profile_storage is not None:
+            self._profile_storage.close()
+        if self._communicator is not None:
+            self._communicator.close()
+        if self._runner is not None:
+            self._runner.stop()
+        self._profile_storage = None
+        self._communicator = None
+        self._daemon_client = None
+        self._process_controller = None
+        self._persister = None
+        self._runner = None
+
+    def unload_profile(self) -> None:
+        """Unload the current profile, closing any associated resources."""
+        self.reset_profile()
+        self._profile = None
+
+    @property
+    def profile_storage_loaded(self) -> bool:
+        """Return whether a storage backend has been loaded.
+
+        :return: boolean, True if database backend is currently loaded, False otherwise
+        """
+        return self._profile_storage is not None
+
+    def get_option(self, option_name: str) -> Any:
+        """Return the value of a configuration option.
+
+        In order of priority, the option is returned from:
+
+        1. The current profile, if loaded and the option specified
+        2. The current configuration, if loaded and the option specified
+        3. The default value for the option
+
+        :param option_name: the name of the option to return
+        :return: the value of the option
+        :raises `aiida.common.exceptions.ConfigurationError`: if the option is not found
+        """
+        from aiida.common.exceptions import ConfigurationError
+        from aiida.manage.configuration.options import get_option
+
+        # try the profile
+        if self._profile and option_name in self._profile.options:
+            return self._profile.get_option(option_name)
+        # try the config
+        try:
+            config = self.get_config(create=True)
+        except ConfigurationError:
+            pass
+        else:
+            if option_name in config.options:
+                return config.get_option(option_name)
+        # try the defaults (will raise ConfigurationError if not present)
+        option = get_option(option_name)
+        return option.default
+
+    def get_backend(self) -> 'StorageBackend':
+        """Return the current profile's storage backend, loading it if necessary.
+
+        Deprecated: use `get_profile_storage` instead.
+        """
+        from aiida.common.warnings import AiidaDeprecationWarning
+        warn('get_backend() is deprecated, use get_profile_storage() instead', AiidaDeprecationWarning)
+        return self.get_profile_storage()
+
+    def get_profile_storage(self) -> 'StorageBackend':
+        """Return the current profile's storage backend, loading it if necessary."""
+        from aiida.common import ConfigurationError
+        from aiida.common.log import configure_logging
         from aiida.manage.profile_access import ProfileAccessManager
 
-        profile = self.get_profile()
+        # if loaded, return the current storage backend (which is "synced" with the global profile)
+        if self._profile_storage is not None:
+            return self._profile_storage
 
+        # get the currently loaded profile
+        profile = self.get_profile()
         if profile is None:
             raise ConfigurationError(
                 'Could not determine the current profile. Consider loading a profile using `aiida.load_profile()`.'
             )
 
-        if configuration.BACKEND_UUID is not None and configuration.BACKEND_UUID != profile.uuid:
-            raise InvalidOperation('cannot load backend because backend of another profile is already loaded')
+        # request access to the profile (for example, if it is being used by a maintenance operation)
+        ProfileAccessManager(profile).request_access()
 
-        backend_manager = get_backend_manager(profile.storage_backend)
+        # retrieve the storage backend to use for the current profile
+        storage_cls = profile.storage_cls
 
-        # Do NOT reload the backend environment if already loaded, simply reload the backend instance after
-        if configuration.BACKEND_UUID is None:
-            access_manager = ProfileAccessManager(profile)
-            access_manager.request_access()
-            backend_manager.load_backend_environment(profile, validate_schema=schema_check)
-            configuration.BACKEND_UUID = profile.uuid
-
-        backend_type = profile.storage_backend
-
-        # Can only import the backend classes after the backend has been loaded
-        if backend_type == BACKEND_DJANGO:
-            from aiida.orm.implementation.django.backend import DjangoBackend
-            self._backend = DjangoBackend()
-        elif backend_type == BACKEND_SQLA:
-            from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
-            self._backend = SqlaBackend()
-        else:
-            raise ValueError(f'unknown database backend type: {backend_type}')
-
-        # Perform the check on the repository compatibility. Since this is new functionality and the stability is not
-        # yet known, we issue a warning in the case the repo and database are incompatible. In the future this might
-        # then become an exception once we have verified that it is working reliably.
-        if repository_check and not profile.is_test_profile:
-            repository_uuid_config = self._backend.get_repository().uuid
-            repository_uuid_database = backend_manager.get_repository_uuid()
-
-            from aiida.cmdline.utils import echo
-            if repository_uuid_config != repository_uuid_database:
-                echo.echo_warning(
-                    f'the database and repository configured for profile `{profile.name}` are incompatible:\n\n'
-                    f'Repository UUID in profile:  {repository_uuid_config}\n'
-                    f'Repository UUID in database: {repository_uuid_database}\n\n'
-                    'Using a database with an incompatible repository will prevent AiiDA from functioning properly.\n'
-                    'Please make sure that the configuration of your profile is correct.\n'
-                )
+        # now we can actually instatiate the backend and set the global variable, note:
+        # if the storage is not reachable, this will raise an exception
+        # if the storage schema is not at the latest version, this will except and the user will be informed to migrate
+        self._profile_storage = storage_cls(profile)
 
         # Reconfigure the logging with `with_orm=True` to make sure that profile specific logging configuration options
         # are taken into account and the `DbLogHandler` is configured.
         configure_logging(with_orm=True)
 
-        return self._backend
-
-    @property
-    def backend_loaded(self) -> bool:
-        """Return whether a database backend has been loaded.
-
-        :return: boolean, True if database backend is currently loaded, False otherwise
-        """
-        return self._backend is not None
-
-    def get_backend_manager(self) -> 'BackendManager':
-        """Return the database backend manager.
-
-        .. note:: this is not the actual backend, but a manager class that is necessary for database operations that
-            go around the actual ORM. For example when the schema version has not yet been validated.
-
-        :return: the database backend manager
-
-        """
-        from aiida.backends import get_backend_manager
-        from aiida.common import ConfigurationError
-
-        if self._backend_manager is None:
-
-            if self._backend is None:
-                self._load_backend()
-
-            profile = self.get_profile()
-            if profile is None:
-                raise ConfigurationError(
-                    'Could not determine the current profile. Consider loading a profile using `aiida.load_profile()`.'
-                )
-            self._backend_manager = get_backend_manager(profile.storage_backend)
-
-        return self._backend_manager
-
-    def get_backend(self) -> 'Backend':
-        """Return the database backend
-
-        :return: the database backend
-
-        """
-        if self._backend is None:
-            self._load_backend()
-
-        return self._backend
+        return self._profile_storage
 
     def get_persister(self) -> 'AiiDAPersister':
         """Return the persister
@@ -239,14 +268,10 @@ class Manager:
 
         return self._communicator
 
-    def create_communicator(
-        self, task_prefetch_count: Optional[int] = None, with_orm: bool = True
-    ) -> 'RmqThreadCommunicator':
+    def create_communicator(self, task_prefetch_count: Optional[int] = None) -> 'RmqThreadCommunicator':
         """Create a Communicator.
 
         :param task_prefetch_count: optional specify how many tasks this communicator take simultaneously
-        :param with_orm: if True, use ORM (de)serializers. If false, use json.
-            This is used by verdi status to get a communicator without needing to load the dbenv.
 
         :return: the communicator instance
 
@@ -255,6 +280,7 @@ class Manager:
 
         from aiida.common import ConfigurationError
         from aiida.manage.external import rmq
+        from aiida.orm.utils import serialize
 
         profile = self.get_profile()
         if profile is None:
@@ -263,21 +289,14 @@ class Manager:
             )
 
         if task_prefetch_count is None:
-            task_prefetch_count = self.get_config().get_option('daemon.worker_process_slots', profile.name)
+            task_prefetch_count = self.get_option('daemon.worker_process_slots')
 
         prefix = profile.rmq_prefix
 
-        if with_orm:
-            from aiida.orm.utils import serialize
-            encoder = functools.partial(serialize.serialize, encoding='utf-8')
-            decoder = serialize.deserialize_unsafe
-        else:
-            # used by verdi status to get a communicator without needing to load the dbenv
-            from aiida.common import json
-            encoder = functools.partial(json.dumps, encoding='utf-8')
-            decoder = json.loads
+        encoder = functools.partial(serialize.serialize, encoding='utf-8')
+        decoder = serialize.deserialize_unsafe
 
-        return kiwipy.rmq.RmqThreadCommunicator.connect(
+        communicator = kiwipy.rmq.RmqThreadCommunicator.connect(
             connection_params={'url': profile.get_rmq_url()},
             message_exchange=rmq.get_message_exchange_name(prefix),
             encoder=encoder,
@@ -285,11 +304,16 @@ class Manager:
             task_exchange=rmq.get_task_exchange_name(prefix),
             task_queue=rmq.get_launch_queue_name(prefix),
             task_prefetch_count=task_prefetch_count,
-            async_task_timeout=self.get_config().get_option('rmq.task_timeout', profile.name),
+            async_task_timeout=self.get_option('rmq.task_timeout'),
             # This is needed because the verdi commands will call this function and when called in unit tests the
             # testing_mode cannot be set.
             testing_mode=profile.is_test_profile,
         )
+
+        # Check whether a compatible version of RabbitMQ is being used.
+        self.check_rabbitmq_version(communicator)
+
+        return communicator
 
     def get_daemon_client(self) -> 'DaemonClient':
         """Return the daemon client for the current profile.
@@ -351,13 +375,12 @@ class Manager:
         from aiida.common import ConfigurationError
         from aiida.engine import runners
 
-        config = self.get_config()
         profile = self.get_profile()
         if profile is None:
             raise ConfigurationError(
                 'Could not determine the current profile. Consider loading a profile using `aiida.load_profile()`.'
             )
-        poll_interval = 0.0 if profile.is_test_profile else config.get_option('runner.poll.interval', profile.name)
+        poll_interval = 0.0 if profile.is_test_profile else self.get_option('runner.poll.interval')
 
         settings = {'rmq_submit': False, 'poll_interval': poll_interval}
         settings.update(kwargs)
@@ -402,19 +425,65 @@ class Manager:
 
         return runner
 
+    def check_rabbitmq_version(self, communicator: 'RmqThreadCommunicator'):
+        """Check the version of RabbitMQ that is being connected to and emit warning if the version is not compatible.
 
-MANAGER: Optional[Manager] = None
+        Versions 3.8.15 and above are not compatible with AiiDA with default configuration.
+        """
+        from packaging.version import parse
+
+        from aiida.cmdline.utils import echo
+
+        show_warning = self.get_option('warnings.rabbitmq_version')
+        version = get_rabbitmq_version(communicator)
+
+        if show_warning and version >= parse('3.8.15'):
+            echo.echo_warning(f'RabbitMQ v{version} is not supported and will cause unexpected problems!')
+            echo.echo_warning('It can cause long-running workflows to crash and jobs to be submitted multiple times.')
+            echo.echo_warning('See https://github.com/aiidateam/aiida-core/wiki/RabbitMQ-version-to-use for details.')
+            return version, False
+
+        return version, True
+
+    def check_version(self):
+        """Check the currently installed version of ``aiida-core`` and warn if it is a post release development version.
+
+        The ``aiida-core`` package maintains the protocol that the ``develop`` branch will use a post release version
+        number. This means it will always append `.post0` to the version of the latest release. This should mean that if
+        this protocol is maintained properly, this method will print a warning if the currently installed version is a
+        post release development branch and not an actual release.
+        """
+        from packaging.version import parse
+
+        from aiida import __version__
+        from aiida.cmdline.utils import echo
+
+        # Showing of the warning can be turned off by setting the following option to false.
+        show_warning = self.get_option('warnings.development_version')
+        version = parse(__version__)
+
+        if version.is_postrelease and show_warning:
+            echo.echo_warning(f'You are currently using a post release development version of AiiDA: {version}')
+            echo.echo_warning('Be aware that this is not recommended for production and is not officially supported.')
+            echo.echo_warning('Databases used with this version may not be compatible with future releases of AiiDA')
+            echo.echo_warning('as you might not be able to automatically migrate your data.\n')
 
 
-def get_manager() -> Manager:
-    global MANAGER  # pylint: disable=global-statement
-    if MANAGER is None:
-        MANAGER = Manager()
-    return MANAGER
+def is_rabbitmq_version_supported(communicator: 'RmqThreadCommunicator') -> bool:
+    """Return whether the version of RabbitMQ configured for the current profile is supported.
+
+    Versions 3.8.15 and above are not compatible with AiiDA with default configuration.
+
+    :return: boolean whether the current RabbitMQ version is supported.
+    """
+    from packaging.version import parse
+    return get_rabbitmq_version(communicator) < parse('3.8.15')
 
 
-def reset_manager() -> None:
-    global MANAGER  # pylint: disable=global-statement
-    if MANAGER is not None:
-        MANAGER.close()
-        MANAGER = None
+def get_rabbitmq_version(communicator: 'RmqThreadCommunicator'):
+    """Return the version of the RabbitMQ server that the current profile connects to.
+
+    :return: :class:`packaging.version.Version`
+    """
+    from packaging.version import parse
+    return parse(communicator.server_properties['version'].decode('utf-8'))

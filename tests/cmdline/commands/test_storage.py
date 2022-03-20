@@ -10,17 +10,26 @@
 """Tests for `verdi storage`."""
 import pytest
 
+from aiida import get_profile
 from aiida.cmdline.commands import cmd_storage
 from aiida.common import exceptions
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
+def tests_storage_version(run_cli_command):
+    """Test the ``verdi storage version`` command."""
+    result = run_cli_command(cmd_storage.storage_version)
+    version = get_profile().storage_cls.version_profile(get_profile())
+    assert version in result.output
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
 def tests_storage_info(aiida_localhost, run_cli_command):
-    """Test the ``verdi storage info`` command with the ``-statistics`` option."""
+    """Test the ``verdi storage info`` command with the ``--detailed`` option."""
     from aiida import orm
     node = orm.Dict().store()
 
-    result = run_cli_command(cmd_storage.storage_info, options=['--statistics'])
+    result = run_cli_command(cmd_storage.storage_info, options=['--detailed'])
 
     assert aiida_localhost.label in result.output
     assert node.node_type in result.output
@@ -29,12 +38,12 @@ def tests_storage_info(aiida_localhost, run_cli_command):
 def tests_storage_migrate_force(run_cli_command):
     """Test the ``verdi storage migrate`` command (with force option)."""
     result = run_cli_command(cmd_storage.storage_migrate, options=['--force'])
-    assert result.output == ''
+    assert 'Migrating to the head of the main branch' in result.output
 
 
 def tests_storage_migrate_interactive(run_cli_command):
     """Test the ``verdi storage migrate`` command (with interactive prompt)."""
-    from aiida.manage.manager import get_manager
+    from aiida.manage import get_manager
     profile = get_manager().get_profile()
 
     result = run_cli_command(cmd_storage.storage_migrate, user_input='MIGRATE NOW')
@@ -68,7 +77,7 @@ def tests_storage_migrate_cancel_prompt(run_cli_command, monkeypatch):
 
 @pytest.mark.parametrize('raise_type', [
     exceptions.ConfigurationError,
-    exceptions.DatabaseMigrationError,
+    exceptions.StorageMigrationError,
 ])
 @pytest.mark.parametrize(
     'call_kwargs', [
@@ -91,13 +100,13 @@ def tests_storage_migrate_raises(run_cli_command, raise_type, call_kwargs, monke
     Instead, the class of the object needs to be patched so that all further created
     objects will have the modified method.
     """
-    from aiida.manage.manager import get_manager
+    from aiida.manage import get_manager
     manager = get_manager()
 
     def mocked_migrate(self):  # pylint: disable=no-self-use
         raise raise_type('passed error message')
 
-    monkeypatch.setattr(manager.get_backend().__class__, 'migrate', mocked_migrate)
+    monkeypatch.setattr(manager.get_profile_storage().__class__, 'migrate', mocked_migrate)
     result = run_cli_command(cmd_storage.storage_migrate, **call_kwargs)
 
     assert result.exc_info[0] is SystemExit
@@ -109,15 +118,24 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch, caplog):
     """Test all the information and cases of the storage maintain command."""
     import logging
 
-    from aiida.backends import control
+    from aiida.manage import get_manager
+    storage = get_manager().get_profile_storage()
 
-    def mock_maintain(**kwargs):
-        logmsg = 'Provided kwargs:\n'
+    def mock_maintain(*args, **kwargs):
+        """Mocks for `maintain` method of `storage`, logging the inputs passed."""
+        log_message = ''
+
+        log_message += 'Provided args:\n'
+        for arg in args:
+            log_message += f' > {arg}\n'
+
+        log_message += 'Provided kwargs:\n'
         for key, val in kwargs.items():
-            logmsg += f' > {key}: {val}\n'
-        logging.info(logmsg)
+            log_message += f' > {key}: {val}\n'
 
-    monkeypatch.setattr(control, 'repository_maintain', mock_maintain)
+        logging.info(log_message)
+
+    monkeypatch.setattr(storage, 'maintain', mock_maintain)
 
     with caplog.at_level(logging.INFO):
         _ = run_cli_command(cmd_storage.storage_maintain, user_input='Y')

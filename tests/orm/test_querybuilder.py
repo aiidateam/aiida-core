@@ -19,12 +19,11 @@ import pytest
 
 from aiida import orm, plugins
 from aiida.common.links import LinkType
-from aiida.manage import configuration
 from aiida.orm.querybuilder import _get_ormclass
 from aiida.orm.utils.links import LinkQuadruple
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 class TestBasic:
 
     def test_date_filters_support(self):
@@ -650,7 +649,7 @@ class TestBasic:
         assert res2 == {d2.id, d4.id}
 
     @staticmethod
-    def test_flat():
+    def test_all_flat():
         """Test the `flat` keyword for the `QueryBuilder.all()` method."""
         pks = []
         uuids = []
@@ -666,12 +665,25 @@ class TestBasic:
         assert len(result) == 10
         assert result == pks
 
-        # Mutltiple projections
+        # Multiple projections
         builder = orm.QueryBuilder().append(orm.Data, project=['id', 'uuid']).order_by({orm.Data: 'id'})
         result = builder.all(flat=True)
         assert isinstance(result, list)
         assert len(result) == 20
         assert result == list(chain.from_iterable(zip(pks, uuids)))
+
+    @staticmethod
+    def test_first_flat():
+        """Test the `flat` keyword for the `QueryBuilder.first()` method."""
+        node = orm.Data().store()
+
+        # Single projected property
+        query = orm.QueryBuilder().append(orm.Data, project='id', filters={'id': node.pk})
+        assert query.first(flat=True) == node.pk
+
+        # Mutltiple projections
+        query = orm.QueryBuilder().append(orm.Data, project=['id', 'uuid'], filters={'id': node.pk})
+        assert query.first(flat=True) == [node.pk, node.uuid]
 
     def test_query_links(self):
         """Test querying for links"""
@@ -695,7 +707,7 @@ class TestBasic:
         assert builder.one()[0] == LinkQuadruple(d2.id, c2.id, LinkType.INPUT_CALC.value, 'link_d2c2')
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 class TestMultipleProjections:
     """Unit tests for the QueryBuilder ORM class."""
 
@@ -704,20 +716,23 @@ class TestMultipleProjections:
         orm.Data().store()
         orm.Data().store()
 
-        result = orm.QueryBuilder().append(orm.User, tag='user',
-                                           project=['email']).append(orm.Data, with_user='user', project=['*']).first()
+        query = orm.QueryBuilder()
+        query.append(orm.User, tag='user', project=['email'])
+        query.append(orm.Data, with_user='user', project=['*'])
+
+        result = query.first()
 
         assert isinstance(result, list)
         assert len(result) == 2
-        assert isinstance(result[0], str)
-        assert isinstance(result[1], orm.Data)
+        assert isinstance(result[0], str)  # pylint: disable=unsubscriptable-object
+        assert isinstance(result[1], orm.Data)  # pylint: disable=unsubscriptable-object
 
 
 class TestRepresentations:
     """Test representing the query in different formats."""
 
     @pytest.fixture(autouse=True)
-    def init_db(self, clear_database_before_test, data_regression, file_regression):
+    def init_db(self, aiida_profile_clean, data_regression, file_regression):
         self.regress_dict = data_regression.check
         self.regress_str = file_regression.check
 
@@ -804,7 +819,7 @@ class TestRepresentations:
             assert sorted([uuid for uuid, in qb.all()]) == sorted([uuid for uuid, in qb_new.all()])
 
 
-def test_analyze_query(clear_database_before_test):
+def test_analyze_query(aiida_profile_clean):
     """Test the query plan is correctly generated."""
     qb = orm.QueryBuilder()
     # include literal values in test
@@ -814,7 +829,7 @@ def test_analyze_query(clear_database_before_test):
     assert 'uuid' in analysis_str, analysis_str
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 class TestQueryBuilderCornerCases:
     """
     In this class corner cases of QueryBuilder are added.
@@ -849,7 +864,7 @@ class TestQueryBuilderCornerCases:
         assert qb.count() == 1
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 class TestAttributes:
 
     def test_attribute_existence(self):
@@ -924,17 +939,12 @@ class TestAttributes:
         qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'==': '1'}}, project='uuid')
         res = [str(_) for _, in qb.all()]
         assert set(res) == set((n_str.uuid,))
-        if configuration.PROFILE.storage_backend == 'sqlalchemy':
-            # I can't query the length of an array with Django,
-            # so I exclude. Not the nicest way, But I would like to keep this piece
-            # of code because of the initialization part, that would need to be
-            # duplicated or wrapped otherwise.
-            qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'of_length': 3}}, project='uuid')
-            res = [str(_) for _, in qb.all()]
-            assert set(res) == set((n_arr.uuid,))
+        qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'of_length': 3}}, project='uuid')
+        res = [str(_) for _, in qb.all()]
+        assert set(res) == set((n_arr.uuid,))
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 class TestQueryBuilderLimitOffsets:
 
     def test_ordering_limits_offsets_of_results_general(self):
@@ -1002,7 +1012,7 @@ class TestQueryBuilderLimitOffsets:
         assert res == tuple(range(4, 1, -1))
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 class TestQueryBuilderJoins:
 
     def test_joins_node_incoming(self):
@@ -1190,7 +1200,7 @@ class TestQueryBuilderJoins:
 class QueryBuilderPath:
 
     @pytest.fixture(autouse=True)
-    def init_db(self, clear_database_before_test, backend):
+    def init_db(self, aiida_profile_clean, backend):
         self.backend = backend
 
     @staticmethod
@@ -1392,7 +1402,7 @@ class QueryBuilderPath:
         # self.assertTrue(set(next(zip(*qb.all()))), set([5]))
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 class TestConsistency:
 
     def test_create_node_and_query(self):
@@ -1433,7 +1443,7 @@ class TestConsistency:
 class TestManager:
 
     @pytest.fixture(autouse=True)
-    def init_db(self, clear_database_before_test, backend):
+    def init_db(self, aiida_profile_clean, backend):
         self.backend = backend
 
     def test_statistics(self):
@@ -1519,7 +1529,7 @@ class TestDoubleStar:
     """
 
     @pytest.fixture(autouse=True)
-    def init_db(self, clear_database_before_test, aiida_localhost):
+    def init_db(self, aiida_profile_clean, aiida_localhost):
         self.computer = aiida_localhost
 
     def test_authinfo(self):

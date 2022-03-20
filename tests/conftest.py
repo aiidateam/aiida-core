@@ -16,6 +16,7 @@ from typing import IO, List, Optional, Union
 import click
 import pytest
 
+from aiida import get_profile
 from aiida.manage.configuration import Config, Profile, get_config, load_profile
 
 pytest_plugins = ['aiida.manage.tests.pytest_fixtures', 'sphinx.testing.fixtures']  # pylint: disable=invalid-name
@@ -49,14 +50,14 @@ def non_interactive_editor(request):
         else:
             environ = None
         try:
-            process = subprocess.Popen(  # pylint: disable=consider-using-with
+            with subprocess.Popen(
                 f'{editor} {filename}',  # This is the line that we change removing `shlex_quote`
                 env=environ,
                 shell=True,
-            )
-            exit_code = process.wait()
-            if exit_code != 0:
-                raise click.ClickException(f'{editor}: Editing failed!')
+            ) as process:
+                exit_code = process.wait()
+                if exit_code != 0:
+                    raise click.ClickException(f'{editor}: Editing failed!')
         except OSError as exception:
             raise click.ClickException(f'{editor}: Editing failed: {exception}')
 
@@ -83,7 +84,7 @@ def generate_calc_job():
     def _generate_calc_job(folder, entry_point_name, inputs=None, return_process=False):
         """Fixture to generate a mock `CalcInfo` for testing calculation jobs."""
         from aiida.engine.utils import instantiate_process
-        from aiida.manage.manager import get_manager
+        from aiida.manage import get_manager
         from aiida.plugins import CalculationFactory
 
         inputs = inputs or {}
@@ -113,7 +114,7 @@ def generate_work_chain():
         :return: a `WorkChain` instance.
         """
         from aiida.engine.utils import instantiate_process
-        from aiida.manage.manager import get_manager
+        from aiida.manage import get_manager
         from aiida.plugins import WorkflowFactory
 
         inputs = inputs or {}
@@ -172,7 +173,7 @@ def isolated_config(monkeypatch):
 
     current_config = configuration.CONFIG
     configuration.CONFIG = copy.deepcopy(current_config)
-    configuration.CONFIG.set_default_profile(configuration.PROFILE.name, overwrite=True)
+    configuration.CONFIG.set_default_profile(configuration.get_profile().name, overwrite=True)
 
     try:
         yield configuration.CONFIG
@@ -191,15 +192,17 @@ def empty_config(tmp_path) -> Config:
     :return: a new empty config instance.
     """
     from aiida.common.utils import Capturing
-    from aiida.manage import configuration
-    from aiida.manage.configuration import reset_profile, settings
+    from aiida.manage import configuration, get_manager
+    from aiida.manage.configuration import settings
+
+    manager = get_manager()
 
     # Store the current configuration instance and config directory path
     current_config = configuration.CONFIG
     current_config_path = current_config.dirpath
-    current_profile_name = configuration.PROFILE.name
+    current_profile_name = configuration.get_profile().name
 
-    reset_profile()
+    manager.unload_profile()
     configuration.CONFIG = None
 
     # Create a temporary folder, set it as the current config directory path and reset the loaded configuration
@@ -217,10 +220,10 @@ def empty_config(tmp_path) -> Config:
     finally:
         # Reset the config folder path and the config instance. Note this will always be executed after the yield no
         # matter what happened in the test that used this fixture.
-        reset_profile()
+        manager.unload_profile()
         settings.AIIDA_CONFIG_FOLDER = current_config_path
         configuration.CONFIG = current_config
-        load_profile(current_profile_name)
+        manager.load_profile(current_profile_name)
 
 
 @pytest.fixture
@@ -237,7 +240,7 @@ def profile_factory() -> Profile:
         profile_dictionary = {
             'default_user_email': kwargs.pop('default_user_email', 'dummy@localhost'),
             'storage': {
-                'backend': kwargs.pop('storage_backend', 'django'),
+                'backend': kwargs.pop('storage_backend', 'psql_dos'),
                 'config': {
                     'database_engine': kwargs.pop('database_engine', 'postgresql_psycopg2'),
                     'database_hostname': kwargs.pop('database_hostname', 'localhost'),
@@ -278,8 +281,8 @@ def config_with_profile_factory(empty_config, profile_factory) -> Config:
     Example::
 
         def test_config_with_profile(config_with_profile_factory):
-            config = config_with_profile_factory(set_as_default=True, name='default', storage_backend='django')
-            assert config.current_profile.name == 'default'
+            config = config_with_profile_factory(name='default', set_as_default=True, load=True)
+            assert get_profile().name == 'default'
 
     As with `empty_config`, the currently loaded configuration and profile are stored in memory,
     and are automatically restored at the end of this context manager.
@@ -324,7 +327,7 @@ def config_with_profile(config_with_profile_factory):
 @pytest.fixture
 def manager(aiida_profile):  # pylint: disable=unused-argument
     """Get the ``Manager`` instance of the currently loaded profile."""
-    from aiida.manage.manager import get_manager
+    from aiida.manage import get_manager
     return get_manager()
 
 
@@ -339,30 +342,14 @@ def event_loop(manager):
 
 @pytest.fixture
 def backend(manager):
-    """Get the ``Backend`` instance of the currently loaded profile."""
-    return manager.get_backend()
+    """Get the ``Backend`` storage instance of the currently loaded profile."""
+    return manager.get_profile_storage()
 
 
 @pytest.fixture
 def communicator(manager):
     """Get the ``Communicator`` instance of the currently loaded profile to communicate with RabbitMQ."""
     return manager.get_communicator()
-
-
-@pytest.fixture
-def skip_if_not_django(backend):
-    """Fixture that will skip any test that uses it when a profile is loaded with any other backend then Django."""
-    from aiida.orm.implementation.django.backend import DjangoBackend
-    if not isinstance(backend, DjangoBackend):
-        pytest.skip('this test should only be run for the Django backend.')
-
-
-@pytest.fixture
-def skip_if_not_sqlalchemy(backend):
-    """Fixture that will skip any test that uses it when a profile is loaded with any other backend then SqlAlchemy."""
-    from aiida.orm.implementation.sqlalchemy.backend import SqlaBackend
-    if not isinstance(backend, SqlaBackend):
-        pytest.skip('this test should only be run for the SqlAlchemy backend.')
 
 
 @pytest.fixture(scope='function')
@@ -388,7 +375,6 @@ def override_logging(isolated_config):
 @pytest.fixture
 def with_daemon():
     """Starts the daemon process and then makes sure to kill it once the test is done."""
-    import signal
     import subprocess
     import sys
 
@@ -401,25 +387,21 @@ def with_daemon():
     env = get_env_with_venv_bin()
     env['PYTHONPATH'] = ':'.join(sys.path)
 
-    profile = get_config().current_profile
-    daemon = subprocess.Popen(  # pylint: disable=consider-using-with
+    profile = get_profile()
+
+    with subprocess.Popen(
         DaemonClient(profile).cmd_string.split(),
         stderr=sys.stderr,
         stdout=sys.stdout,
         env=env,
-    )
-
-    yield
-
-    # Note this will always be executed after the yield no matter what happened in the test that used this fixture.
-    os.kill(daemon.pid, signal.SIGTERM)
+    ):
+        yield
 
 
 @pytest.fixture
 def daemon_client():
     """Return a daemon client instance and stop any daemon instances running for the test profile after the test."""
     from aiida.engine.daemon.client import DaemonClient
-    from aiida.manage.configuration import get_profile
 
     client = DaemonClient(get_profile())
 
@@ -461,7 +443,7 @@ def run_cli_command(reset_log_level):  # pylint: disable=unused-argument
         :param user_input: string with data to be provided at the prompt. Can include newline characters to simulate
             responses to multiple prompts.
         :param raises: whether the command is expected to raise an exception.
-        :param catch_exceptions: if True and ``raise == False``, will assert that the exception is ``None`` and the exit
+        :param catch_exceptions: if True and ``raise is False``, will assert that the exception is ``None`` and the exit
             code of the result of the invoked command equals zero.
         :param kwargs: keyword arguments that will be psased to the command invocation.
         :return: test result.
@@ -470,7 +452,6 @@ def run_cli_command(reset_log_level):  # pylint: disable=unused-argument
 
         from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup
         from aiida.common import AttributeDict
-        from aiida.manage.configuration import get_profile
 
         config = get_config()
         profile = get_profile()
@@ -514,4 +495,4 @@ def reset_log_level():
         yield
     finally:
         log.CLI_LOG_LEVEL = None
-        log.configure_logging()
+        log.configure_logging(with_orm=True)

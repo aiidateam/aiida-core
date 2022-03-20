@@ -17,7 +17,7 @@ from wrapt import decorator
 
 from aiida.common.exceptions import InputValidationError, ValidationError
 from aiida.common.utils import DatetimePrecision
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 from aiida.restapi.common.exceptions import RestInputValidationError, RestValidationError
 
 # Important to match querybuilder keys
@@ -820,14 +820,16 @@ def list_routes():
 
 
 @decorator
-def close_session(wrapped, _, args, kwargs):
-    """Close AiiDA SQLAlchemy (QueryBuilder) session
+def close_thread_connection(wrapped, _, args, kwargs):
+    """Close the profile's storage connection, for the current thread.
 
-    This decorator can be used for router endpoints to close the SQLAlchemy global scoped session after the response
-    has been created. This is needed, since the QueryBuilder uses a SQLAlchemy global scoped session no matter the
-    profile's database backend.
+    This decorator can be used for router endpoints.
+    It is needed due to the server running in threaded mode, i.e., creating a new thread for each incoming request,
+    and leaving connections unreleased.
+
+    Note, this is currently hard-coded to the `PsqlDosBackend` storage backend.
     """
     try:
         return wrapped(*args, **kwargs)
     finally:
-        get_manager().get_backend().get_session().close()
+        get_manager().get_profile_storage().get_session().close()

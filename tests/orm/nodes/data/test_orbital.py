@@ -7,24 +7,26 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Tests for the `OrbitalData` class."""
-
 import copy
 
-from aiida.backends.testbase import AiidaTestCase
+import pytest
+
 from aiida.common import ValidationError
 from aiida.orm import OrbitalData
 from aiida.plugins import OrbitalFactory
 
 
-class TestOrbitalData(AiidaTestCase):
+class TestOrbitalData:
     """Test for the `OrbitalData` class."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
 
-        cls.my_real_hydrogen_dict = {
+        self.my_real_hydrogen_dict = {
             'angular_momentum': -3,
             'diffusivity': None,
             'kind_name': 'As',
@@ -44,25 +46,27 @@ class TestOrbitalData(AiidaTestCase):
         orbitaldata = OrbitalData()
 
         #Check that there is a failure if get_orbital is called for setting orbitals
-        self.assertRaises(AttributeError, orbitaldata.get_orbitals)
+        with pytest.raises(AttributeError):
+            orbitaldata.get_orbitals()
 
         #Check that only one orbital has been assiigned
         orbitaldata.set_orbitals(orbitals=orbital)
-        self.assertEqual(len(orbitaldata.get_orbitals()), 1)
+        assert len(orbitaldata.get_orbitals()) == 1
 
         #Check the orbital dict has been assigned correctly
         retrieved_real_hydrogen_dict = orbitaldata.get_orbitals()[0].get_orbital_dict()
-        self.assertEqual(retrieved_real_hydrogen_dict.pop('_orbital_type'), 'core.realhydrogen')
-        self.assertDictEqual(retrieved_real_hydrogen_dict, self.my_real_hydrogen_dict)
+        assert retrieved_real_hydrogen_dict.pop('_orbital_type') == 'core.realhydrogen'
+        assert retrieved_real_hydrogen_dict == self.my_real_hydrogen_dict
 
         #Check that a corrupted OribtalData fails on get_orbitals
         corrupted_orbitaldata = copy.deepcopy(orbitaldata)
         del corrupted_orbitaldata.get_attribute('orbital_dicts')[0]['_orbital_type']
-        self.assertRaises(ValidationError, corrupted_orbitaldata.get_orbitals)
+        with pytest.raises(ValidationError):
+            corrupted_orbitaldata.get_orbitals()
 
         #Check that clear_orbitals empties the data of orbitals
         orbitaldata.clear_orbitals()
-        self.assertEqual(len(orbitaldata.get_orbitals()), 0)
+        assert len(orbitaldata.get_orbitals()) == 0
 
 
 # verdi -p test_aiida devel tests db.orm.data.orbital

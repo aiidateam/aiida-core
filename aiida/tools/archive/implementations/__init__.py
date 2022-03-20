@@ -14,7 +14,7 @@
 # yapf: disable
 # pylint: disable=wildcard-import
 
-from .sqlite import *
+from .sqlite_zip import *
 
 __all__ = (
     'ArchiveFormatSqlZip',

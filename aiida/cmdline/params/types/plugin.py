@@ -159,13 +159,13 @@ class PluginParamType(EntryPointType):
 
         return possibilites
 
-    def complete(self, ctx, incomplete):  # pylint: disable=unused-argument
+    def shell_complete(self, ctx, param, incomplete):  # pylint: disable=unused-argument
         """
         Return possible completions based on an incomplete value
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description
         """
-        return [(p, '') for p in self.get_possibilities(incomplete=incomplete)]
+        return [click.shell_completion.CompletionItem(p) for p in self.get_possibilities(incomplete=incomplete)]
 
     def get_missing_message(self, param):  # pylint: disable=unused-argument
         return 'Possible arguments are:\n\n' + '\n'.join(self.get_valid_arguments())
@@ -196,12 +196,14 @@ class PluginParamType(EntryPointType):
         elif entry_point_format == EntryPointFormat.MINIMAL:
 
             name = entry_point_string
-            matching_groups = [group for group, entry_point in self._entry_points if entry_point.name == name]
+            matching_groups = {group for group, entry_point in self._entry_points if entry_point.name == name}
 
             if len(matching_groups) > 1:
                 raise ValueError(
                     "entry point '{}' matches more than one valid entry point group [{}], "
-                    'please specify an explicit group prefix'.format(name, ' '.join(matching_groups))
+                    'please specify an explicit group prefix: {}'.format(
+                        name, ' '.join(matching_groups), self._entry_points
+                    )
                 )
             elif not matching_groups:
                 raise ValueError(
@@ -209,7 +211,7 @@ class PluginParamType(EntryPointType):
                     'entry point groups: {}'.format(name, ' '.join(self.groups))
                 )
 
-            group = matching_groups[0]
+            group = matching_groups.pop()
 
         else:
             ValueError(f'invalid entry point string format: {entry_point_string}')

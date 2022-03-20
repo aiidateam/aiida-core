@@ -17,15 +17,12 @@ Testing infrastructure for easy testing of AiiDA plugins.
 # pylint: disable=wildcard-import
 
 from .main import *
-from .unittest_classes import *
 
 __all__ = (
-    'PluginTestCase',
     'ProfileManager',
     'TemporaryProfileManager',
     'TestManager',
     'TestManagerError',
-    'TestRunner',
     'get_test_backend_name',
     'get_test_profile_name',
     'get_user_dict',

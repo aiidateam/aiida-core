@@ -14,11 +14,13 @@ Note that the backend implementation is enforced and handled with a composition 
 :func:`QueryBuilder` is the frontend class that the user can use. It inherits from *object* and contains
 backend-specific functionality. Backend specific functionality is provided by the implementation classes.
 
-These inherit from :func:`aiida.orm.implementation.BackendQueryBuilder`,
+These inherit from :func:`aiida.orm.implementation.querybuilder.BackendQueryBuilder`,
 an interface classes which enforces the implementation of its defined methods.
 An instance of one of the implementation classes becomes a member of the :func:`QueryBuilder` instance
 when instantiated by the user.
 """
+from __future__ import annotations
+
 from copy import deepcopy
 from inspect import isclass as inspect_isclass
 from typing import (
@@ -27,6 +29,7 @@ from typing import (
     Dict,
     Iterable,
     List,
+    Literal,
     NamedTuple,
     Optional,
     Sequence,
@@ -35,10 +38,11 @@ from typing import (
     Type,
     Union,
     cast,
+    overload,
 )
 import warnings
 
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.querybuilder import (
     GROUP_ENTITY_TYPE_PREFIX,
@@ -53,7 +57,7 @@ from . import authinfos, comments, computers, convert, entities, groups, logs, n
 if TYPE_CHECKING:
     # pylint: disable=ungrouped-imports
     from aiida.engine import Process
-    from aiida.orm.implementation import Backend
+    from aiida.orm.implementation import StorageBackend
 
 __all__ = ('QueryBuilder',)
 
@@ -94,7 +98,7 @@ class QueryBuilder:
 
     def __init__(
         self,
-        backend: Optional['Backend'] = None,
+        backend: Optional['StorageBackend'] = None,
         *,
         debug: bool = False,
         path: Optional[Sequence[Union[str, Dict[str, Any], EntityClsType]]] = (),
@@ -136,7 +140,7 @@ class QueryBuilder:
         :param distinct: Whether to return de-duplicated rows
 
         """
-        self._backend = backend or get_manager().get_backend()
+        self._backend = backend or get_manager().get_profile_storage()
         self._impl: BackendQueryBuilder = self._backend.query()
 
         # SERIALISABLE ATTRIBUTES
@@ -190,7 +194,7 @@ class QueryBuilder:
             self.order_by(order_by)
 
     @property
-    def backend(self) -> 'Backend':
+    def backend(self) -> 'StorageBackend':
         """Return the backend used by the QueryBuilder."""
         return self._backend
 
@@ -212,6 +216,10 @@ class QueryBuilder:
     @property
     def queryhelp(self) -> 'QueryDictType':
         """"Legacy name for ``as_dict`` method."""
+        from aiida.common.warnings import AiidaDeprecationWarning
+        warnings.warn(
+            '`QueryBuilder.queryhelp` is deprecated, use `QueryBuilder.as_dict()` instead', AiidaDeprecationWarning
+        )
         return self.as_dict()
 
     @classmethod
@@ -989,12 +997,23 @@ class QueryBuilder:
         except TypeError:
             return value
 
-    def first(self) -> Optional[List[Any]]:
-        """Executes the query, asking for the first row of results.
+    @overload
+    def first(self, flat: Literal[False]) -> Optional[list[Any]]:
+        ...
 
-        Note, this may change if several rows are valid for the query,
-        as persistent ordering is not guaranteed unless explicitly specified.
+    @overload
+    def first(self, flat: Literal[True]) -> Optional[Any]:
+        ...
 
+    def first(self, flat: bool = False) -> Optional[list[Any] | Any]:
+        """Return the first result of the query.
+
+        Calling ``first`` results in an execution of the underlying query.
+
+        Note, this may change if several rows are valid for the query, as persistent ordering is not guaranteed unless
+        explicitly specified.
+
+        :param flat: if True, return just the projected quantity if there is just a single projection.
         :returns: One row of results as a list, or None if no result returned.
         """
         result = self._impl.first(self.as_dict())
@@ -1002,7 +1021,12 @@ class QueryBuilder:
         if result is None:
             return None
 
-        return [self._get_aiida_entity_res(rowitem) for rowitem in result]
+        result = [self._get_aiida_entity_res(rowitem) for rowitem in result]
+
+        if flat and len(result) == 1:
+            return result[0]
+
+        return result
 
     def count(self) -> int:
         """

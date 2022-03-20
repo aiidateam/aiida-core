@@ -17,7 +17,7 @@ from aiida import orm
 from aiida.common.links import LinkType
 from aiida.orm.utils import serialize
 
-pytestmark = pytest.mark.usefixtures('clear_database_before_test')
+pytestmark = pytest.mark.usefixtures('aiida_profile_clean')
 
 
 def test_serialize_round_trip():

@@ -14,13 +14,13 @@ import warnings
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 
 from . import convert, entities, users
 
 if TYPE_CHECKING:
     from aiida.orm import Node, User
-    from aiida.orm.implementation import Backend, BackendGroup
+    from aiida.orm.implementation import BackendGroup, StorageBackend
 
 __all__ = ('Group', 'AutoGroup', 'ImportGroup', 'UpfFamily')
 
@@ -119,7 +119,7 @@ class Group(entities.Entity['BackendGroup'], entities.EntityExtrasMixin, metacla
 
     @classproperty
     def objects(cls: Type['Group']) -> GroupCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
-        return GroupCollection.get_cached(cls, get_manager().get_backend())
+        return GroupCollection.get_cached(cls, get_manager().get_profile_storage())
 
     def __init__(
         self,
@@ -127,7 +127,7 @@ class Group(entities.Entity['BackendGroup'], entities.EntityExtrasMixin, metacla
         user: Optional['User'] = None,
         description: str = '',
         type_string: Optional[str] = None,
-        backend: Optional['Backend'] = None
+        backend: Optional['StorageBackend'] = None
     ):
         """
         Create a new group. Either pass a dbgroup parameter, to reload
@@ -143,7 +143,7 @@ class Group(entities.Entity['BackendGroup'], entities.EntityExtrasMixin, metacla
         if not label:
             raise ValueError('Group label must be provided')
 
-        backend = backend or get_manager().get_backend()
+        backend = backend or get_manager().get_profile_storage()
         user = user or users.User.objects(backend).get_default()
         type_check(user, users.User)
         type_string = self._type_string
@@ -320,7 +320,7 @@ class Group(entities.Entity['BackendGroup'], entities.EntityExtrasMixin, metacla
 
 
 class AutoGroup(Group):
-    """Group to be used to contain selected nodes generated while `aiida.orm.autogroup.CURRENT_AUTOGROUP` is set."""
+    """Group to be used to contain selected nodes generated, whilst autogrouping is enabled."""
 
 
 class ImportGroup(Group):

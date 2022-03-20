@@ -4,15 +4,12 @@ import importlib
 import json
 import typing
 
-from aiida.orm import Data
+from .data import Data
 
-try:
-    from typing import Protocol
-except ImportError:  # Python <3.8 doesn't have `Protocol` in the stdlib
-    from typing_extensions import Protocol  # type: ignore[misc]
+__all__ = ('JsonableData',)
 
 
-class JsonSerializableProtocol(Protocol):
+class JsonSerializableProtocol(typing.Protocol):
 
     def as_dict(self) -> typing.MutableMapping[typing.Any, typing.Any]:
         ...

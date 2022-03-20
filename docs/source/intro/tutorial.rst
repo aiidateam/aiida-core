@@ -611,7 +611,6 @@ We have compiled how-to guides that are especially relevant for the following us
 .. div:: dropdown-group
 
     .. dropdown:: Run pure Python lightweight computations
-        :container:
 
         Designing a workflow
             After reading the :ref:`Basic Tutorial <tutorial:basic>`, you may want to learn about how to encode the logic of a typical scientific workflow in the :ref:`writing workflows how-to <how-to:write-workflows>`.
@@ -629,7 +628,6 @@ We have compiled how-to guides that are especially relevant for the following us
             Once you have a working computation workflow, you may also wish to :ref:`package it into a python module <how-to:plugins-develop>` for others to use.
 
     .. dropdown:: Run compute-intensive codes
-        :container:
 
         Working with external codes
             Existing calculation plugins, for interfacing with external codes, are available on the `aiida plugin registry <https://aiidateam.github.io/aiida-registry/>`_.
@@ -644,7 +642,7 @@ We have compiled how-to guides that are especially relevant for the following us
     .. dropdown:: Run computations on High Performance Computers
 
         Connecting to supercomputers
-            To setup up a computer which can communicate with a high-performance computer over SSH, see the :ref:`how-to for running external codes <how-to:run-codes>`, or add a :ref:`custom transport <how-to:plugin-codes:transport>`.
+            To setup up a computer which can communicate with a high-performance computer over SSH, see the :ref:`how-to for running external codes <how-to:run-codes>`, or add a :ref:`custom transport <topics:transport:develop_plugin>`.
             AiiDA has pre-written scheduler plugins to work with LSF, PBSPro, SGE, Slurm and Torque.
 
         Working with external codes
@@ -664,4 +662,4 @@ We have compiled how-to guides that are especially relevant for the following us
 
 .. todo::
 
-    Add to "Connecting to supercomputers": , or you can add a :ref:`custom scheduler <how-to:plugin-codes:scheduler>`.
+    Add to "Connecting to supercomputers": , or you can add a :ref:`custom scheduler <topics:schedulers:develop_plugin>`.

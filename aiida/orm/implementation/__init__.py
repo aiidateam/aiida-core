@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module with the implementations of the various backend entities for various database backends."""
+"""Module containing the backend entity abstracts for storage backends."""
 
 # AUTO-GENERATED
 
@@ -15,7 +15,6 @@
 # pylint: disable=wildcard-import
 
 from .authinfos import *
-from .backends import *
 from .comments import *
 from .computers import *
 from .entities import *
@@ -23,11 +22,11 @@ from .groups import *
 from .logs import *
 from .nodes import *
 from .querybuilder import *
+from .storage_backend import *
 from .users import *
 from .utils import *
 
 __all__ = (
-    'Backend',
     'BackendAuthInfo',
     'BackendAuthInfoCollection',
     'BackendCollection',
@@ -47,6 +46,7 @@ __all__ = (
     'BackendUser',
     'BackendUserCollection',
     'EntityType',
+    'StorageBackend',
     'clean_value',
     'validate_attribute_extra_key',
 )

@@ -16,7 +16,7 @@ from aiida.tools.groups.paths import GroupAttr, GroupNotFoundError, GroupPath, I
 
 
 @pytest.fixture
-def setup_groups(clear_database_before_test):
+def setup_groups(aiida_profile_clean):
     """Setup some groups for testing."""
     for label in ['a', 'a/b', 'a/c/d', 'a/c/e/g', 'a/f']:
         group, _ = orm.Group.objects.get_or_create(label)
@@ -117,7 +117,7 @@ def test_walk(setup_groups):
 
 
 @pytest.mark.filterwarnings('ignore::UserWarning')
-def test_walk_with_invalid_path(clear_database_before_test):
+def test_walk_with_invalid_path(aiida_profile_clean):
     """Test the ``GroupPath.walk`` method with invalid paths."""
     for label in ['a', 'a/b', 'a/c/d', 'a/c/e/g', 'a/f', 'bad//group', 'bad/other']:
         orm.Group.objects.get_or_create(label)
@@ -126,7 +126,7 @@ def test_walk_with_invalid_path(clear_database_before_test):
     assert [c.path for c in sorted(group_path.walk())] == expected
 
 
-def test_walk_nodes(clear_database_before_test):
+def test_walk_nodes(aiida_profile_clean):
     """Test the ``GroupPath.walk_nodes()`` function."""
     group, _ = orm.Group.objects.get_or_create('a')
     node = orm.Data()
@@ -137,7 +137,7 @@ def test_walk_nodes(clear_database_before_test):
     assert [(r.group_path.path, r.node.attributes) for r in group_path.walk_nodes()] == [('a', {'i': 1, 'j': 2})]
 
 
-def test_cls(clear_database_before_test):
+def test_cls(aiida_profile_clean):
     """Test that only instances of `cls` or its subclasses are matched by ``GroupPath``."""
     for label in ['a', 'a/b', 'a/c/d', 'a/c/e/g']:
         orm.Group.objects.get_or_create(label)
@@ -150,7 +150,7 @@ def test_cls(clear_database_before_test):
     assert GroupPath('a/b/c') != GroupPath('a/b/c', cls=orm.UpfFamily)
 
 
-def test_attr(clear_database_before_test):
+def test_attr(aiida_profile_clean):
     """Test ``GroupAttr``."""
     for label in ['a', 'a/b', 'a/c/d', 'a/c/e/g', 'a/f', 'bad space', 'bad@char', '_badstart']:
         orm.Group.objects.get_or_create(label)
@@ -163,7 +163,7 @@ def test_attr(clear_database_before_test):
         group_path.browse.a.c.x  # pylint: disable=pointless-statement
 
 
-def test_cls_label_clashes(clear_database_before_test):
+def test_cls_label_clashes(aiida_profile_clean):
     """Test behaviour when multiple group classes have the same label."""
     group_01, _ = orm.Group.objects.get_or_create('a')
     node_01 = orm.Data().store()

@@ -11,19 +11,19 @@
 """`verdi archive` command."""
 from enum import Enum
 import logging
+from pathlib import Path
 import traceback
 from typing import List, Tuple
 import urllib.request
 
 import click
 from click_spinner import spinner
-import tabulate
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types import GroupParamType, PathOrUrl
 from aiida.cmdline.utils import decorators, echo
-from aiida.cmdline.utils.common import get_database_summary
+from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, UnreachableStorage
 from aiida.common.links import GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
 
@@ -37,68 +37,68 @@ def verdi_archive():
     """Create, inspect and import AiiDA archives."""
 
 
-@verdi_archive.command('inspect')
+@verdi_archive.command('version')
+@click.argument('path', nargs=1, type=click.Path(exists=True, readable=True))
+def archive_version(path):
+    """Print the current version of an archive's schema."""
+    # note: this mirrors `cmd_storage:storage_version`
+    # it is currently hardcoded to the `SqliteZipBackend`, but could be generalized in the future
+    from aiida.storage.sqlite_zip.backend import SqliteZipBackend
+    storage_cls = SqliteZipBackend
+    profile = storage_cls.create_profile(path)
+    head_version = storage_cls.version_head()
+    try:
+        profile_version = storage_cls.version_profile(profile)
+    except (UnreachableStorage, CorruptStorage) as exc:
+        echo.echo_critical(f'archive file version unreadable: {exc}')
+    echo.echo(f'Latest archive schema version: {head_version!r}')
+    echo.echo(f'Archive schema version of {Path(path).name!r}: {profile_version!r}')
+
+
+@verdi_archive.command('info')
+@click.argument('path', nargs=1, type=click.Path(exists=True, readable=True))
+@click.option('--detailed', is_flag=True, help='Provides more detailed information.')
+def archive_info(path, detailed):
+    """Summarise the contents of an archive."""
+    # note: this mirrors `cmd_storage:storage_info`
+    # it is currently hardcoded to the `SqliteZipBackend`, but could be generalized in the future
+    from aiida.storage.sqlite_zip.backend import SqliteZipBackend
+    try:
+        storage = SqliteZipBackend(SqliteZipBackend.create_profile(path))
+    except (UnreachableStorage, CorruptStorage) as exc:
+        echo.echo_critical(f'archive file unreadable: {exc}')
+    except IncompatibleStorageSchema as exc:
+        echo.echo_critical(f'archive version incompatible: {exc}')
+    with spinner():
+        try:
+            data = storage.get_info(detailed=detailed)
+        finally:
+            storage.close()
+
+    echo.echo_dictionary(data, sort_keys=False, fmt='yaml')
+
+
+@verdi_archive.command('inspect', hidden=True)
 @click.argument('archive', nargs=1, type=click.Path(exists=True, readable=True))
 @click.option('-v', '--version', is_flag=True, help='Print the archive format version and exit.')
 @click.option('-m', '--meta-data', is_flag=True, help='Print the meta data contents and exit.')
 @click.option('-d', '--database', is_flag=True, help='Include information on entities in the database.')
-def inspect(archive, version, meta_data, database):
+@decorators.deprecated_command(
+    'This command has been deprecated and will be removed soon. '
+    'Please call `verdi archive version` or `verdi archive info` instead.\n'
+)
+@click.pass_context
+def inspect(ctx, archive, version, meta_data, database):  # pylint: disable=unused-argument
     """Inspect contents of an archive without importing it.
 
-    By default a summary of the archive contents will be printed.
-    The various options can be used to change exactly what information is displayed.
+    .. deprecated:: v2.0.0, use `verdi archive version` or `verdi archive info` instead.
     """
-    from aiida.tools.archive.abstract import get_format
-    from aiida.tools.archive.exceptions import UnreadableArchiveError
-
-    archive_format = get_format()
-    latest_version = archive_format.latest_version
-    try:
-        current_version = archive_format.read_version(archive)
-    except UnreadableArchiveError as exc:
-        echo.echo_critical(f'archive file of unknown format: {exc}')
-
     if version:
-        echo.echo(current_version)
-        return
-
-    if current_version != latest_version:
-        echo.echo_critical(
-            f"Archive version is not the latest: '{current_version}' != '{latest_version}'. "
-            'Use `verdi migrate` to upgrade to the latest version'
-        )
-
-    with archive_format.open(archive, 'r') as archive_reader:
-        metadata = archive_reader.get_metadata()
-
-    if meta_data:
-        echo.echo_dictionary(metadata, sort_keys=False)
-        return
-
-    statistics = {
-        name: metadata[key] for key, name in [
-            ['export_version', 'Version archive'],
-            ['aiida_version', 'Version aiida'],
-            ['compression', 'Compression'],
-            ['ctime', 'Created'],
-            ['mtime', 'Modified'],
-        ] if key in metadata
-    }
-    if 'conversion_info' in metadata:
-        statistics['Conversion info'] = '\n'.join(metadata['conversion_info'])
-
-    echo.echo(tabulate.tabulate(statistics.items()))
-
-    if database:
-        echo.echo('')
-        echo.echo('Database statistics')
-        echo.echo('-------------------')
-        with spinner():
-            with archive_format.open(archive, 'r') as archive_reader:
-                data = get_database_summary(archive_reader.querybuilder, True)
-                repo = archive_reader.get_backend().get_repository()
-                data['Repo Files'] = {'count': sum(1 for _ in repo.list_objects())}
-        echo.echo_dictionary(data, sort_keys=False, fmt='yaml')
+        ctx.invoke(archive_version, path=archive)
+    elif database:
+        ctx.invoke(archive_info, path=archive, detailed=True)
+    else:
+        ctx.invoke(archive_info, path=archive, detailed=False)
 
 
 @verdi_archive.command('create')
@@ -139,7 +139,7 @@ def create(
     create_backward, return_backward, call_calc_backward, call_work_backward, include_comments, include_logs,
     include_authinfos, compress, batch_size, test_run
 ):
-    """Write subsets of the provenance graph to a single file.
+    """Create an archive from all or part of a profiles's data.
 
     Besides Nodes of the provenance graph, you can archive Groups, Codes, Computers, Comments and Logs.
 
@@ -217,7 +217,7 @@ def create(
     help='Archive format version to migrate to (defaults to latest version).',
 )
 def migrate(input_file, output_file, force, in_place, version):
-    """Migrate an export archive to a more recent format version."""
+    """Migrate an archive to a more recent schema version."""
     from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
     from aiida.tools.archive.abstract import get_format
 
@@ -251,7 +251,7 @@ def migrate(input_file, output_file, force, in_place, version):
             f'{error.__class__.__name__}:{error}'
         )
 
-    echo.echo_success(f'migrated the archive to version {version}')
+    echo.echo_success(f'migrated the archive to version {version!r}')
 
 
 class ExtrasImportCode(Enum):
@@ -336,7 +336,7 @@ def import_archive(
     ctx, archives, webpages, extras_mode_existing, extras_mode_new, comment_mode, include_authinfos, migration,
     batch_size, import_group, group, test_run
 ):
-    """Import data from an AiiDA archive file.
+    """Import archived data to a profile.
 
     The archive can be specified by its relative or absolute file path, or its HTTP URL.
     """
@@ -427,12 +427,11 @@ def _import_archive_and_migrate(archive: str, web_based: bool, import_kwargs: di
     :param archive: the path or URL to the archive
     :param web_based: If the archive needs to be downloaded first
     :param import_kwargs: keyword arguments to pass to the import function
-    :param try_migration: whether to try a migration if the import raises IncompatibleArchiveVersionError
+    :param try_migration: whether to try a migration if the import raises `IncompatibleStorageSchema`
 
     """
     from aiida.common.folders import SandboxFolder
     from aiida.tools.archive.abstract import get_format
-    from aiida.tools.archive.exceptions import IncompatibleArchiveVersionError
     from aiida.tools.archive.imports import import_archive as _import_archive
 
     archive_format = get_format()
@@ -455,7 +454,7 @@ def _import_archive_and_migrate(archive: str, web_based: bool, import_kwargs: di
         echo.echo_report(f'starting import: {archive}')
         try:
             _import_archive(archive_path, archive_format=archive_format, **import_kwargs)
-        except IncompatibleArchiveVersionError as exception:
+        except IncompatibleStorageSchema as exception:
             if try_migration:
 
                 echo.echo_report(f'incompatible version detected for {archive}, trying migration')

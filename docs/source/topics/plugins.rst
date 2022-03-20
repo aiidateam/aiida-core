@@ -59,7 +59,7 @@ The following guidelines are useful to keep in mind when wrapping external codes
 
      #. parse into the database for querying (:py:class:`~aiida.orm.nodes.data.dict.Dict`, ...)
      #. store in the file repository for safe-keeping (:py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`, ...)
-     #. leave on the computer where the calculation ran (:py:class:`~aiida.orm.nodes.data.remote.RemoteData`, ...)
+     #. leave on the computer where the calculation ran (:py:class:`~aiida.orm.RemoteData`, ...)
 
 
 .. _topics:plugins:entrypoints:
@@ -363,37 +363,36 @@ Typically tests should be run against an empty AiiDA database.
 
 AiiDA ships with tools that take care of this for you. They will:
 
- * start a temporary postgres server
- * create a new database
- * create a temporary ``.aiida`` folder
- * create a test profile
- * (optional) reset the AiiDA database before every individual test
+* start a temporary postgres server
+* create a new database
+* create a temporary ``.aiida`` folder
+* create a test profile
+* (optional) reset the AiiDA database before every individual test
 
 thus letting you focus on testing the functionality of your plugin without having to worry about this separation.
 
-.. note::
-   The overhead for setting up the temporary environment is of the order of a few seconds and occurs only once per test session.
-   You can control the database backend for the temporary profile by setting the ``AIIDA_TEST_BACKEND`` environment variable, e.g. ``export AIIDA_TEST_BACKEND=sqlalchemy``.
-
+.. note:: The overhead for setting up the temporary environment is of the order of a few seconds and occurs only once per test session.
 
 If you prefer to run tests on an existing profile, say ``test_profile``, simply set the following environment variable before running your tests::
 
   export AIIDA_TEST_PROFILE=test_profile
 
-
 .. note::
-   In order to prevent accidental data loss, AiiDA only allows to run tests on profiles whose name starts with ``test_``.
+   In order to prevent accidental data loss, AiiDA only allows to run tests on profiles generated with the ``verdi setup --test-profile`` flag.
 
 AiiDA ships with a number of fixtures in :py:mod:`aiida.manage.tests.pytest_fixtures` for you to use.
 
 In particular:
 
-  * The :py:func:`~aiida.manage.tests.pytest_fixtures.aiida_profile` fixture initializes the :py:class:`~aiida.manage.tests.TestManager` and yields it to the test function.
-    Its parameters ``scope='session', autouse=True`` cause this fixture to automatically run once per test session, even if you don't explicitly require it.
-  * The :py:func:`~aiida.manage.tests.pytest_fixtures.clear_database` fixture depends on the :py:func:`~aiida.manage.tests.pytest_fixtures.aiida_profile` fixture and tells the received :py:class:`~aiida.manage.tests.TestManager` instance to reset the database.
-    This fixture lets each test start in a fresh AiiDA environment.
-  * The :py:func:`~aiida.manage.tests.pytest_fixtures.temp_dir` fixture returns a temporary directory for file operations and deletes it after the test is finished.
-  * ... you may want to add your own fixtures tailored for your plugins to set up specific ``Data`` nodes & more.
+* The :py:func:`~aiida.manage.tests.pytest_fixtures.aiida_profile` fixture initializes the :py:class:`~aiida.manage.tests.main.TestManager` and yields it to the test function.
+  Its parameters ``scope='session', autouse=True`` cause this fixture to automatically run once per test session, even if you don't explicitly require it.
+* The :py:func:`~aiida.manage.tests.pytest_fixtures.aiida_profile_clean` fixture depends on the :py:func:`~aiida.manage.tests.pytest_fixtures.aiida_profile` fixture and tells the received :py:class:`~aiida.manage.tests.main.TestManager` instance to reset the profile;
+  Clearing any data previously stored in the profile, and closing any open connections to resources.
+  This fixture lets each test start in a fresh AiiDA environment.
+
+  * Additionally, the ``aiida_profile_clean_class`` fixture can be used to reset the profile only once per test class.
+
+* ... you may want to add your own fixtures tailored for your plugins to set up specific ``Data`` nodes & more.
 
 .. _pytest: https://pytest.org
 .. _unittest: https://docs.python.org/library/unittest.html

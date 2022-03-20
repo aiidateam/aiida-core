@@ -7,23 +7,27 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """ORM Log tests"""
-
+import json
 import logging
 
+import pytest
+
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.common import exceptions
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.common.timezone import now
 from aiida.orm import Log
 
 
-class TestBackendLog(AiidaTestCase):
+class TestBackendLog:
     """Test the Log entity"""
 
-    def setUp(self):
-        super().setUp()
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
         self.log_record = {
             'time': now(),
             'loggername': 'loggername',
@@ -34,13 +38,6 @@ class TestBackendLog(AiidaTestCase):
                 'content': 'test'
             },
         }
-
-    def tearDown(self):
-        """
-        Delete all the created log entries
-        """
-        super().tearDown()
-        Log.objects.delete_all()
 
     def create_log(self):
         node = orm.CalculationNode().store()
@@ -54,13 +51,13 @@ class TestBackendLog(AiidaTestCase):
         """
         entry, node = self.create_log()
 
-        self.assertEqual(entry.time, self.log_record['time'])
-        self.assertEqual(entry.loggername, self.log_record['loggername'])
-        self.assertEqual(entry.levelname, self.log_record['levelname'])
-        self.assertEqual(entry.message, self.log_record['message'])
-        self.assertEqual(entry.metadata, self.log_record['metadata'])
-        self.assertEqual(entry.dbnode_id, self.log_record['dbnode_id'])
-        self.assertEqual(entry.dbnode_id, node.id)
+        assert entry.time == self.log_record['time']
+        assert entry.loggername == self.log_record['loggername']
+        assert entry.levelname == self.log_record['levelname']
+        assert entry.message == self.log_record['message']
+        assert entry.metadata == self.log_record['metadata']
+        assert entry.dbnode_id == self.log_record['dbnode_id']
+        assert entry.dbnode_id == node.id
 
     def test_create_log_unserializable_metadata(self):
         """Test that unserializable data will be removed before reaching the database causing an error."""
@@ -85,21 +82,21 @@ class TestBackendLog(AiidaTestCase):
         except ValueError:
             node.logger.exception('caught an exception')
 
-        self.assertEqual(len(Log.objects.all()), 3)
+        assert len(Log.objects.all()) == 3
 
     def test_log_delete_single(self):
         """Test that a single log entry can be deleted through the collection."""
         entry, _ = self.create_log()
         log_id = entry.id
 
-        self.assertEqual(len(Log.objects.all()), 1)
+        assert len(Log.objects.all()) == 1
 
         # Deleting the entry
         Log.objects.delete(log_id)
-        self.assertEqual(len(Log.objects.all()), 0)
+        assert len(Log.objects.all()) == 0
 
         # Deleting a non-existing entry should raise
-        with self.assertRaises(exceptions.NotExistent):
+        with pytest.raises(exceptions.NotExistent):
             Log.objects.delete(log_id)
 
     def test_log_collection_delete_all(self):
@@ -109,18 +106,18 @@ class TestBackendLog(AiidaTestCase):
             self.create_log()
         log_id = Log.objects.find(limit=1)[0].id
 
-        self.assertEqual(len(Log.objects.all()), count)
+        assert len(Log.objects.all()) == count
 
         # Delete all
         Log.objects.delete_all()
 
         # Checks
-        self.assertEqual(len(Log.objects.all()), 0)
+        assert len(Log.objects.all()) == 0
 
-        with self.assertRaises(exceptions.NotExistent):
+        with pytest.raises(exceptions.NotExistent):
             Log.objects.delete(log_id)
 
-        with self.assertRaises(exceptions.NotExistent):
+        with pytest.raises(exceptions.NotExistent):
             Log.objects.get(id=log_id)
 
     def test_log_collection_delete_many(self):
@@ -133,7 +130,7 @@ class TestBackendLog(AiidaTestCase):
         special_log, _ = self.create_log()
 
         # Assert the Logs exist
-        self.assertEqual(len(Log.objects.all()), count + 1)
+        assert len(Log.objects.all()) == count + 1
 
         # Delete new Logs using filter
         filters = {'id': {'in': log_ids}}
@@ -141,14 +138,14 @@ class TestBackendLog(AiidaTestCase):
 
         # Make sure only the special_log Log is left
         builder = orm.QueryBuilder().append(Log, project='id')
-        self.assertEqual(builder.count(), 1)
-        self.assertEqual(builder.all()[0][0], special_log.id)
+        assert builder.count() == 1
+        assert builder.all()[0][0] == special_log.id
 
         for log_id in log_ids:
-            with self.assertRaises(exceptions.NotExistent):
+            with pytest.raises(exceptions.NotExistent):
                 Log.objects.delete(log_id)
 
-            with self.assertRaises(exceptions.NotExistent):
+            with pytest.raises(exceptions.NotExistent):
                 Log.objects.get(id=log_id)
 
     def test_objects_find(self):
@@ -160,8 +157,8 @@ class TestBackendLog(AiidaTestCase):
             Log(**record)
 
         entries = Log.objects.all()
-        self.assertEqual(10, len(entries))
-        self.assertIsInstance(entries[0], Log)
+        assert len(entries) == 10
+        assert isinstance(entries[0], Log)
 
     def test_find_orderby(self):
         """
@@ -177,11 +174,11 @@ class TestBackendLog(AiidaTestCase):
 
         order_by = [OrderSpecifier('dbnode_id', ASCENDING)]
         res_entries = Log.objects.find(order_by=order_by)
-        self.assertEqual(res_entries[0].dbnode_id, node_ids[0])
+        assert res_entries[0].dbnode_id == node_ids[0]
 
         order_by = [OrderSpecifier('dbnode_id', DESCENDING)]
         res_entries = Log.objects.find(order_by=order_by)
-        self.assertEqual(res_entries[0].dbnode_id, node_ids[-1])
+        assert res_entries[0].dbnode_id == node_ids[-1]
 
     def test_find_limit(self):
         """
@@ -193,7 +190,7 @@ class TestBackendLog(AiidaTestCase):
             self.log_record['dbnode_id'] = node.id
             Log(**self.log_record)
         entries = Log.objects.find(limit=limit)
-        self.assertEqual(len(entries), limit)
+        assert len(entries) == limit
 
     def test_find_filter(self):
         """
@@ -209,8 +206,8 @@ class TestBackendLog(AiidaTestCase):
         node_id_of_choice = node_ids.pop(randint(0, 9))
 
         entries = Log.objects.find(filters={'dbnode_id': node_id_of_choice})
-        self.assertEqual(len(entries), 1)
-        self.assertEqual(entries[0].dbnode_id, node_id_of_choice)
+        assert len(entries) == 1
+        assert entries[0].dbnode_id == node_id_of_choice
 
     def test_db_log_handler(self):
         """
@@ -228,15 +225,15 @@ class TestBackendLog(AiidaTestCase):
 
         logs = Log.objects.find()
 
-        self.assertEqual(len(logs), 0)
+        assert len(logs) == 0
 
         # After storing the node, logs above log level should be stored
         node.store()
         node.logger.critical(message)
         logs = Log.objects.find()
 
-        self.assertEqual(len(logs), 1)
-        self.assertEqual(logs[0].message, message)
+        assert len(logs) == 1
+        assert logs[0].message == message
 
         # Launching a second log message ensuring that both messages are correctly stored
         message2 = f'{message} - Second message'
@@ -245,9 +242,9 @@ class TestBackendLog(AiidaTestCase):
         order_by = [OrderSpecifier('time', ASCENDING)]
         logs = Log.objects.find(order_by=order_by)
 
-        self.assertEqual(len(logs), 2)
-        self.assertEqual(logs[0].message, message)
-        self.assertEqual(logs[1].message, message2)
+        assert len(logs) == 2
+        assert logs[0].message == message
+        assert logs[1].message == message2
 
     def test_log_querybuilder(self):
         """ Test querying for logs by joining on nodes in the QueryBuilder """
@@ -264,9 +261,9 @@ class TestBackendLog(AiidaTestCase):
         builder.append(orm.CalculationNode, with_log='log', project=['uuid'])
         nodes = builder.all()
 
-        self.assertEqual(len(nodes), 1)
+        assert len(nodes) == 1
         for node in nodes:
-            self.assertIn(str(node[0]), [calc.uuid])
+            assert str(node[0]) in [calc.uuid]
 
         # Retrieve all logs for a specific node by joining on a said node
         builder = QueryBuilder()
@@ -274,17 +271,15 @@ class TestBackendLog(AiidaTestCase):
         builder.append(Log, with_node='calc', project=['uuid'])
         logs = builder.all()
 
-        self.assertEqual(len(logs), 3)
+        assert len(logs) == 3
         for log in logs:
-            self.assertIn(str(log[0]), [str(log_1.uuid), str(log_2.uuid), str(log_3.uuid)])
+            assert str(log[0]) in [str(log_1.uuid), str(log_2.uuid), str(log_3.uuid)]
 
     def test_raise_wrong_metadata_type_error(self):
         """
         Test a TypeError exception is thrown with string metadata.
         Also test that metadata is correctly created.
         """
-        from aiida.common import json
-
         # Create CalculationNode
         calc = orm.CalculationNode().store()
 
@@ -302,7 +297,7 @@ class TestBackendLog(AiidaTestCase):
         json_metadata_format = json.loads(json.dumps(correct_metadata_format))
 
         # Check an error is raised when creating a Log with wrong metadata
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             Log(
                 now(),
                 'loggername',
@@ -323,7 +318,7 @@ class TestBackendLog(AiidaTestCase):
         )
 
         # Check metadata is correctly created
-        self.assertEqual(correct_metadata_log.metadata, correct_metadata_format)
+        assert correct_metadata_log.metadata == correct_metadata_format
 
         # Create Log with json metadata, making sure TypeError is NOT raised
         json_metadata_log = Log(
@@ -336,7 +331,7 @@ class TestBackendLog(AiidaTestCase):
         )
 
         # Check metadata is correctly created
-        self.assertEqual(json_metadata_log.metadata, json_metadata_format)
+        assert json_metadata_log.metadata == json_metadata_format
 
         # Check no error is raised if no metadata is given
         no_metadata_log = Log(
@@ -349,4 +344,4 @@ class TestBackendLog(AiidaTestCase):
         )
 
         # Check metadata is an empty dict for no_metadata_log
-        self.assertEqual(no_metadata_log.metadata, {})
+        assert no_metadata_log.metadata == {}

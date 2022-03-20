@@ -19,6 +19,7 @@ Local transport
 ### we should instead keep track internally of the 'current working directory'
 ### in the exact same way as paramiko does already.
 
+import contextlib
 import errno
 import glob
 import io
@@ -716,6 +717,7 @@ class LocalTransport(Transport):
             return False
         return os.path.isfile(os.path.join(self.curdir, path))
 
+    @contextlib.contextmanager
     def _exec_command_internal(self, command, **kwargs):  # pylint: disable=unused-argument
         """
         Executes the specified command in bash login shell.
@@ -747,7 +749,7 @@ class LocalTransport(Transport):
 
         command = bash_commmand + escape_for_bash(command)
 
-        proc = subprocess.Popen(  # pylint: disable=consider-using-with
+        with subprocess.Popen(
             command,
             shell=True,
             stdin=subprocess.PIPE,
@@ -755,9 +757,8 @@ class LocalTransport(Transport):
             stderr=subprocess.PIPE,
             cwd=self.getcwd(),
             start_new_session=True
-        )
-
-        return proc.stdin, proc.stdout, proc.stderr, proc
+        ) as process:
+            yield process
 
     def exec_command_wait_bytes(self, command, stdin=None, **kwargs):
         """
@@ -768,45 +769,45 @@ class LocalTransport(Transport):
         :return: a tuple with (return_value, stdout, stderr) where stdout and stderr
             are both bytes and the return_value is an int.
         """
-        local_stdin, _, _, local_proc = self._exec_command_internal(command)
+        with self._exec_command_internal(command) as process:
 
-        if stdin is not None:
-            # Implicitly assume that the desired encoding is 'utf-8' if I receive a string.
-            # Also, if I get a StringIO, I just read it all in memory and put it into a BytesIO.
-            # Clearly not memory effective - in this case do not use a StringIO, but pass directly a BytesIO
-            # that will be read line by line, if you have a huge stdin and care about memory usage.
-            if isinstance(stdin, str):
-                filelike_stdin = io.BytesIO(stdin.encode('utf-8'))
-            elif isinstance(stdin, bytes):
-                filelike_stdin = io.BytesIO(stdin)
-            elif isinstance(stdin, io.TextIOBase):
+            if stdin is not None:
+                # Implicitly assume that the desired encoding is 'utf-8' if I receive a string.
+                # Also, if I get a StringIO, I just read it all in memory and put it into a BytesIO.
+                # Clearly not memory effective - in this case do not use a StringIO, but pass directly a BytesIO
+                # that will be read line by line, if you have a huge stdin and care about memory usage.
+                if isinstance(stdin, str):
+                    filelike_stdin = io.BytesIO(stdin.encode('utf-8'))
+                elif isinstance(stdin, bytes):
+                    filelike_stdin = io.BytesIO(stdin)
+                elif isinstance(stdin, io.TextIOBase):
 
-                def line_encoder(iterator, encoding='utf-8'):
-                    """Encode the iterator item by item (i.e., line by line).
+                    def line_encoder(iterator, encoding='utf-8'):
+                        """Encode the iterator item by item (i.e., line by line).
 
-                    This only wraps iterating over it and not all other methods, but it's enough for its
-                    use below."""
-                    for line in iterator:
-                        yield line.encode(encoding)
+                        This only wraps iterating over it and not all other methods, but it's enough for its
+                        use below."""
+                        for line in iterator:
+                            yield line.encode(encoding)
 
-                filelike_stdin = line_encoder(stdin)
-            elif isinstance(stdin, io.BufferedIOBase):
-                filelike_stdin = stdin
+                    filelike_stdin = line_encoder(stdin)
+                elif isinstance(stdin, io.BufferedIOBase):
+                    filelike_stdin = stdin
+                else:
+                    raise ValueError('You can only pass strings, bytes, BytesIO or StringIO objects')
+
+                try:
+                    for line in filelike_stdin:
+                        process.stdin.write(line)  # the Popen.stdin/out/err are byte streams
+                except AttributeError:
+                    raise ValueError('stdin can only be either a string or a file-like object!')
             else:
-                raise ValueError('You can only pass strings, bytes, BytesIO or StringIO objects')
+                filelike_stdin = None
 
-            try:
-                for line in filelike_stdin:
-                    local_stdin.write(line)  # the Popen.stdin/out/err are byte streams
-            except AttributeError:
-                raise ValueError('stdin can only be either a string or a file-like object!')
-        else:
-            filelike_stdin = None
+            process.stdin.flush()
+            output_text, stderr_text = process.communicate()
 
-        local_stdin.flush()
-        output_text, stderr_text = local_proc.communicate()
-
-        retval = local_proc.returncode
+            retval = process.returncode
 
         return retval, output_text, stderr_text
 

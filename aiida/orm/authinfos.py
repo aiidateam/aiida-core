@@ -12,14 +12,14 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 from aiida.plugins import TransportFactory
 
 from . import entities, users
 
 if TYPE_CHECKING:
     from aiida.orm import Computer, User
-    from aiida.orm.implementation import Backend, BackendAuthInfo
+    from aiida.orm.implementation import BackendAuthInfo, StorageBackend
     from aiida.transports import Transport
 
 __all__ = ('AuthInfo',)
@@ -47,18 +47,18 @@ class AuthInfo(entities.Entity['BackendAuthInfo']):
 
     @classproperty
     def objects(cls: Type['AuthInfo']) -> AuthInfoCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
-        return AuthInfoCollection.get_cached(cls, get_manager().get_backend())
+        return AuthInfoCollection.get_cached(cls, get_manager().get_profile_storage())
 
     PROPERTY_WORKDIR = 'workdir'
 
-    def __init__(self, computer: 'Computer', user: 'User', backend: Optional['Backend'] = None) -> None:
+    def __init__(self, computer: 'Computer', user: 'User', backend: Optional['StorageBackend'] = None) -> None:
         """Create an `AuthInfo` instance for the given computer and user.
 
         :param computer: a `Computer` instance
         :param user: a `User` instance
         :param backend: the backend to use for the instance, or use the default backend if None
         """
-        backend = backend or get_manager().get_backend()
+        backend = backend or get_manager().get_profile_storage()
         model = backend.authinfos.create(computer=computer.backend_entity, user=user.backend_entity)
         super().__init__(model)
 

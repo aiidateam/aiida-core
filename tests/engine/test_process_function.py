@@ -7,11 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Tests for the process_function decorator."""
 import pytest
 
 from aiida import orm
-from aiida.backends.testbase import AiidaTestCase
 from aiida.engine import ExitCode, Process, calcfunction, run, run_get_node, submit, workfunction
 from aiida.orm.nodes.data.bool import get_true_node
 from aiida.workflows.arithmetic.add_multiply import add_multiply
@@ -24,7 +24,7 @@ CUSTOM_DESCRIPTION = 'Custom description'
 
 
 @pytest.mark.requires_rmq
-class TestProcessFunction(AiidaTestCase):
+class TestProcessFunction:
     """
     Note that here we use `@workfunctions` and `@calculations`, the concrete versions of the
     `@process_function` decorator, even though we are testing only the shared functionality
@@ -38,9 +38,11 @@ class TestProcessFunction(AiidaTestCase):
 
     # pylint: disable=too-many-public-methods,too-many-instance-attributes
 
-    def setUp(self):
-        super().setUp()
-        self.assertIsNone(Process.current())
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        assert Process.current() is None
 
         @workfunction
         def function_return_input(data):
@@ -117,16 +119,15 @@ class TestProcessFunction(AiidaTestCase):
         self.function_excepts = function_excepts
         self.function_out_unstored = function_out_unstored
 
-    def tearDown(self):
-        super().tearDown()
-        self.assertIsNone(Process.current())
+        yield
+        assert Process.current() is None
 
     def test_properties(self):
         """Test that the `is_process_function` and `node_class` attributes are set."""
-        self.assertEqual(self.function_return_input.is_process_function, True)
-        self.assertEqual(self.function_return_input.node_class, orm.WorkFunctionNode)
-        self.assertEqual(self.function_return_true.is_process_function, True)
-        self.assertEqual(self.function_return_true.node_class, orm.CalcFunctionNode)
+        assert self.function_return_input.is_process_function is True
+        assert self.function_return_input.node_class == orm.WorkFunctionNode
+        assert self.function_return_true.is_process_function is True
+        assert self.function_return_true.node_class == orm.CalcFunctionNode
 
     def test_plugin_version(self):
         """Test the version attributes of a process function."""
@@ -137,32 +138,32 @@ class TestProcessFunction(AiidaTestCase):
         # Since the "plugin" i.e. the process function is defined in `aiida-core` the `version.plugin` is the same as
         # the version of `aiida-core` itself
         version_info = node.get_attribute('version')
-        self.assertEqual(version_info['core'], version_core)
-        self.assertEqual(version_info['plugin'], version_core)
+        assert version_info['core'] == version_core
+        assert version_info['plugin'] == version_core
 
     def test_process_state(self):
         """Test the process state for a process function."""
         _, node = self.function_args_with_default.run_get_node()
 
-        self.assertEqual(node.is_terminated, True)
-        self.assertEqual(node.is_excepted, False)
-        self.assertEqual(node.is_killed, False)
-        self.assertEqual(node.is_finished, True)
-        self.assertEqual(node.is_finished_ok, True)
-        self.assertEqual(node.is_failed, False)
+        assert node.is_terminated is True
+        assert node.is_excepted is False
+        assert node.is_killed is False
+        assert node.is_finished is True
+        assert node.is_finished_ok is True
+        assert node.is_failed is False
 
     def test_process_type(self):
         """Test that the process type correctly contains the module and name of original decorated function."""
         _, node = self.function_defaults.run_get_node()
         process_type = f'{self.function_defaults.__module__}.{self.function_defaults.__name__}'
-        self.assertEqual(node.process_type, process_type)
+        assert node.process_type == process_type
 
     def test_exit_status(self):
         """A FINISHED process function has to have an exit status of 0"""
         _, node = self.function_args_with_default.run_get_node()
-        self.assertEqual(node.exit_status, 0)
-        self.assertEqual(node.is_finished_ok, True)
-        self.assertEqual(node.is_failed, False)
+        assert node.exit_status == 0
+        assert node.is_finished_ok is True
+        assert node.is_failed is False
 
     def test_source_code_attributes(self):
         """Verify function properties are properly introspected and stored in the nodes attributes and repository."""
@@ -178,18 +179,18 @@ class TestProcessFunction(AiidaTestCase):
         function_source_code = node.get_function_source_code().split('\n')
 
         # Verify that the function name is correct and the first source code linenumber is stored
-        self.assertEqual(node.function_name, function_name)
-        self.assertIsInstance(node.function_starting_line_number, int)
+        assert node.function_name == function_name
+        assert isinstance(node.function_starting_line_number, int)
 
         # Check that first line number is correct. Note that the first line should correspond
         # to the `@workfunction` directive, but since the list is zero-indexed we actually get the
         # following line, which should correspond to the function name i.e. `def test_process_function(data)`
         function_name_from_source = function_source_code[node.function_starting_line_number]
-        self.assertTrue(node.function_name in function_name_from_source)
+        assert node.function_name in function_name_from_source
 
     def test_function_varargs(self):
         """Variadic arguments are not supported and should raise."""
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
 
             @workfunction
             def function_varargs(*args):  # pylint: disable=unused-variable
@@ -199,24 +200,24 @@ class TestProcessFunction(AiidaTestCase):
         """Simple process function that defines a single positional argument."""
         arg = 1
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             result = self.function_args()  # pylint: disable=no-value-for-parameter
 
         result = self.function_args(data_a=orm.Int(arg))
-        self.assertTrue(isinstance(result, orm.Int))
-        self.assertEqual(result, arg)
+        assert isinstance(result, orm.Int)
+        assert result == arg
 
     def test_function_args_with_default(self):
         """Simple process function that defines a single argument with a default."""
         arg = 1
 
         result = self.function_args_with_default()
-        self.assertTrue(isinstance(result, orm.Int))
-        self.assertEqual(result, orm.Int(DEFAULT_INT))
+        assert isinstance(result, orm.Int)
+        assert result == orm.Int(DEFAULT_INT)
 
         result = self.function_args_with_default(data_a=orm.Int(arg))
-        self.assertTrue(isinstance(result, orm.Int))
-        self.assertEqual(result, arg)
+        assert isinstance(result, orm.Int)
+        assert result == arg
 
     def test_function_with_none_default(self):
         """Simple process function that defines a keyword with `None` as default value."""
@@ -225,32 +226,32 @@ class TestProcessFunction(AiidaTestCase):
         int_c = orm.Int(3)
 
         result = self.function_with_none_default(int_a, int_b)
-        self.assertTrue(isinstance(result, orm.Int))
-        self.assertEqual(result, orm.Int(3))
+        assert isinstance(result, orm.Int)
+        assert result == orm.Int(3)
 
         result = self.function_with_none_default(int_a, int_b, int_c)
-        self.assertTrue(isinstance(result, orm.Int))
-        self.assertEqual(result, orm.Int(6))
+        assert isinstance(result, orm.Int)
+        assert result == orm.Int(6)
 
     def test_function_kwargs(self):
         """Simple process function that defines keyword arguments."""
         kwargs = {'data_a': orm.Int(DEFAULT_INT)}
 
         result, node = self.function_kwargs.run_get_node()
-        self.assertTrue(isinstance(result, dict))
-        self.assertEqual(len(node.get_incoming().all()), 0)
-        self.assertEqual(result, {})
+        assert isinstance(result, dict)
+        assert len(node.get_incoming().all()) == 0
+        assert result == {}
 
         result, node = self.function_kwargs.run_get_node(**kwargs)
-        self.assertTrue(isinstance(result, dict))
-        self.assertEqual(len(node.get_incoming().all()), 1)
-        self.assertEqual(result, kwargs)
+        assert isinstance(result, dict)
+        assert len(node.get_incoming().all()) == 1
+        assert result == kwargs
 
         # Calling with any number of positional arguments should raise
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             self.function_kwargs.run_get_node(orm.Int(1))
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             self.function_kwargs.run_get_node(orm.Int(1), b=orm.Int(2))
 
     def test_function_args_and_kwargs(self):
@@ -260,18 +261,18 @@ class TestProcessFunction(AiidaTestCase):
         kwargs = {'data_b': orm.Int(arg)}
 
         result = self.function_args_and_kwargs(*args)
-        self.assertTrue(isinstance(result, dict))
-        self.assertEqual(result, {'data_a': args[0]})
+        assert isinstance(result, dict)
+        assert result == {'data_a': args[0]}
 
         result = self.function_args_and_kwargs(*args, **kwargs)
-        self.assertTrue(isinstance(result, dict))
-        self.assertEqual(result, {'data_a': args[0], 'data_b': kwargs['data_b']})
+        assert isinstance(result, dict)
+        assert result == {'data_a': args[0], 'data_b': kwargs['data_b']}
 
         # Calling with more positional arguments than defined in the signature should raise
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             self.function_kwargs.run_get_node(orm.Int(1), orm.Int(2))
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             self.function_kwargs.run_get_node(orm.Int(1), orm.Int(2), b=orm.Int(2))
 
     def test_function_args_and_kwargs_default(self):
@@ -281,18 +282,18 @@ class TestProcessFunction(AiidaTestCase):
         args_input_explicit = (orm.Int(DEFAULT_INT), orm.Int(arg))
 
         result = self.function_args_and_default(*args_input_default)
-        self.assertTrue(isinstance(result, dict))
-        self.assertEqual(result, {'data_a': args_input_default[0], 'data_b': orm.Int(DEFAULT_INT)})
+        assert isinstance(result, dict)
+        assert result == {'data_a': args_input_default[0], 'data_b': orm.Int(DEFAULT_INT)}
 
         result = self.function_args_and_default(*args_input_explicit)
-        self.assertTrue(isinstance(result, dict))
-        self.assertEqual(result, {'data_a': args_input_explicit[0], 'data_b': args_input_explicit[1]})
+        assert isinstance(result, dict)
+        assert result == {'data_a': args_input_explicit[0], 'data_b': args_input_explicit[1]}
 
     def test_function_args_passing_kwargs(self):
         """Cannot pass kwargs if the function does not explicitly define it accepts kwargs."""
         arg = 1
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             self.function_args(data_a=orm.Int(arg), data_b=orm.Int(arg))  # pylint: disable=unexpected-keyword-arg
 
     def test_function_set_label_description(self):
@@ -300,58 +301,58 @@ class TestProcessFunction(AiidaTestCase):
         metadata = {'label': CUSTOM_LABEL, 'description': CUSTOM_DESCRIPTION}
 
         _, node = self.function_args.run_get_node(data_a=orm.Int(DEFAULT_INT), metadata=metadata)
-        self.assertEqual(node.label, CUSTOM_LABEL)
-        self.assertEqual(node.description, CUSTOM_DESCRIPTION)
+        assert node.label == CUSTOM_LABEL
+        assert node.description == CUSTOM_DESCRIPTION
 
         _, node = self.function_args_with_default.run_get_node(metadata=metadata)
-        self.assertEqual(node.label, CUSTOM_LABEL)
-        self.assertEqual(node.description, CUSTOM_DESCRIPTION)
+        assert node.label == CUSTOM_LABEL
+        assert node.description == CUSTOM_DESCRIPTION
 
         _, node = self.function_kwargs.run_get_node(metadata=metadata)
-        self.assertEqual(node.label, CUSTOM_LABEL)
-        self.assertEqual(node.description, CUSTOM_DESCRIPTION)
+        assert node.label == CUSTOM_LABEL
+        assert node.description == CUSTOM_DESCRIPTION
 
         _, node = self.function_args_and_kwargs.run_get_node(data_a=orm.Int(DEFAULT_INT), metadata=metadata)
-        self.assertEqual(node.label, CUSTOM_LABEL)
-        self.assertEqual(node.description, CUSTOM_DESCRIPTION)
+        assert node.label == CUSTOM_LABEL
+        assert node.description == CUSTOM_DESCRIPTION
 
         _, node = self.function_args_and_default.run_get_node(data_a=orm.Int(DEFAULT_INT), metadata=metadata)
-        self.assertEqual(node.label, CUSTOM_LABEL)
-        self.assertEqual(node.description, CUSTOM_DESCRIPTION)
+        assert node.label == CUSTOM_LABEL
+        assert node.description == CUSTOM_DESCRIPTION
 
     def test_function_defaults(self):
         """Verify that a process function can define a default label and description but can be overriden."""
         metadata = {'label': CUSTOM_LABEL, 'description': CUSTOM_DESCRIPTION}
 
         _, node = self.function_defaults.run_get_node(data_a=orm.Int(DEFAULT_INT))
-        self.assertEqual(node.label, DEFAULT_LABEL)
-        self.assertEqual(node.description, DEFAULT_DESCRIPTION)
+        assert node.label == DEFAULT_LABEL
+        assert node.description == DEFAULT_DESCRIPTION
 
         _, node = self.function_defaults.run_get_node(metadata=metadata)
-        self.assertEqual(node.label, CUSTOM_LABEL)
-        self.assertEqual(node.description, CUSTOM_DESCRIPTION)
+        assert node.label == CUSTOM_LABEL
+        assert node.description == CUSTOM_DESCRIPTION
 
     def test_function_default_label(self):
         """Verify unless specified label is taken from function name."""
         metadata = {'label': CUSTOM_LABEL, 'description': CUSTOM_DESCRIPTION}
 
         _, node = self.function_default_label.run_get_node()
-        self.assertEqual(node.label, 'function_default_label')
-        self.assertEqual(node.description, '')
+        assert node.label == 'function_default_label'
+        assert node.description == ''
 
         _, node = self.function_default_label.run_get_node(metadata=metadata)
-        self.assertEqual(node.label, CUSTOM_LABEL)
-        self.assertEqual(node.description, CUSTOM_DESCRIPTION)
+        assert node.label == CUSTOM_LABEL
+        assert node.description == CUSTOM_DESCRIPTION
 
     def test_launchers(self):
         """Verify that the various launchers are working."""
         result = run(self.function_return_true)
-        self.assertTrue(result)
+        assert result
 
         result, node = run_get_node(self.function_return_true)
-        self.assertTrue(result)
-        self.assertEqual(result, get_true_node())
-        self.assertTrue(isinstance(node, orm.CalcFunctionNode))
+        assert result
+        assert result == get_true_node()
+        assert isinstance(node, orm.CalcFunctionNode)
 
         # Process function can be submitted and will be run by a daemon worker as long as the function is importable
         # Note that the actual running is not tested here but is done so in `.github/system_tests/test_daemon.py`.
@@ -368,23 +369,23 @@ class TestProcessFunction(AiidaTestCase):
         message = orm.Str(exit_message)
         _, node = self.function_exit_code.run_get_node(exit_status=orm.Int(exit_status), exit_message=message)
 
-        self.assertTrue(node.is_finished)
-        self.assertFalse(node.is_finished_ok)
-        self.assertEqual(node.exit_status, exit_status)
-        self.assertEqual(node.exit_message, exit_message)
+        assert node.is_finished
+        assert not node.is_finished_ok
+        assert node.exit_status == exit_status
+        assert node.exit_message == exit_message
 
     def test_normal_exception(self):
         """If a process, for example a FunctionProcess, excepts, the exception should be stored in the node."""
         exception = 'This process function excepted'
 
-        with self.assertRaises(RuntimeError):
+        with pytest.raises(RuntimeError):
             _, node = self.function_excepts.run_get_node(exception=orm.Str(exception))
-            self.assertTrue(node.is_excepted)
-            self.assertEqual(node.exception, exception)
+            assert node.is_excepted
+            assert node.exception == exception
 
     def test_function_out_unstored(self):
         """A workfunction that returns an unstored node should raise as it indicates users tried to create data."""
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             self.function_out_unstored()
 
     def test_simple_workflow(self):
@@ -404,21 +405,21 @@ class TestProcessFunction(AiidaTestCase):
 
         result, node = add_mul_wf.run_get_node(orm.Int(3), orm.Int(4), orm.Int(5))
 
-        self.assertEqual(result, (3 + 4) * 5)
-        self.assertIsInstance(node, orm.WorkFunctionNode)
+        assert result == (3 + 4) * 5
+        assert isinstance(node, orm.WorkFunctionNode)
 
     def test_hashes(self):
         """Test that the hashes generated for identical process functions with identical inputs are the same."""
         _, node1 = self.function_return_input.run_get_node(data=orm.Int(2))
         _, node2 = self.function_return_input.run_get_node(data=orm.Int(2))
-        self.assertEqual(node1.get_hash(), node1.get_extra('_aiida_hash'))
-        self.assertEqual(node2.get_hash(), node2.get_extra('_aiida_hash'))
-        self.assertEqual(node1.get_hash(), node2.get_hash())
+        assert node1.get_hash() == node1.get_extra('_aiida_hash')
+        assert node2.get_hash() == node2.get_extra('_aiida_hash')
+        assert node1.get_hash() == node2.get_hash()
 
     def test_hashes_different(self):
         """Test that the hashes generated for identical process functions with different inputs are the different."""
         _, node1 = self.function_return_input.run_get_node(data=orm.Int(2))
         _, node2 = self.function_return_input.run_get_node(data=orm.Int(3))
-        self.assertEqual(node1.get_hash(), node1.get_extra('_aiida_hash'))
-        self.assertEqual(node2.get_hash(), node2.get_extra('_aiida_hash'))
-        self.assertNotEqual(node1.get_hash(), node2.get_hash())
+        assert node1.get_hash() == node1.get_extra('_aiida_hash')
+        assert node2.get_hash() == node2.get_extra('_aiida_hash')
+        assert node1.get_hash() != node2.get_hash()

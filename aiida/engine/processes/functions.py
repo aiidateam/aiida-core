@@ -16,7 +16,7 @@ import signal
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Sequence, Tuple, Type
 
 from aiida.common.lang import override
-from aiida.manage.manager import get_manager
+from aiida.manage import get_manager
 from aiida.orm import CalcFunctionNode, Data, ProcessNode, WorkFunctionNode
 from aiida.orm.utils.mixins import FunctionCalculationMixin
 

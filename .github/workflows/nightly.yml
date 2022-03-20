@@ -1,0 +1,71 @@
+name: nightly
+
+on:
+    schedule:
+    -   cron: '0 0 * * *'  # Run every day at midnight
+    pull_request:
+        paths:
+        - '.github/workflows/nightly.yml'
+        - 'aiida/storage/psql_dos/migrations/**'
+        - 'tests/storage/psql_dos/migrations/**'
+
+jobs:
+
+    tests:
+
+        if: github.repository == 'aiidateam/aiida-core'  # Prevent running the builds on forks as well
+        runs-on: ubuntu-latest
+
+        strategy:
+            matrix:
+                python-version: ['3.10']
+
+        services:
+            postgres:
+                image: postgres:12
+                env:
+                    POSTGRES_DB: test_aiida
+                    POSTGRES_PASSWORD: ''
+                    POSTGRES_HOST_AUTH_METHOD: trust
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+                ports:
+                -   5432:5432
+            rabbitmq:
+                image: rabbitmq:latest
+                ports:
+                -   5672:5672
+
+        steps:
+        -   uses: actions/checkout@v2
+
+        -   name: Cache Python dependencies
+            uses: actions/cache@v1
+            with:
+                path: ~/.cache/pip
+                key: pip-${{ matrix.python-version }}-tests-${{ hashFiles('**/setup.json') }}
+                restore-keys:
+                    pip-${{ matrix.python-version }}-tests
+
+        -   name: Set up Python ${{ matrix.python-version }}
+            uses: actions/setup-python@v2
+            with:
+                python-version: ${{ matrix.python-version }}
+
+        -   name: Install system dependencies
+            run: sudo apt update && sudo apt install postgresql
+
+        -   name: Install aiida-core
+            run: |
+                pip install -r requirements/requirements-py-${{ matrix.python-version }}.txt
+                pip install --no-deps -e .
+                pip freeze
+
+        -   name: Setup environment
+            run: .github/workflows/setup.sh
+
+        -   name: Run tests
+            run: .github/workflows/tests_nightly.sh

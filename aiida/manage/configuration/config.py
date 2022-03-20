@@ -8,8 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module that defines the configuration file of an AiiDA instance and functions to create and load it."""
+import codecs
 from functools import lru_cache
 from importlib import resources
+import json
 import os
 import shutil
 import tempfile
@@ -17,7 +19,6 @@ from typing import Any, Dict, Optional, Sequence, Tuple
 
 import jsonschema
 
-from aiida.common import json
 from aiida.common.exceptions import ConfigurationError
 
 from . import schema as schema_module
@@ -26,7 +27,7 @@ from .profile import Profile
 
 __all__ = ('Config', 'config_schema', 'ConfigValidationError')
 
-SCHEMA_FILE = 'config-v6.schema.json'
+SCHEMA_FILE = 'config-v8.schema.json'
 
 
 @lru_cache(1)
@@ -81,7 +82,7 @@ class Config:  # pylint: disable=too-many-public-methods
         from .migrations import check_and_migrate_config, config_needs_migrating
 
         try:
-            with open(filepath, 'r', encoding='utf8') as handle:
+            with open(filepath, 'rb') as handle:
                 config = json.load(handle)
         except FileNotFoundError:
             config = Config(filepath, check_and_migrate_config({}))
@@ -256,15 +257,6 @@ class Config:  # pylint: disable=too-many-public-methods
         return self._default_profile
 
     @property
-    def current_profile(self):
-        """Return the currently loaded profile.
-
-        :return: the current profile or None if not defined
-        """
-        from . import get_profile
-        return get_profile()
-
-    @property
     def profile_names(self):
         """Return the list of profile names.
 
@@ -354,7 +346,6 @@ class Config:  # pylint: disable=too-many-public-methods
         :param include_database_user: also delete the database user configured for the profile.
         :param include_repository: also delete the repository configured for the profile.
         """
-        # to-do storage backend specific stuff should be handled by the backend itself
         from aiida.manage.external.postgres import Postgres
 
         profile = self.get_profile(name)
@@ -502,7 +493,7 @@ class Config:  # pylint: disable=too-many-public-methods
         # Otherwise, we write the content to a temporary file and compare its md5 checksum with the current config on
         # disk. When the checksums differ, we first create a backup and only then overwrite the existing file.
         with tempfile.NamedTemporaryFile() as handle:
-            json.dump(self.dictionary, handle, indent=DEFAULT_CONFIG_INDENT_SIZE)
+            json.dump(self.dictionary, codecs.getwriter('utf-8')(handle), indent=DEFAULT_CONFIG_INDENT_SIZE)
             handle.seek(0)
 
             if md5_from_filelike(handle) != md5_file(self.filepath):
@@ -532,7 +523,7 @@ class Config:  # pylint: disable=too-many-public-methods
         # Create a temporary file in the same directory as the target filepath, which guarantees that the temporary
         # file is on the same filesystem, which is necessary to be able to use ``os.rename``. Since we are moving the
         # temporary file, we should also tell the tempfile to not be automatically deleted as that will raise.
-        with tempfile.NamedTemporaryFile(dir=os.path.dirname(filepath), delete=False) as handle:
+        with tempfile.NamedTemporaryFile(dir=os.path.dirname(filepath), delete=False, mode='w') as handle:
             try:
                 json.dump(self.dictionary, handle, indent=DEFAULT_CONFIG_INDENT_SIZE)
             finally:

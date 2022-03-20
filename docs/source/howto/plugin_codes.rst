@@ -55,7 +55,6 @@ We will run ``diff`` as:
 thus writing difference between `file1.txt` and `file2.txt` to `diff.patch`.
 
 
-
 .. _how-to:plugin-codes:interfacing:
 
 
@@ -454,6 +453,48 @@ Congratulations - you can now write plugins for external simulation codes and us
 
 If you still have time left, consider going through the optional exercise below.
 
+.. _how-to:plugin-codes:importers:
+
+Writing importers for existing computations
+===========================================
+
+.. versionadded:: 2.0
+
+New users to your plugin may often have completed many previous computations without the use of AiiDA, which they wish to import into AiiDA.
+In these cases, it is possible to write an importer for their inputs/outputs, which generates the provenance nodes for the corresponding |CalcJob|.
+
+The importer must be written as a subclass of :class:`~aiida.engine.processes.calcjobs.importer.CalcJobImporter`,
+for an example see :class:`aiida.calculations.importers.arithmetic.add.ArithmeticAddCalculationImporter`.
+
+To associate the importer with the |CalcJob| class, the importer must be registered with an entry point in the group ``aiida.calculations.importers``.
+
+.. code-block:: toml
+
+    [project.entry-points."aiida.calculations.importers"]
+    "core.arithmetic.add" = "aiida.calculations.importers.arithmetic.add:ArithmeticAddCalculationImporter"
+
+.. note::
+
+    Note that the entry point name can be any valid entry point name.
+    If the importer plugin is provided by the same package as the corresponding |CalcJob| plugin, it is recommended that the entry point name of the importer and |CalcJob| plugin are the same.
+    This will allow the :meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.get_importer` method to automatically fetch the associated importer.
+    If the entry point names differ, the entry point name of the desired importer implementation needs to be passed to :meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.get_importer` as an argument.
+
+Users can then import their calculations via the :py:meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.get_importer` method:
+
+.. code-block:: python
+
+    from aiida.plugins import CalculationFactory
+
+    ArithmeticAddCalculation = CalculationFactory('arithmetic.add')
+    importer = ArithmeticAddCalculation.get_importer()
+    remote_data = RemoteData('/some/absolute/path', computer=load_computer('computer'))
+    inputs = importer.parse_remote_data(remote_data)
+    results, node = run.get_node(ArithmeticAddCalculation, **inputs)
+    assert node.is_imported
+
+.. seealso:: :doc:`aep:004_calcjob_importer/readme`, for the design considerations around this feature.
+
 .. _how-to:plugin-codes:cli-options:
 
 Exercise - Support command-line options
@@ -568,28 +609,12 @@ This marks the end of this how-to.
 The |CalcJob| and |Parser| plugins are still rather basic and the ``aiida-diff-tutorial`` plugin package is missing a number of useful features, such as package metadata, documentation, tests, CI, etc.
 Continue with :ref:`how-to:plugins-develop` in order to learn how to quickly create a feature-rich new plugin package from scratch.
 
-
-.. todo::
-
-    .. _how-to:plugin-codes:scheduler:
-
-    title: Adding support for a custom scheduler
-
-    `#3989`_
-
-
-    .. _how-to:plugin-codes:transport:
-
-    title: Adding support for a custom transport
-
-    `#3990`_
-
 .. |Int| replace:: :py:class:`~aiida.orm.nodes.data.int.Int`
 .. |SinglefileData| replace:: :py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`
 .. |StructureData| replace:: :py:class:`~aiida.orm.nodes.data.structure.StructureData`
-.. |RemoteData| replace:: :py:class:`~aiida.orm.nodes.data.remote.RemoteData`
+.. |RemoteData| replace:: :py:class:`~aiida.orm.RemoteData`
 .. |Dict| replace:: :py:class:`~aiida.orm.nodes.data.dict.Dict`
-.. |Code| replace:: :py:class:`~aiida.orm.nodes.data.Code`
+.. |Code| replace:: :py:class:`~aiida.orm.Code`
 .. |Parser| replace:: :py:class:`~aiida.parsers.parser.Parser`
 .. |parse| replace:: :py:class:`~aiida.parsers.parser.Parser.parse`
 .. |folder| replace:: :py:class:`~aiida.common.folders.Folder`
@@ -600,8 +625,8 @@ Continue with :ref:`how-to:plugins-develop` in order to learn how to quickly cre
 .. |CodeInfo| replace:: :py:class:`~aiida.common.CodeInfo`
 .. |FolderData| replace:: :py:class:`~aiida.orm.nodes.data.folder.FolderData`
 .. |spec| replace:: ``spec``
-.. |define| replace:: :py:class:`~aiida.engine.processes.calcjobs.CalcJob.define`
-.. |prepare_for_submission| replace:: :py:meth:`~aiida.engine.processes.calcjobs.CalcJob.prepare_for_submission`
+.. |define| replace:: :py:class:`~aiida.engine.CalcJob.define`
+.. |prepare_for_submission| replace:: :py:meth:`~aiida.engine.CalcJob.prepare_for_submission`
 .. _aiida-diff: https://github.com/aiidateam/aiida-diff
 .. _voluptuous: https://github.com/alecthomas/voluptuous
 .. _pydantic: https://github.com/samuelcolvin/pydantic/

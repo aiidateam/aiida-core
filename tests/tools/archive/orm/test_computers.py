@@ -17,7 +17,7 @@ from aiida.tools.archive.imports import DUPLICATE_LABEL_TEMPLATE
 from tests.utils.archives import import_test_archive
 
 
-def test_same_computer_import(tmp_path, clear_database_before_test, aiida_localhost):
+def test_same_computer_import(tmp_path, aiida_profile_clean, aiida_localhost):
     """
     Test that you can import nodes in steps without any problems. In this
     test we will import a first calculation and then a second one. The
@@ -60,7 +60,7 @@ def test_same_computer_import(tmp_path, clear_database_before_test, aiida_localh
     create_archive([calc2], filename=filename2)
 
     # Clean the local database
-    clear_database_before_test.reset_db()
+    aiida_profile_clean.clear_profile()
 
     # Check that there are no computers
     builder = orm.QueryBuilder()
@@ -79,17 +79,17 @@ def test_same_computer_import(tmp_path, clear_database_before_test, aiida_localh
     builder = orm.QueryBuilder()
     builder.append(orm.CalcJobNode, project=['label'])
     assert builder.count() == 1, 'Only one calculation should be found.'
-    assert str(builder.first()[0]) == calc1_label, 'The calculation label is not correct.'
+    assert str(builder.first(flat=True)) == calc1_label, 'The calculation label is not correct.'
 
     # Check that the referenced computer is imported correctly.
     builder = orm.QueryBuilder()
     builder.append(orm.Computer, project=['label', 'uuid', 'id'])
     assert builder.count() == 1, 'Only one computer should be found.'
-    assert str(builder.first()[0]) == comp_name, 'The computer name is not correct.'
-    assert str(builder.first()[1]) == comp_uuid, 'The computer uuid is not correct.'
+    assert str(builder.first()[0]) == comp_name, 'The computer name is not correct.'  # pylint: disable=unsubscriptable-object
+    assert str(builder.first()[1]) == comp_uuid, 'The computer uuid is not correct.'  # pylint: disable=unsubscriptable-object
 
     # Store the id of the computer
-    comp_id = builder.first()[2]
+    comp_id = builder.first()[2]  # pylint: disable=unsubscriptable-object
 
     # Import the second calculation
     import_archive(filename2)
@@ -99,9 +99,9 @@ def test_same_computer_import(tmp_path, clear_database_before_test, aiida_localh
     builder = orm.QueryBuilder()
     builder.append(orm.Computer, project=['label', 'uuid', 'id'])
     assert builder.count() == 1, f'Found {builder.count()} computersbut only one computer should be found.'
-    assert str(builder.first()[0]) == comp_name, 'The computer name is not correct.'
-    assert str(builder.first()[1]) == comp_uuid, 'The computer uuid is not correct.'
-    assert builder.first()[2] == comp_id, 'The computer id is not correct.'
+    assert str(builder.first()[0]) == comp_name, 'The computer name is not correct.'  # pylint: disable=unsubscriptable-object
+    assert str(builder.first()[1]) == comp_uuid, 'The computer uuid is not correct.'  # pylint: disable=unsubscriptable-object
+    assert builder.first()[2] == comp_id, 'The computer id is not correct.'  # pylint: disable=unsubscriptable-object
 
     # Check that now you have two calculations attached to the same
     # computer.
@@ -113,7 +113,7 @@ def test_same_computer_import(tmp_path, clear_database_before_test, aiida_localh
     assert ret_labels == set([calc1_label, calc2_label]), 'The labels of the calculations are not correct.'
 
 
-def test_same_computer_different_name_import(tmp_path, clear_database_before_test, aiida_localhost):
+def test_same_computer_different_name_import(tmp_path, aiida_profile_clean, aiida_localhost):
     """
     This test checks that if the computer is re-imported with a different
     name to the same database, then the original computer will not be
@@ -156,7 +156,7 @@ def test_same_computer_different_name_import(tmp_path, clear_database_before_tes
     create_archive([calc2], filename=filename2)
 
     # Clean the local database
-    clear_database_before_test.reset_db()
+    aiida_profile_clean.clear_profile()
 
     # Check that there are no computers
     builder = orm.QueryBuilder()
@@ -175,13 +175,13 @@ def test_same_computer_different_name_import(tmp_path, clear_database_before_tes
     builder = orm.QueryBuilder()
     builder.append(orm.CalcJobNode, project=['label'])
     assert builder.count() == 1, 'Only one calculation should be found.'
-    assert str(builder.first()[0]) == calc1_label, 'The calculation label is not correct.'
+    assert str(builder.first(flat=True)) == calc1_label, 'The calculation label is not correct.'
 
     # Check that the referenced computer is imported correctly.
     builder = orm.QueryBuilder()
     builder.append(orm.Computer, project=['label', 'uuid', 'id'])
     assert builder.count() == 1, 'Only one computer should be found.'
-    assert str(builder.first()[0]) == comp1_name, 'The computer name is not correct.'
+    assert str(builder.first()[0]) == comp1_name, 'The computer name is not correct.'  # pylint: disable=unsubscriptable-object
 
     # Import the second calculation
     import_archive(filename2)
@@ -191,10 +191,10 @@ def test_same_computer_different_name_import(tmp_path, clear_database_before_tes
     builder = orm.QueryBuilder()
     builder.append(orm.Computer, project=['label'])
     assert builder.count() == 1, f'Found {builder.count()} computersbut only one computer should be found.'
-    assert str(builder.first()[0]) == comp1_name, 'The computer name is not correct.'
+    assert str(builder.first(flat=True)) == comp1_name, 'The computer name is not correct.'
 
 
-def test_different_computer_same_name_import(tmp_path, clear_database_before_test, aiida_localhost_factory):
+def test_different_computer_same_name_import(tmp_path, aiida_profile_clean, aiida_localhost_factory):
     """
     This test checks that if there is a name collision, the imported
     computers are renamed accordingly.
@@ -216,7 +216,7 @@ def test_different_computer_same_name_import(tmp_path, clear_database_before_tes
     create_archive([calc1], filename=filename1)
 
     # Reset the database
-    clear_database_before_test.reset_db()
+    aiida_profile_clean.clear_profile()
 
     # Store a second calculation
     calc2_label = 'calc2'
@@ -232,7 +232,7 @@ def test_different_computer_same_name_import(tmp_path, clear_database_before_tes
     create_archive([calc2], filename=filename2)
 
     # Reset the database
-    clear_database_before_test.reset_db()
+    aiida_profile_clean.clear_profile()
 
     # Store a third calculation
     calc3_label = 'calc3'
@@ -248,7 +248,7 @@ def test_different_computer_same_name_import(tmp_path, clear_database_before_tes
     create_archive([calc3], filename=filename3)
 
     # Clean the local database
-    clear_database_before_test.reset_db()
+    aiida_profile_clean.clear_profile()
 
     # Check that there are no computers
     builder = orm.QueryBuilder()
@@ -278,7 +278,7 @@ def test_different_computer_same_name_import(tmp_path, clear_database_before_tes
     assert [calc3_label, DUPLICATE_LABEL_TEMPLATE.format(comp1_name, 1)] in res, 'Calc-Computer combination not found.'
 
 
-def test_import_of_computer_json_params(tmp_path, clear_database_before_test, aiida_localhost):
+def test_import_of_computer_json_params(tmp_path, aiida_profile_clean, aiida_localhost):
     """
     This test checks that the metadata and transport params are exported and imported correctly in both backends.
     """
@@ -302,7 +302,7 @@ def test_import_of_computer_json_params(tmp_path, clear_database_before_test, ai
     create_archive([calc1], filename=filename1)
 
     # Clean the local database
-    clear_database_before_test.reset_db()
+    aiida_profile_clean.clear_profile()
 
     # Import the data
     import_archive(filename1)
@@ -315,9 +315,9 @@ def test_import_of_computer_json_params(tmp_path, clear_database_before_test, ai
     assert res['comp']['metadata'] == comp1_metadata, 'Not the expected metadata were found'
 
 
-@pytest.mark.parametrize('backend', ['sqlalchemy', 'django'])
-def test_import_of_django_sqla_export_file(clear_database_before_test, aiida_localhost, backend):  # pylint: disable=unused-argument
-    """Check that sqla import manages to import the django archive file correctly"""
+@pytest.mark.parametrize('backend', ['django', 'sqlalchemy'])
+def test_import_of_django_sqla_export_file(aiida_profile_clean, aiida_localhost, backend):  # pylint: disable=unused-argument
+    """Check that import manages to import the archive file correctly for legacy storage backends."""
     archive = f'{backend}.aiida'
 
     # Import the needed data

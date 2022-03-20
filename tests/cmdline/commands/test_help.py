@@ -8,20 +8,19 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi help`."""
-from click.testing import CliRunner
 import pytest
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_verdi
 
 
-@pytest.mark.usefixtures('config_with_profile')
-class TestVerdiHelpCommand(AiidaTestCase):
+class TestVerdiHelpCommand:
     """Tests for `verdi help`."""
 
-    def setUp(self):
-        super().setUp()
-        self.cli_runner = CliRunner()
+    @pytest.fixture(autouse=True)
+    def init_profile(self, config_with_profile, run_cli_command):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
+        self.cli_runner = run_cli_command
 
     def test_without_arg(self):
         """
@@ -30,12 +29,12 @@ class TestVerdiHelpCommand(AiidaTestCase):
         """
         # don't invoke the cmd directly to make sure ctx.parent is properly populated
         # as it would be when called as a cli
-        result_help = self.cli_runner.invoke(cmd_verdi.verdi, ['help'], catch_exceptions=False)
-        result_verdi = self.cli_runner.invoke(cmd_verdi.verdi, [], catch_exceptions=False)
-        self.assertEqual(result_help.output, result_verdi.output)
+        result_help = self.cli_runner(cmd_verdi.verdi, ['help'], catch_exceptions=False)
+        result_verdi = self.cli_runner(cmd_verdi.verdi, [], catch_exceptions=False)
+        assert result_help.output == result_verdi.output
 
     def test_cmd_help(self):
         """Ensure we get the same help for `verdi user --help` and `verdi help user`"""
-        result_help = self.cli_runner.invoke(cmd_verdi.verdi, ['help', 'user'], catch_exceptions=False)
-        result_user = self.cli_runner.invoke(cmd_verdi.verdi, ['user', '--help'], catch_exceptions=False)
-        self.assertEqual(result_help.output, result_user.output)
+        result_help = self.cli_runner(cmd_verdi.verdi, ['help', 'user'], catch_exceptions=False)
+        result_user = self.cli_runner(cmd_verdi.verdi, ['user', '--help'], catch_exceptions=False)
+        assert result_help.output == result_user.output

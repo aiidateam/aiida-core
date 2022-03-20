@@ -218,7 +218,7 @@ def test_get_info(populated_repository):
     assert repository_info['SHA-hash algorithm'] == 'sha256'
     assert repository_info['Compression algorithm'] == 'zlib+1'
 
-    repository_info = populated_repository.get_info(statistics=True)
+    repository_info = populated_repository.get_info(detailed=True)
     assert 'SHA-hash algorithm' in repository_info
     assert 'Compression algorithm' in repository_info
     assert repository_info['SHA-hash algorithm'] == 'sha256'
@@ -281,7 +281,7 @@ def test_maintain_logging(caplog, populated_repository, do_vacuum):
     list_of_logmsg = []
     for record in caplog.records:
         assert record.levelname == 'REPORT'
-        assert record.name == 'aiida.maintain.disk_object_store'
+        assert record.name.endswith('.disk_object_store')
         list_of_logmsg.append(record.msg)
 
     assert 'packing' in list_of_logmsg[0].lower()

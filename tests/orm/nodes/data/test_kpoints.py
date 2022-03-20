@@ -7,20 +7,21 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Tests for the `KpointsData` class."""
-
 import numpy as np
+import pytest
 
-from aiida.backends.testbase import AiidaTestCase
 from aiida.orm import KpointsData, StructureData, load_node
 
 
-class TestKpoints(AiidaTestCase):
+class TestKpoints:
     """Test for the `Kpointsdata` class."""
 
-    @classmethod
-    def setUpClass(cls, *args, **kwargs):
-        super().setUpClass(*args, **kwargs)
+    @pytest.fixture(autouse=True)
+    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+        """Initialize the profile."""
+        # pylint: disable=attribute-defined-outside-init
 
         alat = 5.430  # angstrom
         cell = [[
@@ -32,14 +33,14 @@ class TestKpoints(AiidaTestCase):
             0.5 * alat,
             0.5 * alat,
         ], [0.5 * alat, 0., 0.5 * alat]]
-        cls.alat = alat
+        self.alat = alat
         structure = StructureData(cell=cell)
         structure.append_atom(position=(0.000 * alat, 0.000 * alat, 0.000 * alat), symbols=['Si'])
         structure.append_atom(position=(0.250 * alat, 0.250 * alat, 0.250 * alat), symbols=['Si'])
-        cls.structure = structure
+        self.structure = structure
         # Define the expected reciprocal cell
         val = 2. * np.pi / alat
-        cls.expected_reciprocal_cell = np.array([[val, val, -val], [-val, val, val], [val, -val, val]])
+        self.expected_reciprocal_cell = np.array([[val, val, -val], [-val, val, val], [val, -val, val]])
 
     def test_reciprocal_cell(self):
         """
@@ -50,12 +51,12 @@ class TestKpoints(AiidaTestCase):
         kpt = KpointsData()
         kpt.set_cell_from_structure(self.structure)
 
-        self.assertEqual(np.abs(kpt.reciprocal_cell - self.expected_reciprocal_cell).sum(), 0.)
+        assert np.abs(kpt.reciprocal_cell - self.expected_reciprocal_cell).sum() == 0.
 
         # Check also after storing
         kpt.store()
         kpt2 = load_node(kpt.pk)
-        self.assertEqual(np.abs(kpt2.reciprocal_cell - self.expected_reciprocal_cell).sum(), 0.)
+        assert np.abs(kpt2.reciprocal_cell - self.expected_reciprocal_cell).sum() == 0.
 
     def test_get_kpoints(self):
         """Test the `get_kpoints` method."""
@@ -73,11 +74,11 @@ class TestKpoints(AiidaTestCase):
         ]
 
         kpt.set_kpoints(kpoints)
-        self.assertEqual(np.abs(kpt.get_kpoints() - np.array(kpoints)).sum(), 0.)
-        self.assertEqual(np.abs(kpt.get_kpoints(cartesian=True) - np.array(cartesian_kpoints)).sum(), 0.)
+        assert np.abs(kpt.get_kpoints() - np.array(kpoints)).sum() == 0.
+        assert np.abs(kpt.get_kpoints(cartesian=True) - np.array(cartesian_kpoints)).sum() == 0.
 
         # Check also after storing
         kpt.store()
         kpt2 = load_node(kpt.pk)
-        self.assertEqual(np.abs(kpt2.get_kpoints() - np.array(kpoints)).sum(), 0.)
-        self.assertEqual(np.abs(kpt2.get_kpoints(cartesian=True) - np.array(cartesian_kpoints)).sum(), 0.)
+        assert np.abs(kpt2.get_kpoints() - np.array(kpoints)).sum() == 0.
+        assert np.abs(kpt2.get_kpoints(cartesian=True) - np.array(cartesian_kpoints)).sum() == 0.

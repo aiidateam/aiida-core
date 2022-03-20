@@ -1731,7 +1731,7 @@ Ag 0 0 2.0335
             assert s.cell
 
             # The default cell is given in these cases:
-            assert s.cell == np.diag([0,0,0]).tolist()
+            assert s.cell == np.diag([0, 0, 0]).tolist()
 
         # Testing a case where 1
         xyz_string4 = """

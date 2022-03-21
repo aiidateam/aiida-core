@@ -112,8 +112,8 @@ def test_parse_common_joblist_output():
 
 def test_submit_script():
     """Test the creation of a simple submission script"""
-    from aiida.common.datastructures import CodeInfo, CodeRunMode
-    from aiida.schedulers.datastructures import JobTemplate
+    from aiida.common.datastructures import CodeRunMode
+    from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
     scheduler = LsfScheduler()
 
@@ -122,10 +122,10 @@ def test_submit_script():
     job_tmpl.uuid = str(uuid.uuid4())
     job_tmpl.job_resource = scheduler.create_job_resource(tot_num_mpiprocs=2, parallel_env='b681e480bd.cern.ch')
     job_tmpl.max_wallclock_seconds = 24 * 3600
-    code_info = CodeInfo()
-    code_info.cmdline_params = ['mpirun', '-np', '2', 'pw.x', '-npool', '1']
-    code_info.stdin_name = 'aiida.in'
-    job_tmpl.codes_info = [code_info]
+    tmpl_code_info = JobTemplateCodeInfo()
+    tmpl_code_info.cmdline_params = ['mpirun', '-np', '2', 'pw.x', '-npool', '1']
+    tmpl_code_info.stdin_name = 'aiida.in'
+    job_tmpl.codes_info = [tmpl_code_info]
     job_tmpl.codes_run_mode = CodeRunMode.SERIAL
     job_tmpl.account = 'account_id'
 
@@ -142,16 +142,16 @@ def test_submit_script():
 
 def test_submit_script_rerunnable():
     """Test the `rerunnable` option of the submit script."""
-    from aiida.common.datastructures import CodeInfo, CodeRunMode
-    from aiida.schedulers.datastructures import JobTemplate
+    from aiida.common.datastructures import CodeRunMode
+    from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
     scheduler = LsfScheduler()
 
     job_tmpl = JobTemplate()
     job_tmpl.job_resource = scheduler.create_job_resource(tot_num_mpiprocs=2, parallel_env='b681e480bd.cern.ch')
-    code_info = CodeInfo()
-    code_info.cmdline_params = []
-    job_tmpl.codes_info = [code_info]
+    tmpl_code_info = JobTemplateCodeInfo()
+    tmpl_code_info.cmdline_params = []
+    job_tmpl.codes_info = [tmpl_code_info]
     job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
     job_tmpl.rerunnable = True

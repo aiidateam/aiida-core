@@ -872,8 +872,8 @@ class TestSubmitScript(unittest.TestCase):
         """
         Test to verify if scripts works fine with default options
         """
-        from aiida.common.datastructures import CodeInfo, CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate
+        from aiida.common.datastructures import CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
         s = TorqueScheduler()
 
@@ -882,10 +882,10 @@ class TestSubmitScript(unittest.TestCase):
         job_tmpl.job_resource = s.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
-        code_info = CodeInfo()
-        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
-        code_info.stdin_name = 'aiida.in'
-        job_tmpl.codes_info = [code_info]
+        tmpl_code_info = JobTemplateCodeInfo()
+        tmpl_code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
+        tmpl_code_info.stdin_name = 'aiida.in'
+        job_tmpl.codes_info = [tmpl_code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
         submit_script_text = s.get_submit_script(job_tmpl)
@@ -900,8 +900,8 @@ class TestSubmitScript(unittest.TestCase):
         Test to verify if script works fine if we specify only
         num_cores_per_machine value.
         """
-        from aiida.common.datastructures import CodeInfo, CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate
+        from aiida.common.datastructures import CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
         scheduler = TorqueScheduler()
 
@@ -912,10 +912,10 @@ class TestSubmitScript(unittest.TestCase):
         )
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
-        code_info = CodeInfo()
-        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
-        code_info.stdin_name = 'aiida.in'
-        job_tmpl.codes_info = [code_info]
+        tmpl_code_info = JobTemplateCodeInfo()
+        tmpl_code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
+        tmpl_code_info.stdin_name = 'aiida.in'
+        job_tmpl.codes_info = [tmpl_code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
         submit_script_text = scheduler.get_submit_script(job_tmpl)
@@ -930,8 +930,8 @@ class TestSubmitScript(unittest.TestCase):
         Test to verify if scripts works fine if we pass only
         num_cores_per_mpiproc value
         """
-        from aiida.common.datastructures import CodeInfo, CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate
+        from aiida.common.datastructures import CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
         scheduler = TorqueScheduler()
 
@@ -942,10 +942,10 @@ class TestSubmitScript(unittest.TestCase):
         )
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
-        code_info = CodeInfo()
-        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
-        code_info.stdin_name = 'aiida.in'
-        job_tmpl.codes_info = [code_info]
+        tmpl_code_info = JobTemplateCodeInfo()
+        tmpl_code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
+        tmpl_code_info.stdin_name = 'aiida.in'
+        job_tmpl.codes_info = [tmpl_code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
         submit_script_text = scheduler.get_submit_script(job_tmpl)
@@ -962,8 +962,8 @@ class TestSubmitScript(unittest.TestCase):
         It should pass in check:
         res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
         """
-        from aiida.common.datastructures import CodeInfo, CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate
+        from aiida.common.datastructures import CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
         scheduler = TorqueScheduler()
 
@@ -974,10 +974,10 @@ class TestSubmitScript(unittest.TestCase):
         )
         job_tmpl.uuid = str(uuid.uuid4())
         job_tmpl.max_wallclock_seconds = 24 * 3600
-        code_info = CodeInfo()
-        code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
-        code_info.stdin_name = 'aiida.in'
-        job_tmpl.codes_info = [code_info]
+        tmpl_code_info = JobTemplateCodeInfo()
+        tmpl_code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
+        tmpl_code_info.stdin_name = 'aiida.in'
+        job_tmpl.codes_info = [tmpl_code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
         submit_script_text = scheduler.get_submit_script(job_tmpl)
@@ -1006,16 +1006,16 @@ class TestSubmitScript(unittest.TestCase):
 
     def test_submit_script_rerunnable(self):  # pylint: disable=no-self-use
         """Test the `rerunnable` option of the submit script."""
-        from aiida.common.datastructures import CodeInfo, CodeRunMode
-        from aiida.schedulers.datastructures import JobTemplate
+        from aiida.common.datastructures import CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
         scheduler = TorqueScheduler()
 
         job_tmpl = JobTemplate()
         job_tmpl.job_resource = scheduler.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
-        code_info = CodeInfo()
-        code_info.cmdline_params = []
-        job_tmpl.codes_info = [code_info]
+        tmpl_code_info = JobTemplateCodeInfo()
+        tmpl_code_info.cmdline_params = []
+        job_tmpl.codes_info = [tmpl_code_info]
         job_tmpl.codes_run_mode = CodeRunMode.SERIAL
 
         job_tmpl.rerunnable = True

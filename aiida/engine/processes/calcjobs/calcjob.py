@@ -515,21 +515,23 @@ class CalcJob(Process):
             self.logger.info('could not parse scheduler output: return value of `detailed_job_info` is non-zero')
             detailed_job_info = None
 
-        try:
-            scheduler_stderr = retrieved.get_object_content(filename_stderr)
-        except FileNotFoundError:
-            scheduler_stderr = None
-            self.logger.warning(f'could not parse scheduler output: the `{filename_stderr}` file is missing')
+        if filename_stderr is None:
+            self.logger.warning('could not determine `stderr` filename because `scheduler_stderr` option was not set.')
+        else:
+            try:
+                scheduler_stderr = retrieved.get_object_content(filename_stderr)
+            except FileNotFoundError:
+                scheduler_stderr = None
+                self.logger.warning(f'could not parse scheduler output: the `{filename_stderr}` file is missing')
 
-        try:
-            scheduler_stdout = retrieved.get_object_content(filename_stdout)
-        except FileNotFoundError:
-            scheduler_stdout = None
-            self.logger.warning(f'could not parse scheduler output: the `{filename_stdout}` file is missing')
-
-        # Only attempt to call the scheduler parser if all three resources of information are available
-        if any(entry is None for entry in [detailed_job_info, scheduler_stderr, scheduler_stdout]):
-            return None
+        if filename_stdout is None:
+            self.logger.warning('could not determine `stdout` filename because `scheduler_stdout` option was not set.')
+        else:
+            try:
+                scheduler_stdout = retrieved.get_object_content(filename_stdout)
+            except FileNotFoundError:
+                scheduler_stdout = None
+                self.logger.warning(f'could not parse scheduler output: the `{filename_stdout}` file is missing')
 
         try:
             exit_code = scheduler.parse_output(detailed_job_info, scheduler_stdout, scheduler_stderr)

@@ -390,14 +390,14 @@ class Scheduler(metaclass=abc.ABCMeta):
         :return: True if everything seems ok, False otherwise.
         """
 
-    def parse_output(self, detailed_job_info, stdout, stderr):
+    def parse_output(self, detailed_job_info=None, stdout=None, stderr=None):
         """Parse the output of the scheduler.
 
         :param detailed_job_info: dictionary with the output returned by the `Scheduler.get_detailed_job_info` command.
             This should contain the keys `retval`, `stdout` and `stderr` corresponding to the return value, stdout and
             stderr returned by the accounting command executed for a specific job id.
-        :param stdout: string with the output written by the scheduler to stdout
-        :param stderr: string with the output written by the scheduler to stderr
-        :return: None or an instance of `aiida.engine.processes.exit_code.ExitCode`
+        :param stdout: string with the output written by the scheduler to stdout.
+        :param stderr: string with the output written by the scheduler to stderr.
+        :return: None or an instance of :class:`aiida.engine.processes.exit_code.ExitCode`.
         """
         raise exceptions.FeatureNotAvailable(f'output parsing is not available for `{self.__class__.__name__}`')

@@ -491,15 +491,21 @@ class Computer(entities.Entity['BackendComputer']):
         self.set_property('default_memory_per_machine', def_memory_per_machine)
 
     def get_minimum_job_poll_interval(self) -> float:
-        """
-        Get the minimum interval between subsequent requests to update the list
-        of jobs currently running on this computer.
+        """Get the minimum interval between subsequent requests to poll the scheduler for job status.
 
-        :return: The minimum interval (in seconds)
+        .. note:: If no value was ever set for this computer it will fall back on the default provided by the associated
+            transport class in the ``DEFAULT_MINIMUM_JOB_POLL_INTERVAL`` attribute. If the computer doesn't have a
+            transport class, or it cannot be loaded, or it doesn't provide a job poll interval default, then this will
+            fall back on the ``PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT`` attribute of this class.
+
+        :return: The minimum interval (in seconds).
         """
-        return self.get_property(
-            self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL, self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT
-        )
+        try:
+            default = self.get_transport_class().DEFAULT_MINIMUM_JOB_POLL_INTERVAL
+        except (exceptions.ConfigurationError, AttributeError):
+            default = self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT
+
+        return self.get_property(self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL, default)
 
     def set_minimum_job_poll_interval(self, interval: float) -> None:
         """

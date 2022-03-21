@@ -11,8 +11,9 @@
 """Tests for the `Computer` ORM class."""
 import pytest
 
-from aiida import orm
 from aiida.common import exceptions
+from aiida.orm import AuthInfo, Computer, User
+from aiida.plugins import TransportFactory
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -25,7 +26,7 @@ class TestComputer:
         """
         import tempfile
 
-        new_comp = orm.Computer(
+        new_comp = Computer(
             label='bbb',
             hostname='localhost',
             transport_type='core.local',
@@ -34,7 +35,7 @@ class TestComputer:
         ).store()
 
         # Configure the computer - no parameters for local transport
-        authinfo = orm.AuthInfo(computer=new_comp, user=orm.User.collection.get_default())
+        authinfo = AuthInfo(computer=new_comp, user=User.collection.get_default())
         authinfo.store()
 
         transport = new_comp.get_transport()
@@ -48,7 +49,7 @@ class TestComputer:
 
     def test_delete(self):
         """Test the deletion of a `Computer` instance."""
-        new_comp = orm.Computer(
+        new_comp = Computer(
             label='aaa',
             hostname='aaa',
             transport_type='core.local',
@@ -58,13 +59,30 @@ class TestComputer:
 
         comp_pk = new_comp.pk
 
-        check_computer = orm.Computer.collection.get(id=comp_pk)
+        check_computer = Computer.collection.get(id=comp_pk)
         assert comp_pk == check_computer.pk
 
-        orm.Computer.collection.delete(comp_pk)
+        Computer.collection.delete(comp_pk)
 
         with pytest.raises(exceptions.NotExistent):
-            orm.Computer.collection.get(id=comp_pk)
+            Computer.collection.get(id=comp_pk)
+
+    def test_get_minimum_job_poll_interval(self):
+        """Test the :meth:`aiida.orm.Computer.get_minimum_job_poll_interval` method."""
+        computer = Computer()
+
+        # No transport class defined: fall back on class default.
+        assert computer.get_minimum_job_poll_interval() == Computer.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT
+
+        # Transport class defined: use default of the transport class.
+        transport = TransportFactory('core.local')
+        computer.transport_type = 'core.local'
+        assert computer.get_minimum_job_poll_interval() == transport.DEFAULT_MINIMUM_JOB_POLL_INTERVAL  # pylint: disable=protected-access
+
+        # Explicit value defined: use value of the instance.
+        interval = -10
+        computer.set_minimum_job_poll_interval(interval)
+        assert computer.get_minimum_job_poll_interval() == interval
 
 
 class TestComputerConfigure:
@@ -85,7 +103,7 @@ class TestComputerConfigure:
         self.comp_builder.default_memory_per_machine = 1000000
         self.comp_builder.mpirun_command = 'mpirun'
         self.comp_builder.shebang = '#!xonsh'
-        self.user = orm.User.collection.get_default()
+        self.user = User.collection.get_default()
 
     def test_configure_local(self):
         """Configure a computer for local transport and check it is configured."""

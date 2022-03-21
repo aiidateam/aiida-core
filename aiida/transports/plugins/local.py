@@ -49,6 +49,12 @@ class LocalTransport(Transport):
     # where the remote computer will rate limit the number of connections.
     _DEFAULT_SAFE_OPEN_INTERVAL = 0.0
 
+    # Like the connection open interval, for local transport, which should be used for localhost, one probably doesn't
+    # want to have a long polling time in most cases. Since localhost is typically used for short running jobs and tests
+    # one doesn't want to be waiting tens of seconds for a job that should last less than one second. We don't set 0 but
+    # a small finite number that should prevent the CPUs from spinning while still guaranteeing fast throughput.
+    DEFAULT_MINIMUM_JOB_POLL_INTERVAL = 0.1
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # The `_internal_dir` will emulate the concept of working directory, as the real current working directory is

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1647864862190,
+  "lastUpdate": 1647901347459,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -79154,6 +79154,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.0016323",
             "group": "node",
             "extra": "mean: 16.412 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "2.60",
+          "cores": 2,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.8.12",
+          "metadata": "postgres:12.3, rabbitmq:3.8.3"
+        },
+        "commit": {
+          "id": "2982e404bcceb1e979f4097541544fa7584c1ebe",
+          "message": "`CalcJob`: always call `Scheduler.parse_output` (#5458)\n\n* `CalcJob`: always call `Scheduler.parse_output`\r\n\r\nWhen the functionality was added for a `Scheduler` plugin to parse the\r\noutput that was written to `stdout` and `stderr` or retrieved from a\r\nspecialized status command, it was decided to only call `parse_output`\r\nif all three information streams were successfully retrieved. The\r\nreasoning was especially that the `detailed_info` should be required as\r\nthat would return well-structured data and would allow to reliably\r\ndetermine what had happened, whereas parsing free text from stdout and\r\nstderr would be error prone.\r\n\r\nAlthough probably a safe choice, the direct result was that setups where\r\nthe scheduler didn't have the necessary implementation to return the\r\n`detailed_info`, no scheduler output parsing would be available. This\r\nwould lead to many OOM and OOW problems to go unnoticed and the engine\r\nretrying to submit without any error handling.\r\n\r\nHere we remove the requirement that all three information streams from\r\nthe parser, `detailed_info`, `stderr` and `stdout` should be known, but\r\nthat `parse_output` will always be called, with a default of `None` for\r\neach. The advantage is that this will allow scheduler plugins to\r\nimplement parsing from `stderr`, on top of `detailed_info` wherever\r\napplicable, to increase the chances of catching basic problems.\r\n\r\nThe major downside is that this is a backwards incompatible change for\r\nscheduler plugins that rely on the assumption that the arguments always\r\nhave values that are not `None`.\r\n\r\nThis commit also fixes a bug in `CalcJob.parse_scheduler_output` where\r\nit would pass the result of `node.get_option('scheduler_stderr')`\r\nstraight to `retrieved.get_object_content`. However, if the option was\r\nnot defined on the node, `get_option` will return `None` which will\r\nresult in a `TypeError` from the `get_object_content` call. This is\r\nfixed by explicitly checking for `None` in which case a warning is\r\nlogged.\r\n\r\n* `SlurmScheduler`: use `stderr` in `parse_stdout` for OOW and OOM\r\n\r\nThe `CalcJob` implementation was changed to always call the\r\n`parse_output` method of the scheduler, even if `detailed_info` is\r\n`None`. This means that now we can attempt to parse errors from the\r\n`stderr` as well.\r\n\r\nHere we add simple regexes to try and detect OOM and OOW errors. They\r\nreturn the exact same exit code as if they would have been detected from\r\nthe `detailed_info`. Note that since this is done with regexes, this\r\nopens the door to false positives. It is not know how likely these are\r\nto occur.",
+          "timestamp": "2022-03-21T22:11:39Z",
+          "url": "https://github.com/aiidateam/aiida-core/commit/2982e404bcceb1e979f4097541544fa7584c1ebe",
+          "distinct": true,
+          "tree_id": "8c42590599c2c4a201857f62f691256bfbb38d3f"
+        },
+        "date": 1647901339416,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 2.703319089897887,
+            "unit": "iter/sec",
+            "range": "stddev: 0.064449",
+            "group": "import-export",
+            "extra": "mean: 369.92 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 2.8087676301376217,
+            "unit": "iter/sec",
+            "range": "stddev: 0.017026",
+            "group": "import-export",
+            "extra": "mean: 356.03 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 3.8126448829877178,
+            "unit": "iter/sec",
+            "range": "stddev: 0.054156",
+            "group": "import-export",
+            "extra": "mean: 262.29 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 3.6329958305132197,
+            "unit": "iter/sec",
+            "range": "stddev: 0.062640",
+            "group": "import-export",
+            "extra": "mean: 275.25 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 2.9934361312487217,
+            "unit": "iter/sec",
+            "range": "stddev: 0.010367",
+            "group": "engine",
+            "extra": "mean: 334.06 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.6925201128374021,
+            "unit": "iter/sec",
+            "range": "stddev: 0.052010",
+            "group": "engine",
+            "extra": "mean: 1.4440 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.8047415958749491,
+            "unit": "iter/sec",
+            "range": "stddev: 0.079560",
+            "group": "engine",
+            "extra": "mean: 1.2426 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.16579605592035526,
+            "unit": "iter/sec",
+            "range": "stddev: 0.16602",
+            "group": "engine",
+            "extra": "mean: 6.0315 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.19112950573762474,
+            "unit": "iter/sec",
+            "range": "stddev: 0.13013",
+            "group": "engine",
+            "extra": "mean: 5.2321 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.4212242493554426,
+            "unit": "iter/sec",
+            "range": "stddev: 0.010786",
+            "group": "engine",
+            "extra": "mean: 413.01 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.5277157311521286,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11234",
+            "group": "engine",
+            "extra": "mean: 1.8950 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.6193053383547741,
+            "unit": "iter/sec",
+            "range": "stddev: 0.087735",
+            "group": "engine",
+            "extra": "mean: 1.6147 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.14794398106417844,
+            "unit": "iter/sec",
+            "range": "stddev: 0.20063",
+            "group": "engine",
+            "extra": "mean: 6.7593 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.17589407033830112,
+            "unit": "iter/sec",
+            "range": "stddev: 0.10741",
+            "group": "engine",
+            "extra": "mean: 5.6852 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 359.69761847009056,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00067556",
+            "group": "node",
+            "extra": "mean: 2.7801 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 146.72168988256487,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00025870",
+            "group": "node",
+            "extra": "mean: 6.8156 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 72.48320590575497,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0012989",
+            "group": "node",
+            "extra": "mean: 13.796 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 237.3340450887064,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00023591",
+            "group": "node",
+            "extra": "mean: 4.2135 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 57.44375323383789,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0015685",
+            "group": "node",
+            "extra": "mean: 17.408 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 50.527399105423456,
+            "unit": "iter/sec",
+            "range": "stddev: 0.023923",
+            "group": "node",
+            "extra": "mean: 19.791 msec\nrounds: 100"
           }
         ]
       }

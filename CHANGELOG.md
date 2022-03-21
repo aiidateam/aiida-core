@@ -439,11 +439,13 @@ Including first-time contributors:
 - @mjclarke94 made their first contribution in [[#4994]](https://github.com/aiidateam/aiida-core/pull/4994)
 - @janssenhenning made their first contribution in [[#5064]](https://github.com/aiidateam/aiida-core/pull/5064)
 
+
 ## v1.6.7 - 2022-03-07
 
 [full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.6...v1.6.7)
 
 The `markupsafe` dependency specification was moved to `install_requires`
+
 
 ## v1.6.6 - 2022-03-07
 
@@ -465,6 +467,7 @@ The `markupsafe` dependency specification was moved to `install_requires`
 - Docs: replace CircleCI build with ReadTheDocs [[#5279]](https://github.com/aiidateam/aiida-core/pull/5279)
 - CI: run certain workflows only on main repo, not on forks [[#5091]](https://github.com/aiidateam/aiida-core/pull/5091)
 - Revise Docker image build [[#4997]](https://github.com/aiidateam/aiida-core/pull/4997)
+
 
 ## v1.6.5 - 2021-08-13
 

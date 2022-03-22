@@ -172,9 +172,14 @@ def profile_context(profile: Optional[str] = None, allow_switch=False) -> 'Profi
     :return: a context manager for temporarily loading a profile
     """
     from aiida.manage import get_manager
-    get_manager().load_profile(profile, allow_switch)
+    manager = get_manager()
+    current_profile = manager.get_profile()
+    manager.load_profile(profile, allow_switch)
     yield profile
-    get_manager().unload_profile()
+    if current_profile is None:
+        manager.unload_profile()
+    else:
+        manager.load_profile(current_profile, allow_switch=True)
 
 
 def reset_config():

@@ -25,6 +25,7 @@ if TYPE_CHECKING:
         BackendQueryBuilder,
         BackendUserCollection,
     )
+    from aiida.orm.users import User
     from aiida.repository.backend.abstract import AbstractRepositoryBackend
 
 __all__ = ('StorageBackend',)
@@ -84,6 +85,7 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
         """
         from aiida.orm.autogroup import AutogroupManager
         self._profile = profile
+        self._default_user: Optional['User'] = None
         self._autogroup = AutogroupManager(self)
 
     @abc.abstractmethod
@@ -160,6 +162,21 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
     @abc.abstractmethod
     def users(self) -> 'BackendUserCollection':
         """Return the collection of users"""
+
+    @property
+    def default_user(self) -> Optional['User']:
+        """Return the default user for the profile, if it has been created.
+
+        This is cached, since it is a frequently used operation, for creating other entities.
+        """
+        from aiida.orm import QueryBuilder, User
+
+        if self._default_user is None and self.profile.default_user_email:
+            query = QueryBuilder().append(User, filters={'email': self.profile.default_user_email})
+            results = query.all(flat=True)
+            if results:
+                self._default_user = results[0]
+        return self._default_user
 
     @abc.abstractmethod
     def query(self) -> 'BackendQueryBuilder':

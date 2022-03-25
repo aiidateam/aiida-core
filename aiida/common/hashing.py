@@ -16,8 +16,8 @@ import hashlib
 from itertools import chain
 import numbers
 from operator import itemgetter
-import random
-import time
+import secrets
+import string
 import typing
 import uuid
 
@@ -29,49 +29,18 @@ from aiida.common.utils import DatetimePrecision
 
 from .folders import Folder
 
-# The prefix of the hashed using pbkdf2_sha256 algorithm in Django
-HASHING_PREFIX_DJANGO = 'pbkdf2_sha256'
-# The prefix of the hashed using pbkdf2_sha256 algorithm in Passlib
-HASHING_PREFIX_PBKDF2_SHA256 = '$pbkdf2-sha256'
 
-# This will never be a valid encoded hash
-UNUSABLE_PASSWORD_PREFIX = '!'  # noqa
-# Number of random chars to add after UNUSABLE_PASSWORD_PREFIX
-UNUSABLE_PASSWORD_SUFFIX_LENGTH = 40
+def get_random_string(length: int = 12) -> str:
+    """Return a securely generated random string.
 
-HASHING_KEY = 'HashingKey'
+    The default length of 12 with the all ASCII letters and digits returns a 71-bit value:
 
-###################################################################
-# THE FOLLOWING WAS TAKEN FROM DJANGO BUT IT CAN BE EASILY REPLACED
-###################################################################
+        log_2((26+26+10)^12) =~ 71 bits
 
-# Use the system PRNG if possible
-try:
-    # pylint: disable=invalid-name
-    random = random.SystemRandom()
-    using_sysrandom = True
-except NotImplementedError:
-    import warnings
-    warnings.warn('A secure pseudo-random number generator is not available. Falling back to Mersenne Twister.')  # pylint: disable=no-member
-    using_sysrandom = False  # pylint: disable=invalid-name
-
-
-def get_random_string(length=12, allowed_chars='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'):
+    :param length: The number of characters to use for the string.
     """
-    Returns a securely generated random string.
-
-    The default length of 12 with the a-z, A-Z, 0-9 character set returns
-    a 71-bit value. log_2((26+26+10)^12) =~ 71 bits
-    """
-    if not using_sysrandom:
-        # This is ugly, and a hack, but it makes things better than
-        # the alternative of predictability. This re-seeds the PRNG
-        # using a value that is hard for an attacker to predict, every
-        # time a random string is required. This may change the
-        # properties of the chosen random sequence slightly, but this
-        # is better than absolute predictability.
-        random.seed(hashlib.sha256(f'{random.getstate()}{time.time()}{HASHING_KEY}'.encode('utf-8')).digest())
-    return ''.join(random.choice(allowed_chars) for i in range(length))
+    alphabet = string.ascii_letters + string.digits
+    return ''.join(secrets.choice(alphabet) for i in range(length))
 
 
 BLAKE2B_OPTIONS = {

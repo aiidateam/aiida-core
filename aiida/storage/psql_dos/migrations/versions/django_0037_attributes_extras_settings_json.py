@@ -24,7 +24,6 @@ from sqlalchemy.sql import column, table
 
 from aiida.cmdline.utils import echo
 from aiida.common.progress_reporter import get_progress_reporter
-from aiida.common.timezone import datetime_to_isoformat
 from aiida.storage.psql_dos.migrations.utils import ReflectMigrations
 
 revision = 'django_0037'
@@ -125,7 +124,10 @@ def upgrade():
                 elif dt == 'bool':
                     val = setting.bval
                 elif dt == 'date':
-                    val = datetime_to_isoformat(setting.dval)
+                    if setting.dval is not None:
+                        val = setting.dval.isoformat()
+                    else:
+                        val = setting.dval
                 conn.execute(
                     setting_tbl.update().where(setting_tbl.c.id == setting.id
                                                ).values(val=cast(val, postgresql.JSONB(astext_type=sa.Text())))
@@ -159,6 +161,7 @@ def attributes_to_dict(attr_list: list):
     Transform the attributes of a node into a dictionary. It assumes the key
     are ordered alphabetically, and that they all belong to the same node.
     """
+    # pylint: disable=too-many-branches
     d = {}
 
     error = False
@@ -193,7 +196,10 @@ def attributes_to_dict(attr_list: list):
             elif dt == 'bool':
                 val = a.bval
             elif dt == 'date':
-                val = datetime_to_isoformat(a.dval)
+                if a.dval is not None:
+                    val = a.dval.isoformat()
+                else:
+                    val = a.dval
 
             tmp_d[key] = val
 

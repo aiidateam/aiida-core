@@ -57,7 +57,7 @@ def migrate_deserialized_datetime(data, conversion):
             if conversion == 'date':
                 # Node attributes that were datetime objects were converted to a string since datetimes cannot be stored
                 # in JSON. The function used to serialize was:
-                # `data.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')
+                # `data.astimezone(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')
                 # Note that this first converted the datetime to UTC but then dropped the information from the string.
                 # Since we know that all strings will be UTC, here we are simply reattaching that information.
                 ret_data = f'{data}+00:00'

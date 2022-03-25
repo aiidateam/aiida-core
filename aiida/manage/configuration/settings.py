@@ -13,8 +13,6 @@ import pathlib
 import typing
 import warnings
 
-USE_TZ = True
-
 DEFAULT_UMASK = 0o0077
 DEFAULT_AIIDA_PATH_VARIABLE = 'AIIDA_PATH'
 DEFAULT_AIIDA_PATH = '~'

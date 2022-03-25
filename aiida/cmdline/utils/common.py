@@ -81,7 +81,7 @@ def print_last_process_state_change(process_type=None):
     if timestamp is None:
         echo_report('last time an entry changed state: never')
     else:
-        timedelta = timezone.delta(timestamp, timezone.now())
+        timedelta = timezone.delta(timestamp)
         formatted = format_local_time(timestamp, format_str='at %H:%M:%S on %Y-%m-%d')
         relative = str_timedelta(timedelta, negative_to_zero=True, max_num_fields=1)
         echo_report(f'last time an entry changed state: {relative} ({formatted})')

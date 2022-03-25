@@ -71,6 +71,7 @@ repos:
         pass_filenames: true
         files: >-
             (?x)^(
+                aiida/common/timezone.py|
                 aiida/common/progress_reporter.py|
                 aiida/engine/.*py|
                 aiida/manage/manager.py|

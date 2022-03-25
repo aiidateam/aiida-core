@@ -9,13 +9,11 @@
 ###########################################################################
 # pylint: disable=no-self-use
 """Unit tests for the BackendLog and BackendLogCollection classes."""
-
 from datetime import datetime
 import logging
 from uuid import UUID
 
 import pytest
-import pytz
 
 from aiida import orm
 from aiida.common import exceptions, timezone
@@ -91,7 +89,7 @@ class TestBackendLog:
         Test creation of a BackendLog when passing the mtime and the ctime. The passed ctime and mtime
         should be respected since it is important for the correct import of nodes at the AiiDA import/export.
         """
-        time = datetime(2019, 2, 27, 16, 20, 12, 245738, pytz.utc)
+        time = datetime(2019, 2, 27, 16, 20, 12, 245738, timezone.utc)
 
         log = self.create_log(time=time)
 

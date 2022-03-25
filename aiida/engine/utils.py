@@ -9,7 +9,6 @@
 ###########################################################################
 # pylint: disable=invalid-name
 """Utilities for the workflow engine."""
-
 import asyncio
 import contextlib
 from datetime import datetime
@@ -269,7 +268,7 @@ def set_process_state_change_timestamp(process: 'Process') -> None:
 
     key = PROCESS_STATE_CHANGE_KEY.format(process_type)
     description = PROCESS_STATE_CHANGE_DESCRIPTION.format(process_type)
-    value = timezone.datetime_to_isoformat(timezone.now())
+    value = timezone.now().isoformat()
 
     backend = get_manager().get_profile_storage()
     backend.set_global_variable(key, value, description)
@@ -285,7 +284,6 @@ def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Op
         known process types will be returned.
     :return: a timestamp or None
     """
-    from aiida.common import timezone
     from aiida.manage import get_manager  # pylint: disable=cyclic-import
 
     valid_process_types = ['calculation', 'work']
@@ -305,9 +303,9 @@ def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Op
     for process_type_key in process_types:
         key = PROCESS_STATE_CHANGE_KEY.format(process_type_key)
         try:
-            time_stamp = timezone.isoformat_to_datetime(backend.get_global_variable(key))
+            time_stamp = backend.get_global_variable(key)
             if time_stamp is not None:
-                timestamps.append(time_stamp)
+                timestamps.append(datetime.fromisoformat(time_stamp))
         except KeyError:
             continue
 

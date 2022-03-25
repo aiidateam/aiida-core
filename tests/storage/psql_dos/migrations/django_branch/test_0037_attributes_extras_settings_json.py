@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the migrations of the attributes, extras and settings from EAV to JSONB."""
+from datetime import datetime
+
 from sqlalchemy import select
 
 from aiida.common import timezone
@@ -66,7 +68,7 @@ def test_attr_extra_migration(perform_migrations: PsqlDostoreMigrator):
             'fval': 1.0
         }, {
             'datatype': 'date',
-            'dval': timezone.isoformat_to_datetime('2022-01-01')
+            'dval': datetime.fromisoformat('2022-01-01')
         })):
             kwargs['tval'] = 'test'
             attr = attr_model(dbnode_id=node.id, key=f'attr_{idx}', **kwargs)
@@ -85,8 +87,8 @@ def test_attr_extra_migration(perform_migrations: PsqlDostoreMigrator):
         attrs = session.execute(select(node_model.attributes).where(node_model.id == node_id)).scalar_one()
         extras = session.execute(select(node_model.extras).where(node_model.id == node_id)).scalar_one()
 
-    attrs['attr_4'] = timezone.isoformat_to_datetime(attrs['attr_4']).year
-    extras['extra_4'] = timezone.isoformat_to_datetime(extras['extra_4']).year
+    attrs['attr_4'] = datetime.fromisoformat(attrs['attr_4']).year
+    extras['extra_4'] = datetime.fromisoformat(extras['extra_4']).year
     assert attrs == {'attr_0': 'test', 'attr_1': 1, 'attr_2': True, 'attr_3': 1.0, 'attr_4': 2022}
     assert extras == {'extra_0': 'test', 'extra_1': 1, 'extra_2': True, 'extra_3': 1.0, 'extra_4': 2022}
 
@@ -118,11 +120,11 @@ def test_settings_migration(perform_migrations: PsqlDostoreMigrator):
             'fval': 1.0
         }, {
             'datatype': 'date',
-            'dval': timezone.isoformat_to_datetime('2022-01-01')
+            'dval': datetime.fromisoformat('2022-01-01')
         })):
             kwargs['tval'] = 'test'
             kwargs['description'] = 'description'
-            kwargs['time'] = timezone.isoformat_to_datetime('2022-01-01')
+            kwargs['time'] = datetime.fromisoformat('2022-01-01')
             attr = setting_model(key=f'key_{idx}', **kwargs)
             session.add(attr)
             session.commit()
@@ -137,5 +139,5 @@ def test_settings_migration(perform_migrations: PsqlDostoreMigrator):
             for row in session.execute(select(setting_model.key, setting_model.val).order_by(setting_model.key)).all()
         }
 
-    settings['key_4'] = timezone.isoformat_to_datetime(settings['key_4']).year
+    settings['key_4'] = datetime.fromisoformat(settings['key_4']).year
     assert settings == {'key_0': 'test', 'key_1': 1, 'key_2': True, 'key_3': 1.0, 'key_4': 2022}

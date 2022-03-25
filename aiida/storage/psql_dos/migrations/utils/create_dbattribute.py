@@ -17,7 +17,7 @@ import datetime
 import json
 
 from aiida.common.exceptions import ValidationError
-from aiida.common.timezone import get_current_timezone, is_naive, make_aware
+from aiida.common.timezone import make_aware
 
 
 def create_rows(key: str, value, node_id: int) -> list[dict]:  # pylint: disable=too-many-branches
@@ -67,9 +67,7 @@ def create_rows(key: str, value, node_id: int) -> list[dict]:  # pylint: disable
     elif isinstance(value, datetime.datetime):
 
         columns['datatype'] = 'date'
-        # For time-aware and time-naive datetime objects, see
-        # https://docs.djangoproject.com/en/dev/topics/i18n/timezones/#naive-and-aware-datetime-objects
-        columns['dval'] = make_aware(value, get_current_timezone()) if is_naive(value) else value
+        columns['dval'] = make_aware(value)
 
     elif isinstance(value, (list, tuple)):
 

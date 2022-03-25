@@ -18,11 +18,13 @@ from __future__ import annotations
 
 import abc
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 import enum
 import json
 
 from aiida.common import AIIDA_LOGGER
 from aiida.common.extendeddicts import AttributeDict, DefaultFieldsAttributeDict
+from aiida.common.timezone import make_aware, timezone_from_name
 
 SCHEDULER_LOGGER = AIIDA_LOGGER.getChild('scheduler')
 
@@ -487,24 +489,17 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
         :param value: The value to serialise
         :return: The serialised value
         """
-
-        import datetime
-
-        import pytz
-
         if value is None:
             return value
 
-        if not isinstance(value, datetime.datetime):
+        if not isinstance(value, datetime):
             raise TypeError('Invalid type for the date, should be a datetime')
 
-        # is_naive check from django.utils.timezone
         if value.tzinfo is None or value.tzinfo.utcoffset(value) is None:
             SCHEDULER_LOGGER.debug('Datetime to serialize in JobInfo is naive, this should be fixed!')
-            # v = v.replace(tzinfo = pytz.utc)
             return {'date': value.strftime('%Y-%m-%dT%H:%M:%S.%f'), 'timezone': None}
 
-        return {'date': value.astimezone(pytz.utc).strftime('%Y-%m-%dT%H:%M:%S.%f'), 'timezone': 'UTC'}
+        return {'date': value.astimezone(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f'), 'timezone': 'UTC'}
 
     @staticmethod
     def _deserialize_date(value):
@@ -513,22 +508,19 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
         :param value: The date vlue
         :return: The deserialised date
         """
-        import datetime
-
-        import pytz
-
         if value is None:
             return value
 
         if value['timezone'] is None:
             # naive date
-            return datetime.datetime.strptime(value['date'], '%Y-%m-%dT%H:%M:%S.%f')
+            return datetime.strptime(value['date'], '%Y-%m-%dT%H:%M:%S.%f')
         if value['timezone'] == 'UTC':
-            return datetime.datetime.strptime(value['date'], '%Y-%m-%dT%H:%M:%S.%f').replace(tzinfo=pytz.utc)
+            return make_aware(datetime.strptime(value['date'], '%Y-%m-%dT%H:%M:%S.%f'), timezone.utc)
 
-        # Try your best
-        return datetime.datetime.strptime(value['date'],
-                                          '%Y-%m-%dT%H:%M:%S.%f').replace(tzinfo=pytz.timezone(value['timezone']))
+        # Try your best to guess the timezone from the name.
+        return make_aware(
+            datetime.strptime(value['date'], '%Y-%m-%dT%H:%M:%S.%f'), timezone_from_name(value['timezone'])
+        )
 
     @classmethod
     def serialize_field(cls, value, field_type):

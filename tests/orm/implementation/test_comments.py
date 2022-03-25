@@ -9,12 +9,10 @@
 ###########################################################################
 # pylint: disable=no-self-use
 """Unit tests for the BackendComment and BackendCommentCollection classes."""
-
 from datetime import datetime
 from uuid import UUID
 
 import pytest
-import pytz
 
 from aiida import orm
 from aiida.common import exceptions, timezone
@@ -97,8 +95,8 @@ class TestBackendComment:
         Test creation of a BackendComment when passing the mtime and the ctime. The passed ctime and mtime
         should be respected since it is important for the correct import of nodes at the AiiDA import/export.
         """
-        ctime = datetime(2019, 2, 27, 16, 20, 12, 245738, pytz.utc)
-        mtime = datetime(2019, 2, 27, 16, 27, 14, 798838, pytz.utc)
+        ctime = datetime(2019, 2, 27, 16, 20, 12, 245738, timezone.utc)
+        mtime = datetime(2019, 2, 27, 16, 27, 14, 798838, timezone.utc)
 
         comment = self.backend.comments.create(
             node=self.node, user=self.user, content=self.comment_content, mtime=mtime, ctime=ctime

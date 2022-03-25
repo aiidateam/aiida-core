@@ -20,7 +20,7 @@ def format_relative_time(datetime):
     from aiida.common import timezone
     from aiida.common.utils import str_timedelta
 
-    timedelta = timezone.delta(datetime, timezone.now())
+    timedelta = timezone.delta(datetime)
 
     return str_timedelta(timedelta, negative_to_zero=True, max_num_fields=1)
 

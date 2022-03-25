@@ -663,8 +663,6 @@ class Utils:
         :param query_string (as obtained from request.query_string)
         :return: parsed values for the querykeys
         """
-
-        from dateutil import parser as dtparser
         from psycopg2.tz import FixedOffsetTimezone
         from pyparsing import Combine, Group, Literal, OneOrMore, Optional, ParseException, QuotedString
         from pyparsing import StringEnd as SE
@@ -722,7 +720,6 @@ class Utils:
             :param toks: datetime string passed in tokens
             :return: datetime object
             """
-
             datetime_string = toks[0]
 
             # Check the precision
@@ -730,7 +727,7 @@ class Utils:
 
             # Parse
             try:
-                dtobj = dtparser.parse(datetime_string)
+                dtobj = datetime.fromisoformat(datetime_string)
             except ValueError:
                 raise RestInputValidationError(
                     'time value has wrong format. The '

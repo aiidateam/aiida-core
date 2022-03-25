@@ -20,11 +20,11 @@ import uuid
 
 import numpy as np
 import pytest
-import pytz
 
 from aiida.common.exceptions import HashingError
 from aiida.common.folders import SandboxFolder
 from aiida.common.hashing import chunked_file_hash, float_to_text, make_hash
+from aiida.common.timezone import timezone_from_name
 from aiida.common.utils import DatetimePrecision
 from aiida.orm import Dict
 
@@ -139,9 +139,9 @@ class TestMakeHashTest:
         ) == 'b4d97d9d486937775bcc25a5cba073f048348c3cd93d4460174a4f72a6feb285'
 
         # test with timezone-aware datetime:
-        assert make_hash(datetime(2018, 8, 18, 8, 18).replace(tzinfo=pytz.timezone('US/Eastern'))) == \
+        assert make_hash(datetime(2018, 8, 18, 8, 18).replace(tzinfo=timezone_from_name('US/Eastern'))) == \
             '194478834b3b8bd0518cf6ca6fefacc13bea15f9c0b8f5d585a0adf2ebbd562f'
-        assert make_hash(datetime(2018, 8, 18, 8, 18).replace(tzinfo=pytz.timezone('Europe/Amsterdam'))) == \
+        assert make_hash(datetime(2018, 8, 18, 8, 18).replace(tzinfo=timezone_from_name('Europe/Amsterdam'))) == \
             'be7c7c7faaff07d796db4cbef4d3d07ed29fdfd4a38c9aded00a4c2da2b89b9c'
 
     def test_datetime_precision_hashing(self):

@@ -161,7 +161,6 @@ tomli==1.2.2
 tornado==6.1
 tqdm==4.62.3
 traitlets==5.1.1
-tzlocal==2.1
 uncertainties==3.1.6
 upf-to-json==0.9.3
 urllib3==1.26.7

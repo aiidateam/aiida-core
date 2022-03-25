@@ -18,11 +18,10 @@ except for changes to the database specific types:
 
 Also, `varchar_pattern_ops` indexes are not possible in sqlite.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 import functools
 from typing import Any, Optional, Set, Tuple
 
-import pytz
 import sqlalchemy as sa
 from sqlalchemy import orm as sa_orm
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -60,8 +59,8 @@ class TZDateTime(sa.TypeDecorator):  # pylint: disable=abstract-method
         if value is None:
             return value
         if value.tzinfo is None:
-            value = value.astimezone(pytz.utc)
-        value = value.astimezone(pytz.utc).replace(tzinfo=None)
+            value = value.astimezone(timezone.utc)
+        value = value.astimezone(timezone.utc).replace(tzinfo=None)
         return value
 
     def process_result_value(self, value: Optional[datetime], dialect):
@@ -69,8 +68,8 @@ class TZDateTime(sa.TypeDecorator):  # pylint: disable=abstract-method
         if value is None:
             return value
         if value.tzinfo is None:
-            return value.replace(tzinfo=pytz.utc)
-        return value.astimezone(pytz.utc)
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
 
 
 SqliteBase = sa.orm.declarative_base(

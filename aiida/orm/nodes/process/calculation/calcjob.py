@@ -349,7 +349,7 @@ class CalcJobNode(CalculationNode):
             raise ValueError(f'scheduler state should be an instance of JobState, got: {state}')
 
         self.base.attributes.set(self.SCHEDULER_STATE_KEY, state.value)
-        self.base.attributes.set(self.SCHEDULER_LAST_CHECK_TIME_KEY, timezone.datetime_to_isoformat(timezone.now()))
+        self.base.attributes.set(self.SCHEDULER_LAST_CHECK_TIME_KEY, timezone.now().isoformat())
 
     def get_scheduler_state(self) -> Optional['JobState']:
         """Return the status of the calculation according to the cluster scheduler.
@@ -370,11 +370,10 @@ class CalcJobNode(CalculationNode):
 
         :return: a datetime object or None
         """
-        from aiida.common import timezone
         value = self.base.attributes.get(self.SCHEDULER_LAST_CHECK_TIME_KEY, None)
 
         if value is not None:
-            value = timezone.isoformat_to_datetime(value)
+            value = datetime.datetime.fromisoformat(value)
 
         return value
 

@@ -9,13 +9,11 @@
 ###########################################################################
 # pylint: disable=too-many-public-methods,no-self-use
 """Unit tests for the BackendNode and BackendNodeCollection classes."""
-
 from collections import OrderedDict
 from datetime import datetime
 from uuid import UUID
 
 import pytest
-import pytz
 
 from aiida.common import exceptions, timezone
 from aiida.orm.implementation.nodes import BackendNode
@@ -106,8 +104,8 @@ class TestBackendNode:
         Test creation of a BackendNode when passing the mtime and the ctime. The passed ctime and mtime
         should be respected since it is important for the correct import of nodes at the AiiDA import/export.
         """
-        ctime = datetime(2019, 2, 27, 16, 20, 12, 245738, pytz.utc)
-        mtime = datetime(2019, 2, 27, 16, 27, 14, 798838, pytz.utc)
+        ctime = datetime(2019, 2, 27, 16, 20, 12, 245738, timezone.utc)
+        mtime = datetime(2019, 2, 27, 16, 27, 14, 798838, timezone.utc)
 
         node = self.backend.nodes.create(
             node_type=self.node_type,

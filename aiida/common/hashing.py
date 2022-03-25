@@ -9,7 +9,7 @@
 ###########################################################################
 """Common password and hash generation functions."""
 from collections import OrderedDict, abc
-import datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from functools import singledispatch
 import hashlib
@@ -20,8 +20,6 @@ import secrets
 import string
 import typing
 import uuid
-
-import pytz
 
 from aiida.common.constants import AIIDA_FLOAT_PRECISION
 from aiida.common.exceptions import HashingError
@@ -238,18 +236,18 @@ def _(val, **kwargs):
     return [_single_digest('none')]
 
 
-@_make_hash.register(datetime.datetime)
+@_make_hash.register(datetime)
 def _(val, **kwargs):
     """hashes the little-endian rep of the float <epoch-seconds>.<subseconds>"""
     # see also https://stackoverflow.com/a/8778548 for an excellent elaboration
     if val.tzinfo is None or val.utcoffset() is None:
-        val = val.replace(tzinfo=pytz.utc)
+        val = val.replace(tzinfo=timezone.utc)
 
     timestamp = val.timestamp()
     return [_single_digest('datetime', float_to_text(timestamp, sig=AIIDA_FLOAT_PRECISION).encode('utf-8'))]
 
 
-@_make_hash.register(datetime.date)
+@_make_hash.register(date)
 def _(val, **kwargs):
     """Hashes the string representation in ISO format of the `datetime.date` object."""
     return [_single_digest('date', val.isoformat().encode('utf-8'))]

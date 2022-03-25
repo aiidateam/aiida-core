@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.6.8 - 2022-03-25
+
+[full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.7...v1.6.8)
+
+### Improvements
+
+- Print warning when incompatible RabbitMQ version is used [[#5466]](https://github.com/aiidateam/aiida-core/pull/5466)
+- `Config`: add the `warnings.rabbitmq_version` option [[#5466]](https://github.com/aiidateam/aiida-core/pull/5466)
+
+
 ## v1.6.7 - 2022-03-07
 
 [full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.6...v1.6.7)

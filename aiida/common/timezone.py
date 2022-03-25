@@ -10,8 +10,6 @@
 """Utility functions to operate on datetime objects."""
 from datetime import datetime
 
-from dateutil import parser
-
 
 def get_current_timezone():
     """Return the current timezone.
@@ -134,6 +132,4 @@ def isoformat_to_datetime(value):
 
     :param value: a ISO format string representation of a datetime object
     """
-    if value is None:
-        return None
-    return parser.parse(value)
+    return datetime.fromisoformat(value) if value is not None else value

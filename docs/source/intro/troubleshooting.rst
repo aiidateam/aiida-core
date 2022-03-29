@@ -25,6 +25,59 @@ If all services are up and running and you are still experiencing problems or if
 Installation issues
 -------------------
 
+.. _intro:troubleshooting:installation:rabbitmq:
+
+RabbitMQ incompatibility
+........................
+
+AiiDA is currently not compatible with RabbitMQ v3.8.15 and up with default configuration.
+When AiiDA is run with an incompatible version of RabbitMQ, the following warning will be displayed:
+
+.. code-block:: console
+
+   RabbitMQ v3.8.15 is not supported and will cause unexpected problems!
+   It can cause long-running workflows to crash and jobs to be submitted multiple times.
+   See https://github.com/aiidateam/aiida-core/wiki/RabbitMQ-version-to-use for details.
+
+There are two possible solutions:
+
+1. Configure the RabbitMQ server to set a long time for the ``consumer_timeout`` parameter.
+2. Downgrade the RabbitMQ server to v3.8.14 or earlier
+
+.. tab-set::
+
+   .. tab-item:: Configuring
+
+      Newer versions of RabbitMQ can be made compatible with AiiDA, but the server will have to be configured.
+      Note that for this administrator access will most likely be required.
+      The name and location of the configuration file depends on the operating system (see the `RabbitMQ documentation <https://www.rabbitmq.com/configure.html#config-location>`_ for details).
+      It is possible that the configuration file does not yet exist, in which case it should be created.
+
+      Add the ``consumer_timeout`` parameter to the config file and give it a sufficiently large number:
+
+      .. code-block:: ini
+
+         consumer_timeout = 36000000000 # 10,000 hours in milliseconds
+
+      For AiiDA to operately safely, this value should be larger than the longest expected run time of any AiiDA workflow or calculation.
+      The suggested number of 10,000 hours should typically be sufficient.
+      See the `RabbitMQ documentation on timeouts <https://www.rabbitmq.com/consumers.html#acknowledgement-timeout>`_ for more details and how with advanced configuration the consumer timeout can even be completely disabled.
+
+      Note that when you have properly configured RabbitMQ, AiiDA will continue to emit the warning because it can only check the version.
+      To suppress the warning set the ``warnings.rabbitmq_version`` to ``False``:
+
+      .. code-block:: console
+
+         verdi config set warnings.rabbitmq_version False
+
+   .. tab-item:: Downgrading
+
+      Downgrading the RabbitMQ server will be dependent on the operating system and/or on how the server was installed.
+      Please refer to the `RabbitMQ installation documentation <https://www.rabbitmq.com/download.html>`_ for instructions.
+
+Further details are maintained on `this wiki page <https://github.com/aiidateam/aiida-core/wiki/RabbitMQ-version-to-use>`_ of the repository.
+
+
 numpy dependency
 .................
 

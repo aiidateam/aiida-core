@@ -388,6 +388,7 @@ deps =
 passenv =
     PYTHONASYNCIODEBUG
 setenv =
+    AIIDA_WARN_v3 = 1
     SQLALCHEMY_WARN_20 = 1
 commands = pytest {posargs}
 

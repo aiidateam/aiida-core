@@ -11,6 +11,7 @@
 """Package for node ORM classes."""
 import copy
 import datetime
+from functools import cached_property
 import importlib
 from logging import Logger
 from typing import (
@@ -101,6 +102,14 @@ class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
                     yield key
 
 
+class NodeBase:
+    """A namespace for node related functionality, that is not directly related to its user-facing properties."""
+
+    def __init__(self, node: 'Node') -> None:
+        """Construct a new instance of the base namespace."""
+        self._node: 'Node' = node
+
+
 class Node(
     Entity['BackendNode'], NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractNodeMeta
 ):
@@ -176,6 +185,11 @@ class Node(
             node_type=self.class_node_type, user=user.backend_entity, computer=computer, **kwargs
         )
         super().__init__(backend_entity)
+
+    @cached_property
+    def base(self) -> NodeBase:
+        """Return the node base namespace."""
+        return NodeBase(self)
 
     def __eq__(self, other: Any) -> bool:
         """Fallback equality comparison by uuid (can be overwritten by specific types)"""

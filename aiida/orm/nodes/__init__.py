@@ -40,7 +40,7 @@ __all__ = (
     'KpointsData',
     'List',
     'Node',
-    'NodeRepositoryMixin',
+    'NodeRepository',
     'NumericType',
     'OrbitalData',
     'ProcessNode',

@@ -239,9 +239,9 @@ def test_integration_transfer(aiida_localhost, tmp_path):
     output_retrieved = output_nodes['retrieved']
 
     # Check the retrieved folder
-    assert sorted(output_retrieved.list_object_names()) == sorted(['file_local.txt', 'file_remote.txt'])
-    assert output_retrieved.get_object_content('file_local.txt') == content_local
-    assert output_retrieved.get_object_content('file_remote.txt') == content_remote
+    assert sorted(output_retrieved.base.repository.list_object_names()) == sorted(['file_local.txt', 'file_remote.txt'])
+    assert output_retrieved.base.repository.get_object_content('file_local.txt') == content_local
+    assert output_retrieved.base.repository.get_object_content('file_remote.txt') == content_remote
 
     # Check the remote folder
     assert 'file_local.txt' in output_remotedir.listdir()

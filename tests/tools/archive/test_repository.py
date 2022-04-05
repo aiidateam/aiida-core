@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test the export for nodes with files in the repository."""
-import io
 import os
 
 import pytest
@@ -21,11 +20,11 @@ from aiida.tools.archive import create_archive, import_archive
 def test_export_repository(aiida_profile, tmp_path):
     """Test exporting a node with files in the repository."""
     node = orm.Data()
-    node.put_object_from_filelike(io.BytesIO(b'file_a'), 'file_a')
-    node.put_object_from_filelike(io.BytesIO(b'file_b'), 'relative/file_b')
+    node.base.repository.put_object_from_bytes(b'file_a', 'file_a')
+    node.base.repository.put_object_from_bytes(b'file_b', 'relative/file_b')
     node.store()
     node_uuid = node.uuid
-    repository_metadata = node.repository_metadata
+    repository_metadata = node.base.repository.metadata
 
     filepath = os.path.join(tmp_path / 'export.aiida')
     create_archive([node], filename=filepath)
@@ -34,6 +33,6 @@ def test_export_repository(aiida_profile, tmp_path):
     import_archive(filepath)
 
     loaded = orm.load_node(uuid=node_uuid)
-    assert loaded.repository_metadata == repository_metadata
-    assert loaded.get_object_content('file_a', mode='rb') == b'file_a'
-    assert loaded.get_object_content('relative/file_b', mode='rb') == b'file_b'
+    assert loaded.base.repository.metadata == repository_metadata
+    assert loaded.base.repository.get_object_content('file_a', mode='rb') == b'file_a'
+    assert loaded.base.repository.get_object_content('relative/file_b', mode='rb') == b'file_b'

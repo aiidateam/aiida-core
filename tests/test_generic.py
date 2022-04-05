@@ -29,7 +29,7 @@ def test_code_local(aiida_profile_clean, aiida_localhost):
     with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
         fhandle.write('#/bin/bash\n\necho test run\n')
         fhandle.flush()
-        code.put_object_from_filelike(fhandle, 'test.sh')
+        code.base.repository.put_object_from_filelike(fhandle, 'test.sh')
 
     code.store()
     assert code.can_run_on(aiida_localhost)
@@ -64,14 +64,14 @@ def test_code_remote(aiida_profile_clean, aiida_localhost):
     with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
         fhandle.write('#/bin/bash\n\necho test run\n')
         fhandle.flush()
-        code.put_object_from_filelike(fhandle, 'test.sh')
+        code.base.repository.put_object_from_filelike(fhandle, 'test.sh')
 
     with pytest.raises(ValidationError):
         # There are files inside
         code.store()
 
     # If there are no files, I can store
-    code.delete_object('test.sh')
+    code.base.repository.delete_object('test.sh')
     code.store()
 
     assert code.get_remote_computer().pk == aiida_localhost.pk  # pylint: disable=no-member

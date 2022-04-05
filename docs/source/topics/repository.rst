@@ -21,9 +21,9 @@ Writing to the repository
 
 To write files to a node, you can use one of the following three methods:
 
- * :meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.put_object_from_file`
- * :meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.put_object_from_filelike`
- * :meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.put_object_from_tree`
+ * :meth:`~aiida.orm.nodes.repository.NodeRepository.put_object_from_file`
+ * :meth:`~aiida.orm.nodes.repository.NodeRepository.put_object_from_filelike`
+ * :meth:`~aiida.orm.nodes.repository.NodeRepository.put_object_from_tree`
 
 Let's assume that you have a file on your local file system called `/some/path/file.txt` that you want to copy to a node.
 The most straightforward solution is the following:
@@ -50,7 +50,7 @@ For example, one can do the following:
         node.put_object_from_filelike(handle, 'file.txt')
 
 which is the same as the previous example, except the file is opened first in a context manager and then the filelike-object is passed in.
-The :meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.put_object_from_filelike` method should work with any filelike-object, for example also byte- and textstreams:
+The :meth:`~aiida.orm.nodes.repository.NodeRepository.put_object_from_filelike` method should work with any filelike-object, for example also byte- and textstreams:
 
 .. code:: python
 
@@ -73,7 +73,7 @@ Optionally, you can write the content to a subdirectory in the repository:
     node = Node()
     node.put_object_from_tree('/some/directory', 'some/sub/path')
 
-As with :meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.put_object_from_file`, the sub directories do not have to be explicitly created first.
+As with :meth:`~aiida.orm.nodes.repository.NodeRepository.put_object_from_file`, the sub directories do not have to be explicitly created first.
 
 
 .. _topics:repository:listing:
@@ -83,9 +83,9 @@ Listing repository content
 
 To determine the contents of a node's repository, you can use the following methods:
 
- * :meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.list_object_names`
- * :meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.list_objects`
- * :meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.walk`
+ * :meth:`~aiida.orm.nodes.repository.NodeRepository.list_object_names`
+ * :meth:`~aiida.orm.nodes.repository.NodeRepository.list_objects`
+ * :meth:`~aiida.orm.nodes.repository.NodeRepository.walk`
 
 The first method will return a list of file objects contained within the node's repository, where an object can be either a directory or a file:
 
@@ -102,7 +102,7 @@ To determine the contents of a subdirectory, simply pass the path as an argument
     Out[1]: ['nested.txt']
 
 Note that the elements in the returned list are simple strings and so one cannot tell if they correspond to a directory or a file.
-If this information is needed, use :meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.list_objects` instead.
+If this information is needed, use :meth:`~aiida.orm.nodes.repository.NodeRepository.list_objects` instead.
 This method returns a list of :class:`~aiida.repository.common.File` objects.
 These objects have a :meth:`~aiida.repository.common.File.file_type` and :meth:`~aiida.repository.common.File.name` property which returns the type and name of the file object, respectively.
 An example usage would be the following:
@@ -117,14 +117,14 @@ An example usage would be the following:
         elif obj.file_type == FileType.FILE:
             print(f'{obj.name} is a file.)
 
-To retrieve a specific file object with a particular relative path, use :meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.get_object`:
+To retrieve a specific file object with a particular relative path, use :meth:`~aiida.orm.nodes.repository.NodeRepository.get_object`:
 
 .. code:: ipython
 
     In [1]: node.get_object('sub/directory/nested.txt')
     Out[1]: File(file_type=FileType.FILE, name='nested.txt')
 
-Finally, if you want to recursively iterate over the contents of a node's repository, you can use the :meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.walk` method.
+Finally, if you want to recursively iterate over the contents of a node's repository, you can use the :meth:`~aiida.orm.nodes.repository.NodeRepository.walk` method.
 It operates exactly as the |os.walk|_:
 
 .. code:: ipython
@@ -143,8 +143,8 @@ Reading from the repository
 
 To retrieve the content of files stored in a node's repository, you can use the following methods:
 
- * :meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.open`
- * :meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.get_object_content`
+ * :meth:`~aiida.orm.nodes.repository.NodeRepository.open`
+ * :meth:`~aiida.orm.nodes.repository.NodeRepository.get_object_content`
 
 The first method functions exactly as Python's ``open`` built-in function:
 
@@ -153,7 +153,7 @@ The first method functions exactly as Python's ``open`` built-in function:
     with node.open('some/file.txt', 'r') as handle:
         content = handle.read()
 
-The :meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.get_object_content` method provides a short-cut for this operation in case you want to directly read the content into memory:
+The :meth:`~aiida.orm.nodes.repository.NodeRepository.get_object_content` method provides a short-cut for this operation in case you want to directly read the content into memory:
 
 .. code:: python
 
@@ -172,7 +172,7 @@ Copying from the repository
 
 If you want to copy specific files from a node's repository, the section on :ref:`reading from the repository<topics:repository:reading>` shows how to read their content which can then be written elsewhere.
 However, sometimes you want to copy the entire contents of the node's repository, or a subdirectory of it.
-The :meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.copy_tree` method makes this easy and can be used as follows:
+The :meth:`~aiida.orm.nodes.repository.NodeRepository.copy_tree` method makes this easy and can be used as follows:
 
 .. code:: python
 
@@ -185,7 +185,7 @@ If you only want to copy a particular subdirectory of the repository, you can pa
 
     node.copy_tree('/some/target/directory', path='sub/directory')
 
-This method, combined with :meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.put_object_from_tree`, makes it easy to copy the entire repository content (or a subdirectory) from one node to another:
+This method, combined with :meth:`~aiida.orm.nodes.repository.NodeRepository.put_object_from_tree`, makes it easy to copy the entire repository content (or a subdirectory) from one node to another:
 
 .. code:: python
 
@@ -198,7 +198,7 @@ This method, combined with :meth:`~aiida.orm.nodes.repository.NodeRepositoryMixi
         node_target.put_object_from_tree(dirpath)
 
 Note that this method is not the most efficient as the files are first written from ``node_a`` to a temporary directory on disk, before they are read in memory again and written to the repository of ``node_b``.
-There is a more efficient method which requires a bit more code and that directly uses the :meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.walk` method explained in the section on :ref:`listing repository content <topics:repository:listing>`.
+There is a more efficient method which requires a bit more code and that directly uses the :meth:`~aiida.orm.nodes.repository.NodeRepository.walk` method explained in the section on :ref:`listing repository content <topics:repository:listing>`.
 
 .. code:: python
 

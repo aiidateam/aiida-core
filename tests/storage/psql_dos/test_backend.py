@@ -48,7 +48,7 @@ def test_get_unreferenced_keyset():
     # Error catching: put a file, get the keys from the aiida db, manually delete the keys
     # in the repository
     datanode = orm.FolderData()
-    datanode.put_object_from_filelike(BytesIO(b'File content'), 'file.txt')
+    datanode.base.repository.put_object_from_filelike(BytesIO(b'File content'), 'file.txt')
     datanode.store()
 
     aiida_backend = get_manager().get_profile_storage()

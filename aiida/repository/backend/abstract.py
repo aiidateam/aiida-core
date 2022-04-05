@@ -39,7 +39,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """Return the format for the keys of the repository.
 
         Important for when migrating between backends (e.g. archive -> main), as if they are not equal then it is
-        necessary to re-compute all the `Node.repository_metadata` before importing (otherwise they will not match
+        necessary to re-compute all the `Node.base.repository.metadata` before importing (otherwise they will not match
         with the repository).
         """
 

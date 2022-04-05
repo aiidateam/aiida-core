@@ -21,7 +21,7 @@ class ArithmeticAddParser(Parser):
         from aiida.orm import Int
 
         try:
-            with self.retrieved.open(self.node.get_option('output_filename'), 'r') as handle:
+            with self.retrieved.base.repository.open(self.node.get_option('output_filename'), 'r') as handle:
                 result = int(handle.read())
         except OSError:
             return self.exit_codes.ERROR_READING_OUTPUT_FILE
@@ -43,7 +43,7 @@ class SimpleArithmeticAddParser(Parser):
 
         output_folder = self.retrieved
 
-        with output_folder.open(self.node.get_option('output_filename'), 'r') as handle:
+        with output_folder.base.repository.open(self.node.get_option('output_filename'), 'r') as handle:
             result = int(handle.read())
 
         self.out('sum', Int(result))

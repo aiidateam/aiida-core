@@ -175,12 +175,12 @@ def upload_calculation(
     for code in input_codes:
         if code.is_local():
             # Note: this will possibly overwrite files
-            for filename in code.list_object_names():
+            for filename in code.base.repository.list_object_names():
                 # Note, once #2579 is implemented, use the `node.open` method instead of the named temporary file in
                 # combination with the new `Transport.put_object_from_filelike`
                 # Since the content of the node could potentially be binary, we read the raw bytes and pass them on
                 with NamedTemporaryFile(mode='wb+') as handle:
-                    handle.write(code.get_object_content(filename, mode='rb'))
+                    handle.write(code.base.repository.get_object_content(filename, mode='rb'))
                     handle.flush()
                     transport.put(handle.name, filename)
             transport.chmod(code.get_local_executable(), 0o755)  # rwxr-xr-x
@@ -212,14 +212,14 @@ def upload_calculation(
             filepath_target = pathlib.Path(folder.abspath) / filename_target
             filepath_target.parent.mkdir(parents=True, exist_ok=True)
 
-            if data_node.get_object(filename_source).file_type == FileType.DIRECTORY:
+            if data_node.base.repository.get_object(filename_source).file_type == FileType.DIRECTORY:
                 # If the source object is a directory, we copy its entire contents
-                data_node.copy_tree(filepath_target, filename_source)
-                provenance_exclude_list.extend(data_node.list_object_names(filename_source))
+                data_node.base.repository.copy_tree(filepath_target, filename_source)
+                provenance_exclude_list.extend(data_node.base.repository.list_object_names(filename_source))
             else:
                 # Otherwise, simply copy the file
                 with folder.open(target, 'wb') as handle:
-                    with data_node.open(filename, 'rb') as source:
+                    with data_node.base.repository.open(filename, 'rb') as source:
                         shutil.copyfileobj(source, handle)
 
                 provenance_exclude_list.append(target)
@@ -320,12 +320,12 @@ def upload_calculation(
                 dirname not in provenance_exclude_list for dirname in dirnames
             ):
                 with open(filepath, 'rb') as handle:  # type: ignore[assignment]
-                    node._repository.put_object_from_filelike(handle, relpath)  # pylint: disable=protected-access
+                    node.base.repository._repository.put_object_from_filelike(handle, relpath)  # pylint: disable=protected-access
 
     # Since the node is already stored, we cannot use the normal repository interface since it will raise a
     # `ModificationNotAllowed` error. To bypass it, we go straight to the underlying repository instance to store the
     # files, however, this means we have to manually update the node's repository metadata.
-    node._update_repository_metadata()  # pylint: disable=protected-access
+    node.base.repository._update_repository_metadata()  # pylint: disable=protected-access
 
     if not dry_run:
         # Make sure that attaching the `remote_folder` with a link is the last thing we do. This gives the biggest
@@ -465,7 +465,7 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
         with SandboxFolder() as folder:
             retrieve_files_from_list(calculation, transport, folder.abspath, retrieve_list)
             # Here I retrieved everything; now I store them inside the calculation
-            retrieved_files.put_object_from_tree(folder.abspath)
+            retrieved_files.base.repository.put_object_from_tree(folder.abspath)
 
         # Retrieve the temporary files in the retrieved_temporary_folder if any files were
         # specified in the 'retrieve_temporary_list' key

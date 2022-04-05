@@ -39,7 +39,7 @@ def recursive_provenance(in_node, depth, breadth, num_objects=0):
 
         out_node = Dict(dict={str(i): i for i in range(10)})
         for idx in range(num_objects):
-            out_node.put_object_from_filelike(StringIO('a' * 10000), f'key{str(idx)}')
+            out_node.base.repository.put_object_from_filelike(StringIO('a' * 10000), f'key{str(idx)}')
         out_node.add_incoming(calcfunc, link_type=LinkType.CREATE, link_label='output')
         out_node.store()
 

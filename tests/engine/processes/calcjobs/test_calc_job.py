@@ -380,7 +380,7 @@ class TestCalcJob:
         uploaded_files = os.listdir(node.dry_run_info['folder'])
 
         # Since the repository will only contain files on the top-level due to `Code.set_files` we only check those
-        for filename in self.local_code.list_object_names():
+        for filename in self.local_code.base.repository.list_object_names():
             assert filename in uploaded_files
 
     @pytest.mark.usefixtures('chdir_tmp_path')
@@ -443,9 +443,9 @@ class TestCalcJob:
 
         # Verify that the folder (representing the node's repository) indeed do not contain the input files. Note,
         # however, that the directory hierarchy should be there, albeit empty
-        assert 'base' in node.list_object_names()
-        assert sorted(['b']) == sorted(node.list_object_names(os.path.join('base')))
-        assert ['two'] == node.list_object_names(os.path.join('base', 'b'))
+        assert 'base' in node.base.repository.list_object_names()
+        assert sorted(['b']) == sorted(node.base.repository.list_object_names(os.path.join('base')))
+        assert ['two'] == node.base.repository.list_object_names(os.path.join('base', 'b'))
 
     def test_parse_no_retrieved_folder(self):
         """Test the `CalcJob.parse` method when there is no retrieved folder."""
@@ -575,8 +575,8 @@ def test_parse_not_implemented(generate_process):
     filename_stderr = process.node.get_option('scheduler_stderr')
     filename_stdout = process.node.get_option('scheduler_stdout')
 
-    retrieved.put_object_from_filelike(io.BytesIO(b'\n'), filename_stderr)
-    retrieved.put_object_from_filelike(io.BytesIO(b'\n'), filename_stdout)
+    retrieved.base.repository.put_object_from_filelike(io.BytesIO(b'\n'), filename_stderr)
+    retrieved.base.repository.put_object_from_filelike(io.BytesIO(b'\n'), filename_stdout)
     retrieved.store()
 
     process.parse()
@@ -609,8 +609,8 @@ def test_parse_scheduler_excepted(generate_process, monkeypatch):
     filename_stderr = process.node.get_option('scheduler_stderr')
     filename_stdout = process.node.get_option('scheduler_stdout')
 
-    retrieved.put_object_from_filelike(io.BytesIO(b'\n'), filename_stderr)
-    retrieved.put_object_from_filelike(io.BytesIO(b'\n'), filename_stdout)
+    retrieved.base.repository.put_object_from_filelike(io.BytesIO(b'\n'), filename_stderr)
+    retrieved.base.repository.put_object_from_filelike(io.BytesIO(b'\n'), filename_stdout)
     retrieved.store()
 
     msg = 'crash'

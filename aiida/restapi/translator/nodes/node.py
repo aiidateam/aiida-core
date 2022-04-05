@@ -495,7 +495,7 @@ class NodeTranslator(BaseTranslator):
         :return: folder list
         """
         try:
-            flist = node.list_objects(filename)
+            flist = node.base.repository.list_objects(filename)
         except NotADirectoryError:
             raise RestInputValidationError(f'{filename} is not a directory in this repository')
         response = []
@@ -515,7 +515,7 @@ class NodeTranslator(BaseTranslator):
 
         if filename:
             try:
-                data = node.get_object_content(filename, mode='rb')
+                data = node.base.repository.get_object_content(filename, mode='rb')
                 return data
             except FileNotFoundError:
                 raise RestInputValidationError('No such file is present')

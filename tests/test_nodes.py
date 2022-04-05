@@ -105,21 +105,21 @@ class TestNodeHashing:
     def create_folderdata_with_empty_file():
         node = orm.FolderData()
         with tempfile.NamedTemporaryFile() as handle:
-            node.put_object_from_filelike(handle, 'path/name')
+            node.base.repository.put_object_from_filelike(handle, 'path/name')
         return node
 
     @staticmethod
     def create_folderdata_with_empty_folder():
         dirpath = tempfile.mkdtemp()
         node = orm.FolderData()
-        node.put_object_from_tree(dirpath, 'path/name')
+        node.base.repository.put_object_from_tree(dirpath, 'path/name')
         return node
 
     def test_folder_file_different(self):
         f1 = self.create_folderdata_with_empty_file().store()
         f2 = self.create_folderdata_with_empty_folder().store()
 
-        assert f1.list_object_names('path') == f2.list_object_names('path')
+        assert f1.base.repository.list_object_names('path') == f2.base.repository.list_object_names('path')
         assert f1.get_hash() != f2.get_hash()
 
     def test_updatable_attributes(self):
@@ -492,44 +492,44 @@ class TestNodeBasic:
         with tempfile.NamedTemporaryFile('w+') as handle:
             handle.write(file_content)
             handle.flush()
-            a.put_object_from_file(handle.name, 'file1.txt')
-            a.put_object_from_file(handle.name, 'file2.txt')
+            a.base.repository.put_object_from_file(handle.name, 'file1.txt')
+            a.base.repository.put_object_from_file(handle.name, 'file2.txt')
 
-        assert set(a.list_object_names()) == set(['file1.txt', 'file2.txt'])
-        with a.open('file1.txt') as fhandle:
+        assert set(a.base.repository.list_object_names()) == set(['file1.txt', 'file2.txt'])
+        with a.base.repository.open('file1.txt') as fhandle:
             assert fhandle.read() == file_content
-        with a.open('file2.txt') as fhandle:
+        with a.base.repository.open('file2.txt') as fhandle:
             assert fhandle.read() == file_content
 
         b = a.clone()
         assert a.uuid != b.uuid
 
         # Check that the content is there
-        assert set(b.list_object_names()) == set(['file1.txt', 'file2.txt'])
-        with b.open('file1.txt') as handle:
+        assert set(b.base.repository.list_object_names()) == set(['file1.txt', 'file2.txt'])
+        with b.base.repository.open('file1.txt') as handle:
             assert handle.read() == file_content
-        with b.open('file2.txt') as handle:
+        with b.base.repository.open('file2.txt') as handle:
             assert handle.read() == file_content
 
         # I overwrite a file and create a new one in the clone only
         with tempfile.NamedTemporaryFile(mode='w+') as handle:
             handle.write(file_content_different)
             handle.flush()
-            b.put_object_from_file(handle.name, 'file2.txt')
-            b.put_object_from_file(handle.name, 'file3.txt')
+            b.base.repository.put_object_from_file(handle.name, 'file2.txt')
+            b.base.repository.put_object_from_file(handle.name, 'file3.txt')
 
         # I check the new content, and that the old one has not changed
-        assert set(a.list_object_names()) == set(['file1.txt', 'file2.txt'])
-        with a.open('file1.txt') as handle:
+        assert set(a.base.repository.list_object_names()) == set(['file1.txt', 'file2.txt'])
+        with a.base.repository.open('file1.txt') as handle:
             assert handle.read() == file_content
-        with a.open('file2.txt') as handle:
+        with a.base.repository.open('file2.txt') as handle:
             assert handle.read() == file_content
-        assert set(b.list_object_names()) == set(['file1.txt', 'file2.txt', 'file3.txt'])
-        with b.open('file1.txt') as handle:
+        assert set(b.base.repository.list_object_names()) == set(['file1.txt', 'file2.txt', 'file3.txt'])
+        with b.base.repository.open('file1.txt') as handle:
             assert handle.read() == file_content
-        with b.open('file2.txt') as handle:
+        with b.base.repository.open('file2.txt') as handle:
             assert handle.read() == file_content_different
-        with b.open('file3.txt') as handle:
+        with b.base.repository.open('file3.txt') as handle:
             assert handle.read() == file_content_different
 
         # This should in principle change the location of the files,
@@ -542,21 +542,21 @@ class TestNodeBasic:
         with tempfile.NamedTemporaryFile(mode='w+') as handle:
             handle.write(file_content_different)
             handle.flush()
-            c.put_object_from_file(handle.name, 'file1.txt')
-            c.put_object_from_file(handle.name, 'file4.txt')
+            c.base.repository.put_object_from_file(handle.name, 'file1.txt')
+            c.base.repository.put_object_from_file(handle.name, 'file4.txt')
 
-        assert set(a.list_object_names()) == set(['file1.txt', 'file2.txt'])
-        with a.open('file1.txt') as handle:
+        assert set(a.base.repository.list_object_names()) == set(['file1.txt', 'file2.txt'])
+        with a.base.repository.open('file1.txt') as handle:
             assert handle.read() == file_content
-        with a.open('file2.txt') as handle:
+        with a.base.repository.open('file2.txt') as handle:
             assert handle.read() == file_content
 
-        assert set(c.list_object_names()) == set(['file1.txt', 'file2.txt', 'file4.txt'])
-        with c.open('file1.txt') as handle:
+        assert set(c.base.repository.list_object_names()) == set(['file1.txt', 'file2.txt', 'file4.txt'])
+        with c.base.repository.open('file1.txt') as handle:
             assert handle.read() == file_content_different
-        with c.open('file2.txt') as handle:
+        with c.base.repository.open('file2.txt') as handle:
             assert handle.read() == file_content
-        with c.open('file4.txt') as handle:
+        with c.base.repository.open('file4.txt') as handle:
             assert handle.read() == file_content_different
 
     @pytest.mark.skip('relies on deleting folders from the repo which is not yet implemented')
@@ -594,61 +594,61 @@ class TestNodeBasic:
         os.mkdir(os.path.join(tree_1, 'dir1', 'dir2', 'dir3'))
 
         # add the tree to the node
-        a.put_object_from_tree(tree_1, 'tree_1')
+        a.base.repository.put_object_from_tree(tree_1, 'tree_1')
 
         # verify if the node has the structure I expect
-        assert set(a.list_object_names()) == set(['tree_1'])
-        assert set(a.list_object_names('tree_1')) == set(['file1.txt', 'dir1'])
-        assert set(a.list_object_names(os.path.join('tree_1', 'dir1'))) == set(['dir2', 'file2.txt'])
-        with a.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
+        assert set(a.base.repository.list_object_names()) == set(['tree_1'])
+        assert set(a.base.repository.list_object_names('tree_1')) == set(['file1.txt', 'dir1'])
+        assert set(a.base.repository.list_object_names(os.path.join('tree_1', 'dir1'))) == set(['dir2', 'file2.txt'])
+        with a.base.repository.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
             assert fhandle.read() == file_content
-        with a.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
+        with a.base.repository.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
             assert fhandle.read() == file_content
 
         # try to exit from the folder
         with pytest.raises(FileNotFoundError):
-            a.list_object_names('..')
+            a.base.repository.list_object_names('..')
 
         # clone into a new node
         b = a.clone()
         assert a.uuid != b.uuid
 
         # Check that the content is there
-        assert set(b.list_object_names()) == set(['tree_1'])
-        assert set(b.list_object_names('tree_1')) == set(['file1.txt', 'dir1'])
-        assert set(b.list_object_names(os.path.join('tree_1', 'dir1'))) == set(['dir2', 'file2.txt'])
-        with b.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
+        assert set(b.base.repository.list_object_names()) == set(['tree_1'])
+        assert set(b.base.repository.list_object_names('tree_1')) == set(['file1.txt', 'dir1'])
+        assert set(b.base.repository.list_object_names(os.path.join('tree_1', 'dir1'))) == set(['dir2', 'file2.txt'])
+        with b.base.repository.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
             assert fhandle.read() == file_content
-        with b.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
+        with b.base.repository.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
             assert fhandle.read() == file_content
 
         # I overwrite a file and create a new one in the copy only
         dir3 = os.path.join(directory, 'dir3')
         os.mkdir(dir3)
 
-        b.put_object_from_tree(dir3, os.path.join('tree_1', 'dir3'))
+        b.base.repository.put_object_from_tree(dir3, os.path.join('tree_1', 'dir3'))
         # no absolute path here
         with pytest.raises(TypeError):
-            b.put_object_from_tree('dir3', os.path.join('tree_1', 'dir3'))
+            b.base.repository.put_object_from_tree('dir3', os.path.join('tree_1', 'dir3'))
 
         stream = io.StringIO(file_content_different)
-        b.put_object_from_filelike(stream, 'file3.txt')
+        b.base.repository.put_object_from_filelike(stream, 'file3.txt')
 
         # I check the new content, and that the old one has not changed old
-        assert set(a.list_object_names()) == set(['tree_1'])
-        assert set(a.list_object_names('tree_1')) == set(['file1.txt', 'dir1'])
-        assert set(a.list_object_names(os.path.join('tree_1', 'dir1'))) == set(['dir2', 'file2.txt'])
-        with a.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
+        assert set(a.base.repository.list_object_names()) == set(['tree_1'])
+        assert set(a.base.repository.list_object_names('tree_1')) == set(['file1.txt', 'dir1'])
+        assert set(a.base.repository.list_object_names(os.path.join('tree_1', 'dir1'))) == set(['dir2', 'file2.txt'])
+        with a.base.repository.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
             assert fhandle.read() == file_content
-        with a.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
+        with a.base.repository.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
             assert fhandle.read() == file_content
         # new
-        assert set(b.list_object_names()) == set(['tree_1', 'file3.txt'])
-        assert set(b.list_object_names('tree_1')) == set(['file1.txt', 'dir1', 'dir3'])
-        assert set(b.list_object_names(os.path.join('tree_1', 'dir1'))) == set(['dir2', 'file2.txt'])
-        with b.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
+        assert set(b.base.repository.list_object_names()) == set(['tree_1', 'file3.txt'])
+        assert set(b.base.repository.list_object_names('tree_1')) == set(['file1.txt', 'dir1', 'dir3'])
+        assert set(b.base.repository.list_object_names(os.path.join('tree_1', 'dir1'))) == set(['dir2', 'file2.txt'])
+        with b.base.repository.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
             assert fhandle.read() == file_content
-        with b.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
+        with b.base.repository.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
             assert fhandle.read() == file_content
 
         # This should in principle change the location of the files, so I recheck
@@ -659,26 +659,27 @@ class TestNodeBasic:
         # I overwrite a file, create a new one and remove a directory
         # in the copy only
         stream = io.StringIO(file_content_different)
-        c.put_object_from_filelike(stream, os.path.join('tree_1', 'file1.txt'))
-        c.put_object_from_filelike(stream, os.path.join('tree_1', 'dir1', 'file4.txt'))
-        c.delete_object(os.path.join('tree_1', 'dir1', 'dir2'))
+        c.base.repository.put_object_from_filelike(stream, os.path.join('tree_1', 'file1.txt'))
+        c.base.repository.put_object_from_filelike(stream, os.path.join('tree_1', 'dir1', 'file4.txt'))
+        c.base.repository.delete_object(os.path.join('tree_1', 'dir1', 'dir2'))
 
         # check old
-        assert set(a.list_object_names()) == set(['tree_1'])
-        assert set(a.list_object_names('tree_1')) == set(['file1.txt', 'dir1'])
-        assert set(a.list_object_names(os.path.join('tree_1', 'dir1'))) == set(['dir2', 'file2.txt'])
-        with a.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
+        assert set(a.base.repository.list_object_names()) == set(['tree_1'])
+        assert set(a.base.repository.list_object_names('tree_1')) == set(['file1.txt', 'dir1'])
+        assert set(a.base.repository.list_object_names(os.path.join('tree_1', 'dir1'))) == set(['dir2', 'file2.txt'])
+        with a.base.repository.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
             assert fhandle.read() == file_content
-        with a.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
+        with a.base.repository.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
             assert fhandle.read() == file_content
 
         # check new
-        assert set(c.list_object_names()) == set(['tree_1'])
-        assert set(c.list_object_names('tree_1')) == set(['file1.txt', 'dir1'])
-        assert set(c.list_object_names(os.path.join('tree_1', 'dir1'))) == set(['file2.txt', 'file4.txt'])
-        with c.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
+        assert set(c.base.repository.list_object_names()) == set(['tree_1'])
+        assert set(c.base.repository.list_object_names('tree_1')) == set(['file1.txt', 'dir1'])
+        assert set(c.base.repository.list_object_names(os.path.join('tree_1',
+                                                                    'dir1'))) == set(['file2.txt', 'file4.txt'])
+        with c.base.repository.open(os.path.join('tree_1', 'file1.txt')) as fhandle:
             assert fhandle.read() == file_content_different
-        with c.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
+        with c.base.repository.open(os.path.join('tree_1', 'dir1', 'file2.txt')) as fhandle:
             assert fhandle.read() == file_content
 
         # garbage cleaning

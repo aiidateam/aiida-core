@@ -111,7 +111,7 @@ def calcjob_inputcat(calcjob, path):
 
     try:
         # When we `cat`, it makes sense to directly send the output to stdout as it is
-        with calcjob.open(path, mode='rb') as fhandle:
+        with calcjob.base.repository.open(path, mode='rb') as fhandle:
             copyfileobj(fhandle, sys.stdout.buffer)
     except OSError as exception:
         # The sepcial case is breakon pipe error, which is usually OK.
@@ -163,7 +163,7 @@ def calcjob_outputcat(calcjob, path):
 
     try:
         # When we `cat`, it makes sense to directly send the output to stdout as it is
-        with retrieved.open(path, mode='rb') as fhandle:
+        with retrieved.base.repository.open(path, mode='rb') as fhandle:
             copyfileobj(fhandle, sys.stdout.buffer)
     except OSError as exception:
         # The sepcial case is breakon pipe error, which is usually OK.

@@ -37,4 +37,4 @@ class FolderData(Data):
         tree = kwargs.pop('tree', None)
         super().__init__(**kwargs)
         if tree:
-            self.put_object_from_tree(tree)
+            self.ctx.repository.put_object_from_tree(tree)

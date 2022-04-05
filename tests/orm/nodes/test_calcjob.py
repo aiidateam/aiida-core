@@ -55,8 +55,10 @@ class TestCalcJobNode:
                 retrieved = FolderData()
 
                 if with_file:
-                    retrieved._repository.put_object_from_filelike(io.BytesIO(stdout.encode('utf-8')), option_value)  # pylint: disable=protected-access
-                    retrieved._update_repository_metadata()  # pylint: disable=protected-access
+                    retrieved.ctx.repository._repository.put_object_from_filelike(  # pylint: disable=protected-access
+                        io.BytesIO(stdout.encode('utf-8')), option_value
+                    )
+                    retrieved.ctx.repository._update_repository_metadata()  # pylint: disable=protected-access
                 if with_option:
                     node.set_option(option_key, option_value)
                 node.store()
@@ -81,8 +83,10 @@ class TestCalcJobNode:
                 retrieved = FolderData()
 
                 if with_file:
-                    retrieved._repository.put_object_from_filelike(io.BytesIO(stderr.encode('utf-8')), option_value)  # pylint: disable=protected-access
-                    retrieved._update_repository_metadata()  # pylint: disable=protected-access
+                    retrieved.ctx.repository._repository.put_object_from_filelike(  # pylint: disable=protected-access
+                        io.BytesIO(stderr.encode('utf-8')), option_value
+                    )
+                    retrieved.ctx.repository._update_repository_metadata()  # pylint: disable=protected-access
                 if with_option:
                     node.set_option(option_key, option_value)
                 node.store()

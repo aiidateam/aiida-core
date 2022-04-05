@@ -571,7 +571,7 @@ def _stream_repo_files(
 
     repository = backend.get_repository()
     if not repository.key_format == key_format:
-        # Here we would have to go back and replace all the keys in the `Node.repository_metadata`s
+        # Here we would have to go back and replace all the keys in the `BackendNode.repository_metadata`s
         raise NotImplementedError(
             f'Backend repository key format incompatible: {repository.key_format!r} != {key_format!r}'
         )

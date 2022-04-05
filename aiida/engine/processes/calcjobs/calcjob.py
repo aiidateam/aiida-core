@@ -519,7 +519,7 @@ class CalcJob(Process):
             self.logger.warning('could not determine `stderr` filename because `scheduler_stderr` option was not set.')
         else:
             try:
-                scheduler_stderr = retrieved.get_object_content(filename_stderr)
+                scheduler_stderr = retrieved.ctx.repository.get_object_content(filename_stderr)
             except FileNotFoundError:
                 scheduler_stderr = None
                 self.logger.warning(f'could not parse scheduler output: the `{filename_stderr}` file is missing')
@@ -528,7 +528,7 @@ class CalcJob(Process):
             self.logger.warning('could not determine `stdout` filename because `scheduler_stdout` option was not set.')
         else:
             try:
-                scheduler_stdout = retrieved.get_object_content(filename_stdout)
+                scheduler_stdout = retrieved.ctx.repository.get_object_content(filename_stdout)
             except FileNotFoundError:
                 scheduler_stdout = None
                 self.logger.warning(f'could not parse scheduler output: the `{filename_stdout}` file is missing')

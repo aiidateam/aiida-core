@@ -141,7 +141,7 @@ def test_upload_local_copy_list(fixture_sandbox, aiida_localhost, aiida_local_co
 
     create_file_hierarchy(file_hierarchy, tmp_path)
     folder = FolderData()
-    folder.put_object_from_tree(tmp_path)
+    folder.ctx.repository.put_object_from_tree(tmp_path)
 
     inputs = {
         'file_x': SinglefileData(io.BytesIO(b'content_x')).store(),
@@ -170,7 +170,7 @@ def test_upload_local_copy_list(fixture_sandbox, aiida_localhost, aiida_local_co
 
     # Check that none of the files were written to the repository of the calculation node, since they were communicated
     # through the ``local_copy_list``.
-    assert node.list_object_names() == []
+    assert node.ctx.repository.list_object_names() == []
 
     # Now check that all contents were successfully written to the sandbox
     written_hierarchy = serialize_file_hierarchy(pathlib.Path(fixture_sandbox.abspath))

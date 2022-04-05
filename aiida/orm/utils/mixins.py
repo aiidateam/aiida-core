@@ -9,8 +9,6 @@
 ###########################################################################
 """Mixin classes for ORM classes."""
 import inspect
-import io
-import tempfile
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, override
@@ -56,7 +54,7 @@ class FunctionCalculationMixin:
         try:
             source_file_path = inspect.getsourcefile(func)
             with open(source_file_path, 'rb') as handle:
-                self.put_object_from_filelike(handle, self.FUNCTION_SOURCE_FILE_PATH)
+                self.ctx.repository.put_object_from_filelike(handle, self.FUNCTION_SOURCE_FILE_PATH)
         except (IOError, OSError):
             pass
 
@@ -110,7 +108,7 @@ class FunctionCalculationMixin:
 
         :returns: the absolute path of the source file in the repository, or None if it does not exist
         """
-        return self.get_object_content(self.FUNCTION_SOURCE_FILE_PATH)
+        return self.ctx.repository.get_object_content(self.FUNCTION_SOURCE_FILE_PATH)
 
 
 class Sealable:
@@ -122,14 +120,6 @@ class Sealable:
     @classproperty
     def _updatable_attributes(cls):  # pylint: disable=no-self-argument
         return (cls.SEALED_KEY,)
-
-    def check_mutability(self):
-        """Check if the node is mutable.
-
-        :raises `~aiida.common.exceptions.ModificationNotAllowed`: when the node is sealed and therefore immutable.
-        """
-        if self.is_stored:
-            raise exceptions.ModificationNotAllowed('the node is sealed and therefore the repository is immutable.')
 
     def validate_incoming(self, source, link_type, link_label):
         """Validate adding a link of the given type from a given node to ourself.
@@ -204,67 +194,3 @@ class Sealable:
             raise exceptions.ModificationNotAllowed(f'`{key}` is not an updatable attribute')
 
         self.backend_entity.delete_attribute(key)
-
-    @override
-    def put_object_from_filelike(self, handle: io.BufferedReader, path: str):
-        """Store the byte contents of a file in the repository.
-
-        :param handle: filelike object with the byte content to be stored.
-        :param path: the relative path where to store the object in the repository.
-        :raises TypeError: if the path is not a string and relative path.
-        :raises aiida.common.exceptions.ModificationNotAllowed: when the node is sealed and therefore immutable.
-        """
-        self.check_mutability()
-
-        if isinstance(handle, io.StringIO):
-            handle = io.BytesIO(handle.read().encode('utf-8'))
-
-        if isinstance(handle, tempfile._TemporaryFileWrapper):  # pylint: disable=protected-access
-            if 'b' in handle.file.mode:
-                handle = io.BytesIO(handle.read())
-            else:
-                handle = io.BytesIO(handle.read().encode('utf-8'))
-
-        self._repository.put_object_from_filelike(handle, path)
-        self._update_repository_metadata()
-
-    @override
-    def put_object_from_file(self, filepath: str, path: str):
-        """Store a new object under `path` with contents of the file located at `filepath` on the local file system.
-
-        :param filepath: absolute path of file whose contents to copy to the repository
-        :param path: the relative path where to store the object in the repository.
-        :raises TypeError: if the path is not a string and relative path, or the handle is not a byte stream.
-        :raises aiida.common.exceptions.ModificationNotAllowed: when the node is sealed and therefore immutable.
-        """
-        self.check_mutability()
-        self._repository.put_object_from_file(filepath, path)
-        self._update_repository_metadata()
-
-    @override
-    def put_object_from_tree(self, filepath: str, path: str = None):
-        """Store the entire contents of `filepath` on the local file system in the repository with under given `path`.
-
-        :param filepath: absolute path of the directory whose contents to copy to the repository.
-        :param path: the relative path where to store the objects in the repository.
-        :raises TypeError: if the path is not a string and relative path.
-        :raises aiida.common.exceptions.ModificationNotAllowed: when the node is sealed and therefore immutable.
-        """
-        self.check_mutability()
-        self._repository.put_object_from_tree(filepath, path)
-        self._update_repository_metadata()
-
-    @override
-    def delete_object(self, path: str):
-        """Delete the object from the repository.
-
-        :param key: fully qualified identifier for the object within the repository.
-        :raises TypeError: if the path is not a string and relative path.
-        :raises FileNotFoundError: if the file does not exist.
-        :raises IsADirectoryError: if the object is a directory and not a file.
-        :raises OSError: if the file could not be deleted.
-        :raises aiida.common.exceptions.ModificationNotAllowed: when the node is sealed and therefore immutable.
-        """
-        self.check_mutability()
-        self._repository.delete_object(path)
-        self._update_repository_metadata()

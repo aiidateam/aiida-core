@@ -63,8 +63,8 @@ class TestVerdiNode:
         cls.content_file2 = 'the minister of silly walks'
         cls.key_file1 = 'some/nested/folder/filename.txt'
         cls.key_file2 = 'some_other_file.txt'
-        folder_node.put_object_from_filelike(io.StringIO(cls.content_file1), cls.key_file1)
-        folder_node.put_object_from_filelike(io.StringIO(cls.content_file2), cls.key_file2)
+        folder_node.ctx.repository.put_object_from_filelike(io.StringIO(cls.content_file1), cls.key_file1)
+        folder_node.ctx.repository.put_object_from_filelike(io.StringIO(cls.content_file2), cls.key_file2)
         return folder_node
 
     def test_node_show(self):
@@ -173,7 +173,7 @@ class TestVerdiNode:
         # Test cat binary files
         folder_node = orm.FolderData()
         bytestream = gzip.compress(b'COMPRESS')
-        folder_node.put_object_from_filelike(io.BytesIO(bytestream), 'filename.txt.gz')
+        folder_node.ctx.repository.put_object_from_filelike(io.BytesIO(bytestream), 'filename.txt.gz')
         folder_node.store()
 
         options = [str(folder_node.pk), 'filename.txt.gz']

@@ -69,8 +69,8 @@ class Data(Node):
 
         backend_clone = self.backend_entity.clone()
         clone = self.__class__.from_backend_entity(backend_clone)
-        clone.reset_attributes(copy.deepcopy(self.attributes))  # pylint: disable=no-member
-        clone._repository.clone(self._repository)  # pylint: disable=no-member,protected-access
+        clone.reset_attributes(copy.deepcopy(self.attributes))
+        clone.ctx.repository._clone(self.ctx.repository)  # pylint: disable=protected-access
 
         return clone
 

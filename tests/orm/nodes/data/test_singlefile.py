@@ -31,7 +31,7 @@ def check_singlefile_content():
         with node.open(mode=open_mode) as handle:
             assert handle.read() == content_reference
 
-        assert node.list_object_names() == [filename]
+        assert node.ctx.repository.list_object_names() == [filename]
 
     return inner
 

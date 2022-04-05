@@ -131,7 +131,7 @@ class TestCifData:
 
         the_uuid = a.uuid
 
-        assert a.list_object_names() == [basename]
+        assert a.ctx.repository.list_object_names() == [basename]
 
         with a.open() as fhandle:
             assert fhandle.read() == file_content
@@ -146,13 +146,13 @@ class TestCifData:
 
         with a.open() as fhandle:
             assert fhandle.read() == file_content
-        assert a.list_object_names() == [basename]
+        assert a.ctx.repository.list_object_names() == [basename]
 
         b = load_node(the_uuid)
 
         # I check the retrieved object
         assert isinstance(b, CifData)
-        assert b.list_object_names() == [basename]
+        assert b.ctx.repository.list_object_names() == [basename]
         with b.open() as fhandle:
             assert fhandle.read() == file_content
 

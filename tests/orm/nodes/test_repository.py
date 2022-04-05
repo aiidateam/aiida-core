@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=redefined-outer-name,protected-access,no-member
 """Tests for the :mod:`aiida.orm.nodes.repository` module."""
-import io
 import pathlib
 
 import pytest
 
 from aiida.common import exceptions
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.engine import ProcessState
 from aiida.manage.caching import enable_caching
 from aiida.orm import CalcJobNode, Data, load_node
@@ -19,7 +19,7 @@ def cacheable_node():
     """Return a node that can be cached from."""
     node = CalcJobNode(process_type='aiida.calculations:core.arithmetic.add')
     node.set_process_state(ProcessState.FINISHED)
-    node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
+    node.ctx.repository.put_object_from_bytes(b'content', 'relative/path')
     node.store()
     assert node.is_valid_cache
 
@@ -30,65 +30,65 @@ def cacheable_node():
 def test_initialization():
     """Test that the repository instance is lazily constructed."""
     node = Data()
-    assert node.repository_metadata == {}
-    assert node._repository_instance is None
+    assert node.ctx.repository.metadata == {}
+    assert node.ctx.repository._repository_instance is None
 
     # Initialize just by calling the property
-    assert isinstance(node._repository.backend, SandboxRepositoryBackend)
+    assert isinstance(node.ctx.repository._repository.backend, SandboxRepositoryBackend)
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_unstored():
     """Test the repository for unstored nodes."""
     node = Data()
-    node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
+    node.ctx.repository.put_object_from_bytes(b'content', 'relative/path')
 
-    assert isinstance(node._repository.backend, SandboxRepositoryBackend)
-    assert node.repository_metadata == {}
+    assert isinstance(node.ctx.repository._repository.backend, SandboxRepositoryBackend)
+    assert node.ctx.repository.metadata == {}
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_store():
     """Test the repository after storing."""
     node = Data()
-    node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
-    assert node.list_object_names() == ['relative']
-    assert node.list_object_names('relative') == ['path']
+    node.ctx.repository.put_object_from_bytes(b'content', 'relative/path')
+    assert node.ctx.repository.list_object_names() == ['relative']
+    assert node.ctx.repository.list_object_names('relative') == ['path']
 
-    hash_unstored = node._repository.hash()
-    metadata = node.repository_serialize()
+    hash_unstored = node.ctx.repository.hash()
+    metadata = node.ctx.repository.serialize()
 
     node.store()
-    assert isinstance(node._repository.backend, DiskObjectStoreRepositoryBackend)
-    assert node.repository_serialize() != metadata
-    assert node._repository.hash() == hash_unstored
+    assert isinstance(node.ctx.repository._repository.backend, DiskObjectStoreRepositoryBackend)
+    assert node.ctx.repository.serialize() != metadata
+    assert node.ctx.repository.hash() == hash_unstored
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_load():
     """Test the repository after loading."""
     node = Data()
-    node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
+    node.ctx.repository.put_object_from_bytes(b'content', 'relative/path')
     node.store()
 
-    hash_stored = node._repository.hash()
-    metadata = node.repository_serialize()
+    hash_stored = node.ctx.repository.hash()
+    metadata = node.ctx.repository.serialize()
 
     loaded = load_node(node.uuid)
-    assert isinstance(node._repository.backend, DiskObjectStoreRepositoryBackend)
-    assert node.repository_serialize() == metadata
-    assert loaded._repository.hash() == hash_stored
+    assert isinstance(node.ctx.repository._repository.backend, DiskObjectStoreRepositoryBackend)
+    assert node.ctx.repository.serialize() == metadata
+    assert loaded.ctx.repository.hash() == hash_stored
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_load_updated():
     """Test the repository after loading."""
     node = CalcJobNode()
-    node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
+    node.ctx.repository.put_object_from_bytes(b'content', 'relative/path')
     node.store()
 
     loaded = load_node(node.uuid)
-    assert loaded.get_object_content('relative/path', mode='rb') == b'content'
+    assert loaded.ctx.repository.get_object_content('relative/path', mode='rb') == b'content'
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -97,93 +97,93 @@ def test_caching(cacheable_node):
 
     with enable_caching():
         cached = CalcJobNode(process_type='aiida.calculations:core.core.arithmetic.add')
-        cached.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
+        cached.ctx.repository.put_object_from_bytes(b'content', 'relative/path')
         cached.store()
 
     assert cached.is_created_from_cache
     assert cached.get_cache_source() == cacheable_node.uuid
-    assert cacheable_node.repository_metadata == cached.repository_metadata
-    assert cacheable_node._repository.hash() == cached._repository.hash()
+    assert cacheable_node.ctx.repository.metadata == cached.ctx.repository.metadata
+    assert cacheable_node.ctx.repository.hash() == cached.ctx.repository.hash()
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_clone():
     """Test the repository after a node is cloned from a stored node."""
     node = Data()
-    node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
+    node.ctx.repository.put_object_from_bytes(b'content', 'relative/path')
     node.store()
 
     clone = node.clone()
-    assert clone.list_object_names('relative') == ['path']
-    assert clone.get_object_content('relative/path', mode='rb') == b'content'
+    assert clone.ctx.repository.list_object_names('relative') == ['path']
+    assert clone.ctx.repository.get_object_content('relative/path', mode='rb') == b'content'
 
     clone.store()
-    assert clone.list_object_names('relative') == ['path']
-    assert clone.get_object_content('relative/path', mode='rb') == b'content'
-    assert clone.repository_metadata == node.repository_metadata
-    assert clone._repository.hash() == node._repository.hash()
+    assert clone.ctx.repository.list_object_names('relative') == ['path']
+    assert clone.ctx.repository.get_object_content('relative/path', mode='rb') == b'content'
+    assert clone.ctx.repository.metadata == node.ctx.repository.metadata
+    assert clone.ctx.repository.hash() == node.ctx.repository.hash()
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_clone_unstored():
     """Test the repository after a node is cloned from an unstored node."""
     node = Data()
-    node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
+    node.ctx.repository.put_object_from_bytes(b'content', 'relative/path')
 
     clone = node.clone()
-    assert clone.list_object_names('relative') == ['path']
-    assert clone.get_object_content('relative/path', mode='rb') == b'content'
+    assert clone.ctx.repository.list_object_names('relative') == ['path']
+    assert clone.ctx.repository.get_object_content('relative/path', mode='rb') == b'content'
 
     clone.store()
-    assert clone.list_object_names('relative') == ['path']
-    assert clone.get_object_content('relative/path', mode='rb') == b'content'
+    assert clone.ctx.repository.list_object_names('relative') == ['path']
+    assert clone.ctx.repository.get_object_content('relative/path', mode='rb') == b'content'
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_sealed():
     """Test the repository interface for a calculation node before and after it is sealed."""
     node = CalcJobNode()
-    node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
+    node.ctx.repository.put_object_from_bytes(b'content', 'relative/path')
     node.store()
     node.seal()
 
     with pytest.raises(exceptions.ModificationNotAllowed):
-        node.put_object_from_filelike(io.BytesIO(b'content'), 'path')
+        node.ctx.repository.put_object_from_bytes(b'content', 'path')
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_get_object_raises():
-    """Test the ``NodeRepositoryMixin.get_object`` method when it is supposed to raise."""
+    """Test the ``NodeRepository.get_object`` method when it is supposed to raise."""
     node = Data()
 
     with pytest.raises(TypeError, match=r'path `.*` is not a relative path.'):
-        node.get_object('/absolute/path')
+        node.ctx.repository.get_object('/absolute/path')
 
     with pytest.raises(FileNotFoundError, match=r'object with path `.*` does not exist.'):
-        node.get_object('non_existing_folder/file_a')
+        node.ctx.repository.get_object('non_existing_folder/file_a')
 
     with pytest.raises(FileNotFoundError, match=r'object with path `.*` does not exist.'):
-        node.get_object('non_existant')
+        node.ctx.repository.get_object('non_existant')
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_get_object():
-    """Test the ``NodeRepositoryMixin.get_object`` method."""
+    """Test the ``NodeRepository.get_object`` method."""
     node = CalcJobNode()
-    node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/file_b')
+    node.ctx.repository.put_object_from_bytes(b'content', 'relative/file_b')
 
-    file_object = node.get_object(None)
+    file_object = node.ctx.repository.get_object(None)
     assert isinstance(file_object, File)
     assert file_object.file_type == FileType.DIRECTORY
     assert file_object.is_file() is False
     assert file_object.is_dir() is True
 
-    file_object = node.get_object('relative')
+    file_object = node.ctx.repository.get_object('relative')
     assert isinstance(file_object, File)
     assert file_object.file_type == FileType.DIRECTORY
     assert file_object.name == 'relative'
 
-    file_object = node.get_object('relative/file_b')
+    file_object = node.ctx.repository.get_object('relative/file_b')
     assert isinstance(file_object, File)
     assert file_object.file_type == FileType.FILE
     assert file_object.name == 'file_b'
@@ -193,12 +193,12 @@ def test_get_object():
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_walk():
-    """Test the ``NodeRepositoryMixin.walk`` method."""
+    """Test the ``NodeRepository.walk`` method."""
     node = Data()
-    node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
+    node.ctx.repository.put_object_from_bytes(b'content', 'relative/path')
 
     results = []
-    for root, dirnames, filenames in node.walk():
+    for root, dirnames, filenames in node.ctx.repository.walk():
         results.append((root, sorted(dirnames), sorted(filenames)))
 
     assert sorted(results) == [
@@ -210,7 +210,7 @@ def test_walk():
     node.store()
 
     results = []
-    for root, dirnames, filenames in node.walk():
+    for root, dirnames, filenames in node.ctx.repository.walk():
         results.append((root, sorted(dirnames), sorted(filenames)))
 
     assert sorted(results) == [
@@ -221,23 +221,33 @@ def test_walk():
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_glob():
-    """Test the ``NodeRepositoryMixin.glob`` method."""
+    """Test the ``NodeRepository.glob`` method."""
     node = Data()
-    node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
+    node.ctx.repository.put_object_from_bytes(b'content', 'relative/path')
 
-    assert {path.as_posix() for path in node.glob()} == {'relative', 'relative/path'}
+    assert {path.as_posix() for path in node.ctx.repository.glob()} == {'relative', 'relative/path'}
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_copy_tree(tmp_path):
     """Test the ``Repository.copy_tree`` method."""
     node = Data()
-    node.put_object_from_filelike(io.BytesIO(b'content'), 'relative/path')
+    node.ctx.repository.put_object_from_bytes(b'content', 'relative/path')
 
-    node.copy_tree(tmp_path)
+    node.ctx.repository.copy_tree(tmp_path)
     dirpath = pathlib.Path(tmp_path / 'relative')
     filepath = dirpath / 'path'
     assert dirpath.is_dir()
     assert filepath.is_file()
-    with node.open('relative/path', 'rb') as handle:
+    with node.ctx.repository.open('relative/path', 'rb') as handle:
         assert filepath.read_bytes() == handle.read()
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_deprecated_methods(monkeypatch):
+    """Test calling (deprecated) methods, directly from the `Node` instance still works."""
+    node = Data()
+    monkeypatch.setenv('AIIDA_WARN_v3', 'true')
+    for method in node._deprecated_repo_methods:
+        with pytest.warns(AiidaDeprecationWarning):
+            getattr(node, method)

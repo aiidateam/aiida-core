@@ -100,7 +100,7 @@ class TestVerdiCalculation:
         # Get the imported ArithmeticAddCalculation node
         ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
         calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()[0]
-        self.arithmetic_job = calculations[0]
+        self.arithmetic_job: orm.CalcJobNode = calculations[0]
 
         self.cli_runner = CliRunner()
 
@@ -194,16 +194,16 @@ class TestVerdiCalculation:
         assert get_result_lines(result)[0] == '2 3'
 
         # Test cat binary files
-        self.arithmetic_job._repository.put_object_from_filelike(io.BytesIO(b'COMPRESS'), 'aiida.in')
-        self.arithmetic_job._update_repository_metadata()
+        self.arithmetic_job.ctx.repository._repository.put_object_from_filelike(io.BytesIO(b'COMPRESS'), 'aiida.in')
+        self.arithmetic_job.ctx.repository._update_repository_metadata()
 
         options = [self.arithmetic_job.uuid, 'aiida.in']
         result = self.cli_runner.invoke(command.calcjob_inputcat, options)
         assert result.stdout_bytes == b'COMPRESS'
 
         # Restore the file
-        self.arithmetic_job._repository.put_object_from_filelike(io.BytesIO(b'2 3\n'), 'aiida.in')
-        self.arithmetic_job._update_repository_metadata()
+        self.arithmetic_job.ctx.repository._repository.put_object_from_filelike(io.BytesIO(b'2 3\n'), 'aiida.in')
+        self.arithmetic_job.ctx.repository._update_repository_metadata()
 
     def test_calcjob_outputcat(self):
         """Test verdi calcjob outputcat"""
@@ -226,16 +226,16 @@ class TestVerdiCalculation:
 
         # Test cat binary files
         retrieved = self.arithmetic_job.outputs.retrieved
-        retrieved._repository.put_object_from_filelike(io.BytesIO(b'COMPRESS'), 'aiida.out')
-        retrieved._update_repository_metadata()
+        retrieved.ctx.repository._repository.put_object_from_filelike(io.BytesIO(b'COMPRESS'), 'aiida.out')
+        retrieved.ctx.repository._update_repository_metadata()
 
         options = [self.arithmetic_job.uuid, 'aiida.out']
         result = self.cli_runner.invoke(command.calcjob_outputcat, options)
         assert result.stdout_bytes == b'COMPRESS'
 
         # Restore the file
-        retrieved._repository.put_object_from_filelike(io.BytesIO(b'5\n'), 'aiida.out')
-        retrieved._update_repository_metadata()
+        retrieved.ctx.repository._repository.put_object_from_filelike(io.BytesIO(b'5\n'), 'aiida.out')
+        retrieved.ctx.repository._update_repository_metadata()
 
     def test_calcjob_cleanworkdir(self):
         """Test verdi calcjob cleanworkdir"""

@@ -45,11 +45,11 @@ class ArrayData(Data):
         :param name: The name of the array to delete from the node.
         """
         fname = f'{name}.npy'
-        if fname not in self.list_object_names():
+        if fname not in self.ctx.repository.list_object_names():
             raise KeyError(f"Array with name '{name}' not found in node pk= {self.pk}")
 
         # remove both file and attribute
-        self.delete_object(fname)
+        self.ctx.repository.delete_object(fname)
         try:
             self.delete_attribute(f'{self.array_prefix}{name}')
         except (KeyError, AttributeError):
@@ -71,7 +71,7 @@ class ArrayData(Data):
         Return a list of all arrays stored in the node, listing the files (and
         not relying on the properties).
         """
-        return [i[:-4] for i in self.list_object_names() if i.endswith('.npy')]
+        return [i[:-4] for i in self.ctx.repository.list_object_names() if i.endswith('.npy')]
 
     def _arraynames_from_properties(self):
         """
@@ -111,11 +111,11 @@ class ArrayData(Data):
             """Return the array stored in a .npy file"""
             filename = f'{name}.npy'
 
-            if filename not in self.list_object_names():
+            if filename not in self.ctx.repository.list_object_names():
                 raise KeyError(f'Array with name `{name}` not found in ArrayData<{self.pk}>')
 
             # Open a handle in binary read mode as the arrays are written as binary files as well
-            with self.open(filename, mode='rb') as handle:
+            with self.ctx.repository.open(filename, mode='rb') as handle:
                 return numpy.load(handle, allow_pickle=False)  # pylint: disable=unexpected-keyword-arg
 
         # Return with proper caching if the node is stored, otherwise always re-read from disk
@@ -171,7 +171,7 @@ class ArrayData(Data):
             handle.seek(0)
 
             # Write the numpy array to the repository, keeping the byte representation
-            self.put_object_from_filelike(handle, f'{name}.npy')
+            self.ctx.repository.put_object_from_filelike(handle, f'{name}.npy')
 
         # Store the array name and shape for querying purposes
         self.set_attribute(f'{self.array_prefix}{name}', list(array.shape))

@@ -93,7 +93,7 @@ class Code(Data):
         for filename in files:
             if os.path.isfile(filename):
                 with open(filename, 'rb') as handle:
-                    self.put_object_from_filelike(handle, os.path.split(filename)[1])
+                    self.ctx.repository.put_object_from_filelike(handle, os.path.split(filename)[1])
 
     def __str__(self):
         local_str = 'Local' if self.is_local() else 'Remote'
@@ -282,12 +282,12 @@ class Code(Data):
                     'You have to set which file is the local executable '
                     'using the set_exec_filename() method'
                 )
-            if self.get_local_executable() not in self.list_object_names():
+            if self.get_local_executable() not in self.ctx.repository.list_object_names():
                 raise exceptions.ValidationError(
                     f"The local executable '{self.get_local_executable()}' is not in the list of files of this code"
                 )
         else:
-            if self.list_object_names():
+            if self.ctx.repository.list_object_names():
                 raise exceptions.ValidationError('The code is remote but it has files inside')
             if not self.get_remote_computer():
                 raise exceptions.ValidationError('You did not specify a remote computer')

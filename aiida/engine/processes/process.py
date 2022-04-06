@@ -550,18 +550,18 @@ class Process(plumpy.processes.Process):
 
         return process_type
 
-    def report(self, msg: str, *args, **kwargs) -> None:
+    def report(self, msg: str, *args, log_level=LOG_LEVEL_REPORT, **kwargs) -> None:
         """Log a message to the logger, which should get saved to the database through the attached DbLogHandler.
 
         The pk, class name and function name of the caller are prepended to the given message
 
         :param msg: message to log
+        :param log_level: the log level of report default to REPORT level
         :param args: args to pass to the log call
         :param kwargs: kwargs to pass to the log call
-
         """
         message = f'[{self.node.pk}|{self.__class__.__name__}|{inspect.stack()[1][3]}]: {msg}'
-        self.logger.log(LOG_LEVEL_REPORT, message, *args, **kwargs)
+        self.logger.log(log_level, message, *args, **kwargs)
 
     def _create_and_setup_db_record(self) -> Union[int, UUID]:
         """

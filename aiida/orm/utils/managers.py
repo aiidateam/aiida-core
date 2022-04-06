@@ -12,12 +12,10 @@ Contain utility classes for "managers", i.e., classes that allow
 to access members of other classes via TAB-completable attributes
 (e.g. the class underlying `calculation.inputs` to allow to do `calculation.inputs.<label>`).
 """
-import warnings
-
 from aiida.common import AttributeDict
 from aiida.common.exceptions import NotExistent, NotExistentAttributeError, NotExistentKeyError
 from aiida.common.links import LinkType
-from aiida.common.warnings import AiidaDeprecationWarning
+from aiida.common.warnings import warn_deprecation
 
 __all__ = ('NodeLinksManager', 'AttributeManager')
 
@@ -100,11 +98,11 @@ class NodeLinksManager:
                 not (label.startswith(self._namespace_separator) and label.endswith(self._namespace_separator))
             ):
                 import functools
-                warnings.warn(
+                warn_deprecation(
                     'dereferencing nodes with links containing double underscores is deprecated, simply replace '
                     'the double underscores with a single dot instead. For example: \n'
-                    '`self.inputs.some__label` can be written as `self.inputs.some.label` instead.\n'
-                    'Support for double underscores will be removed in `v3.0`.', AiidaDeprecationWarning
+                    '`self.inputs.some__label` can be written as `self.inputs.some.label` instead.\n',
+                    version=3
                 )  # pylint: disable=no-member
                 namespaces = label.split(self._namespace_separator)
                 try:
@@ -151,10 +149,10 @@ class NodeLinksManager:
     def __contains__(self, key):
         """Override the operator of the base class to emit deprecation warning if double underscore is used in key."""
         if self._namespace_separator in key:
-            warnings.warn(
+            warn_deprecation(
                 'The use of double underscores in keys is deprecated. Please expand the namespaces manually:\n'
                 'instead of `nested__key in node.inputs`, use `nested in node.inputs and `key in node.inputs.nested`.',
-                AiidaDeprecationWarning
+                version=3
             )
             namespaces = key.split(self._namespace_separator)
             leaf = namespaces.pop()

@@ -12,7 +12,6 @@ import enum
 import functools
 import traceback
 from typing import Any, List, Optional, Sequence, Set, Tuple
-from warnings import warn
 
 # importlib.metadata was introduced into the standard library in python 3.8,
 # but was then updated in python 3.10 to use an improved API.
@@ -21,7 +20,7 @@ from importlib_metadata import EntryPoint, EntryPoints
 from importlib_metadata import entry_points as _eps
 
 from aiida.common.exceptions import LoadingEntryPointError, MissingEntryPointError, MultipleEntryPointError
-from aiida.common.warnings import AiidaDeprecationWarning
+from aiida.common.warnings import warn_deprecation
 
 __all__ = ('load_entry_point', 'load_entry_point_from_string', 'parse_entry_point', 'get_entry_points')
 
@@ -305,9 +304,8 @@ def convert_potentially_deprecated_entry_point(group: str, name: str) -> str:
         return name
     else:
         if name in deprecated_entry_points:
-            warn(
-                f'The entry point `{name}` is deprecated. Please replace it with `core.{name}`.',
-                AiidaDeprecationWarning
+            warn_deprecation(
+                f'The entry point `{name}` is deprecated. Please replace it with `core.{name}`.', version=3
             )
             name = f'core.{name}'
 

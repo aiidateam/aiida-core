@@ -17,13 +17,11 @@ Use this module prefentially over standard json to ensure compatibility.
 """
 import codecs
 import json
-import warnings
 
-from aiida.common.warnings import AiidaDeprecationWarning
+from aiida.common.warnings import warn_deprecation
 
-warnings.warn(
-    'This module has been deprecated and should no longer be used. Use the `json` standard library instead.',
-    AiidaDeprecationWarning
+warn_deprecation(
+    'This module has been deprecated and should no longer be used. Use the `json` standard library instead.', version=3
 )
 
 

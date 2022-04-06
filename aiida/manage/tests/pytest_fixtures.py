@@ -21,12 +21,11 @@ Collection of pytest fixtures using the TestManager for easy testing of AiiDA pl
 import asyncio
 import shutil
 import tempfile
-import warnings
 
 import pytest
 
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.warnings import AiidaDeprecationWarning
+from aiida.common.warnings import warn_deprecation
 from aiida.manage.tests import get_test_backend_name, get_test_profile_name, test_manager
 
 
@@ -77,9 +76,7 @@ def clear_database(clear_database_after_test):
 @pytest.fixture(scope='function')
 def clear_database_after_test(aiida_profile):
     """Clear the database after the test."""
-    warnings.warn(
-        'the clear_database_after_test fixture is deprecated, use aiida_profile_clean instead', AiidaDeprecationWarning
-    )
+    warn_deprecation('the clear_database_after_test fixture is deprecated, use aiida_profile_clean instead', version=3)
     yield aiida_profile
     aiida_profile.clear_profile()
 
@@ -87,9 +84,7 @@ def clear_database_after_test(aiida_profile):
 @pytest.fixture(scope='function')
 def clear_database_before_test(aiida_profile):
     """Clear the database before the test."""
-    warnings.warn(
-        'the clear_database_before_test fixture deprecated, use aiida_profile_clean instead', AiidaDeprecationWarning
-    )
+    warn_deprecation('the clear_database_before_test fixture deprecated, use aiida_profile_clean instead', version=3)
     aiida_profile.clear_profile()
     yield aiida_profile
 
@@ -97,9 +92,8 @@ def clear_database_before_test(aiida_profile):
 @pytest.fixture(scope='class')
 def clear_database_before_test_class(aiida_profile):
     """Clear the database before a test class."""
-    warnings.warn(
-        'the clear_database_before_test_class is deprecated, use aiida_profile_clean_class instead',
-        AiidaDeprecationWarning
+    warn_deprecation(
+        'the clear_database_before_test_class is deprecated, use aiida_profile_clean_class instead', version=3
     )
     aiida_profile.clear_profile()
     yield

@@ -9,8 +9,8 @@
 ###########################################################################
 # pylint: disable=too-many-lines,too-many-arguments
 """Package for node ORM classes."""
-import copy
 import datetime
+from functools import cached_property
 import importlib
 from logging import Logger
 from typing import (
@@ -35,6 +35,7 @@ from aiida.common.escaping import sql_string_match
 from aiida.common.hashing import make_hash
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
+from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 from aiida.orm.utils.links import LinkManager, LinkTriple
 from aiida.orm.utils.node import AbstractNodeMeta
@@ -45,7 +46,7 @@ from ..entities import Collection as EntityCollection
 from ..entities import Entity, EntityAttributesMixin, EntityExtrasMixin
 from ..querybuilder import QueryBuilder
 from ..users import User
-from .repository import NodeRepositoryMixin
+from .repository import NodeRepository
 
 if TYPE_CHECKING:
     from ..implementation import BackendNode, StorageBackend
@@ -59,7 +60,7 @@ class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
     """The collection of nodes."""
 
     @staticmethod
-    def _entity_base_cls() -> Type['Node']:
+    def _entity_base_cls() -> Type['Node']:  # type: ignore
         return Node
 
     def delete(self, pk: int) -> None:
@@ -101,9 +102,20 @@ class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
                     yield key
 
 
-class Node(
-    Entity['BackendNode'], NodeRepositoryMixin, EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractNodeMeta
-):
+class NodeBase:
+    """A namespace for node related functionality, that is not directly related to its user-facing properties."""
+
+    def __init__(self, node: 'Node') -> None:
+        """Construct a new instance of the base namespace."""
+        self._node: 'Node' = node
+
+    @cached_property
+    def repository(self) -> 'NodeRepository':
+        """Return the repository for this node."""
+        return NodeRepository(self._node)
+
+
+class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractNodeMeta):
     """
     Base class for all nodes in AiiDA.
 
@@ -151,7 +163,7 @@ class Node(
     Collection = NodeCollection
 
     @classproperty
-    def objects(cls: Type[NodeType]) -> NodeCollection[NodeType]:  # pylint: disable=no-self-argument
+    def objects(cls: Type[NodeType]) -> NodeCollection[NodeType]:  # type: ignore # pylint: disable=no-self-argument
         return NodeCollection.get_cached(cls, get_manager().get_profile_storage())  # type: ignore[arg-type]
 
     def __init__(
@@ -176,6 +188,11 @@ class Node(
             node_type=self.class_node_type, user=user.backend_entity, computer=computer, **kwargs
         )
         super().__init__(backend_entity)
+
+    @cached_property
+    def base(self) -> NodeBase:
+        """Return the node base namespace."""
+        return NodeBase(self)
 
     def __eq__(self, other: Any) -> bool:
         """Fallback equality comparison by uuid (can be overwritten by specific types)"""
@@ -324,22 +341,6 @@ class Node(
         :param value: the new value to set
         """
         self.backend_entity.description = value
-
-    @property
-    def repository_metadata(self) -> Dict[str, Any]:
-        """Return the node repository metadata.
-
-        :return: the repository metadata
-        """
-        return self.backend_entity.repository_metadata
-
-    @repository_metadata.setter
-    def repository_metadata(self, value: Dict[str, Any]) -> None:
-        """Set the repository metadata.
-
-        :param value: the new value to set
-        """
-        self.backend_entity.repository_metadata = value
 
     @property
     def computer(self) -> Optional[Computer]:
@@ -726,18 +727,7 @@ class Node(
         :param with_transaction: if False, do not use a transaction because the caller will already have opened one.
         :param clean: boolean, if True, will clean the attributes and extras before attempting to store
         """
-        from aiida.repository import Repository
-        from aiida.repository.backend import SandboxRepositoryBackend
-
-        # Only if the backend repository is a sandbox do we have to clone its contents to the permanent repository.
-        if isinstance(self._repository.backend, SandboxRepositoryBackend):
-            repository_backend = self.backend.get_repository()
-            repository = Repository(backend=repository_backend)
-            repository.clone(self._repository)
-            # Swap the sandbox repository for the new permanent repository instance which should delete the sandbox
-            self._repository_instance = repository
-
-        self.repository_metadata = self._repository.serialize()
+        self.base.repository._store()  # pylint: disable=protected-access
 
         links = self._incoming_cache
         self._backend_entity.store(links, with_transaction=with_transaction, clean=clean)
@@ -772,7 +762,6 @@ class Node(
 
         """
         from aiida.orm.utils.mixins import Sealable
-        from aiida.repository import Repository
         assert self.node_type == cache_node.node_type
 
         # Make sure the node doesn't have any RETURN links
@@ -783,7 +772,7 @@ class Node(
         self.description = cache_node.description
 
         # Make sure to reinitialize the repository instance of the clone to that of the source node.
-        self._repository: Repository = copy.copy(cache_node._repository)  # pylint: disable=protected-access
+        self.base.repository._copy(cache_node.base.repository)  # pylint: disable=protected-access
 
         for key, value in cache_node.attributes.items():
             if key != Sealable.SEALED_KEY:
@@ -829,7 +818,6 @@ class Node(
 
     def _get_objects_to_hash(self) -> List[Any]:
         """Return a list of objects which should be included in the hash."""
-        assert self._repository is not None, 'repository not initialised'
         top_level_module = self.__module__.split('.', 1)[0]
         try:
             version = importlib.import_module(top_level_module).__version__
@@ -842,7 +830,7 @@ class Node(
                 for key, val in self.attributes_items()
                 if key not in self._hash_ignored_attributes and key not in self._updatable_attributes  # pylint: disable=unsupported-membership-test
             },
-            self._repository.hash(),
+            self.base.repository.hash(),
             self.computer.uuid if self.computer is not None else None
         ]
         return objects
@@ -946,3 +934,36 @@ class Node(
         """
         # pylint: disable=no-self-use
         return ''
+
+    _deprecated_repo_methods = {
+        'copy_tree': 'copy_tree',
+        'delete_object': 'delete_object',
+        'get_object': 'get_object',
+        'get_object_content': 'get_object_content',
+        'glob': 'glob',
+        'list_objects': 'list_objects',
+        'list_object_names': 'list_object_names',
+        'open': 'open',
+        'put_object_from_filelike': 'put_object_from_filelike',
+        'put_object_from_file': 'put_object_from_file',
+        'put_object_from_tree': 'put_object_from_tree',
+        'walk': 'walk',
+        'repository_metadata': 'metadata',
+    }
+
+    def __getattr__(self, name: str) -> Any:
+        """
+        This method is called when an attribute is not found in the instance.
+
+        It allows for the handling of deprecated mixin methods.
+        """
+        if name in self._deprecated_repo_methods:
+            new_name = self._deprecated_repo_methods[name]
+            kls = self.__class__.__name__
+            warn_deprecation(
+                f'`{kls}.{name}` is deprecated, use `{kls}.base.repository.{new_name}` instead.',
+                version=3,
+                stacklevel=3
+            )
+            return getattr(self.base.repository, new_name)
+        raise AttributeError(name)

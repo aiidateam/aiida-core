@@ -111,7 +111,7 @@ class TestParser:
         node.store()
 
         retrieved = orm.FolderData()
-        retrieved.put_object_from_filelike(io.StringIO(f'{summed}'), output_filename)
+        retrieved.base.repository.put_object_from_filelike(io.StringIO(f'{summed}'), output_filename)
         retrieved.store()
         retrieved.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
 

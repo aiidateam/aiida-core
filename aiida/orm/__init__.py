@@ -72,7 +72,7 @@ __all__ = (
     'Node',
     'NodeEntityLoader',
     'NodeLinksManager',
-    'NodeRepositoryMixin',
+    'NodeRepository',
     'NumericType',
     'OrbitalData',
     'OrderSpecifier',

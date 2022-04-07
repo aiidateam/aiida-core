@@ -44,7 +44,7 @@ def repo_cat(node, relative_path):
     import sys
 
     try:
-        with node.open(relative_path, mode='rb') as fhandle:
+        with node.base.repository.open(relative_path, mode='rb') as fhandle:
             copyfileobj(fhandle, sys.stdout.buffer)
     except OSError as exception:
         # The sepcial case is breakon pipe error, which is usually OK.
@@ -96,7 +96,7 @@ def repo_dump(node, output_directory):
         Recursively copy the content at the ``key`` path in the given node to
         the ``output_dir``.
         """
-        for file in node.list_objects(key):
+        for file in node.base.repository.list_objects(key):
             # Not using os.path.join here, because this is the "path"
             # in the AiiDA node, not an actual OS - level path.
             file_key = file.name if not key else f'{key}/{file.name}'
@@ -110,7 +110,7 @@ def repo_dump(node, output_directory):
                 assert file.file_type == FileType.FILE
                 out_file_path = output_dir / file.name
                 assert not out_file_path.exists()
-                with node.open(file_key, 'rb') as in_file:
+                with node.base.repository.open(file_key, 'rb') as in_file:
                     with out_file_path.open('wb') as out_file:
                         shutil.copyfileobj(in_file, out_file)
 

@@ -53,9 +53,10 @@ class TestNode:
     def test_repository_garbage_collection(self):
         """Verify that the repository sandbox folder is cleaned after the node instance is garbage collected."""
         node = Data()
-        dirpath = node._repository.backend.sandbox.abspath  # pylint: disable=protected-access
+        dirpath = node.base.repository._repository.backend.sandbox.abspath  # pylint: disable=protected-access
 
         assert os.path.isdir(dirpath)
+        del node.base.repository
         del node
         assert not os.path.isdir(dirpath)
 
@@ -73,19 +74,19 @@ class TestNode:
     def test_repository_metadata():
         """Test the basic properties for `repository_metadata`."""
         node = Data()
-        assert node.repository_metadata == {}
+        assert node.base.repository.metadata == {}
 
         # Even after storing the metadata should be empty, since it contains no files
         node.store()
-        assert node.repository_metadata == {}
+        assert node.base.repository.metadata == {}
 
         node = Data()
+        # setting any incorrect metadata on an unstored node should be reverted after storing
         repository_metadata = {'key': 'value'}
-        node.repository_metadata = repository_metadata
-        assert node.repository_metadata == repository_metadata
-
+        node.backend_entity.repository_metadata = repository_metadata
+        assert node.base.repository.metadata == repository_metadata
         node.store()
-        assert node.repository_metadata != repository_metadata
+        assert node.base.repository.metadata == {}
 
     @staticmethod
     @pytest.mark.parametrize(
@@ -966,7 +967,7 @@ class TestNodeCaching:
             os.makedirs(dir_path)
             with open(os.path.join(dir_path, 'file'), 'w', encoding='utf8') as file:
                 file.write('content')
-            data.put_object_from_tree(tmpdir)
+            data.base.repository.put_object_from_tree(tmpdir)
 
         data.store()
 
@@ -1010,13 +1011,13 @@ class TestNodeCaching:
 def test_iter_repo_keys():
     """Test the ``iter_repo_keys`` method."""
     data1 = Data()
-    data1.put_object_from_filelike(BytesIO(b'value1'), 'key1')
-    data1.put_object_from_filelike(BytesIO(b'value1'), 'key2')
-    data1.put_object_from_filelike(BytesIO(b'value3'), 'folder/key3')
+    data1.base.repository.put_object_from_filelike(BytesIO(b'value1'), 'key1')
+    data1.base.repository.put_object_from_filelike(BytesIO(b'value1'), 'key2')
+    data1.base.repository.put_object_from_filelike(BytesIO(b'value3'), 'folder/key3')
     data1.store()
     data2 = Data()
-    data2.put_object_from_filelike(BytesIO(b'value1'), 'key1')
-    data2.put_object_from_filelike(BytesIO(b'value4'), 'key2')
+    data2.base.repository.put_object_from_filelike(BytesIO(b'value1'), 'key1')
+    data2.base.repository.put_object_from_filelike(BytesIO(b'value4'), 'key2')
     data2.store()
     assert set(Data.objects.iter_repo_keys()) == {
         '31cd97ebe10a80abe1b3f401824fc2040fb8b03aafd0d37acf6504777eddee11',

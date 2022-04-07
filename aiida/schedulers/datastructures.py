@@ -14,7 +14,10 @@ the data structure to be filled for job submission (JobTemplate), and
 the data structure that is returned when querying for jobs in the scheduler
 (JobInfo).
 """
+from __future__ import annotations
+
 import abc
+from dataclasses import dataclass, field
 import enum
 import json
 
@@ -298,7 +301,7 @@ class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-insta
       * ``append_text``: a (possibly multi-line) string to be inserted
         in the scheduler script after the main execution line
       * ``import_sys_environment``: import the system environment variables
-      * ``codes_info``: a list of aiida.common.datastructures.CalcInfo objects.
+      * ``codes_info``: a list of aiida.scheduler.datastructures.JobTemplateCodeInfo objects.
         Each contains the information necessary to run a single code. At the
         moment, it can contain:
 
@@ -355,6 +358,27 @@ class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-insta
         'codes_run_mode',
         'codes_info',
     )
+
+
+@dataclass
+class JobTemplateCodeInfo:
+    """
+    Data structure to communicate to a `Scheduler` how a code should be run in submit script.
+
+    `Scheduler.get_submit_script` will pass a list of these objects to `Scheduler._get_run_line` which
+    should build up the code execution line based on the parameters specified in this dataclass.
+
+    :param cmdline_params: list of unescaped command line parameters.
+    :param stdin_name: filename of the the stdin file descriptor.
+    :param stdout_name: filename of the the `stdout` file descriptor.
+    :param stderr_name: filename of the the `stderr` file descriptor.
+    :param join_files: boolean, if true, `stderr` should be redirected to `stdout`.
+    """
+    cmdline_params: list[str] = field(default_factory=list)
+    stdin_name: None | str = None
+    stdout_name: None | str = None
+    stderr_name: None | str = None
+    join_files: bool = False
 
 
 class MachineInfo(DefaultFieldsAttributeDict):

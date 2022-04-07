@@ -206,9 +206,10 @@ class Scheduler(metaclass=abc.ABCMeta):
     def _get_run_line(self, codes_info, codes_run_mode):
         """Return a string with the line to execute a specific code with specific arguments.
 
-        :parameter codes_info: a list of `aiida.common.datastructures.CodeInfo` objects. Each contains the information
-            needed to run the code. I.e. `cmdline_params`, `stdin_name`, `stdout_name`, `stderr_name`, `join_files`. See
-            the documentation of `JobTemplate` and `CodeInfo`.
+        :parameter codes_info: a list of `aiida.scheduler.datastructures.JobTemplateCodeInfo` objects.
+            Each contains the information needed to run the code. I.e. `cmdline_params`, `stdin_name`,
+            `stdout_name`, `stderr_name`, `join_files`. See
+            the documentation of `JobTemplate` and `JobTemplateCodeInfo`.
         :parameter codes_run_mode: instance of `aiida.common.datastructures.CodeRunMode` contains the information on how
             to launch the multiple codes.
         :return: string with format: [executable] [args] {[ < stdin ]} {[ < stdout ]} {[2>&1 | 2> stderr]}
@@ -389,14 +390,14 @@ class Scheduler(metaclass=abc.ABCMeta):
         :return: True if everything seems ok, False otherwise.
         """
 
-    def parse_output(self, detailed_job_info, stdout, stderr):
+    def parse_output(self, detailed_job_info=None, stdout=None, stderr=None):
         """Parse the output of the scheduler.
 
         :param detailed_job_info: dictionary with the output returned by the `Scheduler.get_detailed_job_info` command.
             This should contain the keys `retval`, `stdout` and `stderr` corresponding to the return value, stdout and
             stderr returned by the accounting command executed for a specific job id.
-        :param stdout: string with the output written by the scheduler to stdout
-        :param stderr: string with the output written by the scheduler to stderr
-        :return: None or an instance of `aiida.engine.processes.exit_code.ExitCode`
+        :param stdout: string with the output written by the scheduler to stdout.
+        :param stderr: string with the output written by the scheduler to stderr.
+        :return: None or an instance of :class:`aiida.engine.processes.exit_code.ExitCode`.
         """
         raise exceptions.FeatureNotAvailable(f'output parsing is not available for `{self.__class__.__name__}`')

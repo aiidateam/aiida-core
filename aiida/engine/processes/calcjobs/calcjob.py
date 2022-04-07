@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Implementation of the CalcJob process."""
+import dataclasses
 import io
 import json
 import os
@@ -514,21 +515,23 @@ class CalcJob(Process):
             self.logger.info('could not parse scheduler output: return value of `detailed_job_info` is non-zero')
             detailed_job_info = None
 
-        try:
-            scheduler_stderr = retrieved.get_object_content(filename_stderr)
-        except FileNotFoundError:
-            scheduler_stderr = None
-            self.logger.warning(f'could not parse scheduler output: the `{filename_stderr}` file is missing')
+        if filename_stderr is None:
+            self.logger.warning('could not determine `stderr` filename because `scheduler_stderr` option was not set.')
+        else:
+            try:
+                scheduler_stderr = retrieved.base.repository.get_object_content(filename_stderr)
+            except FileNotFoundError:
+                scheduler_stderr = None
+                self.logger.warning(f'could not parse scheduler output: the `{filename_stderr}` file is missing')
 
-        try:
-            scheduler_stdout = retrieved.get_object_content(filename_stdout)
-        except FileNotFoundError:
-            scheduler_stdout = None
-            self.logger.warning(f'could not parse scheduler output: the `{filename_stdout}` file is missing')
-
-        # Only attempt to call the scheduler parser if all three resources of information are available
-        if any(entry is None for entry in [detailed_job_info, scheduler_stderr, scheduler_stdout]):
-            return None
+        if filename_stdout is None:
+            self.logger.warning('could not determine `stdout` filename because `scheduler_stdout` option was not set.')
+        else:
+            try:
+                scheduler_stdout = retrieved.base.repository.get_object_content(filename_stdout)
+            except FileNotFoundError:
+                scheduler_stdout = None
+                self.logger.warning(f'could not parse scheduler output: the `{filename_stdout}` file is missing')
 
         try:
             exit_code = scheduler.parse_output(detailed_job_info, scheduler_stdout, scheduler_stderr)
@@ -587,7 +590,7 @@ class CalcJob(Process):
         from aiida.common.exceptions import InputValidationError, InvalidOperation, PluginInternalError, ValidationError
         from aiida.common.utils import validate_list_of_string_tuples
         from aiida.orm import Code, Computer, load_node
-        from aiida.schedulers.datastructures import JobTemplate
+        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
         inputs = self.node.get_incoming(link_type=LinkType.INPUT_CALC)
 
@@ -682,7 +685,7 @@ class CalcJob(Process):
         if not isinstance(calc_info.codes_info, (list, tuple)):
             raise PluginInternalError('codes_info passed to CalcInfo must be a list of CalcInfo objects')
 
-        codes_info = []
+        tmpl_codes_info = []
         for code_info in calc_info.codes_info:
 
             if not isinstance(code_info, CodeInfo):
@@ -713,11 +716,15 @@ class CalcJob(Process):
                 this_argv = [this_code.get_execname()
                              ] + (code_info.cmdline_params if code_info.cmdline_params is not None else [])
 
-            # overwrite the old cmdline_params and add codename and mpirun stuff
-            code_info.cmdline_params = this_argv
+            tmpl_code_info = JobTemplateCodeInfo()
+            tmpl_code_info.cmdline_params = this_argv
+            tmpl_code_info.stdin_name = code_info.stdin_name
+            tmpl_code_info.stdout_name = code_info.stdout_name
+            tmpl_code_info.stderr_name = code_info.stderr_name
+            tmpl_code_info.join_files = code_info.join_files
 
-            codes_info.append(code_info)
-        job_tmpl.codes_info = codes_info
+            tmpl_codes_info.append(tmpl_code_info)
+        job_tmpl.codes_info = tmpl_codes_info
 
         # set the codes execution mode, default set to `SERIAL`
         codes_run_mode = CodeRunMode.SERIAL
@@ -759,8 +766,15 @@ class CalcJob(Process):
         script_content = scheduler.get_submit_script(job_tmpl)
         folder.create_file_from_filelike(io.StringIO(script_content), submit_script_filename, 'w', encoding='utf8')
 
+        def encoder(obj):
+            if dataclasses.is_dataclass(obj):
+                return dataclasses.asdict(obj)
+            raise TypeError(f' {obj!r} is not JSON serializable')
+
         subfolder = folder.get_subfolder('.aiida', create=True)
-        subfolder.create_file_from_filelike(io.StringIO(json.dumps(job_tmpl)), 'job_tmpl.json', 'w', encoding='utf8')
+        subfolder.create_file_from_filelike(
+            io.StringIO(json.dumps(job_tmpl, default=encoder)), 'job_tmpl.json', 'w', encoding='utf8'
+        )
         subfolder.create_file_from_filelike(io.StringIO(json.dumps(calc_info)), 'calcinfo.json', 'w', encoding='utf8')
 
         if calc_info.local_copy_list is None:

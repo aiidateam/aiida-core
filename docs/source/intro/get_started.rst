@@ -6,7 +6,7 @@ Getting started
 
 An AiiDA installation consists of three core components (plus any external codes you wish to run):
 
-* aiida-core: The main Python package and the associated ``verdi`` command line interface
+* |aiida-core|: The main Python package and the associated ``verdi`` command line interface
 * |PostgreSQL|: The service that manages the database that AiiDA uses to store data.
 * |RabbitMQ|: The message broker used for communication within AiiDA.
 
@@ -91,6 +91,7 @@ If however, you encountered some issues, proceed to the :ref:`troubleshooting se
 
     For more detailed instructions on configuring AiiDA, :ref:`see the configuration how-to <how-to:installation:configure>`.
 
+.. |aiida-core| replace:: `aiida-core <https://aiida.readthedocs.io/>`__
 .. |PostgreSQL| replace:: `PostgreSQL <https://www.postgresql.org>`__
 .. |RabbitMQ| replace:: `RabbitMQ <https://www.rabbitmq.com>`__
 .. |Homebrew| replace:: `Homebrew <https://brew.sh>`__

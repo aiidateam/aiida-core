@@ -31,12 +31,8 @@ class NodeAttributes:
 
     def __init__(self, node: 'Node') -> None:
         """Initialize the interface."""
-        self._entity = node
-        self._backend_entity = node.backend_entity
-
-    def __contains__(self, key: str) -> bool:
-        """Check if the node contains an attribute with the given key."""
-        return key in self._backend_entity.attributes
+        self._node = node
+        self._backend_node = node.backend_entity
 
     @property
     def all(self) -> Dict[str, Any]:
@@ -52,9 +48,9 @@ class NodeAttributes:
 
         :return: the attributes as a dictionary
         """
-        attributes = self._backend_entity.attributes
+        attributes = self._backend_node.attributes
 
-        if self._entity.is_stored:
+        if self._node.is_stored:
             attributes = copy.deepcopy(attributes)
 
         return attributes
@@ -74,13 +70,13 @@ class NodeAttributes:
         :raises AttributeError: if the attribute does not exist and no default is specified
         """
         try:
-            attribute = self._backend_entity.get_attribute(key)
+            attribute = self._backend_node.get_attribute(key)
         except AttributeError:
             if default is _NO_DEFAULT:
                 raise
             attribute = default
 
-        if self._entity.is_stored:
+        if self._node.is_stored:
             attribute = copy.deepcopy(attribute)
 
         return attribute
@@ -100,9 +96,9 @@ class NodeAttributes:
         :return: a list of attribute values
         :raises AttributeError: if at least one attribute does not exist
         """
-        attributes = self._backend_entity.get_attribute_many(keys)
+        attributes = self._backend_node.get_attribute_many(keys)
 
-        if self._entity.is_stored:
+        if self._node.is_stored:
             attributes = copy.deepcopy(attributes)
 
         return attributes
@@ -115,8 +111,8 @@ class NodeAttributes:
         :raise aiida.common.ValidationError: if the key is invalid, i.e. contains periods
         :raise aiida.common.ModificationNotAllowed: if the entity is stored
         """
-        self._entity._check_mutability_attributes([key])  # pylint: disable=protected-access
-        self._backend_entity.set_attribute(key, value)
+        self._node._check_mutability_attributes([key])  # pylint: disable=protected-access
+        self._backend_node.set_attribute(key, value)
 
     def set_many(self, attributes: Dict[str, Any]) -> None:
         """Set multiple attributes.
@@ -127,8 +123,8 @@ class NodeAttributes:
         :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
         :raise aiida.common.ModificationNotAllowed: if the entity is stored
         """
-        self._entity._check_mutability_attributes(list(attributes))  # pylint: disable=protected-access
-        self._backend_entity.set_attribute_many(attributes)
+        self._node._check_mutability_attributes(list(attributes))  # pylint: disable=protected-access
+        self._backend_node.set_attribute_many(attributes)
 
     def reset(self, attributes: Dict[str, Any]) -> None:
         """Reset the attributes.
@@ -139,8 +135,8 @@ class NodeAttributes:
         :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
         :raise aiida.common.ModificationNotAllowed: if the entity is stored
         """
-        self._entity._check_mutability_attributes()  # pylint: disable=protected-access
-        self._backend_entity.reset_attributes(attributes)
+        self._node._check_mutability_attributes()  # pylint: disable=protected-access
+        self._backend_node.reset_attributes(attributes)
 
     def delete(self, key: str) -> None:
         """Delete an attribute.
@@ -149,8 +145,8 @@ class NodeAttributes:
         :raises AttributeError: if the attribute does not exist
         :raise aiida.common.ModificationNotAllowed: if the entity is stored
         """
-        self._entity._check_mutability_attributes([key])  # pylint: disable=protected-access
-        self._backend_entity.delete_attribute(key)
+        self._node._check_mutability_attributes([key])  # pylint: disable=protected-access
+        self._backend_node.delete_attribute(key)
 
     def delete_many(self, keys: List[str]) -> None:
         """Delete multiple attributes.
@@ -159,24 +155,24 @@ class NodeAttributes:
         :raises AttributeError: if at least one of the attribute does not exist
         :raise aiida.common.ModificationNotAllowed: if the entity is stored
         """
-        self._entity._check_mutability_attributes(keys)  # pylint: disable=protected-access
-        self._backend_entity.delete_attribute_many(keys)
+        self._node._check_mutability_attributes(keys)  # pylint: disable=protected-access
+        self._backend_node.delete_attribute_many(keys)
 
     def clear(self) -> None:
         """Delete all attributes."""
-        self._entity._check_mutability_attributes()  # pylint: disable=protected-access
-        self._backend_entity.clear_attributes()
+        self._node._check_mutability_attributes()  # pylint: disable=protected-access
+        self._backend_node.clear_attributes()
 
     def items(self) -> Iterator[Tuple[str, Any]]:
         """Return an iterator over the attributes.
 
         :return: an iterator with attribute key value pairs
         """
-        return self._backend_entity.attributes_items()
+        return self._backend_node.attributes_items()
 
     def keys(self) -> Iterable[str]:
         """Return an iterator over the attribute keys.
 
         :return: an iterator with attribute keys
         """
-        return self._backend_entity.attributes_keys()
+        return self._backend_node.attributes_keys()

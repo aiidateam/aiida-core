@@ -796,6 +796,8 @@ class TestRepresentations:
         for cls in (orm.StructureData, orm.Dict, orm.Data):
             obj = cls()
             obj.set_attribute('foo-qh2', 'bar')
+            if cls is orm.StructureData:
+                obj.set_pbc(False)
             obj.store()
             g.add_nodes(obj)
 

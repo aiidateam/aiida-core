@@ -955,14 +955,14 @@ class TestStructureDataInit:
         Wrong cell (one vector has zero length)
         """
         with pytest.raises(ValueError):
-            StructureData(cell=((0., 0., 0.), (0., 1., 0.), (0., 0., 1.)))
+            StructureData(cell=((0., 0., 0.), (0., 1., 0.), (0., 0., 1.))).store()
 
     def test_cell_zero_volume(self):
         """
         Wrong cell (volume is zero)
         """
         with pytest.raises(ValueError):
-            StructureData(cell=((1., 0., 0.), (0., 1., 0.), (1., 1., 0.)))
+            StructureData(cell=((1., 0., 0.), (0., 1., 0.), (1., 1., 0.))).store()
 
     def test_cell_ok_init(self):
         """
@@ -1946,7 +1946,7 @@ class TestStructureDataFromAse:
         assert retdict['value'] == 0
         assert retdict['dim'] == 0
 
-        with self.assertRaises(AssertionError):
+        with pytest.raises(AssertionError):
             # A periodic cell requires a nonzero volume in periodic directions
             s.set_pbc(True)
             s.store()

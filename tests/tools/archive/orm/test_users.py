@@ -111,7 +111,7 @@ def test_non_default_user_nodes(tmp_path, aiida_profile_clean, aiida_localhost_f
     jc1.store()
 
     # Create some nodes from a different user
-    sd2 = orm.StructureData()
+    sd2 = orm.StructureData(pbc=False)
     sd2.user = user
     sd2.label = 'sd2'
     sd2.add_incoming(jc1, link_type=LinkType.CREATE, link_label='l1')

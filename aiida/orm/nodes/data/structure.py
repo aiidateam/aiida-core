@@ -2492,7 +2492,7 @@ def _get_dimensionality(pbc, cell):
     elif dim == 3:
         retdict['value'] = calc_cell_volume(cell)
 
-        return retdict
+    return retdict
 
 
 def _validate_dimensionality(pbc, cell):

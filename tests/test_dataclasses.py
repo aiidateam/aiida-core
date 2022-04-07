@@ -1946,7 +1946,7 @@ class TestStructureDataFromAse:
         assert retdict['value'] == 0
         assert retdict['dim'] == 0
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             # A periodic cell requires a nonzero volume in periodic directions
             s.set_pbc(True)
             s.store()

@@ -36,7 +36,7 @@ class NodeAttributes:
 
     def __contains__(self, key: str) -> bool:
         """Check if the node contains an attribute with the given key."""
-        return key in self._backend_entity.attributes
+        return key in self._backend_node.attributes
 
     @property
     def all(self) -> Dict[str, Any]:

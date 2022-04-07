@@ -117,7 +117,7 @@ class NodeBase:
 
     @cached_property
     def attributes(self) -> 'NodeAttributes':
-        """Return the attributes for this node."""
+        """Return an interface to interact with the attributes of this node."""
         return NodeAttributes(self._node)
 
 

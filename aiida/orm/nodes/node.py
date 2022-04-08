@@ -119,7 +119,7 @@ class NodeBase:
     def comments(self) -> 'NodeComments':
         """Return an interface to interact with the comments of this node."""
         return NodeComments(self._node)
-      
+
     @cached_property
     def attributes(self) -> 'NodeAttributes':
         """Return an interface to interact with the attributes of this node."""

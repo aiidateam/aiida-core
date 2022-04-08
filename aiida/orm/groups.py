@@ -120,7 +120,7 @@ class GroupBase:
 
     @cached_property
     def extras(self) -> extras.EntityExtras:
-        """Return the extras of this node."""
+        """Return the extras of this group."""
         return extras.EntityExtras(self._group)
 
 
@@ -354,7 +354,7 @@ class Group(entities.Entity['BackendGroup'], metaclass=GroupMeta):
 
     def __getattr__(self, name: str) -> Any:
         """
-        This method is called when an attribute is not found in the instance.
+        This method is called when an extras is not found in the instance.
 
         It allows for the handling of deprecated mixin methods.
         """

@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=too-many-lines,too-many-arguments
-"""Interface to the attributes of a node instance."""
+"""Interface to the extras of a node instance."""
 import copy
 from typing import TYPE_CHECKING, Any, Dict, Iterable, Iterator, List, Tuple, Union
 

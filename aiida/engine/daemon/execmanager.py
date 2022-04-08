@@ -79,7 +79,7 @@ def upload_calculation(
     # before, which can happen if the daemon is restarted and it shuts down after uploading but before getting the
     # chance to perform the state transition. Upon reloading this calculation, it will re-attempt the upload.
     link_label = 'remote_folder'
-    if node.get_outgoing(RemoteData, link_label_filter=link_label).first():
+    if node.base.links.get_outgoing(RemoteData, link_label_filter=link_label).first():
         EXEC_LOGGER.warning(f'CalcJobNode<{node.pk}> already has a `{link_label}` output: skipping upload')
         return calc_info
 
@@ -92,10 +92,10 @@ def upload_calculation(
     transport.set_logger_extra(logger_extra)
     logger = LoggerAdapter(logger=EXEC_LOGGER, extra=logger_extra)
 
-    if not dry_run and node.has_cached_links():
+    if not dry_run and not node.is_stored:
         raise ValueError(
-            'Cannot submit calculation {} because it has cached input links! If you just want to test the '
-            'submission, set `metadata.dry_run` to True in the inputs.'.format(node.pk)
+            f'Cannot submit calculation {node.pk} because it is not stored! If you just want to test the submission, '
+            'set `metadata.dry_run` to True in the inputs.'
         )
 
     # If we are performing a dry-run, the working directory should actually be a local folder that should already exist
@@ -334,7 +334,7 @@ def upload_calculation(
         # task. Because in that case, the check for the existence of this link at the top of this function will exit
         # early from this command.
         remotedata = RemoteData(computer=computer, remote_path=workdir)
-        remotedata.add_incoming(node, link_type=LinkType.CREATE, link_label='remote_folder')
+        remotedata.base.links.add_incoming(node, link_type=LinkType.CREATE, link_label='remote_folder')
         remotedata.store()
 
 
@@ -422,7 +422,7 @@ def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
         stash_mode=StashMode(stash_mode),
         source_list=source_list,
     ).store()
-    remote_stash.add_incoming(calculation, link_type=LinkType.CREATE, link_label='remote_stash')
+    remote_stash.base.links.add_incoming(calculation, link_type=LinkType.CREATE, link_label='remote_stash')
 
 
 def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retrieved_temporary_folder: str) -> None:
@@ -446,7 +446,7 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
     # before, which can happen if the daemon is restarted and it shuts down after retrieving but before getting the
     # chance to perform the state transition. Upon reloading this calculation, it will re-attempt the retrieval.
     link_label = calculation.link_label_retrieved
-    if calculation.get_outgoing(FolderData, link_label_filter=link_label).first():
+    if calculation.base.links.get_outgoing(FolderData, link_label_filter=link_label).first():
         EXEC_LOGGER.warning(
             f'CalcJobNode<{calculation.pk}> already has a `{link_label}` output folder: skipping retrieval'
         )
@@ -488,7 +488,9 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
     # Make sure that attaching the `retrieved` folder with a link is the last thing we do. This gives the biggest chance
     # of making this method idempotent. That is to say, if a runner gets interrupted during this action, it will simply
     # retry the retrieval, unless we got here and managed to link it up, in which case we move to the next task.
-    retrieved_files.add_incoming(calculation, link_type=LinkType.CREATE, link_label=calculation.link_label_retrieved)
+    retrieved_files.base.links.add_incoming(
+        calculation, link_type=LinkType.CREATE, link_label=calculation.link_label_retrieved
+    )
 
 
 def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:

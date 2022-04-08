@@ -57,7 +57,7 @@ def test_input_code(tmp_path, aiida_profile_clean, aiida_localhost):
     calc.computer = aiida_localhost
     calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
 
-    calc.add_incoming(code, LinkType.INPUT_CALC, 'code')
+    calc.base.links.add_incoming(code, LinkType.INPUT_CALC, 'code')
     calc.store()
     calc.seal()
     links_count = 1

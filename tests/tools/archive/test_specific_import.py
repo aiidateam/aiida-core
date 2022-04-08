@@ -94,10 +94,10 @@ def test_cycle_structure_data(aiida_profile_clean, aiida_localhost, tmp_path):
     child_calculation.base.attributes.set('key', 'value')
     remote_folder = orm.RemoteData(computer=aiida_localhost, remote_path='/').store()
 
-    remote_folder.add_incoming(parent_process, link_type=LinkType.CREATE, link_label='link')
-    child_calculation.add_incoming(remote_folder, link_type=LinkType.INPUT_CALC, link_label='link')
+    remote_folder.base.links.add_incoming(parent_process, link_type=LinkType.CREATE, link_label='link')
+    child_calculation.base.links.add_incoming(remote_folder, link_type=LinkType.INPUT_CALC, link_label='link')
     child_calculation.store()
-    structure.add_incoming(child_calculation, link_type=LinkType.CREATE, link_label='link')
+    structure.base.links.add_incoming(child_calculation, link_type=LinkType.CREATE, link_label='link')
 
     parent_process.seal()
     child_calculation.seal()

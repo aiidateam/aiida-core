@@ -61,7 +61,7 @@ class CalcJobResultManager:
             raise ValueError(f'cannot load results as {process_class} does not specify a default output node')
 
         try:
-            default_output_node = self.node.get_outgoing().get_node_by_label(default_output_node_label)
+            default_output_node = self.node.base.links.get_outgoing().get_node_by_label(default_output_node_label)
         except exceptions.NotExistent as exception:
             raise ValueError(f'cannot load results as the default node could not be retrieved: {exception}')
 

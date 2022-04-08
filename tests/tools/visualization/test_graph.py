@@ -40,8 +40,8 @@ class TestVisGraph:
 
         wc1 = orm.WorkChainNode()
         wc1.set_process_state(ProcessState.RUNNING)
-        wc1.add_incoming(pd0, link_type=LinkType.INPUT_WORK, link_label='input1')
-        wc1.add_incoming(pd1, link_type=LinkType.INPUT_WORK, link_label='input2')
+        wc1.base.links.add_incoming(pd0, link_type=LinkType.INPUT_WORK, link_label='input1')
+        wc1.base.links.add_incoming(pd1, link_type=LinkType.INPUT_WORK, link_label='input2')
         wc1.store()
 
         calc1 = orm.CalcJobNode()
@@ -50,9 +50,9 @@ class TestVisGraph:
         calc1.label = 'calc1'
         calc1.set_process_state(ProcessState.FINISHED)
         calc1.set_exit_status(0)
-        calc1.add_incoming(pd0, link_type=LinkType.INPUT_CALC, link_label='input1')
-        calc1.add_incoming(pd1, link_type=LinkType.INPUT_CALC, link_label='input2')
-        calc1.add_incoming(wc1, link_type=LinkType.CALL_CALC, link_label='call1')
+        calc1.base.links.add_incoming(pd0, link_type=LinkType.INPUT_CALC, link_label='input1')
+        calc1.base.links.add_incoming(pd1, link_type=LinkType.INPUT_CALC, link_label='input2')
+        calc1.base.links.add_incoming(wc1, link_type=LinkType.CALL_CALC, link_label='call1')
         calc1.store()
 
         rd1 = orm.RemoteData()
@@ -60,7 +60,7 @@ class TestVisGraph:
         rd1.set_remote_path('/x/y.py')
         rd1.computer = self.computer
         rd1.store()
-        rd1.add_incoming(calc1, link_type=LinkType.CREATE, link_label='output')
+        rd1.base.links.add_incoming(calc1, link_type=LinkType.CREATE, link_label='output')
 
         pd2 = orm.Dict()
         pd2.label = 'pd2'
@@ -70,9 +70,9 @@ class TestVisGraph:
         calcf1.label = 'calcf1'
         calcf1.set_process_state(ProcessState.FINISHED)
         calcf1.set_exit_status(200)
-        calcf1.add_incoming(rd1, link_type=LinkType.INPUT_CALC, link_label='input1')
-        calcf1.add_incoming(pd2, link_type=LinkType.INPUT_CALC, link_label='input2')
-        calcf1.add_incoming(wc1, link_type=LinkType.CALL_CALC, link_label='call2')
+        calcf1.base.links.add_incoming(rd1, link_type=LinkType.INPUT_CALC, link_label='input1')
+        calcf1.base.links.add_incoming(pd2, link_type=LinkType.INPUT_CALC, link_label='input2')
+        calcf1.base.links.add_incoming(wc1, link_type=LinkType.CALL_CALC, link_label='call2')
         calcf1.store()
 
         pd3 = orm.Dict()
@@ -81,13 +81,13 @@ class TestVisGraph:
         fd1 = orm.FolderData()
         fd1.label = 'fd1'
 
-        pd3.add_incoming(calcf1, link_type=LinkType.CREATE, link_label='output1')
+        pd3.base.links.add_incoming(calcf1, link_type=LinkType.CREATE, link_label='output1')
         pd3.store()
-        fd1.add_incoming(calcf1, link_type=LinkType.CREATE, link_label='output2')
+        fd1.base.links.add_incoming(calcf1, link_type=LinkType.CREATE, link_label='output2')
         fd1.store()
 
-        pd3.add_incoming(wc1, link_type=LinkType.RETURN, link_label='output1')
-        fd1.add_incoming(wc1, link_type=LinkType.RETURN, link_label='output2')
+        pd3.base.links.add_incoming(wc1, link_type=LinkType.RETURN, link_label='output1')
+        fd1.base.links.add_incoming(wc1, link_type=LinkType.RETURN, link_label='output2')
 
         return AttributeDict({
             'pd0': pd0,

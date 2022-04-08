@@ -127,7 +127,7 @@ def test_workchain_local(benchmark, aiida_localhost, workchain, iterations, outg
     result = benchmark.pedantic(_run, iterations=1, rounds=10, warmup_rounds=1)
 
     assert result.node.is_finished_ok, (result.node.exit_status, result.node.exit_message)
-    assert len(result.node.get_outgoing().all()) == outgoing
+    assert len(result.node.base.links.get_outgoing().all()) == outgoing
 
 
 async def with_timeout(what, timeout=60):
@@ -183,4 +183,4 @@ def test_workchain_daemon(benchmark, submit_get_node, aiida_localhost, workchain
     result = benchmark.pedantic(_run, iterations=1, rounds=10, warmup_rounds=1)
 
     assert result.is_finished_ok, (result.exit_status, result.exit_message)
-    assert len(result.get_outgoing().all()) == outgoing
+    assert len(result.base.links.get_outgoing().all()) == outgoing

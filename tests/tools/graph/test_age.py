@@ -55,7 +55,7 @@ def create_tree(max_depth=3, branching=3, starting_cls=orm.Data):
             for label_id in range(branching):
 
                 new_node = current_class()
-                new_node.add_incoming(previous_node, link_type=current_links, link_label=f'link{label_id}')
+                new_node.base.links.add_incoming(previous_node, link_type=current_links, link_label=f'link{label_id}')
                 new_node.store()
 
                 current_nodes.append(new_node)
@@ -120,24 +120,24 @@ class TestAiidaGraphExplorer:
         data_i = orm.Data().store()
 
         work_2 = orm.WorkflowNode()
-        work_2.add_incoming(data_i, link_type=LinkType.INPUT_WORK, link_label='inpwork2')
+        work_2.base.links.add_incoming(data_i, link_type=LinkType.INPUT_WORK, link_label='inpwork2')
         work_2.store()
 
         work_1 = orm.WorkflowNode()
-        work_1.add_incoming(data_i, link_type=LinkType.INPUT_WORK, link_label='inpwork1')
-        work_1.add_incoming(work_2, link_type=LinkType.CALL_WORK, link_label='callwork')
+        work_1.base.links.add_incoming(data_i, link_type=LinkType.INPUT_WORK, link_label='inpwork1')
+        work_1.base.links.add_incoming(work_2, link_type=LinkType.CALL_WORK, link_label='callwork')
         work_1.store()
 
         calc_0 = orm.CalculationNode()
-        calc_0.add_incoming(data_i, link_type=LinkType.INPUT_CALC, link_label='inpcalc0')
-        calc_0.add_incoming(work_1, link_type=LinkType.CALL_CALC, link_label='callcalc')
+        calc_0.base.links.add_incoming(data_i, link_type=LinkType.INPUT_CALC, link_label='inpcalc0')
+        calc_0.base.links.add_incoming(work_1, link_type=LinkType.CALL_CALC, link_label='callcalc')
         calc_0.store()
 
         data_o = orm.Data()
-        data_o.add_incoming(calc_0, link_type=LinkType.CREATE, link_label='create0')
+        data_o.base.links.add_incoming(calc_0, link_type=LinkType.CREATE, link_label='create0')
         data_o.store()
-        data_o.add_incoming(work_2, link_type=LinkType.RETURN, link_label='return2')
-        data_o.add_incoming(work_1, link_type=LinkType.RETURN, link_label='return1')
+        data_o.base.links.add_incoming(work_2, link_type=LinkType.RETURN, link_label='return2')
+        data_o.base.links.add_incoming(work_1, link_type=LinkType.RETURN, link_label='return1')
 
         output_dict = {
             'data_i': data_i,
@@ -252,9 +252,9 @@ class TestAiidaGraphExplorer:
         """
         data_node = orm.Data().store()
         work_node = orm.WorkflowNode()
-        work_node.add_incoming(data_node, link_type=LinkType.INPUT_WORK, link_label='input_link')
+        work_node.base.links.add_incoming(data_node, link_type=LinkType.INPUT_WORK, link_label='input_link')
         work_node.store()
-        data_node.add_incoming(work_node, link_type=LinkType.RETURN, link_label='return_link')
+        data_node.base.links.add_incoming(work_node, link_type=LinkType.RETURN, link_label='return_link')
 
         basket = Basket(nodes=[data_node.id])
         queryb = orm.QueryBuilder()
@@ -302,24 +302,24 @@ class TestAiidaGraphExplorer:
         """
         data_0 = orm.Data().store()
         calc_1 = orm.CalculationNode()
-        calc_1.add_incoming(data_0, link_type=LinkType.INPUT_CALC, link_label='inpcalc_data_0')
+        calc_1.base.links.add_incoming(data_0, link_type=LinkType.INPUT_CALC, link_label='inpcalc_data_0')
         calc_1.store()
 
         data_1 = orm.Data()
         data_o = orm.Data()
-        data_1.add_incoming(calc_1, link_type=LinkType.CREATE, link_label='create_data_1')
-        data_o.add_incoming(calc_1, link_type=LinkType.CREATE, link_label='create_data_o')
+        data_1.base.links.add_incoming(calc_1, link_type=LinkType.CREATE, link_label='create_data_1')
+        data_o.base.links.add_incoming(calc_1, link_type=LinkType.CREATE, link_label='create_data_o')
         data_1.store()
         data_o.store()
 
         data_i = orm.Data().store()
         calc_2 = orm.CalculationNode()
-        calc_2.add_incoming(data_1, link_type=LinkType.INPUT_CALC, link_label='inpcalc_data_1')
-        calc_2.add_incoming(data_i, link_type=LinkType.INPUT_CALC, link_label='inpcalc_data_i')
+        calc_2.base.links.add_incoming(data_1, link_type=LinkType.INPUT_CALC, link_label='inpcalc_data_1')
+        calc_2.base.links.add_incoming(data_i, link_type=LinkType.INPUT_CALC, link_label='inpcalc_data_i')
         calc_2.store()
 
         data_2 = orm.Data()
-        data_2.add_incoming(calc_2, link_type=LinkType.CREATE, link_label='create_data_2')
+        data_2.base.links.add_incoming(calc_2, link_type=LinkType.CREATE, link_label='create_data_2')
         data_2.store()
 
         output_dict = {

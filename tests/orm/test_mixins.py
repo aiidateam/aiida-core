@@ -39,7 +39,7 @@ class TestSealable:
         node.seal()
 
         with pytest.raises(exceptions.ModificationNotAllowed):
-            node.validate_incoming(data, link_type=LinkType.INPUT_CALC, link_label='input')
+            node.base.links.validate_incoming(data, link_type=LinkType.INPUT_CALC, link_label='input')
 
     def test_validate_outgoing_sealed(self):
         """Verify that trying to add a link from a sealed node will raise."""
@@ -48,4 +48,4 @@ class TestSealable:
         node.seal()
 
         with pytest.raises(exceptions.ModificationNotAllowed):
-            node.validate_outgoing(data, link_type=LinkType.CREATE, link_label='create')
+            node.base.links.validate_outgoing(data, link_type=LinkType.CREATE, link_label='create')

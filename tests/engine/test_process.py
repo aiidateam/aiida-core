@@ -64,8 +64,8 @@ class TestProcessNamespace:
         assert input_node.value == 5
 
         # Check that the link of the process node has the correct link name
-        assert 'some__name__space__a' in proc.node.get_incoming().all_link_labels()
-        assert proc.node.get_incoming().get_node_by_label('some__name__space__a') == 5
+        assert 'some__name__space__a' in proc.node.base.links.get_incoming().all_link_labels()
+        assert proc.node.base.links.get_incoming().get_node_by_label('some__name__space__a') == 5
         assert proc.node.inputs.some.name.space.a == 5
         assert proc.node.inputs['some']['name']['space']['a'] == 5
 
@@ -127,7 +127,7 @@ class TestProcess:
         inputs['metadata'] = {'store_provenance': True}
         process = test_processes.DummyProcess(inputs)
 
-        for entry in process.node.get_incoming().all():
+        for entry in process.node.base.links.get_incoming().all():
             assert entry.link_label in inputs
             assert entry.link_label == entry.node.value
             dummy_inputs.remove(entry.link_label)
@@ -146,7 +146,7 @@ class TestProcess:
         process = test_processes.DummyProcess()
 
         with pytest.raises(ValueError):
-            process.node.add_incoming(orm.Int(1), link_type=LinkType.INPUT_WORK, link_label='illegal_link')
+            process.node.base.links.add_incoming(orm.Int(1), link_type=LinkType.INPUT_WORK, link_label='illegal_link')
 
     def test_seal(self):
         _, p_k = run_get_pk(test_processes.DummyProcess)
@@ -379,9 +379,9 @@ class TestProcess:
 
         node_child = orm.WorkflowNode().store()
         node_output = orm.Int(1).store()
-        node_output.add_incoming(node_child, link_label='output', link_type=LinkType.RETURN)
+        node_output.base.links.add_incoming(node_child, link_label='output', link_type=LinkType.RETURN)
         node_name_space = orm.Int(1).store()
-        node_name_space.add_incoming(node_child, link_label='name__space', link_type=LinkType.RETURN)
+        node_name_space.base.links.add_incoming(node_child, link_label='name__space', link_type=LinkType.RETURN)
 
         process = instantiate_process(runner, ParentProcess, input=orm.Int(1))
         exposed_outputs = process.exposed_outputs(node_child, ChildProcess)
@@ -427,9 +427,9 @@ class TestProcess:
 
         node_child = orm.WorkflowNode().store()
         node_output = orm.Int(1).store()
-        node_output.add_incoming(node_child, link_label='output', link_type=LinkType.RETURN)
+        node_output.base.links.add_incoming(node_child, link_label='output', link_type=LinkType.RETURN)
         node_name_space = orm.Int(1).store()
-        node_name_space.add_incoming(node_child, link_label='name__space', link_type=LinkType.RETURN)
+        node_name_space.base.links.add_incoming(node_child, link_label='name__space', link_type=LinkType.RETURN)
 
         process = instantiate_process(runner, ParentProcess, input=orm.Int(1))
 

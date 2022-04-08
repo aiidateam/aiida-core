@@ -151,33 +151,3 @@ class Sealable:
                 raise exceptions.ModificationNotAllowed(
                     f'Cannot modify non-updatable attributes of a stored+unsealed node: {keys}'
                 )
-
-    def validate_incoming(self, source, link_type, link_label):
-        """Validate adding a link of the given type from a given node to ourself.
-
-        Adding an incoming link to a sealed node is forbidden.
-
-        :param source: the node from which the link is coming
-        :param link_type: the link type
-        :param link_label: the link label
-        :raise aiida.common.ModificationNotAllowed: if the target node (self) is sealed
-        """
-        if self.is_sealed:
-            raise exceptions.ModificationNotAllowed('Cannot add a link to a sealed node')
-
-        super().validate_incoming(source, link_type=link_type, link_label=link_label)
-
-    def validate_outgoing(self, target, link_type, link_label):
-        """Validate adding a link of the given type from ourself to a given node.
-
-        Adding an outgoing link from a sealed node is forbidden.
-
-        :param target: the node to which the link is going
-        :param link_type: the link type
-        :param link_label: the link label
-        :raise aiida.common.ModificationNotAllowed: if the source node (self) is sealed
-        """
-        if self.is_sealed:
-            raise exceptions.ModificationNotAllowed('Cannot add a link from a sealed node')
-
-        super().validate_outgoing(target, link_type=link_type, link_label=link_label)

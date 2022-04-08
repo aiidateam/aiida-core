@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 from aiida.common.links import LinkType
 from aiida.orm.utils.mixins import FunctionCalculationMixin
 
-from .workflow import WorkflowNode
+from .workflow import WorkflowNode, WorkflowNodeLinks
 
 if TYPE_CHECKING:
     from aiida.orm import Node
@@ -21,12 +21,11 @@ if TYPE_CHECKING:
 __all__ = ('WorkFunctionNode',)
 
 
-class WorkFunctionNode(FunctionCalculationMixin, WorkflowNode):
-    """ORM class for all nodes representing the execution of a workfunction."""
+class WorkFunctionNodeLinks(WorkflowNodeLinks):
+    """Interface for links of a node instance."""
 
     def validate_outgoing(self, target: 'Node', link_type: LinkType, link_label: str) -> None:
-        """
-        Validate adding a link of the given type from ourself to a given node.
+        """Validate adding a link of the given type from ourself to a given node.
 
         A workfunction cannot create Data, so if we receive an outgoing RETURN link to an unstored Data node, that means
         the user created a Data node within our function body and is trying to return it. This use case should be
@@ -44,3 +43,9 @@ class WorkFunctionNode(FunctionCalculationMixin, WorkflowNode):
                 'trying to return an unstored Data node from a @workfunction, however, @workfunctions cannot create '
                 'data. You probably want to use a @calcfunction instead.'
             )
+
+
+class WorkFunctionNode(FunctionCalculationMixin, WorkflowNode):
+    """ORM class for all nodes representing the execution of a workfunction."""
+
+    _CLS_NODE_LINKS = WorkFunctionNodeLinks

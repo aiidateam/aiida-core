@@ -147,7 +147,7 @@ class TestBackend:
         # create node, link and add to group
         node = orm.Data()
         calc_node = orm.CalcFunctionNode().store()
-        node.add_incoming(calc_node, link_type=LinkType.CREATE, link_label='link')
+        node.base.links.add_incoming(calc_node, link_type=LinkType.CREATE, link_label='link')
         node.store()
         node_pk = node.pk
         group = orm.Group('name').store()
@@ -155,7 +155,7 @@ class TestBackend:
 
         # checks before deletion
         orm.Node.objects.get(id=node_pk)
-        assert len(calc_node.get_outgoing().all()) == 1
+        assert len(calc_node.base.links.get_outgoing().all()) == 1
         assert len(group.nodes) == 1
 
         # cannot call outside a transaction
@@ -168,5 +168,5 @@ class TestBackend:
         # checks after deletion
         with pytest.raises(exceptions.NotExistent):
             orm.Node.objects.get(id=node_pk)
-        assert len(calc_node.get_outgoing().all()) == 0
+        assert len(calc_node.base.links.get_outgoing().all()) == 0
         assert len(group.nodes) == 0

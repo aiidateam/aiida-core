@@ -186,7 +186,7 @@ class TestVerdiProcess:
 
         workchain_two.base.attributes.set('process_label', 'workchain_one_caller')
         workchain_two.store()
-        workchain_one.add_incoming(workchain_two, link_type=LinkType.CALL_WORK, link_label='called')
+        workchain_one.base.links.add_incoming(workchain_two, link_type=LinkType.CALL_WORK, link_label='called')
         workchain_one.store()
 
         calcjob_one = CalcJobNode()
@@ -195,8 +195,8 @@ class TestVerdiProcess:
         calcjob_one.base.attributes.set('process_label', 'process_label_one')
         calcjob_two.base.attributes.set('process_label', 'process_label_two')
 
-        calcjob_one.add_incoming(workchain_one, link_type=LinkType.CALL_CALC, link_label='one')
-        calcjob_two.add_incoming(workchain_one, link_type=LinkType.CALL_CALC, link_label='two')
+        calcjob_one.base.links.add_incoming(workchain_one, link_type=LinkType.CALL_CALC, link_label='one')
+        calcjob_two.base.links.add_incoming(workchain_one, link_type=LinkType.CALL_CALC, link_label='two')
 
         calcjob_one.store()
         calcjob_two.store()
@@ -251,9 +251,9 @@ class TestVerdiProcess:
         parent = WorkChainNode()
         child = WorkChainNode()
 
-        parent.add_incoming(grandparent, link_type=LinkType.CALL_WORK, link_label='link')
+        parent.base.links.add_incoming(grandparent, link_type=LinkType.CALL_WORK, link_label='link')
         parent.store()
-        child.add_incoming(parent, link_type=LinkType.CALL_WORK, link_label='link')
+        child.base.links.add_incoming(parent, link_type=LinkType.CALL_WORK, link_label='link')
         child.store()
 
         grandparent.logger.log(LOG_LEVEL_REPORT, 'grandparent_message')
@@ -340,10 +340,12 @@ class TestVerdiProcessCallRoot:
 
         self.node_root.store()
 
-        self.node_middle.add_incoming(self.node_root, link_type=LinkType.CALL_WORK, link_label='call_middle')
+        self.node_middle.base.links.add_incoming(self.node_root, link_type=LinkType.CALL_WORK, link_label='call_middle')
         self.node_middle.store()
 
-        self.node_terminal.add_incoming(self.node_middle, link_type=LinkType.CALL_WORK, link_label='call_terminal')
+        self.node_terminal.base.links.add_incoming(
+            self.node_middle, link_type=LinkType.CALL_WORK, link_label='call_terminal'
+        )
         self.node_terminal.store()
 
         self.cli_runner = run_cli_command

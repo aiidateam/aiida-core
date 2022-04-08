@@ -63,7 +63,7 @@ class TestCalcJobNode:
                     node.set_option(option_key, option_value)
                 node.store()
                 retrieved.store()
-                retrieved.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
+                retrieved.base.links.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
 
                 # It should return `None` if no scheduler output is there (file not there, or option not set),
                 # while it should return the content if both are set
@@ -91,7 +91,7 @@ class TestCalcJobNode:
                     node.set_option(option_key, option_value)
                 node.store()
                 retrieved.store()
-                retrieved.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
+                retrieved.base.links.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
 
                 # It should return `None` if no scheduler output is there (file not there, or option not set),
                 # while it should return the content if both are set

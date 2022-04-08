@@ -49,8 +49,8 @@ class TestWorkFunction:
         """Verify that a workfunction can only get RETURN links and no CREATE links."""
         _, node = self.test_workfunction.run_get_node(self.default_int)
 
-        assert len(node.get_outgoing(link_type=LinkType.RETURN).all()) == 1
-        assert len(node.get_outgoing(link_type=LinkType.CREATE).all()) == 0
+        assert len(node.base.links.get_outgoing(link_type=LinkType.RETURN).all()) == 1
+        assert len(node.base.links.get_outgoing(link_type=LinkType.CREATE).all()) == 0
 
     def test_workfunction_return_unstored(self):
         """Verify that a workfunction will raise when an unstored node is returned."""
@@ -95,5 +95,5 @@ class TestWorkFunction:
         _, node = caller.run_get_node()
 
         # Verify that the `CALL` link of the calculation function is there with the correct label
-        link_triple = node.get_outgoing(link_type=LinkType.CALL_CALC, link_label_filter=link_label).one()
+        link_triple = node.base.links.get_outgoing(link_type=LinkType.CALL_CALC, link_label_filter=link_label).one()
         assert isinstance(link_triple.node, CalcFunctionNode)

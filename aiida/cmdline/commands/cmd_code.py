@@ -214,7 +214,7 @@ def show(code):
     table.append(['Append text', code.get_append_text()])
 
     if is_verbose():
-        table.append(['Calculations', len(code.get_outgoing().all())])
+        table.append(['Calculations', len(code.base.links.get_outgoing().all())])
 
     echo.echo(tabulate.tabulate(table))
 

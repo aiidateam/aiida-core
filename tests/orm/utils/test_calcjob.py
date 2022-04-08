@@ -26,7 +26,9 @@ def get_calcjob_node(aiida_profile_clean, generate_calculation_node):
     }
 
     results = Dict(dict=dictionary).store()
-    results.add_incoming(node, link_type=LinkType.CREATE, link_label=node.process_class.spec().default_output_node)
+    results.base.links.add_incoming(
+        node, link_type=LinkType.CREATE, link_label=node.process_class.spec().default_output_node
+    )
 
     return node, dictionary
 

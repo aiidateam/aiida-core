@@ -64,8 +64,8 @@ class TestCalcFunction:
         """Verify that a calcfunction can only get CREATE links and no RETURN links."""
         _, node = self.test_calcfunction.run_get_node(self.default_int)
 
-        assert len(node.get_outgoing(link_type=LinkType.CREATE).all()) == 1
-        assert len(node.get_outgoing(link_type=LinkType.RETURN).all()) == 0
+        assert len(node.base.links.get_outgoing(link_type=LinkType.CREATE).all()) == 1
+        assert len(node.base.links.get_outgoing(link_type=LinkType.RETURN).all()) == 0
 
     def test_calcfunction_return_stored(self):
         """Verify that a calcfunction will raise when a stored node is returned."""
@@ -97,7 +97,7 @@ class TestCalcFunction:
             assert result.is_stored
             assert cached.is_created_from_cache
             assert cached.get_cache_source() in original.uuid
-            assert cached.get_incoming().one().node.uuid == input_node.uuid
+            assert cached.base.links.get_incoming().one().node.uuid == input_node.uuid
 
     def test_calcfunction_caching_change_code(self):
         """Verify that changing the source codde of a calcfunction invalidates any existing cached nodes."""
@@ -151,5 +151,5 @@ class TestCalcFunction:
         assert isinstance(node, CalcFunctionNode)
 
         # The node of the outermost `calcfunction` should have a single `CREATE` link and no `CALL_CALC` links
-        assert len(node.get_outgoing(link_type=LinkType.CREATE).all()) == 1
-        assert len(node.get_outgoing(link_type=LinkType.CALL_CALC).all()) == 0
+        assert len(node.base.links.get_outgoing(link_type=LinkType.CREATE).all()) == 1
+        assert len(node.base.links.get_outgoing(link_type=LinkType.CALL_CALC).all()) == 0

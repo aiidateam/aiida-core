@@ -123,7 +123,7 @@ class Data(Node):
 
         :return: the creating node or None
         """
-        inputs = self.get_incoming(link_type=LinkType.CREATE)
+        inputs = self.base.links.get_incoming(link_type=LinkType.CREATE)
         if inputs:
             return inputs.first().node
 

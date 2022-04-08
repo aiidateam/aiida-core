@@ -239,12 +239,12 @@ class TestProcessFunction:
 
         result, node = self.function_kwargs.run_get_node()
         assert isinstance(result, dict)
-        assert len(node.get_incoming().all()) == 0
+        assert len(node.base.links.get_incoming().all()) == 0
         assert result == {}
 
         result, node = self.function_kwargs.run_get_node(**kwargs)
         assert isinstance(result, dict)
-        assert len(node.get_incoming().all()) == 1
+        assert len(node.base.links.get_incoming().all()) == 1
         assert result == kwargs
 
         # Calling with any number of positional arguments should raise

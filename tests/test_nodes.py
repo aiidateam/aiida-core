@@ -146,14 +146,14 @@ class TestTransitiveNoLoops:
         d2 = orm.Data().store()
         c2 = orm.CalculationNode()
 
-        c1.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link')
+        c1.base.links.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link')
         c1.store()
-        d2.add_incoming(c1, link_type=LinkType.CREATE, link_label='link')
-        c2.add_incoming(d2, link_type=LinkType.INPUT_CALC, link_label='link')
+        d2.base.links.add_incoming(c1, link_type=LinkType.CREATE, link_label='link')
+        c2.base.links.add_incoming(d2, link_type=LinkType.INPUT_CALC, link_label='link')
         c2.store()
 
         with pytest.raises(ValueError):  # This would generate a loop
-            d1.add_incoming(c2, link_type=LinkType.CREATE, link_label='link')
+            d1.base.links.add_incoming(c2, link_type=LinkType.CREATE, link_label='link')
 
 
 @pytest.mark.usefixtures('aiida_profile_clean_class')
@@ -1238,31 +1238,32 @@ class TestSubNodesAndLinks:
         endcalc = orm.CalculationNode()
 
         # Nothing stored
-        endcalc.add_incoming(n1, LinkType.INPUT_CALC, 'N1')
+        endcalc.base.links.add_incoming(n1, LinkType.INPUT_CALC, 'N1')
         # Try also reverse storage
-        endcalc.add_incoming(n2, LinkType.INPUT_CALC, 'N2')
+        endcalc.base.links.add_incoming(n2, LinkType.INPUT_CALC, 'N2')
 
-        assert {(i.link_label, i.node.uuid) for i in endcalc.get_incoming()} == {('N1', n1.uuid), ('N2', n2.uuid)}
+        assert {(i.link_label, i.node.uuid) for i in endcalc.base.links.get_incoming()} == {('N1', n1.uuid),
+                                                                                            ('N2', n2.uuid)}
 
         # Endnode not stored yet, n3 and n4 already stored
-        endcalc.add_incoming(n3, LinkType.INPUT_CALC, 'N3')
+        endcalc.base.links.add_incoming(n3, LinkType.INPUT_CALC, 'N3')
         # Try also reverse storage
-        endcalc.add_incoming(n4, LinkType.INPUT_CALC, 'N4')
+        endcalc.base.links.add_incoming(n4, LinkType.INPUT_CALC, 'N4')
 
-        assert {(i.link_label, i.node.uuid) for i in endcalc.get_incoming()} == \
+        assert {(i.link_label, i.node.uuid) for i in endcalc.base.links.get_incoming()} == \
                          {('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)}
 
         # Some parent nodes are not stored yet
         with pytest.raises(ModificationNotAllowed):
             endcalc.store()
 
-        assert {(i.link_label, i.node.uuid) for i in endcalc.get_incoming()} == \
+        assert {(i.link_label, i.node.uuid) for i in endcalc.base.links.get_incoming()} == \
                          {('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)}
 
         # This will also store n1 and n2!
         endcalc.store_all()
 
-        assert {(i.link_label, i.node.uuid) for i in endcalc.get_incoming()} == \
+        assert {(i.link_label, i.node.uuid) for i in endcalc.base.links.get_incoming()} == \
                          {('N1', n1.uuid), ('N2', n2.uuid), ('N3', n3.uuid), ('N4', n4.uuid)}
 
     def test_store_with_unstored_parents(self):
@@ -1273,8 +1274,8 @@ class TestSubNodesAndLinks:
         n2 = orm.Data().store()
         endcalc = orm.CalculationNode()
 
-        endcalc.add_incoming(n1, LinkType.INPUT_CALC, 'N1')
-        endcalc.add_incoming(n2, LinkType.INPUT_CALC, 'N2')
+        endcalc.base.links.add_incoming(n1, LinkType.INPUT_CALC, 'N1')
+        endcalc.base.links.add_incoming(n2, LinkType.INPUT_CALC, 'N2')
 
         # Some parent nodes are not stored yet
         with pytest.raises(ModificationNotAllowed):
@@ -1284,7 +1285,8 @@ class TestSubNodesAndLinks:
         # Now I can store
         endcalc.store()
 
-        assert {(i.link_label, i.node.uuid) for i in endcalc.get_incoming()} == {('N1', n1.uuid), ('N2', n2.uuid)}
+        assert {(i.link_label, i.node.uuid) for i in endcalc.base.links.get_incoming()} == {('N1', n1.uuid),
+                                                                                            ('N2', n2.uuid)}
 
     def test_storeall_with_unstored_grandparents(self):
         """
@@ -1294,8 +1296,8 @@ class TestSubNodesAndLinks:
         n2 = orm.Data()
         endcalc = orm.CalculationNode()
 
-        n2.add_incoming(n1, LinkType.CREATE, 'N1')
-        endcalc.add_incoming(n2, LinkType.INPUT_CALC, 'N2')
+        n2.base.links.add_incoming(n1, LinkType.CREATE, 'N1')
+        endcalc.base.links.add_incoming(n2, LinkType.INPUT_CALC, 'N2')
 
         # Grandparents are unstored
         with pytest.raises(ModificationNotAllowed):
@@ -1306,8 +1308,8 @@ class TestSubNodesAndLinks:
         endcalc.store_all()
 
         # Check the parents...
-        assert {(i.link_label, i.node.uuid) for i in n2.get_incoming()} == {('N1', n1.uuid)}
-        assert {(i.link_label, i.node.uuid) for i in endcalc.get_incoming()} == {('N2', n2.uuid)}
+        assert {(i.link_label, i.node.uuid) for i in n2.base.links.get_incoming()} == {('N1', n1.uuid)}
+        assert {(i.link_label, i.node.uuid) for i in endcalc.base.links.get_incoming()} == {('N2', n2.uuid)}
 
     def test_calculation_load(self):
         from aiida.orm import CalcJobNode
@@ -1331,27 +1333,27 @@ class TestSubNodesAndLinks:
         calc2a = orm.CalculationNode()
         calc2b = orm.CalculationNode()
 
-        calc.add_incoming(d1, LinkType.INPUT_CALC, link_label='label1')
+        calc.base.links.add_incoming(d1, LinkType.INPUT_CALC, link_label='label1')
         with pytest.raises(ValueError):
-            calc.add_incoming(d1bis, LinkType.INPUT_CALC, link_label='label1')
+            calc.base.links.add_incoming(d1bis, LinkType.INPUT_CALC, link_label='label1')
         calc.store()
 
         # This should be allowed since it is an output label with the same name
         # as an input label: no problem
-        d2.add_incoming(calc, LinkType.CREATE, link_label='label1')
+        d2.base.links.add_incoming(calc, LinkType.CREATE, link_label='label1')
         # This should be allowed, it's a different label
-        d3.add_incoming(calc, LinkType.CREATE, link_label='label2')
+        d3.base.links.add_incoming(calc, LinkType.CREATE, link_label='label2')
 
         # This shouldn't be allowed, it's an output CREATE link with
         # the same same of an existing output CREATE link
         with pytest.raises(ValueError):
-            d4.add_incoming(calc, LinkType.CREATE, link_label='label2')
+            d4.base.links.add_incoming(calc, LinkType.CREATE, link_label='label2')
 
         # instead, for outputs, I can have multiple times the same label
         # (think to the case where d4 is a StructureData, and both calc2a and calc2b
         # are calculations that use as label 'input_cell')
-        calc2a.add_incoming(d4, LinkType.INPUT_CALC, link_label='label3')
-        calc2b.add_incoming(d4, LinkType.INPUT_CALC, link_label='label3')
+        calc2a.base.links.add_incoming(d4, LinkType.INPUT_CALC, link_label='label3')
+        calc2b.base.links.add_incoming(d4, LinkType.INPUT_CALC, link_label='label3')
 
     def test_link_with_unstored(self):
         """
@@ -1363,33 +1365,33 @@ class TestSubNodesAndLinks:
         n4 = orm.Data()
 
         # Caching the links
-        n2.add_incoming(n1, link_type=LinkType.INPUT_WORK, link_label='l1')
-        n3.add_incoming(n1, link_type=LinkType.INPUT_CALC, link_label='l3')
-        n3.add_incoming(n2, link_type=LinkType.CALL_CALC, link_label='l2')
+        n2.base.links.add_incoming(n1, link_type=LinkType.INPUT_WORK, link_label='l1')
+        n3.base.links.add_incoming(n1, link_type=LinkType.INPUT_CALC, link_label='l3')
+        n3.base.links.add_incoming(n2, link_type=LinkType.CALL_CALC, link_label='l2')
 
         # Twice the same link name
         with pytest.raises(ValueError):
-            n3.add_incoming(n4, link_type=LinkType.INPUT_CALC, link_label='l3')
+            n3.base.links.add_incoming(n4, link_type=LinkType.INPUT_CALC, link_label='l3')
 
         n2.store_all()
         n3.store_all()
 
-        n2_in_links = [(n.link_label, n.node.uuid) for n in n2.get_incoming()]
+        n2_in_links = [(n.link_label, n.node.uuid) for n in n2.base.links.get_incoming()]
         assert sorted(n2_in_links) == sorted([
             ('l1', n1.uuid),
         ])
-        n3_in_links = [(n.link_label, n.node.uuid) for n in n3.get_incoming()]
+        n3_in_links = [(n.link_label, n.node.uuid) for n in n3.base.links.get_incoming()]
         assert sorted(n3_in_links) == sorted([
             ('l2', n2.uuid),
             ('l3', n1.uuid),
         ])
 
-        n1_out_links = [(entry.link_label, entry.node.pk) for entry in n1.get_outgoing()]
+        n1_out_links = [(entry.link_label, entry.node.pk) for entry in n1.base.links.get_outgoing()]
         assert sorted(n1_out_links) == sorted([
             ('l1', n2.pk),
             ('l3', n3.pk),
         ])
-        n2_out_links = [(entry.link_label, entry.node.pk) for entry in n2.get_outgoing()]
+        n2_out_links = [(entry.link_label, entry.node.pk) for entry in n2.base.links.get_outgoing()]
         assert sorted(n2_out_links) == sorted([('l2', n3.pk)])
 
     def test_multiple_create_links(self):
@@ -1401,9 +1403,9 @@ class TestSubNodesAndLinks:
         n3 = orm.Data()
 
         # Caching the links
-        n3.add_incoming(n1, link_type=LinkType.CREATE, link_label='CREATE')
+        n3.base.links.add_incoming(n1, link_type=LinkType.CREATE, link_label='CREATE')
         with pytest.raises(ValueError):
-            n3.add_incoming(n2, link_type=LinkType.CREATE, link_label='CREATE')
+            n3.base.links.add_incoming(n2, link_type=LinkType.CREATE, link_label='CREATE')
 
     def test_valid_links(self):
         from aiida.plugins import DataFactory
@@ -1431,22 +1433,22 @@ class TestSubNodesAndLinks:
         calc2.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         calc2.store()
 
-        calc.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link')
-        calc.add_incoming(d2, link_type=LinkType.INPUT_CALC, link_label='some_label')
+        calc.base.links.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link')
+        calc.base.links.add_incoming(d2, link_type=LinkType.INPUT_CALC, link_label='some_label')
 
         # Cannot link to itself
         with pytest.raises(ValueError):
-            d1.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link')
+            d1.base.links.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link')
 
         # I try to add wrong links (data to data, calc to calc, etc.)
         with pytest.raises(ValueError):
-            d2.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link')
+            d2.base.links.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link')
 
         with pytest.raises(ValueError):
-            d1.add_incoming(d2, link_type=LinkType.INPUT_CALC, link_label='link')
+            d1.base.links.add_incoming(d2, link_type=LinkType.INPUT_CALC, link_label='link')
 
         with pytest.raises(ValueError):
-            calc.add_incoming(calc2, link_type=LinkType.INPUT_CALC, link_label='link')
+            calc.base.links.add_incoming(calc2, link_type=LinkType.INPUT_CALC, link_label='link')
 
         calc.store()
 
@@ -1458,12 +1460,12 @@ class TestSubNodesAndLinks:
         calc_b.store()
 
         data_node = orm.Data().store()
-        data_node.add_incoming(calc_a, link_type=LinkType.CREATE, link_label='link')
+        data_node.base.links.add_incoming(calc_a, link_type=LinkType.CREATE, link_label='link')
         # A data cannot have two input calculations
         with pytest.raises(ValueError):
-            data_node.add_incoming(calc_b, link_type=LinkType.CREATE, link_label='link')
+            data_node.base.links.add_incoming(calc_b, link_type=LinkType.CREATE, link_label='link')
 
-        calculation_inputs = calc.get_incoming().all()
+        calculation_inputs = calc.base.links.get_incoming().all()
 
         # This calculation has two data inputs
         assert len(calculation_inputs) == 2
@@ -1481,11 +1483,11 @@ class TestSubNodesAndLinks:
         calc2.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         calc2.store()
 
-        d1.add_incoming(calc, link_type=LinkType.CREATE, link_label='link')
+        d1.base.links.add_incoming(calc, link_type=LinkType.CREATE, link_label='link')
 
         # more than one input to the same data object!
         with pytest.raises(ValueError):
-            d1.add_incoming(calc2, link_type=LinkType.CREATE, link_label='link')
+            d1.base.links.add_incoming(calc2, link_type=LinkType.CREATE, link_label='link')
 
     def test_node_get_incoming_outgoing_links(self):
         """
@@ -1501,33 +1503,37 @@ class TestSubNodesAndLinks:
         node_return = orm.Data().store()
 
         # Input links of node_origin
-        node_origin.add_incoming(node_caller_stored, link_type=LinkType.CALL_WORK, link_label='caller_stored')
-        node_origin.add_incoming(node_input_stored, link_type=LinkType.INPUT_WORK, link_label='input_stored')
+        node_origin.base.links.add_incoming(
+            node_caller_stored, link_type=LinkType.CALL_WORK, link_label='caller_stored'
+        )
+        node_origin.base.links.add_incoming(node_input_stored, link_type=LinkType.INPUT_WORK, link_label='input_stored')
         node_origin.store()
 
-        node_origin2.add_incoming(node_caller_stored, link_type=LinkType.CALL_WORK, link_label='caller_unstored')
+        node_origin2.base.links.add_incoming(
+            node_caller_stored, link_type=LinkType.CALL_WORK, link_label='caller_unstored'
+        )
         node_origin2.store()
 
         # Output links of node_origin
-        node_called.add_incoming(node_origin, link_type=LinkType.CALL_WORK, link_label='called')
+        node_called.base.links.add_incoming(node_origin, link_type=LinkType.CALL_WORK, link_label='called')
         node_called.store()
-        node_output.add_incoming(node_origin, link_type=LinkType.RETURN, link_label='return1')
-        node_return.add_incoming(node_origin, link_type=LinkType.RETURN, link_label='return2')
+        node_output.base.links.add_incoming(node_origin, link_type=LinkType.RETURN, link_label='return1')
+        node_return.base.links.add_incoming(node_origin, link_type=LinkType.RETURN, link_label='return2')
 
         # All incoming and outgoing
-        assert len(node_origin.get_incoming().all()) == 2
-        assert len(node_origin.get_outgoing().all()) == 3
+        assert len(node_origin.base.links.get_incoming().all()) == 2
+        assert len(node_origin.base.links.get_outgoing().all()) == 3
 
         # Link specific incoming
-        assert len(node_origin.get_incoming(link_type=LinkType.CALL_WORK).all()) == 1
-        assert len(node_origin2.get_incoming(link_type=LinkType.CALL_WORK).all()) == 1
-        assert len(node_origin.get_incoming(link_type=LinkType.INPUT_WORK).all()) == 1
-        assert len(node_origin.get_incoming(link_label_filter='in_ut%').all()) == 1
-        assert len(node_origin.get_incoming(node_class=orm.Node).all()) == 2
+        assert len(node_origin.base.links.get_incoming(link_type=LinkType.CALL_WORK).all()) == 1
+        assert len(node_origin2.base.links.get_incoming(link_type=LinkType.CALL_WORK).all()) == 1
+        assert len(node_origin.base.links.get_incoming(link_type=LinkType.INPUT_WORK).all()) == 1
+        assert len(node_origin.base.links.get_incoming(link_label_filter='in_ut%').all()) == 1
+        assert len(node_origin.base.links.get_incoming(node_class=orm.Node).all()) == 2
 
         # Link specific outgoing
-        assert len(node_origin.get_outgoing(link_type=LinkType.CALL_WORK).all()) == 1
-        assert len(node_origin.get_outgoing(link_type=LinkType.RETURN).all()) == 2
+        assert len(node_origin.base.links.get_outgoing(link_type=LinkType.CALL_WORK).all()) == 1
+        assert len(node_origin.base.links.get_outgoing(link_type=LinkType.RETURN).all()) == 2
 
 
 class AnyValue:
@@ -1650,24 +1656,24 @@ class TestNodeDeletion:
         wn1 = orm.WorkflowNode()
         wn2 = orm.WorkflowNode()
 
-        wn1.add_incoming(dni, link_type=LinkType.INPUT_WORK, link_label='inpwork1')
-        wn2.add_incoming(dni, link_type=LinkType.INPUT_WORK, link_label='inpwork2')
-        cn1.add_incoming(dni, link_type=LinkType.INPUT_CALC, link_label='inpcalc1')
-        cn2.add_incoming(dnm, link_type=LinkType.INPUT_CALC, link_label='inpcalc2')
+        wn1.base.links.add_incoming(dni, link_type=LinkType.INPUT_WORK, link_label='inpwork1')
+        wn2.base.links.add_incoming(dni, link_type=LinkType.INPUT_WORK, link_label='inpwork2')
+        cn1.base.links.add_incoming(dni, link_type=LinkType.INPUT_CALC, link_label='inpcalc1')
+        cn2.base.links.add_incoming(dnm, link_type=LinkType.INPUT_CALC, link_label='inpcalc2')
 
-        cn1.add_incoming(wn1, link_type=LinkType.CALL_CALC, link_label='callcalc1')
-        cn2.add_incoming(wn2, link_type=LinkType.CALL_CALC, link_label='callcalc2')
-        wn1.add_incoming(wn2, link_type=LinkType.CALL_WORK, link_label='callwork0')
+        cn1.base.links.add_incoming(wn1, link_type=LinkType.CALL_CALC, link_label='callcalc1')
+        cn2.base.links.add_incoming(wn2, link_type=LinkType.CALL_CALC, link_label='callcalc2')
+        wn1.base.links.add_incoming(wn2, link_type=LinkType.CALL_WORK, link_label='callwork0')
 
         wn2.store()
         wn1.store()
         cn2.store()
         cn1.store()
 
-        dnm.add_incoming(cn1, link_type=LinkType.CREATE, link_label='create1')
-        dnm.add_incoming(wn1, link_type=LinkType.RETURN, link_label='return1')
-        dno.add_incoming(cn2, link_type=LinkType.CREATE, link_label='create2')
-        dno.add_incoming(wn2, link_type=LinkType.RETURN, link_label='return2')
+        dnm.base.links.add_incoming(cn1, link_type=LinkType.CREATE, link_label='create1')
+        dnm.base.links.add_incoming(wn1, link_type=LinkType.RETURN, link_label='return1')
+        dno.base.links.add_incoming(cn2, link_type=LinkType.CREATE, link_label='create2')
+        dno.base.links.add_incoming(wn2, link_type=LinkType.RETURN, link_label='return2')
 
         return dni, dnm, dno, cn1, cn2, wn1, wn2
 
@@ -1836,39 +1842,39 @@ class TestNodeDeletion:
         dib = orm.Data().store()
 
         pw0 = orm.WorkflowNode()
-        pw0.add_incoming(dia, link_type=LinkType.INPUT_WORK, link_label='inpwork0a')
-        pw0.add_incoming(dib, link_type=LinkType.INPUT_WORK, link_label='inpwork0b')
+        pw0.base.links.add_incoming(dia, link_type=LinkType.INPUT_WORK, link_label='inpwork0a')
+        pw0.base.links.add_incoming(dib, link_type=LinkType.INPUT_WORK, link_label='inpwork0b')
         pw0.store()
 
         pwa = orm.WorkflowNode()
-        pwa.add_incoming(dia, link_type=LinkType.INPUT_WORK, link_label='inpworka')
-        pwa.add_incoming(pw0, link_type=LinkType.CALL_WORK, link_label='callworka')
+        pwa.base.links.add_incoming(dia, link_type=LinkType.INPUT_WORK, link_label='inpworka')
+        pwa.base.links.add_incoming(pw0, link_type=LinkType.CALL_WORK, link_label='callworka')
         pwa.store()
 
         pwb = orm.WorkflowNode()
-        pwb.add_incoming(dib, link_type=LinkType.INPUT_WORK, link_label='inpworkb')
-        pwb.add_incoming(pw0, link_type=LinkType.CALL_WORK, link_label='callworkb')
+        pwb.base.links.add_incoming(dib, link_type=LinkType.INPUT_WORK, link_label='inpworkb')
+        pwb.base.links.add_incoming(pw0, link_type=LinkType.CALL_WORK, link_label='callworkb')
         pwb.store()
 
         pca = orm.CalculationNode()
-        pca.add_incoming(dia, link_type=LinkType.INPUT_CALC, link_label='inpcalca')
-        pca.add_incoming(pwa, link_type=LinkType.CALL_CALC, link_label='calla')
+        pca.base.links.add_incoming(dia, link_type=LinkType.INPUT_CALC, link_label='inpcalca')
+        pca.base.links.add_incoming(pwa, link_type=LinkType.CALL_CALC, link_label='calla')
         pca.store()
 
         pcb = orm.CalculationNode()
-        pcb.add_incoming(dib, link_type=LinkType.INPUT_CALC, link_label='inpcalcb')
-        pcb.add_incoming(pwb, link_type=LinkType.CALL_CALC, link_label='callb')
+        pcb.base.links.add_incoming(dib, link_type=LinkType.INPUT_CALC, link_label='inpcalcb')
+        pcb.base.links.add_incoming(pwb, link_type=LinkType.CALL_CALC, link_label='callb')
         pcb.store()
 
         doa = orm.Data().store()
-        doa.add_incoming(pca, link_type=LinkType.CREATE, link_label='createa')
-        doa.add_incoming(pwa, link_type=LinkType.RETURN, link_label='returna')
-        doa.add_incoming(pw0, link_type=LinkType.RETURN, link_label='return0a')
+        doa.base.links.add_incoming(pca, link_type=LinkType.CREATE, link_label='createa')
+        doa.base.links.add_incoming(pwa, link_type=LinkType.RETURN, link_label='returna')
+        doa.base.links.add_incoming(pw0, link_type=LinkType.RETURN, link_label='return0a')
 
         dob = orm.Data().store()
-        dob.add_incoming(pcb, link_type=LinkType.CREATE, link_label='createb')
-        dob.add_incoming(pwb, link_type=LinkType.RETURN, link_label='returnb')
-        dob.add_incoming(pw0, link_type=LinkType.RETURN, link_label='return0b')
+        dob.base.links.add_incoming(pcb, link_type=LinkType.CREATE, link_label='createb')
+        dob.base.links.add_incoming(pwb, link_type=LinkType.RETURN, link_label='returnb')
+        dob.base.links.add_incoming(pw0, link_type=LinkType.RETURN, link_label='return0b')
 
         return dia, doa, pca, pwa, dib, dob, pcb, pwb, pw0
 
@@ -1965,28 +1971,28 @@ class TestNodeDeletion:
         di3 = orm.Data().store()
 
         pwm = orm.WorkflowNode()
-        pwm.add_incoming(di1, link_type=LinkType.INPUT_WORK, link_label='inpwm1')
-        pwm.add_incoming(di2, link_type=LinkType.INPUT_WORK, link_label='inpwm2')
-        pwm.add_incoming(di3, link_type=LinkType.INPUT_WORK, link_label='inpwm3')
+        pwm.base.links.add_incoming(di1, link_type=LinkType.INPUT_WORK, link_label='inpwm1')
+        pwm.base.links.add_incoming(di2, link_type=LinkType.INPUT_WORK, link_label='inpwm2')
+        pwm.base.links.add_incoming(di3, link_type=LinkType.INPUT_WORK, link_label='inpwm3')
         pwm.store()
 
         pws = orm.WorkflowNode()
-        pws.add_incoming(di1, link_type=LinkType.INPUT_WORK, link_label='inpws1')
-        pws.add_incoming(di2, link_type=LinkType.INPUT_WORK, link_label='inpws2')
-        pws.add_incoming(di3, link_type=LinkType.INPUT_WORK, link_label='inpws3')
-        pws.add_incoming(pwm, link_type=LinkType.CALL_WORK, link_label='callw')
+        pws.base.links.add_incoming(di1, link_type=LinkType.INPUT_WORK, link_label='inpws1')
+        pws.base.links.add_incoming(di2, link_type=LinkType.INPUT_WORK, link_label='inpws2')
+        pws.base.links.add_incoming(di3, link_type=LinkType.INPUT_WORK, link_label='inpws3')
+        pws.base.links.add_incoming(pwm, link_type=LinkType.CALL_WORK, link_label='callw')
         pws.store()
 
-        di1.add_incoming(pws, link_type=LinkType.RETURN, link_label='outpws')
+        di1.base.links.add_incoming(pws, link_type=LinkType.RETURN, link_label='outpws')
 
         pcs = orm.CalculationNode()
-        pcs.add_incoming(di1, link_type=LinkType.INPUT_CALC, link_label='inpcs1')
-        pcs.add_incoming(pwm, link_type=LinkType.CALL_CALC, link_label='callc')
+        pcs.base.links.add_incoming(di1, link_type=LinkType.INPUT_CALC, link_label='inpcs1')
+        pcs.base.links.add_incoming(pwm, link_type=LinkType.CALL_CALC, link_label='callc')
         pcs.store()
 
         do1 = orm.Data().store()
-        do1.add_incoming(pcs, link_type=LinkType.CREATE, link_label='outpcs')
-        do1.add_incoming(pwm, link_type=LinkType.RETURN, link_label='outpwm')
+        do1.base.links.add_incoming(pcs, link_type=LinkType.CREATE, link_label='outpcs')
+        do1.base.links.add_incoming(pwm, link_type=LinkType.RETURN, link_label='outpwm')
 
         return di1, di2, di3, do1, pws, pcs, pwm
 
@@ -2050,9 +2056,9 @@ class TestNodeDeletion:
         for ii in range(total_calcs):
             new_calc = orm.CalculationNode()
             new_data = orm.Data().store()
-            new_calc.add_incoming(old_data, link_type=LinkType.INPUT_CALC, link_label=f'inp{str(ii)}')
+            new_calc.base.links.add_incoming(old_data, link_type=LinkType.INPUT_CALC, link_label=f'inp{str(ii)}')
             new_calc.store()
-            new_data.add_incoming(new_calc, link_type=LinkType.CREATE, link_label=f'out{str(ii)}')
+            new_data.base.links.add_incoming(new_calc, link_type=LinkType.CREATE, link_label=f'out{str(ii)}')
             node_list.append(new_calc)
             node_list.append(new_data)
             old_data = new_data

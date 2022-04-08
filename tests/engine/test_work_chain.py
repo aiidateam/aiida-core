@@ -201,7 +201,7 @@ class TestExitStatus:
         assert node.is_finished is True
         assert node.is_finished_ok is False
         assert node.is_failed is True
-        assert PotentialFailureWorkChain.OUTPUT_LABEL not in node.get_outgoing().all_link_labels()
+        assert PotentialFailureWorkChain.OUTPUT_LABEL not in node.base.links.get_outgoing().all_link_labels()
 
     def test_failing_workchain_through_exit_code(self):
         _, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(False), through_exit_code=Bool(True))
@@ -210,7 +210,7 @@ class TestExitStatus:
         assert node.is_finished is True
         assert node.is_finished_ok is False
         assert node.is_failed is True
-        assert PotentialFailureWorkChain.OUTPUT_LABEL not in node.get_outgoing().all_link_labels()
+        assert PotentialFailureWorkChain.OUTPUT_LABEL not in node.base.links.get_outgoing().all_link_labels()
 
     def test_successful_workchain_through_integer(self):
         _, node = launch.run.get_node(PotentialFailureWorkChain, success=Bool(True))
@@ -218,8 +218,8 @@ class TestExitStatus:
         assert node.is_finished is True
         assert node.is_finished_ok is True
         assert node.is_failed is False
-        assert PotentialFailureWorkChain.OUTPUT_LABEL in node.get_outgoing().all_link_labels()
-        assert node.get_outgoing().get_node_by_label(PotentialFailureWorkChain.OUTPUT_LABEL) == \
+        assert PotentialFailureWorkChain.OUTPUT_LABEL in node.base.links.get_outgoing().all_link_labels()
+        assert node.base.links.get_outgoing().get_node_by_label(PotentialFailureWorkChain.OUTPUT_LABEL) == \
             PotentialFailureWorkChain.OUTPUT_VALUE
 
     def test_successful_workchain_through_exit_code(self):
@@ -228,8 +228,8 @@ class TestExitStatus:
         assert node.is_finished is True
         assert node.is_finished_ok is True
         assert node.is_failed is False
-        assert PotentialFailureWorkChain.OUTPUT_LABEL in node.get_outgoing().all_link_labels()
-        assert node.get_outgoing().get_node_by_label(PotentialFailureWorkChain.OUTPUT_LABEL) == \
+        assert PotentialFailureWorkChain.OUTPUT_LABEL in node.base.links.get_outgoing().all_link_labels()
+        assert node.base.links.get_outgoing().get_node_by_label(PotentialFailureWorkChain.OUTPUT_LABEL) == \
             PotentialFailureWorkChain.OUTPUT_VALUE
 
     def test_return_out_of_outline(self):
@@ -238,7 +238,7 @@ class TestExitStatus:
         assert node.is_finished is True
         assert node.is_finished_ok is False
         assert node.is_failed is True
-        assert PotentialFailureWorkChain.OUTPUT_LABEL not in node.get_outgoing().all_link_labels()
+        assert PotentialFailureWorkChain.OUTPUT_LABEL not in node.base.links.get_outgoing().all_link_labels()
 
 
 class IfTest(WorkChain):
@@ -571,12 +571,15 @@ class TestWorkchain:
         process = run_and_check_success(MainWorkChain)
 
         # Verify that the `CALL` link of the calculation function is there with the correct label
-        link_triple = process.node.get_outgoing(link_type=LinkType.CALL_CALC,
-                                                link_label_filter=label_calcfunction).one()
+        link_triple = process.node.base.links.get_outgoing(
+            link_type=LinkType.CALL_CALC, link_label_filter=label_calcfunction
+        ).one()
         assert isinstance(link_triple.node, orm.CalcFunctionNode)
 
         # Verify that the `CALL` link of the work chain is there with the correct label
-        link_triple = process.node.get_outgoing(link_type=LinkType.CALL_WORK, link_label_filter=label_workchain).one()
+        link_triple = process.node.base.links.get_outgoing(
+            link_type=LinkType.CALL_WORK, link_label_filter=label_workchain
+        ).one()
         assert isinstance(link_triple.node, orm.WorkChainNode)
 
     def test_tocontext_submit_workchain_no_daemon(self):
@@ -1184,7 +1187,7 @@ class TestWorkChainAbortChildren:
         runner.schedule(process)
         runner.loop.run_until_complete(run_async())
 
-        child = process.node.get_outgoing(link_type=LinkType.CALL_WORK).first().node
+        child = process.node.base.links.get_outgoing(link_type=LinkType.CALL_WORK).first().node
         assert child.is_finished_ok is False
         assert child.is_excepted is False
         assert child.is_killed is True
@@ -1613,10 +1616,10 @@ class TestDefaultUniqueness:
         inputs = {'child_one': {}, 'child_two': {}}
         _, node = launch.run.get_node(TestDefaultUniqueness.Parent, **inputs)
 
-        nodes = node.get_incoming().all_nodes()
+        nodes = node.base.links.get_incoming().all_nodes()
         uuids = {n.uuid for n in nodes}
 
         # Trying to load one of the inputs through the UUID should fail,
         # as both `child_one.a` and `child_two.a` should have the same UUID.
-        node = load_node(uuid=node.get_incoming().get_node_by_label('child_one__a').uuid)
+        node = load_node(uuid=node.base.links.get_incoming().get_node_by_label('child_one__a').uuid)
         assert len(uuids) == len(nodes), f'Only {len(uuids)} unique UUIDS for {len(nodes)} input nodes'

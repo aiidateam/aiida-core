@@ -37,7 +37,7 @@ def test_nodes_in_group(tmp_path, aiida_profile_clean, aiida_localhost):
     jc1.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
     jc1.user = user
     jc1.label = 'jc1'
-    jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
+    jc1.base.links.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
     jc1.store()
     jc1.seal()
 

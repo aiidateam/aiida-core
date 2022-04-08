@@ -577,13 +577,13 @@ class Process(plumpy.processes.Process):
                 self.node.store_all()
                 if self.node.is_finished_ok:
                     self._state = Finished(self, None, True)  # pylint: disable=attribute-defined-outside-init
-                    for entry in self.node.get_outgoing(link_type=LinkType.RETURN):
+                    for entry in self.node.base.links.get_outgoing(link_type=LinkType.RETURN):
                         if entry.link_label.endswith(f'_{entry.node.pk}'):
                             continue
                         self.out(entry.link_label, entry.node)
                     # This is needed for CalcJob. In that case, the outputs are
                     # returned regardless of whether they end in '_pk'
-                    for entry in self.node.get_outgoing(link_type=LinkType.CREATE):
+                    for entry in self.node.base.links.get_outgoing(link_type=LinkType.CREATE):
                         self.out(entry.link_label, entry.node)
             except exceptions.ModificationNotAllowed:
                 # The calculation was already stored
@@ -630,7 +630,8 @@ class Process(plumpy.processes.Process):
             return
 
         outputs_flat = self._flat_outputs()
-        outputs_stored = self.node.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN)).all_link_labels()
+        outputs_stored = self.node.base.links.get_outgoing(link_type=(LinkType.CREATE, LinkType.RETURN)
+                                                           ).all_link_labels()
         outputs_new = set(outputs_flat.keys()) - set(outputs_stored)
 
         for link_label, output in outputs_flat.items():
@@ -639,9 +640,9 @@ class Process(plumpy.processes.Process):
                 continue
 
             if isinstance(self.node, orm.CalculationNode):
-                output.add_incoming(self.node, LinkType.CREATE, link_label)
+                output.base.links.add_incoming(self.node, LinkType.CREATE, link_label)
             elif isinstance(self.node, orm.WorkflowNode):
-                output.add_incoming(self.node, LinkType.RETURN, link_label)
+                output.base.links.add_incoming(self.node, LinkType.RETURN, link_label)
 
             output.store()
 
@@ -674,10 +675,10 @@ class Process(plumpy.processes.Process):
                 raise exceptions.InvalidOperation('calling processes from a calculation type process is forbidden.')
 
             if isinstance(self.node, orm.CalculationNode):
-                self.node.add_incoming(parent_calc, LinkType.CALL_CALC, self.metadata.call_link_label)
+                self.node.base.links.add_incoming(parent_calc, LinkType.CALL_CALC, self.metadata.call_link_label)
 
             elif isinstance(self.node, orm.WorkflowNode):
-                self.node.add_incoming(parent_calc, LinkType.CALL_WORK, self.metadata.call_link_label)
+                self.node.base.links.add_incoming(parent_calc, LinkType.CALL_WORK, self.metadata.call_link_label)
 
         self._setup_metadata()
         self._setup_inputs()
@@ -717,10 +718,10 @@ class Process(plumpy.processes.Process):
 
             # Need this special case for tests that use ProcessNodes as classes
             if isinstance(self.node, orm.CalculationNode):
-                self.node.add_incoming(node, LinkType.INPUT_CALC, name)
+                self.node.base.links.add_incoming(node, LinkType.INPUT_CALC, name)
 
             elif isinstance(self.node, orm.WorkflowNode):
-                self.node.add_incoming(node, LinkType.INPUT_WORK, name)
+                self.node.base.links.add_incoming(node, LinkType.INPUT_WORK, name)
 
     def _flat_inputs(self) -> Dict[str, Any]:
         """
@@ -894,7 +895,7 @@ class Process(plumpy.processes.Process):
         # maps the exposed name to all outputs that belong to it
         top_namespace_map = collections.defaultdict(list)
         link_types = (LinkType.CREATE, LinkType.RETURN)
-        process_outputs_dict = node.get_outgoing(link_type=link_types).nested()
+        process_outputs_dict = node.base.links.get_outgoing(link_type=link_types).nested()
 
         for port_name in process_outputs_dict:
             top_namespace = port_name.split(namespace_separator)[0]

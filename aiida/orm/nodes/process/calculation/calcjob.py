@@ -131,7 +131,7 @@ class CalcJobNode(CalculationNode):
             self.computer.uuid if self.computer is not None else None,  # pylint: disable=no-member
             {
                 entry.link_label: entry.node.get_hash()
-                for entry in self.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
+                for entry in self.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
                 if entry.link_label not in self._hash_ignored_inputs
             }
         ]
@@ -464,7 +464,8 @@ class CalcJobNode(CalculationNode):
         """
         from aiida.orm import FolderData
         try:
-            return self.get_outgoing(node_class=FolderData, link_label_filter=self.link_label_retrieved).one().node
+            return self.base.links.get_outgoing(node_class=FolderData,
+                                                link_label_filter=self.link_label_retrieved).one().node
         except ValueError:
             return None
 

@@ -54,7 +54,7 @@ class TestVerdiCalculation:
             calc.set_remote_workdir('/tmp/aiida/work')
             remote = RemoteData(remote_path='/tmp/aiida/work')
             remote.computer = calc.computer
-            remote.add_incoming(calc, LinkType.CREATE, link_label='remote_folder')
+            remote.base.links.add_incoming(calc, LinkType.CREATE, link_label='remote_folder')
             calc.store()
             remote.store()
 
@@ -72,7 +72,7 @@ class TestVerdiCalculation:
                     self.KEY_TWO: self.VAL_TWO,
                 }).store()
 
-                output_parameters.add_incoming(calc, LinkType.CREATE, 'output_parameters')
+                output_parameters.base.links.add_incoming(calc, LinkType.CREATE, 'output_parameters')
 
                 # Create shortcut for easy dereferencing
                 self.result_job = calc
@@ -90,7 +90,7 @@ class TestVerdiCalculation:
         calc.set_remote_workdir('/tmp/aiida/work')
         remote = RemoteData(remote_path='/tmp/aiida/work')
         remote.computer = calc.computer
-        remote.add_incoming(calc, LinkType.CREATE, link_label='remote_folder')
+        remote.base.links.add_incoming(calc, LinkType.CREATE, link_label='remote_folder')
         remote.store()
         self.calcs.append(calc)
 

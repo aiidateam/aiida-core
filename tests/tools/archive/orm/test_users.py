@@ -37,7 +37,7 @@ def test_nodes_belonging_to_different_users(tmp_path, aiida_profile_clean, aiida
     jc1.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
     jc1.user = user
     jc1.label = 'jc1'
-    jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
+    jc1.base.links.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
     jc1.store()
 
     # Create some nodes from a different user
@@ -45,20 +45,20 @@ def test_nodes_belonging_to_different_users(tmp_path, aiida_profile_clean, aiida
     sd2.user = user
     sd2.label = 'sd2'
     sd2.store()
-    sd2.add_incoming(jc1, link_type=LinkType.CREATE, link_label='l1')  # I assume jc1 CREATED sd2
+    sd2.base.links.add_incoming(jc1, link_type=LinkType.CREATE, link_label='l1')  # I assume jc1 CREATED sd2
     jc1.seal()
 
     jc2 = orm.CalcJobNode()
     jc2.computer = aiida_localhost
     jc2.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
     jc2.label = 'jc2'
-    jc2.add_incoming(sd2, link_type=LinkType.INPUT_CALC, link_label='l2')
+    jc2.base.links.add_incoming(sd2, link_type=LinkType.INPUT_CALC, link_label='l2')
     jc2.store()
 
     sd3 = orm.StructureData(pbc=False)
     sd3.label = 'sd3'
     sd3.store()
-    sd3.add_incoming(jc2, link_type=LinkType.CREATE, link_label='l3')
+    sd3.base.links.add_incoming(jc2, link_type=LinkType.CREATE, link_label='l3')
     jc2.seal()
 
     uuids_u1 = [sd1.uuid, jc1.uuid, sd2.uuid]
@@ -107,14 +107,14 @@ def test_non_default_user_nodes(tmp_path, aiida_profile_clean, aiida_localhost_f
     jc1.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
     jc1.user = user
     jc1.label = 'jc1'
-    jc1.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
+    jc1.base.links.add_incoming(sd1, link_type=LinkType.INPUT_CALC, link_label='link')
     jc1.store()
 
     # Create some nodes from a different user
     sd2 = orm.StructureData(pbc=False)
     sd2.user = user
     sd2.label = 'sd2'
-    sd2.add_incoming(jc1, link_type=LinkType.CREATE, link_label='l1')
+    sd2.base.links.add_incoming(jc1, link_type=LinkType.CREATE, link_label='l1')
     sd2.store()
     jc1.seal()
     sd2_uuid = sd2.uuid
@@ -139,12 +139,12 @@ def test_non_default_user_nodes(tmp_path, aiida_profile_clean, aiida_localhost_f
     jc2.computer = aiida_localhost_factory()
     jc2.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
     jc2.label = 'jc2'
-    jc2.add_incoming(sd2_imp, link_type=LinkType.INPUT_CALC, link_label='l2')
+    jc2.base.links.add_incoming(sd2_imp, link_type=LinkType.INPUT_CALC, link_label='l2')
     jc2.store()
 
     sd3 = orm.StructureData(pbc=False)
     sd3.label = 'sd3'
-    sd3.add_incoming(jc2, link_type=LinkType.CREATE, link_label='l3')
+    sd3.base.links.add_incoming(jc2, link_type=LinkType.CREATE, link_label='l3')
     sd3.store()
     jc2.seal()
 

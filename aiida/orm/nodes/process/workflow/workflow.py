@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 from aiida.common.links import LinkType
 from aiida.orm.utils.managers import NodeLinksManager
 
-from ..process import ProcessNode
+from ..process import ProcessNode, ProcessNodeLinks
 
 if TYPE_CHECKING:
     from aiida.orm import Node
@@ -21,8 +21,35 @@ if TYPE_CHECKING:
 __all__ = ('WorkflowNode',)
 
 
+class WorkflowNodeLinks(ProcessNodeLinks):
+    """Interface for links of a node instance."""
+
+    def validate_outgoing(self, target: 'Node', link_type: LinkType, link_label: str) -> None:
+        """Validate adding a link of the given type from ourself to a given node.
+
+        A workflow cannot 'create' Data, so if we receive an outgoing link to an unstored Data node, that means
+        the user created a Data node within our function body and tries to attach it as an output. This is strictly
+        forbidden and can cause provenance to be lost.
+
+        :param target: the node to which the link is going
+        :param link_type: the link type
+        :param link_label: the link label
+        :raise TypeError: if `target` is not a Node instance or `link_type` is not a `LinkType` enum
+        :raise ValueError: if the proposed link is invalid
+        """
+        super().validate_outgoing(target, link_type, link_label)
+        if link_type is LinkType.RETURN and not target.is_stored:
+            raise ValueError(
+                'Workflow<{}> tried returning an unstored `Data` node. This likely means new `Data` is being created '
+                'inside the workflow. In order to preserve data provenance, use a `calcfunction` to create this node '
+                'and return its output from the workflow'.format(self._node.process_label)
+            )
+
+
 class WorkflowNode(ProcessNode):
     """Base class for all nodes representing the execution of a workflow process."""
+
+    _CLS_NODE_LINKS = WorkflowNodeLinks
 
     # Workflow nodes are storable
     _storable = True
@@ -51,24 +78,3 @@ class WorkflowNode(ProcessNode):
         :return: `NodeLinksManager`
         """
         return NodeLinksManager(node=self, link_type=LinkType.RETURN, incoming=False)
-
-    def validate_outgoing(self, target: 'Node', link_type: LinkType, link_label: str) -> None:
-        """Validate adding a link of the given type from ourself to a given node.
-
-        A workflow cannot 'create' Data, so if we receive an outgoing link to an unstored Data node, that means
-        the user created a Data node within our function body and tries to attach it as an output. This is strictly
-        forbidden and can cause provenance to be lost.
-
-        :param target: the node to which the link is going
-        :param link_type: the link type
-        :param link_label: the link label
-        :raise TypeError: if `target` is not a Node instance or `link_type` is not a `LinkType` enum
-        :raise ValueError: if the proposed link is invalid
-        """
-        super().validate_outgoing(target, link_type, link_label)
-        if link_type is LinkType.RETURN and not target.is_stored:
-            raise ValueError(
-                'Workflow<{}> tried returning an unstored `Data` node. This likely means new `Data` is being created '
-                'inside the workflow. In order to preserve data provenance, use a `calcfunction` to create this node '
-                'and return its output from the workflow'.format(self.process_label)
-            )

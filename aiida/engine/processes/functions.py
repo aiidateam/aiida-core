@@ -45,10 +45,10 @@ def calcfunction(function: Callable[..., Any]) -> Callable[..., Any]:
     >>> r = sum(Int(4), Int(5))
     >>> print(r)
     9
-    >>> r.get_incoming().all() # doctest: +SKIP
+    >>> r.base.links.get_incoming().all() # doctest: +SKIP
     [Neighbor(link_type='', link_label='result',
     node=<CalcFunctionNode: uuid: ce0c63b3-1c84-4bb8-ba64-7b70a36adf34 (pk: 3567)>)]
-    >>> r.get_incoming().get_node_by_label('result').get_incoming().all_nodes()
+    >>> r.base.links.get_incoming().get_node_by_label('result').base.links.get_incoming().all_nodes()
     [4, 5]
 
     :param function: The function to decorate.
@@ -75,10 +75,10 @@ def workfunction(function: Callable[..., Any]) -> Callable[..., Any]:
     >>> r = select(Int(4), Int(5))
     >>> print(r)
     4
-    >>> r.get_incoming().all() # doctest: +SKIP
+    >>> r.base.links.get_incoming().all() # doctest: +SKIP
     [Neighbor(link_type='', link_label='result',
     node=<WorkFunctionNode: uuid: ce0c63b3-1c84-4bb8-ba64-7b70a36adf34 (pk: 3567)>)]
-    >>> r.get_incoming().get_node_by_label('result').get_incoming().all_nodes()
+    >>> r.base.links.get_incoming().get_node_by_label('result').base.links.get_incoming().all_nodes()
     [4, 5]
 
     :param function: The function to decorate.

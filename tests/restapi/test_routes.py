@@ -71,8 +71,8 @@ class TestRestApi:
 
         calc = orm.CalcJobNode(computer=self.computer)
         calc.set_option('resources', resources)
-        calc.set_attribute('attr1', 'OK')
-        calc.set_attribute('attr2', 'OK')
+        calc.base.attributes.set('attr1', 'OK')
+        calc.base.attributes.set('attr2', 'OK')
         calc.set_extra('extra1', False)
         calc.set_extra('extra2', 'extra_info')
 

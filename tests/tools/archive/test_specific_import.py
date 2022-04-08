@@ -88,10 +88,10 @@ def test_cycle_structure_data(aiida_profile_clean, aiida_localhost, tmp_path):
     structure.store()
 
     parent_process = orm.CalculationNode()
-    parent_process.set_attribute('key', 'value')
+    parent_process.base.attributes.set('key', 'value')
     parent_process.store()
     child_calculation = orm.CalculationNode()
-    child_calculation.set_attribute('key', 'value')
+    child_calculation.base.attributes.set('key', 'value')
     remote_folder = orm.RemoteData(computer=aiida_localhost, remote_path='/').store()
 
     remote_folder.add_incoming(parent_process, link_type=LinkType.CREATE, link_label='link')
@@ -121,8 +121,8 @@ def test_cycle_structure_data(aiida_profile_clean, aiida_localhost, tmp_path):
     # Verify that orm.CalculationNodes have non-empty attribute dictionaries
     builder = orm.QueryBuilder().append(orm.CalculationNode)
     for [calculation] in builder.iterall():
-        assert isinstance(calculation.attributes, dict)
-        assert len(calculation.attributes) != 0
+        assert isinstance(calculation.base.attributes.all, dict)
+        assert len(calculation.base.attributes.all) != 0
 
     # Verify that the structure data maintained its label, cell and kinds
     builder = orm.QueryBuilder().append(orm.StructureData)

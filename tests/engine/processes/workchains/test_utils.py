@@ -66,33 +66,33 @@ class TestRegisterProcessHandler:
             @process_handler(priority=100)
             def handler_01(self, node):
                 """Example handler returing ExitCode 100."""
-                handlers_called = node.get_attribute(attribute_key, default=[])
+                handlers_called = node.base.attributes.get(attribute_key, default=[])
                 handlers_called.append('handler_01')
-                node.set_attribute(attribute_key, handlers_called)
+                node.base.attributes.set(attribute_key, handlers_called)
                 return ProcessHandlerReport(False, ExitCode(100))
 
             @process_handler(priority=300)
             def handler_03(self, node):
                 """Example handler returing ExitCode 300."""
-                handlers_called = node.get_attribute(attribute_key, default=[])
+                handlers_called = node.base.attributes.get(attribute_key, default=[])
                 handlers_called.append('handler_03')
-                node.set_attribute(attribute_key, handlers_called)
+                node.base.attributes.set(attribute_key, handlers_called)
                 return ProcessHandlerReport(False, ExitCode(300))
 
             @process_handler(priority=200)
             def handler_02(self, node):
                 """Example handler returing ExitCode 200."""
-                handlers_called = node.get_attribute(attribute_key, default=[])
+                handlers_called = node.base.attributes.get(attribute_key, default=[])
                 handlers_called.append('handler_02')
-                node.set_attribute(attribute_key, handlers_called)
+                node.base.attributes.set(attribute_key, handlers_called)
                 return ProcessHandlerReport(False, ExitCode(200))
 
             @process_handler(priority=400)
             def handler_04(self, node):
                 """Example handler returing ExitCode 400."""
-                handlers_called = node.get_attribute(attribute_key, default=[])
+                handlers_called = node.base.attributes.get(attribute_key, default=[])
                 handlers_called.append('handler_04')
-                node.set_attribute(attribute_key, handlers_called)
+                node.base.attributes.set(attribute_key, handlers_called)
                 return ProcessHandlerReport(False, ExitCode(400))
 
         child = ProcessNode()
@@ -105,7 +105,7 @@ class TestRegisterProcessHandler:
 
         # Last called handler should be `handler_01` which returned `ExitCode(100)`
         assert process.inspect_process() == ExitCode(100)
-        assert child.get_attribute(attribute_key, []) == ['handler_04', 'handler_03', 'handler_02', 'handler_01']
+        assert child.base.attributes.get(attribute_key, []) == ['handler_04', 'handler_03', 'handler_02', 'handler_01']
 
     def test_exit_codes_keyword_only(self):
         """The `exit_codes` should be keyword only."""

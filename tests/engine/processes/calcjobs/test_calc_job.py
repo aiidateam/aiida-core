@@ -71,7 +71,7 @@ class FileCalcJob(CalcJob):
 
         calcinfo = CalcInfo()
         calcinfo.codes_info = [codeinfo]
-        calcinfo.provenance_exclude_list = self.inputs.settings.get_attribute('provenance_exclude_list')
+        calcinfo.provenance_exclude_list = self.inputs.settings.base.attributes.get('provenance_exclude_list')
         return calcinfo
 
 
@@ -551,7 +551,7 @@ def test_parse_non_zero_retval(generate_process):
     retrieved = orm.FolderData().store()
     retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
 
-    process.node.set_attribute('detailed_job_info', {'retval': 1, 'stderr': 'accounting disabled', 'stdout': ''})
+    process.node.base.attributes.set('detailed_job_info', {'retval': 1, 'stderr': 'accounting disabled', 'stdout': ''})
     process.parse()
 
     logs = [log.message for log in orm.Log.objects.get_logs_for(process.node)]
@@ -570,7 +570,7 @@ def test_parse_not_implemented(generate_process):
     retrieved = orm.FolderData()
     retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
 
-    process.node.set_attribute('detailed_job_info', {})
+    process.node.base.attributes.set('detailed_job_info', {})
 
     filename_stderr = process.node.get_option('scheduler_stderr')
     filename_stdout = process.node.get_option('scheduler_stdout')
@@ -604,7 +604,7 @@ def test_parse_scheduler_excepted(generate_process, monkeypatch):
     retrieved = orm.FolderData()
     retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
 
-    process.node.set_attribute('detailed_job_info', {})
+    process.node.base.attributes.set('detailed_job_info', {})
 
     filename_stderr = process.node.get_option('scheduler_stderr')
     filename_stdout = process.node.get_option('scheduler_stdout')
@@ -702,33 +702,33 @@ def test_additional_retrieve_list(generate_process, fixture_sandbox):
     """Test the ``additional_retrieve_list`` option."""
     process = generate_process()
     process.presubmit(fixture_sandbox)
-    retrieve_list = process.node.get_attribute('retrieve_list')
+    retrieve_list = process.node.base.attributes.get('retrieve_list')
 
     # Keep reference of the base contents of the retrieve list.
     base_retrieve_list = retrieve_list
 
     # Test that the code works if no explicit additional retrieve list is specified
     assert len(retrieve_list) != 0
-    assert isinstance(process.node.get_attribute('retrieve_list'), list)
+    assert isinstance(process.node.base.attributes.get('retrieve_list'), list)
 
     # Defining explicit additional retrieve list that is disjoint with the base retrieve list
     additional_retrieve_list = ['file.txt', 'folder/file.txt']
     process = generate_process({'metadata': {'options': {'additional_retrieve_list': additional_retrieve_list}}})
     process.presubmit(fixture_sandbox)
-    retrieve_list = process.node.get_attribute('retrieve_list')
+    retrieve_list = process.node.base.attributes.get('retrieve_list')
 
     # Check that the `retrieve_list` is a list and contains the union of the base and additional retrieve list
-    assert isinstance(process.node.get_attribute('retrieve_list'), list)
+    assert isinstance(process.node.base.attributes.get('retrieve_list'), list)
     assert set(retrieve_list) == set(base_retrieve_list).union(set(additional_retrieve_list))
 
     # Defining explicit additional retrieve list with elements that overlap with `base_retrieve_list
     additional_retrieve_list = ['file.txt', 'folder/file.txt'] + base_retrieve_list
     process = generate_process({'metadata': {'options': {'additional_retrieve_list': additional_retrieve_list}}})
     process.presubmit(fixture_sandbox)
-    retrieve_list = process.node.get_attribute('retrieve_list')
+    retrieve_list = process.node.base.attributes.get('retrieve_list')
 
     # Check that the `retrieve_list` is a list and contains the union of the base and additional retrieve list
-    assert isinstance(process.node.get_attribute('retrieve_list'), list)
+    assert isinstance(process.node.base.attributes.get('retrieve_list'), list)
     assert set(retrieve_list) == set(base_retrieve_list).union(set(additional_retrieve_list))
 
     # Test the validator

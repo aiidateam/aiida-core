@@ -26,7 +26,7 @@ GROUP_NAME = 'node'
 def get_data_node(store=True):
     """A function to create a simple data node."""
     data = Data()
-    data.set_attribute_many({str(i): i for i in range(10)})
+    data.base.attributes.set_many({str(i): i for i in range(10)})
     if store:
         data.store()
     return (), {'node': data}
@@ -35,7 +35,7 @@ def get_data_node(store=True):
 def get_data_node_and_object(store=True):
     """A function to create a simple data node, with an object."""
     data = Data()
-    data.set_attribute_many({str(i): i for i in range(10)})
+    data.base.attributes.set_many({str(i): i for i in range(10)})
     data.put_object_from_filelike(StringIO('a' * 10000), 'key')
     if store:
         data.store()
@@ -51,7 +51,7 @@ def test_store_backend(benchmark):
 
     def _run():
         data = Data()
-        data.set_attribute_many({str(i): i for i in range(10)})
+        data.base.attributes.set_many({str(i): i for i in range(10)})
         data._backend_entity.store(clean=False)
         return data
 

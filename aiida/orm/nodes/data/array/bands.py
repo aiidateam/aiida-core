@@ -341,7 +341,7 @@ class BandsData(KpointsData):
         self.units = units
 
         if the_labels is not None:
-            self.set_attribute('array_labels', the_labels)
+            self.base.attributes.set('array_labels', the_labels)
 
         if the_occupations is not None:
             # set occupations
@@ -352,7 +352,7 @@ class BandsData(KpointsData):
         """
         Get the labels associated with the band arrays
         """
-        return self.get_attribute('array_labels', None)
+        return self.base.attributes.get('array_labels', None)
 
     @property
     def units(self):
@@ -360,7 +360,7 @@ class BandsData(KpointsData):
         Units in which the data in bands were stored. A string
         """
         # return copy.deepcopy(self._pbc)
-        return self.get_attribute('units')
+        return self.base.attributes.get('units')
 
     @units.setter
     def units(self, value):
@@ -369,7 +369,7 @@ class BandsData(KpointsData):
         cell is periodic in the 1,2,3 crystal direction
         """
         the_str = str(value)
-        self.set_attribute('units', the_str)
+        self.base.attributes.set('units', the_str)
 
     def _set_pbc(self, value):
         """
@@ -381,9 +381,9 @@ class BandsData(KpointsData):
         if self.is_stored:
             raise ModificationNotAllowed('The KpointsData object cannot be modified, it has already been stored')
         the_pbc = get_valid_pbc(value)
-        self.set_attribute('pbc1', the_pbc[0])
-        self.set_attribute('pbc2', the_pbc[1])
-        self.set_attribute('pbc3', the_pbc[2])
+        self.base.attributes.set('pbc1', the_pbc[0])
+        self.base.attributes.set('pbc2', the_pbc[1])
+        self.base.attributes.set('pbc3', the_pbc[2])
 
     def get_bands(self, also_occupations=False, also_labels=False):
         """

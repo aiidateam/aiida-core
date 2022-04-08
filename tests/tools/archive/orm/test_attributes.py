@@ -20,7 +20,7 @@ def test_import_of_attributes(tmp_path, aiida_profile):
     # Create Data with attributes
     data = orm.Data()
     data.label = 'my_test_data_node'
-    data.set_attribute_many({'b': 2, 'c': 3})
+    data.base.attributes.set_many({'b': 2, 'c': 3})
     data.store()
 
     # Export
@@ -35,8 +35,8 @@ def test_import_of_attributes(tmp_path, aiida_profile):
     assert builder.count() == 1
     imported_node = builder.all(flat=True)[0]
 
-    assert imported_node.get_attribute('b') == 2
-    assert imported_node.get_attribute('c') == 3
+    assert imported_node.base.attributes.get('b') == 2
+    assert imported_node.base.attributes.get('c') == 3
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

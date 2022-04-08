@@ -39,7 +39,7 @@ class TestVerdiNode:
         self.ATTR_KEY_TWO = 'b'
         self.ATTR_VAL_TWO = 'test'
 
-        node.set_attribute_many({self.ATTR_KEY_ONE: self.ATTR_VAL_ONE, self.ATTR_KEY_TWO: self.ATTR_VAL_TWO})
+        node.base.attributes.set_many({self.ATTR_KEY_ONE: self.ATTR_VAL_ONE, self.ATTR_KEY_TWO: self.ATTR_VAL_TWO})
 
         self.EXTRA_KEY_ONE = 'x'
         self.EXTRA_VAL_ONE = '2'

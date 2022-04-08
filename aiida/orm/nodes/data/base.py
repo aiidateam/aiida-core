@@ -36,11 +36,11 @@ class BaseType(Data):
 
     @property
     def value(self):
-        return self.get_attribute('value', None)
+        return self.base.attributes.get('value', None)
 
     @value.setter
     def value(self, value):
-        self.set_attribute('value', self._type(value))  # pylint: disable=no-member
+        self.base.attributes.set('value', self._type(value))  # pylint: disable=no-member
 
     def __str__(self):
         return f'{super().__str__()} value: {self.value}'

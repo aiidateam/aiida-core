@@ -43,7 +43,7 @@ class SinglefileData(Data):
 
         :return: the filename under which the file is stored in the repository
         """
-        return self.get_attribute('filename')
+        return self.base.attributes.get('filename')
 
     @contextlib.contextmanager
     def open(self, path=None, mode='r'):
@@ -111,7 +111,7 @@ class SinglefileData(Data):
         for existing_key in existing_object_names:
             self.base.repository.delete_object(existing_key)
 
-        self.set_attribute('filename', key)
+        self.base.attributes.set('filename', key)
 
     def _validate(self):
         """Ensure that there is one object stored in the repository, whose key matches value set for `filename` attr."""

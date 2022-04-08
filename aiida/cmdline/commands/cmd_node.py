@@ -237,7 +237,7 @@ def echo_node_dict(nodes, keys, fmt, identifier, raw, use_attrs=True):
             node_dict = node.base.attributes.all
             dict_name = 'attributes'
         else:
-            node_dict = node.extras
+            node_dict = node.base.extras.all
             dict_name = 'extras'
 
         if keys is not None:

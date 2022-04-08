@@ -71,10 +71,11 @@ class TestRestApi:
 
         calc = orm.CalcJobNode(computer=self.computer)
         calc.set_option('resources', resources)
+
+        calc.base.extras.set('extra1', False)
+        calc.base.extras.set('extra2', 'extra_info')
         calc.base.attributes.set('attr1', 'OK')
         calc.base.attributes.set('attr2', 'OK')
-        calc.set_extra('extra1', False)
-        calc.set_extra('extra2', 'extra_info')
 
         calc.add_incoming(structure, link_type=LinkType.INPUT_CALC, link_label='link_structure')
         calc.add_incoming(parameter1, link_type=LinkType.INPUT_CALC, link_label='link_parameter')

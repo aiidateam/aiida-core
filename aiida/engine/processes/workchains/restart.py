@@ -185,9 +185,9 @@ class BaseRestartWorkChain(WorkChain):
         # Add a new empty list to the `BaseRestartWorkChain._considered_handlers_extra` extra. This will contain the
         # name and return value of all class methods, decorated with `process_handler`, that are called during
         # the `inspect_process` outline step.
-        considered_handlers = self.node.get_extra(self._considered_handlers_extra, [])
+        considered_handlers = self.node.base.extras.get(self._considered_handlers_extra, [])
         considered_handlers.append([])
-        self.node.set_extra(self._considered_handlers_extra, considered_handlers)
+        self.node.base.extras.set(self._considered_handlers_extra, considered_handlers)
 
         self.report(f'launching {self.ctx.process_name}<{node.pk}> iteration #{self.ctx.iteration}')
 

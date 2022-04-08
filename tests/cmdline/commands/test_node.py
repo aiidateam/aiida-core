@@ -46,7 +46,7 @@ class TestVerdiNode:
         self.EXTRA_KEY_TWO = 'y'
         self.EXTRA_VAL_TWO = 'other'
 
-        node.set_extra_many({self.EXTRA_KEY_ONE: self.EXTRA_VAL_ONE, self.EXTRA_KEY_TWO: self.EXTRA_VAL_TWO})
+        node.base.extras.set_many({self.EXTRA_KEY_ONE: self.EXTRA_VAL_ONE, self.EXTRA_KEY_TWO: self.EXTRA_VAL_TWO})
 
         node.store()
         self.node = node

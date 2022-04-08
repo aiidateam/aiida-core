@@ -200,15 +200,15 @@ def validate_cached(cached_calcs):
             print_report(calc.pk)
             valid = False
 
-        if '_aiida_cached_from' not in calc.extras or calc.get_hash() != calc.get_extra('_aiida_hash'):
+        if '_aiida_cached_from' not in calc.base.extras or calc.get_hash() != calc.base.extras.get('_aiida_hash'):
             print(f'Cached calculation<{calc.pk}> has invalid hash')
             print_report(calc.pk)
             valid = False
 
         if isinstance(calc, CalcJobNode):
-            original_calc = load_node(calc.get_extra('_aiida_cached_from'))
-            files_original = original_calc.list_object_names()
-            files_cached = calc.list_object_names()
+            original_calc = load_node(calc.base.extras.get('_aiida_cached_from'))
+            files_original = original_calc.base.repository.list_object_names()
+            files_cached = calc.base.repository.list_object_names()
 
             if not files_cached:
                 print(f'Cached calculation <{calc.pk}> does not have any raw inputs files')

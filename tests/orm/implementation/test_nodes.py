@@ -18,6 +18,7 @@ import pytest
 import pytz
 
 from aiida.common import exceptions, timezone
+from aiida.orm.implementation.nodes import BackendNode
 
 
 class TestBackendNode:
@@ -41,7 +42,7 @@ class TestBackendNode:
             description=self.node_description
         )
 
-    def create_node(self):
+    def create_node(self) -> BackendNode:
         return self.backend.nodes.create(node_type=self.node_type, user=self.user)
 
     def test_creation(self):

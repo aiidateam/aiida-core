@@ -9,14 +9,16 @@
 ###########################################################################
 """AiiDA Group entites"""
 from abc import ABCMeta
-from typing import TYPE_CHECKING, ClassVar, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
+from functools import cached_property
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
 import warnings
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
+from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
-from . import convert, entities, users
+from . import convert, entities, extras, users
 
 if TYPE_CHECKING:
     from aiida.orm import Node, User
@@ -109,7 +111,20 @@ class GroupCollection(entities.Collection['Group']):
         self._backend.groups.delete(pk)
 
 
-class Group(entities.Entity['BackendGroup'], entities.EntityExtrasMixin, metaclass=GroupMeta):
+class GroupBase:
+    """A namespace for group related functionality, that is not directly related to its user-facing properties."""
+
+    def __init__(self, group: 'Group') -> None:
+        """Construct a new instance of the base namespace."""
+        self._group: 'Group' = group
+
+    @cached_property
+    def extras(self) -> extras.EntityExtras:
+        """Return the extras of this group."""
+        return extras.EntityExtras(self._group)
+
+
+class Group(entities.Entity['BackendGroup'], metaclass=GroupMeta):
     """An AiiDA ORM implementation of group of nodes."""
 
     # added by metaclass
@@ -152,6 +167,11 @@ class Group(entities.Entity['BackendGroup'], entities.EntityExtrasMixin, metacla
             label=label, user=user.backend_entity, description=description, type_string=type_string
         )
         super().__init__(model)
+
+    @cached_property
+    def base(self) -> GroupBase:
+        """Return the group base namespace."""
+        return GroupBase(self)
 
     def __repr__(self) -> str:
         return (
@@ -317,6 +337,36 @@ class Group(entities.Entity['BackendGroup'], entities.EntityExtrasMixin, metacla
         :return: True if the group is user defined, False otherwise
         """
         return not self.type_string
+
+    _deprecated_extra_methods = {
+        'extras': 'all',
+        'get_extra': 'get',
+        'get_extra_many': 'get_many',
+        'set_extra': 'set',
+        'set_extra_many': 'set_many',
+        'reset_extras': 'reset',
+        'delete_extra': 'delete',
+        'delete_extra_many': 'delete_many',
+        'clear_extras': 'clear',
+        'extras_items': 'items',
+        'extras_keys': 'keys',
+    }
+
+    def __getattr__(self, name: str) -> Any:
+        """
+        This method is called when an extras is not found in the instance.
+
+        It allows for the handling of deprecated mixin methods.
+        """
+        if name in self._deprecated_extra_methods:
+            new_name = self._deprecated_extra_methods[name]
+            kls = self.__class__.__name__
+            warn_deprecation(
+                f'`{kls}.{name}` is deprecated, use `{kls}.base.extras.{new_name}` instead.', version=3, stacklevel=3
+            )
+            return getattr(self.base.extras, new_name)
+
+        raise AttributeError(name)
 
 
 class AutoGroup(Group):

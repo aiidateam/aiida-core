@@ -18,6 +18,7 @@ from .authinfos import *
 from .comments import *
 from .computers import *
 from .entities import *
+from .extras import *
 from .groups import *
 from .logs import *
 from .nodes import *
@@ -51,7 +52,7 @@ __all__ = (
     'Data',
     'Dict',
     'Entity',
-    'EntityExtrasMixin',
+    'EntityExtras',
     'EntityTypes',
     'EnumData',
     'Float',

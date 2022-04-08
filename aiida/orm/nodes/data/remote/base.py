@@ -176,7 +176,7 @@ class RemoteData(Data):
                 )
             clean_remote(transport, remote_dir)
 
-        self.set_extra(self.KEY_EXTRA_CLEANED, True)
+        self.base.extras.set(self.KEY_EXTRA_CLEANED, True)
 
     def _validate(self):
         from aiida.common.exceptions import ValidationError

@@ -500,7 +500,7 @@ You can also traverse directly through the nodes of a path, optionally filtering
 
     In [17]: from aiida.orm import Data
     In [18]: data = Data()
-    In [19]: data.set_extra("key", "value")
+    In [19]: data.base.extras.set("key", "value")
     In [20]: data.store()
     Out[20]: <Data: uuid: 0adb5224-585d-4fd4-99ae-20a071972ddd (pk: 1)>
     In [21]: path["base1/sub_group1"].get_group().add_nodes(data)
@@ -574,7 +574,7 @@ A subset of data in AiiDA is mutable also after storing a node, and is used as a
 This data can be safely deleted at any time.
 This includes, notably:
 
-* *Node extras*: These can be deleted using :py:meth:`~aiida.orm.entities.EntityExtrasMixin.delete_extra` and :py:meth:`~aiida.orm.entities.EntityExtrasMixin.delete_extra_many` methods.
+* *Node extras*: These can be deleted using :py:attr:`Node.base.extras <aiida.orm.extras.EntityExtras>`.
 * *Node comments*: These can be removed using :py:attr:`Node.base.comments <aiida.orm.nodes.node.NodeComments>`.
 * *Groups*: These can be deleted using :py:meth:`Group.objects.delete() <aiida.orm.groups.GroupCollection.delete>`.
   This command will only delete the group, not the nodes contained in the group.

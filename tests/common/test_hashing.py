@@ -244,7 +244,7 @@ class TestCheckDBRoundTrip:
         for val in test_data:
             node = Dict(dict={'data': val})
             node.store()
-            first_hash = node.get_extra('_aiida_hash')
+            first_hash = node.base.extras.get('_aiida_hash')
             recomputed_hash = node.get_hash()
 
             assert first_hash == recomputed_hash

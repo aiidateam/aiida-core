@@ -209,14 +209,14 @@ class TestProcess:
         with enable_caching():
             _, node1 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(False))
             _, node2 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(False))
-            assert node1.get_extra('_aiida_hash') == node2.get_extra('_aiida_hash')
-            assert '_aiida_cached_from' in node2.extras
+            assert node1.base.extras.get('_aiida_hash') == node2.base.extras.get('_aiida_hash')
+            assert '_aiida_cached_from' in node2.base.extras
 
         with enable_caching():
             _, node3 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(True))
             _, node4 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(True))
-            assert node3.get_extra('_aiida_hash') == node4.get_extra('_aiida_hash')
-            assert '_aiida_cached_from' not in node4.extras
+            assert node3.base.extras.get('_aiida_hash') == node4.base.extras.get('_aiida_hash')
+            assert '_aiida_cached_from' not in node4.base.extras
 
     def test_valid_cache_hook(self):
         """
@@ -227,14 +227,14 @@ class TestProcess:
         with enable_caching():
             _, node1 = run_get_node(test_processes.IsValidCacheHook)
             _, node2 = run_get_node(test_processes.IsValidCacheHook)
-            assert node1.get_extra('_aiida_hash') == node2.get_extra('_aiida_hash')
-            assert '_aiida_cached_from' in node2.extras
+            assert node1.base.extras.get('_aiida_hash') == node2.base.extras.get('_aiida_hash')
+            assert '_aiida_cached_from' in node2.base.extras
 
         with enable_caching():
             _, node3 = run_get_node(test_processes.IsValidCacheHook, not_valid_cache=orm.Bool(True))
             _, node4 = run_get_node(test_processes.IsValidCacheHook, not_valid_cache=orm.Bool(True))
-            assert node3.get_extra('_aiida_hash') == node4.get_extra('_aiida_hash')
-            assert '_aiida_cached_from' not in node4.extras
+            assert node3.base.extras.get('_aiida_hash') == node4.base.extras.get('_aiida_hash')
+            assert '_aiida_cached_from' not in node4.base.extras
 
     def test_process_type_with_entry_point(self):
         """For a process with a registered entry point, the process_type will be its formatted entry point string."""

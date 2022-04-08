@@ -121,7 +121,7 @@ def process_handler(
 
         # Append the name and return value of the current process handler to the `considered_handlers` extra.
         try:
-            considered_handlers = instance.node.get_extra(instance._considered_handlers_extra, [])  # pylint: disable=protected-access
+            considered_handlers = instance.node.base.extras.get(instance._considered_handlers_extra, [])  # pylint: disable=protected-access
             current_process = considered_handlers[-1]
         except IndexError:
             # The extra was never initialized, so we skip this functionality
@@ -132,7 +132,7 @@ def process_handler(
             if isinstance(serialized, ProcessHandlerReport):
                 serialized = {'do_break': serialized.do_break, 'exit_status': serialized.exit_code.status}
             current_process.append((wrapped.__name__, serialized))
-            instance.node.set_extra(instance._considered_handlers_extra, considered_handlers)  # pylint: disable=protected-access
+            instance.node.base.extras.set(instance._considered_handlers_extra, considered_handlers)  # pylint: disable=protected-access
 
         return result
 

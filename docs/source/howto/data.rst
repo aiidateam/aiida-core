@@ -575,7 +575,7 @@ This data can be safely deleted at any time.
 This includes, notably:
 
 * *Node extras*: These can be deleted using :py:meth:`~aiida.orm.entities.EntityExtrasMixin.delete_extra` and :py:meth:`~aiida.orm.entities.EntityExtrasMixin.delete_extra_many` methods.
-* *Node comments*: These can be removed using :py:meth:`~aiida.orm.nodes.node.Node.remove_comment`.
+* *Node comments*: These can be removed using :py:attr:`Node.base.comments <aiida.orm.nodes.node.NodeComments>`.
 * *Groups*: These can be deleted using :py:meth:`Group.objects.delete() <aiida.orm.groups.GroupCollection.delete>`.
   This command will only delete the group, not the nodes contained in the group.
 

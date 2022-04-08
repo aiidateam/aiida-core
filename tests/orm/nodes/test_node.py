@@ -907,7 +907,7 @@ class TestNodeComments:
         """Test comment addition."""
         data = Data().store()
         content = 'whatever Trevor'
-        comment = data.add_comment(content)
+        comment = data.base.comments.add(content)
         assert comment.content == content
         assert comment.node.pk == data.pk
 
@@ -915,33 +915,33 @@ class TestNodeComments:
         """Test retrieve single comment."""
         data = Data().store()
         content = 'something something dark side'
-        add_comment = data.add_comment(content)
-        get_comment = data.get_comment(add_comment.pk)
+        add_comment = data.base.comments.add(content)
+        get_comment = data.base.comments.get(add_comment.pk)
         assert get_comment.content == content
         assert get_comment.pk == add_comment.pk
 
     def test_get_comments(self):
         """Test retrieve multiple comments."""
         data = Data().store()
-        data.add_comment('one')
-        data.add_comment('two')
-        comments = data.get_comments()
+        data.base.comments.add('one')
+        data.base.comments.add('two')
+        comments = data.base.comments.all()
         assert {c.content for c in comments} == {'one', 'two'}
 
     def test_update_comment(self):
         """Test update a comment."""
         data = Data().store()
-        comment = data.add_comment('original')
-        data.update_comment(comment.pk, 'new')
+        comment = data.base.comments.add('original')
+        data.base.comments.update(comment.pk, 'new')
         assert comment.content == 'new'
 
     def test_remove_comment(self):
         """Test remove a comment."""
         data = Data().store()
-        comment = data.add_comment('original')
-        assert len(data.get_comments()) == 1
-        data.remove_comment(comment.pk)
-        assert len(data.get_comments()) == 0
+        comment = data.base.comments.add('original')
+        assert len(data.base.comments.all()) == 1
+        data.base.comments.remove(comment.pk)
+        assert len(data.base.comments.all()) == 0
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

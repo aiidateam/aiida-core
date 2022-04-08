@@ -437,7 +437,7 @@ class TestVerdiUserCommand:
 
     def test_comment_show(self):
         """Test showing an existing comment."""
-        self.node.add_comment(COMMENT)
+        self.node.base.comments.add(COMMENT)
 
         options = [str(self.node.pk)]
         result = self.cli_runner(cmd_node.comment_show, options, catch_exceptions=False)
@@ -450,20 +450,20 @@ class TestVerdiUserCommand:
         result = self.cli_runner(cmd_node.comment_add, options, catch_exceptions=False)
         assert result.exit_code == 0
 
-        comment = self.node.get_comments()
+        comment = self.node.base.comments.all()
         assert len(comment) == 1
         assert comment[0].content == COMMENT
 
     def test_comment_remove(self):
         """Test removing a comment."""
-        comment = self.node.add_comment(COMMENT)
+        comment = self.node.base.comments.add(COMMENT)
 
-        assert len(self.node.get_comments()) == 1
+        assert len(self.node.base.comments.all()) == 1
 
         options = [str(comment.pk), '--force']
         result = self.cli_runner(cmd_node.comment_remove, options, catch_exceptions=False)
         assert result.exit_code == 0, result.output
-        assert len(self.node.get_comments()) == 0
+        assert len(self.node.base.comments.all()) == 0
 
 
 class TestVerdiRehash:

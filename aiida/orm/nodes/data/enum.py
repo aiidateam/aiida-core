@@ -60,24 +60,24 @@ class EnumData(Data):
             self.KEY_IDENTIFIER: get_object_loader().identify_object(member.__class__)
         }
 
-        self.set_attribute_many(data)
+        self.base.attributes.set_many(data)
 
     @property
     def name(self) -> str:
         """Return the name of the enum member."""
-        return self.get_attribute(self.KEY_NAME)
+        return self.base.attributes.get(self.KEY_NAME)
 
     @property
     def value(self) -> t.Any:
         """Return the value of the enum member."""
-        return self.get_attribute(self.KEY_VALUE)
+        return self.base.attributes.get(self.KEY_VALUE)
 
     def get_enum(self) -> t.Type[EnumType]:
         """Return the enum class reconstructed from the serialized identifier stored in the database.
 
         :raises `ImportError`: if the enum class represented by the stored identifier cannot be imported.
         """
-        identifier = self.get_attribute(self.KEY_IDENTIFIER)
+        identifier = self.base.attributes.get(self.KEY_IDENTIFIER)
         try:
             return get_object_loader().load_object(identifier)
         except ValueError as exc:
@@ -93,7 +93,7 @@ class EnumData(Data):
         :raises `ImportError`: if the enum class represented by the stored identifier cannot be imported.
         :raises `ValueError`: if the stored enum member value is no longer valid for the imported enum class.
         """
-        value = self.get_attribute(self.KEY_VALUE)
+        value = self.base.attributes.get(self.KEY_VALUE)
         enum: t.Type[EnumType] = self.get_enum()
 
         try:
@@ -112,6 +112,6 @@ class EnumData(Data):
             except (ImportError, ValueError):
                 return False
         elif isinstance(other, EnumData):
-            return self.attributes == other.attributes
+            return self.base.attributes.all == other.base.attributes.all
 
         return False

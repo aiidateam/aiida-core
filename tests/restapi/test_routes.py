@@ -47,8 +47,8 @@ class TestRestApi:
         structure = orm.StructureData(cell=cell)
         structure.append_atom(position=(0., 0., 0.), symbols=['Ba'])
         structure.store()
-        structure.add_comment('This is test comment.')
-        structure.add_comment('Add another comment.')
+        structure.base.comments.add('This is test comment.')
+        structure.base.comments.add('Add another comment.')
 
         cif = orm.CifData(ase=structure.get_ase())
         cif.store()
@@ -71,10 +71,11 @@ class TestRestApi:
 
         calc = orm.CalcJobNode(computer=self.computer)
         calc.set_option('resources', resources)
-        calc.set_attribute('attr1', 'OK')
-        calc.set_attribute('attr2', 'OK')
+
         calc.base.extras.set('extra1', False)
         calc.base.extras.set('extra2', 'extra_info')
+        calc.base.attributes.set('attr1', 'OK')
+        calc.base.attributes.set('attr2', 'OK')
 
         calc.add_incoming(structure, link_type=LinkType.INPUT_CALC, link_label='link_structure')
         calc.add_incoming(parameter1, link_type=LinkType.INPUT_CALC, link_label='link_parameter')

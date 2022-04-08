@@ -63,12 +63,12 @@ class Dict(Data):
 
     def __getitem__(self, key):
         try:
-            return self.get_attribute(key)
+            return self.base.attributes.get(key)
         except AttributeError as exc:
             raise KeyError from exc
 
     def __setitem__(self, key, value):
-        self.set_attribute(key, value)
+        self.base.attributes.set(key, value)
 
     def __eq__(self, other):
         if isinstance(other, Dict):
@@ -77,7 +77,7 @@ class Dict(Data):
 
     def __contains__(self, key: str) -> bool:
         """Return whether the node contains a key."""
-        return key in self.attributes
+        return key in self.base.attributes
 
     def set_dict(self, dictionary):
         """Replace the current dictionary with another one.
@@ -88,14 +88,14 @@ class Dict(Data):
 
         try:
             # Clear existing attributes and set the new dictionary
-            self.clear_attributes()
+            self.base.attributes.clear()
             self.update_dict(dictionary)
         except exceptions.ModificationNotAllowed:  # pylint: disable=try-except-raise
             # I reraise here to avoid to go in the generic 'except' below that would raise the same exception again
             raise
         except Exception:
             # Try to restore the old data
-            self.clear_attributes()
+            self.base.attributes.clear()
             self.update_dict(dictionary_backup)
             raise
 
@@ -107,26 +107,26 @@ class Dict(Data):
         :param dictionary: a dictionary with the keys to substitute
         """
         for key, value in dictionary.items():
-            self.set_attribute(key, value)
+            self.base.attributes.set(key, value)
 
     def get_dict(self):
         """Return a dictionary with the parameters currently set.
 
         :return: dictionary
         """
-        return dict(self.attributes)
+        return dict(self.base.attributes.all)
 
     def keys(self):
         """Iterator of valid keys stored in the Dict object.
 
         :return: iterator over the keys of the current dictionary
         """
-        for key in self.attributes.keys():
+        for key in self.base.attributes.keys():
             yield key
 
     def items(self):
         """Iterator of all items stored in the Dict node."""
-        for key, value in self.attributes_items():
+        for key, value in self.base.attributes.items():
             yield key, value
 
     @property

@@ -125,7 +125,7 @@ class CalcJobNode(CalculationNode):
             import_module(self.__module__.split('.', 1)[0]).__version__,
             {
                 key: val
-                for key, val in self.attributes_items()
+                for key, val in self.base.attributes.items()
                 if key not in self._hash_ignored_attributes and key not in self._updatable_attributes  # pylint: disable=unsupported-membership-test
             },
             self.computer.uuid if self.computer is not None else None,  # pylint: disable=no-member
@@ -155,7 +155,7 @@ class CalcJobNode(CalculationNode):
     @property
     def is_imported(self) -> bool:
         """Return whether the calculation job was imported instead of being an actual run."""
-        return self.get_attribute(self.IMMIGRATED_KEY, None) is True
+        return self.base.attributes.get(self.IMMIGRATED_KEY, None) is True
 
     def get_option(self, name: str) -> Optional[Any]:
         """
@@ -165,7 +165,7 @@ class CalcJobNode(CalculationNode):
         :return: the option value or None
         :raises: ValueError for unknown option
         """
-        return self.get_attribute(name, None)
+        return self.base.attributes.get(name, None)
 
     def set_option(self, name: str, value: Any) -> None:
         """
@@ -176,7 +176,7 @@ class CalcJobNode(CalculationNode):
         :raises: ValueError for unknown option
         :raises: TypeError for values with invalid type
         """
-        self.set_attribute(name, value)
+        self.base.attributes.set(name, value)
 
     def get_options(self) -> Dict[str, Any]:
         """
@@ -211,7 +211,7 @@ class CalcJobNode(CalculationNode):
 
         :return: instance of `aiida.common.datastructures.CalcJobState` or `None` if invalid value, or not set
         """
-        state = self.get_attribute(self.CALC_JOB_STATE_KEY, None)
+        state = self.base.attributes.get(self.CALC_JOB_STATE_KEY, None)
 
         try:
             state = CalcJobState(state)
@@ -228,12 +228,12 @@ class CalcJobNode(CalculationNode):
         if not isinstance(state, CalcJobState):
             raise ValueError(f'{state} is not a valid CalcJobState')
 
-        self.set_attribute(self.CALC_JOB_STATE_KEY, state.value)
+        self.base.attributes.set(self.CALC_JOB_STATE_KEY, state.value)
 
     def delete_state(self) -> None:
         """Delete the calculation job state attribute if it exists."""
         try:
-            self.delete_attribute(self.CALC_JOB_STATE_KEY)
+            self.base.attributes.delete(self.CALC_JOB_STATE_KEY)
         except AttributeError:
             pass
 
@@ -242,14 +242,14 @@ class CalcJobNode(CalculationNode):
 
         :param remote_workdir: absolute filepath to the remote working directory
         """
-        self.set_attribute(self.REMOTE_WORKDIR_KEY, remote_workdir)
+        self.base.attributes.set(self.REMOTE_WORKDIR_KEY, remote_workdir)
 
     def get_remote_workdir(self) -> Optional[str]:
         """Return the path to the remote (on cluster) scratch folder of the calculation.
 
         :return: a string with the remote path
         """
-        return self.get_attribute(self.REMOTE_WORKDIR_KEY, None)
+        return self.base.attributes.get(self.REMOTE_WORKDIR_KEY, None)
 
     @staticmethod
     def _validate_retrieval_directive(directives: Sequence[Union[str, Tuple[str, str, str]]]) -> None:
@@ -289,14 +289,14 @@ class CalcJobNode(CalculationNode):
         :param retrieve_list: list or tuple of with filepath directives
         """
         self._validate_retrieval_directive(retrieve_list)
-        self.set_attribute(self.RETRIEVE_LIST_KEY, retrieve_list)
+        self.base.attributes.set(self.RETRIEVE_LIST_KEY, retrieve_list)
 
     def get_retrieve_list(self) -> Optional[Sequence[Union[str, Tuple[str, str, str]]]]:
         """Return the list of files/directories to be retrieved on the cluster after the calculation has completed.
 
         :return: a list of file directives
         """
-        return self.get_attribute(self.RETRIEVE_LIST_KEY, None)
+        return self.base.attributes.get(self.RETRIEVE_LIST_KEY, None)
 
     def set_retrieve_temporary_list(self, retrieve_temporary_list: Sequence[Union[str, Tuple[str, str, str]]]) -> None:
         """Set the retrieve temporary list.
@@ -307,14 +307,14 @@ class CalcJobNode(CalculationNode):
         :param retrieve_temporary_list: list or tuple of with filepath directives
         """
         self._validate_retrieval_directive(retrieve_temporary_list)
-        self.set_attribute(self.RETRIEVE_TEMPORARY_LIST_KEY, retrieve_temporary_list)
+        self.base.attributes.set(self.RETRIEVE_TEMPORARY_LIST_KEY, retrieve_temporary_list)
 
     def get_retrieve_temporary_list(self) -> Optional[Sequence[Union[str, Tuple[str, str, str]]]]:
         """Return list of files to be retrieved from the cluster which will be available during parsing.
 
         :return: a list of file directives
         """
-        return self.get_attribute(self.RETRIEVE_TEMPORARY_LIST_KEY, None)
+        return self.base.attributes.get(self.RETRIEVE_TEMPORARY_LIST_KEY, None)
 
     def set_job_id(self, job_id: Union[int, str]) -> None:
         """Set the job id that was assigned to the calculation by the scheduler.
@@ -323,14 +323,14 @@ class CalcJobNode(CalculationNode):
 
         :param job_id: the id assigned by the scheduler after submission
         """
-        return self.set_attribute(self.SCHEDULER_JOB_ID_KEY, str(job_id))
+        return self.base.attributes.set(self.SCHEDULER_JOB_ID_KEY, str(job_id))
 
     def get_job_id(self) -> Optional[str]:
         """Return job id that was assigned to the calculation by the scheduler.
 
         :return: the string representation of the scheduler job id
         """
-        return self.get_attribute(self.SCHEDULER_JOB_ID_KEY, None)
+        return self.base.attributes.get(self.SCHEDULER_JOB_ID_KEY, None)
 
     def set_scheduler_state(self, state: 'JobState') -> None:
         """Set the scheduler state.
@@ -343,8 +343,8 @@ class CalcJobNode(CalculationNode):
         if not isinstance(state, JobState):
             raise ValueError(f'scheduler state should be an instance of JobState, got: {state}')
 
-        self.set_attribute(self.SCHEDULER_STATE_KEY, state.value)
-        self.set_attribute(self.SCHEDULER_LAST_CHECK_TIME_KEY, timezone.datetime_to_isoformat(timezone.now()))
+        self.base.attributes.set(self.SCHEDULER_STATE_KEY, state.value)
+        self.base.attributes.set(self.SCHEDULER_LAST_CHECK_TIME_KEY, timezone.datetime_to_isoformat(timezone.now()))
 
     def get_scheduler_state(self) -> Optional['JobState']:
         """Return the status of the calculation according to the cluster scheduler.
@@ -353,7 +353,7 @@ class CalcJobNode(CalculationNode):
         """
         from aiida.schedulers.datastructures import JobState
 
-        state = self.get_attribute(self.SCHEDULER_STATE_KEY, None)
+        state = self.base.attributes.get(self.SCHEDULER_STATE_KEY, None)
 
         if state is None:
             return state
@@ -366,7 +366,7 @@ class CalcJobNode(CalculationNode):
         :return: a datetime object or None
         """
         from aiida.common import timezone
-        value = self.get_attribute(self.SCHEDULER_LAST_CHECK_TIME_KEY, None)
+        value = self.base.attributes.get(self.SCHEDULER_LAST_CHECK_TIME_KEY, None)
 
         if value is not None:
             value = timezone.isoformat_to_datetime(value)
@@ -378,7 +378,7 @@ class CalcJobNode(CalculationNode):
 
         :param detailed_job_info: a dictionary with metadata with the accounting of a completed job
         """
-        self.set_attribute(self.SCHEDULER_DETAILED_JOB_INFO_KEY, detailed_job_info)
+        self.base.attributes.set(self.SCHEDULER_DETAILED_JOB_INFO_KEY, detailed_job_info)
 
     def get_detailed_job_info(self) -> Optional[dict]:
         """Return the detailed job info dictionary.
@@ -387,14 +387,14 @@ class CalcJobNode(CalculationNode):
 
         :return: the dictionary with detailed job info if defined or None
         """
-        return self.get_attribute(self.SCHEDULER_DETAILED_JOB_INFO_KEY, None)
+        return self.base.attributes.get(self.SCHEDULER_DETAILED_JOB_INFO_KEY, None)
 
     def set_last_job_info(self, last_job_info: 'JobInfo') -> None:
         """Set the last job info.
 
         :param last_job_info: a `JobInfo` object
         """
-        self.set_attribute(self.SCHEDULER_LAST_JOB_INFO_KEY, last_job_info.get_dict())
+        self.base.attributes.set(self.SCHEDULER_LAST_JOB_INFO_KEY, last_job_info.get_dict())
 
     def get_last_job_info(self) -> Optional['JobInfo']:
         """Return the last information asked to the scheduler about the status of the job.
@@ -409,7 +409,7 @@ class CalcJobNode(CalculationNode):
         """
         from aiida.schedulers.datastructures import JobInfo
 
-        last_job_info_dictserialized = self.get_attribute(self.SCHEDULER_LAST_JOB_INFO_KEY, None)
+        last_job_info_dictserialized = self.base.attributes.get(self.SCHEDULER_LAST_JOB_INFO_KEY, None)
 
         if last_job_info_dictserialized is not None:
             job_info = JobInfo.load_from_dict(last_job_info_dictserialized)

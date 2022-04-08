@@ -137,7 +137,7 @@ class TestProcessFunction:
 
         # Since the "plugin" i.e. the process function is defined in `aiida-core` the `version.plugin` is the same as
         # the version of `aiida-core` itself
-        version_info = node.get_attribute('version')
+        version_info = node.base.attributes.get('version')
         assert version_info['core'] == version_core
         assert version_info['plugin'] == version_core
 

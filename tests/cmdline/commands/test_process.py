@@ -54,7 +54,7 @@ class TestVerdiProcess:
                 calc.set_exit_status(0)
 
             # Give a `process_label` to the `WorkFunctionNodes` so the `--process-label` option can be tested
-            calc.set_attribute('process_label', self.process_label)
+            calc.base.attributes.set('process_label', self.process_label)
 
             calc.store()
             self.calcs.append(calc)
@@ -184,7 +184,7 @@ class TestVerdiProcess:
         workchain_two = WorkChainNode()
         workchains = [workchain_one, workchain_two]
 
-        workchain_two.set_attribute('process_label', 'workchain_one_caller')
+        workchain_two.base.attributes.set('process_label', 'workchain_one_caller')
         workchain_two.store()
         workchain_one.add_incoming(workchain_two, link_type=LinkType.CALL_WORK, link_label='called')
         workchain_one.store()
@@ -192,8 +192,8 @@ class TestVerdiProcess:
         calcjob_one = CalcJobNode()
         calcjob_two = CalcJobNode()
 
-        calcjob_one.set_attribute('process_label', 'process_label_one')
-        calcjob_two.set_attribute('process_label', 'process_label_two')
+        calcjob_one.base.attributes.set('process_label', 'process_label_one')
+        calcjob_two.base.attributes.set('process_label', 'process_label_two')
 
         calcjob_one.add_incoming(workchain_one, link_type=LinkType.CALL_CALC, link_label='one')
         calcjob_two.add_incoming(workchain_one, link_type=LinkType.CALL_CALC, link_label='two')

@@ -314,8 +314,8 @@ class UpfData(SinglefileData):
         except KeyError:
             raise ParsingError(f'Could not parse the element from the UPF file {self.filename}')
 
-        self.set_attribute('element', str(element))
-        self.set_attribute('md5', md5)
+        self.base.attributes.set('element', str(element))
+        self.base.attributes.set('md5', md5)
 
         return super().store(*args, **kwargs)
 
@@ -358,8 +358,8 @@ class UpfData(SinglefileData):
 
         super().set_file(file, filename=filename)
 
-        self.set_attribute('element', str(element))
-        self.set_attribute('md5', md5sum)
+        self.base.attributes.set('element', str(element))
+        self.base.attributes.set('md5', md5sum)
 
     def get_upf_family_names(self):
         """Get the list of all upf family names to which the pseudo belongs."""
@@ -376,7 +376,7 @@ class UpfData(SinglefileData):
 
         :return: the element
         """
-        return self.get_attribute('element', None)
+        return self.base.attributes.get('element', None)
 
     @property
     def md5sum(self):
@@ -384,7 +384,7 @@ class UpfData(SinglefileData):
 
         :return: the md5 checksum
         """
-        return self.get_attribute('md5', None)
+        return self.base.attributes.get('md5', None)
 
     def _validate(self):
         """Validate the UPF potential file stored for this node."""
@@ -411,12 +411,12 @@ class UpfData(SinglefileData):
             raise ValidationError(f"No 'element' could be parsed in the UPF {self.filename}")
 
         try:
-            attr_element = self.get_attribute('element')
+            attr_element = self.base.attributes.get('element')
         except AttributeError:
             raise ValidationError("attribute 'element' not set.")
 
         try:
-            attr_md5 = self.get_attribute('md5')
+            attr_md5 = self.base.attributes.get('md5')
         except AttributeError:
             raise ValidationError("attribute 'md5' not set.")
 

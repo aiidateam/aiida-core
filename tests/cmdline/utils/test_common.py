@@ -22,7 +22,7 @@ def test_get_node_summary(aiida_local_code_factory):
     code = aiida_local_code_factory(entry_point='core.arithmetic.add', executable='/bin/bash')
     node = CalculationNode()
     node.computer = code.computer
-    node.add_incoming(code, link_type=LinkType.INPUT_CALC, link_label='code')
+    node.base.links.add_incoming(code, link_type=LinkType.INPUT_CALC, link_label='code')
     node.store()
 
     summary = common.get_node_summary(node)
@@ -41,8 +41,8 @@ def test_get_node_info_multiple_call_links():
     node_one = CalculationNode()
     node_two = CalculationNode()
 
-    node_one.add_incoming(workflow, link_type=LinkType.CALL_CALC, link_label='CALL_IDENTICAL')
-    node_two.add_incoming(workflow, link_type=LinkType.CALL_CALC, link_label='CALL_IDENTICAL')
+    node_one.base.links.add_incoming(workflow, link_type=LinkType.CALL_CALC, link_label='CALL_IDENTICAL')
+    node_two.base.links.add_incoming(workflow, link_type=LinkType.CALL_CALC, link_label='CALL_IDENTICAL')
     node_one.store()
     node_two.store()
 

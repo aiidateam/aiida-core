@@ -13,31 +13,15 @@ import datetime
 from functools import cached_property
 import importlib
 from logging import Logger
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    ClassVar,
-    Dict,
-    Generic,
-    Iterator,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Iterator, List, Optional, Tuple, Type, TypeVar
 from uuid import UUID
 
 from aiida.common import exceptions
-from aiida.common.escaping import sql_string_match
 from aiida.common.hashing import make_hash
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
-from aiida.orm.utils.links import LinkManager, LinkTriple
 from aiida.orm.utils.node import AbstractNodeMeta
 
 from ..comments import Comment
@@ -48,6 +32,7 @@ from ..extras import EntityExtras
 from ..querybuilder import QueryBuilder
 from ..users import User
 from .attributes import NodeAttributes
+from .links import NodeLinks
 from .repository import NodeRepository
 
 if TYPE_CHECKING:
@@ -75,10 +60,10 @@ class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
         if not node.is_stored:
             return
 
-        if node.get_incoming().all():
+        if node.base.links.get_incoming().all():
             raise exceptions.InvalidOperation(f'cannot delete Node<{node.pk}> because it has incoming links')
 
-        if node.get_outgoing().all():
+        if node.base.links.get_outgoing().all():
             raise exceptions.InvalidOperation(f'cannot delete Node<{node.pk}> because it has outgoing links')
 
         self._backend.nodes.delete(pk)
@@ -131,6 +116,11 @@ class NodeBase:
         """Return an interface to interact with the extras of this node."""
         return EntityExtras(self._node)
 
+    @cached_property
+    def links(self) -> 'NodeLinks':
+        """Return an interface to interact with the links of this node."""
+        return self._node._CLS_NODE_LINKS(self._node)  # pylint: disable=protected-access
+
 
 class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
     """
@@ -148,6 +138,8 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
     the 'type' field.
     """
     # pylint: disable=too-many-public-methods
+
+    _CLS_NODE_LINKS = NodeLinks
 
     # The keys in the extras that are used to store the hash of the node and whether it should be used in caching.
     _HASH_EXTRA_KEY: str = '_aiida_hash'
@@ -173,9 +165,6 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
     # Flag that determines whether the class can be stored.
     _storable = False
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
-
-    # These are to be initialized in the `initialization` method
-    _incoming_cache: Optional[List[LinkTriple]] = None
 
     Collection = NodeCollection
 
@@ -247,17 +236,6 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
     def __deepcopy__(self, memo):
         """Deep copying a Node is not supported in general, but only for the Data sub class."""
         raise exceptions.InvalidOperation('deep copying a base Node is not supported')
-
-    def initialize(self) -> None:
-        """
-        Initialize internal variables for the backend node
-
-        This needs to be called explicitly in each specific subclass implementation of the init.
-        """
-        super().initialize()
-
-        # A cache of incoming links represented as a list of LinkTriples instances
-        self._incoming_cache = []
 
     def _validate(self) -> bool:
         """Validate information stored in Node object.
@@ -423,221 +401,6 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
         """
         return self.backend_entity.mtime
 
-    def add_incoming(self, source: 'Node', link_type: LinkType, link_label: str) -> None:
-        """Add a link of the given type from a given node to ourself.
-
-        :param source: the node from which the link is coming
-        :param link_type: the link type
-        :param link_label: the link label
-        :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
-        :raise ValueError: if the proposed link is invalid
-        """
-        self.validate_incoming(source, link_type, link_label)
-        source.validate_outgoing(self, link_type, link_label)
-
-        if self.is_stored and source.is_stored:
-            self.backend_entity.add_incoming(source.backend_entity, link_type, link_label)
-        else:
-            self._add_incoming_cache(source, link_type, link_label)
-
-    def validate_incoming(self, source: 'Node', link_type: LinkType, link_label: str) -> None:
-        """Validate adding a link of the given type from a given node to ourself.
-
-        This function will first validate the types of the inputs, followed by the node and link types and validate
-        whether in principle a link of that type between the nodes of these types is allowed.
-
-        Subsequently, the validity of the "degree" of the proposed link is validated, which means validating the
-        number of links of the given type from the given node type is allowed.
-
-        :param source: the node from which the link is coming
-        :param link_type: the link type
-        :param link_label: the link label
-        :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
-        :raise ValueError: if the proposed link is invalid
-        """
-        from aiida.orm.utils.links import validate_link
-
-        validate_link(source, self, link_type, link_label, backend=self.backend)
-
-        # Check if the proposed link would introduce a cycle in the graph following ancestor/descendant rules
-        if link_type in [LinkType.CREATE, LinkType.INPUT_CALC, LinkType.INPUT_WORK]:
-            builder = QueryBuilder(backend=self.backend).append(
-                Node, filters={'id': self.pk}, tag='parent').append(
-                Node, filters={'id': source.pk}, tag='child', with_ancestors='parent')  # yapf:disable
-            if builder.count() > 0:
-                raise ValueError('the link you are attempting to create would generate a cycle in the graph')
-
-    def validate_outgoing(self, target: 'Node', link_type: LinkType, link_label: str) -> None:  # pylint: disable=unused-argument,no-self-use
-        """Validate adding a link of the given type from ourself to a given node.
-
-        The validity of the triple (source, link, target) should be validated in the `validate_incoming` call.
-        This method will be called afterwards and can be overriden by subclasses to add additional checks that are
-        specific to that subclass.
-
-        :param target: the node to which the link is going
-        :param link_type: the link type
-        :param link_label: the link label
-        :raise TypeError: if `target` is not a Node instance or `link_type` is not a `LinkType` enum
-        :raise ValueError: if the proposed link is invalid
-        """
-        type_check(link_type, LinkType, f'link_type should be a LinkType enum but got: {type(link_type)}')
-        type_check(target, Node, f'target should be a `Node` instance but got: {type(target)}')
-
-    def _add_incoming_cache(self, source: 'Node', link_type: LinkType, link_label: str) -> None:
-        """Add an incoming link to the cache.
-
-        .. note: the proposed link is not validated in this function, so this should not be called directly
-            but it should only be called by `Node.add_incoming`.
-
-        :param source: the node from which the link is coming
-        :param link_type: the link type
-        :param link_label: the link label
-        :raise aiida.common.UniquenessError: if the given link triple already exists in the cache
-        """
-        assert self._incoming_cache is not None, 'incoming_cache not initialised'
-
-        link_triple = LinkTriple(source, link_type, link_label)
-
-        if link_triple in self._incoming_cache:
-            raise exceptions.UniquenessError(f'the link triple {link_triple} is already present in the cache')
-
-        self._incoming_cache.append(link_triple)
-
-    def get_stored_link_triples(
-        self,
-        node_class: Type['Node'] = None,
-        link_type: Union[LinkType, Sequence[LinkType]] = (),
-        link_label_filter: Optional[str] = None,
-        link_direction: str = 'incoming',
-        only_uuid: bool = False
-    ) -> List[LinkTriple]:
-        """Return the list of stored link triples directly incoming to or outgoing of this node.
-
-        Note this will only return link triples that are stored in the database. Anything in the cache is ignored.
-
-        :param node_class: If specified, should be a class, and it filters only elements of that (subclass of) type
-        :param link_type: Only get inputs of this link type, if empty tuple then returns all inputs of all link types.
-        :param link_label_filter: filters the incoming nodes by its link label. This should be a regex statement as
-            one would pass directly to a QueryBuilder filter statement with the 'like' operation.
-        :param link_direction: `incoming` or `outgoing` to get the incoming or outgoing links, respectively.
-        :param only_uuid: project only the node UUID instead of the instance onto the `NodeTriple.node` entries
-        """
-        if not isinstance(link_type, tuple):
-            link_type = (link_type,)
-
-        if link_type and not all(isinstance(t, LinkType) for t in link_type):
-            raise TypeError(f'link_type should be a LinkType or tuple of LinkType: got {link_type}')
-
-        node_class = node_class or Node
-        node_filters: Dict[str, Any] = {'id': {'==': self.id}}
-        edge_filters: Dict[str, Any] = {}
-
-        if link_type:
-            edge_filters['type'] = {'in': [t.value for t in link_type]}
-
-        if link_label_filter:
-            edge_filters['label'] = {'like': link_label_filter}
-
-        builder = QueryBuilder(backend=self.backend)
-        builder.append(Node, filters=node_filters, tag='main')
-
-        node_project = ['uuid'] if only_uuid else ['*']
-        if link_direction == 'outgoing':
-            builder.append(
-                node_class,
-                with_incoming='main',
-                project=node_project,
-                edge_project=['type', 'label'],
-                edge_filters=edge_filters
-            )
-        else:
-            builder.append(
-                node_class,
-                with_outgoing='main',
-                project=node_project,
-                edge_project=['type', 'label'],
-                edge_filters=edge_filters
-            )
-
-        return [LinkTriple(entry[0], LinkType(entry[1]), entry[2]) for entry in builder.all()]
-
-    def get_incoming(
-        self,
-        node_class: Type['Node'] = None,
-        link_type: Union[LinkType, Sequence[LinkType]] = (),
-        link_label_filter: Optional[str] = None,
-        only_uuid: bool = False
-    ) -> LinkManager:
-        """Return a list of link triples that are (directly) incoming into this node.
-
-        :param node_class: If specified, should be a class or tuple of classes, and it filters only
-            elements of that specific type (or a subclass of 'type')
-        :param link_type: If specified should be a string or tuple to get the inputs of this
-            link type, if None then returns all inputs of all link types.
-        :param link_label_filter: filters the incoming nodes by its link label.
-            Here wildcards (% and _) can be passed in link label filter as we are using "like" in QB.
-        :param only_uuid: project only the node UUID instead of the instance onto the `NodeTriple.node` entries
-        """
-        assert self._incoming_cache is not None, 'incoming_cache not initialised'
-
-        if not isinstance(link_type, tuple):
-            link_type = (link_type,)
-
-        if self.is_stored:
-            link_triples = self.get_stored_link_triples(
-                node_class, link_type, link_label_filter, 'incoming', only_uuid=only_uuid
-            )
-        else:
-            link_triples = []
-
-        # Get all cached link triples
-        for link_triple in self._incoming_cache:
-
-            if only_uuid:
-                link_triple = LinkTriple(link_triple.node.uuid, link_triple.link_type, link_triple.link_label)
-
-            if link_triple in link_triples:
-                raise exceptions.InternalError(
-                    f'Node<{self.pk}> has both a stored and cached link triple {link_triple}'
-                )
-
-            if not link_type or link_triple.link_type in link_type:
-                if link_label_filter is not None:
-                    if sql_string_match(string=link_triple.link_label, pattern=link_label_filter):
-                        link_triples.append(link_triple)
-                else:
-                    link_triples.append(link_triple)
-
-        return LinkManager(link_triples)
-
-    def get_outgoing(
-        self,
-        node_class: Type['Node'] = None,
-        link_type: Union[LinkType, Sequence[LinkType]] = (),
-        link_label_filter: Optional[str] = None,
-        only_uuid: bool = False
-    ) -> LinkManager:
-        """Return a list of link triples that are (directly) outgoing of this node.
-
-        :param node_class: If specified, should be a class or tuple of classes, and it filters only
-            elements of that specific type (or a subclass of 'type')
-        :param link_type: If specified should be a string or tuple to get the inputs of this
-            link type, if None then returns all outputs of all link types.
-        :param link_label_filter: filters the outgoing nodes by its link label.
-            Here wildcards (% and _) can be passed in link label filter as we are using "like" in QB.
-        :param only_uuid: project only the node UUID instead of the instance onto the `NodeTriple.node` entries
-        """
-        link_triples = self.get_stored_link_triples(node_class, link_type, link_label_filter, 'outgoing', only_uuid)
-        return LinkManager(link_triples)
-
-    def has_cached_links(self) -> bool:
-        """Feturn whether there are unstored incoming links in the cache.
-
-        :return: boolean, True when there are links in the incoming cache, False otherwise
-        """
-        assert self._incoming_cache is not None, 'incoming_cache not initialised'
-        return bool(self._incoming_cache)
-
     def store_all(self, with_transaction: bool = True) -> 'Node':
         """Store the node, together with all input links.
 
@@ -645,16 +408,14 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
 
         :parameter with_transaction: if False, do not use a transaction because the caller will already have opened one.
         """
-        assert self._incoming_cache is not None, 'incoming_cache not initialised'
-
         if self.is_stored:
             raise exceptions.ModificationNotAllowed(f'Node<{self.id}> is already stored')
 
         # For each node of a cached incoming link, check that all its incoming links are stored
-        for link_triple in self._incoming_cache:
+        for link_triple in self.base.links.incoming_cache:
             link_triple.node.verify_are_parents_stored()
 
-        for link_triple in self._incoming_cache:
+        for link_triple in self.base.links.incoming_cache:
             if not link_triple.node.is_stored:
                 link_triple.node.store(with_transaction=with_transaction)
 
@@ -711,10 +472,10 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
         """
         self.base.repository._store()  # pylint: disable=protected-access
 
-        links = self._incoming_cache
+        links = self.base.links.incoming_cache
         self._backend_entity.store(links, with_transaction=with_transaction, clean=clean)
 
-        self._incoming_cache = []
+        self.base.links.incoming_cache = []
         self._backend_entity.set_extra(self._HASH_EXTRA_KEY, self.get_hash())
 
         return self
@@ -724,9 +485,7 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
 
         :raise aiida.common.ModificationNotAllowed: if one of the source nodes of incoming links is not stored.
         """
-        assert self._incoming_cache is not None, 'incoming_cache not initialised'
-
-        for link_triple in self._incoming_cache:
+        for link_triple in self.base.links.incoming_cache:
             if not link_triple.node.is_stored:
                 raise exceptions.ModificationNotAllowed(
                     f'Cannot store because source node of link triple {link_triple} is not stored'
@@ -747,7 +506,7 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
         assert self.node_type == cache_node.node_type
 
         # Make sure the node doesn't have any RETURN links
-        if cache_node.get_outgoing(link_type=LinkType.RETURN).all():
+        if cache_node.base.links.get_outgoing(link_type=LinkType.RETURN).all():
             raise ValueError('Cannot use cache from nodes with RETURN links.')
 
         self.label = cache_node.label
@@ -766,9 +525,9 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
 
     def _add_outputs_from_cache(self, cache_node: 'Node') -> None:
         """Replicate the output links and nodes from the cached node onto this node."""
-        for entry in cache_node.get_outgoing(link_type=LinkType.CREATE):
+        for entry in cache_node.base.links.get_outgoing(link_type=LinkType.CREATE):
             new_node = entry.node.clone()
-            new_node.add_incoming(self, link_type=LinkType.CREATE, link_label=entry.link_label)
+            new_node.base.links.add_incoming(self, link_type=LinkType.CREATE, link_label=entry.link_label)
             new_node.store()
 
     def get_hash(self, ignore_errors: bool = True, **kwargs: Any) -> Optional[str]:
@@ -969,9 +728,17 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
         'update_comment': 'update',
     }
 
+    _deprecated_links_methods = {
+        'add_incoming': 'add_incoming',
+        'validate_incoming': 'validate_incoming',
+        'validate_outgoing': 'validate_outgoing',
+        'get_stored_link_triples': 'get_stored_link_triples',
+        'get_incoming': 'get_incoming',
+        'get_outgoing': 'get_outgoing',
+    }
+
     def __getattr__(self, name: str) -> Any:
-        """
-        This method is called when an attribute is not found in the instance.
+        """This method is called when an attribute is not found in the instance.
 
         It allows for the handling of deprecated mixin methods.
         """
@@ -1010,6 +777,14 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
                 f'`{kls}.{name}` is deprecated, use `{kls}.base.comments.{new_name}` instead.', version=3, stacklevel=3
             )
             return getattr(self.base.comments, new_name)
+
+        if name in self._deprecated_links_methods:
+            new_name = self._deprecated_links_methods[name]
+            kls = self.__class__.__name__
+            warn_deprecation(
+                f'`{kls}.{name}` is deprecated, use `{kls}.base.links.{new_name}` instead.', version=3, stacklevel=3
+            )
+            return getattr(self.base.links, new_name)
 
         raise AttributeError(name)
 

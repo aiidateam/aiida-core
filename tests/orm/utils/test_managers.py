@@ -61,16 +61,16 @@ def test_link_manager(aiida_profile_clean):
 
     # Create calc with inputs
     calc = orm.CalculationNode()
-    calc.add_incoming(inp1, link_type=LinkType.INPUT_CALC, link_label='inp1label')
-    calc.add_incoming(inp2, link_type=LinkType.INPUT_CALC, link_label='inp2label')
+    calc.base.links.add_incoming(inp1, link_type=LinkType.INPUT_CALC, link_label='inp1label')
+    calc.base.links.add_incoming(inp2, link_type=LinkType.INPUT_CALC, link_label='inp2label')
     calc.store()
 
     # Attach outputs
     out1 = orm.Data()
     out2 = orm.Data()
-    out1.add_incoming(calc, link_type=LinkType.CREATE, link_label='out1label')
+    out1.base.links.add_incoming(calc, link_type=LinkType.CREATE, link_label='out1label')
     out1.store()
-    out2.add_incoming(calc, link_type=LinkType.CREATE, link_label='out2label')
+    out2.base.links.add_incoming(calc, link_type=LinkType.CREATE, link_label='out2label')
     out2.store()
 
     expected_inputs = {'inp1label': inp1.uuid, 'inp2label': inp2.uuid}
@@ -144,16 +144,16 @@ def test_link_manager_with_nested_namespaces(aiida_profile_clean):
     inp1.store()
 
     calc = orm.CalculationNode()
-    calc.add_incoming(inp1, link_type=LinkType.INPUT_CALC, link_label='nested__sub__namespace')
+    calc.base.links.add_incoming(inp1, link_type=LinkType.INPUT_CALC, link_label='nested__sub__namespace')
     calc.store()
 
     # Attach outputs
     out1 = orm.Data()
-    out1.add_incoming(calc, link_type=LinkType.CREATE, link_label='nested__sub__namespace')
+    out1.base.links.add_incoming(calc, link_type=LinkType.CREATE, link_label='nested__sub__namespace')
     out1.store()
 
     out2 = orm.Data()
-    out2.add_incoming(calc, link_type=LinkType.CREATE, link_label='remote_folder')
+    out2.base.links.add_incoming(calc, link_type=LinkType.CREATE, link_label='remote_folder')
     out2.store()
 
     # Check that the recommended way of dereferencing works
@@ -200,7 +200,7 @@ def test_link_manager_contains(aiida_profile_clean):
     data.store()
 
     calc = orm.CalculationNode()
-    calc.add_incoming(data, link_type=LinkType.INPUT_CALC, link_label='nested__sub__name')
+    calc.base.links.add_incoming(data, link_type=LinkType.INPUT_CALC, link_label='nested__sub__name')
     calc.store()
 
     assert 'nested' in calc.inputs

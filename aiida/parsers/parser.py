@@ -61,7 +61,7 @@ class Parser(ABC):
 
     @property
     def retrieved(self):
-        return self.node.get_outgoing().get_node_by_label(self.node.process_class.link_label_retrieved)
+        return self.node.base.links.get_outgoing().get_node_by_label(self.node.process_class.link_label_retrieved)
 
     @property
     def outputs(self):
@@ -90,7 +90,7 @@ class Parser(ABC):
 
         :return: dictionary of nodes that are required by the `parse` method
         """
-        link_triples = self.node.get_outgoing()
+        link_triples = self.node.base.links.get_outgoing()
         result = {}
 
         for label, port in self.node.process_class.spec().outputs.items():

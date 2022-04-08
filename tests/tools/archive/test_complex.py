@@ -50,21 +50,21 @@ def test_complex_graph_import_export(aiida_profile_clean, tmp_path, aiida_localh
     rd1.set_remote_path('/x/y.py')
     rd1.computer = aiida_localhost
     rd1.store()
-    rd1.add_incoming(calc1, link_type=LinkType.CREATE, link_label='link')
+    rd1.base.links.add_incoming(calc1, link_type=LinkType.CREATE, link_label='link')
 
     calc2 = orm.CalcJobNode()
     calc2.computer = aiida_localhost
     calc2.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
     calc2.label = 'calc2'
-    calc2.add_incoming(pd1, link_type=LinkType.INPUT_CALC, link_label='link1')
-    calc2.add_incoming(pd2, link_type=LinkType.INPUT_CALC, link_label='link2')
-    calc2.add_incoming(rd1, link_type=LinkType.INPUT_CALC, link_label='link3')
+    calc2.base.links.add_incoming(pd1, link_type=LinkType.INPUT_CALC, link_label='link1')
+    calc2.base.links.add_incoming(pd2, link_type=LinkType.INPUT_CALC, link_label='link2')
+    calc2.base.links.add_incoming(rd1, link_type=LinkType.INPUT_CALC, link_label='link3')
     calc2.store()
 
     fd1 = orm.FolderData()
     fd1.label = 'fd1'
     fd1.store()
-    fd1.add_incoming(calc2, link_type=LinkType.CREATE, link_label='link')
+    fd1.base.links.add_incoming(calc2, link_type=LinkType.CREATE, link_label='link')
 
     calc1.seal()
     calc2.seal()
@@ -134,10 +134,10 @@ def test_reexport(aiida_profile, tmp_path):
     array.store()
     # LINKS
     # the calculation has input the parameters-instance
-    calc.add_incoming(param, link_type=LinkType.INPUT_CALC, link_label='input_parameters')
+    calc.base.links.add_incoming(param, link_type=LinkType.INPUT_CALC, link_label='input_parameters')
     calc.store()
     # I want the array to be an output of the calculation
-    array.add_incoming(calc, link_type=LinkType.CREATE, link_label='output_array')
+    array.base.links.add_incoming(calc, link_type=LinkType.CREATE, link_label='output_array')
     group = orm.Group(label='test-group')
     group.store()
     group.add_nodes(array)

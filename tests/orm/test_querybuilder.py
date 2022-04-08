@@ -249,13 +249,13 @@ class TestBasic:
         n5.base.attributes.set('foo', None)
         n5.store()
 
-        n2.add_incoming(n1, link_type=LinkType.INPUT_CALC, link_label='link1')
+        n2.base.links.add_incoming(n1, link_type=LinkType.INPUT_CALC, link_label='link1')
         n2.store()
-        n3.add_incoming(n2, link_type=LinkType.CREATE, link_label='link2')
+        n3.base.links.add_incoming(n2, link_type=LinkType.CREATE, link_label='link2')
 
-        n4.add_incoming(n3, link_type=LinkType.INPUT_CALC, link_label='link3')
+        n4.base.links.add_incoming(n3, link_type=LinkType.INPUT_CALC, link_label='link3')
         n4.store()
-        n5.add_incoming(n4, link_type=LinkType.CREATE, link_label='link4')
+        n5.base.links.add_incoming(n4, link_type=LinkType.CREATE, link_label='link4')
 
         qb1 = orm.QueryBuilder()
         qb1.append(orm.Node, filters={'attributes.foo': 1.000})
@@ -305,8 +305,8 @@ class TestBasic:
         n2.label = 'bar'
         n2.description = 'I am BaR'
 
-        n2.add_incoming(n1, link_type=LinkType.CREATE, link_label='random_2')
-        n1.add_incoming(n0, link_type=LinkType.INPUT_CALC, link_label='random_1')
+        n2.base.links.add_incoming(n1, link_type=LinkType.CREATE, link_label='random_2')
+        n1.base.links.add_incoming(n0, link_type=LinkType.INPUT_CALC, link_label='random_1')
 
         for n in (n0, n1, n2):
             n.store()
@@ -598,13 +598,13 @@ class TestBasic:
         """
         d1, d2, d3, d4 = [orm.Data().store() for _ in range(4)]
         c1, c2 = [orm.CalculationNode() for _ in range(2)]
-        c1.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link_d1c1')
+        c1.base.links.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link_d1c1')
         c1.store()
-        d2.add_incoming(c1, link_type=LinkType.CREATE, link_label='link_c1d2')
-        d4.add_incoming(c1, link_type=LinkType.CREATE, link_label='link_c1d4')
-        c2.add_incoming(d2, link_type=LinkType.INPUT_CALC, link_label='link_d2c2')
+        d2.base.links.add_incoming(c1, link_type=LinkType.CREATE, link_label='link_c1d2')
+        d4.base.links.add_incoming(c1, link_type=LinkType.CREATE, link_label='link_c1d4')
+        c2.base.links.add_incoming(d2, link_type=LinkType.INPUT_CALC, link_label='link_d2c2')
         c2.store()
-        d3.add_incoming(c2, link_type=LinkType.CREATE, link_label='link_c2d3')
+        d3.base.links.add_incoming(c2, link_type=LinkType.CREATE, link_label='link_c2d3')
 
         # testing direction=1 for d1, which should return the outgoing
         qb = orm.QueryBuilder()
@@ -690,13 +690,13 @@ class TestBasic:
         """Test querying for links"""
         d1, d2, d3, d4 = [orm.Data().store() for _ in range(4)]
         c1, c2 = [orm.CalculationNode() for _ in range(2)]
-        c1.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link_d1c1')
+        c1.base.links.add_incoming(d1, link_type=LinkType.INPUT_CALC, link_label='link_d1c1')
         c1.store()
-        d2.add_incoming(c1, link_type=LinkType.CREATE, link_label='link_c1d2')
-        d4.add_incoming(c1, link_type=LinkType.CREATE, link_label='link_c1d4')
-        c2.add_incoming(d2, link_type=LinkType.INPUT_CALC, link_label='link_d2c2')
+        d2.base.links.add_incoming(c1, link_type=LinkType.CREATE, link_label='link_c1d2')
+        d4.base.links.add_incoming(c1, link_type=LinkType.CREATE, link_label='link_c1d4')
+        c2.base.links.add_incoming(d2, link_type=LinkType.INPUT_CALC, link_label='link_d2c2')
         c2.store()
-        d3.add_incoming(c2, link_type=LinkType.CREATE, link_label='link_c2d3')
+        d3.base.links.add_incoming(c2, link_type=LinkType.CREATE, link_label='link_c2d3')
 
         builder = orm.QueryBuilder().append(entity_type='link')
         assert builder.count() == 5
@@ -1036,8 +1036,8 @@ class TestQueryBuilderJoins:
         unrelated.label = 'unrelated'
         unrelated.store()
 
-        good_child.add_incoming(parent, link_type=LinkType.INPUT_CALC, link_label='parent')
-        bad_child.add_incoming(parent, link_type=LinkType.INPUT_CALC, link_label='parent')
+        good_child.base.links.add_incoming(parent, link_type=LinkType.INPUT_CALC, link_label='parent')
+        bad_child.base.links.add_incoming(parent, link_type=LinkType.INPUT_CALC, link_label='parent')
         good_child.store()
         bad_child.store()
 
@@ -1066,18 +1066,18 @@ class TestQueryBuilderJoins:
 
         # advisor 0 get student 0, 1
         for i in (0, 1):
-            students[i].add_incoming(advisors[0], link_type=LinkType.CREATE, link_label=f'is_advisor_{i}')
+            students[i].base.links.add_incoming(advisors[0], link_type=LinkType.CREATE, link_label=f'is_advisor_{i}')
 
         # advisor 1 get student 3, 4
         for i in (3, 4):
-            students[i].add_incoming(advisors[1], link_type=LinkType.CREATE, link_label=f'is_advisor_{i}')
+            students[i].base.links.add_incoming(advisors[1], link_type=LinkType.CREATE, link_label=f'is_advisor_{i}')
 
         # advisor 2 get student 5, 6, 7
         for i in (5, 6, 7):
-            students[i].add_incoming(advisors[2], link_type=LinkType.CREATE, link_label=f'is_advisor_{i}')
+            students[i].base.links.add_incoming(advisors[2], link_type=LinkType.CREATE, link_label=f'is_advisor_{i}')
 
         # let's add a differnt relationship than advisor:
-        students[9].add_incoming(advisors[2], link_type=LinkType.CREATE, link_label='lover')
+        students[9].base.links.add_incoming(advisors[2], link_type=LinkType.CREATE, link_label='lover')
 
         assert orm.QueryBuilder().append(
             orm.Node
@@ -1244,13 +1244,13 @@ class QueryBuilderPath:
         # I create a strange graph, inserting links in a order
         # such that I often have to create the transitive closure
         # between two graphs
-        n3.add_incoming(n2, link_type=LinkType.CREATE, link_label='link1')
-        n2.add_incoming(n1, link_type=LinkType.INPUT_CALC, link_label='link2')
-        n5.add_incoming(n3, link_type=LinkType.INPUT_CALC, link_label='link3')
-        n5.add_incoming(n4, link_type=LinkType.INPUT_CALC, link_label='link4')
-        n4.add_incoming(n2, link_type=LinkType.CREATE, link_label='link5')
-        n7.add_incoming(n6, link_type=LinkType.INPUT_CALC, link_label='link6')
-        n8.add_incoming(n7, link_type=LinkType.CREATE, link_label='link7')
+        n3.base.links.add_incoming(n2, link_type=LinkType.CREATE, link_label='link1')
+        n2.base.links.add_incoming(n1, link_type=LinkType.INPUT_CALC, link_label='link2')
+        n5.base.links.add_incoming(n3, link_type=LinkType.INPUT_CALC, link_label='link3')
+        n5.base.links.add_incoming(n4, link_type=LinkType.INPUT_CALC, link_label='link4')
+        n4.base.links.add_incoming(n2, link_type=LinkType.CREATE, link_label='link5')
+        n7.base.links.add_incoming(n6, link_type=LinkType.INPUT_CALC, link_label='link6')
+        n8.base.links.add_incoming(n7, link_type=LinkType.CREATE, link_label='link7')
 
         for node in [n1, n2, n3, n4, n5, n6, n7, n8, n9]:
             node.store()
@@ -1277,7 +1277,7 @@ class QueryBuilderPath:
             'id': n1.pk
         }).count() == 0
 
-        n6.add_incoming(n5, link_type=LinkType.CREATE, link_label='link1')
+        n6.base.links.add_incoming(n5, link_type=LinkType.CREATE, link_label='link1')
         # Yet, now 2 links from 1 to 8
         assert orm.QueryBuilder().append(orm.Node, filters={
             'id': n1.pk
@@ -1361,7 +1361,7 @@ class QueryBuilderPath:
         # This part of the test is no longer possible as the nodes have already been stored and the previous parts of
         # the test rely on this, which means however, that here, no more links can be added as that will raise.
 
-        # n7.add_incoming(n9, link_type=LinkType.INPUT_CALC, link_label='link0')
+        # n7.base.links.add_incoming(n9, link_type=LinkType.INPUT_CALC, link_label='link0')
         # # Still two links...
 
         # self.assertEqual(
@@ -1377,7 +1377,7 @@ class QueryBuilderPath:
         #     }, tag='desc').append(orm.Node, with_descendants='desc', filters={
         #         'id': n1.pk
         #     }).count(), 2)
-        # n9.add_incoming(n5, link_type=LinkType.CREATE, link_label='link6')
+        # n9.base.links.add_incoming(n5, link_type=LinkType.CREATE, link_label='link6')
         # # And now there should be 4 nodes
 
         # self.assertEqual(
@@ -1435,7 +1435,7 @@ class TestConsistency:
         # adding 5 links going out:
         for inode in range(5):
             output_node = orm.Data().store()
-            output_node.add_incoming(parent, link_type=LinkType.CREATE, link_label=f'link_{inode}')
+            output_node.base.links.add_incoming(parent, link_type=LinkType.CREATE, link_label=f'link_{inode}')
         for projection in ('id', '*'):
             qb = orm.QueryBuilder()
             qb.append(orm.CalculationNode, filters={'id': parent.id}, tag='parent', project=projection)

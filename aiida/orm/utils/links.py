@@ -58,8 +58,10 @@ def link_triple_exists(
     """
     from aiida.orm import Node, QueryBuilder
 
+    target_links_cache = target.base.links.incoming_cache
+
     # First check if the triple exist in the cache, in the case of an unstored target node
-    if target._incoming_cache and LinkTriple(source, link_type, link_label) in target._incoming_cache:  # pylint: disable=protected-access
+    if target_links_cache and LinkTriple(source, link_type, link_label) in target_links_cache:
         return True
 
     # If either node is unstored (i.e. does not have a pk), the link cannot exist in the database, so no need to check
@@ -188,11 +190,11 @@ def validate_link(
         duplicate_link_triple = link_triple_exists(source, target, link_type, link_label, backend)
 
     # If the outdegree is `unique` there cannot already be any other outgoing link of that type
-    if outdegree == 'unique' and source.get_outgoing(link_type=link_type, only_uuid=True).all():
+    if outdegree == 'unique' and source.base.links.get_outgoing(link_type=link_type, only_uuid=True).all():
         raise ValueError(f'node<{source.uuid}> already has an outgoing {link_type} link')
 
     # If the outdegree is `unique_pair`, then the link labels for outgoing links of this type should be unique
-    elif outdegree == 'unique_pair' and source.get_outgoing(
+    elif outdegree == 'unique_pair' and source.base.links.get_outgoing(
             link_type=link_type, only_uuid=True, link_label_filter=link_label).all():
         raise ValueError(f'node<{source.uuid}> already has an outgoing {link_type} link with label "{link_label}"')
 
@@ -202,11 +204,11 @@ def validate_link(
             source.uuid, link_type, link_label, target.uuid))
 
     # If the indegree is `unique` there cannot already be any other incoming links of that type
-    if indegree == 'unique' and target.get_incoming(link_type=link_type, only_uuid=True).all():
+    if indegree == 'unique' and target.base.links.get_incoming(link_type=link_type, only_uuid=True).all():
         raise ValueError(f'node<{target.uuid}> already has an incoming {link_type} link')
 
     # If the indegree is `unique_pair`, then the link labels for incoming links of this type should be unique
-    elif indegree == 'unique_pair' and target.get_incoming(
+    elif indegree == 'unique_pair' and target.base.links.get_incoming(
             link_type=link_type, link_label_filter=link_label, only_uuid=True).all():
         raise ValueError(f'node<{target.uuid}> already has an incoming {link_type} link with label "{link_label}"')
 

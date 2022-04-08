@@ -57,20 +57,20 @@ def create_minimal_graph():
     work_1 = orm.WorkflowNode()
     work_2 = orm.WorkflowNode()
 
-    calc_0.add_incoming(data_i, link_type=LinkType.INPUT_CALC, link_label='inpcalc')
-    work_1.add_incoming(data_i, link_type=LinkType.INPUT_WORK, link_label='inpwork')
-    work_2.add_incoming(data_i, link_type=LinkType.INPUT_WORK, link_label='inpwork')
+    calc_0.base.links.add_incoming(data_i, link_type=LinkType.INPUT_CALC, link_label='inpcalc')
+    work_1.base.links.add_incoming(data_i, link_type=LinkType.INPUT_WORK, link_label='inpwork')
+    work_2.base.links.add_incoming(data_i, link_type=LinkType.INPUT_WORK, link_label='inpwork')
 
-    calc_0.add_incoming(work_1, link_type=LinkType.CALL_CALC, link_label='callcalc')
-    work_1.add_incoming(work_2, link_type=LinkType.CALL_WORK, link_label='callwork')
+    calc_0.base.links.add_incoming(work_1, link_type=LinkType.CALL_CALC, link_label='callcalc')
+    work_1.base.links.add_incoming(work_2, link_type=LinkType.CALL_WORK, link_label='callwork')
 
     work_2.store()
     work_1.store()
     calc_0.store()
 
-    data_o.add_incoming(calc_0, link_type=LinkType.CREATE, link_label='create0')
-    data_o.add_incoming(work_1, link_type=LinkType.RETURN, link_label='return1')
-    data_o.add_incoming(work_2, link_type=LinkType.RETURN, link_label='return2')
+    data_o.base.links.add_incoming(calc_0, link_type=LinkType.CREATE, link_label='create0')
+    data_o.base.links.add_incoming(work_1, link_type=LinkType.RETURN, link_label='return1')
+    data_o.base.links.add_incoming(work_2, link_type=LinkType.RETURN, link_label='return2')
 
     output_dict = {
         'data_i': data_i,
@@ -289,11 +289,11 @@ class TestTraverseGraph:
         data_drop = orm.Data().store()
         work_select = orm.WorkflowNode()
 
-        work_select.add_incoming(data_take, link_type=LinkType.INPUT_WORK, link_label='input_take')
-        work_select.add_incoming(data_drop, link_type=LinkType.INPUT_WORK, link_label='input_drop')
+        work_select.base.links.add_incoming(data_take, link_type=LinkType.INPUT_WORK, link_label='input_take')
+        work_select.base.links.add_incoming(data_drop, link_type=LinkType.INPUT_WORK, link_label='input_drop')
         work_select.store()
 
-        data_take.add_incoming(work_select, link_type=LinkType.RETURN, link_label='return_link')
+        data_take.base.links.add_incoming(work_select, link_type=LinkType.RETURN, link_label='return_link')
 
         data_take = data_take.pk
         data_drop = data_drop.pk

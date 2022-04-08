@@ -60,7 +60,7 @@ class TestParser:
         node.store()
 
         retrieved = orm.FolderData().store()
-        retrieved.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
+        retrieved.base.links.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
 
         parser = ArithmeticAddParser(node)
         assert parser.node.uuid == node.uuid
@@ -81,10 +81,10 @@ class TestParser:
         node.store()
 
         retrieved = orm.FolderData().store()
-        retrieved.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
+        retrieved.base.links.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
 
         output = orm.Data().store()
-        output.add_incoming(node, link_type=LinkType.CREATE, link_label='output')
+        output.base.links.add_incoming(node, link_type=LinkType.CREATE, link_label='output')
 
         parser = ArithmeticAddParser(node)
         outputs_for_parsing = parser.get_outputs_for_parsing()
@@ -113,7 +113,7 @@ class TestParser:
         retrieved = orm.FolderData()
         retrieved.base.repository.put_object_from_filelike(io.StringIO(f'{summed}'), output_filename)
         retrieved.store()
-        retrieved.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
+        retrieved.base.links.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
 
         for cls in [ArithmeticAddParser, SimpleArithmeticAddParser]:
             result, calcfunction = cls.parse_from_node(node)

@@ -196,7 +196,9 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             future = Future()
 
             if node.is_finished:
-                future.set_result({entry.link_label: entry.node for entry in node.get_outgoing(node_class=Data)})
+                future.set_result({
+                    entry.link_label: entry.node for entry in node.base.links.get_outgoing(node_class=Data)
+                })
             elif node.is_excepted:
                 future.set_exception(PastException(node.exception))
             elif node.is_killed:

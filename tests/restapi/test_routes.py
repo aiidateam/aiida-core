@@ -77,8 +77,8 @@ class TestRestApi:
         calc.base.attributes.set('attr1', 'OK')
         calc.base.attributes.set('attr2', 'OK')
 
-        calc.add_incoming(structure, link_type=LinkType.INPUT_CALC, link_label='link_structure')
-        calc.add_incoming(parameter1, link_type=LinkType.INPUT_CALC, link_label='link_parameter')
+        calc.base.links.add_incoming(structure, link_type=LinkType.INPUT_CALC, link_label='link_structure')
+        calc.base.links.add_incoming(parameter1, link_type=LinkType.INPUT_CALC, link_label='link_parameter')
         calc.base.repository.put_object_from_filelike(
             io.BytesIO(b'The input file\nof the CalcJob node'), 'calcjob_inputs/aiida.in'
         )
@@ -107,9 +107,9 @@ class TestRestApi:
         stream = io.BytesIO(b'The output file\nof the CalcJob node')
         retrieved_outputs.base.repository.put_object_from_filelike(stream, 'calcjob_outputs/aiida.out')
         retrieved_outputs.store()
-        retrieved_outputs.add_incoming(calc, link_type=LinkType.CREATE, link_label='retrieved')
+        retrieved_outputs.base.links.add_incoming(calc, link_type=LinkType.CREATE, link_label='retrieved')
 
-        kpoint.add_incoming(calc, link_type=LinkType.CREATE, link_label='create')
+        kpoint.base.links.add_incoming(calc, link_type=LinkType.CREATE, link_label='create')
 
         calc1 = orm.CalcJobNode(computer=self.computer)
         calc1.set_option('resources', resources)

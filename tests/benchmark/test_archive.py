@@ -34,13 +34,13 @@ def recursive_provenance(in_node, depth, breadth, num_objects=0):
         calcfunc = CalcFunctionNode()
         calcfunc.set_process_state(ProcessState.FINISHED)
         calcfunc.set_exit_status(0)
-        calcfunc.add_incoming(in_node, link_type=LinkType.INPUT_CALC, link_label='input')
+        calcfunc.base.links.add_incoming(in_node, link_type=LinkType.INPUT_CALC, link_label='input')
         calcfunc.store()
 
         out_node = Dict(dict={str(i): i for i in range(10)})
         for idx in range(num_objects):
             out_node.base.repository.put_object_from_filelike(StringIO('a' * 10000), f'key{str(idx)}')
-        out_node.add_incoming(calcfunc, link_type=LinkType.CREATE, link_label='output')
+        out_node.base.links.add_incoming(calcfunc, link_type=LinkType.CREATE, link_label='output')
         out_node.store()
 
         calcfunc.seal()

@@ -226,12 +226,14 @@ def test_builder_restart_work_chain(example_inputs):
     caller = orm.WorkChainNode().store()
 
     node = orm.WorkChainNode(process_type=ExampleWorkChain.build_process_type())
-    node.add_incoming(example_inputs['dynamic']['namespace']['alp'], LinkType.INPUT_WORK, 'dynamic__namespace__alp')
-    node.add_incoming(example_inputs['name']['spaced'], LinkType.INPUT_WORK, 'name__spaced')
-    node.add_incoming(example_inputs['name_spaced'], LinkType.INPUT_WORK, 'name_spaced')
-    node.add_incoming(example_inputs['boolean'], LinkType.INPUT_WORK, 'boolean')
-    node.add_incoming(orm.Int(DEFAULT_INT).store(), LinkType.INPUT_WORK, 'default')
-    node.add_incoming(caller, link_type=LinkType.CALL_WORK, link_label='CALL_WORK')
+    node.base.links.add_incoming(
+        example_inputs['dynamic']['namespace']['alp'], LinkType.INPUT_WORK, 'dynamic__namespace__alp'
+    )
+    node.base.links.add_incoming(example_inputs['name']['spaced'], LinkType.INPUT_WORK, 'name__spaced')
+    node.base.links.add_incoming(example_inputs['name_spaced'], LinkType.INPUT_WORK, 'name_spaced')
+    node.base.links.add_incoming(example_inputs['boolean'], LinkType.INPUT_WORK, 'boolean')
+    node.base.links.add_incoming(orm.Int(DEFAULT_INT).store(), LinkType.INPUT_WORK, 'default')
+    node.base.links.add_incoming(caller, link_type=LinkType.CALL_WORK, link_label='CALL_WORK')
     node.store()
 
     builder = node.get_builder_restart()
@@ -294,8 +296,8 @@ def test_calc_job_node_get_builder_restart(aiida_localhost):
     original.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
     original.set_option('max_wallclock_seconds', 1800)
 
-    original.add_incoming(orm.Int(1).store(), link_type=LinkType.INPUT_CALC, link_label='x')
-    original.add_incoming(orm.Int(2).store(), link_type=LinkType.INPUT_CALC, link_label='y')
+    original.base.links.add_incoming(orm.Int(1).store(), link_type=LinkType.INPUT_CALC, link_label='x')
+    original.base.links.add_incoming(orm.Int(2).store(), link_type=LinkType.INPUT_CALC, link_label='y')
     original.store()
 
     builder = original.get_builder_restart()

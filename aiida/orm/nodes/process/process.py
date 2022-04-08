@@ -14,17 +14,58 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 from plumpy.process_states import ProcessState
 
+from aiida.common import exceptions
 from aiida.common.lang import classproperty
 from aiida.common.links import LinkType
 from aiida.orm.utils.mixins import Sealable
 
-from ..node import Node
+from ..node import Node, NodeLinks
 
 if TYPE_CHECKING:
     from aiida.engine.processes import Process
     from aiida.engine.processes.builder import ProcessBuilder
 
 __all__ = ('ProcessNode',)
+
+
+class ProcessNodeLinks(NodeLinks):
+    """Interface for links of a node instance."""
+
+    def validate_incoming(self, source: Node, link_type: LinkType, link_label: str) -> None:
+        """Validate adding a link of the given type from a given node to ourself.
+
+        Adding an input link to a `ProcessNode` once it is stored is illegal because this should be taken care of
+        by the engine in one go. If a link is being added after the node is stored, it is most likely not by the engine
+        and it should not be allowed.
+
+        :param source: the node from which the link is coming
+        :param link_type: the link type
+        :param link_label: the link label
+        :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
+        :raise ValueError: if the proposed link is invalid
+        """
+        if self._node.is_sealed:
+            raise exceptions.ModificationNotAllowed('Cannot add a link to a sealed node')
+
+        if self._node.is_stored:
+            raise ValueError('attempted to add an input link after the process node was already stored.')
+
+        super().validate_incoming(source, link_type, link_label)
+
+    def validate_outgoing(self, target, link_type, link_label):
+        """Validate adding a link of the given type from ourself to a given node.
+
+        Adding an outgoing link from a sealed node is forbidden.
+
+        :param target: the node to which the link is going
+        :param link_type: the link type
+        :param link_label: the link label
+        :raise aiida.common.ModificationNotAllowed: if the source node (self) is sealed
+        """
+        if self._node.is_sealed:
+            raise exceptions.ModificationNotAllowed('Cannot add a link from a sealed node')
+
+        super().validate_outgoing(target, link_type=link_type, link_label=link_label)
 
 
 class ProcessNode(Sealable, Node):
@@ -38,6 +79,8 @@ class ProcessNode(Sealable, Node):
     provenance graph, after the execution has terminated.
     """
     # pylint: disable=too-many-public-methods,abstract-method
+
+    _CLS_NODE_LINKS = ProcessNodeLinks
 
     CHECKPOINT_KEY = 'checkpoints'
     EXCEPTION_KEY = 'exception'
@@ -94,7 +137,7 @@ class ProcessNode(Sealable, Node):
         :return: `~aiida.engine.processes.builder.ProcessBuilder` instance
         """
         builder = self.process_class.get_builder()
-        builder._update(self.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)).nested())  # pylint: disable=protected-access
+        builder._update(self.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)).nested())  # pylint: disable=protected-access
 
         return builder
 
@@ -106,7 +149,6 @@ class ProcessNode(Sealable, Node):
         :raises ValueError: if no process type is defined, it is an invalid process type string or cannot be resolved
             to load the corresponding class
         """
-        from aiida.common import exceptions
         from aiida.plugins.entry_point import load_entry_point_from_string
 
         if not self.process_type:
@@ -422,7 +464,7 @@ class ProcessNode(Sealable, Node):
 
         :returns: list of process nodes called by this process
         """
-        return self.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all_nodes()
+        return self.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all_nodes()
 
     @property
     def called_descendants(self) -> List['ProcessNode']:
@@ -447,28 +489,11 @@ class ProcessNode(Sealable, Node):
         :returns: process node that called this process node instance or None
         """
         try:
-            caller = self.get_incoming(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).one().node
+            caller = self.base.links.get_incoming(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).one().node
         except ValueError:
             return None
         else:
             return caller
-
-    def validate_incoming(self, source: Node, link_type: LinkType, link_label: str) -> None:
-        """Validate adding a link of the given type from a given node to ourself.
-
-        Adding an input link to a `ProcessNode` once it is stored is illegal because this should be taken care of
-        by the engine in one go. If a link is being added after the node is stored, it is most likely not by the engine
-        and it should not be allowed.
-
-        :param source: the node from which the link is coming
-        :param link_type: the link type
-        :param link_label: the link label
-        :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
-        :raise ValueError: if the proposed link is invalid
-        """
-        super().validate_incoming(source, link_type, link_label)
-        if self.is_stored:
-            raise ValueError('attempted to add an input link after the process node was already stored.')
 
     @property
     def is_valid_cache(self) -> bool:
@@ -509,7 +534,7 @@ class ProcessNode(Sealable, Node):
         res = super()._get_objects_to_hash()
         res.append({
             entry.link_label: entry.node.get_hash()
-            for entry in self.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
+            for entry in self.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
             if entry.link_label not in self._hash_ignored_inputs
         })
         return res

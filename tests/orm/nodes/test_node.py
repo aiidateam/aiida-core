@@ -469,9 +469,9 @@ class TestNodeLinks:
         data = Data().store()
         calculation = CalculationNode()
 
-        calculation.add_incoming(data, LinkType.INPUT_CALC, 'input')
+        calculation.base.links.add_incoming(data, LinkType.INPUT_CALC, 'input')
         calculation.store()
-        stored_triples = calculation.get_stored_link_triples()
+        stored_triples = calculation.base.links.get_stored_link_triples()
 
         assert len(stored_triples) == 1
 
@@ -488,7 +488,7 @@ class TestNodeLinks:
     def test_validate_incoming_ipsum(self):
         """Test the `validate_incoming` method with respect to linking ourselves."""
         with pytest.raises(ValueError):
-            self.node_target.validate_incoming(self.node_target, LinkType.CREATE, 'link_label')
+            self.node_target.base.links.validate_incoming(self.node_target, LinkType.CREATE, 'link_label')
 
     def test_validate_incoming(self):
         """Test the `validate_incoming` method
@@ -497,13 +497,13 @@ class TestNodeLinks:
         type is a valid LinkType enum value.
         """
         with pytest.raises(TypeError):
-            self.node_target.validate_incoming(self.node_source, None, 'link_label')
+            self.node_target.base.links.validate_incoming(self.node_source, None, 'link_label')
 
         with pytest.raises(TypeError):
-            self.node_target.validate_incoming(None, LinkType.CREATE, 'link_label')
+            self.node_target.base.links.validate_incoming(None, LinkType.CREATE, 'link_label')
 
         with pytest.raises(TypeError):
-            self.node_target.validate_incoming(self.node_source, LinkType.CREATE.value, 'link_label')
+            self.node_target.base.links.validate_incoming(self.node_source, LinkType.CREATE.value, 'link_label')
 
     def test_add_incoming_create(self):
         """Nodes can only have a single incoming CREATE link, independent of the source node."""
@@ -511,19 +511,19 @@ class TestNodeLinks:
         source_two = CalculationNode()
         target = Data()
 
-        target.add_incoming(source_one, LinkType.CREATE, 'link_label')
+        target.base.links.add_incoming(source_one, LinkType.CREATE, 'link_label')
 
         # Can only have a single incoming CREATE link
         with pytest.raises(ValueError):
-            target.validate_incoming(source_one, LinkType.CREATE, 'link_label')
+            target.base.links.validate_incoming(source_one, LinkType.CREATE, 'link_label')
 
         # Even when the source node is different
         with pytest.raises(ValueError):
-            target.validate_incoming(source_two, LinkType.CREATE, 'link_label')
+            target.base.links.validate_incoming(source_two, LinkType.CREATE, 'link_label')
 
         # Or when the link label is different
         with pytest.raises(ValueError):
-            target.validate_incoming(source_one, LinkType.CREATE, 'other_label')
+            target.base.links.validate_incoming(source_one, LinkType.CREATE, 'other_label')
 
     def test_add_incoming_call_calc(self):
         """Nodes can only have a single incoming CALL_CALC link, independent of the source node."""
@@ -531,19 +531,19 @@ class TestNodeLinks:
         source_two = WorkflowNode()
         target = CalculationNode()
 
-        target.add_incoming(source_one, LinkType.CALL_CALC, 'link_label')
+        target.base.links.add_incoming(source_one, LinkType.CALL_CALC, 'link_label')
 
         # Can only have a single incoming CALL_CALC link
         with pytest.raises(ValueError):
-            target.validate_incoming(source_one, LinkType.CALL_CALC, 'link_label')
+            target.base.links.validate_incoming(source_one, LinkType.CALL_CALC, 'link_label')
 
         # Even when the source node is different
         with pytest.raises(ValueError):
-            target.validate_incoming(source_two, LinkType.CALL_CALC, 'link_label')
+            target.base.links.validate_incoming(source_two, LinkType.CALL_CALC, 'link_label')
 
         # Or when the link label is different
         with pytest.raises(ValueError):
-            target.validate_incoming(source_one, LinkType.CALL_CALC, 'other_label')
+            target.base.links.validate_incoming(source_one, LinkType.CALL_CALC, 'other_label')
 
     def test_add_incoming_call_work(self):
         """Nodes can only have a single incoming CALL_WORK link, independent of the source node."""
@@ -551,19 +551,19 @@ class TestNodeLinks:
         source_two = WorkflowNode()
         target = WorkflowNode()
 
-        target.add_incoming(source_one, LinkType.CALL_WORK, 'link_label')
+        target.base.links.add_incoming(source_one, LinkType.CALL_WORK, 'link_label')
 
         # Can only have a single incoming CALL_WORK link
         with pytest.raises(ValueError):
-            target.validate_incoming(source_one, LinkType.CALL_WORK, 'link_label')
+            target.base.links.validate_incoming(source_one, LinkType.CALL_WORK, 'link_label')
 
         # Even when the source node is different
         with pytest.raises(ValueError):
-            target.validate_incoming(source_two, LinkType.CALL_WORK, 'link_label')
+            target.base.links.validate_incoming(source_two, LinkType.CALL_WORK, 'link_label')
 
         # Or when the link label is different
         with pytest.raises(ValueError):
-            target.validate_incoming(source_one, LinkType.CALL_WORK, 'other_label')
+            target.base.links.validate_incoming(source_one, LinkType.CALL_WORK, 'other_label')
 
     def test_add_incoming_input_calc(self):
         """Nodes can have an infinite amount of incoming INPUT_CALC links, as long as the link pair is unique."""
@@ -571,18 +571,18 @@ class TestNodeLinks:
         source_two = Data()
         target = CalculationNode()
 
-        target.add_incoming(source_one, LinkType.INPUT_CALC, 'link_label')
+        target.base.links.add_incoming(source_one, LinkType.INPUT_CALC, 'link_label')
 
         # Can only have a single incoming INPUT_CALC link from each source node if the label is not unique
         with pytest.raises(ValueError):
-            target.validate_incoming(source_one, LinkType.INPUT_CALC, 'link_label')
+            target.base.links.validate_incoming(source_one, LinkType.INPUT_CALC, 'link_label')
 
         # Using another link label is fine
-        target.validate_incoming(source_one, LinkType.INPUT_CALC, 'other_label')
+        target.base.links.validate_incoming(source_one, LinkType.INPUT_CALC, 'other_label')
 
         # However, using the same link, even from another node is illegal
         with pytest.raises(ValueError):
-            target.validate_incoming(source_two, LinkType.INPUT_CALC, 'link_label')
+            target.base.links.validate_incoming(source_two, LinkType.INPUT_CALC, 'link_label')
 
     def test_add_incoming_input_work(self):
         """Nodes can have an infinite amount of incoming INPUT_WORK links, as long as the link pair is unique."""
@@ -590,18 +590,18 @@ class TestNodeLinks:
         source_two = Data()
         target = WorkflowNode()
 
-        target.add_incoming(source_one, LinkType.INPUT_WORK, 'link_label')
+        target.base.links.add_incoming(source_one, LinkType.INPUT_WORK, 'link_label')
 
         # Can only have a single incoming INPUT_WORK link from each source node if the label is not unique
         with pytest.raises(ValueError):
-            target.validate_incoming(source_one, LinkType.INPUT_WORK, 'link_label')
+            target.base.links.validate_incoming(source_one, LinkType.INPUT_WORK, 'link_label')
 
         # Using another link label is fine
-        target.validate_incoming(source_one, LinkType.INPUT_WORK, 'other_label')
+        target.base.links.validate_incoming(source_one, LinkType.INPUT_WORK, 'other_label')
 
         # However, using the same link, even from another node is illegal
         with pytest.raises(ValueError):
-            target.validate_incoming(source_two, LinkType.INPUT_WORK, 'link_label')
+            target.base.links.validate_incoming(source_two, LinkType.INPUT_WORK, 'link_label')
 
     def test_add_incoming_return(self):
         """Nodes can have an infinite amount of incoming RETURN links, as long as the link triple is unique."""
@@ -609,15 +609,15 @@ class TestNodeLinks:
         source_two = WorkflowNode()
         target = Data().store()  # Needs to be stored: see `test_validate_outgoing_workflow`
 
-        target.add_incoming(source_one, LinkType.RETURN, 'link_label')
+        target.base.links.add_incoming(source_one, LinkType.RETURN, 'link_label')
 
         # Can only have a single incoming RETURN link from each source node if the label is not unique
         with pytest.raises(ValueError):
-            target.validate_incoming(source_one, LinkType.RETURN, 'link_label')
+            target.base.links.validate_incoming(source_one, LinkType.RETURN, 'link_label')
 
         # From another source node or using another label is fine
-        target.validate_incoming(source_one, LinkType.RETURN, 'other_label')
-        target.validate_incoming(source_two, LinkType.RETURN, 'link_label')
+        target.base.links.validate_incoming(source_one, LinkType.RETURN, 'other_label')
+        target.base.links.validate_incoming(source_two, LinkType.RETURN, 'link_label')
 
     def test_validate_outgoing_workflow(self):
         """Verify that attaching an unstored `Data` node with `RETURN` link from a `WorkflowNode` raises.
@@ -630,7 +630,7 @@ class TestNodeLinks:
         target = Data()
 
         with pytest.raises(ValueError):
-            target.add_incoming(source, LinkType.RETURN, 'link_label')
+            target.base.links.add_incoming(source, LinkType.RETURN, 'link_label')
 
     def test_get_incoming(self):
         """Test that `Node.get_incoming` will return stored and cached input links."""
@@ -638,21 +638,21 @@ class TestNodeLinks:
         source_two = Data().store()
         target = CalculationNode()
 
-        target.add_incoming(source_one, LinkType.INPUT_CALC, 'link_one')
-        target.add_incoming(source_two, LinkType.INPUT_CALC, 'link_two')
+        target.base.links.add_incoming(source_one, LinkType.INPUT_CALC, 'link_one')
+        target.base.links.add_incoming(source_two, LinkType.INPUT_CALC, 'link_two')
 
         # Without link type
-        incoming_nodes = target.get_incoming().all()
+        incoming_nodes = target.base.links.get_incoming().all()
         incoming_uuids = sorted([neighbor.node.uuid for neighbor in incoming_nodes])
         assert incoming_uuids == sorted([source_one.uuid, source_two.uuid])
 
         # Using a single link type
-        incoming_nodes = target.get_incoming(link_type=LinkType.INPUT_CALC).all()
+        incoming_nodes = target.base.links.get_incoming(link_type=LinkType.INPUT_CALC).all()
         incoming_uuids = sorted([neighbor.node.uuid for neighbor in incoming_nodes])
         assert incoming_uuids == sorted([source_one.uuid, source_two.uuid])
 
         # Using a link type tuple
-        incoming_nodes = target.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)).all()
+        incoming_nodes = target.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)).all()
         incoming_uuids = sorted([neighbor.node.uuid for neighbor in incoming_nodes])
         assert incoming_uuids == sorted([source_one.uuid, source_two.uuid])
 
@@ -667,11 +667,11 @@ class TestNodeLinks:
         called = CalculationNode()
 
         # Verify that adding two incoming links with the same link label but different type is allowed
-        called.add_incoming(caller, link_type=LinkType.CALL_CALC, link_label='call')
-        called.add_incoming(data, link_type=LinkType.INPUT_CALC, link_label='call')
+        called.base.links.add_incoming(caller, link_type=LinkType.CALL_CALC, link_label='call')
+        called.base.links.add_incoming(data, link_type=LinkType.INPUT_CALC, link_label='call')
         called.store()
 
-        uuids_incoming = set(node.uuid for node in called.get_incoming().all_nodes())
+        uuids_incoming = set(node.uuid for node in called.base.links.get_incoming().all_nodes())
         uuids_expected = set([caller.uuid, data.uuid])
         assert uuids_incoming == uuids_expected
 
@@ -686,10 +686,10 @@ class TestNodeLinks:
         data = Data().store()  # Needs to be stored: see `test_validate_outgoing_workflow`
 
         # Verify that adding two return links with the same link label but from different source is allowed
-        data.add_incoming(return_one, link_type=LinkType.RETURN, link_label='returned')
-        data.add_incoming(return_two, link_type=LinkType.RETURN, link_label='returned')
+        data.base.links.add_incoming(return_one, link_type=LinkType.RETURN, link_label='returned')
+        data.base.links.add_incoming(return_two, link_type=LinkType.RETURN, link_label='returned')
 
-        uuids_incoming = set(node.uuid for node in data.get_incoming().all_nodes())
+        uuids_incoming = set(node.uuid for node in data.base.links.get_incoming().all_nodes())
         uuids_expected = set([return_one.uuid, return_two.uuid])
         assert uuids_incoming == uuids_expected
 
@@ -705,12 +705,12 @@ class TestNodeLinks:
 
         # Verify that adding two create links with the same link label but to different target is allowed from the
         # perspective of the source node (the CalculationNode in this case)
-        data_one.add_incoming(creator, link_type=LinkType.CREATE, link_label='create')
-        data_two.add_incoming(creator, link_type=LinkType.CREATE, link_label='create')
+        data_one.base.links.add_incoming(creator, link_type=LinkType.CREATE, link_label='create')
+        data_two.base.links.add_incoming(creator, link_type=LinkType.CREATE, link_label='create')
         data_one.store()
         data_two.store()
 
-        uuids_outgoing = set(node.uuid for node in creator.get_outgoing().all_nodes())
+        uuids_outgoing = set(node.uuid for node in creator.base.links.get_outgoing().all_nodes())
         uuids_expected = set([data_one.uuid, data_two.uuid])
         assert uuids_outgoing == uuids_expected
 
@@ -726,24 +726,24 @@ class TestNodeLinks:
         calc_two = CalculationNode()
 
         # Two calcs using the data with the same label
-        calc_one_a.add_incoming(data, link_type=LinkType.INPUT_CALC, link_label='input')
-        calc_one_b.add_incoming(data, link_type=LinkType.INPUT_CALC, link_label='input')
+        calc_one_a.base.links.add_incoming(data, link_type=LinkType.INPUT_CALC, link_label='input')
+        calc_one_b.base.links.add_incoming(data, link_type=LinkType.INPUT_CALC, link_label='input')
         # A different label
-        calc_two.add_incoming(data, link_type=LinkType.INPUT_CALC, link_label='the_input')
+        calc_two.base.links.add_incoming(data, link_type=LinkType.INPUT_CALC, link_label='the_input')
 
         calc_one_a.store()
         calc_one_b.store()
         calc_two.store()
 
         # Retrieve a link when the label is unique
-        output_the_input = data.get_outgoing(link_type=LinkType.INPUT_CALC).get_node_by_label('the_input')
+        output_the_input = data.base.links.get_outgoing(link_type=LinkType.INPUT_CALC).get_node_by_label('the_input')
         assert output_the_input.pk == calc_two.pk
 
         with pytest.raises(exceptions.MultipleObjectsError):
-            data.get_outgoing(link_type=LinkType.INPUT_CALC).get_node_by_label('input')
+            data.base.links.get_outgoing(link_type=LinkType.INPUT_CALC).get_node_by_label('input')
 
         with pytest.raises(exceptions.NotExistent):
-            data.get_outgoing(link_type=LinkType.INPUT_CALC).get_node_by_label('some_weird_label')
+            data.base.links.get_outgoing(link_type=LinkType.INPUT_CALC).get_node_by_label('some_weird_label')
 
     def test_tab_completable_properties(self):
         """Test properties to go from one node to a neighboring one"""
@@ -761,29 +761,29 @@ class TestNodeLinks:
 
         # The `top_workflow` has two inputs, proxies them to `workflow`, that in turn calls two calculations, passing
         # one data node to each as input, and return the two data nodes returned one by each called calculation
-        top_workflow.add_incoming(input1, link_type=LinkType.INPUT_WORK, link_label='a')
-        top_workflow.add_incoming(input2, link_type=LinkType.INPUT_WORK, link_label='b')
+        top_workflow.base.links.add_incoming(input1, link_type=LinkType.INPUT_WORK, link_label='a')
+        top_workflow.base.links.add_incoming(input2, link_type=LinkType.INPUT_WORK, link_label='b')
         top_workflow.store()
 
-        workflow.add_incoming(input1, link_type=LinkType.INPUT_WORK, link_label='a')
-        workflow.add_incoming(input2, link_type=LinkType.INPUT_WORK, link_label='b')
-        workflow.add_incoming(top_workflow, link_type=LinkType.CALL_WORK, link_label='CALL')
+        workflow.base.links.add_incoming(input1, link_type=LinkType.INPUT_WORK, link_label='a')
+        workflow.base.links.add_incoming(input2, link_type=LinkType.INPUT_WORK, link_label='b')
+        workflow.base.links.add_incoming(top_workflow, link_type=LinkType.CALL_WORK, link_label='CALL')
         workflow.store()
 
-        calc1.add_incoming(input1, link_type=LinkType.INPUT_CALC, link_label='input_value')
-        calc1.add_incoming(workflow, link_type=LinkType.CALL_CALC, link_label='CALL')
+        calc1.base.links.add_incoming(input1, link_type=LinkType.INPUT_CALC, link_label='input_value')
+        calc1.base.links.add_incoming(workflow, link_type=LinkType.CALL_CALC, link_label='CALL')
         calc1.store()
-        output1.add_incoming(calc1, link_type=LinkType.CREATE, link_label='result')
+        output1.base.links.add_incoming(calc1, link_type=LinkType.CREATE, link_label='result')
 
-        calc2.add_incoming(input2, link_type=LinkType.INPUT_CALC, link_label='input_value')
-        calc2.add_incoming(workflow, link_type=LinkType.CALL_CALC, link_label='CALL')
+        calc2.base.links.add_incoming(input2, link_type=LinkType.INPUT_CALC, link_label='input_value')
+        calc2.base.links.add_incoming(workflow, link_type=LinkType.CALL_CALC, link_label='CALL')
         calc2.store()
-        output2.add_incoming(calc2, link_type=LinkType.CREATE, link_label='result')
+        output2.base.links.add_incoming(calc2, link_type=LinkType.CREATE, link_label='result')
 
-        output1.add_incoming(workflow, link_type=LinkType.RETURN, link_label='result_a')
-        output2.add_incoming(workflow, link_type=LinkType.RETURN, link_label='result_b')
-        output1.add_incoming(top_workflow, link_type=LinkType.RETURN, link_label='result_a')
-        output2.add_incoming(top_workflow, link_type=LinkType.RETURN, link_label='result_b')
+        output1.base.links.add_incoming(workflow, link_type=LinkType.RETURN, link_label='result_a')
+        output2.base.links.add_incoming(workflow, link_type=LinkType.RETURN, link_label='result_b')
+        output1.base.links.add_incoming(top_workflow, link_type=LinkType.RETURN, link_label='result_a')
+        output2.base.links.add_incoming(top_workflow, link_type=LinkType.RETURN, link_label='result_b')
 
         # creator
         assert output1.creator.pk == calc1.pk
@@ -837,8 +837,8 @@ class TestNodeDelete:
         data_one = Data().store()
         data_two = Data().store()
         calculation = CalculationNode()
-        calculation.add_incoming(data_one, LinkType.INPUT_CALC, 'input_one')
-        calculation.add_incoming(data_two, LinkType.INPUT_CALC, 'input_two')
+        calculation.base.links.add_incoming(data_one, LinkType.INPUT_CALC, 'input_one')
+        calculation.base.links.add_incoming(data_two, LinkType.INPUT_CALC, 'input_two')
         calculation.store()
 
         log_one = Log(timezone.now(), 'test', 'INFO', data_one.pk).store()
@@ -881,7 +881,7 @@ class TestNodeDelete:
         """Test deletion through objects collection raises when there are incoming links."""
         data = Data().store()
         calculation = CalculationNode()
-        calculation.add_incoming(data, LinkType.INPUT_CALC, 'input')
+        calculation.base.links.add_incoming(data, LinkType.INPUT_CALC, 'input')
         calculation.store()
 
         with pytest.raises(exceptions.InvalidOperation):
@@ -892,7 +892,7 @@ class TestNodeDelete:
         """Test deletion through objects collection raises when there are outgoing links."""
         calculation = CalculationNode().store()
         data = Data()
-        data.add_incoming(calculation, LinkType.CREATE, 'output')
+        data.base.links.add_incoming(calculation, LinkType.CREATE, 'output')
         data.store()
 
         with pytest.raises(exceptions.InvalidOperation):

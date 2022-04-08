@@ -339,7 +339,7 @@ class WorkChain(Process):
             raise ValueError(f'provided pk<{awaitable.pk}> could not be resolved to a valid Node instance')
 
         if awaitable.outputs:
-            value = {entry.link_label: entry.node for entry in node.get_outgoing()}
+            value = {entry.link_label: entry.node for entry in node.base.links.get_outgoing()}
         else:
             value = node
 

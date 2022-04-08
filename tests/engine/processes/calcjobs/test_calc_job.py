@@ -457,7 +457,7 @@ class TestCalcJob:
         """Test the `CalcJob.parse` method when there is a retrieved folder."""
         process = self.instantiate_process()
         retrieved = orm.FolderData().store()
-        retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
+        retrieved.base.links.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
         exit_code = process.parse()
 
         # The following exit code is specific to the `ArithmeticAddCalculation` we are testing here and is returned
@@ -517,7 +517,7 @@ def test_parse_insufficient_data(generate_process):
     process = generate_process()
 
     retrieved = orm.FolderData().store()
-    retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
+    retrieved.base.links.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
     process.parse()
 
     filename_stderr = process.node.get_option('scheduler_stderr')
@@ -549,7 +549,7 @@ def test_parse_non_zero_retval(generate_process):
     process = generate_process()
 
     retrieved = orm.FolderData().store()
-    retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
+    retrieved.base.links.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
 
     process.node.base.attributes.set('detailed_job_info', {'retval': 1, 'stderr': 'accounting disabled', 'stdout': ''})
     process.parse()
@@ -568,7 +568,7 @@ def test_parse_not_implemented(generate_process):
     process = generate_process()
 
     retrieved = orm.FolderData()
-    retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
+    retrieved.base.links.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
 
     process.node.base.attributes.set('detailed_job_info', {})
 
@@ -602,7 +602,7 @@ def test_parse_scheduler_excepted(generate_process, monkeypatch):
     process = generate_process()
 
     retrieved = orm.FolderData()
-    retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
+    retrieved.base.links.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
 
     process.node.base.attributes.set('detailed_job_info', {})
 
@@ -689,7 +689,7 @@ def test_parse_exit_code_priority(
     }
     process = generate_calc_job(fixture_sandbox, 'core.arithmetic.add', inputs, return_process=True)
     retrieved = orm.FolderData().store()
-    retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
+    retrieved.base.links.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
 
     result = process.parse()
     assert isinstance(result, ExitCode)

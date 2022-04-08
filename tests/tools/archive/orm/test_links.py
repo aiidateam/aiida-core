@@ -62,9 +62,9 @@ def test_input_and_create_links(tmp_path, aiida_profile_clean):
     node_input = orm.Int(1).store()
     node_output = orm.Int(2).store()
 
-    node_work.add_incoming(node_input, LinkType.INPUT_CALC, 'input')
+    node_work.base.links.add_incoming(node_input, LinkType.INPUT_CALC, 'input')
     node_work.store()
-    node_output.add_incoming(node_work, LinkType.CREATE, 'output')
+    node_output.base.links.add_incoming(node_work, LinkType.CREATE, 'output')
 
     node_work.seal()
 
@@ -157,36 +157,36 @@ def construct_complex_graph(aiida_localhost_factory, export_combination=0, work_
     data6 = orm.Int(1)
 
     # Link creation
-    work1.add_incoming(data1, LinkType.INPUT_WORK, 'input1')
-    work1.add_incoming(data2, LinkType.INPUT_WORK, 'input2')
+    work1.base.links.add_incoming(data1, LinkType.INPUT_WORK, 'input1')
+    work1.base.links.add_incoming(data2, LinkType.INPUT_WORK, 'input2')
 
-    work2.add_incoming(data1, LinkType.INPUT_WORK, 'input1')
-    work2.add_incoming(work1, LinkType.CALL_WORK, 'call2')
+    work2.base.links.add_incoming(data1, LinkType.INPUT_WORK, 'input1')
+    work2.base.links.add_incoming(work1, LinkType.CALL_WORK, 'call2')
 
     work1.store()
     work2.store()
 
-    calc1.add_incoming(data1, LinkType.INPUT_CALC, 'input1')
-    calc1.add_incoming(work2, LinkType.CALL_CALC, 'call1')
+    calc1.base.links.add_incoming(data1, LinkType.INPUT_CALC, 'input1')
+    calc1.base.links.add_incoming(work2, LinkType.CALL_CALC, 'call1')
     calc1.store()
 
-    data3.add_incoming(calc1, LinkType.CREATE, 'create3')
+    data3.base.links.add_incoming(calc1, LinkType.CREATE, 'create3')
     # data3 is stored now, because a @workfunction cannot return unstored Data,
     # i.e. create data.
     data3.store()
-    data3.add_incoming(work2, LinkType.RETURN, 'return3')
+    data3.base.links.add_incoming(work2, LinkType.RETURN, 'return3')
 
-    data4.add_incoming(calc1, LinkType.CREATE, 'create4')
+    data4.base.links.add_incoming(calc1, LinkType.CREATE, 'create4')
     # data3 is stored now, because a @workfunction cannot return unstored Data,
     # i.e. create data.
     data4.store()
-    data4.add_incoming(work2, LinkType.RETURN, 'return4')
+    data4.base.links.add_incoming(work2, LinkType.RETURN, 'return4')
 
-    calc2.add_incoming(data4, LinkType.INPUT_CALC, 'input4')
+    calc2.base.links.add_incoming(data4, LinkType.INPUT_CALC, 'input4')
     calc2.store()
 
-    data5.add_incoming(calc2, LinkType.CREATE, 'create5')
-    data6.add_incoming(calc2, LinkType.CREATE, 'create6')
+    data5.base.links.add_incoming(calc2, LinkType.CREATE, 'create5')
+    data6.base.links.add_incoming(calc2, LinkType.CREATE, 'create6')
 
     data5.store()
     data6.store()
@@ -548,11 +548,11 @@ def test_double_return_links_for_workflows(tmp_path, aiida_profile_clean):
     data_in = orm.Int(1).store()
     data_out = orm.Int(2).store()
 
-    work1.add_incoming(data_in, LinkType.INPUT_WORK, 'input_i1')
-    work1.add_incoming(work2, LinkType.CALL_WORK, 'call')
+    work1.base.links.add_incoming(data_in, LinkType.INPUT_WORK, 'input_i1')
+    work1.base.links.add_incoming(work2, LinkType.CALL_WORK, 'call')
     work1.store()
-    data_out.add_incoming(work1, LinkType.RETURN, 'return1')
-    data_out.add_incoming(work2, LinkType.RETURN, 'return2')
+    data_out.base.links.add_incoming(work1, LinkType.RETURN, 'return1')
+    data_out.base.links.add_incoming(work2, LinkType.RETURN, 'return2')
     links_count = 4
 
     work1.seal()
@@ -586,8 +586,8 @@ def test_multiple_post_return_links(tmp_path, aiida_profile_clean):  # pylint: d
     work = orm.WorkflowNode().store()
     link_label = 'output_data'
 
-    data.add_incoming(calc, LinkType.CREATE, link_label)
-    data.add_incoming(work, LinkType.RETURN, link_label)
+    data.base.links.add_incoming(calc, LinkType.CREATE, link_label)
+    data.base.links.add_incoming(work, LinkType.RETURN, link_label)
 
     calc.seal()
     work.seal()

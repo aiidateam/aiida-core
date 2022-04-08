@@ -54,9 +54,9 @@ class NodeLinksManager:
         :param incoming: if True, inspect incoming links, otherwise inspect outgoing links.
         """
         if incoming:
-            links = self._node.get_incoming(link_type=self._link_type)
+            links = self._node.base.links.get_incoming(link_type=self._link_type)
         else:
-            links = self._node.get_outgoing(link_type=self._link_type)
+            links = self._node.base.links.get_outgoing(link_type=self._link_type)
 
         return AttributeDict(links.nested())
 

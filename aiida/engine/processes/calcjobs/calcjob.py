@@ -487,7 +487,7 @@ class CalcJob(Process):
             exit_code = exit_code_scheduler
 
         # Finally link up the outputs and we're done
-        for entry in self.node.get_outgoing():
+        for entry in self.node.base.links.get_outgoing():
             self.out(entry.link_label, entry.node)
 
         return exit_code or ExitCode(0)
@@ -592,10 +592,10 @@ class CalcJob(Process):
         from aiida.orm import Code, Computer, load_node
         from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
-        inputs = self.node.get_incoming(link_type=LinkType.INPUT_CALC)
+        inputs = self.node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
 
-        if not self.inputs.metadata.dry_run and self.node.has_cached_links():  # type: ignore[union-attr]
-            raise InvalidOperation('calculation node has unstored links in cache')
+        if not self.inputs.metadata.dry_run and not self.node.is_stored:  # type: ignore[union-attr]
+            raise InvalidOperation('calculation node is not stored.')
 
         computer = self.node.computer
         codes = [_ for _ in inputs.all_nodes() if isinstance(_, Code)]

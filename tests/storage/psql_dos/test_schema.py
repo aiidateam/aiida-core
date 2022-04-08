@@ -40,9 +40,9 @@ class TestRelationshipsSQLA:
         n_3 = Data().store()
 
         # Create a link between these 2 nodes
-        n_2.add_incoming(n_1, link_type=LinkType.INPUT_CALC, link_label='N1')
+        n_2.base.links.add_incoming(n_1, link_type=LinkType.INPUT_CALC, link_label='N1')
         n_2.store()
-        n_3.add_incoming(n_2, link_type=LinkType.CREATE, link_label='N2')
+        n_3.base.links.add_incoming(n_2, link_type=LinkType.CREATE, link_label='N2')
 
         # Check that the result of outputs is a list
         assert isinstance(n_1.backend_entity.bare_model.outputs, list), 'This is expected to be a list'
@@ -65,9 +65,9 @@ class TestRelationshipsSQLA:
         n_3 = Data().store()
 
         # Create a link between these 2 nodes
-        n_2.add_incoming(n_1, link_type=LinkType.INPUT_CALC, link_label='N1')
+        n_2.base.links.add_incoming(n_1, link_type=LinkType.INPUT_CALC, link_label='N1')
         n_2.store()
-        n_3.add_incoming(n_2, link_type=LinkType.CREATE, link_label='N2')
+        n_3.base.links.add_incoming(n_2, link_type=LinkType.CREATE, link_label='N2')
 
         # Check that the result of outputs is a list
         assert isinstance(n_1.backend_entity.bare_model.inputs, list), 'This is expected to be a list'

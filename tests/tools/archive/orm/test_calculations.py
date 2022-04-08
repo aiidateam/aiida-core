@@ -64,14 +64,14 @@ def test_workcalculation(tmp_path, aiida_profile):
     input_2 = orm.Int(5).store()
     output_1 = orm.Int(2).store()
 
-    master.add_incoming(input_1, LinkType.INPUT_WORK, 'input_1')
-    slave.add_incoming(master, LinkType.CALL_WORK, 'CALL')
-    slave.add_incoming(input_2, LinkType.INPUT_WORK, 'input_2')
+    master.base.links.add_incoming(input_1, LinkType.INPUT_WORK, 'input_1')
+    slave.base.links.add_incoming(master, LinkType.CALL_WORK, 'CALL')
+    slave.base.links.add_incoming(input_2, LinkType.INPUT_WORK, 'input_2')
 
     master.store()
     slave.store()
 
-    output_1.add_incoming(master, LinkType.RETURN, 'RETURN')
+    output_1.base.links.add_incoming(master, LinkType.RETURN, 'RETURN')
 
     master.seal()
     slave.seal()

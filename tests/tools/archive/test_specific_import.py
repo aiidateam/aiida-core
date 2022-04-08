@@ -121,8 +121,8 @@ def test_cycle_structure_data(aiida_profile_clean, aiida_localhost, tmp_path):
     # Verify that orm.CalculationNodes have non-empty attribute dictionaries
     builder = orm.QueryBuilder().append(orm.CalculationNode)
     for [calculation] in builder.iterall():
-        assert isinstance(calculation.attributes, dict)
-        assert len(calculation.attributes) != 0
+        assert isinstance(calculation.base.attributes.all, dict)
+        assert len(calculation.base.attributes.all) != 0
 
     # Verify that the structure data maintained its label, cell and kinds
     builder = orm.QueryBuilder().append(orm.StructureData)

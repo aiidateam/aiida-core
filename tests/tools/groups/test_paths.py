@@ -134,7 +134,7 @@ def test_walk_nodes(aiida_profile_clean):
     node.store()
     group.add_nodes(node)
     group_path = GroupPath()
-    assert [(r.group_path.path, r.node.attributes) for r in group_path.walk_nodes()] == [('a', {'i': 1, 'j': 2})]
+    assert [(r.group_path.path, r.node.base.attributes.all) for r in group_path.walk_nodes()] == [('a', {'i': 1, 'j': 2})]
 
 
 def test_cls(aiida_profile_clean):

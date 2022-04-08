@@ -41,7 +41,7 @@ class RemoteStashData(Data):
 
         :return: the stash mode.
         """
-        return StashMode(self.get_attribute('stash_mode'))
+        return StashMode(self.base.attributes.get('stash_mode'))
 
     @stash_mode.setter
     def stash_mode(self, value: StashMode):
@@ -50,4 +50,4 @@ class RemoteStashData(Data):
         :param value: the stash mode.
         """
         type_check(value, StashMode)
-        self.set_attribute('stash_mode', value.value)
+        self.base.attributes.set('stash_mode', value.value)

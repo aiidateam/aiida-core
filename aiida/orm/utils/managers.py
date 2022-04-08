@@ -208,7 +208,7 @@ class AttributeManager:
         """
         # Possibly add checks here
         # We cannot set `self._node` because it would go through the __setattr__ method
-        # which uses said _node by calling `self._node.set_attribute(name, value)`.
+        # which uses said _node by calling `self._node.base.attributes.set(name, value)`.
         # Instead, we need to manually set it through the `self.__dict__` property.
         self.__dict__['_node'] = node
 
@@ -216,20 +216,20 @@ class AttributeManager:
         """
         Allow to list the keys of the dictionary
         """
-        return sorted(self._node.attributes_keys())
+        return sorted(self._node.base.attributes.keys())
 
     def __iter__(self):
         """
         Return the keys as an iterator
         """
-        for k in self._node.attributes_keys():
+        for k in self._node.base.attributes.keys():
             yield k
 
     def _get_dict(self):
         """
         Return the internal dictionary
         """
-        return dict(self._node.attributes_items())
+        return dict(self._node.base.attributes.items())
 
     def __getattr__(self, name):
         """
@@ -240,10 +240,10 @@ class AttributeManager:
 
         :param name: name of the key whose value is required.
         """
-        return self._node.get_attribute(name)
+        return self._node.base.attributes.get(name)
 
     def __setattr__(self, name, value):
-        self._node.set_attribute(name, value)
+        self._node.base.attributes.set(name, value)
 
     def __getitem__(self, name):
         """
@@ -252,6 +252,6 @@ class AttributeManager:
         :param name: name of the key whose value is required.
         """
         try:
-            return self._node.get_attribute(name)
+            return self._node.base.attributes.get(name)
         except AttributeError as exception:
             raise KeyError(str(exception)) from exception

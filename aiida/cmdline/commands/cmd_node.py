@@ -234,7 +234,7 @@ def echo_node_dict(nodes, keys, fmt, identifier, raw, use_attrs=True):
             id_value = node.uuid
 
         if use_attrs:
-            node_dict = node.attributes
+            node_dict = node.base.attributes.all
             dict_name = 'attributes'
         else:
             node_dict = node.extras

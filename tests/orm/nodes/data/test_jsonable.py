@@ -124,7 +124,7 @@ def test_unimportable_module():
     node = JsonableData(obj)
 
     # Artificially change the ``@module`` in the attributes so it becomes unloadable
-    node.set_attribute('@module', 'not.existing')
+    node.base.attributes.set('@module', 'not.existing')
     node.store()
 
     loaded = load_node(node.pk)
@@ -140,7 +140,7 @@ def test_unimportable_class():
     node = JsonableData(obj)
 
     # Artificially change the ``@class`` in the attributes so it becomes unloadable
-    node.set_attribute('@class', 'NonExistingClass')
+    node.base.attributes.set('@class', 'NonExistingClass')
     node.store()
 
     loaded = load_node(node.pk)

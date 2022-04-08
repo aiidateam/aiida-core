@@ -31,4 +31,4 @@ def test_clean(remote_data):
 
     remote_data._clean()  #  pylint: disable=protected-access
     assert remote_data.is_empty
-    assert remote_data.get_attribute(RemoteData.KEY_EXTRA_CLEANED, True)
+    assert remote_data.base.attributes.get(RemoteData.KEY_EXTRA_CLEANED, True)

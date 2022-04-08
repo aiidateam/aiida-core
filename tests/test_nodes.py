@@ -74,9 +74,9 @@ class TestNodeHashing:
     @staticmethod
     def create_simple_node(a, b=0, c=0):
         n = orm.Data()
-        n.set_attribute('a', a)
-        n.set_attribute('b', b)
-        n.set_attribute('c', c)
+        n.base.attributes.set('a', a)
+        n.base.attributes.set('b', b)
+        n.base.attributes.set('c', c)
         return n
 
     def test_node_uuid_hashing_for_querybuidler(self):
@@ -295,78 +295,78 @@ class TestNodeBasic:
         disabled in the call
         """
         a = orm.Data()
-        a.set_attribute('bool', self.boolval)
-        a.set_attribute('integer', self.intval)
+        a.base.attributes.set('bool', self.boolval)
+        a.base.attributes.set('integer', self.intval)
         a.store()
 
         # After storing attributes should now be immutable
         with pytest.raises(ModificationNotAllowed):
-            a.delete_attribute('bool')
+            a.base.attributes.delete('bool')
 
         with pytest.raises(ModificationNotAllowed):
-            a.set_attribute('integer', self.intval)
+            a.base.attributes.set('integer', self.intval)
 
     def test_attr_before_storing(self):
         a = orm.Data()
-        a.set_attribute('k1', self.boolval)
-        a.set_attribute('k2', self.intval)
-        a.set_attribute('k3', self.floatval)
-        a.set_attribute('k4', self.stringval)
-        a.set_attribute('k5', self.dictval)
-        a.set_attribute('k6', self.listval)
-        a.set_attribute('k7', self.emptydict)
-        a.set_attribute('k8', self.emptylist)
-        a.set_attribute('k9', None)
+        a.base.attributes.set('k1', self.boolval)
+        a.base.attributes.set('k2', self.intval)
+        a.base.attributes.set('k3', self.floatval)
+        a.base.attributes.set('k4', self.stringval)
+        a.base.attributes.set('k5', self.dictval)
+        a.base.attributes.set('k6', self.listval)
+        a.base.attributes.set('k7', self.emptydict)
+        a.base.attributes.set('k8', self.emptylist)
+        a.base.attributes.set('k9', None)
 
         # Now I check if I can retrieve them, before the storage
-        assert self.boolval == a.get_attribute('k1')
-        assert self.intval == a.get_attribute('k2')
-        assert self.floatval == a.get_attribute('k3')
-        assert self.stringval == a.get_attribute('k4')
-        assert self.dictval == a.get_attribute('k5')
-        assert self.listval == a.get_attribute('k6')
-        assert self.emptydict == a.get_attribute('k7')
-        assert self.emptylist == a.get_attribute('k8')
-        assert a.get_attribute('k9') is None
+        assert self.boolval == a.base.attributes.get('k1')
+        assert self.intval == a.base.attributes.get('k2')
+        assert self.floatval == a.base.attributes.get('k3')
+        assert self.stringval == a.base.attributes.get('k4')
+        assert self.dictval == a.base.attributes.get('k5')
+        assert self.listval == a.base.attributes.get('k6')
+        assert self.emptydict == a.base.attributes.get('k7')
+        assert self.emptylist == a.base.attributes.get('k8')
+        assert a.base.attributes.get('k9') is None
 
         # And now I try to delete the keys
-        a.delete_attribute('k1')
-        a.delete_attribute('k2')
-        a.delete_attribute('k3')
-        a.delete_attribute('k4')
-        a.delete_attribute('k5')
-        a.delete_attribute('k6')
-        a.delete_attribute('k7')
-        a.delete_attribute('k8')
-        a.delete_attribute('k9')
+        a.base.attributes.delete('k1')
+        a.base.attributes.delete('k2')
+        a.base.attributes.delete('k3')
+        a.base.attributes.delete('k4')
+        a.base.attributes.delete('k5')
+        a.base.attributes.delete('k6')
+        a.base.attributes.delete('k7')
+        a.base.attributes.delete('k8')
+        a.base.attributes.delete('k9')
 
         with pytest.raises(AttributeError):
             # I delete twice the same attribute
-            a.delete_attribute('k1')
+            a.base.attributes.delete('k1')
 
         with pytest.raises(AttributeError):
             # I delete a non-existing attribute
-            a.delete_attribute('nonexisting')
+            a.base.attributes.delete('nonexisting')
 
         with pytest.raises(AttributeError):
             # I get a deleted attribute
-            a.get_attribute('k1')
+            a.base.attributes.get('k1')
 
         with pytest.raises(AttributeError):
             # I get a non-existing attribute
-            a.get_attribute('nonexisting')
+            a.base.attributes.get('nonexisting')
 
     def test_get_attrs_before_storing(self):
         a = orm.Data()
-        a.set_attribute('k1', self.boolval)
-        a.set_attribute('k2', self.intval)
-        a.set_attribute('k3', self.floatval)
-        a.set_attribute('k4', self.stringval)
-        a.set_attribute('k5', self.dictval)
-        a.set_attribute('k6', self.listval)
-        a.set_attribute('k7', self.emptydict)
-        a.set_attribute('k8', self.emptylist)
-        a.set_attribute('k9', None)
+        a.base.attributes.set('k1', self.boolval)
+        a.base.attributes.set('k2', self.intval)
+        a.base.attributes.set('k3', self.floatval)
+        a.base.attributes.set('k4', self.stringval)
+        a.base.attributes.set('k5', self.dictval)
+        a.base.attributes.set('k6', self.listval)
+        a.base.attributes.set('k7', self.emptydict)
+        a.base.attributes.set('k8', self.emptylist)
+        a.base.attributes.set('k9', None)
 
         target_attrs = {
             'k1': self.boolval,
@@ -381,32 +381,32 @@ class TestNodeBasic:
         }
 
         # Now I check if I can retrieve them, before the storage
-        assert a.attributes == target_attrs
+        assert a.base.attributes.all == target_attrs
 
         # And now I try to delete the keys
-        a.delete_attribute('k1')
-        a.delete_attribute('k2')
-        a.delete_attribute('k3')
-        a.delete_attribute('k4')
-        a.delete_attribute('k5')
-        a.delete_attribute('k6')
-        a.delete_attribute('k7')
-        a.delete_attribute('k8')
-        a.delete_attribute('k9')
+        a.base.attributes.delete('k1')
+        a.base.attributes.delete('k2')
+        a.base.attributes.delete('k3')
+        a.base.attributes.delete('k4')
+        a.base.attributes.delete('k5')
+        a.base.attributes.delete('k6')
+        a.base.attributes.delete('k7')
+        a.base.attributes.delete('k8')
+        a.base.attributes.delete('k9')
 
-        assert a.attributes == {}
+        assert a.base.attributes.all == {}
 
     def test_get_attrs_after_storing(self):
         a = orm.Data()
-        a.set_attribute('k1', self.boolval)
-        a.set_attribute('k2', self.intval)
-        a.set_attribute('k3', self.floatval)
-        a.set_attribute('k4', self.stringval)
-        a.set_attribute('k5', self.dictval)
-        a.set_attribute('k6', self.listval)
-        a.set_attribute('k7', self.emptydict)
-        a.set_attribute('k8', self.emptylist)
-        a.set_attribute('k9', None)
+        a.base.attributes.set('k1', self.boolval)
+        a.base.attributes.set('k2', self.intval)
+        a.base.attributes.set('k3', self.floatval)
+        a.base.attributes.set('k4', self.stringval)
+        a.base.attributes.set('k5', self.dictval)
+        a.base.attributes.set('k6', self.listval)
+        a.base.attributes.set('k7', self.emptydict)
+        a.base.attributes.set('k8', self.emptylist)
+        a.base.attributes.set('k9', None)
 
         a.store()
 
@@ -423,18 +423,18 @@ class TestNodeBasic:
         }
 
         # Now I check if I can retrieve them, before the storage
-        assert a.attributes == target_attrs
+        assert a.base.attributes.all == target_attrs
 
     def test_store_object(self):
         """Trying to set objects as attributes should fail, because they are not json-serializable."""
         a = orm.Data()
 
-        a.set_attribute('object', object())
+        a.base.attributes.set('object', object())
         with pytest.raises(ValidationError):
             a.store()
 
         b = orm.Data()
-        b.set_attribute('object_list', [object(), object()])
+        b.base.attributes.set('object_list', [object(), object()])
         with pytest.raises(ValidationError):
             b.store()
 
@@ -453,20 +453,20 @@ class TestNodeBasic:
         }
 
         for k, v in attrs_to_set.items():
-            a.set_attribute(k, v)
+            a.base.attributes.set(k, v)
 
         # Create a copy
         b = copy.deepcopy(a)
         # I modify an attribute and add a new one; I mirror it in the dictionary
         # for later checking
         b_expected_attributes = copy.deepcopy(attrs_to_set)
-        b.set_attribute('integer', 489)
+        b.base.attributes.set('integer', 489)
         b_expected_attributes['integer'] = 489
-        b.set_attribute('new', 'cvb')
+        b.base.attributes.set('new', 'cvb')
         b_expected_attributes['new'] = 'cvb'
 
         # I check before storing that the attributes are ok
-        assert b.attributes == b_expected_attributes
+        assert b.base.attributes.all == b_expected_attributes
         # Note that during copy, I do not copy the extras!
         assert b.extras == {}
 
@@ -477,10 +477,10 @@ class TestNodeBasic:
         b_expected_extras = {'meta': 'textofext', '_aiida_hash': AnyValue()}
 
         # Now I check that the attributes of the original node have not changed
-        assert a.attributes == attrs_to_set
+        assert a.base.attributes.all == attrs_to_set
 
         # I check then on the 'b' copy
-        assert b.attributes == b_expected_attributes
+        assert b.base.attributes.all == b_expected_attributes
         assert b.extras == b_expected_extras
 
     def test_files(self):
@@ -687,45 +687,45 @@ class TestNodeBasic:
 
     def test_attr_after_storing(self):
         a = orm.Data()
-        a.set_attribute('none', None)
-        a.set_attribute('bool', self.boolval)
-        a.set_attribute('integer', self.intval)
-        a.set_attribute('float', self.floatval)
-        a.set_attribute('string', self.stringval)
-        a.set_attribute('dict', self.dictval)
-        a.set_attribute('list', self.listval)
+        a.base.attributes.set('none', None)
+        a.base.attributes.set('bool', self.boolval)
+        a.base.attributes.set('integer', self.intval)
+        a.base.attributes.set('float', self.floatval)
+        a.base.attributes.set('string', self.stringval)
+        a.base.attributes.set('dict', self.dictval)
+        a.base.attributes.set('list', self.listval)
 
         a.store()
 
         # Now I check if I can retrieve them, before the storage
-        assert a.get_attribute('none') is None
-        assert self.boolval == a.get_attribute('bool')
-        assert self.intval == a.get_attribute('integer')
-        assert self.floatval == a.get_attribute('float')
-        assert self.stringval == a.get_attribute('string')
-        assert self.dictval == a.get_attribute('dict')
-        assert self.listval == a.get_attribute('list')
+        assert a.base.attributes.get('none') is None
+        assert self.boolval == a.base.attributes.get('bool')
+        assert self.intval == a.base.attributes.get('integer')
+        assert self.floatval == a.base.attributes.get('float')
+        assert self.stringval == a.base.attributes.get('string')
+        assert self.dictval == a.base.attributes.get('dict')
+        assert self.listval == a.base.attributes.get('list')
 
     def test_attr_with_reload(self):
         a = orm.Data()
-        a.set_attribute('none', None)
-        a.set_attribute('bool', self.boolval)
-        a.set_attribute('integer', self.intval)
-        a.set_attribute('float', self.floatval)
-        a.set_attribute('string', self.stringval)
-        a.set_attribute('dict', self.dictval)
-        a.set_attribute('list', self.listval)
+        a.base.attributes.set('none', None)
+        a.base.attributes.set('bool', self.boolval)
+        a.base.attributes.set('integer', self.intval)
+        a.base.attributes.set('float', self.floatval)
+        a.base.attributes.set('string', self.stringval)
+        a.base.attributes.set('dict', self.dictval)
+        a.base.attributes.set('list', self.listval)
 
         a.store()
 
         b = orm.load_node(uuid=a.uuid)
-        assert a.get_attribute('none') is None
-        assert self.boolval == b.get_attribute('bool')
-        assert self.intval == b.get_attribute('integer')
-        assert self.floatval == b.get_attribute('float')
-        assert self.stringval == b.get_attribute('string')
-        assert self.dictval == b.get_attribute('dict')
-        assert self.listval == b.get_attribute('list')
+        assert a.base.attributes.get('none') is None
+        assert self.boolval == b.base.attributes.get('bool')
+        assert self.intval == b.base.attributes.get('integer')
+        assert self.floatval == b.base.attributes.get('float')
+        assert self.stringval == b.base.attributes.get('string')
+        assert self.dictval == b.base.attributes.get('dict')
+        assert self.listval == b.base.attributes.get('list')
 
     def test_extra_with_reload(self):
         a = orm.Data()
@@ -805,7 +805,7 @@ class TestNodeBasic:
         }
 
         for k, v in attrs_to_set.items():
-            a.set_attribute(k, v)
+            a.base.attributes.set(k, v)
 
         a.store()
 
@@ -817,10 +817,10 @@ class TestNodeBasic:
 
         all_extras = dict(_aiida_hash=AnyValue(), **extras_to_set)
 
-        assert set(list(a.attributes.keys())) == set(attrs_to_set.keys())
+        assert set(list(a.base.attributes.keys())) == set(attrs_to_set.keys())
         assert set(list(a.extras.keys())) == set(all_extras.keys())
 
-        assert a.attributes == attrs_to_set
+        assert a.base.attributes.all == attrs_to_set
 
         assert a.extras == all_extras
 
@@ -926,28 +926,28 @@ class TestNodeBasic:
         # Manages to store, and value is converted to its base type
         p = orm.Dict(dict={'b': orm.Str('sometext'), 'c': l1})
         p.store()
-        assert p.get_attribute('b') == 'sometext'
-        assert isinstance(p.get_attribute('b'), str)
-        assert p.get_attribute('c') == ['b', [1, 2]]
-        assert isinstance(p.get_attribute('c'), (list, tuple))
+        assert p.base.attributes.get('b') == 'sometext'
+        assert isinstance(p.base.attributes.get('b'), str)
+        assert p.base.attributes.get('c') == ['b', [1, 2]]
+        assert isinstance(p.base.attributes.get('c'), (list, tuple))
 
         # Check also before storing
         n = orm.Data()
-        n.set_attribute('a', orm.Str('sometext2'))
-        n.set_attribute('b', l2)
-        assert n.get_attribute('a').value == 'sometext2'
-        assert isinstance(n.get_attribute('a'), orm.Str)
-        assert n.get_attribute('b').get_list() == ['f', True, {'gg': None}]
-        assert isinstance(n.get_attribute('b'), orm.List)
+        n.base.attributes.set('a', orm.Str('sometext2'))
+        n.base.attributes.set('b', l2)
+        assert n.base.attributes.get('a').value == 'sometext2'
+        assert isinstance(n.base.attributes.get('a'), orm.Str)
+        assert n.base.attributes.get('b').get_list() == ['f', True, {'gg': None}]
+        assert isinstance(n.base.attributes.get('b'), orm.List)
 
         # Check also deep in a dictionary/list
         n = orm.Data()
-        n.set_attribute('a', {'b': [orm.Str('sometext3')]})
-        assert n.get_attribute('a')['b'][0].value == 'sometext3'
-        assert isinstance(n.get_attribute('a')['b'][0], orm.Str)
+        n.base.attributes.set('a', {'b': [orm.Str('sometext3')]})
+        assert n.base.attributes.get('a')['b'][0].value == 'sometext3'
+        assert isinstance(n.base.attributes.get('a')['b'][0], orm.Str)
         n.store()
-        assert n.get_attribute('a')['b'][0] == 'sometext3'
-        assert isinstance(n.get_attribute('a')['b'][0], str)
+        assert n.base.attributes.get('a')['b'][0] == 'sometext3'
+        assert isinstance(n.base.attributes.get('a')['b'][0], str)
 
     def test_basetype_as_extra(self):
         """

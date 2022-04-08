@@ -195,7 +195,10 @@ def format_flat_links(links, headers):
     table = []
 
     for link_triple in links:
-        table.append([link_triple.link_label, link_triple.node.pk, link_triple.node.get_attribute('process_label', '')])
+        table.append([
+            link_triple.link_label, link_triple.node.pk,
+            link_triple.node.base.attributes.get('process_label', '')
+        ])
 
     result = f'\n{tabulate(table, headers=headers)}'
 

@@ -30,7 +30,7 @@ def test_qb_ordering_limits_offsets_sqla():
     # Creating 10 nodes with an attribute that can be ordered
     for i in range(10):
         node = Data()
-        node.set_attribute('foo', i)
+        node.base.attributes.set('foo', i)
         node.store()
     q_b = QueryBuilder().append(Node, project='attributes.foo').order_by({Node: {'attributes.foo': {'cast': 'i'}}})
     res = next(zip(*q_b.all()))

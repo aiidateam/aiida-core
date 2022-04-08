@@ -158,20 +158,7 @@ Attributes related methods
 ==========================
 Each :py:meth:`~aiida.orm.nodes.node.Node` object can have attributes which are properties that characterize the node.
 Such properties can be the energy, the atom symbols or the lattice vectors.
-The following methods can be used for the management of the attributes.
-
-- :py:meth:`~aiida.orm.nodes.node.Node.set_attribute` and :py:meth:`~aiida.orm.nodes.node.Node.set_attribute_many` adds one or many new attributes to the node.
-  The key of the attribute is the property name (e.g. ``energy``, ``lattice_vectors`` etc) and the value of the attribute is the value of that property.
-
-- :py:meth:`~aiida.orm.nodes.node.Node.reset_attributes` will replace all existing attributes with a new set of attributes.
-
-- :py:meth:`~aiida.orm.nodes.node.Node.attributes` is a property that returns all attributes.
-
-- :py:meth:`~aiida.orm.nodes.node.Node.get_attribute` and :py:meth:`~aiida.orm.nodes.node.Node.get_attribute_many` can be used to return a single or many specific attributes.
-
-- :py:meth:`~aiida.orm.nodes.node.Node.delete_attribute` & :py:meth:`~aiida.orm.nodes.node.Node.delete_attribute_many` delete one or multiple specific attributes.
-
-- :py:meth:`~aiida.orm.nodes.node.Node.clear_attributes` will delete all existing attributes.
+The methods for the management of the attributes are defined on the :py:class:`~aiida.orm.nodes.attributes.NodeAttributes` class.
 
 
 Extras related methods

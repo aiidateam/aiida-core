@@ -128,7 +128,7 @@ def test_reexport(aiida_profile, tmp_path):
     calc = orm.CalculationNode()
     # setting also trial dict as attributes, but randomizing the keys)
     for key, value in trial_dict.items():
-        calc.set_attribute(str(int(key) + np.random.randint(10)), value)
+        calc.base.attributes.set(str(int(key) + np.random.randint(10)), value)
     array = orm.ArrayData()
     array.set_array('array', nparr)
     array.store()
@@ -178,13 +178,13 @@ def get_hash_from_db_content(grouplabel):
     # The hash is given from the preservable entries in an export-import cycle,
     # uuids, attributes, labels, descriptions, arrays, link-labels, link-types:
     hash_ = make_hash([(
-        item['param']['*'].attributes,
+        item['param']['*'].base.attributes.all,
         item['param']['*'].uuid,
         item['param']['*'].label,
         item['param']['*'].description,
         item['calc']['*'].uuid,
-        item['calc']['*'].attributes,
-        item['array']['*'].attributes,
+        item['calc']['*'].base.attributes.all,
+        item['array']['*'].base.attributes.all,
         [item['array']['*'].get_array(name).tolist() for name in item['array']['*'].get_arraynames()],
         item['array']['*'].uuid,
         item['group']['*'].uuid,

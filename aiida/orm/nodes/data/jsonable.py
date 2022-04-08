@@ -81,7 +81,7 @@ class JsonableData(Data):
         except TypeError as exc:
             raise TypeError(f'the object `{obj}` is not JSON-serializable and therefore cannot be stored.') from exc
 
-        self.set_attribute_many(serialized)
+        self.base.attributes.set_many(serialized)
 
     @classmethod
     def _deserialize_float_constants(cls, data: typing.Any):
@@ -114,7 +114,7 @@ class JsonableData(Data):
         try:
             return self._obj
         except AttributeError:
-            attributes = self.attributes
+            attributes = self.base.attributes.all
             class_name = attributes.pop('@class')
             module_name = attributes.pop('@module')
 

@@ -115,10 +115,10 @@ class List(Data, MutableSequence):
         :return: a list
         """
         try:
-            return self.get_attribute(self._LIST_KEY)
+            return self.base.attributes.get(self._LIST_KEY)
         except AttributeError:
             self.set_list([])
-            return self.get_attribute(self._LIST_KEY)
+            return self.base.attributes.get(self._LIST_KEY)
 
     def set_list(self, data):
         """Set the contents of this node.
@@ -127,7 +127,7 @@ class List(Data, MutableSequence):
         """
         if not isinstance(data, list):
             raise TypeError('Must supply list type')
-        self.set_attribute(self._LIST_KEY, data.copy())
+        self.base.attributes.set(self._LIST_KEY, data.copy())
 
     def _using_list_reference(self):
         """

@@ -138,7 +138,7 @@ class TrajectoryData(ArrayData):
 
         self._internal_validate(stepids, cells, symbols, positions, times, velocities)
         # set symbols as attribute for easier querying
-        self.set_attribute('symbols', list(symbols))
+        self.base.attributes.set('symbols', list(symbols))
         self.set_array('positions', positions)
         if stepids is not None:  # use input stepids
             self.set_array('steps', stepids)
@@ -271,7 +271,7 @@ class TrajectoryData(ArrayData):
 
         :raises KeyError: if the trajectory has not been set yet.
         """
-        return self.get_attribute('symbols')
+        return self.base.attributes.get('symbols')
 
     def get_positions(self):
         """
@@ -610,11 +610,11 @@ class TrajectoryData(ArrayData):
 
         # Try to get the units.
         try:
-            positions_unit = self.get_attribute('units|positions')
+            positions_unit = self.base.attributes.get('units|positions')
         except AttributeError:
             positions_unit = 'A'
         try:
-            times_unit = self.get_attribute('units|times')
+            times_unit = self.base.attributes.get('units|times')
         except AttributeError:
             times_unit = 'ps'
 
@@ -731,7 +731,7 @@ class TrajectoryData(ArrayData):
         positions = self.get_positions()[minindex:maxindex:stepsize]
 
         try:
-            if self.get_attribute('units|positions') in ('bohr', 'atomic'):
+            if self.base.attributes.get('units|positions') in ('bohr', 'atomic'):
                 bohr_to_ang = 0.52917720859
                 positions *= bohr_to_ang
         except AttributeError:

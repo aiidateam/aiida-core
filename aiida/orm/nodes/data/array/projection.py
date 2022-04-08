@@ -79,7 +79,7 @@ class ProjectionData(OrbitalData, ArrayData):
                         'The value passed to set_reference_bandsdata was not associated to any bandsdata'
                     )
 
-        self.set_attribute('reference_bandsdata_uuid', uuid)
+        self.base.attributes.set('reference_bandsdata_uuid', uuid)
 
     def get_reference_bandsdata(self):
         """
@@ -92,7 +92,7 @@ class ProjectionData(OrbitalData, ArrayData):
         """
         from aiida.orm import load_node
         try:
-            uuid = self.get_attribute('reference_bandsdata_uuid')
+            uuid = self.base.attributes.get('reference_bandsdata_uuid')
         except AttributeError:
             raise AttributeError('BandsData has not been set for this instance')
         try:
@@ -248,7 +248,7 @@ class ProjectionData(OrbitalData, ArrayData):
             cls = OrbitalFactory(orbital_type)
             test_orbital = cls(**orbital_dict)
             list_of_orbital_dicts.append(test_orbital.get_orbital_dict())
-        self.set_attribute('orbital_dicts', list_of_orbital_dicts)
+        self.base.attributes.set('orbital_dicts', list_of_orbital_dicts)
 
         # verifies and sets the projections
         if list_of_projections:
@@ -286,7 +286,7 @@ class ProjectionData(OrbitalData, ArrayData):
 
             if not all(isinstance(_, str) for _ in tags):
                 raise exceptions.ValidationError('Tags must set a list of strings')
-            self.set_attribute('tags', tags)
+            self.base.attributes.set('tags', tags)
 
     def set_orbitals(self, **kwargs):  # pylint: disable=arguments-differ
         """

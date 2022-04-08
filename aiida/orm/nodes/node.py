@@ -43,6 +43,7 @@ from aiida.orm.utils.node import AbstractNodeMeta
 from ..comments import Comment
 from ..computers import Computer
 from ..entities import Collection as EntityCollection
+from ..entities import Entity
 from ..extras import EntityExtras
 from ..querybuilder import QueryBuilder
 from ..users import User

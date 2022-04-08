@@ -8,6 +8,7 @@ MODULE_POLISH="${GITHUB_WORKSPACE}/.molecule/default/files/polish"
 export PYTHONPATH="${PYTHONPATH}:${SYSTEM_TESTS}:${MODULE_POLISH}"
 
 verdi daemon start 4
+verdi -p test_aiida run ${SYSTEM_TESTS}/test_daemon.py
 bash ${SYSTEM_TESTS}/test_polish_workchains.sh
 verdi daemon stop
 

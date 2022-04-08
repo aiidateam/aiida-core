@@ -34,7 +34,7 @@ class WorkChainNode(WorkflowNode):
 
         :returns: string representation of the stepper state info
         """
-        return self.get_attribute(self.STEPPER_STATE_INFO_KEY, None)
+        return self.base.attributes.get(self.STEPPER_STATE_INFO_KEY, None)
 
     def set_stepper_state_info(self, stepper_state_info: str) -> None:
         """
@@ -42,4 +42,4 @@ class WorkChainNode(WorkflowNode):
 
         :param state: string representation of the stepper state info
         """
-        return self.set_attribute(self.STEPPER_STATE_INFO_KEY, stepper_state_info)
+        return self.base.attributes.set(self.STEPPER_STATE_INFO_KEY, stepper_state_info)

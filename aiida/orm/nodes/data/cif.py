@@ -293,7 +293,7 @@ class CifData(SinglefileData):
         if values is not None:
             self.set_values(values)
 
-        if not self.is_stored and file is not None and self.get_attribute('parse_policy') == 'eager':
+        if not self.is_stored and file is not None and self.base.attributes.get('parse_policy') == 'eager':
             self.parse()
 
     @staticmethod
@@ -437,7 +437,7 @@ class CifData(SinglefileData):
             from CifFile import CifBlock  # pylint: disable=no-name-in-module
 
             with self.open() as handle:
-                c = CifFile.ReadCif(handle, scantype=self.get_attribute('scan_type', CifData._SCAN_TYPE_DEFAULT))  # pylint: disable=no-member
+                c = CifFile.ReadCif(handle, scantype=self.base.attributes.get('scan_type', CifData._SCAN_TYPE_DEFAULT))  # pylint: disable=no-member
             for k, v in c.items():
                 c.dictionary[k] = CifBlock(v)
             self._values = c
@@ -477,15 +477,15 @@ class CifData(SinglefileData):
             self.set_scan_type(scan_type)
 
         # Note: this causes parsing, if not already parsed
-        self.set_attribute('formulae', self.get_formulae())
-        self.set_attribute('spacegroup_numbers', self.get_spacegroup_numbers())
+        self.base.attributes.set('formulae', self.get_formulae())
+        self.base.attributes.set('spacegroup_numbers', self.get_spacegroup_numbers())
 
     def store(self, *args, **kwargs):  # pylint: disable=signature-differs
         """
         Store the node.
         """
         if not self.is_stored:
-            self.set_attribute('md5', self.generate_md5())
+            self.base.attributes.set('md5', self.generate_md5())
 
         return super().store(*args, **kwargs)
 
@@ -507,12 +507,12 @@ class CifData(SinglefileData):
                 self.source.get('source_md5', None) is not None and \
                 self.source['source_md5'] != md5sum:
             self.source = {}
-        self.set_attribute('md5', md5sum)
+        self.base.attributes.set('md5', md5sum)
 
         self._values = None
         self._ase = None
-        self.set_attribute('formulae', None)
-        self.set_attribute('spacegroup_numbers', None)
+        self.base.attributes.set('formulae', None)
+        self.base.attributes.set('spacegroup_numbers', None)
 
     def set_scan_type(self, scan_type):
         """
@@ -525,7 +525,7 @@ class CifData(SinglefileData):
         :param scan_type: Either 'standard' or 'flex' (see _scan_types)
         """
         if scan_type in CifData._SCAN_TYPES:
-            self.set_attribute('scan_type', scan_type)
+            self.base.attributes.set('scan_type', scan_type)
         else:
             raise ValueError(f'Got unknown scan_type {scan_type}')
 
@@ -537,7 +537,7 @@ class CifData(SinglefileData):
             or 'lazy' (defer parsing until needed)
         """
         if parse_policy in CifData._PARSE_POLICIES:
-            self.set_attribute('parse_policy', parse_policy)
+            self.base.attributes.set('parse_policy', parse_policy)
         else:
             raise ValueError(f'Got unknown parse_policy {parse_policy}')
 
@@ -799,7 +799,7 @@ class CifData(SinglefileData):
         super()._validate()
 
         try:
-            attr_md5 = self.get_attribute('md5')
+            attr_md5 = self.base.attributes.get('md5')
         except AttributeError:
             raise ValidationError("attribute 'md5' not set.")
         md5 = self.generate_md5()

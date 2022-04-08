@@ -260,13 +260,13 @@ class NodeTranslator(BaseTranslator):
         if self._content_type == 'attributes':
             # Get all attrs if attributes_filter is None
             if self._attributes_filter is None:
-                data = {self._content_type: node.attributes}
+                data = {self._content_type: node.base.attributes.all}
             # Get all attrs contained in attributes_filter
             else:
                 attrs = {}
-                for key in node.attributes.keys():
+                for key in node.base.attributes.keys():
                     if key in self._attributes_filter:
-                        attrs[key] = node.get_attribute(key)
+                        attrs[key] = node.base.attributes.get(key)
                 data = {self._content_type: attrs}
 
         # content/extras
@@ -495,7 +495,7 @@ class NodeTranslator(BaseTranslator):
         :return: folder list
         """
         try:
-            flist = node.list_objects(filename)
+            flist = node.base.repository.list_objects(filename)
         except NotADirectoryError:
             raise RestInputValidationError(f'{filename} is not a directory in this repository')
         response = []
@@ -515,7 +515,7 @@ class NodeTranslator(BaseTranslator):
 
         if filename:
             try:
-                data = node.get_object_content(filename, mode='rb')
+                data = node.base.repository.get_object_content(filename, mode='rb')
                 return data
             except FileNotFoundError:
                 raise RestInputValidationError('No such file is present')
@@ -527,7 +527,7 @@ class NodeTranslator(BaseTranslator):
         :param node: node object
         :return: node comments
         """
-        comments = node.get_comments()
+        comments = node.base.comments.all()
         response = []
         for cobj in comments:
             response.append({

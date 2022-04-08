@@ -44,7 +44,7 @@ def repo_cat(node, relative_path):
     import sys
 
     try:
-        with node.open(relative_path, mode='rb') as fhandle:
+        with node.base.repository.open(relative_path, mode='rb') as fhandle:
             copyfileobj(fhandle, sys.stdout.buffer)
     except OSError as exception:
         # The sepcial case is breakon pipe error, which is usually OK.
@@ -96,7 +96,7 @@ def repo_dump(node, output_directory):
         Recursively copy the content at the ``key`` path in the given node to
         the ``output_dir``.
         """
-        for file in node.list_objects(key):
+        for file in node.base.repository.list_objects(key):
             # Not using os.path.join here, because this is the "path"
             # in the AiiDA node, not an actual OS - level path.
             file_key = file.name if not key else f'{key}/{file.name}'
@@ -110,7 +110,7 @@ def repo_dump(node, output_directory):
                 assert file.file_type == FileType.FILE
                 out_file_path = output_dir / file.name
                 assert not out_file_path.exists()
-                with node.open(file_key, 'rb') as in_file:
+                with node.base.repository.open(file_key, 'rb') as in_file:
                     with out_file_path.open('wb') as out_file:
                         shutil.copyfileobj(in_file, out_file)
 
@@ -234,7 +234,7 @@ def echo_node_dict(nodes, keys, fmt, identifier, raw, use_attrs=True):
             id_value = node.uuid
 
         if use_attrs:
-            node_dict = node.attributes
+            node_dict = node.base.attributes.all
             dict_name = 'attributes'
         else:
             node_dict = node.extras
@@ -479,7 +479,7 @@ def comment_add(nodes, content):
         content = multi_line_input.edit_comment()
 
     for node in nodes:
-        node.add_comment(content)
+        node.base.comments.add(content)
 
     echo.echo_success(f'comment added to {len(nodes)} nodes')
 
@@ -517,7 +517,7 @@ def comment_show(user, nodes):
         echo.echo(msg)
         echo.echo('*' * len(msg))
 
-        all_comments = node.get_comments()
+        all_comments = node.base.comments.all()
 
         if user is not None:
             comments = [comment for comment in all_comments if comment.user.email == user.email]

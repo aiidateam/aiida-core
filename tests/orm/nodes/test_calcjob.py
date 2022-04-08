@@ -38,7 +38,7 @@ class TestCalcJobNode:
         assert node.get_state() == CalcJobState.UPLOADING
 
         # Setting an illegal calculation job state, the `get_state` should not fail but return `None`
-        node.set_attribute(node.CALC_JOB_STATE_KEY, 'INVALID')
+        node.base.attributes.set(node.CALC_JOB_STATE_KEY, 'INVALID')
         assert node.get_state() is None
 
     def test_get_scheduler_stdout(self):
@@ -55,8 +55,10 @@ class TestCalcJobNode:
                 retrieved = FolderData()
 
                 if with_file:
-                    retrieved._repository.put_object_from_filelike(io.BytesIO(stdout.encode('utf-8')), option_value)  # pylint: disable=protected-access
-                    retrieved._update_repository_metadata()  # pylint: disable=protected-access
+                    retrieved.base.repository._repository.put_object_from_filelike(  # pylint: disable=protected-access
+                        io.BytesIO(stdout.encode('utf-8')), option_value
+                    )
+                    retrieved.base.repository._update_repository_metadata()  # pylint: disable=protected-access
                 if with_option:
                     node.set_option(option_key, option_value)
                 node.store()
@@ -81,8 +83,10 @@ class TestCalcJobNode:
                 retrieved = FolderData()
 
                 if with_file:
-                    retrieved._repository.put_object_from_filelike(io.BytesIO(stderr.encode('utf-8')), option_value)  # pylint: disable=protected-access
-                    retrieved._update_repository_metadata()  # pylint: disable=protected-access
+                    retrieved.base.repository._repository.put_object_from_filelike(  # pylint: disable=protected-access
+                        io.BytesIO(stderr.encode('utf-8')), option_value
+                    )
+                    retrieved.base.repository._update_repository_metadata()  # pylint: disable=protected-access
                 if with_option:
                     node.set_option(option_key, option_value)
                 node.store()

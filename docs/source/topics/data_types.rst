@@ -333,14 +333,14 @@ or from `file-like objects <https://docs.python.org/3/glossary.html#term-file-li
 
   In [4]: folder.put_object_from_filelike(filelike_object, path='file2.txt')
 
-Inversely, the content of the files stored in the :py:class:`~aiida.orm.nodes.data.folder.FolderData` node can be accessed using the :py:meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.get_object_content()` method:
+Inversely, the content of the files stored in the :py:class:`~aiida.orm.nodes.data.folder.FolderData` node can be accessed using the :py:meth:`~aiida.orm.nodes.repository.NodeRepository.get_object_content()` method:
 
 .. code-block:: ipython
 
   In [5]: folder.get_object_content('file1.txt')
   Out[5]: 'File 1 content\n'
 
-To see the files that are stored in the :py:class:`~aiida.orm.nodes.data.folder.FolderData`, you can use the :py:meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.list_object_names()` method:
+To see the files that are stored in the :py:class:`~aiida.orm.nodes.data.folder.FolderData`, you can use the :py:meth:`~aiida.orm.nodes.repository.NodeRepository.list_object_names()` method:
 
 .. code-block:: ipython
 
@@ -348,14 +348,14 @@ To see the files that are stored in the :py:class:`~aiida.orm.nodes.data.folder.
   Out[6]: ['subdir', 'file1.txt', 'file2.txt']
 
 In this example, ``subdir`` was a sub directory of ``/absolute/path/to/directory``, whose contents where added above.
-to list the contents of the ``subdir`` directory, you can pass its path to the :py:meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.list_object_names()` method:
+to list the contents of the ``subdir`` directory, you can pass its path to the :py:meth:`~aiida.orm.nodes.repository.NodeRepository.list_object_names()` method:
 
 .. code-block:: ipython
 
   In [7]: folder.list_object_names('subdir')
   Out[7]: ['file3.txt', 'module.py']
 
-The content can once again be shown using the :py:meth:`~aiida.orm.nodes.repository.NodeRepositoryMixin.get_object_content()` method by passing the correct path:
+The content can once again be shown using the :py:meth:`~aiida.orm.nodes.repository.NodeRepository.get_object_content()` method by passing the correct path:
 
 .. code-block:: ipython
 
@@ -916,7 +916,7 @@ Therefore, we have to override the constructor :meth:`~aiida.orm.nodes.node.Node
         def __init__(self, **kwargs):
             value = kwargs.pop('value')
             super().__init__(**kwargs)
-            self.set_attribute('value', value)
+            self.base.attributes.set('value', value)
 
 .. warning::
 
@@ -937,10 +937,10 @@ By adding the value to the node's attributes, they will be queryable in the data
 .. code-block:: python
 
     node = NewData(value=5)   # Creating new node instance in memory
-    node.set_attribute('value', 6)  # While in memory, node attributes can be changed
+    node.base.attributes.set('value', 6)  # While in memory, node attributes can be changed
     node.store()  # Storing node instance in the database
 
-After storing the node instance in the database, its attributes are frozen, and ``node.set_attribute('value', 7)`` will fail.
+After storing the node instance in the database, its attributes are frozen, and ``node.base.attributes.set('value', 7)`` will fail.
 By storing the ``value`` in the attributes of the node instance, we ensure that that ``value`` can be retrieved even when the node is reloaded at a later point in time.
 
 Besides making sure that the content of a data node is stored in the database or file repository, the data type class can also provide useful methods for users to retrieve that data.
@@ -949,7 +949,7 @@ For example, with the current state of the ``NewData`` class, in order to retrie
 .. code-block:: python
 
     node = load_node(<IDENTIFIER>)
-    node.get_attribute('value')
+    node.base.attributes.get('value')
 
 In other words, the user of the ``NewData`` class needs to know that the ``value`` is stored as an attribute with the name 'value'.
 This is not easy to remember and therefore not very user-friendly.
@@ -968,7 +968,7 @@ Let's introduce one that will return the value that was stored for it:
         @property
         def value(self):
             """Return the value stored for this instance."""
-            return self.get_attribute('value')
+            return self.base.attributes.get('value')
 
 The addition of the instance property ``value`` makes retrieving the value of a ``NewData`` node a lot easier:
 
@@ -998,14 +998,14 @@ Here is an example for a custom data type that needs to wrap a single text file:
 
             filename = os.path.basename(filepath)  # Get the filename from the absolute path
             self.put_object_from_file(filepath, filename)  # Store the file in the repository under the given filename
-            self.set_attribute('filename', filename)  # Store in the attributes what the filename is
+            self.base.attributes.set('filename', filename)  # Store in the attributes what the filename is
 
         def get_content(self):
             """Return the content of the single file stored for this data node.
 
             :return: the content of the file as a string
             """
-            filename = self.get_attribute('filename')
+            filename = self.base.attributes.get('filename')
             return self.get_object_content(filename)
 
 To create a new instance of this data type and get its content:
@@ -1033,4 +1033,4 @@ However, storing large amounts of data within the database comes at the cost of 
 Therefore, big data (think large files), whose content does not necessarily need to be queried for, is better stored in the file repository.
 A data type may safely use both the database and file repository in parallel for individual properties.
 Properties stored in the database are stored as *attributes* of the node.
-The node class has various methods to set these attributes, such as :py:meth:`~aiida.orm.entities.EntityAttributesMixin.set_attribute` and :py:meth:`~aiida.orm.entities.EntityAttributesMixin.set_attribute_many`.
+The node class has various methods to set these attributes, such as :py:meth:`~aiida.orm.nodes.attributes.NodeAttributes.set` and :py:meth:`~aiida.orm.nodes.attributes.NodeAttributes.set_many`.

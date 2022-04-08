@@ -14,6 +14,7 @@
 # yapf: disable
 # pylint: disable=wildcard-import
 
+from .attributes import *
 from .data import *
 from .node import *
 from .process import *
@@ -40,7 +41,8 @@ __all__ = (
     'KpointsData',
     'List',
     'Node',
-    'NodeRepositoryMixin',
+    'NodeAttributes',
+    'NodeRepository',
     'NumericType',
     'OrbitalData',
     'ProcessNode',

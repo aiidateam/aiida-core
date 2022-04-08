@@ -440,7 +440,7 @@ class CalcJob(Process):
                     )
                     retrieve_calculation(self.node, transport, retrieved_temporary_folder.abspath)
                     self.node.set_state(CalcJobState.PARSING)
-                    self.node.set_attribute(orm.CalcJobNode.IMMIGRATED_KEY, True)
+                    self.node.base.attributes.set(orm.CalcJobNode.IMMIGRATED_KEY, True)
                     return self.parse(retrieved_temporary_folder.abspath)
 
     def parse(self, retrieved_temporary_folder: Optional[str] = None) -> ExitCode:
@@ -519,7 +519,7 @@ class CalcJob(Process):
             self.logger.warning('could not determine `stderr` filename because `scheduler_stderr` option was not set.')
         else:
             try:
-                scheduler_stderr = retrieved.get_object_content(filename_stderr)
+                scheduler_stderr = retrieved.base.repository.get_object_content(filename_stderr)
             except FileNotFoundError:
                 scheduler_stderr = None
                 self.logger.warning(f'could not parse scheduler output: the `{filename_stderr}` file is missing')
@@ -528,7 +528,7 @@ class CalcJob(Process):
             self.logger.warning('could not determine `stdout` filename because `scheduler_stdout` option was not set.')
         else:
             try:
-                scheduler_stdout = retrieved.get_object_content(filename_stdout)
+                scheduler_stdout = retrieved.base.repository.get_object_content(filename_stdout)
             except FileNotFoundError:
                 scheduler_stdout = None
                 self.logger.warning(f'could not parse scheduler output: the `{filename_stdout}` file is missing')

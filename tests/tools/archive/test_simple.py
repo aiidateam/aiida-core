@@ -63,8 +63,8 @@ def test_calc_of_structuredata(aiida_profile_clean, tmp_path, aiida_localhost):
     for pk in pks:
         node = orm.load_node(pk)
         attrs[node.uuid] = {}
-        for k in node.attributes.keys():
-            attrs[node.uuid][k] = node.get_attribute(k)
+        for k in node.base.attributes.keys():
+            attrs[node.uuid][k] = node.base.attributes.get(k)
 
     filename = str(tmp_path / 'export.aiida')
 
@@ -76,7 +76,7 @@ def test_calc_of_structuredata(aiida_profile_clean, tmp_path, aiida_localhost):
     for uuid, value in attrs.items():
         node = orm.load_node(uuid)
         for k in value.keys():
-            assert value[k] == node.get_attribute(k)
+            assert value[k] == node.base.attributes.get(k)
 
 
 def test_check_for_export_format_version(aiida_profile_clean, tmp_path):

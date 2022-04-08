@@ -192,7 +192,7 @@ class TestComment:
     def test_objects_get(self):
         """Test getting a comment from the collection"""
         node = orm.Data().store()
-        comment = node.add_comment('Check out the comment on _this_ one')
+        comment = node.base.comments.add('Check out the comment on _this_ one')
         gotten_comment = Comment.objects.get(id=comment.id)
         assert isinstance(gotten_comment, Comment)
 

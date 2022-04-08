@@ -43,7 +43,7 @@ class SinglefileData(Data):
 
         :return: the filename under which the file is stored in the repository
         """
-        return self.get_attribute('filename')
+        return self.base.attributes.get('filename')
 
     @contextlib.contextmanager
     def open(self, path=None, mode='r'):
@@ -56,7 +56,7 @@ class SinglefileData(Data):
         if path is None:
             path = self.filename
 
-        with super().open(path, mode=mode) as handle:
+        with self.base.repository.open(path, mode=mode) as handle:
             yield handle
 
     def get_content(self):
@@ -94,7 +94,7 @@ class SinglefileData(Data):
 
         key = filename or key
 
-        existing_object_names = self.list_object_names()
+        existing_object_names = self.base.repository.list_object_names()
 
         try:
             # Remove the 'key' from the list of currently existing objects such that it is not deleted after storing
@@ -103,15 +103,15 @@ class SinglefileData(Data):
             pass
 
         if is_filelike:
-            self.put_object_from_filelike(file, key)
+            self.base.repository.put_object_from_filelike(file, key)
         else:
-            self.put_object_from_file(file, key)
+            self.base.repository.put_object_from_file(file, key)
 
         # Delete any other existing objects (minus the current `key` which was already removed from the list)
         for existing_key in existing_object_names:
-            self.delete_object(existing_key)
+            self.base.repository.delete_object(existing_key)
 
-        self.set_attribute('filename', key)
+        self.base.attributes.set('filename', key)
 
     def _validate(self):
         """Ensure that there is one object stored in the repository, whose key matches value set for `filename` attr."""
@@ -122,7 +122,7 @@ class SinglefileData(Data):
         except AttributeError:
             raise exceptions.ValidationError('the `filename` attribute is not set.')
 
-        objects = self.list_object_names()
+        objects = self.base.repository.list_object_names()
 
         if [filename] != objects:
             raise exceptions.ValidationError(

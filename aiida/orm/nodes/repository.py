@@ -1,21 +1,25 @@
 # -*- coding: utf-8 -*-
 """Interface to the file repository of a node instance."""
 import contextlib
+import copy
 import io
 import pathlib
 import tempfile
-from typing import BinaryIO, Dict, Iterable, Iterator, List, Tuple, Union
+from typing import TYPE_CHECKING, Any, BinaryIO, Dict, Iterable, Iterator, List, Optional, TextIO, Tuple, Union
 
 from aiida.common import exceptions
 from aiida.repository import File, Repository
 from aiida.repository.backend import SandboxRepositoryBackend
 
-__all__ = ('NodeRepositoryMixin',)
+if TYPE_CHECKING:
+    from .node import Node
+
+__all__ = ('NodeRepository',)
 
 FilePath = Union[str, pathlib.PurePosixPath]
 
 
-class NodeRepositoryMixin:
+class NodeRepository:
     """Interface to the file repository of a node instance.
 
     This is the compatibility layer between the `Node` class and the `Repository` class. The repository in principle has
@@ -26,19 +30,42 @@ class NodeRepositoryMixin:
     hierarchy if the instance was constructed normally, or from a specific hierarchy if reconstructred through the
     ``Repository.from_serialized`` classmethod. This is only the case for stored nodes, because unstored nodes do not
     have any files yet when they are constructed. Once the node get's stored, the repository is asked to serialize its
-    metadata contents which is then stored in the ``repository_metadata`` attribute of the node in the database. This
-    layer explicitly does not update the metadata of the node on a mutation action. The reason is that for stored nodes
-    these actions are anyway forbidden and for unstored nodes, the final metadata will be stored in one go, once the
-    node is stored, so there is no need to keep updating the node metadata intermediately. Note that this does mean that
-    ``repository_metadata`` does not give accurate information as long as the node is not yet stored.
+    metadata contents which is then stored in the ``repository_metadata`` field of the backend node.
+    This layer explicitly does not update the metadata of the node on a mutation action.
+    The reason is that for stored nodes these actions are anyway forbidden and for unstored nodes,
+    the final metadata will be stored in one go, once the node is stored,
+    so there is no need to keep updating the node metadata intermediately.
+    Note that this does mean that ``repository_metadata`` does not give accurate information,
+    as long as the node is not yet stored.
     """
 
-    _repository_instance = None
+    def __init__(self, node: 'Node') -> None:
+        """Construct a new instance of the repository interface."""
+        self._node: 'Node' = node
+        self._repository_instance: Optional[Repository] = None
+
+    @property
+    def metadata(self) -> Dict[str, Any]:
+        """Return the repository metadata, representing the virtual file hierarchy.
+
+        Note, this is only accurate if the node is stored.
+
+        :return: the repository metadata
+        """
+        return self._node.backend_entity.repository_metadata
 
     def _update_repository_metadata(self):
-        """Refresh the repository metadata of the node if it is stored and the decorated method returns successfully."""
-        if self.is_stored:
-            self.repository_metadata = self._repository.serialize()
+        """Refresh the repository metadata of the node if it is stored."""
+        if self._node.is_stored:
+            self._node.backend_entity.repository_metadata = self.serialize()
+
+    def _check_mutability(self):
+        """Check if the node is mutable.
+
+        :raises `~aiida.common.exceptions.ModificationNotAllowed`: when the node is stored and therefore immutable.
+        """
+        if self._node.is_stored:
+            raise exceptions.ModificationNotAllowed('the node is stored and therefore the repository is immutable.')
 
     @property
     def _repository(self) -> Repository:
@@ -49,10 +76,9 @@ class NodeRepositoryMixin:
         :return: the file repository instance.
         """
         if self._repository_instance is None:
-            if self.is_stored:
-                backend = self.backend.get_repository()
-                serialized = self.repository_metadata
-                self._repository_instance = Repository.from_serialized(backend=backend, serialized=serialized)
+            if self._node.is_stored:
+                backend = self._node.backend.get_repository()
+                self._repository_instance = Repository.from_serialized(backend=backend, serialized=self.metadata)
             else:
                 self._repository_instance = Repository(backend=SandboxRepositoryBackend())
 
@@ -69,20 +95,49 @@ class NodeRepositoryMixin:
 
         self._repository_instance = repository
 
-    def repository_serialize(self) -> Dict:
+    def _store(self) -> None:
+        """Store the repository in the backend."""
+        if isinstance(self._repository.backend, SandboxRepositoryBackend):
+            # Only if the backend repository is a sandbox do we have to clone its contents to the permanent repository.
+            repository_backend = self._node.backend.get_repository()
+            repository = Repository(backend=repository_backend)
+            repository.clone(self._repository)
+            # Swap the sandbox repository for the new permanent repository instance which should delete the sandbox
+            self._repository_instance = repository
+        # update the metadata on the node backend
+        self._node.backend_entity.repository_metadata = self.serialize()
+
+    def _copy(self, repo: 'NodeRepository') -> None:
+        """Copy a repository from another instance.
+
+        This is used when storing cached nodes.
+
+        :param repo: the repository to clone.
+        """
+        self._repository = copy.copy(repo._repository)  # pylint: disable=protected-access
+
+    def _clone(self, repo: 'NodeRepository') -> None:
+        """Clone the repository from another instance.
+
+        This is used when cloning a node.
+
+        :param repo: the repository to clone.
+        """
+        self._repository.clone(repo._repository)  # pylint: disable=protected-access
+
+    def serialize(self) -> Dict:
         """Serialize the metadata of the repository content into a JSON-serializable format.
 
         :return: dictionary with the content metadata.
         """
         return self._repository.serialize()
 
-    def check_mutability(self):
-        """Check if the node is mutable.
+    def hash(self) -> str:
+        """Generate a hash of the repository's contents.
 
-        :raises `~aiida.common.exceptions.ModificationNotAllowed`: when the node is stored and therefore immutable.
+        :return: the hash representing the contents of the repository.
         """
-        if self.is_stored:
-            raise exceptions.ModificationNotAllowed('the node is stored and therefore the repository is immutable.')
+        return self._repository.hash()
 
     def list_objects(self, path: str = None) -> List[File]:
         """Return a list of the objects contained in this repository sorted by name, optionally in given sub directory.
@@ -107,7 +162,7 @@ class NodeRepositoryMixin:
         return self._repository.list_object_names(path)
 
     @contextlib.contextmanager
-    def open(self, path: str, mode='r') -> Iterator[BinaryIO]:
+    def open(self, path: str, mode='r') -> Iterator[Union[BinaryIO, TextIO]]:
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
@@ -156,6 +211,18 @@ class NodeRepositoryMixin:
 
         return self._repository.get_object_content(path)
 
+    def put_object_from_bytes(self, content: bytes, path: str) -> None:
+        """Store the given content in the repository at the given path.
+
+        :param path: the relative path where to store the object in the repository.
+        :param content: the content to store.
+        :raises TypeError: if the path is not a string and relative path.
+        :raises FileExistsError: if an object already exists at the given path.
+        """
+        self._check_mutability()
+        self._repository.put_object_from_filelike(io.BytesIO(content), path)
+        self._update_repository_metadata()
+
     def put_object_from_filelike(self, handle: io.BufferedReader, path: str):
         """Store the byte contents of a file in the repository.
 
@@ -164,7 +231,7 @@ class NodeRepositoryMixin:
         :raises TypeError: if the path is not a string and relative path.
         :raises `~aiida.common.exceptions.ModificationNotAllowed`: when the node is stored and therefore immutable.
         """
-        self.check_mutability()
+        self._check_mutability()
 
         if isinstance(handle, io.StringIO):
             handle = io.BytesIO(handle.read().encode('utf-8'))
@@ -186,7 +253,7 @@ class NodeRepositoryMixin:
         :raises TypeError: if the path is not a string and relative path, or the handle is not a byte stream.
         :raises `~aiida.common.exceptions.ModificationNotAllowed`: when the node is stored and therefore immutable.
         """
-        self.check_mutability()
+        self._check_mutability()
         self._repository.put_object_from_file(filepath, path)
         self._update_repository_metadata()
 
@@ -198,7 +265,7 @@ class NodeRepositoryMixin:
         :raises TypeError: if the path is not a string and relative path.
         :raises `~aiida.common.exceptions.ModificationNotAllowed`: when the node is stored and therefore immutable.
         """
-        self.check_mutability()
+        self._check_mutability()
         self._repository.put_object_from_tree(filepath, path)
         self._update_repository_metadata()
 
@@ -241,7 +308,7 @@ class NodeRepositoryMixin:
         :raises OSError: if the file could not be deleted.
         :raises `~aiida.common.exceptions.ModificationNotAllowed`: when the node is stored and therefore immutable.
         """
-        self.check_mutability()
+        self._check_mutability()
         self._repository.delete_object(path)
         self._update_repository_metadata()
 
@@ -250,6 +317,6 @@ class NodeRepositoryMixin:
 
         :raises `~aiida.common.exceptions.ModificationNotAllowed`: when the node is stored and therefore immutable.
         """
-        self.check_mutability()
+        self._check_mutability()
         self._repository.erase()
         self._update_repository_metadata()

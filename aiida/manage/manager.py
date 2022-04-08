@@ -12,7 +12,6 @@
 import asyncio
 import functools
 from typing import TYPE_CHECKING, Any, Optional, Union
-from warnings import warn
 
 if TYPE_CHECKING:
     from kiwipy.rmq import RmqThreadCommunicator
@@ -206,8 +205,8 @@ class Manager:
 
         Deprecated: use `get_profile_storage` instead.
         """
-        from aiida.common.warnings import AiidaDeprecationWarning
-        warn('get_backend() is deprecated, use get_profile_storage() instead', AiidaDeprecationWarning)
+        from aiida.common.warnings import warn_deprecation
+        warn_deprecation('get_backend() is deprecated, use get_profile_storage() instead', version=3)
         return self.get_profile_storage()
 
     def get_profile_storage(self) -> 'StorageBackend':

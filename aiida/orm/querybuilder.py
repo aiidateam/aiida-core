@@ -216,10 +216,8 @@ class QueryBuilder:
     @property
     def queryhelp(self) -> 'QueryDictType':
         """"Legacy name for ``as_dict`` method."""
-        from aiida.common.warnings import AiidaDeprecationWarning
-        warnings.warn(
-            '`QueryBuilder.queryhelp` is deprecated, use `QueryBuilder.as_dict()` instead', AiidaDeprecationWarning
-        )
+        from aiida.common.warnings import warn_deprecation
+        warn_deprecation('`QueryBuilder.queryhelp` is deprecated, use `QueryBuilder.as_dict()` instead', version=3)
         return self.as_dict()
 
     @classmethod

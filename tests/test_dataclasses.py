@@ -131,7 +131,7 @@ class TestCifData:
 
         the_uuid = a.uuid
 
-        assert a.list_object_names() == [basename]
+        assert a.base.repository.list_object_names() == [basename]
 
         with a.open() as fhandle:
             assert fhandle.read() == file_content
@@ -146,13 +146,13 @@ class TestCifData:
 
         with a.open() as fhandle:
             assert fhandle.read() == file_content
-        assert a.list_object_names() == [basename]
+        assert a.base.repository.list_object_names() == [basename]
 
         b = load_node(the_uuid)
 
         # I check the retrieved object
         assert isinstance(b, CifData)
-        assert b.list_object_names() == [basename]
+        assert b.base.repository.list_object_names() == [basename]
         with b.open() as fhandle:
             assert fhandle.read() == file_content
 
@@ -673,8 +673,8 @@ _tag   {'a' * 5000}
 
             # this should reset formulae and spacegroup_numbers
             a.set_file(tmpf.name)
-            assert a.get_attribute('formulae') is None
-            assert a.get_attribute('spacegroup_numbers') is None
+            assert a.base.attributes.get('formulae') is None
+            assert a.base.attributes.get('spacegroup_numbers') is None
 
             # this should populate formulae
             a.parse()
@@ -3379,7 +3379,7 @@ class TestSpglibTupleConversion:
         roundtrip_struc = spglib_tuple_to_structure(struc_tuple, kind_info, kinds)
 
         assert round(abs(np.sum(np.abs(np.array(struc.cell) - np.array(roundtrip_struc.cell))) - 0.), 7) == 0
-        assert struc.get_attribute('kinds') == roundtrip_struc.get_attribute('kinds')
+        assert struc.base.attributes.get('kinds') == roundtrip_struc.base.attributes.get('kinds')
         assert [_.kind_name for _ in struc.sites] == [_.kind_name for _ in roundtrip_struc.sites]
         assert np.sum(
             np.abs(np.array([_.position for _ in struc.sites]) - np.array([_.position for _ in roundtrip_struc.sites]))

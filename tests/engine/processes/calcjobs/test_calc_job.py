@@ -71,7 +71,7 @@ class FileCalcJob(CalcJob):
 
         calcinfo = CalcInfo()
         calcinfo.codes_info = [codeinfo]
-        calcinfo.provenance_exclude_list = self.inputs.settings.get_attribute('provenance_exclude_list')
+        calcinfo.provenance_exclude_list = self.inputs.settings.base.attributes.get('provenance_exclude_list')
         return calcinfo
 
 
@@ -380,7 +380,7 @@ class TestCalcJob:
         uploaded_files = os.listdir(node.dry_run_info['folder'])
 
         # Since the repository will only contain files on the top-level due to `Code.set_files` we only check those
-        for filename in self.local_code.list_object_names():
+        for filename in self.local_code.base.repository.list_object_names():
             assert filename in uploaded_files
 
     @pytest.mark.usefixtures('chdir_tmp_path')
@@ -443,9 +443,9 @@ class TestCalcJob:
 
         # Verify that the folder (representing the node's repository) indeed do not contain the input files. Note,
         # however, that the directory hierarchy should be there, albeit empty
-        assert 'base' in node.list_object_names()
-        assert sorted(['b']) == sorted(node.list_object_names(os.path.join('base')))
-        assert ['two'] == node.list_object_names(os.path.join('base', 'b'))
+        assert 'base' in node.base.repository.list_object_names()
+        assert sorted(['b']) == sorted(node.base.repository.list_object_names(os.path.join('base')))
+        assert ['two'] == node.base.repository.list_object_names(os.path.join('base', 'b'))
 
     def test_parse_no_retrieved_folder(self):
         """Test the `CalcJob.parse` method when there is no retrieved folder."""
@@ -551,7 +551,7 @@ def test_parse_non_zero_retval(generate_process):
     retrieved = orm.FolderData().store()
     retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
 
-    process.node.set_attribute('detailed_job_info', {'retval': 1, 'stderr': 'accounting disabled', 'stdout': ''})
+    process.node.base.attributes.set('detailed_job_info', {'retval': 1, 'stderr': 'accounting disabled', 'stdout': ''})
     process.parse()
 
     logs = [log.message for log in orm.Log.objects.get_logs_for(process.node)]
@@ -570,13 +570,13 @@ def test_parse_not_implemented(generate_process):
     retrieved = orm.FolderData()
     retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
 
-    process.node.set_attribute('detailed_job_info', {})
+    process.node.base.attributes.set('detailed_job_info', {})
 
     filename_stderr = process.node.get_option('scheduler_stderr')
     filename_stdout = process.node.get_option('scheduler_stdout')
 
-    retrieved.put_object_from_filelike(io.BytesIO(b'\n'), filename_stderr)
-    retrieved.put_object_from_filelike(io.BytesIO(b'\n'), filename_stdout)
+    retrieved.base.repository.put_object_from_filelike(io.BytesIO(b'\n'), filename_stderr)
+    retrieved.base.repository.put_object_from_filelike(io.BytesIO(b'\n'), filename_stdout)
     retrieved.store()
 
     process.parse()
@@ -604,13 +604,13 @@ def test_parse_scheduler_excepted(generate_process, monkeypatch):
     retrieved = orm.FolderData()
     retrieved.add_incoming(process.node, link_label='retrieved', link_type=LinkType.CREATE)
 
-    process.node.set_attribute('detailed_job_info', {})
+    process.node.base.attributes.set('detailed_job_info', {})
 
     filename_stderr = process.node.get_option('scheduler_stderr')
     filename_stdout = process.node.get_option('scheduler_stdout')
 
-    retrieved.put_object_from_filelike(io.BytesIO(b'\n'), filename_stderr)
-    retrieved.put_object_from_filelike(io.BytesIO(b'\n'), filename_stdout)
+    retrieved.base.repository.put_object_from_filelike(io.BytesIO(b'\n'), filename_stderr)
+    retrieved.base.repository.put_object_from_filelike(io.BytesIO(b'\n'), filename_stdout)
     retrieved.store()
 
     msg = 'crash'
@@ -702,33 +702,33 @@ def test_additional_retrieve_list(generate_process, fixture_sandbox):
     """Test the ``additional_retrieve_list`` option."""
     process = generate_process()
     process.presubmit(fixture_sandbox)
-    retrieve_list = process.node.get_attribute('retrieve_list')
+    retrieve_list = process.node.base.attributes.get('retrieve_list')
 
     # Keep reference of the base contents of the retrieve list.
     base_retrieve_list = retrieve_list
 
     # Test that the code works if no explicit additional retrieve list is specified
     assert len(retrieve_list) != 0
-    assert isinstance(process.node.get_attribute('retrieve_list'), list)
+    assert isinstance(process.node.base.attributes.get('retrieve_list'), list)
 
     # Defining explicit additional retrieve list that is disjoint with the base retrieve list
     additional_retrieve_list = ['file.txt', 'folder/file.txt']
     process = generate_process({'metadata': {'options': {'additional_retrieve_list': additional_retrieve_list}}})
     process.presubmit(fixture_sandbox)
-    retrieve_list = process.node.get_attribute('retrieve_list')
+    retrieve_list = process.node.base.attributes.get('retrieve_list')
 
     # Check that the `retrieve_list` is a list and contains the union of the base and additional retrieve list
-    assert isinstance(process.node.get_attribute('retrieve_list'), list)
+    assert isinstance(process.node.base.attributes.get('retrieve_list'), list)
     assert set(retrieve_list) == set(base_retrieve_list).union(set(additional_retrieve_list))
 
     # Defining explicit additional retrieve list with elements that overlap with `base_retrieve_list
     additional_retrieve_list = ['file.txt', 'folder/file.txt'] + base_retrieve_list
     process = generate_process({'metadata': {'options': {'additional_retrieve_list': additional_retrieve_list}}})
     process.presubmit(fixture_sandbox)
-    retrieve_list = process.node.get_attribute('retrieve_list')
+    retrieve_list = process.node.base.attributes.get('retrieve_list')
 
     # Check that the `retrieve_list` is a list and contains the union of the base and additional retrieve list
-    assert isinstance(process.node.get_attribute('retrieve_list'), list)
+    assert isinstance(process.node.base.attributes.get('retrieve_list'), list)
     assert set(retrieve_list) == set(base_retrieve_list).union(set(additional_retrieve_list))
 
     # Test the validator

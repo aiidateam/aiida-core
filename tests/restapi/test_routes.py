@@ -47,8 +47,8 @@ class TestRestApi:
         structure = orm.StructureData(cell=cell)
         structure.append_atom(position=(0., 0., 0.), symbols=['Ba'])
         structure.store()
-        structure.add_comment('This is test comment.')
-        structure.add_comment('Add another comment.')
+        structure.base.comments.add('This is test comment.')
+        structure.base.comments.add('Add another comment.')
 
         cif = orm.CifData(ase=structure.get_ase())
         cif.store()
@@ -71,14 +71,16 @@ class TestRestApi:
 
         calc = orm.CalcJobNode(computer=self.computer)
         calc.set_option('resources', resources)
-        calc.set_attribute('attr1', 'OK')
-        calc.set_attribute('attr2', 'OK')
+        calc.base.attributes.set('attr1', 'OK')
+        calc.base.attributes.set('attr2', 'OK')
         calc.set_extra('extra1', False)
         calc.set_extra('extra2', 'extra_info')
 
         calc.add_incoming(structure, link_type=LinkType.INPUT_CALC, link_label='link_structure')
         calc.add_incoming(parameter1, link_type=LinkType.INPUT_CALC, link_label='link_parameter')
-        calc.put_object_from_filelike(io.BytesIO(b'The input file\nof the CalcJob node'), 'calcjob_inputs/aiida.in')
+        calc.base.repository.put_object_from_filelike(
+            io.BytesIO(b'The input file\nof the CalcJob node'), 'calcjob_inputs/aiida.in'
+        )
         calc.store()
 
         # create log message for calcjob
@@ -102,7 +104,7 @@ class TestRestApi:
 
         retrieved_outputs = orm.FolderData()
         stream = io.BytesIO(b'The output file\nof the CalcJob node')
-        retrieved_outputs.put_object_from_filelike(stream, 'calcjob_outputs/aiida.out')
+        retrieved_outputs.base.repository.put_object_from_filelike(stream, 'calcjob_outputs/aiida.out')
         retrieved_outputs.store()
         retrieved_outputs.add_incoming(calc, link_type=LinkType.CREATE, link_label='retrieved')
 
@@ -1098,7 +1100,7 @@ class TestRestApi:
         url = f"{self.get_url_prefix()}/nodes/{str(node_uuid)}/repo/contents?filename=\"calcjob_inputs/aiida.in\""
         with self.app.test_client() as client:
             response_obj = client.get(url)
-            input_file = load_node(node_uuid).get_object_content('calcjob_inputs/aiida.in', mode='rb')
+            input_file = load_node(node_uuid).base.repository.get_object_content('calcjob_inputs/aiida.in', mode='rb')
             assert response_obj.data == input_file
 
     def test_process_report(self):

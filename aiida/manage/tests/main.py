@@ -15,9 +15,8 @@ from contextlib import contextmanager
 import os
 import shutil
 import tempfile
-import warnings
 
-from aiida.common.warnings import AiidaDeprecationWarning
+from aiida.common.warnings import warn_deprecation
 from aiida.manage import configuration, get_manager
 from aiida.manage.configuration.settings import create_instance_directories
 from aiida.manage.external.postgres import Postgres
@@ -123,7 +122,7 @@ class TestManager:
         return self._manager and self._manager.has_profile_open()
 
     def reset_db(self):
-        warnings.warn('reset_db() is deprecated, use clear_profile() instead', AiidaDeprecationWarning)
+        warn_deprecation('reset_db() is deprecated, use clear_profile() instead', version=3)
         return self._manager.clear_profile()
 
     def clear_profile(self):

@@ -30,7 +30,7 @@ class TestSealable:
 
         for attr in CalculationNode._updatable_attributes:  # pylint: disable=protected-access,not-an-iterable
             if attr != Sealable.SEALED_KEY:
-                node.set_attribute(attr, 'a')
+                node.base.attributes.set(attr, 'a')
 
     def test_validate_incoming_sealed(self):
         """Verify that trying to add a link to a sealed node will raise."""

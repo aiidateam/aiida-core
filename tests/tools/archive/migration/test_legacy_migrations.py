@@ -69,10 +69,12 @@ def test_full_migration(tmp_path, core_archive, archive_name):
         # test all node repositories were migrated
         uuids = reader.querybuilder().append(orm.Node, project='uuid').all(flat=True)
         assert set(uuids) == set(NODE_REPOS)
-        assert {uuid: {p.as_posix() for p in reader.get(orm.Node, uuid=uuid).glob()} for uuid in uuids} == NODE_REPOS
+        assert {
+            uuid: {p.as_posix() for p in reader.get(orm.Node, uuid=uuid).base.repository.glob()} for uuid in uuids
+        } == NODE_REPOS
         # test we can read a node repository file
         node = reader.get(orm.Node, uuid='3b429fd4-601c-4473-add5-7cbb76cf38cb')
-        content = node.get_object_content('_aiidasubmit.sh').encode('utf8')
+        content = node.base.repository.get_object_content('_aiidasubmit.sh').encode('utf8')
         assert content.startswith(b'#!/bin/bash')
 
 

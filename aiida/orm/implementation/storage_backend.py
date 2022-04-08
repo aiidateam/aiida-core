@@ -40,7 +40,7 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
     - Searchable data, which is stored in the database and can be queried using the QueryBuilder
     - Non-searchable (binary) data, which is stored in the repository and can be loaded using the RepositoryBackend
 
-    The two sources are inter-linked by the ``Node.repository_metadata``.
+    The two sources are inter-linked by the ``Node.base.repository.metadata``.
     Once stored, the leaf values of this dictionary must be valid pointers to object keys in the repository.
 
     The class methods,`version_profile` and `migrate`,

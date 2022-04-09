@@ -98,7 +98,7 @@ jobs:
 
     if: github.repository == 'aiidateam/aiida-core'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
 
     strategy:
       fail-fast: false
@@ -132,7 +132,7 @@ jobs:
 
     if: github.repository == 'aiidateam/aiida-core'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 25
 
     strategy:
       fail-fast: false
@@ -158,13 +158,21 @@ jobs:
       with:
         conda-channels: conda-forge
 
+    - run: conda update conda
     - run: conda --version
+
+    # Use mamba because conda is running out of memory
+    - run: conda install mamba -n base -c conda-forge
+    - run: mamba --version
+
+    # Temporary workaround: https://github.com/mamba-org/mamba/issues/488
+    - run: rm /usr/share/miniconda/pkgs/cache/*.json
 
     - name: Test installation
       id: test_installation
       continue-on-error: ${{ matrix.optional }}
       run: >
-        conda create --dry-run -n test-install aiida-core
+        mamba create --dry-run -n test-install aiida-core
         ${{ matrix.python-version && format('python={0}', matrix.python-version) }}
 
     - name: Warn about failure

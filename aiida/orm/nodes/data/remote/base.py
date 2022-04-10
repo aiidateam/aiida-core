@@ -32,10 +32,10 @@ class RemoteData(Data):
             self.set_remote_path(remote_path)
 
     def get_remote_path(self):
-        return self.get_attribute('remote_path')
+        return self.base.attributes.get('remote_path')
 
     def set_remote_path(self, val):
-        self.set_attribute('remote_path', val)
+        self.base.attributes.set('remote_path', val)
 
     @property
     def is_empty(self):
@@ -176,7 +176,7 @@ class RemoteData(Data):
                 )
             clean_remote(transport, remote_dir)
 
-        self.set_extra(self.KEY_EXTRA_CLEANED, True)
+        self.base.extras.set(self.KEY_EXTRA_CLEANED, True)
 
     def _validate(self):
         from aiida.common.exceptions import ValidationError

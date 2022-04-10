@@ -87,6 +87,7 @@ repos:
                 aiida/orm/implementation/users.py|
                 aiida/orm/implementation/querybuilder.py|
                 aiida/orm/entities.py|
+                aiida/orm/extras.py|
                 aiida/orm/authinfos.py|
                 aiida/orm/comments.py|
                 aiida/orm/computers.py|
@@ -95,6 +96,7 @@ repos:
                 aiida/orm/users.py|
                 aiida/orm/nodes/data/enum.py|
                 aiida/orm/nodes/data/jsonable.py|
+                aiida/orm/nodes/attributes.py|
                 aiida/orm/nodes/node.py|
                 aiida/orm/nodes/process/.*py|
                 aiida/orm/nodes/repository.py|

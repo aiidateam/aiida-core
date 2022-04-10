@@ -146,7 +146,7 @@ class ProcessNode(Sealable, Node):
 
         :returns: the process label
         """
-        return self.get_attribute(self.PROCESS_LABEL_KEY, None)
+        return self.base.attributes.get(self.PROCESS_LABEL_KEY, None)
 
     def set_process_label(self, label: str) -> None:
         """
@@ -154,7 +154,7 @@ class ProcessNode(Sealable, Node):
 
         :param label: process label string
         """
-        self.set_attribute(self.PROCESS_LABEL_KEY, label)
+        self.base.attributes.set(self.PROCESS_LABEL_KEY, label)
 
     @property
     def process_state(self) -> Optional[ProcessState]:
@@ -163,7 +163,7 @@ class ProcessNode(Sealable, Node):
 
         :returns: the process state instance of ProcessState enum
         """
-        state = self.get_attribute(self.PROCESS_STATE_KEY, None)
+        state = self.base.attributes.get(self.PROCESS_STATE_KEY, None)
 
         if state is None:
             return state
@@ -178,7 +178,7 @@ class ProcessNode(Sealable, Node):
         """
         if isinstance(state, ProcessState):
             state = state.value
-        return self.set_attribute(self.PROCESS_STATE_KEY, state)
+        return self.base.attributes.set(self.PROCESS_STATE_KEY, state)
 
     @property
     def process_status(self) -> Optional[str]:
@@ -189,7 +189,7 @@ class ProcessNode(Sealable, Node):
 
         :returns: the process status
         """
-        return self.get_attribute(self.PROCESS_STATUS_KEY, None)
+        return self.base.attributes.get(self.PROCESS_STATUS_KEY, None)
 
     def set_process_status(self, status: Optional[str]) -> None:
         """
@@ -202,7 +202,7 @@ class ProcessNode(Sealable, Node):
         """
         if status is None:
             try:
-                self.delete_attribute(self.PROCESS_STATUS_KEY)
+                self.base.attributes.delete(self.PROCESS_STATUS_KEY)
             except AttributeError:
                 pass
             return None
@@ -210,7 +210,7 @@ class ProcessNode(Sealable, Node):
         if not isinstance(status, str):
             raise TypeError('process status should be a string')
 
-        return self.set_attribute(self.PROCESS_STATUS_KEY, status)
+        return self.base.attributes.set(self.PROCESS_STATUS_KEY, status)
 
     @property
     def is_terminated(self) -> bool:
@@ -292,7 +292,7 @@ class ProcessNode(Sealable, Node):
 
         :returns: the exit status, an integer exit code or None
         """
-        return self.get_attribute(self.EXIT_STATUS_KEY, None)
+        return self.base.attributes.get(self.EXIT_STATUS_KEY, None)
 
     def set_exit_status(self, status: Union[None, enum.Enum, int]) -> None:
         """
@@ -309,7 +309,7 @@ class ProcessNode(Sealable, Node):
         if not isinstance(status, int):
             raise ValueError(f'exit status has to be an integer, got {status}')
 
-        return self.set_attribute(self.EXIT_STATUS_KEY, status)
+        return self.base.attributes.set(self.EXIT_STATUS_KEY, status)
 
     @property
     def exit_message(self) -> Optional[str]:
@@ -318,7 +318,7 @@ class ProcessNode(Sealable, Node):
 
         :returns: the exit message
         """
-        return self.get_attribute(self.EXIT_MESSAGE_KEY, None)
+        return self.base.attributes.get(self.EXIT_MESSAGE_KEY, None)
 
     def set_exit_message(self, message: Optional[str]) -> None:
         """
@@ -332,7 +332,7 @@ class ProcessNode(Sealable, Node):
         if not isinstance(message, str):
             raise ValueError(f'exit message has to be a string type, got {type(message)}')
 
-        return self.set_attribute(self.EXIT_MESSAGE_KEY, message)
+        return self.base.attributes.set(self.EXIT_MESSAGE_KEY, message)
 
     @property
     def exception(self) -> Optional[str]:
@@ -344,7 +344,7 @@ class ProcessNode(Sealable, Node):
         :returns: the exception message or None
         """
         if self.is_excepted:
-            return self.get_attribute(self.EXCEPTION_KEY, '')
+            return self.base.attributes.get(self.EXCEPTION_KEY, '')
 
         return None
 
@@ -357,7 +357,7 @@ class ProcessNode(Sealable, Node):
         if not isinstance(exception, str):
             raise ValueError(f'exception message has to be a string type, got {type(exception)}')
 
-        return self.set_attribute(self.EXCEPTION_KEY, exception)
+        return self.base.attributes.set(self.EXCEPTION_KEY, exception)
 
     @property
     def checkpoint(self) -> Optional[Dict[str, Any]]:
@@ -366,7 +366,7 @@ class ProcessNode(Sealable, Node):
 
         :returns: checkpoint bundle if it exists, None otherwise
         """
-        return self.get_attribute(self.CHECKPOINT_KEY, None)
+        return self.base.attributes.get(self.CHECKPOINT_KEY, None)
 
     def set_checkpoint(self, checkpoint: Dict[str, Any]) -> None:
         """
@@ -374,14 +374,14 @@ class ProcessNode(Sealable, Node):
 
         :param state: string representation of the stepper state info
         """
-        return self.set_attribute(self.CHECKPOINT_KEY, checkpoint)
+        return self.base.attributes.set(self.CHECKPOINT_KEY, checkpoint)
 
     def delete_checkpoint(self) -> None:
         """
         Delete the checkpoint bundle set for the process
         """
         try:
-            self.delete_attribute(self.CHECKPOINT_KEY)
+            self.base.attributes.delete(self.CHECKPOINT_KEY)
         except AttributeError:
             pass
 
@@ -392,7 +392,7 @@ class ProcessNode(Sealable, Node):
 
         :returns: True if the Calculation is marked as paused, False otherwise
         """
-        return self.get_attribute(self.PROCESS_PAUSED_KEY, False)
+        return self.base.attributes.get(self.PROCESS_PAUSED_KEY, False)
 
     def pause(self) -> None:
         """
@@ -401,7 +401,7 @@ class ProcessNode(Sealable, Node):
         This serves only to reflect that the corresponding Process is paused and so this method should not be called
         by anyone but the Process instance itself.
         """
-        return self.set_attribute(self.PROCESS_PAUSED_KEY, True)
+        return self.base.attributes.set(self.PROCESS_PAUSED_KEY, True)
 
     def unpause(self) -> None:
         """
@@ -411,7 +411,7 @@ class ProcessNode(Sealable, Node):
         by anyone but the Process instance itself.
         """
         try:
-            self.delete_attribute(self.PROCESS_PAUSED_KEY)
+            self.base.attributes.delete(self.PROCESS_PAUSED_KEY)
         except AttributeError:
             pass
 

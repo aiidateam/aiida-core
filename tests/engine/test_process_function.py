@@ -137,7 +137,7 @@ class TestProcessFunction:
 
         # Since the "plugin" i.e. the process function is defined in `aiida-core` the `version.plugin` is the same as
         # the version of `aiida-core` itself
-        version_info = node.get_attribute('version')
+        version_info = node.base.attributes.get('version')
         assert version_info['core'] == version_core
         assert version_info['plugin'] == version_core
 
@@ -412,14 +412,14 @@ class TestProcessFunction:
         """Test that the hashes generated for identical process functions with identical inputs are the same."""
         _, node1 = self.function_return_input.run_get_node(data=orm.Int(2))
         _, node2 = self.function_return_input.run_get_node(data=orm.Int(2))
-        assert node1.get_hash() == node1.get_extra('_aiida_hash')
-        assert node2.get_hash() == node2.get_extra('_aiida_hash')
+        assert node1.get_hash() == node1.base.extras.get('_aiida_hash')
+        assert node2.get_hash() == node2.base.extras.get('_aiida_hash')
         assert node1.get_hash() == node2.get_hash()
 
     def test_hashes_different(self):
         """Test that the hashes generated for identical process functions with different inputs are the different."""
         _, node1 = self.function_return_input.run_get_node(data=orm.Int(2))
         _, node2 = self.function_return_input.run_get_node(data=orm.Int(3))
-        assert node1.get_hash() == node1.get_extra('_aiida_hash')
-        assert node2.get_hash() == node2.get_extra('_aiida_hash')
+        assert node1.get_hash() == node1.base.extras.get('_aiida_hash')
+        assert node2.get_hash() == node2.base.extras.get('_aiida_hash')
         assert node1.get_hash() != node2.get_hash()

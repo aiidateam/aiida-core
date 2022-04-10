@@ -59,7 +59,7 @@ class KpointsData(ArrayData):
         The crystal unit cell. Rows are the crystal vectors in Angstroms.
         :return: a 3x3 numpy.array
         """
-        return numpy.array(self.get_attribute('cell'))
+        return numpy.array(self.base.attributes.get('cell'))
 
     @cell.setter
     def cell(self, value):
@@ -82,7 +82,7 @@ class KpointsData(ArrayData):
 
         the_cell = _get_valid_cell(value)
 
-        self.set_attribute('cell', the_cell)
+        self.base.attributes.set('cell', the_cell)
 
     @property
     def pbc(self):
@@ -93,7 +93,7 @@ class KpointsData(ArrayData):
             boundary conditions for the i-th real-space direction (i=1,2,3)
         """
         # return copy.deepcopy(self._pbc)
-        return (self.get_attribute('pbc1'), self.get_attribute('pbc2'), self.get_attribute('pbc3'))
+        return (self.base.attributes.get('pbc1'), self.base.attributes.get('pbc2'), self.base.attributes.get('pbc3'))
 
     @pbc.setter
     def pbc(self, value):
@@ -113,9 +113,9 @@ class KpointsData(ArrayData):
         if self.is_stored:
             raise ModificationNotAllowed('The KpointsData object cannot be modified, it has already been stored')
         the_pbc = get_valid_pbc(value)
-        self.set_attribute('pbc1', the_pbc[0])
-        self.set_attribute('pbc2', the_pbc[1])
-        self.set_attribute('pbc3', the_pbc[2])
+        self.base.attributes.set('pbc1', the_pbc[0])
+        self.base.attributes.set('pbc2', the_pbc[1])
+        self.base.attributes.set('pbc3', the_pbc[2])
 
     @property
     def labels(self):
@@ -123,8 +123,8 @@ class KpointsData(ArrayData):
         Labels associated with the list of kpoints.
         List of tuples with kpoint index and kpoint name: ``[(0,'G'),(13,'M'),...]``
         """
-        label_numbers = self.get_attribute('label_numbers', None)
-        labels = self.get_attribute('labels', None)
+        label_numbers = self.base.attributes.get('label_numbers', None)
+        labels = self.base.attributes.get('labels', None)
         if labels is None or label_numbers is None:
             return None
         return list(zip(label_numbers, labels))
@@ -155,8 +155,8 @@ class KpointsData(ArrayData):
         if any(i > len(self.get_kpoints()) - 1 for i in label_numbers):
             raise ValueError('Index of label exceeding the list of kpoints')
 
-        self.set_attribute('label_numbers', label_numbers)
-        self.set_attribute('labels', labels)
+        self.base.attributes.set('label_numbers', label_numbers)
+        self.base.attributes.set('labels', labels)
 
     def _change_reference(self, kpoints, to_cartesian=True):
         """
@@ -267,8 +267,8 @@ class KpointsData(ArrayData):
             pass
 
         # store
-        self.set_attribute('mesh', the_mesh)
-        self.set_attribute('offset', the_offset)
+        self.base.attributes.set('mesh', the_mesh)
+        self.base.attributes.set('offset', the_offset)
 
     def get_kpoints_mesh(self, print_list=False):
         """
@@ -282,8 +282,8 @@ class KpointsData(ArrayData):
         :return kpoints: (if print_list = True) an explicit list of kpoints coordinates,
                 similar to what returned by get_kpoints()
         """
-        mesh = self.get_attribute('mesh')
-        offset = self.get_attribute('offset')
+        mesh = self.base.attributes.get('mesh')
+        offset = self.base.attributes.get('offset')
 
         if not print_list:
             return mesh, offset
@@ -467,7 +467,7 @@ class KpointsData(ArrayData):
             the_kpoints = self._change_reference(the_kpoints, to_cartesian=False)
 
         # check that we did not saved a mesh already
-        if self.get_attribute('mesh', None) is not None:
+        if self.base.attributes.get('mesh', None) is not None:
             raise ModificationNotAllowed('KpointsData has already a mesh stored')
 
         # store

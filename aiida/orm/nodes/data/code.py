@@ -61,21 +61,21 @@ class Code(Data):
         """
         Hide the code (prevents from showing it in the verdi code list)
         """
-        self.set_extra(self.HIDDEN_KEY, True)
+        self.base.extras.set(self.HIDDEN_KEY, True)
 
     def reveal(self):
         """
         Reveal the code (allows to show it in the verdi code list)
         By default, it is revealed
         """
-        self.set_extra(self.HIDDEN_KEY, False)
+        self.base.extras.set(self.HIDDEN_KEY, False)
 
     @property
     def hidden(self):
         """
         Determines whether the Code is hidden or not
         """
-        return self.get_extra(self.HIDDEN_KEY, False)
+        return self.base.extras.get(self.HIDDEN_KEY, False)
 
     def set_files(self, files):
         """
@@ -325,14 +325,14 @@ class Code(Data):
         Pass a string of code that will be put in the scheduler script before the
         execution of the code.
         """
-        self.set_attribute('prepend_text', str(code))
+        self.base.attributes.set('prepend_text', str(code))
 
     def get_prepend_text(self):
         """
         Return the code that will be put in the scheduler script before the
         execution, or an empty string if no pre-exec code was defined.
         """
-        return self.get_attribute('prepend_text', '')
+        return self.base.attributes.get('prepend_text', '')
 
     def set_input_plugin_name(self, input_plugin):
         """
@@ -340,29 +340,29 @@ class Code(Data):
         generation of a new calculation.
         """
         if input_plugin is None:
-            self.set_attribute('input_plugin', None)
+            self.base.attributes.set('input_plugin', None)
         else:
-            self.set_attribute('input_plugin', str(input_plugin))
+            self.base.attributes.set('input_plugin', str(input_plugin))
 
     def get_input_plugin_name(self):
         """
         Return the name of the default input plugin (or None if no input plugin
         was set.
         """
-        return self.get_attribute('input_plugin', None)
+        return self.base.attributes.get('input_plugin', None)
 
     def set_append_text(self, code):
         """
         Pass a string of code that will be put in the scheduler script after the
         execution of the code.
         """
-        self.set_attribute('append_text', str(code))
+        self.base.attributes.set('append_text', str(code))
 
     def get_append_text(self):
         """
         Return the postexec_code, or an empty string if no post-exec code was defined.
         """
-        return self.get_attribute('append_text', '')
+        return self.base.attributes.get('append_text', '')
 
     def set_local_executable(self, exec_name):
         """
@@ -370,10 +370,10 @@ class Code(Data):
         Implicitly set the code as local.
         """
         self._set_local()
-        self.set_attribute('local_executable', exec_name)
+        self.base.attributes.set('local_executable', exec_name)
 
     def get_local_executable(self):
-        return self.get_attribute('local_executable', '')
+        return self.base.attributes.get('local_executable', '')
 
     def set_remote_computer_exec(self, remote_computer_exec):
         """
@@ -400,12 +400,12 @@ class Code(Data):
 
         self._set_remote()
         self.computer = computer
-        self.set_attribute('remote_exec_path', remote_exec_path)
+        self.base.attributes.set('remote_exec_path', remote_exec_path)
 
     def get_remote_exec_path(self):
         if self.is_local():
             raise ValueError('The code is local')
-        return self.get_attribute('remote_exec_path', '')
+        return self.base.attributes.get('remote_exec_path', '')
 
     def get_remote_computer(self):
         if self.is_local():
@@ -421,10 +421,10 @@ class Code(Data):
 
         It also deletes the flags related to the local case (if any)
         """
-        self.set_attribute('is_local', True)
+        self.base.attributes.set('is_local', True)
         self.computer = None
         try:
-            self.delete_attribute('remote_exec_path')
+            self.base.attributes.delete('remote_exec_path')
         except AttributeError:
             pass
 
@@ -436,9 +436,9 @@ class Code(Data):
 
         It also deletes the flags related to the local case (if any)
         """
-        self.set_attribute('is_local', False)
+        self.base.attributes.set('is_local', False)
         try:
-            self.delete_attribute('local_executable')
+            self.base.attributes.delete('local_executable')
         except AttributeError:
             pass
 
@@ -447,7 +447,7 @@ class Code(Data):
         Return True if the code is 'local', False if it is 'remote' (see also documentation
         of the set_local and set_remote functions).
         """
-        return self.get_attribute('is_local', None)
+        return self.base.attributes.get('is_local', None)
 
     def can_run_on(self, computer):
         """

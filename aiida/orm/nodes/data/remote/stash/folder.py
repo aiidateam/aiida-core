@@ -38,7 +38,7 @@ class RemoteStashFolderData(RemoteStashData):
 
         :return: the target basepath.
         """
-        return self.get_attribute('target_basepath')
+        return self.base.attributes.get('target_basepath')
 
     @target_basepath.setter
     def target_basepath(self, value: str):
@@ -47,7 +47,7 @@ class RemoteStashFolderData(RemoteStashData):
         :param value: the target basepath.
         """
         type_check(value, str)
-        self.set_attribute('target_basepath', value)
+        self.base.attributes.set('target_basepath', value)
 
     @property
     def source_list(self) -> typing.Union[typing.List, typing.Tuple]:
@@ -55,7 +55,7 @@ class RemoteStashFolderData(RemoteStashData):
 
         :return: the list of source files.
         """
-        return self.get_attribute('source_list')
+        return self.base.attributes.get('source_list')
 
     @source_list.setter
     def source_list(self, value: typing.Union[typing.List, typing.Tuple]):
@@ -64,4 +64,4 @@ class RemoteStashFolderData(RemoteStashData):
         :param value: the list of source files.
         """
         type_check(value, (list, tuple))
-        self.set_attribute('source_list', value)
+        self.base.attributes.set('source_list', value)

@@ -125,11 +125,11 @@ class TestNodeAttributesExtras:
         self.node = Data()
 
     def test_attributes(self):
-        """Test the `Node.attributes` property."""
+        """Test the `Node.base.attributes.all` property."""
         original_attribute = {'nested': {'a': 1}}
 
-        self.node.set_attribute('key', original_attribute)
-        node_attributes = self.node.attributes
+        self.node.base.attributes.set('key', original_attribute)
+        node_attributes = self.node.base.attributes.all
         assert node_attributes['key'] == original_attribute
         node_attributes['key']['nested']['a'] = 2
 
@@ -137,7 +137,7 @@ class TestNodeAttributesExtras:
 
         # Now store the node and verify that `attributes` then returns a deep copy
         self.node.store()
-        node_attributes = self.node.attributes
+        node_attributes = self.node.base.attributes.all
 
         # We change the returned node attributes but the original attribute should remain unchanged
         node_attributes['key']['nested']['a'] = 3
@@ -147,37 +147,37 @@ class TestNodeAttributesExtras:
         """Test the `Node.get_attribute` method."""
         original_attribute = {'nested': {'a': 1}}
 
-        self.node.set_attribute('key', original_attribute)
-        node_attribute = self.node.get_attribute('key')
+        self.node.base.attributes.set('key', original_attribute)
+        node_attribute = self.node.base.attributes.get('key')
         assert node_attribute == original_attribute
         node_attribute['nested']['a'] = 2
 
         assert original_attribute['nested']['a'] == 2
 
         default = 'default'
-        assert self.node.get_attribute('not_existing', default=default) == default
+        assert self.node.base.attributes.get('not_existing', default=default) == default
         with pytest.raises(AttributeError):
-            self.node.get_attribute('not_existing')
+            self.node.base.attributes.get('not_existing')
 
         # Now store the node and verify that `get_attribute` then returns a deep copy
         self.node.store()
-        node_attribute = self.node.get_attribute('key')
+        node_attribute = self.node.base.attributes.get('key')
 
         # We change the returned node attributes but the original attribute should remain unchanged
         node_attribute['nested']['a'] = 3
         assert original_attribute['nested']['a'] == 2
 
         default = 'default'
-        assert self.node.get_attribute('not_existing', default=default) == default
+        assert self.node.base.attributes.get('not_existing', default=default) == default
         with pytest.raises(AttributeError):
-            self.node.get_attribute('not_existing')
+            self.node.base.attributes.get('not_existing')
 
     def test_get_attribute_many(self):
         """Test the `Node.get_attribute_many` method."""
         original_attribute = {'nested': {'a': 1}}
 
-        self.node.set_attribute('key', original_attribute)
-        node_attribute = self.node.get_attribute_many(['key'])[0]
+        self.node.base.attributes.set('key', original_attribute)
+        node_attribute = self.node.base.attributes.get_many(['key'])[0]
         assert node_attribute == original_attribute
         node_attribute['nested']['a'] = 2
 
@@ -185,7 +185,7 @@ class TestNodeAttributesExtras:
 
         # Now store the node and verify that `get_attribute` then returns a deep copy
         self.node.store()
-        node_attribute = self.node.get_attribute_many(['key'])[0]
+        node_attribute = self.node.base.attributes.get_many(['key'])[0]
 
         # We change the returned node attributes but the original attribute should remain unchanged
         node_attribute['nested']['a'] = 3
@@ -194,24 +194,24 @@ class TestNodeAttributesExtras:
     def test_set_attribute(self):
         """Test the `Node.set_attribute` method."""
         with pytest.raises(exceptions.ValidationError):
-            self.node.set_attribute('illegal.key', 'value')
+            self.node.base.attributes.set('illegal.key', 'value')
 
-        self.node.set_attribute('valid_key', 'value')
+        self.node.base.attributes.set('valid_key', 'value')
         self.node.store()
 
         with pytest.raises(exceptions.ModificationNotAllowed):
-            self.node.set_attribute('valid_key', 'value')
+            self.node.base.attributes.set('valid_key', 'value')
 
     def test_set_attribute_many(self):
         """Test the `Node.set_attribute` method."""
         with pytest.raises(exceptions.ValidationError):
-            self.node.set_attribute_many({'illegal.key': 'value', 'valid_key': 'value'})
+            self.node.base.attributes.set_many({'illegal.key': 'value', 'valid_key': 'value'})
 
-        self.node.set_attribute_many({'valid_key': 'value'})
+        self.node.base.attributes.set_many({'valid_key': 'value'})
         self.node.store()
 
         with pytest.raises(exceptions.ModificationNotAllowed):
-            self.node.set_attribute_many({'valid_key': 'value'})
+            self.node.base.attributes.set_many({'valid_key': 'value'})
 
     def test_reset_attribute(self):
         """Test the `Node.reset_attribute` method."""
@@ -219,34 +219,34 @@ class TestNodeAttributesExtras:
         attributes_after = {'attribute_three': 'value', 'attribute_four': 'value'}
         attributes_illegal = {'attribute.illegal': 'value', 'attribute_four': 'value'}
 
-        self.node.set_attribute_many(attributes_before)
-        assert self.node.attributes == attributes_before
-        self.node.reset_attributes(attributes_after)
-        assert self.node.attributes == attributes_after
+        self.node.base.attributes.set_many(attributes_before)
+        assert self.node.base.attributes.all == attributes_before
+        self.node.base.attributes.reset(attributes_after)
+        assert self.node.base.attributes.all == attributes_after
 
         with pytest.raises(exceptions.ValidationError):
-            self.node.reset_attributes(attributes_illegal)
+            self.node.base.attributes.reset(attributes_illegal)
 
         self.node.store()
 
         with pytest.raises(exceptions.ModificationNotAllowed):
-            self.node.reset_attributes(attributes_after)
+            self.node.base.attributes.reset(attributes_after)
 
     def test_delete_attribute(self):
         """Test the `Node.delete_attribute` method."""
-        self.node.set_attribute('valid_key', 'value')
-        assert self.node.get_attribute('valid_key') == 'value'
-        self.node.delete_attribute('valid_key')
+        self.node.base.attributes.set('valid_key', 'value')
+        assert self.node.base.attributes.get('valid_key') == 'value'
+        self.node.base.attributes.delete('valid_key')
 
         with pytest.raises(AttributeError):
-            self.node.delete_attribute('valid_key')
+            self.node.base.attributes.delete('valid_key')
 
         # Repeat with stored node
-        self.node.set_attribute('valid_key', 'value')
+        self.node.base.attributes.set('valid_key', 'value')
         self.node.store()
 
         with pytest.raises(exceptions.ModificationNotAllowed):
-            self.node.delete_attribute('valid_key')
+            self.node.base.attributes.delete('valid_key')
 
     def test_delete_attribute_many(self):
         """Test the `Node.delete_attribute_many` method."""
@@ -254,36 +254,36 @@ class TestNodeAttributesExtras:
     def test_clear_attributes(self):
         """Test the `Node.clear_attributes` method."""
         attributes = {'attribute_one': 'value', 'attribute_two': 'value'}
-        self.node.set_attribute_many(attributes)
-        assert self.node.attributes == attributes
+        self.node.base.attributes.set_many(attributes)
+        assert self.node.base.attributes.all == attributes
 
-        self.node.clear_attributes()
-        assert self.node.attributes == {}
+        self.node.base.attributes.clear()
+        assert self.node.base.attributes.all == {}
 
         # Repeat for stored node
         self.node.store()
 
         with pytest.raises(exceptions.ModificationNotAllowed):
-            self.node.clear_attributes()
+            self.node.base.attributes.clear()
 
     def test_attributes_items(self):
-        """Test the `Node.attributes_items` generator."""
+        """Test the `Node.base.attributes.items` generator."""
         attributes = {'attribute_one': 'value', 'attribute_two': 'value'}
-        self.node.set_attribute_many(attributes)
-        assert dict(self.node.attributes_items()) == attributes
+        self.node.base.attributes.set_many(attributes)
+        assert dict(self.node.base.attributes.items()) == attributes
 
     def test_attributes_keys(self):
-        """Test the `Node.attributes_keys` generator."""
+        """Test the `Node.base.attributes.keys` generator."""
         attributes = {'attribute_one': 'value', 'attribute_two': 'value'}
-        self.node.set_attribute_many(attributes)
-        assert set(self.node.attributes_keys()) == set(attributes)
+        self.node.base.attributes.set_many(attributes)
+        assert set(self.node.base.attributes.keys()) == set(attributes)
 
     def test_extras(self):
-        """Test the `Node.extras` property."""
+        """Test the `Node.base.extras.all` property."""
         original_extra = {'nested': {'a': 1}}
 
-        self.node.set_extra('key', original_extra)
-        node_extras = self.node.extras
+        self.node.base.extras.set('key', original_extra)
+        node_extras = self.node.base.extras.all
         assert node_extras['key'] == original_extra
         node_extras['key']['nested']['a'] = 2
 
@@ -291,47 +291,47 @@ class TestNodeAttributesExtras:
 
         # Now store the node and verify that `extras` then returns a deep copy
         self.node.store()
-        node_extras = self.node.extras
+        node_extras = self.node.base.extras.all
 
         # We change the returned node extras but the original extra should remain unchanged
         node_extras['key']['nested']['a'] = 3
         assert original_extra['nested']['a'] == 2
 
     def test_get_extra(self):
-        """Test the `Node.get_extra` method."""
+        """Test the `Node.base.extras.get` method."""
         original_extra = {'nested': {'a': 1}}
 
-        self.node.set_extra('key', original_extra)
-        node_extra = self.node.get_extra('key')
+        self.node.base.extras.set('key', original_extra)
+        node_extra = self.node.base.extras.get('key')
         assert node_extra == original_extra
         node_extra['nested']['a'] = 2
 
         assert original_extra['nested']['a'] == 2
 
         default = 'default'
-        assert self.node.get_extra('not_existing', default=default) == default
+        assert self.node.base.extras.get('not_existing', default=default) == default
         with pytest.raises(AttributeError):
-            self.node.get_extra('not_existing')
+            self.node.base.extras.get('not_existing')
 
         # Now store the node and verify that `get_extra` then returns a deep copy
         self.node.store()
-        node_extra = self.node.get_extra('key')
+        node_extra = self.node.base.extras.get('key')
 
         # We change the returned node extras but the original extra should remain unchanged
         node_extra['nested']['a'] = 3
         assert original_extra['nested']['a'] == 2
 
         default = 'default'
-        assert self.node.get_extra('not_existing', default=default) == default
+        assert self.node.base.extras.get('not_existing', default=default) == default
         with pytest.raises(AttributeError):
-            self.node.get_extra('not_existing')
+            self.node.base.extras.get('not_existing')
 
     def test_get_extra_many(self):
-        """Test the `Node.get_extra_many` method."""
+        """Test the `Node.base.extras.get_many` method."""
         original_extra = {'nested': {'a': 1}}
 
-        self.node.set_extra('key', original_extra)
-        node_extra = self.node.get_extra_many(['key'])[0]
+        self.node.base.extras.set('key', original_extra)
+        node_extra = self.node.base.extras.get_many(['key'])[0]
         assert node_extra == original_extra
         node_extra['nested']['a'] = 2
 
@@ -339,120 +339,120 @@ class TestNodeAttributesExtras:
 
         # Now store the node and verify that `get_extra` then returns a deep copy
         self.node.store()
-        node_extra = self.node.get_extra_many(['key'])[0]
+        node_extra = self.node.base.extras.get_many(['key'])[0]
 
         # We change the returned node extras but the original extra should remain unchanged
         node_extra['nested']['a'] = 3
         assert original_extra['nested']['a'] == 2
 
     def test_set_extra(self):
-        """Test the `Node.set_extra` method."""
+        """Test the `Node.base.extras.set` method."""
         with pytest.raises(exceptions.ValidationError):
-            self.node.set_extra('illegal.key', 'value')
+            self.node.base.extras.set('illegal.key', 'value')
 
-        self.node.set_extra('valid_key', 'value')
+        self.node.base.extras.set('valid_key', 'value')
         self.node.store()
 
-        self.node.set_extra('valid_key', 'changed')
-        assert load_node(self.node.pk).get_extra('valid_key') == 'changed'
+        self.node.base.extras.set('valid_key', 'changed')
+        assert load_node(self.node.pk).base.extras.get('valid_key') == 'changed'
 
     def test_set_extra_many(self):
-        """Test the `Node.set_extra` method."""
+        """Test the `Node.base.extras.set_many` method."""
         with pytest.raises(exceptions.ValidationError):
-            self.node.set_extra_many({'illegal.key': 'value', 'valid_key': 'value'})
+            self.node.base.extras.set_many({'illegal.key': 'value', 'valid_key': 'value'})
 
-        self.node.set_extra_many({'valid_key': 'value'})
+        self.node.base.extras.set_many({'valid_key': 'value'})
         self.node.store()
 
-        self.node.set_extra_many({'valid_key': 'changed'})
-        assert load_node(self.node.pk).get_extra('valid_key') == 'changed'
+        self.node.base.extras.set_many({'valid_key': 'changed'})
+        assert load_node(self.node.pk).base.extras.get('valid_key') == 'changed'
 
     def test_reset_extra(self):
-        """Test the `Node.reset_extra` method."""
+        """Test the `Node.base.extras.reset` method."""
         extras_before = {'extra_one': 'value', 'extra_two': 'value'}
         extras_after = {'extra_three': 'value', 'extra_four': 'value'}
         extras_illegal = {'extra.illegal': 'value', 'extra_four': 'value'}
 
-        self.node.set_extra_many(extras_before)
-        assert self.node.extras == extras_before
-        self.node.reset_extras(extras_after)
-        assert self.node.extras == extras_after
+        self.node.base.extras.set_many(extras_before)
+        assert self.node.base.extras.all == extras_before
+        self.node.base.extras.reset(extras_after)
+        assert self.node.base.extras.all == extras_after
 
         with pytest.raises(exceptions.ValidationError):
-            self.node.reset_extras(extras_illegal)
+            self.node.base.extras.reset(extras_illegal)
 
         self.node.store()
 
-        self.node.reset_extras(extras_after)
-        assert load_node(self.node.pk).extras == extras_after
+        self.node.base.extras.reset(extras_after)
+        assert load_node(self.node.pk).base.extras.all == extras_after
 
     def test_delete_extra(self):
         """Test the `Node.delete_extra` method."""
-        self.node.set_extra('valid_key', 'value')
-        assert self.node.get_extra('valid_key') == 'value'
-        self.node.delete_extra('valid_key')
+        self.node.base.extras.set('valid_key', 'value')
+        assert self.node.base.extras.get('valid_key') == 'value'
+        self.node.base.extras.delete('valid_key')
 
         with pytest.raises(AttributeError):
-            self.node.delete_extra('valid_key')
+            self.node.base.extras.delete('valid_key')
 
         # Repeat with stored node
-        self.node.set_extra('valid_key', 'value')
+        self.node.base.extras.set('valid_key', 'value')
         self.node.store()
 
-        self.node.delete_extra('valid_key')
+        self.node.base.extras.delete('valid_key')
         with pytest.raises(AttributeError):
-            load_node(self.node.pk).get_extra('valid_key')
+            load_node(self.node.pk).base.extras.get('valid_key')
 
     def test_delete_extra_many(self):
         """Test the `Node.delete_extra_many` method."""
-        self.node.set_extra('valid_key', 'value')
-        assert self.node.get_extra('valid_key') == 'value'
-        self.node.delete_extra('valid_key')
+        self.node.base.extras.set('valid_key', 'value')
+        assert self.node.base.extras.get('valid_key') == 'value'
+        self.node.base.extras.delete('valid_key')
 
         with pytest.raises(AttributeError):
-            self.node.delete_extra('valid_key')
+            self.node.base.extras.delete('valid_key')
 
         # Repeat with stored group
-        self.node.set_extra('valid_key', 'value')
+        self.node.base.extras.set('valid_key', 'value')
         self.node.store()
 
-        self.node.delete_extra('valid_key')
+        self.node.base.extras.delete('valid_key')
         with pytest.raises(AttributeError):
-            load_node(self.node.pk).get_extra('valid_key')
+            load_node(self.node.pk).base.extras.get('valid_key')
 
     def test_clear_extras(self):
-        """Test the `Node.clear_extras` method."""
+        """Test the `Node.base.extras.clear` method."""
         extras = {'extra_one': 'value', 'extra_two': 'value'}
-        self.node.set_extra_many(extras)
-        assert self.node.extras == extras
+        self.node.base.extras.set_many(extras)
+        assert self.node.base.extras.all == extras
 
-        self.node.clear_extras()
-        assert self.node.extras == {}
+        self.node.base.extras.clear()
+        assert self.node.base.extras.all == {}
 
         # Repeat for stored node
         self.node.store()
 
-        self.node.clear_extras()
-        assert load_node(self.node.pk).extras == {}
+        self.node.base.extras.clear()
+        assert load_node(self.node.pk).base.extras.all == {}
 
     def test_extras_items(self):
-        """Test the `Node.extras_items` generator."""
+        """Test the `Node.base.extras.items` generator."""
         extras = {'extra_one': 'value', 'extra_two': 'value'}
-        self.node.set_extra_many(extras)
-        assert dict(self.node.extras_items()) == extras
+        self.node.base.extras.set_many(extras)
+        assert dict(self.node.base.extras.items()) == extras
 
     def test_extras_keys(self):
-        """Test the `Node.extras_keys` generator."""
+        """Test the `Node.base.extras.keys` generator."""
         extras = {'extra_one': 'value', 'extra_two': 'value'}
-        self.node.set_extra_many(extras)
-        assert set(self.node.extras_keys()) == set(extras)
+        self.node.base.extras.set_many(extras)
+        assert set(self.node.base.extras.keys()) == set(extras)
 
     def test_attribute_decimal(self):
         """Test that the `Node.set_attribute` method supports Decimal."""
-        self.node.set_attribute('a_val', Decimal('3.141'))
+        self.node.base.attributes.set('a_val', Decimal('3.141'))
         self.node.store()
         # ensure the returned node is a float
-        assert self.node.get_attribute('a_val') == 3.141
+        assert self.node.base.attributes.get('a_val') == 3.141
 
 
 @pytest.mark.usefixtures('aiida_profile_clean_class')
@@ -907,7 +907,7 @@ class TestNodeComments:
         """Test comment addition."""
         data = Data().store()
         content = 'whatever Trevor'
-        comment = data.add_comment(content)
+        comment = data.base.comments.add(content)
         assert comment.content == content
         assert comment.node.pk == data.pk
 
@@ -915,33 +915,33 @@ class TestNodeComments:
         """Test retrieve single comment."""
         data = Data().store()
         content = 'something something dark side'
-        add_comment = data.add_comment(content)
-        get_comment = data.get_comment(add_comment.pk)
+        add_comment = data.base.comments.add(content)
+        get_comment = data.base.comments.get(add_comment.pk)
         assert get_comment.content == content
         assert get_comment.pk == add_comment.pk
 
     def test_get_comments(self):
         """Test retrieve multiple comments."""
         data = Data().store()
-        data.add_comment('one')
-        data.add_comment('two')
-        comments = data.get_comments()
+        data.base.comments.add('one')
+        data.base.comments.add('two')
+        comments = data.base.comments.all()
         assert {c.content for c in comments} == {'one', 'two'}
 
     def test_update_comment(self):
         """Test update a comment."""
         data = Data().store()
-        comment = data.add_comment('original')
-        data.update_comment(comment.pk, 'new')
+        comment = data.base.comments.add('original')
+        data.base.comments.update(comment.pk, 'new')
         assert comment.content == 'new'
 
     def test_remove_comment(self):
         """Test remove a comment."""
         data = Data().store()
-        comment = data.add_comment('original')
-        assert len(data.get_comments()) == 1
-        data.remove_comment(comment.pk)
-        assert len(data.get_comments()) == 0
+        comment = data.base.comments.add('original')
+        assert len(data.base.comments.all()) == 1
+        data.base.comments.remove(comment.pk)
+        assert len(data.base.comments.all()) == 0
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

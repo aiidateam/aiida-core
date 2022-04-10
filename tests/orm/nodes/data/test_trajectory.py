@@ -26,13 +26,13 @@ class TestTrajectory:
         Test whether the try_except statement on the get_attribute calls for units in
         the `show_mpl_*` functions except the correct exception type (for setting defaults).
 
-        Added for PR #5015 (behavior of BackendEntityAttributesMixin.get_attribute changed
+        Added for PR #5015 (behavior of BackendEntityAttributes.get changed
         to raise AttributeError instead of KeyError)
         """
         tjd = TrajectoryData()
 
         try:
-            positions_unit = tjd.get_attribute('units|positions')
+            positions_unit = tjd.base.attributes.get('units|positions')
         except AttributeError:
             positions_unit = 'A'
         except KeyError:
@@ -40,7 +40,7 @@ class TestTrajectory:
         assert positions_unit == 'A'
 
         try:
-            times_unit = tjd.get_attribute('units|times')
+            times_unit = tjd.base.attributes.get('units|times')
         except AttributeError:
             times_unit = 'ps'
         except KeyError:
@@ -49,7 +49,7 @@ class TestTrajectory:
 
         positions = 1
         try:
-            if self.get_attribute('units|positions') in ('bohr', 'atomic'):
+            if self.base.attributes.get('units|positions') in ('bohr', 'atomic'):
                 bohr_to_ang = 0.52917720859
                 positions *= bohr_to_ang
         except AttributeError:
@@ -62,15 +62,15 @@ class TestTrajectory:
         """Test the setting of units attributes."""
         tjd = TrajectoryData()
 
-        tjd.set_attribute('units|positions', 'some_random_pos_unit')
-        assert tjd.get_attribute('units|positions') == 'some_random_pos_unit'
+        tjd.base.attributes.set('units|positions', 'some_random_pos_unit')
+        assert tjd.base.attributes.get('units|positions') == 'some_random_pos_unit'
 
-        tjd.set_attribute('units|times', 'some_random_time_unit')
-        assert tjd.get_attribute('units|times') == 'some_random_time_unit'
+        tjd.base.attributes.set('units|times', 'some_random_time_unit')
+        assert tjd.base.attributes.get('units|times') == 'some_random_time_unit'
 
         # Test after storing
         tjd.set_trajectory(self.symbols, self.positions)
         tjd.store()
         tjd2 = load_node(tjd.pk)
-        assert tjd2.get_attribute('units|positions') == 'some_random_pos_unit'
-        assert tjd2.get_attribute('units|times') == 'some_random_time_unit'
+        assert tjd2.base.attributes.get('units|positions') == 'some_random_pos_unit'
+        assert tjd2.base.attributes.get('units|times') == 'some_random_time_unit'

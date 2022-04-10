@@ -60,7 +60,7 @@ class TestOrbitalData:
 
         #Check that a corrupted OribtalData fails on get_orbitals
         corrupted_orbitaldata = copy.deepcopy(orbitaldata)
-        del corrupted_orbitaldata.get_attribute('orbital_dicts')[0]['_orbital_type']
+        del corrupted_orbitaldata.base.attributes.get('orbital_dicts')[0]['_orbital_type']
         with pytest.raises(ValidationError):
             corrupted_orbitaldata.get_orbitals()
 

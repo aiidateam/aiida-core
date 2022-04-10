@@ -417,11 +417,11 @@ class TestGroupExtras:
         self.group = orm.Group('test_extras')
 
     def test_extras(self):
-        """Test the `Group.extras` property."""
+        """Test the `Group.base.extras.all` property."""
         original_extra = {'nested': {'a': 1}}
 
-        self.group.set_extra('key', original_extra)
-        group_extras = self.group.extras
+        self.group.base.extras.set('key', original_extra)
+        group_extras = self.group.base.extras.all
         assert group_extras['key'] == original_extra
         group_extras['key']['nested']['a'] = 2
 
@@ -429,7 +429,7 @@ class TestGroupExtras:
 
         # Now store the group and verify that `extras` then returns a deep copy
         self.group.store()
-        group_extras = self.group.extras
+        group_extras = self.group.base.extras.all
 
         # We change the returned group extras but the original extra should remain unchanged
         group_extras['key']['nested']['a'] = 3
@@ -439,37 +439,37 @@ class TestGroupExtras:
         """Test the `Group.get_extra` method."""
         original_extra = {'nested': {'a': 1}}
 
-        self.group.set_extra('key', original_extra)
-        group_extra = self.group.get_extra('key')
+        self.group.base.extras.set('key', original_extra)
+        group_extra = self.group.base.extras.get('key')
         assert group_extra == original_extra
         group_extra['nested']['a'] = 2
 
         assert original_extra['nested']['a'] == 2
 
         default = 'default'
-        assert self.group.get_extra('not_existing', default=default) == default
+        assert self.group.base.extras.get('not_existing', default=default) == default
         with pytest.raises(AttributeError):
-            self.group.get_extra('not_existing')
+            self.group.base.extras.get('not_existing')
 
         # Now store the group and verify that `get_extra` then returns a deep copy
         self.group.store()
-        group_extra = self.group.get_extra('key')
+        group_extra = self.group.base.extras.get('key')
 
         # We change the returned group extras but the original extra should remain unchanged
         group_extra['nested']['a'] = 3
         assert original_extra['nested']['a'] == 2
 
         default = 'default'
-        assert self.group.get_extra('not_existing', default=default) == default
+        assert self.group.base.extras.get('not_existing', default=default) == default
         with pytest.raises(AttributeError):
-            self.group.get_extra('not_existing')
+            self.group.base.extras.get('not_existing')
 
     def test_get_extra_many(self):
-        """Test the `Group.get_extra_many` method."""
+        """Test the `Group.base.extras.get_many` method."""
         original_extra = {'nested': {'a': 1}}
 
-        self.group.set_extra('key', original_extra)
-        group_extra = self.group.get_extra_many(['key'])[0]
+        self.group.base.extras.set('key', original_extra)
+        group_extra = self.group.base.extras.get_many(['key'])[0]
         assert group_extra == original_extra
         group_extra['nested']['a'] = 2
 
@@ -477,7 +477,7 @@ class TestGroupExtras:
 
         # Now store the group and verify that `get_extra` then returns a deep copy
         self.group.store()
-        group_extra = self.group.get_extra_many(['key'])[0]
+        group_extra = self.group.base.extras.get_many(['key'])[0]
 
         # We change the returned group extras but the original extra should remain unchanged
         group_extra['nested']['a'] = 3
@@ -486,101 +486,101 @@ class TestGroupExtras:
     def test_set_extra(self):
         """Test the `Group.set_extra` method."""
         with pytest.raises(exceptions.ValidationError):
-            self.group.set_extra('illegal.key', 'value')
+            self.group.base.extras.set('illegal.key', 'value')
 
-        self.group.set_extra('valid_key', 'value')
+        self.group.base.extras.set('valid_key', 'value')
         self.group.store()
 
-        self.group.set_extra('valid_key', 'changed')
-        assert orm.load_group(self.group.pk).get_extra('valid_key') == 'changed'
+        self.group.base.extras.set('valid_key', 'changed')
+        assert orm.load_group(self.group.pk).base.extras.get('valid_key') == 'changed'
 
     def test_set_extra_many(self):
-        """Test the `Group.set_extra` method."""
+        """Test the `Group.base.extras.set_many` method."""
         with pytest.raises(exceptions.ValidationError):
-            self.group.set_extra_many({'illegal.key': 'value', 'valid_key': 'value'})
+            self.group.base.extras.set_many({'illegal.key': 'value', 'valid_key': 'value'})
 
-        self.group.set_extra_many({'valid_key': 'value'})
+        self.group.base.extras.set_many({'valid_key': 'value'})
         self.group.store()
 
-        self.group.set_extra_many({'valid_key': 'changed'})
-        assert orm.load_group(self.group.pk).get_extra('valid_key') == 'changed'
+        self.group.base.extras.set_many({'valid_key': 'changed'})
+        assert orm.load_group(self.group.pk).base.extras.get('valid_key') == 'changed'
 
     def test_reset_extra(self):
-        """Test the `Group.reset_extra` method."""
+        """Test the `Group.base.extras.reset` method."""
         extras_before = {'extra_one': 'value', 'extra_two': 'value'}
         extras_after = {'extra_three': 'value', 'extra_four': 'value'}
         extras_illegal = {'extra.illegal': 'value', 'extra_four': 'value'}
 
-        self.group.set_extra_many(extras_before)
-        assert self.group.extras == extras_before
-        self.group.reset_extras(extras_after)
-        assert self.group.extras == extras_after
+        self.group.base.extras.set_many(extras_before)
+        assert self.group.base.extras.all == extras_before
+        self.group.base.extras.reset(extras_after)
+        assert self.group.base.extras.all == extras_after
 
         with pytest.raises(exceptions.ValidationError):
-            self.group.reset_extras(extras_illegal)
+            self.group.base.extras.reset(extras_illegal)
 
         self.group.store()
 
-        self.group.reset_extras(extras_after)
-        assert orm.load_group(self.group.pk).extras == extras_after
+        self.group.base.extras.reset(extras_after)
+        assert orm.load_group(self.group.pk).base.extras.all == extras_after
 
     def test_delete_extra(self):
-        """Test the `Group.delete_extra` method."""
-        self.group.set_extra('valid_key', 'value')
-        assert self.group.get_extra('valid_key') == 'value'
-        self.group.delete_extra('valid_key')
+        """Test the `Group.base.extras.delete` method."""
+        self.group.base.extras.set('valid_key', 'value')
+        assert self.group.base.extras.get('valid_key') == 'value'
+        self.group.base.extras.delete('valid_key')
 
         with pytest.raises(AttributeError):
-            self.group.delete_extra('valid_key')
+            self.group.base.extras.delete('valid_key')
 
         # Repeat with stored group
-        self.group.set_extra('valid_key', 'value')
+        self.group.base.extras.set('valid_key', 'value')
         self.group.store()
 
-        self.group.delete_extra('valid_key')
+        self.group.base.extras.delete('valid_key')
         with pytest.raises(AttributeError):
-            orm.load_group(self.group.pk).get_extra('valid_key')
+            orm.load_group(self.group.pk).base.extras.get('valid_key')
 
     def test_delete_extra_many(self):
-        """Test the `Group.delete_extra_many` method."""
+        """Test the `Group.base.extras.delete_many` method."""
         extras_valid = {'extra_one': 'value', 'extra_two': 'value'}
         valid_keys = ['extra_one', 'extra_two']
         invalid_keys = ['extra_one', 'invalid_key']
 
-        self.group.set_extra_many(extras_valid)
-        assert self.group.extras == extras_valid
+        self.group.base.extras.set_many(extras_valid)
+        assert self.group.base.extras.all == extras_valid
 
         with pytest.raises(AttributeError):
-            self.group.delete_extra_many(invalid_keys)
+            self.group.base.extras.delete_many(invalid_keys)
 
         self.group.store()
 
-        self.group.delete_extra_many(valid_keys)
-        assert orm.load_group(self.group.pk).extras == {}
+        self.group.base.extras.delete_many(valid_keys)
+        assert orm.load_group(self.group.pk).base.extras.all == {}
 
     def test_clear_extras(self):
-        """Test the `Group.clear_extras` method."""
+        """Test the `Group.base.extras.clear` method."""
         extras = {'extra_one': 'value', 'extra_two': 'value'}
-        self.group.set_extra_many(extras)
-        assert self.group.extras == extras
+        self.group.base.extras.set_many(extras)
+        assert self.group.base.extras.all == extras
 
-        self.group.clear_extras()
-        assert self.group.extras == {}
+        self.group.base.extras.clear()
+        assert self.group.base.extras.all == {}
 
         # Repeat for stored group
         self.group.store()
 
-        self.group.clear_extras()
-        assert orm.load_group(self.group.pk).extras == {}
+        self.group.base.extras.clear()
+        assert orm.load_group(self.group.pk).base.extras.all == {}
 
     def test_extras_items(self):
-        """Test the `Group.extras_items` generator."""
+        """Test the `Group.base.extras.items` generator."""
         extras = {'extra_one': 'value', 'extra_two': 'value'}
-        self.group.set_extra_many(extras)
-        assert dict(self.group.extras_items()) == extras
+        self.group.base.extras.set_many(extras)
+        assert dict(self.group.base.extras.items()) == extras
 
     def test_extras_keys(self):
-        """Test the `Group.extras_keys` generator."""
+        """Test the `Group.base.extras.keys` generator."""
         extras = {'extra_one': 'value', 'extra_two': 'value'}
-        self.group.set_extra_many(extras)
-        assert set(self.group.extras_keys()) == set(extras)
+        self.group.base.extras.set_many(extras)
+        assert set(self.group.base.extras.keys()) == set(extras)

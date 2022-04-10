@@ -43,9 +43,11 @@ from aiida.orm.utils.node import AbstractNodeMeta
 from ..comments import Comment
 from ..computers import Computer
 from ..entities import Collection as EntityCollection
-from ..entities import Entity, EntityAttributesMixin, EntityExtrasMixin
+from ..entities import Entity
+from ..extras import EntityExtras
 from ..querybuilder import QueryBuilder
 from ..users import User
+from .attributes import NodeAttributes
 from .repository import NodeRepository
 
 if TYPE_CHECKING:
@@ -114,8 +116,23 @@ class NodeBase:
         """Return the repository for this node."""
         return NodeRepository(self._node)
 
+    @cached_property
+    def comments(self) -> 'NodeComments':
+        """Return an interface to interact with the comments of this node."""
+        return NodeComments(self._node)
 
-class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, metaclass=AbstractNodeMeta):
+    @cached_property
+    def attributes(self) -> 'NodeAttributes':
+        """Return an interface to interact with the attributes of this node."""
+        return NodeAttributes(self._node)
+
+    @cached_property
+    def extras(self) -> 'EntityExtras':
+        """Return an interface to interact with the extras of this node."""
+        return EntityExtras(self._node)
+
+
+class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
     """
     Base class for all nodes in AiiDA.
 
@@ -194,6 +211,16 @@ class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, meta
         """Return the node base namespace."""
         return NodeBase(self)
 
+    def _check_mutability_attributes(self, keys: Optional[List[str]] = None) -> None:  # pylint: disable=unused-argument
+        """Check if the entity is mutable and raise an exception if not.
+
+        This is called from `NodeAttributes` methods that modify the attributes.
+
+        :param keys: the keys that will be mutated, or all if None
+        """
+        if self.is_stored:
+            raise exceptions.ModificationNotAllowed('the attributes of a stored entity are immutable')
+
     def __eq__(self, other: Any) -> bool:
         """Fallback equality comparison by uuid (can be overwritten by specific types)"""
         if isinstance(other, Node) and self.uuid == other.uuid:
@@ -240,7 +267,7 @@ class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, meta
         and should usually call ``super()._validate()`` first!
 
         This method is called automatically before storing the node in the DB.
-        Therefore, use :py:meth:`~aiida.orm.entities.EntityAttributesMixin.get_attribute()` and similar methods that
+        Therefore, use :py:meth:`~aiida.orm.nodes.attributes.NodeAttributes.get()` and similar methods that
         automatically read either from the DB or from the internal attribute cache.
         """
         # pylint: disable=no-self-use
@@ -395,51 +422,6 @@ class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, meta
         :return: the mtime
         """
         return self.backend_entity.mtime
-
-    def add_comment(self, content: str, user: Optional[User] = None) -> Comment:
-        """Add a new comment.
-
-        :param content: string with comment
-        :param user: the user to associate with the comment, will use default if not supplied
-        :return: the newly created comment
-        """
-        user = user or User.objects(self.backend).get_default()
-        return Comment(node=self, user=user, content=content).store()
-
-    def get_comment(self, identifier: int) -> Comment:
-        """Return a comment corresponding to the given identifier.
-
-        :param identifier: the comment pk
-        :raise aiida.common.NotExistent: if the comment with the given id does not exist
-        :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
-        :return: the comment
-        """
-        return Comment.objects(self.backend).get(dbnode_id=self.pk, id=identifier)
-
-    def get_comments(self) -> List[Comment]:
-        """Return a sorted list of comments for this node.
-
-        :return: the list of comments, sorted by pk
-        """
-        return Comment.objects(self.backend).find(filters={'dbnode_id': self.pk}, order_by=[{'id': 'asc'}])
-
-    def update_comment(self, identifier: int, content: str) -> None:
-        """Update the content of an existing comment.
-
-        :param identifier: the comment pk
-        :param content: the new comment content
-        :raise aiida.common.NotExistent: if the comment with the given id does not exist
-        :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
-        """
-        comment = Comment.objects(self.backend).get(dbnode_id=self.pk, id=identifier)
-        comment.set_content(content)
-
-    def remove_comment(self, identifier: int) -> None:  # pylint: disable=no-self-use
-        """Delete an existing comment.
-
-        :param identifier: the comment pk
-        """
-        Comment.objects(self.backend).delete(identifier)
 
     def add_incoming(self, source: 'Node', link_type: LinkType, link_label: str) -> None:
         """Add a link of the given type from a given node to ourself.
@@ -774,13 +756,13 @@ class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, meta
         # Make sure to reinitialize the repository instance of the clone to that of the source node.
         self.base.repository._copy(cache_node.base.repository)  # pylint: disable=protected-access
 
-        for key, value in cache_node.attributes.items():
+        for key, value in cache_node.base.attributes.all.items():
             if key != Sealable.SEALED_KEY:
-                self.set_attribute(key, value)
+                self.base.attributes.set(key, value)
 
         self._store(with_transaction=with_transaction, clean=False)
         self._add_outputs_from_cache(cache_node)
-        self.set_extra('_aiida_cached_from', cache_node.uuid)
+        self.base.extras.set('_aiida_cached_from', cache_node.uuid)
 
     def _add_outputs_from_cache(self, cache_node: 'Node') -> None:
         """Replicate the output links and nodes from the cached node onto this node."""
@@ -827,7 +809,7 @@ class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, meta
             version,
             {
                 key: val
-                for key, val in self.attributes_items()
+                for key, val in self.base.attributes.items()
                 if key not in self._hash_ignored_attributes and key not in self._updatable_attributes  # pylint: disable=unsupported-membership-test
             },
             self.base.repository.hash(),
@@ -837,18 +819,18 @@ class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, meta
 
     def rehash(self) -> None:
         """Regenerate the stored hash of the Node."""
-        self.set_extra(self._HASH_EXTRA_KEY, self.get_hash())
+        self.base.extras.set(self._HASH_EXTRA_KEY, self.get_hash())
 
     def clear_hash(self) -> None:
         """Sets the stored hash of the Node to None."""
-        self.set_extra(self._HASH_EXTRA_KEY, None)
+        self.base.extras.set(self._HASH_EXTRA_KEY, None)
 
     def get_cache_source(self) -> Optional[str]:
         """Return the UUID of the node that was used in creating this node from the cache, or None if it was not cached.
 
         :return: source node UUID or None
         """
-        return self.get_extra('_aiida_cached_from', None)
+        return self.base.extras.get('_aiida_cached_from', None)
 
     @property
     def is_created_from_cache(self) -> bool:
@@ -913,7 +895,7 @@ class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, meta
         has been set to ``False`` explicitly. Subclasses can override this property with more specific logic, but should
         probably also consider the value returned by this base class.
         """
-        return self.get_extra(self._VALID_CACHE_KEY, True)
+        return self.base.extras.get(self._VALID_CACHE_KEY, True)
 
     @is_valid_cache.setter
     def is_valid_cache(self, valid: bool) -> None:
@@ -925,7 +907,7 @@ class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, meta
         :param valid: whether the node is valid or invalid for use in caching.
         """
         type_check(valid, bool)
-        self.set_extra(self._VALID_CACHE_KEY, valid)
+        self.base.extras.set(self._VALID_CACHE_KEY, valid)
 
     def get_description(self) -> str:
         """Return a string with a description of the node.
@@ -951,12 +933,66 @@ class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, meta
         'repository_metadata': 'metadata',
     }
 
+    _deprecated_attr_methods = {
+        'attributes': 'all',
+        'get_attribute': 'get',
+        'get_attribute_many': 'get_many',
+        'set_attribute': 'set',
+        'set_attribute_many': 'set_many',
+        'reset_attributes': 'reset',
+        'delete_attribute': 'delete',
+        'delete_attribute_many': 'delete_many',
+        'clear_attributes': 'clear',
+        'attributes_items': 'items',
+        'attributes_keys': 'keys',
+    }
+
+    _deprecated_extra_methods = {
+        'extras': 'all',
+        'get_extra': 'get',
+        'get_extra_many': 'get_many',
+        'set_extra': 'set',
+        'set_extra_many': 'set_many',
+        'reset_extras': 'reset',
+        'delete_extra': 'delete',
+        'delete_extra_many': 'delete_many',
+        'clear_extras': 'clear',
+        'extras_items': 'items',
+        'extras_keys': 'keys',
+    }
+
+    _deprecated_comment_methods = {
+        'add_comment': 'add',
+        'get_comment': 'get',
+        'get_comments': 'all',
+        'remove_comment': 'remove',
+        'update_comment': 'update',
+    }
+
     def __getattr__(self, name: str) -> Any:
         """
         This method is called when an attribute is not found in the instance.
 
         It allows for the handling of deprecated mixin methods.
         """
+        if name in self._deprecated_extra_methods:
+            new_name = self._deprecated_extra_methods[name]
+            kls = self.__class__.__name__
+            warn_deprecation(
+                f'`{kls}.{name}` is deprecated, use `{kls}.base.extras.{new_name}` instead.', version=3, stacklevel=3
+            )
+            return getattr(self.base.extras, new_name)
+
+        if name in self._deprecated_attr_methods:
+            new_name = self._deprecated_attr_methods[name]
+            kls = self.__class__.__name__
+            warn_deprecation(
+                f'`{kls}.{name}` is deprecated, use `{kls}.base.attributes.{new_name}` instead.',
+                version=3,
+                stacklevel=3
+            )
+            return getattr(self.base.attributes, new_name)
+
         if name in self._deprecated_repo_methods:
             new_name = self._deprecated_repo_methods[name]
             kls = self.__class__.__name__
@@ -966,4 +1002,66 @@ class Node(Entity['BackendNode'], EntityAttributesMixin, EntityExtrasMixin, meta
                 stacklevel=3
             )
             return getattr(self.base.repository, new_name)
+
+        if name in self._deprecated_comment_methods:
+            new_name = self._deprecated_comment_methods[name]
+            kls = self.__class__.__name__
+            warn_deprecation(
+                f'`{kls}.{name}` is deprecated, use `{kls}.base.comments.{new_name}` instead.', version=3, stacklevel=3
+            )
+            return getattr(self.base.comments, new_name)
+
         raise AttributeError(name)
+
+
+class NodeComments:
+    """Interface for comments of a node instance."""
+
+    def __init__(self, node: Node) -> None:
+        """Initialize the comments interface."""
+        self._node = node
+
+    def add(self, content: str, user: Optional[User] = None) -> Comment:
+        """Add a new comment.
+
+        :param content: string with comment
+        :param user: the user to associate with the comment, will use default if not supplied
+        :return: the newly created comment
+        """
+        user = user or User.objects(self._node.backend).get_default()
+        return Comment(node=self._node, user=user, content=content).store()
+
+    def get(self, identifier: int) -> Comment:
+        """Return a comment corresponding to the given identifier.
+
+        :param identifier: the comment pk
+        :raise aiida.common.NotExistent: if the comment with the given id does not exist
+        :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
+        :return: the comment
+        """
+        return Comment.objects(self._node.backend).get(dbnode_id=self._node.pk, id=identifier)
+
+    def all(self) -> List[Comment]:
+        """Return a sorted list of comments for this node.
+
+        :return: the list of comments, sorted by pk
+        """
+        return Comment.objects(self._node.backend).find(filters={'dbnode_id': self._node.pk}, order_by=[{'id': 'asc'}])
+
+    def update(self, identifier: int, content: str) -> None:
+        """Update the content of an existing comment.
+
+        :param identifier: the comment pk
+        :param content: the new comment content
+        :raise aiida.common.NotExistent: if the comment with the given id does not exist
+        :raise aiida.common.MultipleObjectsError: if the id cannot be uniquely resolved to a comment
+        """
+        comment = Comment.objects(self._node.backend).get(dbnode_id=self._node.pk, id=identifier)
+        comment.set_content(content)
+
+    def remove(self, identifier: int) -> None:  # pylint: disable=no-self-use
+        """Delete an existing comment.
+
+        :param identifier: the comment pk
+        """
+        Comment.objects(self._node.backend).delete(identifier)

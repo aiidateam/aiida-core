@@ -69,7 +69,7 @@ class Data(Node):
 
         backend_clone = self.backend_entity.clone()
         clone = self.__class__.from_backend_entity(backend_clone)
-        clone.reset_attributes(copy.deepcopy(self.attributes))
+        clone.base.attributes.reset(copy.deepcopy(self.base.attributes.all))
         clone.base.repository._clone(self.base.repository)  # pylint: disable=protected-access
 
         return clone
@@ -93,7 +93,7 @@ class Data(Node):
 
         :return: dictionary describing the source of Data object.
         """
-        return self.get_attribute('source', None)
+        return self.base.attributes.get('source', None)
 
     @source.setter
     def source(self, source):
@@ -109,7 +109,7 @@ class Data(Node):
         if unknown_attrs:
             raise KeyError(f"Unknown source parameters: {', '.join(unknown_attrs)}")
 
-        self.set_attribute('source', source)
+        self.base.attributes.set('source', source)
 
     def set_source(self, source):
         """

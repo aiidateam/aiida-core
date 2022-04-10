@@ -21,14 +21,14 @@ def new_archive(aiida_profile_clean, tmp_path):
     data = orm.Data()
     data.label = 'my_test_data_node'
     data.store()
-    data.set_extra_many({'b': 2, 'c': 3})
+    data.base.extras.set_many({'b': 2, 'c': 3})
     archive_file = tmp_path / 'export.aiida'
     create_archive([data], filename=archive_file)
     aiida_profile_clean.clear_profile()
     yield archive_file
 
 
-def import_extras(path, import_new_extras=True):
+def import_extras(path, import_new_extras=True) -> orm.Data:
     """Import an aiida database"""
     import_archive(path, import_new_extras=import_new_extras, merge_extras=('k', 'c', 'l'))
 
@@ -38,11 +38,11 @@ def import_extras(path, import_new_extras=True):
     return data[0][0]
 
 
-def modify_extras(path, imported_node, mode_existing):
+def modify_extras(path, imported_node, mode_existing) -> orm.Data:
     """Import the same aiida database again"""
-    imported_node.set_extra('a', 1)
-    imported_node.set_extra('b', 1000)
-    imported_node.delete_extra('c')
+    imported_node.base.extras.set('a', 1)
+    imported_node.base.extras.set('b', 1000)
+    imported_node.base.extras.delete('c')
 
     import_archive(path, merge_extras=mode_existing)
 
@@ -55,8 +55,8 @@ def modify_extras(path, imported_node, mode_existing):
 def test_import_of_extras(new_archive):
     """Check if extras are properly imported"""
     imported_node = import_extras(new_archive)
-    assert imported_node.get_extra('b') == 2
-    assert imported_node.get_extra('c') == 3
+    assert imported_node.base.extras.get('b') == 2
+    assert imported_node.base.extras.get('c') == 3
 
 
 def test_absence_of_extras(new_archive):
@@ -64,10 +64,10 @@ def test_absence_of_extras(new_archive):
     imported_node = import_extras(new_archive, import_new_extras=False)
     with pytest.raises(AttributeError):
         # the extra 'b' should not exist
-        imported_node.get_extra('b')
+        imported_node.base.extras.get('b')
     with pytest.raises(AttributeError):
         # the extra 'c' should not exist
-        imported_node.get_extra('c')
+        imported_node.base.extras.get('c')
 
 
 def test_extras_import_mode_keep_existing(new_archive):
@@ -77,9 +77,9 @@ def test_extras_import_mode_keep_existing(new_archive):
     imported_node = modify_extras(new_archive, imported_node, mode_existing=('k', 'c', 'l'))
 
     # Check that extras are imported correctly
-    assert imported_node.get_extra('a') == 1
-    assert imported_node.get_extra('b') == 1000
-    assert imported_node.get_extra('c') == 3
+    assert imported_node.base.extras.get('a') == 1
+    assert imported_node.base.extras.get('b') == 1000
+    assert imported_node.base.extras.get('c') == 3
 
 
 def test_extras_import_mode_update_existing(new_archive):
@@ -89,9 +89,9 @@ def test_extras_import_mode_update_existing(new_archive):
     imported_node = modify_extras(new_archive, imported_node, mode_existing=('k', 'c', 'u'))
 
     # Check that extras are imported correctly
-    assert imported_node.get_extra('a') == 1
-    assert imported_node.get_extra('b') == 2
-    assert imported_node.get_extra('c') == 3
+    assert imported_node.base.extras.get('a') == 1
+    assert imported_node.base.extras.get('b') == 2
+    assert imported_node.base.extras.get('c') == 3
 
 
 def test_extras_import_mode_mirror(new_archive):
@@ -104,9 +104,9 @@ def test_extras_import_mode_mirror(new_archive):
     with pytest.raises(AttributeError):  # the extra
         # 'a' should not exist, as the extras were fully mirrored with respect to
         # the imported node
-        imported_node.get_extra('a')
-    assert imported_node.get_extra('b') == 2
-    assert imported_node.get_extra('c') == 3
+        imported_node.base.extras.get('a')
+    assert imported_node.base.extras.get('b') == 2
+    assert imported_node.base.extras.get('c') == 3
 
 
 def test_extras_import_mode_none(new_archive):
@@ -116,11 +116,11 @@ def test_extras_import_mode_none(new_archive):
     imported_node = modify_extras(new_archive, imported_node, mode_existing=('k', 'n', 'l'))
 
     # Check if extras are imported correctly
-    assert imported_node.get_extra('b') == 1000
-    assert imported_node.get_extra('a') == 1
+    assert imported_node.base.extras.get('b') == 1000
+    assert imported_node.base.extras.get('a') == 1
     with pytest.raises(AttributeError):  # the extra
         # 'c' should not exist, as the extras were keept untached
-        imported_node.get_extra('c')
+        imported_node.base.extras.get('c')
 
 
 def test_extras_import_mode_strange(new_archive):
@@ -130,11 +130,11 @@ def test_extras_import_mode_strange(new_archive):
     imported_node = modify_extras(new_archive, imported_node, mode_existing=('k', 'c', 'd'))
 
     # Check if extras are imported correctly
-    assert imported_node.get_extra('a') == 1
-    assert imported_node.get_extra('c') == 3
+    assert imported_node.base.extras.get('a') == 1
+    assert imported_node.base.extras.get('c') == 3
     with pytest.raises(AttributeError):  # the extra
         # 'b' should not exist, as the collided extras are deleted
-        imported_node.get_extra('b')
+        imported_node.base.extras.get('b')
 
 
 def test_extras_import_mode_correct(new_archive):

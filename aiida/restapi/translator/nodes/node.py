@@ -260,26 +260,26 @@ class NodeTranslator(BaseTranslator):
         if self._content_type == 'attributes':
             # Get all attrs if attributes_filter is None
             if self._attributes_filter is None:
-                data = {self._content_type: node.attributes}
+                data = {self._content_type: node.base.attributes.all}
             # Get all attrs contained in attributes_filter
             else:
                 attrs = {}
-                for key in node.attributes.keys():
+                for key in node.base.attributes.keys():
                     if key in self._attributes_filter:
-                        attrs[key] = node.get_attribute(key)
+                        attrs[key] = node.base.attributes.get(key)
                 data = {self._content_type: attrs}
 
         # content/extras
         elif self._content_type == 'extras':
             # Get all extras if elist is None
             if self._extras_filter is None:
-                data = {self._content_type: node.extras}
+                data = {self._content_type: node.base.extras.all}
             else:
                 # Get all extras contained in elist
                 extras = {}
-                for key in node.extras.keys():
+                for key in node.base.extras.all.keys():
                     if key in self._extras_filter:
-                        extras[key] = node.get_extra(key)
+                        extras[key] = node.base.extras.get(key)
                 data = {self._content_type: extras}
 
         # Data needed for visualization appropriately serialized (this
@@ -527,7 +527,7 @@ class NodeTranslator(BaseTranslator):
         :param node: node object
         :return: node comments
         """
-        comments = node.get_comments()
+        comments = node.base.comments.all()
         response = []
         for cobj in comments:
             response.append({

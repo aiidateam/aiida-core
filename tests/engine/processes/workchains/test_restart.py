@@ -145,7 +145,7 @@ def test_run_process(generate_work_chain, generate_calculation_node, monkeypatch
 
     assert isinstance(result, engine.ToContext)
     assert isinstance(result['children'], Awaitable)
-    assert process.node.get_extra(SomeWorkChain._considered_handlers_extra) == [[]]  # pylint: disable=protected-access
+    assert process.node.base.extras.get(SomeWorkChain._considered_handlers_extra) == [[]]  # pylint: disable=protected-access
 
 
 class OutputNamespaceWorkChain(engine.WorkChain):

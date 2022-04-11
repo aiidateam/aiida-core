@@ -251,7 +251,7 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
         # pylint: disable=no-self-use
         return True
 
-    def validate_storability(self) -> None:
+    def _validate_storability(self) -> None:
         """Verify that the current node is allowed to be stored.
 
         :raises `aiida.common.exceptions.StoringNotAllowed`: if the node does not match all requirements for storing
@@ -413,7 +413,7 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
 
         # For each node of a cached incoming link, check that all its incoming links are stored
         for link_triple in self.base.links.incoming_cache:
-            link_triple.node.verify_are_parents_stored()
+            link_triple.node._verify_are_parents_stored()  # pylint: disable=protected-access
 
         for link_triple in self.base.links.incoming_cache:
             if not link_triple.node.is_stored:
@@ -436,12 +436,12 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
 
         if not self.is_stored:
 
-            # Call `validate_storability` directly and not in `_validate` in case sub class forgets to call the super.
-            self.validate_storability()
+            # Call `_validate_storability` directly and not in `_validate` in case sub class forgets to call the super.
+            self._validate_storability()
             self._validate()
 
             # Verify that parents are already stored. Raises if this is not the case.
-            self.verify_are_parents_stored()
+            self._verify_are_parents_stored()
 
             # Determine whether the cache should be used for the process type of this node.
             use_cache = get_use_cache(identifier=self.process_type)
@@ -480,7 +480,7 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
 
         return self
 
-    def verify_are_parents_stored(self) -> None:
+    def _verify_are_parents_stored(self) -> None:
         """Verify that all `parent` nodes are already stored.
 
         :raise aiida.common.ModificationNotAllowed: if one of the source nodes of incoming links is not stored.

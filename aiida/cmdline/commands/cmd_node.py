@@ -363,7 +363,7 @@ def rehash(nodes, entry_point, force):
 
     with click.progressbar(to_hash, label='Rehashing Nodes:') as iter_hash:
         for node, in iter_hash:
-            node.rehash()
+            node.base.caching.rehash()
 
     echo.echo_success(f'{num_nodes} nodes re-hashed.')
 

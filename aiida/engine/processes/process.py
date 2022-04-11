@@ -949,7 +949,7 @@ class Process(plumpy.processes.Process):
         corresponding process nodes are considered as a cache.
 
         .. warning :: When overriding this method, make sure to return ``False``
-            *at least* in all cases when ``super().is_valid_cache(node)``
+            *at least* in all cases when ``super()._node.base.caching.is_valid_cache(node)``
             returns ``False``. Otherwise, the ``invalidates_cache`` keyword on exit
             codes may have no effect.
 

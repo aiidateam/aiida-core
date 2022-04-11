@@ -120,16 +120,16 @@ class TestNodeHashing:
         f2 = self.create_folderdata_with_empty_folder().store()
 
         assert f1.base.repository.list_object_names('path') == f2.base.repository.list_object_names('path')
-        assert f1.get_hash() != f2.get_hash()
+        assert f1.base.caching.get_hash() != f2.base.caching.get_hash()
 
     def test_updatable_attributes(self):
         """
         Tests that updatable attributes are ignored.
         """
         node = orm.CalculationNode().store()
-        hash1 = node.get_hash()
+        hash1 = node.base.caching.get_hash()
         node.set_process_state('finished')
-        hash2 = node.get_hash()
+        hash2 = node.base.caching.get_hash()
         assert hash1 is not None
         assert hash1 == hash2
 

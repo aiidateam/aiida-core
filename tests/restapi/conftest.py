@@ -86,9 +86,9 @@ def populate_restapi_database(aiida_profile_clean):
     # pylint: disable=unused-argument
     from aiida import orm
 
-    struct_forcif = orm.StructureData().store()
-    orm.StructureData().store()
-    orm.StructureData().store()
+    struct_forcif = orm.StructureData(pbc=False).store()
+    orm.StructureData(pbc=False).store()
+    orm.StructureData(pbc=False).store()
 
     orm.Dict().store()
     orm.Dict().store()

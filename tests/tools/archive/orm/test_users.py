@@ -27,7 +27,7 @@ def test_nodes_belonging_to_different_users(tmp_path, aiida_profile_clean, aiida
     user = orm.User(email=new_email).store()
 
     # Create a structure data node that has a calculation as output
-    sd1 = orm.StructureData()
+    sd1 = orm.StructureData(pbc=False)
     sd1.user = user
     sd1.label = 'sd1'
     sd1.store()
@@ -41,7 +41,7 @@ def test_nodes_belonging_to_different_users(tmp_path, aiida_profile_clean, aiida
     jc1.store()
 
     # Create some nodes from a different user
-    sd2 = orm.StructureData()
+    sd2 = orm.StructureData(pbc=False)
     sd2.user = user
     sd2.label = 'sd2'
     sd2.store()
@@ -55,7 +55,7 @@ def test_nodes_belonging_to_different_users(tmp_path, aiida_profile_clean, aiida
     jc2.add_incoming(sd2, link_type=LinkType.INPUT_CALC, link_label='l2')
     jc2.store()
 
-    sd3 = orm.StructureData()
+    sd3 = orm.StructureData(pbc=False)
     sd3.label = 'sd3'
     sd3.store()
     sd3.add_incoming(jc2, link_type=LinkType.CREATE, link_label='l3')
@@ -97,7 +97,7 @@ def test_non_default_user_nodes(tmp_path, aiida_profile_clean, aiida_localhost_f
     user = orm.User(email=new_email).store()
 
     # Create a structure data node that has a calculation as output
-    sd1 = orm.StructureData()
+    sd1 = orm.StructureData(pbc=False)
     sd1.user = user
     sd1.label = 'sd1'
     sd1.store()
@@ -111,7 +111,7 @@ def test_non_default_user_nodes(tmp_path, aiida_profile_clean, aiida_localhost_f
     jc1.store()
 
     # Create some nodes from a different user
-    sd2 = orm.StructureData()
+    sd2 = orm.StructureData(pbc=False)
     sd2.user = user
     sd2.label = 'sd2'
     sd2.add_incoming(jc1, link_type=LinkType.CREATE, link_label='l1')
@@ -142,7 +142,7 @@ def test_non_default_user_nodes(tmp_path, aiida_profile_clean, aiida_localhost_f
     jc2.add_incoming(sd2_imp, link_type=LinkType.INPUT_CALC, link_label='l2')
     jc2.store()
 
-    sd3 = orm.StructureData()
+    sd3 = orm.StructureData(pbc=False)
     sd3.label = 'sd3'
     sd3.add_incoming(jc2, link_type=LinkType.CREATE, link_label='l3')
     sd3.store()

@@ -46,7 +46,7 @@ def test_base_data_nodes(aiida_profile_clean, tmp_path, entities):
 
 def test_calc_of_structuredata(aiida_profile_clean, tmp_path, aiida_localhost):
     """Simple ex-/import of CalcJobNode with input StructureData"""
-    struct = orm.StructureData()
+    struct = orm.StructureData(pbc=False)
     struct.store()
 
     calc = orm.CalcJobNode()
@@ -82,7 +82,7 @@ def test_calc_of_structuredata(aiida_profile_clean, tmp_path, aiida_localhost):
 def test_check_for_export_format_version(aiida_profile_clean, tmp_path):
     """Test the check for the export format version."""
     # first create an archive
-    struct = orm.StructureData()
+    struct = orm.StructureData(pbc=False)
     struct.store()
     filename = str(tmp_path / 'export.aiida')
     create_archive([struct], filename=filename)
@@ -110,7 +110,7 @@ def test_check_for_export_format_version(aiida_profile_clean, tmp_path):
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_control_of_licenses(tmp_path):
     """Test control of licenses."""
-    struct = orm.StructureData()
+    struct = orm.StructureData(pbc=False)
     struct.source = {'license': 'GPL'}
     struct.store()
 

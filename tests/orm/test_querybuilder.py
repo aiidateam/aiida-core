@@ -427,6 +427,7 @@ class TestBasic:
     def test_subclassing(self):
         s = orm.StructureData()
         s.base.attributes.set('cat', 'miau')
+        s.set_pbc(False)
         s.store()
 
         d = orm.Data()
@@ -795,6 +796,8 @@ class TestRepresentations:
         for cls in (orm.StructureData, orm.Dict, orm.Data):
             obj = cls()
             obj.base.attributes.set('foo-qh2', 'bar')
+            if cls is orm.StructureData:
+                obj.set_pbc(False)
             obj.store()
             g.add_nodes(obj)
 

@@ -29,8 +29,8 @@ __all__ = ('StructureData', 'Kind', 'Site')
 _MASS_THRESHOLD = 1.e-3
 # Threshold to check if the sum is one or not
 _SUM_THRESHOLD = 1.e-6
-# Threshold used to check if the cell volume is not zero.
-_VOLUME_THRESHOLD = 1.e-6
+# Default cell
+_DEFAULT_CELL = ((0, 0, 0), (0, 0, 0), (0, 0, 0))
 
 _valid_symbols = tuple(i['symbol'] for i in elements.values())
 _atomic_masses = {el['symbol']: el['mass'] for el in elements.values()}
@@ -51,9 +51,6 @@ def _get_valid_cell(inputcell):
             raise ValueError
     except (IndexError, ValueError, TypeError):
         raise ValueError('Cell must be a list of three vectors, each defined as a list of three coordinates.')
-
-    if abs(calc_cell_volume(the_cell)) < _VOLUME_THRESHOLD:
-        raise ValueError('The cell volume is zero. Invalid cell.')
 
     return the_cell
 
@@ -138,25 +135,13 @@ def has_spglib():
 
 def calc_cell_volume(cell):
     """
-    Calculates the volume of a cell given the three lattice vectors.
+    Compute the three-dimensional cell volume in Angstrom^3.
 
-    It is calculated as cell[0] . (cell[1] x cell[2]), where . represents
-    a dot product and x a cross product.
-
-    :param cell: the cell vectors; the must be a 3x3 list of lists of floats,
-            no other checks are done.
-
+    :param cell: the cell vectors; the must be a 3x3 list of lists of floats
     :returns: the cell volume.
     """
-    # pylint: disable=invalid-name
-    # returns the volume of the primitive cell: |a1.(a2xa3)|
-    a1 = cell[0]
-    a2 = cell[1]
-    a3 = cell[2]
-    a_mid_0 = a2[1] * a3[2] - a2[2] * a3[1]
-    a_mid_1 = a2[2] * a3[0] - a2[0] * a3[2]
-    a_mid_2 = a2[0] * a3[1] - a2[1] * a3[0]
-    return abs(a1[0] * a_mid_0 + a1[1] * a_mid_1 + a1[2] * a_mid_2)
+    import numpy as np
+    return np.abs(np.dot(cell[0], np.cross(cell[1], cell[2])))
 
 
 def _create_symbols_tuple(symbols):
@@ -761,45 +746,23 @@ class StructureData(Data):
 
         else:
             if cell is None:
-                cell = [[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]]
+                cell = _DEFAULT_CELL
+            self.set_cell(cell)
 
             if pbc is None:
                 pbc = [True, True, True]
-
-            self.set_cell(cell)
             self.set_pbc(pbc)
 
     def get_dimensionality(self):
         """
-        This function checks the dimensionality of the structure and
-        calculates its length/surface/volume
-        :return: returns the dimensionality and length/surface/volume
+        Return the dimensionality of the structure and its length/surface/volume.
+
+        Zero-dimensional structures are assigned "volume" 0.
+
+        :return: returns a dictionary with keys "dim" (dimensionality integer), "label" (dimensionality label)
+            and "value" (numerical length/surface/volume).
         """
-
-        import numpy as np
-
-        retdict = {}
-
-        cell = np.array(self.cell)
-        pbc = np.array(self.pbc)
-        dim = len(pbc[pbc])
-
-        retdict['dim'] = dim
-        retdict['label'] = self._dimensionality_label[dim]
-
-        if dim == 0:
-            pass
-        elif dim == 1:
-            retdict['value'] = np.linalg.norm(cell[pbc])
-        elif dim == 2:
-            vectors = cell[pbc]
-            retdict['value'] = np.linalg.norm(np.cross(vectors[0], vectors[1]))
-        elif dim == 3:
-            retdict['value'] = np.dot(cell[0], np.cross(cell[1], cell[2]))
-        else:
-            raise ValueError(f'Dimensionality {dim} must be <= 3')
-
-        return retdict
+        return _get_dimensionality(self.pbc, self.cell)
 
     def set_ase(self, aseatoms):
         """
@@ -947,6 +910,8 @@ class StructureData(Data):
             get_valid_pbc(self.pbc)
         except ValueError as exc:
             raise ValidationError(f'Invalid periodic boundary conditions: {exc}')
+
+        _validate_dimensionality(self.pbc, self.cell)
 
         try:
             # This will try to create the kinds objects
@@ -1124,9 +1089,7 @@ class StructureData(Data):
 
     def _adjust_default_cell(self, vacuum_factor=1.0, vacuum_addition=10.0, pbc=(False, False, False)):
         """
-        If the structure was imported from an xyz file, it lacks a defined cell,
-        and the default cell is taken ([[1,0,0], [0,1,0], [0,0,1]]),
-        leading to an unphysical definition of the structure.
+        If the structure was imported from an xyz file, it lacks a cell.
         This method will adjust the cell
         """
         # pylint: disable=invalid-name
@@ -1137,10 +1100,6 @@ class StructureData(Data):
             returns the minimum and maximum value for each dimension in the positions given
             """
             return list(zip(*[(min(values), max(values)) for values in zip(*positions)]))
-
-        # First, set PBC
-        # All the checks are done in get_valid_pbc called by set_pbc, no need to check anything here
-        self.set_pbc(pbc)
 
         # Calculating the minimal cell:
         positions = np.array([site.position for site in self.sites])
@@ -1161,6 +1120,11 @@ class StructureData(Data):
         # Transform the vector (a, b, c ) to [[a,0,0], [0,b,0], [0,0,c]]
         newcell = np.diag(minimal_orthorhombic_cell_dimensions)
         self.set_cell(newcell.tolist())
+
+        # Now set PBC (checks are done in set_pbc, no need to check anything here)
+        self.set_pbc(pbc)
+
+        return self
 
     def get_description(self):
         """
@@ -1753,7 +1717,9 @@ class StructureData(Data):
 
     def get_cell_volume(self):
         """
-        Returns the cell volume in Angstrom^3.
+        Returns the three-dimensional cell volume in Angstrom^3.
+
+        Use the `get_dimensionality` method in order to get the area/length of lower-dimensional cells.
 
         :return: a float.
         """
@@ -2490,5 +2456,57 @@ class Site:
         return f"kind name '{self.kind_name}' @ {self.position[0]},{self.position[1]},{self.position[2]}"
 
 
-# get_structuredata_from_qeinput has been moved to:
-# aiida.tools.codespecific.quantumespresso.qeinputparser
+def _get_dimensionality(pbc, cell):
+    """
+    Return the dimensionality of the structure and its length/surface/volume.
+
+    Zero-dimensional structures are assigned "volume" 0.
+
+    :return: returns a dictionary with keys "dim" (dimensionality integer), "label" (dimensionality label)
+        and "value" (numerical length/surface/volume).
+    """
+
+    import numpy as np
+
+    retdict = {}
+
+    pbc = np.array(pbc)
+    cell = np.array(cell)
+
+    dim = len(pbc[pbc])
+
+    retdict['dim'] = dim
+    retdict['label'] = StructureData._dimensionality_label[dim]  # pylint: disable=protected-access
+
+    if dim not in (0, 1, 2, 3):
+        raise ValueError(f'Dimensionality {dim} must be one of 0, 1, 2, 3')
+
+    if dim == 0:
+        # We have no concept of 0d volume. Let's return a value of 0 for a consistent output dictionary
+        retdict['value'] = 0
+    elif dim == 1:
+        retdict['value'] = np.linalg.norm(cell[pbc])
+    elif dim == 2:
+        vectors = cell[pbc]
+        retdict['value'] = np.linalg.norm(np.cross(vectors[0], vectors[1]))
+    elif dim == 3:
+        retdict['value'] = calc_cell_volume(cell)
+
+    return retdict
+
+
+def _validate_dimensionality(pbc, cell):
+    """
+    Check whether the given pbc and cell vectors are consistent.
+    """
+    dim = _get_dimensionality(pbc, cell)
+
+    # 0-d structures put no constraints on the cell
+    if dim['dim'] == 0:
+        return
+
+    # finite-d structures should have a cell with finite volume
+    if dim['value'] == 0:
+        raise ValueError(f'Structure has periodicity {pbc} but {dim["dim"]}-d volume 0.')
+
+    return

@@ -955,14 +955,14 @@ class TestStructureDataInit:
         Wrong cell (one vector has zero length)
         """
         with pytest.raises(ValueError):
-            StructureData(cell=((0., 0., 0.), (0., 1., 0.), (0., 0., 1.)))
+            StructureData(cell=((0., 0., 0.), (0., 1., 0.), (0., 0., 1.))).store()
 
     def test_cell_zero_volume(self):
         """
         Wrong cell (volume is zero)
         """
         with pytest.raises(ValueError):
-            StructureData(cell=((1., 0., 0.), (0., 1., 0.), (1., 1., 0.)))
+            StructureData(cell=((1., 0., 0.), (0., 1., 0.), (1., 1., 0.))).store()
 
     def test_cell_ok_init(self):
         """
@@ -1729,8 +1729,9 @@ Ag 0 0 2.0335
             assert s.sites
             assert s.kinds
             assert s.cell
+
             # The default cell is given in these cases:
-            assert s.cell == np.diag([1, 1, 1]).tolist()
+            assert s.cell == np.diag([0, 0, 0]).tolist()
 
         # Testing a case where 1
         xyz_string4 = """
@@ -1935,6 +1936,26 @@ class TestStructureDataFromAse:
         assert round(abs(c[1].mass - 110.2), 7) == 0
 
     @skip_ase
+    def test_ase_molecule(self):  # pylint: disable=no-self-use
+        """Tests that importing a molecule from ASE works."""
+        from ase.build import molecule
+        s = StructureData(ase=molecule('H2O'))
+
+        assert s.pbc == (False, False, False)
+        retdict = s.get_dimensionality()
+        assert retdict['value'] == 0
+        assert retdict['dim'] == 0
+
+        with pytest.raises(ValueError):
+            # A periodic cell requires a nonzero volume in periodic directions
+            s.set_pbc(True)
+            s.store()
+
+        # after setting a cell, we should be able to store
+        s.set_cell([[5, 0, 0], [0, 5, 0], [0, 0, 5]])
+        s.store()
+
+    @skip_ase
     def test_conversion_of_types_1(self):
         """
         Tests roundtrip ASE -> StructureData -> ASE, with tags
@@ -2002,7 +2023,7 @@ class TestStructureDataFromAse:
         """
         Tests StructureData -> ASE, with all sorts of kind names
         """
-        a = StructureData()
+        a = StructureData(cell=[[1, 0, 0], [0, 1, 0], [0, 0, 1]])
         a.append_atom(position=(0., 0., 0.), symbols='Ba', name='Ba')
         a.append_atom(position=(0., 0., 0.), symbols='Ba', name='Ba1')
         a.append_atom(position=(0., 0., 0.), symbols='Cu', name='Cu')
@@ -2294,7 +2315,7 @@ class TestPymatgenFromStructureData:
     def test_1(self):
         """Tests the check of periodic boundary conditions."""
         struct = StructureData()
-
+        struct.set_cell([[1, 0, 0], [0, 1, 2], [3, 4, 5]])
         struct.pbc = [True, True, True]
         struct.get_pymatgen_structure()
 

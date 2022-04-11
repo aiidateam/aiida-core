@@ -27,7 +27,7 @@ def test_nodes_in_group(tmp_path, aiida_profile_clean, aiida_localhost):
     user.store()
 
     # Create a structure data node that has a calculation as output
-    sd1 = orm.StructureData()
+    sd1 = orm.StructureData(pbc=False)
     sd1.user = user
     sd1.label = 'sd1'
     sd1.store()
@@ -73,7 +73,7 @@ def test_group_export(tmp_path, aiida_profile_clean):
     user.store()
 
     # Create a structure data node
-    sd1 = orm.StructureData()
+    sd1 = orm.StructureData(pbc=False)
     sd1.user = user
     sd1.label = 'sd1'
     sd1.store()
@@ -118,7 +118,7 @@ def test_group_import_existing(tmp_path, aiida_profile_clean):
     user.store()
 
     # Create a structure data node
-    sd1 = orm.StructureData()
+    sd1 = orm.StructureData(pbc=False)
     sd1.user = user
     sd1.label = 'sd'
     sd1.store()

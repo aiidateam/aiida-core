@@ -1,5 +1,142 @@
 # Changelog
 
+## v2.0.0b2 - 2022-04-12
+
+[Full changelog](https://github.com/aiidateam/aiida-core/compare/v2.0.0b2...v2.0.0b1)
+
+The primary focus of this release is to implement the restructuring of the `Node` namespace.
+
+### Node namespace restructuring
+
+:::{note}
+The restructuring is fully back-compatible, and existing methods/attributes will continue to work, until aiida-core `v3.0`.
+
+Deprecations warnings are also currently turned **off** by default.
+To identify these deprecations in your code base (for example when running unit tests), activate the `AIIDA_WARN_v3` environmental variable:
+
+```bash
+export AIIDA_WARN_v3=1
+```
+
+:::
+
+The `Node` class (and thus its subclasses) has many methods and attributes in its public namespace.
+This has been noted [as being a problem](https://github.com/aiidateam/aiida-core/issues/4976) for those using auto-completion,
+since it makes it difficult to select suitable methods and attributes.
+
+These methods/attributes have now been partitioned into "sub-namespaces" for specific purposes:
+
+`Node.base.attributes`
+: Interface to the attributes of a node instance.
+
+`Node.base.caching`
+: Interface to control caching of a node instance.
+
+`Node.base.comments`
+: Interface for comments of a node instance.
+
+`Node.base.extras`
+: Interface to the extras of a node instance.
+
+`Node.base.links`
+: Interface for links of a node instance.
+
+`Node.base.repository`
+: Interface to the file repository of a node instance.
+
+:::{dropdown} Full list of re-naming
+
+| Current name                | New name                                        |
+| --------------------------- | ----------------------------------------------- |
+| `Collection`                | Deprecated, use `NodeCollection` directly       |
+| `add_comment`               | `Node.base.comments.add`                        |
+| `add_incoming`              | `Node.base.links.add_incoming`                  |
+| `attributes`                | `Node.base.attributes.all`                      |
+| `attributes_items`          | `Node.base.attributes.items`                    |
+| `attributes_keys`           | `Node.base.attributes.keys`                     |
+| `check_mutability`          | `Node._check_mutability_attributes`             |
+| `clear_attributes`          | `Node.base.attributes.clear`                    |
+| `clear_extras`              | `Node.base.extras.clear`                        |
+| `clear_hash`                | `Node.base.caching.clear_hash`                  |
+| `copy_tree`                 | `Node.base.repository.copy_tree`                |
+| `delete_attribute`          | `Node.base.attributes.delete`                   |
+| `delete_attribute_many`     | `Node.base.attributes.delete_many`              |
+| `delete_extra`              | `Node.base.extras.delete`                       |
+| `delete_extra_many`         | `Node.base.extras.delete_many`                  |
+| `delete_object`             | `Node.base.repository.delete_object`            |
+| `erase`                     | `Node.base.repository.erase`                    |
+| `extras`                    | `Node.base.extras.all`                          |
+| `extras_items`              | `Node.base.extras.items`                        |
+| `extras_keys`               | `Node.base.extras.keys`                         |
+| `get`                       | Deprecated, use `Node.objects.get`              |
+| `get_all_same_nodes`        | `Node.base.caching.get_all_same_nodes`          |
+| `get_attribute`             | `Node.base.attributes.get`                      |
+| `get_attribute_many`        | `Node.base.attributes.get_many`                 |
+| `get_cache_source`          | `Node.base.caching.get_cache_source`            |
+| `get_comment`               | `Node.base.comments.get`                        |
+| `get_comments`              | `Node.base.comments.all`                        |
+| `get_extra`                 | `Node.base.extras.get`                          |
+| `get_extra_many`            | `Node.base.extras.get_many`                     |
+| `get_hash`                  | `Node.base.caching.get_hash`                    |
+| `get_incoming`              | `Node.base.links.get_incoming`                  |
+| `get_object`                | `Node.base.repository.get_object`               |
+| `get_object_content`        | `Node.base.repository.get_object_content`       |
+| `get_outgoing`              | `Node.base.links.get_outgoing`                  |
+| `get_stored_link_triples`   | `Node.base.links.get_stored_link_triples`       |
+| `glob`                      | `Node.base.repository.glob`                     |
+| `has_cached_links`          | `Node.base.caching.has_cached_links`            |
+| `id`                        | Deprecated, use `pk`                            |
+| `is_created_from_cache`     | `Node.base.caching.is_created_from_cache`       |
+| `is_valid_cache`            | `Node.base.caching.is_valid_cache`              |
+| `list_object_names`         | `Node.base.repository.list_object_names`        |
+| `list_objects`              | `Node.base.repository.list_objects`             |
+| `objects`                   | `collection`                                    |
+| `open`                      | `Node.base.repository.open`                     |
+| `put_object_from_file`      | `Node.base.repository.put_object_from_file`     |
+| `put_object_from_filelike`  | `Node.base.repository.put_object_from_filelike` |
+| `put_object_from_tree`      | `Node.base.repository.put_object_from_tree`     |
+| `rehash`                    | `Node.base.caching.rehash`                      |
+| `remove_comment`            | `Node.base.comments.remove`                     |
+| `repository_metadata`       | `Node.base.repository.metadata`                 |
+| `repository_serialize`      | `Node.base.repository.serialize`                |
+| `reset_attributes`          | `Node.base.attributes.reset`                    |
+| `reset_extras`              | `Node.base.extras.reset`                        |
+| `set_attribute`             | `Node.base.attributes.set`                      |
+| `set_attribute_many`        | `Node.base.attributes.set_many`                 |
+| `set_extra`                 | `Node.base.extras.set`                          |
+| `set_extra_many`            | `Node.base.extras.set_many`                     |
+| `update_comment`            | `Node.base.comments.update`                     |
+| `validate_incoming`         | `Node.base.links.validate_incoming`             |
+| `validate_outgoing`         | `Node.base.links.validate_outgoing`             |
+| `validate_storability`      | `Node._validate_storability`                    |
+| `verify_are_parents_stored` | `Node._verify_are_parents_stored`               |
+| `walk`                      | `Node.base.repository.walk`                     |
+
+:::
+
+### Key Pull Requests
+
+Below is a list of some key pull requests that have been merged into version 2.0.0b2:
+
+- Node namespace re-structuring:
+  - 🔧 MAINTAIN: Add `warn_deprecation` function, `Node.base`, and move `NodeRepositoryMixin -> NodeRepository` by @chrisjsewell in [#5472](https://github.com/aiidateam/aiida-core/pull/5472)
+  - ♻️ REFACTOR: `EntityAttributesMixin` -> `NodeAttributes` by @chrisjsewell in [#5442](https://github.com/aiidateam/aiida-core/pull/5442)
+  - ♻️ REFACTOR: Move methods to `Node.comments` by @chrisjsewell in [#5446](https://github.com/aiidateam/aiida-core/pull/5446)
+  - ♻️ REFACTOR: `EntityExtrasMixin` -> `EntityExtras` by @chrisjsewell in [#5445](https://github.com/aiidateam/aiida-core/pull/5445)
+  - ♻️ REFACTOR: Move link related methods to `Node.base.links` by @sphuber in [#5480](https://github.com/aiidateam/aiida-core/pull/5480)
+  - ♻️ REFACTOR: Move caching related methods to `Node.base.caching` by @sphuber in [#5483](https://github.com/aiidateam/aiida-core/pull/5483)
+
+- ORM:
+  - 👌 IMPROVE: `StructureData`: allow to be initialised without a specified cell by @ltalirz in [#5341](https://github.com/aiidateam/aiida-core/pull/5341)
+
+- Processing:
+  - 👌 IMPROVE: `JobTemplate`: change `CodeInfo` to `JobTemplateCodeInfo` in `codes_info` by @unkcpz in [#5350](https://github.com/aiidateam/aiida-core/pull/5350)
+    - This is required for a containerized code implementation
+
+- Scheduler:
+  - 👌 IMPROVE: `SlurmScheduler`: Parse out-of-walltime and out-of-memory errors from `stderr` by @sphuber in [#5458](https://github.com/aiidateam/aiida-core/pull/5458)
+  - 👌 IMPROVE: `CalcJob`: always call `Scheduler.parse_output` by @sphuber in [#5458](https://github.com/aiidateam/aiida-core/pull/5458)
+
 ## v2.0.0b1 - 2022-03-15
 
 [Full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.7...v2.0.0b1)

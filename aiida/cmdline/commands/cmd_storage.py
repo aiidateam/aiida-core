@@ -8,13 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi storage` commands."""
-
 import click
 from click_spinner import spinner
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
-from aiida.cmdline.utils import echo
+from aiida.cmdline.utils import decorators, echo
 from aiida.common import exceptions
 
 
@@ -90,6 +89,7 @@ def storage_integrity():
 
 @verdi_storage.command('info')
 @click.option('--detailed', is_flag=True, help='Provides more detailed information.')
+@decorators.with_dbenv()
 def storage_info(detailed):
     """Summarise the contents of the storage."""
     from aiida.manage.manager import get_manager
@@ -115,6 +115,7 @@ def storage_info(detailed):
     help=
     'Run the maintenance in dry-run mode which will print actions that would be taken without actually executing them.'
 )
+@decorators.with_dbenv()
 @click.pass_context
 def storage_maintain(ctx, full, dry_run):
     """Performs maintenance tasks on the repository."""
@@ -137,7 +138,7 @@ def storage_maintain(ctx, full, dry_run):
         )
 
     else:
-        echo.echo(
+        echo.echo_report(
             '\nThis command will perform all maintenance operations on the internal storage that can be safely '
             'executed while still running AiiDA. '
             'However, not all operations that are required to fully optimize disk usage and future performance '

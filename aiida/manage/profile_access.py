@@ -62,7 +62,7 @@ class ProfileAccessManager:
         :raises ~aiida.common.exceptions.LockedProfileError: if the profile is locked.
         """
         error_message = (
-            f'process {self.process.pid} cannot access profile `{self.profile.name}`'
+            f'process {self.process.pid} cannot access profile `{self.profile.name}` '
             f'because it is being locked.'
         )
         self._raise_if_locked(error_message)

@@ -38,7 +38,7 @@ def configure_computer_main(computer, user, **kwargs):
     """Configure a computer via the CLI."""
     from aiida import orm
 
-    user = user or orm.User.objects.get_default()
+    user = user or orm.User.collection.get_default()
 
     echo.echo_report(f'Configuring computer {computer.label} for user {user.email}.')
     if user.email != get_manager().get_profile().default_user_email:
@@ -86,14 +86,14 @@ def interactive_default(key, also_non_interactive=False):
         if not also_non_interactive and ctx.params['non_interactive']:
             raise click.MissingParameter()
 
-        user = ctx.params.get('user', None) or orm.User.objects.get_default()
+        user = ctx.params.get('user', None) or orm.User.collection.get_default()
         computer = ctx.params.get('computer', None)
 
         if computer is None:
             return None
 
         try:
-            authinfo = orm.AuthInfo.objects.get(dbcomputer_id=computer.pk, aiidauser_id=user.pk)
+            authinfo = orm.AuthInfo.collection.get(dbcomputer_id=computer.pk, aiidauser_id=user.pk)
         except NotExistent:
             authinfo = orm.AuthInfo(computer=computer, user=user)
 

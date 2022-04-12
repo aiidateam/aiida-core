@@ -180,7 +180,7 @@ def group_delete(group, delete_nodes, dry_run, force, **traversal_rules):
 
     if not dry_run:
         group_str = str(group)
-        orm.Group.objects.delete(group.pk)
+        orm.Group.collection.delete(group.pk)
         echo.echo_success(f'{group_str} deleted.')
 
 
@@ -360,7 +360,7 @@ def group_list(
         user_email = user.email
     else:
         # By default: only groups of this user
-        user_email = orm.User.objects.get_default().email
+        user_email = orm.User.collection.get_default().email
 
     # Query groups that belong to all users
     if not all_users:
@@ -413,7 +413,7 @@ def group_create(group_label):
     """Create an empty group with a given label."""
     from aiida import orm
 
-    group, created = orm.Group.objects.get_or_create(label=group_label)
+    group, created = orm.Group.collection.get_or_create(label=group_label)
 
     if created:
         echo.echo_success(f"Group created with PK = {group.pk} and label '{group.label}'.")
@@ -432,7 +432,7 @@ def group_copy(source_group, destination_group):
     Note that the destination group may not exist."""
     from aiida import orm
 
-    dest_group, created = orm.Group.objects.get_or_create(label=destination_group)
+    dest_group, created = orm.Group.collection.get_or_create(label=destination_group)
 
     # Issue warning if destination group is not empty and get user confirmation to continue
     if not created and not dest_group.is_empty:

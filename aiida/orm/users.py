@@ -70,11 +70,7 @@ class UserCollection(entities.Collection['User']):
 class User(entities.Entity['BackendUser']):
     """AiiDA User"""
 
-    Collection = UserCollection
-
-    @classproperty
-    def objects(cls: Type['User']) -> UserCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
-        return UserCollection.get_cached(cls, get_manager().get_profile_storage())
+    _CLS_COLLECTION = UserCollection
 
     def __init__(
         self,

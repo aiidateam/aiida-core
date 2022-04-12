@@ -129,24 +129,24 @@ class TestBackendLog:
     def test_delete_all(self):
         """Test `delete_all` method"""
         self.create_log().store()
-        assert len(orm.Log.objects.all()) > 0, 'There should be Logs in the database'
+        assert len(orm.Log.collection.all()) > 0, 'There should be Logs in the database'
 
         self.backend.logs.delete_all()
-        assert len(orm.Log.objects.all()) == 0, 'All Logs should have been deleted'
+        assert len(orm.Log.collection.all()) == 0, 'All Logs should have been deleted'
 
     def test_delete_many_no_filters(self):
         """Test `delete_many` method with empty filters"""
         self.create_log().store()
-        count = len(orm.Log.objects.all())
+        count = len(orm.Log.collection.all())
         assert count > 0
 
         # Pass empty filter to delete_many, making sure ValidationError is raised
         with pytest.raises(exceptions.ValidationError):
             self.backend.logs.delete_many({})
-        assert len(orm.Log.objects.all()) == \
+        assert len(orm.Log.collection.all()) == \
             count, \
             'No Logs should have been deleted. There should still be {} Log(s), ' \
-            'however {} Log(s) was/were found.'.format(count, len(orm.Log.objects.all()))
+            'however {} Log(s) was/were found.'.format(count, len(orm.Log.collection.all()))
 
     def test_delete_many_ids(self):
         """Test `delete_many` method filtering on both `id` and `uuid`"""

@@ -128,11 +128,7 @@ class Log(entities.Entity['BackendLog']):
     An AiiDA Log entity.  Corresponds to a logged message against a particular AiiDA node.
     """
 
-    Collection = LogCollection
-
-    @classproperty
-    def objects(cls: Type['Log']) -> LogCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
-        return LogCollection.get_cached(cls, get_manager().get_profile_storage())
+    _CLS_COLLECTION = LogCollection
 
     def __init__(
         self,

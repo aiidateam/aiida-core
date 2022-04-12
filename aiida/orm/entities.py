@@ -161,25 +161,38 @@ class Collection(abc.ABC, Generic[EntityType]):
 class Entity(abc.ABC, Generic[BackendEntityType]):
     """An AiiDA entity"""
 
+    _CLS_COLLECTION = Collection
+
     @classproperty
-    @abc.abstractmethod
-    def objects(cls: EntityType) -> Collection[EntityType]:  # pylint: disable=no-self-argument,disable=no-self-use
+    def objects(cls: EntityType) -> Collection[EntityType]:  # pylint: disable=no-self-argument,no-self-use
+        """Get a collection for objects of this type, with the default backend.
+
+        .. deprecated:: This will be removed in v3, use ``collection`` instead.
+
+        :return: an object that can be used to access entities of this type
+        """
+        warn_deprecation('This property is deprecated, use `.collection` instead.', version=3, stacklevel=2)
+        return cls.collection
+
+    @classproperty
+    def collection(cls: EntityType) -> Collection[EntityType]:  # pylint: disable=no-self-argument,no-self-use
         """Get a collection for objects of this type, with the default backend.
 
         :return: an object that can be used to access entities of this type
         """
+        return cls._CLS_COLLECTION.get_cached(cls, get_manager().get_profile_storage())
 
     @classmethod
     def get(cls, **kwargs):
         """Get an entity of the collection matching the given filters.
 
-        .. deprecated: Will be removed in v3, use `Entity.objects.get` instead.
+        .. deprecated: Will be removed in v3, use `Entity.collection.get` instead.
 
         """
         warn_deprecation(
-            f'This method is deprecated, use `{cls.__name__}.objects.get` instead.', version=3, stacklevel=2
+            f'This method is deprecated, use `{cls.__name__}.collection.get` instead.', version=3, stacklevel=2
         )
-        return cls.objects.get(**kwargs)  # pylint: disable=no-member
+        return cls.collection.get(**kwargs)  # pylint: disable=no-member
 
     @classmethod
     def from_backend_entity(cls: Type[EntityType], backend_entity: BackendEntityType) -> EntityType:

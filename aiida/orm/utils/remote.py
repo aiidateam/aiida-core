@@ -74,7 +74,7 @@ def get_calcjob_remote_paths(  # pylint: disable=too-many-locals
     filters_remote = {}
 
     if user is None:
-        user = orm.User.objects.get_default()
+        user = orm.User.collection.get_default()
 
     if computers is not None:
         filters_computer['id'] = {'in': [computer.pk for computer in computers]}

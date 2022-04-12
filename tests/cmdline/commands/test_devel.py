@@ -16,4 +16,4 @@ def test_run_sql(run_cli_command):
     """Test ``verdi devel run-sql``."""
     options = ['SELECT COUNT(*) FROM db_dbnode;']
     result = run_cli_command(cmd_devel.devel_run_sql, options)
-    assert str(Node.objects.count()) in result.output, result.output
+    assert str(Node.collection.count()) in result.output, result.output

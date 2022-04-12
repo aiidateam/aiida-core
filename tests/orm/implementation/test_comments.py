@@ -137,24 +137,24 @@ class TestBackendComment:
     def test_delete_all(self):
         """Test `delete_all` method"""
         self.create_comment().store()
-        assert len(orm.Comment.objects.all()) > 0, 'There should be Comments in the database'
+        assert len(orm.Comment.collection.all()) > 0, 'There should be Comments in the database'
 
         self.backend.comments.delete_all()
-        assert len(orm.Comment.objects.all()) == 0, 'All Comments should have been deleted'
+        assert len(orm.Comment.collection.all()) == 0, 'All Comments should have been deleted'
 
     def test_delete_many_no_filters(self):
         """Test `delete_many` method with empty filters"""
         self.create_comment().store()
-        count = len(orm.Comment.objects.all())
+        count = len(orm.Comment.collection.all())
         assert count > 0
 
         # Pass empty filter to delete_many, making sure ValidationError is raised
         with pytest.raises(exceptions.ValidationError):
             self.backend.comments.delete_many({})
-        assert len(orm.Comment.objects.all()) == \
+        assert len(orm.Comment.collection.all()) == \
             count, \
             'No Comments should have been deleted. There should still be {} Comment(s), ' \
-            'however {} Comment(s) was/were found.'.format(count, len(orm.Comment.objects.all()))
+            'however {} Comment(s) was/were found.'.format(count, len(orm.Comment.collection.all()))
 
     def test_delete_many_ids(self):
         """Test `delete_many` method filtering on both `id` and `uuid`"""

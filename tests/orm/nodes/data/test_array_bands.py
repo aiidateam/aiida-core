@@ -23,7 +23,7 @@ def alternate_user():
     """Return an alternate ``User`` instance that is not the current default user."""
     email = 'alternate@localhost'
     try:
-        return User.objects.get(email=email)
+        return User.collection.get(email=email)
     except NotExistent:
         return User(email='alternate@localhost').store()
 

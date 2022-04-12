@@ -218,13 +218,13 @@ def test_create_group(tmp_path, aiida_profile_clean):  # pylint: disable=unused-
     node = orm.Data().store()
     filename = tmp_path / 'export.aiida'
     create_archive([node], filename=filename)
-    assert orm.Group.objects.count() == 0
+    assert orm.Group.collection.count() == 0
     # this should create an ImportGroup
     import_archive(filename)
-    assert orm.Group.objects.count() == 1
+    assert orm.Group.collection.count() == 1
     # this should create another ImportGroup
     import_archive(filename, create_group=True)
-    assert orm.Group.objects.count() == 2
+    assert orm.Group.collection.count() == 2
     # this should not create a new ImportGroup
     import_archive(filename, create_group=False)
-    assert orm.Group.objects.count() == 2
+    assert orm.Group.collection.count() == 2

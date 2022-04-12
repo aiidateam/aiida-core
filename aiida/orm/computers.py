@@ -75,11 +75,7 @@ class Computer(entities.Entity['BackendComputer']):
     PROPERTY_WORKDIR = 'workdir'
     PROPERTY_SHEBANG = 'shebang'
 
-    Collection = ComputerCollection
-
-    @classproperty
-    def objects(cls: Type['Computer']) -> ComputerCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
-        return ComputerCollection.get_cached(cls, get_manager().get_profile_storage())
+    _CLS_COLLECTION = ComputerCollection
 
     def __init__(  # pylint: disable=too-many-arguments
         self,
@@ -553,7 +549,7 @@ class Computer(entities.Entity['BackendComputer']):
         from . import authinfos
 
         try:
-            authinfo = authinfos.AuthInfo.objects(self.backend).get(dbcomputer_id=self.pk, aiidauser_id=user.pk)
+            authinfo = authinfos.AuthInfo.collection(self.backend).get(dbcomputer_id=self.pk, aiidauser_id=user.pk)
         except exceptions.NotExistent as exc:
             raise exceptions.NotExistent(
                 f'Computer `{self.label}` (ID={self.pk}) not configured for user `{user.get_short_name()}` '
@@ -610,8 +606,8 @@ class Computer(entities.Entity['BackendComputer']):
         """
         from . import authinfos  # pylint: disable=cyclic-import
 
-        user = user or users.User.objects(self.backend).get_default()
-        authinfo = authinfos.AuthInfo.objects(self.backend).get(dbcomputer=self, aiidauser=user)
+        user = user or users.User.collection(self.backend).get_default()
+        authinfo = authinfos.AuthInfo.collection(self.backend).get(dbcomputer=self, aiidauser=user)
         return authinfo.get_transport()
 
     def get_transport_class(self) -> Type['Transport']:
@@ -644,7 +640,7 @@ class Computer(entities.Entity['BackendComputer']):
         from . import authinfos
 
         transport_cls = self.get_transport_class()
-        user = user or users.User.objects(self.backend).get_default()
+        user = user or users.User.collection(self.backend).get_default()
         valid_keys = set(transport_cls.get_valid_auth_params())
 
         if not set(kwargs.keys()).issubset(valid_keys):
@@ -670,7 +666,7 @@ class Computer(entities.Entity['BackendComputer']):
 
         :param user: the user to to get the configuration for, otherwise default user
         """
-        user = user or users.User.objects(self.backend).get_default()
+        user = user or users.User.collection(self.backend).get_default()
 
         try:
             authinfo = self.get_authinfo(user)

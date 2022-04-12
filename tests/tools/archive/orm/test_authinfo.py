@@ -60,11 +60,11 @@ def test_import_authinfo(tmp_path, aiida_profile_clean, aiida_localhost):
     computer.store()
     computer.set_minimum_job_poll_interval(0.)
     computer.configure()
-    assert orm.AuthInfo.objects.count() == 1
+    assert orm.AuthInfo.collection.count() == 1
     import_archive(filename1, include_authinfos=False)
-    assert orm.AuthInfo.objects.count() == 1
+    assert orm.AuthInfo.collection.count() == 1
     import_archive(filename1, include_authinfos=True)
-    assert orm.AuthInfo.objects.count() == 2
+    assert orm.AuthInfo.collection.count() == 2
     # re-import should be a no-op
     import_archive(filename1, include_authinfos=True)
-    assert orm.AuthInfo.objects.count() == 2
+    assert orm.AuthInfo.collection.count() == 2

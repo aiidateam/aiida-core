@@ -259,7 +259,7 @@ def create_archive(
     if test_run:
         EXPORT_LOGGER.report('Test Run: Stopping before archive creation')
         keys = set(
-            orm.Node.objects(backend).iter_repo_keys(
+            orm.Node.collection(backend).iter_repo_keys(
                 filters={'id': {
                     'in': list(entity_ids[EntityTypes.NODE])
                 }}, batch_size=batch_size
@@ -567,7 +567,11 @@ def _stream_repo_files(
     key_format: str, writer: ArchiveWriterAbstract, node_ids: Set[int], backend: StorageBackend, batch_size: int
 ) -> None:
     """Collect all repository object keys from the nodes, then stream the files to the archive."""
-    keys = set(orm.Node.objects(backend).iter_repo_keys(filters={'id': {'in': list(node_ids)}}, batch_size=batch_size))
+    keys = set(
+        orm.Node.collection(backend).iter_repo_keys(filters={'id': {
+            'in': list(node_ids)
+        }}, batch_size=batch_size)
+    )
 
     repository = backend.get_repository()
     if not repository.key_format == key_format:

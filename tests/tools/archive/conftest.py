@@ -35,7 +35,7 @@ def aiida_localhost_factory(tmp_path):
 
     def _func(label='localhost-test'):
         try:
-            computer = Computer.objects.get(label=label)
+            computer = Computer.collection.get(label=label)
         except NotExistent:
             computer = Computer(
                 label=label,

@@ -43,11 +43,7 @@ class AuthInfoCollection(entities.Collection['AuthInfo']):
 class AuthInfo(entities.Entity['BackendAuthInfo']):
     """ORM class that models the authorization information that allows a `User` to connect to a `Computer`."""
 
-    Collection = AuthInfoCollection
-
-    @classproperty
-    def objects(cls: Type['AuthInfo']) -> AuthInfoCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
-        return AuthInfoCollection.get_cached(cls, get_manager().get_profile_storage())
+    _CLS_COLLECTION = AuthInfoCollection
 
     PROPERTY_WORKDIR = 'workdir'
 

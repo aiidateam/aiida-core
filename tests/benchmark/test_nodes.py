@@ -88,7 +88,7 @@ def test_delete_backend(benchmark):
 
     def _run(node):
         pk = node.pk
-        Data.objects._backend.nodes.delete(pk)  # pylint: disable=no-member
+        Data.collection._backend.nodes.delete(pk)  # pylint: disable=no-member
         return pk
 
     pk = benchmark.pedantic(_run, setup=get_data_node, iterations=1, rounds=100, warmup_rounds=1)
@@ -105,7 +105,7 @@ def test_delete(benchmark):
 
     def _run(node):
         pk = node.pk
-        Data.objects.delete(pk)  # pylint: disable=no-member
+        Data.collection.delete(pk)  # pylint: disable=no-member
         return pk
 
     pk = benchmark.pedantic(_run, setup=get_data_node, iterations=1, rounds=100, warmup_rounds=1)
@@ -122,7 +122,7 @@ def test_delete_with_object(benchmark):
 
     def _run(node):
         pk = node.pk
-        Data.objects.delete(pk)  # pylint: disable=no-member
+        Data.collection.delete(pk)  # pylint: disable=no-member
         return pk
 
     pk = benchmark.pedantic(_run, setup=get_data_node_and_object, iterations=1, rounds=100, warmup_rounds=1)

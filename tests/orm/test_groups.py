@@ -189,24 +189,24 @@ class TestGroups:
         assert group.description == 'some desc'
 
         # To avoid to find it in further tests
-        orm.Group.objects.delete(group.pk)
+        orm.Group.collection.delete(group.pk)
 
     def test_delete(self):
         """Test Group deletion."""
         node = orm.Data().store()
         group = orm.Group(label='testgroup3', description='some other desc').store()
 
-        group_copy = orm.Group.objects.get(label='testgroup3')
+        group_copy = orm.Group.collection.get(label='testgroup3')
         assert group.uuid == group_copy.uuid
 
         group.add_nodes(node)
         assert len(group.nodes) == 1
 
-        orm.Group.objects.delete(group.pk)
+        orm.Group.collection.delete(group.pk)
 
         with pytest.raises(exceptions.NotExistent):
             # The group does not exist anymore
-            orm.Group.objects.get(label='testgroup3')
+            orm.Group.collection.get(label='testgroup3')
 
     def test_delete_node(self):
         """Test deletion of a node that has been assigned to a group."""
@@ -293,7 +293,7 @@ class TestGroupsSubclasses:
         assert isinstance(group, orm.AutoGroup)
         assert group.type_string == 'core.auto'
 
-        group, _ = orm.AutoGroup.objects.get_or_create('some-auto-group')
+        group, _ = orm.AutoGroup.collection.get_or_create('some-auto-group')
         assert isinstance(group, orm.AutoGroup)
         assert group.type_string == 'core.auto'
 
@@ -347,7 +347,7 @@ class TestGroupsSubclasses:
         # Removing it as other methods might get a warning instead
         group_pk = group.pk
         del group
-        orm.Group.objects.delete(pk=group_pk)
+        orm.Group.collection.delete(pk=group_pk)
 
     @staticmethod
     def test_querying():
@@ -369,7 +369,7 @@ class TestGroupsSubclasses:
         # Removing it as other methods might get a warning instead
         group_pk = group.pk
         del group
-        orm.Group.objects.delete(pk=group_pk)
+        orm.Group.collection.delete(pk=group_pk)
 
     @staticmethod
     def test_querying_node_subclasses():

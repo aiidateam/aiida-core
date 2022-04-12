@@ -132,7 +132,7 @@ def computer_constructor(loader, computer):
     :rtype: :class:`aiida.orm.Computer`
     """
     yaml_node = loader.construct_scalar(computer)
-    return orm.Computer.objects.get(uuid=yaml_node)
+    return orm.Computer.collection.get(uuid=yaml_node)
 
 
 def represent_mapping(tag, dumper, mapping):

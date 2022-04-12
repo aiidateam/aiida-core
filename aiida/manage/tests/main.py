@@ -341,7 +341,7 @@ class TemporaryProfileManager(ProfileManager):
         # initialize the profile storage
         profile.storage_cls.migrate(profile)
         # create the default user for the profile
-        created, user = User.objects.get_or_create(**get_user_dict(_DEFAULT_PROFILE_INFO))
+        created, user = User.collection.get_or_create(**get_user_dict(_DEFAULT_PROFILE_INFO))
         if created:
             user.store()
         profile.default_user_email = user.email

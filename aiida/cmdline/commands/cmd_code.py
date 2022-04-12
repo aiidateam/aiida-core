@@ -295,7 +295,7 @@ def code_list(computer, input_plugin, all_entries, all_users, show_owner):
 
     qb_user_filters = {}
     if not all_users:
-        user = orm.User.objects.get_default()
+        user = orm.User.collection.get_default()
         qb_user_filters['email'] = user.email
 
     qb_computer_filters = {}

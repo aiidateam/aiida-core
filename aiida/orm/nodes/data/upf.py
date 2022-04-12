@@ -101,8 +101,8 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
 
     nfiles = len(filenames)
 
-    automatic_user = orm.User.objects.get_default()
-    group, group_created = orm.UpfFamily.objects.get_or_create(label=group_label, user=automatic_user)
+    automatic_user = orm.User.collection.get_default()
+    group, group_created = orm.UpfFamily.collection.get_or_create(label=group_label, user=automatic_user)
 
     if group.user.email != automatic_user.email:
         raise UniquenessError(

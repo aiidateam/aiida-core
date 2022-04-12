@@ -30,7 +30,7 @@ def test_get_unreferenced_keyset():
     # `get_unreferenced_keyset` that would require to mock a very complex class
     # structure:
     #
-    #     keyset_aiidadb = set(orm.Node.objects(aiida_backend).iter_repo_keys())
+    #     keyset_aiidadb = set(orm.Node.collection(aiida_backend).iter_repo_keys())
     #
     # Ideally this should eventually be replaced by a more direct call to the
     # method of a single object that would be easier to mock and would allow
@@ -52,7 +52,7 @@ def test_get_unreferenced_keyset():
     datanode.store()
 
     aiida_backend = get_manager().get_profile_storage()
-    keys = list(orm.Node.objects(aiida_backend).iter_repo_keys())
+    keys = list(orm.Node.collection(aiida_backend).iter_repo_keys())
 
     repository_backend = aiida_backend.get_repository()
     repository_backend.delete_objects(keys)

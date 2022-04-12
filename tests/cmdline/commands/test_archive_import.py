@@ -120,7 +120,7 @@ class TestVerdiImport:
         archives = [get_archive_file(self.newest_archive, filepath=ARCHIVE_PATH)]
 
         # Check Group does not already exist
-        group_search = Group.objects.find(filters={'label': group_label})
+        group_search = Group.collection.find(filters={'label': group_label})
         assert len(group_search) == 0, f"A Group with label '{group_label}' already exists, this shouldn't be."
 
         # Invoke `verdi import`, making sure there are no exceptions
@@ -130,7 +130,7 @@ class TestVerdiImport:
         assert result.exit_code == 0, result.output
 
         # Make sure new Group was created
-        (group, new_group) = Group.objects.get_or_create(group_label)
+        (group, new_group) = Group.collection.get_or_create(group_label)
         assert not new_group, 'The Group should not have been created now, but instead when it was imported.'
         assert not group.is_empty, 'The Group should not be empty.'
 
@@ -138,7 +138,7 @@ class TestVerdiImport:
         """Test '--import-group/--no-import-group' options."""
         archives = [get_archive_file(self.newest_archive, filepath=ARCHIVE_PATH)]
 
-        assert Group.objects.count() == 0, 'There should be no Groups.'
+        assert Group.collection.count() == 0, 'There should be no Groups.'
 
         # Invoke `verdi import`
         options = archives
@@ -146,7 +146,7 @@ class TestVerdiImport:
         assert result.exception is None, result.output
         assert result.exit_code == 0, result.output
 
-        assert Group.objects.count() == 5
+        assert Group.collection.count() == 5
 
         # Invoke `verdi import` again, creating another import group
         options = ['--import-group'] + archives
@@ -154,7 +154,7 @@ class TestVerdiImport:
         assert result.exception is None, result.output
         assert result.exit_code == 0, result.output
 
-        assert Group.objects.count() == 6
+        assert Group.collection.count() == 6
 
         # Invoke `verdi import` again, but with no import group created
         options = ['--no-import-group'] + archives
@@ -162,7 +162,7 @@ class TestVerdiImport:
         assert result.exception is None, result.output
         assert result.exit_code == 0, result.output
 
-        assert Group.objects.count() == 6
+        assert Group.collection.count() == 6
 
     @pytest.mark.skip('Due to summary being logged, this can not be checked against `results.output`.')  # pylint: disable=not-callable
     def test_comment_mode(self):

@@ -28,7 +28,7 @@ class TestJobManager:
         # pylint: disable=attribute-defined-outside-init
         self.loop = asyncio.get_event_loop()
         self.transport_queue = TransportQueue(self.loop)
-        self.user = User.objects.get_default()
+        self.user = User.collection.get_default()
         self.computer = aiida_localhost
         self.auth_info = self.computer.get_authinfo(self.user)
         self.manager = JobManager(self.transport_queue)
@@ -56,7 +56,7 @@ class TestJobsList:
         # pylint: disable=attribute-defined-outside-init
         self.loop = asyncio.get_event_loop()
         self.transport_queue = TransportQueue(self.loop)
-        self.user = User.objects.get_default()
+        self.user = User.collection.get_default()
         self.computer = aiida_localhost
         self.auth_info = self.computer.get_authinfo(self.user)
         self.jobs_list = JobsList(self.auth_info, self.transport_queue)

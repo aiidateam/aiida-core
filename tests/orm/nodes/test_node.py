@@ -29,8 +29,8 @@ class TestNode:
 
     def setup_method(self):
         """Setup for methods."""
-        self.user = User.objects.get_default()
-        _, self.computer = Computer.objects.get_or_create(
+        self.user = User.collection.get_default()
+        _, self.computer = Computer.collection.get_or_create(
             label='localhost',
             description='localhost computer set up by test manager',
             hostname='localhost',
@@ -844,17 +844,17 @@ class TestNodeDelete:
         log_one = Log(timezone.now(), 'test', 'INFO', data_one.pk).store()
         log_two = Log(timezone.now(), 'test', 'INFO', data_two.pk).store()
 
-        assert len(Log.objects.get_logs_for(data_one)) == 1
-        assert Log.objects.get_logs_for(data_one)[0].pk == log_one.pk
-        assert len(Log.objects.get_logs_for(data_two)) == 1
-        assert Log.objects.get_logs_for(data_two)[0].pk == log_two.pk
+        assert len(Log.collection.get_logs_for(data_one)) == 1
+        assert Log.collection.get_logs_for(data_one)[0].pk == log_one.pk
+        assert len(Log.collection.get_logs_for(data_two)) == 1
+        assert Log.collection.get_logs_for(data_two)[0].pk == log_two.pk
 
         with backend.transaction():
             backend.delete_nodes_and_connections([data_two.pk])
 
-        assert len(Log.objects.get_logs_for(data_one)) == 1
-        assert Log.objects.get_logs_for(data_one)[0].pk == log_one.pk
-        assert len(Log.objects.get_logs_for(data_two)) == 0
+        assert len(Log.collection.get_logs_for(data_one)) == 1
+        assert Log.collection.get_logs_for(data_one)[0].pk == log_one.pk
+        assert len(Log.collection.get_logs_for(data_two)) == 0
 
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_delete_collection_logs(self):
@@ -865,16 +865,16 @@ class TestNodeDelete:
         log_one = Log(timezone.now(), 'test', 'INFO', data_one.pk).store()
         log_two = Log(timezone.now(), 'test', 'INFO', data_two.pk).store()
 
-        assert len(Log.objects.get_logs_for(data_one)) == 1
-        assert Log.objects.get_logs_for(data_one)[0].pk == log_one.pk
-        assert len(Log.objects.get_logs_for(data_two)) == 1
-        assert Log.objects.get_logs_for(data_two)[0].pk == log_two.pk
+        assert len(Log.collection.get_logs_for(data_one)) == 1
+        assert Log.collection.get_logs_for(data_one)[0].pk == log_one.pk
+        assert len(Log.collection.get_logs_for(data_two)) == 1
+        assert Log.collection.get_logs_for(data_two)[0].pk == log_two.pk
 
-        Node.objects.delete(data_two.pk)
+        Node.collection.delete(data_two.pk)
 
-        assert len(Log.objects.get_logs_for(data_one)) == 1
-        assert Log.objects.get_logs_for(data_one)[0].pk == log_one.pk
-        assert len(Log.objects.get_logs_for(data_two)) == 0
+        assert len(Log.collection.get_logs_for(data_one)) == 1
+        assert Log.collection.get_logs_for(data_one)[0].pk == log_one.pk
+        assert len(Log.collection.get_logs_for(data_two)) == 0
 
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_delete_collection_incoming_link(self):
@@ -885,7 +885,7 @@ class TestNodeDelete:
         calculation.store()
 
         with pytest.raises(exceptions.InvalidOperation):
-            Node.objects.delete(calculation.pk)
+            Node.collection.delete(calculation.pk)
 
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_delete_collection_outgoing_link(self):
@@ -896,7 +896,7 @@ class TestNodeDelete:
         data.store()
 
         with pytest.raises(exceptions.InvalidOperation):
-            Node.objects.delete(calculation.pk)
+            Node.collection.delete(calculation.pk)
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -1019,7 +1019,7 @@ def test_iter_repo_keys():
     data2.base.repository.put_object_from_filelike(BytesIO(b'value1'), 'key1')
     data2.base.repository.put_object_from_filelike(BytesIO(b'value4'), 'key2')
     data2.store()
-    assert set(Data.objects.iter_repo_keys()) == {
+    assert set(Data.collection.iter_repo_keys()) == {
         '31cd97ebe10a80abe1b3f401824fc2040fb8b03aafd0d37acf6504777eddee11',
         '3c9683017f9e4bf33d0fbedd26bf143fd72de9b9dd145441b75f0604047ea28e',
         '89dc6ae7f06a9f46b565af03eab0ece0bf6024d3659b7e3a1d03573cfeb0b59d'

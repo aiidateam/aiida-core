@@ -735,7 +735,7 @@ class TestWorkchain:
                 spec.outputs.dynamic = True
 
             def run(self):
-                orm.Log.objects.delete_all()
+                orm.Log.collection.delete_all()
                 self.report('Testing the report function')
 
             def check(self):

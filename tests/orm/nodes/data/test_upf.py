@@ -104,11 +104,11 @@ class TestUpfParser:
         """Test the `UpfData.get_upf_family_names` method."""
         label = 'family'
 
-        family, _ = orm.UpfFamily.objects.get_or_create(label=label)
+        family, _ = orm.UpfFamily.collection.get_or_create(label=label)
         family.add_nodes([self.pseudo_barium])
         family.store()
 
-        assert {group.label for group in orm.UpfFamily.objects.all()} == {label}
+        assert {group.label for group in orm.UpfFamily.collection.all()} == {label}
         assert self.pseudo_barium.get_upf_family_names() == [label]
 
     def test_get_upf_groups(self):
@@ -118,17 +118,17 @@ class TestUpfParser:
 
         user = orm.User(email='alternate@localhost').store()
 
-        assert orm.UpfFamily.objects.all() == []
+        assert orm.UpfFamily.collection.all() == []
 
         # Create group with default user and add `Ba` pseudo
-        family_01, _ = orm.UpfFamily.objects.get_or_create(label=label_01)
+        family_01, _ = orm.UpfFamily.collection.get_or_create(label=label_01)
         family_01.add_nodes([self.pseudo_barium])
         family_01.store()
 
         assert {group.label for group in orm.UpfData.get_upf_groups()} == {label_01}
 
         # Create group with different user and add `O` pseudo
-        family_02, _ = orm.UpfFamily.objects.get_or_create(label=label_02, user=user)
+        family_02, _ = orm.UpfFamily.collection.get_or_create(label=label_02, user=user)
         family_02.add_nodes([self.pseudo_oxygen])
         family_02.store()
 

@@ -58,7 +58,7 @@ def user_list():
     """Show a list of all users."""
     from aiida.orm import User
 
-    default_user = User.objects.get_default()
+    default_user = User.collection.get_default()
 
     if default_user is None:
         echo.echo_warning('no default user has been configured')
@@ -66,7 +66,7 @@ def user_list():
     attributes = ['email', 'first_name', 'last_name']
     sort = lambda user: user.email
     highlight = lambda x: x.email == default_user.email if default_user else None
-    echo.echo_formatted_list(User.objects.all(), attributes, sort=sort, highlight=highlight)
+    echo.echo_formatted_list(User.collection.all(), attributes, sort=sort, highlight=highlight)
 
 
 @verdi_user.command('configure')

@@ -21,7 +21,7 @@ def test_critical_log_msg_and_metadata(tmp_path, aiida_profile_clean):
     # Firing a log for an unstored node should not end up in the database
     calc.logger.critical(message)
     # There should be no log messages for the unstored object
-    assert len(orm.Log.objects.all()) == 0
+    assert len(orm.Log.collection.all()) == 0
 
     # After storing the node, logs above log level should be stored
     calc.store()
@@ -29,7 +29,7 @@ def test_critical_log_msg_and_metadata(tmp_path, aiida_profile_clean):
     calc.logger.critical(message)
 
     # Store Log metadata
-    log_metadata = orm.Log.objects.get(dbnode_id=calc.pk).metadata
+    log_metadata = orm.Log.collection.get(dbnode_id=calc.pk).metadata
 
     export_file = tmp_path.joinpath('export.aiida')
     create_archive([calc], filename=export_file)
@@ -39,7 +39,7 @@ def test_critical_log_msg_and_metadata(tmp_path, aiida_profile_clean):
     import_archive(export_file)
 
     # Finding all the log messages
-    logs = orm.Log.objects.all()
+    logs = orm.Log.collection.all()
 
     assert len(logs) == 1
     assert logs[0].message == message

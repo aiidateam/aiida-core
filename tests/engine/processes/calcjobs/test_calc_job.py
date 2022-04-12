@@ -527,7 +527,7 @@ def test_parse_insufficient_data(generate_process):
     # stored as an attribute on the calculation job node and the output of the stdout and stderr which are both
     # stored in the repository. In this test, we haven't created these on purpose. This should not except the
     # process but should log a warning, so here we check that those expected warnings are attached to the node
-    logs = [log.message for log in orm.Log.objects.get_logs_for(process.node)]
+    logs = [log.message for log in orm.Log.collection.get_logs_for(process.node)]
     expected_logs = [
         'could not parse scheduler output: the `detailed_job_info` attribute is missing',
         f'could not parse scheduler output: the `{filename_stderr}` file is missing',
@@ -554,7 +554,7 @@ def test_parse_non_zero_retval(generate_process):
     process.node.base.attributes.set('detailed_job_info', {'retval': 1, 'stderr': 'accounting disabled', 'stdout': ''})
     process.parse()
 
-    logs = [log.message for log in orm.Log.objects.get_logs_for(process.node)]
+    logs = [log.message for log in orm.Log.collection.get_logs_for(process.node)]
     assert 'could not parse scheduler output: return value of `detailed_job_info` is non-zero' in logs
 
 
@@ -583,7 +583,7 @@ def test_parse_not_implemented(generate_process):
 
     # The `DirectScheduler` at this point in time does not implement the `parse_output` method. Instead of raising
     # a warning message should be logged. We verify here that said message is present.
-    logs = [log.message for log in orm.Log.objects.get_logs_for(process.node)]
+    logs = [log.message for log in orm.Log.collection.get_logs_for(process.node)]
     expected_logs = ['`DirectScheduler` does not implement scheduler output parsing']
 
     for log in expected_logs:
@@ -621,7 +621,7 @@ def test_parse_scheduler_excepted(generate_process, monkeypatch):
     # Monkeypatch the `DirectScheduler.parse_output` to raise an exception
     monkeypatch.setattr(DirectScheduler, 'parse_output', raise_exception)
     process.parse()
-    logs = [log.message for log in orm.Log.objects.get_logs_for(process.node)]
+    logs = [log.message for log in orm.Log.collection.get_logs_for(process.node)]
     expected_logs = [f'the `parse_output` method of the scheduler excepted: {msg}']
 
     for log in expected_logs:

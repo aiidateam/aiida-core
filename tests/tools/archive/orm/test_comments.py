@@ -24,7 +24,7 @@ COMMENTS = (
 
 def test_multiple_imports_for_single_node(tmp_path, aiida_profile_clean):
     """Test multiple imports for single node with different comments are imported correctly"""
-    user = orm.User.objects.get_default()
+    user = orm.User.collection.get_default()
 
     # Create Node and initial comments and save UUIDs prior to export
     node = orm.CalculationNode().store()
@@ -93,7 +93,7 @@ def test_multiple_imports_for_single_node(tmp_path, aiida_profile_clean):
 def test_exclude_comments_flag(tmp_path, aiida_profile_clean):
     """Test comments and associated commenting users are not exported when using `include_comments=False`."""
     # Create users, node, and comments
-    user_one = orm.User.objects.get_default()
+    user_one = orm.User.collection.get_default()
     user_two = orm.User(email='commenting@user.s').store()
 
     node = orm.Data().store()
@@ -136,7 +136,7 @@ def test_exclude_comments_flag(tmp_path, aiida_profile_clean):
 def test_calc_and_data_nodes_with_comments(tmp_path, aiida_profile_clean):
     """ Test comments for CalculatioNode and Data node are correctly ex-/imported """
     # Create user, nodes, and comments
-    user = orm.User.objects.get_default()
+    user = orm.User.collection.get_default()
 
     calc_node = orm.CalculationNode().store()
     calc_node.seal()
@@ -187,7 +187,7 @@ def test_calc_and_data_nodes_with_comments(tmp_path, aiida_profile_clean):
 def test_multiple_user_comments_single_node(tmp_path, aiida_profile_clean):
     """ Test multiple users commenting on a single orm.CalculationNode """
     # Create users, node, and comments
-    user_one = orm.User.objects.get_default()
+    user_one = orm.User.collection.get_default()
     user_two = orm.User(email='commenting@user.s').store()
 
     node = orm.CalculationNode().store()
@@ -271,7 +271,7 @@ def test_mtime_of_imported_comments(tmp_path, aiida_profile_clean):
     This is related to correct usage of `merge_comments` when importing.
     """
     # Get user
-    user = orm.User.objects.get_default()
+    user = orm.User.collection.get_default()
 
     comment_content = 'You get what you give'
 
@@ -328,7 +328,7 @@ def test_import_arg_comment_mode(tmp_path):
     Test import of 'old' comment that has since been changed in DB.
     """
     # set up initial database
-    user = orm.User.objects.get_default()
+    user = orm.User.collection.get_default()
     calc = orm.CalculationNode().store()
     calc.seal()
     calc_uuid = calc.uuid
@@ -429,7 +429,7 @@ def test_reimport_of_comments_for_single_node(tmp_path, aiida_profile_clean):
 
     # Get user
     # Will have to do this again after resetting the DB
-    user = orm.User.objects.get_default()
+    user = orm.User.collection.get_default()
 
     ## Part I
     # Create node and save UUID
@@ -493,7 +493,7 @@ def test_reimport_of_comments_for_single_node(tmp_path, aiida_profile_clean):
 
     # Add remaining Comments (again)
     calc = orm.load_node(import_calcs.all()[0][0])  # Reload CalculationNode
-    user = orm.User.objects.get_default()  # Get user - again
+    user = orm.User.collection.get_default()  # Get user - again
     for comment in COMMENTS[1:]:
         orm.Comment(calc, user, comment).store()
 
@@ -569,7 +569,7 @@ def test_reimport_of_comments_for_single_node(tmp_path, aiida_profile_clean):
 
 def test_import_newest(tmp_path, aiida_profile_clean):
     """Test `merge_comments='newest'"""
-    user = orm.User.objects.get_default()
+    user = orm.User.collection.get_default()
     node = orm.Data().store()
     comment_1 = orm.Comment(node, user, 'Comment old').store()
     comment_1_uuid = comment_1.uuid
@@ -586,16 +586,16 @@ def test_import_newest(tmp_path, aiida_profile_clean):
     aiida_profile_clean.clear_profile()
 
     import_archive(export_file_old)
-    assert orm.Comment.objects.get(uuid=comment_1_uuid).content == 'Comment old'
+    assert orm.Comment.collection.get(uuid=comment_1_uuid).content == 'Comment old'
 
     import_archive(export_file_new, merge_comments='leave')
-    assert orm.Comment.objects.get(uuid=comment_1_uuid).content == 'Comment old'
+    assert orm.Comment.collection.get(uuid=comment_1_uuid).content == 'Comment old'
 
     import_archive(export_file_new, merge_comments='newest')
-    assert orm.Comment.objects.get(uuid=comment_1_uuid).content == 'Comment new'
+    assert orm.Comment.collection.get(uuid=comment_1_uuid).content == 'Comment new'
 
     import_archive(export_file_old, merge_comments='newest')
-    assert orm.Comment.objects.get(uuid=comment_1_uuid).content == 'Comment new'
+    assert orm.Comment.collection.get(uuid=comment_1_uuid).content == 'Comment new'
 
     import_archive(export_file_old, merge_comments='overwrite')
-    assert orm.Comment.objects.get(uuid=comment_1_uuid).content == 'Comment old'
+    assert orm.Comment.collection.get(uuid=comment_1_uuid).content == 'Comment old'

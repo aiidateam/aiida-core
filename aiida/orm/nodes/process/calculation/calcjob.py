@@ -16,6 +16,7 @@ from aiida.common.datastructures import CalcJobState
 from aiida.common.lang import classproperty
 from aiida.common.links import LinkType
 
+from ..process import ProcessNodeCaching
 from .calculation import CalculationNode
 
 if TYPE_CHECKING:
@@ -29,6 +30,36 @@ if TYPE_CHECKING:
     from aiida.transports import Transport
 
 __all__ = ('CalcJobNode',)
+
+
+class CalcJobNodeCaching(ProcessNodeCaching):
+    """Interface to control caching of a node instance."""
+
+    def _get_objects_to_hash(self) -> List[Any]:
+        """Return a list of objects which should be included in the hash.
+
+        This method is purposefully overridden from the base `Node` class, because we do not want to include the
+        repository folder in the hash. The reason is that the hash of this node is computed in the `store` method, at
+        which point the input files that will be stored in the repository have not yet been generated. Including these
+        anyway in the computation of the hash would mean that the hash of the node would change as soon as the process
+        has started and the input files have been written to the repository.
+        """
+        from importlib import import_module
+        objects = [
+            import_module(self._node.__module__.split('.', 1)[0]).__version__,
+            {
+                key: val
+                for key, val in self._node.base.attributes.items()
+                if key not in self._node._hash_ignored_attributes and key not in self._node._updatable_attributes  # pylint: disable=unsupported-membership-test,protected-access
+            },
+            self._node.computer.uuid if self._node.computer is not None else None,  # pylint: disable=no-member
+            {
+                entry.link_label: entry.node.base.caching.get_hash()
+                for entry in self._node.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
+                if entry.link_label not in self._hash_ignored_inputs
+            }
+        ]
+        return objects
 
 
 class CalcJobNode(CalculationNode):
@@ -110,32 +141,6 @@ class CalcJobNode(CalculationNode):
             'max_wallclock_seconds',
             'max_memory_kb',
         )
-
-    def _get_objects_to_hash(self) -> List[Any]:
-        """Return a list of objects which should be included in the hash.
-
-        This method is purposefully overridden from the base `Node` class, because we do not want to include the
-        repository folder in the hash. The reason is that the hash of this node is computed in the `store` method, at
-        which point the input files that will be stored in the repository have not yet been generated. Including these
-        anyway in the computation of the hash would mean that the hash of the node would change as soon as the process
-        has started and the input files have been written to the repository.
-        """
-        from importlib import import_module
-        objects = [
-            import_module(self.__module__.split('.', 1)[0]).__version__,
-            {
-                key: val
-                for key, val in self.base.attributes.items()
-                if key not in self._hash_ignored_attributes and key not in self._updatable_attributes  # pylint: disable=unsupported-membership-test
-            },
-            self.computer.uuid if self.computer is not None else None,  # pylint: disable=no-member
-            {
-                entry.link_label: entry.node.get_hash()
-                for entry in self.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
-                if entry.link_label not in self._hash_ignored_inputs
-            }
-        ]
-        return objects
 
     def get_builder_restart(self) -> 'ProcessBuilder':
         """Return a `ProcessBuilder` that is ready to relaunch the same `CalcJob` that created this node.

@@ -412,14 +412,14 @@ class TestProcessFunction:
         """Test that the hashes generated for identical process functions with identical inputs are the same."""
         _, node1 = self.function_return_input.run_get_node(data=orm.Int(2))
         _, node2 = self.function_return_input.run_get_node(data=orm.Int(2))
-        assert node1.get_hash() == node1.base.extras.get('_aiida_hash')
-        assert node2.get_hash() == node2.base.extras.get('_aiida_hash')
-        assert node1.get_hash() == node2.get_hash()
+        assert node1.base.caching.get_hash() == node1.base.extras.get('_aiida_hash')
+        assert node2.base.caching.get_hash() == node2.base.extras.get('_aiida_hash')
+        assert node1.base.caching.get_hash() == node2.base.caching.get_hash()
 
     def test_hashes_different(self):
         """Test that the hashes generated for identical process functions with different inputs are the different."""
         _, node1 = self.function_return_input.run_get_node(data=orm.Int(2))
         _, node2 = self.function_return_input.run_get_node(data=orm.Int(3))
-        assert node1.get_hash() == node1.base.extras.get('_aiida_hash')
-        assert node2.get_hash() == node2.base.extras.get('_aiida_hash')
-        assert node1.get_hash() != node2.get_hash()
+        assert node1.base.caching.get_hash() == node1.base.extras.get('_aiida_hash')
+        assert node2.base.caching.get_hash() == node2.base.extras.get('_aiida_hash')
+        assert node1.base.caching.get_hash() != node2.base.caching.get_hash()

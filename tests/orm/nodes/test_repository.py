@@ -101,7 +101,7 @@ def test_caching(cacheable_node):
         cached.store()
 
     assert cached.is_created_from_cache
-    assert cached.get_cache_source() == cacheable_node.uuid
+    assert cached.base.caching.get_cache_source() == cacheable_node.uuid
     assert cacheable_node.base.repository.metadata == cached.base.repository.metadata
     assert cacheable_node.base.repository.hash() == cached.base.repository.hash()
 

@@ -96,7 +96,7 @@ class TestCalcFunction:
             assert EXECUTION_COUNTER == 1  # Calculation function body should not have been executed
             assert result.is_stored
             assert cached.is_created_from_cache
-            assert cached.get_cache_source() in original.uuid
+            assert cached.base.caching.get_cache_source() in original.uuid
             assert cached.base.links.get_incoming().one().node.uuid == input_node.uuid
 
     def test_calcfunction_caching_change_code(self):

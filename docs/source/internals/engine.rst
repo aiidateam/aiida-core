@@ -27,10 +27,10 @@ On the level of the generic :class:`orm.Node <aiida.orm.Node>` class:
 
 On the level of the :class:`Process <aiida.engine.processes.process.Process>` and :class:`orm.ProcessNode <aiida.orm.ProcessNode>` classes:
 
-* The :meth:`ProcessNode.is_valid_cache <aiida.orm.ProcessNode.is_valid_cache>` calls :meth:`Process.is_valid_cache <aiida.engine.processes.process.Process.is_valid_cache>`, passing the node itself.
+* The :meth:`ProcessNodeCaching.is_valid_cache <aiida.orm.nodes.process.process.ProcessNodeCaching.is_valid_cache>` calls :meth:`Process.is_valid_cache <aiida.engine.processes.process.Process.is_valid_cache>`, passing the node itself.
   This can be used in :class:`~aiida.engine.processes.process.Process` subclasses (e.g. in calculation plugins) to implement custom ways of invalidating the cache.
-* The :meth:`ProcessNode._hash_ignored_inputs <aiida.orm.nodes.process.process.ProcessNode._hash_ignored_inputs>` attribute lists the inputs that should be ignored when creating the hash.
-  This is checked by the :meth:`ProcessNode._get_objects_to_hash <aiida.orm.nodes.process.process.ProcessNode._get_objects_to_hash>` method.
+* The :meth:`ProcessNodeCaching._hash_ignored_inputs <aiida.orm.nodes.process.process.ProcessNodeCaching._hash_ignored_inputs>` attribute lists the inputs that should be ignored when creating the hash.
+  This is checked by the :meth:`ProcessNodeCaching._get_objects_to_hash <aiida.orm.nodes.process.process.ProcessNodeCaching._get_objects_to_hash>` method.
 * The :meth:`Process.is_valid_cache <aiida.engine.processes.process.Process.is_valid_cache>` is where the :meth:`exit_codes <aiida.engine.processes.process_spec.ProcessSpec.exit_code>` that have been marked by ``invalidates_cache`` are checked.
 
 

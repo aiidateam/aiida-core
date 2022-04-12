@@ -200,7 +200,8 @@ def validate_cached(cached_calcs):
             print_report(calc.pk)
             valid = False
 
-        if '_aiida_cached_from' not in calc.base.extras or calc.get_hash() != calc.base.extras.get('_aiida_hash'):
+        if '_aiida_cached_from' not in calc.base.extras or calc.base.caching.get_hash(
+        ) != calc.base.extras.get('_aiida_hash'):
             print(f'Cached calculation<{calc.pk}> has invalid hash')
             print_report(calc.pk)
             valid = False

@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub class for processes."""
-
 import enum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
@@ -19,6 +18,7 @@ from aiida.common.lang import classproperty
 from aiida.common.links import LinkType
 from aiida.orm.utils.mixins import Sealable
 
+from ..caching import NodeCaching
 from ..node import Node, NodeLinks
 
 if TYPE_CHECKING:
@@ -26,6 +26,58 @@ if TYPE_CHECKING:
     from aiida.engine.processes.builder import ProcessBuilder
 
 __all__ = ('ProcessNode',)
+
+
+class ProcessNodeCaching(NodeCaching):
+    """Interface to control caching of a node instance."""
+
+    # The link_type might not be correct while the object is being created.
+    _hash_ignored_inputs = ['CALL_CALC', 'CALL_WORK']
+
+    @property
+    def is_valid_cache(self) -> bool:
+        """Return whether the node is valid for caching
+
+        :returns: True if this process node is valid to be used for caching, False otherwise
+        """
+        if not (super().is_valid_cache and self._node.is_finished):
+            return False
+
+        try:
+            process_class = self._node.process_class
+        except ValueError as exc:
+            self._node.logger.warning(
+                f"Not considering {self} for caching, '{exc!r}' when accessing its process class."
+            )
+            return False
+
+        # For process functions, the `process_class` does not have an is_valid_cache attribute
+        try:
+            is_valid_cache_func = process_class.is_valid_cache
+        except AttributeError:
+            return True
+
+        return is_valid_cache_func(self._node)
+
+    @is_valid_cache.setter
+    def is_valid_cache(self, valid: bool) -> None:
+        """Set whether this node instance is considered valid for caching or not.
+
+        :param valid: whether the node is valid or invalid for use in caching.
+        """
+        super().is_valid_cache = valid  # type: ignore[misc]
+
+    def _get_objects_to_hash(self) -> List[Any]:
+        """
+        Return a list of objects which should be included in the hash.
+        """
+        res = super()._get_objects_to_hash()  # pylint: disable=protected-access
+        res.append({
+            entry.link_label: entry.node.base.caching.get_hash()
+            for entry in self._node.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
+            if entry.link_label not in self._hash_ignored_inputs
+        })
+        return res
 
 
 class ProcessNodeLinks(NodeLinks):
@@ -81,6 +133,7 @@ class ProcessNode(Sealable, Node):
     # pylint: disable=too-many-public-methods,abstract-method
 
     _CLS_NODE_LINKS = ProcessNodeLinks
+    _CLS_NODE_CACHING = ProcessNodeCaching
 
     CHECKPOINT_KEY = 'checkpoints'
     EXCEPTION_KEY = 'exception'
@@ -90,9 +143,6 @@ class ProcessNode(Sealable, Node):
     PROCESS_LABEL_KEY = 'process_label'
     PROCESS_STATE_KEY = 'process_state'
     PROCESS_STATUS_KEY = 'process_status'
-
-    # The link_type might not be correct while the object is being created.
-    _hash_ignored_inputs = ['CALL_CALC', 'CALL_WORK']
 
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
@@ -494,47 +544,3 @@ class ProcessNode(Sealable, Node):
             return None
         else:
             return caller
-
-    @property
-    def is_valid_cache(self) -> bool:
-        """
-        Return whether the node is valid for caching
-
-        :returns: True if this process node is valid to be used for caching, False otherwise
-        """
-        if not (super().is_valid_cache and self.is_finished):
-            return False
-
-        try:
-            process_class = self.process_class
-        except ValueError as exc:
-            self.logger.warning(f"Not considering {self} for caching, '{exc!r}' when accessing its process class.")
-            return False
-
-        # For process functions, the `process_class` does not have an is_valid_cache attribute
-        try:
-            is_valid_cache_func = process_class.is_valid_cache
-        except AttributeError:
-            return True
-
-        return is_valid_cache_func(self)
-
-    @is_valid_cache.setter
-    def is_valid_cache(self, valid: bool) -> None:
-        """Set whether this node instance is considered valid for caching or not.
-
-        :param valid: whether the node is valid or invalid for use in caching.
-        """
-        super().is_valid_cache = valid  # type: ignore[misc]
-
-    def _get_objects_to_hash(self) -> List[Any]:
-        """
-        Return a list of objects which should be included in the hash.
-        """
-        res = super()._get_objects_to_hash()
-        res.append({
-            entry.link_label: entry.node.get_hash()
-            for entry in self.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK))
-            if entry.link_label not in self._hash_ignored_inputs
-        })
-        return res

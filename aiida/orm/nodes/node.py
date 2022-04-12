@@ -11,13 +11,11 @@
 """Package for node ORM classes."""
 import datetime
 from functools import cached_property
-import importlib
 from logging import Logger
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Iterator, List, Optional, Tuple, Type, TypeVar
 from uuid import UUID
 
 from aiida.common import exceptions
-from aiida.common.hashing import make_hash
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.common.warnings import warn_deprecation
@@ -31,6 +29,7 @@ from ..extras import EntityExtras
 from ..querybuilder import QueryBuilder
 from ..users import User
 from .attributes import NodeAttributes
+from .caching import NodeCaching
 from .comments import NodeComments
 from .links import NodeLinks
 from .repository import NodeRepository
@@ -102,6 +101,11 @@ class NodeBase:
         return NodeRepository(self._node)
 
     @cached_property
+    def caching(self) -> 'NodeCaching':
+        """Return an interface to interact with the caching of this node."""
+        return self._node._CLS_NODE_CACHING(self._node)  # pylint: disable=protected-access
+
+    @cached_property
     def comments(self) -> 'NodeComments':
         """Return an interface to interact with the comments of this node."""
         return NodeComments(self._node)
@@ -140,10 +144,7 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
     # pylint: disable=too-many-public-methods
 
     _CLS_NODE_LINKS = NodeLinks
-
-    # The keys in the extras that are used to store the hash of the node and whether it should be used in caching.
-    _HASH_EXTRA_KEY: str = '_aiida_hash'
-    _VALID_CACHE_KEY: str = '_aiida_valid_cache'
+    _CLS_NODE_CACHING = NodeCaching
 
     # added by metaclass
     _plugin_type_string: ClassVar[str]
@@ -451,7 +452,7 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
             self._backend_entity.clean_values()
 
             # Retrieve the cached node.
-            same_node = self._get_same_node() if use_cache else None
+            same_node = self.base.caching._get_same_node() if use_cache else None  # pylint: disable=protected-access
 
             if same_node is not None:
                 self._store_from_cache(same_node, with_transaction=with_transaction)
@@ -476,7 +477,7 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
         self._backend_entity.store(links, with_transaction=with_transaction, clean=clean)
 
         self.base.links.incoming_cache = []
-        self._backend_entity.set_extra(self._HASH_EXTRA_KEY, self.get_hash())
+        self.base.caching.rehash()
 
         return self
 
@@ -530,66 +531,13 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
             new_node.base.links.add_incoming(self, link_type=LinkType.CREATE, link_label=entry.link_label)
             new_node.store()
 
-    def get_hash(self, ignore_errors: bool = True, **kwargs: Any) -> Optional[str]:
-        """Return the hash for this node based on its attributes.
+    def get_description(self) -> str:
+        """Return a string with a description of the node.
 
-        :param ignore_errors: return ``None`` on ``aiida.common.exceptions.HashingError`` (logging the exception)
+        :return: a description string
         """
-        if not self.is_stored:
-            raise exceptions.InvalidOperation('You can get the hash only after having stored the node')
-
-        return self._get_hash(ignore_errors=ignore_errors, **kwargs)
-
-    def _get_hash(self, ignore_errors: bool = True, **kwargs: Any) -> Optional[str]:
-        """
-        Return the hash for this node based on its attributes.
-
-        This will always work, even before storing.
-
-        :param ignore_errors: return ``None`` on ``aiida.common.exceptions.HashingError`` (logging the exception)
-        """
-        try:
-            return make_hash(self._get_objects_to_hash(), **kwargs)
-        except exceptions.HashingError:
-            if not ignore_errors:
-                raise
-            if self.logger:
-                self.logger.exception('Node hashing failed')
-            return None
-
-    def _get_objects_to_hash(self) -> List[Any]:
-        """Return a list of objects which should be included in the hash."""
-        top_level_module = self.__module__.split('.', 1)[0]
-        try:
-            version = importlib.import_module(top_level_module).__version__
-        except (ImportError, AttributeError) as exc:
-            raise exceptions.HashingError("The node's package version could not be determined") from exc
-        objects = [
-            version,
-            {
-                key: val
-                for key, val in self.base.attributes.items()
-                if key not in self._hash_ignored_attributes and key not in self._updatable_attributes  # pylint: disable=unsupported-membership-test
-            },
-            self.base.repository.hash(),
-            self.computer.uuid if self.computer is not None else None
-        ]
-        return objects
-
-    def rehash(self) -> None:
-        """Regenerate the stored hash of the Node."""
-        self.base.extras.set(self._HASH_EXTRA_KEY, self.get_hash())
-
-    def clear_hash(self) -> None:
-        """Sets the stored hash of the Node to None."""
-        self.base.extras.set(self._HASH_EXTRA_KEY, None)
-
-    def get_cache_source(self) -> Optional[str]:
-        """Return the UUID of the node that was used in creating this node from the cache, or None if it was not cached.
-
-        :return: source node UUID or None
-        """
-        return self.base.extras.get('_aiida_cached_from', None)
+        # pylint: disable=no-self-use
+        return ''
 
     @property
     def is_created_from_cache(self) -> bool:
@@ -597,54 +545,13 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
 
         :return: boolean, True if the node was created by cloning a cached node, False otherwise
         """
-        return self.get_cache_source() is not None
-
-    def _get_same_node(self) -> Optional['Node']:
-        """Returns a stored node from which the current Node can be cached or None if it does not exist
-
-        If a node is returned it is a valid cache, meaning its `_aiida_hash` extra matches `self.get_hash()`.
-        If there are multiple valid matches, the first one is returned.
-        If no matches are found, `None` is returned.
-
-        :return: a stored `Node` instance with the same hash as this code or None
-
-        Note: this should be only called on stored nodes, or internally from .store() since it first calls
-        clean_value() on the attributes to normalise them.
-        """
-        try:
-            return next(self._iter_all_same_nodes(allow_before_store=True))
-        except StopIteration:
-            return None
-
-    def get_all_same_nodes(self) -> List['Node']:
-        """Return a list of stored nodes which match the type and hash of the current node.
-
-        All returned nodes are valid caches, meaning their `_aiida_hash` extra matches `self.get_hash()`.
-
-        Note: this can be called only after storing a Node (since at store time attributes will be cleaned with
-        `clean_value` and the hash should become idempotent to the action of serialization/deserialization)
-        """
-        return list(self._iter_all_same_nodes())
-
-    def _iter_all_same_nodes(self, allow_before_store=False) -> Iterator['Node']:
-        """
-        Returns an iterator of all same nodes.
-
-        Note: this should be only called on stored nodes, or internally from .store() since it first calls
-        clean_value() on the attributes to normalise them.
-        """
-        if not allow_before_store and not self.is_stored:
-            raise exceptions.InvalidOperation('You can get the hash only after having stored the node')
-
-        node_hash = self._get_hash()
-
-        if not node_hash or not self._cachable:
-            return iter(())
-
-        builder = QueryBuilder(backend=self.backend)
-        builder.append(self.__class__, filters={f'extras.{self._HASH_EXTRA_KEY}': node_hash}, subclassing=False)
-
-        return (node for node in builder.all(flat=True) if node.is_valid_cache)  # type: ignore[misc,union-attr]
+        kls = self.__class__.__name__
+        warn_deprecation(
+            f'`{kls}.is_created_from_cache` is deprecated, use `{kls}.base.extras.is_created_from_cache` instead.',
+            version=3,
+            stacklevel=2
+        )
+        return self.base.caching.is_created_from_cache
 
     @property
     def is_valid_cache(self) -> bool:
@@ -654,7 +561,13 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
         has been set to ``False`` explicitly. Subclasses can override this property with more specific logic, but should
         probably also consider the value returned by this base class.
         """
-        return self.base.extras.get(self._VALID_CACHE_KEY, True)
+        kls = self.__class__.__name__
+        warn_deprecation(
+            f'`{kls}.is_valid_cache` is deprecated, use `{kls}.base.extras.is_valid_cache` instead.',
+            version=3,
+            stacklevel=2
+        )
+        return self.base.caching.is_valid_cache
 
     @is_valid_cache.setter
     def is_valid_cache(self, valid: bool) -> None:
@@ -665,16 +578,13 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
 
         :param valid: whether the node is valid or invalid for use in caching.
         """
-        type_check(valid, bool)
-        self.base.extras.set(self._VALID_CACHE_KEY, valid)
-
-    def get_description(self) -> str:
-        """Return a string with a description of the node.
-
-        :return: a description string
-        """
-        # pylint: disable=no-self-use
-        return ''
+        kls = self.__class__.__name__
+        warn_deprecation(
+            f'`{kls}.is_valid_cache` is deprecated, use `{kls}.base.extras.is_valid_cache` instead.',
+            version=3,
+            stacklevel=2
+        )
+        self.base.caching.is_valid_cache = valid
 
     _deprecated_repo_methods = {
         'copy_tree': 'copy_tree',
@@ -728,6 +638,18 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
         'update_comment': 'update',
     }
 
+    _deprecated_caching_methods = {
+        'get_hash': 'get_hash',
+        '_get_hash': '_get_hash',
+        '_get_objects_to_hash': '_get_objects_to_hash',
+        'rehash': 'rehash',
+        'clear_hash': 'clear_hash',
+        'get_cache_source': 'get_cache_source',
+        '_get_same_node': '_get_same_node',
+        'get_all_same_nodes': 'get_all_same_nodes',
+        '_iter_all_same_nodes': '_iter_all_same_nodes',
+    }
+
     _deprecated_links_methods = {
         'add_incoming': 'add_incoming',
         'validate_incoming': 'validate_incoming',
@@ -777,6 +699,14 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
                 f'`{kls}.{name}` is deprecated, use `{kls}.base.comments.{new_name}` instead.', version=3, stacklevel=3
             )
             return getattr(self.base.comments, new_name)
+
+        if name in self._deprecated_caching_methods:
+            new_name = self._deprecated_caching_methods[name]
+            kls = self.__class__.__name__
+            warn_deprecation(
+                f'`{kls}.{name}` is deprecated, use `{kls}.base.caching.{new_name}` instead.', version=3, stacklevel=3
+            )
+            return getattr(self.base.caching, new_name)
 
         if name in self._deprecated_links_methods:
             new_name = self._deprecated_links_methods[name]

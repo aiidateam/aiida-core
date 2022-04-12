@@ -253,7 +253,7 @@ Examples of columns we have encountered so far are ``id``, ``uuid`` and ``attrib
 If the column is a dictionary, you can expand the dictionary values using a dot notation, as we have done in the previous example to obtain the ``attributes.value``.
 This can be used to project the values of nested dictionaries as well.
 
-The keys of columns can be one from following list: 
+The keys of columns can be one from following list:
 
 .. code-block:: python
 

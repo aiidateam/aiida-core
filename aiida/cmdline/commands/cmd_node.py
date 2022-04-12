@@ -532,7 +532,7 @@ def comment_show(user, nodes):
 
         for comment in comments:
             comment_msg = [
-                f'Comment<{comment.id}> for Node<{node.pk}> by {comment.user.email}',
+                f'Comment<{comment.pk}> for Node<{node.pk}> by {comment.user.email}',
                 f"Created on {timezone.localtime(comment.ctime).strftime('%Y-%m-%d %H:%M')}",
                 f"Last modified on {timezone.localtime(comment.mtime).strftime('%Y-%m-%d %H:%M')}",
                 f'\n{comment.content}\n',

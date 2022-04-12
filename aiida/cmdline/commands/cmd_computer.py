@@ -545,7 +545,7 @@ def computer_delete(computer):
     label = computer.label
 
     try:
-        orm.Computer.objects.delete(computer.id)
+        orm.Computer.objects.delete(computer.pk)
     except InvalidOperation as error:
         echo.echo_critical(str(error))
 

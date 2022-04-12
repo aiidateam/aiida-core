@@ -436,9 +436,9 @@ class Graph:
         :returns: aiida.orm.nodes.node.Node
         """
         if isinstance(node, int):
-            return orm.Node.Collection.get_cached(orm.Node, self._backend).get(pk=node)
+            return orm.Node.objects(self._backend).get(pk=node)
         if isinstance(node, str):
-            return orm.Node.Collection.get_cached(orm.Node, self._backend).get(uuid=node)
+            return orm.Node.objects(self._backend).get(uuid=node)
         return node
 
     @staticmethod

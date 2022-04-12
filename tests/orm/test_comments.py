@@ -90,7 +90,7 @@ class TestComment:
         """Test deleting many Comments through the collection."""
         comment_one = Comment(self.node, self.user, 'I will perish').store()
         comment_two = Comment(self.node, self.user, 'Surely not?').store()
-        comment_ids = [_.id for _ in [comment_one, comment_two]]
+        comment_ids = [_.pk for _ in [comment_one, comment_two]]
 
         # Assert the Comments exist
         assert len(Comment.objects.all()) == 3
@@ -102,7 +102,7 @@ class TestComment:
         # Make sure only the setUp Comment is left
         builder = orm.QueryBuilder().append(Comment, project='id')
         assert builder.count() == 1
-        assert builder.all()[0][0] == self.comment.id
+        assert builder.all()[0][0] == self.comment.pk
 
         for comment_pk in comment_ids:
             with pytest.raises(exceptions.NotExistent):
@@ -133,7 +133,7 @@ class TestComment:
 
         # Retrieve a node by joining on a specific comment
         builder = orm.QueryBuilder()
-        builder.append(Comment, tag='comment', filters={'id': comment_one.id})
+        builder.append(Comment, tag='comment', filters={'id': comment_one.pk})
         builder.append(orm.Node, with_comment='comment', project=['uuid'])
         nodes = builder.all()
 
@@ -143,7 +143,7 @@ class TestComment:
 
         # Retrieve a comment by joining on a specific node
         builder = orm.QueryBuilder()
-        builder.append(orm.Node, tag='node', filters={'id': node_two.id})
+        builder.append(orm.Node, tag='node', filters={'id': node_two.pk})
         builder.append(Comment, with_node='node', project=['uuid'])
         comments = builder.all()
 
@@ -153,7 +153,7 @@ class TestComment:
 
         # Retrieve a user by joining on a specific comment
         builder = orm.QueryBuilder()
-        builder.append(Comment, tag='comment', filters={'id': comment_four.id})
+        builder.append(Comment, tag='comment', filters={'id': comment_four.pk})
         builder.append(orm.User, with_comment='comment', project=['email'])
         users = builder.all()
 
@@ -174,7 +174,7 @@ class TestComment:
 
         # Retrieve users from comments of a single node by joining specific node
         builder = orm.QueryBuilder()
-        builder.append(orm.Node, tag='node', filters={'id': node_four.id})
+        builder.append(orm.Node, tag='node', filters={'id': node_four.pk})
         builder.append(Comment, tag='comments', with_node='node', project=['uuid'])
         builder.append(orm.User, with_comment='comments', project=['email'])
         comments_and_users = builder.all()
@@ -193,7 +193,7 @@ class TestComment:
         """Test getting a comment from the collection"""
         node = orm.Data().store()
         comment = node.base.comments.add('Check out the comment on _this_ one')
-        gotten_comment = Comment.objects.get(id=comment.id)
+        gotten_comment = Comment.objects.get(id=comment.pk)
         assert isinstance(gotten_comment, Comment)
 
     def test_delete_node_with_comments(self):

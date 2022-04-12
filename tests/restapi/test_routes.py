@@ -95,7 +95,7 @@ class TestRestApi:
             'time': now(),
             'loggername': 'loggername',
             'levelname': logging.getLevelName(LOG_LEVEL_REPORT),
-            'dbnode_id': calc.id,
+            'dbnode_id': calc.pk,
             'message': 'This is a template record message',
             'metadata': {
                 'content': 'test'

@@ -201,7 +201,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
 
         try:
             with session.begin_nested():
-                link = DbLink(input_id=source.id, output_id=self.id, label=link_label, type=link_type.value)
+                link = DbLink(input_id=source.pk, output_id=self.pk, label=link_label, type=link_type.value)
                 session.add(link)
         except SQLAlchemyError as exception:
             raise exceptions.UniquenessError(f'failed to create the link: {exception}') from exception

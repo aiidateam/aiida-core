@@ -951,13 +951,13 @@ class TestNodeCaching:
     def test_is_valid_cache(self):
         """Test the ``Node.is_valid_cache`` property."""
         node = Node()
-        assert node.is_valid_cache
+        assert node.base.caching.is_valid_cache
 
-        node.is_valid_cache = False
-        assert not node.is_valid_cache
+        node.base.caching.is_valid_cache = False
+        assert not node.base.caching.is_valid_cache
 
         with pytest.raises(TypeError):
-            node.is_valid_cache = 'false'
+            node.base.caching.is_valid_cache = 'false'
 
     def test_store_from_cache(self):
         """Regression test for storing a Node with (nested) repository content with caching."""

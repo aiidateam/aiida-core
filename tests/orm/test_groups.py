@@ -196,7 +196,7 @@ class TestGroups:
         node = orm.Data().store()
         group = orm.Group(label='testgroup3', description='some other desc').store()
 
-        group_copy = orm.Group.get(label='testgroup3')
+        group_copy = orm.Group.objects.get(label='testgroup3')
         assert group.uuid == group_copy.uuid
 
         group.add_nodes(node)
@@ -206,7 +206,7 @@ class TestGroups:
 
         with pytest.raises(exceptions.NotExistent):
             # The group does not exist anymore
-            orm.Group.get(label='testgroup3')
+            orm.Group.objects.get(label='testgroup3')
 
     def test_delete_node(self):
         """Test deletion of a node that has been assigned to a group."""
@@ -279,7 +279,7 @@ class TestGroups:
 
         # And that the results are correct
         assert builder.count() == 1
-        assert builder.first(flat=True) == group.id
+        assert builder.first(flat=True) == group.pk
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

@@ -223,7 +223,7 @@ class TestVerdiDataArray:
         assert b'Usage:' in output, 'Sub-command verdi data array show --help failed.'
 
     def test_arrayshow(self):
-        options = [str(self.arr.id)]
+        options = [str(self.arr.pk)]
         res = self.cli_runner(cmd_array.array_show, options, catch_exceptions=False)
         assert res.exit_code == 0, 'The command did not finish correctly'
 
@@ -238,7 +238,7 @@ class TestVerdiDataBands(DummyVerdiDataListable):
         # pylint: disable=attribute-defined-outside-init
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
-        self.ids = self.create_structure_bands()
+        self.pks = self.create_structure_bands()
         self.cli_runner = run_cli_command
         yield
         self.loop.close()
@@ -302,9 +302,9 @@ class TestVerdiDataBands(DummyVerdiDataListable):
         g_e.store()
 
         return {
-            DummyVerdiDataListable.NODE_ID_STR: bands.id,
-            DummyVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.id,
-            DummyVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.id
+            DummyVerdiDataListable.NODE_ID_STR: bands.pk,
+            DummyVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.pk,
+            DummyVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.pk
         }
 
     def test_bandsshowhelp(self):
@@ -316,8 +316,8 @@ class TestVerdiDataBands(DummyVerdiDataListable):
         assert b'Usage:' in output, 'Sub-command verdi data bands show --help failed.'
 
     def test_bandslist(self):
-        self.data_listing_test(BandsData, 'FeO', self.ids)
-        self.data_listing_test(BandsData, '<<NOT FOUND>>', self.ids)
+        self.data_listing_test(BandsData, 'FeO', self.pks)
+        self.data_listing_test(BandsData, '<<NOT FOUND>>', self.pks)
 
     def test_bandslist_with_elements(self):
         options = ['-e', 'Fe']
@@ -330,7 +330,7 @@ class TestVerdiDataBands(DummyVerdiDataListable):
         assert b'Usage:' in output, 'Sub-command verdi data bands export --help failed.'
 
     def test_bandsexport(self):
-        options = [str(self.ids[DummyVerdiDataListable.NODE_ID_STR])]
+        options = [str(self.pks[DummyVerdiDataListable.NODE_ID_STR])]
         res = self.cli_runner(cmd_bands.bands_export, options, catch_exceptions=False)
         assert res.exit_code == 0, 'The command did not finish correctly'
         assert b'[1.0, 3.0]' in res.stdout_bytes, 'The string [1.0, 3.0] was not found in the bands export'
@@ -348,14 +348,14 @@ class TestVerdiDataBands(DummyVerdiDataListable):
         bands.store()
 
         # matplotlib
-        options = [str(bands.id), '--format', 'mpl_singlefile']
+        options = [str(bands.pk), '--format', 'mpl_singlefile']
         res = self.cli_runner(cmd_bands.bands_export, options, catch_exceptions=False)
         assert b'p.scatter' in res.stdout_bytes, 'The string p.scatter was not found in the bands mpl export'
 
         # gnuplot
         from click.testing import CliRunner
         with CliRunner().isolated_filesystem():
-            options = [str(bands.id), '--format', 'gnuplot', '-o', 'bands.gnu']
+            options = [str(bands.pk), '--format', 'gnuplot', '-o', 'bands.gnu']
             self.cli_runner(cmd_bands.bands_export, options, catch_exceptions=False)
             with open('bands.gnu', 'r', encoding='utf8') as gnu_file:
                 res = gnu_file.read()
@@ -380,7 +380,7 @@ class TestVerdiDataDict:
 
     def test_dictshow(self):
         """Test verdi data dict show."""
-        options = [str(self.dct.id)]
+        options = [str(self.dct.pk)]
         res = self.cli_runner(cmd_dict.dictionary_show, options, catch_exceptions=False)
         assert res.exit_code == 0, 'The command verdi data dict show did not finish correctly'
         assert b'"a": 1' in res.stdout_bytes, 'The string "a": 1 was not found in the output' \
@@ -407,7 +407,7 @@ class TestVerdiDataRemote:
 
     def test_remoteshow(self):
         """Test verdi data remote show."""
-        options = [str(self.rmt.id)]
+        options = [str(self.rmt.pk)]
         res = self.cli_runner(cmd_remote.remote_show, options, catch_exceptions=False)
         assert res.exit_code == 0, 'The command verdi data remote show did not finish correctly'
         assert b'Remote computer name:' in res.stdout_bytes, (
@@ -422,7 +422,7 @@ class TestVerdiDataRemote:
         assert b'Usage:' in output, 'Sub-command verdi data remote ls --help failed.'
 
     def test_remotels(self):
-        options = ['--long', str(self.rmt.id)]
+        options = ['--long', str(self.rmt.pk)]
         res = self.cli_runner(cmd_remote.remote_ls, options, catch_exceptions=False)
         assert res.exit_code == 0, 'The command verdi data remote ls did not finish correctly'
         assert b'file.txt' in res.stdout_bytes, 'The file "file.txt" was not found in the output' \
@@ -433,7 +433,7 @@ class TestVerdiDataRemote:
         assert b'Usage:' in output, 'Sub-command verdi data remote cat --help failed.'
 
     def test_remotecat(self):
-        options = [str(self.rmt.id), 'file.txt']
+        options = [str(self.rmt.pk), 'file.txt']
         res = self.cli_runner(cmd_remote.remote_cat, options, catch_exceptions=False)
         assert res.exit_code == 0, 'The command verdi data remote cat did not finish correctly'
         assert b'test string' in res.stdout_bytes, 'The string "test string" was not found in the output' \
@@ -450,7 +450,7 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
         self.comp = aiida_localhost
         self.this_folder = os.path.dirname(__file__)
         self.this_file = os.path.basename(__file__)
-        self.ids = self.create_trajectory_data()
+        self.pks = self.create_trajectory_data()
         self.cli_runner = run_cli_command
 
     @staticmethod
@@ -509,9 +509,9 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
         g_e.store()
 
         return {
-            DummyVerdiDataListable.NODE_ID_STR: traj.id,
-            DummyVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.id,
-            DummyVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.id
+            DummyVerdiDataListable.NODE_ID_STR: traj.pk,
+            DummyVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.pk,
+            DummyVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.pk
         }
 
     def test_showhelp(self):
@@ -520,12 +520,12 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
             ' of verdi data trajecotry show --help'
 
     def test_list(self):
-        self.data_listing_test(TrajectoryData, str(self.ids[DummyVerdiDataListable.NODE_ID_STR]), self.ids)
+        self.data_listing_test(TrajectoryData, str(self.pks[DummyVerdiDataListable.NODE_ID_STR]), self.pks)
 
     @pytest.mark.skipif(not has_pycifrw(), reason='Unable to import PyCifRW')
     def test_export(self):
         new_supported_formats = list(cmd_trajectory.EXPORT_FORMATS)
-        self.data_export_test(TrajectoryData, self.ids, new_supported_formats)
+        self.data_export_test(TrajectoryData, self.pks, new_supported_formats)
 
 
 class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):
@@ -539,7 +539,7 @@ class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):
         self.comp = aiida_localhost
         self.this_folder = os.path.dirname(__file__)
         self.this_file = os.path.basename(__file__)
-        self.ids = self.create_structure_data()
+        self.pks = self.create_structure_data()
         for group_label in ['xyz structure group', 'ase structure group']:
             Group(label=group_label).store()
         self.cli_runner = run_cli_command
@@ -584,9 +584,9 @@ class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):
         g_e.store()
 
         return {
-            DummyVerdiDataListable.NODE_ID_STR: struc.id,
-            DummyVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.id,
-            DummyVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.id
+            DummyVerdiDataListable.NODE_ID_STR: struc.pk,
+            DummyVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.pk,
+            DummyVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.pk
         }
 
     def test_importhelp(self):
@@ -747,10 +747,10 @@ PRIMVEC
                 assert grpline in res.output
 
     def test_list(self):
-        self.data_listing_test(StructureData, 'BaO3Ti', self.ids)
+        self.data_listing_test(StructureData, 'BaO3Ti', self.pks)
 
     def test_export(self):
-        self.data_export_test(StructureData, self.ids, cmd_structure.EXPORT_FORMATS)
+        self.data_export_test(StructureData, self.pks, cmd_structure.EXPORT_FORMATS)
 
 
 @pytest.mark.skipif(not has_pycifrw(), reason='Unable to import PyCifRW')
@@ -783,7 +783,7 @@ class TestVerdiDataCif(DummyVerdiDataListable, DummyVerdiDataExportable):
         self.comp = aiida_localhost
         self.this_folder = os.path.dirname(__file__)
         self.this_file = os.path.basename(__file__)
-        self.ids = self.create_cif_data()
+        self.pks = self.create_cif_data()
         self.cli_runner = run_cli_command
 
     def create_cif_data(self):
@@ -805,9 +805,9 @@ class TestVerdiDataCif(DummyVerdiDataListable, DummyVerdiDataExportable):
         self.cif = a_cif  # pylint: disable=attribute-defined-outside-init
 
         return {
-            DummyVerdiDataListable.NODE_ID_STR: a_cif.id,
-            DummyVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.id,
-            DummyVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.id
+            DummyVerdiDataListable.NODE_ID_STR: a_cif.pk,
+            DummyVerdiDataListable.NON_EMPTY_GROUP_ID_STR: g_ne.pk,
+            DummyVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.pk
         }
 
     def test_list(self):
@@ -815,7 +815,7 @@ class TestVerdiDataCif(DummyVerdiDataListable, DummyVerdiDataExportable):
         This method tests that the Cif listing works as expected with all
         possible flags and arguments.
         """
-        self.data_listing_test(CifData, 'C O2', self.ids)
+        self.data_listing_test(CifData, 'C O2', self.pks)
 
     def test_showhelp(self):
         options = ['--help']
@@ -850,7 +850,7 @@ class TestVerdiDataCif(DummyVerdiDataListable, DummyVerdiDataExportable):
     def test_export(self):
         """This method checks if the Cif export works as expected with all
         possible flags and arguments."""
-        self.data_export_test(CifData, self.ids, cmd_cif.EXPORT_FORMATS)
+        self.data_export_test(CifData, self.pks, cmd_cif.EXPORT_FORMATS)
 
 
 class TestVerdiDataSinglefile(DummyVerdiDataListable, DummyVerdiDataExportable):

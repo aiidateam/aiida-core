@@ -368,7 +368,7 @@ def group_list(
 
     # Query groups that contain a particular node
     if node:
-        builder.append(orm.Node, filters={'id': {'==': node.id}}, with_group='group')
+        builder.append(orm.Node, filters={'id': {'==': node.pk}}, with_group='group')
 
     builder.order_by({orm.Group: {order_by: order_dir}})
     result = builder.all()

@@ -112,14 +112,14 @@ However, this can be changed on a per-node basis, by setting it to ``False``
 .. code-block:: python
 
     node = load_node(<IDENTIFIER>)
-    node.is_valid_cache = False
+    node.base.caching.is_valid_cache = False
 
 Setting the property to ``False``, will cause an extra to be stored on the node in the database, such that even when it is loaded at a later point in time, ``is_valid_cache`` returns ``False``.
 
 .. code-block:: python
 
     node = load_node(<IDENTIFIER>)
-    assert node.is_valid_cache is False
+    assert node.base.caching.is_valid_cache is False
 
 Through this method, it is possible to guarantee that individual nodes are never used as a `source` for caching.
 

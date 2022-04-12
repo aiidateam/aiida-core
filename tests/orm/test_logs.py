@@ -42,7 +42,7 @@ class TestBackendLog:
     def create_log(self):
         node = orm.CalculationNode().store()
         record = self.log_record
-        record['dbnode_id'] = node.id
+        record['dbnode_id'] = node.pk
         return Log(**record), node
 
     def test_create_log_message(self):
@@ -57,7 +57,7 @@ class TestBackendLog:
         assert entry.message == self.log_record['message']
         assert entry.metadata == self.log_record['metadata']
         assert entry.dbnode_id == self.log_record['dbnode_id']
-        assert entry.dbnode_id == node.id
+        assert entry.dbnode_id == node.pk
 
     def test_create_log_unserializable_metadata(self):
         """Test that unserializable data will be removed before reaching the database causing an error."""
@@ -87,7 +87,7 @@ class TestBackendLog:
     def test_log_delete_single(self):
         """Test that a single log entry can be deleted through the collection."""
         entry, _ = self.create_log()
-        log_id = entry.id
+        log_id = entry.pk
 
         assert len(Log.objects.all()) == 1
 
@@ -104,7 +104,7 @@ class TestBackendLog:
         count = 10
         for _ in range(count):
             self.create_log()
-        log_id = Log.objects.find(limit=1)[0].id
+        log_id = Log.objects.find(limit=1)[0].pk
 
         assert len(Log.objects.all()) == count
 
@@ -126,7 +126,7 @@ class TestBackendLog:
         count = 5
         for _ in range(count):
             log_, _ = self.create_log()
-            log_ids.append(log_.id)
+            log_ids.append(log_.pk)
         special_log, _ = self.create_log()
 
         # Assert the Logs exist
@@ -139,7 +139,7 @@ class TestBackendLog:
         # Make sure only the special_log Log is left
         builder = orm.QueryBuilder().append(Log, project='id')
         assert builder.count() == 1
-        assert builder.all()[0][0] == special_log.id
+        assert builder.all()[0][0] == special_log.pk
 
         for log_id in log_ids:
             with pytest.raises(exceptions.NotExistent):
@@ -153,7 +153,7 @@ class TestBackendLog:
         node = orm.Data().store()
         for _ in range(10):
             record = self.log_record
-            record['dbnode_id'] = node.id
+            record['dbnode_id'] = node.pk
             Log(**record)
 
         entries = Log.objects.all()
@@ -169,7 +169,7 @@ class TestBackendLog:
         node_ids = []
         for _ in range(10):
             _, node = self.create_log()
-            node_ids.append(node.id)
+            node_ids.append(node.pk)
         node_ids.sort()
 
         order_by = [OrderSpecifier('dbnode_id', ASCENDING)]
@@ -187,7 +187,7 @@ class TestBackendLog:
         node = orm.Data().store()
         limit = 2
         for _ in range(limit * 2):
-            self.log_record['dbnode_id'] = node.id
+            self.log_record['dbnode_id'] = node.pk
             Log(**self.log_record)
         entries = Log.objects.find(limit=limit)
         assert len(entries) == limit
@@ -201,7 +201,7 @@ class TestBackendLog:
         node_ids = []
         for _ in range(10):
             _, node = self.create_log()
-            node_ids.append(node.id)
+            node_ids.append(node.pk)
 
         node_id_of_choice = node_ids.pop(randint(0, 9))
 
@@ -252,12 +252,12 @@ class TestBackendLog:
 
         # Setup nodes
         log_1, calc = self.create_log()
-        log_2 = Log(now(), 'loggername', logging.getLevelName(LOG_LEVEL_REPORT), calc.id, 'log message #2')
-        log_3 = Log(now(), 'loggername', logging.getLevelName(LOG_LEVEL_REPORT), calc.id, 'log message #3')
+        log_2 = Log(now(), 'loggername', logging.getLevelName(LOG_LEVEL_REPORT), calc.pk, 'log message #2')
+        log_3 = Log(now(), 'loggername', logging.getLevelName(LOG_LEVEL_REPORT), calc.pk, 'log message #3')
 
         # Retrieve a node by joining on a specific log ('log_1')
         builder = QueryBuilder()
-        builder.append(Log, tag='log', filters={'id': log_2.id})
+        builder.append(Log, tag='log', filters={'id': log_2.pk})
         builder.append(orm.CalculationNode, with_log='log', project=['uuid'])
         nodes = builder.all()
 
@@ -267,7 +267,7 @@ class TestBackendLog:
 
         # Retrieve all logs for a specific node by joining on a said node
         builder = QueryBuilder()
-        builder.append(orm.CalculationNode, tag='calc', filters={'id': calc.id})
+        builder.append(orm.CalculationNode, tag='calc', filters={'id': calc.pk})
         builder.append(Log, with_node='calc', project=['uuid'])
         logs = builder.all()
 
@@ -302,7 +302,7 @@ class TestBackendLog:
                 now(),
                 'loggername',
                 logging.getLevelName(LOG_LEVEL_REPORT),
-                calc.id,
+                calc.pk,
                 'To keep your balance, you must keep moving',
                 metadata=wrong_metadata_format
             )
@@ -312,7 +312,7 @@ class TestBackendLog:
             now(),
             'loggername',
             logging.getLevelName(LOG_LEVEL_REPORT),
-            calc.id,
+            calc.pk,
             'To keep your balance, you must keep moving',
             metadata=correct_metadata_format
         )
@@ -325,7 +325,7 @@ class TestBackendLog:
             now(),
             'loggername',
             logging.getLevelName(LOG_LEVEL_REPORT),
-            calc.id,
+            calc.pk,
             'To keep your balance, you must keep moving',
             metadata=json_metadata_format
         )
@@ -338,7 +338,7 @@ class TestBackendLog:
             now(),
             'loggername',
             logging.getLevelName(LOG_LEVEL_REPORT),
-            calc.id,
+            calc.pk,
             'To keep your balance, you must keep moving',
             metadata=None
         )

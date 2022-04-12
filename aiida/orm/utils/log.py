@@ -51,7 +51,7 @@ def get_dblogger_extra(node):
     if not isinstance(node, Node) or not node.is_stored:
         return {}
 
-    return {'dbnode_id': node.id, 'backend': node.backend}
+    return {'dbnode_id': node.pk, 'backend': node.backend}
 
 
 def create_logger_adapter(logger, node):

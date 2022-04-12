@@ -701,7 +701,7 @@ class QueryBuilder:
             if isinstance(value, entities.Entity):
                 # Convert to be the id of the joined entity because we can't query
                 # for the object instance directly
-                processed_filters[f'{key}_id'] = value.id
+                processed_filters[f'{key}_id'] = value.pk
             else:
                 processed_filters[key] = value
 

@@ -174,7 +174,7 @@ def test_link_manager_with_nested_namespaces(aiida_profile_clean):
             calc.inputs.__name__
         except AttributeError:
             pass
-        assert not record
+        assert not record, print(record.list[0].message)
 
     # Must raise a AttributeError, otherwise tab competion will not work
     for attribute in ['not_existent', 'not__existent__nested']:

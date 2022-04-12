@@ -77,7 +77,7 @@ class TestWorkFunction:
         # Caching should always be disabled for a WorkFunctionNode
         with enable_caching():
             _, cached = self.test_workfunction.run_get_node(self.default_int)
-            assert not cached.is_created_from_cache
+            assert not cached.base.caching.is_created_from_cache
 
     def test_call_link_label(self):
         """Verify that setting a `call_link_label` on a `calcfunction` called from a `workfunction` works."""

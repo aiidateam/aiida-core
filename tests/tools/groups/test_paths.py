@@ -19,7 +19,7 @@ from aiida.tools.groups.paths import GroupAttr, GroupNotFoundError, GroupPath, I
 def setup_groups(aiida_profile_clean):
     """Setup some groups for testing."""
     for label in ['a', 'a/b', 'a/c/d', 'a/c/e/g', 'a/f']:
-        group, _ = orm.Group.objects.get_or_create(label)
+        group, _ = orm.Group.collection.get_or_create(label)
         group.description = f'A description of {label}'
     yield
 
@@ -120,7 +120,7 @@ def test_walk(setup_groups):
 def test_walk_with_invalid_path(aiida_profile_clean):
     """Test the ``GroupPath.walk`` method with invalid paths."""
     for label in ['a', 'a/b', 'a/c/d', 'a/c/e/g', 'a/f', 'bad//group', 'bad/other']:
-        orm.Group.objects.get_or_create(label)
+        orm.Group.collection.get_or_create(label)
     group_path = GroupPath()
     expected = ['a', 'a/b', 'a/c', 'a/c/d', 'a/c/e', 'a/c/e/g', 'a/f', 'bad', 'bad/other']
     assert [c.path for c in sorted(group_path.walk())] == expected
@@ -128,7 +128,7 @@ def test_walk_with_invalid_path(aiida_profile_clean):
 
 def test_walk_nodes(aiida_profile_clean):
     """Test the ``GroupPath.walk_nodes()`` function."""
-    group, _ = orm.Group.objects.get_or_create('a')
+    group, _ = orm.Group.collection.get_or_create('a')
     node = orm.Data()
     node.base.attributes.set_many({'i': 1, 'j': 2})
     node.store()
@@ -144,9 +144,9 @@ def test_walk_nodes(aiida_profile_clean):
 def test_cls(aiida_profile_clean):
     """Test that only instances of `cls` or its subclasses are matched by ``GroupPath``."""
     for label in ['a', 'a/b', 'a/c/d', 'a/c/e/g']:
-        orm.Group.objects.get_or_create(label)
+        orm.Group.collection.get_or_create(label)
     for label in ['a/c/e', 'a/f']:
-        orm.UpfFamily.objects.get_or_create(label)
+        orm.UpfFamily.collection.get_or_create(label)
     group_path = GroupPath()
     assert sorted([c.path for c in group_path.walk()]) == ['a', 'a/b', 'a/c', 'a/c/d', 'a/c/e', 'a/c/e/g']
     group_path = GroupPath(cls=orm.UpfFamily)
@@ -157,7 +157,7 @@ def test_cls(aiida_profile_clean):
 def test_attr(aiida_profile_clean):
     """Test ``GroupAttr``."""
     for label in ['a', 'a/b', 'a/c/d', 'a/c/e/g', 'a/f', 'bad space', 'bad@char', '_badstart']:
-        orm.Group.objects.get_or_create(label)
+        orm.Group.collection.get_or_create(label)
     group_path = GroupPath()
     assert isinstance(group_path.browse.a.c.d, GroupAttr)
     assert isinstance(group_path.browse.a.c.d(), GroupPath)
@@ -169,11 +169,11 @@ def test_attr(aiida_profile_clean):
 
 def test_cls_label_clashes(aiida_profile_clean):
     """Test behaviour when multiple group classes have the same label."""
-    group_01, _ = orm.Group.objects.get_or_create('a')
+    group_01, _ = orm.Group.collection.get_or_create('a')
     node_01 = orm.Data().store()
     group_01.add_nodes(node_01)
 
-    group_02, _ = orm.UpfFamily.objects.get_or_create('a')
+    group_02, _ = orm.UpfFamily.collection.get_or_create('a')
     node_02 = orm.Data().store()
     group_02.add_nodes(node_02)
 

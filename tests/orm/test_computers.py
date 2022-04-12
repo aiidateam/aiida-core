@@ -34,7 +34,7 @@ class TestComputer:
         ).store()
 
         # Configure the computer - no parameters for local transport
-        authinfo = orm.AuthInfo(computer=new_comp, user=orm.User.objects.get_default())
+        authinfo = orm.AuthInfo(computer=new_comp, user=orm.User.collection.get_default())
         authinfo.store()
 
         transport = new_comp.get_transport()
@@ -58,13 +58,13 @@ class TestComputer:
 
         comp_pk = new_comp.pk
 
-        check_computer = orm.Computer.objects.get(id=comp_pk)
+        check_computer = orm.Computer.collection.get(id=comp_pk)
         assert comp_pk == check_computer.pk
 
-        orm.Computer.objects.delete(comp_pk)
+        orm.Computer.collection.delete(comp_pk)
 
         with pytest.raises(exceptions.NotExistent):
-            orm.Computer.objects.get(id=comp_pk)
+            orm.Computer.collection.get(id=comp_pk)
 
 
 class TestComputerConfigure:
@@ -85,7 +85,7 @@ class TestComputerConfigure:
         self.comp_builder.default_memory_per_machine = 1000000
         self.comp_builder.mpirun_command = 'mpirun'
         self.comp_builder.shebang = '#!xonsh'
-        self.user = orm.User.objects.get_default()
+        self.user = orm.User.collection.get_default()
 
     def test_configure_local(self):
         """Configure a computer for local transport and check it is configured."""

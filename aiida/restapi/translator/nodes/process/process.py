@@ -45,7 +45,7 @@ class ProcessTranslator(NodeTranslator):
             }
 
         report = {}
-        report['logs'] = [get_dict(log) for log in Log.objects.get_logs_for(process)]
+        report['logs'] = [get_dict(log) for log in Log.collection.get_logs_for(process)]
 
         return report
 

@@ -130,11 +130,7 @@ class Group(entities.Entity['BackendGroup'], metaclass=GroupMeta):
     # added by metaclass
     _type_string: ClassVar[Optional[str]]
 
-    Collection = GroupCollection
-
-    @classproperty
-    def objects(cls: Type['Group']) -> GroupCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
-        return GroupCollection.get_cached(cls, get_manager().get_profile_storage())
+    _CLS_COLLECTION = GroupCollection
 
     def __init__(
         self,
@@ -159,7 +155,7 @@ class Group(entities.Entity['BackendGroup'], metaclass=GroupMeta):
             raise ValueError('Group label must be provided')
 
         backend = backend or get_manager().get_profile_storage()
-        user = user or users.User.objects(backend).get_default()
+        user = user or users.User.collection(backend).get_default()
         type_check(user, users.User)
         type_string = self._type_string
 

@@ -20,7 +20,7 @@ def create_app(aiida_profile_clean):  # pylint: disable=unused-argument
     """Set up Flask App"""
     from aiida.restapi.run_api import configure_api
 
-    user = orm.User.objects.get_default()
+    user = orm.User.collection.get_default()
 
     def _create_app(**kwargs):
         catch_internal_server = kwargs.pop('catch_internal_server', True)

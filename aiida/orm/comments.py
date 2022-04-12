@@ -66,11 +66,7 @@ class CommentCollection(entities.Collection['Comment']):
 class Comment(entities.Entity['BackendComment']):
     """Base class to map a DbComment that represents a comment attached to a certain Node."""
 
-    Collection = CommentCollection
-
-    @classproperty
-    def objects(cls: Type['Comment']) -> CommentCollection:  # type: ignore[misc] # pylint: disable=no-self-argument
-        return CommentCollection.get_cached(cls, get_manager().get_profile_storage())
+    _CLS_COLLECTION = CommentCollection
 
     def __init__(
         self, node: 'Node', user: 'User', content: Optional[str] = None, backend: Optional['StorageBackend'] = None

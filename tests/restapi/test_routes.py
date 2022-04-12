@@ -40,7 +40,7 @@ class TestRestApi:
         self.app = api.app
         self.app.config['TESTING'] = True
 
-        self.user = orm.User.objects.get_default()
+        self.user = orm.User.collection.get_default()
 
         # create test inputs
         cell = ((2., 0., 0.), (0., 2., 0.), (0., 0., 2.))

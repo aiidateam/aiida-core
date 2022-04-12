@@ -803,7 +803,7 @@ class CalcJob(Process):
 
         for (remote_computer_uuid, _, dest_rel_path) in remote_copy_list:
             try:
-                Computer.objects.get(uuid=remote_computer_uuid)  # pylint: disable=unused-variable
+                Computer.collection.get(uuid=remote_computer_uuid)  # pylint: disable=unused-variable
             except exceptions.NotExistent as exception:
                 raise PluginInternalError(
                     '[presubmission of calc {}] '

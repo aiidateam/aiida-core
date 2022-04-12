@@ -61,7 +61,7 @@ class TestBackend:
         with self.backend.transaction():
             user1.store()
         # the following shouldn't raise
-        orm.User.objects.get(email='user_store@email.com')
+        orm.User.collection.get(email='user_store@email.com')
 
         user2 = orm.User('user_store_fail@email.com')
         try:
@@ -72,7 +72,7 @@ class TestBackend:
             pass
 
         with pytest.raises(exceptions.NotExistent):
-            orm.User.objects.get(email='user_store_fail@email.com')
+            orm.User.collection.get(email='user_store_fail@email.com')
 
     def test_bulk_insert(self):
         """Test that bulk insert works."""
@@ -84,7 +84,7 @@ class TestBackend:
         assert len(pks) == len(rows)
         for pk, row in zip(pks, rows):
             assert isinstance(pk, int)
-            user = orm.User.objects.get(id=pk)
+            user = orm.User.collection.get(id=pk)
             assert user.email == row['email']
 
     def test_bulk_insert_in_transaction(self):
@@ -98,7 +98,7 @@ class TestBackend:
             pass
         for row in rows:
             with pytest.raises(exceptions.NotExistent):
-                orm.User.objects.get(email=row['email'])
+                orm.User.collection.get(email=row['email'])
 
     def test_bulk_update(self):
         """Test that bulk update works."""
@@ -154,7 +154,7 @@ class TestBackend:
         group.add_nodes([node])
 
         # checks before deletion
-        orm.Node.objects.get(id=node_pk)
+        orm.Node.collection.get(id=node_pk)
         assert len(calc_node.base.links.get_outgoing().all()) == 1
         assert len(group.nodes) == 1
 
@@ -167,6 +167,6 @@ class TestBackend:
 
         # checks after deletion
         with pytest.raises(exceptions.NotExistent):
-            orm.Node.objects.get(id=node_pk)
+            orm.Node.collection.get(id=node_pk)
         assert len(calc_node.base.links.get_outgoing().all()) == 0
         assert len(group.nodes) == 0

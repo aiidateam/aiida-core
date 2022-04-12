@@ -292,7 +292,7 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     else:
         echo.echo_success(f'Computer<{computer.pk}> {computer.label} created')
 
-    is_configured = computer.is_user_configured(orm.User.objects.get_default())
+    is_configured = computer.is_user_configured(orm.User.collection.get_default())
 
     if not is_configured:
         echo.echo_report('Note: before the computer can be used, it has to be configured with the command:')
@@ -359,8 +359,8 @@ def computer_list(all_entries, raw):
         echo.echo_report('List of configured computers')
         echo.echo_report("Use 'verdi computer show COMPUTERLABEL' to display more detailed information")
 
-    computers = Computer.objects.all()
-    user = User.objects.get_default()
+    computers = Computer.collection.all()
+    user = User.collection.get_default()
 
     if not computers:
         echo.echo_report("No computers configured yet. Use 'verdi computer setup'")
@@ -444,7 +444,7 @@ def computer_test(user, print_traceback, computer):
 
     # Set a user automatically if one is not specified in the command line
     if user is None:
-        user = orm.User.objects.get_default()
+        user = orm.User.collection.get_default()
 
     echo.echo_report(f'Testing computer<{computer.label}> for user<{user.email}>...')
 
@@ -545,7 +545,7 @@ def computer_delete(computer):
     label = computer.label
 
     try:
-        orm.Computer.objects.delete(computer.pk)
+        orm.Computer.collection.delete(computer.pk)
     except InvalidOperation as error:
         echo.echo_critical(str(error))
 

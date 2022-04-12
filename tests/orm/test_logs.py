@@ -82,43 +82,43 @@ class TestBackendLog:
         except ValueError:
             node.logger.exception('caught an exception')
 
-        assert len(Log.objects.all()) == 3
+        assert len(Log.collection.all()) == 3
 
     def test_log_delete_single(self):
         """Test that a single log entry can be deleted through the collection."""
         entry, _ = self.create_log()
         log_id = entry.pk
 
-        assert len(Log.objects.all()) == 1
+        assert len(Log.collection.all()) == 1
 
         # Deleting the entry
-        Log.objects.delete(log_id)
-        assert len(Log.objects.all()) == 0
+        Log.collection.delete(log_id)
+        assert len(Log.collection.all()) == 0
 
         # Deleting a non-existing entry should raise
         with pytest.raises(exceptions.NotExistent):
-            Log.objects.delete(log_id)
+            Log.collection.delete(log_id)
 
     def test_log_collection_delete_all(self):
         """Test deleting all Log entries through collection"""
         count = 10
         for _ in range(count):
             self.create_log()
-        log_id = Log.objects.find(limit=1)[0].pk
+        log_id = Log.collection.find(limit=1)[0].pk
 
-        assert len(Log.objects.all()) == count
+        assert len(Log.collection.all()) == count
 
         # Delete all
-        Log.objects.delete_all()
+        Log.collection.delete_all()
 
         # Checks
-        assert len(Log.objects.all()) == 0
+        assert len(Log.collection.all()) == 0
 
         with pytest.raises(exceptions.NotExistent):
-            Log.objects.delete(log_id)
+            Log.collection.delete(log_id)
 
         with pytest.raises(exceptions.NotExistent):
-            Log.objects.get(id=log_id)
+            Log.collection.get(id=log_id)
 
     def test_log_collection_delete_many(self):
         """Test deleting many Logs through the collection."""
@@ -130,11 +130,11 @@ class TestBackendLog:
         special_log, _ = self.create_log()
 
         # Assert the Logs exist
-        assert len(Log.objects.all()) == count + 1
+        assert len(Log.collection.all()) == count + 1
 
         # Delete new Logs using filter
         filters = {'id': {'in': log_ids}}
-        Log.objects.delete_many(filters=filters)
+        Log.collection.delete_many(filters=filters)
 
         # Make sure only the special_log Log is left
         builder = orm.QueryBuilder().append(Log, project='id')
@@ -143,10 +143,10 @@ class TestBackendLog:
 
         for log_id in log_ids:
             with pytest.raises(exceptions.NotExistent):
-                Log.objects.delete(log_id)
+                Log.collection.delete(log_id)
 
             with pytest.raises(exceptions.NotExistent):
-                Log.objects.get(id=log_id)
+                Log.collection.get(id=log_id)
 
     def test_objects_find(self):
         """Put logs in and find them"""
@@ -156,7 +156,7 @@ class TestBackendLog:
             record['dbnode_id'] = node.pk
             Log(**record)
 
-        entries = Log.objects.all()
+        entries = Log.collection.all()
         assert len(entries) == 10
         assert isinstance(entries[0], Log)
 
@@ -173,11 +173,11 @@ class TestBackendLog:
         node_ids.sort()
 
         order_by = [OrderSpecifier('dbnode_id', ASCENDING)]
-        res_entries = Log.objects.find(order_by=order_by)
+        res_entries = Log.collection.find(order_by=order_by)
         assert res_entries[0].dbnode_id == node_ids[0]
 
         order_by = [OrderSpecifier('dbnode_id', DESCENDING)]
-        res_entries = Log.objects.find(order_by=order_by)
+        res_entries = Log.collection.find(order_by=order_by)
         assert res_entries[0].dbnode_id == node_ids[-1]
 
     def test_find_limit(self):
@@ -189,7 +189,7 @@ class TestBackendLog:
         for _ in range(limit * 2):
             self.log_record['dbnode_id'] = node.pk
             Log(**self.log_record)
-        entries = Log.objects.find(limit=limit)
+        entries = Log.collection.find(limit=limit)
         assert len(entries) == limit
 
     def test_find_filter(self):
@@ -205,7 +205,7 @@ class TestBackendLog:
 
         node_id_of_choice = node_ids.pop(randint(0, 9))
 
-        entries = Log.objects.find(filters={'dbnode_id': node_id_of_choice})
+        entries = Log.collection.find(filters={'dbnode_id': node_id_of_choice})
         assert len(entries) == 1
         assert entries[0].dbnode_id == node_id_of_choice
 
@@ -223,14 +223,14 @@ class TestBackendLog:
         # Firing a log for an unstored should not end up in the database
         node.logger.critical(message)
 
-        logs = Log.objects.find()
+        logs = Log.collection.find()
 
         assert len(logs) == 0
 
         # After storing the node, logs above log level should be stored
         node.store()
         node.logger.critical(message)
-        logs = Log.objects.find()
+        logs = Log.collection.find()
 
         assert len(logs) == 1
         assert logs[0].message == message
@@ -240,7 +240,7 @@ class TestBackendLog:
         node.logger.critical(message2)
 
         order_by = [OrderSpecifier('time', ASCENDING)]
-        logs = Log.objects.find(order_by=order_by)
+        logs = Log.collection.find(order_by=order_by)
 
         assert len(logs) == 2
         assert logs[0].message == message

@@ -100,7 +100,7 @@ class TestNodeBasicSQLA:
         assert len(res) == 0, 'There should not be any nodes with this UUID in the session/DB.'
 
         # Get the automatic user
-        dbuser = orm.User.objects.get_default().backend_entity.bare_model
+        dbuser = orm.User.collection.get_default().backend_entity.bare_model
         # Create a new node but now add it to the session
         node_uuid = get_new_uuid()
         node = DbNode(user=dbuser, uuid=node_uuid, node_type=None)

@@ -31,7 +31,7 @@ class UserParamType(click.ParamType):
     def convert(self, value, param, ctx):
         from aiida import orm
 
-        results = orm.User.objects.find({'email': value})
+        results = orm.User.collection.find({'email': value})
 
         if not results:
             if self._create:
@@ -53,7 +53,7 @@ class UserParamType(click.ParamType):
         """
         from aiida import orm
 
-        users = orm.User.objects.find()
+        users = orm.User.collection.find()
 
         return [
             click.shell_completion.CompletionItem(user.email) for user in users if user.email.startswith(incomplete)

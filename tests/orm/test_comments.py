@@ -25,7 +25,7 @@ class TestComment:
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.node = orm.Data().store()
-        self.user = orm.User.objects.get_default()
+        self.user = orm.User.collection.get_default()
         self.content = 'Sometimes when I am freestyling, I lose confidence'
         self.comment = Comment(self.node, self.user, self.content).store()
 
@@ -52,7 +52,7 @@ class TestComment:
 
     def test_comment_collection_get(self):
         """Test retrieving a Comment through the collection."""
-        comment = Comment.objects.get(id=self.comment.pk)
+        comment = Comment.collection.get(id=self.comment.pk)
         assert self.comment.uuid == comment.uuid
 
     def test_comment_collection_delete(self):
@@ -60,13 +60,13 @@ class TestComment:
         comment = Comment(self.node, self.user, 'I will perish').store()
         comment_pk = comment.pk
 
-        Comment.objects.delete(comment.pk)
+        Comment.collection.delete(comment.pk)
 
         with pytest.raises(exceptions.NotExistent):
-            Comment.objects.delete(comment_pk)
+            Comment.collection.delete(comment_pk)
 
         with pytest.raises(exceptions.NotExistent):
-            Comment.objects.get(id=comment_pk)
+            Comment.collection.get(id=comment_pk)
 
     def test_comment_collection_delete_all(self):
         """Test deleting all Comments through the collection."""
@@ -75,16 +75,16 @@ class TestComment:
         comment_pk = comment.pk
 
         # Assert the comments exist
-        assert len(Comment.objects.all()) == 3
+        assert len(Comment.collection.all()) == 3
 
         # Delete all Comments
-        Comment.objects.delete_all()
+        Comment.collection.delete_all()
 
         with pytest.raises(exceptions.NotExistent):
-            Comment.objects.delete(comment_pk)
+            Comment.collection.delete(comment_pk)
 
         with pytest.raises(exceptions.NotExistent):
-            Comment.objects.get(id=comment_pk)
+            Comment.collection.get(id=comment_pk)
 
     def test_comment_collection_delete_many(self):
         """Test deleting many Comments through the collection."""
@@ -93,11 +93,11 @@ class TestComment:
         comment_ids = [_.pk for _ in [comment_one, comment_two]]
 
         # Assert the Comments exist
-        assert len(Comment.objects.all()) == 3
+        assert len(Comment.collection.all()) == 3
 
         # Delete new Comments using filter
         filters = {'id': {'in': comment_ids}}
-        Comment.objects.delete_many(filters=filters)
+        Comment.collection.delete_many(filters=filters)
 
         # Make sure only the setUp Comment is left
         builder = orm.QueryBuilder().append(Comment, project='id')
@@ -106,10 +106,10 @@ class TestComment:
 
         for comment_pk in comment_ids:
             with pytest.raises(exceptions.NotExistent):
-                Comment.objects.delete(comment_pk)
+                Comment.collection.delete(comment_pk)
 
             with pytest.raises(exceptions.NotExistent):
-                Comment.objects.get(id=comment_pk)
+                Comment.collection.get(id=comment_pk)
 
     def test_comment_querybuilder(self):
         # pylint: disable=too-many-locals
@@ -193,11 +193,11 @@ class TestComment:
         """Test getting a comment from the collection"""
         node = orm.Data().store()
         comment = node.base.comments.add('Check out the comment on _this_ one')
-        gotten_comment = Comment.objects.get(id=comment.pk)
+        gotten_comment = Comment.collection.get(id=comment.pk)
         assert isinstance(gotten_comment, Comment)
 
     def test_delete_node_with_comments(self):
         """Test deleting a node with comments."""
-        assert len(Comment.objects.all()) == 1
+        assert len(Comment.collection.all()) == 1
         delete_nodes([self.node.pk], dry_run=False)
-        assert len(Comment.objects.all()) == 0
+        assert len(Comment.collection.all()) == 0

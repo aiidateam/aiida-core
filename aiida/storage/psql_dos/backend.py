@@ -114,7 +114,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         if self._session_factory is None:
             return  # the instance is already closed, and so this is a no-op
         # reset the cached default user instance, since it will now have no associated session
-        User.objects(self).reset()
+        User.collection(self).reset()
         # close the connection
         # pylint: disable=no-member
         engine = self._session_factory.bind
@@ -138,7 +138,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
             # save the default user
             default_user_kwargs = None
             if recreate_user:
-                default_user = User.objects(self).get_default()
+                default_user = User.collection(self).get_default()
                 if default_user is not None:
                     default_user_kwargs = {
                         'email': default_user.email,
@@ -159,7 +159,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
             if recreate_user and default_user_kwargs:
                 session.add(DbUser(**default_user_kwargs))
             # clear aiida's cache of the default user
-            User.objects(self).reset()
+            User.collection(self).reset()
 
         # Clear the repository and reset the repository UUID
         container = Container(self.profile.repository_path / 'container')
@@ -386,7 +386,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         repository = self.get_repository()
 
         keyset_repository = set(repository.list_objects())
-        keyset_database = set(orm.Node.objects(self).iter_repo_keys())
+        keyset_database = set(orm.Node.collection(self).iter_repo_keys())
 
         if check_consistency:
             keyset_missing = keyset_database - keyset_repository

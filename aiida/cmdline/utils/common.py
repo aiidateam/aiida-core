@@ -173,7 +173,7 @@ def get_node_info(node, include_summary=True):
         links = sorted(nodes_called.all(), key=lambda x: x.node.ctime)
         result += f"\n{format_flat_links(links, headers=['Called', 'PK', 'Type'])}"
 
-    log_messages = orm.Log.objects.get_logs_for(node)
+    log_messages = orm.Log.collection.get_logs_for(node)
 
     if log_messages:
         table = []
@@ -252,7 +252,7 @@ def get_calcjob_report(calcjob):
     from aiida import orm
     from aiida.common.datastructures import CalcJobState
 
-    log_messages = orm.Log.objects.get_logs_for(calcjob)
+    log_messages = orm.Log.collection.get_logs_for(calcjob)
     scheduler_out = calcjob.get_scheduler_stdout()
     scheduler_err = calcjob.get_scheduler_stderr()
     calcjob_state = calcjob.get_state()
@@ -307,7 +307,7 @@ def get_process_function_report(node):
 
     report = []
 
-    for log in orm.Log.objects.get_logs_for(node):
+    for log in orm.Log.collection.get_logs_for(node):
         report.append(f'{log.time:%Y-%m-%d %H:%M:%S} [{log.pk}]: {log.message}')
 
     return '\n'.join(report)
@@ -331,7 +331,7 @@ def get_workchain_report(node: 'WorkChainNode', levelname, indent_size=4, max_de
         node_id = orm.load_node(uuid).pk
         filters = {'dbnode_id': node_id}
 
-        entries = orm.Log.objects.find(filters)
+        entries = orm.Log.collection.find(filters)
         entries = [entry for entry in entries if LOG_LEVELS[entry.levelname] >= LOG_LEVELS[levelname]]
         return [(_, depth) for _ in entries]
 

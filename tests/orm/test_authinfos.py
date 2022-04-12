@@ -36,17 +36,17 @@ class TestAuthinfo:
         """Test deleting a single AuthInfo."""
         pk = self.auth_info.pk
 
-        assert len(authinfos.AuthInfo.objects.all()) == 1
-        authinfos.AuthInfo.objects.delete(pk)
-        assert len(authinfos.AuthInfo.objects.all()) == 0
+        assert len(authinfos.AuthInfo.collection.all()) == 1
+        authinfos.AuthInfo.collection.delete(pk)
+        assert len(authinfos.AuthInfo.collection.all()) == 0
 
         with pytest.raises(exceptions.NotExistent):
-            authinfos.AuthInfo.objects.delete(pk)
+            authinfos.AuthInfo.collection.delete(pk)
 
     def test_delete_computer(self):
         """Test that deleting a computer also deletes the associated Authinfo."""
         pk = self.auth_info.pk
 
-        computers.Computer.objects.delete(self.computer.pk)
+        computers.Computer.collection.delete(self.computer.pk)
         with pytest.raises(exceptions.NotExistent):
-            authinfos.AuthInfo.objects.delete(pk)
+            authinfos.AuthInfo.collection.delete(pk)

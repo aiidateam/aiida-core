@@ -150,7 +150,7 @@ def aiida_localhost(temp_dir):
     label = 'localhost-test'
 
     try:
-        computer = Computer.objects.get(label=label)
+        computer = Computer.collection.get(label=label)
     except NotExistent:
         computer = Computer(
             label=label,

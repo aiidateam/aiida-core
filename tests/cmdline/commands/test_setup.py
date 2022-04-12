@@ -73,7 +73,7 @@ class TestVerdiSetup:
         # Verify that the backend type of the created profile matches that of the profile for the current test session
         assert self.storage_backend_name == profile.storage_backend
 
-        user = orm.User.objects.get(email=user_email)
+        user = orm.User.collection.get(email=user_email)
         assert user.first_name == user_first_name
         assert user.last_name == user_last_name
         assert user.institution == user_institution
@@ -150,7 +150,7 @@ email: 123@234.de"""
         # Verify that the backend type of the created profile matches that of the profile for the current test session
         assert self.storage_backend_name == profile.storage_backend
 
-        user = orm.User.objects.get(email=user_email)
+        user = orm.User.collection.get(email=user_email)
         assert user.first_name == user_first_name
         assert user.last_name == user_last_name
         assert user.institution == user_institution

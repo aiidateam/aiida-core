@@ -265,13 +265,13 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force, exit
         warning = f'Are you sure you want to clean the work directory of {path_count} calcjobs?'
         click.confirm(warning, abort=True)
 
-    user = orm.User.objects.get_default()
+    user = orm.User.collection.get_default()
 
     for computer_uuid, paths in path_mapping.items():
 
         counter = 0
         computer = orm.load_computer(uuid=computer_uuid)
-        transport = orm.AuthInfo.objects.get(dbcomputer_id=computer.pk, aiidauser_id=user.pk).get_transport()
+        transport = orm.AuthInfo.collection.get(dbcomputer_id=computer.pk, aiidauser_id=user.pk).get_transport()
 
         with transport:
             for remote_folder in paths:

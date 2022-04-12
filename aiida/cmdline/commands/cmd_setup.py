@@ -105,7 +105,7 @@ def setup(
     config.set_option('autofill.user.institution', institution, override=False)
 
     # Create the user if it does not yet exist
-    created, user = orm.User.objects.get_or_create(
+    created, user = orm.User.collection.get_or_create(
         email=email, first_name=first_name, last_name=last_name, institution=institution
     )
     if created:

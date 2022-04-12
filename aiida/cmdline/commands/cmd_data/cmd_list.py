@@ -40,7 +40,7 @@ def query(datatype, project, past_days, group_pks, all_users):
 
     qbl = orm.QueryBuilder()
     if all_users is False:
-        user = orm.User.objects.get_default()
+        user = orm.User.collection.get_default()
         qbl.append(orm.User, tag='creator', filters={'email': user.email})
     else:
         qbl.append(orm.User, tag='creator')

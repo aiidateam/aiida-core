@@ -150,7 +150,7 @@ def test_mixed(run_cli_command):
     result = run_cli_command(computer_setup, options, user_input=user_input, catch_exceptions=False)
     assert result.exception is None, f'There was an unexpected exception. Output: {result.output}'
 
-    new_computer = orm.Computer.objects.get(label=label)
+    new_computer = orm.Computer.collection.get(label=label)
     assert isinstance(new_computer, orm.Computer)
 
     assert new_computer.description == options_dict_full['description']
@@ -179,7 +179,7 @@ def test_noninteractive(run_cli_command, aiida_localhost, non_interactive_editor
 
     result = run_cli_command(computer_setup, options)
 
-    new_computer = orm.Computer.objects.get(label=options_dict['label'])
+    new_computer = orm.Computer.collection.get(label=options_dict['label'])
     assert isinstance(new_computer, orm.Computer)
 
     assert new_computer.description == options_dict['description']
@@ -209,7 +209,7 @@ def test_noninteractive_optional_default_mpiprocs(run_cli_command):
     options = generate_setup_options(options_dict)
     run_cli_command(computer_setup, options, catch_exceptions=False)
 
-    new_computer = orm.Computer.objects.get(label=options_dict['label'])
+    new_computer = orm.Computer.collection.get(label=options_dict['label'])
     assert isinstance(new_computer, orm.Computer)
     assert new_computer.get_default_mpiprocs_per_machine() is None
 
@@ -224,7 +224,7 @@ def test_noninteractive_optional_default_mpiprocs_2(run_cli_command):
     options = generate_setup_options(options_dict)
     run_cli_command(computer_setup, options, catch_exceptions=False)
 
-    new_computer = orm.Computer.objects.get(label=options_dict['label'])
+    new_computer = orm.Computer.collection.get(label=options_dict['label'])
     assert isinstance(new_computer, orm.Computer)
     assert new_computer.get_default_mpiprocs_per_machine() is None
 
@@ -250,7 +250,7 @@ def test_noninteractive_optional_default_memory(run_cli_command):
     options = generate_setup_options(options_dict)
     run_cli_command(computer_setup, options)
 
-    new_computer = orm.Computer.objects.get(label=options_dict['label'])
+    new_computer = orm.Computer.collection.get(label=options_dict['label'])
     assert isinstance(new_computer, orm.Computer)
     assert new_computer.get_default_memory_per_machine() is None
 
@@ -333,7 +333,7 @@ scheduler: core.direct
         options = ['--non-interactive', '--config', os.path.realpath(handle.name)]
         run_cli_command(computer_setup, options)
 
-    assert isinstance(orm.Computer.objects.get(label=label), orm.Computer)
+    assert isinstance(orm.Computer.collection.get(label=label), orm.Computer)
 
 
 class TestVerdiComputerConfigure:
@@ -345,7 +345,7 @@ class TestVerdiComputerConfigure:
         # pylint: disable=attribute-defined-outside-init
         from aiida.orm.utils.builders.computer import ComputerBuilder
         self.cli_runner = run_cli_command
-        self.user = orm.User.objects.get_default()
+        self.user = orm.User.collection.get_default()
         self.comp_builder = ComputerBuilder(label='test_comp_setup')
         self.comp_builder.hostname = 'localhost'
         self.comp_builder.description = 'Test Computer'
@@ -519,7 +519,7 @@ safe_interval: {interval}
         username = 'TEST'
         options = ['core.ssh', comp.label, '--non-interactive', f'--username={username}', '--safe-interval', '1']
         result = self.cli_runner(computer_configure, options, catch_exceptions=False)
-        auth_info = orm.AuthInfo.objects.get(dbcomputer_id=comp.pk, aiidauser_id=self.user.pk)
+        auth_info = orm.AuthInfo.collection.get(dbcomputer_id=comp.pk, aiidauser_id=self.user.pk)
         assert comp.is_user_configured(self.user), result.output
         assert auth_info.get_auth_params()['username'] == username
 
@@ -576,7 +576,7 @@ class TestVerdiComputerCommands:
         self.comp.set_append_text('text to append')
         self.comp.store()
         self.comp.configure()
-        self.user = orm.User.objects.get_default()
+        self.user = orm.User.collection.get_default()
         assert self.comp.is_user_configured(self.user), 'There was a problem configuring the test computer'
         self.cli_runner = run_cli_command
 
@@ -644,9 +644,9 @@ class TestVerdiComputerCommands:
         # Check that the label really was changed
         # The old label should not be available
         with pytest.raises(NotExistent):
-            orm.Computer.objects.get(label='comp_cli_test_computer')
+            orm.Computer.collection.get(label='comp_cli_test_computer')
         # The new label should be available
-        orm.Computer.objects.get(label='relabeled_test_computer')
+        orm.Computer.collection.get(label='relabeled_test_computer')
 
         # Now change the label back
         options = ['relabeled_test_computer', 'comp_cli_test_computer']
@@ -655,9 +655,9 @@ class TestVerdiComputerCommands:
         # Check that the label really was changed
         # The old label should not be available
         with pytest.raises(NotExistent):
-            orm.Computer.objects.get(label='relabeled_test_computer')
+            orm.Computer.collection.get(label='relabeled_test_computer')
         # The new label should be available
-        orm.Computer.objects.get(label='comp_cli_test_computer')
+        orm.Computer.collection.get(label='comp_cli_test_computer')
 
     def test_computer_delete(self):
         """
@@ -685,7 +685,7 @@ class TestVerdiComputerCommands:
         self.cli_runner(computer_delete, [label])
         # Check that the computer really was deleted
         with pytest.raises(NotExistent):
-            orm.Computer.objects.get(label=label)
+            orm.Computer.collection.get(label=label)
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -698,7 +698,7 @@ def test_computer_duplicate_interactive(run_cli_command, aiida_localhost, non_in
     result = run_cli_command(computer_duplicate, [str(computer.pk)], user_input=user_input, catch_exceptions=False)
     assert result.exception is None, result.output
 
-    new_computer = orm.Computer.objects.get(label=label)
+    new_computer = orm.Computer.collection.get(label=label)
     assert new_computer.description == computer.description
     assert new_computer.hostname == computer.hostname
     assert new_computer.transport_type == computer.transport_type
@@ -720,7 +720,7 @@ def test_computer_duplicate_non_interactive(run_cli_command, aiida_localhost, no
     result = run_cli_command(computer_duplicate, ['--non-interactive', f'--label={label}', str(computer.pk)])
     assert result.exception is None, result.output
 
-    new_computer = orm.Computer.objects.get(label=label)
+    new_computer = orm.Computer.collection.get(label=label)
     assert new_computer.description == computer.description
     assert new_computer.hostname == computer.hostname
     assert new_computer.transport_type == computer.transport_type
@@ -748,7 +748,7 @@ def test_interactive(run_cli_command, aiida_profile_clean, non_interactive_edito
     result = run_cli_command(computer_setup, user_input=user_input)
     assert result.exception is None, f'There was an unexpected exception. Output: {result.output}'
 
-    new_computer = orm.Computer.objects.get(label=label)
+    new_computer = orm.Computer.collection.get(label=label)
     assert isinstance(new_computer, orm.Computer)
 
     assert new_computer.description == options_dict['description']

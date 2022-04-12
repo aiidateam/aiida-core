@@ -143,6 +143,7 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
     """
     # pylint: disable=too-many-public-methods
 
+    _CLS_COLLECTION = NodeCollection
     _CLS_NODE_LINKS = NodeLinks
     _CLS_NODE_CACHING = NodeCaching
 
@@ -167,10 +168,6 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
     _storable = False
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
-    @classproperty
-    def objects(cls: Type[NodeType]) -> NodeCollection[NodeType]:  # type: ignore # pylint: disable=no-self-argument
-        return NodeCollection.get_cached(cls, get_manager().get_profile_storage())  # type: ignore[arg-type]
-
     def __init__(
         self,
         backend: Optional['StorageBackend'] = None,
@@ -184,7 +181,7 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
             raise ValueError('the computer is not stored')
 
         computer = computer.backend_entity if computer else None
-        user = user if user else User.objects(backend).get_default()
+        user = user if user else User.collection(backend).get_default()
 
         if user is None:
             raise ValueError('the user cannot be None')

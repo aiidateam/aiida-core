@@ -732,7 +732,7 @@ def _import_comments(
             def _transform(row):
                 # to-do this is probably not the most efficient way to do this
                 uuid, new_mtime, new_comment = row
-                cmt = orm.Comment.objects.get(uuid=uuid)
+                cmt = orm.Comment.collection.get(uuid=uuid)
                 if cmt.mtime < new_mtime:
                     cmt.set_mtime(new_mtime)
                     cmt.set_content(new_comment)

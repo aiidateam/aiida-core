@@ -991,7 +991,7 @@ class TestNodeBasic:
 
         from aiida.common import timezone
 
-        user = orm.User.objects.get_default()
+        user = orm.User.collection.get_default()
 
         a = orm.Data()
         with pytest.raises(ModificationNotAllowed):

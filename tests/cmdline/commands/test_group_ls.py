@@ -22,9 +22,9 @@ from aiida.cmdline.commands.cmd_group import group_path_ls
 def setup_groups(aiida_profile_clean):
     """Setup some groups for testing."""
     for label in ['a', 'a/b', 'a/c/d', 'a/c/e/g', 'a/f']:
-        group, _ = orm.Group.objects.get_or_create(label)
+        group, _ = orm.Group.collection.get_or_create(label)
         group.description = f'A description of {label}'
-    orm.UpfFamily.objects.get_or_create('a/x')
+    orm.UpfFamily.collection.get_or_create('a/x')
     yield
 
 

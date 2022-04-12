@@ -1802,7 +1802,7 @@ def get_bands_and_parents_structure(args, backend=None):
 
     q_build = orm.QueryBuilder(backend=backend)
     if args.all_users is False:
-        q_build.append(orm.User, tag='creator', filters={'email': orm.User.objects.get_default().email})
+        q_build.append(orm.User, tag='creator', filters={'email': orm.User.collection.get_default().email})
     else:
         q_build.append(orm.User, tag='creator')
 

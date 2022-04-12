@@ -36,7 +36,7 @@ class TestVerdiUserCommand:
         # pylint: disable=attribute-defined-outside-init
         self.cli_runner = run_cli_command
 
-        created, user = orm.User.objects.get_or_create(email=USER_1['email'])
+        created, user = orm.User.collection.get_or_create(email=USER_1['email'])
         for key, value in USER_1.items():
             if key != 'email':
                 setattr(user, key, value)
@@ -68,7 +68,7 @@ class TestVerdiUserCommand:
         assert 'created' in result.output
         assert 'updated' not in result.output
 
-        user_obj = orm.User.objects.get(email=USER_2['email'])
+        user_obj = orm.User.collection.get(email=USER_2['email'])
         for key, val in USER_2.items():
             assert val == getattr(user_obj, key)
 

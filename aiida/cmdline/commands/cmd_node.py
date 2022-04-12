@@ -493,7 +493,7 @@ def comment_update(comment_id, content):
     from aiida.orm.comments import Comment
 
     try:
-        comment = Comment.objects.get(id=comment_id)
+        comment = Comment.collection.get(id=comment_id)
     except (exceptions.NotExistent, exceptions.MultipleObjectsError):
         echo.echo_critical(f'comment<{comment_id}> not found')
 
@@ -555,7 +555,7 @@ def comment_remove(force, comment):
         click.confirm(f'Are you sure you want to remove comment<{comment}>', abort=True)
 
     try:
-        Comment.objects.delete(comment)
+        Comment.collection.delete(comment)
     except exceptions.NotExistent as exception:
         echo.echo_critical(f'failed to remove comment<{comment}>: {exception}')
     else:

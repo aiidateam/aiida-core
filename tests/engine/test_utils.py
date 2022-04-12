@@ -29,7 +29,7 @@ class TestExponentialBackoffRetry:
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
-        self.authinfo = self.computer.get_authinfo(orm.User.objects.get_default())
+        self.authinfo = self.computer.get_authinfo(orm.User.collection.get_default())
 
     @staticmethod
     def test_exp_backoff_success():

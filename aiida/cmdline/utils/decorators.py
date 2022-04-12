@@ -63,11 +63,11 @@ def with_dbenv():
     @decorator
     def wrapper(wrapped, _, args, kwargs):
         """The wrapped function that should be called after having loaded the backend."""
-        from aiida.common.exceptions import ConfigurationError, IntegrityError
+        from aiida.common.exceptions import ConfigurationError, IntegrityError, LockedProfileError
 
         try:
             load_backend_if_not_loaded()
-        except (IntegrityError, ConfigurationError) as exception:
+        except (IntegrityError, ConfigurationError, LockedProfileError) as exception:
             echo.echo_critical(str(exception))
 
         return wrapped(*args, **kwargs)

@@ -253,6 +253,23 @@ Examples of columns we have encountered so far are ``id``, ``uuid`` and ``attrib
 If the column is a dictionary, you can expand the dictionary values using a dot notation, as we have done in the previous example to obtain the ``attributes.value``.
 This can be used to project the values of nested dictionaries as well.
 
+The keys of columns can be one from following list: 
+
+.. code-block:: python
+
+    id
+    uuid
+    node_type
+    process_type
+    label
+    description
+    ctime
+    mtime
+    attributes
+    extras
+    user_id
+    dbcomputer_id
+
 .. note::
 
     Be aware that for consistency, ``QueryBuilder.all()`` / ``iterall()`` always returns a list of lists, even if you only project one property of a single entity.

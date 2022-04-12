@@ -71,8 +71,8 @@ def link_triple_exists(
     # Here we have two stored nodes, so we need to check if the same link already exists in the database.
     # Finding just a single match is sufficient so we can use the `limit` clause for efficiency
     builder = QueryBuilder(backend=backend)
-    builder.append(Node, filters={'id': source.id}, project=['id'])
-    builder.append(Node, filters={'id': target.id}, edge_filters={'type': link_type.value, 'label': link_label})
+    builder.append(Node, filters={'id': source.pk}, project=['id'])
+    builder.append(Node, filters={'id': target.pk}, edge_filters={'type': link_type.value, 'label': link_label})
     builder.limit(1)
 
     return builder.count() != 0

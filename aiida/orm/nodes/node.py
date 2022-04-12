@@ -167,8 +167,6 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
     _storable = False
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
-    Collection = NodeCollection
-
     @classproperty
     def objects(cls: Type[NodeType]) -> NodeCollection[NodeType]:  # type: ignore # pylint: disable=no-self-argument
         return NodeCollection.get_cached(cls, get_manager().get_profile_storage())  # type: ignore[arg-type]
@@ -410,7 +408,7 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
         :parameter with_transaction: if False, do not use a transaction because the caller will already have opened one.
         """
         if self.is_stored:
-            raise exceptions.ModificationNotAllowed(f'Node<{self.id}> is already stored')
+            raise exceptions.ModificationNotAllowed(f'Node<{self.pk}> is already stored')
 
         # For each node of a cached incoming link, check that all its incoming links are stored
         for link_triple in self.base.links.incoming_cache:
@@ -540,20 +538,6 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
         return ''
 
     @property
-    def is_created_from_cache(self) -> bool:
-        """Return whether this node was created from a cached node.
-
-        :return: boolean, True if the node was created by cloning a cached node, False otherwise
-        """
-        kls = self.__class__.__name__
-        warn_deprecation(
-            f'`{kls}.is_created_from_cache` is deprecated, use `{kls}.base.extras.is_created_from_cache` instead.',
-            version=3,
-            stacklevel=2
-        )
-        return self.base.caching.is_created_from_cache
-
-    @property
     def is_valid_cache(self) -> bool:
         """Hook to exclude certain ``Node`` classes from being considered a valid cache.
 
@@ -563,7 +547,7 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
         """
         kls = self.__class__.__name__
         warn_deprecation(
-            f'`{kls}.is_valid_cache` is deprecated, use `{kls}.base.extras.is_valid_cache` instead.',
+            f'`{kls}.is_valid_cache` is deprecated, use `{kls}.base.caching.is_valid_cache` instead.',
             version=3,
             stacklevel=2
         )
@@ -580,7 +564,7 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
         """
         kls = self.__class__.__name__
         warn_deprecation(
-            f'`{kls}.is_valid_cache` is deprecated, use `{kls}.base.extras.is_valid_cache` instead.',
+            f'`{kls}.is_valid_cache` is deprecated, use `{kls}.base.caching.is_valid_cache` instead.',
             version=3,
             stacklevel=2
         )
@@ -645,6 +629,7 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
         'rehash': 'rehash',
         'clear_hash': 'clear_hash',
         'get_cache_source': 'get_cache_source',
+        'is_created_from_cache': 'is_created_from_cache',
         '_get_same_node': '_get_same_node',
         'get_all_same_nodes': 'get_all_same_nodes',
         '_iter_all_same_nodes': '_iter_all_same_nodes',
@@ -658,6 +643,18 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
         'get_incoming': 'get_incoming',
         'get_outgoing': 'get_outgoing',
     }
+
+    @classproperty
+    def Collection(cls):  # pylint: disable=invalid-name,no-self-use
+        """Return the collection type for this class.
+
+        This used to be a class argument with the value ``NodeCollection``. The argument is deprecated and this property
+        is here for backwards compatibility to print the deprecation warning.
+        """
+        warn_deprecation(
+            'This attribute is deprecated, use `aiida.orm.nodes.node.NodeCollection` instead.', version=3, stacklevel=2
+        )
+        return NodeCollection
 
     def __getattr__(self, name: str) -> Any:
         """This method is called when an attribute is not found in the instance.

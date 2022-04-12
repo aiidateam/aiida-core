@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any, Generic, List, Optional, Type, TypeVar, c
 from plumpy.base.utils import call_with_super_check, super_check
 
 from aiida.common.lang import classproperty, type_check
+from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
 if TYPE_CHECKING:
@@ -170,12 +171,19 @@ class Entity(abc.ABC, Generic[BackendEntityType]):
 
     @classmethod
     def get(cls, **kwargs):
+        """Get an entity of the collection matching the given filters.
+
+        .. deprecated: Will be removed in v3, use `Entity.objects.get` instead.
+
+        """
+        warn_deprecation(
+            f'This method is deprecated, use `{cls.__name__}.objects.get` instead.', version=3, stacklevel=2
+        )
         return cls.objects.get(**kwargs)  # pylint: disable=no-member
 
     @classmethod
     def from_backend_entity(cls: Type[EntityType], backend_entity: BackendEntityType) -> EntityType:
-        """
-        Construct an entity from a backend entity instance
+        """Construct an entity from a backend entity instance
 
         :param backend_entity: the backend entity
 
@@ -209,8 +217,11 @@ class Entity(abc.ABC, Generic[BackendEntityType]):
 
         This identifier is guaranteed to be unique amongst entities of the same type for a single backend instance.
 
+        .. deprecated: Will be removed in v3, use `pk` instead.
+
         :return: the entity's id
         """
+        warn_deprecation('This method is deprecated, use `pk` instead.', version=3, stacklevel=2)
         return self._backend_entity.id
 
     @property
@@ -221,7 +232,7 @@ class Entity(abc.ABC, Generic[BackendEntityType]):
 
         :return: the entity's principal key
         """
-        return self.id
+        return self._backend_entity.id
 
     def store(self: EntityType) -> EntityType:
         """Store the entity."""

@@ -519,7 +519,7 @@ safe_interval: {interval}
         username = 'TEST'
         options = ['core.ssh', comp.label, '--non-interactive', f'--username={username}', '--safe-interval', '1']
         result = self.cli_runner(computer_configure, options, catch_exceptions=False)
-        auth_info = orm.AuthInfo.objects.get(dbcomputer_id=comp.id, aiidauser_id=self.user.id)
+        auth_info = orm.AuthInfo.objects.get(dbcomputer_id=comp.pk, aiidauser_id=self.user.pk)
         assert comp.is_user_configured(self.user), result.output
         assert auth_info.get_auth_params()['username'] == username
 

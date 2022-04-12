@@ -271,10 +271,10 @@ class JobManager:
         :param authinfo: the `AuthInfo`
         :return: a `JobsList` instance
         """
-        if authinfo.id not in self._job_lists:
-            self._job_lists[authinfo.id] = JobsList(authinfo, self._transport_queue)
+        if authinfo.pk not in self._job_lists:
+            self._job_lists[authinfo.pk] = JobsList(authinfo, self._transport_queue)
 
-        return self._job_lists[authinfo.id]
+        return self._job_lists[authinfo.pk]
 
     @contextlib.contextmanager
     def request_job_info_update(self, authinfo: AuthInfo, job_id: Hashable) -> Iterator['asyncio.Future[JobInfo]']:

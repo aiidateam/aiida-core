@@ -132,7 +132,7 @@ class NodeLinks:
             raise TypeError(f'link_type should be a LinkType or tuple of LinkType: got {link_type}')
 
         node_class = node_class or Node
-        node_filters: dict[str, t.Any] = {'id': {'==': self._node.id}}
+        node_filters: dict[str, t.Any] = {'id': {'==': self._node.pk}}
         edge_filters: dict[str, t.Any] = {}
 
         if link_type:

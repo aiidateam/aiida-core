@@ -127,8 +127,8 @@ class TestComputerConfigure:
         with pytest.raises(exceptions.NotExistent) as exc:
             comp.get_authinfo(self.user)
 
-        assert str(comp.id) in str(exc)
+        assert str(comp.pk) in str(exc)
         assert comp.label in str(exc)
         assert self.user.get_short_name() in str(exc)
-        assert str(self.user.id) in str(exc)
+        assert str(self.user.pk) in str(exc)
         assert 'verdi computer configure' in str(exc)

@@ -21,7 +21,7 @@ def cacheable_node():
     node.set_process_state(ProcessState.FINISHED)
     node.base.repository.put_object_from_bytes(b'content', 'relative/path')
     node.store()
-    assert node.is_valid_cache
+    assert node.base.caching.is_valid_cache
 
     return node
 
@@ -100,7 +100,7 @@ def test_caching(cacheable_node):
         cached.base.repository.put_object_from_bytes(b'content', 'relative/path')
         cached.store()
 
-    assert cached.is_created_from_cache
+    assert cached.base.caching.is_created_from_cache
     assert cached.base.caching.get_cache_source() == cacheable_node.uuid
     assert cacheable_node.base.repository.metadata == cached.base.repository.metadata
     assert cacheable_node.base.repository.hash() == cached.base.repository.hash()

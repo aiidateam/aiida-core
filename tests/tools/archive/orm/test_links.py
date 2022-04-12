@@ -33,7 +33,7 @@ def test_links_to_unknown_nodes(tmp_path, aiida_profile_clean):
             EntityTypes.LINK, [{
                 'id': 1,
                 'input_id': 99999,
-                'output_id': node.id,
+                'output_id': node.pk,
                 'label': 'parent',
                 'type': LinkType.CREATE.value,
             }]

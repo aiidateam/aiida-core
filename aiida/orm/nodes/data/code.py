@@ -465,7 +465,7 @@ class Code(Data):
             return True
 
         type_check(computer, orm.Computer)
-        return computer.id == self.get_remote_computer().id
+        return computer.pk == self.get_remote_computer().pk
 
     def get_execname(self):
         """

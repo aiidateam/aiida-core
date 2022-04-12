@@ -151,7 +151,7 @@ def test_reexport(aiida_profile, tmp_path):
         # Always new filename:
         filename = tmp_path / f'export-{i}.aiida'
         # Loading the group from the string
-        group = orm.Group.get(label=grouplabel)
+        group = orm.Group.objects.get(label=grouplabel)
         # exporting based on all members of the group
         # this also checks if group memberships are preserved!
         create_archive([group] + list(group.nodes), filename=filename)

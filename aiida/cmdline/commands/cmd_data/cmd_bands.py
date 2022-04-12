@@ -53,7 +53,7 @@ def bands_list(elements, elements_exclusive, raw, formula_mode, past_days, group
     args.past_days = past_days
     args.group_name = None
     if groups is not None:
-        args.group_pk = [group.id for group in groups]
+        args.group_pk = [group.pk for group in groups]
     else:
         args.group_pk = None
     args.all_users = all_users

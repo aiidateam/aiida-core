@@ -367,7 +367,7 @@ class UpfData(SinglefileData):
 
         query = QueryBuilder(backend=self.backend)
         query.append(UpfFamily, tag='group', project='label')
-        query.append(UpfData, filters={'id': {'==': self.id}}, with_group='group')
+        query.append(UpfData, filters={'id': {'==': self.pk}}, with_group='group')
         return query.all(flat=True)
 
     @property

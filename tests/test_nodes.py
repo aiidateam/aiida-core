@@ -88,7 +88,7 @@ class TestNodeHashing:
 
         # Search for the UUID of the stored node
         qb = orm.QueryBuilder()
-        qb.append(orm.Data, project=['uuid'], filters={'id': {'==': n.id}})
+        qb.append(orm.Data, project=['uuid'], filters={'id': {'==': n.pk}})
         uuid = qb.first(flat=True)
 
         # Look the node with the previously returned UUID
@@ -99,7 +99,7 @@ class TestNodeHashing:
         qb.all()
         # And that the results are correct
         assert qb.count() == 1
-        assert qb.first(flat=True) == n.id
+        assert qb.first(flat=True) == n.pk
 
     @staticmethod
     def create_folderdata_with_empty_file():
@@ -1042,19 +1042,19 @@ class TestNodeBasic:
 
         # Test that the code1 can be loaded correctly with its label
         q_code_1 = orm.Code.get_from_string(code1.label)
-        assert q_code_1.id == code1.id
+        assert q_code_1.pk == code1.pk
         assert q_code_1.label == code1.label
         assert q_code_1.get_remote_exec_path() == code1.get_remote_exec_path()
 
         # Test that the code2 can be loaded correctly with its label
         q_code_2 = orm.Code.get_from_string(f'{code2.label}@{self.computer.label}')  # pylint: disable=no-member
-        assert q_code_2.id == code2.id
+        assert q_code_2.pk == code2.pk
         assert q_code_2.label == code2.label
         assert q_code_2.get_remote_exec_path() == code2.get_remote_exec_path()
 
         # Calling get_from_string for a non string type raises exception
         with pytest.raises(TypeError):
-            orm.Code.get_from_string(code1.id)
+            orm.Code.get_from_string(code1.pk)
 
         # Test that the lookup of a nonexistent code works as expected
         with pytest.raises(NotExistent):
@@ -1089,25 +1089,25 @@ class TestNodeBasic:
 
         # Test that the code1 can be loaded correctly with its label only
         q_code_1 = orm.Code.get(label=code1.label)
-        assert q_code_1.id == code1.id
+        assert q_code_1.pk == code1.pk
         assert q_code_1.label == code1.label
         assert q_code_1.get_remote_exec_path() == code1.get_remote_exec_path()
 
         # Test that the code1 can be loaded correctly with its id/pk
-        q_code_1 = orm.Code.get(code1.id)
-        assert q_code_1.id == code1.id
+        q_code_1 = orm.Code.get(code1.pk)
+        assert q_code_1.pk == code1.pk
         assert q_code_1.label == code1.label
         assert q_code_1.get_remote_exec_path() == code1.get_remote_exec_path()
 
         # Test that the code2 can be loaded correctly with its label and computername
         q_code_2 = orm.Code.get(label=code2.label, machinename=self.computer.label)  # pylint: disable=no-member
-        assert q_code_2.id == code2.id
+        assert q_code_2.pk == code2.pk
         assert q_code_2.label == code2.label
         assert q_code_2.get_remote_exec_path() == code2.get_remote_exec_path()
 
         # Test that the code2 can be loaded correctly with its id/pk
-        q_code_2 = orm.Code.get(code2.id)
-        assert q_code_2.id == code2.id
+        q_code_2 = orm.Code.get(code2.pk)
+        assert q_code_2.pk == code2.pk
         assert q_code_2.label == code2.label
         assert q_code_2.get_remote_exec_path() == code2.get_remote_exec_path()
 
@@ -1136,7 +1136,7 @@ class TestNodeBasic:
         # Code.get(pk_label_duplicate) should return code1, as the pk takes
         # precedence
         q_code_4 = orm.Code.get(code4.label)
-        assert q_code_4.id == code1.id
+        assert q_code_4.pk == code1.pk
         assert q_code_4.label == code1.label
         assert q_code_4.get_remote_exec_path() == code1.get_remote_exec_path()
 
@@ -1155,7 +1155,7 @@ class TestNodeBasic:
         q_code1 = orm.Code.get(label=code.label)
         assert code.description == str(q_code1.description)
 
-        q_code2 = orm.Code.get(code.id)
+        q_code2 = orm.Code.get(code.pk)
         assert code.description == str(q_code2.description)
 
     def test_list_for_plugin(self):
@@ -1321,7 +1321,7 @@ class TestSubNodesAndLinks:
 
         with pytest.raises(Exception):
             # I should get an error if I ask for a computer id/pk that doesn't exist
-            CalcJobNode(computer=self.computer.id + 100000).store()
+            CalcJobNode(computer=self.computer.pk + 100000).store()
 
     def test_links_label_constraints(self):
         d1 = orm.Data().store()

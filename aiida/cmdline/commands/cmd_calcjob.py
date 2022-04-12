@@ -271,7 +271,7 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force, exit
 
         counter = 0
         computer = orm.load_computer(uuid=computer_uuid)
-        transport = orm.AuthInfo.objects.get(dbcomputer_id=computer.id, aiidauser_id=user.id).get_transport()
+        transport = orm.AuthInfo.objects.get(dbcomputer_id=computer.pk, aiidauser_id=user.pk).get_transport()
 
         with transport:
             for remote_folder in paths:

@@ -95,7 +95,7 @@ class TestCalcFunction:
 
             assert EXECUTION_COUNTER == 1  # Calculation function body should not have been executed
             assert result.is_stored
-            assert cached.is_created_from_cache
+            assert cached.base.caching.is_created_from_cache
             assert cached.base.caching.get_cache_source() in original.uuid
             assert cached.base.links.get_incoming().one().node.uuid == input_node.uuid
 
@@ -113,11 +113,11 @@ class TestCalcFunction:
         with enable_caching(identifier='*.add_calcfunction'):
             result_cached, cached = add_calcfunction.run_get_node(self.default_int)
             assert result_original != result_cached
-            assert not cached.is_created_from_cache
+            assert not cached.base.caching.is_created_from_cache
             # Test that the locally-created calcfunction can be cached in principle
             result2_cached, cached2 = add_calcfunction.run_get_node(self.default_int)
             assert result_original != result2_cached
-            assert cached2.is_created_from_cache
+            assert cached2.base.caching.is_created_from_cache
 
     def test_calcfunction_do_not_store_provenance(self):
         """Run the function without storing the provenance."""

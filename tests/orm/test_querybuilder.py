@@ -608,46 +608,46 @@ class TestBasic:
 
         # testing direction=1 for d1, which should return the outgoing
         qb = orm.QueryBuilder()
-        qb.append(orm.Data, filters={'id': d1.id})
+        qb.append(orm.Data, filters={'id': d1.pk})
         qb.append(orm.CalculationNode, direction=1, project='id')
         res1 = {_ for _, in qb.all()}
 
         qb = orm.QueryBuilder()
-        qb.append(orm.Data, filters={'id': d1.id}, tag='data')
+        qb.append(orm.Data, filters={'id': d1.pk}, tag='data')
         qb.append(orm.CalculationNode, with_incoming='data', project='id')
         res2 = {_ for _, in qb.all()}
 
         assert res1 == res2
-        assert res1 == {c1.id}
+        assert res1 == {c1.pk}
 
         # testing direction=-1, which should return the incoming
         qb = orm.QueryBuilder()
-        qb.append(orm.Data, filters={'id': d2.id})
+        qb.append(orm.Data, filters={'id': d2.pk})
         qb.append(orm.CalculationNode, direction=-1, project='id')
         res1 = {_ for _, in qb.all()}
 
         qb = orm.QueryBuilder()
-        qb.append(orm.Data, filters={'id': d2.id}, tag='data')
+        qb.append(orm.Data, filters={'id': d2.pk}, tag='data')
         qb.append(orm.CalculationNode, with_outgoing='data', project='id')
         res2 = {_ for _, in qb.all()}
         assert res1 == res2
-        assert res1 == {c1.id}
+        assert res1 == {c1.pk}
 
         # testing direction higher than 1
         qb = orm.QueryBuilder()
-        qb.append(orm.CalculationNode, tag='c1', filters={'id': c1.id})
+        qb.append(orm.CalculationNode, tag='c1', filters={'id': c1.pk})
         qb.append(orm.Data, with_incoming='c1', tag='d2or4')
         qb.append(orm.CalculationNode, tag='c2', with_incoming='d2or4')
         qb.append(orm.Data, tag='d3', with_incoming='c2', project='id')
         qh = qb.as_dict()  # saving query for later
         qb.append(orm.Data, direction=-4, project='id')
         res1 = {item[1] for item in qb.all()}
-        assert res1 == {d1.id}
+        assert res1 == {d1.pk}
 
         qb = orm.QueryBuilder(**qh)
         qb.append(orm.Data, direction=4, project='id')
         res2 = {item[1] for item in qb.all()}
-        assert res2 == {d2.id, d4.id}
+        assert res2 == {d2.pk, d4.pk}
 
     @staticmethod
     def test_all_flat():
@@ -705,7 +705,7 @@ class TestBasic:
         assert builder.count() == 3
 
         builder = orm.QueryBuilder().append(entity_type='link', filters={'label': 'link_d2c2'})
-        assert builder.one()[0] == LinkQuadruple(d2.id, c2.id, LinkType.INPUT_CALC.value, 'link_d2c2')
+        assert builder.one()[0] == LinkQuadruple(d2.pk, c2.pk, LinkType.INPUT_CALC.value, 'link_d2c2')
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -1108,14 +1108,14 @@ class TestQueryBuilderJoins:
 
         # Search for the group of the user
         qb = orm.QueryBuilder()
-        qb.append(orm.User, tag='user', filters={'id': {'==': user.id}})
-        qb.append(orm.Group, with_user='user', filters={'id': {'==': group.id}})
+        qb.append(orm.User, tag='user', filters={'id': {'==': user.pk}})
+        qb.append(orm.Group, with_user='user', filters={'id': {'==': group.pk}})
         assert qb.count() == 1, 'The expected group that belongs to the selected user was not found.'
 
         # Search for the user that owns a group
         qb = orm.QueryBuilder()
-        qb.append(orm.Group, tag='group', filters={'id': {'==': group.id}})
-        qb.append(orm.User, with_group='group', filters={'id': {'==': user.id}})
+        qb.append(orm.Group, tag='group', filters={'id': {'==': group.pk}})
+        qb.append(orm.User, with_group='group', filters={'id': {'==': user.pk}})
 
         assert qb.count() == 1, 'The expected user that owns the selected group was not found.'
 
@@ -1127,7 +1127,7 @@ class TestQueryBuilderJoins:
         ).store()
         authinfo = computer.configure(user)
         qb = orm.QueryBuilder()
-        qb.append(orm.AuthInfo, tag='auth', filters={'id': {'==': authinfo.id}})
+        qb.append(orm.AuthInfo, tag='auth', filters={'id': {'==': authinfo.pk}})
         qb.append(orm.User, with_authinfo='auth')
         assert qb.count() == 1, 'The expected user that owns the selected authinfo was not found.'
         assert qb.one()[0].pk == user.pk
@@ -1142,14 +1142,14 @@ class TestQueryBuilderJoins:
 
         # Search for the user of the authinfo
         qb = orm.QueryBuilder()
-        qb.append(orm.User, tag='user', filters={'id': {'==': user.id}})
-        qb.append(orm.AuthInfo, with_user='user', filters={'id': {'==': authinfo.id}})
+        qb.append(orm.User, tag='user', filters={'id': {'==': user.pk}})
+        qb.append(orm.AuthInfo, with_user='user', filters={'id': {'==': authinfo.pk}})
         assert qb.count() == 1, 'The expected user that owns the selected authinfo was not found.'
 
         # Search for the computer of the authinfo
         qb = orm.QueryBuilder()
-        qb.append(orm.Computer, tag='computer', filters={'id': {'==': computer.id}})
-        qb.append(orm.AuthInfo, with_computer='computer', filters={'id': {'==': authinfo.id}})
+        qb.append(orm.Computer, tag='computer', filters={'id': {'==': computer.pk}})
+        qb.append(orm.AuthInfo, with_computer='computer', filters={'id': {'==': authinfo.pk}})
         assert qb.count() == 1, 'The expected computer that owns the selected authinfo was not found.'
 
     def test_joins_group_node(self):
@@ -1193,10 +1193,10 @@ class TestQueryBuilderJoins:
         # Check that the nodes are in the group
         qb = orm.QueryBuilder()
         qb.append(orm.Node, tag='node', project=['id'])
-        qb.append(orm.Group, with_node='node', filters={'id': {'==': group.id}})
+        qb.append(orm.Group, with_node='node', filters={'id': {'==': group.pk}})
         assert qb.count() == 4, 'There should be 4 nodes in the group'
         id_res = [_ for [_] in qb.all()]
-        for curr_id in [n1.id, n2.id, n3.id, n4.id]:
+        for curr_id in [n1.pk, n2.pk, n3.pk, n4.pk]:
             assert curr_id in id_res
 
 
@@ -1438,7 +1438,7 @@ class TestConsistency:
             output_node.base.links.add_incoming(parent, link_type=LinkType.CREATE, link_label=f'link_{inode}')
         for projection in ('id', '*'):
             qb = orm.QueryBuilder()
-            qb.append(orm.CalculationNode, filters={'id': parent.id}, tag='parent', project=projection)
+            qb.append(orm.CalculationNode, filters={'id': parent.pk}, tag='parent', project=projection)
             qb.append(orm.Data, with_incoming='parent')
             assert len(qb.all()) == qb.count()
 
@@ -1544,13 +1544,13 @@ class TestDoubleStar:
         result = orm.QueryBuilder().append(
             orm.AuthInfo, tag='auth', filters={
                 'id': {
-                    '==': authinfo.id
+                    '==': authinfo.pk
                 }
             }, project=['**']
         ).dict()
         assert len(result) == 1
         print(result)
-        assert result[0]['auth']['id'] == authinfo.id
+        assert result[0]['auth']['id'] == authinfo.pk
 
     def test_statistics_default_class(self):
 
@@ -1563,7 +1563,7 @@ class TestDoubleStar:
             'uuid': self.computer.uuid,
             'label': self.computer.label,
             'transport_type': self.computer.transport_type,
-            'id': self.computer.id,
+            'id': self.computer.pk,
             'metadata': self.computer.metadata,
         }
 

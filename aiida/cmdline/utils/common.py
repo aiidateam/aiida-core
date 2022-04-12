@@ -308,7 +308,7 @@ def get_process_function_report(node):
     report = []
 
     for log in orm.Log.objects.get_logs_for(node):
-        report.append(f'{log.time:%Y-%m-%d %H:%M:%S} [{log.id}]: {log.message}')
+        report.append(f'{log.time:%Y-%m-%d %H:%M:%S} [{log.pk}]: {log.message}')
 
     return '\n'.join(report)
 
@@ -328,7 +328,7 @@ def get_workchain_report(node: 'WorkChainNode', levelname, indent_size=4, max_de
 
     def get_report_messages(uuid, depth, levelname):
         """Return list of log messages with given levelname and their depth for a node with a given uuid."""
-        node_id = orm.load_node(uuid).id
+        node_id = orm.load_node(uuid).pk
         filters = {'dbnode_id': node_id}
 
         entries = orm.Log.objects.find(filters)
@@ -373,7 +373,7 @@ def get_workchain_report(node: 'WorkChainNode', levelname, indent_size=4, max_de
     if not reports:
         return 'No log messages recorded for this entry'
 
-    log_ids = [entry[0].id for entry in reports]
+    log_ids = [entry[0].pk for entry in reports]
     levelnames = [len(entry[0].levelname) for entry in reports]
     width_id = len(str(max(log_ids)))
     width_levelname = max(levelnames)
@@ -381,7 +381,7 @@ def get_workchain_report(node: 'WorkChainNode', levelname, indent_size=4, max_de
 
     for entry, depth in reports:
         line = '{time:%Y-%m-%d %H:%M:%S} [{id:<{width_id}} | {levelname:>{width_levelname}}]:{indent} {message}'.format(
-            id=entry.id,
+            id=entry.pk,
             levelname=entry.levelname,
             message=entry.message,
             time=entry.time,

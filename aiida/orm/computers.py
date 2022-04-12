@@ -553,11 +553,11 @@ class Computer(entities.Entity['BackendComputer']):
         from . import authinfos
 
         try:
-            authinfo = authinfos.AuthInfo.objects(self.backend).get(dbcomputer_id=self.id, aiidauser_id=user.id)
+            authinfo = authinfos.AuthInfo.objects(self.backend).get(dbcomputer_id=self.pk, aiidauser_id=user.pk)
         except exceptions.NotExistent as exc:
             raise exceptions.NotExistent(
-                f'Computer `{self.label}` (ID={self.id}) not configured for user `{user.get_short_name()}` '
-                f'(ID={user.id}) - use `verdi computer configure` first'
+                f'Computer `{self.label}` (ID={self.pk}) not configured for user `{user.get_short_name()}` '
+                f'(ID={user.pk}) - use `verdi computer configure` first'
             ) from exc
 
         return authinfo

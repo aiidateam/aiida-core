@@ -93,7 +93,7 @@ def interactive_default(key, also_non_interactive=False):
             return None
 
         try:
-            authinfo = orm.AuthInfo.objects.get(dbcomputer_id=computer.id, aiidauser_id=user.id)
+            authinfo = orm.AuthInfo.objects.get(dbcomputer_id=computer.pk, aiidauser_id=user.pk)
         except NotExistent:
             authinfo = orm.AuthInfo(computer=computer, user=user)
 

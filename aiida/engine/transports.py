@@ -70,12 +70,12 @@ class TransportQueue:
         :return: A future that can be yielded to give the transport
         """
         open_callback_handle = None
-        transport_request = self._transport_requests.get(authinfo.id, None)
+        transport_request = self._transport_requests.get(authinfo.pk, None)
 
         if transport_request is None:
             # There is no existing request for this transport (i.e. on this authinfo)
             transport_request = TransportRequest()
-            self._transport_requests[authinfo.id] = transport_request
+            self._transport_requests[authinfo.pk] = transport_request
 
             transport = authinfo.get_transport()
             safe_open_interval = transport.get_safe_open_interval()
@@ -92,7 +92,7 @@ class TransportQueue:
                         transport_request.future.set_exception(exception)
 
                         # Cleanup of the stale TransportRequest with the excepted transport future
-                        self._transport_requests.pop(authinfo.id, None)
+                        self._transport_requests.pop(authinfo.pk, None)
                     else:
                         transport_request.future.set_result(transport)
 
@@ -127,4 +127,4 @@ class TransportQueue:
                 elif open_callback_handle is not None:
                     open_callback_handle.cancel()
 
-                self._transport_requests.pop(authinfo.id, None)
+                self._transport_requests.pop(authinfo.pk, None)

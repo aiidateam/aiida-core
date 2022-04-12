@@ -20,7 +20,7 @@ There are several methods which the internal classes of AiiDA use to control the
 
 On the level of the generic :class:`orm.Node <aiida.orm.Node>` class:
 
-* The :meth:`~aiida.orm.Node.is_valid_cache` property determines whether a particular node can be used as a cache.
+* The :meth:`~aiida.orm.nodes.caching.NodeCaching.is_valid_cache` property determines whether a particular node can be used as a cache.
   This is used for example to disable caching from failed calculations.
 * Node classes have a ``_cachable`` attribute, which can be set to ``False`` to completely switch off caching for nodes of that class.
   This avoids performing queries for the hash altogether.

@@ -29,7 +29,7 @@ def test_critical_log_msg_and_metadata(tmp_path, aiida_profile_clean):
     calc.logger.critical(message)
 
     # Store Log metadata
-    log_metadata = orm.Log.objects.get(dbnode_id=calc.id).metadata
+    log_metadata = orm.Log.objects.get(dbnode_id=calc.pk).metadata
 
     export_file = tmp_path.joinpath('export.aiida')
     create_archive([calc], filename=export_file)

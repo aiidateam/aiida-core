@@ -28,7 +28,7 @@ class TemplatereplacerDoublerParser(Parser):
             return self.exit_codes.ERROR_NO_OUTPUT_FILE_NAME_DEFINED
 
         try:
-            with output_folder.open(output_file, 'r') as handle:
+            with output_folder.base.repository.open(output_file, 'r') as handle:
                 result = self.parse_stdout(handle)
         except (OSError, IOError):
             self.logger.exception(f'unable to parse the output for CalcJobNode<{self.node.pk}>')

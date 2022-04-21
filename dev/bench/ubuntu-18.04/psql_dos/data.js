@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1650542402387,
+  "lastUpdate": 1650545466120,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -82265,6 +82265,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.0015207",
             "group": "node",
             "extra": "mean: 15.952 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "2.60",
+          "cores": 2,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.8.12",
+          "metadata": "postgres:12.3, rabbitmq:3.8.3"
+        },
+        "commit": {
+          "id": "25ac2131c0eaa61baa8f722427ed5a01a6f55688",
+          "message": "Fixing, simplifying and typing `aiida.common.timezone`\n\nThe `make_aware` method was actually bugged if the passed `timezone` was\nnot a `pytz.tzinfo` object but a standard `datetime.tzinfo`. The latter\ndoes not have the `localize` method. The implementation checked for this\nbut outside the conditional still called the method, which would raise\nan `AttributeError`.\n\nInstead of fixing the small bug, the entire implementation is simplified\nsignificantly. The implementation was borrowed from Django way in the\nbeginning of this project, but as of Python 3.6 `datetime.astimezone`\nprovides all the needed functionality as it will automatically retrieve\nthe timezone of the operating system when no timezone is specified. This\nalso means that we can now drop the `tzlocal` dependency as its only use\nwas determining the system's timezone. The `get_current_timezone` method\nthat wrapped it is dropped. The function now no longer excepts if a\ndatetime object is passed that is already aware, it will simply have the\ntimezone updated.\n\nThe `localtime` also was taken from Django originally and is also\nsimplified. It also drops the `timezone` argument because with it, it is\nidentical to `make_aware` rendering it obsolete. It should not allow\nspecifying a `timezone` but always use the timezone of the OS. Similar\nto `make_aware`, this now also no longer excepts when an already aware\nobject is passed.\n\nWith these changes, the code no longer includes code taken from Django\nand so its license can be dropped from `open_source_licenses.txt`.\n\nInvocations of `timezone.delta` don't need to explicitly pass\n`timezone.now` as second argument as that is already the default.\n\nThe use of `pytz` is reduced to a minimum and only used when there is no\nequivalent functionality in the standard library. Instead of `pytz.utc`\nuse `datetime.timezone.utc`. For convenience this is forwarded in\n`aiida.common.timezone`. The `pytz` library is now exclusively used to\nconvert a timezone name in string form into a `timezone` object. This\nfunctionality is centralized in `aiida.common.timezone.timezone_from_name`.\nThis is also only used in `aiida.schedulers.datastructures` to convert\nthe serialized response from schedulers. If this were to be removed, the\n`pytz` dependency could be dropped.\n\nFinally, the `aiida.manage.configuration.settings.USE_TZ` settingm is\ndropped. It was a relic of Django's configuration. It was hard-coded to\ntrue, wasn't configurable and was only used in `aiida.common.timezone.now`\nto make the returned object aware of the system's timezone if the setting\nwas set to True. This behavior is now hard-coded.",
+          "timestamp": "2022-04-21T14:41:26+02:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/25ac2131c0eaa61baa8f722427ed5a01a6f55688",
+          "distinct": true,
+          "tree_id": "9686cbb1df146f628a9fe6da40a6a166eef91d10"
+        },
+        "date": 1650545461575,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 3.2301809449975005,
+            "unit": "iter/sec",
+            "range": "stddev: 0.067134",
+            "group": "import-export",
+            "extra": "mean: 309.58 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 3.2276298681364963,
+            "unit": "iter/sec",
+            "range": "stddev: 0.055520",
+            "group": "import-export",
+            "extra": "mean: 309.82 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 4.241159827800823,
+            "unit": "iter/sec",
+            "range": "stddev: 0.059563",
+            "group": "import-export",
+            "extra": "mean: 235.78 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 3.8024448510579534,
+            "unit": "iter/sec",
+            "range": "stddev: 0.082183",
+            "group": "import-export",
+            "extra": "mean: 262.99 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 3.4260403838761575,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0047664",
+            "group": "engine",
+            "extra": "mean: 291.88 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.7545145687899641,
+            "unit": "iter/sec",
+            "range": "stddev: 0.060078",
+            "group": "engine",
+            "extra": "mean: 1.3254 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.881259783074706,
+            "unit": "iter/sec",
+            "range": "stddev: 0.039898",
+            "group": "engine",
+            "extra": "mean: 1.1347 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.18188501902013915,
+            "unit": "iter/sec",
+            "range": "stddev: 0.18639",
+            "group": "engine",
+            "extra": "mean: 5.4980 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.2114410098920592,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11611",
+            "group": "engine",
+            "extra": "mean: 4.7295 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.7113273367669066,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0086596",
+            "group": "engine",
+            "extra": "mean: 368.82 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.6061590150950154,
+            "unit": "iter/sec",
+            "range": "stddev: 0.067692",
+            "group": "engine",
+            "extra": "mean: 1.6497 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.701649422756447,
+            "unit": "iter/sec",
+            "range": "stddev: 0.088806",
+            "group": "engine",
+            "extra": "mean: 1.4252 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.1639402462130628,
+            "unit": "iter/sec",
+            "range": "stddev: 0.13855",
+            "group": "engine",
+            "extra": "mean: 6.0998 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.19284140503467762,
+            "unit": "iter/sec",
+            "range": "stddev: 0.18422",
+            "group": "engine",
+            "extra": "mean: 5.1856 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 389.0740898842587,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00059612",
+            "group": "node",
+            "extra": "mean: 2.5702 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 152.3679401009373,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0012062",
+            "group": "node",
+            "extra": "mean: 6.5631 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 84.20195643570386,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00076284",
+            "group": "node",
+            "extra": "mean: 11.876 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 264.0745238164672,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000088991",
+            "group": "node",
+            "extra": "mean: 3.7868 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 65.44528628877791,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0010020",
+            "group": "node",
+            "extra": "mean: 15.280 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 54.67433898106392,
+            "unit": "iter/sec",
+            "range": "stddev: 0.021388",
+            "group": "node",
+            "extra": "mean: 18.290 msec\nrounds: 100"
           }
         ]
       }

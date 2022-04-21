@@ -119,6 +119,7 @@ def storage_info(detailed):
 @click.pass_context
 def storage_maintain(ctx, full, dry_run):
     """Performs maintenance tasks on the repository."""
+    from aiida.common.exceptions import LockingProfileError
     from aiida.manage.manager import get_manager
 
     manager = get_manager()
@@ -151,5 +152,8 @@ def storage_maintain(ctx, full, dry_run):
         if not click.confirm('Are you sure you want continue in this mode?'):
             return
 
-    storage.maintain(full=full, dry_run=dry_run)
+    try:
+        storage.maintain(full=full, dry_run=dry_run)
+    except LockingProfileError as exception:
+        echo.echo_critical(str(exception))
     echo.echo_success('Requested maintenance procedures finished.')

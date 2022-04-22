@@ -370,13 +370,18 @@ class JobTemplateCodeInfo:
     `Scheduler.get_submit_script` will pass a list of these objects to `Scheduler._get_run_line` which
     should build up the code execution line based on the parameters specified in this dataclass.
 
+    :param preprend_cmdline_params: list of unescaped command line arguments that are to be prepended to the executable.
     :param cmdline_params: list of unescaped command line parameters.
+    :param use_double_quotes: list of two booleans. If true, use double quotes to escape command line arguments. The
+        first value applies to `prepend_cmdline_params` and the second to `cmdline_params`.
     :param stdin_name: filename of the the stdin file descriptor.
     :param stdout_name: filename of the the `stdout` file descriptor.
     :param stderr_name: filename of the the `stderr` file descriptor.
     :param join_files: boolean, if true, `stderr` should be redirected to `stdout`.
     """
+    prepend_cmdline_params: list[str] = field(default_factory=list)
     cmdline_params: list[str] = field(default_factory=list)
+    use_double_quotes: list[bool] = field(default_factory=lambda: [False, False])
     stdin_name: None | str = None
     stdout_name: None | str = None
     stderr_name: None | str = None

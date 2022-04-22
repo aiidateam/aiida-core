@@ -38,6 +38,30 @@ def raise_exception(exception, *args, **kwargs):
 
 
 @pytest.mark.requires_rmq
+class DummyCalcJob(CalcJob):
+    """`DummyCalcJob` implementation to test the calcinfo with container code."""
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+
+    def prepare_for_submission(self, folder):
+        from aiida.common.datastructures import CalcInfo, CodeInfo
+
+        codeinfo = CodeInfo()
+        codeinfo.code_uuid = self.inputs.code.uuid
+        codeinfo.cmdline_params = ['--version', '-c']
+        codeinfo.stdin_name = 'aiida.in'
+        codeinfo.stdout_name = 'aiida.out'
+        codeinfo.stderr_name = 'aiida.err'
+
+        calcinfo = CalcInfo()
+        calcinfo.codes_info = [codeinfo]
+
+        return calcinfo
+
+
+@pytest.mark.requires_rmq
 class FileCalcJob(CalcJob):
     """Example `CalcJob` implementation to test the `provenance_exclude_list` functionality.
 
@@ -128,6 +152,72 @@ def test_multi_codes_run_parallel(aiida_local_code_factory, file_regression, par
     }
 
     _, node = launch.run_get_node(MultiCodesCalcJob, **inputs)
+    folder_name = node.dry_run_info['folder']
+    submit_script_filename = node.get_option('submit_script_filename')
+    with open(os.path.join(folder_name, submit_script_filename), encoding='utf8') as handle:
+        content = handle.read()
+
+    file_regression.check(content, extension='.sh')
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
+@pytest.mark.parametrize('computer_use_double_quotes', [True, False])
+def test_computer_double_quotes(aiida_local_code_factory, file_regression, computer_use_double_quotes):
+    """test that bash script quote escape behaviour can be controlled"""
+    computer = orm.Computer(
+        label='test-code-computer',
+        transport_type='core.local',
+        hostname='localhost',
+        scheduler_type='core.direct',
+    ).store()
+    computer.set_use_double_quotes(computer_use_double_quotes)
+
+    inputs = {
+        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash', computer),
+        'metadata': {
+            'dry_run': True,
+            'options': {
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
+                },
+                'withmpi': True,
+            }
+        }
+    }
+
+    _, node = launch.run_get_node(DummyCalcJob, **inputs)
+    folder_name = node.dry_run_info['folder']
+    submit_script_filename = node.get_option('submit_script_filename')
+    with open(os.path.join(folder_name, submit_script_filename), encoding='utf8') as handle:
+        content = handle.read()
+
+    file_regression.check(content, extension='.sh')
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
+@pytest.mark.parametrize('code_use_double_quotes', [True, False])
+def test_code_double_quotes(aiida_localhost, file_regression, code_use_double_quotes):
+    """test that bash script quote escape behaviour can be controlled"""
+    code = orm.Code(remote_computer_exec=(aiida_localhost, '/bin/bash'))
+    code.set_use_double_quotes(code_use_double_quotes)
+    inputs = {
+        'code': code.store(),
+        'metadata': {
+            'dry_run': True,
+            'options': {
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
+                },
+                'withmpi': True,
+            }
+        }
+    }
+
+    _, node = launch.run_get_node(DummyCalcJob, **inputs)
     folder_name = node.dry_run_info['folder']
     submit_script_filename = node.get_option('submit_script_filename')
     with open(os.path.join(folder_name, submit_script_filename), encoding='utf8') as handle:

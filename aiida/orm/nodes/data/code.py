@@ -351,6 +351,22 @@ class Code(Data):
         """
         return self.base.attributes.get('input_plugin', None)
 
+    def set_use_double_quotes(self, use_double_quotes: bool):
+        """Set whether the command line invocation of this code should be escaped with double quotes.
+
+        :param use_double_quotes: True if to escape with double quotes, False otherwise.
+        """
+        from aiida.common.lang import type_check
+        type_check(use_double_quotes, bool)
+        self.base.attributes.set('use_double_quotes', use_double_quotes)
+
+    def get_use_double_quotes(self) -> bool:
+        """Return whether the command line invocation of this code should be escaped with double quotes.
+
+        :returns: True if to escape with double quotes, False otherwise which is also the default.
+        """
+        return self.base.attributes.get('use_double_quotes', False)
+
     def set_append_text(self, code):
         """
         Pass a string of code that will be put in the scheduler script after the

@@ -219,19 +219,28 @@ class Scheduler(metaclass=abc.ABCMeta):
         list_of_runlines = []
 
         for code_info in codes_info:
+            computer_use_double_quotes = code_info.use_double_quotes[0]
+            code_use_double_quotes = code_info.use_double_quotes[1]
+
             command_to_exec_list = []
+            for arg in code_info.prepend_cmdline_params:
+                command_to_exec_list.append(escape_for_bash(arg, use_double_quotes=computer_use_double_quotes))
             for arg in code_info.cmdline_params:
-                command_to_exec_list.append(escape_for_bash(arg))
+                command_to_exec_list.append(escape_for_bash(arg, use_double_quotes=code_use_double_quotes))
             command_to_exec = ' '.join(command_to_exec_list)
 
-            stdin_str = f'< {escape_for_bash(code_info.stdin_name)}' if code_info.stdin_name else ''
-            stdout_str = f'> {escape_for_bash(code_info.stdout_name)}' if code_info.stdout_name else ''
+            escape_stdin_name = escape_for_bash(code_info.stdin_name, use_double_quotes=computer_use_double_quotes)
+            escape_stdout_name = escape_for_bash(code_info.stdout_name, use_double_quotes=computer_use_double_quotes)
+            escape_sterr_name = escape_for_bash(code_info.stderr_name, use_double_quotes=computer_use_double_quotes)
+
+            stdin_str = f'< {escape_stdin_name}' if code_info.stdin_name else ''
+            stdout_str = f'> {escape_stdout_name}' if code_info.stdout_name else ''
 
             join_files = code_info.join_files
             if join_files:
                 stderr_str = '2>&1'
             else:
-                stderr_str = f'2> {escape_for_bash(code_info.stderr_name)}' if code_info.stderr_name else ''
+                stderr_str = f'2> {escape_sterr_name}' if code_info.stderr_name else ''
 
             output_string = f'{command_to_exec} {stdin_str} {stdout_str} {stderr_str}'
 

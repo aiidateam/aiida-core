@@ -708,16 +708,16 @@ class CalcJob(Process):
                 this_withmpi = code_info.withmpi
 
             if this_withmpi:
-                this_argv = (
-                    mpi_args + extra_mpirun_params + [this_code.get_execname()] +
-                    (code_info.cmdline_params if code_info.cmdline_params is not None else [])
-                )
+                prepend_cmdline_params = mpi_args + extra_mpirun_params
             else:
-                this_argv = [this_code.get_execname()
-                             ] + (code_info.cmdline_params if code_info.cmdline_params is not None else [])
+                prepend_cmdline_params = []
+
+            cmdline_params = [this_code.get_execname()] + (code_info.cmdline_params or [])
 
             tmpl_code_info = JobTemplateCodeInfo()
-            tmpl_code_info.cmdline_params = this_argv
+            tmpl_code_info.prepend_cmdline_params = prepend_cmdline_params
+            tmpl_code_info.cmdline_params = cmdline_params
+            tmpl_code_info.use_double_quotes = [computer.get_use_double_quotes(), this_code.get_use_double_quotes()]
             tmpl_code_info.stdin_name = code_info.stdin_name
             tmpl_code_info.stdout_name = code_info.stdout_name
             tmpl_code_info.stderr_name = code_info.stderr_name

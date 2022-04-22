@@ -39,6 +39,7 @@ class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
         spec['hostname'] = computer.hostname
         spec['scheduler'] = computer.scheduler_type
         spec['transport'] = computer.transport_type
+        spec['use_double_quotes'] = computer.get_use_double_quotes()
         spec['prepend_text'] = computer.get_prepend_text()
         spec['append_text'] = computer.get_append_text()
         spec['work_dir'] = computer.get_workdir()
@@ -76,6 +77,7 @@ class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
         computer.description = self._get_and_count('description', used)
         computer.scheduler_type = self._get_and_count('scheduler', used)
         computer.transport_type = self._get_and_count('transport', used)
+        computer.set_use_double_quotes(self._get_and_count('use_double_quotes', used))
         computer.set_prepend_text(self._get_and_count('prepend_text', used))
         computer.set_append_text(self._get_and_count('append_text', used))
         computer.set_workdir(self._get_and_count('work_dir', used))

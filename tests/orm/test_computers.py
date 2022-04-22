@@ -99,6 +99,7 @@ class TestComputerConfigure:
         self.comp_builder.work_dir = '/tmp/aiida'
         self.comp_builder.prepend_text = ''
         self.comp_builder.append_text = ''
+        self.comp_builder.use_double_quotes = False
         self.comp_builder.mpiprocs_per_machine = 8
         self.comp_builder.default_memory_per_machine = 1000000
         self.comp_builder.mpirun_command = 'mpirun'

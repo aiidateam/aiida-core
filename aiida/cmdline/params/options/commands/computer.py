@@ -117,6 +117,15 @@ DEFAULT_MEMORY_PER_MACHINE = OverridableOption(
     help='The default amount of RAM (kB) that should be allocated per machine (node), if not otherwise specified.'
 )
 
+USE_DOUBLE_QUOTES = OverridableOption(
+    '--use-double-quotes/--not-use-double-quotes',
+    default=False,
+    cls=InteractiveOption,
+    prompt='Escape CLI arguments in double quotes',
+    help='Whether the command line arguments before and after the executable in the submission script should be '
+    'escaped with single or double quotes.'
+)
+
 PREPEND_TEXT = OverridableOption(
     '--prepend-text',
     cls=TemplateInteractiveOption,

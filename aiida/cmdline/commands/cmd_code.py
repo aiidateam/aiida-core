@@ -72,6 +72,7 @@ def set_code_builder(ctx, param, value):
 @options_code.REMOTE_ABS_PATH()
 @options_code.FOLDER()
 @options_code.REL_PATH()
+@options_code.USE_DOUBLE_QUOTES()
 @options_code.PREPEND_TEXT()
 @options_code.APPEND_TEXT()
 @options.NON_INTERACTIVE()

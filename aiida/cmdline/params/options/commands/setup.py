@@ -259,7 +259,7 @@ SETUP_DATABASE_ENGINE = QUICKSETUP_DATABASE_ENGINE.clone(
 
 SETUP_DATABASE_BACKEND = QUICKSETUP_DATABASE_BACKEND.clone(
     prompt='Database backend',
-    contextual_default=functools.partial(get_profile_attribute_default, ('storage_backend', 'psql_dos')),
+    contextual_default=functools.partial(get_profile_attribute_default, ('storage_backend', 'core.psql_dos')),
     cls=options.interactive.InteractiveOption
 )
 

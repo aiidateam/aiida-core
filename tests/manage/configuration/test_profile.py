@@ -17,7 +17,7 @@ def test_base_properties(profile_factory):
     """Test the basic properties of a ``Profile`` instance."""
     kwargs = {
         'name': 'profile-name',
-        'storage_backend': 'psql_dos',
+        'storage_backend': 'core.psql_dos',
         'process_control_backend': 'rabbitmq',
     }
     profile = profile_factory(**kwargs)

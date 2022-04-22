@@ -53,7 +53,7 @@ To display these parameters, use ``verdi profile show``:
             broker_username: guest
             broker_virtual_host: ''
     storage:
-        backend: psql_dos
+        backend: core.psql_dos
         config:
             database_engine: postgresql_psycopg2
             database_hostname: localhost
@@ -568,7 +568,7 @@ To determine what storage backend a profile uses, call ``verdi profile show``.
 
     .. tab-item:: psql_dos
 
-        To fully backup the data stored for a profile using the ``psql_dos`` backend, you should restore the associated database and file repository.
+        To fully backup the data stored for a profile using the ``core.psql_dos`` backend, you should restore the associated database and file repository.
 
         **PostgreSQL database**
 

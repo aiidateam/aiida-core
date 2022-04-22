@@ -55,7 +55,7 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
             {
                 'default_user_email': default_user_email,
                 'storage': {
-                    'backend': 'sqlite_temp',
+                    'backend': 'core.sqlite_temp',
                     'config': {
                         'debug': debug,
                         # Note this is currently required, see https://github.com/aiidateam/aiida-core/issues/5451

@@ -63,7 +63,7 @@ provisioner:
           aiida_pip_cache: /home/.cache/pip
           venv_bin: /opt/conda/bin
           ansible_python_interpreter: "{{ venv_bin }}/python"
-          aiida_backend: ${AIIDA_TEST_BACKEND:-psql_dos}
+          aiida_backend: ${AIIDA_TEST_BACKEND:-core.psql_dos}
           aiida_workers: ${AIIDA_TEST_WORKERS:-2}
           aiida_path: /tmp/.aiida_${AIIDA_TEST_BACKEND:-psql_dos}
           aiida_query_stats: true

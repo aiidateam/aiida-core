@@ -377,7 +377,7 @@ Below is a list with all available subcommands.
       --institution NONEMPTYSTRING    Institution of the user.  [required]
       --db-engine [postgresql_psycopg2]
                                       Engine to use to connect to the database.
-      --db-backend [psql_dos]         Database backend to use.
+      --db-backend [core.psql_dos]    Database backend to use.
       --db-host HOSTNAME              Database server host. Leave empty for "peer"
                                       authentication.
       --db-port INTEGER               Database server port.
@@ -481,7 +481,7 @@ Below is a list with all available subcommands.
       --institution NONEMPTYSTRING    Institution of the user.  [required]
       --db-engine [postgresql_psycopg2]
                                       Engine to use to connect to the database.
-      --db-backend [psql_dos]         Database backend to use.
+      --db-backend [core.psql_dos]    Database backend to use.
       --db-host HOSTNAME              Database server host. Leave empty for "peer"
                                       authentication.
       --db-port INTEGER               Database server port.

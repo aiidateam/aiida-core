@@ -1,12 +1,12 @@
 {
-  "CONFIG_VERSION": { "CURRENT": 9, "OLDEST_COMPATIBLE": 9 },
+  "CONFIG_VERSION": { "CURRENT": 8, "OLDEST_COMPATIBLE": 8 },
   "default_profile": "default",
   "profiles": {
     "default": {
       "default_user_email": "email@aiida.net",
       "PROFILE_UUID": "00000000000000000000000000000000",
       "storage": {
-        "backend": "core.psql_dos",
+        "backend": "psql_dos",
         "config": {
           "database_engine": "postgresql_psycopg2",
           "database_password": "some_random_password",

@@ -213,6 +213,11 @@ runaiida = "aiida.cmdline.commands.cmd_run:run"
 "core.slurm" = "aiida.schedulers.plugins.slurm:SlurmScheduler"
 "core.torque" = "aiida.schedulers.plugins.torque:TorqueScheduler"
 
+[project.entry-points."aiida.storage"]
+"core.psql_dos" = "aiida.storage.psql_dos.backend:PsqlDosBackend"
+"core.sqlite_temp" = "aiida.storage.sqlite_temp.backend:SqliteTempBackend"
+"core.sqlite_zip" = "aiida.storage.sqlite_zip.backend:SqliteZipBackend"
+
 [project.entry-points."aiida.transports"]
 "core.local" = "aiida.transports.plugins.local:LocalTransport"
 "core.ssh" = "aiida.transports.plugins.ssh:SshTransport"

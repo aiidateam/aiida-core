@@ -65,6 +65,7 @@ ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP = {
     'aiida.node': 'aiida.orm.nodes',
     'aiida.parsers': 'aiida.parsers.plugins',
     'aiida.schedulers': 'aiida.schedulers.plugins',
+    'aiida.storage': 'aiida.storage',
     'aiida.tools.calculations': 'aiida.tools.calculations',
     'aiida.tools.data.orbitals': 'aiida.tools.data.orbitals',
     'aiida.tools.dbexporters': 'aiida.tools.dbexporters',

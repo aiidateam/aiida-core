@@ -174,7 +174,7 @@ class TestMakeHashTest:
 
     def test_folder(self):
         # create directories for the Folder test
-        with SandboxFolder(sandbox_in_repo=False) as folder:
+        with SandboxFolder() as folder:
             with folder.open('file1', 'a') as handle:
                 pass
             with folder.open('file2', 'w') as handle:

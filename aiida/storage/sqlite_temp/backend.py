@@ -133,7 +133,7 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
             raise ClosedStorage(str(self))
         if self._repo is None:
             # to-do this does not seem to be removing the folder on garbage collection?
-            self._repo = SandboxRepositoryBackend(sandbox_in_repo=True)
+            self._repo = SandboxRepositoryBackend()
         return self._repo
 
     @property

@@ -8,16 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions to operate on filesystem folders."""
+from __future__ import annotations
+
 import contextlib
 import errno
 import fnmatch
 import os
+import pathlib
 import shutil
 import tempfile
 
-from aiida.manage.configuration import get_profile
-
 from . import timezone
+from .lang import type_check
 
 # If True, tries to make everything (dirs, files) group-writable.
 # Otherwise, tries to make everything only readable and writable by the user.
@@ -25,8 +27,6 @@ GROUP_WRITABLE = True
 
 # Name of directory in which to place the input files created by running a dry run for a `CalcJob`
 CALC_JOB_DRY_RUN_BASE_PATH = 'submit_test'
-
-VALID_SECTIONS = ['node']
 
 
 class Folder:
@@ -47,6 +47,7 @@ class Folder:
     """
 
     def __init__(self, abspath, folder_limit=None):
+        """Construct a new instance."""
         abspath = os.path.abspath(abspath)
         if folder_limit is None:
             folder_limit = abspath
@@ -393,48 +394,35 @@ class Folder:
 
 
 class SandboxFolder(Folder):
-    """
-    A class to manage the creation and management of a sandbox folder.
+    """A class to manage the creation and management of a sandbox folder.
 
-    Note: this class must be used within a context manager, i.e.:
+    .. note:: This class should be used with a context manager to guarantee automatic cleanup:
 
-    with SandboxFolder as f:
-        ## do something with f
+        with SandboxFolder() as folder:
+            # Do something with ``folder``
 
-    In this way, the sandbox folder is removed from disk
-    (if it wasn't removed already) when exiting the 'with' block.
-
-    .. todo:: Implement check of whether the folder has been removed.
     """
 
-    def __init__(self, sandbox_in_repo=True):
-        """
-        Initializes the object by creating a new temporary folder in the
-        sandbox.
+    def __init__(self, filepath: pathlib.Path | None = None):
+        """Initialize a ``Folder`` object for an automatically created temporary directory.
 
-        :param bool sandbox_in_repo:
-            If True (default), creates the folder in the repository.
-            If false,  relies on the defaults of tempfile.mkdtemp
+        :param filepath: A filepath to a directory to use for the sandbox folder. This path will be actually used as the
+            base path and a random subfolder will be generated inside it. This will guarantee that multiple instances of
+            the class can be created with the same value for ``filepath`` while guaranteeing they are independent.
         """
-        # First check if the sandbox folder already exists
-        if sandbox_in_repo:
-            sandbox = os.path.join(get_profile().repository_path, 'sandbox')
-            os.makedirs(sandbox, exist_ok=True)
-            abspath = tempfile.mkdtemp(dir=sandbox)
-        else:
-            abspath = tempfile.mkdtemp()
-        super().__init__(abspath=abspath)
+        type_check(filepath, pathlib.Path, allow_none=True)
+
+        if filepath is not None:
+            filepath.mkdir(exist_ok=True, parents=True)
+
+        super().__init__(abspath=tempfile.mkdtemp(dir=filepath))
 
     def __enter__(self):
-        """
-        Called when entering in the with statement
-        """
+        """Enter a context and return self."""
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        """
-        In exit, I remove the sandbox folder from disk, if it still exists
-        """
+        """Erase the temporary directory created in the constructor."""
         self.erase()
 
 

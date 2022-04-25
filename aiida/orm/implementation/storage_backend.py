@@ -172,7 +172,7 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
         from aiida.orm import QueryBuilder, User
 
         if self._default_user is None and self.profile.default_user_email:
-            query = QueryBuilder().append(User, filters={'email': self.profile.default_user_email})
+            query = QueryBuilder(self).append(User, filters={'email': self.profile.default_user_email})
             results = query.all(flat=True)
             if results:
                 self._default_user = results[0]

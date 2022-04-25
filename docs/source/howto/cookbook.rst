@@ -25,7 +25,7 @@ If you want to know if which jobs are currently on the scheduler (e.g. to dynami
         """
         from aiida import orm
 
-        computer = Computer.objects.get(label=computer_label)
+        computer = Computer.collection.get(label=computer_label)
         transport = computer.get_transport()
         scheduler = computer.get_scheduler()
         scheduler.set_transport(transport)
@@ -93,7 +93,7 @@ Getting an ``AuthInfo`` knowing the computer and the user
 =========================================================
 
 To open a transport to a computer, you need the corresponding :class:`~aiida.orm.authinfos.AuthInfo` object, which contains the required information for a specific user.
-Once you have the relevant :class:`~aiida.orm.computers.Computer` and :class:`~aiida.orm.users.User` objects, you can obtain as follows:
+Once you have the relevant :class:`~aiida.orm.computers.Computer` and :class:`~aiida.orm.users.User` collection, you can obtain as follows:
 
 .. code-block:: python
 
@@ -106,7 +106,7 @@ Here is, as an example, a useful utility function:
     def get_authinfo_from_computer_label(computer_label):
         from aiida.orm import load_computer, User
         computer = load_computer(computer_label)
-        user = User.objects.get_default()
+        user = User.collection.get_default()
         return computer.get_authinfo(user)
 
 that you can then use, for instance, as follows:

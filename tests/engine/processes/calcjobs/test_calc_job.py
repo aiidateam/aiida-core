@@ -161,7 +161,7 @@ def test_multi_codes_run_parallel(aiida_local_code_factory, file_regression, par
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
+@pytest.mark.usefixtures('aiida_profile_clean', 'chdir_tmp_path')
 @pytest.mark.parametrize('computer_use_double_quotes', [True, False])
 def test_computer_double_quotes(aiida_local_code_factory, file_regression, computer_use_double_quotes):
     """test that bash script quote escape behaviour can be controlled"""
@@ -197,7 +197,7 @@ def test_computer_double_quotes(aiida_local_code_factory, file_regression, compu
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
+@pytest.mark.usefixtures('aiida_profile_clean', 'chdir_tmp_path')
 @pytest.mark.parametrize('code_use_double_quotes', [True, False])
 def test_code_double_quotes(aiida_localhost, file_regression, code_use_double_quotes):
     """test that bash script quote escape behaviour can be controlled"""

@@ -13,13 +13,15 @@ from aiida.common.lang import type_check
 from aiida.orm.implementation.authinfos import BackendAuthInfo, BackendAuthInfoCollection
 from aiida.storage.psql_dos.models.authinfo import DbAuthInfo
 
-from . import computers, entities, utils
+from . import computers, entities, users, utils
 
 
 class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
     """SqlAlchemy backend implementation for the `AuthInfo` ORM class."""
 
     MODEL_CLASS = DbAuthInfo
+    USER_CLASS = users.SqlaUser
+    COMPUTER_CLASS = computers.SqlaComputer
 
     def __init__(self, backend, computer, user):
         """Construct a new instance.
@@ -28,10 +30,9 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
         :param user: a :class:`aiida.orm.implementation.users.BackendUser` instance
         :return: an :class:`aiida.orm.implementation.authinfos.BackendAuthInfo` instance
         """
-        from . import users
         super().__init__(backend)
-        type_check(user, users.SqlaUser)
-        type_check(computer, computers.SqlaComputer)
+        type_check(user, self.USER_CLASS)
+        type_check(computer, self.COMPUTER_CLASS)
         self._model = utils.ModelWrapper(
             self.MODEL_CLASS(dbcomputer=computer.bare_model, aiidauser=user.bare_model), backend
         )

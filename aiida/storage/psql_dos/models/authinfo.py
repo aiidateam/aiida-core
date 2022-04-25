@@ -49,11 +49,6 @@ class DbAuthInfo(Base):
 
     __table_args__ = (UniqueConstraint('aiidauser_id', 'dbcomputer_id'),)
 
-    def __init__(self, *args, **kwargs):
-        self._metadata = {}
-        self.auth_params = {}
-        super().__init__(*args, **kwargs)
-
     def __str__(self):
         if self.enabled:
             return f'DB authorization info for {self.aiidauser.email} on {self.dbcomputer.label}'

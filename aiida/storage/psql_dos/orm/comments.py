@@ -25,6 +25,7 @@ class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
     """Comment implementation for Sqla."""
 
     MODEL_CLASS = models.DbComment
+    USER_CLASS = users.SqlaUser
 
     # pylint: disable=too-many-arguments
     def __init__(self, backend, node, user, content=None, ctime=None, mtime=None):
@@ -37,7 +38,7 @@ class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
         :param mtime: The modification time as datetime object
         """
         super().__init__(backend)
-        lang.type_check(user, users.SqlaUser)  # pylint: disable=no-member
+        lang.type_check(user, self.USER_CLASS)  # pylint: disable=no-member
 
         arguments = {
             'dbnode': node.bare_model,

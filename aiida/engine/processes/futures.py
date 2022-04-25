@@ -82,6 +82,7 @@ class ProcessFuture(asyncio.Future):
 
     async def _poll_process(self, node: Node, poll_interval: Union[int, float]) -> None:
         """Poll whether the process node has reached a terminal state."""
+        print('polling', node)
         while not self.done() and not node.is_terminated:
             await asyncio.sleep(poll_interval)
 

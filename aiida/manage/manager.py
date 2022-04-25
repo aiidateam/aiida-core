@@ -384,7 +384,7 @@ class Manager:
         settings = {'rmq_submit': False, 'poll_interval': poll_interval}
         settings.update(kwargs)
 
-        if 'communicator' not in settings:
+        if profile.process_control_backend == 'rabbitmq' and 'communicator' not in settings:
             # Only call get_communicator if we have to as it will lazily create
             settings['communicator'] = self.get_communicator()
 

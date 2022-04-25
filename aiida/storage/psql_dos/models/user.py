@@ -38,13 +38,5 @@ class DbUser(Base):
         ),
     )
 
-    def __init__(self, email, first_name='', last_name='', institution='', **kwargs):
-        """Set additional class attributes with respect to the base class."""
-        self.email = email
-        self.first_name = first_name
-        self.last_name = last_name
-        self.institution = institution
-        super().__init__(**kwargs)
-
     def __str__(self):
         return self.email

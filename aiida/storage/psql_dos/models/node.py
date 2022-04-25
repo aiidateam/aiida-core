@@ -46,8 +46,8 @@ class DbNode(Base):
     description = Column(Text(), nullable=False, default='')
     ctime = Column(DateTime(timezone=True), default=timezone.now, nullable=False, index=True)
     mtime = Column(DateTime(timezone=True), default=timezone.now, onupdate=timezone.now, nullable=False, index=True)
-    attributes = Column(JSONB)
-    extras = Column(JSONB)
+    attributes = Column(JSONB, default=dict)
+    extras = Column(JSONB, default=dict)
     repository_metadata = Column(JSONB, nullable=False, default=dict)
     dbcomputer_id = Column(
         Integer,
@@ -104,29 +104,6 @@ class DbNode(Base):
             postgresql_ops={'process_type': 'varchar_pattern_ops'}
         ),
     )
-
-    def __init__(self, *args, **kwargs):
-        """Add three additional attributes to the base class: mtime, attributes and extras."""
-        super().__init__(*args, **kwargs)
-        # The behavior of an unstored Node instance should be that all its attributes should be initialized in
-        # accordance with the defaults specified on the colums, i.e. if a default is specified for the `uuid` column,
-        # then an unstored `DbNode` instance should have a default value for the `uuid` attribute. The exception here
-        # is the `mtime`, that we do not want to be set upon instantiation, but only upon storing. However, in
-        # SqlAlchemy a default *has* to be defined if one wants to get that value upon storing. But since defining a
-        # default on the column in combination with the hack in `aiida.backend.SqlAlchemy.models.__init__` to force all
-        # defaults to be populated upon instantiation, we have to unset the `mtime` attribute here manually.
-        #
-        # The only time that we allow mtime not to be null is when we explicitly pass mtime as a kwarg. This covers
-        # the case that a node is constructed based on some very predefined data like when we create nodes at the
-        # AiiDA import functions.
-        if 'mtime' not in kwargs:
-            self.mtime = None
-
-        if self.attributes is None:
-            self.attributes = {}
-
-        if self.extras is None:
-            self.extras = {}
 
     @property
     def outputs(self):

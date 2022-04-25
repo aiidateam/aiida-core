@@ -72,8 +72,8 @@ class Profile:  # pylint: disable=too-many-public-methods
             from uuid import uuid4
             self._attributes[self.KEY_UUID] = uuid4().hex
 
-    def __str__(self) -> str:
-        return f'Profile<{self.uuid!r} ({self.name!r})>'
+    def __repr__(self) -> str:
+        return f'Profile<uuid={self.uuid!r} name={self.name!r}>'
 
     def copy(self):
         """Return a copy of the profile."""
@@ -130,6 +130,9 @@ class Profile:  # pylint: disable=too-many-public-methods
         if self.storage_backend == 'sqlite_zip':
             from aiida.storage.sqlite_zip.backend import SqliteZipBackend
             return SqliteZipBackend
+        if self.storage_backend == 'sqlite_temp':
+            from aiida.storage.sqlite_temp.backend import SqliteTempBackend
+            return SqliteTempBackend
         raise ValueError(f'unknown storage backend type: {self.storage_backend}')
 
     @property
@@ -223,6 +226,9 @@ class Profile:  # pylint: disable=too-many-public-methods
         :return: absolute filepath of the profile's file repository
         """
         from urllib.parse import urlparse
+
+        if 'repository_uri' not in self.storage_config:
+            raise KeyError('repository_uri not defined in profile storage config')
 
         parts = urlparse(self.storage_config['repository_uri'])
 

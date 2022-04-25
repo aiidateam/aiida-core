@@ -16,8 +16,9 @@ __all__ = ('SandboxRepositoryBackend',)
 class SandboxRepositoryBackend(AbstractRepositoryBackend):
     """Implementation of the ``AbstractRepositoryBackend`` using a sandbox folder on disk as the backend."""
 
-    def __init__(self):
+    def __init__(self, sandbox_in_repo=True):
         self._sandbox: Optional[SandboxFolder] = None
+        self._sandbox_in_repo = sandbox_in_repo
 
     def __str__(self) -> str:
         """Return the string representation of this repository."""
@@ -58,7 +59,7 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
     def sandbox(self):
         """Return the sandbox instance of this repository."""
         if self._sandbox is None:
-            self._sandbox = SandboxFolder()
+            self._sandbox = SandboxFolder(sandbox_in_repo=self._sandbox_in_repo)
 
         return self._sandbox
 

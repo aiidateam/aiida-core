@@ -7,4 +7,4 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module to define the database models for the SqlAlchemy backend."""
+"""Tests for the sqlite_zip/sqlite_temp backends."""

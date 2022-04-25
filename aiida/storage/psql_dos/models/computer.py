@@ -52,17 +52,6 @@ class DbComputer(Base):
         ),
     )
 
-    def __init__(self, *args, **kwargs):
-        """Provide _metadata and description attributes to the class."""
-        self._metadata = {}
-        self.description = ''
-
-        # If someone passes metadata in **kwargs we change it to _metadata
-        if 'metadata' in kwargs:
-            kwargs['_metadata'] = kwargs.pop('metadata')
-
-        super().__init__(*args, **kwargs)
-
     @property
     def pk(self):
         return self.id

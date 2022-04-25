@@ -11,27 +11,26 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from functools import singledispatch
+from functools import cached_property
 from pathlib import Path
 import tempfile
-from typing import BinaryIO, Iterable, Iterator, Optional, Sequence, Tuple, Type, cast
+from typing import BinaryIO, Iterable, Iterator, Optional, Sequence, Tuple, cast
 from zipfile import ZipFile, is_zipfile
 
 from archive_path import extract_file_in_zip
 from sqlalchemy.orm import Session
 
-from aiida.common.exceptions import AiidaException, ClosedStorage, CorruptStorage
+from aiida.common.exceptions import ClosedStorage, CorruptStorage
 from aiida.manage import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
 from aiida.repository.backend.abstract import AbstractRepositoryBackend
-from aiida.storage.psql_dos.orm import authinfos, comments, computers, entities, groups, logs, nodes, users
-from aiida.storage.psql_dos.orm.querybuilder import SqlaQueryBuilder
-from aiida.storage.psql_dos.orm.utils import ModelWrapper
 
-from . import models
+from . import orm
 from .migrator import get_schema_version_head, validate_storage
-from .utils import DB_FILENAME, REPO_FOLDER, create_sqla_engine, extract_metadata, read_version
+from .utils import DB_FILENAME, REPO_FOLDER, ReadOnlyError, create_sqla_engine, extract_metadata, read_version
+
+__all__ = ('SqliteZipBackend',)
 
 
 class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-methods
@@ -49,13 +48,14 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
             ...
 
     """
+    _read_only = True
 
     @classmethod
     def version_head(cls) -> str:
         return get_schema_version_head()
 
     @staticmethod
-    def create_profile(path: str | Path) -> Profile:
+    def create_profile(path: str | Path, options: dict | None = None) -> Profile:
         """Create a new profile instance for this backend, from the path to the zip file."""
         profile_name = Path(path).name
         return Profile(
@@ -69,7 +69,8 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
                 'process_control': {
                     'backend': 'null',
                     'config': {}
-                }
+                },
+                'options': options or {},
             }
         )
 
@@ -129,7 +130,7 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
                 db_file = self._path / DB_FILENAME
                 if not db_file.exists():
                     raise CorruptStorage(f'database could not be read: non-existent {db_file}')
-            self._session = Session(create_sqla_engine(db_file))
+            self._session = Session(create_sqla_engine(db_file), future=True)
         return self._session
 
     def get_repository(self) -> '_RoBackendRepository':
@@ -144,45 +145,40 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
                 raise CorruptStorage(f'repository could not be read: non-existent {self._path / REPO_FOLDER}')
         return self._repo
 
-    def query(self) -> 'SqliteBackendQueryBuilder':
-        return SqliteBackendQueryBuilder(self)
+    def query(self) -> orm.SqliteQueryBuilder:
+        return orm.SqliteQueryBuilder(self)
 
-    def get_backend_entity(self, res):  # pylint: disable=no-self-use
+    def get_backend_entity(self, model):  # pylint: disable=no-self-use
         """Return the backend entity that corresponds to the given Model instance."""
-        klass = get_backend_entity(res)
-        return klass(self, res)
+        return orm.get_backend_entity(model, self)
 
-    @property
+    @cached_property
     def authinfos(self):
-        return create_backend_collection(
-            authinfos.SqlaAuthInfoCollection, self, authinfos.SqlaAuthInfo, models.DbAuthInfo
-        )
+        return orm.SqliteAuthInfoCollection(self)
 
-    @property
+    @cached_property
     def comments(self):
-        return create_backend_collection(comments.SqlaCommentCollection, self, comments.SqlaComment, models.DbComment)
+        return orm.SqliteCommentCollection(self)
 
-    @property
+    @cached_property
     def computers(self):
-        return create_backend_collection(
-            computers.SqlaComputerCollection, self, computers.SqlaComputer, models.DbComputer
-        )
+        return orm.SqliteComputerCollection(self)
 
-    @property
+    @cached_property
     def groups(self):
-        return create_backend_collection(groups.SqlaGroupCollection, self, groups.SqlaGroup, models.DbGroup)
+        return orm.SqliteGroupCollection(self)
 
-    @property
+    @cached_property
     def logs(self):
-        return create_backend_collection(logs.SqlaLogCollection, self, logs.SqlaLog, models.DbLog)
+        return orm.SqliteLogCollection(self)
 
-    @property
+    @cached_property
     def nodes(self):
-        return create_backend_collection(nodes.SqlaNodeCollection, self, nodes.SqlaNode, models.DbNode)
+        return orm.SqliteNodeCollection(self)
 
-    @property
+    @cached_property
     def users(self):
-        return create_backend_collection(users.SqlaUserCollection, self, users.SqlaUser, models.DbUser)
+        return orm.SqliteUserCollection(self)
 
     def _clear(self, recreate_user: bool = True) -> None:
         raise ReadOnlyError()
@@ -219,13 +215,6 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
             results.update(super().get_info(detailed=detailed))
             results['repository'] = self.get_repository().get_info(detailed)
         return results
-
-
-class ReadOnlyError(AiidaException):
-    """Raised when a write operation is called on a read-only archive."""
-
-    def __init__(self, msg='sqlite_zip storage is read-only'):  # pylint: disable=useless-super-delegation
-        super().__init__(msg)
 
 
 class _RoBackendRepository(AbstractRepositoryBackend):  # pylint: disable=abstract-method
@@ -359,127 +348,3 @@ class FolderBackendRepository(_RoBackendRepository):
             raise FileNotFoundError(f'object with key `{key}` does not exist.')
         with self._path.joinpath(key).open('rb') as handle:
             yield handle
-
-
-class SqliteBackendQueryBuilder(SqlaQueryBuilder):
-    """Archive query builder"""
-
-    @property
-    def Node(self):
-        return models.DbNode
-
-    @property
-    def Link(self):
-        return models.DbLink
-
-    @property
-    def Computer(self):
-        return models.DbComputer
-
-    @property
-    def User(self):
-        return models.DbUser
-
-    @property
-    def Group(self):
-        return models.DbGroup
-
-    @property
-    def AuthInfo(self):
-        return models.DbAuthInfo
-
-    @property
-    def Comment(self):
-        return models.DbComment
-
-    @property
-    def Log(self):
-        return models.DbLog
-
-    @property
-    def table_groups_nodes(self):
-        return models.DbGroupNodes.__table__  # type: ignore[attr-defined] # pylint: disable=no-member
-
-
-def create_backend_cls(base_class, model_cls):
-    """Create an archive backend class for the given model class."""
-
-    class ReadOnlyEntityBackend(base_class):  # type: ignore
-        """Backend class for the read-only archive."""
-
-        MODEL_CLASS = model_cls
-
-        def __init__(self, _backend, model):
-            """Initialise the backend entity."""
-            self._backend = _backend
-            self._model = ModelWrapper(model, _backend)
-
-        @property
-        def model(self) -> ModelWrapper:
-            """Return an ORM model that correctly updates and flushes the data model when getting or setting a field."""
-            return self._model
-
-        @property
-        def bare_model(self):
-            """Return the underlying SQLAlchemy ORM model for this entity."""
-            return self.model._model  # pylint: disable=protected-access
-
-        @classmethod
-        def from_dbmodel(cls, model, _backend):
-            return cls(_backend, model)
-
-        @property
-        def is_stored(self):
-            return True
-
-        def store(self):  # pylint: disable=no-self-use
-            raise ReadOnlyError()
-
-    return ReadOnlyEntityBackend
-
-
-def create_backend_collection(cls, _backend, entity_cls, model):
-    collection = cls(_backend)
-    new_cls = create_backend_cls(entity_cls, model)
-    collection.ENTITY_CLASS = new_cls
-    return collection
-
-
-@singledispatch
-def get_backend_entity(dbmodel) -> Type[entities.SqlaModelEntity]:  # pylint: disable=unused-argument
-    raise TypeError(f'Cannot get backend entity for {dbmodel}')
-
-
-@get_backend_entity.register(models.DbAuthInfo)  # type: ignore[call-overload]
-def _(dbmodel):
-    return create_backend_cls(authinfos.SqlaAuthInfo, dbmodel.__class__)
-
-
-@get_backend_entity.register(models.DbComment)  # type: ignore[call-overload]
-def _(dbmodel):
-    return create_backend_cls(comments.SqlaComment, dbmodel.__class__)
-
-
-@get_backend_entity.register(models.DbComputer)  # type: ignore[call-overload]
-def _(dbmodel):
-    return create_backend_cls(computers.SqlaComputer, dbmodel.__class__)
-
-
-@get_backend_entity.register(models.DbGroup)  # type: ignore[call-overload]
-def _(dbmodel):
-    return create_backend_cls(groups.SqlaGroup, dbmodel.__class__)
-
-
-@get_backend_entity.register(models.DbLog)  # type: ignore[call-overload]
-def _(dbmodel):
-    return create_backend_cls(logs.SqlaLog, dbmodel.__class__)
-
-
-@get_backend_entity.register(models.DbNode)  # type: ignore[call-overload]
-def _(dbmodel):
-    return create_backend_cls(nodes.SqlaNode, dbmodel.__class__)
-
-
-@get_backend_entity.register(models.DbUser)  # type: ignore[call-overload]
-def _(dbmodel):
-    return create_backend_cls(users.SqlaUser, dbmodel.__class__)

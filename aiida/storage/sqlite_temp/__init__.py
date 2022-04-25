@@ -7,4 +7,22 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module to define the database models for the SqlAlchemy backend."""
+"""A temporary backend, using an in-memory sqlite database.
+
+This backend is intended for testing and demonstration purposes.
+Whenever it is instantiated, it creates a fresh storage backend,
+and destroys it when it is garbage collected.
+"""
+
+# AUTO-GENERATED
+
+# yapf: disable
+# pylint: disable=wildcard-import
+
+from .backend import *
+
+__all__ = (
+    'SqliteTempBackend',
+)
+
+# yapf: enable

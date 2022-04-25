@@ -34,6 +34,7 @@ Usage
    In [2]: %aiida
 """
 import json
+import shlex
 
 from IPython import get_ipython, version_info
 from IPython.core import magic
@@ -61,6 +62,18 @@ def add_to_ns(local_ns, name, obj):
 @magic.magics_class
 class AiiDALoaderMagics(magic.Magics):
     """AiiDA magic loader."""
+
+    @magic.needs_local_scope
+    @magic.line_magic
+    def verdi(self, line='', local_ns=None):  # pylint: disable=no-self-use,unused-argument
+        """Run the AiiDA command line tool, using the currently loaded configuration and profile."""
+        from aiida.cmdline.commands.cmd_verdi import verdi
+        from aiida.common import AttributeDict
+        from aiida.manage import get_config, get_profile
+        config = get_config()
+        profile = get_profile()
+        obj = AttributeDict({'config': config, 'profile': profile})
+        return verdi(shlex.split(line), prog_name='%verdi', obj=obj, standalone_mode=False)  # pylint: disable=too-many-function-args,unexpected-keyword-arg
 
     @magic.needs_local_scope
     @magic.line_magic

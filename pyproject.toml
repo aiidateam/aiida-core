@@ -285,6 +285,7 @@ good-names = [
     "i",
     "j",
     "k",
+    "dt",
     "pk",
     "fg",
     "tz",

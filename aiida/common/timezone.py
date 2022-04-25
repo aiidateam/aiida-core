@@ -63,4 +63,4 @@ def delta(from_time: datetime, to_time: datetime = None) -> timedelta:
     :param to_time: The end datetime object. If not specified :func:`aiida.common.timezone.now` is used.
     :return: The delta datetime object.
     """
-    return make_aware(from_time) - make_aware(to_time or now())
+    return make_aware(to_time or now()) - make_aware(from_time)

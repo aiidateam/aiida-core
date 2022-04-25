@@ -13,10 +13,10 @@ from time import time
 
 import pytest
 
-from aiida.common.timezone import localtime, make_aware, now, timezone_from_name
+from aiida.common.timezone import delta, localtime, make_aware, now, timezone_from_name
 
 
-def is_aware(dt):  # pylint: disable=invalid-name
+def is_aware(dt):
     """Return whether the datetime is aware.
 
     See https://docs.python.org/3/library/datetime.html#determining-if-an-object-is-aware-or-naive
@@ -33,12 +33,12 @@ def test_now():
     Check that the time returned by AiiDA's ``now`` function is compatible with attaching a timezone to a "naive" time
     stamp using ``make_aware``.
     """
-    delta = timedelta(minutes=1)
+    dt = timedelta(minutes=1)
     ref = now()
 
     from_tz = make_aware(datetime.fromtimestamp(time()))
-    assert from_tz <= ref + delta
-    assert from_tz >= ref - delta
+    assert from_tz <= ref + dt
+    assert from_tz >= ref - dt
 
 
 def test_make_aware():
@@ -96,11 +96,11 @@ def test_localtime_naive():
 
 def test_make_aware_timezone():
     """Test the :func:`aiida.common.timezone.make_aware` function passing an explicit timezone."""
-    delta = timedelta(hours=2)
+    dt = timedelta(hours=2)
     naive = datetime(1970, 1, 1)
-    aware = make_aware(naive, timezone(delta))
+    aware = make_aware(naive, timezone(dt))
     assert is_aware(aware)
-    assert aware.tzinfo.utcoffset(aware) == delta
+    assert aware.tzinfo.utcoffset(aware) == dt
 
 
 def test_timezone_from_name():
@@ -112,3 +112,18 @@ def test_timezone_from_name_unknown():
     """Test the :func:`aiida.common.timezone.timezone_from_name` function for unknown timezone."""
     with pytest.raises(ValueError, match=r'unknown timezone: .*'):
         timezone_from_name('Invalid/Unknown')
+
+
+def test_delta():
+    """Test the :func:`aiida.common.timezone.delta` function."""
+    datetime_01 = datetime(1980, 1, 1, 0, 0, 0)
+    datetime_02 = datetime(1980, 1, 1, 0, 0, 2)
+
+    # Should return an instance of ``timedelta``
+    assert isinstance(delta(datetime_02), timedelta)
+
+    # If no comparison datetime is provided, it should be compared to ``now`` as a default
+    assert delta(datetime_01).total_seconds() > 0
+
+    assert delta(datetime_01, datetime_02).total_seconds() == 2
+    assert delta(datetime_02, datetime_01).total_seconds() == -2

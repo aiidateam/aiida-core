@@ -29,9 +29,6 @@ class UserCollection(entities.Collection['User']):
     def _entity_base_cls() -> Type['User']:
         return User
 
-    def __init__(self, entity_class: Type['User'], backend: Optional['StorageBackend'] = None) -> None:
-        super().__init__(entity_class=entity_class, backend=backend)
-
     def get_or_create(self, email: str, **kwargs) -> Tuple[bool, 'User']:
         """Get the existing user with a given email address or create an unstored one
 

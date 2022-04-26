@@ -19,7 +19,6 @@ from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from aiida.common.exceptions import ClosedStorage, IntegrityError
 from aiida.manage.configuration.profile import Profile
-from aiida.orm import User
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import BackendEntity, StorageBackend
 from aiida.storage.log import STORAGE_LOGGER
@@ -113,8 +112,6 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
     def close(self) -> None:
         if self._session_factory is None:
             return  # the instance is already closed, and so this is a no-op
-        # reset the cached default user instance, since it will now have no associated session
-        User.collection(self).reset()
         # close the connection
         # pylint: disable=no-member
         engine = self._session_factory.bind
@@ -137,15 +134,13 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
 
             # save the default user
             default_user_kwargs = None
-            if recreate_user:
-                default_user = User.collection(self).get_default()
-                if default_user is not None:
-                    default_user_kwargs = {
-                        'email': default_user.email,
-                        'first_name': default_user.first_name,
-                        'last_name': default_user.last_name,
-                        'institution': default_user.institution,
-                    }
+            if recreate_user and self.default_user is not None:
+                default_user_kwargs = {
+                    'email': self.default_user.email,
+                    'first_name': self.default_user.first_name,
+                    'last_name': self.default_user.last_name,
+                    'institution': self.default_user.institution,
+                }
 
             # now clear the database
             for table_name in (
@@ -158,8 +153,6 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
             # restore the default user
             if recreate_user and default_user_kwargs:
                 session.add(DbUser(**default_user_kwargs))
-            # clear aiida's cache of the default user
-            User.collection(self).reset()
 
         # Clear the repository and reset the repository UUID
         container = Container(self.profile.repository_path / 'container')

@@ -3,6 +3,7 @@
 import pytest
 
 import aiida
+from aiida.manage.configuration import get_profile, profile_context
 from aiida.manage.manager import get_manager
 
 
@@ -48,3 +49,21 @@ def test_check_version_development(monkeypatch, capsys, isolated_config, suppres
         assert not captured.out
     else:
         assert f'You are currently using a post release development version of AiiDA: {version}' in captured.out
+
+
+def test_profile_context(config_with_profile, profile_factory):
+    """Test that the original profile is restored when ``profile_context`` returns from the context."""
+    config = config_with_profile
+
+    # Get current profile
+    profile_original = get_profile()
+    assert profile_original is not None
+
+    # Create a new profile and add it to the config
+    profile_alternate = profile_factory()
+    config.add_profile(profile_alternate)
+
+    with profile_context(profile_alternate.name):
+        assert get_profile() == profile_alternate
+
+    assert get_profile() == profile_original

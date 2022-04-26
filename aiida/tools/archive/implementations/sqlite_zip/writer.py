@@ -286,8 +286,5 @@ class ArchiveAppenderSqlZip(ArchiveWriterSqlZip):
                     if subpath.is_dir():
                         new_path_sub.mkdir(exist_ok=True)
                     else:
-                        with subpath.open('rb') as handle:
-                            # TODO compute subpath size
-                            with new_path_sub.open(mode='wb') as new_handle:
-                                shutil.copyfileobj(handle, new_handle)
+                        new_path_sub.putfile(subpath)
                     progress.update()

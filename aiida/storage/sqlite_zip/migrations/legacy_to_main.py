@@ -122,10 +122,7 @@ def perform_v1_migration(  # pylint: disable=too-many-locals
                     with subpath.open('rb') as handle:
                         hashkey = chunked_file_hash(handle, sha256)
                     if f'{REPO_FOLDER}/{hashkey}' not in central_dir:
-                        with subpath.open('rb') as handle:
-                            # TODO compute subpath file size
-                            with (new_zip / f'{REPO_FOLDER}/{hashkey}').open(mode='wb') as handle2:
-                                shutil.copyfileobj(handle, handle2)
+                        (new_zip / f'{REPO_FOLDER}/{hashkey}').putfile(subpath)
                 node_repos.setdefault(uuid, []).append((posix_rel.as_posix(), hashkey))
         MIGRATE_LOGGER.report(f'Unique repository files written: {len(central_dir)}')
 

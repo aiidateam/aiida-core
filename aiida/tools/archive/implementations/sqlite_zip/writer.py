@@ -97,8 +97,10 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
             self._conn.commit()
             self._conn.close()
         assert self._work_dir is not None
-        with (self._work_dir / self.db_name).open('rb') as handle:
-            self._stream_binary(self.db_name, handle)
+        db_path = (self._work_dir / self.db_name)
+        db_path_size = db_path.stat().st_size
+        with db_path.open('rb') as handle:
+            self._stream_binary(self.db_name, handle, file_size=db_path_size)
         self._stream_binary(
             self.meta_name,
             BytesIO(json.dumps(self._metadata).encode('utf8')),
@@ -148,6 +150,7 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
         name: str,
         handle: BinaryIO,
         *,
+        file_size: Optional[int] = None,
         buffer_size: Optional[int] = None,
         compression: Optional[int] = None,
         comment: Optional[bytes] = None,
@@ -164,7 +167,9 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
         if compression is not None:
             kwargs['compression'] = zipfile.ZIP_DEFLATED if compression else zipfile.ZIP_STORED
             kwargs['level'] = compression
-        with self._zip_path.joinpath(name).open('wb', **kwargs) as zip_handle:
+        if file_size is not None:
+            kwargs['file_size'] = file_size
+        with self._zip_path.joinpath(name).open(mode='wb', **kwargs) as zip_handle:
             if buffer_size is None:
                 shutil.copyfileobj(handle, zip_handle)
             else:
@@ -175,6 +180,7 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
             key = chunked_file_hash(stream, hashlib.sha256)
             stream.seek(0)
         if f'{utils.REPO_FOLDER}/{key}' not in self._central_dir:
+            # TODO how to compute stream size?
             self._stream_binary(f'{utils.REPO_FOLDER}/{key}', stream, buffer_size=buffer_size)
         return key
 
@@ -244,8 +250,10 @@ class ArchiveAppenderSqlZip(ArchiveWriterSqlZip):
             self._conn.close()
         assert self._work_dir is not None
         # write the database and metadata to the new archive
-        with (self._work_dir / self.db_name).open('rb') as handle:
-            self._stream_binary(self.db_name, handle)
+        db_path = (self._work_dir / self.db_name)
+        db_path_size = db_path.stat().st_size
+        with db_path.open('rb') as handle:
+            self._stream_binary(self.db_name, handle, file_size=db_path_size)
         self._stream_binary(
             self.meta_name,
             BytesIO(json.dumps(self._metadata).encode('utf8')),
@@ -279,6 +287,7 @@ class ArchiveAppenderSqlZip(ArchiveWriterSqlZip):
                         new_path_sub.mkdir(exist_ok=True)
                     else:
                         with subpath.open('rb') as handle:
-                            with new_path_sub.open('wb') as new_handle:
+                            # TODO compute subpath size
+                            with new_path_sub.open(mode='wb') as new_handle:
                                 shutil.copyfileobj(handle, new_handle)
                     progress.update()

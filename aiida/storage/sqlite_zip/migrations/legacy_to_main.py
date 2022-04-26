@@ -14,7 +14,7 @@ from hashlib import sha256
 from pathlib import Path, PurePosixPath
 import shutil
 import tarfile
-from typing import Any, Dict, Iterator, List, Optional, Tuple
+from typing import Any, Callable, ContextManager, Dict, Iterator, List, Optional, Tuple, Union
 
 from archive_path import ZipPath
 from sqlalchemy import insert, select
@@ -90,10 +90,11 @@ def perform_v1_migration(  # pylint: disable=too-many-locals
     """
     MIGRATE_LOGGER.report('Initialising new archive...')
     node_repos: Dict[str, List[Tuple[str, Optional[str]]]] = {}
+    in_archive_context: Callable[[Path], ContextManager[Union[Path, ZipPath]]] = ZipPath
     if is_tar:
         # we cannot stream from a tar file performantly, so we extract it to disk first
         @contextmanager
-        def in_archive_context(_inpath):
+        def _in_archive_context(_inpath):
             temp_folder = working / 'temp_unpack'
             with tarfile.open(_inpath, 'r') as tar:
                 MIGRATE_LOGGER.report('Extracting tar archive...(may take a while)')
@@ -101,8 +102,8 @@ def perform_v1_migration(  # pylint: disable=too-many-locals
             yield temp_folder
             MIGRATE_LOGGER.report('Removing extracted tar archive...')
             shutil.rmtree(temp_folder)
-    else:
-        in_archive_context = ZipPath  # type: ignore
+
+        in_archive_context = _in_archive_context
 
     with in_archive_context(inpath) as path:
         length = sum(1 for _ in path.glob('**/*'))
@@ -122,6 +123,7 @@ def perform_v1_migration(  # pylint: disable=too-many-locals
                         hashkey = chunked_file_hash(handle, sha256)
                     if f'{REPO_FOLDER}/{hashkey}' not in central_dir:
                         with subpath.open('rb') as handle:
+                            # TODO compute subpath file size
                             with (new_zip / f'{REPO_FOLDER}/{hashkey}').open(mode='wb') as handle2:
                                 shutil.copyfileobj(handle, handle2)
                 node_repos.setdefault(uuid, []).append((posix_rel.as_posix(), hashkey))

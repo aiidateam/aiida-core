@@ -262,7 +262,7 @@ def migrate(  # pylint: disable=too-many-branches,too-many-statements,too-many-l
 
             # write the final database file to the new zip file
             with db_path.open('rb') as handle:
-                with (new_zip / DB_FILENAME).open(mode='wb') as handle2:
+                with (new_zip / DB_FILENAME).open(mode='wb', file_size=db_path.stat().st_size) as handle2:
                     shutil.copyfileobj(handle, handle2)
 
             # write the final metadata.json file to the new zip file

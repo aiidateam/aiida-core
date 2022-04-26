@@ -29,10 +29,6 @@ class UserCollection(entities.Collection['User']):
     def _entity_base_cls() -> Type['User']:
         return User
 
-    def __init__(self, entity_class: Type['User'], backend: Optional['StorageBackend'] = None) -> None:
-        super().__init__(entity_class=entity_class, backend=backend)
-        self._default_user: Optional[User] = None
-
     def get_or_create(self, email: str, **kwargs) -> Tuple[bool, 'User']:
         """Get the existing user with a given email address or create an unstored one
 
@@ -48,23 +44,7 @@ class UserCollection(entities.Collection['User']):
 
     def get_default(self) -> Optional['User']:
         """Get the current default user"""
-        if self._default_user is None:
-            email = self.backend.profile.default_user_email
-            if not email:
-                self._default_user = None
-
-            try:
-                self._default_user = self.get(email=email)
-            except (exceptions.MultipleObjectsError, exceptions.NotExistent):
-                self._default_user = None
-
-        return self._default_user
-
-    def reset(self) -> None:
-        """
-        Reset internal caches (default user).
-        """
-        self._default_user = None
+        return self.backend.default_user
 
 
 class User(entities.Entity['BackendUser']):

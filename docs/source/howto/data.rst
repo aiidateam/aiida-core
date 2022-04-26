@@ -303,7 +303,7 @@ From the Python interface:
 
 .. code-block:: ipython
 
-    In [1]: src_group = Group.objects.get(label='source_group')
+    In [1]: src_group = Group.collection.get(label='source_group')
 
     In [2]: dest_group = Group(label='destination_group').store()
 

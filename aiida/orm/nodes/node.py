@@ -181,7 +181,7 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
             raise ValueError('the computer is not stored')
 
         computer = computer.backend_entity if computer else None
-        user = user if user else User.collection(backend).get_default()
+        user = user if user else backend.default_user
 
         if user is None:
             raise ValueError('the user cannot be None')

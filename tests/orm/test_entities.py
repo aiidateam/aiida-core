@@ -19,10 +19,10 @@ class TestBackendEntitiesAndCollections:
     """Test backend entities and their collections"""
 
     def test_collections_cache(self):
-        """Make sure that we're not recreating collections each time .objects is called"""
+        """Make sure that we're not recreating collections each time .collection is called"""
         # Check directly
-        user_collection = orm.User.objects
-        assert user_collection is orm.User.objects
+        user_collection = orm.User.collection
+        assert user_collection is orm.User.collection
 
         # Now check passing an explicit backend
         backend = user_collection.backend

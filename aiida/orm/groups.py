@@ -155,7 +155,7 @@ class Group(entities.Entity['BackendGroup'], metaclass=GroupMeta):
             raise ValueError('Group label must be provided')
 
         backend = backend or get_manager().get_profile_storage()
-        user = user if user else backend.default_user
+        user = user or backend.default_user
         type_check(user, users.User)
         type_string = self._type_string
 

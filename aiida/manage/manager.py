@@ -447,7 +447,7 @@ class Manager:
     def check_version(self):
         """Check the currently installed version of ``aiida-core`` and warn if it is a post release development version.
 
-        The ``aiida-core`` package maintains the protocol that the ``develop`` branch will use a post release version
+        The ``aiida-core`` package maintains the protocol that the ``main`` branch will use a post release version
         number. This means it will always append `.post0` to the version of the latest release. This should mean that if
         this protocol is maintained properly, this method will print a warning if the currently installed version is a
         post release development branch and not an actual release.

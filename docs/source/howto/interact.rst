@@ -133,6 +133,7 @@ The same can be accomplished using the following magic statement:
 
 .. code-block:: ipython
 
+    %load_ext aiida
     %aiida
 
 This magic line will replicate the same environment as :ref:`the interactive shell <how-to:interact-shell>` provided by ``verdi shell``.

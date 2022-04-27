@@ -98,8 +98,7 @@ def test_add_test_profile_key_downgrade_profile(empty_config, profile_factory, c
     exception should be raised.
     """
     config = empty_config
-    profile = profile_factory('test_profile')
-    profile.is_test_profile = False
+    profile = profile_factory('test_profile', test_profile=False)
     config.add_profile(profile)
 
     config_migrated = downgrade_config(config.dictionary, 7)
@@ -122,8 +121,7 @@ def test_add_test_profile_key_downgrade_test_profile(empty_config, profile_facto
     determine whether a profile is a test profile or not.
     """
     config = empty_config
-    profile = profile_factory('profile')
-    profile.is_test_profile = True
+    profile = profile_factory('profile', test_profile=True)
     config.add_profile(profile)
 
     config_migrated = downgrade_config(config.dictionary, 7)
@@ -131,7 +129,7 @@ def test_add_test_profile_key_downgrade_test_profile(empty_config, profile_facto
     assert 'profile `profile` is a test profile but does not start with' in caplog.records[0].message
     assert 'changing profile name from `profile` to `test_profile`.' in caplog.records[1].message
 
-    profile = profile_factory('test_profile')
+    profile = profile_factory('test_profile', test_profile=True)
     config.add_profile(profile)
 
     with pytest.raises(ConfigurationError, match=r'cannot change `.*` to `.*` because it already exists.'):

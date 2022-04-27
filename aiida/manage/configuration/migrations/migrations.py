@@ -340,6 +340,7 @@ class AddTestProfileKey(SingleMigration):
                 CONFIG_LOGGER.warning(f'changing profile name from `{profile_name}` to `{profile_name_new}`.')
                 profile_name = profile_name_new
 
+            profile['test_profile'] = test_profile
             profiles[profile_name] = profile
 
 

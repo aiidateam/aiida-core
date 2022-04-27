@@ -249,17 +249,8 @@ Using AiiDA in Jupyter
 
   1. Install the AiiDA ``notebook`` extra **inside** the AiiDA python environment, e.g. by running ``pip install aiida-core[notebook]``.
 
-  2. (optional) Register the ``%aiida`` IPython magic for loading the same environment as in the ``verdi shell``:
 
-     Copy the following code snippet into ``<home_folder>/.ipython/profile_default/startup/aiida_magic_register.py``
-
-     .. literalinclude:: ../../../aiida/tools/ipython/aiida_magic_register.py
-         :start-after: # DOCUMENTATION MARKER
-
-     .. note:: Use ``ipython locate profile`` if you're unsure about the location of your ipython profile folder.
-
-
-With this setup, you're ready to use AiiDA in Jupyter notebeooks.
+With this setup, you're ready to use AiiDA in Jupyter notebooks.
 
 Start a Jupyter notebook server:
 
@@ -269,7 +260,13 @@ Start a Jupyter notebook server:
 
 This will open a tab in your browser. Click on ``New -> Python``.
 
-If you registered the ``%aiida`` IPython magic, simply run:
+To load the `aiida` magics extension, simply run:
+
+.. code-block:: ipython
+
+   %load_ext aiida
+
+Now you can load a profile (the default unless specified) by:
 
 .. code-block:: ipython
 
@@ -284,3 +281,9 @@ Otherwise, you can load the profile manually as you would in a Python script:
    load_profile()
    qb = orm.QueryBuilder()
    # ...
+
+You can also run `verdi` CLI commands, using the currently loaded profile, by:
+
+.. code-block:: ipython
+
+   %verdi status

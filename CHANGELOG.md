@@ -1,12 +1,12 @@
 # Changelog
 
-## v2.0.0b2 - 2022-04-12
+## v2.0.0 - 2022-04-27
 
-[Full changelog](https://github.com/aiidateam/aiida-core/compare/v2.0.0b2...v2.0.0b1)
+[Full changelog](https://github.com/aiidateam/aiida-core/compare/v2.0.0b1...v2.0.0)
 
-The primary focus of this release is to implement the restructuring of the `Node` namespace.
+This release finalises the [v2.0.0b1 changes](release/2.0.0b1).
 
-### Node namespace restructuring
+### Node namespace restructuring ♻️
 
 :::{note}
 The restructuring is fully back-compatible, and existing methods/attributes will continue to work, until aiida-core `v3.0`.
@@ -114,9 +114,53 @@ These methods/attributes have now been partitioned into "sub-namespaces" for spe
 
 :::
 
+### IPython integration improvements 👌
+
+The `aiida` [IPython magic commands](https://ipython.readthedocs.io/en/stable/interactive/magics.html) are now available to load via:
+
+```ipython
+%load_ext aiida
+```
+
+As well as the previous `%aiida` magic command, to load a profile,
+one can also use the `%verdi` magic command.
+This command runs the `verdi` CLI using the currently loaded profile of the IPython/Jupyter session.
+
+```ipython
+%verdi status
+```
+
+See the [Basic Tutorial](docs/source/intro/tutorial.md) for example usage.
+
+### New `SqliteTempBackend` ✨
+
+The `SqliteTempBackend` utilises an in-memory SQLite database to store data, allowing it to be transiently created/destroyed within a single Python session, without the need for Postgresql.
+
+As such, it is useful for demonstrations and testing purposes, whereby no persistent storage is required.
+
+To load a temporary profile, you can use the following code:
+
+```python
+from aiida import load_profile
+from aiida.storage.sqlite_temp import SqliteTempBackend
+
+profile = load_profile(
+    SqliteTempBackend.create_profile(
+        'myprofile',
+        sandbox_path='_sandbox',
+        options={
+            'runner.poll.interval': 1
+        },
+        debug=False
+    ),
+)
+```
+
+See the [Basic Tutorial](docs/source/intro/tutorial.md) for example usage.
+
 ### Key Pull Requests
 
-Below is a list of some key pull requests that have been merged into version 2.0.0b2:
+Below is a list of some key pull requests that have been merged into version 2.0.0:
 
 - Node namespace re-structuring:
   - 🔧 MAINTAIN: Add `warn_deprecation` function, `Node.base`, and move `NodeRepositoryMixin -> NodeRepository` by @chrisjsewell in [#5472](https://github.com/aiidateam/aiida-core/pull/5472)
@@ -126,17 +170,32 @@ Below is a list of some key pull requests that have been merged into version 2.0
   - ♻️ REFACTOR: Move link related methods to `Node.base.links` by @sphuber in [#5480](https://github.com/aiidateam/aiida-core/pull/5480)
   - ♻️ REFACTOR: Move caching related methods to `Node.base.caching` by @sphuber in [#5483](https://github.com/aiidateam/aiida-core/pull/5483)
 
+- Storage:
+  - ✨ NEW: Add SqliteTempBackend by @chrisjsewell in [#5448](https://github.com/aiidateam/aiida-core/pull/5448)
+  - 👌 IMPROVE: Move default user caching to `StorageBackend` by @chrisjsewell in [#5460](https://github.com/aiidateam/aiida-core/pull/5460)
+  - 👌 IMPROVE: Add JSON filtering for SQLite backends by @chrisjsewell in [#5448](https://github.com/aiidateam/aiida-core/pull/5448)
+
 - ORM:
   - 👌 IMPROVE: `StructureData`: allow to be initialised without a specified cell by @ltalirz in [#5341](https://github.com/aiidateam/aiida-core/pull/5341)
 
 - Processing:
+  - 👌 IMPROVE: Allow `engine.run` to work without RabbitMQ by @chrisjsewell in [#5448](https://github.com/aiidateam/aiida-core/pull/5448)
   - 👌 IMPROVE: `JobTemplate`: change `CodeInfo` to `JobTemplateCodeInfo` in `codes_info` by @unkcpz in [#5350](https://github.com/aiidateam/aiida-core/pull/5350)
     - This is required for a containerized code implementation
+  - 👌 IMPROVE: Add option to use double quotes for `Code` and `Computer` CLI arguments by @unkcpz in [#5478](https://github.com/aiidateam/aiida-core/pull/5478)
 
-- Scheduler:
+- Transport and Scheduler:
   - 👌 IMPROVE: `SlurmScheduler`: Parse out-of-walltime and out-of-memory errors from `stderr` by @sphuber in [#5458](https://github.com/aiidateam/aiida-core/pull/5458)
   - 👌 IMPROVE: `CalcJob`: always call `Scheduler.parse_output` by @sphuber in [#5458](https://github.com/aiidateam/aiida-core/pull/5458)
+  - 👌 IMPROVE: `Computer`: fallback on transport for `get_minimum_job_poll_interval` default by @sphuber in [#5457](https://github.com/aiidateam/aiida-core/pull/5457)
 
+- IPython:
+  - ✨ NEW: Add `%verdi` IPython magic by @chrisjsewell in [#5448](https://github.com/aiidateam/aiida-core/pull/5448)
+
+- Dependencies:
+  - ♻️ REFACTOR: drop the `python-dateutil` library by @sphuber
+
+(release/2.0.0b1)=
 ## v2.0.0b1 - 2022-03-15
 
 [Full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.7...v2.0.0b1)

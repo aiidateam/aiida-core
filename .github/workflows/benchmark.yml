@@ -2,10 +2,10 @@ name: Performance benchmarks
 
 on:
   push:
-    branches: [develop]
+    branches: [main]
     paths-ignore: ['docs/**']
   pull_request:
-    branches: [develop]
+    branches: [main]
 
 jobs:
 

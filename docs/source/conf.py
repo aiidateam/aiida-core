@@ -100,7 +100,7 @@ html_theme_options = {
 html_context = {
     'github_user': 'aiidateam',
     'github_repo': 'aiida-core',
-    'github_version': 'master',
+    'github_version': 'main',
     'doc_path': 'docs/source',
 }
 

@@ -12,6 +12,7 @@ from datetime import datetime
 import hashlib
 from io import BytesIO
 import json
+import os
 from pathlib import Path
 import shutil
 import tempfile
@@ -164,7 +165,14 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
         if compression is not None:
             kwargs['compression'] = zipfile.ZIP_DEFLATED if compression else zipfile.ZIP_STORED
             kwargs['level'] = compression
-        with self._zip_path.joinpath(name).open('wb', **kwargs) as zip_handle:
+
+        # compute the file size of the handle
+        position = handle.tell()
+        handle.seek(0, os.SEEK_END)
+        file_size = handle.tell()
+        handle.seek(position)
+
+        with self._zip_path.joinpath(name).open(mode='wb', file_size=file_size, **kwargs) as zip_handle:
             if buffer_size is None:
                 shutil.copyfileobj(handle, zip_handle)
             else:
@@ -278,7 +286,5 @@ class ArchiveAppenderSqlZip(ArchiveWriterSqlZip):
                     if subpath.is_dir():
                         new_path_sub.mkdir(exist_ok=True)
                     else:
-                        with subpath.open('rb') as handle:
-                            with new_path_sub.open('wb') as new_handle:
-                                shutil.copyfileobj(handle, new_handle)
+                        new_path_sub.putfile(subpath)
                     progress.update()

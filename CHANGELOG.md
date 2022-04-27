@@ -449,7 +449,7 @@ or see [Transport plugins](docs/source/topics/transport.rst) for more informatio
 
 The `Transport.get_valid_transports()` method has also been removed, use `get_entry_point_names('aiida.transports')` instead (see {func}`~aiida.plugins.entry_point.get_entry_point_names`).
 
-## Improvements to the AiiDA command-line 👌
+### Improvements to the AiiDA command-line 👌
 
 The AiiDA command-line interface (CLI) can now be accessed as both `verdi` and `/path/to/bin/python -m aiida`.
 

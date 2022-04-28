@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.0.1 - 2022-04-28
+
+[Full changelog](https://github.com/aiidateam/aiida-core/compare/v2.0.0...v2.0.1)
+
+### Dependencies
+- Fix incompatibility with `click>=8.1` and require `click==8.1` as a minimum by @sphuber in [#5504](https://github.com/aiidateam/aiida-core/pull/5504)
+
+
 ## v2.0.0 - 2022-04-27
 
 [Full changelog](https://github.com/aiidateam/aiida-core/compare/v2.0.0b1...v2.0.0)

@@ -11,7 +11,6 @@
 import difflib
 
 import click
-from click import shell_completion
 
 from aiida import __version__
 from aiida.cmdline.params import options, types

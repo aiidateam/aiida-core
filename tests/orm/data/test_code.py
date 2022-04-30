@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=redefined-outer-name
-"""Tests for :class:`aiida.orm.nodes.data.code.Code` class."""
+"""Tests for :class:`aiida.orm.nodes.data.code.legacy.Code` class."""
 import pytest
 
 from aiida.common.exceptions import ValidationError

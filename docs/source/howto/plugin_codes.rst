@@ -614,7 +614,7 @@ Continue with :ref:`how-to:plugins-develop` in order to learn how to quickly cre
 .. |StructureData| replace:: :py:class:`~aiida.orm.nodes.data.structure.StructureData`
 .. |RemoteData| replace:: :py:class:`~aiida.orm.RemoteData`
 .. |Dict| replace:: :py:class:`~aiida.orm.nodes.data.dict.Dict`
-.. |Code| replace:: :py:class:`~aiida.orm.Code`
+.. |Code| replace:: :py:class:`~aiida.orm.nodes.data.code.abstract.AbstractCode`
 .. |Parser| replace:: :py:class:`~aiida.parsers.parser.Parser`
 .. |parse| replace:: :py:class:`~aiida.parsers.parser.Parser.parse`
 .. |folder| replace:: :py:class:`~aiida.common.folders.Folder`

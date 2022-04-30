@@ -13,7 +13,7 @@ import os
 from aiida.common import exceptions
 from aiida.common.log import override_log_level
 
-from .data import Data
+from ..data import Data
 
 __all__ = ('Code',)
 

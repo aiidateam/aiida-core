@@ -125,7 +125,7 @@ There is no ``return`` statement in ``define``: the ``define`` method directly m
 
         .. code-block:: python
 
-            spec.input('code', valid_type=orm.Code, help='The `Code` to use for this job.')
+            spec.input('code', valid_type=orm.AbstractCode, help='The `Code` to use for this job.')
 
 .. admonition:: Further reading
 

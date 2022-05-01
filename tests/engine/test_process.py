@@ -238,12 +238,9 @@ class TestProcess:
 
     def test_process_type_with_entry_point(self):
         """For a process with a registered entry point, the process_type will be its formatted entry point string."""
-        from aiida.orm import Code
+        from aiida.orm import InstalledCode
 
-        code = Code()
-        code.set_remote_computer_exec((self.computer, '/bin/true'))
-        code.store()
-
+        code = InstalledCode(computer=self.computer, filepath_executable='/bin/true').store()
         parameters = orm.Dict(dict={})
         template = orm.Dict(dict={})
         options = {

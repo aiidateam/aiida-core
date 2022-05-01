@@ -52,13 +52,10 @@ class TestOrmUtils:
 
     def test_load_code(self):
         """Test the functionality of load_code."""
-        from aiida.orm import Code
+        from aiida.orm import InstalledCode
 
         label = 'compy'
-        code = Code()
-        code.label = label
-        code.set_remote_computer_exec((self.computer, '/x.x'))
-        code.store()
+        code = InstalledCode(label=label, computer=self.computer, filepath_executable='/x.x').store()
 
         # Load through full label
         loaded_code = load_code(code.full_label)

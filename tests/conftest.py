@@ -374,6 +374,21 @@ def override_logging(isolated_config):
 
 
 @pytest.fixture
+def suppress_internal_deprecations():
+    """Suppress all internal deprecations.
+
+    Warnings emmitted of type :class:`aiida.common.warnings.AiidaDeprecationWarning` for the duration of the test.
+    """
+    import warnings
+
+    from aiida.common.warnings import AiidaDeprecationWarning
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=AiidaDeprecationWarning)
+        yield
+
+
+@pytest.fixture
 def with_daemon():
     """Starts the daemon process and then makes sure to kill it once the test is done."""
     import subprocess

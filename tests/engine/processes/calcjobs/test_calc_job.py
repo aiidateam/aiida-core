@@ -201,8 +201,8 @@ def test_computer_double_quotes(aiida_local_code_factory, file_regression, compu
 @pytest.mark.parametrize('code_use_double_quotes', [True, False])
 def test_code_double_quotes(aiida_localhost, file_regression, code_use_double_quotes):
     """test that bash script quote escape behaviour can be controlled"""
-    code = orm.Code(remote_computer_exec=(aiida_localhost, '/bin/bash'))
-    code.set_use_double_quotes(code_use_double_quotes)
+    code = orm.InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash')
+    code.use_double_quotes = code_use_double_quotes
     inputs = {
         'code': code.store(),
         'metadata': {
@@ -261,13 +261,15 @@ class TestCalcJob:
     """Test for the `CalcJob` process sub class."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile_clean, aiida_localhost, tmp_path):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
+        (tmp_path / 'bash').write_bytes(b'bash implementation')
+
         assert Process.current() is None
         self.computer = aiida_localhost
-        self.remote_code = orm.Code(remote_computer_exec=(self.computer, '/bin/bash')).store()
-        self.local_code = orm.Code(local_executable='bash', files=['/bin/bash']).store()
+        self.remote_code = orm.InstalledCode(computer=self.computer, filepath_executable='/bin/bash').store()
+        self.local_code = orm.PortableCode(filepath_executable='bash', filepath_files=tmp_path).store()
         self.inputs = {'x': orm.Int(1), 'y': orm.Int(2), 'metadata': {'options': {}}}
         yield
         assert Process.current() is None
@@ -434,7 +436,7 @@ class TestCalcJob:
         computer = orm.Computer('sge_computer', 'localhost', 'desc', 'core.local', 'core.sge').store()
         computer.set_default_mpiprocs_per_machine(1)
 
-        inputs['code'] = orm.Code(remote_computer_exec=(computer, '/bin/bash')).store()
+        inputs['code'] = orm.InstalledCode(computer=computer, filepath_executable='/bin/bash').store()
         inputs['metadata']['options']['resources'] = {'parallel_env': 'environment', 'tot_num_mpiprocs': 10}
 
         # Just checking that instantiating does not raise, meaning the inputs were valid
@@ -493,8 +495,9 @@ class TestCalcJob:
     @pytest.mark.usefixtures('chdir_tmp_path')
     def test_provenance_exclude_list(self):
         """Test the functionality of the `CalcInfo.provenance_exclude_list` attribute."""
-        code = orm.Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[self.computer,
-                                                                                       '/bin/true']).store()
+        code = orm.InstalledCode(
+            default_calc_job_plugin='core.arithmetic.add', computer=self.computer, filepath_executable='/bin/true'
+        ).store()
 
         with tempfile.NamedTemporaryFile('w+') as handle:
             handle.write('dummy_content')

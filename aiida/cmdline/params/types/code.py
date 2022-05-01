@@ -59,7 +59,7 @@ class CodeParamType(IdentifierParamType):
         code = super().convert(value, param, ctx)
 
         if code and self._entry_point is not None:
-            entry_point = code.get_input_plugin_name()
+            entry_point = code.default_calc_job_plugin
             if entry_point != self._entry_point:
                 raise click.BadParameter(
                     'the retrieved Code<{}> has plugin type "{}" while "{}" is required'.format(

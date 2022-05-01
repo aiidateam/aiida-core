@@ -107,7 +107,7 @@ Next, as with all work chains, we should *define* its process specification:
         super().define(spec)
         spec.input('x', valid_type=(orm.Int, orm.Float), help='The left operand.')
         spec.input('y', valid_type=(orm.Int, orm.Float), help='The right operand.')
-        spec.input('code', valid_type=orm.Code, help='The code to use to perform the summation.')
+        spec.input('code', valid_type=orm.AbstractCode, help='The code to use to perform the summation.')
         spec.output('sum', valid_type=(orm.Int, orm.Float), help='The sum of the left and right operand.')
         spec.outline(
             cls.setup,

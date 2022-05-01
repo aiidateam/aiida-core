@@ -112,7 +112,6 @@ def setup_code(ctx, non_interactive, **kwargs):
     except Exception as exception:  # pylint: disable=broad-except
         echo.echo_critical(f'Unable to store the Code: {exception}')
 
-    code.reveal()
     echo.echo_success(f'Code<{code.pk}> {code.full_label} created')
 
 
@@ -127,9 +126,11 @@ def code_test(code):
      * Whether the remote executable exists.
 
     """
-    if not code.is_local():
+    from aiida.orm import InstalledCode
+
+    if isinstance(code, InstalledCode):
         try:
-            code.validate_remote_exec_path()
+            code.validate_filepath_executable()
         except exceptions.ValidationError as exception:
             echo.echo_critical(f'validation failed: {exception}')
 
@@ -169,10 +170,11 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
         kwargs['code_type'] = CodeBuilder.CodeType.STORE_AND_UPLOAD
 
     if kwargs.pop('hide_original'):
-        code.hide()
+        code.is_hidden = True
 
     # Convert entry point to its name
-    kwargs['input_plugin'] = kwargs['input_plugin'].name
+    if kwargs['input_plugin']:
+        kwargs['input_plugin'] = kwargs['input_plugin'].name
 
     code_builder = ctx.code_builder
     for key, value in kwargs.items():
@@ -181,7 +183,7 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 
     try:
         new_code.store()
-        new_code.reveal()
+        new_code.is_hidden = False
     except ValidationError as exception:
         echo.echo_critical(f'Unable to store the Code: {exception}')
 
@@ -194,31 +196,15 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 def show(code):
     """Display detailed information for a code."""
     from aiida.cmdline import is_verbose
-    from aiida.repository import FileType
 
     table = []
     table.append(['PK', code.pk])
     table.append(['UUID', code.uuid])
     table.append(['Label', code.label])
     table.append(['Description', code.description])
-    table.append(['Default plugin', code.get_input_plugin_name()])
-
-    if code.is_local():
-        table.append(['Type', 'local'])
-        table.append(['Exec name', code.get_execname()])
-        table.append(['List of files/folders:', ''])
-        for obj in code.list_objects():
-            if obj.file_type == FileType.DIRECTORY:
-                table.append(['directory', obj.name])
-            else:
-                table.append(['file', obj.name])
-    else:
-        table.append(['Type', 'remote'])
-        table.append(['Remote machine', code.get_remote_computer().label])
-        table.append(['Remote absolute path', code.get_remote_exec_path()])
-
-    table.append(['Prepend text', code.get_prepend_text()])
-    table.append(['Append text', code.get_append_text()])
+    table.append(['Default plugin', code.default_calc_job_plugin])
+    table.append(['Prepend text', code.prepend_text])
+    table.append(['Append text', code.append_text])
 
     if is_verbose():
         table.append(['Calculations', len(code.base.links.get_outgoing().all())])
@@ -258,7 +244,7 @@ def delete(codes, dry_run, force):
 def hide(codes):
     """Hide one or more codes from `verdi code list`."""
     for code in codes:
-        code.hide()
+        code.is_hidden = True
         echo.echo_success(f'Code<{code.pk}> {code.full_label} hidden')
 
 
@@ -268,7 +254,7 @@ def hide(codes):
 def reveal(codes):
     """Reveal one or more hidden codes in `verdi code list`."""
     for code in codes:
-        code.reveal()
+        code.is_hidden = False
         echo.echo_success(f'Code<{code.pk}> {code.full_label} revealed')
 
 
@@ -281,7 +267,7 @@ def relabel(code, label):
     old_label = code.full_label
 
     try:
-        code.relabel(label)
+        code.label = label
     except (TypeError, ValueError) as exception:
         echo.echo_critical(f'invalid code label: {exception}')
     else:

@@ -14,6 +14,7 @@ import click
 import tabulate
 
 from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import code as options_code
 from aiida.cmdline.utils import echo
@@ -24,6 +25,11 @@ from aiida.common import exceptions
 @verdi.group('code')
 def verdi_code():
     """Setup and manage codes."""
+
+
+@verdi_code.group('create', cls=DynamicEntryPointCommandGroup, entry_point_name_filter=r'core\.code\..*')
+def code_create():
+    """Create a new code."""
 
 
 def get_default(key, ctx):

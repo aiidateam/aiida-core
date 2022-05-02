@@ -19,6 +19,8 @@ working directory on the selected computer and the executable will be run there.
 """
 import pathlib
 
+import click
+
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.orm import Computer
@@ -121,3 +123,24 @@ class PortableCode(AbstractCode):
             raise ValueError('The `filepath_executable` should not be absolute.')
 
         self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, value)
+
+    @classmethod
+    def _get_cli_options(cls) -> dict:
+        """Return the CLI options that would allow to create an instance of this class."""
+        options = {
+            'filepath_executable': {
+                'required': True,
+                'type': click.STRING,
+                'prompt': 'Relative filepath executable',
+                'help': 'Relative filepath of executable with directory of code files.',
+            },
+            'filepath_files': {
+                'required': True,
+                'type': click.Path(exists=True, file_okay=False, dir_okay=True, path_type=pathlib.Path),
+                'prompt': 'Code directory',
+                'help': 'Filepath to directory containing code files.',
+            }
+        }
+        options.update(**super()._get_cli_options())
+
+        return options

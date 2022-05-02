@@ -11,9 +11,15 @@
 from __future__ import annotations
 
 import abc
+import collections
 
+import click
+
+from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
+from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.orm import Computer
+from aiida.plugins import CalculationFactory
 
 from ..data import Data
 
@@ -181,3 +187,102 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """
         type_check(value, bool)
         self.base.extras.set(self._KEY_EXTRA_IS_HIDDEN, value)
+
+    def get_builder(self):
+        """Create and return a new ``ProcessBuilder`` for the ``CalcJob`` class of the plugin configured for this code.
+
+        The configured calculation plugin class is defined by the ``default_calc_job_plugin`` property.
+
+        .. note:: it also sets the ``builder.code`` value.
+
+        :return: a ``ProcessBuilder`` instance with the ``code`` input already populated with ourselves
+        :raise aiida.common.EntryPointError: if the specified plugin does not exist.
+        :raise ValueError: if no default plugin was specified.
+        """
+        entry_point = self.default_calc_job_plugin
+
+        if entry_point is None:
+            raise ValueError('No default calculation input plugin specified for this code')
+
+        try:
+            process_class = CalculationFactory(entry_point)
+        except exceptions.EntryPointError:
+            raise exceptions.EntryPointError(f'The calculation entry point `{entry_point}` could not be loaded')
+
+        builder = process_class.get_builder()
+        builder.code = self
+
+        return builder
+
+    @staticmethod
+    def cli_validate_label_uniqueness(_, __, value):
+        """Validate the uniqueness of the label of the code."""
+        from aiida.orm import load_code
+
+        try:
+            load_code(value)
+        except exceptions.NotExistent:
+            pass
+        except exceptions.MultipleObjectsError:
+            raise click.BadParameter(f'Multiple codes with the label `{value}` already exist.')
+        else:
+            raise click.BadParameter(f'A code with the label `{value}` already exists.')
+
+        return value
+
+    @classmethod
+    def get_cli_options(cls) -> collections.OrderedDict:
+        """Return the CLI options that would allow to create an instance of this class."""
+        return collections.OrderedDict(cls._get_cli_options())
+
+    @classmethod
+    def _get_cli_options(cls) -> dict:
+        """Return the CLI options that would allow to create an instance of this class."""
+        return {
+            'label': {
+                'required': True,
+                'type': click.STRING,
+                'prompt': 'Label',
+                'help': 'A unique label to identify the code by.',
+                'callback': cls.cli_validate_label_uniqueness,
+            },
+            'description': {
+                'type': click.STRING,
+                'prompt': 'Description',
+                'help': 'Human-readable description of this code ideally including version and compilation environment.'
+            },
+            'default_calc_job_plugin': {
+                'type': click.STRING,
+                'prompt': 'Default `CalcJob` plugin',
+                'help': 'Entry point name of the default plugin (as listed in `verdi plugin list aiida.calculations`).'
+            },
+            'prepend_text': {
+                'cls': TemplateInteractiveOption,
+                'type': click.STRING,
+                'default': '',
+                'prompt': 'Prepend script',
+                'help': 'Bash commands that should be prepended to the run line in all submit scripts for this code.',
+                'extension': '.bash',
+                'header': 'PREPEND_TEXT: if there is any bash commands that should be prepended to the executable call '
+                'in all submit scripts for this code, type that between the equal signs below and save the file.',
+                'footer': 'All lines that start with `#=`: will be ignored.'
+            },
+            'append_text': {
+                'cls': TemplateInteractiveOption,
+                'type': click.STRING,
+                'default': '',
+                'prompt': 'Append script',
+                'help': 'Bash commands that should be appended to the run line in all submit scripts for this code.',
+                'extension': '.bash',
+                'header': 'APPEND_TEXT: if there is any bash commands that should be appended to the executable call '
+                'in all submit scripts for this code, type that between the equal signs below and save the file.',
+                'footer': 'All lines that start with `#=`: will be ignored.'
+            },
+            'use_double_quotes': {
+                'is_flag': True,
+                'default': False,
+                'help': 'Whether the executable and arguments of the code in the submission script should be escaped '
+                'with single or double quotes.',
+                'prompt': 'Escape using double quotes',
+            },
+        }

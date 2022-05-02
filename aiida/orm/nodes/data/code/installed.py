@@ -16,6 +16,9 @@ using an ``InstalledCode``, it will run its executable on the associated compute
 """
 import pathlib
 
+import click
+
+from aiida.cmdline.params.types import ComputerParamType
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.common.log import override_log_level
@@ -127,3 +130,47 @@ class InstalledCode(AbstractCode):
             raise ValueError('the `filepath_executable` should be absolute.')
 
         self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, value)
+
+    @staticmethod
+    def cli_validate_label_uniqueness(ctx, _, value):
+        """Validate the uniqueness of the label of the code."""
+        from aiida.orm import load_code
+
+        computer = ctx.params.get('computer', None)
+
+        if computer is None:
+            return value
+
+        full_label = f'{value}@{computer.label}'
+
+        try:
+            load_code(full_label)
+        except exceptions.NotExistent:
+            pass
+        except exceptions.MultipleObjectsError:
+            raise click.BadParameter(f'Multiple codes with the label `{full_label}` already exist.')
+        else:
+            raise click.BadParameter(f'A code with the label `{full_label}` already exists.')
+
+        return value
+
+    @classmethod
+    def _get_cli_options(cls) -> dict:
+        """Return the CLI options that would allow to create an instance of this class."""
+        options = {
+            'computer': {
+                'required': True,
+                'prompt': 'Computer',
+                'help': 'The remote computer on which the executable resides.',
+                'type': ComputerParamType(),
+            },
+            'filepath_executable': {
+                'required': True,
+                'type': click.Path(exists=False),
+                'prompt': 'Absolute filepath executable',
+                'help': 'Absolute filepath of the executable on the remote computer.',
+            }
+        }
+        options.update(**super()._get_cli_options())
+
+        return options

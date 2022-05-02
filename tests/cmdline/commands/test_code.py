@@ -12,6 +12,7 @@
 import os
 import tempfile
 import textwrap
+import uuid
 
 import click
 import pytest
@@ -20,6 +21,7 @@ from aiida.cmdline.commands import cmd_code
 from aiida.cmdline.params.options.commands.code import validate_label_uniqueness
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from aiida.orm import Code, Computer, load_code
+from aiida.plugins import DataFactory
 
 
 @pytest.fixture
@@ -406,3 +408,29 @@ def test_code_test(run_cli_command):
     code = Code(remote_computer_exec=[computer, '/bin/bash']).store()
     result = run_cli_command(cmd_code.code_test, [str(code.pk)])
     assert 'all tests succeeded.' in result.output
+
+
+@pytest.fixture
+def command_options(request, aiida_localhost, tmp_path):
+    """Return tuple of list of options and entry point."""
+    options = [request.param, '-n', '--label', str(uuid.uuid4())]
+
+    if request.param == 'core.code.installed':
+        options.extend(['--computer', aiida_localhost.pk, '--filepath-executable', '/usr/bin/bash'])
+
+    if request.param == 'core.code.portable':
+        filepath_executable = 'bash'
+        (tmp_path / filepath_executable).touch()
+        options.extend(['--filepath-executable', filepath_executable, '--filepath-files', tmp_path])
+
+    return options, request.param
+
+
+@pytest.mark.usefixtures('aiida_profile')
+@pytest.mark.parametrize('command_options', ('core.code.installed', 'core.code.portable'), indirect=True)
+def test_code_create(run_cli_command, command_options):
+    """Test the ``verdi code create`` command."""
+    options, entry_point = command_options
+    cls = DataFactory(entry_point)
+    result = run_cli_command(cmd_code.code_create, options)
+    assert f'Success: Created {cls.__name__}' in result.output

@@ -71,6 +71,7 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
+      create     Create a new code.
       delete     Delete a code.
       duplicate  Duplicate a code allowing to change some parameters.
       hide       Hide one or more codes from `verdi code list`.

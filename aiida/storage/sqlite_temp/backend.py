@@ -19,7 +19,7 @@ from typing import Any, Iterator, Sequence
 from sqlalchemy.orm import Session
 
 from aiida.common.exceptions import ClosedStorage
-from aiida.manage import Profile
+from aiida.manage import Profile, get_config_option
 from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import BackendEntity, StorageBackend
@@ -133,7 +133,7 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
             raise ClosedStorage(str(self))
         if self._repo is None:
             # to-do this does not seem to be removing the folder on garbage collection?
-            self._repo = SandboxRepositoryBackend()
+            self._repo = SandboxRepositoryBackend(filepath=get_config_option('storage.sandbox') or None)
         return self._repo
 
     @property

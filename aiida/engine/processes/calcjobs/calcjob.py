@@ -429,11 +429,14 @@ class CalcJob(Process):
         from aiida.common.datastructures import CalcJobState
         from aiida.common.folders import SandboxFolder
         from aiida.engine.daemon.execmanager import retrieve_calculation
+        from aiida.manage import get_config_option
         from aiida.transports.plugins.local import LocalTransport
 
+        filepath_sandbox = get_config_option('storage.sandbox') or None
+
         with LocalTransport() as transport:
-            with SandboxFolder() as folder:
-                with SandboxFolder() as retrieved_temporary_folder:
+            with SandboxFolder(filepath_sandbox) as folder:
+                with SandboxFolder(filepath_sandbox) as retrieved_temporary_folder:
                     self.presubmit(folder)
                     self.node.set_remote_workdir(
                         self.inputs.remote_folder.get_remote_path()  # type: ignore[union-attr]

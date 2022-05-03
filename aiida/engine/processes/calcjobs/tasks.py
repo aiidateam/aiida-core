@@ -72,6 +72,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
 
     initial_interval = get_config_option(RETRY_INTERVAL_OPTION)
     max_attempts = get_config_option(MAX_ATTEMPTS_OPTION)
+    filepath_sandbox = get_config_option('storage.sandbox') or None
 
     authinfo = node.get_authinfo()
 
@@ -79,7 +80,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
         with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
 
-            with SandboxFolder() as folder:
+            with SandboxFolder(filepath_sandbox) as folder:
                 # Any exception thrown in `presubmit` call is not transient so we circumvent the exponential backoff
                 try:
                     calc_info = process.presubmit(folder)

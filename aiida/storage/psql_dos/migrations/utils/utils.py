@@ -26,6 +26,7 @@ from aiida.common import exceptions
 from aiida.repository.backend import AbstractRepositoryBackend
 from aiida.repository.common import File, FileType
 from aiida.repository.repository import Repository
+from aiida.storage.psql_dos.backend import get_filepath_container
 
 ISOFORMAT_DATETIME_REGEX = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+(\+\d{2}:\d{2})?$')
 REGEX_SHARD_SUB_LEVEL = re.compile(r'^[0-9a-f]{2}$')
@@ -152,14 +153,18 @@ def migrate_legacy_repository(profile, shard=None):
     backend = NoopRepositoryBackend()
     repository = MigrationRepository(backend=backend)
 
-    basepath = pathlib.Path(profile.repository_path) / 'repository' / 'node'
-    filepath = pathlib.Path(profile.repository_path) / 'container'
-    container = Container(filepath)
+    # The original repository should be in the same parent as the DOS container, whose location can be retrieved from
+    # the currently loaded storage backend.
+    filepath_container = get_filepath_container(profile)
+    filepath_repository = filepath_container.parent / 'repository' / 'node'
+    container = Container(filepath_container)
 
-    if not basepath.exists():
+    if not filepath_repository.exists():
         return None, None
 
-    node_repository_dirpaths, missing_sub_repo_folder = get_node_repository_dirpaths(profile, basepath, shard)
+    node_repository_dirpaths, missing_sub_repo_folder = get_node_repository_dirpaths(
+        profile, filepath_repository, shard
+    )
 
     filepaths = []
     streams = []
@@ -392,8 +397,8 @@ def load_numpy_array_from_repository(repository_path, uuid, name):
 
 def get_repository_object(profile, hashkey):
     """Return the content of an object stored in the disk object store repository for the given hashkey."""
-    dirpath_container = os.path.join(profile.repository_path, 'container')
-    container = Container(dirpath_container)
+    filepath_container = get_filepath_container(profile)
+    container = Container(filepath_container)
     return container.get_object_content(hashkey)
 
 

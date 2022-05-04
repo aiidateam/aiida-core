@@ -15,7 +15,6 @@ taking a `Profile` as input for the connection configuration.
 .. important:: This code should only be accessed via the storage backend class, not directly!
 """
 import contextlib
-import os
 import pathlib
 from typing import ContextManager, Dict, Iterator, Optional
 
@@ -124,6 +123,8 @@ class PsqlDostoreMigrator:
         :raises: :class:`aiida.common.exceptions.CorruptStorage`
             if the repository ID is not equal to the UUID set in thedatabase.
         """
+        from .backend import get_filepath_container
+
         with self._connection_context() as connection:
 
             # check there is an alembic_version table from which to get the schema version
@@ -148,12 +149,14 @@ class PsqlDostoreMigrator:
                 )
 
             # check that we can access the disk-objectstore container, and get its id
-            filepath = pathlib.Path(self.profile.repository_path) / 'container'
-            container = Container(filepath)
+            filepath_container = get_filepath_container(self.profile)
+            container = Container(filepath_container)
             try:
                 container_id = container.container_id
             except Exception as exc:
-                raise exceptions.UnreachableStorage(f'Could not access disk-objectstore {filepath}: {exc}') from exc
+                raise exceptions.UnreachableStorage(
+                    f'Could not access disk-objectstore {filepath_container}: {exc}'
+                ) from exc
 
             # finally, we check that the ID set within the disk-objectstore is equal to the one saved in the database,
             # i.e. this container is indeed the one associated with the db
@@ -169,7 +172,7 @@ class PsqlDostoreMigrator:
 
     def initialise(self) -> None:
         """Generate the initial storage schema for this profile, from the ORM models."""
-        from aiida.storage.psql_dos.backend import CONTAINER_DEFAULTS
+        from aiida.storage.psql_dos.backend import CONTAINER_DEFAULTS, get_filepath_container
         from aiida.storage.psql_dos.models.base import get_orm_metadata
 
         # setup the database
@@ -177,8 +180,7 @@ class PsqlDostoreMigrator:
         get_orm_metadata().create_all(create_sqlalchemy_engine(self.profile.storage_config))
 
         # setup the repository
-        filepath = pathlib.Path(self.profile.repository_path) / 'container'
-        container = Container(filepath)
+        container = Container(get_filepath_container(self.profile))
         container.init_container(clear=True, **CONTAINER_DEFAULTS)
 
         with create_sqlalchemy_engine(self.profile.storage_config).begin() as conn:
@@ -272,9 +274,9 @@ class PsqlDostoreMigrator:
     @staticmethod
     def _alembic_config():
         """Return an instance of an Alembic `Config`."""
-        dir_path = os.path.dirname(os.path.realpath(__file__))
+        dirpath = pathlib.Path(__file__).resolve().parent
         config = Config()
-        config.set_main_option('script_location', os.path.join(dir_path, ALEMBIC_REL_PATH))
+        config.set_main_option('script_location', str(dirpath / ALEMBIC_REL_PATH))
         return config
 
     @classmethod

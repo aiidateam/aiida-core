@@ -45,6 +45,11 @@ def get_strict_version():
     :rtype: :class:`!distutils.version.StrictVersion`
     """
     from distutils.version import StrictVersion
+
+    from aiida.common.warnings import warn_deprecation
+    warn_deprecation(
+        'This method is deprecated as the `distutils` package it uses will be removed in Python 3.12.', version=3
+    )
     return StrictVersion(__version__)
 
 

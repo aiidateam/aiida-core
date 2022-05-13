@@ -262,7 +262,8 @@ def profile_factory() -> Profile:
                     'broker_virtual_host': kwargs.pop('broker_virtual_host', ''),
                     'broker_parameters': kwargs.pop('broker_parameters', {}),
                 }
-            }
+            },
+            'test_profile': kwargs.pop('test_profile', True)
         }
 
         return Profile(name, profile_dictionary)

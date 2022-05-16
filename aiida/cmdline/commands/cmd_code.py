@@ -18,7 +18,7 @@ from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import code as options_code
 from aiida.cmdline.utils import echo
-from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.cmdline.utils.decorators import deprecated_command, with_dbenv
 from aiida.common import exceptions
 
 
@@ -85,6 +85,7 @@ def set_code_builder(ctx, param, value):
 @options.CONFIG_FILE()
 @click.pass_context
 @with_dbenv()
+@deprecated_command('This command will be removed soon, use `verdi code create` instead.')
 def setup_code(ctx, non_interactive, **kwargs):
     """Setup a new code."""
     from aiida.orm.utils.builders.code import CodeBuilder

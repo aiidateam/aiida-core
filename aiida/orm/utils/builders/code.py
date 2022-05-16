@@ -13,7 +13,10 @@ import pathlib
 
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.utils import ErrorAccumulator
+from aiida.common.warnings import warn_deprecation
 from aiida.orm import InstalledCode, PortableCode
+
+warn_deprecation('This module is deprecated. To create a new code instance, simply use the constructor.', version=3)
 
 
 class CodeBuilder:

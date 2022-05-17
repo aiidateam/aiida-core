@@ -426,7 +426,7 @@ If found, AiiDA creates a copy of the calculation node and its results, thus ens
     This diagram depicts the same input node **D1** being used for both calculations, but an input node **D1'** with the same *hash* as **D1** would trigger the cache as well.
 
 Caching happens on the *calculation* level (no caching at the workflow level, see :ref:`topics:provenance:caching:limitations`).
-By default, both successful and failed calculations enter the cache (more details in :ref:`topics:provenance:caching:control-caching`).
+By default, both successful and failed calculations enter the cache once they are *finished*. *Excepted* calculations do not enter the cache (more details in :ref:`topics:provenance:caching:control-caching`).
 
 .. _how-to:run-codes:caching:enable:
 

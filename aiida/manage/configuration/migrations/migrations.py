@@ -291,7 +291,7 @@ class MergeStorageBackendTypes(SingleMigration):
     def downgrade(self, config: ConfigType) -> None:
         for profile_name, profile in config.get('profiles', {}).items():
             if '_v6_backend' in profile.get('storage', {}):
-                profile.setdefault('storage', {})['backend'] = profile.pop('_v6_backend')
+                profile.setdefault('storage', {})['backend'] = profile['storage'].pop('_v6_backend')
             else:
                 CONFIG_LOGGER.warning(f'profile {profile_name!r} had no expected "storage._v6_backend" key')
 

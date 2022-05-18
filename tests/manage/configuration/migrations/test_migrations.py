@@ -108,7 +108,7 @@ def test_merge_storage_backends_downgrade_profile(empty_config, profile_factory,
     assert list(config_migrated['profiles'].keys()) == ['profile_a', 'profile_b']
     assert f'profile {profile_b.name!r} had no expected "storage._v6_backend" key' in caplog.records[0].message
 
-    
+
 def test_add_test_profile_key_downgrade_profile(empty_config, profile_factory, caplog):
     """Test the downgrade of schema version 8.
 

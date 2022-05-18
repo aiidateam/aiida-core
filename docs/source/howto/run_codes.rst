@@ -427,7 +427,7 @@ If found, AiiDA creates a copy of the calculation node and its results, thus ens
 
 Caching happens on the *calculation* level (no caching at the workflow level, see :ref:`topics:provenance:caching:limitations`).
 By default, both successful and failed calculations enter the cache once they are *finished*.
-Excepted calculations do *not* enter the cache (more details in :ref:`topics:provenance:caching:control-caching`).
+Excepted and killed calculations do *not* enter the cache (more details in :ref:`topics:provenance:caching:control-caching`).
 
 .. _how-to:run-codes:caching:enable:
 

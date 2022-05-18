@@ -90,6 +90,25 @@ def test_migrate_individual(load_config_sample, initial, target, monkeypatch):
     assert config_migrated == config_target
 
 
+def test_merge_storage_backends_downgrade_profile(empty_config, profile_factory, caplog):
+    """Test the downgrade of schema version 7.
+
+    Test specifically the case that the ``storage._v6_backend`` key does not exist.
+    """
+    config = empty_config
+    profile_a = profile_factory('profile_a', test_profile=False)
+    profile_b = profile_factory('profile_b', test_profile=False)
+
+    profile_a._attributes[profile_a.KEY_STORAGE]['_v6_backend'] = 'django'  # pylint: disable=protected-access
+
+    config.add_profile(profile_a)
+    config.add_profile(profile_b)
+
+    config_migrated = downgrade_config(config.dictionary, 6)
+    assert list(config_migrated['profiles'].keys()) == ['profile_a', 'profile_b']
+    assert f'profile {profile_b.name!r} had no expected "storage._v6_backend" key' in caplog.records[0].message
+
+    
 def test_add_test_profile_key_downgrade_profile(empty_config, profile_factory, caplog):
     """Test the downgrade of schema version 8.
 

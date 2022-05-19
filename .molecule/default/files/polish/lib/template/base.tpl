@@ -2,7 +2,7 @@
 from numpy import prod
 from copy import deepcopy
 from aiida.engine import submit, WorkChain, if_, while_, append_, ToContext, calcfunction
-from aiida.orm import Code, Int, Str, Dict
+from aiida.orm import AbstractCode, Int, Str, Dict
 from aiida.plugins import CalculationFactory
 
 

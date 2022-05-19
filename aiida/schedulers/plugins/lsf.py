@@ -112,37 +112,33 @@ class LsfJobResource(JobResource):
         from aiida.common.exceptions import ConfigurationError
 
         resources = AttributeDict()
-
         resources.parallel_env = kwargs.pop('parallel_env', '')
-        if not isinstance(resources.parallel_env, str):
-            raise TypeError("When specified, 'parallel_env' must be a string")
-
         resources.use_num_machines = kwargs.pop('use_num_machines', False)
         num_machines = kwargs.pop('num_machines', None)
+        default_mpiprocs_per_machine = kwargs.pop('default_mpiprocs_per_machine', None)
+
+        if not isinstance(resources.parallel_env, str):
+            raise TypeError('`parallel_env` must be a string')
+
+        if default_mpiprocs_per_machine is not None:
+            raise ConfigurationError('`default_mpiprocs_per_machine` cannot be set.')
+
+        if not resources.use_num_machines and num_machines is not None:
+            raise ConfigurationError('`num_machines` cannot be set unless `use_num_machines` is `True`.')
+
+        if resources.use_num_machines and num_machines is None:
+            raise ConfigurationError('must set `num_machines` when `use_num_machines` is `True`.')
 
         if resources.use_num_machines and num_machines is not None:
             try:
                 resources.num_machines = int(num_machines)
             except (KeyError, ValueError):
-                raise TypeError('num_machines must be an integer')
-
-        elif resources.use_num_machines and num_machines is None:
-            raise ConfigurationError('must set num_machines when use_num_machines is set to true')
-
-        elif not resources.use_num_machines and num_machines is not None:
-            raise ConfigurationError(
-                'num_machines cannot be set for LSF scheduler unless'
-                ' use_num_machines is set to true'
-            )
+                raise TypeError('`num_machines` must be an integer')
 
         try:
             resources.tot_num_mpiprocs = int(kwargs.pop('tot_num_mpiprocs'))
         except (KeyError, ValueError) as exc:
-            raise TypeError('tot_num_mpiprocs must be specified and must be an integer') from exc
-
-        default_mpiprocs_per_machine = kwargs.pop('default_mpiprocs_per_machine', None)
-        if default_mpiprocs_per_machine is not None:
-            raise ConfigurationError('default_mpiprocs_per_machine cannot be set for LSF scheduler')
+            raise TypeError('`tot_num_mpiprocs` must be specified and must be an integer') from exc
 
         if resources.tot_num_mpiprocs <= 0:
             raise ValueError('tot_num_mpiprocs must be >= 1')
@@ -167,18 +163,6 @@ class LsfJobResource(JobResource):
         Return the total number of cpus of this job resource.
         """
         return self.tot_num_mpiprocs
-
-    def get_num_machines(self):
-        """
-        Return the total number of machines of this job resource.
-        """
-        return self.num_machines
-
-    def get_use_num_machines(self):
-        """
-        Return whether to use num_machines when submitting job resources.
-        """
-        return self.use_num_machines
 
     @classmethod
     def accepts_default_mpiprocs_per_machine(cls):
@@ -410,7 +394,7 @@ class LsfScheduler(aiida.schedulers.Scheduler):
             raise ValueError('Job resources (as the tot_num_mpiprocs) are required for the LSF scheduler plugin')
 
         if job_tmpl.job_resource.use_num_machines:
-            lines.append(f'#BSUB -nnodes {job_tmpl.job_resource.get_num_machines()}')
+            lines.append(f'#BSUB -nnodes {job_tmpl.job_resource.num_machines}')
         else:
             lines.append(f'#BSUB -n {job_tmpl.job_resource.get_tot_num_mpiprocs()}')
             # Note:  make sure that PARALLEL_SCHED_BY_SLOT=Y is NOT

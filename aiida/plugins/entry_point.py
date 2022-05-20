@@ -283,7 +283,10 @@ def get_entry_point(group: str, name: str) -> EntryPoint:
     if name not in found.names:
         raise MissingEntryPointError(f"Entry point '{name}' not found in group '{group}'")
     if len(found) > 1:
-        raise MultipleEntryPointError(f"Multiple entry points '{name}' found in group '{group}': {found}")
+        # if the entry points have the same *value*, it does not matter which one we load
+        # (needed e.g. to allow installing aiida-core in user space over an existing system-level installation)
+        if len(set(ep.value for ep in found)) != 1:
+            raise MultipleEntryPointError(f"Multiple entry points '{name}' found in group '{group}': {found}")
     return found[name]
 
 

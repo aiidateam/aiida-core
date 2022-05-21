@@ -282,7 +282,9 @@ def get_entry_point(group: str, name: str) -> EntryPoint:
     found = eps().select(group=group, name=name)
     if name not in found.names:
         raise MissingEntryPointError(f"Entry point '{name}' not found in group '{group}'")
-    if len(found.names) > 1:
+    # If multiple entry points are found and they have different values we raise, otherwise if they all
+    # correspond to the same value, we simply return one of them
+    if len(found) > 1 and len(set(ep.value for ep in found)) != 1:
         raise MultipleEntryPointError(f"Multiple entry points '{name}' found in group '{group}': {found}")
     return found[name]
 

@@ -436,3 +436,24 @@ class TestProcess:
         # If the ``namespace`` does not exist, for example because it is slightly misspelled, a ``KeyError`` is raised
         with pytest.raises(KeyError):
             process.exposed_outputs(node_child, ChildProcess, namespace='cildh')
+
+
+class TestValidateDynamicNamespaceProcess(Process):
+    """Simple process with dynamic input namespace."""
+
+    _node_class = orm.WorkflowNode
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.inputs.dynamic = True
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_input_validation_storable_nodes():
+    """Test that validation catches non-storable inputs even if nested in dictionary for dynamic namespace.
+
+    Regression test for #5128.
+    """
+    with pytest.raises(ValueError):
+        run(TestValidateDynamicNamespaceProcess, **{'namespace': {'a': 1}})

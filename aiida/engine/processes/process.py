@@ -112,6 +112,8 @@ class Process(plumpy.processes.Process):
             default='CALL',
             help='The label to use for the `CALL` link if the process is called by another process.'
         )
+        spec.inputs.valid_type = orm.Data
+        spec.inputs.dynamic = False  # Settings a ``valid_type`` automatically makes it dynamic, so we reset it again
         spec.exit_code(1, 'ERROR_UNSPECIFIED', message='The process has failed with an unspecified error.')
         spec.exit_code(2, 'ERROR_LEGACY_FAILURE', message='The process failed with legacy failure mode.')
         spec.exit_code(10, 'ERROR_INVALID_OUTPUT', message='The process returned an invalid output.')

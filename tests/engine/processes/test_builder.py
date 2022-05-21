@@ -45,11 +45,11 @@ class LazyProcessNamespace(Process):
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input_namespace('namespace')
-        spec.input_namespace('namespace.nested')
-        spec.input('namespace.nested.bird')
-        spec.input('namespace.a')
-        spec.input('namespace.c')
+        spec.input_namespace('namespace', non_db=True)
+        spec.input_namespace('namespace.nested', non_db=True)
+        spec.input('namespace.nested.bird', non_db=True)
+        spec.input('namespace.a', non_db=True)
+        spec.input('namespace.c', non_db=True)
 
 
 class SimpleProcessNamespace(Process):
@@ -58,9 +58,9 @@ class SimpleProcessNamespace(Process):
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input_namespace('namespace.nested', dynamic=True)
-        spec.input('namespace.a', valid_type=int)
-        spec.input('namespace.c', valid_type=dict)
+        spec.input_namespace('namespace.nested', dynamic=True, non_db=True)
+        spec.input('namespace.a', valid_type=int, non_db=True)
+        spec.input('namespace.c', valid_type=dict, non_db=True)
 
 
 class NestedNamespaceProcess(Process):
@@ -69,9 +69,9 @@ class NestedNamespaceProcess(Process):
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input('nested.namespace.int', valid_type=int, required=True)
-        spec.input('nested.namespace.float', valid_type=float, required=True)
-        spec.input('nested.namespace.str', valid_type=str, required=False)
+        spec.input('nested.namespace.int', valid_type=int, required=True, non_db=True)
+        spec.input('nested.namespace.float', valid_type=float, required=True, non_db=True)
+        spec.input('nested.namespace.str', valid_type=str, required=False, non_db=True)
 
 
 class MappingData(Mapping, orm.Data):
@@ -396,7 +396,7 @@ def test_instance_interference():
         @classmethod
         def define(cls, spec):
             super().define(spec)
-            spec.input('port', valid_type=int, default=1)
+            spec.input('port', valid_type=int, default=1, non_db=True)
 
     class ProcessTwo(Process):
         """Process with nested required ports to check the update functionality."""
@@ -404,7 +404,7 @@ def test_instance_interference():
         @classmethod
         def define(cls, spec):
             super().define(spec)
-            spec.input('port', valid_type=int, default=2)
+            spec.input('port', valid_type=int, default=2, non_db=True)
 
     builder_one = ProcessOne.get_builder()
     assert builder_one.port == 1

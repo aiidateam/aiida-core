@@ -115,9 +115,12 @@ def storage_info(detailed):
     help=
     'Run the maintenance in dry-run mode which will print actions that would be taken without actually executing them.'
 )
+@click.option(
+    '--compress/--no-compress', default=True, help='Use compression if possible when carrying out maintainance tasks.'
+)
 @decorators.with_dbenv()
 @click.pass_context
-def storage_maintain(ctx, full, dry_run):
+def storage_maintain(ctx, full, dry_run, compress):
     """Performs maintenance tasks on the repository."""
     from aiida.common.exceptions import LockingProfileError
     from aiida.manage.manager import get_manager
@@ -153,7 +156,7 @@ def storage_maintain(ctx, full, dry_run):
             return
 
     try:
-        storage.maintain(full=full, dry_run=dry_run)
+        storage.maintain(full=full, dry_run=dry_run, compress=compress)
     except LockingProfileError as exception:
         echo.echo_critical(str(exception))
     echo.echo_success('Requested maintenance procedures finished.')

@@ -149,6 +149,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         do_repack: bool = None,
         clean_storage: bool = None,
         do_vacuum: bool = None,
+        compress: bool = None,
     ) -> dict:
         """Performs maintenance operations.
 
@@ -165,6 +166,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
             raise ValueError(f'The following overrides were enabled but cannot be if `live=True`: {keys}')
 
         pack_loose = True if pack_loose is None else pack_loose
+        compress = True if compress is None else compress
 
         if live:
             do_repack = False
@@ -181,7 +183,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                 files_size = container.get_total_size()['total_size_loose'] * BYTES_TO_MB
                 logger.report(f'Packing all loose files ({files_numb} files occupying {files_size} MB) ...')
                 if not dry_run:
-                    container.pack_all_loose()
+                    container.pack_all_loose(compress=compress)
 
             if do_repack:
                 files_numb = container.count_objects()['packed']

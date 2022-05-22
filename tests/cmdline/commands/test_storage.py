@@ -143,6 +143,15 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch, caplog):
     message_list = caplog.records[0].msg.splitlines()
     assert ' > full: False' in message_list
     assert ' > dry_run: False' in message_list
+    assert ' > compress: True' in message_list
+
+    with caplog.at_level(logging.INFO):
+        _ = run_cli_command(cmd_storage.storage_maintain, user_input='Y', options='--no-compress')
+
+    message_list = caplog.records[0].msg.splitlines()
+    assert ' > full: False' in message_list
+    assert ' > dry_run: False' in message_list
+    assert ' > compress: False' in message_list
 
     with caplog.at_level(logging.INFO):
         _ = run_cli_command(cmd_storage.storage_maintain, options=['--dry-run'])

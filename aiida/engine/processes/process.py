@@ -582,11 +582,13 @@ class Process(plumpy.processes.Process):
                     for entry in self.node.base.links.get_outgoing(link_type=LinkType.RETURN):
                         if entry.link_label.endswith(f'_{entry.node.pk}'):
                             continue
-                        self.out(entry.link_label, entry.node)
+                        label = entry.link_label.replace(PORT_NAMESPACE_SEPARATOR, self.spec().namespace_separator)
+                        self.out(label, entry.node)
                     # This is needed for CalcJob. In that case, the outputs are
                     # returned regardless of whether they end in '_pk'
                     for entry in self.node.base.links.get_outgoing(link_type=LinkType.CREATE):
-                        self.out(entry.link_label, entry.node)
+                        label = entry.link_label.replace(PORT_NAMESPACE_SEPARATOR, self.spec().namespace_separator)
+                        self.out(label, entry.node)
             except exceptions.ModificationNotAllowed:
                 # The calculation was already stored
                 pass

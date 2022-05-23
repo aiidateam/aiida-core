@@ -717,6 +717,9 @@ class Process(plumpy.processes.Process):
             # Special exception: set computer if node is a remote Code and our node does not yet have a computer set
             if isinstance(node, orm.InstalledCode) and not self.node.computer:
                 self.node.computer = node.computer
+                
+            if isinstance(node, orm.ContainerizedCode) and not self.node.computer:
+                self.node.computer = node.computer
 
             # Need this special case for tests that use ProcessNodes as classes
             if isinstance(self.node, orm.CalculationNode):

@@ -225,6 +225,48 @@ def test_code_double_quotes(aiida_localhost, file_regression, code_use_double_qu
 
     file_regression.check(content, extension='.sh')
 
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
+def test_containerized_installed_code(file_regression, aiida_localhost):
+    """test run container code"""
+    computer = orm.Computer(
+        label='cmp', 
+        transport_type='core.local', 
+        hostname='localhost', 
+        scheduler_type='core.direct',
+    ).store()
+    computer.set_use_double_quotes(True)
+    engine_command = """docker run -it -v $PWD:/workdir:rw -w /workdir {image} sh -c"""
+    containerized_code = orm.ContainerizedCode(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/bash',
+        engine_command=engine_command,
+        image='ubuntu',
+        computer=computer,
+        escape_exec_line=True,
+    ).store()
+
+    inputs = {
+        'code': containerized_code,
+        'metadata': {
+            'dry_run': True,
+            'options': {
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
+                },
+                'withmpi': False,
+            }
+        }
+    }
+
+    _, node = launch.run_get_node(DummyCalcJob, **inputs)
+    folder_name = node.dry_run_info['folder']
+    submit_script_filename = node.get_option('submit_script_filename')
+    with open(os.path.join(folder_name, submit_script_filename), encoding='utf8') as handle:
+        content = handle.read()
+
+    file_regression.check(content, extension='.sh')
 
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('aiida_profile_clean', 'chdir_tmp_path')

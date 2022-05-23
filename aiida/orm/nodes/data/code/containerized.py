@@ -14,6 +14,7 @@ storing the absolute filepath of the relevant executable and the computer on whi
 represented by an instance of :class:`aiida.orm.computers.Computer`. Each time a :class:`aiida.engine.CalcJob` is run
 using an ``InstalledCode``, it will run its executable on the associated computer.
 """
+from glob import escape
 import pathlib
 
 import click
@@ -33,14 +34,17 @@ class ContainerizedCode(AbstractCode):
     """Data plugin representing an executable code on a remote computer."""
 
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
+    _KEY_ATTRIBUTE_ENGINE_COMMAND: str = 'engine_command'
+    _KEY_ATTRIBUTE_IMAGE: str = 'image'
+    _KEY_ATTRIBUTE_ESCAPE_EXEC_LINE: str = 'escape_exec_line'
 
     def __init__(
         self, 
         filepath_executable: str, 
         engine_command: str, 
         image: str,
-        computer: Computer,
-        escape_exec_line: bool=False,   # TODO: can be None for Portable
+        computer: Computer,# TODO: can be None for Portable
+        escape_exec_line: bool=False,   
         **kwargs):
         """Construct a new instance.
 
@@ -61,8 +65,8 @@ class ContainerizedCode(AbstractCode):
         """
         super()._validate()
 
-        # if not self.computer:
-        #     raise exceptions.ValidationError('The `computer` is undefined.')
+        if not self.computer:
+            raise exceptions.ValidationError('The `computer` is undefined.')
 
         # TODO more validate for image, engine_command, escape_exec_line
         try:
@@ -110,7 +114,66 @@ class ContainerizedCode(AbstractCode):
         :return: The executable to be called in the submission script.
         """
         return self.filepath_executable
+    
+    @property
+    def engine_command(self) -> str:
+        """
+        doc
+        """
+        return self.base.attributes.get(self._KEY_ATTRIBUTE_ENGINE_COMMAND)
 
+    @engine_command.setter
+    def engine_command(self, value: str) -> None:
+        """
+        doc
+        """
+        type_check(value, str)
+        
+        # TODO: check contain image template
+        
+        self.base.attributes.set(self._KEY_ATTRIBUTE_ENGINE_COMMAND, value)
+        
+    @property
+    def escape_exec_line(self) -> str:
+        """
+        doc
+        """
+        return self.base.attributes.get(self._KEY_ATTRIBUTE_ESCAPE_EXEC_LINE)
+
+    @escape_exec_line.setter
+    def escape_exec_line(self, value: bool) -> None:
+        """
+        doc
+        """
+        type_check(value, bool)
+        
+        # TODO: check contain image template
+        
+        self.base.attributes.set(self._KEY_ATTRIBUTE_ESCAPE_EXEC_LINE, value)
+        
+    @property
+    def image(self) -> str:
+        """
+        doc
+        """
+        return self.base.attributes.get(self._KEY_ATTRIBUTE_IMAGE)
+
+    @image.setter
+    def image(self, value: str) -> None:
+        """
+        doc
+        """
+        type_check(value, str)
+        
+        # TODO: check contain image template
+        
+        self.base.attributes.set(self._KEY_ATTRIBUTE_IMAGE, value)
+        
+    def get_engine_command(self) -> str:
+        cmdline = self.engine_command.format(image=self.image)
+
+        return cmdline.split()
+        
     @property
     def full_label(self) -> str:
         """Return the full label of this code.

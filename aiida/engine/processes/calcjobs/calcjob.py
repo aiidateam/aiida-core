@@ -717,7 +717,7 @@ class CalcJob(Process):
                 
             escape_exec_line = False
             if isinstance(this_code, ContainerizedCode):
-                prepend_cmdline_params += this_code.container_engine_command
+                prepend_cmdline_params += this_code.get_engine_command()
                 # escape exec line will put the all parameters after `prepend_cmdline_params`
                 # into the single quotes. 
                 # It is only needed for docker type containerized code,

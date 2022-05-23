@@ -248,8 +248,8 @@ class Scheduler(metaclass=abc.ABCMeta):
             output_string = f'{cmdline_params} {stdin_str} {stdout_str} {stderr_str}'
 
             if code_info.escape_exec_line:
-                # escape with single quotes the whole string, so it can pass to docker (only) run
-                output_string = escape_for_bash(output_string)
+                # escape with double quotes the whole string, so it can pass to docker (only) run
+                output_string = escape_for_bash(output_string, use_double_quotes=True)
 
             if prepend_cmdline_params:
                 output_string = f'{prepend_cmdline_params} {output_string}'

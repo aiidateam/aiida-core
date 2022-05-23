@@ -396,6 +396,29 @@ class CalcJob(Process):
         """
         raise NotImplementedError()
 
+    def _setup_metadata(self, metadata: dict) -> None:
+        """Store the metadata on the ProcessNode."""
+        computer = metadata.pop('computer', None)
+        if computer is not None:
+            self.node.computer = computer
+
+        options = metadata.pop('options', {})
+        for option_name, option_value in options.items():
+            self.node.set_option(option_name, option_value)
+
+        super()._setup_metadata(metadata)
+
+    def _setup_inputs(self) -> None:
+        """Create the links between the input nodes and the ProcessNode that represents this process."""
+        super()._setup_inputs()
+
+        # If a computer has not yet been set, which should have been done in ``_setup_metadata`` if it was specified
+        # in the ``metadata`` inputs, set the computer associated with the ``code`` input. Note that not all ``code``s
+        # will have an associated computer, but in that case the ``computer`` property should return ``None`` and
+        # nothing would change anyway.
+        if not self.node.computer:
+            self.node.computer = self.inputs.code.computer  # type: ignore[union-attr]
+
     def _perform_dry_run(self):
         """Perform a dry run.
 

@@ -874,11 +874,12 @@ class TestImport:
     """Test the functionality to import existing calculations completed outside of AiiDA."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile_clean, aiida_localhost, aiida_local_code_factory):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
         self.inputs = {
+            'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash', computer=aiida_localhost),
             'x': orm.Int(1),
             'y': orm.Int(2),
             'metadata': {

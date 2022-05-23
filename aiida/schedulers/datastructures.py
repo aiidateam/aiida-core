@@ -381,6 +381,7 @@ class JobTemplateCodeInfo:
     """
     prepend_cmdline_params: list[str] = field(default_factory=list)
     cmdline_params: list[str] = field(default_factory=list)
+    escape_exec_line: bool = False
     use_double_quotes: list[bool] = field(default_factory=lambda: [False, False])
     stdin_name: None | str = None
     stdout_name: None | str = None

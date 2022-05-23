@@ -159,6 +159,9 @@ Limitations and Guidelines
    While AiiDA's hashes include the version of the Python package containing the calculation/data classes, it cannot detect cases where the underlying Python code was changed without increasing the version number.
    Another scenario that can lead to an erroneous cache hit is if the parser and calculation are not implemented as part of the same Python package, because the calculation nodes store only the name, but not the version of the used parser.
 
+#. While caching saves unnecessary computations, it does not directly prevent duplication of data: the cached calculation and its output nodes are duplicated.
+   In practice, however, AiiDA's file repository implementation will detect that any files associated with these nodes are already present and simply point to those, reducing duplication to metadata stored at the database level.
+
 #. Finally, When modifying the hashing/caching behaviour of your classes, keep in mind that cache matches can go wrong in two ways:
 
    * False negatives, where two nodes *should* have the same hash but do not

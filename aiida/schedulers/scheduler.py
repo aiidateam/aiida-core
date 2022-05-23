@@ -222,12 +222,15 @@ class Scheduler(metaclass=abc.ABCMeta):
             computer_use_double_quotes = code_info.use_double_quotes[0]
             code_use_double_quotes = code_info.use_double_quotes[1]
 
-            command_to_exec_list = []
+            prepend_cmdline_params_list = []
             for arg in code_info.prepend_cmdline_params:
-                command_to_exec_list.append(escape_for_bash(arg, use_double_quotes=computer_use_double_quotes))
+                prepend_cmdline_params_list.append(escape_for_bash(arg, use_double_quotes=computer_use_double_quotes))
+            prepend_cmdline_params = ' '.join(prepend_cmdline_params_list)
+
+            cmdline_params_list = []
             for arg in code_info.cmdline_params:
-                command_to_exec_list.append(escape_for_bash(arg, use_double_quotes=code_use_double_quotes))
-            command_to_exec = ' '.join(command_to_exec_list)
+                cmdline_params_list.append(escape_for_bash(arg, use_double_quotes=code_use_double_quotes))
+            cmdline_params = ' '.join(cmdline_params_list)
 
             escape_stdin_name = escape_for_bash(code_info.stdin_name, use_double_quotes=computer_use_double_quotes)
             escape_stdout_name = escape_for_bash(code_info.stdout_name, use_double_quotes=computer_use_double_quotes)
@@ -242,7 +245,14 @@ class Scheduler(metaclass=abc.ABCMeta):
             else:
                 stderr_str = f'2> {escape_sterr_name}' if code_info.stderr_name else ''
 
-            output_string = f'{command_to_exec} {stdin_str} {stdout_str} {stderr_str}'
+            output_string = f'{cmdline_params} {stdin_str} {stdout_str} {stderr_str}'
+
+            if code_info.escape_exec_line:
+                # escape with double quotes the whole string, so it can pass to docker (only) run
+                output_string = escape_for_bash(output_string, use_double_quotes=True)
+
+            if prepend_cmdline_params:
+                output_string = f'{prepend_cmdline_params} {output_string}'
 
             list_of_runlines.append(output_string)
 

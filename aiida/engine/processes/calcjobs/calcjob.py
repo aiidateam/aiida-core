@@ -592,7 +592,7 @@ class CalcJob(Process):
         from aiida.common.datastructures import CodeInfo, CodeRunMode
         from aiida.common.exceptions import InputValidationError, InvalidOperation, PluginInternalError, ValidationError
         from aiida.common.utils import validate_list_of_string_tuples
-        from aiida.orm import AbstractCode, Code, Computer, InstalledCode, PortableCode, load_node
+        from aiida.orm import AbstractCode, Code, Computer, InstalledCode, PortableCode, ContainerizedCode, load_node
         from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
         inputs = self.node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
@@ -696,7 +696,7 @@ class CalcJob(Process):
 
             if code_info.code_uuid is None:
                 raise PluginInternalError('CalcInfo should have the information of the code to be launched')
-            this_code = load_node(code_info.code_uuid, sub_classes=(Code, InstalledCode, PortableCode))
+            this_code = load_node(code_info.code_uuid, sub_classes=(Code, InstalledCode, PortableCode, ContainerizedCode))
 
             # To determine whether this code should be run with MPI enabled, we get the value that was set in the inputs
             # of the entire process, which can then be overwritten by the value from the `CodeInfo`. This allows plugins
@@ -714,11 +714,21 @@ class CalcJob(Process):
                 prepend_cmdline_params = mpi_args + extra_mpirun_params
             else:
                 prepend_cmdline_params = []
+                
+            escape_exec_line = False
+            if isinstance(this_code, ContainerizedCode):
+                prepend_cmdline_params += this_code.container_engine_command
+                # escape exec line will put the all parameters after `prepend_cmdline_params`
+                # into the single quotes. 
+                # It is only needed for docker type containerized code,
+                # therefore default set to False.
+                escape_exec_line = this_code.escape_exec_line
 
             cmdline_params = [str(this_code.get_executable())] + (code_info.cmdline_params or [])
 
             tmpl_code_info = JobTemplateCodeInfo()
             tmpl_code_info.prepend_cmdline_params = prepend_cmdline_params
+            tmpl_code_info.escape_exec_line = escape_exec_line
             tmpl_code_info.cmdline_params = cmdline_params
             tmpl_code_info.use_double_quotes = [computer.get_use_double_quotes(), this_code.use_double_quotes]
             tmpl_code_info.stdin_name = code_info.stdin_name

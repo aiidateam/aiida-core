@@ -10,12 +10,14 @@ from .abstract import *
 from .installed import *
 from .legacy import *
 from .portable import *
+from .containerized import ContainerizedCode
 
 __all__ = (
     'AbstractCode',
     'Code',
     'InstalledCode',
     'PortableCode',
+    'ContainerizedCode',
 )
 
 # yapf: enable

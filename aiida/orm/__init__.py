@@ -44,6 +44,7 @@ __all__ = (
     'CalculationNode',
     'CifData',
     'Code',
+    'ContainerizedCode',
     'CodeEntityLoader',
     'Collection',
     'Comment',

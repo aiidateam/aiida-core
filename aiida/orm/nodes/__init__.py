@@ -31,6 +31,7 @@ __all__ = (
     'CalculationNode',
     'CifData',
     'Code',
+    'ContainerizedCode',
     'Data',
     'Dict',
     'EnumData',

@@ -43,6 +43,7 @@ __all__ = (
     'Bool',
     'CifData',
     'Code',
+    'ContainerizedCode',
     'Data',
     'Dict',
     'EnumData',

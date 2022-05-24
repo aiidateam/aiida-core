@@ -156,13 +156,13 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch, caplog):
     with caplog.at_level(logging.INFO):
         _ = run_cli_command(cmd_storage.storage_maintain, options=['--dry-run'])
 
-    message_list = caplog.records[1].msg.splitlines()
+    message_list = caplog.records[2].msg.splitlines()
     assert ' > full: False' in message_list
     assert ' > dry_run: True' in message_list
 
     with caplog.at_level(logging.INFO):
         run_cli_command(cmd_storage.storage_maintain, options=['--full'], user_input='Y')
 
-    message_list = caplog.records[2].msg.splitlines()
+    message_list = caplog.records[3].msg.splitlines()
     assert ' > full: True' in message_list
     assert ' > dry_run: False' in message_list

@@ -28,17 +28,17 @@ def print_client_response_status(response):
         return 1
 
     if response['status'] == 'active':
-        echo.echo('RUNNING', fg='green', bold=True)
+        echo.echo('RUNNING', fg=echo.COLORS['success'], bold=True)
         return 0
     if response['status'] == 'ok':
-        echo.echo('OK', fg='green', bold=True)
+        echo.echo('OK', fg=echo.COLORS['success'], bold=True)
         return 0
     if response['status'] == DaemonClient.DAEMON_ERROR_NOT_RUNNING:
-        echo.echo('FAILED', fg='red', bold=True)
+        echo.echo('FAILED', fg=echo.COLORS['error'], bold=True)
         echo.echo('Try to run `verdi daemon start-circus --foreground` to potentially see the exception')
         return 2
     if response['status'] == DaemonClient.DAEMON_ERROR_TIMEOUT:
-        echo.echo('TIMEOUT', fg='red', bold=True)
+        echo.echo('TIMEOUT', fg=echo.COLORS['error'], bold=True)
         return 3
     # Unknown status, I will consider it as failed
     echo.echo_critical(response['status'])

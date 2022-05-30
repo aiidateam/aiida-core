@@ -1,0 +1,12 @@
+---
+label: add-docker
+description: add docker
+default_calc_job_plugin: core.arithmetic.add
+on_computer: true
+computer: localhost
+filepath_executable: /bin/bash
+image: ubuntu
+engine_command: docker run -v $PWD:/workdir:rw -w /workdir {image} sh -c
+escape_exec_line: true
+prepend_text: ' '
+append_text: ' '

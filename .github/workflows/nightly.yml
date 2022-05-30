@@ -1,6 +1,7 @@
 name: nightly
 
 on:
+    workflow_dispatch:  # To manually trigger nightly
     schedule:
     -   cron: '0 0 * * *'  # Run every day at midnight
     pull_request:

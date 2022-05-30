@@ -10,6 +10,7 @@
 # pylint: disable=unused-argument,redefined-outer-name
 """Tests for the 'verdi code' command."""
 import io
+from ipaddress import ip_address
 import os
 import pathlib
 import tempfile
@@ -424,7 +425,7 @@ def command_options(request, aiida_localhost, tmp_path):
     if 'containerized' in request.param:
         engine_command = 'docker run -it -v $PWD:/workdir:rw -w /workdir {image} sh -c'
         image = 'ubuntu'
-        options.extend(['--engine-command', engine_command, '--image', image, '--escape-exec-line', True])
+        options.extend(['--engine-command', engine_command, '--image', image, '--escape-exec-line'])
 
     return options, request.param
 

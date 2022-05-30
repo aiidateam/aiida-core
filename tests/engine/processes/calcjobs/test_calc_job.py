@@ -259,7 +259,7 @@ def test_containerized_installed_code(file_regression, aiida_localhost):
     _, node = launch.run_get_node(DummyCalcJob, **inputs)
     folder_name = node.dry_run_info['folder']
     submit_script_filename = node.get_option('submit_script_filename')
-    content = (pathlib.Path(folder_name) / submit_script_filename).read_bytes()
+    content = (pathlib.Path(folder_name) / submit_script_filename).read_bytes().decode('utf-8')
 
     file_regression.check(content, extension='.sh')
 
@@ -300,7 +300,7 @@ def test_containerized_portable_code(file_regression, tmp_path, aiida_localhost)
         assert filename in uploaded_files
 
     submit_script_filename = node.get_option('submit_script_filename')
-    content = (pathlib.Path(folder_name) / submit_script_filename).read_bytes()
+    content = (pathlib.Path(folder_name) / submit_script_filename).read_bytes().decode('utf-8')
 
     file_regression.check(content, extension='.sh')
 

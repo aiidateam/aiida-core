@@ -23,6 +23,7 @@ verdi computer configure core.local localhost --config "${CONFIG}/localhost-conf
 verdi computer test localhost
 verdi code create core.code.installed --non-interactive --config "${CONFIG}/doubler.yaml"
 verdi code create core.code.installed --non-interactive --config "${CONFIG}/add.yaml"
+verdi code create core.code.installed.containerized --non-interactive --config "${CONFIG}/add-docker.yaml"
 
 # set up slurm-ssh computer
 verdi computer setup --non-interactive --config "${CONFIG}/slurm-ssh.yaml"

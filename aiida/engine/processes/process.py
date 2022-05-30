@@ -11,6 +11,7 @@
 import asyncio
 import collections
 from collections.abc import Mapping
+import copy
 import enum
 import inspect
 import logging
@@ -582,11 +583,13 @@ class Process(plumpy.processes.Process):
                     for entry in self.node.base.links.get_outgoing(link_type=LinkType.RETURN):
                         if entry.link_label.endswith(f'_{entry.node.pk}'):
                             continue
-                        self.out(entry.link_label, entry.node)
+                        label = entry.link_label.replace(PORT_NAMESPACE_SEPARATOR, self.spec().namespace_separator)
+                        self.out(label, entry.node)
                     # This is needed for CalcJob. In that case, the outputs are
                     # returned regardless of whether they end in '_pk'
                     for entry in self.node.base.links.get_outgoing(link_type=LinkType.CREATE):
-                        self.out(entry.link_label, entry.node)
+                        label = entry.link_label.replace(PORT_NAMESPACE_SEPARATOR, self.spec().namespace_separator)
+                        self.out(label, entry.node)
             except exceptions.ModificationNotAllowed:
                 # The calculation was already stored
                 pass
@@ -682,27 +685,22 @@ class Process(plumpy.processes.Process):
             elif isinstance(self.node, orm.WorkflowNode):
                 self.node.base.links.add_incoming(parent_calc, LinkType.CALL_WORK, self.metadata.call_link_label)
 
-        self._setup_metadata()
+        self._setup_metadata(copy.copy(dict(self.inputs.metadata)))
         self._setup_inputs()
 
-    def _setup_metadata(self) -> None:
+    def _setup_metadata(self, metadata: dict) -> None:
         """Store the metadata on the ProcessNode."""
         version_info = self.runner.plugin_version_provider.get_version_info(self.__class__)
         self.node.base.attributes.set_many(version_info)
 
-        for name, metadata in self.metadata.items():
+        for name, value in metadata.items():
             if name in ['store_provenance', 'dry_run', 'call_link_label']:
                 continue
 
             if name == 'label':
-                self.node.label = metadata
+                self.node.label = value
             elif name == 'description':
-                self.node.description = metadata
-            elif name == 'computer':
-                self.node.computer = metadata
-            elif name == 'options':
-                for option_name, option_value in metadata.items():
-                    self.node.set_option(option_name, option_value)
+                self.node.description = value
             else:
                 raise RuntimeError(f'unsupported metadata key: {name}')
 
@@ -713,10 +711,6 @@ class Process(plumpy.processes.Process):
             # Certain processes allow to specify ports with `None` as acceptable values
             if node is None:
                 continue
-
-            # Special exception: set computer if node is a remote Code and our node does not yet have a computer set
-            if isinstance(node, orm.InstalledCode) and not self.node.computer:
-                self.node.computer = node.computer
 
             # Need this special case for tests that use ProcessNodes as classes
             if isinstance(self.node, orm.CalculationNode):

@@ -6,6 +6,10 @@ import gzip
 
 import click
 
+from aiida.common.exceptions import ConfigurationError
+from aiida.common.extendeddicts import AttributeDict
+from aiida.manage.configuration import get_config
+
 from ..params import options
 
 __all__ = ('VerdiCommandGroup',)
@@ -28,12 +32,29 @@ GIU = (
 )
 
 
+class VerdiContext(click.Context):
+    """Custom context implementation that defines the ``obj`` user object and adds the ``Config`` instance."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.obj is None:
+            self.obj = AttributeDict()
+
+        try:
+            self.obj.config = get_config(create=True)
+        except ConfigurationError as exception:
+            self.fail(str(exception))
+
+
 class VerdiCommandGroup(click.Group):
     """Subclass of :class:`click.Group` for the ``verdi`` CLI.
 
     The class automatically adds the verbosity option to all commands in the interface. It also adds some functionality
     to provide suggestions of commands in case the user provided command name does not exist.
     """
+
+    context_class = VerdiContext
 
     @staticmethod
     def add_verbosity_option(cmd):

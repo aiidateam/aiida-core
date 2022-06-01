@@ -43,6 +43,7 @@ __all__ = (
     'EntryPointType',
     'FileOrUrl',
     'GroupParamType',
+    'GroupPartialParamType',
     'HostnameType',
     'IdentifierParamType',
     'LabelStringType',

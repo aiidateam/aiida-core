@@ -310,67 +310,32 @@ def group_show(group, raw, limit, uuid):
 @options.ORDER_BY(type=click.Choice(['id', 'label', 'ctime']), default='label')
 @options.ORDER_DIRECTION()
 @options.NODE(help='Show only the groups that contain the node.')
+@arguments.GROUP_PARTIAL(required=False)
 @with_dbenv()
 def group_list(
-    all_users, user, all_entries, type_string, with_description, count, past_days, startswith, endswith, contains,
-    order_by, order_dir, node
+    group_partial, all_users, user, all_entries, type_string, with_description, count, past_days, startswith, endswith,
+    contains, order_by, order_dir, node
 ):
     """Show a list of existing groups."""
     # pylint: disable=too-many-branches,too-many-arguments,too-many-locals,too-many-statements
-    import datetime
-
     from tabulate import tabulate
 
-    from aiida import orm
-    from aiida.common import timezone
-    from aiida.common.escaping import escape_for_sql_like
+    from aiida.cmdline.utils.list_groups import get_group_list_builder
 
-    builder = orm.QueryBuilder()
-    filters = {}
-
-    # Have to specify the default for `type_string` here instead of directly in the option otherwise it will always
-    # raise above if the user specifies just the `--group-type` option. Once that option is removed, the default can
-    # be moved to the option itself.
-    if type_string is None:
-        type_string = 'core'
-
-    if not all_entries:
-        if '%' in type_string or '_' in type_string:
-            filters['type_string'] = {'like': type_string}
-        else:
-            filters['type_string'] = type_string
-
-    # Creation time
-    if past_days:
-        filters['time'] = {'>': timezone.now() - datetime.timedelta(days=past_days)}
-
-    # Query for specific group labels
-    filters['or'] = []
-    if startswith:
-        filters['or'].append({'label': {'like': f'{escape_for_sql_like(startswith)}%'}})
-    if endswith:
-        filters['or'].append({'label': {'like': f'%{escape_for_sql_like(endswith)}'}})
-    if contains:
-        filters['or'].append({'label': {'like': f'%{escape_for_sql_like(contains)}%'}})
-
-    builder.append(orm.Group, filters=filters, tag='group', project='*')
-
-    # Query groups that belong to specific user
-    if user:
-        user_email = user.email
-    else:
-        # By default: only groups of this user
-        user_email = orm.User.collection.get_default().email
-
-    # Query groups that belong to all users
-    if not all_users:
-        builder.append(orm.User, filters={'email': {'==': user_email}}, with_group='group')
-
-    # Query groups that contain a particular node
-    if node:
-        builder.append(orm.Node, filters={'id': {'==': node.pk}}, with_group='group')
-
-    builder.order_by({orm.Group: {order_by: order_dir}})
+    builder = get_group_list_builder(
+        group_partial=group_partial,
+        all_users=all_users,
+        user=user,
+        all_entries=all_entries,
+        type_string=type_string,
+        past_days=past_days,
+        startswith=startswith,
+        endswith=endswith,
+        contains=contains,
+        order_by=order_by,
+        order_dir=order_dir,
+        node=node,
+    )
     result = builder.all()
 
     projection_lambdas = {

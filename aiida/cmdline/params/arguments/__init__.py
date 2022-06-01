@@ -30,6 +30,7 @@ __all__ = (
     'DATUM',
     'GROUP',
     'GROUPS',
+    'GROUP_PARTIAL',
     'INPUT_FILE',
     'LABEL',
     'NODE',

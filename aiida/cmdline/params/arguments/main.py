@@ -18,7 +18,7 @@ from .overridable import OverridableArgument
 __all__ = (
     'PROFILE', 'PROFILES', 'CALCULATION', 'CALCULATIONS', 'CODE', 'CODES', 'COMPUTER', 'COMPUTERS', 'DATUM', 'DATA',
     'GROUP', 'GROUPS', 'NODE', 'NODES', 'PROCESS', 'PROCESSES', 'WORKFLOW', 'WORKFLOWS', 'INPUT_FILE', 'OUTPUT_FILE',
-    'LABEL', 'USER', 'CONFIG_OPTION'
+    'LABEL', 'USER', 'CONFIG_OPTION', 'GROUP_PARTIAL'
 )
 
 
@@ -45,6 +45,8 @@ DATA = OverridableArgument('data', nargs=-1, type=types.DataParamType())
 GROUP = OverridableArgument('group', type=types.GroupParamType())
 
 GROUPS = OverridableArgument('groups', nargs=-1, type=types.GroupParamType())
+
+GROUP_PARTIAL = OverridableArgument('group_partial', type=types.GroupPartialParamType())
 
 NODE = OverridableArgument('node', type=types.NodeParamType())
 

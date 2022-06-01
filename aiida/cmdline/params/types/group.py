@@ -14,8 +14,12 @@ from aiida.cmdline.utils import decorators
 from aiida.common.lang import type_check
 
 from .identifier import IdentifierParamType
+from .strings import LabelStringType
 
-__all__ = ('GroupParamType',)
+__all__ = (
+    'GroupParamType',
+    'GroupPartialParamType',
+)
 
 
 class GroupParamType(IdentifierParamType):
@@ -82,3 +86,64 @@ class GroupParamType(IdentifierParamType):
                 raise
 
         return group
+
+
+class GroupPartialParamType(LabelStringType):
+    """The ParamType for identifying Group partial entities or its subclasses.
+
+    This was inititally designed for the `verdi group list command`, and it needs to be
+    different from `GroupParamType` because:
+
+        * it needs to be a string: the command has to be able to take partial labels
+        and not only full labels that can be translated into nodes.
+
+        * the bash autocomplete needs to be able to filter groups in the same way
+        that the listing would do (see the `shell_complete` method).
+
+    """
+
+    name = 'group_partial'
+
+    @property
+    def orm_class_loader(self):
+        """Return the orm entity loader class, which should be a subclass of `OrmEntityLoader`.
+
+        This class is supposed to be used to load the entity for a given identifier.
+
+        :return: the orm entity loader class for this `ParamType`
+        """
+        from aiida.orm.utils.loaders import GroupEntityLoader
+        return GroupEntityLoader
+
+    def shell_complete(self, ctx, param, incomplete):  # pylint: disable=unused-argument,no-self-use
+        """Return possible completions based on an incomplete value.
+
+        This uses the `get_group_list_builder` method instead of the typical
+        `self.orm_class_loader.get_options`, because the former is prepared to
+        return the same kind of output as executing the listing command would.
+        For example, the listing command will by default hide groups from other
+        users while the `get_options` from the `orm_class_loader` will not.
+
+        :returns:
+            list of `click.shell_completion.CompletionItem` objects, one for each
+            of the available groups (matching incomplete)
+        """
+        from aiida.cmdline.utils.list_groups import get_group_list_builder
+
+        builder = get_group_list_builder(
+            group_partial=incomplete,
+            all_users=ctx.params['all_users'],
+            user=ctx.params['user'],
+            all_entries=ctx.params['all_entries'],
+            type_string=ctx.params['type_string'],
+            past_days=ctx.params['past_days'],
+            startswith=ctx.params['startswith'],
+            endswith=ctx.params['endswith'],
+            contains=ctx.params['contains'],
+            order_by=ctx.params['order_by'],
+            order_dir=ctx.params['order_dir'],
+            node=ctx.params['node'],
+            project_labels=True,
+        )
+
+        return [click.shell_completion.CompletionItem(option) for option, in builder.all()]

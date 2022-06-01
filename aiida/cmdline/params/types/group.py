@@ -95,10 +95,10 @@ class GroupPartialParamType(LabelStringType):
     different from `GroupParamType` because:
 
         * it needs to be a string: the command has to be able to take partial labels
-        and not only full labels that can be translated into nodes.
+          and not only full labels that can be translated into nodes.
 
         * the bash autocomplete needs to be able to filter groups in the same way
-        that the listing would do (see the `shell_complete` method).
+          that the listing would do (see the `shell_complete` method).
 
     """
 

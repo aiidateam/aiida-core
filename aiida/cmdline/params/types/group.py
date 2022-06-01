@@ -104,17 +104,6 @@ class GroupPartialParamType(LabelStringType):
 
     name = 'group_partial'
 
-    @property
-    def orm_class_loader(self):
-        """Return the orm entity loader class, which should be a subclass of `OrmEntityLoader`.
-
-        This class is supposed to be used to load the entity for a given identifier.
-
-        :return: the orm entity loader class for this `ParamType`
-        """
-        from aiida.orm.utils.loaders import GroupEntityLoader
-        return GroupEntityLoader
-
     def shell_complete(self, ctx, param, incomplete):  # pylint: disable=unused-argument,no-self-use
         """Return possible completions based on an incomplete value.
 

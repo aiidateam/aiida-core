@@ -325,7 +325,7 @@ class TemporaryProfileManager(ProfileManager):
             self.create_aiida_db()
 
         if not self.root_dir:
-            self.root_dir = tempfile.mkdtemp()
+            self.root_dir = tempfile.TemporaryDirectory().name  # pylint: disable=consider-using-with
         configuration.CONFIG = None
 
         os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = self.config_dir

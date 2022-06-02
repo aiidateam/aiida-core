@@ -13,6 +13,7 @@ from collections import defaultdict
 import copy
 from datetime import date, datetime, timedelta
 from itertools import chain
+import uuid
 import warnings
 
 import pytest
@@ -1198,6 +1199,34 @@ class TestQueryBuilderJoins:
         id_res = [_ for [_] in qb.all()]
         for curr_id in [n1.pk, n2.pk, n3.pk, n4.pk]:
             assert curr_id in id_res
+
+    def test_joins_group_node_project_group(self):
+        """Test that when protecting only the group for a join on nodes, only unique groups are returned.
+
+        Regression test for #5535
+        """
+        group = orm.Group(label=str(uuid.uuid4())).store()
+        node_a = orm.Data().store()
+        node_b = orm.Data().store()
+        group.add_nodes([node_a, node_b])
+
+        # First join the group on the data
+        query = orm.QueryBuilder()
+        query.append(orm.Group, project='id', tag='group')
+        query.append(orm.Data, with_group='group')
+        query.distinct()
+
+        assert query.count() == 1
+        assert query.all(flat=True) == [group.pk]
+
+        # Then reverse and join the data on the group
+        query = orm.QueryBuilder()
+        query.append(orm.Data, tag='node')
+        query.append(orm.Group, with_node='node', project='id')
+        query.distinct()
+
+        assert query.count() == 1
+        assert query.all(flat=True) == [group.pk]
 
 
 class QueryBuilderPath:

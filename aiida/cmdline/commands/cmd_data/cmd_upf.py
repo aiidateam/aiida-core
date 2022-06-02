@@ -68,10 +68,10 @@ def upf_listfamilies(elements, with_description):
 
     UpfData = DataFactory('core.upf')  # pylint: disable=invalid-name
     query = orm.QueryBuilder()
-    query.append(UpfData, tag='upfdata')
+    query.append(orm.UpfFamily, tag='group', project=['label', 'description'])
+    query.append(UpfData, with_group='group')
     if elements is not None:
         query.add_filter(UpfData, {'attributes.element': {'in': elements}})
-    query.append(orm.UpfFamily, with_node='upfdata', tag='group', project=['label', 'description'])
 
     query.distinct()
     if query.count() > 0:

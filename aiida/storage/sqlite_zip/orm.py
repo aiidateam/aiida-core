@@ -274,10 +274,10 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
 
         if operator == 'like':
             type_filter, casted_entity = _cast_json_type(database_entity, value)
-            return case((type_filter, casted_entity.like(value)), else_=False)
+            return case((type_filter, casted_entity.like(value, escape='\\')), else_=False)
         if operator == 'ilike':
             type_filter, casted_entity = _cast_json_type(database_entity, value)
-            return case((type_filter, casted_entity.ilike(value)), else_=False)
+            return case((type_filter, casted_entity.ilike(value, escape='\\')), else_=False)
 
         # if operator == 'contains':
         # to-do, see: https://github.com/sqlalchemy/sqlalchemy/discussions/7836

@@ -855,10 +855,10 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             expr = jsonb_typeof(database_entity) == value
         elif operator == 'like':
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
-            expr = case((type_filter, casted_entity.like(value, escape='\\')), else_=False)
+            expr = case((type_filter, casted_entity.like(value)), else_=False)
         elif operator == 'ilike':
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
-            expr = case((type_filter, casted_entity.ilike(value, escape='\\')), else_=False)
+            expr = case((type_filter, casted_entity.ilike(value)), else_=False)
         elif operator == 'in':
             type_filter, casted_entity = cast_according_to_type(database_entity, value[0])
             expr = case((type_filter, casted_entity.in_(value)), else_=False)
@@ -913,9 +913,9 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         elif operator == 'like':
             # the like operator expects a string, so we cast to avoid problems
             # with fields like UUID, which don't support the like operator
-            expr = database_entity.cast(String).like(value, escape='\\')
+            expr = database_entity.cast(String).like(value)
         elif operator == 'ilike':
-            expr = database_entity.ilike(value, escape='\\')
+            expr = database_entity.ilike(value)
         elif operator == 'in':
             expr = database_entity.in_(value)
         else:

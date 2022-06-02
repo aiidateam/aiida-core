@@ -49,7 +49,7 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
             'attributes.null': {
                 'of_type': 'null'
             }
-        }, 1),
+        }, 2),
         ({
             'attributes.list': {
                 'of_type': 'array'
@@ -171,6 +171,24 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
                 'like': 'abc%'
             }
         }, 1),
+        ({
+            'attributes.text': {
+                'like': 'abc_YZ'
+            }
+        }, 1),
+        (
+            {
+                'attributes.text2': {
+                    'like': 'abc\\_XYZ'  # Literal match
+                }
+            },
+            1
+        ),
+        ({
+            'attributes.text2': {
+                'like': 'abc_XYZ'
+            }
+        }, 2),
         # integer comparisons
         ({
             'attributes.float': {
@@ -330,6 +348,7 @@ def test_qb_json_filters(tmp_path, filters, matches):
     backend = SqliteTempBackend(profile)
     Dict({
         'text': 'abcXYZ',
+        'text2': 'abc_XYZ',
         'integer': 1,
         'float': 1.1,
         'true': True,
@@ -343,6 +362,47 @@ def test_qb_json_filters(tmp_path, filters, matches):
         },
     },
          backend=backend).store()
+    Dict({'text2': 'abcxXYZ'}, backend=backend).store()
+    qbuilder = QueryBuilder(backend=backend)
+    qbuilder.append(Dict, filters=filters)
+    assert qbuilder.count() == matches
+
+
+@pytest.mark.parametrize(
+    'filters,matches', (
+        ({
+            'label': {
+                'like': 'abc_XYZ'
+            }
+        }, 2),
+        ({
+            'label': {
+                'like': 'abc\\_XYZ'
+            }
+        }, 1),
+        ({
+            'label': {
+                'like': 'abcxXYZ'
+            }
+        }, 1),
+        ({
+            'label': {
+                'like': 'abc%XYZ'
+            }
+        }, 2),
+    ),
+    ids=json.dumps
+)
+def test_qb_column_filters(tmp_path, filters, matches):
+    """Test querying directly those stored in the columns"""
+    profile = SqliteTempBackend.create_profile(sandbox_path=tmp_path, debug=False)
+    backend = SqliteTempBackend(profile)
+    dict1 = Dict({
+        'text2': 'abc_XYZ',
+    }, backend=backend).store()
+    dict2 = Dict({'text2': 'abcxXYZ'}, backend=backend).store()
+    dict1.label = 'abc_XYZ'
+    dict2.label = 'abcxXYZ'
     qbuilder = QueryBuilder(backend=backend)
     qbuilder.append(Dict, filters=filters)
     assert qbuilder.count() == matches

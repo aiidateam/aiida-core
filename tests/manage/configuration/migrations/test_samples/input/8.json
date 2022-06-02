@@ -1,0 +1,35 @@
+{
+  "CONFIG_VERSION": { "CURRENT": 8, "OLDEST_COMPATIBLE": 8 },
+  "default_profile": "default",
+  "profiles": {
+    "default": {
+      "default_user_email": "email@aiida.net",
+      "PROFILE_UUID": "00000000000000000000000000000000",
+      "storage": {
+        "backend": "psql_dos",
+        "config": {
+          "database_engine": "postgresql_psycopg2",
+          "database_password": "some_random_password",
+          "database_name": "aiidadb_qs_some_user",
+          "database_hostname": "localhost",
+          "database_port": "5432",
+          "database_username": "aiida_qs_greschd",
+          "repository_uri": "file:////home/some_user/.aiida/repository-quicksetup/"
+        },
+        "_v6_backend": "django"
+      },
+      "process_control": {
+        "backend": "rabbitmq",
+        "config": {
+          "broker_protocol": "amqp",
+          "broker_username": "guest",
+          "broker_password": "guest",
+          "broker_host": "127.0.0.1",
+          "broker_port": 5672,
+          "broker_virtual_host": ""
+        }
+      },
+      "test_profile": false
+    }
+  }
+}

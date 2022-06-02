@@ -124,16 +124,8 @@ class Profile:  # pylint: disable=too-many-public-methods
     @property
     def storage_cls(self) -> Type['StorageBackend']:
         """Return the storage backend class for this profile."""
-        if self.storage_backend == 'psql_dos':
-            from aiida.storage.psql_dos.backend import PsqlDosBackend
-            return PsqlDosBackend
-        if self.storage_backend == 'sqlite_zip':
-            from aiida.storage.sqlite_zip.backend import SqliteZipBackend
-            return SqliteZipBackend
-        if self.storage_backend == 'sqlite_temp':
-            from aiida.storage.sqlite_temp.backend import SqliteTempBackend
-            return SqliteTempBackend
-        raise ValueError(f'unknown storage backend type: {self.storage_backend}')
+        from aiida.plugins import StorageFactory
+        return StorageFactory(self.storage_backend)
 
     @property
     def process_control_backend(self) -> str:

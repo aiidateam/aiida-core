@@ -22,4 +22,8 @@ def list_repository_contents(node, path, color):
 
     for entry in node.base.repository.list_objects(path):
         bold = bool(entry.file_type == FileType.DIRECTORY)
-        echo.echo(entry.name, bold=bold, fg='blue' if color and entry.file_type == FileType.DIRECTORY else None)
+        echo.echo(
+            entry.name,
+            bold=bold,
+            fg=echo.COLORS['report'] if color and entry.file_type == FileType.DIRECTORY else None
+        )

@@ -25,8 +25,8 @@ ConfigType = Dict[str, Any]
 # When the configuration file format is changed in a backwards-incompatible way, the oldest compatible version should
 # be set to the new current version.
 
-CURRENT_CONFIG_VERSION = 8
-OLDEST_COMPATIBLE_CONFIG_VERSION = 8
+CURRENT_CONFIG_VERSION = 9
+OLDEST_COMPATIBLE_CONFIG_VERSION = 9
 
 CONFIG_LOGGER = AIIDA_LOGGER.getChild('config')
 
@@ -291,7 +291,7 @@ class MergeStorageBackendTypes(SingleMigration):
     def downgrade(self, config: ConfigType) -> None:
         for profile_name, profile in config.get('profiles', {}).items():
             if '_v6_backend' in profile.get('storage', {}):
-                profile.setdefault('storage', {})['backend'] = profile.pop('_v6_backend')
+                profile.setdefault('storage', {})['backend'] = profile['storage'].pop('_v6_backend')
             else:
                 CONFIG_LOGGER.warning(f'profile {profile_name!r} had no expected "storage._v6_backend" key')
 
@@ -340,7 +340,40 @@ class AddTestProfileKey(SingleMigration):
                 CONFIG_LOGGER.warning(f'changing profile name from `{profile_name}` to `{profile_name_new}`.')
                 profile_name = profile_name_new
 
+            profile['test_profile'] = test_profile
             profiles[profile_name] = profile
+
+
+class AddPrefixToStorageBackendTypes(SingleMigration):
+    """The ``storage.backend`` key should be prefixed with ``core.``.
+
+    At this point, it should only ever contain ``psql_dos`` which should therefore become ``core.psql_dos``. To cover
+    for cases where people manually added a read only ``sqlite_zip`` profile, we also migrate that.
+    """
+    down_revision = 8
+    down_compatible = 8
+    up_revision = 9
+    up_compatible = 9
+
+    def upgrade(self, config: ConfigType) -> None:
+        for profile_name, profile in config.get('profiles', {}).items():
+            if 'storage' in profile:
+                backend = profile['storage'].get('backend', None)
+                if backend in ('psql_dos', 'sqlite_zip', 'sqlite_temp'):
+                    profile['storage']['backend'] = 'core.' + backend
+                else:
+                    CONFIG_LOGGER.warning(f'profile {profile_name!r} had unknown storage backend {backend!r}')
+
+    def downgrade(self, config: ConfigType) -> None:
+        for profile_name, profile in config.get('profiles', {}).items():
+            backend = profile.get('storage', {}).get('backend', None)
+            if backend in ('core.psql_dos', 'core.sqlite_zip', 'core.sqlite_temp'):
+                profile.setdefault('storage', {})['backend'] = backend[5:]
+            else:
+                CONFIG_LOGGER.warning(
+                    f'profile {profile_name!r} has storage backend {backend!r} that will not be compatible '
+                    'with the version of `aiida-core` that can be used with the new version of the configuration.'
+                )
 
 
 MIGRATIONS = (
@@ -352,6 +385,7 @@ MIGRATIONS = (
     AbstractStorageAndProcess,
     MergeStorageBackendTypes,
     AddTestProfileKey,
+    AddPrefixToStorageBackendTypes,
 )
 
 

@@ -10,5 +10,5 @@
 """Configuration file for pytest tests."""
 from aiida.manage.tests import get_test_backend_name
 
-if get_test_backend_name() != 'psql_dos':
+if get_test_backend_name() != 'core.psql_dos':
     collect_ignore_glob = ['*']  # pylint: disable=invalid-name

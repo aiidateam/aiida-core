@@ -81,6 +81,21 @@ class TestGroups:
         assert all(isinstance(node, orm.Data) for node in nodes_sliced)
         assert all(node.uuid in set(node.uuid for node in nodes) for node in nodes_sliced)
 
+    def test_entry_point(self):
+        """Test the :meth:`aiida.orm.groups.Group.entry_point` property."""
+        from aiida.plugins.entry_point import get_entry_point_from_string
+
+        group = orm.Group('label')
+        assert group.entry_point == get_entry_point_from_string('aiida.groups:core')
+        assert orm.Group.entry_point == get_entry_point_from_string('aiida.groups:core')
+
+        class Custom(orm.Group):
+            pass
+
+        group = Custom('label')
+        assert group.entry_point is None
+        assert Custom.entry_point is None
+
     def test_description(self):
         """Test the update of the description both for stored and unstored groups."""
         node = orm.Data().store()

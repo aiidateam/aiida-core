@@ -76,7 +76,7 @@ def start(foreground, number):
         currenv = get_env_with_venv_bin()
         subprocess.check_output(command, env=currenv, stderr=subprocess.STDOUT)  # pylint: disable=unexpected-keyword-arg
     except subprocess.CalledProcessError as exception:
-        echo.echo('FAILED', fg='red', bold=True)
+        echo.echo('FAILED', fg=echo.COLORS['error'], bold=True)
         echo.echo_critical(str(exception))
 
     # We add a small timeout to give the pid-file a chance to be created
@@ -110,7 +110,7 @@ def status(all_profiles):
     for profile in profiles:
         client = get_daemon_client(profile.name)
         delete_stale_pid_file(client)
-        echo.echo('Profile: ', fg='red', bold=True, nl=False)
+        echo.echo('Profile: ', fg=echo.COLORS['report'], bold=True, nl=False)
         echo.echo(f'{profile.name}', bold=True)
         result = get_daemon_status(client)
         echo.echo(result)
@@ -188,7 +188,7 @@ def stop(no_wait, all_profiles):
 
         client = get_daemon_client(profile.name)
 
-        echo.echo('Profile: ', fg='red', bold=True, nl=False)
+        echo.echo('Profile: ', fg=echo.COLORS['report'], bold=True, nl=False)
         echo.echo(f'{profile.name}', bold=True)
 
         if not client.is_daemon_running:

@@ -100,12 +100,12 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
     """
     # pylint: disable=too-many-arguments,too-many-locals,too-many-statements,too-many-branches
     from aiida.engine import run_get_node
-    from aiida.orm import Code, Int, Str
+    from aiida.orm import AbstractCode, Int, Str
 
     lib_expression = importlib.import_module('lib.expression')
     lib_workchain = importlib.import_module('lib.workchain')
 
-    if use_calculations and not isinstance(code, Code):
+    if use_calculations and not isinstance(code, AbstractCode):
         raise click.BadParameter('if you specify the -C flag, you have to specify a code as well')
 
     if expression is None:

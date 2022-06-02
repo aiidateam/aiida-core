@@ -12,13 +12,15 @@ import os
 
 from aiida.common import exceptions
 from aiida.common.log import override_log_level
+from aiida.common.warnings import warn_deprecation
+from aiida.orm import Computer
 
-from .data import Data
+from .abstract import AbstractCode
 
 __all__ = ('Code',)
 
 
-class Code(Data):
+class Code(AbstractCode):
     """
     A code entity.
     It can either be 'local', or 'remote'.
@@ -44,9 +46,13 @@ class Code(Data):
             raise ValueError('cannot set `remote_computer_exec` and `local_executable` at the same time')
 
         if remote_computer_exec:
+            warn_deprecation(
+                'The `Code` plugin is deprecated, use the `InstalledCode` (`core.code.remote`) instead.', 3
+            )
             self.set_remote_computer_exec(remote_computer_exec)
 
         if local_executable:
+            warn_deprecation('The `Code` plugin is deprecated, use the `PortableCode` (`core.code.local`) instead.', 3)
             self.set_local_executable(local_executable)
 
         if input_plugin_name:
@@ -57,25 +63,53 @@ class Code(Data):
 
     HIDDEN_KEY = 'hidden'
 
+    def can_run_on_computer(self, computer: Computer) -> bool:
+        """Return whether the code can run on a given computer.
+
+        :param computer: The computer.
+        :return: ``True`` if the code can run on ``computer``, ``False`` otherwise.
+        """
+        from aiida import orm
+        from aiida.common.lang import type_check
+
+        if self.is_local():
+            return True
+
+        type_check(computer, orm.Computer)
+        return computer.pk == self.get_remote_computer().pk
+
+    def get_executable(self) -> str:
+        """Return the executable that the submission script should execute to run the code.
+
+        :return: The executable to be called in the submission script.
+        """
+        if self.is_local():
+            return f'./{self.get_local_executable()}'
+
+        return self.get_remote_exec_path()
+
     def hide(self):
         """
         Hide the code (prevents from showing it in the verdi code list)
         """
-        self.base.extras.set(self.HIDDEN_KEY, True)
+        warn_deprecation('This property is deprecated, use the `Code.is_hidden` property instead.', version=3)
+        self.is_hidden = True
 
     def reveal(self):
         """
         Reveal the code (allows to show it in the verdi code list)
         By default, it is revealed
         """
-        self.base.extras.set(self.HIDDEN_KEY, False)
+        warn_deprecation('This property is deprecated, use the `Code.is_hidden` property instead.', version=3)
+        self.is_hidden = False
 
     @property
     def hidden(self):
         """
         Determines whether the Code is hidden or not
         """
-        return self.base.extras.get(self.HIDDEN_KEY, False)
+        warn_deprecation('This property is deprecated, use the `Code.is_hidden` property instead.', version=3)
+        return self.is_hidden
 
     def set_files(self, files):
         """
@@ -102,6 +136,9 @@ class Code(Data):
 
     def get_computer_label(self):
         """Get label of this code's computer."""
+        warn_deprecation(
+            'This method is deprecated, use the `InstalledCode.computer.label` property instead.', version=3
+        )
         return 'repository' if self.is_local() else self.computer.label
 
     @property
@@ -110,33 +147,14 @@ class Code(Data):
 
         Returns label of the form <code-label>@<computer-name>.
         """
-        return f'{self.label}@{self.get_computer_label()}'
-
-    @property
-    def label(self):
-        """Return the node label.
-
-        :return: the label
-        """
-        return super().label
-
-    @label.setter
-    def label(self, value):
-        """Set the label.
-
-        :param value: the new value to set
-        """
-        if '@' in str(value):
-            msg = "Code labels must not contain the '@' symbol"
-            raise ValueError(msg)
-
-        super(Code, self.__class__).label.fset(self, value)  # pylint: disable=no-member
+        return f'{self.label}@{"repository" if self.is_local() else self.computer.label}'
 
     def relabel(self, new_label):
         """Relabel this code.
 
         :param new_label: new code label
         """
+        warn_deprecation('This method is deprecated, use the `label` property instead.', version=3)
         # pylint: disable=unused-argument
         suffix = f'@{self.computer.label}'
         if new_label.endswith(suffix):
@@ -149,6 +167,7 @@ class Code(Data):
 
         :return: string description of this Code instance
         """
+        warn_deprecation('This method is deprecated, use the `description` property instead.', version=3)
         return f'{self.description}'
 
     @classmethod
@@ -162,8 +181,9 @@ class Code(Data):
             a code
         """
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
-        from aiida.orm.computers import Computer
         from aiida.orm.querybuilder import QueryBuilder
+
+        warn_deprecation('This method is deprecated, use `aiida.orm.load_code` instead.', version=3)
 
         query = QueryBuilder(backend=backend)
         query.append(cls, filters={'label': label}, project='*', tag='code')
@@ -197,6 +217,8 @@ class Code(Data):
         """
         # pylint: disable=arguments-differ
         from aiida.orm.utils import load_code
+
+        warn_deprecation('This method is deprecated, use `aiida.orm.load_code` instead.', version=3)
 
         # first check if code pk is provided
         if pk:
@@ -237,6 +259,8 @@ class Code(Data):
         """
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
 
+        warn_deprecation('This method is deprecated, use `aiida.orm.load_code` instead.', version=3)
+
         try:
             label, _, machinename = code_string.partition('@')
         except AttributeError:
@@ -261,6 +285,9 @@ class Code(Data):
           otherwise a list of integers with the code PKs.
         """
         from aiida.orm.querybuilder import QueryBuilder
+
+        warn_deprecation('This method has been deprecated, there is no replacement.', version=3)
+
         query = QueryBuilder(backend=backend)
         query.append(cls, filters={'attributes.input_plugin': {'==': plugin}})
         valid_codes = query.all(flat=True)
@@ -304,6 +331,10 @@ class Code(Data):
         :raises `~aiida.common.exceptions.ValidationError`: if no transport could be opened or if the defined executable
             does not exist on the remote computer.
         """
+        warn_deprecation(
+            'This method is deprecated, use the `InstalledCode.validate_filepath_executable` property instead.',
+            version=3
+        )
         filepath = self.get_remote_exec_path()
 
         try:
@@ -325,71 +356,77 @@ class Code(Data):
         Pass a string of code that will be put in the scheduler script before the
         execution of the code.
         """
-        self.base.attributes.set('prepend_text', str(code))
+        warn_deprecation('This method is deprecated, use the `prepend_text` property instead.', version=3)
+        self.prepend_text = code
 
     def get_prepend_text(self):
         """
         Return the code that will be put in the scheduler script before the
         execution, or an empty string if no pre-exec code was defined.
         """
-        return self.base.attributes.get('prepend_text', '')
+        warn_deprecation('This method is deprecated, use the `prepend_text` property instead.', version=3)
+        return self.prepend_text
 
     def set_input_plugin_name(self, input_plugin):
         """
         Set the name of the default input plugin, to be used for the automatic
         generation of a new calculation.
         """
-        if input_plugin is None:
-            self.base.attributes.set('input_plugin', None)
-        else:
-            self.base.attributes.set('input_plugin', str(input_plugin))
+        warn_deprecation('This method is deprecated, use the `default_calc_job_plugin` property instead.', version=3)
+        self.default_calc_job_plugin = input_plugin
 
     def get_input_plugin_name(self):
         """
         Return the name of the default input plugin (or None if no input plugin
         was set.
         """
-        return self.base.attributes.get('input_plugin', None)
+        warn_deprecation('This method is deprecated, use the `default_calc_job_plugin` property instead.', version=3)
+        return self.default_calc_job_plugin
 
     def set_use_double_quotes(self, use_double_quotes: bool):
         """Set whether the command line invocation of this code should be escaped with double quotes.
 
         :param use_double_quotes: True if to escape with double quotes, False otherwise.
         """
-        from aiida.common.lang import type_check
-        type_check(use_double_quotes, bool)
-        self.base.attributes.set('use_double_quotes', use_double_quotes)
+        warn_deprecation('This method is deprecated, use the `use_double_quotes` property instead.', version=3)
+        self.use_double_quotes = use_double_quotes
 
     def get_use_double_quotes(self) -> bool:
         """Return whether the command line invocation of this code should be escaped with double quotes.
 
         :returns: True if to escape with double quotes, False otherwise which is also the default.
         """
-        return self.base.attributes.get('use_double_quotes', False)
+        warn_deprecation('This method is deprecated, use the `use_double_quotes` property instead.', version=3)
+        return self.use_double_quotes
 
     def set_append_text(self, code):
         """
         Pass a string of code that will be put in the scheduler script after the
         execution of the code.
         """
-        self.base.attributes.set('append_text', str(code))
+        warn_deprecation('This method is deprecated, use the `append_text` property instead.', version=3)
+        self.append_text = code
 
     def get_append_text(self):
         """
         Return the postexec_code, or an empty string if no post-exec code was defined.
         """
-        return self.base.attributes.get('append_text', '')
+        warn_deprecation('This method is deprecated, use the `append_text` property instead.', version=3)
+        return self.append_text
 
     def set_local_executable(self, exec_name):
         """
         Set the filename of the local executable.
         Implicitly set the code as local.
         """
+        warn_deprecation('This method is deprecated, use `PortableCode`.', version=3)
+
         self._set_local()
-        self.base.attributes.set('local_executable', exec_name)
+        self.filepath_executable = exec_name
 
     def get_local_executable(self):
-        return self.base.attributes.get('local_executable', '')
+        warn_deprecation('This method is deprecated, use `PortableCode.filepath_executable` instead.', version=3)
+        return self.filepath_executable
 
     def set_remote_computer_exec(self, remote_computer_exec):
         """
@@ -401,6 +438,8 @@ class Code(Data):
         """
         from aiida import orm
         from aiida.common.lang import type_check
+
+        warn_deprecation('This method is deprecated, use `InstalledCode`.', version=3)
 
         if (not isinstance(remote_computer_exec, (list, tuple)) or len(remote_computer_exec) != 2):
             raise ValueError(
@@ -419,11 +458,14 @@ class Code(Data):
         self.base.attributes.set('remote_exec_path', remote_exec_path)
 
     def get_remote_exec_path(self):
+        warn_deprecation('This method is deprecated, use `InstalledCode.filepath_executable` instead.', version=3)
         if self.is_local():
             raise ValueError('The code is local')
         return self.base.attributes.get('remote_exec_path', '')
 
     def get_remote_computer(self):
+        """Return the remote computer associated with this code."""
+        warn_deprecation('This method is deprecated, use the `computer` attribute instead.', version=3)
         if self.is_local():
             raise ValueError('The code is local')
 
@@ -463,6 +505,7 @@ class Code(Data):
         Return True if the code is 'local', False if it is 'remote' (see also documentation
         of the set_local and set_remote functions).
         """
+        warn_deprecation('This method is deprecated, use a `PortableCode` instance and check the type.', version=3)
         return self.base.attributes.get('is_local', None)
 
     def can_run_on(self, computer):
@@ -477,6 +520,8 @@ class Code(Data):
         from aiida import orm
         from aiida.common.lang import type_check
 
+        warn_deprecation('This method is deprecated, use `can_run_on_computer` instead.', version=3)
+
         if self.is_local():
             return True
 
@@ -489,35 +534,9 @@ class Code(Data):
         For local codes, it is ./LOCAL_EXECUTABLE_NAME
         For remote codes, it is the absolute path to the executable.
         """
+        warn_deprecation('This method is deprecated, use `get_executable` instead.', version=3)
+
         if self.is_local():
             return f'./{self.get_local_executable()}'
 
         return self.get_remote_exec_path()
-
-    def get_builder(self):
-        """Create and return a new `ProcessBuilder` for the `CalcJob` class of the plugin configured for this code.
-
-        The configured calculation plugin class is defined by the `get_input_plugin_name` method.
-
-        .. note:: it also sets the ``builder.code`` value.
-
-        :return: a `ProcessBuilder` instance with the `code` input already populated with ourselves
-        :raise aiida.common.EntryPointError: if the specified plugin does not exist.
-        :raise ValueError: if no default plugin was specified.
-        """
-        from aiida.plugins import CalculationFactory
-
-        plugin_name = self.get_input_plugin_name()
-
-        if plugin_name is None:
-            raise ValueError('no default calculation input plugin specified for this code')
-
-        try:
-            process_class = CalculationFactory(plugin_name)
-        except exceptions.EntryPointError:
-            raise exceptions.EntryPointError(f'the calculation entry point `{plugin_name}` could not be loaded')
-
-        builder = process_class.get_builder()
-        builder.code = self
-
-        return builder

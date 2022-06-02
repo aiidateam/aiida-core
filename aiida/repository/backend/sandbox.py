@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """Implementation of the ``AbstractRepositoryBackend`` using a sandbox folder on disk as the backend."""
+from __future__ import annotations
+
 import contextlib
 import os
 import shutil
-from typing import BinaryIO, Iterable, Iterator, List, Optional, Tuple
+import typing as t
 import uuid
 
 from aiida.common.folders import SandboxFolder
@@ -16,9 +18,13 @@ __all__ = ('SandboxRepositoryBackend',)
 class SandboxRepositoryBackend(AbstractRepositoryBackend):
     """Implementation of the ``AbstractRepositoryBackend`` using a sandbox folder on disk as the backend."""
 
-    def __init__(self, sandbox_in_repo=True):
-        self._sandbox: Optional[SandboxFolder] = None
-        self._sandbox_in_repo = sandbox_in_repo
+    def __init__(self, filepath: str | None = None):
+        """Construct a new instance.
+
+        :param filepath: The path to the directory in which the sandbox folder should be created.
+        """
+        self._sandbox: SandboxFolder | None = None
+        self._filepath: str | None = filepath
 
     def __str__(self) -> str:
         """Return the string representation of this repository."""
@@ -31,7 +37,7 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
         self.erase()
 
     @property
-    def uuid(self) -> Optional[str]:
+    def uuid(self) -> str | None:
         """Return the unique identifier of the repository.
 
         .. note:: A sandbox folder does not have the concept of a unique identifier and so always returns ``None``.
@@ -39,7 +45,7 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
         return None
 
     @property
-    def key_format(self) -> Optional[str]:
+    def key_format(self) -> str | None:
         return 'uuid4'
 
     def initialise(self, **kwargs) -> None:
@@ -59,7 +65,7 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
     def sandbox(self):
         """Return the sandbox instance of this repository."""
         if self._sandbox is None:
-            self._sandbox = SandboxFolder(sandbox_in_repo=self._sandbox_in_repo)
+            self._sandbox = SandboxFolder(filepath=self._filepath)
 
         return self._sandbox
 
@@ -73,7 +79,7 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
             finally:
                 self._sandbox = None
 
-    def _put_object_from_filelike(self, handle: BinaryIO) -> str:
+    def _put_object_from_filelike(self, handle: t.BinaryIO) -> str:
         """Store the byte contents of a file in the repository.
 
         :param handle: filelike object with the byte content to be stored.
@@ -88,7 +94,7 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
 
         return key
 
-    def has_objects(self, keys: List[str]) -> List[bool]:
+    def has_objects(self, keys: list[str]) -> list[bool]:
         result = []
         dirlist = os.listdir(self.sandbox.abspath)
         for key in keys:
@@ -96,23 +102,23 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
         return result
 
     @contextlib.contextmanager
-    def open(self, key: str) -> Iterator[BinaryIO]:
+    def open(self, key: str) -> t.Iterator[t.BinaryIO]:
         super().open(key)
 
         with self.sandbox.open(key, mode='rb') as handle:
             yield handle
 
-    def iter_object_streams(self, keys: List[str]) -> Iterator[Tuple[str, BinaryIO]]:
+    def iter_object_streams(self, keys: list[str]) -> t.Iterator[tuple[str, t.BinaryIO]]:
         for key in keys:
             with self.open(key) as handle:  # pylint: disable=not-context-manager
                 yield key, handle
 
-    def delete_objects(self, keys: List[str]) -> None:
+    def delete_objects(self, keys: list[str]) -> None:
         super().delete_objects(keys)
         for key in keys:
             os.remove(os.path.join(self.sandbox.abspath, key))
 
-    def list_objects(self) -> Iterable[str]:
+    def list_objects(self) -> t.Iterable[str]:
         return self.sandbox.get_content_list()
 
     def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:

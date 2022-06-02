@@ -71,6 +71,7 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
+      create     Create a new code.
       delete     Delete a code.
       duplicate  Duplicate a code allowing to change some parameters.
       hide       Hide one or more codes from `verdi code list`.
@@ -377,7 +378,7 @@ Below is a list with all available subcommands.
       --institution NONEMPTYSTRING    Institution of the user.  [required]
       --db-engine [postgresql_psycopg2]
                                       Engine to use to connect to the database.
-      --db-backend [psql_dos]         Database backend to use.
+      --db-backend [core.psql_dos]    Database backend to use.
       --db-host HOSTNAME              Database server host. Leave empty for "peer"
                                       authentication.
       --db-port INTEGER               Database server port.
@@ -481,7 +482,7 @@ Below is a list with all available subcommands.
       --institution NONEMPTYSTRING    Institution of the user.  [required]
       --db-engine [postgresql_psycopg2]
                                       Engine to use to connect to the database.
-      --db-backend [psql_dos]         Database backend to use.
+      --db-backend [core.psql_dos]    Database backend to use.
       --db-host HOSTNAME              Database server host. Leave empty for "peer"
                                       authentication.
       --db-port INTEGER               Database server port.

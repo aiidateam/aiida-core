@@ -367,7 +367,7 @@ def import_archive(
     }
 
     for archive, web_based in all_archives:
-        _import_archive_and_migrate(archive, web_based, import_kwargs, migration)
+        _import_archive_and_migrate(ctx, archive, web_based, import_kwargs, migration)
 
 
 def _echo_exception(msg: str, exception, warn_only: bool = False):
@@ -421,7 +421,9 @@ def _gather_imports(archives, webpages) -> List[Tuple[str, bool]]:
     return final_archives
 
 
-def _import_archive_and_migrate(archive: str, web_based: bool, import_kwargs: dict, try_migration: bool):
+def _import_archive_and_migrate(
+    ctx: click.Context, archive: str, web_based: bool, import_kwargs: dict, try_migration: bool
+):
     """Perform the archive import.
 
     :param archive: the path or URL to the archive
@@ -435,8 +437,9 @@ def _import_archive_and_migrate(archive: str, web_based: bool, import_kwargs: di
     from aiida.tools.archive.imports import import_archive as _import_archive
 
     archive_format = get_format()
+    filepath = ctx.obj['config'].get_option('storage.sandbox') or None
 
-    with SandboxFolder() as temp_folder:
+    with SandboxFolder(filepath=filepath) as temp_folder:
 
         archive_path = archive
 
@@ -462,15 +465,15 @@ def _import_archive_and_migrate(archive: str, web_based: bool, import_kwargs: di
                     new_path = temp_folder.get_abs_path('migrated_archive.aiida')
                     archive_format.migrate(archive_path, new_path, archive_format.latest_version, compression=0)
                     archive_path = new_path
-                except Exception as exception:
-                    _echo_exception(f'an exception occurred while migrating the archive {archive}', exception)
+                except Exception as sub_exception:
+                    _echo_exception(f'an exception occurred while migrating the archive {archive}', sub_exception)
 
                 echo.echo_report('proceeding with import of migrated archive')
                 try:
                     _import_archive(archive_path, archive_format=archive_format, **import_kwargs)
-                except Exception as exception:
+                except Exception as sub_exception:
                     _echo_exception(
-                        f'an exception occurred while trying to import the migrated archive {archive}', exception
+                        f'an exception occurred while trying to import the migrated archive {archive}', sub_exception
                     )
             else:
                 _echo_exception(f'an exception occurred while trying to import the archive {archive}', exception)

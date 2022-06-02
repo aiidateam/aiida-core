@@ -9,7 +9,7 @@ ENV USER_EMAIL aiida@localhost
 ENV USER_FIRST_NAME Giuseppe
 ENV USER_LAST_NAME Verdi
 ENV USER_INSTITUTION Khedivial
-ENV AIIDADB_BACKEND psql_dos
+ENV AIIDADB_BACKEND core.psql_dos
 
 # Copy and install AiiDA
 COPY . aiida-core

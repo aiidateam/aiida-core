@@ -159,7 +159,9 @@ Limitations and Guidelines
    While AiiDA's hashes include the version of the Python package containing the calculation/data classes, it cannot detect cases where the underlying Python code was changed without increasing the version number.
    Another scenario that can lead to an erroneous cache hit is if the parser and calculation are not implemented as part of the same Python package, because the calculation nodes store only the name, but not the version of the used parser.
 
-#. Note that while caching saves unnecessary computations, it does not save disk space: the output nodes of the cached calculation are full copies of the original outputs.
+#. While caching saves unnecessary computations, it does not necessarily save space as the cached calculation and its output nodes are duplicated in the provenance graph.
+   However, AiiDA's default disk-objectstore storage backend comes with automatic de-duplication at the object level.
+   Disk usage therefore remains unaffected with this backend, except for node metadata stored at the database level.
 
 #. Finally, When modifying the hashing/caching behaviour of your classes, keep in mind that cache matches can go wrong in two ways:
 

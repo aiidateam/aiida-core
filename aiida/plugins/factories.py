@@ -18,12 +18,12 @@ from aiida.common.exceptions import InvalidEntryPointTypeError
 
 __all__ = (
     'BaseFactory', 'CalculationFactory', 'CalcJobImporterFactory', 'DataFactory', 'DbImporterFactory', 'GroupFactory',
-    'OrbitalFactory', 'ParserFactory', 'SchedulerFactory', 'TransportFactory', 'WorkflowFactory'
+    'OrbitalFactory', 'ParserFactory', 'SchedulerFactory', 'StorageFactory', 'TransportFactory', 'WorkflowFactory'
 )
 
 if TYPE_CHECKING:
     from aiida.engine import CalcJob, CalcJobImporter, WorkChain
-    from aiida.orm import Data, Group
+    from aiida.orm import Data, Group, StorageBackend
     from aiida.parsers import Parser
     from aiida.schedulers import Scheduler
     from aiida.tools.data.orbital import Orbital
@@ -243,6 +243,29 @@ def SchedulerFactory(entry_point_name: str, load: bool = True) -> Optional[Union
         return entry_point
 
     if isclass(entry_point) and issubclass(entry_point, Scheduler):
+        return entry_point
+
+    raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
+
+
+def StorageFactory(entry_point_name: str, load: bool = True) -> Optional[Union[EntryPoint, 'StorageBackend']]:
+    """Return the ``StorageBackend`` sub class registered under the given entry point.
+
+    :param entry_point_name: the entry point name.
+    :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
+    :return: sub class of :py:class:`~aiida.orm.implementation.storage_backend.StorageBackend`.
+    :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
+    """
+    from aiida.orm.implementation import StorageBackend
+
+    entry_point_group = 'aiida.storage'
+    entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)
+    valid_classes = (StorageBackend,)
+
+    if not load:
+        return entry_point
+
+    if isclass(entry_point) and issubclass(entry_point, StorageBackend):
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)

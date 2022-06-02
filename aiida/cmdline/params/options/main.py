@@ -282,7 +282,7 @@ DB_ENGINE = OverridableOption(
 )
 
 DB_BACKEND = OverridableOption(
-    '--db-backend', type=click.Choice(['psql_dos']), default='psql_dos', help='Database backend to use.'
+    '--db-backend', type=click.Choice(['core.psql_dos']), default='core.psql_dos', help='Database backend to use.'
 )
 
 DB_HOST = OverridableOption(

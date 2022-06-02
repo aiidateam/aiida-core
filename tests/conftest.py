@@ -240,7 +240,7 @@ def profile_factory() -> Profile:
         profile_dictionary = {
             'default_user_email': kwargs.pop('default_user_email', 'dummy@localhost'),
             'storage': {
-                'backend': kwargs.pop('storage_backend', 'psql_dos'),
+                'backend': kwargs.pop('storage_backend', 'core.psql_dos'),
                 'config': {
                     'database_engine': kwargs.pop('database_engine', 'postgresql_psycopg2'),
                     'database_hostname': kwargs.pop('database_hostname', 'localhost'),
@@ -262,7 +262,8 @@ def profile_factory() -> Profile:
                     'broker_virtual_host': kwargs.pop('broker_virtual_host', ''),
                     'broker_parameters': kwargs.pop('broker_parameters', {}),
                 }
-            }
+            },
+            'test_profile': kwargs.pop('test_profile', True)
         }
 
         return Profile(name, profile_dictionary)
@@ -370,6 +371,21 @@ def override_logging(isolated_config):
         isolated_config.unset_option('logging.aiida_loglevel')
         isolated_config.unset_option('logging.db_loglevel')
         configure_logging(with_orm=True)
+
+
+@pytest.fixture
+def suppress_internal_deprecations():
+    """Suppress all internal deprecations.
+
+    Warnings emmitted of type :class:`aiida.common.warnings.AiidaDeprecationWarning` for the duration of the test.
+    """
+    import warnings
+
+    from aiida.common.warnings import AiidaDeprecationWarning
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=AiidaDeprecationWarning)
+        yield
 
 
 @pytest.fixture

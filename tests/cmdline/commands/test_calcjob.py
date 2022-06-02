@@ -38,7 +38,7 @@ class TestVerdiCalculation:
         # pylint: disable=attribute-defined-outside-init
 
         self.computer = aiida_localhost
-        self.code = orm.Code(remote_computer_exec=(self.computer, '/bin/true')).store()
+        self.code = orm.InstalledCode(computer=self.computer, filepath_executable='/bin/true').store()
         self.group = orm.Group(label='test_group').store()
         self.node = orm.Data().store()
         self.calcs = []

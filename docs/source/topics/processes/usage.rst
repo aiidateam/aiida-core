@@ -410,7 +410,7 @@ In an interactive shell, you can get this information to display as follows::
         "name": "code",
         "required": "True"
         "non_db": "False"
-        "valid_type": "<class 'aiida.orm.nodes.data.code.Code'>"
+        "valid_type": "<class 'aiida.orm.nodes.data.code.abstract.AbstractCode'>"
         "help": "The Code to use for this job.",
 
 In the ``Docstring`` you will see a ``help`` string that contains more detailed information about the input port.

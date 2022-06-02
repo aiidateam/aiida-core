@@ -27,7 +27,8 @@ from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcInfo
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
-from aiida.orm import CalcJobNode, Code, FolderData, Node, RemoteData, load_node
+from aiida.manage.configuration import get_config_option
+from aiida.orm import CalcJobNode, Code, FolderData, Node, PortableCode, RemoteData, load_node
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.repository.common import FileType
 from aiida.schedulers.datastructures import JobState
@@ -173,7 +174,7 @@ def upload_calculation(
     # Still, beware! The code file itself could be overwritten...
     # But I checked for this earlier.
     for code in input_codes:
-        if code.is_local():
+        if isinstance(code, PortableCode):
             # Note: this will possibly overwrite files
             for filename in code.base.repository.list_object_names():
                 # Note, once #2579 is implemented, use the `node.open` method instead of the named temporary file in
@@ -183,7 +184,7 @@ def upload_calculation(
                     handle.write(code.base.repository.get_object_content(filename, mode='rb'))
                     handle.flush()
                     transport.put(handle.name, filename)
-            transport.chmod(code.get_local_executable(), 0o755)  # rwxr-xr-x
+            transport.chmod(code.filepath_executable, 0o755)  # rwxr-xr-x
 
     # local_copy_list is a list of tuples, each with (uuid, dest_path, rel_path)
     # NOTE: validation of these lists are done inside calculation.presubmit()
@@ -438,6 +439,7 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
     """
     logger_extra = get_dblogger_extra(calculation)
     workdir = calculation.get_remote_workdir()
+    filepath_sandbox = get_config_option('storage.sandbox') or None
 
     EXEC_LOGGER.debug(f'Retrieving calc {calculation.pk}', extra=logger_extra)
     EXEC_LOGGER.debug(f'[retrieval of calc {calculation.pk}] chdir {workdir}', extra=logger_extra)
@@ -462,7 +464,7 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
         retrieve_list = calculation.get_retrieve_list()
         retrieve_temporary_list = calculation.get_retrieve_temporary_list()
 
-        with SandboxFolder() as folder:
+        with SandboxFolder(filepath_sandbox) as folder:
             retrieve_files_from_list(calculation, transport, folder.abspath, retrieve_list)
             # Here I retrieved everything; now I store them inside the calculation
             retrieved_files.base.repository.put_object_from_tree(folder.abspath)

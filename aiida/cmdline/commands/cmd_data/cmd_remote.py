@@ -50,7 +50,7 @@ def remote_ls(ls_long, path, datum):
             )
             echo.echo(pre_line, nl=False)
         if metadata['isdir']:
-            echo.echo(metadata['name'], fg='blue')
+            echo.echo(metadata['name'], fg=echo.COLORS['info'])
         else:
             echo.echo(metadata['name'])
 

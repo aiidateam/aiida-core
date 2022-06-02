@@ -78,7 +78,7 @@ def uninitialised_profile(empty_pg_cluster: PGTest, tmp_path):  # pylint: disabl
         'test_migrate', {
             'test_profile': True,
             'storage': {
-                'backend': 'psql_dos',
+                'backend': 'core.psql_dos',
                 'config': {
                     'database_engine': 'postgresql_psycopg2',
                     'database_port': empty_pg_cluster.port,

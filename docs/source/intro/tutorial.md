@@ -443,7 +443,7 @@ These steps are provided as methods of the `MultiplyAddWorkChain` class.
 :tags: ["hide-cell"]
 
 from aiida.engine import ToContext, WorkChain, calcfunction
-from aiida.orm import Code, Int
+from aiida.orm import AbstractCode, Int
 from aiida.plugins.factories import CalculationFactory
 
 ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
@@ -464,7 +464,7 @@ class MultiplyAddWorkChain(WorkChain):
         spec.input('x', valid_type=Int)
         spec.input('y', valid_type=Int)
         spec.input('z', valid_type=Int)
-        spec.input('code', valid_type=Code)
+        spec.input('code', valid_type=AbstractCode)
         spec.outline(
             cls.multiply,
             cls.add,

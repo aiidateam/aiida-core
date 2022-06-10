@@ -8,11 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test for the ORM implementation."""
-import json
-
 import pytest
 
 from aiida.orm import Dict, QueryBuilder
+from aiida.storage import json
 from aiida.storage.sqlite_temp import SqliteTempBackend
 
 
@@ -77,6 +76,21 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
             }
         }, 1),
         ({
+            'attributes.complex': {
+                '==': 1.1 + 2.1j
+            }
+        }, 1),
+        ({
+            'attributes.complex.real': {
+                '==': 1.1
+            }
+        }, 1),
+        ({
+            'attributes.complex.imag': {
+                '==': 2.1
+            }
+        }, 1),
+        ({
             'attributes.true': {
                 '==': True
             }
@@ -123,6 +137,21 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
         ({
             'attributes.float': {
                 '==': 2.2
+            }
+        }, 0),
+        ({
+            'attributes.complex': {
+                '==': 2.2 + 4.2j
+            }
+        }, 0),
+        ({
+            'attributes.complex.real': {
+                '==': 2.2
+            }
+        }, 0),
+        ({
+            'attributes.complex.imag': {
+                '==': 4.2
             }
         }, 0),
         ({
@@ -351,6 +380,7 @@ def test_qb_json_filters(tmp_path, filters, matches):
         'text2': 'abc_XYZ',
         'integer': 1,
         'float': 1.1,
+        'complex': 1.1 + 2.1j,
         'true': True,
         'false': False,
         'null': None,

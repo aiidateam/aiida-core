@@ -19,6 +19,7 @@ from sqlalchemy import event
 from sqlalchemy.future.engine import Engine, create_engine
 
 from aiida.common.exceptions import AiidaException, CorruptStorage, UnreachableStorage
+from aiida.storage import json as db_json
 
 META_FILENAME = 'metadata.json'
 """The filename containing meta information about the storage instance."""
@@ -54,8 +55,8 @@ def create_sqla_engine(path: Union[str, Path], *, enforce_foreign_keys: bool = T
     """Create a new engine instance."""
     engine = create_engine(
         f'sqlite:///{path}',
-        json_serializer=json.dumps,
-        json_deserializer=json.loads,
+        json_serializer=db_json.dumps,
+        json_deserializer=db_json.loads,
         encoding='utf-8',
         future=True,
         **kwargs

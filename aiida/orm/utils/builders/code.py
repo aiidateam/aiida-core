@@ -64,7 +64,7 @@ class CodeBuilder:
 
         code.label = self._get_and_count('label', used)
         code.description = self._get_and_count('description', used)
-        code.set_input_plugin_name(self._get_and_count('input_plugin', used).name)
+        code.set_input_plugin_name(self._get_and_count('input_plugin', used))
         code.set_prepend_text(self._get_and_count('prepend_text', used))
         code.set_append_text(self._get_and_count('append_text', used))
 

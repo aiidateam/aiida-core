@@ -168,8 +168,12 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
 
         # compute the file size of the handle
         position = handle.tell()
-        handle.seek(0, os.SEEK_END)
-        file_size = handle.tell()
+        try:
+            handle.seek(0, os.SEEK_END)
+        except NotImplementedError:
+            file_size = 1
+        else:
+            file_size = handle.tell()
         handle.seek(position)
 
         with self._zip_path.joinpath(name).open(mode='wb', file_size=file_size, **kwargs) as zip_handle:

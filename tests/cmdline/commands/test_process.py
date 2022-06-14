@@ -21,7 +21,8 @@ from aiida.backends.testbase import AiidaTestCase
 from aiida.cmdline.commands import cmd_process
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
-from aiida.orm import CalcJobNode, WorkflowNode, WorkFunctionNode, WorkChainNode
+from aiida.orm import CalcJobNode, WorkflowNode, WorkFunctionNode, WorkChainNode, Group
+from aiida.engine import ProcessState
 
 from tests.utils import processes as test_processes
 
@@ -38,9 +39,6 @@ class TestVerdiProcess(AiidaTestCase):
     @classmethod
     def setUpClass(cls, *args, **kwargs):
         super().setUpClass(*args, **kwargs)
-        from aiida.engine import ProcessState
-        from aiida.orm.groups import Group
-
         cls.calcs = []
         cls.process_label = 'SomeDummyWorkFunctionNode'
 
@@ -244,6 +242,23 @@ class TestVerdiProcess(AiidaTestCase):
         self.assertIsNone(result.exception, result.output)
         self.assertTrue(len(get_result_lines(result)) > 0)
 
+    def test_process_status(self):
+        """Test verdi process status"""
+        node = WorkflowNode().store()
+        node.set_process_state(ProcessState.RUNNING)
+
+        # Running without identifiers should not except and not print anything
+        options = []
+        result = self.cli_runner.invoke(cmd_process.process_status, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertEqual(len(get_result_lines(result)), 0)
+
+        # Giving a single identifier should print a non empty string message
+        options = ['--max-depth', 2, str(node.pk)]
+        result = self.cli_runner.invoke(cmd_process.process_status, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertTrue(len(get_result_lines(result)) > 0)
+
     def test_report(self):
         """Test the report command."""
         grandparent = WorkChainNode().store()
@@ -312,7 +327,6 @@ class TestVerdiProcessListWarning(AiidaTestCase):
         Test that the if the number of used worker process slots exceeds a threshold,
         that the warning message is displayed to the user when running `verdi process list`
         """
-        from aiida.engine import ProcessState
         from aiida.manage.configuration import get_config
 
         # Get the number of allowed processes per worker:
@@ -406,7 +420,6 @@ def test_pause_play_kill(cmd_try_all, run_cli_command):
     # pylint: disable=no-member, too-many-locals
     from aiida.cmdline.commands.cmd_process import process_pause, process_play, process_kill
     from aiida.manage.manager import get_manager
-    from aiida.engine import ProcessState
     from aiida.orm import load_node
 
     runner = get_manager().create_runner(rmq_submit=True)

@@ -157,6 +157,8 @@ py:class sqlalchemy.sql.compiler.TypeCompiler
 py:class sqlalchemy.sql.elements.BooleanClauseList
 
 py:class sphinx.ext.autodoc.ClassDocumenter
+py:class sphinx.application.Sphinx
+py:class sphinx.transforms.SphinxTransform
 py:class sphinx.util.docutils.SphinxDirective
 py:class ModuleAnalyzer
 py:class BuildEnvironment

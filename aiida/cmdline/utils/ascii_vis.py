@@ -296,20 +296,23 @@ def build_call_graph(calc_node, max_depth: int = None, info_fn=calc_info) -> str
     """Build the call graph of a given node.
 
     :param calc_node: The calculation node
-    :param max_depth: Maximum depth of the call graph to build. Use `None` or -1 for unlimited.
+    :param max_depth: Maximum depth of the call graph to build. Use `None` for unlimited.
     :param info_fn: An optional function that takes the node and returns a string
         of information to be displayed for each node.
     """
-    if max_depth is None:
-        max_depth = -1
-    if max_depth == 0:
-        return ''
+    if max_depth is not None:
+        if max_depth < 0:
+            raise ValueError('max_depth must be >= 0')
+        if max_depth == 0:
+            return ''
 
     info_string = info_fn(calc_node)
     called = calc_node.called
     called.sort(key=lambda x: x.ctime)
     if called and max_depth != 1:
-        return info_string, [build_call_graph(child, max_depth=max_depth - 1, info_fn=info_fn) for child in called]
+        if max_depth is not None:
+            max_depth -= 1
+        return info_string, [build_call_graph(child, max_depth=max_depth, info_fn=info_fn) for child in called]
 
     return info_string
 

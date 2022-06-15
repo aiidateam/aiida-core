@@ -254,7 +254,7 @@ class TestVerdiProcess(AiidaTestCase):
         self.assertEqual(len(get_result_lines(result)), 0)
 
         # Giving a single identifier should print a non empty string message
-        options = ['--max-depth', 2, str(node.pk)]
+        options = [str(node.pk)]
         result = self.cli_runner.invoke(cmd_process.process_status, options)
         self.assertIsNone(result.exception, result.output)
         self.assertTrue(len(get_result_lines(result)) > 0)

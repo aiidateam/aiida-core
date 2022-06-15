@@ -171,7 +171,7 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
         try:
             handle.seek(0, os.SEEK_END)
         except NotImplementedError:
-            file_size = 1
+            file_size = zipfile.ZIP64_LIMIT
         else:
             file_size = handle.tell()
         handle.seek(position)

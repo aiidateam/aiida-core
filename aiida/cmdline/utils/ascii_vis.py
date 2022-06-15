@@ -15,7 +15,7 @@ TREE_MIDDLE_ENTRY = '\u251C\u2500\u2500 '
 TREE_FIRST_ENTRY = TREE_MIDDLE_ENTRY
 
 
-def calc_info(node):
+def calc_info(node) -> str:
     """Return a string with the summary of the state of a CalculationNode."""
     from aiida.orm import ProcessNode, WorkChainNode
 
@@ -37,25 +37,40 @@ def calc_info(node):
     return string
 
 
-def format_call_graph(calc_node, info_fn=calc_info):
+def format_call_graph(calc_node, max_depth: int = None, info_fn=calc_info):
     """
     Print a tree like the POSIX tree command for the calculation call graph
 
     :param calc_node: The calculation node
+    :param max_depth: Maximum depth of the call graph to print
     :param info_fn: An optional function that takes the node and returns a string
         of information to be displayed for each node.
     """
-    call_tree = build_call_graph(calc_node, info_fn=info_fn)
+    call_tree = build_call_graph(calc_node, max_depth=max_depth, info_fn=info_fn)
     return format_tree_descending(call_tree)
 
 
-def build_call_graph(calc_node, info_fn=calc_info):
-    """Build the call graph of a given node."""
+def build_call_graph(calc_node, max_depth: int = None, info_fn=calc_info) -> str:
+    """Build the call graph of a given node.
+
+    :param calc_node: The calculation node
+    :param max_depth: Maximum depth of the call graph to build. Use `None` for unlimited.
+    :param info_fn: An optional function that takes the node and returns a string
+        of information to be displayed for each node.
+    """
+    if max_depth is not None:
+        if max_depth < 0:
+            raise ValueError('max_depth must be >= 0')
+        if max_depth == 0:
+            return ''
+
     info_string = info_fn(calc_node)
     called = calc_node.called
     called.sort(key=lambda x: x.ctime)
-    if called:
-        return info_string, [build_call_graph(child, info_fn) for child in called]
+    if called and max_depth != 1:
+        if max_depth is not None:
+            max_depth -= 1
+        return info_string, [build_call_graph(child, max_depth=max_depth, info_fn=info_fn) for child in called]
 
     return info_string
 

@@ -174,13 +174,16 @@ def process_report(processes, levelname, indent_size, max_depth):
 
 
 @verdi_process.command('status')
+@click.option(
+    '-m', '--max-depth', 'max_depth', type=int, default=None, help='Limit the number of levels to be printed.'
+)
 @arguments.PROCESSES()
-def process_status(processes):
+def process_status(max_depth, processes):
     """Print the status of one or multiple processes."""
     from aiida.cmdline.utils.ascii_vis import format_call_graph
 
     for process in processes:
-        graph = format_call_graph(process)
+        graph = format_call_graph(process, max_depth=max_depth)
         echo.echo(graph)
 
 

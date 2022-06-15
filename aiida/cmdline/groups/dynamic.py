@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import functools
 import re
 
 import click
@@ -12,17 +13,37 @@ from aiida.plugins.entry_point import ENTRY_POINT_GROUP_FACTORY_MAPPING, get_ent
 
 from ..params import options
 from ..params.options.interactive import InteractiveOption
-from ..utils import echo
 from .verdi import VerdiCommandGroup
 
 __all__ = ('DynamicEntryPointCommandGroup',)
 
 
 class DynamicEntryPointCommandGroup(VerdiCommandGroup):
-    """Subclass of :class:`click.Group` that loads subcommands dynamically from entry points."""
+    """Subclass of :class:`click.Group` that loads subcommands dynamically from entry points.
 
-    def __init__(self, entry_point_group: str = 'aiida.data', entry_point_name_filter=r'.*', **kwargs):
+    A command group using this class will automatically generate the sub commands from the entry points registered in
+    the given ``entry_point_group``. The entry points can be additionally filtered using a regex defined for the
+    ``entry_point_name_filter`` keyword. The actual command for each entry point is defined by ``command``, which should
+    take as a first argument the class that corresponds to the entry point. In addition, it should accept ``kwargs``
+    which will be the values for the options passed when the command is invoked. The help string of the command will be
+    provided by the docstring of the class registered at the respective entry point. Example usage:
+
+    .. code:: python
+
+        def create_instance(cls, **kwargs):
+            instance = cls(**kwargs)
+            instance.store()
+            echo.echo_success(f'Created {cls.__name__}<{instance.pk}>')
+
+        @click.group('create', cls=DynamicEntryPointCommandGroup, command=create_instance,)
+        def cmd_create():
+            pass
+
+    """
+
+    def __init__(self, command, entry_point_group: str, entry_point_name_filter=r'.*', **kwargs):
         super().__init__(**kwargs)
+        self.command = command
         self.entry_point_group = entry_point_group
         self.entry_point_name_filter = entry_point_name_filter
         self.factory = ENTRY_POINT_GROUP_FACTORY_MAPPING[entry_point_group]
@@ -53,25 +74,10 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         return command
 
     def create_command(self, entry_point):
-        """Create a subcommand to create an instance of a particular code subclass"""
+        """Create a subcommand for the given ``entry_point``."""
         cls = self.factory(entry_point)
-
-        def command(non_interactive, **kwargs):  # pylint: disable=unused-argument
-            """Create a new instance."""
-            try:
-                instance = cls(**kwargs)
-            except Exception as exception:  # pylint: disable=broad-except
-                echo.echo_critical(f'Failed to instantiate `{cls}`: {exception}')
-
-            try:
-                instance.store()
-            except Exception as exception:  # pylint: disable=broad-except
-                echo.echo_critical(f'Failed to store instance of `{cls}`: {exception}')
-
-            echo.echo_success(f'Created {cls.__name__}<{instance.pk}>')
-
+        command = functools.partial(self.command, cls)
         command.__doc__ = cls.__doc__
-
         return click.command(entry_point)(self.create_options(entry_point)(command))
 
     def create_options(self, entry_point):

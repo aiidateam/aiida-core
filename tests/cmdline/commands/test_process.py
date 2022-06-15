@@ -259,6 +259,12 @@ class TestVerdiProcess(AiidaTestCase):
         self.assertIsNone(result.exception, result.output)
         self.assertTrue(len(get_result_lines(result)) > 0)
 
+        # With max depth 0, the output should be empty
+        options = ['--max-depth', 0, str(node.pk)]
+        result = self.cli_runner.invoke(cmd_process.process_status, options)
+        self.assertIsNone(result.exception, result.output)
+        self.assertTrue(len(get_result_lines(result)) == 0)
+
     def test_report(self):
         """Test the report command."""
         grandparent = WorkChainNode().store()

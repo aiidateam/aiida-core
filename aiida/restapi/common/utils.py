@@ -682,7 +682,7 @@ class Utils:
         )
         # Value types
         value_num = ppc.number
-        value_bool = (Literal('true') | Literal('false')).addParseAction(lambda toks: bool(toks[0]))
+        value_bool = (Literal('true') | Literal('false')).addParseAction(lambda toks: toks[0] == 'true')
         value_string = QuotedString('"', escQuote='""')
         value_orderby = Combine(Optional(Word('+-', exact=1)) + key)
 

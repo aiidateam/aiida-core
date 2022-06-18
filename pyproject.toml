@@ -25,7 +25,7 @@ keywords = ["aiida", "workflows"]
 requires-python = ">=3.8"
 dependencies = [
         "alembic~=1.2",
-        "archive-path~=0.4.0",
+        "archive-path~=0.4.1",
         "aio-pika~=6.6",
         "circus~=0.17.1",
         "click-config-file~=0.6.0",

@@ -458,7 +458,7 @@ class Node(BaseResource):
 
                 if query_type == 'download' and download not in ['false', 'False', False] and results:
                     if results['download']['status'] == 200:
-                        data = results['download']['data']
+                        data = results['download']['data'].encode('utf-8')
                         response = make_response(data)
                         response.headers['content-type'] = 'application/octet-stream'
                         response.headers['Content-Disposition'] = 'attachment; filename="{}"'.format(

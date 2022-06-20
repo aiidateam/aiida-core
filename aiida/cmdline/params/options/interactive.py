@@ -48,7 +48,7 @@ class InteractiveOption(ConditionalOption):
             click.echo(f'Labeling with label: {label}')
     """
 
-    PROMPT_COLOR = 'yellow'
+    PROMPT_COLOR = echo.COLORS['warning']
     CHARACTER_PROMPT_HELP = '?'
     CHARACTER_IGNORE_DEFAULT = '!'
 

@@ -176,14 +176,19 @@ def upload_calculation(
     for code in input_codes:
         if isinstance(code, PortableCode):
             # Note: this will possibly overwrite files
-            for filename in code.base.repository.list_object_names():
+            for root, dirnames, filenames in code.base.repository.walk():
+                # remotely mkdir first
+                for dirname in dirnames:
+                    transport.makedirs(dirname, ignore_existing=True)
+
                 # Note, once #2579 is implemented, use the `node.open` method instead of the named temporary file in
                 # combination with the new `Transport.put_object_from_filelike`
                 # Since the content of the node could potentially be binary, we read the raw bytes and pass them on
-                with NamedTemporaryFile(mode='wb+') as handle:
-                    handle.write(code.base.repository.get_object_content(filename, mode='rb'))
-                    handle.flush()
-                    transport.put(handle.name, filename)
+                for filename in filenames:
+                    with NamedTemporaryFile(mode='wb+') as handle:
+                        handle.write(code.base.repository.get_object_content(filename, mode='rb'))
+                        handle.flush()
+                        transport.put(handle.name, filename)
             transport.chmod(code.filepath_executable, 0o755)  # rwxr-xr-x
 
     # local_copy_list is a list of tuples, each with (uuid, dest_path, rel_path)

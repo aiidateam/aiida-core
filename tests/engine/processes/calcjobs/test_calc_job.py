@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-public-methods,redefined-outer-name,no-self-use
+# pylint: disable=too-many-public-methods,redefined-outer-name,no-self-use, too-many-lines
 """Test for the `CalcJob` process sub class."""
 from copy import deepcopy
 from functools import partial
@@ -252,6 +252,43 @@ def test_multi_codes_run_withmpi(aiida_local_code_factory, file_regression, calc
     submit_script_filename = node.get_option('submit_script_filename')
     with open(os.path.join(folder_name, submit_script_filename), encoding='utf8') as handle:
         content = handle.read()
+
+    file_regression.check(content, extension='.sh')
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
+def test_portable_code(file_regression, tmp_path, aiida_localhost):
+    """test run container code"""
+    import pathlib
+    (tmp_path / 'bash').write_bytes(b'bash implementation')
+
+    code = orm.PortableCode(
+        filepath_executable='bash',
+        filepath_files=tmp_path,
+    ).store()
+
+    inputs = {
+        'code': code,
+        'x': orm.Int(1),
+        'y': orm.Int(2),
+        'metadata': {
+            'computer': aiida_localhost,
+            'dry_run': True,
+            'options': {},
+        }
+    }
+
+    _, node = launch.run_get_node(ArithmeticAddCalculation, **inputs)
+    folder_name = node.dry_run_info['folder']
+    uploaded_files = os.listdir(folder_name)
+
+    # Since the repository will only contain files on the top-level due to `Code.set_files` we only check those
+    for filename in code.base.repository.list_object_names():
+        assert filename in uploaded_files
+
+    submit_script_filename = node.get_option('submit_script_filename')
+    content = (pathlib.Path(folder_name) / submit_script_filename).read_bytes().decode('utf-8')
 
     file_regression.check(content, extension='.sh')
 

@@ -112,11 +112,16 @@ class Containerized(AbstractCode):
         """Return the CLI options that would allow to create an instance of this class."""
         options = {
             'engine_command': {
-                'required': True,
-                'prompt': 'Engine command',
-                'help':
-                'The command to run the container. It must contain the placeholder {image} that will be replaced with the `image_name`.',
-                'type': click.STRING,
+                'required':
+                True,
+                'prompt':
+                'Engine command',
+                'help': (
+                    'The command to run the container. It must contain the placeholder '
+                    '{image} that will be replaced with the `image_name`.'
+                ),
+                'type':
+                click.STRING,
             },
             'image': {
                 'required': True,

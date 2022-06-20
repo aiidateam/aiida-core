@@ -9,7 +9,6 @@ export PYTHONPATH="${PYTHONPATH}:${SYSTEM_TESTS}:${MODULE_POLISH}"
 
 verdi daemon start 4
 verdi -p test_aiida run ${SYSTEM_TESTS}/test_daemon.py
-docker version | echo
 verdi -p test_aiida run ${SYSTEM_TESTS}/test_containerized_code.py
 bash ${SYSTEM_TESTS}/test_polish_workchains.sh
 verdi daemon stop

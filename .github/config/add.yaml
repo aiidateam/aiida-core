@@ -1,9 +1,9 @@
 ---
 label: add
 description: add
-default_calc_job_plugin: core.arithmetic.add
+input_plugin: core.arithmetic.add
 on_computer: true
 computer: localhost
-filepath_executable: /bin/bash
+remote_abs_path: /bin/bash
 prepend_text: ' '
 append_text: ' '

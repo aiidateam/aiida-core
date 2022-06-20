@@ -10,7 +10,6 @@
 # pylint: disable=unused-argument,redefined-outer-name
 """Tests for the 'verdi code' command."""
 import io
-from ipaddress import ip_address
 import os
 import pathlib
 import tempfile

@@ -422,6 +422,8 @@ There are currently three implementations of this abstract class:
  * :class:`~aiida.orm.nodes.data.code.legacy.Code` (see :ref:`Code <topics:data_types:core:code:legacy>`)
  * :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` (see :ref:`InstalledCode <topics:data_types:core:code:installed>`)
  * :class:`~aiida.orm.nodes.data.code.portable.PortableCode` (see :ref:`PortableCode <topics:data_types:core:code:portable>`)
+ * :class:`~aiida.orm.nodes.data.code.containerized.InstalledContainerizedCode` (see :ref:`ContainerizedCode <topics:data_types:core:code:containerized>`)
+ * :class:`~aiida.orm.nodes.data.code.containerized.PortableContainerizedCode` (see :ref:`ContainerzedCode <topics:data_types:core:code:containerized>`)
 
 
 .. _topics:data_types:core:code:legacy:
@@ -492,6 +494,51 @@ Example of creating an ``PortableCode``:
         filepath_executable='executable.exe'
     )
 
+.. _topics:data_types:core:code:containerized:
+
+Containerized Code
+------------------
+
+.. versionadded:: 2.1
+
+A containerzed code is the code shipped with container.
+It can be either the :class:`~aiida.orm.nodes.data.code.containerized.PortableContainerizedCode` class or :class:`~aiida.orm.nodes.data.code.containerized.InstalledContainerizedCode` class.
+Which are implementations of the :class:`~aiida.orm.nodes.data.code.abstract.AbstractCode` class with :class:`~aiida.orm.nodes.data.code.portable.PortableCode` or :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` respectively.
+
+Example of creating an ``InstalledContainerizedCode``:
+
+.. code:: python
+
+    from pathlib import Path
+    from aiida.orm import InstalledContainerizedCode
+    code = InstalledContainerizedCode(
+        label='some-label',
+        computer=load_computer('localhost'),
+        filepath_executable='/usr/bin/bash'
+        engine_command='engine_command',
+        image='imagename',
+        escape_exec_line=False,
+    )
+
+
+Example of creating an ``PortableContainerizedCode``:
+
+.. code:: python
+
+    from pathlib import Path
+    from aiida.orm import PortableContainerizedCode
+    code = PortableContainerizedCode(
+        label='some-label',
+        filepath_files=Path('/some/path/code'),
+        filepath_executable='executable.exe',
+        engine_command='engine_command',
+        image='imagename',
+        escape_exec_line=True,
+    )
+
+.. note::
+
+    The option ``escape_exec_line`` is mandatory for running commands in docker which need to have executable command in the quotes after ``sh -c`` of engine command.
 
 .. _topics:data_types:materials:
 

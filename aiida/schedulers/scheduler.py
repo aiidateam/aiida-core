@@ -214,6 +214,7 @@ class Scheduler(metaclass=abc.ABCMeta):
             to launch the multiple codes.
         :return: string with format: [executable] [args] {[ < stdin ]} {[ < stdout ]} {[2>&1 | 2> stderr]}
         """
+        # pylint: disable=too-many-locals
         from aiida.common.datastructures import CodeRunMode
 
         list_of_runlines = []

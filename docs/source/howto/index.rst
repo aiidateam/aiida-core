@@ -8,6 +8,7 @@ How-To Guides
    interact
    plugins_install
    run_codes
+   run_containerized_codes
    run_workflows
    ssh
    plugin_codes

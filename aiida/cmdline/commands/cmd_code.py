@@ -27,7 +27,28 @@ def verdi_code():
     """Setup and manage codes."""
 
 
-@verdi_code.group('create', cls=DynamicEntryPointCommandGroup, entry_point_name_filter=r'core\.code\..*')
+def create_code(cls, non_interactive, **kwargs):  # pylint: disable=unused-argument
+    """Create a new `Code` instance."""
+    try:
+        instance = cls(**kwargs)
+    except (TypeError, ValueError) as exception:
+        echo.echo_critical(f'Failed to create instance `{cls}`: {exception}')
+
+    try:
+        instance.store()
+    except exceptions.ValidationError as exception:
+        echo.echo_critical(f'Failed to store instance of `{cls}`: {exception}')
+
+    echo.echo_success(f'Created {cls.__name__}<{instance.pk}>')
+
+
+@verdi_code.group(
+    'create',
+    cls=DynamicEntryPointCommandGroup,
+    command=create_code,
+    entry_point_group='aiida.data',
+    entry_point_name_filter=r'core\.code\..*'
+)
 def code_create():
     """Create a new code."""
 

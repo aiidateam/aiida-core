@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, Generic, List, Optional, Type, TypeVar, c
 
 from plumpy.base.utils import call_with_super_check, super_check
 
+from aiida.common.exceptions import InvalidOperation
 from aiida.common.lang import classproperty, type_check
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
@@ -216,6 +217,10 @@ class Entity(abc.ABC, Generic[BackendEntityType]):
         """
         self._backend_entity = backend_entity
         call_with_super_check(self.initialize)
+
+    def __getstate__(self):
+        """Prevent an ORM entity instance from being pickled."""
+        raise InvalidOperation('pickling of AiiDA ORM instances is not supported.')
 
     @super_check
     def initialize(self) -> None:

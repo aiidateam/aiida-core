@@ -525,7 +525,7 @@ To determine what storage backend a profile uses, call ``verdi profile show``.
 
         .. code-block:: console
 
-            pg_dump -h <database_hostname> -p <database_port> -d <database_name> -W > aiida_backup.psql
+            pg_dump -h <database_hostname> -p <database_port> -d <database_name> -U <database_username> -W > aiida_backup.psql
 
         The ``-W`` flag will ensure to prompt for the database password.
         The parameters between brackets should be replaced with the values that have been configured for the profile.

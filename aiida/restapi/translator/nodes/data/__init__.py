@@ -51,7 +51,7 @@ class DataTranslator(NodeTranslator):
 
         elif download_format in node.get_export_formats():
             try:
-                response['data'] = (node._exportcontent(download_format)[0]).decode('utf-8')  # pylint: disable=protected-access
+                response['data'] = node._exportcontent(download_format)[0]  # pylint: disable=protected-access
                 response['status'] = 200
                 try:
                     response['filename'] = node.filename

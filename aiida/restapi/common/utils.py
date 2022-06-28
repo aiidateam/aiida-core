@@ -56,6 +56,12 @@ class CustomJSONEncoder(JSONEncoder):
                                    o.hour).zfill(2), str(o.minute).zfill(2),
                                          str(o.second).zfill(2)])
 
+        # To support bytes objects, try to decode to a string
+        try:
+            return o.decode("utf-8")
+        except (UnicodeDecodeError, AttributeError):
+            pass
+
         # If not returned yet, do it in the default way
         return JSONEncoder.default(self, o)
 

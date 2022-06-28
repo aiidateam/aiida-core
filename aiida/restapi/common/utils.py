@@ -58,7 +58,7 @@ class CustomJSONEncoder(JSONEncoder):
 
         # To support bytes objects, try to decode to a string
         try:
-            return o.decode("utf-8")
+            return o.decode('utf-8')
         except (UnicodeDecodeError, AttributeError):
             pass
 

@@ -258,10 +258,17 @@ def test_multi_codes_run_withmpi(aiida_local_code_factory, file_regression, calc
 
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
-def test_portable_code(file_regression, tmp_path, aiida_localhost):
+def test_portable_code(tmp_path, aiida_localhost):
     """test run container code"""
     import pathlib
     (tmp_path / 'bash').write_bytes(b'bash implementation')
+    subdir = tmp_path / 'sub'
+    subdir.mkdir()
+    (subdir / 'dummy').write_bytes(b'dummy')
+
+    subsubdir = tmp_path / 'sub' / 'sub'
+    subsubdir.mkdir()
+    (subsubdir / 'sub-dummy').write_bytes(b'sub dummy')
 
     code = orm.PortableCode(
         filepath_executable='bash',
@@ -287,10 +294,13 @@ def test_portable_code(file_regression, tmp_path, aiida_localhost):
     for filename in code.base.repository.list_object_names():
         assert filename in uploaded_files
 
-    submit_script_filename = node.get_option('submit_script_filename')
-    content = (pathlib.Path(folder_name) / submit_script_filename).read_bytes().decode('utf-8')
+    content = (pathlib.Path(folder_name) / code.filepath_executable).read_bytes().decode('utf-8')
+    subcontent = (pathlib.Path(folder_name) / 'sub' / 'dummy').read_bytes().decode('utf-8')
+    subsubcontent = (pathlib.Path(folder_name) / 'sub' / 'sub' / 'sub-dummy').read_bytes().decode('utf-8')
 
-    file_regression.check(content, extension='.sh')
+    assert content == 'bash implementation'
+    assert subcontent == 'dummy'
+    assert subsubcontent == 'sub dummy'
 
 
 @pytest.mark.requires_rmq

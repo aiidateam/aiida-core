@@ -177,9 +177,12 @@ def upload_calculation(
         if isinstance(code, PortableCode):
             # Note: this will possibly overwrite files
             for root, dirnames, filenames in code.base.repository.walk():
+                # mkdir of root
+                transport.makedirs(root, ignore_existing=True)
+                
                 # remotely mkdir first
                 for dirname in dirnames:
-                    transport.makedirs(dirname, ignore_existing=True)
+                    transport.makedirs((root / dirname), ignore_existing=True)
 
                 # Note, once #2579 is implemented, use the `node.open` method instead of the named temporary file in
                 # combination with the new `Transport.put_object_from_filelike`
@@ -189,7 +192,7 @@ def upload_calculation(
                         content = code.base.repository.get_object_content((pathlib.Path(root) / filename), mode='rb')
                         handle.write(content)
                         handle.flush()
-                        transport.put(handle.name, filename)
+                        transport.put(handle.name, (root / filename))
             transport.chmod(code.filepath_executable, 0o755)  # rwxr-xr-x
 
     # local_copy_list is a list of tuples, each with (uuid, dest_path, rel_path)

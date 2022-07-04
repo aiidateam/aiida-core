@@ -179,7 +179,7 @@ def upload_calculation(
             for root, dirnames, filenames in code.base.repository.walk():
                 # mkdir of root
                 transport.makedirs(root, ignore_existing=True)
-                
+
                 # remotely mkdir first
                 for dirname in dirnames:
                     transport.makedirs((root / dirname), ignore_existing=True)

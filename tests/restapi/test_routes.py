@@ -1014,7 +1014,8 @@ class TestRestApi:
         structure_data = load_node(node_uuid)._exportcontent('xsf')[0]  # pylint: disable=protected-access
         assert rv_obj.data == structure_data
 
-    def test_structure_download_false(self):
+    @pytest.mark.parametrize('download', ['false', 'False'])
+    def test_structure_download_false(self, download):
         """
         Test download=false that displays the content in the browser instead
         of downloading the structure file
@@ -1022,7 +1023,7 @@ class TestRestApi:
         from aiida.orm import load_node
 
         node_uuid = self.get_dummy_data()['structuredata'][0]['uuid']
-        url = f'{self.get_url_prefix()}/nodes/{node_uuid}/download?download_format=xsf&download=False'
+        url = f'{self.get_url_prefix()}/nodes/{node_uuid}/download?download_format=xsf&download={download}'
         with self.app.test_client() as client:
             rv_obj = client.get(url)
             response = json.loads(rv_obj.data)

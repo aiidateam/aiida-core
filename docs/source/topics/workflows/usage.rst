@@ -423,7 +423,7 @@ Nested context keys
 To simplify the organization of the context, the keys may contain dots ``.``, transparently creating namespaces in the process.
 As an example compare the following to the parallel submission example above:
 
-.. include:: include/snippets/workchains/run_workchain_submit_append.py
+.. include:: include/snippets/workchains/run_workchain_submit_parallel_nested.py
     :code: python
 
 This allows to create intuitively grouped and easily accessible structures of child calculations or workchains.

@@ -974,6 +974,10 @@ class TestNodeCaching:
         with pytest.raises(TypeError):
             node.base.caching.is_valid_cache = 'false'
 
+        # prevent regression of issue #5582
+        calc = CalculationNode()
+        calc.base.caching.is_valid_cache = False
+
     def test_store_from_cache(self):
         """Regression test for storing a Node with (nested) repository content with caching."""
         data = Data()

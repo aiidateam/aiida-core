@@ -1029,7 +1029,7 @@ class TestRestApi:
         structure_data = load_node(node_uuid)._exportcontent('xsf')[0]  # pylint: disable=protected-access
         assert response['data']['download']['data'] == structure_data.decode('utf-8')
 
-    @pytest.mark.parametrize("download", ["false", "False"])
+    @pytest.mark.parametrize('download', ['false', 'False'])
     def test_structure_download_false(self, download):
     ...
         url = f'{self.get_url_prefix()}/nodes/{node_uuid}/download?download_format=xsf&download={download}'

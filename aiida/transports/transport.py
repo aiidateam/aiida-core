@@ -87,9 +87,11 @@ class Transport(abc.ABC):
         self._safe_open_interval = kwargs.pop('safe_interval', self._DEFAULT_SAFE_OPEN_INTERVAL)
         self._use_login_shell = kwargs.pop('use_login_shell', True)
         if self._use_login_shell:
-            self._bash_command_str = 'bash -l '
+            # self._bash_command_str = 'bash -l '
+            self._bash_command_str = 'powershell '
         else:
-            self._bash_command_str = 'bash '
+            # self._bash_command_str = 'bash '
+            self._bash_command_str = 'powershell '
 
         self._logger = AIIDA_LOGGER.getChild('transport').getChild(self.__class__.__name__)
         self._logger_extra = None

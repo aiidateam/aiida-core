@@ -1349,8 +1349,10 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         channel.set_combine_stderr(combine_stderr)
 
         if self.getcwd() is not None:
-            escaped_folder = escape_for_bash(self.getcwd())
-            command_to_execute = (f'cd {escaped_folder} && ( {command} )')
+            # escaped_folder = escape_for_bash(self.getcwd())
+            # command_to_execute = (f'cd {escaped_folder} && ( {command} )')
+            escaped_folder = escape_for_bash(self.getcwd()[1:])
+            command_to_execute = (f'cd {escaped_folder}; {command}')
         else:
             command_to_execute = command
 
@@ -1360,7 +1362,8 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         # 'bash -l -c ...' will eat another. Thus, we need to escape again.
         bash_commmand = self._bash_command_str + '-c '
 
-        channel.exec_command(bash_commmand + escape_for_bash(command_to_execute))
+        # channel.exec_command(bash_commmand + escape_for_bash(command_to_execute))
+        channel.exec_command(self._bash_command_str + f' "{command_to_execute}"')
 
         stdin = channel.makefile('wb', bufsize)
         stdout = channel.makefile('rb', bufsize)

@@ -144,8 +144,8 @@ def storage_maintain(ctx, full, dry_run):
             'executed while still running AiiDA. '
             'However, not all operations that are required to fully optimize disk usage and future performance '
             'can be done in this way.\n'
-            'Whenever you find the time or opportunity, please consider running `verdi repository maintenance '
-            '--full` for a more complete optimization.\n'
+            'Whenever you find the time or opportunity, please consider running `verdi storage maintain --full` '
+            'for a more complete optimization.\n'
         )
 
     if not dry_run:

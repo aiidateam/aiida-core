@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.0.2 - 2022-07-13
+
+[Full changelog](https://github.com/aiidateam/aiida-core/compare/v2.0.1...v2.0.2)
+
+### Fixes
+- REST API: treat `false` as `False` in URL parsing [[#5573]](https://github.com/aiidateam/aiida-core/pull/5573)
+- REST API: add support for byte streams through a custom JSON encoder [[#5576]](https://github.com/aiidateam/aiida-core/pull/5576)
+
+
 ## v2.0.1 - 2022-04-28
 
 [Full changelog](https://github.com/aiidateam/aiida-core/compare/v2.0.0...v2.0.1)

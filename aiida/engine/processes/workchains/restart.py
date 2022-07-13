@@ -372,7 +372,7 @@ class BaseRestartWorkChain(WorkChain):
                 enabled = overrides.pop('enabled', None)
                 priority = overrides.pop('priority', None)
 
-            if enabled is False or not handler.enabled:  # type: ignore[attr-defined]
+            if enabled is False or (enabled is None and not handler.enabled):  # type: ignore[attr-defined]
                 continue
 
             handlers.append((priority or handler.priority, handler))  # type: ignore[attr-defined]

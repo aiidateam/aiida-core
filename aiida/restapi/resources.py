@@ -14,7 +14,7 @@ from flask import make_response, request
 from flask_restful import Resource
 
 from aiida.common.lang import classproperty
-from aiida.manage import load_profile
+from aiida.manage import get_config_option, load_profile
 from aiida.restapi.common.exceptions import RestInputValidationError
 from aiida.restapi.common.utils import Utils, close_thread_connection
 from aiida.restapi.translator.nodes.node import NodeTranslator
@@ -153,13 +153,18 @@ class BaseResource(Resource):
 
         return node
 
-    def load_profile(self, profile):
+    def load_profile(self, profile=None):
         """Load the required profile.
 
         This will load the profile specified by the ``profile`` keyword in the query parameters, and if not specified it
         will default to the profile defined in the constructor.
         """
-        load_profile(profile, allow_switch=True)
+        profile_switching_enabled = get_config_option('rest_api.profile_switching')
+
+        if profile is not None and not profile_switching_enabled:
+            raise RestInputValidationError('specifying an explicit profile is not enabled for this REST API.')
+
+        load_profile(profile or self.profile, allow_switch=True)
 
     def get(self, id=None, page=None):  # pylint: disable=redefined-builtin,invalid-name,unused-argument
         # pylint: disable=too-many-locals

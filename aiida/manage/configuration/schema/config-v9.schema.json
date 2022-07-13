@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema",
-  "description": "Schema for AiiDA configuration files, format version 8",
+  "description": "Schema for AiiDA configuration files, format version 9",
   "type": "object",
   "definitions": {
     "options": {
@@ -123,6 +123,12 @@
           "default": 5,
           "minimum": 1,
           "description": "Maximum number of transport task attempts before a Process is Paused."
+        },
+        "rest_api.profile_switching": {
+          "type": "boolean",
+          "default": false,
+          "description": "Toggle whether the profile can be specified in requests submitted to the REST API",
+          "global_only": true
         },
         "rmq.task_timeout": {
           "type": "integer",

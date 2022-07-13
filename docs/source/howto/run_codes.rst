@@ -408,7 +408,8 @@ After this, use ``verdi process list`` to monitor the status of the calculations
     .. code-block:: python
 
         builder = load_node(<IDENTIFIER>).get_builder_restart()
-        # now start modifying the builder
+        # If needed, the builder can now be modified as usual before being run or submitted
+        submit(builder)
 
     where ``<IDENTIFIER>`` is the ``PK`` or ``UUID`` (or label) of your *calculation*.
 

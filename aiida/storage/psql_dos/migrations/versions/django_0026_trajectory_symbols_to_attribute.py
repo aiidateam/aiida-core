@@ -20,6 +20,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from aiida.storage.psql_dos.backend import get_filepath_container
 from aiida.storage.psql_dos.migrations.utils.create_dbattribute import create_rows
 from aiida.storage.psql_dos.migrations.utils.utils import load_numpy_array_from_repository
 
@@ -32,8 +33,7 @@ depends_on = None
 def upgrade():
     """Migrations for the upgrade."""
     connection = op.get_bind()
-    profile = op.get_context().opts['aiida_profile']
-    repo_path = profile.repository_path
+    repo_path = get_filepath_container(op.get_context().opts['aiida_profile']).parent
 
     node_model = sa.table(
         'db_dbnode',

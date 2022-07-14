@@ -86,11 +86,6 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
                 '==': False
             }
         }, 1),
-        # ({
-        #     'attributes.null': {
-        #         '==': None
-        #     }
-        # }, 1),
         ({
             'attributes.list': {
                 '==': [1, 2]
@@ -135,16 +130,6 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
                 '==': True
             }
         }, 0),
-        # ({
-        #     'attributes.null': {
-        #         '==': 0
-        #     }
-        # }, 0),
-        # ({
-        #     'attributes.other': {
-        #         '==': None
-        #     }
-        # }, 0),
         ({
             'attributes.list': {
                 '==': [1, 3]
@@ -334,17 +319,12 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
                 'has_key': 'key1'
             }
         }, 1),
-        # ({
-        #     'attributes.dict': {
-        #         'has_key': 'key2'
-        #     }
-        # }, 1),
     ),
     ids=json.dumps,
 )
-def test_qb_json_filters(tmp_path, filters, matches):
+def test_qb_json_filters(filters, matches):
     """Test QueryBuilder filtering for JSON fields."""
-    profile = SqliteTempBackend.create_profile(sandbox_path=tmp_path, debug=False)
+    profile = SqliteTempBackend.create_profile(debug=False)
     backend = SqliteTempBackend(profile)
     Dict({
         'text': 'abcXYZ',
@@ -393,9 +373,9 @@ def test_qb_json_filters(tmp_path, filters, matches):
     ),
     ids=json.dumps
 )
-def test_qb_column_filters(tmp_path, filters, matches):
+def test_qb_column_filters(filters, matches):
     """Test querying directly those stored in the columns"""
-    profile = SqliteTempBackend.create_profile(sandbox_path=tmp_path, debug=False)
+    profile = SqliteTempBackend.create_profile(debug=False)
     backend = SqliteTempBackend(profile)
     dict1 = Dict({
         'text2': 'abc_XYZ',
@@ -413,9 +393,9 @@ def test_qb_column_filters(tmp_path, filters, matches):
     ('integer', 'i'),
     ('float', 'f'),
 ))
-def test_qb_json_order_by(tmp_path, key, cast_type):
+def test_qb_json_order_by(key, cast_type):
     """Test QueryBuilder ordering by JSON field keys."""
-    profile = SqliteTempBackend.create_profile(sandbox_path=tmp_path, debug=False)
+    profile = SqliteTempBackend.create_profile(debug=False)
     backend = SqliteTempBackend(profile)
     dict1 = Dict({
         'text': 'b',

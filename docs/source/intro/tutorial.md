@@ -50,7 +50,6 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
 profile = load_profile(
     SqliteTempBackend.create_profile(
         'myprofile',
-        sandbox_path='_sandbox',
         options={
             'warnings.development_version': False,
             'runner.poll.interval': 1
@@ -300,7 +299,7 @@ This command sets up a code with *label* `add` on the *computer* `tutor`, using 
 ```{code-cell} ipython3
 :tags: ["hide-cell"]
 
-%verdi computer setup -L tutor -H localhost -T core.local -S core.direct -w {profile.repository_path / 'work'} -n
+%verdi computer setup -L tutor -H localhost -T core.local -S core.direct -w /tmp -n
 %verdi computer configure core.local tutor --safe-interval 0 -n
 %verdi code setup -L add --on-computer --computer=tutor -P core.arithmetic.add --remote-abs-path=/bin/bash -n
 ```

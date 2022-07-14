@@ -13,6 +13,7 @@ import os
 from uuid import uuid4
 
 from aiida.common import timezone
+from aiida.storage.psql_dos.backend import get_filepath_container
 from aiida.storage.psql_dos.migrations.utils import utils
 from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
 
@@ -24,7 +25,7 @@ def test_node_repository(perform_migrations: PsqlDostoreMigrator):  # pylint: di
     # starting revision
     perform_migrations.migrate_up('django@django_0046')
 
-    repo_path = perform_migrations.profile.repository_path
+    repo_path = get_filepath_container(perform_migrations.profile).parent
 
     # setup the storage
     user_model = perform_migrations.get_current_table('db_dbuser')

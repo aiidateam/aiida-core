@@ -219,6 +219,10 @@ class Profile:  # pylint: disable=too-many-public-methods
         """
         from urllib.parse import urlparse
 
+        from aiida.common.warnings import warn_deprecation
+
+        warn_deprecation('This method has been deprecated', version=3)
+
         if 'repository_uri' not in self.storage_config:
             raise KeyError('repository_uri not defined in profile storage config')
 

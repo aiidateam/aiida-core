@@ -11,6 +11,7 @@
 import numpy as np
 import pytest
 
+from aiida.storage.psql_dos.backend import get_filepath_container
 from aiida.storage.psql_dos.migrations.utils import utils
 from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
 from aiida.storage.psql_dos.utils import flag_modified
@@ -43,7 +44,7 @@ def test_trajectory_data(perform_migrations: PsqlDostoreMigrator):
 
     Verify that migration of symbols from repository array to attribute works properly.
     """
-    repo_path = perform_migrations.profile.repository_path
+    repo_path = get_filepath_container(perform_migrations.profile).parent
 
     # starting revision
     perform_migrations.migrate_up('sqlalchemy@37f3d4882837')  # 37f3d4882837_make_all_uuid_columns_unique

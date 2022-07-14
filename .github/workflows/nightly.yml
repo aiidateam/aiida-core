@@ -6,6 +6,7 @@ on:
     pull_request:
         paths:
         - '.github/workflows/nightly.yml'
+        - '.github/system_tests/test_daemon.py'
         - '.molecule/default/files/**'
         - 'aiida/storage/psql_dos/migrations/**'
         - 'tests/storage/psql_dos/migrations/**'

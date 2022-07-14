@@ -10,6 +10,7 @@
 # pylint: disable=no-name-in-module
 """Tests to run with a running daemon."""
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -434,7 +435,7 @@ def launch_all():
         # Delete the temporary directory to test that the stashing functionality will create it if necessary
         shutil.rmtree(tmpdir, ignore_errors=True)
 
-        source_list = ['output.txt', 'triple_value.tmp']
+        source_list = ['output.txt', 'triple_value.*']
         inputs['metadata']['options']['stash'] = {'target_base': tmpdir, 'source_list': source_list}
         _, node = run.get_node(process, **inputs)
         assert node.is_finished_ok
@@ -443,7 +444,13 @@ def launch_all():
         assert remote_stash.stash_mode == StashMode.COPY
         assert remote_stash.target_basepath.startswith(tmpdir)
         assert sorted(remote_stash.source_list) == sorted(source_list)
-        assert sorted(p for p in os.listdir(remote_stash.target_basepath)) == sorted(source_list)
+
+        stashed_filenames = os.listdir(remote_stash.target_basepath)
+        for filename in source_list:
+            if '*' in filename:
+                assert any(re.match(filename, stashed_file) is not None for stashed_file in stashed_filenames)
+            else:
+                assert filename in stashed_filenames
 
     # Submitting the calcfunction through the launchers
     print('Submitting calcfunction to the daemon')

@@ -40,6 +40,11 @@ MAPPING_DATA = {
     'data.upf.UpfData.': 'data.core.upf.UpfData.',
 }
 
+MAPPING_TRANSPORTS = {
+    'local': 'core.local',
+    'ssh': 'core.ssh',
+}
+
 MAPPING_SCHEDULERS = {
     'direct': 'core.direct',
     'lsf': 'core.lsf',
@@ -111,7 +116,7 @@ def migrate_v11_to_v12(metadata: dict, data: dict) -> None:
             else:
                 attributes['parser_name'] = new_parser_name
 
-    # Migrate scheduler entry point names
+    # Migrate scheduler and transport entry point names
     for values in data.get('export_data', {}).get('Computer', {}).values():
         if 'scheduler_type' in values:
             try:
@@ -120,3 +125,11 @@ def migrate_v11_to_v12(metadata: dict, data: dict) -> None:
                 pass
             else:
                 values['scheduler_type'] = new_scheduler_type
+
+        if 'transport_type' in values:
+            try:
+                new_transport_type = MAPPING_TRANSPORTS[values['transport_type']]
+            except KeyError:
+                pass
+            else:
+                values['transport_type'] = new_transport_type

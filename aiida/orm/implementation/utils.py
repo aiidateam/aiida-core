@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility methods for backend non-specific implementations."""
+import cmath
 from collections.abc import Iterable, Mapping
 from decimal import Decimal
 import math
@@ -93,6 +94,15 @@ def clean_value(value):
                 return int(new_val)
             return new_val
 
+        if isinstance(val, numbers.Complex) and (cmath.isnan(val) or cmath.isinf(val)):
+            # see https://www.postgresql.org/docs/current/static/datatype-json.html#JSON-TYPE-MAPPING-TABLE
+            raise exceptions.ValidationError('nan and inf/-inf can not be serialized to the database')
+
+        if isinstance(val, numbers.Complex):
+            string_representation = f'{{:.{AIIDA_FLOAT_PRECISION}g}}'.format(val)
+            new_val = complex(string_representation)
+            return {'__complex__': True, 'real': new_val.real, 'imag': new_val.imag}
+
         # Anything else we do not understand and we refuse
         raise exceptions.ValidationError(f'type `{type(val)}` is not supported as it is not json-serializable')
 
@@ -101,6 +111,11 @@ def clean_value(value):
 
     if isinstance(value, Mapping):
         # Check dictionary before iterables
+        if '__complex__' in value and (\
+            not isinstance(value.get('real'),(numbers.Integral, numbers.Real, Decimal)) or \
+            not isinstance(value.get('real'),(numbers.Integral, numbers.Real, Decimal))):
+            #A dict with a __complex__ key will be deserialized as a complex number
+            raise exceptions.ValidationError('The key __complex__ is reserved for internal use')
         return {k: clean_value(v) for k, v in value.items()}
 
     if (isinstance(value, Iterable) and not isinstance(value, str)):
@@ -115,3 +130,33 @@ def clean_value(value):
     # but is not an integer, I still accept it)
 
     return clean_builtin(value)
+
+
+def deserialize_value(value):
+    """
+    Get value from input and (recursively) deserialize all values
+    that were serialized to another type (e.g. complex -> dict) by clean_value
+
+    - Mappings containg the key `__complex__` are converted into a complex number
+
+    Note however that there is no logic to avoid infinite loops when the
+    user passes some perverse recursive dictionary or list. However,
+    these should already fail when calling clean_value
+
+    :param value: A value to be set as an attribute or an extra
+    :return: a "deserialized" value, potentially identical to value, but with
+             values replaced where needed.
+    """
+    if isinstance(value, Mapping):
+        if '__complex__' in value:
+            return complex(value['real'], value['imag'])
+        # Check dictionary before iterables
+        return {k: deserialize_value(v) for k, v in value.items()}
+
+    if (isinstance(value, Iterable) and not isinstance(value, str)):
+        # list, tuple, ... but not a string
+        # This should also properly take care of dealing with the
+        # basedatatypes.List object
+        return [deserialize_value(v) for v in value]
+
+    return value

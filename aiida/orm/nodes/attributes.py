@@ -11,6 +11,8 @@
 import copy
 from typing import TYPE_CHECKING, Any, Dict, Iterable, Iterator, List, Tuple
 
+from ..implementation.utils import clean_value, deserialize_value
+
 if TYPE_CHECKING:
     from .node import Node
 
@@ -55,7 +57,7 @@ class NodeAttributes:
         attributes = self._backend_node.attributes
 
         if self._node.is_stored:
-            attributes = copy.deepcopy(attributes)
+            attributes = deserialize_value(copy.deepcopy(attributes))
 
         return attributes
 
@@ -81,7 +83,7 @@ class NodeAttributes:
             attribute = default
 
         if self._node.is_stored:
-            attribute = copy.deepcopy(attribute)
+            attribute = deserialize_value(copy.deepcopy(attribute))
 
         return attribute
 
@@ -103,7 +105,7 @@ class NodeAttributes:
         attributes = self._backend_node.get_attribute_many(keys)
 
         if self._node.is_stored:
-            attributes = copy.deepcopy(attributes)
+            attributes = deserialize_value(copy.deepcopy(attributes))
 
         return attributes
 
@@ -116,6 +118,8 @@ class NodeAttributes:
         :raise aiida.common.ModificationNotAllowed: if the entity is stored
         """
         self._node._check_mutability_attributes([key])  # pylint: disable=protected-access
+        if self._node.is_stored:
+            value = clean_value(value)
         self._backend_node.set_attribute(key, value)
 
     def set_many(self, attributes: Dict[str, Any]) -> None:
@@ -128,6 +132,8 @@ class NodeAttributes:
         :raise aiida.common.ModificationNotAllowed: if the entity is stored
         """
         self._node._check_mutability_attributes(list(attributes))  # pylint: disable=protected-access
+        if self._node.is_stored:
+            attributes = clean_value(attributes)
         self._backend_node.set_attribute_many(attributes)
 
     def reset(self, attributes: Dict[str, Any]) -> None:
@@ -140,6 +146,8 @@ class NodeAttributes:
         :raise aiida.common.ModificationNotAllowed: if the entity is stored
         """
         self._node._check_mutability_attributes()  # pylint: disable=protected-access
+        if self._node.is_stored:
+            attributes = clean_value(attributes)
         self._backend_node.reset_attributes(attributes)
 
     def delete(self, key: str) -> None:
@@ -172,7 +180,12 @@ class NodeAttributes:
 
         :return: an iterator with attribute key value pairs
         """
-        return self._backend_node.attributes_items()
+
+        def deserialize_values(items):
+            for key, value in items:
+                yield key, deserialize_value(value)
+
+        return deserialize_values(self._backend_node.attributes_items())
 
     def keys(self) -> Iterable[str]:
         """Return an iterator over the attribute keys.

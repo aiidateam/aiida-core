@@ -243,6 +243,8 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
                 return func.json_type(comparator).in_(['integer', 'real']), comparator.as_integer()
             if isinstance(value, float):
                 return func.json_type(comparator).in_(['integer', 'real']), comparator.as_float()
+            if isinstance(value, complex):
+                return func.json_type(comparator) == 'object', comparator.as_json()
             if isinstance(value, str):
                 return func.json_type(comparator) == 'text', comparator.as_string()
             if isinstance(value, list):
@@ -260,6 +262,14 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
             type_filter, casted_entity = _cast_json_type(database_entity, value)
             if isinstance(value, (list, dict)):
                 return case((type_filter, casted_entity == func.json(json.dumps(value))), else_=False)
+            if isinstance(value, complex):
+                return case(
+                    (type_filter, casted_entity == func.json(json.dumps({
+                        'real': value.real,
+                        'imag': value.imag
+                    }))),
+                    else_=False
+                )
             # to-do not working for dict
             return case((type_filter, casted_entity == value), else_=False)
         if operator == '>':

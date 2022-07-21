@@ -8,12 +8,27 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test for the ORM implementation."""
+from functools import partial
 import json
 
 import pytest
 
 from aiida.orm import Dict, QueryBuilder
 from aiida.storage.sqlite_temp import SqliteTempBackend
+
+
+class ComplexEncoder(json.JSONEncoder):
+    """
+    Json Encoder with support for complex numbers.
+    These are encoded as a dictionary with the reserved
+    key `__complex__` used to identify them
+    """
+
+    def default(self, obj):  #pylint: disable=arguments-renamed
+        if isinstance(obj, complex):
+            return {'__complex__': True, 'real': obj.real, 'imag': obj.imag}
+        # Let the base class default method raise the TypeError
+        return json.JSONEncoder.default(self, obj)
 
 
 @pytest.mark.parametrize(
@@ -77,6 +92,21 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
             }
         }, 1),
         ({
+            'attributes.complex': {
+                '==': 1.1 + 2.1j
+            }
+        }, 1),
+        ({
+            'attributes.complex.real': {
+                '==': 1.1
+            }
+        }, 1),
+        ({
+            'attributes.complex.imag': {
+                '==': 2.1
+            }
+        }, 1),
+        ({
             'attributes.true': {
                 '==': True
             }
@@ -118,6 +148,21 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
         ({
             'attributes.float': {
                 '==': 2.2
+            }
+        }, 0),
+        ({
+            'attributes.complex': {
+                '==': 2.2 + 4.2j
+            }
+        }, 0),
+        ({
+            'attributes.complex.real': {
+                '==': 2.2
+            }
+        }, 0),
+        ({
+            'attributes.complex.imag': {
+                '==': 4.2
             }
         }, 0),
         ({
@@ -320,7 +365,7 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
             }
         }, 1),
     ),
-    ids=json.dumps,
+    ids=partial(json.dumps, cls=ComplexEncoder),
 )
 def test_qb_json_filters(filters, matches):
     """Test QueryBuilder filtering for JSON fields."""
@@ -331,6 +376,7 @@ def test_qb_json_filters(filters, matches):
         'text2': 'abc_XYZ',
         'integer': 1,
         'float': 1.1,
+        'complex': 1.1 + 2.1j,
         'true': True,
         'false': False,
         'null': None,

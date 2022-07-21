@@ -468,6 +468,20 @@ class TestNodeAttributesExtras:
         # ensure the returned node is a float
         assert self.node.base.attributes.get('a_val') == 3.141
 
+    def test_attribute_complex(self):
+        """Test that the `Node.set_attribute` method supports complex."""
+        self.node.base.attributes.set('a_val', 1.1 + 2.1j)
+        self.node.store()
+        # ensure the returned node is a complex number
+        assert self.node.base.attributes.get('a_val') == 1.1 + 2.1j
+    
+    def test_extra_complex(self):
+        """Test that the `Node.set_attribute` method supports complex."""
+        self.node.base.extras.set('a_val', 1.1 + 2.1j)
+        self.node.store() #Only when stored the complex number is serialized
+        # ensure the returned node is a complex number
+        assert self.node.base.extras.get('a_val') == 1.1 + 2.1j
+
 
 @pytest.mark.usefixtures('aiida_profile_clean_class')
 class TestNodeLinks:

@@ -244,19 +244,12 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
 
     def set_attribute(self, key: str, value: Any) -> None:
         validate_attribute_extra_key(key)
-
-        if self.is_stored:
-            value = clean_value(value)
-
         self.model.attributes[key] = value
         self._flush_if_stored({'attributes'})
 
     def set_attribute_many(self, attributes: Dict[str, Any]) -> None:
         for key in attributes:
             validate_attribute_extra_key(key)
-
-        if self.is_stored:
-            attributes = {key: clean_value(value) for key, value in attributes.items()}
 
         for key, value in attributes.items():
             # We need to use the SQLA model, because otherwise the second iteration will refetch
@@ -267,10 +260,6 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
     def reset_attributes(self, attributes: Dict[str, Any]) -> None:
         for key in attributes:
             validate_attribute_extra_key(key)
-
-        if self.is_stored:
-            attributes = clean_value(attributes)
-
         self.bare_model.attributes = attributes
         self._flush_if_stored({'attributes'})
 

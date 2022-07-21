@@ -32,6 +32,7 @@ __all__ = (
     'CifData',
     'Code',
     'ContainerizedCode',
+    'Complex',
     'Data',
     'Dict',
     'EnumData',

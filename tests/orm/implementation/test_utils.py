@@ -9,6 +9,7 @@
 ###########################################################################
 # pylint: disable=no-self-use
 """Unit tests for the backend non-specific utility methods."""
+import cmath
 import math
 
 import pytest
@@ -41,3 +42,22 @@ class TestOrmImplementationUtils:
 
         with pytest.raises(exceptions.ValidationError):
             clean_value(inf_value)
+
+    def test_invalid_complex_value(self):
+        """Test supplying complex nan and inf values to the `clean_value` method."""
+        nan_value = cmath.nan
+        inf_value = cmath.inf
+
+        with pytest.raises(exceptions.ValidationError):
+            clean_value(nan_value)
+
+        with pytest.raises(exceptions.ValidationError):
+            clean_value(inf_value)
+
+    def test_reserved_complex_key(self):
+        """Test supplying a mapping with the reserved
+        `__complex__` key to the `clean_value` method."""
+        mapping = {'__complex__': ''}
+
+        with pytest.raises(exceptions.ValidationError):
+            clean_value(mapping)

@@ -11,7 +11,7 @@
 """Mixin class for SQL implementations of ``extras``."""
 from typing import Any, Dict, Iterable, Tuple
 
-from aiida.orm.implementation.utils import clean_value, validate_attribute_extra_key
+from aiida.orm.implementation.utils import validate_attribute_extra_key
 
 
 class ExtrasMixin:
@@ -34,18 +34,12 @@ class ExtrasMixin:
     def set_extra(self, key: str, value: Any) -> None:
         validate_attribute_extra_key(key)
 
-        if self.is_stored:
-            value = clean_value(value)
-
         self.model.extras[key] = value
         self._flush_if_stored({'extras'})
 
     def set_extra_many(self, extras: Dict[str, Any]) -> None:
         for key in extras:
             validate_attribute_extra_key(key)
-
-        if self.is_stored:
-            extras = {key: clean_value(value) for key, value in extras.items()}
 
         for key, value in extras.items():
             self.bare_model.extras[key] = value
@@ -55,10 +49,6 @@ class ExtrasMixin:
     def reset_extras(self, extras: Dict[str, Any]) -> None:
         for key in extras:
             validate_attribute_extra_key(key)
-
-        if self.is_stored:
-            extras = clean_value(extras)
-
         self.bare_model.extras = extras
         self._flush_if_stored({'extras'})
 

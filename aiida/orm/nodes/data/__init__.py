@@ -19,6 +19,7 @@ from .base import *
 from .bool import *
 from .cif import *
 from .code import *
+from .complex import *
 from .data import *
 from .dict import *
 from .enum import *
@@ -44,6 +45,7 @@ __all__ = (
     'CifData',
     'Code',
     'ContainerizedCode',
+    'Complex',
     'Data',
     'Dict',
     'EnumData',

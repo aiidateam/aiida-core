@@ -602,6 +602,9 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             elif isinstance(value, dict):
                 type_filter = jsonb_typeof(path_in_json) == 'array'
                 casted_entity = path_in_json.astext.cast(JSONB)  # BOOLEANS?
+            elif isinstance(value, complex):
+                type_filter = jsonb_typeof(path_in_json) == 'object'
+                casted_entity = path_in_json.astext.cast(JSONB)  # BOOLEANS?
             elif isinstance(value, str):
                 type_filter = jsonb_typeof(path_in_json) == 'string'
                 casted_entity = path_in_json.astext

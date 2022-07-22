@@ -408,27 +408,34 @@ def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     EXEC_LOGGER.debug(f'stashing files for calculation<{calculation.pk}>: {source_list}', extra=logger_extra)
 
     uuid = calculation.uuid
-    target_basepath = os.path.join(stash_options['target_base'], uuid[:2], uuid[2:4], uuid[4:])
+    source_basepath = pathlib.Path(calculation.get_remote_workdir())
+    target_basepath = pathlib.Path(stash_options['target_base']) / uuid[:2] / uuid[2:4] / uuid[4:]
 
     for source_filename in source_list:
 
-        source_filepath = os.path.join(calculation.get_remote_workdir(), source_filename)
-        target_filepath = os.path.join(target_basepath, source_filename)
-
-        # If the source file is in a (nested) directory, create those directories first in the target directory
-        target_dirname = os.path.dirname(target_filepath)
-        transport.makedirs(target_dirname, ignore_existing=True)
-
-        try:
-            transport.copy(source_filepath, target_filepath)
-        except (IOError, ValueError) as exception:
-            EXEC_LOGGER.warning(f'failed to stash {source_filepath} to {target_filepath}: {exception}')
+        if transport.has_magic(source_filename):
+            copy_instructions = []
+            for globbed_filename in transport.glob(str(source_basepath / source_filename)):
+                target_filepath = target_basepath / pathlib.Path(globbed_filename).relative_to(source_basepath)
+                copy_instructions.append((globbed_filename, target_filepath))
         else:
-            EXEC_LOGGER.debug(f'stashed {source_filepath} to {target_filepath}')
+            copy_instructions = [(source_basepath / source_filename, target_basepath / source_filename)]
+
+        for source_filepath, target_filepath in copy_instructions:
+            # If the source file is in a (nested) directory, create those directories first in the target directory
+            target_dirname = target_filepath.parent
+            transport.makedirs(str(target_dirname), ignore_existing=True)
+
+            try:
+                transport.copy(str(source_filepath), str(target_filepath))
+            except (IOError, ValueError) as exception:
+                EXEC_LOGGER.warning(f'failed to stash {source_filepath} to {target_filepath}: {exception}')
+            else:
+                EXEC_LOGGER.debug(f'stashed {source_filepath} to {target_filepath}')
 
     remote_stash = cls(
         computer=calculation.computer,
-        target_basepath=target_basepath,
+        target_basepath=str(target_basepath),
         stash_mode=StashMode(stash_mode),
         source_list=source_list,
     ).store()

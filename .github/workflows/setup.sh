@@ -21,8 +21,8 @@ verdi setup --non-interactive --config "${CONFIG}/profile.yaml"
 verdi computer setup --non-interactive --config "${CONFIG}/localhost.yaml"
 verdi computer configure core.local localhost --config "${CONFIG}/localhost-config.yaml"
 verdi computer test localhost
-verdi code setup --non-interactive --config "${CONFIG}/doubler.yaml"
-verdi code setup --non-interactive --config "${CONFIG}/add.yaml"
+verdi code create core.code.installed --non-interactive --config "${CONFIG}/doubler.yaml"
+verdi code create core.code.installed --non-interactive --config "${CONFIG}/add.yaml"
 
 # set up slurm-ssh computer
 verdi computer setup --non-interactive --config "${CONFIG}/slurm-ssh.yaml"

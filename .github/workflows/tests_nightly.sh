@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -ev
 
+exit 2
+
 # Make sure the folder containing the workchains is in the python path before the daemon is started
 SYSTEM_TESTS="${GITHUB_WORKSPACE}/.github/system_tests"
 MODULE_POLISH="${GITHUB_WORKSPACE}/.molecule/default/files/polish"

@@ -22,6 +22,7 @@ from .v08_to_v09 import migrate_v8_to_v9
 from .v09_to_v10 import migrate_v9_to_v10
 from .v10_to_v11 import migrate_v10_to_v11
 from .v11_to_v12 import migrate_v11_to_v12
+from .v12_to_v13 import migrate_v12_to_v13
 
 # version from -> version to, function which modifies metadata, data in-place
 LEGACY_MIGRATE_FUNCTIONS: Dict[str, Tuple[str, Callable[[dict, dict], None]]] = {
@@ -33,5 +34,6 @@ LEGACY_MIGRATE_FUNCTIONS: Dict[str, Tuple[str, Callable[[dict, dict], None]]] = 
     '0.9': ('0.10', migrate_v9_to_v10),
     '0.10': ('0.11', migrate_v10_to_v11),
     '0.11': ('0.12', migrate_v11_to_v12),
+    '0.12': ('0.13', migrate_v12_to_v13),
 }
-FINAL_LEGACY_VERSION = '0.12'
+FINAL_LEGACY_VERSION = '0.13'

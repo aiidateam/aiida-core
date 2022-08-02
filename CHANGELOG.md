@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.6.9 - 2022-08-02
+
+[full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.8...v1.6.9)
+
+### Improvements
+
+- `--max-depth` argument to `verdi process status`
+- Update the Docker image `aiidateam/aiida-prerequisites` base image to version `0.6.0`
+
+
 ## v1.6.8 - 2022-03-25
 
 [full changelog](https://github.com/aiidateam/aiida-core/compare/v1.6.7...v1.6.8)

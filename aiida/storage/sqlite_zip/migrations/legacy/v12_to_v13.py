@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Migration from v0.11 to v0.12, used by ``verdi archive migrate`` command.
+"""Migration from v0.12 to v0.13, used by ``verdi archive migrate`` command.
 
 This migration is necessary after the v0.11 to v0.12 migration did not add the core prefix
 to transport entry points.

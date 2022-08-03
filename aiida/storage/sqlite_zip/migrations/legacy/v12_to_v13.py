@@ -19,6 +19,7 @@ MAPPING_TRANSPORTS = {
     'ssh': 'core.ssh',
 }
 
+
 def migrate_v12_to_v13(metadata: dict, data: dict) -> None:
     """Migration of export files from v0.12 to v0.13."""
     # pylint: disable=too-many-branches

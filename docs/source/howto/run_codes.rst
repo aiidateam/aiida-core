@@ -455,6 +455,138 @@ After this, use ``verdi process list`` to monitor the status of the calculations
 See :ref:`topics:processes:usage:launching` and :ref:`topics:processes:usage:monitoring` for more details.
 
 
+.. _how-to:run-codes:monitoring:
+
+How to monitor (and prematurely stop) a calculation
+===================================================
+
+A calculation job will terminate if and only if:
+
+ * The calculation terminates; either nominally or due to an error.
+ * The scheduler kills the job; e.g., due to the wallclock time being exceeded or the allocated memory being exhausted.
+ * The calculation job is killed through AiiDA
+
+One might want to kill the calculation job if it seems that the calculation is not going anywhere, and so instead of letting the calculation run to its end automatically, it is killed.
+It is possible to automate this procedure through *monitoring* of the calculation job.
+
+A monitor is a Python function that will be called in regular intervals while the calculation job is running.
+The function has access to the working directory of the running calculation and can retrieve and inspect their contents.
+Based on the output it can decide whether the job should continue running or should be killed.
+
+How to implement a monitor
+--------------------------
+
+A monitor is a function with the following signature:
+
+.. code-block:: python
+
+    from aiida.orm import CalcJobNode
+    from aiida.transports import Transport
+
+    def monitor(node: CalcJobNode, transport: Transport) -> str | None:
+        """Retrieve and inspect files in working directory of job to determine whether the job should be killed.
+
+        :param node: The node representing the calculation job.
+        :param transport: The transport that can be used to retrieve files from remote working directory.
+        :returns: A string if the job should be killed, `None` otherwise.
+        """
+
+The ``node`` and the ``transport`` arguments are required.
+The ``node`` is a reference to the calculation job node, which can be used to retrieve its input, for example.
+The ``transport`` can be used to retrieve files from the working directory of the calculation running on the remote computer.
+This allows you to inspect the content and determine whether the job should be prematurely killed.
+
+A monitor can define additional keyword arguments that a user can use to modify or configure its behavior.
+The arguments can take any value, as long as it is JSON-serializable.
+This is necessary because the arguments that are passed to a monitor are stored in the database in order to preserve provenance.
+It is recommended to write out each supported keyword argument and not use the ``**kwargs`` catch-all, for example:
+
+.. code-block:: python
+
+    from aiida.orm import CalcJobNode
+    from aiida.transports import Transport
+
+    def monitor(node: CalcJobNode, transport: Transport, custom_keyword: bool = False) -> str | None:
+        """Retrieve and inspect files in working directory of job to determine whether the job should be killed.
+
+        :param node: The node representing the calculation job.
+        :param transport: The transport that can be used to retrieve files from remote working directory.
+        :param custom_keyword: Optional keyword, when set to ``True`` will do something different.
+        :returns: A string if the job should be killed, `None` otherwise.
+        """
+
+This will allow the engine to validate the arguments provided by a user.
+If unsupported arguments are provided to a monitor, the calculation job will not start and the user will be notified of the mistake.
+
+As an example case, imagine a code that would print the string `WARNING` to stdout, in which case we want to stop the calculation.
+The following implementation would accomplish that:
+
+.. code-block:: python
+
+    import tempfile
+    from aiida.orm import CalcJobNode
+    from aiida.transports import Transport
+
+    def monitor(node: CalcJobNode, transport: Transport) -> str | None:
+        """Retrieve and inspect files in working directory of job to determine whether the job should be killed.
+
+        :param node: The node representing the calculation job.
+        :param transport: The transport that can be used to retrieve files from remote working directory.
+        :returns: A string if the job should be killed, `None` otherwise.
+        """
+        with tempfile.NamedTemporaryFile('w+') as handle:
+            transport.getfile(node.options.output_filename, handle.name)
+            handle.seek(0)
+            output = handle.read()
+
+        if 'WARNING' in output:
+            return 'Detected the string `WARNIGN` in the output file.'
+
+The content of the stdout stream, which should be written to the ``node.options.output_filename`` file, is retrieved using ``transport.getfile`` and is written to a temporary file on the local file system.
+The content is then read from the file and if the target string is detected, an error message is returned.
+If a monitor, attached to a calculation job, returns anything other than ``None``, the calculation job will be killed by the engine.
+
+Finally, the monitor needs to be declared using an entry point in the ``aiida.calculations.monitors`` group.
+The next section will show how this entry point is used to assign it to a calculation job.
+
+
+How to assign a monitor
+-----------------------
+
+A monitor can be assigned to a calculation job by adding it to the `monitors` input.
+It takes a dictionary of monitors, where each monitor is defined by a `Dict` node with the following keys:
+
+.. code-block:: python
+
+    monitor = Dict({
+        'entry_point': 'some.monitor'
+    })
+
+The `entry_point` key is required and should contain an entry point that refers to a monitor function registered in the `aiida.calculations.monitors` group.
+It is possible to assign multiple monitors to a single calculation:
+
+.. code-block:: python
+
+    builder = code.get_builder()
+    builder.monitors = {
+        'monitor_a': Dict({'entry_point': 'some.monitor'}),
+        'monitor_b': Dict({'entry_point': 'some.other.monitor'}),
+    }
+
+Note that the keys used in the `monitors` input can be any valid attribute name and does not influence the behavior whatsoever.
+
+If a monitor supports additional custom keyword arguments, these should be passed as a dictionary under the ``kwargs`` key.
+For example, if the monitor accepts a boolean value for the keyword ``custom_keyword``, it can be specified as follows:
+
+.. code-block:: python
+
+    builder = code.get_builder()
+    builder.monitors = {
+        'monitor_a': Dict({'entry_point': 'some.monitor', 'kwargs': {'custom_keyword': True}}),
+    }
+
+If a keyword is specified that is not declared explicitly by the monitor, the validation of the ``CalcJob`` will fail.
+
 
 .. _how-to:run-codes:caching:
 

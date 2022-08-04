@@ -23,7 +23,7 @@ import pytest
 from aiida import orm
 from aiida.common import CalcJobState, LinkType, StashMode, exceptions
 from aiida.engine import CalcJob, CalcJobImporter, ExitCode, Process, launch
-from aiida.engine.processes.calcjobs.calcjob import validate_stash_options
+from aiida.engine.processes.calcjobs.calcjob import validate_monitors, validate_stash_options
 from aiida.engine.processes.ports import PortNamespace
 from aiida.plugins import CalculationFactory
 
@@ -409,6 +409,12 @@ class TestCalcJob:
         process.node.set_state(state)
 
         return process
+
+    def test_process_status(self):
+        """Test that the process status is properly reset if calculation ends successfully."""
+        _, node = launch.run_get_node(ArithmeticAddCalculation, code=self.remote_code, **self.inputs)
+        assert node.is_finished_ok
+        assert node.process_status is None
 
     def test_run_base_class(self):
         """Verify that it is impossible to run, submit or instantiate a base `CalcJob` class."""
@@ -987,6 +993,60 @@ def test_validate_stash_options(stash_options, expected):
         assert validate_stash_options(stash_options, None) is expected
     else:
         assert expected in validate_stash_options(stash_options, None)
+
+
+def test_validate_monitors_valid():
+    """Test the ``validate_monitors`` function for valid input."""
+    monitors = {'monitor': orm.Dict({'entry_point': 'core.always_kill'})}
+    result = validate_monitors(monitors, None)
+    assert result is None
+
+
+def test_validate_monitors_non_existent_entry_point():
+    """Test the ``validate_monitors`` function for invalid entry point."""
+    monitors = {'monitor': orm.Dict({'entry_point': 'not_existant_entry_point'})}
+    result = validate_monitors(monitors, None)
+    assert 'Entry point \'not_existant_entry_point\' not found in group' in result
+
+
+def test_validate_monitors_invalid_signature(monkeypatch):
+    """Test the ``validate_monitors`` function for existing monitor with invalid signature.
+
+    For this test, we monkeypatch the ``BaseFactory`` which is used by the validator to load the monitor. The patched
+    function will return a monitor implementation with an invalid signature.
+    """
+    from aiida.engine.processes.calcjobs.monitors import CalcJobMonitor
+
+    def monitor_invalid_signature(**kwargs):  # pylint: disable=unused-argument
+        """Monitor with invalid signature"""
+
+    def load_entry_point(*args, **kwargs):  # pylint: disable=unused-argument,invalid-name
+        return monitor_invalid_signature
+
+    monkeypatch.setattr(CalcJobMonitor, 'load_entry_point', load_entry_point)
+
+    monitors = {'monitor': orm.Dict({'entry_point': 'monitor_invalid_signature'})}
+    result = validate_monitors(monitors, None)
+    assert 'The monitor `monitor_invalid_signature` has an invalid function signature' in result
+
+
+def test_validate_monitors_unsupported_kwargs():
+    """Test the ``validate_monitors`` function for existing monitor receiving unsupported keyword argument."""
+    monitors = {'monitor': orm.Dict({'entry_point': 'core.always_kill', 'kwargs': {'unsupported_kwarg': True}})}
+    result = validate_monitors(monitors, None)
+    assert 'The monitor `core.always_kill` does not accept the keywords' in result
+
+
+def test_monitor_version(aiida_local_code_factory):
+    """Test that the version of the package of the monitors are added as attributes on the node."""
+    from aiida import __version__
+    code = aiida_local_code_factory('core.arithmetic.add', 'bash')
+    builder = code.get_builder()
+    builder.x = orm.Int(1)
+    builder.y = orm.Int(1)
+    builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.always_kill'})}
+    _, node = launch.run_get_node(builder)
+    assert node.base.attributes.get('version')['monitors'] == {'monitor': __version__}
 
 
 class TestImport:

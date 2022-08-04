@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=too-many-lines
 """The AiiDA process class"""
 import asyncio
 import collections
@@ -707,13 +708,28 @@ class Process(plumpy.processes.Process):
                 self.node.base.links.add_incoming(parent_calc, LinkType.CALL_WORK, self.metadata.call_link_label)
 
         self._setup_metadata(copy.copy(dict(self.inputs.metadata)))
+        self._setup_version_info()
         self._setup_inputs()
+
+    def _setup_version_info(self) -> None:
+        """Store relevant plugin version information."""
+        from aiida.plugins.entry_point import format_entry_point_string
+
+        if self.inputs is None:
+            return
+
+        version_info = self.runner.plugin_version_provider.get_version_info(self.__class__)
+
+        for key, monitor in self.inputs.get('monitors', {}).items():
+            entry_point = monitor.base.attributes.get('entry_point')
+            entry_point_string = format_entry_point_string('aiida.calculations.monitors', entry_point)
+            monitor_version_info = self.runner.plugin_version_provider.get_version_info(entry_point_string)
+            version_info['version'].setdefault('monitors', {})[key] = monitor_version_info['version']['plugin']
+
+        self.node.base.attributes.set_many(version_info)
 
     def _setup_metadata(self, metadata: dict) -> None:
         """Store the metadata on the ProcessNode."""
-        version_info = self.runner.plugin_version_provider.get_version_info(self.__class__)
-        self.node.base.attributes.set_many(version_info)
-
         for name, value in metadata.items():
             if name in ['store_provenance', 'dry_run', 'call_link_label']:
                 continue

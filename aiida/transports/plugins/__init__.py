@@ -15,8 +15,10 @@
 # pylint: disable=wildcard-import
 
 from .ssh import *
+from .sshtowin import *
 
 __all__ = (
+    'SshToWindowsTransport',
     'SshTransport',
     'convert_to_bool',
     'parse_sshconfig',

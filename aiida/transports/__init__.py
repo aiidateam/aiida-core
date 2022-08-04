@@ -18,6 +18,7 @@ from .plugins import *
 from .transport import *
 
 __all__ = (
+    'SshToWindowsTransport',
     'SshTransport',
     'Transport',
     'convert_to_bool',

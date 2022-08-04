@@ -231,6 +231,7 @@ runaiida = "aiida.cmdline.commands.cmd_run:run"
 [project.entry-points."aiida.transports"]
 "core.local" = "aiida.transports.plugins.local:LocalTransport"
 "core.ssh" = "aiida.transports.plugins.ssh:SshTransport"
+"core.sshtowin" = "aiida.transports.plugins.sshtowin:SshToWindowsTransport"
 
 [project.entry-points."aiida.tools.calculations"]
 

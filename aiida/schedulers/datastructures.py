@@ -252,11 +252,12 @@ class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-insta
     The required fields are: working_directory, job_name, num_machines, num_mpiprocs_per_machine, argv.
 
     Fields:
-
-      * ``shebang line``: The first line of the submission script
+      * ``shell_type``: The type of shell where the submission script is run,
+        for example 'bash' or 'powershell'.
+      * ``shebang``: the first line of the submission script.
       * ``submit_as_hold``: if set, the job will be in a 'hold' status right
-        after the submission
-      * ``rerunnable``: if the job is rerunnable (boolean)
+        after the submission.
+      * ``rerunnable``: if the job is rerunnable (boolean).
       * ``job_environment``: a dictionary with environment variables to set
         before the execution of the code.
       * ``environment_variables_double_quotes``: if set to True, use double quotes
@@ -338,6 +339,7 @@ class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-insta
     """
 
     _default_fields = (
+        'shell_type',
         'shebang',
         'submit_as_hold',
         'rerunnable',

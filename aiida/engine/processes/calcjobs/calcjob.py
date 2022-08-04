@@ -848,6 +848,7 @@ class CalcJob(Process):
         job_tmpl.sched_output_path = self.options.scheduler_stdout
         if computer is not None:
             job_tmpl.shebang = computer.get_shebang()
+            job_tmpl.shell_type = computer.get_transport_class().shell_type
         if self.options.scheduler_stderr == self.options.scheduler_stdout:
             job_tmpl.sched_join_files = True
         else:

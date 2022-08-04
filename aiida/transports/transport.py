@@ -73,6 +73,7 @@ class Transport(abc.ABC):
             }
         ),
     ]
+    _shell_type = 'bash'
 
     def __init__(self, *args, **kwargs):  # pylint: disable=unused-argument
         """
@@ -87,9 +88,9 @@ class Transport(abc.ABC):
         self._safe_open_interval = kwargs.pop('safe_interval', self._DEFAULT_SAFE_OPEN_INTERVAL)
         self._use_login_shell = kwargs.pop('use_login_shell', True)
         if self._use_login_shell:
-            self._bash_command_str = 'bash -l '
+            self._bash_command_str = f'{self._shell_type} -l '
         else:
-            self._bash_command_str = 'bash '
+            self._bash_command_str = f'{self._shell_type} '
 
         self._logger = AIIDA_LOGGER.getChild('transport').getChild(self.__class__.__name__)
         self._logger_extra = None
@@ -222,6 +223,13 @@ class Transport(abc.ABC):
         Return a suggestion for the specific field.
         """
         return 'True'
+
+    @classproperty
+    def shell_type(cls):  # pylint: disable=no-self-argument
+        """
+        Return the type of shell used by this transport class (e.g. bash, powershell).
+        """
+        return cls._shell_type
 
     @property
     def logger(self):

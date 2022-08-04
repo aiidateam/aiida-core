@@ -23,15 +23,16 @@ class SshToWindowsTransport(SshTransport):  # pylint: disable=too-many-public-me
     """
     Support connection, command execution and data transfer to remote computers running Windows Powershell via SSH+SFTP.
     """
+    _shell_type = 'powershell'
 
     def __init__(self, *args, **kwargs):  # pylint: disable=unused-argument
 
         super().__init__(*args, **kwargs)
 
         if self._use_login_shell:
-            self._bash_command_str = 'powershell '
+            self._bash_command_str = f'{self._shell_type} -l '
         else:
-            self._bash_command_str = 'powershell '
+            self._bash_command_str = f'{self._shell_type} '
 
     def _exec_command_internal(self, command, combine_stderr=False, bufsize=-1):  # pylint: disable=arguments-differ
         """

@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Transport tasks for calculation jobs."""
+from __future__ import annotations
+
 import asyncio
 import functools
 import logging
@@ -22,6 +24,7 @@ from aiida.common.datastructures import CalcJobState
 from aiida.common.exceptions import FeatureNotAvailable, TransportTaskException
 from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
+from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.transports import TransportQueue
 from aiida.engine.utils import InterruptableFuture, exponential_backoff_retry, interruptable_task
 from aiida.manage.configuration import get_config_option
@@ -29,6 +32,7 @@ from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
 from aiida.schedulers.datastructures import JobState
 
 from ..process import ProcessState
+from .monitors import CalcJobMonitor
 
 if TYPE_CHECKING:
     from .calcjob import CalcJob
@@ -166,11 +170,8 @@ async def task_update_job(node: CalcJobNode, job_manager, cancellable: Interrupt
     If all retries fail, the task will raise a TransportTaskException
 
     :param node: the node that represents the job calculation
-    :type node: :class:`aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`
     :param job_manager: The job manager
-    :type job_manager: :class:`aiida.engine.processes.calcjobs.manager.JobManager`
     :param cancellable: A cancel flag
-    :type cancellable: :class:`aiida.engine.utils.InterruptableFuture`
     :return: True if the tasks was successfully completed, False otherwise
     """
     state = node.get_state()
@@ -218,6 +219,62 @@ async def task_update_job(node: CalcJobNode, job_manager, cancellable: Interrupt
             node.set_state(CalcJobState.STASHING)
 
         return job_done
+
+
+async def task_monitor_job(node: CalcJobNode, transport_queue: TransportQueue, cancellable: InterruptableFuture):
+    """Transport task that will monitor the job calculation if any monitors have been defined.
+
+    The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
+    function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
+    retry after an interval that increases exponentially with the number of retries, for a maximum number of retries.
+    If all retries fail, the task will raise a TransportTaskException
+
+    :param node: the node that represents the job calculation
+    :param transport_queue: the TransportQueue from which to request a Transport
+    :param cancellable: A cancel flag
+    :return: True if the tasks was successfully completed, False otherwise
+    """
+    state = node.get_state()
+
+    if state in [CalcJobState.RETRIEVING, CalcJobState.STASHING]:
+        logger.warning(f'CalcJob<{node.pk}> already marked as `{state}`, skipping task_monitor_job')
+        return None
+
+    initial_interval = get_config_option(RETRY_INTERVAL_OPTION)
+    max_attempts = get_config_option(MAX_ATTEMPTS_OPTION)
+    authinfo = node.get_authinfo()
+
+    async def do_monitor():
+
+        with transport_queue.request_transport(authinfo) as request:
+            transport = await cancellable.with_interrupt(request)
+            transport.chdir(node.get_remote_workdir())
+
+            monitors = {key: CalcJobMonitor(**node.get_dict()) for key, node in node.inputs.monitors.items()}
+
+            for monitor in monitors:
+
+                monitor_result = monitor.load_entry_point()(node, transport, **monitor.kwargs)
+
+                if monitor_result is not None:
+                    message = f'Monitor `{monitor.entry_point}` killed job with message: {monitor_result}'
+                    logger.warning(message)
+                    return message
+
+    try:
+        logger.info(f'scheduled request to monitor CalcJob<{node.pk}>')
+        ignore_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
+        monitor_result = await exponential_backoff_retry(
+            do_monitor, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
+        )
+    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):  # pylint: disable=try-except-raise
+        raise
+    except Exception as exception:
+        logger.warning(f'monitoring CalcJob<{node.pk}> failed')
+        raise TransportTaskException(f'monitor_calculation failed {max_attempts} times consecutively') from exception
+    else:
+        logger.info(f'monitoring CalcJob<{node.pk}> successful')
+        return monitor_result
 
 
 async def task_retrieve_job(
@@ -299,7 +356,6 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
     :param node: the node that represents the job calculation
     :param transport_queue: the TransportQueue from which to request a Transport
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
-    :type cancellable: :class:`aiida.engine.utils.InterruptableFuture`
     :raises: Return if the tasks was successfully completed
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
@@ -411,18 +467,22 @@ class Waiting(plumpy.process_states.Waiting):
 
     async def execute(self) -> plumpy.process_states.State:  # type: ignore[override] # pylint: disable=invalid-overridden-method
         """Override the execute coroutine of the base `Waiting` state."""
-        # pylint: disable=too-many-branches,too-many-statements
+        # pylint: disable=too-many-branches,too-many-statements,too-many-nested-blocks
         node = self.process.node
         transport_queue = self.process.runner.transport
         result: plumpy.process_states.State = self
-        command = self.data
+
+        if isinstance(self.data, dict):
+            command = self.data['command']
+        else:
+            command = self.data
 
         process_status = f'Waiting for transport task: {command}'
+        node.set_process_status(process_status)
 
         try:
 
             if command == UPLOAD_COMMAND:
-                node.set_process_status(process_status)
                 skip_submit = await self._launch_task(task_upload_job, self.process, transport_queue)
                 if skip_submit:
                     result = self.retrieve()
@@ -430,7 +490,6 @@ class Waiting(plumpy.process_states.Waiting):
                     result = self.submit()
 
             elif command == SUBMIT_COMMAND:
-                node.set_process_status(process_status)
                 await self._launch_task(task_submit_job, node, transport_queue)
                 result = self.update()
 
@@ -444,34 +503,42 @@ class Waiting(plumpy.process_states.Waiting):
                     node.set_process_status(process_status)
                     job_done = await self._launch_task(task_update_job, node, self.process.runner.job_manager)
 
-                if node.get_option('stash') is not None:
-                    result = self.stash()
-                else:
-                    result = self.retrieve()
+                    if 'monitors' in node.inputs:
+                        monitor_result = await self._launch_task(task_monitor_job, node, transport_queue)
+
+                        if monitor_result is not None:
+                            raise plumpy.process_states.KillInterruption(monitor_result)
+
+                result = self.stash()
 
             elif command == STASH_COMMAND:
-                node.set_process_status(process_status)
-                await self._launch_task(task_stash_job, node, transport_queue)
+                if node.get_option('stash') is not None:
+                    await self._launch_task(task_stash_job, node, transport_queue)
                 result = self.retrieve()
 
             elif command == RETRIEVE_COMMAND:
-                node.set_process_status(process_status)
                 temp_folder = tempfile.mkdtemp()
                 await self._launch_task(task_retrieve_job, node, transport_queue, temp_folder)
-                result = self.parse(temp_folder)
+                if isinstance(self.data, dict):
+                    exit_code = self.data.get('exit_code', None)
+                else:
+                    exit_code = None
+                result = self.parse(temp_folder, exit_code)
 
             else:
                 raise RuntimeError('Unknown waiting command')
 
         except TransportTaskException as exception:
             raise plumpy.process_states.PauseInterruption(f'Pausing after failed transport task: {exception}')
-        except plumpy.process_states.KillInterruption:
+        except plumpy.process_states.KillInterruption as exception:
             await self._launch_task(task_kill_job, node, transport_queue)
             if self._killing is not None:
                 self._killing.set_result(True)
             else:
                 logger.warning(f'killed CalcJob<{node.pk}> but async future was None')
-            raise
+            node.set_process_status(str(exception))
+            result = self.retrieve(exit_code=self.process.exit_codes.STOPPED_BY_MONITOR.format(message=exception))
+            return result
         except (plumpy.futures.CancelledError, asyncio.CancelledError):
             node.set_process_status(f'Transport task {command} was cancelled')
             raise
@@ -499,38 +566,49 @@ class Waiting(plumpy.process_states.Waiting):
     def upload(self) -> 'Waiting':
         """Return the `Waiting` state that will `upload` the `CalcJob`."""
         msg = 'Waiting for calculation folder upload'
-        return self.create_state(ProcessState.WAITING, None, msg=msg, data=UPLOAD_COMMAND)  # type: ignore[return-value]
+        return self.create_state(  # type: ignore[return-value]
+            ProcessState.WAITING, None, msg=msg, data={'command': UPLOAD_COMMAND}
+        )
 
     def submit(self) -> 'Waiting':
         """Return the `Waiting` state that will `submit` the `CalcJob`."""
         msg = 'Waiting for scheduler submission'
-        return self.create_state(ProcessState.WAITING, None, msg=msg, data=SUBMIT_COMMAND)  # type: ignore[return-value]
+        return self.create_state(  # type: ignore[return-value]
+            ProcessState.WAITING, None, msg=msg, data={'command': SUBMIT_COMMAND}
+        )
 
     def update(self) -> 'Waiting':
         """Return the `Waiting` state that will `update` the `CalcJob`."""
         msg = 'Waiting for scheduler update'
-        return self.create_state(ProcessState.WAITING, None, msg=msg, data=UPDATE_COMMAND)  # type: ignore[return-value]
+        return self.create_state(  # type: ignore[return-value]
+            ProcessState.WAITING, None, msg=msg, data={'command': UPDATE_COMMAND}
+        )
 
-    def retrieve(self) -> 'Waiting':
+    def retrieve(self, exit_code: ExitCode | None = None) -> 'Waiting':
         """Return the `Waiting` state that will `retrieve` the `CalcJob`."""
         msg = 'Waiting to retrieve'
-        return self.create_state(
-            ProcessState.WAITING, None, msg=msg, data=RETRIEVE_COMMAND
-        )  # type: ignore[return-value]
+        return self.create_state(  # type: ignore[return-value]
+            ProcessState.WAITING, None, msg=msg, data={
+                'command': RETRIEVE_COMMAND,
+                'exit_code': exit_code
+            }
+        )
 
     def stash(self):
         """Return the `Waiting` state that will `stash` the `CalcJob`."""
         msg = 'Waiting to stash'
-        return self.create_state(ProcessState.WAITING, None, msg=msg, data=STASH_COMMAND)
+        return self.create_state(ProcessState.WAITING, None, msg=msg, data={'command': STASH_COMMAND})
 
-    def parse(self, retrieved_temporary_folder: str) -> plumpy.process_states.Running:
+    def parse(
+        self, retrieved_temporary_folder: str, exit_code: ExitCode | None = None
+    ) -> plumpy.process_states.Running:
         """Return the `Running` state that will parse the `CalcJob`.
 
         :param retrieved_temporary_folder: temporary folder used in retrieving that can be used during parsing.
         """
-        return self.create_state(
-            ProcessState.RUNNING, self.process.parse, retrieved_temporary_folder
-        )  # type: ignore[return-value]
+        return self.create_state(  # type: ignore[return-value]
+            ProcessState.RUNNING, self.process.parse, retrieved_temporary_folder, exit_code
+        )
 
     def interrupt(self, reason: Any) -> Optional[plumpy.futures.Future]:  # type: ignore[override]
         """Interrupt the `Waiting` state by calling interrupt on the transport task `InterruptableFuture`."""

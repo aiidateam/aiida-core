@@ -142,6 +142,9 @@ runaiida = "aiida.cmdline.commands.cmd_run:run"
 [project.entry-points."aiida.calculations.importers"]
 "core.arithmetic.add" = "aiida.calculations.importers.arithmetic.add:ArithmeticAddCalculationImporter"
 
+[project.entry-points."aiida.calculations.monitors"]
+"core.always_kill" = "aiida.calculations.monitors.base:always_kill"
+
 [project.entry-points."aiida.cmdline.computer.configure"]
 "core.local" = "aiida.transports.plugins.local:CONFIGURE_LOCAL_CMD"
 "core.ssh" = "aiida.transports.plugins.ssh:CONFIGURE_SSH_CMD"

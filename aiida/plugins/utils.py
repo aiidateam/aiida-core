@@ -13,6 +13,7 @@ from __future__ import annotations
 from importlib import import_module
 from inspect import isclass, isfunction
 from logging import Logger
+import typing as t
 
 from aiida.common import AIIDA_LOGGER
 from aiida.common.exceptions import EntryPointError
@@ -30,14 +31,14 @@ class PluginVersionProvider:
     """Utility class that determines version information about a given plugin resource."""
 
     def __init__(self):
-        self._cache: dict[type, dict[str, dict[str, str]]] = {}
+        self._cache: dict[type, dict[t.Any, dict[t.Any, t.Any]]] = {}
         self._logger: Logger = AIIDA_LOGGER.getChild('plugin_version_provider')
 
     @property
     def logger(self) -> Logger:
         return self._logger
 
-    def get_version_info(self, plugin: str | type) -> dict[str, dict[str, str]]:
+    def get_version_info(self, plugin: str | type) -> dict[t.Any, dict[t.Any, t.Any]]:
         """Get the version information for a given plugin.
 
         .. note::

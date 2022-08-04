@@ -259,6 +259,7 @@ autodoc_aliases_typing = {
     'WorkChainNode': 'aiida.orm.nodes.process.workflow.workchain.WorkChainNode',
     'orm.ProcessNode': 'aiida.orm.nodes.process.process.ProcessNode',
     'ProcessNode': 'aiida.orm.nodes.process.process.ProcessNode',
+    'CalcJobNode': 'aiida.orm.nodes.process.calculation.calcjob.CalcJobNode',
     'BackendAuthInfo': 'aiida.orm.implementation.authinfos.BackendAuthInfo',
     'BackendComment': 'aiida.orm.implementation.comments.BackendComment',
     'BackendComputer': 'aiida.orm.implementation.computers.BackendComputer',

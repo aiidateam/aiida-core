@@ -30,7 +30,7 @@ class SshToWindowsTransport(SshTransport):  # pylint: disable=too-many-public-me
         super().__init__(*args, **kwargs)
 
         if self._use_login_shell:
-            self._bash_command_str = f'{self._shell_type} -l '
+            self._bash_command_str = f'{self._shell_type} '
         else:
             self._bash_command_str = f'{self._shell_type} '
 

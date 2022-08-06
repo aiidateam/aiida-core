@@ -34,6 +34,7 @@ from sqlalchemy.types import Boolean, DateTime, Float, Integer, String
 from aiida.common.exceptions import NotExistent
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.querybuilder import QUERYBUILD_LOGGER, BackendQueryBuilder, QueryDictType
+from aiida.orm.implementation.utils import clean_value
 
 from .joiner import JoinReturn, SqlaJoiner
 
@@ -587,7 +588,6 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         """Return a filter expression"""
 
         # pylint: disable=too-many-branches, too-many-arguments, too-many-statements
-
         def cast_according_to_type(path_in_json, value):
             """Cast the value according to the type"""
             if isinstance(value, bool):
@@ -618,48 +618,49 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         if column is None:
             column = get_column(column_name, alias)
 
+        cleaned_value = clean_value(value)
         database_entity = column[tuple(attr_key)]
         expr: Any
         if operator == '==':
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
-            expr = case((type_filter, casted_entity == value), else_=False)
+            expr = case((type_filter, casted_entity == cleaned_value), else_=False)
         elif operator == '>':
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
-            expr = case((type_filter, casted_entity > value), else_=False)
+            expr = case((type_filter, casted_entity > cleaned_value), else_=False)
         elif operator == '<':
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
-            expr = case((type_filter, casted_entity < value), else_=False)
+            expr = case((type_filter, casted_entity < cleaned_value), else_=False)
         elif operator in ('>=', '=>'):
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
-            expr = case((type_filter, casted_entity >= value), else_=False)
+            expr = case((type_filter, casted_entity >= cleaned_value), else_=False)
         elif operator in ('<=', '=<'):
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
-            expr = case((type_filter, casted_entity <= value), else_=False)
+            expr = case((type_filter, casted_entity <= cleaned_value), else_=False)
         elif operator == 'of_type':
             # http://www.postgresql.org/docs/9.5/static/functions-json.html
             #  Possible types are object, array, string, number, boolean, and null.
             valid_types = ('object', 'array', 'string', 'number', 'boolean', 'null')
             if value not in valid_types:
                 raise ValueError(f'value {value} for of_type is not among valid types\n{valid_types}')
-            expr = jsonb_typeof(database_entity) == value
+            expr = jsonb_typeof(database_entity) == cleaned_value
         elif operator == 'like':
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
-            expr = case((type_filter, casted_entity.like(value)), else_=False)
+            expr = case((type_filter, casted_entity.like(cleaned_value)), else_=False)
         elif operator == 'ilike':
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
-            expr = case((type_filter, casted_entity.ilike(value)), else_=False)
+            expr = case((type_filter, casted_entity.ilike(cleaned_value)), else_=False)
         elif operator == 'in':
             type_filter, casted_entity = cast_according_to_type(database_entity, value[0])
-            expr = case((type_filter, casted_entity.in_(value)), else_=False)
+            expr = case((type_filter, casted_entity.in_(cleaned_value)), else_=False)
         elif operator == 'contains':
-            expr = database_entity.cast(JSONB).contains(value)
+            expr = database_entity.cast(JSONB).contains(cleaned_value)
         elif operator == 'has_key':
-            expr = database_entity.cast(JSONB).has_key(value)  # noqa
+            expr = database_entity.cast(JSONB).has_key(cleaned_value)  # noqa
         elif operator == 'of_length':
             expr = case(
                 (
                     jsonb_typeof(database_entity) == 'array',
-                    jsonb_array_length(database_entity.cast(JSONB)) == value,
+                    jsonb_array_length(database_entity.cast(JSONB)) == cleaned_value,
                 ),
                 else_=False,
             )
@@ -668,7 +669,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             expr = case(
                 (
                     jsonb_typeof(database_entity) == 'array',
-                    jsonb_array_length(database_entity.cast(JSONB)) > value,
+                    jsonb_array_length(database_entity.cast(JSONB)) > cleaned_value,
                 ),
                 else_=False,
             )
@@ -676,7 +677,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             expr = case(
                 (
                     jsonb_typeof(database_entity) == 'array',
-                    jsonb_array_length(database_entity.cast(JSONB)) < value,
+                    jsonb_array_length(database_entity.cast(JSONB)) < cleaned_value,
                 ),
                 else_=False,
             )

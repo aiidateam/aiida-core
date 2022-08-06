@@ -265,6 +265,7 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
             if isinstance(value, complex):
                 return case(
                     (type_filter, casted_entity == func.json(json.dumps({
+                        '__complex__': True,
                         'real': value.real,
                         'imag': value.imag
                     }))),

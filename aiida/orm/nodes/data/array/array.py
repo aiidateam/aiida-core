@@ -200,10 +200,26 @@ class ArrayData(Data):
         The idea is that this dictionary contains the array name as a key and
         the value is the numpy array transformed into a list. This is so that
         it can be transformed into a json object.
+
+        The function will also sanitize the array removing ``np.nan`` and ``np.inf``
+        for ``None`` of this way the resulting JSON is always valid.
+        Both ``np.nan`` and ``np.inf``/``-np.inf`` are set to None to be in
+        accordance with the
+        `ECMA-262 standard <https://www.ecma-international.org/publications-and-standards/standards/ecma-262/>`_.
         """
+        import numpy as np
+
         array_dict = {}
         for key, val in self.get_iterarrays():
-            array_dict[key] = val.tolist()
+            # Replacing np.nan and np.inf/-np.inf for Nones.
+            # np.nan and np.inf are not proper JSON values and they should be
+            # replaced by Nones so that they are displayed as null in JSON
+            _val = np.reshape(
+                np.asarray([
+                    entry if not np.isnan(entry) and not np.isinf(entry) else None for entry in val.flatten().tolist()
+                ]), val.shape
+            )
+            array_dict[key] = _val.tolist()
         return array_dict
 
     def _prepare_json(self, main_file_name='', comments=True):  # pylint: disable=unused-argument

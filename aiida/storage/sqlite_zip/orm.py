@@ -263,14 +263,15 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
             if isinstance(value, (list, dict)):
                 return case((type_filter, casted_entity == func.json(json.dumps(value))), else_=False)
             if isinstance(value, complex):
-                return case(
-                    (type_filter, casted_entity == func.json(json.dumps({
+                return case((
+                    type_filter, casted_entity
+                    == func.json(json.dumps({
                         '__complex__': True,
                         'real': value.real,
                         'imag': value.imag
-                    }))),
-                    else_=False
-                )
+                    }))
+                ),
+                            else_=False)
             # to-do not working for dict
             return case((type_filter, casted_entity == value), else_=False)
         if operator == '>':

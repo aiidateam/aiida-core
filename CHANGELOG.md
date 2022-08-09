@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.0.3 - 2022-08-09
+
+[Full changelog](https://github.com/aiidateam/aiida-core/compare/v2.0.2...v2.0.3)
+
+Update of the Dockerfile base image (`aiidateam/aiida-prerequisites`) to version `0.6.0`.
+
+
 ## v2.0.2 - 2022-07-13
 
 [Full changelog](https://github.com/aiidateam/aiida-core/compare/v2.0.1...v2.0.2)

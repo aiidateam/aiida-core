@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the :class:`aiida.common.folders.Folder` class."""
+"""Tests for the :mod:`aiida.common.folders` module."""
 import io
 import pathlib
 import sys
@@ -15,7 +15,7 @@ import tempfile
 
 import pytest
 
-from aiida.common.folders import Folder
+from aiida.common.folders import Folder, SandboxFolder
 
 
 def fs_encoding_is_utf8():
@@ -81,3 +81,38 @@ def test_open(tmpdir):
 
     with folder.open(filename) as handle:
         assert handle.read() == 'test'
+
+
+def test_sandbox():
+    """Test the :class:`aiida.common.folders.SandboxFolder` class."""
+    sandbox = SandboxFolder()
+
+    # By default, the created sandbox should be relative to the default temporary directory of the OS.
+    assert pathlib.Path(sandbox.abspath).relative_to(tempfile.gettempdir())
+
+
+def test_sandbox_filepath(tmp_path):
+    """Test the :class:`aiida.common.folders.SandboxFolder` class with the ``filepath`` argument."""
+    sandbox = SandboxFolder(filepath=tmp_path)
+    assert pathlib.Path(sandbox.abspath).relative_to(tmp_path)
+
+
+def test_sandbox_filepath_not_existing(tmp_path):
+    """Test the :class:`aiida.common.folders.SandboxFolder` class with the ``filepath`` argument.
+
+    Ensure that a non-existing ``filepath`` is created automatically, including parent directories.
+    """
+    filepath = (tmp_path / 'some' / 'sub' / 'folder')
+    assert not filepath.exists()
+    sandbox = SandboxFolder(filepath=filepath)
+    assert pathlib.Path(sandbox.abspath).relative_to(filepath)
+
+
+def test_sandbox_filepath_multiple(tmp_path):
+    """Test the :class:`aiida.common.folders.SandboxFolder` class with the ``filepath`` argument.
+
+    Ensure that multiple instances using the same ``filepath`` get individual subfolders.
+    """
+    sandbox_01 = SandboxFolder(filepath=tmp_path)
+    sandbox_02 = SandboxFolder(filepath=tmp_path)
+    assert sandbox_01.abspath != sandbox_02.abspath

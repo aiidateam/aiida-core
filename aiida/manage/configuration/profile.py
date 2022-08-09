@@ -124,16 +124,8 @@ class Profile:  # pylint: disable=too-many-public-methods
     @property
     def storage_cls(self) -> Type['StorageBackend']:
         """Return the storage backend class for this profile."""
-        if self.storage_backend == 'psql_dos':
-            from aiida.storage.psql_dos.backend import PsqlDosBackend
-            return PsqlDosBackend
-        if self.storage_backend == 'sqlite_zip':
-            from aiida.storage.sqlite_zip.backend import SqliteZipBackend
-            return SqliteZipBackend
-        if self.storage_backend == 'sqlite_temp':
-            from aiida.storage.sqlite_temp.backend import SqliteTempBackend
-            return SqliteTempBackend
-        raise ValueError(f'unknown storage backend type: {self.storage_backend}')
+        from aiida.plugins import StorageFactory
+        return StorageFactory(self.storage_backend)
 
     @property
     def process_control_backend(self) -> str:
@@ -226,6 +218,10 @@ class Profile:  # pylint: disable=too-many-public-methods
         :return: absolute filepath of the profile's file repository
         """
         from urllib.parse import urlparse
+
+        from aiida.common.warnings import warn_deprecation
+
+        warn_deprecation('This method has been deprecated', version=3)
 
         if 'repository_uri' not in self.storage_config:
             raise KeyError('repository_uri not defined in profile storage config')

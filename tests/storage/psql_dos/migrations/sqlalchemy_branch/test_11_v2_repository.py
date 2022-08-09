@@ -12,6 +12,7 @@ import hashlib
 import os
 
 from aiida.common.utils import get_new_uuid
+from aiida.storage.psql_dos.backend import get_filepath_container
 from aiida.storage.psql_dos.migrations.utils import utils
 from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
 
@@ -148,7 +149,7 @@ def test_repository_migration(perform_migrations: PsqlDostoreMigrator):  # pylin
         node_03_pk = node_03.id
         node_05_pk = node_05.id
 
-        repo_path = perform_migrations.profile.repository_path
+        repo_path = get_filepath_container(perform_migrations.profile).parent
 
         utils.put_object_from_string(repo_path, node_01.uuid, 'sub/path/file_b.txt', 'b')
         utils.put_object_from_string(repo_path, node_01.uuid, 'sub/file_a.txt', 'a')

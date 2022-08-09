@@ -19,7 +19,7 @@ import pytest
 
 from aiida.engine import WorkChain, run_get_node, submit, while_
 from aiida.manage import get_manager
-from aiida.orm import Code, Int
+from aiida.orm import InstalledCode, Int
 from aiida.plugins.factories import CalculationFactory
 
 ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
@@ -119,7 +119,9 @@ WORKCHAINS = {
 @pytest.mark.benchmark(group='engine')
 def test_workchain_local(benchmark, aiida_localhost, workchain, iterations, outgoing):
     """Benchmark Workchains, executed in the local runner."""
-    code = Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[aiida_localhost, '/bin/true'])
+    code = InstalledCode(
+        default_calc_job_plugin='core.arithmetic.add', computer=aiida_localhost, filepath_executable='/bin/true'
+    )
 
     def _run():
         return run_get_node(workchain, iterations=Int(iterations), code=code)
@@ -175,7 +177,9 @@ def submit_get_node():
 @pytest.mark.benchmark(group='engine')
 def test_workchain_daemon(benchmark, submit_get_node, aiida_localhost, workchain, iterations, outgoing):
     """Benchmark Workchains, executed in the via a daemon runner."""
-    code = Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[aiida_localhost, '/bin/true'])
+    code = InstalledCode(
+        default_calc_job_plugin='core.arithmetic.add', computer=aiida_localhost, filepath_executable='/bin/true'
+    )
 
     def _run():
         return submit_get_node(workchain, iterations=Int(iterations), code=code)

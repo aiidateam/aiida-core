@@ -14,6 +14,7 @@ from flask import make_response, request
 from flask_restful import Resource
 
 from aiida.common.lang import classproperty
+from aiida.manage import get_config_option, load_profile
 from aiida.restapi.common.exceptions import RestInputValidationError
 from aiida.restapi.common.utils import Utils, close_thread_connection
 from aiida.restapi.translator.nodes.node import NodeTranslator
@@ -33,11 +34,10 @@ class ServerInfo(Resource):
         It returns the general info about the REST API
         :return: returns current AiiDA version defined in aiida/__init__.py
         """
-        # Decode url parts
         path = unquote(request.path)
         url = unquote(request.url)
         url_root = unquote(request.url_root)
-
+        query_string = unquote(request.query_string.decode('utf-8'))
         subpath = self.utils.strip_api_prefix(path).strip('/')
         pathlist = self.utils.split_path(subpath)
 
@@ -81,7 +81,7 @@ class ServerInfo(Resource):
             url=url,
             url_root=url_root,
             path=path,
-            query_string=request.query_string.decode('utf-8'),
+            query_string=query_string,
             resource_type='Info',
             data=response
         )
@@ -103,8 +103,10 @@ class BaseResource(Resource):
 
     ## TODO add the caching support. I cache total count, results, and possibly
 
-    def __init__(self, **kwargs):
+    def __init__(self, profile, **kwargs):
+        """Construct the resource."""
         self.trans = self._translator_class(**kwargs)
+        self.profile = profile
 
         # Configure utils
         utils_conf_keys = ('PREFIX', 'PERPAGE_DEFAULT', 'LIMIT_DEFAULT')
@@ -114,6 +116,26 @@ class BaseResource(Resource):
         # HTTP Request method decorators
         if 'get_decorators' in kwargs and isinstance(kwargs['get_decorators'], (tuple, list, set)):
             self.method_decorators = {'get': list(kwargs['get_decorators'])}
+
+    @staticmethod
+    def unquote_request():
+        """Unquote and return various parts of the request.
+
+        :returns: Tuple of the request path, url, url root and query string.
+        """
+        path = unquote(request.path)
+        url = unquote(request.url)
+        url_root = unquote(request.url_root)
+        query_string = unquote(request.query_string.decode('utf-8'))
+        return path, url, url_root, query_string
+
+    def parse_path(self, path):
+        """Parse the request path."""
+        return self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
+
+    def parse_query_string(self, query_string):
+        """Parse the request query string."""
+        return self.utils.parse_query_string(query_string)
 
     @classproperty
     def parse_pk_uuid(cls):  # pylint: disable=no-self-argument
@@ -131,6 +153,19 @@ class BaseResource(Resource):
 
         return node
 
+    def load_profile(self, profile=None):
+        """Load the required profile.
+
+        This will load the profile specified by the ``profile`` keyword in the query parameters, and if not specified it
+        will default to the profile defined in the constructor.
+        """
+        profile_switching_enabled = get_config_option('rest_api.profile_switching')
+
+        if profile is not None and not profile_switching_enabled:
+            raise RestInputValidationError('specifying an explicit profile is not enabled for this REST API.')
+
+        load_profile(profile or self.profile, allow_switch=True)
+
     def get(self, id=None, page=None):  # pylint: disable=redefined-builtin,invalid-name,unused-argument
         # pylint: disable=too-many-locals
         """
@@ -139,21 +174,34 @@ class BaseResource(Resource):
         :param page: page no, used for pagination
         :return: http response
         """
+        path, url, url_root, query_string = self.unquote_request()
+        resource_type, page, node_id, query_type = self.parse_path(path)
+        parameters = self.parse_query_string(query_string)
+        limit = parameters[0]
+        offset = parameters[1]
+        perpage = parameters[2]
+        orderby = parameters[3]
+        filters = parameters[4]
+        profile = parameters[-1]
 
-        ## Decode url parts
-        path = unquote(request.path)
-        query_string = unquote(request.query_string.decode('utf-8'))
-        url = unquote(request.url)
-        url_root = unquote(request.url_root)
-
-        ## Parse request
-        (resource_type, page, node_id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
-
-        # pylint: disable=unused-variable
-        (
-            limit, offset, perpage, orderby, filters, download_format, download, filename, tree_in_limit,
-            tree_out_limit, attributes, attributes_filter, extras, extras_filter, full_type
-        ) = self.utils.parse_query_string(query_string)
+        try:
+            self.load_profile(profile)
+        except RestInputValidationError as exception:
+            return self.utils.build_response(
+                status=400,
+                headers=self.utils.build_headers(url=request.url, total_count=0),
+                data={
+                    'method': request.method,
+                    'url': url,
+                    'url_root': url_root,
+                    'path': path,
+                    'query_string': query_string,
+                    'resource_type': self.__class__.__name__,
+                    'data': {
+                        'message': str(exception)
+                    },
+                }
+            )
 
         ## Validate request
         self.utils.validate_request(
@@ -175,6 +223,7 @@ class BaseResource(Resource):
             headers = self.utils.build_headers(url=request.url, total_count=1)
 
         else:
+
             ## Set the query, and initialize qb object
             self.trans.set_query(filters=filters, orders=orderby, node_id=node_id)
 
@@ -200,7 +249,7 @@ class BaseResource(Resource):
             url_root=url_root,
             path=request.path,
             id=node_id,
-            query_string=request.query_string.decode('utf-8'),
+            query_string=query_string,
             resource_type=resource_type,
             data=results
         )
@@ -234,16 +283,17 @@ class QueryBuilder(BaseResource):
 
     def get(self):  # pylint: disable=arguments-differ
         """Static return to state information about this endpoint."""
+        path, url, url_root, query_string = self.unquote_request()
         headers = self.utils.build_headers(url=request.url, total_count=1)
         return self.utils.build_response(
             status=405,  # Method Not Allowed
             headers=headers,
             data={
                 'method': request.method,
-                'url': unquote(request.url),
-                'url_root': unquote(request.url_root),
-                'path': unquote(request.path),
-                'query_string': request.query_string.decode('utf-8'),
+                'url': url,
+                'url_root': url_root,
+                'path': path,
+                'query_string': query_string,
                 'resource_type': self.__class__.__name__,
                 'data': {'message': self.GET_MESSAGE},
             },
@@ -262,6 +312,28 @@ class QueryBuilder(BaseResource):
         :return: QueryBuilder result of AiiDA entities in "standard" REST API format.
         """
         # pylint: disable=protected-access
+        path, url, url_root, query_string = self.unquote_request()
+        profile = self.parse_query_string(query_string)[-1]
+
+        try:
+            self.load_profile(profile)
+        except RestInputValidationError as exception:
+            return self.utils.build_response(
+                status=400,
+                headers=self.utils.build_headers(url=request.url, total_count=0),
+                data={
+                    'method': request.method,
+                    'url': url,
+                    'url_root': url_root,
+                    'path': path,
+                    'query_string': query_string,
+                    'resource_type': self.__class__.__name__,
+                    'data': {
+                        'message': str(exception)
+                    },
+                }
+            )
+
         self.trans._query_help = request.get_json(force=True)
         # While the data may be correct JSON, it MUST be a single JSON Object,
         # equivalent of a QueryBuilder.as_dict() dictionary.
@@ -350,20 +422,31 @@ class Node(BaseResource):
         :param page: page no, used for pagination
         :return: http response
         """
-
-        ## Decode url parts
-        path = unquote(request.path)
-        query_string = unquote(request.query_string.decode('utf-8'))
-        url = unquote(request.url)
-        url_root = unquote(request.url_root)
-
-        ## Parse request
-        (resource_type, page, node_id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
-
+        path, url, url_root, query_string = self.unquote_request()
+        (resource_type, page, node_id, query_type) = self.parse_path(path)
         (
             limit, offset, perpage, orderby, filters, download_format, download, filename, tree_in_limit,
-            tree_out_limit, attributes, attributes_filter, extras, extras_filter, full_type
-        ) = self.utils.parse_query_string(query_string)
+            tree_out_limit, attributes, attributes_filter, extras, extras_filter, full_type, profile
+        ) = self.parse_query_string(query_string)
+
+        try:
+            self.load_profile(profile)
+        except RestInputValidationError as exception:
+            return self.utils.build_response(
+                status=400,
+                headers=self.utils.build_headers(url=request.url, total_count=0),
+                data={
+                    'method': request.method,
+                    'url': url,
+                    'url_root': url_root,
+                    'path': path,
+                    'query_string': query_string,
+                    'resource_type': self.__class__.__name__,
+                    'data': {
+                        'message': str(exception)
+                    },
+                }
+            )
 
         ## Validate request
         self.utils.validate_request(
@@ -495,7 +578,7 @@ class Node(BaseResource):
             url_root=url_root,
             path=path,
             id=node_id,
-            query_string=request.query_string.decode('utf-8'),
+            query_string=query_string,
             resource_type=resource_type,
             data=results
         )
@@ -540,13 +623,30 @@ class ProcessNode(Node):
         :param id: node identifier
         :return: http response
         """
+        path, url, url_root, query_string = self.unquote_request()
+        resource_type, page, node_id, query_type = self.parse_path(path)
+        profile = self.parse_query_string(query_string)[-1]
+
+        try:
+            self.load_profile(profile)
+        except RestInputValidationError as exception:
+            return self.utils.build_response(
+                status=400,
+                headers=self.utils.build_headers(url=request.url, total_count=0),
+                data={
+                    'method': request.method,
+                    'url': url,
+                    'url_root': url_root,
+                    'path': path,
+                    'query_string': query_string,
+                    'resource_type': self.__class__.__name__,
+                    'data': {
+                        'message': str(exception)
+                    },
+                }
+            )
 
         headers = self.utils.build_headers(url=request.url, total_count=1)
-
-        path = unquote(request.path)
-
-        ## Parse request
-        (resource_type, page, node_id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
 
         results = None
         if query_type == 'report':
@@ -562,11 +662,11 @@ class ProcessNode(Node):
         ## Build response
         data = dict(
             method=request.method,
-            url=unquote(request.url),
-            url_root=unquote(request.url_root),
+            url=url,
+            url_root=url_root,
             path=path,
             id=node_id,
-            query_string=request.query_string.decode('utf-8'),
+            query_string=query_string,
             resource_type=resource_type,
             data=results
         )
@@ -587,14 +687,28 @@ class CalcJobNode(ProcessNode):
         :param id: node identifier
         :return: http response
         """
+        path, url, url_root, query_string = self.unquote_request()
+        resource_type, page, node_id, query_type = self.parse_path(path)
+        profile = self.parse_query_string(query_string)[-1]
 
-        ## Decode url parts
-        path = unquote(request.path)
-        url = unquote(request.url)
-        url_root = unquote(request.url_root)
-
-        ## Parse request
-        (resource_type, page, node_id, query_type) = self.utils.parse_path(path, parse_pk_uuid=self.parse_pk_uuid)
+        try:
+            self.load_profile(profile)
+        except RestInputValidationError as exception:
+            return self.utils.build_response(
+                status=400,
+                headers=self.utils.build_headers(url=request.url, total_count=0),
+                data={
+                    'method': request.method,
+                    'url': url,
+                    'url_root': url_root,
+                    'path': path,
+                    'query_string': query_string,
+                    'resource_type': self.__class__.__name__,
+                    'data': {
+                        'message': str(exception)
+                    },
+                }
+            )
 
         node = self._load_and_verify(node_id)
         results = None
@@ -617,7 +731,7 @@ class CalcJobNode(ProcessNode):
             url_root=url_root,
             path=path,
             id=node_id,
-            query_string=request.query_string.decode('utf-8'),
+            query_string=query_string,
             resource_type=resource_type,
             data=results
         )

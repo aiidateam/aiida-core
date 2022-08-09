@@ -21,7 +21,16 @@ from sqlalchemy.sql import ColumnElement
 
 from aiida.common.lang import type_check
 from aiida.storage.psql_dos.orm import authinfos, comments, computers, entities, groups, logs, nodes, users, utils
-from aiida.storage.psql_dos.orm.querybuilder.main import SqlaQueryBuilder
+from aiida.storage.psql_dos.orm.querybuilder.main import (
+    BinaryExpression,
+    Cast,
+    ColumnClause,
+    InstrumentedAttribute,
+    Label,
+    QueryableAttribute,
+    SqlaQueryBuilder,
+    String,
+)
 
 from . import models
 from .utils import ReadOnlyError
@@ -274,10 +283,10 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
 
         if operator == 'like':
             type_filter, casted_entity = _cast_json_type(database_entity, value)
-            return case((type_filter, casted_entity.like(value)), else_=False)
+            return case((type_filter, casted_entity.like(value, escape='\\')), else_=False)
         if operator == 'ilike':
             type_filter, casted_entity = _cast_json_type(database_entity, value)
-            return case((type_filter, casted_entity.ilike(value)), else_=False)
+            return case((type_filter, casted_entity.ilike(value, escape='\\')), else_=False)
 
         # if operator == 'contains':
         # to-do, see: https://github.com/sqlalchemy/sqlalchemy/discussions/7836
@@ -313,6 +322,42 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
                         else_=False)
 
         raise ValueError(f'SQLite does not support JSON query: {query_str}')
+
+    @staticmethod
+    def get_filter_expr_from_column(operator: str, value: Any, column) -> BinaryExpression:
+        """A method that returns an valid SQLAlchemy expression.
+
+        :param operator: The operator provided by the user ('==',  '>', ...)
+        :param value: The value to compare with, e.g. (5.0, 'foo', ['a','b'])
+        :param column: an instance of sqlalchemy.orm.attributes.InstrumentedAttribute or
+
+        """
+        # Label is used because it is what is returned for the
+        # 'state' column by the hybrid_column construct
+        if not isinstance(column, (Cast, InstrumentedAttribute, QueryableAttribute, Label, ColumnClause)):
+            raise TypeError(f'column ({type(column)}) {column} is not a valid column')
+        database_entity = column
+        if operator == '==':
+            expr = database_entity == value
+        elif operator == '>':
+            expr = database_entity > value
+        elif operator == '<':
+            expr = database_entity < value
+        elif operator == '>=':
+            expr = database_entity >= value
+        elif operator == '<=':
+            expr = database_entity <= value
+        elif operator == 'like':
+            # the like operator expects a string, so we cast to avoid problems
+            # with fields like UUID, which don't support the like operator
+            expr = database_entity.cast(String).like(value, escape='\\')
+        elif operator == 'ilike':
+            expr = database_entity.ilike(value, escape='\\')
+        elif operator == 'in':
+            expr = database_entity.in_(value)
+        else:
+            raise ValueError(f'Unknown operator {operator} for filters on columns')
+        return expr
 
 
 @singledispatch

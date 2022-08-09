@@ -407,7 +407,7 @@ def print_process_info(process):
     if not docstring:
         docstring = ['No description available']
 
-    echo.echo('Description:\n', fg='red', bold=True)
+    echo.echo('Description:\n', fg=echo.COLORS['report'], bold=True)
     for line in docstring:
         echo.echo(f'    {line.lstrip()}')
     echo.echo('')
@@ -450,7 +450,7 @@ def print_process_spec(process_spec):
     max_width_type = max([len(entry[2]) for entry in inputs + outputs]) + 2
 
     if process_spec.inputs:
-        echo.echo('Inputs:', fg='red', bold=True)
+        echo.echo('Inputs:', fg=echo.COLORS['report'], bold=True)
     for entry in inputs:
         if entry[1] == 'required':
             echo.echo(template.format(*entry, width_name=max_width_name, width_type=max_width_type), bold=True)
@@ -458,7 +458,7 @@ def print_process_spec(process_spec):
             echo.echo(template.format(*entry, width_name=max_width_name, width_type=max_width_type))
 
     if process_spec.outputs:
-        echo.echo('Outputs:', fg='red', bold=True)
+        echo.echo('Outputs:', fg=echo.COLORS['report'], bold=True)
     for entry in outputs:
         if entry[1] == 'required':
             echo.echo(template.format(*entry, width_name=max_width_name, width_type=max_width_type), bold=True)
@@ -466,7 +466,7 @@ def print_process_spec(process_spec):
             echo.echo(template.format(*entry, width_name=max_width_name, width_type=max_width_type))
 
     if process_spec.exit_codes:
-        echo.echo('Exit codes:', fg='red', bold=True)
+        echo.echo('Exit codes:', fg=echo.COLORS['report'], bold=True)
     for exit_code in sorted(process_spec.exit_codes.values(), key=lambda exit_code: exit_code.status):
         message = exit_code.message
         echo.echo('{:>{width_name}d}:  {}'.format(exit_code.status, message, width_name=max_width_name))

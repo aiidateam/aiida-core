@@ -35,7 +35,7 @@ class TestVerdiSetup:
     def init_profile(self, pg_test_cluster, empty_config, run_cli_command):  # pylint: disable=redefined-outer-name,unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
-        self.storage_backend_name = 'psql_dos'
+        self.storage_backend_name = 'core.psql_dos'
         self.pg_test = pg_test_cluster
         self.cli_runner = run_cli_command
 

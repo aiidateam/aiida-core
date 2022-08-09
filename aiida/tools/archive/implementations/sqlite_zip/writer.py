@@ -167,12 +167,17 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
             kwargs['level'] = compression
 
         # compute the file size of the handle
-        position = handle.tell()
-        handle.seek(0, os.SEEK_END)
-        file_size = handle.tell()
-        handle.seek(position)
+        try:
+            position = handle.tell()
+            handle.seek(0, os.SEEK_END)
+            kwargs['file_size'] = handle.tell()
+            handle.seek(position)
+        except NotImplementedError:
+            # the disk-objectstore PackedObjectReader handler, does not support SEEK_END,
+            # so for these objects we always use ZIP64 to be safe
+            kwargs['force_zip64'] = True
 
-        with self._zip_path.joinpath(name).open(mode='wb', file_size=file_size, **kwargs) as zip_handle:
+        with self._zip_path.joinpath(name).open(mode='wb', **kwargs) as zip_handle:
             if buffer_size is None:
                 shutil.copyfileobj(handle, zip_handle)
             else:

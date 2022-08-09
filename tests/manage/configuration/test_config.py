@@ -376,6 +376,16 @@ def test_set_option_override(config_with_profile):
     assert config.get_option(option_name, scope=None, default=False) == option_value_two
 
 
+def test_option_empty_config(empty_config):
+    """Test setting an option on a config without any profiles."""
+    config = empty_config
+    option_name = 'autofill.user.email'
+    option_value = 'first@email.com'
+
+    config.set_option(option_name, option_value)
+    assert config.get_option(option_name, scope=None, default=False) == option_value
+
+
 def test_store(config_with_profile):
     """Test that the store method writes the configuration properly to disk."""
     config = config_with_profile

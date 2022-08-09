@@ -19,7 +19,7 @@ import pytest
 
 from aiida.common import LinkType, exceptions, timezone
 from aiida.manage import get_manager
-from aiida.orm import CalculationNode, Computer, Data, Log, Node, User, WorkflowNode, load_node
+from aiida.orm import CalculationNode, Computer, Data, Int, Log, Node, User, WorkflowNode, load_node
 from aiida.orm.utils.links import LinkTriple
 
 
@@ -114,6 +114,21 @@ class TestNode:
 
         with pytest.raises(ValueError, match=match):
             node.process_class  # pylint: disable=pointless-statement
+
+    def test_entry_point(self):
+        """Test the :meth:`aiida.orm.nodes.node.Node.entry_point` property."""
+        from aiida.plugins.entry_point import get_entry_point_from_string
+
+        node = Int()
+        assert node.entry_point == get_entry_point_from_string('aiida.data:core.int')
+        assert Int.entry_point == get_entry_point_from_string('aiida.data:core.int')
+
+        class Custom(Data):
+            pass
+
+        node = Custom()
+        assert node.entry_point is None
+        assert Custom.entry_point is None
 
 
 @pytest.mark.usefixtures('aiida_profile_clean_class')
@@ -958,6 +973,10 @@ class TestNodeCaching:
 
         with pytest.raises(TypeError):
             node.base.caching.is_valid_cache = 'false'
+
+        # prevent regression of issue #5582
+        calc = CalculationNode()
+        calc.base.caching.is_valid_cache = False
 
     def test_store_from_cache(self):
         """Regression test for storing a Node with (nested) repository content with caching."""

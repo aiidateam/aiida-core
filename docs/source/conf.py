@@ -232,7 +232,7 @@ def setup(app: Sphinx):
 # these are mainly required, because sphinx finds multiple references,
 # in `aiida.orm`` and `aiida.restapi.translator`
 autodoc_aliases_typing = {
-    'Code': 'aiida.orm.nodes.data.code.Code',
+    'Code': 'aiida.orm.nodes.data.code.legacy.Code',
     'Computer': 'aiida.orm.computers.Computer',
     'Data': 'aiida.orm.nodes.data.data.Data',
     'Group': 'aiida.orm.groups.Group',
@@ -277,7 +277,7 @@ autodoc_aliases_public = {
     'aiida.orm.User': 'aiida.orm.users.User',
     'aiida.orm.CalculationNode': 'aiida.orm.nodes.process.calculation.calculation.CalculationNode',
     'aiida.orm.CalcJobNode': 'aiida.orm.nodes.process.calculation.calcjob.CalcJobNode',
-    'aiida.orm.Code': 'aiida.orm.nodes.data.code.Code',
+    'aiida.orm.Code': 'aiida.orm.nodes.data.code.legacy.Code',
     'aiida.orm.Data': 'aiida.orm.nodes.data.data.Data',
     'aiida.orm.Dict': 'aiida.orm.nodes.data.dict.Dict',
     'aiida.orm.ProcessNode': 'aiida.orm.nodes.process.process.ProcessNode',

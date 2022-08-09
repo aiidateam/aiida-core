@@ -21,11 +21,7 @@ def test_that_solo_code_is_exported_correctly(tmp_path, aiida_profile_clean, aii
     """
     code_label = 'test_code1'
 
-    code = orm.Code()
-    code.set_remote_computer_exec((aiida_localhost, '/bin/true'))
-    code.label = code_label
-    code.store()
-
+    code = orm.InstalledCode(label=code_label, computer=aiida_localhost, filepath_executable='/bin/true').store()
     code_uuid = code.uuid
 
     export_file = tmp_path / 'export.aiida'
@@ -46,11 +42,7 @@ def test_input_code(tmp_path, aiida_profile_clean, aiida_localhost):
     """
     code_label = 'test_code1'
 
-    code = orm.Code()
-    code.set_remote_computer_exec((aiida_localhost, '/bin/true'))
-    code.label = code_label
-    code.store()
-
+    code = orm.InstalledCode(label=code_label, computer=aiida_localhost, filepath_executable='/bin/true').store()
     code_uuid = code.uuid
 
     calc = orm.CalcJobNode()
@@ -90,11 +82,7 @@ def test_solo_code(tmp_path, aiida_profile_clean, aiida_localhost):
     """
     code_label = 'test_code1'
 
-    code = orm.Code()
-    code.set_remote_computer_exec((aiida_localhost, '/bin/true'))
-    code.label = code_label
-    code.store()
-
+    code = orm.InstalledCode(label=code_label, computer=aiida_localhost, filepath_executable='/bin/true').store()
     code_uuid = code.uuid
 
     export_file = tmp_path / 'export.aiida'

@@ -10,7 +10,6 @@
 # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 """"Migrate the file repository to the new disk object store based implementation."""
 import json
-import pathlib
 from tempfile import NamedTemporaryFile
 
 from disk_objectstore import Container
@@ -21,7 +20,7 @@ from sqlalchemy.sql import column, func, select, table, text
 from aiida.cmdline.utils import echo
 from aiida.common import exceptions
 from aiida.common.progress_reporter import get_progress_reporter, set_progress_bar_tqdm, set_progress_reporter
-from aiida.storage.psql_dos.backend import CONTAINER_DEFAULTS
+from aiida.storage.psql_dos.backend import CONTAINER_DEFAULTS, get_filepath_container
 from aiida.storage.psql_dos.migrations.utils import utils
 
 
@@ -38,19 +37,19 @@ def migrate_repository(connection, profile):
     missing_repo_folder = []
     shard_count = 256
 
-    basepath = pathlib.Path(profile.repository_path) / 'repository' / 'node'
-    filepath = pathlib.Path(profile.repository_path) / 'container'
-    container = Container(filepath)
+    filepath_container = get_filepath_container(profile)
+    filepath_repository = filepath_container.parent / 'repository' / 'node'
+    container = Container(filepath_container)
 
-    if not profile.is_test_profile and (node_count > 0 and not basepath.is_dir()):
+    if not profile.is_test_profile and (node_count > 0 and not filepath_repository.is_dir()):
         raise exceptions.StorageMigrationError(
-            f'the file repository `{basepath}` does not exist but the database is not empty, it contains {node_count} '
-            'nodes. Aborting the migration.'
+            f'the file repository `{filepath_repository}` does not exist but the database is not empty, it contains '
+            f'{node_count} nodes. Aborting the migration.'
         )
 
     if not profile.is_test_profile and container.is_initialised:
         raise exceptions.StorageMigrationError(
-            f'the container {filepath} already exists. If you ran this migration before and it failed simply '
+            f'the container {filepath_container} already exists. If you ran this migration before and it failed simply '
             'delete this directory and restart the migration.'
         )
 
@@ -120,5 +119,5 @@ def migrate_repository(connection, profile):
         if node_count:
             echo.echo_warning(
                 'Migrated file repository to the new disk object store. The old repository has not been deleted out'
-                f' of safety and can be found at {pathlib.Path(profile.repository_path, "repository")}.'
+                f' of safety and can be found at {filepath_repository.parent}.'
             )

@@ -35,6 +35,8 @@ from .links import NodeLinks
 from .repository import NodeRepository
 
 if TYPE_CHECKING:
+    from aiida.plugins.entry_point import EntryPoint
+
     from ..implementation import BackendNode, StorageBackend
 
 __all__ = ('Node',)
@@ -270,6 +272,16 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
         # pylint: disable=no-self-argument,no-member
         return cls._plugin_type_string
 
+    @classproperty
+    def entry_point(cls) -> Optional['EntryPoint']:
+        """Return the entry point associated this node class.
+
+        :return: the associated entry point or ``None`` if it isn't known.
+        """
+        # pylint: disable=no-self-argument
+        from aiida.plugins.entry_point import get_entry_point_from_class
+        return get_entry_point_from_class(cls.__module__, cls.__name__)[1]
+
     @property
     def logger(self) -> Optional[Logger]:
         """Return the logger configured for this Node.
@@ -283,7 +295,6 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
         """Return the node UUID.
 
         :return: the string representation of the UUID
-
         """
         return self.backend_entity.uuid
 

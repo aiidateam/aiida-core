@@ -194,7 +194,7 @@ class CalcJob(Process):
         # yapf: disable
         super().define(spec)
         spec.inputs.validator = validate_calc_job  # type: ignore[assignment]  # takes only PortNamespace not Port
-        spec.input('code', valid_type=orm.Code, required=False,
+        spec.input('code', valid_type=orm.AbstractCode, required=False,
             help='The `Code` to use for this job. This input is required, unless the `remote_folder` input is '
                  'specified, which means an existing job is being imported and no code will actually be run.')
         spec.input('remote_folder', valid_type=orm.RemoteData, required=False,
@@ -396,6 +396,29 @@ class CalcJob(Process):
         """
         raise NotImplementedError()
 
+    def _setup_metadata(self, metadata: dict) -> None:
+        """Store the metadata on the ProcessNode."""
+        computer = metadata.pop('computer', None)
+        if computer is not None:
+            self.node.computer = computer
+
+        options = metadata.pop('options', {})
+        for option_name, option_value in options.items():
+            self.node.set_option(option_name, option_value)
+
+        super()._setup_metadata(metadata)
+
+    def _setup_inputs(self) -> None:
+        """Create the links between the input nodes and the ProcessNode that represents this process."""
+        super()._setup_inputs()
+
+        # If a computer has not yet been set, which should have been done in ``_setup_metadata`` if it was specified
+        # in the ``metadata`` inputs, set the computer associated with the ``code`` input. Note that not all ``code``s
+        # will have an associated computer, but in that case the ``computer`` property should return ``None`` and
+        # nothing would change anyway.
+        if not self.node.computer:
+            self.node.computer = self.inputs.code.computer  # type: ignore[union-attr]
+
     def _perform_dry_run(self):
         """Perform a dry run.
 
@@ -429,11 +452,14 @@ class CalcJob(Process):
         from aiida.common.datastructures import CalcJobState
         from aiida.common.folders import SandboxFolder
         from aiida.engine.daemon.execmanager import retrieve_calculation
+        from aiida.manage import get_config_option
         from aiida.transports.plugins.local import LocalTransport
 
+        filepath_sandbox = get_config_option('storage.sandbox') or None
+
         with LocalTransport() as transport:
-            with SandboxFolder() as folder:
-                with SandboxFolder() as retrieved_temporary_folder:
+            with SandboxFolder(filepath_sandbox) as folder:
+                with SandboxFolder(filepath_sandbox) as retrieved_temporary_folder:
                     self.presubmit(folder)
                     self.node.set_remote_workdir(
                         self.inputs.remote_folder.get_remote_path()  # type: ignore[union-attr]
@@ -589,7 +615,7 @@ class CalcJob(Process):
         from aiida.common.datastructures import CodeInfo, CodeRunMode
         from aiida.common.exceptions import InputValidationError, InvalidOperation, PluginInternalError, ValidationError
         from aiida.common.utils import validate_list_of_string_tuples
-        from aiida.orm import Code, Computer, load_node
+        from aiida.orm import AbstractCode, Code, Computer, InstalledCode, PortableCode, load_node
         from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
         inputs = self.node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
@@ -598,19 +624,19 @@ class CalcJob(Process):
             raise InvalidOperation('calculation node is not stored.')
 
         computer = self.node.computer
-        codes = [_ for _ in inputs.all_nodes() if isinstance(_, Code)]
+        codes = [_ for _ in inputs.all_nodes() if isinstance(_, AbstractCode)]
 
         for code in codes:
-            if not code.can_run_on(computer):
+            if not code.can_run_on_computer(computer):
                 raise InputValidationError(
                     'The selected code {} for calculation {} cannot run on computer {}'.format(
                         code.pk, self.node.pk, computer.label
                     )
                 )
 
-            if code.is_local() and code.get_local_executable() in folder.get_content_list():
+            if isinstance(code, PortableCode) and str(code.filepath_executable) in folder.get_content_list():
                 raise PluginInternalError(
-                    f'The plugin created a file {code.get_local_executable()} that is also the executable name!'
+                    f'The plugin created a file {code.filepath_executable} that is also the executable name!'
                 )
 
         calc_info = self.prepare_for_submission(folder)
@@ -660,12 +686,12 @@ class CalcJob(Process):
         #   would return None, in which case the join method would raise
         #   an exception
         prepend_texts = [computer.get_prepend_text()] + \
-            [code.get_prepend_text() for code in codes] + \
+            [code.prepend_text for code in codes] + \
             [calc_info.prepend_text, self.node.get_option('prepend_text')]
         job_tmpl.prepend_text = '\n\n'.join(prepend_text for prepend_text in prepend_texts if prepend_text)
 
         append_texts = [self.node.get_option('append_text'), calc_info.append_text] + \
-            [code.get_append_text() for code in codes] + \
+            [code.append_text for code in codes] + \
             [computer.get_append_text()]
         job_tmpl.append_text = '\n\n'.join(append_text for append_text in append_texts if append_text)
 
@@ -693,7 +719,7 @@ class CalcJob(Process):
 
             if code_info.code_uuid is None:
                 raise PluginInternalError('CalcInfo should have the information of the code to be launched')
-            this_code = load_node(code_info.code_uuid, sub_classes=(Code,))
+            this_code = load_node(code_info.code_uuid, sub_classes=(Code, InstalledCode, PortableCode))
 
             # To determine whether this code should be run with MPI enabled, we get the value that was set in the inputs
             # of the entire process, which can then be overwritten by the value from the `CodeInfo`. This allows plugins
@@ -712,12 +738,12 @@ class CalcJob(Process):
             else:
                 prepend_cmdline_params = []
 
-            cmdline_params = [this_code.get_execname()] + (code_info.cmdline_params or [])
+            cmdline_params = [str(this_code.get_executable())] + (code_info.cmdline_params or [])
 
             tmpl_code_info = JobTemplateCodeInfo()
             tmpl_code_info.prepend_cmdline_params = prepend_cmdline_params
             tmpl_code_info.cmdline_params = cmdline_params
-            tmpl_code_info.use_double_quotes = [computer.get_use_double_quotes(), this_code.get_use_double_quotes()]
+            tmpl_code_info.use_double_quotes = [computer.get_use_double_quotes(), this_code.use_double_quotes]
             tmpl_code_info.stdin_name = code_info.stdin_name
             tmpl_code_info.stdout_name = code_info.stdout_name
             tmpl_code_info.stderr_name = code_info.stderr_name

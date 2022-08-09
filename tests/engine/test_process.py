@@ -238,12 +238,9 @@ class TestProcess:
 
     def test_process_type_with_entry_point(self):
         """For a process with a registered entry point, the process_type will be its formatted entry point string."""
-        from aiida.orm import Code
+        from aiida.orm import InstalledCode
 
-        code = Code()
-        code.set_remote_computer_exec((self.computer, '/bin/true'))
-        code.store()
-
+        code = InstalledCode(computer=self.computer, filepath_executable='/bin/true').store()
         parameters = orm.Dict(dict={})
         template = orm.Dict(dict={})
         options = {
@@ -436,3 +433,24 @@ class TestProcess:
         # If the ``namespace`` does not exist, for example because it is slightly misspelled, a ``KeyError`` is raised
         with pytest.raises(KeyError):
             process.exposed_outputs(node_child, ChildProcess, namespace='cildh')
+
+
+class TestValidateDynamicNamespaceProcess(Process):
+    """Simple process with dynamic input namespace."""
+
+    _node_class = orm.WorkflowNode
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.inputs.dynamic = True
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_input_validation_storable_nodes():
+    """Test that validation catches non-storable inputs even if nested in dictionary for dynamic namespace.
+
+    Regression test for #5128.
+    """
+    with pytest.raises(ValueError):
+        run(TestValidateDynamicNamespaceProcess, **{'namespace': {'a': 1}})

@@ -11,13 +11,14 @@
 # pylint: disable=missing-function-docstring
 from contextlib import contextmanager, nullcontext
 import functools
+import pathlib
 from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence, Set, Union
 
 from disk_objectstore import Container
 from sqlalchemy import table
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
-from aiida.common.exceptions import ClosedStorage, IntegrityError
+from aiida.common.exceptions import ClosedStorage, ConfigurationError, IntegrityError
 from aiida.manage.configuration.profile import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import BackendEntity, StorageBackend
@@ -38,6 +39,28 @@ CONTAINER_DEFAULTS: dict = {
     'hash_type': 'sha256',
     'compression_algorithm': 'zlib+1'
 }
+
+
+def get_filepath_container(profile: Profile) -> pathlib.Path:
+    """Return the filepath of the disk-object store container."""
+    from urllib.parse import urlparse
+
+    try:
+        parts = urlparse(profile.storage_config['repository_uri'])
+    except KeyError:
+        raise KeyError(f'invalid profile {profile.name}: `repository_uri` not defined in `storage.config`.')
+
+    if parts.scheme != 'file':
+        raise ConfigurationError(
+            f'invalid profile {profile.name}: `storage.config.repository_uri` does not start with `file://`.'
+        )
+
+    filepath = pathlib.Path(parts.path)
+
+    if not filepath.is_absolute():
+        raise ConfigurationError(f'invalid profile {profile.name}: `storage.config.repository_uri` is not absolute')
+
+    return filepath.expanduser() / 'container'
 
 
 class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
@@ -155,7 +178,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
                 session.add(DbUser(**default_user_kwargs))
 
         # Clear the repository and reset the repository UUID
-        container = Container(self.profile.repository_path / 'container')
+        container = Container(str(get_filepath_container(self.profile)))
         container.init_container(clear=True, **CONTAINER_DEFAULTS)
         container_id = container.container_id
         with self.transaction():
@@ -165,8 +188,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
 
     def get_repository(self) -> 'DiskObjectStoreRepositoryBackend':
         from aiida.repository.backend import DiskObjectStoreRepositoryBackend
-
-        container = Container(self.profile.repository_path / 'container')
+        container = Container(str(get_filepath_container(self.profile)))
         return DiskObjectStoreRepositoryBackend(container=container)
 
     @property

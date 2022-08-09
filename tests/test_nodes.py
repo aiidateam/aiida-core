@@ -1023,6 +1023,7 @@ class TestNodeBasic:
             (default_user_email, 'text2'),
         ]
 
+    @pytest.mark.usefixtures('suppress_internal_deprecations')
     def test_code_loading_from_string(self):
         """
         Checks that the method Code.get_from_string works correctly.
@@ -1070,6 +1071,7 @@ class TestNodeBasic:
         with pytest.raises(MultipleObjectsError):
             orm.Code.get_from_string(code3.label)
 
+    @pytest.mark.usefixtures('suppress_internal_deprecations')
     def test_code_loading_using_get(self):
         """
         Checks that the method Code.get(pk) works correctly.
@@ -1129,7 +1131,7 @@ class TestNodeBasic:
         pk_label_duplicate = code1.pk
         code4 = orm.Code()
         code4.set_remote_computer_exec((self.computer, '/bin/true'))
-        code4.label = pk_label_duplicate
+        code4.label = str(pk_label_duplicate)
         code4.store()
 
         # Since the label of code4 is identical to the pk of code1, calling
@@ -1140,24 +1142,7 @@ class TestNodeBasic:
         assert q_code_4.label == code1.label
         assert q_code_4.get_remote_exec_path() == code1.get_remote_exec_path()
 
-    def test_code_description(self):
-        """
-        This test checks that the code description is retrieved correctly
-        when the code is searched with its id and label.
-        """
-        # Create a code node
-        code = orm.Code()
-        code.set_remote_computer_exec((self.computer, '/bin/true'))
-        code.label = 'test_code_label'
-        code.description = 'test code description'
-        code.store()
-
-        q_code1 = orm.Code.get(label=code.label)
-        assert code.description == str(q_code1.description)
-
-        q_code2 = orm.Code.get(code.pk)
-        assert code.description == str(q_code2.description)
-
+    @pytest.mark.usefixtures('suppress_internal_deprecations')
     def test_list_for_plugin(self):
         """
         This test checks the Code.list_for_plugin()

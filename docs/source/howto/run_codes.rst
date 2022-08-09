@@ -400,6 +400,20 @@ After :ref:`setting up your computer <how-to:run-codes:computer>` and :ref:`sett
 
 After this, use ``verdi process list`` to monitor the status of the calculations.
 
+.. tip::
+
+    If you ever need to resubmit a previous calculation with modified inputs,
+    you can get a pre-populated copy of its process builder with
+
+    .. code-block:: python
+
+        builder = load_node(<IDENTIFIER>).get_builder_restart()
+        # If needed, the builder can now be modified as usual before being run or submitted
+        submit(builder)
+
+    where ``<IDENTIFIER>`` is the ``PK`` or ``UUID`` (or label) of your *calculation*.
+
+
 See :ref:`topics:processes:usage:launching` and :ref:`topics:processes:usage:monitoring` for more details.
 
 
@@ -426,7 +440,8 @@ If found, AiiDA creates a copy of the calculation node and its results, thus ens
     This diagram depicts the same input node **D1** being used for both calculations, but an input node **D1'** with the same *hash* as **D1** would trigger the cache as well.
 
 Caching happens on the *calculation* level (no caching at the workflow level, see :ref:`topics:provenance:caching:limitations`).
-By default, both successful and failed calculations enter the cache (more details in :ref:`topics:provenance:caching:control-caching`).
+By default, both successful and failed calculations enter the cache once they are *finished*.
+Excepted and killed calculations do *not* enter the cache (more details in :ref:`topics:provenance:caching:control-caching`).
 
 .. _how-to:run-codes:caching:enable:
 

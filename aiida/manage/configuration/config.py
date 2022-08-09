@@ -27,7 +27,7 @@ from .profile import Profile
 
 __all__ = ('Config', 'config_schema', 'ConfigValidationError')
 
-SCHEMA_FILE = 'config-v8.schema.json'
+SCHEMA_FILE = 'config-v9.schema.json'
 
 
 @lru_cache(1)
@@ -351,7 +351,12 @@ class Config:  # pylint: disable=too-many-public-methods
         profile = self.get_profile(name)
 
         if include_repository:
-            folder = profile.repository_path
+            # Note, this is currently being hardcoded, but really this `delete_profile` should get the storage backend
+            # for the given profile and call `StorageBackend.erase` method. Currently this is leaking details
+            # of the implementation of the PsqlDosBackend into a generic function which would fail for profiles that
+            # use a different storage backend implementation.
+            from aiida.storage.psql_dos.backend import get_filepath_container
+            folder = get_filepath_container(profile).parent
             if folder.exists():
                 shutil.rmtree(folder)
 

@@ -212,7 +212,7 @@ Usage::
 -----------------
 
 ``verdi`` uses the `click_` framework, which makes it possible to add new subcommands to existing verdi commands, such as ``verdi data mydata``.
-AiiDA expects each entry point to be either a ``click.Command`` or ``click.CommandGroup``. At present extra commands can be injected at the following levels:
+AiiDA expects each entry point to be either a ``click.Command`` or ``click.Group``. At present extra commands can be injected at the following levels:
 
   * As a :ref:`direct subcommand of verdi data<spec-verdi-data>`
   * As a :ref:`subcommand of verdi data structure import<spec-verdi-data-structure-import>`

@@ -49,7 +49,7 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
             'attributes.null': {
                 'of_type': 'null'
             }
-        }, 1),
+        }, 2),
         ({
             'attributes.list': {
                 'of_type': 'array'
@@ -86,11 +86,6 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
                 '==': False
             }
         }, 1),
-        # ({
-        #     'attributes.null': {
-        #         '==': None
-        #     }
-        # }, 1),
         ({
             'attributes.list': {
                 '==': [1, 2]
@@ -135,16 +130,6 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
                 '==': True
             }
         }, 0),
-        # ({
-        #     'attributes.null': {
-        #         '==': 0
-        #     }
-        # }, 0),
-        # ({
-        #     'attributes.other': {
-        #         '==': None
-        #     }
-        # }, 0),
         ({
             'attributes.list': {
                 '==': [1, 3]
@@ -171,6 +156,24 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
                 'like': 'abc%'
             }
         }, 1),
+        ({
+            'attributes.text': {
+                'like': 'abc_YZ'
+            }
+        }, 1),
+        (
+            {
+                'attributes.text2': {
+                    'like': 'abc\\_XYZ'  # Literal match
+                }
+            },
+            1
+        ),
+        ({
+            'attributes.text2': {
+                'like': 'abc_XYZ'
+            }
+        }, 2),
         # integer comparisons
         ({
             'attributes.float': {
@@ -316,20 +319,16 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
                 'has_key': 'key1'
             }
         }, 1),
-        # ({
-        #     'attributes.dict': {
-        #         'has_key': 'key2'
-        #     }
-        # }, 1),
     ),
     ids=json.dumps,
 )
-def test_qb_json_filters(tmp_path, filters, matches):
+def test_qb_json_filters(filters, matches):
     """Test QueryBuilder filtering for JSON fields."""
-    profile = SqliteTempBackend.create_profile(sandbox_path=tmp_path, debug=False)
+    profile = SqliteTempBackend.create_profile(debug=False)
     backend = SqliteTempBackend(profile)
     Dict({
         'text': 'abcXYZ',
+        'text2': 'abc_XYZ',
         'integer': 1,
         'float': 1.1,
         'true': True,
@@ -343,6 +342,47 @@ def test_qb_json_filters(tmp_path, filters, matches):
         },
     },
          backend=backend).store()
+    Dict({'text2': 'abcxXYZ'}, backend=backend).store()
+    qbuilder = QueryBuilder(backend=backend)
+    qbuilder.append(Dict, filters=filters)
+    assert qbuilder.count() == matches
+
+
+@pytest.mark.parametrize(
+    'filters,matches', (
+        ({
+            'label': {
+                'like': 'abc_XYZ'
+            }
+        }, 2),
+        ({
+            'label': {
+                'like': 'abc\\_XYZ'
+            }
+        }, 1),
+        ({
+            'label': {
+                'like': 'abcxXYZ'
+            }
+        }, 1),
+        ({
+            'label': {
+                'like': 'abc%XYZ'
+            }
+        }, 2),
+    ),
+    ids=json.dumps
+)
+def test_qb_column_filters(filters, matches):
+    """Test querying directly those stored in the columns"""
+    profile = SqliteTempBackend.create_profile(debug=False)
+    backend = SqliteTempBackend(profile)
+    dict1 = Dict({
+        'text2': 'abc_XYZ',
+    }, backend=backend).store()
+    dict2 = Dict({'text2': 'abcxXYZ'}, backend=backend).store()
+    dict1.label = 'abc_XYZ'
+    dict2.label = 'abcxXYZ'
     qbuilder = QueryBuilder(backend=backend)
     qbuilder.append(Dict, filters=filters)
     assert qbuilder.count() == matches
@@ -353,9 +393,9 @@ def test_qb_json_filters(tmp_path, filters, matches):
     ('integer', 'i'),
     ('float', 'f'),
 ))
-def test_qb_json_order_by(tmp_path, key, cast_type):
+def test_qb_json_order_by(key, cast_type):
     """Test QueryBuilder ordering by JSON field keys."""
-    profile = SqliteTempBackend.create_profile(sandbox_path=tmp_path, debug=False)
+    profile = SqliteTempBackend.create_profile(debug=False)
     backend = SqliteTempBackend(profile)
     dict1 = Dict({
         'text': 'b',

@@ -14,8 +14,12 @@ import pytest
 from aiida import orm
 
 
+@pytest.mark.usefixtures('suppress_internal_deprecations')
 def test_code_local(aiida_profile_clean, aiida_localhost):
-    """Test local code."""
+    """Test local code.
+
+    Remove this test when legacy `Code` is removed in v3.0.
+    """
     import tempfile
 
     from aiida.common.exceptions import ValidationError
@@ -37,8 +41,12 @@ def test_code_local(aiida_profile_clean, aiida_localhost):
     assert code.get_execname(), 'stest.sh'
 
 
+@pytest.mark.usefixtures('suppress_internal_deprecations')
 def test_code_remote(aiida_profile_clean, aiida_localhost):
-    """Test remote code."""
+    """Test remote code.
+
+    Remove this test when legacy `Code` is removed in v3.0.
+    """
     import tempfile
 
     from aiida.common.exceptions import ValidationError

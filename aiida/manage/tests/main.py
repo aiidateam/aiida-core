@@ -38,7 +38,7 @@ _DEFAULT_PROFILE_INFO = {
     'first_name': 'AiiDA',
     'last_name': 'Plugintest',
     'institution': 'aiidateam',
-    'storage_backend': 'psql_dos',
+    'storage_backend': 'core.psql_dos',
     'database_engine': 'postgresql_psycopg2',
     'database_username': 'aiida',
     'database_password': 'aiida_pw',
@@ -219,7 +219,7 @@ class TemporaryProfileManager(ProfileManager):
 
     """
 
-    def __init__(self, backend='psql_dos', pgtest=None):  # pylint: disable=super-init-not-called
+    def __init__(self, backend='core.psql_dos', pgtest=None):  # pylint: disable=super-init-not-called
         """Construct a TemporaryProfileManager
 
         :param backend: a database backend
@@ -368,7 +368,7 @@ class TemporaryProfileManager(ProfileManager):
         if self.has_profile_open():
             raise TestManagerError('backend cannot be changed after setting up the environment')
 
-        valid_backends = ['psql_dos']
+        valid_backends = ['core.psql_dos']
         if backend not in valid_backends:
             raise ValueError(f'invalid backend {backend}, must be one of {valid_backends}')
         self.profile_info['backend'] = backend
@@ -418,7 +418,7 @@ _GLOBAL_TEST_MANAGER = TestManager()
 
 
 @contextmanager
-def test_manager(backend='psql_dos', profile_name=None, pgtest=None):
+def test_manager(backend='core.psql_dos', profile_name=None, pgtest=None):
     """ Context manager for TestManager objects.
 
     Sets up temporary AiiDA environment for testing or reuses existing environment,
@@ -480,9 +480,9 @@ def get_test_backend_name() -> str:
             )
         backend_res = backend_profile
     else:
-        backend_res = backend_env or 'psql_dos'
+        backend_res = backend_env or 'core.psql_dos'
 
-    if backend_res in ('psql_dos',):
+    if backend_res in ('core.psql_dos',):
         return backend_res
     raise ValueError(f"Unknown backend '{backend_res}' read from AIIDA_TEST_BACKEND environment variable")
 

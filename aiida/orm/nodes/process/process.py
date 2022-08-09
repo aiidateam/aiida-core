@@ -65,7 +65,7 @@ class ProcessNodeCaching(NodeCaching):
 
         :param valid: whether the node is valid or invalid for use in caching.
         """
-        super().is_valid_cache = valid  # type: ignore[misc]
+        super(ProcessNodeCaching, self.__class__).is_valid_cache.fset(self, valid)
 
     def _get_objects_to_hash(self) -> List[Any]:
         """

@@ -24,7 +24,7 @@ def test_base_template(fixture_sandbox, aiida_localhost, generate_calc_job):
     entry_point_name = 'core.templatereplacer'
     inputs = {
         'code':
-        orm.Code(remote_computer_exec=(aiida_localhost, '/bin/bash')),
+        orm.InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
         'metadata': {
             'options': {
                 'resources': {
@@ -83,7 +83,7 @@ def test_file_usage(fixture_sandbox, aiida_localhost, generate_calc_job):
     # Check that the files are correctly copied to the copy list
     entry_point_name = 'core.templatereplacer'
     inputs = {
-        'code': orm.Code(remote_computer_exec=(aiida_localhost, '/bin/bash')),
+        'code': orm.InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
         'metadata': {
             'options': {
                 'resources': {

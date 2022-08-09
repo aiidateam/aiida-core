@@ -9,9 +9,12 @@
 ###########################################################################
 # pylint: disable=no-self-use
 """Test for general backend entities"""
+import pickle
+
 import pytest
 
 from aiida import orm
+from aiida.common.exceptions import InvalidOperation
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -37,3 +40,8 @@ class TestBackendEntitiesAndCollections:
             number_of_users, \
             '{} User(s) was/were found using Collections\' count() method, ' \
             'but {} User(s) was/were found using QueryBuilder directly'.format(user_collection_count, number_of_users)
+
+    def test_pickle(self):
+        """Pickling is not supported and should raise."""
+        with pytest.raises(InvalidOperation):
+            pickle.dumps(orm.Entity({}))

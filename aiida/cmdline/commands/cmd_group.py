@@ -307,7 +307,7 @@ def group_show(group, raw, limit, uuid):
     default=None,
     help='Add a filter to show only groups for which the label contains STRING.'
 )
-@options.ORDER_BY(type=click.Choice(['id', 'label', 'ctime']), default='id')
+@options.ORDER_BY(type=click.Choice(['id', 'label', 'ctime']), default='label')
 @options.ORDER_DIRECTION()
 @options.NODE(help='Show only the groups that contain the node.')
 @with_dbenv()

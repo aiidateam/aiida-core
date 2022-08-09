@@ -11,10 +11,11 @@
 import functools
 from inspect import getmembers
 from types import FunctionType
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 from aiida import orm
 from aiida.common import AttributeDict
+from aiida.common.warnings import warn_deprecation
 
 from .context import ToContext, append_
 from .utils import ProcessHandlerReport, process_handler  # pylint: disable=no-name-in-module
@@ -31,32 +32,44 @@ def validate_handler_overrides(
     handler_overrides: Optional[orm.Dict],
     ctx: 'PortNamespace'  # pylint: disable=unused-argument
 ) -> Optional[str]:
-    """Validator for the `handler_overrides` input port of the `BaseRestartWorkChain`.
+    """Validator for the ``handler_overrides`` input port of the ``BaseRestartWorkChain``.
 
-    The `handler_overrides` should be a dictionary where keys are strings that are the name of a process handler, i.e. a
-    instance method of the `process_class` that has been decorated with the `process_handler` decorator. The values
-    should be boolean.
+    The ``handler_overrides`` should be a dictionary where keys are strings that are the name of a process handler, i.e.
+    an instance method of the ``process_class`` that has been decorated with the ``process_handler`` decorator. The
+    values should be a dictionary that can specify the keys ``enabled`` and ``priority``.
 
-    .. note:: the normal signature of a port validator is `(value, ctx)` but since for the validation here we need a
+    .. note:: the normal signature of a port validator is ``(value, ctx)`` but since for the validation here we need a
         reference to the process class, we add it and the class is bound to the method in the port declaration in the
-        `define` method.
+        ``define`` method.
 
-    :param process_class: the `BaseRestartWorkChain` (sub) class
-    :param handler_overrides: the input `Dict` node
-    :param ctx: the `PortNamespace` in which the port is embedded
+    :param process_class: the ``BaseRestartWorkChain`` (sub) class
+    :param handler_overrides: the input ``Dict`` node
+    :param ctx: the ``PortNamespace`` in which the port is embedded
     """
     if not handler_overrides:
         return None
 
-    for handler, override in handler_overrides.get_dict().items():
+    for handler, overrides in handler_overrides.get_dict().items():
         if not isinstance(handler, str):
             return f'The key `{handler}` is not a string.'
 
         if not process_class.is_process_handler(handler):
             return f'The key `{handler}` is not a process handler of {process_class}'
 
-        if not isinstance(override, bool):
-            return f'The value of key `{handler}` is not a boolean.'
+        if not isinstance(overrides, (bool, dict)):
+            return f'The value of key `{handler}` is not a boolean or dictionary.'
+
+        if isinstance(overrides, bool):
+            warn_deprecation(
+                'Setting a boolean as value for `handler_overrides` is deprecated. Use '
+                "`{'handler_name': {'enabled': " + f'{overrides}' + '}` instead.',
+                version=3
+            )
+
+        if isinstance(overrides, dict):
+            for key in overrides.keys():
+                if key not in ['enabled', 'priority']:
+                    return f'The value of key `{handler}` contain keys `{key}` which is not supported.'
 
     return None
 
@@ -135,9 +148,10 @@ class BaseRestartWorkChain(WorkChain):
             help='If `True`, work directories of all called calculation jobs will be cleaned at the end of execution.')
         spec.input('handler_overrides',
             valid_type=orm.Dict, required=False, validator=functools.partial(validate_handler_overrides, cls),
-            help='Mapping where keys are process handler names and the values are a boolean, where `True` will enable '
-                 'the corresponding handler and `False` will disable it. This overrides the default value set by the '
-                 '`enabled` keyword of the `process_handler` decorator with which the method is decorated.')
+            serializer=orm.to_aiida_type,
+            help='Mapping where keys are process handler names and the values are a dictionary, where each dictionary '
+                 'can define the ``enabled`` and ``priority`` key, which can be used to toggle the values set on '
+                 'the original process handler declaration.')
         spec.exit_code(301, 'ERROR_SUB_PROCESS_EXCEPTED',
             message='The sub process excepted.')
         spec.exit_code(302, 'ERROR_SUB_PROCESS_KILLED',
@@ -225,16 +239,11 @@ class BaseRestartWorkChain(WorkChain):
         last_report = None
 
         # Sort the handlers with a priority defined, based on their priority in reverse order
-        get_priority = lambda handler: handler.priority
-        for handler in sorted(self.get_process_handlers(), key=get_priority, reverse=True):
+        for _, handler in sorted(self.get_process_handlers_by_priority(), key=lambda e: e[0], reverse=True):
 
-            # Skip if the handler is enabled, either explicitly through `handler_overrides` or by default
-            if not self.ctx.handler_overrides.get(handler.__name__, handler.enabled):  # type: ignore[attr-defined]
-                continue
-
-            # Even though the `handler` is an instance method, the `get_process_handlers` method returns unbound methods
-            # so we have to pass in `self` manually. Also, always pass the `node` as an argument because the
-            # `process_handler` decorator with which the handler is decorated relies on this behavior.
+            # Even though the ``handler`` is an instance method, the ``get_process_handlers_by_priority`` method returns
+            # unbound methods so we have to pass in ``self`` manually. Also, always pass the ``node`` as an argument
+            # because the ``process_handler`` decorator with which the handler is decorated relies on this behavior.
             report = handler(self, node)
 
             if report is not None and not isinstance(report, ProcessHandlerReport):
@@ -345,6 +354,30 @@ class BaseRestartWorkChain(WorkChain):
     @classmethod
     def get_process_handlers(cls) -> List[FunctionType]:
         return [method[1] for method in getmembers(cls) if cls.is_process_handler(method[1])]
+
+    def get_process_handlers_by_priority(self) -> List[Tuple[int, FunctionType]]:
+        """Return list of process handlers where overrides from ``inputs.handler_overrides`` are taken into account."""
+        handlers = []
+
+        for handler in self.get_process_handlers():
+
+            overrides = self.ctx.handler_overrides.get(handler.__name__, {})
+
+            enabled = None
+            priority = None
+
+            if isinstance(overrides, bool):
+                enabled = overrides
+            else:
+                enabled = overrides.pop('enabled', None)
+                priority = overrides.pop('priority', None)
+
+            if enabled is False or (enabled is None and not handler.enabled):  # type: ignore[attr-defined]
+                continue
+
+            handlers.append((priority or handler.priority, handler))  # type: ignore[attr-defined]
+
+        return handlers
 
     def on_terminated(self):
         """Clean the working directories of all child calculation jobs if `clean_workdir=True` in the inputs."""

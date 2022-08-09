@@ -61,7 +61,7 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
         return Profile(
             profile_name, {
                 'storage': {
-                    'backend': 'sqlite_zip',
+                    'backend': 'core.sqlite_zip',
                     'config': {
                         'path': str(path)
                     }

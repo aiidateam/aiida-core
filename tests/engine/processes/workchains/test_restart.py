@@ -33,6 +33,10 @@ class SomeWorkChain(engine.BaseRestartWorkChain):
     def handler_b(self, _):
         return
 
+    @engine.process_handler(priority=0, enabled=False)
+    def handler_c(self, _):
+        return
+
     def not_a_handler(self, _):
         pass
 
@@ -44,9 +48,35 @@ def test_is_process_handler():
     assert not SomeWorkChain.is_process_handler('unexisting_method')
 
 
-def test_get_process_handler():
+def test_get_process_handlers():
     """Test the `BaseRestartWorkChain.get_process_handlers` class method."""
-    assert [handler.__name__ for handler in SomeWorkChain.get_process_handlers()] == ['handler_a', 'handler_b']
+    assert [handler.__name__ for handler in SomeWorkChain.get_process_handlers()
+            ] == ['handler_a', 'handler_b', 'handler_c']
+
+
+# yapf: disable
+@pytest.mark.parametrize('inputs, priorities', (
+    ({}, [100, 200]),
+    ({'handler_overrides': {'handler_c': {'enabled': True}}}, [0, 100, 200]),
+    ({'handler_overrides': {'handler_a': {'priority': 50}}}, [50, 100]),
+    ({'handler_overrides': {'handler_a': {'enabled': False}}}, [100]),
+    ({'handler_overrides': {'handler_a': False}}, [100]),  # This notation is deprecated
+))
+# yapf: enable
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_get_process_handlers_by_priority(generate_work_chain, inputs, priorities):
+    """Test the `BaseRestartWorkChain.get_process_handlers_by_priority` method."""
+    process = generate_work_chain(SomeWorkChain, inputs)
+    process.setup()
+    assert sorted([priority for priority, handler in process.get_process_handlers_by_priority()]) == priorities
+
+    # Verify the actual handlers on the class haven't been modified
+    assert getattr(SomeWorkChain, 'handler_a').priority == 200
+    assert getattr(SomeWorkChain, 'handler_b').priority == 100
+    assert getattr(SomeWorkChain, 'handler_c').priority == 0
+    assert getattr(SomeWorkChain, 'handler_a').enabled
+    assert getattr(SomeWorkChain, 'handler_b').enabled
+    assert not getattr(SomeWorkChain, 'handler_c').enabled
 
 
 @pytest.mark.requires_rmq

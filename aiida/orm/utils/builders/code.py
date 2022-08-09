@@ -9,16 +9,21 @@
 ###########################################################################
 """Manage code objects with lazy loading of the db env"""
 import enum
-import os
+import pathlib
 
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.utils import ErrorAccumulator
+from aiida.common.warnings import warn_deprecation
+from aiida.orm import InstalledCode, PortableCode
+
+warn_deprecation('This module is deprecated. To create a new code instance, simply use the constructor.', version=3)
 
 
 class CodeBuilder:
     """Build a code with validation of attribute combinations"""
 
     def __init__(self, **kwargs):
+        """Construct a new instance."""
         self._err_acc = ErrorAccumulator(self.CodeValidationError)
         self._code_spec = {}
 
@@ -41,31 +46,27 @@ class CodeBuilder:
         """Build and return a new code instance (not stored)"""
         self.validate()
 
-        from aiida.orm import Code
-
         # Will be used at the end to check if all keys are known (those that are not None)
         passed_keys = set(k for k in self._code_spec.keys() if self._code_spec[k] is not None)
         used = set()
 
         if self._get_and_count('code_type', used) == self.CodeType.STORE_AND_UPLOAD:
-            file_list = [
-                os.path.realpath(os.path.join(self.code_folder, f))
-                for f in os.listdir(self._get_and_count('code_folder', used))
-            ]
-            code = Code(local_executable=self._get_and_count('code_rel_path', used), files=file_list)
+            code = PortableCode(
+                filepath_executable=self._get_and_count('code_rel_path', used),
+                filepath_files=pathlib.Path(self._get_and_count('code_folder', used))
+            )
         else:
-            code = Code(
-                remote_computer_exec=(
-                    self._get_and_count('computer', used), self._get_and_count('remote_abs_path', used)
-                )
+            code = InstalledCode(
+                computer=self._get_and_count('computer', used),
+                filepath_executable=self._get_and_count('remote_abs_path', used)
             )
 
         code.label = self._get_and_count('label', used)
         code.description = self._get_and_count('description', used)
-        code.set_input_plugin_name(self._get_and_count('input_plugin', used))
-        code.set_use_double_quotes(self._get_and_count('use_double_quotes', used))
-        code.set_prepend_text(self._get_and_count('prepend_text', used))
-        code.set_append_text(self._get_and_count('append_text', used))
+        code.default_calc_job_plugin = self._get_and_count('input_plugin', used)
+        code.use_double_quotes = self._get_and_count('use_double_quotes', used)
+        code.prepend_text = self._get_and_count('prepend_text', used)
+        code.append_text = self._get_and_count('append_text', used)
 
         # Complain if there are keys that are passed but not used
         if passed_keys - used:
@@ -98,19 +99,19 @@ class CodeBuilder:
         spec = {}
         spec['label'] = code.label
         spec['description'] = code.description
-        spec['input_plugin'] = code.get_input_plugin_name()
-        spec['use_double_quotes'] = code.get_use_double_quotes()
-        spec['prepend_text'] = code.get_prepend_text()
-        spec['append_text'] = code.get_append_text()
+        spec['input_plugin'] = code.default_calc_job_plugin
+        spec['use_double_quotes'] = code.use_double_quotes
+        spec['prepend_text'] = code.prepend_text
+        spec['append_text'] = code.append_text
 
-        if code.is_local():
+        if isinstance(code, PortableCode):
             spec['code_type'] = CodeBuilder.CodeType.STORE_AND_UPLOAD
             spec['code_folder'] = code.get_code_folder()
             spec['code_rel_path'] = code.get_code_rel_path()
         else:
             spec['code_type'] = CodeBuilder.CodeType.ON_COMPUTER
-            spec['computer'] = code.get_remote_computer()
-            spec['remote_abs_path'] = code.get_remote_exec_path()
+            spec['computer'] = code.computer
+            spec['remote_abs_path'] = code.get_executable()
 
         return spec
 

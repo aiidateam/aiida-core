@@ -16,7 +16,12 @@ __all__ = ('ProfileParamType',)
 
 
 class ProfileParamType(LabelStringType):
-    """The profile parameter type for click."""
+    """The profile parameter type for click.
+
+    This parameter type requires the command that uses it to define the ``context_class`` class attribute to be the
+    :class:`aiida.cmdline.groups.verdi.VerdiContext` class, as that is responsible for creating the user defined object
+    ``obj`` on the context and loads the instance config.
+    """
 
     name = 'profile'
 
@@ -31,9 +36,16 @@ class ProfileParamType(LabelStringType):
 
     def convert(self, value, param, ctx):
         """Attempt to match the given value to a valid profile."""
-        from aiida.common import extendeddicts
         from aiida.common.exceptions import MissingConfigurationError, ProfileConfigurationError
-        from aiida.manage.configuration import Profile, get_config, load_profile
+        from aiida.manage.configuration import Profile, load_profile
+
+        try:
+            config = ctx.obj.config
+        except AttributeError:
+            raise RuntimeError(
+                'The context does not contain a user defined object with the loaded AiiDA configuration. '
+                'Is your click command setting `context_class` to :class:`aiida.cmdline.groups.verdi.VerdiContext`?'
+            )
 
         # If the value is already of the expected return type, simply return it. This behavior is new in `click==8.0`:
         # https://click.palletsprojects.com/en/8.0.x/parameters/#implementing-custom-types
@@ -43,7 +55,6 @@ class ProfileParamType(LabelStringType):
         value = super().convert(value, param, ctx)
 
         try:
-            config = get_config(create=True)
             profile = config.get_profile(value)
         except (MissingConfigurationError, ProfileConfigurationError) as exception:
             if not self._cannot_exist:
@@ -58,10 +69,6 @@ class ProfileParamType(LabelStringType):
         if self._load_profile:
             load_profile(profile.name)
 
-        if ctx.obj is None:
-            ctx.obj = extendeddicts.AttributeDict()
-
-        ctx.obj.config = config
         ctx.obj.profile = profile
 
         return profile

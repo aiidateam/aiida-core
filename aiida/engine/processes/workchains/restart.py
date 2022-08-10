@@ -11,7 +11,7 @@
 import functools
 from inspect import getmembers
 from types import FunctionType
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Tuple, Type, Union
 
 from aiida import orm
 from aiida.common import AttributeDict
@@ -295,6 +295,15 @@ class BaseRestartWorkChain(WorkChain):
 
         return None
 
+    def get_outputs(self, node) -> Mapping[str, orm.Node]:
+        """Return a mapping of the outputs that should be attached as outputs to the work chain.
+
+        By default this method returns the outputs of the last completed calculation job. This method can be overridden
+        if the implementation wants to update those outputs before attaching them. Make sure that if the content of an
+        output node is modified that this is done through a calcfunction in order to not lose the provenance.
+        """
+        return self.exposed_outputs(node, self.process_class)
+
     def results(self) -> Optional['ExitCode']:
         """Attach the outputs specified in the output specification from the last completed process."""
         node = self.ctx.children[self.ctx.iteration - 1]
@@ -312,12 +321,12 @@ class BaseRestartWorkChain(WorkChain):
 
         self.report(f'work chain completed after {self.ctx.iteration} iterations')
 
-        exposed_outputs = self.exposed_outputs(node, self.process_class)
+        outputs = self.get_outputs(node)
 
         for name, port in self.spec().outputs.items():
 
             try:
-                output = exposed_outputs[name]
+                output = outputs[name]
             except KeyError:
                 if port.required:
                     self.report(

@@ -946,7 +946,7 @@ Querybuilder
         Posts a query to the database. The content of the query is passed in a attached JSON file.
 
 To use this endpoint, you need a http operator that allows to pass attachments.
-We will demonstrate two options, the `HTTPie <https://httpie.io/>`_ (to use in the terminal) and the python library `Requests <https://docs.python-requests.org/en/latest/#>`_ (to use in python).
+We will demonstrate two options, the `HTTPie <https://httpie.io/>`_ (to use in the terminal) and the python library `Requests <https://requests.readthedocs.io/en/latest/>`_ (to use in python).
 
 Option 1: HTTPie
 

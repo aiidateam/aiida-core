@@ -251,6 +251,27 @@ When submitting or running the work chain using namespaced inputs (``add`` in th
 
         $ verdi daemon restart --reset
 
+
+Customizing outputs
+===================
+
+By default, the ``BaseRestartWorkChain`` will attach the exposed outputs of the last completed calculation job.
+In most cases this is the correct behavior, but there might be use-cases where one wants to modify exactly what outputs are attached to the work chain.
+This can be achieved by overriding the :meth:`aiida.engine.processes.workchains.restart.BaseRestartWorkChain.get_outputs` method.
+For example, if you want to remove a particular output from being attached, you can do the following:
+
+.. code-block:: python
+
+    def get_outputs(self, node) -> Mapping[str, orm.Node]:
+        """Return a mapping of the outputs that should be attached as outputs to the work chain."""
+        outputs = super().get_outputs(node)
+        outputs.pop('some_output', None)
+        return outputs
+
+It is also possible to update the contents of one of the outputs returned by the last completed calculation job.
+In this case, it is important to go through a ``calcfunction``, as always, as to not lose any provenance.
+
+
 Error handling
 ==============
 

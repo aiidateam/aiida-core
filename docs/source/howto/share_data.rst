@@ -183,6 +183,11 @@ The AiiDA REST API allows to query your AiiDA database over HTTP(S) and returns 
     As of October 2020, the AiiDA REST API only supports ``GET`` methods (reading); in particular, it does *not* yet support workflow management.
     This feature is, however, part of the `AiiDA roadmap <https://github.com/aiidateam/aiida-core/wiki/AiiDA-release-roadmap>`_.
 
+
+.. note::
+    To ensure that when serving ``orm.ArrayData`` one always obtains a valid JSON compliant with the `ECMA-262 standard <https://www.ecma-international.org/publications-and-standards/standards/ecma-262/>`_, any ``np.nan``, ``np.inf`` and/or ``-np.inf`` entries will be replaced by ``None`` which will be rendered as ``null`` when getting the array via the API call.
+
+
 .. _how-to:share:serve:launch:
 
 Launching the REST API

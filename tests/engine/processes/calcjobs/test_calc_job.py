@@ -266,6 +266,46 @@ def test_containerized_installed_code(file_regression, aiida_localhost):
 
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
+def test_containerized_inner_mpi(file_regression, aiida_localhost):
+    """test run container code"""
+    aiida_localhost.set_use_double_quotes(True)
+    engine_command = """conda run --name {image}"""
+    override_mpirun_command = 'inner_mpirun -np {tot_num_mpiprocs}'
+    containerized_code = orm.InstalledContainerizedCode(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/bash',
+        engine_command=engine_command,
+        image='myenv',
+        inner_mpi=True,
+        mpi_args=override_mpirun_command,
+        computer=aiida_localhost,
+        escape_exec_line=False,
+    ).store()
+
+    inputs = {
+        'code': containerized_code,
+        'metadata': {
+            'dry_run': True,
+            'options': {
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
+                },
+                'withmpi': True,
+            }
+        }
+    }
+
+    _, node = launch.run_get_node(DummyCalcJob, **inputs)
+    folder_name = node.dry_run_info['folder']
+    submit_script_filename = node.get_option('submit_script_filename')
+    content = (pathlib.Path(folder_name) / submit_script_filename).read_bytes().decode('utf-8')
+
+    file_regression.check(content, extension='.sh')
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
 def test_containerized_portable_code(file_regression, tmp_path, aiida_localhost):
     """test run container code"""
     (tmp_path / 'bash').write_bytes(b'bash implementation')
@@ -339,7 +379,6 @@ def test_multi_codes_run_withmpi(aiida_local_code_factory, file_regression, calc
 @pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
 def test_portable_code(tmp_path, aiida_localhost):
     """test run container code"""
-    import pathlib
     (tmp_path / 'bash').write_bytes(b'bash implementation')
     subdir = tmp_path / 'sub'
     subdir.mkdir()

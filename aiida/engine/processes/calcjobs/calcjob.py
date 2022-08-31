@@ -740,6 +740,8 @@ class CalcJob(Process):
             else:
                 prepend_cmdline_params = []
 
+            cmdline_params = [str(this_code.get_executable())] + (code_info.cmdline_params or [])
+
             escape_exec_line = False
             if isinstance(this_code, Containerized):
                 prepend_cmdline_params += this_code.get_engine_command()
@@ -749,7 +751,19 @@ class CalcJob(Process):
                 # therefore default set to False.
                 escape_exec_line = this_code.escape_exec_line
 
-            cmdline_params = [str(this_code.get_executable())] + (code_info.cmdline_params or [])
+                inner_mpi = this_code.inner_mpi
+                if inner_mpi:
+                    # First always serials outside
+                    prepend_cmdline_params = this_code.get_engine_command()
+
+                    # Set mpi args for code if not exist use the computer one as default
+                    if this_code.get_mpirun_command():
+                        code_mpi_args = this_code.get_mpirun_command()
+                    else:
+                        code_mpi_args = mpi_args
+
+                    # import ipdb; ipdb.set_trace()
+                    cmdline_params = [arg.format(**subst_dict) for arg in code_mpi_args] + cmdline_params
 
             tmpl_code_info = JobTemplateCodeInfo()
             tmpl_code_info.prepend_cmdline_params = prepend_cmdline_params

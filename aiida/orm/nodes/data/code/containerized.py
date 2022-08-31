@@ -34,11 +34,23 @@ class Containerized(AbstractCode):
     _KEY_ATTRIBUTE_ENGINE_COMMAND: str = 'engine_command'
     _KEY_ATTRIBUTE_IMAGE: str = 'image'
     _KEY_ATTRIBUTE_ESCAPE_EXEC_LINE: str = 'escape_exec_line'
+    _KEY_ATTRIBUTE_INNER_MPI: str = 'inner_mpi'
+    _KEY_ATTRIBUTE_MPI_ARGS: str = 'mpi_args'
 
-    def __init__(self, engine_command: str, image: str, escape_exec_line: bool = False, **kwargs):
+    def __init__(
+        self,
+        engine_command: str,
+        image: str,
+        inner_mpi: bool = False,
+        mpi_args: str = '',
+        escape_exec_line: bool = False,
+        **kwargs
+    ):
         super().__init__(**kwargs)
         self.engine_command = engine_command
         self.image = image
+        self.inner_mpi = inner_mpi
+        self.mpi_args = mpi_args
         self.escape_exec_line = escape_exec_line
 
     @property
@@ -63,6 +75,16 @@ class Containerized(AbstractCode):
         self.base.attributes.set(self._KEY_ATTRIBUTE_ENGINE_COMMAND, value)
 
     @property
+    def mpi_args(self) -> str:
+        return self.base.attributes.get(self._KEY_ATTRIBUTE_MPI_ARGS)
+
+    @mpi_args.setter
+    def mpi_args(self, value: str) -> None:
+        type_check(value, str)
+
+        self.base.attributes.set(self._KEY_ATTRIBUTE_MPI_ARGS, value)
+
+    @property
     def escape_exec_line(self) -> bool:
         """True for escape whole execute line after engine command in double quotes.
 
@@ -79,6 +101,16 @@ class Containerized(AbstractCode):
         type_check(value, bool)
 
         self.base.attributes.set(self._KEY_ATTRIBUTE_ESCAPE_EXEC_LINE, value)
+
+    @property
+    def inner_mpi(self) -> bool:
+        return self.base.attributes.get(self._KEY_ATTRIBUTE_INNER_MPI)
+
+    @inner_mpi.setter
+    def inner_mpi(self, value: bool) -> None:
+        type_check(value, bool)
+
+        self.base.attributes.set(self._KEY_ATTRIBUTE_INNER_MPI, value)
 
     @property
     def image(self) -> str:
@@ -106,6 +138,12 @@ class Containerized(AbstractCode):
         cmdline = self.engine_command.format(image=self.image)
 
         return cmdline.split()
+
+    def get_mpirun_command(self) -> list:
+        """Return the mpi_args in terms of code."""
+        mpi_args = self.mpi_args
+
+        return mpi_args.split()
 
     @classmethod
     def _get_cli_options(cls) -> dict:

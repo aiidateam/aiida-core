@@ -25,7 +25,6 @@ from aiida.common.folders import Folder
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
 from aiida.orm.nodes.data.code.containerized import Containerized
-from aiida.orm.utils.loaders import load_code
 
 from ..exit_code import ExitCode
 from ..ports import PortNamespace
@@ -617,7 +616,7 @@ class CalcJob(Process):
         from aiida.common.datastructures import CodeInfo, CodeRunMode
         from aiida.common.exceptions import InputValidationError, InvalidOperation, PluginInternalError, ValidationError
         from aiida.common.utils import validate_list_of_string_tuples
-        from aiida.orm import AbstractCode, Computer, PortableCode
+        from aiida.orm import AbstractCode, Computer, PortableCode, load_code
         from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
         inputs = self.node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)

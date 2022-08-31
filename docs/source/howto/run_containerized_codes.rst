@@ -21,7 +21,7 @@ Running installed code within container
 
 The typical code setup for for running code installed docker container is shown below.
 
-    .. code-block::yaml
+    .. code-block:: yaml
 
         ---
         label: add-docker

@@ -10,7 +10,6 @@
 # pylint: disable=too-many-arguments
 """`verdi process` command."""
 import click
-from kiwipy import communications
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options, types
@@ -193,24 +192,12 @@ def process_status(processes):
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_kill(processes, timeout, wait):
     """Kill running processes."""
+    from aiida.engine.processes import control
 
-    controller = get_manager().get_process_controller()
-
-    futures = {}
-    for process in processes:
-
-        if process.is_terminated:
-            echo.echo_error(f'Process<{process.pk}> is already terminated')
-            continue
-
-        try:
-            future = controller.kill_process(process.pk, msg='Killed through `verdi process kill`')
-        except communications.UnroutableError:
-            echo.echo_error(f'Process<{process.pk}> is unreachable')
-        else:
-            futures[future] = process
-
-    process_actions(futures, 'kill', 'killing', 'killed', wait, timeout)
+    try:
+        control.kill_processes(processes, timeout=timeout, wait=wait)
+    except control.ProcessTimeoutException as exception:
+        echo.echo_critical(str(exception))
 
 
 @verdi_process.command('pause')
@@ -222,33 +209,15 @@ def process_kill(processes, timeout, wait):
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_pause(processes, all_entries, timeout, wait):
     """Pause running processes."""
-    from aiida.orm import ProcessNode, QueryBuilder
-
-    controller = get_manager().get_process_controller()
+    from aiida.engine.processes import control
 
     if processes and all_entries:
         raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
 
-    if not processes and all_entries:
-        active_states = options.active_process_states()
-        builder = QueryBuilder().append(ProcessNode, filters={'attributes.process_state': {'in': active_states}})
-        processes = builder.all(flat=True)
-
-    futures = {}
-    for process in processes:
-
-        if process.is_terminated:
-            echo.echo_error(f'Process<{process.pk}> is already terminated')
-            continue
-
-        try:
-            future = controller.pause_process(process.pk, msg='Paused through `verdi process pause`')
-        except communications.UnroutableError:
-            echo.echo_error(f'Process<{process.pk}> is unreachable')
-        else:
-            futures[future] = process
-
-    process_actions(futures, 'pause', 'pausing', 'paused', wait, timeout)
+    try:
+        control.pause_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait)
+    except control.ProcessTimeoutException as exception:
+        echo.echo_critical(str(exception))
 
 
 @verdi_process.command('play')
@@ -260,34 +229,15 @@ def process_pause(processes, all_entries, timeout, wait):
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_play(processes, all_entries, timeout, wait):
     """Play (unpause) paused processes."""
-    from aiida.orm import ProcessNode, QueryBuilder
-    from aiida.tools.query.calculation import CalculationQueryBuilder
-
-    controller = get_manager().get_process_controller()
+    from aiida.engine.processes import control
 
     if processes and all_entries:
         raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
 
-    if not processes and all_entries:
-        filters = CalculationQueryBuilder().get_filters(process_state=('created', 'waiting', 'running'), paused=True)
-        builder = QueryBuilder().append(ProcessNode, filters=filters)
-        processes = builder.all(flat=True)
-
-    futures = {}
-    for process in processes:
-
-        if process.is_terminated:
-            echo.echo_error(f'Process<{process.pk}> is already terminated')
-            continue
-
-        try:
-            future = controller.play_process(process.pk)
-        except communications.UnroutableError:
-            echo.echo_error(f'Process<{process.pk}> is unreachable')
-        else:
-            futures[future] = process
-
-    process_actions(futures, 'play', 'playing', 'played', wait, timeout)
+    try:
+        control.play_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait)
+    except control.ProcessTimeoutException as exception:
+        echo.echo_critical(str(exception))
 
 
 @verdi_process.command('watch')
@@ -335,79 +285,3 @@ def process_watch(processes):
 
         # Reraise to trigger clicks builtin abort sequence
         raise
-
-
-def process_actions(futures_map, infinitive, present, past, wait=False, timeout=None):
-    """
-    Process the requested actions sent to a set of Processes given a map of the futures and the
-    corresponding processes.  This function will echo the correct information strings based on
-    the outcomes of the futures and the given verb conjugations.  You can optionally wait for
-    any pending actions to be completed before the functions returns and use a timeout to put
-    a maximum wait time on the actions.
-
-    :param futures_map: the map of action futures and the corresponding processes
-    :type futures_map: dict
-    :param infinitive: the infinitive form of the action verb
-    :type infinitive: str
-    :param present: the present tense form
-    :type present: str
-    :param past: the past tense form
-    :type past: str
-    :param wait: if True, waits for pending actions to be competed, otherwise just returns
-    :type wait: bool
-    :param timeout: the timeout (in seconds) to wait for actions to be completed
-    :type timeout: float
-    """
-    # pylint: disable=too-many-branches
-    from concurrent import futures
-
-    import kiwipy
-    from plumpy.futures import unwrap_kiwi_future
-
-    from aiida.manage.external.rmq import CommunicationTimeout
-
-    scheduled = {}
-    try:
-        for future in futures.as_completed(futures_map.keys(), timeout=timeout):
-            # Get the corresponding process
-            process = futures_map[future]
-
-            try:
-                # unwrap is need here since LoopCommunicator will also wrap a future
-                future = unwrap_kiwi_future(future)
-                result = future.result()
-            except CommunicationTimeout:
-                echo.echo_error(f'call to {infinitive} Process<{process.pk}> timed out')
-            except Exception as exception:  # pylint: disable=broad-except
-                echo.echo_error(f'failed to {infinitive} Process<{process.pk}>: {exception}')
-            else:
-                if result is True:
-                    echo.echo_success(f'{past} Process<{process.pk}>')
-                elif result is False:
-                    echo.echo_error(f'problem {present} Process<{process.pk}>')
-                elif isinstance(result, kiwipy.Future):
-                    echo.echo_success(f'scheduled {infinitive} Process<{process.pk}>')
-                    scheduled[result] = process
-                else:
-                    echo.echo_error(f'got unexpected response when {present} Process<{process.pk}>: {result}')
-
-        if wait and scheduled:
-            echo.echo_report(f"waiting for process(es) {','.join([str(proc.pk) for proc in scheduled.values()])}")
-
-            for future in futures.as_completed(scheduled.keys(), timeout=timeout):
-                process = scheduled[future]
-
-                try:
-                    result = future.result()
-                except Exception as exception:  # pylint: disable=broad-except
-                    echo.echo_error(f'failed to {infinitive} Process<{process.pk}>: {exception}')
-                else:
-                    if result is True:
-                        echo.echo_success(f'{past} Process<{process.pk}>')
-                    elif result is False:
-                        echo.echo_error(f'problem {present} Process<{process.pk}>')
-                    else:
-                        echo.echo_error(f'got unexpected response when {present} Process<{process.pk}>: {result}')
-
-    except futures.TimeoutError:
-        echo.echo_error(f'timed out trying to {infinitive} processes {futures_map.values()}')

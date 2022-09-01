@@ -242,6 +242,7 @@ autodoc_aliases_typing = {
     'QueryBuilder': 'aiida.orm.querybuilder.QueryBuilder',
     'WorkChainNode': 'aiida.orm.nodes.process.workflow.workchain.WorkChainNode',
     'orm.ProcessNode': 'aiida.orm.nodes.process.process.ProcessNode',
+    'ProcessNode': 'aiida.orm.nodes.process.process.ProcessNode',
     'BackendAuthInfo': 'aiida.orm.implementation.authinfos.BackendAuthInfo',
     'BackendComment': 'aiida.orm.implementation.comments.BackendComment',
     'BackendComputer': 'aiida.orm.implementation.computers.BackendComputer',

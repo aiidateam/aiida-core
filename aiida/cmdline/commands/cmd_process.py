@@ -13,11 +13,28 @@ import click
 from kiwipy import communications
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import arguments, options
+from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
-from aiida.cmdline.utils.query.calculation import CalculationQueryBuilder
 from aiida.common.log import LOG_LEVELS
 from aiida.manage import get_manager
+
+
+def valid_projections():
+    """Return list of valid projections for the ``--project`` option of ``verdi process list``.
+
+    This indirection is necessary to prevent loading the imported module which slows down tab-completion.
+    """
+    from aiida.tools.query.calculation import CalculationQueryBuilder
+    return CalculationQueryBuilder.valid_projections
+
+
+def default_projections():
+    """Return list of default projections for the ``--project`` option of ``verdi process list``.
+
+    This indirection is necessary to prevent loading the imported module which slows down tab-completion.
+    """
+    from aiida.tools.query.calculation import CalculationQueryBuilder
+    return CalculationQueryBuilder.default_projections
 
 
 @verdi.group('process')
@@ -26,9 +43,7 @@ def verdi_process():
 
 
 @verdi_process.command('list')
-@options.PROJECT(
-    type=click.Choice(CalculationQueryBuilder.valid_projections), default=CalculationQueryBuilder.default_projections
-)
+@options.PROJECT(type=types.LazyChoice(valid_projections), default=lambda: default_projections())  # pylint: disable=unnecessary-lambda
 @options.ORDER_BY()
 @options.ORDER_DIRECTION()
 @options.GROUP(help='Only include entries that are a member of this group.')
@@ -48,13 +63,14 @@ def process_list(
 ):
     """Show a list of running or terminated processes.
 
-    By default, only those that are still running are shown, but there are options
-    to show also the finished ones."""
+    By default, only those that are still running are shown, but there are options to show also the finished ones.
+    """
     # pylint: disable=too-many-locals
     from tabulate import tabulate
 
     from aiida.cmdline.utils.common import check_worker_load, print_last_process_state_change
     from aiida.engine.daemon.client import get_daemon_client
+    from aiida.tools.query.calculation import CalculationQueryBuilder
 
     relationships = {}
 
@@ -245,6 +261,7 @@ def process_pause(processes, all_entries, timeout, wait):
 def process_play(processes, all_entries, timeout, wait):
     """Play (unpause) paused processes."""
     from aiida.orm import ProcessNode, QueryBuilder
+    from aiida.tools.query.calculation import CalculationQueryBuilder
 
     controller = get_manager().get_process_controller()
 

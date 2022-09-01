@@ -112,6 +112,7 @@ repos:
                 aiida/storage/sqlite_zip/.*.py|
                 aiida/tools/graph/graph_traversers.py|
                 aiida/tools/groups/paths.py|
+                aiida/tools/query/*.py|
                 aiida/tools/archive/.*py|
             )$
 

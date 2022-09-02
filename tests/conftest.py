@@ -406,7 +406,7 @@ def with_daemon():
     profile = get_profile()
 
     with subprocess.Popen(
-        DaemonClient(profile).cmd_string.split(),
+        DaemonClient(profile).cmd_start_daemon_worker,
         stderr=sys.stderr,
         stdout=sys.stdout,
         env=env,

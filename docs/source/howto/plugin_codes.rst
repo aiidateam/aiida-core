@@ -314,26 +314,7 @@ With your ``calculations.py`` and ``parsers.py`` files at hand, let's register e
 
    You have just created an ``aiida_diff_tutorial`` Python *package*!
 
- * Write a minimalistic ``setup.py`` script for your new package:
-
-    .. code-block:: python
-
-        from setuptools import setup
-
-        setup(
-            name='aiida-diff-tutorial',
-            packages=['aiida_diff_tutorial'],
-            entry_points={
-                'aiida.calculations': ["diff-tutorial = aiida_diff_tutorial.calculations:DiffCalculation"],
-                'aiida.parsers': ["diff-tutorial = aiida_diff_tutorial.parsers:DiffParser"],
-            }
-        )
-
-    .. note::
-        Strictly speaking, ``aiida-diff-tutorial`` is the name of the *distribution*, while ``aiida_diff_tutorial`` is the name of the *package*.
-        The aiida-core documentation uses the term *package* a bit more loosely.
-
- * Or using ``pyproject.toml`` for new package:
+ * Write a minimalistic project metadata specification ``pyproject.toml`` for new package:
 
     .. code-block:: toml
 

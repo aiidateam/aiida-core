@@ -388,43 +388,29 @@ def suppress_internal_deprecations():
         yield
 
 
-@pytest.fixture
-def with_daemon():
-    """Starts the daemon process and then makes sure to kill it once the test is done."""
-    import subprocess
-    import sys
+@pytest.fixture(scope='session')
+def daemon_client(aiida_profile):
+    """Return a daemon client for the configured test profile for the test session.
 
-    from aiida.cmdline.utils.common import get_env_with_venv_bin
+    The daemon will be automatically stopped at the end of the session.
+    """
     from aiida.engine.daemon.client import DaemonClient
 
-    # Add the current python path to the environment that will be used for the daemon sub process.
-    # This is necessary to guarantee the daemon can also import all the classes that are defined
-    # in this `tests` module.
-    env = get_env_with_venv_bin()
-    env['PYTHONPATH'] = ':'.join(sys.path)
-
-    profile = get_profile()
-
-    with subprocess.Popen(
-        DaemonClient(profile).cmd_start_daemon_worker,
-        stderr=sys.stderr,
-        stdout=sys.stdout,
-        env=env,
-    ):
-        yield
-
-
-@pytest.fixture
-def daemon_client():
-    """Return a daemon client instance and stop any daemon instances running for the test profile after the test."""
-    from aiida.engine.daemon.client import DaemonClient
-
-    client = DaemonClient(get_profile())
+    daemon_client = DaemonClient(aiida_profile._manager._profile)  # pylint: disable=protected-access
 
     try:
-        yield client
+        yield daemon_client
     finally:
-        client.stop_daemon(wait=True)
+        daemon_client.stop_daemon(wait=True)
+
+
+@pytest.fixture()
+def with_daemon(daemon_client):
+    """Ensure that the daemon is running for the test profile and return the associated client."""
+    if not daemon_client.is_daemon_running:
+        daemon_client.start_daemon()
+
+    yield daemon_client
 
 
 @pytest.fixture(scope='function')

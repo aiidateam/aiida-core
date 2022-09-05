@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1660768556985,
+  "lastUpdate": 1662393748086,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -92330,6 +92330,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.0043352",
             "group": "node",
             "extra": "mean: 26.163 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "2.40",
+          "cores": 2,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.8.13",
+          "metadata": "postgres:12.3, rabbitmq:3.8.3"
+        },
+        "commit": {
+          "id": "2d306980b1a992194d4a2d7d7ff5962fae57c527",
+          "message": "API: Add function to start the daemon (#5625)\n\nSo far, the daemon could only be started through `verdi` and there was\r\nno way to do it from the Python API. Here we add the `start_daemon`\r\nmethod to the `aiida.engine.daemon.client.DaemonClient` class which will\r\nstart the daemon when called.\r\n\r\nTo start the daemon, the function will actually still invoke the `verdi`\r\ncommand through a subprocess. The reason is that starting the daemon\r\nwill put the calling process in the background, which is not the desired\r\nbehavior when calling it from the API. The actual code that launches the\r\ncircus daemon is moved from the `verdi` command to the `_start_daemon`\r\nmethod of the `DaemonClient`. In this way, the daemon functionality is\r\nmore self-contained. By making it a protected method, we signal that\r\nusers of the Python API should probably not use it, but use the public\r\n`start_daemon` instead.\r\n\r\nThis implementation may seem to have some circularity, as `start_daemon`\r\nwill call a `verdi` command, which in turn will call the `_start_daemon`\r\nmethod of the `DaemonClient`. The reason for this is that the `verdi`\r\ncommand ensures that the correct profile is loaded before starting the\r\ndaemon. We could make a separate CLI end point independent of `verdi`\r\nthat just serves to load a profile and start the daemon, but that seems\r\nunnecessarily complicated at this point.\r\n\r\nBesides the added function, which was the main goal, the code is also\r\nrefactored considerably. The implementation of the command line command\r\n`verdi daemon start-circus` is now moved to the `_start_circus` method\r\nof the `DaemonClient` class. The `verdi devel run_daemon` command is\r\nmoved to `verdi daemon worker`, which makes more sense as a location.\r\nThis command launches a single daemon worker, which is nothing more than\r\nan AiiDA process that runs a `Runner` instance in blocking mode. The\r\n`verdi daemon start` will run a circus daemon that manages instances of\r\nthese daemon workers. To better match the nomenclature, the module\r\n`aiida.engine.daemon.runner` was renamed to `worker`.",
+          "timestamp": "2022-09-05T17:50:23+02:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/2d306980b1a992194d4a2d7d7ff5962fae57c527",
+          "distinct": true,
+          "tree_id": "fc142275102287fe2ce3a7291f7e40cb6ceb3efc"
+        },
+        "date": 1662393740399,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 2.4309653212084394,
+            "unit": "iter/sec",
+            "range": "stddev: 0.057970",
+            "group": "import-export",
+            "extra": "mean: 411.36 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 2.3929065181686537,
+            "unit": "iter/sec",
+            "range": "stddev: 0.054853",
+            "group": "import-export",
+            "extra": "mean: 417.90 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 3.274109400805002,
+            "unit": "iter/sec",
+            "range": "stddev: 0.078945",
+            "group": "import-export",
+            "extra": "mean: 305.43 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 3.189491528677094,
+            "unit": "iter/sec",
+            "range": "stddev: 0.082437",
+            "group": "import-export",
+            "extra": "mean: 313.53 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 2.6363180933694395,
+            "unit": "iter/sec",
+            "range": "stddev: 0.013004",
+            "group": "engine",
+            "extra": "mean: 379.32 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.5930070563112864,
+            "unit": "iter/sec",
+            "range": "stddev: 0.074686",
+            "group": "engine",
+            "extra": "mean: 1.6863 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.6862994961182582,
+            "unit": "iter/sec",
+            "range": "stddev: 0.035396",
+            "group": "engine",
+            "extra": "mean: 1.4571 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.14989515992402772,
+            "unit": "iter/sec",
+            "range": "stddev: 0.17811",
+            "group": "engine",
+            "extra": "mean: 6.6713 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.16976604772896794,
+            "unit": "iter/sec",
+            "range": "stddev: 0.18664",
+            "group": "engine",
+            "extra": "mean: 5.8905 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 1.9598535807971222,
+            "unit": "iter/sec",
+            "range": "stddev: 0.019043",
+            "group": "engine",
+            "extra": "mean: 510.24 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.47847476445456677,
+            "unit": "iter/sec",
+            "range": "stddev: 0.062888",
+            "group": "engine",
+            "extra": "mean: 2.0900 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.5475515756621868,
+            "unit": "iter/sec",
+            "range": "stddev: 0.090450",
+            "group": "engine",
+            "extra": "mean: 1.8263 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.13408923171659676,
+            "unit": "iter/sec",
+            "range": "stddev: 0.15833",
+            "group": "engine",
+            "extra": "mean: 7.4577 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.15588208130023604,
+            "unit": "iter/sec",
+            "range": "stddev: 0.17365",
+            "group": "engine",
+            "extra": "mean: 6.4151 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 310.845050267042,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00055359",
+            "group": "node",
+            "extra": "mean: 3.2170 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 118.19089531775944,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00063808",
+            "group": "node",
+            "extra": "mean: 8.4609 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 58.607836404935206,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0048871",
+            "group": "node",
+            "extra": "mean: 17.063 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 189.26508141757023,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00044140",
+            "group": "node",
+            "extra": "mean: 5.2836 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 50.52787261812263,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0018235",
+            "group": "node",
+            "extra": "mean: 19.791 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 46.77324874385955,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0022457",
+            "group": "node",
+            "extra": "mean: 21.380 msec\nrounds: 100"
           }
         ]
       }

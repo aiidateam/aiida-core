@@ -7,18 +7,18 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Unit tests for the :mod:`aiida.engine.daemon.runner` module."""
+"""Unit tests for the :mod:`aiida.engine.daemon.worker` module."""
 import pytest
 
-from aiida.engine.daemon.runner import shutdown_runner
+from aiida.engine.daemon.worker import shutdown_worker
 
 
 @pytest.mark.requires_rmq
 @pytest.mark.asyncio
-async def test_shutdown_runner(manager):
-    """Test the ``shutdown_runner`` method."""
+async def test_shutdown_worker(manager):
+    """Test the ``shutdown_worker`` method."""
     runner = manager.get_runner()
-    await shutdown_runner(runner)
+    await shutdown_worker(runner)
 
     try:
         assert runner.is_closed()

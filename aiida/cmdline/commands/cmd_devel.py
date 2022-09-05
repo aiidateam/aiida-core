@@ -73,14 +73,6 @@ def devel_check_undesired_imports():
     echo.echo_success('no issues detected')
 
 
-@verdi_devel.command('run_daemon')
-@decorators.with_dbenv()
-def devel_run_daemon():
-    """Run a daemon instance in the current interpreter."""
-    from aiida.engine.daemon.runner import start_daemon
-    start_daemon()
-
-
 @verdi_devel.command('validate-plugins')
 @decorators.with_dbenv()
 def devel_validate_plugins():

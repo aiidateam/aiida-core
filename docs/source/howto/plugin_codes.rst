@@ -314,7 +314,7 @@ With your ``calculations.py`` and ``parsers.py`` files at hand, let's register e
 
    You have just created an ``aiida_diff_tutorial`` Python *package*!
 
- * Write a minimalistic project metadata specification ``pyproject.toml`` for new package:
+ * Add a minimal set of metadata for your package by writing a ``pyproject.toml`` file:
 
     .. code-block:: toml
 

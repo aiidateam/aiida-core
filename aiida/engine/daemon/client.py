@@ -15,10 +15,10 @@ import os
 import shutil
 import socket
 import subprocess
+import sys
 import tempfile
 from typing import TYPE_CHECKING, Any, Dict
 
-from aiida.cmdline.utils.common import get_env_with_venv_bin
 from aiida.common.exceptions import AiidaException, ConfigurationError
 from aiida.common.lang import type_check
 from aiida.manage.configuration import get_config, get_config_option
@@ -172,6 +172,25 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
                 fhandle.write(str(port))
 
             return port
+
+    @staticmethod
+    def get_env() -> dict[str, str]:
+        """Return the environment for this current process.
+
+        This method is used to pass variables from the environment of the current process to a subprocess that is
+        spawned when the daemon or a daemon worker is started.
+
+        It replicates the ``PATH``, ``PYTHONPATH` and the ``AIIDA_PATH`` environment variables. The ``PYTHONPATH``
+        variable ensures that all Python modules that can be imported by the parent process, are also importable by
+        the subprocess. The ``AIIDA_PATH`` variable ensures that the subprocess will use the same AiiDA configuration
+        directory as used by the current process.
+        """
+        env = os.environ.copy()
+        env['PATH'] = ':'.join([os.path.dirname(sys.executable), env['PATH']])
+        env['PYTHONPATH'] = ':'.join(sys.path)
+        env['AIIDA_PATH'] = get_config().dirpath
+        env['PYTHONUNBUFFERED'] = 'True'
+        return env
 
     def get_circus_socket_directory(self) -> str:
         """Retrieve the absolute path of the directory where the circus sockets are stored.
@@ -453,10 +472,8 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         :raises DaemonException: If the daemon fails to start.
         :raises DaemonException: If the daemon starts but then is unresponsive or in an unexpected state.
         """
-        env = get_env_with_venv_bin()
-
         try:
-            subprocess.check_output(self.cmd_start_daemon, env=env, stderr=subprocess.STDOUT)  # pylint: disable=unexpected-keyword-arg
+            subprocess.check_output(self.cmd_start_daemon, env=self.get_env(), stderr=subprocess.STDOUT)  # pylint: disable=unexpected-keyword-arg
         except subprocess.CalledProcessError as exception:
             raise DaemonException('The daemon failed to start.') from exception
 
@@ -516,7 +533,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
                     'class': 'FileStream',
                     'filename': self.daemon_log_file,
                 },
-                'env': get_env_with_venv_bin(),
+                'env': self.get_env(),
             }]
         }  # yapf: disable
 

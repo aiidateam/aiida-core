@@ -18,7 +18,9 @@ import socket
 import subprocess
 import sys
 import tempfile
-from typing import TYPE_CHECKING, Any, Dict
+import time
+import typing as t
+from typing import TYPE_CHECKING
 
 from aiida.common.exceptions import AiidaException, ConfigurationError
 from aiida.common.lang import type_check
@@ -34,7 +36,7 @@ VERDI_BIN = shutil.which('verdi')
 VIRTUALENV = os.environ.get('VIRTUAL_ENV', None)
 
 # see https://github.com/python/typing/issues/182
-JsonDictType = Dict[str, Any]
+JsonDictType = t.Dict[str, t.Any]
 
 __all__ = ('DaemonClient',)
 
@@ -106,10 +108,18 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
 
         return VERDI_BIN
 
-    @property
-    def cmd_start_daemon(self) -> list[str]:
-        """Return the command to start the daemon."""
-        return [self._verdi_bin, '-p', self.profile.name, 'daemon', 'start']
+    def cmd_start_daemon(self, number_workers: int = 1, foreground: bool = False) -> list[str]:
+        """Return the command to start the daemon.
+
+        :param number_workers: Number of daemon workers to start.
+        :param foreground: Whether to launch the subprocess in the background or not.
+        """
+        command = [self._verdi_bin, '-p', self.profile.name, 'daemon', 'start-circus', str(number_workers)]
+
+        if foreground:
+            command.append('--foreground')
+
+        return command
 
     @property
     def cmd_start_daemon_worker(self) -> list[str]:
@@ -141,7 +151,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         return self.profile.filepaths['circus']['socket']['file']
 
     @property
-    def circus_socket_endpoints(self) -> Dict[str, str]:
+    def circus_socket_endpoints(self) -> dict[str, str]:
         return self.profile.filepaths['circus']['socket']
 
     @property
@@ -449,11 +459,13 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         command = {'command': 'decr', 'properties': {'name': self.daemon_name, 'nb': number}}
         return self.call_client(command)
 
-    def stop_daemon(self, wait: bool) -> JsonDictType:
+    def stop_daemon(self, wait: bool = True, timeout: int = 5) -> JsonDictType:
         """Stop the daemon.
 
         :param wait: Boolean to indicate whether to wait for the result of the command.
+        :param timeout: Wait this number of seconds for the ``is_daemon_running`` to return ``False`` before raising.
         :return: The client call response.
+        :raises DaemonException: If ``is_daemon_running`` returns ``True`` after the ``timeout`` has passed.
         """
         command = {'command': 'quit', 'properties': {'waiting': wait}}
 
@@ -461,6 +473,15 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
 
         if self._ENDPOINT_PROTOCOL == ControllerProtocol.IPC:
             self.delete_circus_socket_directory()
+
+        if not wait:
+            return result
+
+        self._await_condition(
+            lambda: not self.is_daemon_running,
+            DaemonException(f'The daemon failed to stop within {timeout} seconds.'),
+            timeout=timeout,
+        )
 
         return result
 
@@ -473,24 +494,48 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         command = {'command': 'restart', 'properties': {'name': self.daemon_name, 'waiting': wait}}
         return self.call_client(command)
 
-    def start_daemon(self) -> None:
+    def start_daemon(self, number_workers: int = 1, foreground: bool = False, timeout: int = 5) -> None:
         """Start the daemon in a sub process running in the background.
 
+        :param number_workers: Number of daemon workers to start.
+        :param foreground: Whether to launch the subprocess in the background or not.
+        :param timeout: Wait this number of seconds for the ``is_daemon_running`` to return ``True`` before raising.
         :raises DaemonException: If the daemon fails to start.
         :raises DaemonException: If the daemon starts but then is unresponsive or in an unexpected state.
+        :raises DaemonException: If ``is_daemon_running`` returns ``False`` after the ``timeout`` has passed.
         """
+        env = self.get_env()
+        command = self.cmd_start_daemon(number_workers, foreground)
+
         try:
-            subprocess.check_output(self.cmd_start_daemon, env=self.get_env(), stderr=subprocess.STDOUT)  # pylint: disable=unexpected-keyword-arg
+            subprocess.check_output(command, env=env, stderr=subprocess.STDOUT)  # pylint: disable=unexpected-keyword-arg
         except subprocess.CalledProcessError as exception:
             raise DaemonException('The daemon failed to start.') from exception
 
-        response = self.get_status()
+        self._await_condition(
+            lambda: self.is_daemon_running,
+            DaemonException(f'The daemon failed to start within {timeout} seconds.'),
+            timeout=timeout,
+        )
 
-        if 'status' not in response:
-            raise DaemonException('The daemon is not responsive.')
+    @staticmethod
+    def _await_condition(condition: t.Callable, exception: Exception, timeout: int = 5, interval: float = 0.1):
+        """Await a condition to evaluate to ``True`` or raise the exception if the timeout is reached.
 
-        if response['status'] not in ['active', 'ok']:
-            raise DaemonException(f'The daemon has an unexpected status: {response["status"]}')
+        :param condition: A callable that is waited for to return ``True``.
+        :param exception: Raise this exception if ``condition`` does not return ``True`` after ``timeout`` seconds.
+        :param timeout: Wait this number of seconds for ``condition`` to return ``True`` before raising.
+        :param interval: The time in seconds to wait between invocations of ``condition``.
+        :raises: The exception provided by ``exception`` if timeout is reached.
+        """
+        start_time = time.time()
+
+        while not condition():
+
+            time.sleep(interval)
+
+            if time.time() - start_time > timeout:
+                raise exception
 
     def _start_daemon(self, number_workers: int = 1, foreground: bool = False) -> None:
         """Start the daemon.

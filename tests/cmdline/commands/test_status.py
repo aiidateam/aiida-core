@@ -17,6 +17,7 @@ from aiida.storage.psql_dos import migrator
 
 
 @pytest.mark.requires_rmq
+@pytest.mark.usefixtures('stopped_daemon_client')
 def test_status(run_cli_command):
     """Test `verdi status`."""
     options = []

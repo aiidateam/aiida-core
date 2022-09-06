@@ -37,7 +37,13 @@ def is_verbose():
 
 def get_env_with_venv_bin():
     """Create a clone of the current running environment with the AIIDA_PATH variable set directory of the config."""
+    from aiida.common.warnings import warn_deprecation
     from aiida.manage.configuration import get_config
+
+    warn_deprecation(
+        '`get_env_with_venv_bin` function is deprecated use `aiida.engine.daemon.client.DaemonClient.get_env` instead.',
+        version=3
+    )
 
     config = get_config()
 

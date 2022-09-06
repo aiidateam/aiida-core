@@ -394,22 +394,16 @@ def with_daemon():
     import subprocess
     import sys
 
-    from aiida.cmdline.utils.common import get_env_with_venv_bin
     from aiida.engine.daemon.client import DaemonClient
 
-    # Add the current python path to the environment that will be used for the daemon sub process.
-    # This is necessary to guarantee the daemon can also import all the classes that are defined
-    # in this `tests` module.
-    env = get_env_with_venv_bin()
-    env['PYTHONPATH'] = ':'.join(sys.path)
-
     profile = get_profile()
+    client = DaemonClient(profile)
 
     with subprocess.Popen(
-        DaemonClient(profile).cmd_start_daemon_worker,
+        client.cmd_start_daemon_worker,
         stderr=sys.stderr,
         stdout=sys.stdout,
-        env=env,
+        env=client.get_env(),
     ):
         yield
 

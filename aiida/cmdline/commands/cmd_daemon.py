@@ -17,7 +17,6 @@ from click_spinner import spinner
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import decorators, echo
-from aiida.cmdline.utils.common import get_env_with_venv_bin
 from aiida.cmdline.utils.daemon import (
     _START_CIRCUS_COMMAND,
     delete_stale_pid_file,
@@ -71,8 +70,7 @@ def start(foreground, number):
         command = ['verdi', '-p', client.profile.name, 'daemon', _START_CIRCUS_COMMAND, str(number)]
 
     try:
-        currenv = get_env_with_venv_bin()
-        subprocess.check_output(command, env=currenv, stderr=subprocess.STDOUT)  # pylint: disable=unexpected-keyword-arg
+        subprocess.check_output(command, env=client.get_env(), stderr=subprocess.STDOUT)  # pylint: disable=unexpected-keyword-arg
     except subprocess.CalledProcessError as exception:
         echo.echo('FAILED', fg=echo.COLORS['error'], bold=True)
         echo.echo_critical(str(exception))
@@ -159,8 +157,7 @@ def logshow():
 
     client = get_daemon_client()
 
-    currenv = get_env_with_venv_bin()
-    with subprocess.Popen(['tail', '-f', client.daemon_log_file], env=currenv) as process:
+    with subprocess.Popen(['tail', '-f', client.daemon_log_file], env=client.get_env()) as process:
         process.wait()
 
 

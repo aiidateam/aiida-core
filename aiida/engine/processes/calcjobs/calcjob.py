@@ -844,4 +844,9 @@ class CalcJob(Process):
                     'is absolute! ({})'.format(this_pk, dest_rel_path)
                 )
 
+        job_tmpl.retrieve_list = retrieve_list
+        job_tmpl.retrieve_temporary_list = retrieve_temporary_list
+        job_tmpl.local_copy_list = local_copy_list
+        job_tmpl.remote_copy_list = remote_copy_list
+
         return calc_info

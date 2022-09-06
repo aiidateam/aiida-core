@@ -359,6 +359,10 @@ class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-insta
         'import_sys_environment',
         'codes_run_mode',
         'codes_info',
+        'retrieve_list',
+        'retrieve_temporary_list',
+        'local_copy_list',
+        'remote_copy_list',
     )
 
 

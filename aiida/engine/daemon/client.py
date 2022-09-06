@@ -10,6 +10,7 @@
 """Client to interact with the daemon."""
 from __future__ import annotations
 
+import contextlib
 import enum
 import os
 import shutil
@@ -356,8 +357,8 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
 
         return endpoint
 
-    @property
-    def client(self) -> 'CircusClient':
+    @contextlib.contextmanager
+    def get_client(self) -> 'CircusClient':
         """Return an instance of the CircusClient.
 
         The endpoint is defined by the controller endpoint, which used the port that was written to the port file upon
@@ -366,7 +367,12 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         :return: CircusClient instance
         """
         from circus.client import CircusClient
-        return CircusClient(endpoint=self.get_controller_endpoint(), timeout=self._DAEMON_TIMEOUT)
+
+        try:
+            client = CircusClient(endpoint=self.get_controller_endpoint(), timeout=self._DAEMON_TIMEOUT)
+            yield client
+        finally:
+            client.stop()
 
     def call_client(self, command: JsonDictType) -> JsonDictType:
         """Call the client with a specific command.
@@ -384,7 +390,8 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
             return {'status': self.DAEMON_ERROR_NOT_RUNNING}
 
         try:
-            result = self.client.call(command)
+            with self.get_client() as client:
+                result = client.call(command)
         except CallError as exception:
             if str(exception) == 'Timed out.':
                 return {'status': self.DAEMON_ERROR_TIMEOUT}

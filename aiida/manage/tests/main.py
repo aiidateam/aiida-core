@@ -18,7 +18,7 @@ import tempfile
 
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import configuration, get_manager
-from aiida.manage.configuration.settings import create_instance_directories
+from aiida.manage.configuration import settings
 from aiida.manage.external.postgres import Postgres
 
 __all__ = (
@@ -227,8 +227,6 @@ class TemporaryProfileManager(ProfileManager):
            e.g. {'pg_ctl': '/somepath/pg_ctl'}. Should usually not be necessary.
 
         """
-        from aiida.manage.configuration import settings
-
         self.dbinfo = {}
         self.profile_info = _DEFAULT_PROFILE_INFO
         self.profile_info['storage_backend'] = backend
@@ -241,6 +239,7 @@ class TemporaryProfileManager(ProfileManager):
         self._backup = {
             'config': configuration.CONFIG,
             'config_dir': settings.AIIDA_CONFIG_FOLDER,
+            settings.DEFAULT_AIIDA_PATH_VARIABLE: os.environ.get(settings.DEFAULT_AIIDA_PATH_VARIABLE, None)
         }
 
     @property
@@ -315,7 +314,7 @@ class TemporaryProfileManager(ProfileManager):
 
         Warning: the AiiDA dbenv must not be loaded when this is called!
         """
-        from aiida.manage.configuration import Profile, settings
+        from aiida.manage.configuration import Profile
         from aiida.orm import User
 
         manager = get_manager()
@@ -326,9 +325,11 @@ class TemporaryProfileManager(ProfileManager):
         if not self.root_dir:
             self.root_dir = tempfile.mkdtemp()
         configuration.CONFIG = None
-        settings.AIIDA_CONFIG_FOLDER = self.config_dir
+
+        os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = self.config_dir
+        settings.set_configuration_directory()
+
         manager.unload_profile()
-        create_instance_directories()
         profile_name = self.profile_info['name']
         config = configuration.get_config(create=True)
         profile = Profile(profile_name, self.profile_dictionary)
@@ -395,7 +396,6 @@ class TemporaryProfileManager(ProfileManager):
 
     def destroy_all(self):
         """Remove all traces of the tests run"""
-        from aiida.manage.configuration import settings
         if self.root_dir:
             shutil.rmtree(self.root_dir)
             self.root_dir = None
@@ -409,6 +409,9 @@ class TemporaryProfileManager(ProfileManager):
             configuration.CONFIG = self._backup['config']
         if 'config_dir' in self._backup:
             settings.AIIDA_CONFIG_FOLDER = self._backup['config_dir']
+
+        if settings.DEFAULT_AIIDA_PATH_VARIABLE in self._backup and self._backup[settings.DEFAULT_AIIDA_PATH_VARIABLE]:
+            os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = self._backup[settings.DEFAULT_AIIDA_PATH_VARIABLE]
 
     def has_profile_open(self):
         return self._profile is not None

@@ -92,18 +92,15 @@ def compare_string_literals(left, right):
         assert line_left == line_right
 
 
-def test_daemon_not_running():
+def test_daemon_not_running(stopped_daemon_client):
     """Test `get_daemon_status` output when the daemon is not running."""
-    client = get_daemon_client()
-    assert 'The daemon is not running' in get_daemon_status(client)
-    assert not client.is_daemon_running
+    assert 'The daemon is not running' in get_daemon_status(stopped_daemon_client)
 
 
 @patch.object(DaemonClient, 'is_daemon_running', lambda: True)
-def test_circus_timeout():
+def test_circus_timeout(stopped_daemon_client):
     """Test `get_daemon_status` output when the circus daemon process cannot be reached."""
-    client = get_daemon_client()
-    assert 'Call to the circus controller timed out' in get_daemon_status(client)
+    assert 'Call to the circus controller timed out' in get_daemon_status(stopped_daemon_client)
 
 
 @patch.object(DaemonClient, 'is_daemon_running', lambda: True)

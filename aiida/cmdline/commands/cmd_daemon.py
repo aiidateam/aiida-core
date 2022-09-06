@@ -17,12 +17,7 @@ from click_spinner import spinner
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import decorators, echo
-from aiida.cmdline.utils.daemon import (
-    _START_CIRCUS_COMMAND,
-    delete_stale_pid_file,
-    get_daemon_status,
-    print_client_response_status,
-)
+from aiida.cmdline.utils.daemon import delete_stale_pid_file, get_daemon_status, print_client_response_status
 from aiida.manage import get_manager
 
 
@@ -58,24 +53,17 @@ def start(foreground, number):
 
     Returns exit code 0 if the daemon is OK, non-zero if there was an error.
     """
-    from aiida.engine.daemon.client import get_daemon_client
+    from aiida.engine.daemon.client import DaemonException, get_daemon_client
 
     client = get_daemon_client()
 
-    echo.echo(f'Starting the daemon with {number} workers... ', nl=False)
-
-    if foreground:
-        command = ['verdi', '-p', client.profile.name, 'daemon', _START_CIRCUS_COMMAND, '--foreground', str(number)]
-    else:
-        command = ['verdi', '-p', client.profile.name, 'daemon', _START_CIRCUS_COMMAND, str(number)]
-
     try:
-        subprocess.check_output(command, env=client.get_env(), stderr=subprocess.STDOUT)  # pylint: disable=unexpected-keyword-arg
-    except subprocess.CalledProcessError as exception:
+        echo.echo(f'Starting the daemon with {number} workers... ', nl=False)
+        client.start_daemon(number_workers=number, foreground=foreground)
+    except DaemonException as exception:
         echo.echo('FAILED', fg=echo.COLORS['error'], bold=True)
         echo.echo_critical(str(exception))
 
-    # We add a small timeout to give the pid-file a chance to be created
     with spinner():
         time.sleep(1)
         response = client.get_status()

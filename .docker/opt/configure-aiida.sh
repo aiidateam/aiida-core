@@ -76,5 +76,11 @@ verdi daemon stop
 # Migration will run for the default profile.
 verdi storage migrate --force || echo "Database migration failed."
 
+export ARCH=`uname -m`
+if [ "$ARCH" = "aarch64" ]; then \
+    verdi config set warnings.rabbitmq_version False
+fi
+
+
 # Daemon will start only if the database exists and is migrated to the latest version.
 verdi daemon start || echo "AiiDA daemon is not running."

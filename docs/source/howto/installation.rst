@@ -385,6 +385,53 @@ Here are a few general tips that might improve the AiiDA performance:
         and try a simple AiiDA query with the new database.
         If everything went fine, you can delete the old database location.
 
+It is not trivial to give a baseline of performance for AiiDA, as it depends a lot on the machine on which it is running, the installation, and what is being run.
+To still give some sense of performance, we provide this :download:`simple benchmarking script <include/scripts/performance_benchmark_base.py>` :fa:`download`.
+Download the script to the machine where AiiDA is running and make it executable.
+Make sure the daemon is running (``verdi daemon start``) and then execute the script:
+
+.. code:: console
+
+    ./performance_benchmark_base.py -n 100
+
+This will launch 100 ``ArithmeticAddCalculation`` jobs on the localhost and record the time until completion.
+
+Below is the output of a run using AiiDA v1.6.9 with a single daemon worker on a machine with a AMD Ryzen 5 3600 6-Core processor, with all services (RabbitMQ and PostgreSQL running on the same machine):
+
+.. code:: console
+
+    sph@citadel:~/$ ./performance_benchmark_base.py -n 100
+        Success: Created and configured temporary `Computer` benchmark-5fa8c67f for localhost.
+        Success: Created temporary `Code` bash for localhost.
+        Submitting 100 calculations.  [####################################]  100%
+        Submission completed in 9.36 seconds.
+        Waiting for calculations to complete  [####################################]  100%
+        Success: All calculations finished successfully.
+        Elapsed time: 46.55 seconds.
+        Cleaning up...
+        Success: Deleted all calculations.
+        Success: Deleted the created code bash@benchmark-5fa8c67f.
+        Success: Deleted the created computer benchmark-5fa8c67f.
+        Performance 2.15 processes / s
+
+As you can see, it took 9.42 seconds to submit the 100 calculations.
+The entire script took 46.55 seconds to submit and successfully complete all 100 calculations.
+When running the same script and setup with a different amount of daemon workers, we got the following numbers:
+
+.. table::
+    :widths: auto
+
+    ========== ======================= ==========================
+    # Workers  Total elapsed time (s)  Performance (processes/s)
+    ========== ======================= ==========================
+    1          46.55                   2.15
+    2          27.83                   3.59
+    4          16.43                   6.09
+    ========== ======================= ==========================
+
+Although there is no perfect linear scaling, an increase in the number of daemon workers clearly increases the throughput significantly.
+
+
 .. _how-to:installation:update:
 
 Updating your installation

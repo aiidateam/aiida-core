@@ -76,6 +76,9 @@ verdi daemon stop
 # Migration will run for the default profile.
 verdi storage migrate --force || echo "Database migration failed."
 
+# Supress rabbitmq version warning for arm64 since
+# the it build using latest version rabbitmq from apt install
+# We explicitly set consumer_timeout to 100 hours in /etc/rabbitmq/rabbitmq.conf
 export ARCH=`uname -m`
 if [ "$ARCH" = "aarch64" ]; then \
     verdi config set warnings.rabbitmq_version False

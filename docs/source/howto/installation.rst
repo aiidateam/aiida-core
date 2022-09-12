@@ -385,8 +385,8 @@ Here are a few general tips that might improve the AiiDA performance:
         and try a simple AiiDA query with the new database.
         If everything went fine, you can delete the old database location.
 
-It is not trivial to give a baseline of performance for AiiDA, as it depends a lot on the machine on which it is running, the installation, and what is being run.
-To still give some sense of performance, we provide this :download:`simple benchmarking script <include/scripts/performance_benchmark_base.py>` :fa:`download`.
+The performance for AiiDA depends both on the hardware and environment it is running on, as well as the type of processes that are run.
+In order to get a rough idea, you can run this :download:`simple benchmarking script <include/scripts/performance_benchmark_base.py>` :fa:`download`.
 Download the script to the machine where AiiDA is running and make it executable.
 Make sure the daemon is running (``verdi daemon start``) and then execute the script:
 
@@ -396,7 +396,7 @@ Make sure the daemon is running (``verdi daemon start``) and then execute the sc
 
 This will launch 100 ``ArithmeticAddCalculation`` jobs on the localhost and record the time until completion.
 
-Below is the output of a run using AiiDA v1.6.9 with a single daemon worker on a machine with a AMD Ryzen 5 3600 6-Core processor, with all services (RabbitMQ and PostgreSQL running on the same machine):
+Below is the output for running 100 ``ArithmeticAddCalculation``s with a single daemon worker on one core of an AMD Ryzen 5 3600 6-Core processor, using AiiDA v1.6.9, and RabbitMQ and PostgreSQL running on the same machine:
 
 .. code:: console
 
@@ -414,9 +414,10 @@ Below is the output of a run using AiiDA v1.6.9 with a single daemon worker on a
         Success: Deleted the created computer benchmark-5fa8c67f.
         Performance 2.15 processes / s
 
-As you can see, it took 9.42 seconds to submit the 100 calculations.
-The entire script took 46.55 seconds to submit and successfully complete all 100 calculations.
-When running the same script and setup with a different amount of daemon workers, we got the following numbers:
+It took 9.42 seconds to submit the 100 calculations.
+Overall, the entire script took 46.55 seconds to submit and successfully complete all 100 calculations, corresponding to a rate of roughly 2 calculations per second.
+
+This rate can be sped up by adding more daemon workers:
 
 .. table::
     :widths: auto
@@ -429,7 +430,14 @@ When running the same script and setup with a different amount of daemon workers
     4          16.43                   6.09
     ========== ======================= ==========================
 
-Although there is no perfect linear scaling, an increase in the number of daemon workers clearly increases the throughput significantly.
+A decent setup for AiiDA (for comparable hardware as described above) should show a performance of roughly 2 processes per second for a single worker.
+
+.. note::
+
+    As expected, the process rate increases with the number of daemon workers, however the scaling is not quite linear.
+    This is mostly due to the fact that the submission time is of the order of 10 seconds and doesn't depend on the number of active daemon workers.
+    To get the scaling of the daemon workers' performance, the script should be slightly changed: with the daemon switched off, all processes should be submitted first, and only then should the daemon be turned on and the timing started as soon as the first process starts running.
+    With this procedure, the scaling should be much closer to linear.
 
 
 .. _how-to:installation:update:

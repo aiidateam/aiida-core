@@ -396,7 +396,7 @@ Make sure the daemon is running (``verdi daemon start``) and then execute the sc
 
 This will launch 100 ``ArithmeticAddCalculation`` jobs on the localhost and record the time until completion.
 
-Below is the output for running 100 ``ArithmeticAddCalculation``s with a single daemon worker on one core of an AMD Ryzen 5 3600 6-Core processor, using AiiDA v1.6.9, and RabbitMQ and PostgreSQL running on the same machine:
+Below is the output for running 100 ``ArithmeticAddCalculation``'s with a single daemon worker on one core of an AMD Ryzen 5 3600 6-Core processor, using AiiDA v1.6.9, and RabbitMQ and PostgreSQL running on the same machine:
 
 .. code:: console
 
@@ -431,6 +431,7 @@ This rate can be sped up by adding more daemon workers:
     ========== ======================= ==========================
 
 A decent setup for AiiDA (for comparable hardware as described above) should show a performance of roughly 2 processes per second for a single worker.
+For more information on AiiDA's performance and how to optimize it, please refer to the :ref:`the topic on performance<topics:performance>`.
 
 .. note::
 

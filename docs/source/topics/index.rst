@@ -15,6 +15,7 @@ Topics
    plugins
    schedulers
    transport
+   performance
 
 .. todo::
 

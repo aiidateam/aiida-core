@@ -163,14 +163,16 @@ class ProfileManager:
         """Reset the global profile, clearing all its data and closing any open resources."""
         manager = get_manager()
         manager.get_profile_storage()._clear(recreate_user=True)  # pylint: disable=protected-access
-        manager.reset_profile()
         manager.get_profile_storage()  # reload the storage connection
+        manager.reset_communicator()
+        manager.reset_runner()
 
     def has_profile_open(self):
         return self._profile is not None
 
-    def destroy_all(self):
-        pass
+    def destroy_all(self):  # pylint: disable=no-self-use
+        manager = get_manager()
+        manager.reset_profile()
 
 
 class TemporaryProfileManager(ProfileManager):
@@ -396,6 +398,7 @@ class TemporaryProfileManager(ProfileManager):
 
     def destroy_all(self):
         """Remove all traces of the tests run"""
+        super().destroy_all()
         if self.root_dir:
             shutil.rmtree(self.root_dir)
             self.root_dir = None

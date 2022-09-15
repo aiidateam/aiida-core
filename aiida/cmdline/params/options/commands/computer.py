@@ -14,14 +14,9 @@ from aiida.cmdline.params import options, types
 from aiida.cmdline.params.options.interactive import InteractiveOption, TemplateInteractiveOption
 from aiida.cmdline.params.options.overridable import OverridableOption
 
-
-def should_call_default_mpiprocs_per_machine(ctx):  # pylint: disable=invalid-name
+def get_job_resource_cls(ctx):
     """
-    Return True if the scheduler can accept 'default_mpiprocs_per_machine',
-    False otherwise.
-
-    If there is a problem in determining the scheduler, return True to
-    avoid exceptions.
+    Return job resource cls from ctx.
     """
     from aiida.common.exceptions import ValidationError
 
@@ -36,7 +31,18 @@ def should_call_default_mpiprocs_per_machine(ctx):  # pylint: disable=invalid-na
             'The should_call_... function should always be run (and prompted) AFTER asking for a scheduler'
         )
 
-    job_resource_cls = scheduler_cls.job_resource_class
+    return scheduler_cls.job_resource_class
+
+def should_call_default_mpiprocs_per_machine(ctx):  # pylint: disable=invalid-name
+    """
+    Return True if the scheduler can accept 'default_mpiprocs_per_machine',
+    False otherwise.
+
+    If there is a problem in determining the scheduler, return True to
+    avoid exceptions.
+    """
+    job_resource_cls = get_job_resource_cls(ctx)
+    
     if job_resource_cls is None:
         # Odd situation...
         return False
@@ -51,20 +57,8 @@ def should_call_default_memory_per_machine(ctx):  # pylint: disable=invalid-name
     If there is a problem in determining the scheduler, return True to
     avoid exceptions.
     """
-    from aiida.common.exceptions import ValidationError
-
-    scheduler_ep = ctx.params['scheduler']
-    if scheduler_ep is not None:
-        try:
-            scheduler_cls = scheduler_ep.load()
-        except ImportError:
-            raise ImportError(f"Unable to load the '{scheduler_ep.name}' scheduler")
-    else:
-        raise ValidationError(
-            'The should_call_... function should always be run (and prompted) AFTER asking for a scheduler'
-        )
-
-    job_resource_cls = scheduler_cls.job_resource_class
+    job_resource_cls = get_job_resource_cls(ctx)
+    
     if job_resource_cls is None:
         # Odd situation...
         return False

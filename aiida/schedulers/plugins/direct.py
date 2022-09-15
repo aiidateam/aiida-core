@@ -64,7 +64,11 @@ _MAP_STATUS_PS = {
 
 
 class DirectJobResource(NodeNumberJobResource):
-    pass
+
+    @classmethod
+    def accepts_default_memory_per_machine(cls):
+        """Return True if this subclass accepts a `default_memory_per_machine` key, False otherwise."""
+        return False
 
 
 class DirectScheduler(aiida.schedulers.Scheduler):

@@ -64,6 +64,9 @@ _MAP_STATUS_PS = {
 
 
 class DirectJobResource(NodeNumberJobResource):
+    """
+    An implementation of JobResource for the direct excution bypassing schedulers.
+    """
 
     @classmethod
     def accepts_default_memory_per_machine(cls):

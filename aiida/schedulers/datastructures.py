@@ -87,11 +87,11 @@ class JobResource(DefaultFieldsAttributeDict, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def accepts_default_mpiprocs_per_machine(cls):
         """Return True if this subclass accepts a `default_mpiprocs_per_machine` key, False otherwise."""
-        
+
     @classmethod
-    @abc.abstractmethod
     def accepts_default_memory_per_machine(cls):
         """Return True if this subclass accepts a `default_memory_per_machine` key, False otherwise."""
+        return True
 
     @abc.abstractmethod
     def get_tot_num_mpiprocs(self):
@@ -179,11 +179,6 @@ class NodeNumberJobResource(JobResource):
     def accepts_default_mpiprocs_per_machine(cls):
         """Return True if this subclass accepts a `default_mpiprocs_per_machine` key, False otherwise."""
         return True
-      
-    @classmethod
-    def accepts_default_memory_per_machine(cls):
-        """Return True if this subclass accepts a `default_memory_per_machine` key, False otherwise."""
-        return True
 
     def get_tot_num_mpiprocs(self):
         """Return the total number of cpus of this job resource."""
@@ -243,11 +238,6 @@ class ParEnvJobResource(JobResource):
     def accepts_default_mpiprocs_per_machine(cls):
         """Return True if this subclass accepts a `default_mpiprocs_per_machine` key, False otherwise."""
         return False
-      
-    @classmethod
-    def accepts_default_memory_per_machine(cls):
-        """Return True if this subclass accepts a `default_memory_per_machine` key, False otherwise."""
-        return True
 
     def get_tot_num_mpiprocs(self):
         """Return the total number of cpus of this job resource."""

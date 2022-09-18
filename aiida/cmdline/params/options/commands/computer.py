@@ -14,6 +14,7 @@ from aiida.cmdline.params import options, types
 from aiida.cmdline.params.options.interactive import InteractiveOption, TemplateInteractiveOption
 from aiida.cmdline.params.options.overridable import OverridableOption
 
+
 def get_job_resource_cls(ctx):
     """
     Return job resource cls from ctx.
@@ -33,32 +34,34 @@ def get_job_resource_cls(ctx):
 
     return scheduler_cls.job_resource_class
 
+
 def should_call_default_mpiprocs_per_machine(ctx):  # pylint: disable=invalid-name
     """
-    Return True if the scheduler can accept 'default_mpiprocs_per_machine',
-    False otherwise.
+    Return whether the selected scheduler type accepts `default_mpiprocs_per_machine`.
 
-    If there is a problem in determining the scheduler, return True to
-    avoid exceptions.
+
+    :return: `True` if the scheduler type accepts `default_mpiprocs_per_machine`, `False`
+    otherwise. If the scheduler class could not be loaded `False` is returned by default.
     """
     job_resource_cls = get_job_resource_cls(ctx)
-    
+
     if job_resource_cls is None:
         # Odd situation...
         return False
 
     return job_resource_cls.accepts_default_mpiprocs_per_machine()
 
+
 def should_call_default_memory_per_machine(ctx):  # pylint: disable=invalid-name
     """
-    Return True if the scheduler can accept 'default_memory_per_machine',
-    False otherwise.
+    Return whether the selected scheduler type accepts `default_memory_per_machine`.
 
-    If there is a problem in determining the scheduler, return True to
-    avoid exceptions.
+
+    :return: `True` if the scheduler type accepts `default_memory_per_machine`, `False`
+    otherwise. If the scheduler class could not be loaded `False` is returned by default.
     """
     job_resource_cls = get_job_resource_cls(ctx)
-    
+
     if job_resource_cls is None:
         # Odd situation...
         return False

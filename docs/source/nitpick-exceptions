@@ -19,6 +19,7 @@ py:class TypeDecorator
 py:class json.encoder.JSONEncoder
 py:class EXPOSED_TYPE
 py:class EVENT_CALLBACK_TYPE
+py:class datetime
 
 ### AiiDA
 py:class ReturnType

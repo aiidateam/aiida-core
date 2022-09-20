@@ -39,9 +39,8 @@ def should_call_default_mpiprocs_per_machine(ctx):  # pylint: disable=invalid-na
     """
     Return whether the selected scheduler type accepts `default_mpiprocs_per_machine`.
 
-
     :return: `True` if the scheduler type accepts `default_mpiprocs_per_machine`, `False`
-    otherwise. If the scheduler class could not be loaded `False` is returned by default.
+        otherwise. If the scheduler class could not be loaded `False` is returned by default.
     """
     job_resource_cls = get_job_resource_cls(ctx)
 
@@ -56,9 +55,8 @@ def should_call_default_memory_per_machine(ctx):  # pylint: disable=invalid-name
     """
     Return whether the selected scheduler type accepts `default_memory_per_machine`.
 
-
     :return: `True` if the scheduler type accepts `default_memory_per_machine`, `False`
-    otherwise. If the scheduler class could not be loaded `False` is returned by default.
+        otherwise. If the scheduler class could not be loaded `False` is returned by default.
     """
     job_resource_cls = get_job_resource_cls(ctx)
 

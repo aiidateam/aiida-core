@@ -161,7 +161,9 @@ def test_mixed(run_cli_command):
     assert new_computer.get_shebang() == options_dict_full['shebang']
     assert new_computer.get_workdir() == options_dict_full['work-dir']
     assert new_computer.get_default_mpiprocs_per_machine() == int(options_dict_full['mpiprocs-per-machine'])
-    assert new_computer.get_default_memory_per_machine() == int(options_dict_full['default-memory-per-machine'])
+
+    # default_memory_per_machine should not prompt and set
+    assert new_computer.get_default_memory_per_machine() is None
 
     # For now I'm not writing anything in them
     assert new_computer.get_prepend_text() == options_dict_full['prepend-text']

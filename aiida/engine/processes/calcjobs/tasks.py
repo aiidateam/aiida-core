@@ -32,7 +32,7 @@ from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
 from aiida.schedulers.datastructures import JobState
 
 from ..process import ProcessState
-from .monitors import CalcJobMonitor
+from .monitors import CalcJobMonitors
 
 if TYPE_CHECKING:
     from .calcjob import CalcJob
@@ -221,7 +221,9 @@ async def task_update_job(node: CalcJobNode, job_manager, cancellable: Interrupt
         return job_done
 
 
-async def task_monitor_job(node: CalcJobNode, transport_queue: TransportQueue, cancellable: InterruptableFuture):
+async def task_monitor_job(
+    node: CalcJobNode, transport_queue: TransportQueue, cancellable: InterruptableFuture, monitors: CalcJobMonitors
+):
     """Transport task that will monitor the job calculation if any monitors have been defined.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
@@ -232,6 +234,7 @@ async def task_monitor_job(node: CalcJobNode, transport_queue: TransportQueue, c
     :param node: the node that represents the job calculation
     :param transport_queue: the TransportQueue from which to request a Transport
     :param cancellable: A cancel flag
+    :param monitors: An instance of ``CalcJobMonitors`` holding the collection of monitors to process.
     :return: True if the tasks was successfully completed, False otherwise
     """
     state = node.get_state()
@@ -250,16 +253,10 @@ async def task_monitor_job(node: CalcJobNode, transport_queue: TransportQueue, c
             transport = await cancellable.with_interrupt(request)
             transport.chdir(node.get_remote_workdir())
 
-            monitors = {key: CalcJobMonitor(**node.get_dict()) for key, node in node.inputs.monitors.items()}
+            monitor_result = monitors.process(node, transport)
 
-            for monitor in monitors:
-
-                monitor_result = monitor.load_entry_point()(node, transport, **monitor.kwargs)
-
-                if monitor_result is not None:
-                    message = f'Monitor `{monitor.entry_point}` killed job with message: {monitor_result}'
-                    logger.warning(message)
-                    return message
+            if monitor_result is not None:
+                return monitor_result
 
     try:
         logger.info(f'scheduled request to monitor CalcJob<{node.pk}>')
@@ -452,6 +449,10 @@ class Waiting(plumpy.process_states.Waiting):
         super().__init__(process, done_callback, msg, data)
         self._task: Optional[InterruptableFuture] = None
         self._killing: Optional[plumpy.futures.Future] = None
+        self._monitors: CalcJobMonitors | None = None
+
+        if 'monitors' in self.process.node.inputs:
+            self._monitors = CalcJobMonitors(self.process.node.inputs.monitors)
 
     @property
     def process(self) -> 'CalcJob':
@@ -502,12 +503,10 @@ class Waiting(plumpy.process_states.Waiting):
                     process_status = f'Monitoring scheduler: job state {scheduler_state_string}'
                     node.set_process_status(process_status)
                     job_done = await self._launch_task(task_update_job, node, self.process.runner.job_manager)
+                    monitor_result = await self._monitor_job(node, transport_queue, self._monitors)
 
-                    if 'monitors' in node.inputs:
-                        monitor_result = await self._launch_task(task_monitor_job, node, transport_queue)
-
-                        if monitor_result is not None:
-                            raise plumpy.process_states.KillInterruption(monitor_result)
+                    if monitor_result is not None:
+                        raise plumpy.process_states.KillInterruption(monitor_result)
 
                 result = self.stash()
 
@@ -552,6 +551,15 @@ class Waiting(plumpy.process_states.Waiting):
             # If we were trying to kill but we didn't deal with it, make sure it's set here
             if self._killing and not self._killing.done():
                 self._killing.set_result(False)
+
+    async def _monitor_job(self, node, transport_queue, monitors) -> str | None:
+        """Process job monitors if any were specified as inputs."""
+        if monitors is None:
+            return None
+
+        monitor_result = await self._launch_task(task_monitor_job, node, transport_queue, monitors=monitors)
+
+        return monitor_result
 
     async def _launch_task(self, coro, *args, **kwargs):
         """Launch a coroutine as a task, making sure to make it interruptable."""

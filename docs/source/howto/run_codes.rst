@@ -605,6 +605,22 @@ It is not necessary to define a priority for all monitors, in the absence of a p
 For monitors with identical priority, the order remains alphabetical based on their key in the ``monitors`` input namespace.
 
 
+Monitor execution frequency
+---------------------------
+By default, all monitors are executed during each scheduler update cycle.
+This interval is controlled by the ``minimum_scheduler_poll_interval`` property of the ``Computer``, which can be retrieved and set through the ``get_minimum_job_poll_interval`` and ``set_minimum_job_poll_interval``, respectively.
+The frequency of monitor execution can be reduced by setting a larger interval for the ``minimum_poll_interval`` key in the monitor input definition:
+
+.. code-block:: python
+
+    builder.monitors = {
+        'monitor_one': Dict({'entry_point': 'entry_point_one', 'minimum_poll_interval': 600})
+    }
+
+The engine will guarantee that the interval between calls of the monitor is at least the value specified by ``minimum_poll_interval``.
+Due to a number of other intervals that are part of the ``CalcJob`` pipeline, it is possible however, that the effective interval between monitor calls will be larger than that.
+
+
 .. _how-to:run-codes:caching:
 
 How to save compute time with caching

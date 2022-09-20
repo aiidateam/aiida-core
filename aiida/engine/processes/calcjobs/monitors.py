@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import collections
 import dataclasses
+from datetime import datetime, timedelta
 import inspect
 import typing as t
 
@@ -29,6 +30,12 @@ class CalcJobMonitor:
     priority: int = 0
     """Determines the order in which monitors should be executed in the case of multiple monitors."""
 
+    minimum_poll_interval: int | None = None
+    """Optional minimum poll interval. If set, subsequent calls should be at least this many seconds apart."""
+
+    call_timestamp: datetime | None = None
+    """Optional datetime representing the last time this monitor was called."""
+
     def __post_init__(self):
         """Validate the attributes."""
         self.validate()
@@ -44,6 +51,10 @@ class CalcJobMonitor:
         type_check(self.entry_point, str)
         type_check(self.kwargs, dict)
         type_check(self.priority, int)
+        type_check(self.minimum_poll_interval, int, allow_none=True)
+
+        if self.minimum_poll_interval is not None and self.minimum_poll_interval <= 0:
+            raise ValueError('The `minimum_poll_interval` must be a positive integer greater than zero.')
 
         monitor = self.load_entry_point()
         signature = inspect.signature(monitor)
@@ -109,9 +120,17 @@ class CalcJobMonitors:
         """
         for key, monitor in self.monitors.items():
 
+            if (
+                monitor.minimum_poll_interval and monitor.call_timestamp and
+                datetime.now() - monitor.call_timestamp < timedelta(seconds=monitor.minimum_poll_interval)
+            ):
+                LOGGER.debug(f'skipping monitor `{key}` because minimum poll interval has not expired yet.')
+                continue
+
             monitor_function = monitor.load_entry_point()
 
             LOGGER.debug(f'calling monitor `{key}`')
+            monitor.call_timestamp = datetime.now()
             monitor_result = monitor_function(node, transport, **monitor.kwargs)
 
             if monitor_result is not None:

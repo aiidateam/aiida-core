@@ -588,6 +588,23 @@ For example, if the monitor accepts a boolean value for the keyword ``custom_key
 If a keyword is specified that is not declared explicitly by the monitor, the validation of the ``CalcJob`` will fail.
 
 
+Monitor execution order
+-----------------------
+By default, the monitors are executed in alphabetical order based on their keys in the ``monitors`` input namespace.
+The order can be controlled using the ``priority`` key in the ``monitors`` input.
+
+.. code-block:: python
+
+    builder.monitors = {
+        'monitor_one': Dict({'entry_point': 'entry_point_one', 'priority': 100})
+        'monitor_one': Dict({'entry_point': 'entry_point_one'})
+    }
+
+Higher priorities will be executed first.
+It is not necessary to define a priority for all monitors, in the absence of a priority, a priority of 0 is assumed.
+For monitors with identical priority, the order remains alphabetical based on their key in the ``monitors`` input namespace.
+
+
 .. _how-to:run-codes:caching:
 
 How to save compute time with caching

@@ -2,12 +2,18 @@
 """Utilities to define monitor functions for ``CalcJobs``."""
 from __future__ import annotations
 
+import collections
 import dataclasses
 import inspect
 import typing as t
 
 from aiida.common.lang import type_check
+from aiida.common.log import AIIDA_LOGGER
+from aiida.orm import CalcJobNode, Dict
 from aiida.plugins import BaseFactory
+from aiida.transports import Transport
+
+LOGGER = AIIDA_LOGGER.getChild(__name__)
 
 
 @dataclasses.dataclass
@@ -19,6 +25,9 @@ class CalcJobMonitor:
 
     kwargs: dict[t.Any, t.Any] = dataclasses.field(default_factory=dict)
     """Keyword arguments that will be passed to the monitor when invoked (should be JSON serializable)."""
+
+    priority: int = 0
+    """Determines the order in which monitors should be executed in the case of multiple monitors."""
 
     def __post_init__(self):
         """Validate the attributes."""
@@ -34,6 +43,7 @@ class CalcJobMonitor:
         """
         type_check(self.entry_point, str)
         type_check(self.kwargs, dict)
+        type_check(self.priority, int)
 
         monitor = self.load_entry_point()
         signature = inspect.signature(monitor)
@@ -56,3 +66,54 @@ class CalcJobMonitor:
         :raises EntryPointError: If the entry point does not exist or cannot be loaded.
         """
         return BaseFactory('aiida.calculations.monitors', self.entry_point)
+
+
+class CalcJobMonitors:
+    """Collection of ``CalcJobMonitor`` instances.
+
+    The collection is initialized from a dictionary where the values are the parameters for initializing an instance of
+    :class:`~aiida.engine.processes.calcjobs.monitors.CalcJobMonitor`, which are stored as an ordered dictionary. The
+    monitors are sorted according to the priority set for the monitors (reversed, i.e., from high to low) and second
+    alphabetically on their key.
+
+    The :meth:`~aiida.engine.processes.calcjobs.monitors.CalcJobMonitors.process` method can be called providing an
+    instance of a ``CalcJobNode`` and a ``Transport`` and it will iterate over the collection of monitors, executing
+    each monitor in order, and stopping on the first to return a ``CalcJobMonitorResult`` to pass it up to its caller.
+    """
+
+    def __init__(self, monitors: dict[str, Dict]):
+        type_check(monitors, dict)
+
+        if any(not isinstance(monitor, Dict) for monitor in monitors.values()):
+            raise TypeError('at least one value of `monitors` is not a `Dict` node.')
+
+        monitors = {key: CalcJobMonitor(**node.get_dict()) for key, node in monitors.items()}
+        self._monitors = collections.OrderedDict(sorted(monitors.items(), key=lambda x: (-x[1].priority, x[0])))
+
+    @property
+    def monitors(self) -> collections.OrderedDict:
+        """Return an ordered dictionary of the monitor collection.
+
+        Monitors are first sorted on their priority (reversed, i.e., from high to low) and second on their key.
+
+        :returns: Ordered dictionary of monitors..
+        """
+        return self._monitors
+
+    def process(self, node: CalcJobNode, transport: Transport) -> str | None:
+        """Call all monitors in order and return the result as one returns anything other than ``None``.
+
+        :param node: The node to pass to the monitor invocation.
+        :param transport: The transport to pass to the monitor invocation.
+        :returns: ``None`` or a monitor result.
+        """
+        for key, monitor in self.monitors.items():
+
+            monitor_function = monitor.load_entry_point()
+
+            LOGGER.debug(f'calling monitor `{key}`')
+            monitor_result = monitor_function(node, transport, **monitor.kwargs)
+
+            if monitor_result is not None:
+                LOGGER.warning(monitor_result)
+                return f'Monitor `{monitor.entry_point}` killed job with message: {monitor_result}'

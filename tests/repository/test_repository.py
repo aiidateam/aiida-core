@@ -72,6 +72,31 @@ def tmp_path_parametrized(request, tmp_path_factory) -> t.Union[str, pathlib.Pat
     yield tmp_path
 
 
+def serialize_file_hierarchy(dirpath: pathlib.Path):
+    """Serialize the file hierarchy at ``dirpath``.
+
+    .. note:: empty directories are ignored.
+
+    :param dirpath: the base path.
+    :return: a mapping representing the file hierarchy, where keys are filenames. The leafs correspond to files and the
+        values are the text contents.
+    """
+    import os
+    serialized = {}
+
+    for root, _, files in os.walk(dirpath):
+        for filepath in files:
+
+            relpath = pathlib.Path(root).relative_to(dirpath)
+            subdir = serialized
+            if relpath.parts:
+                for part in relpath.parts:
+                    subdir = subdir.setdefault(part, {})
+            subdir[filepath] = (pathlib.Path(root) / filepath).read_bytes()
+
+    return serialized
+
+
 def test_uuid(repository_uninitialised):
     """Test the ``uuid`` property."""
     repository = repository_uninitialised
@@ -561,21 +586,20 @@ def test_walk(repository, generate_directory):
     ]
 
 
-@pytest.mark.parametrize('path', ('.', 'relative'))
-def test_copy_tree(repository, generate_directory, tmp_path_parametrized, path):
+# yapf: disable
+@pytest.mark.parametrize(('path', 'expected_hierarchy'), (
+    (None, {'file_a': b'a', 'relative': {'file_b': b'b', 'sub': {'file_c': b'c'}}}),
+    ('.', {'file_a': b'a', 'relative': {'file_b': b'b', 'sub': {'file_c': b'c'}}}),
+    ('relative', {'file_b': b'b', 'sub': {'file_c': b'c'}}),
+    ('relative/sub', {'file_c': b'c'}),
+))
+# yapf: enable
+def test_copy_tree(repository, generate_directory, tmp_path_parametrized, path, expected_hierarchy):
     """Test the ``Repository.copy_tree`` method."""
-    directory = generate_directory({'file_a': None, 'relative': {'file_b': None, 'sub': {'file_c': None}}})
+    directory = generate_directory({'file_a': b'a', 'relative': {'file_b': b'b', 'sub': {'file_c': b'c'}}})
     repository.put_object_from_tree(str(directory))
-
     repository.copy_tree(tmp_path_parametrized, path=path)
-    for root, dirnames, filenames in repository.walk(path):
-        for dirname in dirnames:
-            assert pathlib.Path(tmp_path_parametrized / root / dirname).is_dir()
-        for filename in filenames:
-            filepath = pathlib.Path(tmp_path_parametrized / root / filename)
-            assert filepath.is_file()
-            with repository.open(root / filename) as handle:
-                assert filepath.read_bytes() == handle.read()
+    assert serialize_file_hierarchy(tmp_path_parametrized) == expected_hierarchy
 
 
 @pytest.mark.parametrize(('argument', 'value', 'exception', 'match'), (

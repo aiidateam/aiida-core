@@ -1082,6 +1082,26 @@ def test_monitor_result_parse(get_calcjob_builder, entry_points):
     assert node.exit_status == CalcJob.exit_codes.STOPPED_BY_MONITOR.status
 
 
+def monitor_skip_retrieve(node, transport, **kwargs):  # pylint: disable=unused-argument
+    """Kill the job and skip the retrieval and parsing of retrieved output files."""
+    return CalcJobMonitorResult(message='skip retrieval', retrieve=False, parse=False)
+
+
+def test_monitor_result_retrieve(get_calcjob_builder, entry_points):
+    """Test the ``retrieve`` attribute of :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult`.
+
+    If set to ``False``, retrieval and parsing of output files should be skipped.
+    """
+    entry_points.add(monitor_skip_retrieve, group='aiida.calculations.monitors', name='core.skip_retrieval')
+
+    builder = get_calcjob_builder()
+    builder.metadata.options.sleep = 3
+    builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.skip_retrieval'})}
+    _, node = launch.run_get_node(builder)
+    assert 'retrieved' not in node.outputs
+    assert node.exit_status == CalcJob.exit_codes.STOPPED_BY_MONITOR.status
+
+
 class TestImport:
     """Test the functionality to import existing calculations completed outside of AiiDA."""
 

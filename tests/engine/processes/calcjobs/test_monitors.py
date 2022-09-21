@@ -7,8 +7,38 @@ import pytest
 from aiida.calculations.monitors import base
 from aiida.common.exceptions import EntryPointError
 from aiida.engine import run_get_node
-from aiida.engine.processes.calcjobs.monitors import CalcJobMonitor, CalcJobMonitors
+from aiida.engine.processes.calcjobs.monitors import (
+    CalcJobMonitor,
+    CalcJobMonitorAction,
+    CalcJobMonitorResult,
+    CalcJobMonitors,
+)
 from aiida.orm import Dict, Int
+
+
+def test_calc_job_monitor_result_constructor_invalid():
+    """Test :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult` constructor for invalid input."""
+    with pytest.raises(TypeError, match=r'got an unexpected keyword argument .*'):
+        CalcJobMonitorResult(invalid_key='test')  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+
+    with pytest.raises(TypeError, match=r'Got object of type .*'):
+        CalcJobMonitorResult(key=[])
+
+    with pytest.raises(TypeError, match=r'Got object of type .*'):
+        CalcJobMonitorResult(message=[])
+
+    with pytest.raises(TypeError, match=r'Got object of type .*'):
+        CalcJobMonitorResult(message='message', action=[])
+
+
+def test_calc_job_monitor_result_constructor_valid():
+    """Test the :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult` constructor for valid input."""
+    key = 'some_monitor'
+    message = 'some message'
+    result = CalcJobMonitorResult(key=key, message=message)
+    assert result.key == key
+    assert result.message == message
+    assert result.action == CalcJobMonitorAction.KILL
 
 
 def test_calc_job_monitor_constructor_invalid():
@@ -92,7 +122,9 @@ def test_calc_job_monitors_process_poll_interval(monkeypatch):
     monkeypatch.setattr(base, 'always_kill', always_kill)
 
     # First call should simple go through and so raise
-    assert monitors.process(None, None) == 'Monitor `core.always_kill` killed job with message: always_kill called'
+    result = monitors.process(None, None)
+    assert isinstance(result, CalcJobMonitorResult)
+    assert result.message == 'always_kill called'
 
     # Calling again should skip it since the minimum poll interval has not yet passed
     assert monitors.process(None, None) is None
@@ -100,7 +132,9 @@ def test_calc_job_monitors_process_poll_interval(monkeypatch):
     time.sleep(1)
 
     # After the intervalhas passed, it should be called again
-    assert monitors.process(None, None) == 'Monitor `core.always_kill` killed job with message: always_kill called'
+    result = monitors.process(None, None)
+    assert isinstance(result, CalcJobMonitorResult)
+    assert result.message == 'always_kill called'
 
 
 def monitor_emit_warning(node, transport, **kwargs):  # pylint: disable=unused-argument

@@ -5,6 +5,7 @@ from __future__ import annotations
 import collections
 import dataclasses
 from datetime import datetime, timedelta
+import enum
 import inspect
 import typing as t
 
@@ -15,6 +16,39 @@ from aiida.plugins import BaseFactory
 from aiida.transports import Transport
 
 LOGGER = AIIDA_LOGGER.getChild(__name__)
+
+
+class CalcJobMonitorAction(enum.Enum):
+    """The action a engine should undertake as a result of a monitor."""
+
+    KILL = 'kill'  # The job should be killed and no other monitors should be called.
+
+
+@dataclasses.dataclass
+class CalcJobMonitorResult:
+    """Data class representing the result of a monitor."""
+
+    key: str | None = None
+    """Key of the monitor in the ``monitors`` input namespace. Will be set automatically by the engine."""
+
+    message: str | None = None
+    """Human readable message: could be a warning or an error message."""
+
+    action: CalcJobMonitorAction = CalcJobMonitorAction.KILL
+    """The action the engine should take."""
+
+    def __post_init__(self):
+        """Validate the attributes."""
+        self.validate()
+
+    def validate(self):
+        """Validate the instance.
+
+        :raises TypeError: If any of the attributes are of the incorrect type.
+        """
+        type_check(self.key, str, allow_none=True)
+        type_check(self.message, str, allow_none=True)
+        type_check(self.action, CalcJobMonitorAction)
 
 
 @dataclasses.dataclass
@@ -111,7 +145,7 @@ class CalcJobMonitors:
         """
         return self._monitors
 
-    def process(self, node: CalcJobNode, transport: Transport) -> str | None:
+    def process(self, node: CalcJobNode, transport: Transport) -> CalcJobMonitorResult | None:
         """Call all monitors in order and return the result as one returns anything other than ``None``.
 
         :param node: The node to pass to the monitor invocation.
@@ -133,6 +167,12 @@ class CalcJobMonitors:
             monitor.call_timestamp = datetime.now()
             monitor_result = monitor_function(node, transport, **monitor.kwargs)
 
-            if monitor_result is not None:
-                LOGGER.warning(monitor_result)
-                return f'Monitor `{monitor.entry_point}` killed job with message: {monitor_result}'
+            if isinstance(monitor_result, str):
+                monitor_result = CalcJobMonitorResult(message=monitor_result)
+
+            if isinstance(monitor_result, CalcJobMonitorResult):
+                monitor_result.key = key
+
+            if monitor_result:
+                LOGGER.info(f'Monitor `{key}` returned: {monitor_result}')
+                return monitor_result

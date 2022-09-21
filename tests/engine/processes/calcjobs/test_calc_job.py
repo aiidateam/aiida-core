@@ -1102,6 +1102,26 @@ def test_monitor_result_retrieve(get_calcjob_builder, entry_points):
     assert node.exit_status == CalcJob.exit_codes.STOPPED_BY_MONITOR.status
 
 
+def monitor_override_exit_code(node, transport, **kwargs):  # pylint: disable=unused-argument
+    """Kill the job and do not override the exit code of the parser."""
+    return CalcJobMonitorResult(message='do not override exit code', override_exit_code=False)
+
+
+def test_monitor_result_override_exit_code(get_calcjob_builder, entry_points):
+    """Test the ``override_exit_code`` attr of :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult`.
+
+    If set to ``False``, parsing of output files should be skipped.
+    """
+    entry_points.add(monitor_override_exit_code, group='aiida.calculations.monitors', name='core.override_exit_code')
+
+    builder = get_calcjob_builder()
+    builder.metadata.options.sleep = 3
+    builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.override_exit_code'})}
+    _, node = launch.run_get_node(builder)
+    assert sorted(node.outputs) == ['remote_folder', 'retrieved']
+    assert node.exit_status == ArithmeticAddCalculation.exit_codes.ERROR_INVALID_OUTPUT.status
+
+
 class TestImport:
     """Test the functionality to import existing calculations completed outside of AiiDA."""
 

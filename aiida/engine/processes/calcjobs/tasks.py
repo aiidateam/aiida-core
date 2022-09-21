@@ -537,7 +537,10 @@ class Waiting(plumpy.process_states.Waiting):
                         ProcessState.RUNNING, self.process.terminate, exit_code
                     )  # type: ignore[return-value]
 
-                result = self.parse(temp_folder, exit_code)
+                if self._monitor_result.override_exit_code:
+                    result = self.parse(temp_folder, exit_code)
+                else:
+                    result = self.parse(temp_folder)
 
             else:
                 raise RuntimeError('Unknown waiting command')

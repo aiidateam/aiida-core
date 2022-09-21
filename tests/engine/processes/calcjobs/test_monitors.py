@@ -39,6 +39,9 @@ def test_calc_job_monitor_result_constructor_invalid():
     with pytest.raises(ValueError, match=r'`parse` cannot be `True` if `retrieve` is `False`.'):
         CalcJobMonitorResult(message='message', retrieve=False, parse=True)
 
+    with pytest.raises(TypeError, match=r'Got object of type .*'):
+        CalcJobMonitorResult(message='message', override_exit_code='true')
+
 
 def test_calc_job_monitor_result_constructor_valid():
     """Test the :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult` constructor for valid input."""
@@ -50,6 +53,7 @@ def test_calc_job_monitor_result_constructor_valid():
     assert result.action == CalcJobMonitorAction.KILL
     assert result.retrieve is True
     assert result.parse is True
+    assert result.override_exit_code is True
 
 
 def test_calc_job_monitor_constructor_invalid():

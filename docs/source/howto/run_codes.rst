@@ -626,7 +626,7 @@ Advanced functionality
 
 The most simple implementation of a monitor simply returns a string.
 This is interpreted by the engine that the job should be killed and the string contains the reason for doing so.
-This behavior can be controlled by returning an instance of :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult` instead.
+This behavior can be controlled by returning an instance of :class:`~aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult` instead.
 
 Disable parsing of retrieved files
 ..................................
@@ -655,6 +655,20 @@ To skip the file retrieval, set ``CalcJobMonitorResult.retrieve`` to ``False``:
         return CalcJobMonitorResult(retrieve=False, parse=False)
 
 Note that in this case ``parse`` should also be set to ``False`` since the engine cannot parse files that have not been retrieved.
+
+Disable overriding of parse exit code
+.....................................
+
+By default, when a job is stopped through a monitor, the engine will set the exit code ``STOPPED_BY_MONITOR``.
+This overrides any exit code that may be returned by the parser, if one is invoked.
+To keep the exit code of the parser instead, set ``CalcJobMonitorResult.override_exit_code`` to ``False``:
+
+.. code-block:: python
+
+    def monitor_do_not_override_exit_code(node: CalcJobNode, transport: Transport) -> str | None:
+        """Kill the job and do not override the exit code returned by the parser."""
+        from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorResult
+        return CalcJobMonitorResult(override_exit_code=False)
 
 
 .. _how-to:run-codes:caching:

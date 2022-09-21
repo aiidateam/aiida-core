@@ -24,6 +24,7 @@ from aiida import orm
 from aiida.common import CalcJobState, LinkType, StashMode, exceptions
 from aiida.engine import CalcJob, CalcJobImporter, ExitCode, Process, launch
 from aiida.engine.processes.calcjobs.calcjob import validate_monitors, validate_stash_options
+from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorResult
 from aiida.engine.processes.ports import PortNamespace
 from aiida.plugins import CalculationFactory
 
@@ -36,6 +37,21 @@ def raise_exception(exception, *args, **kwargs):
     :param exception: exception class to raise
     """
     raise exception()
+
+
+@pytest.fixture
+def get_calcjob_builder(aiida_local_code_factory):
+    """Return a builder for the ``ArithmeticAddCalculation`` that is ready to go."""
+
+    def _factory(**kwargs):
+        code = aiida_local_code_factory('core.arithmetic.add', 'bash')
+        builder = code.get_builder()
+        builder.x = orm.Int(1)
+        builder.y = orm.Int(1)
+        builder._update(**kwargs)  # pylint: disable=protected-access
+        return builder
+
+    return _factory
 
 
 @pytest.mark.requires_rmq
@@ -1037,16 +1053,33 @@ def test_validate_monitors_unsupported_kwargs():
     assert 'The monitor `core.always_kill` does not accept the keywords' in result
 
 
-def test_monitor_version(aiida_local_code_factory):
+def test_monitor_version(get_calcjob_builder):
     """Test that the version of the package of the monitors are added as attributes on the node."""
     from aiida import __version__
-    code = aiida_local_code_factory('core.arithmetic.add', 'bash')
-    builder = code.get_builder()
-    builder.x = orm.Int(1)
-    builder.y = orm.Int(1)
+    builder = get_calcjob_builder()
     builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.always_kill'})}
     _, node = launch.run_get_node(builder)
     assert node.base.attributes.get('version')['monitors'] == {'monitor': __version__}
+
+
+def monitor_skip_parse(node, transport, **kwargs):  # pylint: disable=unused-argument
+    """Kill the job and skip the parsing of retrieved output files."""
+    return CalcJobMonitorResult(message='skip parsing', parse=False)
+
+
+def test_monitor_result_parse(get_calcjob_builder, entry_points):
+    """Test the ``parse`` attribute of :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult`.
+
+    If set to ``False``, parsing of output files should be skipped.
+    """
+    entry_points.add(monitor_skip_parse, group='aiida.calculations.monitors', name='core.skip_parse')
+
+    builder = get_calcjob_builder()
+    builder.metadata.options.sleep = 3
+    builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.skip_parse'})}
+    _, node = launch.run_get_node(builder)
+    assert sorted(node.outputs) == ['remote_folder', 'retrieved']
+    assert node.exit_status == CalcJob.exit_codes.STOPPED_BY_MONITOR.status
 
 
 class TestImport:

@@ -520,10 +520,17 @@ class Waiting(plumpy.process_states.Waiting):
             elif self._command == RETRIEVE_COMMAND:
                 temp_folder = tempfile.mkdtemp()
                 await self._launch_task(task_retrieve_job, node, transport_queue, temp_folder)
-                if self._monitor_result:
-                    exit_code = self.process.exit_codes.STOPPED_BY_MONITOR.format(message=self._monitor_result.message)
-                else:
-                    exit_code = None
+
+                if not self._monitor_result:
+                    return self.parse(temp_folder)
+
+                exit_code = self.process.exit_codes.STOPPED_BY_MONITOR.format(message=self._monitor_result.message)
+
+                if self._monitor_result.parse is False:
+                    return self.create_state(
+                        ProcessState.RUNNING, self.process.terminate, exit_code
+                    )  # type: ignore[return-value]
+
                 result = self.parse(temp_folder, exit_code)
 
             else:

@@ -37,6 +37,9 @@ class CalcJobMonitorResult:
     action: CalcJobMonitorAction = CalcJobMonitorAction.KILL
     """The action the engine should take."""
 
+    parse: bool = True
+    """If set to ``False``, the engine will skip the parsing of the retrieved files, if one was specified in inputs."""
+
     def __post_init__(self):
         """Validate the attributes."""
         self.validate()
@@ -49,6 +52,7 @@ class CalcJobMonitorResult:
         type_check(self.key, str, allow_none=True)
         type_check(self.message, str, allow_none=True)
         type_check(self.action, CalcJobMonitorAction)
+        type_check(self.parse, bool)
 
 
 @dataclasses.dataclass

@@ -684,6 +684,19 @@ class CalcJob(Process):
 
         return exit_code or ExitCode(0)
 
+    @staticmethod
+    def terminate(exit_code: ExitCode) -> ExitCode:
+        """Terminate the process immediately and return the given exit code.
+
+        This method is called by :meth:`aiida.engine.processes.calcjobs.tasks.Waiting.execute` if a monitor triggered
+        the job to be terminated and specified the parsing to be skipped. It will construct the running state and tell
+        this method to be run, which returns the given exit code which will cause the process to be terminated.
+
+        :param exit_code: The exit code to return.
+        :returns: The provided exit code.
+        """
+        return exit_code
+
     def parse_scheduler_output(self, retrieved: orm.Node) -> Optional[ExitCode]:
         """Parse the output of the scheduler if that functionality has been implemented for the plugin."""
         computer = self.node.computer

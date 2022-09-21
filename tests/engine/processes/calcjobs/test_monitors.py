@@ -30,6 +30,9 @@ def test_calc_job_monitor_result_constructor_invalid():
     with pytest.raises(TypeError, match=r'Got object of type .*'):
         CalcJobMonitorResult(message='message', action=[])
 
+    with pytest.raises(TypeError, match=r'Got object of type .*'):
+        CalcJobMonitorResult(message='message', parse='true')
+
 
 def test_calc_job_monitor_result_constructor_valid():
     """Test the :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult` constructor for valid input."""
@@ -39,6 +42,7 @@ def test_calc_job_monitor_result_constructor_valid():
     assert result.key == key
     assert result.message == message
     assert result.action == CalcJobMonitorAction.KILL
+    assert result.parse is True
 
 
 def test_calc_job_monitor_constructor_invalid():

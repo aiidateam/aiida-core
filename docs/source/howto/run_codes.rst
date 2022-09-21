@@ -621,6 +621,27 @@ The engine will guarantee that the interval between calls of the monitor is at l
 Due to a number of other intervals that are part of the ``CalcJob`` pipeline, it is possible however, that the effective interval between monitor calls will be larger than that.
 
 
+Advanced functionality
+----------------------
+
+The most simple implementation of a monitor simply returns a string.
+This is interpreted by the engine that the job should be killed and the string contains the reason for doing so.
+This behavior can be controlled by returning an instance of :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult` instead.
+
+Disable parsing of retrieved files
+..................................
+
+By default, when a job is stopped through a monitor, the engine will still retrieve and parse the files.
+To skip the parsing of the retrieved files, set ``CalcJobMonitorResult.parse`` to ``False``:
+
+.. code-block:: python
+
+    def monitor_skip_parsing(node: CalcJobNode, transport: Transport) -> str | None:
+        """Kill the job and do not call the parser, if specified in the inputs."""
+        from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorResult
+        return CalcJobMonitorResult(parse=False)
+
+
 .. _how-to:run-codes:caching:
 
 How to save compute time with caching

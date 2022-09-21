@@ -641,6 +641,21 @@ To skip the parsing of the retrieved files, set ``CalcJobMonitorResult.parse`` t
         from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorResult
         return CalcJobMonitorResult(parse=False)
 
+Disable retrieving of files
+...........................
+
+By default, when a job is stopped through a monitor, the engine will still retrieve the files from the remote working directory.
+To skip the file retrieval, set ``CalcJobMonitorResult.retrieve`` to ``False``:
+
+.. code-block:: python
+
+    def monitor_skip_retrieval(node: CalcJobNode, transport: Transport) -> str | None:
+        """Kill the job and do not retrieve the output files."""
+        from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorResult
+        return CalcJobMonitorResult(retrieve=False, parse=False)
+
+Note that in this case ``parse`` should also be set to ``False`` since the engine cannot parse files that have not been retrieved.
+
 
 .. _how-to:run-codes:caching:
 

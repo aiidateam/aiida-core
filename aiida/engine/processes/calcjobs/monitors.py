@@ -37,6 +37,9 @@ class CalcJobMonitorResult:
     action: CalcJobMonitorAction = CalcJobMonitorAction.KILL
     """The action the engine should take."""
 
+    retrieve: bool = True
+    """If set to ``False``, the engine will skip retrieving the output files."""
+
     parse: bool = True
     """If set to ``False``, the engine will skip the parsing of the retrieved files, if one was specified in inputs."""
 
@@ -48,11 +51,16 @@ class CalcJobMonitorResult:
         """Validate the instance.
 
         :raises TypeError: If any of the attributes are of the incorrect type.
+        :raises ValueError: If ``parse == True`` and ``retrieve == False``.
         """
         type_check(self.key, str, allow_none=True)
         type_check(self.message, str, allow_none=True)
         type_check(self.action, CalcJobMonitorAction)
+        type_check(self.retrieve, bool)
         type_check(self.parse, bool)
+
+        if self.retrieve is False and self.parse is True:
+            raise ValueError('`parse` cannot be `True` if `retrieve` is `False`.')
 
 
 @dataclasses.dataclass

@@ -510,6 +510,12 @@ class Waiting(plumpy.process_states.Waiting):
                         await self._kill_job(node, transport_queue)
                         job_done = True
 
+                    if monitor_result and not monitor_result.retrieve:
+                        exit_code = self.process.exit_codes.STOPPED_BY_MONITOR.format(message=monitor_result.message)
+                        return self.create_state(
+                            ProcessState.RUNNING, self.process.terminate, exit_code
+                        )  # type: ignore[return-value]
+
                 result = self.stash(monitor_result=monitor_result)
 
             elif self._command == STASH_COMMAND:

@@ -14,9 +14,10 @@ but redefines the SQLAlchemy models to the SQLite compatible ones.
 """
 from functools import singledispatch
 import json
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, Union
 
 from sqlalchemy import JSON, case, func
+from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy.sql import ColumnElement
 
 from aiida.common.lang import type_check
@@ -30,6 +31,7 @@ from aiida.storage.psql_dos.orm.querybuilder.main import (
     QueryableAttribute,
     SqlaQueryBuilder,
     String,
+    get_column,
 )
 
 from . import models
@@ -188,12 +190,18 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
     def table_groups_nodes(self):
         return models.DbGroupNodes.__table__  # type: ignore[attr-defined] # pylint: disable=no-member
 
-    def get_projectable_attribute(
-        self, alias, column_name: str, attrpath: List[str], cast: Optional[str] = None
-    ) -> ColumnElement:
-        """Return an attribute store in a JSON field of the give column"""
-        # pylint: disable=unused-argument
-        entity = self.get_column(column_name, alias)[attrpath]
+    def _get_projectable_entity(
+        self,
+        alias: AliasedClass,
+        column_name: str,
+        attrpath: List[str],
+        cast: Optional[str] = None,
+    ) -> Union[ColumnElement, InstrumentedAttribute]:
+
+        if not (attrpath or column_name in ('attributes', 'extras')):
+            return get_column(column_name, alias)
+
+        entity = get_column(column_name, alias)[attrpath]
         if cast is None:
             pass
         elif cast == 'f':
@@ -220,7 +228,7 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
         See: https://www.sqlite.org/json1.html
         """
         if column is None:
-            column = self.get_column(column_name, alias)
+            column = get_column(column_name, alias)
 
         query_str = f'{alias or ""}.{column_name or ""}.{attr_key} {operator} {value}'
 

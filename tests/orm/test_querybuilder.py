@@ -1199,6 +1199,24 @@ class TestQueryBuilderJoins:
         for curr_id in [n1.pk, n2.pk, n3.pk, n4.pk]:
             assert curr_id in id_res
 
+    def test_joins_group_node_distinct(self):
+        """Test that when protecting only the group for a join on nodes, only unique groups are returned.
+
+        Regression test for #5535
+        """
+        group = orm.Group(label='mygroup').store()
+        node_a = orm.Data().store()
+        node_b = orm.Data().store()
+        group.add_nodes([node_a, node_b])
+
+        query = orm.QueryBuilder()
+        query.append(orm.Data, tag='node')
+        query.append(orm.Group, with_node='node', project='uuid')
+        query.distinct()
+
+        assert query.all(flat=True) == [group.uuid]
+        assert query.count() == 1
+
 
 class QueryBuilderPath:
 

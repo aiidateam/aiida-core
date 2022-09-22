@@ -19,6 +19,7 @@ from sqlalchemy import and_
 from sqlalchemy import func as sa_func
 from sqlalchemy import not_, or_
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.engine import Row
 from sqlalchemy.exc import SAWarning
 from sqlalchemy.orm import aliased
 from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
@@ -155,15 +156,10 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         if result is None:
             return result
 
-        # we discard the first item of the result row,
-        # which was what the query was initialised with and not one of the requested projection (see self._build)
-        result = result[1:]
-
-        if len(result) != self._requested_projections:
-            raise AssertionError(
-                f'length of query result ({len(result)}) does not match '
-                f'the number of specified projections ({self._requested_projections})'
-            )
+        # SQLA will return a Row, if only certain columns are requested,
+        # or a database model if that is requested
+        if not isinstance(result, Row):
+            result = (result,)
 
         return [self.to_backend(r) for r in result]
 
@@ -174,10 +170,6 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             stmt = query.statement.execution_options(yield_per=batch_size)
 
             for resultrow in self.get_session().execute(stmt):
-                # we discard the first item of the result row,
-                # which is what the query was initialised with
-                # and not one of the requested projection (see self._build)
-                resultrow = resultrow[1:]
                 yield [self.to_backend(rowitem) for rowitem in resultrow]
 
     def iterdict(self, data: QueryDictType, batch_size: Optional[int]) -> Iterable[Dict[str, Dict[str, Any]]]:
@@ -189,11 +181,16 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             for row in self.get_session().execute(stmt):
                 # build the yield result
                 yield_result: Dict[str, Dict[str, Any]] = {}
-                for tag, projected_entities_dict in self._tag_to_projected_fields.items():
+                for (
+                    tag,
+                    projected_entities_dict,
+                ) in self._tag_to_projected_fields.items():
                     yield_result[tag] = {}
                     for attrkey, project_index in projected_entities_dict.items():
-                        field_name = self.get_corresponding_property(
-                            self.get_table_name(self._get_tag_alias(tag)), attrkey, self.inner_to_outer_schema
+                        field_name = get_corresponding_property(
+                            get_table_name(self._get_tag_alias(tag)),
+                            attrkey,
+                            self.inner_to_outer_schema,
                         )
                         yield_result[tag][field_name] = self.to_backend(row[project_index])
                 yield yield_result
@@ -263,18 +260,11 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         """
         # pylint: disable=too-many-branches,too-many-locals
         self.rebuild_aliases()
-        # Start the build by generating a query from the current session,
-        # A query must always be initialised with a starting entity or column (to allow joins),
-        # however, we don't actually want to return this, since we set projections explicitly.
-        # Therefore, we just add the id field (as we don't want to retrive the entire entity from the database),
-        # and then remove it in the "return" methods (`one`, `iterall`, `iterdict`)
-        firstalias = self._get_tag_alias(self._data['path'][0]['tag'])
-        # we assume here that every table has an 'id' column (currently the case)
-        self._query = self.get_session().query(firstalias.id)
 
         # JOINS ################################
 
         # Start on second path item, since there is nothing to join if that is the first table
+        joins = []
         for index, verticespec in enumerate(self._data['path'][1:], start=1):
             join_to = self._get_tag_alias(verticespec['tag'])
             join_func = self._build_join_func(index, verticespec['joining_keyword'], verticespec['joining_value'])
@@ -286,15 +276,77 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             # Also find out whether the path is used in a filter or a project and, if so,
             # instruct the recursive function to build the path on the fly.
             # The default is False, because it's super expensive
-            expand_path = ((self._data['filters'][edge_tag].get('path', None) is not None) or
-                           any('path' in d.keys() for d in self._data['project'][edge_tag]))
+            expand_path = (self._data['filters'][edge_tag].get('path', None)
+                           is not None) or any('path' in d.keys() for d in self._data['project'][edge_tag])
 
             result = join_func(
-                join_to, isouterjoin=verticespec.get('outerjoin'), filter_dict=filter_dict, expand_path=expand_path
+                join_to,
+                isouterjoin=verticespec.get('outerjoin'),
+                filter_dict=filter_dict,
+                expand_path=expand_path,
             )
-            self._query = result.query
+            joins.append(result)
             if result.aliased_edge is not None:
                 self._tag_to_alias[edge_tag] = result.aliased_edge
+
+        # PROJECTIONS ##########################
+
+        # Reset mapping of tag -> field -> projection_index
+        self._tag_to_projected_fields = {}
+
+        projections: List[Union[AliasedClass, ColumnElement]] = []
+        QUERYBUILD_LOGGER.debug('projections data: %s', self._data['project'])
+
+        if not any(self._data['project'].values()):
+            # If user has not set projection,
+            # I will simply project the last item specified!
+            # Don't change, path traversal querying relies on this behavior!
+            projections += self._create_projections(
+                self._data['path'][-1]['tag'],
+                len(projections),
+                items_to_project=[{
+                    '*': {}
+                }],
+            )
+        else:
+            for vertex in self._data['path']:
+                projections += self._create_projections(vertex['tag'], len(projections))
+
+            # LINK-PROJECTIONS #########################
+
+            for vertex in self._data['path'][1:]:
+                edge_tag = vertex.get('edge_tag', None)  # type: ignore
+
+                QUERYBUILD_LOGGER.debug(
+                    'Checking projections for edges: This is edge %s from %s, %s of %s',
+                    edge_tag,
+                    vertex.get('tag'),
+                    vertex.get('joining_keyword'),
+                    vertex.get('joining_value'),
+                )
+                if edge_tag is not None:
+                    projections += self._create_projections(edge_tag, len(projections))
+
+        # check the consistency of projections
+        projection_index_to_field = {
+            index_in_sql_result: attrkey for _, projected_entities_dict in self._tag_to_projected_fields.items()
+            for attrkey, index_in_sql_result in projected_entities_dict.items()
+        }
+        if len(projections) > len(projection_index_to_field):
+            raise ValueError('You are projecting the same key multiple times within the same node')
+        if not projection_index_to_field:
+            raise ValueError('No projections requested')
+        self._requested_projections = len(projections)
+
+        # INITIALISE QUERY ##############################
+
+        starting_table = self._get_tag_alias(self._data['path'][0]['tag'])
+        self._query = self.get_session().query(*projections).select_from(starting_table)
+
+        # JOINS ##############################
+
+        for join in joins:
+            self._query = join.join(self._query)
 
         # FILTERS ##############################
 
@@ -308,50 +360,6 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             filters = self.build_filters(alias, filter_specs)
             if filters is not None:
                 self._query = self._query.filter(filters)
-
-        # PROJECTIONS ##########################
-
-        # Reset mapping of tag -> field -> projection_index
-        self._tag_to_projected_fields = {}
-
-        projection_count = 1
-        QUERYBUILD_LOGGER.debug('projections data: %s', self._data['project'])
-
-        if not any(self._data['project'].values()):
-            # If user has not set projection,
-            # I will simply project the last item specified!
-            # Don't change, path traversal querying relies on this behavior!
-            projection_count = self._build_projections(
-                self._data['path'][-1]['tag'], projection_count, items_to_project=[{
-                    '*': {}
-                }]
-            )
-        else:
-            for vertex in self._data['path']:
-                projection_count = self._build_projections(vertex['tag'], projection_count)
-
-            # LINK-PROJECTIONS #########################
-
-            for vertex in self._data['path'][1:]:
-                edge_tag = vertex.get('edge_tag', None)  # type: ignore
-
-                QUERYBUILD_LOGGER.debug(
-                    'Checking projections for edges: This is edge %s from %s, %s of %s', edge_tag, vertex.get('tag'),
-                    vertex.get('joining_keyword'), vertex.get('joining_value')
-                )
-                if edge_tag is not None:
-                    projection_count = self._build_projections(edge_tag, projection_count)
-
-        # check the consistency of projections
-        projection_index_to_field = {
-            index_in_sql_result: attrkey for _, projected_entities_dict in self._tag_to_projected_fields.items()
-            for attrkey, index_in_sql_result in projected_entities_dict.items()
-        }
-        if (projection_count - 1) > len(projection_index_to_field):
-            raise ValueError('You are projecting the same key multiple times within the same node')
-        if not projection_index_to_field:
-            raise ValueError('No projections requested')
-        self._requested_projections = projection_count - 1
 
         # ORDER ################################
         for order_spec in self._data['order_by']:
@@ -391,7 +399,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         if isinstance(joining_value, str):
             try:
-                return partial(func, self._query, self._get_tag_alias(joining_value))
+                return partial(func, self._get_tag_alias(joining_value))
             except KeyError:
                 raise ValueError(f'joining_value tag {joining_value!r} not in : {list(self._tag_to_alias)}')
         raise ValueError(f"'joining_value' value is not a string: {joining_value}")
@@ -414,10 +422,19 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             raise ValueError(f"Unknown 'order' key: {order!r}, must be one of: 'asc', 'desc'")
         self._query = self._query.order_by(entity)
 
-    def _build_projections(
-        self, tag: str, projection_count: int, items_to_project: Optional[List[Dict[str, dict]]] = None
-    ) -> int:
-        """Build the projections for a given tag."""
+    def _create_projections(
+        self,
+        tag: str,
+        projection_count: int,
+        items_to_project: Optional[List[Dict[str, dict]]] = None,
+    ) -> List[Union[AliasedClass, ColumnElement]]:
+        """Build the projections for a given tag.
+
+        :param tag: the tag of the node for which to build the projections
+        :param projection_count: the number of previous projections
+        :param items_to_project: the list of projections to build, if None, use the projections specified in the query
+
+        """
         if items_to_project is None:
             project_dict = self._data['project'].get(tag, [])
         else:
@@ -426,42 +443,51 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         # Return here if there is nothing to project, reduces number of key in return dictionary
         QUERYBUILD_LOGGER.debug('projection for %s: %s', tag, project_dict)
         if not project_dict:
-            return projection_count
+            return []
 
         alias = self._get_tag_alias(tag)
 
         self._tag_to_projected_fields[tag] = {}
+
+        projections = []
 
         for projectable_spec in project_dict:
             for projectable_entity_name, extraspec in projectable_spec.items():
                 property_names = []
                 if projectable_entity_name == '**':
                     # Need to expand
-                    property_names.extend(self.modify_expansions(alias, self.get_column_names(alias)))
+                    property_names.extend(modify_expansions(alias, get_column_names(alias), self.outer_to_inner_schema))
                 else:
-                    property_names.extend(self.modify_expansions(alias, [projectable_entity_name]))
+                    property_names.extend(
+                        modify_expansions(alias, [projectable_entity_name], self.outer_to_inner_schema)
+                    )
 
                 for property_name in property_names:
-                    self._add_to_projections(alias, property_name, **extraspec)
+                    # self._add_to_projections(alias, property_name, **extraspec)
+                    projections.append(self._get_projection(alias, property_name, **extraspec))
                     self._tag_to_projected_fields[tag][property_name] = projection_count
                     projection_count += 1
 
-        return projection_count
+        return projections
 
-    def _add_to_projections(
+    def _get_projection(
         self,
         alias: AliasedClass,
         projectable_entity_name: str,
         cast: Optional[str] = None,
         func: Optional[str] = None,
-        **_kw: Any
-    ) -> None:
+        **_kw: Any,
+    ) -> Union[AliasedClass, ColumnElement]:
         """
         :param alias: An alias for an ormclass
         :param projectable_entity_name:
             User specification of what to project.
             Appends to query's entities what the user wants to project
             (have returned by the query)
+        :param cast: Cast the value to a different type
+        :param func: Apply a function to the projection
+
+        :return: The projection
 
         """
         column_name = projectable_entity_name.split('.')[0]
@@ -475,41 +501,35 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                     'will not work!\n'
                     "I suggest you apply functions on a column, e.g. ('id')\n"
                 )
-            self._query = self._query.add_entity(alias)
+            # self._query = self._query.add_entity(alias)
+            return alias
+
+        entity_to_project = self._get_projectable_entity(alias, column_name, attr_key, cast=cast)
+        if func is None:
+            pass
+        elif func == 'max':
+            entity_to_project = sa_func.max(entity_to_project)
+        elif func == 'min':
+            entity_to_project = sa_func.max(entity_to_project)
+        elif func == 'count':
+            entity_to_project = sa_func.count(entity_to_project)
         else:
-            entity_to_project = self._get_projectable_entity(alias, column_name, attr_key, cast=cast)
-            if func is None:
-                pass
-            elif func == 'max':
-                entity_to_project = sa_func.max(entity_to_project)
-            elif func == 'min':
-                entity_to_project = sa_func.max(entity_to_project)
-            elif func == 'count':
-                entity_to_project = sa_func.count(entity_to_project)
-            else:
-                raise ValueError(f'\nInvalid function specification {func}')
-            self._query = self._query.add_columns(entity_to_project)
+            raise ValueError(f'\nInvalid function specification {func}')
+        # self._query = self._query.add_columns(entity_to_project)
+        return entity_to_project
 
     def _get_projectable_entity(
         self,
         alias: AliasedClass,
         column_name: str,
         attrpath: List[str],
-        cast: Optional[str] = None
+        cast: Optional[str] = None,
     ) -> Union[ColumnElement, InstrumentedAttribute]:
         """Return projectable entity for a given alias and column name."""
-        if attrpath or column_name in ('attributes', 'extras'):
-            entity = self.get_projectable_attribute(alias, column_name, attrpath, cast=cast)
-        else:
-            entity = self.get_column(column_name, alias)
-        return entity
+        if not (attrpath or column_name in ('attributes', 'extras')):
+            return get_column(column_name, alias)
 
-    def get_projectable_attribute(
-        self, alias: AliasedClass, column_name: str, attrpath: List[str], cast: Optional[str] = None
-    ) -> ColumnElement:
-        """Return an attribute store in a JSON field of the give column"""
-        # pylint: disable=unused-argument
-        entity: ColumnElement = self.get_column(column_name, alias)[attrpath]
+        entity: ColumnElement = get_column(column_name, alias)[attrpath]
         if cast is None:
             pass
         elif cast == 'f':
@@ -527,20 +547,6 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         else:
             raise ValueError(f'Unknown casting key {cast}')
         return entity
-
-    @staticmethod
-    def get_column(colname: str, alias: AliasedClass) -> InstrumentedAttribute:
-        """
-        Return the column for a given projection.
-        """
-        try:
-            return getattr(alias, colname)
-        except AttributeError as exc:
-            raise ValueError(
-                '{} is not a column of {}\n'
-                'Valid columns are:\n'
-                '{}'.format(colname, alias, '\n'.join(alias._sa_class_manager.mapper.c.keys()))  # pylint: disable=protected-access
-            ) from exc
 
     def build_filters(self, alias: AliasedClass, filter_spec: Dict[str, Any]) -> Optional[BooleanClauseList]:  # pylint: disable=too-many-branches
         """Recurse through the filter specification and apply filter operations.
@@ -571,10 +577,10 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 column_name = path_spec.split('.')[0]
 
                 attr_key = path_spec.split('.')[1:]
-                is_jsonb = (bool(attr_key) or column_name in ('attributes', 'extras'))
+                is_jsonb = bool(attr_key) or column_name in ('attributes', 'extras')
                 column: Optional[InstrumentedAttribute]
                 try:
-                    column = self.get_column(column_name, alias)
+                    column = get_column(column_name, alias)
                 except (ValueError, TypeError):
                     if is_jsonb:
                         column = None
@@ -591,64 +597,10 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                             is_jsonb=is_jsonb,
                             column=column,
                             column_name=column_name,
-                            alias=alias
+                            alias=alias,
                         )
                     )
         return and_(*expressions) if expressions else None
-
-    def modify_expansions(self, alias: AliasedClass, expansions: List[str]) -> List[str]:
-        """Modify names of projections if `**` was specified.
-
-        This is important for the schema having attributes in a different table.
-        In SQLA, the metadata should be changed to _metadata to be in-line with the database schema
-        """
-        # pylint: disable=protected-access
-        # The following check is added to avoided unnecessary calls to get_inner_property for QB edge queries
-        # The update of expansions makes sense only when AliasedClass is provided
-        if hasattr(alias, '_sa_class_manager'):
-            if '_metadata' in expansions:
-                raise NotExistent(f"_metadata doesn't exist for {alias}. Please try metadata.")
-
-            return self.get_corresponding_properties(alias.__tablename__, expansions, self.outer_to_inner_schema)
-
-        return expansions
-
-    @classmethod
-    def get_corresponding_properties(
-        cls, entity_table: str, given_properties: List[str], mapper: Dict[str, Dict[str, str]]
-    ):
-        """
-        This method returns a list of updated properties for a given list of properties.
-        If there is no update for the property, the given property is returned in the list.
-        """
-        if entity_table in mapper:
-            res = []
-            for given_property in given_properties:
-                res.append(cls.get_corresponding_property(entity_table, given_property, mapper))
-            return res
-
-        return given_properties
-
-    @classmethod
-    def get_corresponding_property(
-        cls, entity_table: str, given_property: str, mapper: Dict[str, Dict[str, str]]
-    ) -> str:
-        """
-        This method returns an updated property for a given a property.
-        If there is no update for the property, the given property is returned.
-        """
-        try:
-            # Get the mapping for the specific entity_table
-            property_mapping = mapper[entity_table]
-            try:
-                # Get the mapping for the specific property
-                return property_mapping[given_property]
-            except KeyError:
-                # If there is no mapping, the property remains unchanged
-                return given_property
-        except KeyError:
-            # If it doesn't exist, it means that the given_property remains v
-            return given_property
 
     def get_filter_expr(
         self,
@@ -658,7 +610,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         is_jsonb: bool,
         alias=None,
         column=None,
-        column_name=None
+        column_name=None,
     ):
         """Applies a filter on the alias given.
 
@@ -771,7 +723,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                             is_jsonb=is_jsonb,
                             alias=alias,
                             column=column,
-                            column_name=column_name
+                            column_name=column_name,
                         )
                     )
             if operator == 'and':
@@ -782,13 +734,18 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         if expr is None:
             if is_jsonb:
                 expr = self.get_filter_expr_from_jsonb(
-                    operator, value, attr_key, column=column, column_name=column_name, alias=alias
+                    operator,
+                    value,
+                    attr_key,
+                    column=column,
+                    column_name=column_name,
+                    alias=alias,
                 )
             else:
                 if column is None:
                     if (alias is None) and (column_name is None):
                         raise RuntimeError('I need to get the column but do not know the alias and the column name')
-                    column = self.get_column(column_name, alias)
+                    column = get_column(column_name, alias)
                 expr = self.get_filter_expr_from_column(operator, value, column)
 
         if negation:
@@ -796,7 +753,13 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         return expr
 
     def get_filter_expr_from_jsonb(
-        self, operator: str, value, attr_key: List[str], column=None, column_name=None, alias=None
+        self,
+        operator: str,
+        value,
+        attr_key: List[str],
+        column=None,
+        column_name=None,
+        alias=None,
     ):
         """Return a filter expression"""
 
@@ -827,7 +790,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             return type_filter, casted_entity
 
         if column is None:
-            column = self.get_column(column_name, alias)
+            column = get_column(column_name, alias)
 
         database_entity = column[tuple(attr_key)]
         expr: Any
@@ -868,19 +831,28 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             expr = database_entity.cast(JSONB).has_key(value)  # noqa
         elif operator == 'of_length':
             expr = case(
-                (jsonb_typeof(database_entity) == 'array', jsonb_array_length(database_entity.cast(JSONB)) == value),
-                else_=False
+                (
+                    jsonb_typeof(database_entity) == 'array',
+                    jsonb_array_length(database_entity.cast(JSONB)) == value,
+                ),
+                else_=False,
             )
 
         elif operator == 'longer':
             expr = case(
-                (jsonb_typeof(database_entity) == 'array', jsonb_array_length(database_entity.cast(JSONB)) > value),
-                else_=False
+                (
+                    jsonb_typeof(database_entity) == 'array',
+                    jsonb_array_length(database_entity.cast(JSONB)) > value,
+                ),
+                else_=False,
             )
         elif operator == 'shorter':
             expr = case(
-                (jsonb_typeof(database_entity) == 'array', jsonb_array_length(database_entity.cast(JSONB)) < value),
-                else_=False
+                (
+                    jsonb_typeof(database_entity) == 'array',
+                    jsonb_array_length(database_entity.cast(JSONB)) < value,
+                ),
+                else_=False,
             )
         else:
             raise ValueError(f'Unknown operator {operator} for filters in JSON field')
@@ -897,7 +869,10 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         """
         # Label is used because it is what is returned for the
         # 'state' column by the hybrid_column construct
-        if not isinstance(column, (Cast, InstrumentedAttribute, QueryableAttribute, Label, ColumnClause)):
+        if not isinstance(
+            column,
+            (Cast, InstrumentedAttribute, QueryableAttribute, Label, ColumnClause),
+        ):
             raise TypeError(f'column ({type(column)}) {column} is not a valid column')
         database_entity = column
         if operator == '==':
@@ -922,18 +897,6 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             raise ValueError(f'Unknown operator {operator} for filters on columns')
         return expr
 
-    @staticmethod
-    def get_table_name(aliased_class: AliasedClass) -> str:
-        """ Returns the table name given an Aliased class"""
-        return aliased_class.__tablename__
-
-    @staticmethod
-    def get_column_names(alias: AliasedClass) -> List[str]:
-        """
-        Given the backend specific alias, return the column names that correspond to the aliased table.
-        """
-        return [str(c).replace(f'{alias.__table__.name}.', '') for c in alias.__table__.columns]
-
     def to_backend(self, res) -> Any:
         """Convert results to return backend specific objects.
 
@@ -952,41 +915,9 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         except TypeError:
             return res
 
-    @staticmethod
-    def _compile_query(query: Query, literal_binds: bool = False) -> SQLCompiler:
-        """Compile the query to the SQL executable.
-
-        :params literal_binds: Inline bound parameters (this is normally handled by the Python DBAPI).
-        """
-        dialect = query.session.bind.dialect  # type: ignore[union-attr]
-
-        class _Compiler(dialect.statement_compiler):  # type: ignore[name-defined]
-            """Override the compiler with additional literal value renderers."""
-
-            def render_literal_value(self, value, type_):
-                """Render the value of a bind parameter as a quoted literal.
-
-                See https://www.postgresql.org/docs/current/functions-json.html for serialisation specs
-                """
-                from datetime import date, datetime, timedelta
-                try:
-                    return super().render_literal_value(value, type_)
-                except NotImplementedError:
-                    if isinstance(value, list):
-                        values = ','.join(self.render_literal_value(item, type_) for item in value)
-                        return f"'[{values}]'"
-                    if isinstance(value, int):
-                        return str(value)
-                    if isinstance(value, (str, date, datetime, timedelta)):
-                        escaped = str(value).replace('"', '\\"')
-                        return f'"{escaped}"'
-                    raise
-
-        return _Compiler(dialect, query.statement, compile_kwargs=dict(literal_binds=literal_binds))
-
     def as_sql(self, data: QueryDictType, inline: bool = False) -> str:
         with self.use_query(data) as query:
-            compiled = self._compile_query(query, literal_binds=inline)
+            compiled = compile_query(query, literal_binds=inline)
         if inline:
             return compiled.string + '\n'
         return f'{compiled.string!r} % {compiled.params!r}\n'
@@ -995,10 +926,10 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         with self.use_query(data) as query:
             if query.session.bind.dialect.name != 'postgresql':  # type: ignore[union-attr]
                 raise NotImplementedError('Only PostgreSQL is supported for this method')
-            compiled = self._compile_query(query, literal_binds=True)
+            compiled = compile_query(query, literal_binds=True)
         options = ', '.join((['ANALYZE'] if execute else []) + (['VERBOSE'] if verbose else []))
         options = f' ({options})' if options else ''
-        rows = self.get_session().execute(text(f'EXPLAIN{options} {compiled.string}')).fetchall()
+        rows = (self.get_session().execute(text(f'EXPLAIN{options} {compiled.string}')).fetchall())
         return '\n'.join(row[0] for row in rows)
 
     def get_creation_statistics(self, user_pk: Optional[int] = None) -> Dict[str, Any]:
@@ -1009,7 +940,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         types_query = session.query(self.Node.node_type.label('typestring'), sa_func.count(self.Node.id))  # pylint: disable=no-member
         stat_query = session.query(
             sa_func.date_trunc('day', self.Node.ctime).label('cday'),  # pylint: disable=no-member
-            sa_func.count(self.Node.id)  # pylint: disable=no-member
+            sa_func.count(self.Node.id),  # pylint: disable=no-member
         )
 
         if user_pk is not None:
@@ -1031,3 +962,117 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         return retdict
         # Still not containing all dates
+
+
+def get_corresponding_property(entity_table: str, given_property: str, mapper: Dict[str, Dict[str, str]]) -> str:
+    """
+    This method returns an updated property for a given a property.
+    If there is no update for the property, the given property is returned.
+    """
+    try:
+        # Get the mapping for the specific entity_table
+        property_mapping = mapper[entity_table]
+        try:
+            # Get the mapping for the specific property
+            return property_mapping[given_property]
+        except KeyError:
+            # If there is no mapping, the property remains unchanged
+            return given_property
+    except KeyError:
+        # If it doesn't exist, it means that the given_property remains v
+        return given_property
+
+
+def get_corresponding_properties(entity_table: str, given_properties: List[str], mapper: Dict[str, Dict[str, str]]):
+    """
+    This method returns a list of updated properties for a given list of properties.
+    If there is no update for the property, the given property is returned in the list.
+    """
+    if entity_table in mapper:
+        res = []
+        for given_property in given_properties:
+            res.append(get_corresponding_property(entity_table, given_property, mapper))
+        return res
+
+    return given_properties
+
+
+def modify_expansions(
+    alias: AliasedClass,
+    expansions: List[str],
+    outer_to_inner_schema=Dict[str, Dict[str, str]],
+) -> List[str]:
+    """Modify names of projections if `**` was specified.
+
+    This is important for the schema having attributes in a different table.
+    In SQLA, the metadata should be changed to _metadata to be in-line with the database schema
+    """
+    # pylint: disable=protected-access
+    # The following check is added to avoided unnecessary calls to get_inner_property for QB edge queries
+    # The update of expansions makes sense only when AliasedClass is provided
+    if hasattr(alias, '_sa_class_manager'):
+        if '_metadata' in expansions:
+            raise NotExistent(f"_metadata doesn't exist for {alias}. Please try metadata.")
+
+        return get_corresponding_properties(alias.__tablename__, expansions, outer_to_inner_schema)
+
+    return expansions
+
+
+def get_column(colname: str, alias: AliasedClass) -> InstrumentedAttribute:
+    """
+    Return the column for a given projection.
+    """
+    try:
+        return getattr(alias, colname)
+    except AttributeError as exc:
+        raise ValueError(
+            '{} is not a column of {}\n'
+            'Valid columns are:\n'
+            '{}'.format(colname, alias, '\n'.join(alias._sa_class_manager.mapper.c.keys()))  # pylint: disable=protected-access
+        ) from exc
+
+
+def get_column_names(alias: AliasedClass) -> List[str]:
+    """
+    Given the backend specific alias, return the column names that correspond to the aliased table.
+    """
+    return [str(c).replace(f'{alias.__table__.name}.', '') for c in alias.__table__.columns]
+
+
+def get_table_name(aliased_class: AliasedClass) -> str:
+    """ Returns the table name given an Aliased class"""
+    return aliased_class.__tablename__
+
+
+def compile_query(query: Query, literal_binds: bool = False) -> SQLCompiler:
+    """Compile the query to the SQL executable.
+
+    :params literal_binds: Inline bound parameters (this is normally handled by the Python DBAPI).
+    """
+    dialect = query.session.bind.dialect  # type: ignore[union-attr]
+
+    class _Compiler(dialect.statement_compiler):  # type: ignore[name-defined]
+        """Override the compiler with additional literal value renderers."""
+
+        def render_literal_value(self, value, type_):
+            """Render the value of a bind parameter as a quoted literal.
+
+            See https://www.postgresql.org/docs/current/functions-json.html for serialisation specs
+            """
+            from datetime import date, datetime, timedelta
+
+            try:
+                return super().render_literal_value(value, type_)
+            except NotImplementedError:
+                if isinstance(value, list):
+                    values = ','.join(self.render_literal_value(item, type_) for item in value)
+                    return f"'[{values}]'"
+                if isinstance(value, int):
+                    return str(value)
+                if isinstance(value, (str, date, datetime, timedelta)):
+                    escaped = str(value).replace('"', '\\"')
+                    return f'"{escaped}"'
+                raise
+
+    return _Compiler(dialect, query.statement, compile_kwargs=dict(literal_binds=literal_binds))

@@ -66,12 +66,12 @@ class _EntityMapper(Protocol):
 
 
 class JoinReturn(NamedTuple):
-    query: Query
+    join: Callable[[Query], Query]
     aliased_edge: Optional[AliasedClass] = None
 
 
 FilterType = Dict[str, Any]  # pylint: disable=invalid-name
-JoinFuncType = Callable[[Query, Type[Model], Type[Model], bool, FilterType, bool], JoinReturn]  # pylint: disable=invalid-name
+JoinFuncType = Callable[[Type[Model], Type[Model], bool, FilterType, bool], JoinReturn]  # pylint: disable=invalid-name
 
 
 class SqlaJoiner:
@@ -136,26 +136,30 @@ class SqlaJoiner:
 
         return mapping  # type: ignore
 
-    def _join_computer_authinfo(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_computer_authinfo(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: the aliased user you want to join to
         :param entity_to_join: the (aliased) node or group in the DB to join with
         """
         _check_dbentities((joined_entity, self._entities.Computer), (entity_to_join, self._entities.AuthInfo),
                           'with_computer')
-        new_query = query.join(entity_to_join, entity_to_join.dbcomputer_id == joined_entity.id, isouter=isouterjoin)
+        new_query = lambda q: q.join(
+            entity_to_join, entity_to_join.dbcomputer_id == joined_entity.id, isouter=isouterjoin
+        )
         return JoinReturn(new_query)
 
-    def _join_user_authinfo(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_user_authinfo(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: the aliased user you want to join to
         :param entity_to_join: the (aliased) node or group in the DB to join with
         """
         _check_dbentities((joined_entity, self._entities.User), (entity_to_join, self._entities.AuthInfo), 'with_user')
-        new_query = query.join(entity_to_join, entity_to_join.aiidauser_id == joined_entity.id, isouter=isouterjoin)
+        new_query = lambda q: q.join(
+            entity_to_join, entity_to_join.aiidauser_id == joined_entity.id, isouter=isouterjoin
+        )
         return JoinReturn(new_query)
 
-    def _join_group_node(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_group_node(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity:
             The (aliased) ORMclass that is
@@ -170,12 +174,12 @@ class SqlaJoiner:
         """
         _check_dbentities((joined_entity, self._entities.Group), (entity_to_join, self._entities.Node), 'with_group')
         aliased_group_nodes = aliased(self._entities.table_groups_nodes)
-        new_query = query.join(aliased_group_nodes, aliased_group_nodes.c.dbgroup_id == joined_entity.id).join(
+        new_query = lambda q: q.join(aliased_group_nodes, aliased_group_nodes.c.dbgroup_id == joined_entity.id).join(
             entity_to_join, entity_to_join.id == aliased_group_nodes.c.dbnode_id, isouter=isouterjoin
         )
         return JoinReturn(new_query, aliased_group_nodes)
 
-    def _join_node_group(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_node_group(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: The (aliased) node in the database
         :param entity_to_join: The (aliased) Group
@@ -187,30 +191,30 @@ class SqlaJoiner:
         """
         _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Group), 'with_node')
         aliased_group_nodes = aliased(self._entities.table_groups_nodes)
-        new_query = query.join(aliased_group_nodes, aliased_group_nodes.c.dbnode_id == joined_entity.id).join(
+        new_query = lambda q: q.join(aliased_group_nodes, aliased_group_nodes.c.dbnode_id == joined_entity.id).join(
             entity_to_join, entity_to_join.id == aliased_group_nodes.c.dbgroup_id, isouter=isouterjoin
         )
         return JoinReturn(new_query, aliased_group_nodes)
 
-    def _join_node_user(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_node_user(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: the aliased node
         :param entity_to_join: the aliased user to join to that node
         """
         _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.User), 'with_node')
-        new_query = query.join(entity_to_join, entity_to_join.id == joined_entity.user_id, isouter=isouterjoin)
+        new_query = lambda q: q.join(entity_to_join, entity_to_join.id == joined_entity.user_id, isouter=isouterjoin)
         return JoinReturn(new_query)
 
-    def _join_user_node(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_user_node(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: the aliased user you want to join to
         :param entity_to_join: the (aliased) node or group in the DB to join with
         """
         _check_dbentities((joined_entity, self._entities.User), (entity_to_join, self._entities.Node), 'with_user')
-        new_query = query.join(entity_to_join, entity_to_join.user_id == joined_entity.id, isouter=isouterjoin)
+        new_query = lambda q: q.join(entity_to_join, entity_to_join.user_id == joined_entity.id, isouter=isouterjoin)
         return JoinReturn(new_query)
 
-    def _join_computer_node(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_computer_node(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: the (aliased) computer entity
         :param entity_to_join: the (aliased) node entity
@@ -218,103 +222,109 @@ class SqlaJoiner:
         """
         _check_dbentities((joined_entity, self._entities.Computer), (entity_to_join, self._entities.Node),
                           'with_computer')
-        new_query = query.join(entity_to_join, entity_to_join.dbcomputer_id == joined_entity.id, isouter=isouterjoin)
+        new_query = lambda q: q.join(
+            entity_to_join, entity_to_join.dbcomputer_id == joined_entity.id, isouter=isouterjoin
+        )
         return JoinReturn(new_query)
 
-    def _join_node_computer(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_node_computer(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: An entity that can use a computer (eg a node)
         :param entity_to_join: aliased dbcomputer entity
         """
         _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Computer), 'with_node')
-        new_query = query.join(entity_to_join, joined_entity.dbcomputer_id == entity_to_join.id, isouter=isouterjoin)
+        new_query = lambda q: q.join(
+            entity_to_join, joined_entity.dbcomputer_id == entity_to_join.id, isouter=isouterjoin
+        )
         return JoinReturn(new_query)
 
-    def _join_group_user(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_group_user(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: An aliased dbgroup
         :param entity_to_join: aliased dbuser
         """
         _check_dbentities((joined_entity, self._entities.Group), (entity_to_join, self._entities.User), 'with_group')
-        new_query = query.join(entity_to_join, joined_entity.user_id == entity_to_join.id, isouter=isouterjoin)
+        new_query = lambda q: q.join(entity_to_join, joined_entity.user_id == entity_to_join.id, isouter=isouterjoin)
         return JoinReturn(new_query)
 
-    def _join_user_group(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_user_group(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: An aliased user
         :param entity_to_join: aliased group
         """
         _check_dbentities((joined_entity, self._entities.User), (entity_to_join, self._entities.Group), 'with_user')
-        new_query = query.join(entity_to_join, joined_entity.id == entity_to_join.user_id, isouter=isouterjoin)
+        new_query = lambda q: q.join(entity_to_join, joined_entity.id == entity_to_join.user_id, isouter=isouterjoin)
         return JoinReturn(new_query)
 
-    def _join_node_comment(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_node_comment(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: An aliased node
         :param entity_to_join: aliased comment
         """
         _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Comment), 'with_node')
-        new_query = query.join(entity_to_join, joined_entity.id == entity_to_join.dbnode_id, isouter=isouterjoin)
+        new_query = lambda q: q.join(entity_to_join, joined_entity.id == entity_to_join.dbnode_id, isouter=isouterjoin)
         return JoinReturn(new_query)
 
-    def _join_comment_node(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_comment_node(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: An aliased comment
         :param entity_to_join: aliased node
         """
         _check_dbentities((joined_entity, self._entities.Comment), (entity_to_join, self._entities.Node),
                           'with_comment')
-        new_query = query.join(entity_to_join, joined_entity.dbnode_id == entity_to_join.id, isouter=isouterjoin)
+        new_query = lambda q: q.join(entity_to_join, joined_entity.dbnode_id == entity_to_join.id, isouter=isouterjoin)
         return JoinReturn(new_query)
 
-    def _join_node_log(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_node_log(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: An aliased node
         :param entity_to_join: aliased log
         """
         _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Log), 'with_node')
-        new_query = query.join(entity_to_join, joined_entity.id == entity_to_join.dbnode_id, isouter=isouterjoin)
+        new_query = lambda q: q.join(entity_to_join, joined_entity.id == entity_to_join.dbnode_id, isouter=isouterjoin)
         return JoinReturn(new_query)
 
-    def _join_log_node(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_log_node(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: An aliased log
         :param entity_to_join: aliased node
         """
         _check_dbentities((joined_entity, self._entities.Log), (entity_to_join, self._entities.Node), 'with_log')
-        new_query = query.join(entity_to_join, joined_entity.dbnode_id == entity_to_join.id, isouter=isouterjoin)
+        new_query = lambda q: q.join(entity_to_join, joined_entity.dbnode_id == entity_to_join.id, isouter=isouterjoin)
         return JoinReturn(new_query)
 
-    def _join_user_comment(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_user_comment(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: An aliased user
         :param entity_to_join: aliased comment
         """
         _check_dbentities((joined_entity, self._entities.User), (entity_to_join, self._entities.Comment), 'with_user')
-        new_query = query.join(entity_to_join, joined_entity.id == entity_to_join.user_id, isouter=isouterjoin)
+        new_query = lambda q: q.join(entity_to_join, joined_entity.id == entity_to_join.user_id, isouter=isouterjoin)
         return JoinReturn(new_query)
 
-    def _join_authinfo_user(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_authinfo_user(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: An aliased comment
         :param entity_to_join: aliased user
         """
         _check_dbentities((joined_entity, self._entities.AuthInfo), (entity_to_join, self._entities.User),
                           'with_authinfo')
-        new_query = query.join(entity_to_join, joined_entity.aiidauser_id == entity_to_join.id, isouter=isouterjoin)
+        new_query = lambda q: q.join(
+            entity_to_join, joined_entity.aiidauser_id == entity_to_join.id, isouter=isouterjoin
+        )
         return JoinReturn(new_query)
 
-    def _join_comment_user(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_comment_user(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: An aliased comment
         :param entity_to_join: aliased user
         """
         _check_dbentities((joined_entity, self._entities.Comment), (entity_to_join, self._entities.User),
                           'with_comment')
-        new_query = query.join(entity_to_join, joined_entity.user_id == entity_to_join.id, isouter=isouterjoin)
+        new_query = lambda q: q.join(entity_to_join, joined_entity.user_id == entity_to_join.id, isouter=isouterjoin)
         return JoinReturn(new_query)
 
-    def _join_node_outputs(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_node_outputs(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: The (aliased) ORMclass that is an input
         :param entity_to_join: The (aliased) ORMClass that is an output.
@@ -326,11 +336,12 @@ class SqlaJoiner:
         _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Node), 'with_incoming')
 
         aliased_edge = aliased(self._entities.Link)
-        new_query = query.join(aliased_edge, aliased_edge.input_id == joined_entity.id, isouter=isouterjoin
-                               ).join(entity_to_join, aliased_edge.output_id == entity_to_join.id, isouter=isouterjoin)
+        new_query = lambda q: q.join(aliased_edge, aliased_edge.input_id == joined_entity.id, isouter=isouterjoin).join(
+            entity_to_join, aliased_edge.output_id == entity_to_join.id, isouter=isouterjoin
+        )
         return JoinReturn(new_query, aliased_edge)
 
-    def _join_node_inputs(self, query: Query, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_node_inputs(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """
         :param joined_entity: The (aliased) ORMclass that is an output
         :param entity_to_join: The (aliased) ORMClass that is an input.
@@ -343,20 +354,14 @@ class SqlaJoiner:
 
         _check_dbentities((joined_entity, self._entities.Node), (entity_to_join, self._entities.Node), 'with_outgoing')
         aliased_edge = aliased(self._entities.Link)
-        new_query = query.join(
+        new_query = lambda q: q.join(
             aliased_edge,
             aliased_edge.output_id == joined_entity.id,
         ).join(entity_to_join, aliased_edge.input_id == entity_to_join.id, isouter=isouterjoin)
         return JoinReturn(new_query, aliased_edge)
 
     def _join_node_descendants_recursive(
-        self,
-        query: Query,
-        joined_entity,
-        entity_to_join,
-        isouterjoin: bool,
-        filter_dict: FilterType,
-        expand_path=False
+        self, joined_entity, entity_to_join, isouterjoin: bool, filter_dict: FilterType, expand_path=False
     ):
         """
         joining descendants using the recursive functionality
@@ -409,19 +414,13 @@ class SqlaJoiner:
             )
         )  # .alias()
 
-        new_query = query.join(descendants_recursive, descendants_recursive.c.ancestor_id == joined_entity.id).join(
-            entity_to_join, descendants_recursive.c.descendant_id == entity_to_join.id, isouter=isouterjoin
-        )
+        new_query = lambda q: q.join(
+            descendants_recursive, descendants_recursive.c.ancestor_id == joined_entity.id
+        ).join(entity_to_join, descendants_recursive.c.descendant_id == entity_to_join.id, isouter=isouterjoin)
         return JoinReturn(new_query, descendants_recursive.c)
 
     def _join_node_ancestors_recursive(
-        self,
-        query: Query,
-        joined_entity,
-        entity_to_join,
-        isouterjoin: bool,
-        filter_dict: FilterType,
-        expand_path=False
+        self, joined_entity, entity_to_join, isouterjoin: bool, filter_dict: FilterType, expand_path=False
     ):
         """
         joining ancestors using the recursive functionality
@@ -475,7 +474,7 @@ class SqlaJoiner:
             )
         )
 
-        new_query = query.join(ancestors_recursive, ancestors_recursive.c.descendant_id == joined_entity.id).join(
+        new_query = lambda q: q.join(ancestors_recursive, ancestors_recursive.c.descendant_id == joined_entity.id).join(
             entity_to_join, ancestors_recursive.c.ancestor_id == entity_to_join.id, isouter=isouterjoin
         )
         return JoinReturn(new_query, ancestors_recursive.c)

@@ -29,25 +29,26 @@ def fs_encoding_is_utf8():
 @pytest.mark.skipif(
     not fs_encoding_is_utf8(), reason='Testing for unicode folders requires UTF-8 to be set for filesystem encoding'
 )
-def test_unicode(tmpdir):
+def test_unicode(tmp_path_factory):
     """Check that there are no exceptions raised when using unicode folders."""
-    with tempfile.TemporaryDirectory() as dirpath_target:
+    dirpath_source = tmp_path_factory.mktemp('source')
+    dirpath_target = tmp_path_factory.mktemp('target')
 
-        (pathlib.Path(tmpdir) / 'sąžininga').write_text('test')
-        (pathlib.Path(tmpdir) / 'žąsis').write_text('test')
+    (dirpath_source / 'sąžininga').write_text('test')
+    (dirpath_source / 'žąsis').write_text('test')
 
-        folder = Folder(dirpath_target)
-        folder.insert_path(tmpdir, 'destination')
-        folder.insert_path(tmpdir, 'šaltinis')
+    folder = Folder(dirpath_target)
+    folder.insert_path(dirpath_source, 'destination')
+    folder.insert_path(dirpath_source, 'šaltinis')
 
-        assert sorted(folder.get_content_list()) == sorted(['destination', 'šaltinis'])
-        assert sorted(folder.get_subfolder('destination').get_content_list()) == sorted(['sąžininga', 'žąsis'])
-        assert sorted(folder.get_subfolder('šaltinis').get_content_list()) == sorted(['sąžininga', 'žąsis'])
+    assert sorted(folder.get_content_list()) == sorted(['destination', 'šaltinis'])
+    assert sorted(folder.get_subfolder('destination').get_content_list()) == sorted(['sąžininga', 'žąsis'])
+    assert sorted(folder.get_subfolder('šaltinis').get_content_list()) == sorted(['sąžininga', 'žąsis'])
 
-        folder = Folder(pathlib.Path(tmpdir) / 'šaltinis')
-        folder.insert_path(dirpath_target, 'destination')
-        folder.insert_path(dirpath_target, 'kitas-šaltinis')
-        assert sorted(folder.get_content_list()) == sorted(['destination', 'kitas-šaltinis'])
+    folder = Folder(dirpath_source / 'šaltinis')
+    folder.insert_path(dirpath_target, 'destination')
+    folder.insert_path(dirpath_target, 'kitas-šaltinis')
+    assert sorted(folder.get_content_list()) == sorted(['destination', 'kitas-šaltinis'])
 
 
 def test_get_abs_path_without_limit():

@@ -12,8 +12,6 @@ import errno
 import gzip
 import io
 import os
-import pathlib
-import tempfile
 
 import pytest
 
@@ -180,62 +178,56 @@ class TestVerdiNode:
         result = self.cli_runner(cmd_node.repo_cat, options)
         assert gzip.decompress(result.stdout_bytes) == b'COMPRESS'
 
-    def test_node_repo_dump(self):
+    def test_node_repo_dump(self, tmp_path):
         """Test 'verdi node repo dump' command."""
         folder_node = self.get_unstored_folder_node().store()
+        out_path = tmp_path / 'out_dir'
+        options = [str(folder_node.uuid), str(out_path)]
+        res = self.cli_runner(cmd_node.repo_dump, options, catch_exceptions=False)
+        assert not res.stdout
 
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            out_path = pathlib.Path(tmp_dir) / 'out_dir'
-            options = [str(folder_node.uuid), str(out_path)]
-            res = self.cli_runner(cmd_node.repo_dump, options, catch_exceptions=False)
-            assert not res.stdout
+        for file_key, content in [(self.key_file1, self.content_file1), (self.key_file2, self.content_file2)]:
+            curr_path = out_path
+            for key_part in file_key.split('/'):
+                curr_path /= key_part
+                assert curr_path.exists()
+            with curr_path.open('r') as res_file:
+                assert res_file.read() == content
 
-            for file_key, content in [(self.key_file1, self.content_file1), (self.key_file2, self.content_file2)]:
-                curr_path = out_path
-                for key_part in file_key.split('/'):
-                    curr_path /= key_part
-                    assert curr_path.exists()
-                with curr_path.open('r') as res_file:
-                    assert res_file.read() == content
-
-    def test_node_repo_dump_to_nested_folder(self):
+    def test_node_repo_dump_to_nested_folder(self, tmp_path):
         """Test 'verdi node repo dump' command, with an output folder whose parent does not exist."""
         folder_node = self.get_unstored_folder_node().store()
+        out_path = tmp_path / 'out_dir' / 'nested' / 'path'
+        options = [str(folder_node.uuid), str(out_path)]
+        res = self.cli_runner(cmd_node.repo_dump, options, catch_exceptions=False)
+        assert not res.stdout
 
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            out_path = pathlib.Path(tmp_dir) / 'out_dir' / 'nested' / 'path'
-            options = [str(folder_node.uuid), str(out_path)]
-            res = self.cli_runner(cmd_node.repo_dump, options, catch_exceptions=False)
-            assert not res.stdout
+        for file_key, content in [(self.key_file1, self.content_file1), (self.key_file2, self.content_file2)]:
+            curr_path = out_path
+            for key_part in file_key.split('/'):
+                curr_path /= key_part
+                assert curr_path.exists()
+            with curr_path.open('r') as res_file:
+                assert res_file.read() == content
 
-            for file_key, content in [(self.key_file1, self.content_file1), (self.key_file2, self.content_file2)]:
-                curr_path = out_path
-                for key_part in file_key.split('/'):
-                    curr_path /= key_part
-                    assert curr_path.exists()
-                with curr_path.open('r') as res_file:
-                    assert res_file.read() == content
-
-    def test_node_repo_existing_out_dir(self):
+    def test_node_repo_existing_out_dir(self, tmp_path):
         """Test 'verdi node repo dump' command, check that an existing output directory is not overwritten."""
         folder_node = self.get_unstored_folder_node().store()
+        out_path = tmp_path / 'out_dir'
+        # Create the directory and put a file in it
+        out_path.mkdir()
+        some_file = out_path / 'file_name'
+        some_file_content = 'ni!'
+        with some_file.open('w') as file_handle:
+            file_handle.write(some_file_content)
+        options = [str(folder_node.uuid), str(out_path)]
+        res = self.cli_runner(cmd_node.repo_dump, options, catch_exceptions=False)
+        assert 'exists' in res.stdout
+        assert 'Critical:' in res.stdout
 
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            out_path = pathlib.Path(tmp_dir) / 'out_dir'
-            # Create the directory and put a file in it
-            out_path.mkdir()
-            some_file = out_path / 'file_name'
-            some_file_content = 'ni!'
-            with some_file.open('w') as file_handle:
-                file_handle.write(some_file_content)
-            options = [str(folder_node.uuid), str(out_path)]
-            res = self.cli_runner(cmd_node.repo_dump, options, catch_exceptions=False)
-            assert 'exists' in res.stdout
-            assert 'Critical:' in res.stdout
-
-            # Make sure the directory content is still there
-            with some_file.open('r') as file_handle:
-                assert file_handle.read() == some_file_content
+        # Make sure the directory content is still there
+        with some_file.open('r') as file_handle:
+            assert file_handle.read() == some_file_content
 
 
 def delete_temporary_file(filepath):

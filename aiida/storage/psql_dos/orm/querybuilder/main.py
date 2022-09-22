@@ -518,7 +518,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         # self._query = self._query.add_columns(entity_to_project)
         return entity_to_project
 
-    def _get_projectable_entity(
+    def _get_projectable_entity(  # pylint: disable=no-self-use
         self,
         alias: AliasedClass,
         column_name: str,
@@ -752,7 +752,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             return not_(expr)
         return expr
 
-    def get_filter_expr_from_jsonb(
+    def get_filter_expr_from_jsonb(  # pylint: disable=no-self-use
         self,
         operator: str,
         value,

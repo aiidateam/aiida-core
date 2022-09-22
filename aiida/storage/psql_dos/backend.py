@@ -172,6 +172,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
             ):
                 session.execute(table(table_name).delete())
             session.expunge_all()
+            self._default_user = None
 
             # restore the default user
             if recreate_user and default_user_kwargs:

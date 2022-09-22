@@ -37,7 +37,7 @@ def get_manager() -> 'Manager':
     return MANAGER
 
 
-class Manager:
+class Manager:  # pylint: disable=too-many-public-methods
     """Manager singleton for globally loaded resources.
 
     AiiDA can have the following global resources loaded:
@@ -143,17 +143,33 @@ class Manager:
 
     def reset_profile(self) -> None:
         """Close and reset any associated resources for the current profile."""
+        self.reset_profile_storage()
+        self.reset_communicator()
+        self.reset_runner()
+
+        self._daemon_client = None
+        self._persister = None
+
+    def reset_profile_storage(self) -> None:
+        """Reset the profile storage.
+
+        This will close any connections to the services used by the storage, such as database connections.
+        """
         if self._profile_storage is not None:
             self._profile_storage.close()
+        self._profile_storage = None
+
+    def reset_communicator(self) -> None:
+        """Reset the communicator."""
         if self._communicator is not None:
             self._communicator.close()
-        if self._runner is not None:
-            self._runner.stop()
-        self._profile_storage = None
         self._communicator = None
-        self._daemon_client = None
         self._process_controller = None
-        self._persister = None
+
+    def reset_runner(self) -> None:
+        """Reset the process runner."""
+        if self._runner is not None:
+            self._runner.close()
         self._runner = None
 
     def unload_profile(self) -> None:

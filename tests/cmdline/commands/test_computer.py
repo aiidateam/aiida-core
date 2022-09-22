@@ -161,7 +161,9 @@ def test_mixed(run_cli_command):
     assert new_computer.get_shebang() == options_dict_full['shebang']
     assert new_computer.get_workdir() == options_dict_full['work-dir']
     assert new_computer.get_default_mpiprocs_per_machine() == int(options_dict_full['mpiprocs-per-machine'])
-    assert new_computer.get_default_memory_per_machine() == int(options_dict_full['default-memory-per-machine'])
+
+    # default_memory_per_machine should not prompt and set
+    assert new_computer.get_default_memory_per_machine() is None
 
     # For now I'm not writing anything in them
     assert new_computer.get_prepend_text() == options_dict_full['prepend-text']
@@ -736,11 +738,14 @@ def test_computer_duplicate_non_interactive(run_cli_command, aiida_localhost, no
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
-def test_interactive(run_cli_command, aiida_profile_clean, non_interactive_editor):
+def test_direct_interactive(run_cli_command, aiida_profile_clean, non_interactive_editor):
     """Test verdi computer setup in interactive mode."""
     label = 'interactive_computer'
 
     options_dict = generate_setup_options_dict(replace_args={'label': label}, non_interactive=False)
+    # default-memory-per-machine will not prompt for direct
+    options_dict.pop('default-memory-per-machine')
+
     # In any case, these would be managed by the visual editor
     options_dict.pop('prepend-text')
     options_dict.pop('append-text')

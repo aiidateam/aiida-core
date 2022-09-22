@@ -225,7 +225,10 @@ def upload_calculation(
             if data_node.base.repository.get_object(filename_source).file_type == FileType.DIRECTORY:
                 # If the source object is a directory, we copy its entire contents
                 data_node.base.repository.copy_tree(filepath_target, filename_source)
-                provenance_exclude_list.extend(data_node.base.repository.list_object_names(filename_source))
+                sources = data_node.base.repository.list_object_names(filename_source)
+                if filename_target:
+                    sources = [str(pathlib.Path(filename_target) / subpath) for subpath in sources]
+                provenance_exclude_list.extend(sources)
             else:
                 # Otherwise, simply copy the file
                 with folder.open(target, 'wb') as handle:

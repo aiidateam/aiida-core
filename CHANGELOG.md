@@ -1,5 +1,20 @@
 # Changelog
 
+## v2.0.4 - 2022-09-22
+
+[Full changelog](https://github.com/aiidateam/aiida-core/compare/v2.0.3...v2.0.4)
+
+### Fixes
+- Engine: Fix bug that allowed non-storable inputs to be passed to process [[#5532]](https://github.com/aiidateam/aiida-core/pull/5532)
+- Engine: Fix bug when caching from process with nested outputs [[#5538]](https://github.com/aiidateam/aiida-core/pull/5538)
+- Archive: Fix bug in archive creation after packing of file repository [[#5570]](https://github.com/aiidateam/aiida-core/pull/5570)
+- `QueryBuilder`: apply escape `\` in `like` and `ilike` for a `sqlite` backend, such as export archives [[#5553]](https://github.com/aiidateam/aiida-core/pull/5553)
+- `QueryBuilder`: Fix bug in distinct queries always projecting the first entity, even if not projected explicitly [[#5654]](https://github.com/aiidateam/aiida-core/pull/5654)
+- `CalcJob`: fix bug in `local_copy_list` provenance exclusion [[#5648]](https://github.com/aiidateam/aiida-core/pull/5648)
+- `Repository.copy_tree`: omit subdirectories from `path` when copying [[#5648]](https://github.com/aiidateam/aiida-core/pull/5648)
+- Docs: Add intersphinx aliases for `__all__` imports. Now the shortcut imports can also be used in third-party packages (e.g. `aiida.orm.nodes.node.Node` as well as `aiida.orm.Node`) [[#5657]](https://github.com/aiidateam/aiida-core/pull/5657)
+
+
 ## v2.0.3 - 2022-08-09
 
 [Full changelog](https://github.com/aiidateam/aiida-core/compare/v2.0.2...v2.0.3)

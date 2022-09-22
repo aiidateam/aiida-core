@@ -8,7 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """A module containing the logic for creating joined queries."""
-from typing import Any, Callable, Dict, NamedTuple, Optional, Protocol, Type
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, Optional, Protocol, Type
 
 from sqlalchemy import and_, join, select
 from sqlalchemy.dialects.postgresql import array
@@ -65,13 +66,15 @@ class _EntityMapper(Protocol):
         ...
 
 
-class JoinReturn(NamedTuple):
+@dataclass
+class JoinReturn:
     join: Callable[[Query], Query]
     aliased_edge: Optional[AliasedClass] = None
+    edge_tag: str = ''
 
 
 FilterType = Dict[str, Any]  # pylint: disable=invalid-name
-JoinFuncType = Callable[[Type[Model], Type[Model], bool, FilterType, bool], JoinReturn]  # pylint: disable=invalid-name
+JoinFuncType = Callable[[Any, Any, bool, FilterType, bool], JoinReturn]  # pylint: disable=invalid-name
 
 
 class SqlaJoiner:

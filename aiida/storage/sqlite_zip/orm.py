@@ -190,8 +190,8 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
     def table_groups_nodes(self):
         return models.DbGroupNodes.__table__  # type: ignore[attr-defined] # pylint: disable=no-member
 
+    @staticmethod
     def _get_projectable_entity(
-        self,
         alias: AliasedClass,
         column_name: str,
         attrpath: List[str],
@@ -220,8 +220,9 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
             raise ValueError(f'Unknown casting key {cast}')
         return entity
 
+    @staticmethod
     def get_filter_expr_from_jsonb(  # pylint: disable=too-many-return-statements,too-many-branches
-        self, operator: str, value, attr_key: List[str], column=None, column_name=None, alias=None
+        operator: str, value, attr_key: List[str], column=None, column_name=None, alias=None
     ):
         """Return a filter expression.
 
@@ -333,13 +334,6 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
 
     @staticmethod
     def get_filter_expr_from_column(operator: str, value: Any, column) -> BinaryExpression:
-        """A method that returns an valid SQLAlchemy expression.
-
-        :param operator: The operator provided by the user ('==',  '>', ...)
-        :param value: The value to compare with, e.g. (5.0, 'foo', ['a','b'])
-        :param column: an instance of sqlalchemy.orm.attributes.InstrumentedAttribute or
-
-        """
         # Label is used because it is what is returned for the
         # 'state' column by the hybrid_column construct
         if not isinstance(column, (Cast, InstrumentedAttribute, QueryableAttribute, Label, ColumnClause)):

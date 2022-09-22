@@ -372,7 +372,7 @@ class TestBasic:
         assert qb.count() == 1
 
         # Test the hashing:
-        query1 = qb._impl._update_query(qb.as_dict())  # pylint: disable=protected-access
+        query1 = qb._impl.get_query(qb.as_dict())  # pylint: disable=protected-access
         qb.add_filter('n2', {'label': 'nonexistentlabel'})
         assert qb.count() == 0
 
@@ -381,8 +381,8 @@ class TestBasic:
         with pytest.raises(MultipleObjectsError):
             orm.QueryBuilder().append(orm.Node).one()
 
-        query2 = qb._impl._update_query(qb.as_dict())  # pylint: disable=protected-access
-        query3 = qb._impl._update_query(qb.as_dict())  # pylint: disable=protected-access
+        query2 = qb._impl.get_query(qb.as_dict())  # pylint: disable=protected-access
+        query3 = qb._impl.get_query(qb.as_dict())  # pylint: disable=protected-access
 
         assert id(query1) != id(query2)
         assert id(query2) == id(query3)

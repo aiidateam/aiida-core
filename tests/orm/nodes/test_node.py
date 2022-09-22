@@ -13,7 +13,6 @@ from decimal import Decimal
 from io import BytesIO
 import logging
 import os
-import tempfile
 
 import pytest
 
@@ -978,15 +977,13 @@ class TestNodeCaching:
         calc = CalculationNode()
         calc.base.caching.is_valid_cache = False
 
-    def test_store_from_cache(self):
+    def test_store_from_cache(self, tmp_path):
         """Regression test for storing a Node with (nested) repository content with caching."""
         data = Data()
-        with tempfile.TemporaryDirectory() as tmpdir:
-            dir_path = os.path.join(tmpdir, 'directory')
-            os.makedirs(dir_path)
-            with open(os.path.join(dir_path, 'file'), 'w', encoding='utf8') as file:
-                file.write('content')
-            data.base.repository.put_object_from_tree(tmpdir)
+        filepath = tmp_path / 'sub' / 'file'
+        filepath.parent.mkdir(parents=True)
+        filepath.write_text('content')
+        data.base.repository.put_object_from_tree(tmp_path)
 
         data.store()
 

@@ -122,6 +122,7 @@ def temp_dir():
     :rtype: str
 
     """
+    warn_deprecation('This fixture is deprecated, use the `tmp_path` fixture of `pytest` instead.', version=3)
     try:
         dirpath = tempfile.mkdtemp()
         yield dirpath
@@ -131,7 +132,7 @@ def temp_dir():
 
 
 @pytest.fixture(scope='function')
-def aiida_localhost(temp_dir):
+def aiida_localhost(tmp_path):
     """Get an AiiDA computer for localhost.
 
     Usage::
@@ -156,7 +157,7 @@ def aiida_localhost(temp_dir):
             label=label,
             description='localhost computer set up by test manager',
             hostname=label,
-            workdir=temp_dir,
+            workdir=str(tmp_path),
             transport_type='core.local',
             scheduler_type='core.direct'
         )

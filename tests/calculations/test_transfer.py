@@ -142,7 +142,7 @@ def test_validate_instructions():
     assert result == expected
 
 
-def test_validate_transfer_inputs(aiida_localhost, tmp_path, temp_dir):
+def test_validate_transfer_inputs(aiida_localhost, tmp_path):
     """Test the `TransferCalculation` validators."""
     from aiida.calculations.transfer import check_node_type, validate_transfer_inputs
     from aiida.orm import Computer
@@ -151,7 +151,7 @@ def test_validate_transfer_inputs(aiida_localhost, tmp_path, temp_dir):
         label='localhost-fake',
         description='extra localhost computer set up by test',
         hostname='localhost-fake',
-        workdir=temp_dir,
+        workdir=str(tmp_path),
         transport_type='core.local',
         scheduler_type='core.direct'
     )

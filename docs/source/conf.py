@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+import inspect
 import os
 import sys
 
@@ -220,6 +220,8 @@ epub_copyright = copyright
 # -- Local extension --------------------------------------------------
 from sphinx.addnodes import pending_xref
 from sphinx.application import Sphinx
+from sphinx.domains.python import PythonDomain
+from sphinx.environment import BuildEnvironment
 from sphinx.transforms import SphinxTransform
 
 
@@ -227,6 +229,7 @@ def setup(app: Sphinx):
     if os.environ.get('RUN_APIDOC', None) != 'False':
         app.connect('builder-inited', run_apidoc)
     app.add_transform(AutodocAliases)
+    app.connect('env-updated', add_python_aliases)
 
 
 # these are mainly required, because sphinx finds multiple references,
@@ -250,55 +253,33 @@ autodoc_aliases_typing = {
     'BackendNode': 'aiida.orm.implementation.nodes.BackendNode',
     'BackendUser': 'aiida.orm.implementation.users.BackendUser',
 }
-# alias public APIs, exposed by __all__
-autodoc_aliases_public = {
-    'aiida.common.CalcInfo': 'aiida.common.datastructures.CalcInfo',
-    'aiida.common.CodeInfo': 'aiida.common.datastructures.CodeInfo',
-    'aiida.engine.ProcessHandlerReport': 'aiida.engine.processes.workchains.utils.ProcessHandlerReport',
-    'aiida.engine.run': 'aiida.engine.launch.run',
-    'aiida.engine.submit': 'aiida.engine.launch.submit',
-    'aiida.engine.process_handler': 'aiida.engine.processes.workchains.utils.process_handler',
-    'aiida.engine.BaseRestartWorkChain': 'aiida.engine.processes.workchains.restart.BaseRestartWorkChain',
-    'aiida.engine.CalcJob': 'aiida.engine.processes.calcjobs.calcjob.CalcJob',
-    'aiida.engine.Process': 'aiida.engine.processes.process.Process',
-    'aiida.engine.WorkChain': 'aiida.engine.processes.workchains.workchain.WorkChain',
-    'aiida.engine.WorkChainSpec': 'aiida.engine.processes.workchains.workchain.WorkChainSpec',
-    'aiida.orm.QueryBuilder': 'aiida.orm.querybuilder.QueryBuilder',
-    'aiida.orm.ArrayData': 'aiida.orm.nodes.data.array.array.ArrayData',
-    'aiida.orm.AuthInfo': 'aiida.orm.authinfos.AuthInfo',
-    'aiida.orm.Computer': 'aiida.orm.computers.Computer',
-    'aiida.orm.Comment': 'aiida.orm.comments.Comment',
-    'aiida.orm.EnumData': 'aiida.orm.nodes.data.enum.EnumData',
-    'aiida.orm.Group': 'aiida.orm.groups.Group',
-    'aiida.orm.JsonableData': 'aiida.orm.nodes.data.jsonable.JsonableData',
-    'aiida.orm.List': 'aiida.orm.nodes.data.list.List',
-    'aiida.orm.Log': 'aiida.orm.logs.Log',
-    'aiida.orm.Node': 'aiida.orm.nodes.node.Node',
-    'aiida.orm.User': 'aiida.orm.users.User',
-    'aiida.orm.CalculationNode': 'aiida.orm.nodes.process.calculation.calculation.CalculationNode',
-    'aiida.orm.CalcJobNode': 'aiida.orm.nodes.process.calculation.calcjob.CalcJobNode',
-    'aiida.orm.Code': 'aiida.orm.nodes.data.code.Code',
-    'aiida.orm.Data': 'aiida.orm.nodes.data.data.Data',
-    'aiida.orm.Dict': 'aiida.orm.nodes.data.dict.Dict',
-    'aiida.orm.ProcessNode': 'aiida.orm.nodes.process.process.ProcessNode',
-    'aiida.orm.RemoteData': 'aiida.orm.nodes.data.remote.base.RemoteData',
-    'aiida.orm.WorkChainNode': 'aiida.orm.nodes.process.workflow.workchain.WorkChainNode',
-    'aiida.orm.XyData': 'aiida.orm.nodes.data.array.xy.XyData',
-    'aiida.orm.load_computer': 'aiida.orm.utils.loaders.load_computer',
-}
-autodoc_aliases_exc = {}
-for exc_name in (
-    'AiidaException', 'NotExistent', 'NotExistentAttributeError', 'NotExistentKeyError', 'MultipleObjectsError',
-    'RemoteOperationError', 'ContentNotExistent', 'FailedError', 'StoringNotAllowed', 'ModificationNotAllowed',
-    'IntegrityError', 'UniquenessError', 'EntryPointError', 'MissingEntryPointError', 'MultipleEntryPointError',
-    'LoadingEntryPointError', 'InvalidEntryPointTypeError', 'InvalidOperation', 'ParsingError', 'InternalError',
-    'PluginInternalError', 'ValidationError', 'ConfigurationError', 'ProfileConfigurationError',
-    'MissingConfigurationError', 'ConfigurationVersionError', 'IncompatibleStorageSchema', 'CorruptStorage',
-    'DbContentError', 'InputValidationError', 'FeatureNotAvailable', 'FeatureDisabled', 'LicensingException',
-    'TestsNotAllowedError', 'UnsupportedSpeciesError', 'TransportTaskException', 'OutputParsingError', 'HashingError',
-    'StorageMigrationError', 'LockedProfileError', 'LockingProfileError', 'ClosedStorage'
-):
-    autodoc_aliases_exc[f'aiida.common.{exc_name}'] = f'aiida.common.exceptions.{exc_name}'
+
+
+def add_python_aliases(app: Sphinx, env: BuildEnvironment) -> None:
+    """Add aliases to the python domain.
+
+    These will also be added to the objects.inv inventory file,
+    for other projects to reference.
+    """
+    py: PythonDomain = env.get_domain('py')
+
+    shorthands = {}
+    for modname, module in inspect.getmembers(aiida, inspect.ismodule):
+        for name in getattr(module, '__all__', []):
+            obj = getattr(module, name)
+            if hasattr(obj, '__module__'):
+                shorthands[f'{obj.__module__}.{name}'] = f'aiida.{modname}.{name}'
+
+    updates = {}
+    for name, obj in py.objects.items():
+        if name in shorthands:
+            updates[shorthands[name]] = obj._replace(aliased=True)
+            continue
+        for original, new in shorthands.items():
+            if name.startswith(original + '.'):
+                updates[name.replace(original, new)] = obj._replace(aliased=True)
+                break
+    py.objects.update(updates)
 
 
 class AutodocAliases(SphinxTransform):
@@ -314,16 +295,7 @@ class AutodocAliases(SphinxTransform):
         for node in self.document.traverse(pending_xref):
             if node.get('refdomain') != 'py':
                 continue
-            if node.get('reftype') == 'exc' and node.get('reftarget') in autodoc_aliases_exc:
-                node['reftarget'] = autodoc_aliases_exc[node.get('reftarget')]
-            elif node.get('reftarget').startswith('t.'):
+            if node.get('reftarget').startswith('t.'):
                 node['reftarget'] = 'typing.' + node.get('reftarget')[2:]
             elif node.get('reftarget') in autodoc_aliases_typing:
                 node['reftarget'] = autodoc_aliases_typing[node.get('reftarget')]
-            elif node.get('reftarget') in autodoc_aliases_public:
-                node['reftarget'] = autodoc_aliases_public[node.get('reftarget')]
-            elif node.get('reftarget').startswith('aiida.'):
-                for original, new in autodoc_aliases_public.items():
-                    if node.get('reftarget').startswith(original + '.'):
-                        node['reftarget'] = node.get('reftarget').replace(original, new)
-                        break

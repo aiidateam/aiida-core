@@ -528,16 +528,16 @@ class Waiting(plumpy.process_states.Waiting):
                 await self._launch_task(task_retrieve_job, node, transport_queue, temp_folder)
 
                 if not self._monitor_result:
-                    return self.parse(temp_folder)
+                    result = self.parse(temp_folder)
 
-                exit_code = self.process.exit_codes.STOPPED_BY_MONITOR.format(message=self._monitor_result.message)
-
-                if self._monitor_result.parse is False:
-                    return self.create_state(
+                elif self._monitor_result.parse is False:
+                    exit_code = self.process.exit_codes.STOPPED_BY_MONITOR.format(message=self._monitor_result.message)
+                    result = self.create_state(  # type: ignore[assignment]
                         ProcessState.RUNNING, self.process.terminate, exit_code
-                    )  # type: ignore[return-value]
+                    )
 
-                if self._monitor_result.override_exit_code:
+                elif self._monitor_result.override_exit_code:
+                    exit_code = self.process.exit_codes.STOPPED_BY_MONITOR.format(message=self._monitor_result.message)
                     result = self.parse(temp_folder, exit_code)
                 else:
                     result = self.parse(temp_folder)
@@ -570,10 +570,13 @@ class Waiting(plumpy.process_states.Waiting):
         if monitors is None:
             return None
 
-        if self._monitor_result and self._monitor_result.action != CalcJobMonitorAction.DISABLE_ALL:
+        if self._monitor_result and self._monitor_result.action == CalcJobMonitorAction.DISABLE_ALL:
             return None
 
         monitor_result = await self._launch_task(task_monitor_job, node, transport_queue, monitors=monitors)
+
+        if monitor_result and monitor_result.action == CalcJobMonitorAction.DISABLE_SELF:
+            monitors.monitors[monitor_result.key].disabled = True
 
         if monitor_result is not None:
             self._monitor_result = monitor_result

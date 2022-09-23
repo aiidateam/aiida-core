@@ -1153,6 +1153,31 @@ def test_monitor_result_action_disable_all(get_calcjob_builder, entry_points):
     assert node.is_finished_ok
 
 
+def monitor_disable_self(node, transport, **kwargs):  # pylint: disable=unused-argument
+    """Monitor that will disable itself."""
+    return CalcJobMonitorResult(action=CalcJobMonitorAction.DISABLE_SELF, message='Disable self.')
+
+
+@pytest.mark.usefixtures('override_logging')
+def test_monitor_result_action_disable_self(get_calcjob_builder, entry_points, caplog):
+    """Test the ``action`` attr of :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult`.
+
+    If set to ``CalcJobMonitorAction.DISABLE_SELF``, the calculation should continue running and the monitor should not
+    be invoked anymore, but any other monitor should continue to be called.
+
+    The ``override_logging`` fixture is necessary to set the logging level to ``DEBUG`` because the monitor message is
+    logged at the ``INFO`` level and so without this change, it would not be captured.
+    """
+    entry_points.add(monitor_disable_self, group='aiida.calculations.monitors', name='core.disable_self')
+
+    builder = get_calcjob_builder()
+    builder.metadata.options.sleep = 1
+    builder.monitors = {'disable_self': orm.Dict({'entry_point': 'core.disable_self'})}
+    _, node = launch.run_get_node(builder)
+    assert node.is_finished_ok
+    assert len([record for record in caplog.records if 'Disable self.' in record.message]) == 1
+
+
 class TestImport:
     """Test the functionality to import existing calculations completed outside of AiiDA."""
 

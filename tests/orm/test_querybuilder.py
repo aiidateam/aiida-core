@@ -1209,6 +1209,16 @@ class TestQueryBuilderJoins:
         node_b = orm.Data().store()
         group.add_nodes([node_a, node_b])
 
+        # First join the group on the data
+        query = orm.QueryBuilder()
+        query.append(orm.Group, project='id', tag='group')
+        query.append(orm.Data, with_group='group')
+        query.distinct()
+
+        assert query.count() == 1
+        assert query.all(flat=True) == [group.pk]
+
+        # Then reverse and join the data on the group
         query = orm.QueryBuilder()
         query.append(orm.Data, tag='node')
         query.append(orm.Group, with_node='node', project='uuid')

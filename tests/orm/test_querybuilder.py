@@ -372,7 +372,7 @@ class TestBasic:
         assert qb.count() == 1
 
         # Test the hashing:
-        query1 = qb._impl._update_query(qb.as_dict())  # pylint: disable=protected-access
+        query1 = qb._impl.get_query(qb.as_dict())  # pylint: disable=protected-access
         qb.add_filter('n2', {'label': 'nonexistentlabel'})
         assert qb.count() == 0
 
@@ -381,8 +381,8 @@ class TestBasic:
         with pytest.raises(MultipleObjectsError):
             orm.QueryBuilder().append(orm.Node).one()
 
-        query2 = qb._impl._update_query(qb.as_dict())  # pylint: disable=protected-access
-        query3 = qb._impl._update_query(qb.as_dict())  # pylint: disable=protected-access
+        query2 = qb._impl.get_query(qb.as_dict())  # pylint: disable=protected-access
+        query3 = qb._impl.get_query(qb.as_dict())  # pylint: disable=protected-access
 
         assert id(query1) != id(query2)
         assert id(query2) == id(query3)
@@ -1198,6 +1198,34 @@ class TestQueryBuilderJoins:
         id_res = [_ for [_] in qb.all()]
         for curr_id in [n1.pk, n2.pk, n3.pk, n4.pk]:
             assert curr_id in id_res
+
+    def test_joins_group_node_distinct(self):
+        """Test that when protecting only the group for a join on nodes, only unique groups are returned.
+
+        Regression test for #5535
+        """
+        group = orm.Group(label='mygroup').store()
+        node_a = orm.Data().store()
+        node_b = orm.Data().store()
+        group.add_nodes([node_a, node_b])
+
+        # First join the group on the data
+        query = orm.QueryBuilder()
+        query.append(orm.Group, project='id', tag='group')
+        query.append(orm.Data, with_group='group')
+        query.distinct()
+
+        assert query.count() == 1
+        assert query.all(flat=True) == [group.pk]
+
+        # Then reverse and join the data on the group
+        query = orm.QueryBuilder()
+        query.append(orm.Data, tag='node')
+        query.append(orm.Group, with_node='node', project='uuid')
+        query.distinct()
+
+        assert query.all(flat=True) == [group.uuid]
+        assert query.count() == 1
 
 
 class QueryBuilderPath:

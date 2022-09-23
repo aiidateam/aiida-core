@@ -24,7 +24,7 @@ from aiida import orm
 from aiida.common import CalcJobState, LinkType, StashMode, exceptions
 from aiida.engine import CalcJob, CalcJobImporter, ExitCode, Process, launch
 from aiida.engine.processes.calcjobs.calcjob import validate_monitors, validate_stash_options
-from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorResult
+from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorAction, CalcJobMonitorResult
 from aiida.engine.processes.ports import PortNamespace
 from aiida.plugins import CalculationFactory
 
@@ -1120,6 +1120,37 @@ def test_monitor_result_override_exit_code(get_calcjob_builder, entry_points):
     _, node = launch.run_get_node(builder)
     assert sorted(node.outputs) == ['remote_folder', 'retrieved']
     assert node.exit_status == ArithmeticAddCalculation.exit_codes.ERROR_INVALID_OUTPUT.status
+
+
+def monitor_disable_all(node, transport, **kwargs):  # pylint: disable=unused-argument
+    """Monitor that will disable all monitors."""
+    return CalcJobMonitorResult(action=CalcJobMonitorAction.DISABLE_ALL, message='Disable all monitors.')
+
+
+def test_monitor_result_action_disable_all(get_calcjob_builder, entry_points):
+    """Test the ``action`` attr of :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult`.
+
+    If set to ``CalcJobMonitorAction.DISABLE_ALL``, the calculation should continue running and no monitor should be
+    invoked anymore.
+    """
+    entry_points.add(monitor_disable_all, group='aiida.calculations.monitors', name='core.disable_all')
+
+    builder = get_calcjob_builder()
+    builder.metadata.options.sleep = 1
+    # Set priority to ensure that ``disable_all`` is run first. If the code works properly, it will be called first,
+    # and so the ``always_kill`` monitor will never be called. This should cause the calculation to finish nominally.
+    builder.monitors = {
+        'disable_all': orm.Dict({
+            'entry_point': 'core.disable_all',
+            'priority': 100
+        }),
+        'always_kill': orm.Dict({
+            'entry_point': 'core.always_kill',
+            'priority': 0
+        }),
+    }
+    _, node = launch.run_get_node(builder)
+    assert node.is_finished_ok
 
 
 class TestImport:

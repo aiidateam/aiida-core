@@ -22,6 +22,7 @@ class CalcJobMonitorAction(enum.Enum):
     """The action a engine should undertake as a result of a monitor."""
 
     KILL = 'kill'  # The job should be killed and no other monitors should be called.
+    DISABLE_ALL = 'disable-all'  # All monitors should be disabled for the continued duration of the current job
 
 
 @dataclasses.dataclass

@@ -486,6 +486,7 @@ class Utils:
         extras = None
         extras_filter = None
         full_type = None
+        profile = None
 
         # io tree limit parameters
         tree_in_limit = None
@@ -539,10 +540,17 @@ class Utils:
             raise RestInputValidationError('You cannot specify extras_filter more than once')
         if 'full_type' in field_counts and field_counts['full_type'] > 1:
             raise RestInputValidationError('You cannot specify full_type more than once')
+        if 'profile' in field_counts and field_counts['profile'] > 1:
+            raise RestInputValidationError('You cannot specify profile more than once')
 
         ## Extract results
         for field in field_list:
-            if field[0] == 'limit':
+            if field[0] == 'profile':
+                if field[1] == '=':
+                    profile = field[2]
+                else:
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'profile'")
+            elif field[0] == 'limit':
                 if field[1] == '=':
                     limit = field[2]
                 else:
@@ -658,7 +666,7 @@ class Utils:
 
         return (
             limit, offset, perpage, orderby, filters, download_format, download, filename, tree_in_limit,
-            tree_out_limit, attributes, attributes_filter, extras, extras_filter, full_type
+            tree_out_limit, attributes, attributes_filter, extras, extras_filter, full_type, profile
         )
 
     def parse_query_string(self, query_string):
@@ -680,7 +688,7 @@ class Utils:
 
         ## Define grammar
         # key types
-        key = Word(f'{alphas}_', f'{alphanums}_')
+        key = Word(f'{alphas}_', f'{alphanums}_-')
         # operators
         operator = (
             Literal('=like=') | Literal('=ilike=') | Literal('=in=') | Literal('=notin=') | Literal('=') |

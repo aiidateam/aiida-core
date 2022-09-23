@@ -130,6 +130,10 @@
           "minimum": 1,
           "description": "Timeout in seconds for communications with RabbitMQ"
         },
+        "storage.sandbox": {
+          "type": "string",
+          "description": "Absolute path to the directory to store sandbox folders."
+        },
         "caching.default_enabled": {
           "type": "boolean",
           "default": false,

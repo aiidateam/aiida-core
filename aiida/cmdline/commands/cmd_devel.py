@@ -73,14 +73,6 @@ def devel_check_undesired_imports():
     echo.echo_success('no issues detected')
 
 
-@verdi_devel.command('run_daemon')
-@decorators.with_dbenv()
-def devel_run_daemon():
-    """Run a daemon instance in the current interpreter."""
-    from aiida.engine.daemon.runner import start_daemon
-    start_daemon()
-
-
 @verdi_devel.command('validate-plugins')
 @decorators.with_dbenv()
 def devel_validate_plugins():
@@ -99,11 +91,11 @@ def devel_validate_plugins():
 @verdi_devel.command('run-sql')
 @click.argument('sql', type=str)
 def devel_run_sql(sql):
-    """Run a raw SQL command on the profile database (only available for 'psql_dos' storage)."""
+    """Run a raw SQL command on the profile database (only available for 'core.psql_dos' storage)."""
     from sqlalchemy import text
 
     from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
-    assert get_profile().storage_backend == 'psql_dos'
+    assert get_profile().storage_backend == 'core.psql_dos'
     with create_sqlalchemy_engine(get_profile().storage_config).connect() as connection:
         result = connection.execute(text(sql)).fetchall()
 

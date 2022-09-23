@@ -6,7 +6,7 @@ Node
 ++++
 
 All nodes in an AiiDA provenance graph inherit from the :py:class:`~aiida.orm.nodes.node.Node` class.
-Among those are the :py:class:`~aiida.orm.nodes.data.data.Data` class, the :py:class:`~aiida.orm.nodes.process.process.ProcessNode` class representing computations that transform data, and the :py:class:`~aiida.orm.nodes.data.code.Code` class representing executables (and file collections that are used by calculations).
+Among those are the :py:class:`~aiida.orm.nodes.data.data.Data` class, the :py:class:`~aiida.orm.nodes.process.process.ProcessNode` class representing computations that transform data, and the :py:class:`~aiida.orm.nodes.data.code.abstract.AbstractCode` class representing executables (and file collections that are used by calculations).
 
 
 Immutability concept

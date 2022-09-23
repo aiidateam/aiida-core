@@ -14,6 +14,7 @@ import click
 from sqlalchemy.util.compat import nullcontext
 
 from aiida.cmdline import is_verbose
+from aiida.cmdline.groups.verdi import VerdiCommandGroup
 from aiida.cmdline.params import options
 from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
 
@@ -44,7 +45,7 @@ class AlembicRunner:
 pass_runner = click.make_pass_decorator(AlembicRunner, ensure=True)
 
 
-@click.group()
+@click.group(cls=VerdiCommandGroup)
 @options.PROFILE(required=True)
 @pass_runner
 def alembic_cli(runner, profile):

@@ -88,16 +88,15 @@ class TestVerdiGroup:
         options = []
         result = self.cli_runner(cmd_group.group_list, options)
         group_ordering = [l.split()[1] for l in result.output.split('\n')[3:] if l]
-        assert ['dummygroup1', 'dummygroup2', 'dummygroup3', 'dummygroup4', 'agroup'] == group_ordering
+        assert ['agroup', 'dummygroup1', 'dummygroup2', 'dummygroup3', 'dummygroup4'] == group_ordering
 
-        options = ['--order-by', 'label']
+        options = ['--order-by', 'id']
         result = self.cli_runner(cmd_group.group_list, options)
         group_ordering = [l.split()[1] for l in result.output.split('\n')[3:] if l]
-        assert ['agroup', 'dummygroup1', 'dummygroup2', 'dummygroup3', 'dummygroup4'] == group_ordering
+        assert ['dummygroup1', 'dummygroup2', 'dummygroup3', 'dummygroup4', 'agroup'] == group_ordering
 
         options = ['--order-by', 'id', '--order-direction', 'desc']
         result = self.cli_runner(cmd_group.group_list, options)
-
         group_ordering = [l.split()[1] for l in result.output.split('\n')[3:] if l]
         assert ['agroup', 'dummygroup4', 'dummygroup3', 'dummygroup2', 'dummygroup1'] == group_ordering
 

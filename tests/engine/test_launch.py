@@ -173,8 +173,9 @@ class TestLaunchersDryRun:
 
         ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 
-        code = orm.Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[self.computer,
-                                                                                       '/bin/true']).store()
+        code = orm.InstalledCode(
+            default_calc_job_plugin='core.arithmetic.add', computer=self.computer, filepath_executable='/bin/true'
+        ).store()
 
         inputs = {
             'code': code,
@@ -214,8 +215,9 @@ class TestLaunchersDryRun:
 
         ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 
-        code = orm.Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[self.computer,
-                                                                                       '/bin/true']).store()
+        code = orm.InstalledCode(
+            default_calc_job_plugin='core.arithmetic.add', computer=self.computer, filepath_executable='/bin/true'
+        ).store()
 
         inputs = {
             'code': code,
@@ -262,8 +264,9 @@ class TestLaunchersDryRun:
         """
         import tempfile
 
-        code = orm.Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[self.computer,
-                                                                                       '/bin/true']).store()
+        code = orm.InstalledCode(
+            default_calc_job_plugin='core.arithmetic.add', computer=self.computer, filepath_executable='/bin/true'
+        ).store()
 
         with tempfile.NamedTemporaryFile('w+') as handle:
             handle.write('dummy_content')

@@ -27,7 +27,8 @@ from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcInfo
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
-from aiida.orm import CalcJobNode, Code, FolderData, Node, RemoteData, load_node
+from aiida.manage.configuration import get_config_option
+from aiida.orm import CalcJobNode, Code, FolderData, Node, PortableCode, RemoteData, load_node
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.repository.common import FileType
 from aiida.schedulers.datastructures import JobState
@@ -173,17 +174,26 @@ def upload_calculation(
     # Still, beware! The code file itself could be overwritten...
     # But I checked for this earlier.
     for code in input_codes:
-        if code.is_local():
+        if isinstance(code, PortableCode):
             # Note: this will possibly overwrite files
-            for filename in code.base.repository.list_object_names():
+            for root, dirnames, filenames in code.base.repository.walk():
+                # mkdir of root
+                transport.makedirs(root, ignore_existing=True)
+
+                # remotely mkdir first
+                for dirname in dirnames:
+                    transport.makedirs((root / dirname), ignore_existing=True)
+
                 # Note, once #2579 is implemented, use the `node.open` method instead of the named temporary file in
                 # combination with the new `Transport.put_object_from_filelike`
                 # Since the content of the node could potentially be binary, we read the raw bytes and pass them on
-                with NamedTemporaryFile(mode='wb+') as handle:
-                    handle.write(code.base.repository.get_object_content(filename, mode='rb'))
-                    handle.flush()
-                    transport.put(handle.name, filename)
-            transport.chmod(code.get_local_executable(), 0o755)  # rwxr-xr-x
+                for filename in filenames:
+                    with NamedTemporaryFile(mode='wb+') as handle:
+                        content = code.base.repository.get_object_content((pathlib.Path(root) / filename), mode='rb')
+                        handle.write(content)
+                        handle.flush()
+                        transport.put(handle.name, (root / filename))
+            transport.chmod(code.filepath_executable, 0o755)  # rwxr-xr-x
 
     # local_copy_list is a list of tuples, each with (uuid, dest_path, rel_path)
     # NOTE: validation of these lists are done inside calculation.presubmit()
@@ -401,27 +411,34 @@ def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     EXEC_LOGGER.debug(f'stashing files for calculation<{calculation.pk}>: {source_list}', extra=logger_extra)
 
     uuid = calculation.uuid
-    target_basepath = os.path.join(stash_options['target_base'], uuid[:2], uuid[2:4], uuid[4:])
+    source_basepath = pathlib.Path(calculation.get_remote_workdir())
+    target_basepath = pathlib.Path(stash_options['target_base']) / uuid[:2] / uuid[2:4] / uuid[4:]
 
     for source_filename in source_list:
 
-        source_filepath = os.path.join(calculation.get_remote_workdir(), source_filename)
-        target_filepath = os.path.join(target_basepath, source_filename)
-
-        # If the source file is in a (nested) directory, create those directories first in the target directory
-        target_dirname = os.path.dirname(target_filepath)
-        transport.makedirs(target_dirname, ignore_existing=True)
-
-        try:
-            transport.copy(source_filepath, target_filepath)
-        except (IOError, ValueError) as exception:
-            EXEC_LOGGER.warning(f'failed to stash {source_filepath} to {target_filepath}: {exception}')
+        if transport.has_magic(source_filename):
+            copy_instructions = []
+            for globbed_filename in transport.glob(str(source_basepath / source_filename)):
+                target_filepath = target_basepath / pathlib.Path(globbed_filename).relative_to(source_basepath)
+                copy_instructions.append((globbed_filename, target_filepath))
         else:
-            EXEC_LOGGER.debug(f'stashed {source_filepath} to {target_filepath}')
+            copy_instructions = [(source_basepath / source_filename, target_basepath / source_filename)]
+
+        for source_filepath, target_filepath in copy_instructions:
+            # If the source file is in a (nested) directory, create those directories first in the target directory
+            target_dirname = target_filepath.parent
+            transport.makedirs(str(target_dirname), ignore_existing=True)
+
+            try:
+                transport.copy(str(source_filepath), str(target_filepath))
+            except (IOError, ValueError) as exception:
+                EXEC_LOGGER.warning(f'failed to stash {source_filepath} to {target_filepath}: {exception}')
+            else:
+                EXEC_LOGGER.debug(f'stashed {source_filepath} to {target_filepath}')
 
     remote_stash = cls(
         computer=calculation.computer,
-        target_basepath=target_basepath,
+        target_basepath=str(target_basepath),
         stash_mode=StashMode(stash_mode),
         source_list=source_list,
     ).store()
@@ -441,6 +458,7 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
     """
     logger_extra = get_dblogger_extra(calculation)
     workdir = calculation.get_remote_workdir()
+    filepath_sandbox = get_config_option('storage.sandbox') or None
 
     EXEC_LOGGER.debug(f'Retrieving calc {calculation.pk}', extra=logger_extra)
     EXEC_LOGGER.debug(f'[retrieval of calc {calculation.pk}] chdir {workdir}', extra=logger_extra)
@@ -465,7 +483,7 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
         retrieve_list = calculation.get_retrieve_list()
         retrieve_temporary_list = calculation.get_retrieve_temporary_list()
 
-        with SandboxFolder() as folder:
+        with SandboxFolder(filepath_sandbox) as folder:
             retrieve_files_from_list(calculation, transport, folder.abspath, retrieve_list)
             # Here I retrieved everything; now I store them inside the calculation
             retrieved_files.base.repository.put_object_from_tree(folder.abspath)

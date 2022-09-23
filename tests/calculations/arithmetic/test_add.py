@@ -20,7 +20,11 @@ from aiida.common import datastructures
 def test_add_default(fixture_sandbox, aiida_localhost, generate_calc_job):
     """Test a default `ArithmeticAddCalculation`."""
     entry_point_name = 'core.arithmetic.add'
-    inputs = {'x': orm.Int(1), 'y': orm.Int(2), 'code': orm.Code(remote_computer_exec=(aiida_localhost, '/bin/bash'))}
+    inputs = {
+        'x': orm.Int(1),
+        'y': orm.Int(2),
+        'code': orm.InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash')
+    }
 
     calc_info = generate_calc_job(fixture_sandbox, entry_point_name, inputs)
     options = ArithmeticAddCalculation.spec().inputs['metadata']['options']
@@ -54,7 +58,7 @@ def test_add_custom_filenames(fixture_sandbox, aiida_localhost, generate_calc_jo
     inputs = {
         'x': orm.Int(1),
         'y': orm.Int(2),
-        'code': orm.Code(remote_computer_exec=(aiida_localhost, '/bin/bash')),
+        'code': orm.InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
         'metadata': {
             'options': {
                 'input_filename': input_filename,

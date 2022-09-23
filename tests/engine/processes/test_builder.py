@@ -122,7 +122,7 @@ def test_builder_inputs():
 
     # When no inputs are specified specifically, `prune=True` should get rid of completely empty namespaces
     assert builder._inputs(prune=False) == {'namespace': {'nested': {}}, 'metadata': {}}
-    assert builder._inputs(prune=True) == {}
+    assert not builder._inputs(prune=True)
 
     # With a specific input in `namespace` the case of `prune=True` should now only remove `metadata`
     integer = orm.Int(DEFAULT_INT)
@@ -313,10 +313,12 @@ def test_calc_job_node_get_builder_restart(aiida_localhost):
 
 def test_code_get_builder(aiida_localhost):
     """Test that the `Code.get_builder` method returns a builder where the code is already set."""
-    code = orm.Code()
-    code.set_remote_computer_exec((aiida_localhost, '/bin/true'))
-    code.label = 'test_code'
-    code.set_input_plugin_name('core.templatereplacer')
+    code = orm.InstalledCode(
+        label='test_code',
+        computer=aiida_localhost,
+        filepath_executable='/bin/true',
+        default_calc_job_plugin='core.templatereplacer'
+    )
     code.store()
 
     # Check that I can get a builder

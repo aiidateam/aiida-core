@@ -8,6 +8,7 @@ import tempfile
 from typing import TYPE_CHECKING, Any, BinaryIO, Dict, Iterable, Iterator, List, Optional, TextIO, Tuple, Union
 
 from aiida.common import exceptions
+from aiida.manage import get_config_option
 from aiida.repository import File, Repository
 from aiida.repository.backend import SandboxRepositoryBackend
 
@@ -80,7 +81,8 @@ class NodeRepository:
                 backend = self._node.backend.get_repository()
                 self._repository_instance = Repository.from_serialized(backend=backend, serialized=self.metadata)
             else:
-                self._repository_instance = Repository(backend=SandboxRepositoryBackend())
+                filepath = get_config_option('storage.sandbox') or None
+                self._repository_instance = Repository(backend=SandboxRepositoryBackend(filepath))
 
         return self._repository_instance
 

@@ -18,7 +18,7 @@ import tempfile
 
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import configuration, get_manager
-from aiida.manage.configuration.settings import create_instance_directories
+from aiida.manage.configuration import settings
 from aiida.manage.external.postgres import Postgres
 
 __all__ = (
@@ -38,7 +38,7 @@ _DEFAULT_PROFILE_INFO = {
     'first_name': 'AiiDA',
     'last_name': 'Plugintest',
     'institution': 'aiidateam',
-    'storage_backend': 'psql_dos',
+    'storage_backend': 'core.psql_dos',
     'database_engine': 'postgresql_psycopg2',
     'database_username': 'aiida',
     'database_password': 'aiida_pw',
@@ -163,14 +163,16 @@ class ProfileManager:
         """Reset the global profile, clearing all its data and closing any open resources."""
         manager = get_manager()
         manager.get_profile_storage()._clear(recreate_user=True)  # pylint: disable=protected-access
-        manager.reset_profile()
         manager.get_profile_storage()  # reload the storage connection
+        manager.reset_communicator()
+        manager.reset_runner()
 
     def has_profile_open(self):
         return self._profile is not None
 
-    def destroy_all(self):
-        pass
+    def destroy_all(self):  # pylint: disable=no-self-use
+        manager = get_manager()
+        manager.reset_profile()
 
 
 class TemporaryProfileManager(ProfileManager):
@@ -219,7 +221,7 @@ class TemporaryProfileManager(ProfileManager):
 
     """
 
-    def __init__(self, backend='psql_dos', pgtest=None):  # pylint: disable=super-init-not-called
+    def __init__(self, backend='core.psql_dos', pgtest=None):  # pylint: disable=super-init-not-called
         """Construct a TemporaryProfileManager
 
         :param backend: a database backend
@@ -227,8 +229,6 @@ class TemporaryProfileManager(ProfileManager):
            e.g. {'pg_ctl': '/somepath/pg_ctl'}. Should usually not be necessary.
 
         """
-        from aiida.manage.configuration import settings
-
         self.dbinfo = {}
         self.profile_info = _DEFAULT_PROFILE_INFO
         self.profile_info['storage_backend'] = backend
@@ -241,6 +241,7 @@ class TemporaryProfileManager(ProfileManager):
         self._backup = {
             'config': configuration.CONFIG,
             'config_dir': settings.AIIDA_CONFIG_FOLDER,
+            settings.DEFAULT_AIIDA_PATH_VARIABLE: os.environ.get(settings.DEFAULT_AIIDA_PATH_VARIABLE, None)
         }
 
     @property
@@ -315,7 +316,7 @@ class TemporaryProfileManager(ProfileManager):
 
         Warning: the AiiDA dbenv must not be loaded when this is called!
         """
-        from aiida.manage.configuration import Profile, settings
+        from aiida.manage.configuration import Profile
         from aiida.orm import User
 
         manager = get_manager()
@@ -324,11 +325,13 @@ class TemporaryProfileManager(ProfileManager):
             self.create_aiida_db()
 
         if not self.root_dir:
-            self.root_dir = tempfile.mkdtemp()
+            self.root_dir = tempfile.TemporaryDirectory().name  # pylint: disable=consider-using-with
         configuration.CONFIG = None
-        settings.AIIDA_CONFIG_FOLDER = self.config_dir
+
+        os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = self.config_dir
+        settings.set_configuration_directory()
+
         manager.unload_profile()
-        create_instance_directories()
         profile_name = self.profile_info['name']
         config = configuration.get_config(create=True)
         profile = Profile(profile_name, self.profile_dictionary)
@@ -368,7 +371,7 @@ class TemporaryProfileManager(ProfileManager):
         if self.has_profile_open():
             raise TestManagerError('backend cannot be changed after setting up the environment')
 
-        valid_backends = ['psql_dos']
+        valid_backends = ['core.psql_dos']
         if backend not in valid_backends:
             raise ValueError(f'invalid backend {backend}, must be one of {valid_backends}')
         self.profile_info['backend'] = backend
@@ -395,7 +398,7 @@ class TemporaryProfileManager(ProfileManager):
 
     def destroy_all(self):
         """Remove all traces of the tests run"""
-        from aiida.manage.configuration import settings
+        super().destroy_all()
         if self.root_dir:
             shutil.rmtree(self.root_dir)
             self.root_dir = None
@@ -410,6 +413,9 @@ class TemporaryProfileManager(ProfileManager):
         if 'config_dir' in self._backup:
             settings.AIIDA_CONFIG_FOLDER = self._backup['config_dir']
 
+        if settings.DEFAULT_AIIDA_PATH_VARIABLE in self._backup and self._backup[settings.DEFAULT_AIIDA_PATH_VARIABLE]:
+            os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = self._backup[settings.DEFAULT_AIIDA_PATH_VARIABLE]
+
     def has_profile_open(self):
         return self._profile is not None
 
@@ -418,7 +424,7 @@ _GLOBAL_TEST_MANAGER = TestManager()
 
 
 @contextmanager
-def test_manager(backend='psql_dos', profile_name=None, pgtest=None):
+def test_manager(backend='core.psql_dos', profile_name=None, pgtest=None):
     """ Context manager for TestManager objects.
 
     Sets up temporary AiiDA environment for testing or reuses existing environment,
@@ -480,9 +486,9 @@ def get_test_backend_name() -> str:
             )
         backend_res = backend_profile
     else:
-        backend_res = backend_env or 'psql_dos'
+        backend_res = backend_env or 'core.psql_dos'
 
-    if backend_res in ('psql_dos',):
+    if backend_res in ('core.psql_dos',):
         return backend_res
     raise ValueError(f"Unknown backend '{backend_res}' read from AIIDA_TEST_BACKEND environment variable")
 

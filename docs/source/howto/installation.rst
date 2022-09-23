@@ -53,7 +53,7 @@ To display these parameters, use ``verdi profile show``:
             broker_username: guest
             broker_virtual_host: ''
     storage:
-        backend: psql_dos
+        backend: core.psql_dos
         config:
             database_engine: postgresql_psycopg2
             database_hostname: localhost
@@ -525,7 +525,7 @@ To determine what storage backend a profile uses, call ``verdi profile show``.
 
         .. code-block:: console
 
-            pg_dump -h <database_hostname> -p <database_port> -d <database_name> -W > aiida_backup.psql
+            pg_dump -h <database_hostname> -p <database_port> -d <database_name> -U <database_username> -W > aiida_backup.psql
 
         The ``-W`` flag will ensure to prompt for the database password.
         The parameters between brackets should be replaced with the values that have been configured for the profile.
@@ -568,7 +568,7 @@ To determine what storage backend a profile uses, call ``verdi profile show``.
 
     .. tab-item:: psql_dos
 
-        To fully backup the data stored for a profile using the ``psql_dos`` backend, you should restore the associated database and file repository.
+        To fully backup the data stored for a profile using the ``core.psql_dos`` backend, you should restore the associated database and file repository.
 
         **PostgreSQL database**
 

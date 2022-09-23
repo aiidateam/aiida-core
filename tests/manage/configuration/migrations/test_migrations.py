@@ -90,6 +90,25 @@ def test_migrate_individual(load_config_sample, initial, target, monkeypatch):
     assert config_migrated == config_target
 
 
+def test_merge_storage_backends_downgrade_profile(empty_config, profile_factory, caplog):
+    """Test the downgrade of schema version 7.
+
+    Test specifically the case that the ``storage._v6_backend`` key does not exist.
+    """
+    config = empty_config
+    profile_a = profile_factory('profile_a', test_profile=False)
+    profile_b = profile_factory('profile_b', test_profile=False)
+
+    profile_a._attributes[profile_a.KEY_STORAGE]['_v6_backend'] = 'django'  # pylint: disable=protected-access
+
+    config.add_profile(profile_a)
+    config.add_profile(profile_b)
+
+    config_migrated = downgrade_config(config.dictionary, 6)
+    assert list(config_migrated['profiles'].keys()) == ['profile_a', 'profile_b']
+    assert f'profile {profile_b.name!r} had no expected "storage._v6_backend" key' in caplog.records[0].message
+
+
 def test_add_test_profile_key_downgrade_profile(empty_config, profile_factory, caplog):
     """Test the downgrade of schema version 8.
 
@@ -98,8 +117,7 @@ def test_add_test_profile_key_downgrade_profile(empty_config, profile_factory, c
     exception should be raised.
     """
     config = empty_config
-    profile = profile_factory('test_profile')
-    profile.is_test_profile = False
+    profile = profile_factory('test_profile', test_profile=False)
     config.add_profile(profile)
 
     config_migrated = downgrade_config(config.dictionary, 7)
@@ -122,8 +140,7 @@ def test_add_test_profile_key_downgrade_test_profile(empty_config, profile_facto
     determine whether a profile is a test profile or not.
     """
     config = empty_config
-    profile = profile_factory('profile')
-    profile.is_test_profile = True
+    profile = profile_factory('profile', test_profile=True)
     config.add_profile(profile)
 
     config_migrated = downgrade_config(config.dictionary, 7)
@@ -131,7 +148,7 @@ def test_add_test_profile_key_downgrade_test_profile(empty_config, profile_facto
     assert 'profile `profile` is a test profile but does not start with' in caplog.records[0].message
     assert 'changing profile name from `profile` to `test_profile`.' in caplog.records[1].message
 
-    profile = profile_factory('test_profile')
+    profile = profile_factory('test_profile', test_profile=True)
     config.add_profile(profile)
 
     with pytest.raises(ConfigurationError, match=r'cannot change `.*` to `.*` because it already exists.'):

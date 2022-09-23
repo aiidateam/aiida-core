@@ -28,7 +28,7 @@ __copyright__ = (
     'For further information please visit http://www.aiida.net/. All rights reserved.'
 )
 __license__ = 'MIT license, see LICENSE.txt file.'
-__version__ = '2.0.4'
+__version__ = '2.0.4.post0'
 __authors__ = 'The AiiDA team.'
 __paper__ = (
     'S. P. Huber et al., "AiiDA 1.0, a scalable computational infrastructure for automated reproducible workflows and '
@@ -45,6 +45,11 @@ def get_strict_version():
     :rtype: :class:`!distutils.version.StrictVersion`
     """
     from distutils.version import StrictVersion
+
+    from aiida.common.warnings import warn_deprecation
+    warn_deprecation(
+        'This method is deprecated as the `distutils` package it uses will be removed in Python 3.12.', version=3
+    )
     return StrictVersion(__version__)
 
 

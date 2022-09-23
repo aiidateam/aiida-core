@@ -186,7 +186,6 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
 profile = load_profile(
     SqliteTempBackend.create_profile(
         'myprofile',
-        sandbox_path='_sandbox',
         options={
             'runner.poll.interval': 1
         },

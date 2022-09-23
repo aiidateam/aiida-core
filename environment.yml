@@ -33,4 +33,5 @@ dependencies:
 - tabulate~=0.8.5
 - tqdm~=4.45
 - upf_to_json~=0.9.2
-- wrapt~=1.11.1
+- werkzeug<2.2
+- wrapt~=1.11

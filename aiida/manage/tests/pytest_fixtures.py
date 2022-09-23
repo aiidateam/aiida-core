@@ -122,6 +122,7 @@ def temp_dir():
     :rtype: str
 
     """
+    warn_deprecation('This fixture is deprecated, use the `tmp_path` fixture of `pytest` instead.', version=3)
     try:
         dirpath = tempfile.mkdtemp()
         yield dirpath
@@ -131,7 +132,7 @@ def temp_dir():
 
 
 @pytest.fixture(scope='function')
-def aiida_localhost(temp_dir):
+def aiida_localhost(tmp_path):
     """Get an AiiDA computer for localhost.
 
     Usage::
@@ -156,7 +157,7 @@ def aiida_localhost(temp_dir):
             label=label,
             description='localhost computer set up by test manager',
             hostname=label,
-            workdir=temp_dir,
+            workdir=str(tmp_path),
             transport_type='core.local',
             scheduler_type='core.direct'
         )
@@ -199,13 +200,18 @@ def aiida_local_code_factory(aiida_localhost):
         :rtype: :py:class:`aiida.orm.Code`
         """
         from aiida.common import exceptions
-        from aiida.orm import Code, Computer, QueryBuilder
+        from aiida.orm import Computer, InstalledCode, QueryBuilder
 
         if label is None:
             label = executable
 
         builder = QueryBuilder().append(Computer, filters={'uuid': computer.uuid}, tag='computer')
-        builder.append(Code, filters={'label': label, 'attributes.input_plugin': entry_point}, with_computer='computer')
+        builder.append(
+            InstalledCode, filters={
+                'label': label,
+                'attributes.input_plugin': entry_point
+            }, with_computer='computer'
+        )
 
         try:
             code = builder.one()[0]
@@ -218,15 +224,19 @@ def aiida_local_code_factory(aiida_localhost):
         if not executable_path:
             raise ValueError(f'The executable "{executable}" was not found in the $PATH.')
 
-        code = Code(input_plugin_name=entry_point, remote_computer_exec=[computer, executable_path])
-        code.label = label
-        code.description = label
+        code = InstalledCode(
+            label=label,
+            description=label,
+            default_calc_job_plugin=entry_point,
+            computer=computer,
+            filepath_executable=executable_path
+        )
 
         if prepend_text is not None:
-            code.set_prepend_text(prepend_text)
+            code.prepend_text = prepend_text
 
         if append_text is not None:
-            code.set_append_text(append_text)
+            code.append_text = append_text
 
         return code.store()
 

@@ -25,6 +25,8 @@ py:class ReturnType
 py:class SelfType
 py:class CollectionType
 py:class EntityType
+py:class EntityClsType
+py:class ProjectType
 py:class BackendEntityType
 py:class BackendNodeType
 py:class TransactionType

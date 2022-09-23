@@ -133,14 +133,13 @@ def test_node_process_type(aiida_profile, tmp_path):
     assert node.process_type == node_process_type
 
 
+@pytest.mark.usefixtures('suppress_internal_deprecations')
 def test_code_type_change(aiida_profile_clean, tmp_path, aiida_localhost):
     """ Code type string changed
     Change: “code.Bool.” → “data.code.Code.”
     """
     # Create Code instance
-    code = orm.Code()
-    code.set_remote_computer_exec((aiida_localhost, '/bin/true'))
-    code.store()
+    code = orm.Code((aiida_localhost, '/bin/true')).store()
 
     # Save uuid and type
     code_uuid = str(code.uuid)

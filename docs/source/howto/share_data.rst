@@ -183,6 +183,11 @@ The AiiDA REST API allows to query your AiiDA database over HTTP(S) and returns 
     As of October 2020, the AiiDA REST API only supports ``GET`` methods (reading); in particular, it does *not* yet support workflow management.
     This feature is, however, part of the `AiiDA roadmap <https://github.com/aiidateam/aiida-core/wiki/AiiDA-release-roadmap>`_.
 
+
+.. note::
+    To ensure that when serving ``orm.ArrayData`` one always obtains a valid JSON compliant with the `ECMA-262 standard <https://www.ecma-international.org/publications-and-standards/standards/ecma-262/>`_, any ``np.nan``, ``np.inf`` and/or ``-np.inf`` entries will be replaced by ``None`` which will be rendered as ``null`` when getting the array via the API call.
+
+
 .. _how-to:share:serve:launch:
 
 Launching the REST API
@@ -276,6 +281,29 @@ Here are some examples to try::
        $ curl https://aiida-dev.materialscloud.org/2dstructures/api/v4/users
 
 For an extensive user documentation of the endpoints, the query string as well as the format of the responses, see the :ref:`AiiDA REST API reference <reference:rest-api>`.
+
+.. versionadded:: 2.1.0
+
+It is possible to allow a request to declare a specific profile for which to run the profile.
+This makes it possible to use a single REST API to serve the content of all configured profiles.
+The profile switching functionality is disabled by default but can be enabled through the config:
+
+.. code-block:: console
+
+    verdi config set rest_api.profile_switching True
+
+After the REST API is restarted, it will now accept the `profile` query parameter, for example:
+
+.. code-block:: console
+
+    http://127.0.0.1:5000/api/v4/computers?profile=some-profile-name
+
+If the specified is already loaded, the REST API functions exactly as without profile switching enabled.
+If another profile is specified, the REST API will first switch profiles before executing the request.
+
+.. note::
+
+    If the profile parameter is specified in a request and the REST API does not have profile switching enabled, a 400 response is returned.
 
 .. _how-to:share:serve:deploy:
 

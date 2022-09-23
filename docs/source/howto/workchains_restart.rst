@@ -107,7 +107,7 @@ Next, as with all work chains, we should *define* its process specification:
         super().define(spec)
         spec.input('x', valid_type=(orm.Int, orm.Float), help='The left operand.')
         spec.input('y', valid_type=(orm.Int, orm.Float), help='The right operand.')
-        spec.input('code', valid_type=orm.Code, help='The code to use to perform the summation.')
+        spec.input('code', valid_type=orm.AbstractCode, help='The code to use to perform the summation.')
         spec.output('sum', valid_type=(orm.Int, orm.Float), help='The sum of the left and right operand.')
         spec.outline(
             cls.setup,
@@ -250,6 +250,27 @@ When submitting or running the work chain using namespaced inputs (``add`` in th
     .. code-block:: bash
 
         $ verdi daemon restart --reset
+
+
+Customizing outputs
+===================
+
+By default, the ``BaseRestartWorkChain`` will attach the exposed outputs of the last completed calculation job.
+In most cases this is the correct behavior, but there might be use-cases where one wants to modify exactly what outputs are attached to the work chain.
+This can be achieved by overriding the :meth:`aiida.engine.processes.workchains.restart.BaseRestartWorkChain.get_outputs` method.
+For example, if you want to remove a particular output from being attached, you can do the following:
+
+.. code-block:: python
+
+    def get_outputs(self, node) -> Mapping[str, orm.Node]:
+        """Return a mapping of the outputs that should be attached as outputs to the work chain."""
+        outputs = super().get_outputs(node)
+        outputs.pop('some_output', None)
+        return outputs
+
+It is also possible to update the contents of one of the outputs returned by the last completed calculation job.
+In this case, it is important to go through a ``calcfunction``, as always, as to not lose any provenance.
+
 
 Error handling
 ==============
@@ -400,3 +421,26 @@ The base restart work chain will detect this exit code and abort the work chain,
     └── ArithmeticAddCalculation<1952> Finished [410]
 
 With these basic tools, a broad range of use-cases can be addressed while preventing a lot of boilerplate code.
+
+
+Handler overrides
+=================
+
+It is possible to change the priority of handlers and enable/disable them without changing the source code of the work chain.
+These properties of the handlers can be controlled through the ``handler_overrides`` input of the work chain.
+This input takes a ``Dict`` node, that has the following form:
+
+.. code-block:: python
+
+    handler_overrides = Dict({
+        'handler_negative_sum': {
+            'enabled': True,
+            'priority': 10000
+        }
+    })
+
+As you can see, the keys are the name of the handler to affect and the value is a dictionary that can take two keys: ``enabled`` and ``priority``.
+To enable or disable a handler, set ``enabled`` to ``True`` or ``False``, respectively.
+The ``priority`` key takes an integer and determines the priority of the handler.
+Note that the values of the ``handler_overrides`` are fully optional and will override the values configured by the process handler decorator in the source code of the work chain.
+The changes also only affect the work chain instance that receives the ``handler_overrides`` input, all other instances of the work chain that will be launched will be unaffected.

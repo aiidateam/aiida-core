@@ -13,7 +13,7 @@ import pytest
 
 from aiida import get_profile
 from aiida.common.exceptions import ConfigurationError
-from aiida.manage.configuration import ConfigValidationError, get_config, get_config_option
+from aiida.manage.configuration import ConfigValidationError, config_schema, get_config, get_config_option
 from aiida.manage.configuration.options import Option, get_option, get_option_names, parse_option
 
 
@@ -24,7 +24,7 @@ class TestConfigurationOptions:
     def test_get_option_names(self):
         """Test `get_option_names` function."""
         assert isinstance(get_option_names(), list)
-        assert len(get_option_names()) == 28
+        assert len(get_option_names()) == len(config_schema()['definitions']['options']['properties'])
 
     def test_get_option(self):
         """Test `get_option` function."""

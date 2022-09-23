@@ -51,7 +51,8 @@ dependencies = [
         "tabulate~=0.8.5",
         "tqdm~=4.45",
         "upf_to_json~=0.9.2",
-        "wrapt~=1.11.1"
+        "werkzeug<2.2",
+        "wrapt~=1.11"
 ]
 
 [project.urls]
@@ -167,7 +168,9 @@ runaiida = "aiida.cmdline.commands.cmd_run:run"
 "core.base" = "aiida.orm.nodes.data:BaseType"
 "core.bool" = "aiida.orm.nodes.data.bool:Bool"
 "core.cif" = "aiida.orm.nodes.data.cif:CifData"
-"core.code" = "aiida.orm.nodes.data.code:Code"
+"core.code" = "aiida.orm.nodes.data.code.legacy:Code"
+"core.code.portable" = "aiida.orm.nodes.data.code.portable:PortableCode"
+"core.code.installed" = "aiida.orm.nodes.data.code.installed:InstalledCode"
 "core.dict" = "aiida.orm.nodes.data.dict:Dict"
 "core.enum" = "aiida.orm.nodes.data.enum:EnumData"
 "core.float" = "aiida.orm.nodes.data.float:Float"
@@ -212,6 +215,11 @@ runaiida = "aiida.cmdline.commands.cmd_run:run"
 "core.sge" = "aiida.schedulers.plugins.sge:SgeScheduler"
 "core.slurm" = "aiida.schedulers.plugins.slurm:SlurmScheduler"
 "core.torque" = "aiida.schedulers.plugins.torque:TorqueScheduler"
+
+[project.entry-points."aiida.storage"]
+"core.psql_dos" = "aiida.storage.psql_dos.backend:PsqlDosBackend"
+"core.sqlite_temp" = "aiida.storage.sqlite_temp.backend:SqliteTempBackend"
+"core.sqlite_zip" = "aiida.storage.sqlite_zip.backend:SqliteZipBackend"
 
 [project.entry-points."aiida.transports"]
 "core.local" = "aiida.transports.plugins.local:LocalTransport"
@@ -258,7 +266,6 @@ max-line-length = 120
 [tool.pylint.messages_control]
 disable = [
     "bad-continuation",
-    "bad-option-value",
     "consider-using-f-string",
     "cyclic-import",
     "duplicate-code",

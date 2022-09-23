@@ -166,12 +166,12 @@ class TestAutoGroups:
     @pytest.mark.requires_rmq
     def test_autogroup_filter_class(self):  # pylint: disable=too-many-locals
         """Check if the autogroup is properly generated but filtered classes are skipped."""
-        from aiida.orm import AutoGroup, Code, Node, QueryBuilder, load_node
+        from aiida.orm import AutoGroup, Node, QueryBuilder, load_node
 
         script_content = textwrap.dedent(
             """\
             import sys
-            from aiida.orm import Computer, Int, ArrayData, KpointsData, CalculationNode, WorkflowNode
+            from aiida.orm import Computer, Int, ArrayData, KpointsData, CalculationNode, WorkflowNode, InstalledCode
             from aiida.plugins import CalculationFactory
             from aiida.engine import run_get_node
             ArithmeticAdd = CalculationFactory('core.arithmetic.add')
@@ -186,9 +186,10 @@ class TestAutoGroups:
             ).store()
             computer.configure()
 
-            code = Code(
-                input_plugin_name='core.arithmetic.add',
-                remote_computer_exec=[computer, '/bin/true']).store()
+            code = InstalledCode(
+                default_calc_job_plugin='core.arithmetic.add',
+                computer=computer,
+                filepath_executable='/bin/true').store()
             inputs = {
                 'x': Int(1),
                 'y': Int(2),
@@ -218,7 +219,6 @@ class TestAutoGroups:
             """
         )
 
-        Code()
         for idx, (
             flags,
             kptdata_in_autogroup,

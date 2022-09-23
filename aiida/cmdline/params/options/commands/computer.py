@@ -15,13 +15,9 @@ from aiida.cmdline.params.options.interactive import InteractiveOption, Template
 from aiida.cmdline.params.options.overridable import OverridableOption
 
 
-def should_call_default_mpiprocs_per_machine(ctx):  # pylint: disable=invalid-name
+def get_job_resource_cls(ctx):
     """
-    Return True if the scheduler can accept 'default_mpiprocs_per_machine',
-    False otherwise.
-
-    If there is a problem in determining the scheduler, return True to
-    avoid exceptions.
+    Return job resource cls from ctx.
     """
     from aiida.common.exceptions import ValidationError
 
@@ -36,12 +32,39 @@ def should_call_default_mpiprocs_per_machine(ctx):  # pylint: disable=invalid-na
             'The should_call_... function should always be run (and prompted) AFTER asking for a scheduler'
         )
 
-    job_resource_cls = scheduler_cls.job_resource_class
+    return scheduler_cls.job_resource_class
+
+
+def should_call_default_mpiprocs_per_machine(ctx):  # pylint: disable=invalid-name
+    """
+    Return whether the selected scheduler type accepts `default_mpiprocs_per_machine`.
+
+    :return: `True` if the scheduler type accepts `default_mpiprocs_per_machine`, `False`
+        otherwise. If the scheduler class could not be loaded `False` is returned by default.
+    """
+    job_resource_cls = get_job_resource_cls(ctx)
+
     if job_resource_cls is None:
         # Odd situation...
         return False
 
     return job_resource_cls.accepts_default_mpiprocs_per_machine()
+
+
+def should_call_default_memory_per_machine(ctx):  # pylint: disable=invalid-name
+    """
+    Return whether the selected scheduler type accepts `default_memory_per_machine`.
+
+    :return: `True` if the scheduler type accepts `default_memory_per_machine`, `False`
+        otherwise. If the scheduler class could not be loaded `False` is returned by default.
+    """
+    job_resource_cls = get_job_resource_cls(ctx)
+
+    if job_resource_cls is None:
+        # Odd situation...
+        return False
+
+    return job_resource_cls.accepts_default_memory_per_machine()
 
 
 LABEL = options.LABEL.clone(
@@ -113,6 +136,8 @@ DEFAULT_MEMORY_PER_MACHINE = OverridableOption(
     '--default-memory-per-machine',
     prompt='Default amount of memory per machine (kB).',
     cls=InteractiveOption,
+    prompt_fn=should_call_default_memory_per_machine,
+    required_fn=False,
     type=click.INT,
     help='The default amount of RAM (kB) that should be allocated per machine (node), if not otherwise specified.'
 )

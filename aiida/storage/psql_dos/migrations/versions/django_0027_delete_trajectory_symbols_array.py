@@ -21,6 +21,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql.expression import delete
 
+from aiida.storage.psql_dos.backend import get_filepath_container
 from aiida.storage.psql_dos.migrations.utils import utils
 
 revision = 'django_0027'
@@ -33,8 +34,7 @@ def upgrade():
     """Migrations for the upgrade."""
     # pylint: disable=unused-variable
     connection = op.get_bind()
-    profile = op.get_context().opts['aiida_profile']
-    repo_path = profile.repository_path
+    repo_path = get_filepath_container(op.get_context().opts['aiida_profile']).parent
 
     node_tbl = sa.table(
         'db_dbnode',

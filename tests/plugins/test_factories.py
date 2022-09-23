@@ -14,6 +14,7 @@ import pytest
 from aiida.common.exceptions import InvalidEntryPointTypeError
 from aiida.engine import CalcJob, CalcJobImporter, WorkChain, calcfunction, workfunction
 from aiida.orm import CalcFunctionNode, Data, Node, WorkFunctionNode
+from aiida.orm.implementation.storage_backend import StorageBackend
 from aiida.parsers import Parser
 from aiida.plugins import entry_point, factories
 from aiida.schedulers import Scheduler
@@ -62,6 +63,10 @@ def custom_load_entry_point(group, name):
         },
         'aiida.schedulers': {
             'valid': Scheduler,
+            'invalid': Node,
+        },
+        'aiida.storage': {
+            'valid': StorageBackend,
             'invalid': Node,
         },
         'aiida.transports': {
@@ -173,6 +178,15 @@ class TestFactories:
 
         with pytest.raises(InvalidEntryPointTypeError):
             factories.SchedulerFactory('invalid')
+
+    @pytest.mark.usefixtures('mock_load_entry_point')
+    def test_storage_factory(self):
+        """Test the ``StorageFactory``."""
+        plugin = factories.StorageFactory('valid')
+        assert plugin is StorageBackend
+
+        with pytest.raises(InvalidEntryPointTypeError):
+            factories.StorageFactory('invalid')
 
     @pytest.mark.usefixtures('mock_load_entry_point')
     def test_transport_factory(self):

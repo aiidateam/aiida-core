@@ -235,7 +235,7 @@ def setup(app: Sphinx):
 # these are mainly required, because sphinx finds multiple references,
 # in `aiida.orm`` and `aiida.restapi.translator`
 autodoc_aliases_typing = {
-    'Code': 'aiida.orm.nodes.data.code.Code',
+    'Code': 'aiida.orm.nodes.data.code.legacy.Code',
     'Computer': 'aiida.orm.computers.Computer',
     'Data': 'aiida.orm.nodes.data.data.Data',
     'Group': 'aiida.orm.groups.Group',
@@ -245,6 +245,7 @@ autodoc_aliases_typing = {
     'QueryBuilder': 'aiida.orm.querybuilder.QueryBuilder',
     'WorkChainNode': 'aiida.orm.nodes.process.workflow.workchain.WorkChainNode',
     'orm.ProcessNode': 'aiida.orm.nodes.process.process.ProcessNode',
+    'ProcessNode': 'aiida.orm.nodes.process.process.ProcessNode',
     'BackendAuthInfo': 'aiida.orm.implementation.authinfos.BackendAuthInfo',
     'BackendComment': 'aiida.orm.implementation.comments.BackendComment',
     'BackendComputer': 'aiida.orm.implementation.computers.BackendComputer',

@@ -27,6 +27,7 @@ from sqlalchemy import Integer, String, cast
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.sql import column, func, select, table
 
+from aiida.storage.psql_dos.backend import get_filepath_container
 from aiida.storage.psql_dos.migrations.utils.utils import load_numpy_array_from_repository
 
 # revision identifiers, used by Alembic.
@@ -42,8 +43,7 @@ depends_on = None
 def upgrade():
     """Migrations for the upgrade."""
     connection = op.get_bind()
-    profile = op.get_context().opts['aiida_profile']
-    repo_path = profile.repository_path
+    repo_path = get_filepath_container(op.get_context().opts['aiida_profile']).parent
 
     DbNode = table(
         'db_dbnode',

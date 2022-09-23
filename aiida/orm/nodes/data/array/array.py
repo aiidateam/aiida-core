@@ -201,9 +201,11 @@ class ArrayData(Data):
         the value is the numpy array transformed into a list. This is so that
         it can be transformed into a json object.
         """
+
         array_dict = {}
         for key, val in self.get_iterarrays():
-            array_dict[key] = val.tolist()
+
+            array_dict[key] = clean_array(val)
         return array_dict
 
     def _prepare_json(self, main_file_name='', comments=True):  # pylint: disable=unused-argument
@@ -222,3 +224,28 @@ class ArrayData(Data):
             json_dict['comments'] = get_file_header(comment_char='')
 
         return json.dumps(json_dict).encode('utf-8'), {}
+
+
+def clean_array(array):
+    """
+    Replacing np.nan and np.inf/-np.inf for Nones.
+
+    The function will also sanitize the array removing ``np.nan`` and ``np.inf``
+    for ``None`` of this way the resulting JSON is always valid.
+    Both ``np.nan`` and ``np.inf``/``-np.inf`` are set to None to be in
+    accordance with the
+    `ECMA-262 standard <https://www.ecma-international.org/publications-and-standards/standards/ecma-262/>`_.
+
+    :param array: input array to be cleaned
+    :return: cleaned list to be serialized
+    :rtype: list
+    """
+    import numpy as np
+
+    output = np.reshape(
+        np.asarray([
+            entry if not np.isnan(entry) and not np.isinf(entry) else None for entry in array.flatten().tolist()
+        ]), array.shape
+    )
+
+    return output.tolist()

@@ -108,16 +108,14 @@ class TestNodeHashing:
             node.base.repository.put_object_from_filelike(handle, 'path/name')
         return node
 
-    @staticmethod
-    def create_folderdata_with_empty_folder():
-        dirpath = tempfile.mkdtemp()
+    def create_folderdata_with_empty_folder(self, tmp_path):
         node = orm.FolderData()
-        node.base.repository.put_object_from_tree(dirpath, 'path/name')
+        node.base.repository.put_object_from_tree(tmp_path, 'path/name')
         return node
 
-    def test_folder_file_different(self):
+    def test_folder_file_different(self, tmp_path):
         f1 = self.create_folderdata_with_empty_file().store()
-        f2 = self.create_folderdata_with_empty_folder().store()
+        f2 = self.create_folderdata_with_empty_folder(tmp_path).store()
 
         assert f1.base.repository.list_object_names('path') == f2.base.repository.list_object_names('path')
         assert f1.base.caching.get_hash() != f2.base.caching.get_hash()

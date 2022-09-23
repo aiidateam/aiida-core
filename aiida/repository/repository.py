@@ -487,6 +487,10 @@ class Repository:
     def copy_tree(self, target: Union[str, pathlib.Path], path: FilePath = None) -> None:
         """Copy the contents of the entire node repository to another location on the local file system.
 
+        .. note:: If ``path`` is specified, only its contents are copied, and the relative path with respect to the
+            root is discarded. For example, if ``path`` is ``relative/sub``, the contents of ``sub`` will be copied
+            directly to the target, without the ``relative/sub`` directory.
+
         :param target: absolute path of the directory where to copy the contents to.
         :param path: optional relative path whose contents to copy.
         :raises TypeError: if ``target`` is of incorrect type or not absolute.
@@ -509,11 +513,11 @@ class Repository:
 
         for root, dirnames, filenames in self.walk(path):
             for dirname in dirnames:
-                dirpath = target / root / dirname
+                dirpath = target / (root / dirname).relative_to(path)
                 dirpath.mkdir(parents=True, exist_ok=True)
 
             for filename in filenames:
-                dirpath = target / root
+                dirpath = target / root.relative_to(path)
                 filepath = dirpath / filename
 
                 dirpath.mkdir(parents=True, exist_ok=True)

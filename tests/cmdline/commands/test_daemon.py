@@ -15,12 +15,12 @@ from aiida import get_profile
 from aiida.cmdline.commands import cmd_daemon
 
 
-def test_daemon_start(run_cli_command, daemon_client):
+def test_daemon_start(run_cli_command, stopped_daemon_client):
     """Test ``verdi daemon start``."""
     run_cli_command(cmd_daemon.start)
 
-    daemon_response = daemon_client.get_daemon_info()
-    worker_response = daemon_client.get_worker_info()
+    daemon_response = stopped_daemon_client.get_daemon_info()
+    worker_response = stopped_daemon_client.get_worker_info()
 
     assert 'status' in daemon_response
     assert daemon_response['status'] == 'ok'
@@ -29,14 +29,13 @@ def test_daemon_start(run_cli_command, daemon_client):
     assert len(worker_response['info']) == 1
 
 
-def test_daemon_restart(run_cli_command, daemon_client):
+@pytest.mark.parametrize('options', ([], ['--reset']))
+def test_daemon_restart(run_cli_command, started_daemon_client, options):
     """Test ``verdi daemon restart`` both with and without ``--reset`` flag."""
-    run_cli_command(cmd_daemon.start, [])
-    run_cli_command(cmd_daemon.restart, [])
-    run_cli_command(cmd_daemon.restart, ['--reset'])
+    run_cli_command(cmd_daemon.restart, options)
 
-    daemon_response = daemon_client.get_daemon_info()
-    worker_response = daemon_client.get_worker_info()
+    daemon_response = started_daemon_client.get_daemon_info()
+    worker_response = started_daemon_client.get_worker_info()
 
     assert 'status' in daemon_response
     assert daemon_response['status'] == 'ok'
@@ -45,13 +44,13 @@ def test_daemon_restart(run_cli_command, daemon_client):
     assert len(worker_response['info']) == 1
 
 
-def test_daemon_start_number(run_cli_command, daemon_client):
+def test_daemon_start_number(run_cli_command, stopped_daemon_client):
     """Test ``verdi daemon start`` with a specific number of workers."""
     number = 4
     run_cli_command(cmd_daemon.start, [str(number)])
 
-    daemon_response = daemon_client.get_daemon_info()
-    worker_response = daemon_client.get_worker_info()
+    daemon_response = stopped_daemon_client.get_daemon_info()
+    worker_response = stopped_daemon_client.get_worker_info()
 
     assert 'status' in daemon_response
     assert daemon_response['status'] == 'ok'
@@ -60,7 +59,7 @@ def test_daemon_start_number(run_cli_command, daemon_client):
     assert len(worker_response['info']) == number
 
 
-def test_daemon_start_number_config(run_cli_command, daemon_client, isolated_config):
+def test_daemon_start_number_config(run_cli_command, stopped_daemon_client, isolated_config):
     """Test ``verdi daemon start`` with ``daemon.default_workers`` config option being set."""
     number = 3
     isolated_config.set_option('daemon.default_workers', number, scope=get_profile().name)
@@ -68,8 +67,8 @@ def test_daemon_start_number_config(run_cli_command, daemon_client, isolated_con
 
     run_cli_command(cmd_daemon.start)
 
-    daemon_response = daemon_client.get_daemon_info()
-    worker_response = daemon_client.get_worker_info()
+    daemon_response = stopped_daemon_client.get_daemon_info()
+    worker_response = stopped_daemon_client.get_worker_info()
 
     assert 'status' in daemon_response
     assert daemon_response['status'] == 'ok'
@@ -78,16 +77,14 @@ def test_daemon_start_number_config(run_cli_command, daemon_client, isolated_con
     assert len(worker_response['info']) == number
 
 
-@pytest.mark.usefixtures('daemon_client')
 def test_foreground_multiple_workers(run_cli_command):
     """Test `verdi daemon start` in foreground with more than one worker will fail."""
     run_cli_command(cmd_daemon.start, ['--foreground', str(4)], raises=True)
 
 
-@pytest.mark.usefixtures('daemon_client', 'isolated_config')
+@pytest.mark.usefixtures('started_daemon_client', 'isolated_config')
 def test_daemon_status(run_cli_command):
     """Test ``verdi daemon status``."""
-    run_cli_command(cmd_daemon.start)
     result = run_cli_command(cmd_daemon.status)
     last_line = result.output_lines[-1]
 

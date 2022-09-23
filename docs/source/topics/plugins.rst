@@ -69,15 +69,12 @@ What is an entry point?
 
 
 The ``setuptools`` package (used by ``pip``) has a feature called `entry points`_, which allows to associate a string (the entry point *identifier*) with any python object defined inside a python package.
-Entry points are defined in the ``setup.py`` file, for example::
+Entry points are defined in the ``pyproject.toml`` file, for example::
 
       ...
-      entry_points={
-         "aiida.data": [
-             # entry point = path.to.python.object
-             "mycode.mydata = aiida_mycode.data.mydata:MyData",
-         ]
-      }
+      [project.entry-points."aiida.data"]
+      # entry point = path.to.python.object
+      "mycode.mydata = aiida_mycode.data.mydata:MyData",
       ...
 
 Here, we add a new entry point ``mycode.mydata`` to the entry point *group* ``aiida.data``.
@@ -114,11 +111,8 @@ Entry points in this group are expected to be subclasses of :py:class:`aiida.orm
 
 Example entry point specification::
 
-   entry_points={
-      "aiida.calculations": [
-         "mycode.mycode = aiida_mycode.calcs.mycode:MycodeCalculation"
-      ]
-   }
+   [project.entry-points."aiida.calculations"]
+   "mycode.mycode" = "aiida_mycode.calcs.mycode:MycodeCalculation"
 
 ``aiida_mycode/calcs/mycode.py``::
 
@@ -138,11 +132,8 @@ AiiDA expects a subclass of ``Parser``. Replaces the previous approach consistin
 
 Example spec::
 
-   entry_points={
-      "aiida.calculations": [
-         "mycode.mycode = aiida_mycode.parsers.mycode:MycodeParser"
-      ]
-   }
+   [project.entry-points."aiida.parsers"]
+   "mycode.myparser" = "aiida_mycode.parsers.mycode:MycodeParser"
 
 ``aida_mycode/parsers/myparser.py``::
 
@@ -162,11 +153,8 @@ Group for :py:class:`~aiida.orm.nodes.data.data.Data` subclasses. Previously loc
 
 Spec::
 
-   entry_points={
-      "aiida.data": [
-         "mycode.mydata = aiida_mycode.data.mydat:MyData"
-      ]
-   }
+   [project.entry-points."aiida.data"]
+   "mycode.mydata" = "aiida_mycode.data.mydata:MyData"
 
 ``aiida_mycode/data/mydat.py``::
 
@@ -186,11 +174,8 @@ Package AiiDA workflows as follows:
 
 Spec::
 
-   entry_points={
-      "aiida.workflows": [
-         "mycode.mywf = aiida_mycode.workflows.mywf:MyWorkflow"
-      ]
-   }
+   [project.entry-points."aiida.workflows"]
+   "mycode.mywf" = "aiida_mycode.workflows.mywf:MyWorkflow"
 
 ``aiida_mycode/workflows/mywf.py``::
 
@@ -222,11 +207,8 @@ AiiDA expects each entry point to be either a ``click.Command`` or ``click.Group
 
 Spec for ``verdi data``::
 
-   entry_points={
-      "aiida.cmdline.data": [
-         "mydata = aiida_mycode.commands.mydata:mydata"
-      ]
-   }
+   [project.entry-points."aiida.cmdline.data"]
+   "mydata" = "aiida_mycode.commands.mydata:mydata"
 
 ``aiida_mycode/commands/mydata.py``::
 
@@ -257,6 +239,8 @@ Spec for ``verdi data structure import``::
          "myformat = aiida_mycode.commands.myformat:myformat"
       ]
    }
+   [project.entry-points."aiida.cmdline.data.structure.import"]
+   "myformat" = "aiida_mycode.commands.myformat:myformat"
 
 ``aiida_mycode/commands/myformat.py``::
 
@@ -281,7 +265,7 @@ If your plugin package adds support for exporting to an external database, use t
 
 .. Not sure how dbexporters work
 .. .. Spec::
-..
+
 ..    entry_points={
 ..       "aiida.tools.dbexporters": [
 ..          "mymatdb = aiida_mymatdb.mymatdb
@@ -310,11 +294,8 @@ We recommend naming the plugin package after the scheduler (e.g. ``aiida-mysched
 
 Spec::
 
-   entry_points={
-      "aiida.schedulers": [
-         "myscheduler = aiida_myscheduler.myscheduler:MyScheduler"
-      ]
-   }
+   [project.entry-points."aiida.schedulers"]
+   "myscheduler" = "aiida_myscheduler.myscheduler:MyScheduler"
 
 ``aiida_myscheduler/myscheduler.py``::
 
@@ -332,11 +313,8 @@ We recommend naming the plugin package after the mode of transport (e.g. ``aiida
 
 Spec::
 
-   entry_points={
-      "aiida.transports": [
-         "mytransport = aiida_mytransport.mytransport:MyTransport"
-      ]
-   }
+   [project.entry-points."aiida.transports"]
+   "mytransport" = "aiida_mytransport.mytransport:MyTransport"
 
 ``aiida_mytransport/mytransport.py``::
 

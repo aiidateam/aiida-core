@@ -8,12 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for `verdi process`."""
-import asyncio
-from concurrent.futures import Future
 import time
+import typing as t
 
-import kiwipy
-import plumpy
 import pytest
 
 from aiida import get_profile
@@ -21,7 +18,16 @@ from aiida.cmdline.commands import cmd_process
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.orm import CalcJobNode, WorkChainNode, WorkflowNode, WorkFunctionNode
-from tests.utils import processes as test_processes
+from tests.utils.processes import WaitProcess
+
+
+def await_condition(condition: t.Callable, timeout: int = 1):
+    """Wait for the ``condition`` to evaluate to ``True`` within the ``timeout`` or raise."""
+    start_time = time.time()
+
+    while not condition:
+        if time.time() - start_time > timeout:
+            raise RuntimeError(f'waiting for {condition} to evaluate to `True` timed out after {timeout} seconds.')
 
 
 def get_result_lines(result):
@@ -376,74 +382,54 @@ class TestVerdiProcessCallRoot:
         assert str(self.node_root.pk) in get_result_lines(result)[2]
 
 
-@pytest.mark.skip(reason='fails to complete randomly (see issue #4731)')
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('with_daemon', 'aiida_profile_clean')
-@pytest.mark.parametrize('cmd_try_all', (True, False))
-def test_pause_play_kill(cmd_try_all, run_cli_command):
-    """
-    Test the pause/play/kill commands
-    """
-    # pylint: disable=no-member, too-many-locals
-    from aiida.cmdline.commands.cmd_process import process_kill, process_pause, process_play
-    from aiida.engine import ProcessState
-    from aiida.manage import get_manager
-    from aiida.orm import load_node
+@pytest.mark.usefixtures('started_daemon_client')
+def test_process_pause(submit_and_await, run_cli_command):
+    """Test the ``verdi process pause`` command."""
+    node = submit_and_await(WaitProcess)
+    assert not node.paused
 
-    runner = get_manager().create_runner(rmq_submit=True)
-    calc = runner.submit(test_processes.WaitProcess)
+    run_cli_command(cmd_process.process_pause, [str(node.pk), '--wait'])
+    await_condition(lambda: node.paused)
 
-    test_daemon_timeout = 5.
-    start_time = time.time()
-    while calc.process_state is not plumpy.ProcessState.WAITING:
-        if time.time() - start_time >= test_daemon_timeout:
-            raise RuntimeError('Timed out waiting for process to enter waiting state')
 
-    # Make sure that calling any command on a non-existing process id will not except but print an error
-    # To simulate a process without a corresponding task, we simply create a node and store it. This node will not
-    # have an associated task at RabbitMQ, but it will be a valid `ProcessNode` with and active state, so it will
-    # pass the initial filtering of the `verdi process` commands
-    orphaned_node = WorkFunctionNode()
-    orphaned_node.set_process_state(ProcessState.RUNNING)
-    orphaned_node.store()
-    non_existing_process_id = str(orphaned_node.pk)
-    for command in [process_pause, process_play, process_kill]:
-        result = run_cli_command(command, [non_existing_process_id])
-        assert 'Error:' in result.output
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('started_daemon_client')
+def test_process_play(submit_and_await, run_cli_command):
+    """Test the ``verdi process play`` command."""
+    node = submit_and_await(WaitProcess)
 
-    assert not calc.paused
-    result = run_cli_command(process_pause, [str(calc.pk)])
+    run_cli_command(cmd_process.process_pause, [str(node.pk), '--wait'])
+    await_condition(lambda: node.paused)
 
-    # We need to make sure that the process is picked up by the daemon and put in the Waiting state before we start
-    # running the CLI commands, so we add a broadcast subscriber for the state change, which when hit will set the
-    # future to True. This will be our signal that we can start testing
-    waiting_future = Future()
-    filters = kiwipy.BroadcastFilter(
-        lambda *args, **kwargs: waiting_future.set_result(True), sender=calc.pk, subject='state_changed.*.waiting'
-    )
-    runner.communicator.add_broadcast_subscriber(filters)
+    run_cli_command(cmd_process.process_play, [str(node.pk), '--wait'])
+    await_condition(lambda: not node.paused)
 
-    # The process may already have been picked up by the daemon and put in the waiting state, before the subscriber
-    # got the chance to attach itself, making it have missed the broadcast. That's why check if the state is already
-    # waiting, and if not, we run the loop of the runner to start waiting for the broadcast message. To make sure
-    # that we have the latest state of the node as it is in the database, we force refresh it by reloading it.
-    calc = load_node(calc.pk)
-    if calc.process_state != plumpy.ProcessState.WAITING:
-        runner.loop.run_until_complete(asyncio.wait_for(waiting_future, timeout=5.0))
 
-    # Here we now that the process is with the daemon runner and in the waiting state so we can starting running
-    # the `verdi process` commands that we want to test
-    result = run_cli_command(process_pause, ['--wait', str(calc.pk)])
-    assert calc.paused
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('started_daemon_client')
+def test_process_play_all(submit_and_await, run_cli_command):
+    """Test the ``verdi process play`` command with the ``--all`` option."""
+    node_one = submit_and_await(WaitProcess)
+    node_two = submit_and_await(WaitProcess)
 
-    if cmd_try_all:
-        cmd_option = '--all'
-    else:
-        cmd_option = str(calc.pk)
+    run_cli_command(cmd_process.process_pause, ['--all', '--wait'])
+    await_condition(lambda: node_one.paused)
+    await_condition(lambda: node_two.paused)
 
-    result = run_cli_command(process_play, ['--wait', cmd_option])
-    assert not calc.paused
+    run_cli_command(cmd_process.process_play, ['--all', '--wait'])
+    await_condition(lambda: not node_one.paused)
+    await_condition(lambda: not node_two.paused)
 
-    result = run_cli_command(process_kill, ['--wait', str(calc.pk)])
-    assert calc.is_terminated
-    assert calc.is_killed
+
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('started_daemon_client')
+def test_process_kill(submit_and_await, run_cli_command):
+    """Test the ``verdi process kill`` command."""
+    node = submit_and_await(WaitProcess)
+
+    run_cli_command(cmd_process.process_pause, [str(node.pk), '--wait'])
+    await_condition(lambda: node.paused)
+
+    run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
+    await_condition(lambda: node.is_killed)

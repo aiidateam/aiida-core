@@ -1057,63 +1057,61 @@ class TestImport:
             }
         }
 
-    def test_import_from_valid(self):
+    def test_import_from_valid(self, tmp_path):
         """Test the import of a successfully completed `ArithmeticAddCalculation`."""
         expected_sum = (self.inputs['x'] + self.inputs['y']).value
 
-        with tempfile.TemporaryDirectory() as directory:
-            filepath = os.path.join(directory, ArithmeticAddCalculation.spec_options['output_filename'].default)
-            with open(filepath, 'w', encoding='utf8') as handle:
-                handle.write(f'{expected_sum}\n')
+        filepath = tmp_path / ArithmeticAddCalculation.spec_options['output_filename'].default
+        with open(filepath, 'w', encoding='utf8') as handle:
+            handle.write(f'{expected_sum}\n')
 
-            remote = orm.RemoteData(directory, computer=self.computer).store()
-            inputs = deepcopy(self.inputs)
-            inputs['remote_folder'] = remote
+        remote = orm.RemoteData(str(tmp_path), computer=self.computer).store()
+        inputs = deepcopy(self.inputs)
+        inputs['remote_folder'] = remote
 
-            results, node = launch.run.get_node(ArithmeticAddCalculation, **inputs)
+        results, node = launch.run.get_node(ArithmeticAddCalculation, **inputs)
 
-            # Check node attributes
-            assert isinstance(node, orm.CalcJobNode)
-            assert node.is_finished_ok
-            assert node.is_sealed
-            assert node.is_imported
+        # Check node attributes
+        assert isinstance(node, orm.CalcJobNode)
+        assert node.is_finished_ok
+        assert node.is_sealed
+        assert node.is_imported
 
-            # Verify the expected outputs are there
-            assert 'retrieved' in results
-            assert isinstance(results['retrieved'], orm.FolderData)
-            assert 'sum' in results
-            assert isinstance(results['sum'], orm.Int)
-            assert results['sum'].value == expected_sum
+        # Verify the expected outputs are there
+        assert 'retrieved' in results
+        assert isinstance(results['retrieved'], orm.FolderData)
+        assert 'sum' in results
+        assert isinstance(results['sum'], orm.Int)
+        assert results['sum'].value == expected_sum
 
-    def test_import_from_invalid(self):
+    def test_import_from_invalid(self, tmp_path):
         """Test the import of a completed `ArithmeticAddCalculation` where parsing will fail.
 
         The `ArithmeticParser` will return a non-zero exit code if the output file could not be parsed. Make sure that
         this is piped through correctly through the infrastructure and will cause the process to be marked as failed.
         """
-        with tempfile.TemporaryDirectory() as directory:
-            filepath = os.path.join(directory, ArithmeticAddCalculation.spec_options['output_filename'].default)
-            with open(filepath, 'w', encoding='utf8') as handle:
-                handle.write('a\n')  # On purpose write a non-integer to output so the parsing will fail
+        filepath = tmp_path / ArithmeticAddCalculation.spec_options['output_filename'].default
+        with open(filepath, 'w', encoding='utf8') as handle:
+            handle.write('a\n')  # On purpose write a non-integer to output so the parsing will fail
 
-            remote = orm.RemoteData(directory, computer=self.computer).store()
-            inputs = deepcopy(self.inputs)
-            inputs['remote_folder'] = remote
+        remote = orm.RemoteData(str(tmp_path), computer=self.computer).store()
+        inputs = deepcopy(self.inputs)
+        inputs['remote_folder'] = remote
 
-            results, node = launch.run.get_node(ArithmeticAddCalculation, **inputs)
+        results, node = launch.run.get_node(ArithmeticAddCalculation, **inputs)
 
-            # Check node attributes
-            assert isinstance(node, orm.CalcJobNode)
-            assert node.is_failed
-            assert node.is_sealed
-            assert node.is_imported
-            assert node.exit_status == ArithmeticAddCalculation.exit_codes.ERROR_INVALID_OUTPUT.status
+        # Check node attributes
+        assert isinstance(node, orm.CalcJobNode)
+        assert node.is_failed
+        assert node.is_sealed
+        assert node.is_imported
+        assert node.exit_status == ArithmeticAddCalculation.exit_codes.ERROR_INVALID_OUTPUT.status
 
-            # Verify the expected outputs are there
-            assert 'retrieved' in results
-            assert isinstance(results['retrieved'], orm.FolderData)
+        # Verify the expected outputs are there
+        assert 'retrieved' in results
+        assert isinstance(results['retrieved'], orm.FolderData)
 
-    def test_import_non_default_input_file(self):
+    def test_import_non_default_input_file(self, tmp_path):
         """Test the import of a successfully completed `ArithmeticAddCalculation`
 
         The only difference of this test with `test_import_from_valid` is that here the name of the output file
@@ -1122,27 +1120,26 @@ class TestImport:
 
         output_filename = 'non_standard.out'
 
-        with tempfile.TemporaryDirectory() as directory:
-            filepath = os.path.join(directory, output_filename)
-            with open(filepath, 'w', encoding='utf8') as handle:
-                handle.write(f'{expected_sum}\n')
+        filepath = tmp_path / output_filename
+        with open(filepath, 'w', encoding='utf8') as handle:
+            handle.write(f'{expected_sum}\n')
 
-            remote = orm.RemoteData(directory, computer=self.computer).store()
-            inputs = deepcopy(self.inputs)
-            inputs['remote_folder'] = remote
-            inputs['metadata']['options']['output_filename'] = output_filename
+        remote = orm.RemoteData(str(tmp_path), computer=self.computer).store()
+        inputs = deepcopy(self.inputs)
+        inputs['remote_folder'] = remote
+        inputs['metadata']['options']['output_filename'] = output_filename
 
-            results, node = launch.run.get_node(ArithmeticAddCalculation, **inputs)
+        results, node = launch.run.get_node(ArithmeticAddCalculation, **inputs)
 
-            # Check node attributes
-            assert isinstance(node, orm.CalcJobNode)
-            assert node.is_finished_ok
-            assert node.is_sealed
-            assert node.is_imported
+        # Check node attributes
+        assert isinstance(node, orm.CalcJobNode)
+        assert node.is_finished_ok
+        assert node.is_sealed
+        assert node.is_imported
 
-            # Verify the expected outputs are there
-            assert 'retrieved' in results
-            assert isinstance(results['retrieved'], orm.FolderData)
-            assert 'sum' in results
-            assert isinstance(results['sum'], orm.Int)
-            assert results['sum'].value == expected_sum
+        # Verify the expected outputs are there
+        assert 'retrieved' in results
+        assert isinstance(results['retrieved'], orm.FolderData)
+        assert 'sum' in results
+        assert isinstance(results['sum'], orm.Int)
+        assert results['sum'].value == expected_sum

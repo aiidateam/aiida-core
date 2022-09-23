@@ -570,6 +570,9 @@ class Waiting(plumpy.process_states.Waiting):
         if monitors is None:
             return None
 
+        if self._monitor_result and self._monitor_result.action != CalcJobMonitorAction.DISABLE_ALL:
+            return None
+
         monitor_result = await self._launch_task(task_monitor_job, node, transport_queue, monitors=monitors)
 
         if monitor_result is not None:

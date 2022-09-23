@@ -670,6 +670,22 @@ To keep the exit code of the parser instead, set ``CalcJobMonitorResult.override
         from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorResult
         return CalcJobMonitorResult(override_exit_code=False)
 
+Disable all monitors
+....................
+
+By default, when a monitor returns anything other than ``None``, the engine will immediately kill the job.
+In certain use-cases, a monitor may want to perform an action and then let the job terminate nominally.
+An example might be where the monitor writes a sentinel file in the remote working directory, which will let the code running on the remote shut itself down gracefully.
+In this case it is desirable that the engine stops calling the monitors that were registered and just let the job continue normally.
+To disable all monitors, set ``CalcJobMonitorResult.action`` to the ``DISABLE_ALL`` option of the :class:`~aiida.engine.processes.calcjobs.monitors.CalcJobMonitorAction`:
+
+.. code-block:: python
+
+    def monitor_disable_all_monitors(node: CalcJobNode, transport: Transport) -> str | None:
+        """Disable all monitors and let job terminate nominally."""
+        from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorResult, CalcJobMonitorAction
+        return CalcJobMonitorResult(action=CalcJobMonitorAction.DISABLE_ALL)
+
 
 .. _how-to:run-codes:caching:
 

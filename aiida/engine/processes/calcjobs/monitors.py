@@ -23,6 +23,7 @@ class CalcJobMonitorAction(enum.Enum):
 
     KILL = 'kill'  # The job should be killed and no other monitors should be called.
     DISABLE_ALL = 'disable-all'  # All monitors should be disabled for the continued duration of the current job
+    DISABLE_SELF = 'disable-self'  # Disable the monitor that returns a result with this action.
 
 
 @dataclasses.dataclass
@@ -87,6 +88,9 @@ class CalcJobMonitor:
     call_timestamp: datetime | None = None
     """Optional datetime representing the last time this monitor was called."""
 
+    disabled: bool = False
+    """If this attribute is set to ``True`` the monitor should not be called when monitors are processed."""
+
     def __post_init__(self):
         """Validate the attributes."""
         self.validate()
@@ -103,6 +107,7 @@ class CalcJobMonitor:
         type_check(self.kwargs, dict)
         type_check(self.priority, int)
         type_check(self.minimum_poll_interval, int, allow_none=True)
+        type_check(self.disabled, bool)
 
         if self.minimum_poll_interval is not None and self.minimum_poll_interval <= 0:
             raise ValueError('The `minimum_poll_interval` must be a positive integer greater than zero.')
@@ -162,7 +167,11 @@ class CalcJobMonitors:
         """
         return self._monitors
 
-    def process(self, node: CalcJobNode, transport: Transport) -> CalcJobMonitorResult | None:
+    def process(
+        self,
+        node: CalcJobNode,
+        transport: Transport,
+    ) -> CalcJobMonitorResult | None:
         """Call all monitors in order and return the result as one returns anything other than ``None``.
 
         :param node: The node to pass to the monitor invocation.
@@ -170,6 +179,10 @@ class CalcJobMonitors:
         :returns: ``None`` or a monitor result.
         """
         for key, monitor in self.monitors.items():
+
+            if monitor.disabled:
+                LOGGER.debug(f'monitor`{key}` is disabled, skipping')
+                continue
 
             if (
                 monitor.minimum_poll_interval and monitor.call_timestamp and

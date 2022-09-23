@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-
+import inspect
 import os
 import sys
 
@@ -262,12 +262,11 @@ def add_python_aliases(app: Sphinx, env: BuildEnvironment) -> None:
     These will also be added to the objects.inv inventory file,
     for other projects to reference.
     """
-    from aiida import common, engine, orm, plugins
     py: PythonDomain = env.get_domain('py')
 
     shorthands = {}
-    for modname, module in (('orm', orm),( 'common', common), ('engine', engine), ('plugins', plugins)):
-        for name in module.__all__:
+    for modname, module in inspect.getmembers(aiida, inspect.ismodule):
+        for name in getattr(module, '__all__', []):
             obj = getattr(module, name)
             if hasattr(obj, '__module__'):
                 shorthands[f'{obj.__module__}.{name}'] = f'aiida.{modname}.{name}'

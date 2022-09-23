@@ -13,13 +13,13 @@ It re-uses the classes already defined in ``psql_dos`` backend (for PostGresQL),
 but redefines the SQLAlchemy models to the SQLite compatible ones.
 """
 from functools import singledispatch
-import json
 from typing import Any, List, Optional, Tuple
 
 from sqlalchemy import JSON, case, func
 from sqlalchemy.sql import ColumnElement
 
 from aiida.common.lang import type_check
+from aiida.storage import json
 from aiida.storage.psql_dos.orm import authinfos, comments, computers, entities, groups, logs, nodes, users, utils
 from aiida.storage.psql_dos.orm.querybuilder.main import (
     BinaryExpression,
@@ -234,6 +234,8 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
                 return func.json_type(comparator).in_(['integer', 'real']), comparator.as_integer()
             if isinstance(value, float):
                 return func.json_type(comparator).in_(['integer', 'real']), comparator.as_float()
+            if isinstance(value, complex):
+                return func.json_type(comparator) == 'object', comparator.as_json()
             if isinstance(value, str):
                 return func.json_type(comparator) == 'text', comparator.as_string()
             if isinstance(value, list):
@@ -249,7 +251,7 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
             # if value is None:
             #     return func.json_type(database_entity) == 'null'
             type_filter, casted_entity = _cast_json_type(database_entity, value)
-            if isinstance(value, (list, dict)):
+            if isinstance(value, (list, dict, complex)):
                 return case((type_filter, casted_entity == func.json(json.dumps(value))), else_=False)
             # to-do not working for dict
             return case((type_filter, casted_entity == value), else_=False)

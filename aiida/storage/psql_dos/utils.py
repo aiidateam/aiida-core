@@ -9,8 +9,9 @@
 ###########################################################################
 # pylint: disable=import-error,no-name-in-module
 """Utility functions specific to the SqlAlchemy backend."""
-import json
 from typing import TypedDict
+
+from aiida.storage import json
 
 
 class PsqlConfig(TypedDict, total=False):

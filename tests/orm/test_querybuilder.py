@@ -902,15 +902,16 @@ class TestAttributes:
 
     def test_attribute_type(self):
         key = 'value_test_attr_type'
-        n_int, n_float, n_str, n_str2, n_bool, n_arr = [orm.Data() for _ in range(6)]
+        n_int, n_float, n_complex, n_str, n_str2, n_bool, n_arr = [orm.Data() for _ in range(7)]
         n_int.base.attributes.set(key, 1)
         n_float.base.attributes.set(key, 1.0)
+        n_complex.base.attributes.set(key, 1 + 2j)
         n_bool.base.attributes.set(key, True)
         n_str.base.attributes.set(key, '1')
         n_str2.base.attributes.set(key, 'one')
         n_arr.base.attributes.set(key, [4, 3, 5])
 
-        for n in (n_str2, n_str, n_int, n_float, n_bool, n_arr):
+        for n in (n_str2, n_str, n_int, n_float, n_complex, n_bool, n_arr):
             n.store()
 
         # Here I am testing which values contain a number 1.
@@ -929,6 +930,17 @@ class TestAttributes:
         qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': True}, project='uuid')
         res = [str(_) for _, in qb.all()]
         assert set(res) == set((n_bool.uuid,))
+
+        # Now I am testing complex values
+        qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': 1.0 + 2j}, project='uuid')
+        res = [str(_) for _, in qb.all()]
+        assert set(res) == set((n_complex.uuid,))
+        qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}.real': {'<': 1.5}}, project='uuid')
+        res = [str(_) for _, in qb.all()]
+        assert set(res) == set((n_complex.uuid,))
+        qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}.imag': {'>': 1.5}}, project='uuid')
+        res = [str(_) for _, in qb.all()]
+        assert set(res) == set((n_complex.uuid,))
 
         qb = orm.QueryBuilder().append(orm.Node, filters={f'attributes.{key}': {'like': '%n%'}}, project='uuid')
         res = [str(_) for _, in qb.all()]

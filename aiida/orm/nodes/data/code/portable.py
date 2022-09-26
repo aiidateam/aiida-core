@@ -90,7 +90,7 @@ class PortableCode(AbstractCode):
 
         :return: The executable to be called in the submission script.
         """
-        return self.filepath_executable
+        return str(self.filepath_executable)
 
     @property
     def full_label(self) -> str:

@@ -27,6 +27,7 @@ class ArithmeticAddCalculation(CalcJob):
         spec.input('x', valid_type=(orm.Int, orm.Float), help='The left operand.')
         spec.input('y', valid_type=(orm.Int, orm.Float), help='The right operand.')
         spec.output('sum', valid_type=(orm.Int, orm.Float), help='The sum of the left and right operand.')
+        spec.input('metadata.options.sleep', required=False, valid_type=int)
         # set default options (optional)
         spec.inputs['metadata']['options']['parser_name'].default = 'core.arithmetic.add'
         spec.inputs['metadata']['options']['input_filename'].default = 'aiida.in'
@@ -50,6 +51,8 @@ class ArithmeticAddCalculation(CalcJob):
         :returns: the `CalcInfo` instance
         """
         with folder.open(self.options.input_filename, 'w', encoding='utf8') as handle:
+            if 'sleep' in self.options:
+                handle.write(f'sleep {self.options.sleep}\n')
             handle.write(f'echo $(({self.inputs.x.value} + {self.inputs.y.value}))\n')
 
         codeinfo = CodeInfo()

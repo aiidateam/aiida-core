@@ -9,8 +9,9 @@
 ###########################################################################
 # pylint: disable=redefined-outer-name
 """Tests for the :class:`aiida.orm.nodes.data.code.abstract.AbstractCode` class."""
-import pytest
 import pathlib
+
+import pytest
 
 from aiida.orm.nodes.data.code.abstract import AbstractCode
 

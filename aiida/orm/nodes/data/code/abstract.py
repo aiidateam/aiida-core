@@ -95,9 +95,9 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """
         Return List of command line parameters to be prepended to the executable in submission line.
         These command line parameters are typically parameters related to MPI invocations.
-        
+
         :param mpi_args: List of MPI parameters provided by the ``Computer.get_mpirun_command`` method.
-        :param extra_mpiruns_params: List of MPI parameters provided by the ``metadata.options.extra_mpirun_params`` 
+        :param extra_mpiruns_params: List of MPI parameters provided by the ``metadata.options.extra_mpirun_params``
             input of the ``CalcJob``.
         :return: List of command line parameters to be prepended to the executable in submission line.
         """

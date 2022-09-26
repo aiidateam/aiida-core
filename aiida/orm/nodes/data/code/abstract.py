@@ -11,8 +11,8 @@
 from __future__ import annotations
 
 import abc
-import cmd
 import collections
+import pathlib
 
 import click
 
@@ -71,18 +71,26 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def get_executable(self) -> str:
+    def get_executable(self) -> pathlib.Path:
         """Return the executable that the submission script should execute to run the code.
 
         :return: The executable to be called in the submission script.
         """
 
-    def get_executable_cmdline_params(self, cmdline_params: list = None) -> list:
-        """Return the list of executable with its cmdline_params"""
-        return [self.get_executable()] + (cmdline_params or [])
+    def get_executable_cmdline_params(self, cmdline_params: list[str] | None = None) -> list:
+        """Return the list of executable with its cmdline_params
 
-    def get_prepend_cmdline_params(self, mpi_args=None, extra_mpirun_params=None) -> list:
-        """Return the list of prepend cmdline params for mpi seeting"""
+        :return: list of executable with its cmdline parameters."""
+        return [str(self.get_executable())] + (cmdline_params or [])
+
+    def get_prepend_cmdline_params( # pylint: disable=no-self-use
+        self,
+        mpi_args: list[str] | None = None,
+        extra_mpirun_params: list[str] | None = None
+    ) -> list[str]:
+        """Return the list of prepend cmdline params for mpi seeting
+
+        :return: list of prepend cmdline parameters."""
         return (mpi_args or []) + (extra_mpirun_params or [])
 
     @property

@@ -17,6 +17,7 @@ import click
 
 from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
 from aiida.common import exceptions
+from aiida.common.folders import Folder
 from aiida.common.lang import type_check
 from aiida.orm import Computer
 from aiida.plugins import CalculationFactory
@@ -74,6 +75,14 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """Return the executable that the submission script should execute to run the code.
 
         :return: The executable to be called in the submission script.
+        """
+
+    @abc.abstractmethod
+    def presubmit_check(self, folder: Folder):
+        """check the validity when calling in presubmit.
+
+        :param folder: a SandboxFolder that can be used to write calculation input files and the scheduling script.
+        :raises PluginInternalError: The plugin created a file that is also the executable name!.
         """
 
     @property

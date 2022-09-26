@@ -634,10 +634,7 @@ class CalcJob(Process):
                     )
                 )
 
-            if isinstance(code, PortableCode) and str(code.filepath_executable) in folder.get_content_list():
-                raise PluginInternalError(
-                    f'The plugin created a file {code.filepath_executable} that is also the executable name!'
-                )
+            code.presubmit_check(folder)
 
         calc_info = self.prepare_for_submission(folder)
         calc_info.uuid = str(self.node.uuid)

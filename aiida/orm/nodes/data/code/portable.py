@@ -22,6 +22,7 @@ import pathlib
 import click
 
 from aiida.common import exceptions
+from aiida.common.folders import Folder
 from aiida.common.lang import type_check
 from aiida.orm import Computer
 
@@ -91,6 +92,12 @@ class PortableCode(AbstractCode):
         :return: The executable to be called in the submission script.
         """
         return self.filepath_executable
+
+    def presubmit_check(self, folder: Folder):
+        if str(self.filepath_executable) in folder.get_content_list():
+            raise exceptions.PluginInternalError(
+                f'The plugin created a file {self.filepath_executable} that is also the executable name!'
+            )
 
     @property
     def full_label(self) -> str:

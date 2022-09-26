@@ -77,12 +77,17 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         :return: The executable to be called in the submission script.
         """
 
-    @abc.abstractmethod
-    def presubmit_check(self, folder: Folder):
-        """check the validity when calling in presubmit.
+    def validate_working_directory(self, folder: SandboxFolder):
+        """Validate content of the working directory created by the :class:`~aiida.engine.CalcJob` plugin.
 
-        :param folder: a SandboxFolder that can be used to write calculation input files and the scheduling script.
-        :raises PluginInternalError: The plugin created a file that is also the executable name!.
+        This method will be called by :meth:`~aiida.engine.processes.calcjobs.CalcJob.presubmit` when a new calculation
+        job is launched, passing the :class:`~aiida.common.folders.SandboxFolder` that was used by the plugin used for
+        the calculation to create the input files for the working directory. This method can be overridden by
+        implementations of the ``AbstractCode`` class that need to validate the contents of that folder.
+
+        :param folder: A sandbox folder that the ``CalcJob`` plugin wrote input files to that will be copied to the
+            working directory for the corresponding calculation job instance.
+        :raises PluginInternalError: If the content of the sandbox folder is not valid.
         """
 
     @property

@@ -63,7 +63,7 @@ class TemplatereplacerCalculation(CalcJob):
     def define(cls, spec):
         # yapf: disable
         super().define(spec)
-        spec.inputs['metadata']['options']['parser_name'].default = 'core.templatereplacer.doubler'
+        spec.inputs['metadata']['options']['parser_name'].default = 'core.templatereplacer'
         spec.input('template', valid_type=orm.Dict,
             help='A template for the input file.')
         spec.input('parameters', valid_type=orm.Dict, required=False,

@@ -20,7 +20,6 @@ import click
 
 from aiida.cmdline.params.types import ComputerParamType
 from aiida.common import exceptions
-from aiida.common.folders import Folder
 from aiida.common.lang import type_check
 from aiida.common.log import override_log_level
 from aiida.orm import Computer
@@ -99,13 +98,6 @@ class InstalledCode(AbstractCode):
         :return: The executable to be called in the submission script.
         """
         return self.filepath_executable
-
-    def presubmit_check(self, folder: Folder):
-        """check the validity when calling in presubmit.
-
-        :param folder: a SandboxFolder that can be used to write calculation input files and the scheduling script.
-        :raises PluginInternalError: The plugin created a file that is also the executable name!.
-        """
 
     @property
     def full_label(self) -> str:

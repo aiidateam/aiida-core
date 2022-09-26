@@ -738,7 +738,7 @@ class CalcJob(Process):
             else:
                 prepend_cmdline_params = this_code.get_prepend_cmdline_params()
 
-            cmdline_params = this_code.get_executable_cmdline_params(cmdline_params=code_info.cmdline_params)
+            cmdline_params = this_code.get_executable_cmdline_params(code_info.cmdline_params)
 
             tmpl_code_info = JobTemplateCodeInfo()
             tmpl_code_info.prepend_cmdline_params = prepend_cmdline_params

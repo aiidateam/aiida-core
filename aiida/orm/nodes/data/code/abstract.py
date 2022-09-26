@@ -72,15 +72,19 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def get_executable(self) -> pathlib.Path:
-        """Return the executable that the submission script should execute to run the code.
+        """
+        Return the executable that the submission script should execute to run the code.
 
         :return: The executable to be called in the submission script.
         """
 
     def get_executable_cmdline_params(self, cmdline_params: list[str] | None = None) -> list:
-        """Return the list of executable with its cmdline_params
+        """
+        Return the list of executable with its command line parameters.
 
-        :return: list of executable with its cmdline parameters."""
+        :param cmdline_params: List of command line parameters provided by the ``CalcJob`` plugin.
+        :return: List of the executable followed by its command line parameters.
+        """
         return [str(self.get_executable())] + (cmdline_params or [])
 
     def get_prepend_cmdline_params( # pylint: disable=no-self-use
@@ -88,9 +92,15 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         mpi_args: list[str] | None = None,
         extra_mpirun_params: list[str] | None = None
     ) -> list[str]:
-        """Return the list of prepend cmdline params for mpi seeting
-
-        :return: list of prepend cmdline parameters."""
+        """
+        Return List of command line parameters to be prepended to the executable in submission line.
+        These command line parameters are typically parameters related to MPI invocations.
+        
+        :param mpi_args: List of MPI parameters provided by the ``Computer.get_mpirun_command`` method.
+        :param extra_mpiruns_params: List of MPI parameters provided by the ``metadata.options.extra_mpirun_params`` 
+            input of the ``CalcJob``.
+        :return: List of command line parameters to be prepended to the executable in submission line.
+        """
         return (mpi_args or []) + (extra_mpirun_params or [])
 
     @property

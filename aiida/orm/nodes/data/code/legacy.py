@@ -9,6 +9,7 @@
 ###########################################################################
 """Data plugin represeting an executable code to be wrapped and called through a `CalcJob` plugin."""
 import os
+import pathlib
 
 from aiida.common import exceptions
 from aiida.common.log import override_log_level
@@ -78,15 +79,17 @@ class Code(AbstractCode):
         type_check(computer, orm.Computer)
         return computer.pk == self.get_remote_computer().pk
 
-    def get_executable(self) -> str:
+    def get_executable(self) -> pathlib.Path:
         """Return the executable that the submission script should execute to run the code.
 
         :return: The executable to be called in the submission script.
         """
         if self.is_local():
-            return f'./{self.get_local_executable()}'
+            exec_path = f'./{self.get_local_executable()}'
 
-        return self.get_remote_exec_path()
+        exec_path = self.get_remote_exec_path()
+
+        return pathlib.Path(exec_path)
 
     def hide(self):
         """

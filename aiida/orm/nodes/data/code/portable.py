@@ -96,11 +96,11 @@ class PortableCode(AbstractCode):
     def validate_working_directory(self, folder: Folder):
         """Validate content of the working directory created by the :class:`~aiida.engine.CalcJob` plugin.
 
-        This method will be called by :meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.presubmit` when a new 
-        calculation job is launched, passing the :class:`~aiida.common.folders.Folder` that was used by the plugin used 
+        This method will be called by :meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.presubmit` when a new
+        calculation job is launched, passing the :class:`~aiida.common.folders.Folder` that was used by the plugin used
         for the calculation to create the input files for the working directory. This method can be overridden by
         implementations of the ``AbstractCode`` class that need to validate the contents of that folder.
-        
+
         :param folder: A sandbox folder that the ``CalcJob`` plugin wrote input files to that will be copied to the
             working directory for the corresponding calculation job instance.
         :raises PluginInternalError: The ``CalcJob`` plugin created a file that has the same relative filepath as the

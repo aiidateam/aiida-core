@@ -7,15 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Parser for the `TemplatereplacerCalculation` calculation job doubling a number."""
+"""Parser for the `TemplatereplacerCalculation` calculation job."""
 import os
 
 from aiida.orm import Dict
 from aiida.parsers.parser import Parser
 
 
-class TemplatereplacerDoublerParser(Parser):
-    """Parser for the `TemplatereplacerCalculation` calculation job doubling a number."""
+class TemplatereplacerParser(Parser):
+    """Parser for the `TemplatereplacerCalculation` calculation job."""
 
     def parse(self, **kwargs):
         """Parse the contents of the output files retrieved in the `FolderData`."""
@@ -69,13 +69,13 @@ class TemplatereplacerDoublerParser(Parser):
 
     @staticmethod
     def parse_stdout(filelike):
-        """Parse the sum from the output of the ArithmeticAddcalculation written to standard out.
+        """Parse the content from the output of the TemplatereplacerCalculation written to output file.
 
         :param filelike: filelike object containing the output
-        :returns: the sum
+        :returns: the content of the file
         """
         try:
-            result = int(filelike.read())
+            result = filelike.read()
         except ValueError:
             result = None
 

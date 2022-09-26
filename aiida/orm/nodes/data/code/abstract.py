@@ -76,11 +76,11 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
 
         :return: The executable to be called in the submission script.
         """
-        
-    def get_executable_cmdline_params(self, cmdline_params: list=None) -> list:
+
+    def get_executable_cmdline_params(self, cmdline_params: list = None) -> list:
         """Return the list of executable with its cmdline_params"""
         return [self.get_executable()] + (cmdline_params or [])
-    
+
     def get_prepend_cmdline_params(self, mpi_args=None, extra_mpirun_params=None) -> list:
         """Return the list of prepend cmdline params for mpi seeting"""
         return (mpi_args or []) + (extra_mpirun_params or [])

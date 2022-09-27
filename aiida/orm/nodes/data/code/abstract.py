@@ -77,7 +77,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
 
         :return: The executable to be called in the submission script.
         """
-        
+
     def get_executable_cmdline_params(self, cmdline_params: list[str] | None = None) -> list:
         """Return the list of executable with its command line parameters.
 

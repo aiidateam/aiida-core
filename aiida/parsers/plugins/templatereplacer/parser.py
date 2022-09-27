@@ -7,15 +7,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Parser for the `TemplatereplacerCalculation` calculation job doubling a number."""
+"""Parser for the `TemplatereplacerCalculation` calculation job."""
 import os
 
 from aiida.orm import Dict
 from aiida.parsers.parser import Parser
 
 
-class TemplatereplacerDoublerParser(Parser):
-    """Parser for the `TemplatereplacerCalculation` calculation job doubling a number."""
+class TemplatereplacerParser(Parser):
+    """Parser for the `TemplatereplacerCalculation` calculation job."""
 
     def parse(self, **kwargs):
         """Parse the contents of the output files retrieved in the `FolderData`."""
@@ -29,7 +29,7 @@ class TemplatereplacerDoublerParser(Parser):
 
         try:
             with output_folder.base.repository.open(output_file, 'r') as handle:
-                result = self.parse_stdout(handle)
+                result = handle.read()
         except (OSError, IOError):
             self.logger.exception(f'unable to parse the output for CalcJobNode<{self.node.pk}>')
             return self.exit_codes.ERROR_READING_OUTPUT_FILE
@@ -66,17 +66,3 @@ class TemplatereplacerDoublerParser(Parser):
         self.out(self.node.process_class.spec().default_output_node, Dict(dict=output_dict))
 
         return
-
-    @staticmethod
-    def parse_stdout(filelike):
-        """Parse the sum from the output of the ArithmeticAddcalculation written to standard out.
-
-        :param filelike: filelike object containing the output
-        :returns: the sum
-        """
-        try:
-            result = int(filelike.read())
-        except ValueError:
-            result = None
-
-        return result

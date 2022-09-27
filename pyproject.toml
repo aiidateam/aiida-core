@@ -206,7 +206,7 @@ runaiida = "aiida.cmdline.commands.cmd_run:run"
 
 [project.entry-points."aiida.parsers"]
 "core.arithmetic.add" = "aiida.parsers.plugins.arithmetic.add:ArithmeticAddParser"
-"core.templatereplacer.doubler" = "aiida.parsers.plugins.templatereplacer.doubler:TemplatereplacerDoublerParser"
+"core.templatereplacer" = "aiida.parsers.plugins.templatereplacer.parser:TemplatereplacerParser"
 
 [project.entry-points."aiida.schedulers"]
 "core.direct" = "aiida.schedulers.plugins.direct:DirectScheduler"

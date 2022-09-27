@@ -29,7 +29,7 @@ class TemplatereplacerParser(Parser):
 
         try:
             with output_folder.base.repository.open(output_file, 'r') as handle:
-                result = self.parse_stdout(handle)
+                result = handle.read()
         except (OSError, IOError):
             self.logger.exception(f'unable to parse the output for CalcJobNode<{self.node.pk}>')
             return self.exit_codes.ERROR_READING_OUTPUT_FILE
@@ -66,17 +66,3 @@ class TemplatereplacerParser(Parser):
         self.out(self.node.process_class.spec().default_output_node, Dict(dict=output_dict))
 
         return
-
-    @staticmethod
-    def parse_stdout(filelike):
-        """Parse the content from the output of the TemplatereplacerCalculation written to output file.
-
-        :param filelike: filelike object containing the output
-        :returns: the content of the file
-        """
-        try:
-            result = filelike.read()
-        except ValueError:
-            result = None
-
-        return result

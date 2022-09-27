@@ -152,6 +152,19 @@ def get_quicksetup_password(ctx, param, value):  # pylint: disable=unused-argume
     return value
 
 
+SETUP_PROFILE_UUID = options.OverridableOption(
+    '--profile-uuid',
+    prompt='Profile UUID',
+    prompt_fn=lambda x: False,  # This option should not be prompted for.
+    help='The UUID of the profile. This should only be defined if configuring a profile that should connect to the '
+    'same services of a profile that is already configured in another AiiDA instance, in which case the profile UUIDs '
+    'need to be identical.',
+    required=False,
+    hidden=True,
+    type=str,
+    cls=options.interactive.InteractiveOption
+)
+
 SETUP_PROFILE = options.OverridableOption(
     '--profile',
     prompt='Profile name',

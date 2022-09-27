@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """The `verdi setup` and `verdi quicksetup` commands."""
-
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -40,11 +39,12 @@ from aiida.manage.configuration import Profile, load_profile
 @options_setup.SETUP_BROKER_VIRTUAL_HOST()
 @options_setup.SETUP_REPOSITORY_URI()
 @options_setup.SETUP_TEST_PROFILE()
+@options_setup.SETUP_PROFILE_UUID()
 @options.CONFIG_FILE()
 def setup(
     non_interactive, profile: Profile, email, first_name, last_name, institution, db_engine, db_backend, db_host,
     db_port, db_name, db_username, db_password, broker_protocol, broker_username, broker_password, broker_host,
-    broker_port, broker_virtual_host, repository, test_profile
+    broker_port, broker_virtual_host, repository, test_profile, profile_uuid
 ):
     """Setup a new profile.
 
@@ -53,6 +53,9 @@ def setup(
     # pylint: disable=too-many-arguments,too-many-locals,unused-argument
     from aiida import orm
     from aiida.manage.configuration import get_config
+
+    if profile_uuid is not None:
+        profile.uuid = profile_uuid
 
     profile.set_storage(
         db_backend, {

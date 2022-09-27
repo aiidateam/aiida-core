@@ -86,7 +86,7 @@ class PortableCode(AbstractCode):
         """
         return True
 
-    def get_executable(self) -> str:
+    def get_executable(self) -> pathlib.Path:
         """Return the executable that the submission script should execute to run the code.
 
         :return: The executable to be called in the submission script.

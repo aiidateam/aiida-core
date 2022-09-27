@@ -111,7 +111,7 @@ class CodeBuilder:
         else:
             spec['code_type'] = CodeBuilder.CodeType.ON_COMPUTER
             spec['computer'] = code.computer
-            spec['remote_abs_path'] = code.get_executable()
+            spec['remote_abs_path'] = str(code.get_executable())
 
         return spec
 

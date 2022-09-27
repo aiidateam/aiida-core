@@ -12,11 +12,13 @@ from __future__ import annotations
 
 import abc
 import collections
+import pathlib
 
 import click
 
 from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
 from aiida.common import exceptions
+from aiida.common.folders import Folder
 from aiida.common.lang import type_check
 from aiida.orm import Computer
 from aiida.plugins import CalculationFactory
@@ -70,10 +72,46 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def get_executable(self) -> str:
+    def get_executable(self) -> pathlib.Path:
         """Return the executable that the submission script should execute to run the code.
 
         :return: The executable to be called in the submission script.
+        """
+
+    def get_executable_cmdline_params(self, cmdline_params: list[str] | None = None) -> list:
+        """Return the list of executable with its command line parameters.
+
+        :param cmdline_params: List of command line parameters provided by the ``CalcJob`` plugin.
+        :return: List of the executable followed by its command line parameters.
+        """
+        return [str(self.get_executable())] + (cmdline_params or [])
+
+    def get_prepend_cmdline_params( # pylint: disable=no-self-use
+        self,
+        mpi_args: list[str] | None = None,
+        extra_mpirun_params: list[str] | None = None
+    ) -> list[str]:
+        """Return List of command line parameters to be prepended to the executable in submission line.
+        These command line parameters are typically parameters related to MPI invocations.
+
+        :param mpi_args: List of MPI parameters provided by the ``Computer.get_mpirun_command`` method.
+        :param extra_mpiruns_params: List of MPI parameters provided by the ``metadata.options.extra_mpirun_params``
+            input of the ``CalcJob``.
+        :return: List of command line parameters to be prepended to the executable in submission line.
+        """
+        return (mpi_args or []) + (extra_mpirun_params or [])
+
+    def validate_working_directory(self, folder: Folder):
+        """Validate content of the working directory created by the :class:`~aiida.engine.CalcJob` plugin.
+
+        This method will be called by :meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.presubmit` when a new
+        calculation job is launched, passing the :class:`~aiida.common.folders.Folder` that was used by the plugin used
+        for the calculation to create the input files for the working directory. This method can be overridden by
+        implementations of the ``AbstractCode`` class that need to validate the contents of that folder.
+
+        :param folder: A sandbox folder that the ``CalcJob`` plugin wrote input files to that will be copied to the
+            working directory for the corresponding calculation job instance.
+        :raises PluginInternalError: If the content of the sandbox folder is not valid.
         """
 
     @property

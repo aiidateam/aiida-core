@@ -615,7 +615,7 @@ class CalcJob(Process):
         from aiida.common.datastructures import CodeInfo, CodeRunMode
         from aiida.common.exceptions import InputValidationError, InvalidOperation, PluginInternalError, ValidationError
         from aiida.common.utils import validate_list_of_string_tuples
-        from aiida.orm import AbstractCode, Code, Computer, InstalledCode, PortableCode, load_node
+        from aiida.orm import AbstractCode, Computer, load_code
         from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
         inputs = self.node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
@@ -634,10 +634,7 @@ class CalcJob(Process):
                     )
                 )
 
-            if isinstance(code, PortableCode) and str(code.filepath_executable) in folder.get_content_list():
-                raise PluginInternalError(
-                    f'The plugin created a file {code.filepath_executable} that is also the executable name!'
-                )
+            code.validate_working_directory(folder)
 
         calc_info = self.prepare_for_submission(folder)
         calc_info.uuid = str(self.node.uuid)
@@ -719,7 +716,7 @@ class CalcJob(Process):
 
             if code_info.code_uuid is None:
                 raise PluginInternalError('CalcInfo should have the information of the code to be launched')
-            this_code = load_node(code_info.code_uuid, sub_classes=(Code, InstalledCode, PortableCode))
+            this_code = load_code(code_info.code_uuid)
 
             # To determine whether this code should be run with MPI enabled, we get the value that was set in the inputs
             # of the entire process, which can then be overwritten by the value from the `CodeInfo`. This allows plugins
@@ -734,11 +731,11 @@ class CalcJob(Process):
                 this_withmpi = code_info.withmpi
 
             if this_withmpi:
-                prepend_cmdline_params = mpi_args + extra_mpirun_params
+                prepend_cmdline_params = this_code.get_prepend_cmdline_params(mpi_args, extra_mpirun_params)
             else:
-                prepend_cmdline_params = []
+                prepend_cmdline_params = this_code.get_prepend_cmdline_params()
 
-            cmdline_params = [str(this_code.get_executable())] + (code_info.cmdline_params or [])
+            cmdline_params = this_code.get_executable_cmdline_params(code_info.cmdline_params)
 
             tmpl_code_info = JobTemplateCodeInfo()
             tmpl_code_info.prepend_cmdline_params = prepend_cmdline_params

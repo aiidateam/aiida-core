@@ -104,6 +104,7 @@ repos:
                 aiida/orm/utils/links.py|
                 aiida/plugins/entry_point.py|
                 aiida/plugins/factories.py|
+                aiida/plugins/utils.py|
                 aiida/repository/.*py|
                 aiida/storage/control.py|
                 aiida/storage/psql_dos/backend.py|

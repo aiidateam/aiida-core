@@ -76,7 +76,10 @@ jobs:
             run: .github/workflows/tests_nightly.sh
 
         -   name: Slack notification
-            if: always() && (steps.install.outcome == 'Failure' || steps.tests.outcome == 'Failure')
+            # Always run this step (otherwise it would be skipped if any of the previous steps fail) but only if the
+            # `install` or `tests` steps failed, and the `SLACK_WEBHOOK` is available. The latter is not the case for
+            # pull requests that come from forks. This is a limitation of secrets on GHA
+            if: always() && (steps.install.outcome == 'Failure' || steps.tests.outcome == 'Failure') && env.SLACK_WEBHOOK != null
             uses: rtCamp/action-slack-notify@v2
             env:
                 SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}

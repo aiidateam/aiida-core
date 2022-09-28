@@ -9,16 +9,22 @@
 ###########################################################################
 # pylint: disable=redefined-outer-name
 """Configuration file for pytest tests."""
+from __future__ import annotations
+
+import copy
 import os
 import pathlib
 import time
 from typing import IO, List, Optional, Union
+import warnings
 
 import click
 import plumpy
 import pytest
+import wrapt
 
-from aiida import get_profile
+from aiida import get_profile, plugins
+from aiida.common.lang import type_check
 from aiida.engine import Process, submit
 from aiida.manage.configuration import Config, Profile, get_config, load_profile
 
@@ -168,8 +174,6 @@ def isolated_config(monkeypatch):
     changing it in tests maybe necessary if a command is invoked that will be reading the config from disk in another
     Python process and so doesn't have access to the loaded config in memory in the process that is running the test.
     """
-    import copy
-
     from aiida.manage import configuration
 
     monkeypatch.setattr(configuration.Config, '_backup', lambda *args, **kwargs: None)
@@ -382,8 +386,6 @@ def suppress_internal_deprecations():
 
     Warnings emmitted of type :class:`aiida.common.warnings.AiidaDeprecationWarning` for the duration of the test.
     """
-    import warnings
-
     from aiida.common.warnings import AiidaDeprecationWarning
 
     with warnings.catch_warnings():
@@ -541,3 +543,120 @@ def submit_and_await():
         return node
 
     return _factory
+
+
+@wrapt.decorator
+def suppress_deprecations(wrapped, _, args, kwargs):
+    """Decorator that suppresses all ``DeprecationWarning``s."""
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=DeprecationWarning)
+        return wrapped(*args, **kwargs)
+
+
+class EntryPointManager:
+    """Manager to temporarily add or remove entry points."""
+
+    @staticmethod
+    def eps():
+        return plugins.entry_point.eps()
+
+    @staticmethod
+    def _validate_entry_point(entry_point_string: str | None, group: str | None, name: str | None) -> tuple[str, str]:
+        """Validate the definition of the entry point.
+
+        :param entry_point_string: Fully qualified entry point string.
+        :param name: Entry point name.
+        :param group: Entry point group.
+        :returns: The entry point group and name.
+        :raises TypeError: If `entry_point_string`, `group` or `name` are not a string, when defined.
+        :raises ValueError: If `entry_point_string` is not defined, nor a `group` and `name`.
+        :raises ValueError: If `entry_point_string` is not a complete entry point string with group and name.
+        """
+        if entry_point_string is not None:
+            try:
+                group, name = plugins.entry_point.parse_entry_point_string(entry_point_string)
+            except TypeError as exception:
+                raise TypeError('`entry_point_string` should be a string when defined.') from exception
+            except ValueError as exception:
+                raise ValueError('invalid `entry_point_string` format, should `group:name`.') from exception
+
+        if name is None or group is None:
+            raise ValueError('neither `entry_point_string` is defined, nor `name` and `group`.')
+
+        type_check(group, str)
+        type_check(name, str)
+
+        return group, name
+
+    @suppress_deprecations
+    def add(
+        self,
+        value: type | str,
+        entry_point_string: str | None = None,
+        *,
+        name: str | None = None,
+        group: str | None = None
+    ) -> None:
+        """Add an entry point.
+
+        :param value: The class or function to register as entry point. The resource needs to be importable, so it can't
+            be inlined. Alternatively, the fully qualified name can be passed as a string.
+        :param entry_point_string: Fully qualified entry point string.
+        :param name: Entry point name.
+        :param group: Entry point group.
+        :returns: The entry point group and name.
+        :raises TypeError: If `entry_point_string`, `group` or `name` are not a string, when defined.
+        :raises ValueError: If `entry_point_string` is not defined, nor a `group` and `name`.
+        :raises ValueError: If `entry_point_string` is not a complete entry point string with group and name.
+        """
+        if not isinstance(value, str):
+            value = f'{value.__module__}:{value.__name__}'
+
+        group, name = self._validate_entry_point(entry_point_string, group, name)
+        entry_point = plugins.entry_point.EntryPoint(name, value, group)
+        self.eps()[group].append(entry_point)
+
+    @suppress_deprecations
+    def remove(
+        self, entry_point_string: str | None = None, *, name: str | None = None, group: str | None = None
+    ) -> None:
+        """Remove an entry point.
+
+        :param value: Entry point value, fully qualified import path name.
+        :param entry_point_string: Fully qualified entry point string.
+        :param name: Entry point name.
+        :param group: Entry point group.
+        :returns: The entry point group and name.
+        :raises TypeError: If `entry_point_string`, `group` or `name` are not a string, when defined.
+        :raises ValueError: If `entry_point_string` is not defined, nor a `group` and `name`.
+        :raises ValueError: If `entry_point_string` is not a complete entry point string with group and name.
+        """
+        group, name = self._validate_entry_point(entry_point_string, group, name)
+
+        for entry_point in self.eps()[group]:
+            if entry_point.name == name:
+                self.eps()[group].remove(entry_point)
+                break
+        else:
+            raise KeyError(f'entry point `{name}` does not exist in group `{group}`.')
+
+
+@pytest.fixture
+def entry_points(monkeypatch) -> EntryPointManager:
+    """Return an instance of the ``EntryPointManager`` which allows to temporarily add or remove entry points.
+
+    This fixture creates a deep copy of the entry point cache returned by the :func:`aiida.plugins.entry_point.eps`
+    method and then monkey patches that function to return the deepcopy. This ensures that the changes on the entry
+    point cache performed during the test through the manager are undone at the end of the function scope.
+
+    .. note:: This fixture does not use the ``suppress_deprecations`` decorator on purpose, but instead adds it manually
+        inside the fixture's body. The reason is that otherwise all deprecations would be suppressed for the entire
+        scope of the fixture, including those raised by the code run in the test using the fixture, which is not
+        desirable.
+
+    """
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=DeprecationWarning)
+        eps_copy = copy.deepcopy(plugins.entry_point.eps())
+    monkeypatch.setattr(plugins.entry_point, 'eps', lambda: eps_copy)
+    yield EntryPointManager()

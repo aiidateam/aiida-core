@@ -21,13 +21,13 @@ This image contains a fully pre-configured AiiDA environment which makes it part
 
       .. parsed-literal::
 
-         $ docker pull aiidateam/aiida-core:\ |release|\
+         $ docker pull aiidateam/aiida-core:latest
 
       Then start the container with:
 
       .. parsed-literal::
 
-         $ docker run -d --name aiida-container aiidateam/aiida-core:\ |release|\
+         $ docker run -d --name aiida-container aiidateam/aiida-core:latest
 
       You can use the following command to block until all services have started up:
 
@@ -88,7 +88,7 @@ This image contains a fully pre-configured AiiDA environment which makes it part
 
       .. parsed-literal::
 
-         $ docker run -d --name aiida-container --mount source=my-data,target=/tmp/my_data aiidateam/aiida-core:\ |release|\
+         $ docker run -d --name aiida-container --mount source=my-data,target=/tmp/my_data aiidateam/aiida-core:latest
 
       Starting the container with the above command, ensures that any data stored in the ``/tmp/my_data`` path within the container is stored in the ``my-data`` volume and therefore persists even if the container is removed.
 

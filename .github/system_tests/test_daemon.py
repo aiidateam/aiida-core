@@ -136,6 +136,12 @@ def validate_calculations(expected_results):
             # If the retrieval fails we simply pass as the following check of the actual value will fail anyway
             pass
 
+        # Convert the parsed stdout content (which should be the integer followed by a newline `10\n`) to an integer
+        try:
+            actual_dict['value'] = int(actual_dict['value'].strip())
+        except (KeyError, ValueError):
+            pass
+
         if actual_dict != expected_dict:
             print(f'* UNEXPECTED VALUE {actual_dict} for calc pk={pk}: I expected {expected_dict}')
             valid = False
@@ -309,7 +315,7 @@ def create_calculation_process(code, inputval):
         },
         'max_wallclock_seconds': 5 * 60,
         'withmpi': False,
-        'parser_name': 'core.templatereplacer.doubler',
+        'parser_name': 'core.templatereplacer',
     }
 
     expected_result = {'value': 2 * inputval, 'retrieved_temporary_files': {'triple_value.tmp': str(inputval * 3)}}

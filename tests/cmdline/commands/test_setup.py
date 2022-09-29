@@ -7,9 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for `verdi profile`."""
+"""Tests for ``verdi setup``."""
 import os
 import tempfile
+import uuid
 
 from pgtest.pgtest import PGTest
 import pytest
@@ -158,3 +159,32 @@ email: 123@234.de"""
         # Check that the repository UUID was stored in the database
         backend = profile.storage_cls(profile)
         assert backend.get_global_variable('repository|uuid') == backend.get_repository().uuid
+
+    def test_setup_profile_uuid(self):
+        """Test ``verdi setup`` explicitly defining the ``--profile-uuid`` option.
+
+        This option intentionally does not work in interactive mode and should not be prompted for.
+        """
+        postgres = Postgres(interactive=False, quiet=True, dbinfo=self.pg_test.dsn)
+        postgres.determine_setup()
+        db_name = 'test_profile_uuid'
+        db_user = 'test_profile_uuid'
+        db_pass = 'test_profile_uuid'
+        postgres.create_dbuser(db_user, db_pass)
+        postgres.create_db(db_user, db_name)
+
+        profile_name = 'profile-copy'
+        profile_uuid = str(uuid.uuid4)
+        options = [
+            '--non-interactive', '--profile', profile_name, '--profile-uuid', profile_uuid, '--db-backend',
+            self.storage_backend_name, '--db-name', db_name, '--db-username', db_user, '--db-password', db_pass,
+            '--db-port', self.pg_test.dsn['port']
+        ]
+
+        self.cli_runner(cmd_setup.setup, options)
+
+        config = configuration.get_config()
+        assert profile_name in config.profile_names
+
+        profile = config.get_profile(profile_name)
+        profile.uuid = profile_uuid

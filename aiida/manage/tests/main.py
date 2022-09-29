@@ -348,6 +348,7 @@ class TemporaryProfileManager(ProfileManager):
         if created:
             user.store()
         profile.default_user_email = user.email
+        config.store()
 
     def repo_ok(self):
         return bool(self.repo and os.path.isdir(os.path.dirname(self.repo)))

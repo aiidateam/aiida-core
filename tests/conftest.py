@@ -25,8 +25,9 @@ import wrapt
 
 from aiida import get_profile, plugins
 from aiida.common.lang import type_check
-from aiida.engine import Process, submit
+from aiida.engine import Process, ProcessBuilder, submit
 from aiida.manage.configuration import Config, Profile, get_config, load_profile
+from aiida.orm import ProcessNode
 
 pytest_plugins = ['aiida.manage.tests.pytest_fixtures', 'sphinx.testing.fixtures']  # pylint: disable=invalid-name
 
@@ -521,15 +522,24 @@ def reset_log_level():
 def submit_and_await():
     """Submit a process and wait for it to achieve the given state."""
 
-    def _factory(process: Process, state: plumpy.ProcessState = plumpy.ProcessState.WAITING, timeout: int = 5):
+    def _factory(
+        submittable: Process | ProcessBuilder | ProcessNode,
+        state: plumpy.ProcessState = plumpy.ProcessState.WAITING,
+        timeout: int = 5
+    ):
         """Submit a process and wait for it to achieve the given state.
 
-        :param process: The process class to submit.
+        :param submittable: A process, a process builder or a process node. If it is a process or builder, it is
+            submitted first before awaiting the desired state.
         :param state: The process state to wait for.
         :param timeout: The time to wait for the process to achieve the state.
         :raises RuntimeError: If the process fails to achieve the specified state before the timeout expires.
         """
-        node = submit(process)
+        if not isinstance(submittable, ProcessNode):
+            node = submit(submittable)
+        else:
+            node = submittable
+
         start_time = time.time()
 
         while node.process_state is not state:
@@ -538,7 +548,9 @@ def submit_and_await():
                 raise RuntimeError(f'The process excepted: {node.exception}')
 
             if time.time() - start_time >= timeout:
-                raise RuntimeError(f'Timed out waiting for process to enter state `{state}`.')
+                raise RuntimeError(
+                    f'Timed out waiting for process with state `{node.process_state}` to enter state `{state}`.'
+                )
 
         return node
 

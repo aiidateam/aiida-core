@@ -216,6 +216,7 @@ Below is a list with all available subcommands.
     Commands:
       check-load-time          Check for common indicators that slowdown `verdi`.
       check-undesired-imports  Check that verdi does not import python modules it shouldn't.
+      revive                   Revive processes that seem stuck and are no longer reachable.
       run-sql                  Run a raw SQL command on the profile database (only...
       validate-plugins         Validate all plugins by checking they can be loaded.
 

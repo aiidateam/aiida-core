@@ -197,7 +197,7 @@ def process_kill(processes, timeout, wait):
     try:
         control.kill_processes(processes, timeout=timeout, wait=wait)
     except control.ProcessTimeoutException as exception:
-        echo.echo_critical(str(exception))
+        echo.echo_critical(str(exception) + '\nFrom the CLI you can call `verdi devel revive <PID>`.')
 
 
 @verdi_process.command('pause')
@@ -217,7 +217,7 @@ def process_pause(processes, all_entries, timeout, wait):
     try:
         control.pause_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait)
     except control.ProcessTimeoutException as exception:
-        echo.echo_critical(str(exception))
+        echo.echo_critical(str(exception) + '\nFrom the CLI you can call `verdi devel revive <PID>`.')
 
 
 @verdi_process.command('play')
@@ -237,7 +237,7 @@ def process_play(processes, all_entries, timeout, wait):
     try:
         control.play_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait)
     except control.ProcessTimeoutException as exception:
-        echo.echo_critical(str(exception))
+        echo.echo_critical(str(exception) + '\nFrom the CLI you can call `verdi devel revive <PID>`.')
 
 
 @verdi_process.command('watch')

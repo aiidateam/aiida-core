@@ -26,12 +26,12 @@ from aiida.common.folders import Folder
 from aiida.common.lang import type_check
 from aiida.orm import Computer
 
-from .abstract import AbstractCode
+from .legacy import Code
 
 __all__ = ('PortableCode',)
 
 
-class PortableCode(AbstractCode):
+class PortableCode(Code):
     """Data plugin representing an executable code stored in AiiDA's storage."""
 
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
@@ -62,7 +62,7 @@ class PortableCode(AbstractCode):
 
         :raises :class:`aiida.common.exceptions.ValidationError`: If the state of the node is invalid.
         """
-        super()._validate()
+        super(Code, self)._validate()  # Change to ``super()._validate()`` once deprecated ``Code`` class is removed.  # pylint: disable=bad-super-call
 
         try:
             filepath_executable = self.filepath_executable

@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 """Tests for the :mod:`aiida.engine.processes.control` module."""
+from plumpy.process_comms import RemoteProcessThreadController
+from plumpy.process_states import ProcessState
 import pytest
 
 from aiida.engine.daemon.client import DaemonException
+from aiida.engine.launch import submit
 from aiida.engine.processes import control
+from aiida.orm import Int
 from tests.utils.processes import WaitProcess
 
 
@@ -90,3 +94,31 @@ def test_kill_processes_all_entries(submit_and_await):
     control.kill_processes(all_entries=True, wait=True)
     assert node.is_terminated
     assert node.is_killed
+
+
+@pytest.mark.usefixtures('aiida_profile', 'started_daemon_client')
+def test_revive(monkeypatch, aiida_local_code_factory, submit_and_await):
+    """Test :func:`aiida.engine.processes.control.revive_processes`."""
+    code = aiida_local_code_factory('core.arithmetic.add', '/bin/bash')
+    builder = code.get_builder()
+    builder.x = Int(1)
+    builder.y = Int(1)
+    builder.metadata.options.resources = {'num_machines': 1}
+
+    # Temporarily patch the ``RemoteProcessThreadController.continue_process`` method to do nothing and just return a
+    # completed future. This ensures that the submission creates a process node in the database but no task is sent to
+    # RabbitMQ and so the daemon will not start running it.
+    with monkeypatch.context() as context:
+        context.setattr(RemoteProcessThreadController, 'continue_process', lambda *args, **kwargs: None)
+        node = submit(builder)
+
+    # The node should now be created in the database but "stuck"
+    assert node.process_state == ProcessState.CREATED
+
+    # Time to revive it by recreating the task and send it to RabbitMQ
+    control.revive_processes([node])
+
+    # Wait for the process to be picked up by the daemon and completed. If there is a problem with the code, this call
+    # should timeout and raise an exception
+    submit_and_await(node, ProcessState.FINISHED)
+    assert node.is_finished_ok

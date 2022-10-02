@@ -31,9 +31,49 @@ def get_active_processes(paused: bool = False) -> list[ProcessNode]:
     :return: A list of process nodes of active processes.
     """
     filters = CalculationQueryBuilder().get_filters(process_state=('created', 'waiting', 'running'), paused=paused)
-
     builder = QueryBuilder().append(ProcessNode, filters=filters)
     return builder.all(flat=True)
+
+
+def revive_processes(processes: list[ProcessNode], *, wait: bool = False) -> None:
+    """Revive processes that seem stuck and are no longer reachable.
+
+    Warning: Use only as a last resort after you've gone through the checklist below.
+
+        1. Does ``verdi status`` indicate that both daemon and RabbitMQ are running properly?
+           If not, restart the daemon with ``verdi daemon restart --reset`` and restart RabbitMQ.
+        2. Try to play the process through ``play_processes``.
+           If a ``ProcessTimeoutException`` is raised use this method to attempt to revive it.
+
+    Details: When RabbitMQ loses the process task before the process has completed, the process is never picked up by
+    the daemon and will remain "stuck". This method recreates the task, which can lead to multiple instances of the task
+    being executed and should thus be used with caution.
+
+    .. note:: Requires the daemon to be running.
+
+    :param processes: List of processes to revive.
+    :param wait: Set to ``True`` to wait for a response, for ``False`` the action is fire-and-forget.
+    """
+    if not get_daemon_client().is_daemon_running:
+        raise DaemonException('The daemon is not running.')
+
+    process_controller = get_manager().get_process_controller()
+
+    for process in processes:
+
+        future = process_controller.continue_process(process.id, nowait=not wait, no_reply=False)
+
+        if future:
+            response = future.result()  # type: ignore[union-attr]
+        else:
+            response = None
+
+        if response and response.done():
+            LOGGER.info(f'Message to continue Process<{process.id}> received successfully.')
+        elif response:
+            LOGGER.warning(f'Failed to deliver message to Process<{process.id}>: {response}|{response.exception()}')
+        else:
+            LOGGER.warning(f'No response when trying to continue Process<{process.id}>, try resetting the daemon.')
 
 
 def play_processes(
@@ -246,4 +286,9 @@ def _resolve_futures(
                 handle_result(result)
 
     except concurrent.futures.TimeoutError:
-        raise ProcessTimeoutException(f'timed out trying to {infinitive} processes {futures.values()}')
+        raise ProcessTimeoutException(
+            f'timed out trying to {infinitive} processes {futures.values()}\n'
+            'This could be because the daemon workers are too busy to respond, please try again later.\n'
+            'If the problem persists, make sure the daemon and RabbitMQ are running properly by restarting them.\n'
+            'If the processes remain unresponsive, as a last resort, try reviving them with ``revive_processes``.'
+        )

@@ -98,7 +98,29 @@ def perform_v1_migration(  # pylint: disable=too-many-locals
             temp_folder = working / 'temp_unpack'
             with tarfile.open(_inpath, 'r') as tar:
                 MIGRATE_LOGGER.report('Extracting tar archive...(may take a while)')
-                tar.extractall(temp_folder)
+                
+                import os
+                
+                def is_within_directory(directory, target):
+                    
+                    abs_directory = os.path.abspath(directory)
+                    abs_target = os.path.abspath(target)
+                
+                    prefix = os.path.commonprefix([abs_directory, abs_target])
+                    
+                    return prefix == abs_directory
+                
+                def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+                
+                    for member in tar.getmembers():
+                        member_path = os.path.join(path, member.name)
+                        if not is_within_directory(path, member_path):
+                            raise Exception("Attempted Path Traversal in Tar File")
+                
+                    tar.extractall(path, members, numeric_owner) 
+                    
+                
+                safe_extract(tar, temp_folder)
             yield temp_folder
             MIGRATE_LOGGER.report('Removing extracted tar archive...')
             shutil.rmtree(temp_folder)

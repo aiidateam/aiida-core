@@ -24,12 +24,12 @@ from aiida.common.lang import type_check
 from aiida.common.log import override_log_level
 from aiida.orm import Computer
 
-from .abstract import AbstractCode
+from .legacy import Code
 
 __all__ = ('InstalledCode',)
 
 
-class InstalledCode(AbstractCode):
+class InstalledCode(Code):
     """Data plugin representing an executable code on a remote computer."""
 
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
@@ -49,7 +49,7 @@ class InstalledCode(AbstractCode):
 
         :raises :class:`aiida.common.exceptions.ValidationError`: If the state of the node is invalid.
         """
-        super()._validate()
+        super(Code, self)._validate()  # Change to ``super()._validate()`` once deprecated ``Code`` class is removed.  # pylint: disable=bad-super-call
 
         if not self.computer:
             raise exceptions.ValidationError('The `computer` is undefined.')

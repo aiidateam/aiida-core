@@ -519,7 +519,7 @@ def reset_log_level():
 
 
 @pytest.fixture
-def submit_and_await():
+def submit_and_await(daemon_client):
     """Submit a process and wait for it to achieve the given state."""
 
     def _factory(
@@ -548,8 +548,11 @@ def submit_and_await():
                 raise RuntimeError(f'The process excepted: {node.exception}')
 
             if time.time() - start_time >= timeout:
+                daemon_log_file = pathlib.Path(daemon_client.daemon_log_file).read_text(encoding='utf-8')
+                daemon_status = 'running' if daemon_client.is_daemon_running else 'stopped'
                 raise RuntimeError(
-                    f'Timed out waiting for process with state `{node.process_state}` to enter state `{state}`.'
+                    f'Timed out waiting for process with state `{node.process_state}` to enter state `{state}`.\n'
+                    f'Daemon <{daemon_client.profile.name}|{daemon_status}> log file content: \n{daemon_log_file}'
                 )
 
         return node

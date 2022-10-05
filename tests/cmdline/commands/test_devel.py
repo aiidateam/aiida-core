@@ -30,8 +30,8 @@ def test_revive_without_daemon(run_cli_command):
     assert run_cli_command(cmd_devel.devel_revive, raises=True)
 
 
-@pytest.mark.usefixtures('aiida_profile', 'started_daemon_client')
-def test_revive(run_cli_command, monkeypatch, aiida_local_code_factory, submit_and_await):
+@pytest.mark.usefixtures('aiida_profile')
+def test_revive(run_cli_command, monkeypatch, aiida_local_code_factory, submit_and_await, started_daemon_client):
     """Test ``verdi devel revive``."""
     code = aiida_local_code_factory('core.arithmetic.add', '/bin/bash')
     builder = code.get_builder()
@@ -56,3 +56,8 @@ def test_revive(run_cli_command, monkeypatch, aiida_local_code_factory, submit_a
     # should timeout and raise an exception
     submit_and_await(node, ProcessState.FINISHED)
     assert node.is_finished_ok
+
+    # Need to manually stop the daemon such that it cleans all state related to the submitted processes. It is not quite
+    # understood how, but leaving the daemon running, a following test that will submit to the daemon may hit an
+    # an exception because the node submitted here would no longer exist and the daemon would try to operate on it.
+    started_daemon_client.stop_daemon(wait=True)

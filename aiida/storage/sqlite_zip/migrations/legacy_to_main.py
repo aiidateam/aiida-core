@@ -100,6 +100,7 @@ def perform_v1_migration(  # pylint: disable=too-many-locals
                 MIGRATE_LOGGER.report('Extracting tar archive...(may take a while)')
 
                 import os
+                from aiida.tools.archive.exceptions import ArchiveImportError
 
                 def is_within_directory(directory, target):
 
@@ -115,7 +116,7 @@ def perform_v1_migration(  # pylint: disable=too-many-locals
                     for member in tar.getmembers():
                         member_path = os.path.join(path, member.name)
                         if not is_within_directory(path, member_path):
-                            raise Exception('Attempted Path Traversal in Tar File')
+                            raise ArchiveImportError('Attempted Path Traversal in Tar File')
 
                     tar.extractall(path, members, numeric_owner=numeric_owner)
 

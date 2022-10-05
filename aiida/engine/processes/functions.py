@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Sequence, Tuple
 
 from aiida.common.lang import override
 from aiida.manage import get_manager
-from aiida.orm import CalcFunctionNode, Data, ProcessNode, WorkFunctionNode
+from aiida.orm import CalcFunctionNode, Data, ProcessNode, WorkFunctionNode, to_aiida_type
 from aiida.orm.utils.mixins import FunctionCalculationMixin
 
 from .process import Process
@@ -253,7 +253,7 @@ class FunctionProcess(Process):
                     else:
                         valid_type = (Data,)
 
-                    spec.input(arg, valid_type=valid_type, default=default)
+                    spec.input(arg, valid_type=valid_type, default=default, serializer=to_aiida_type)
 
             # Set defaults for label and description based on function name and docstring, if not explicitly defined
             port_label = spec.inputs['metadata']['label']

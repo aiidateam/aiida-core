@@ -54,6 +54,18 @@ Here, the ``add_and_multiply`` work function returns the output ``Int`` node and
 Note that the input arguments of a work function must be an instance of ``Data`` node, or any of its subclasses.
 Just calling the ``add_and_multiply`` function with regular integers will result in a ``ValueError``, as these cannot be stored in the provenance graph.
 
+.. versionadded:: 2.1
+
+    If a function argument is a Python base type (i.e. a value of type ``bool``, ``dict``, ``Enum``, ``float``, ``int``, ``list`` or ``str``), it can be passed straight away to the function, without first having to wrap it in the corresponding AiiDA data type.
+    That is to say, you can run the example above also as:
+
+    .. code-block:: python
+
+        result = add_and_multiply(2, 3, 5)
+
+    and AiiDA will recognize that the arguments are of type ``int`` and automatically wrap them in an ``Int`` node.
+
+
 .. note::
 
     Although the example above shows the most straightforward way to run the ``add_and_multiply`` work function, there are several other ways of running processes that can return more than just the result.

@@ -16,6 +16,8 @@ relating to the transformation of the wrapped function into a ``FunctionProcess`
 fly, but then anytime inputs or outputs would be attached to it in the tests, the ``validate_link`` function would
 complain as the dummy node class is not recognized as a valid process node.
 """
+import enum
+
 import pytest
 
 from aiida import orm
@@ -462,3 +464,35 @@ def test_input_validation():
     """
     with pytest.raises(ValueError):
         function_kwargs.run_get_node(**{'namespace': {'valid': orm.Int(1), 'invalid': 1}})
+
+
+class DummyEnum(enum.Enum):
+    """Dummy enumeration."""
+
+    VALUE = 'value'
+
+
+# yapf: disable
+@pytest.mark.parametrize('argument, node_cls', (
+    (True, orm.Bool),
+    ({'a': 1}, orm.Dict),
+    (1.0, orm.Float),
+    (1, orm.Int),
+    ('string', orm.Str),
+    ([1], orm.List),
+    (DummyEnum.VALUE, orm.EnumData),
+))
+# yapf: enable
+def test_input_serialization(argument, node_cls):
+    """Test that Python base type inputs are automatically serialized to AiiDA node counterpart."""
+    result = function_args(argument)
+    assert isinstance(result, node_cls)
+
+    if isinstance(result, orm.EnumData):
+        assert result.get_member() == argument
+    elif isinstance(result, orm.List):
+        assert result.get_list() == argument
+    elif isinstance(result, orm.Dict):
+        assert result.get_dict() == argument
+    else:
+        assert result.value == argument

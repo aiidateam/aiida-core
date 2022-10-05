@@ -348,6 +348,11 @@ class TemporaryProfileManager(ProfileManager):
         if created:
             user.store()
         profile.default_user_email = user.email
+
+        # Set options to suppress certain warnings
+        config.set_option('warnings.development_version', False)
+        config.set_option('warnings.rabbitmq_version', False)
+
         config.store()
 
     def repo_ok(self):

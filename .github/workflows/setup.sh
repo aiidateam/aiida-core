@@ -31,3 +31,5 @@ verdi computer test slurm-ssh --print-traceback
 
 verdi profile setdefault test_aiida
 verdi config set runner.poll.interval 0
+verdi config set warnings.development_version False
+verdi config set warnings.rabbitmq_version False

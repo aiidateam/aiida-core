@@ -100,6 +100,7 @@ def perform_v1_migration(  # pylint: disable=too-many-locals
                 MIGRATE_LOGGER.report('Extracting tar archive...(may take a while)')
 
                 import os
+
                 from aiida.tools.archive.exceptions import ArchiveImportError
 
                 def is_within_directory(directory, target):

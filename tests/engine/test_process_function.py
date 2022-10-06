@@ -41,6 +41,16 @@ def function_return_input(data):
 
 
 @calcfunction
+def function_variadic_arguments(int_a, int_b, *args):
+    return int_a + int_b + orm.Int(sum(args))
+
+
+@calcfunction
+def function_variadic_arguments_label_overlap(args_0, *args):
+    return args_0 + orm.Int(sum(args))
+
+
+@calcfunction
 def function_return_true():
     return get_true_node()
 
@@ -58,8 +68,8 @@ def function_args_with_default(data_a=lambda: orm.Int(DEFAULT_INT)):
 @calcfunction
 def function_with_none_default(int_a, int_b, int_c=None):
     if int_c is not None:
-        return orm.Int(int_a + int_b + int_c)
-    return orm.Int(int_a + int_b)
+        return int_a + int_b + int_c
+    return int_a + int_b
 
 
 @workfunction
@@ -203,12 +213,27 @@ def test_get_function_source_code():
 
 
 def test_function_varargs():
-    """Variadic arguments are not supported and should raise."""
-    with pytest.raises(ValueError):
+    """Test a function with variadic arguments."""
+    result, node = function_variadic_arguments.run_get_node(orm.Int(1), orm.Int(2), *(orm.Int(3), orm.Int(4)))
+    assert isinstance(result, orm.Int)
+    assert result.value == 10
 
-        @workfunction
-        def function_varargs(*args):  # pylint: disable=unused-variable
-            return args
+    inputs = node.get_incoming().nested()
+    assert inputs['int_a'].value == 1
+    assert inputs['int_b'].value == 2
+    assert inputs['args_0'].value == 3
+    assert inputs['args_1'].value == 4
+    assert node.inputs.args_0.value == 3
+    assert node.inputs.args_1.value == 4
+
+
+def test_function_varargs_label_overlap():
+    """Test a function with variadic arguments where the automatic label overlaps with a declared argument.
+
+    This should raise a ``RuntimeError``.
+    """
+    with pytest.raises(RuntimeError, match=r'variadic argument with index `.*` would get the label `.*` but this'):
+        function_variadic_arguments_label_overlap.run_get_node(orm.Int(1), *(orm.Int(2), orm.Int(3)))
 
 
 def test_function_args():

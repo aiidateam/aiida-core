@@ -80,12 +80,12 @@ class WithSerialize:
         self._serializer: Callable[[Any], 'Data'] = serializer
 
     def serialize(self, value: Any) -> 'Data':
-        """Serialize the given value if it is not already a Data type and a serializer function is defined
+        """Serialize the given value, unless it is ``None``, already a Data type, or no serializer function is defined.
 
         :param value: the value to be serialized
         :returns: a serialized version of the value or the unchanged value
         """
-        if self._serializer is None or isinstance(value, Data):
+        if self._serializer is None or value is None or isinstance(value, Data):
             return value
 
         return self._serializer(value)

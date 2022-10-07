@@ -55,6 +55,17 @@ To solve this, one only has to wrap them in the :py:class:`~aiida.orm.nodes.data
 The only difference with the previous snippet is that all inputs have been wrapped in the :py:class:`~aiida.orm.nodes.data.int.Int` class.
 The result that is returned by the function, is now also an :py:class:`~aiida.orm.nodes.data.int.Int` node that can be stored in the provenance graph, and contains the result of the computation.
 
+.. versionadded:: 2.1
+
+    If a function argument is a Python base type (i.e. a value of type ``bool``, ``dict``, ``Enum``, ``float``, ``int``, ``list`` or ``str``), it can be passed straight away to the function, without first having to wrap it in the corresponding AiiDA data type.
+    That is to say, you can run the example above also as:
+
+    .. code-block:: python
+
+        result = multiply(add(1, 2), 3)
+
+    and AiiDA will recognize that the arguments are of type ``int`` and automatically wrap them in an ``Int`` node.
+
 .. note::
 
     Since ``x`` and ``y`` inside the ``add`` and ``multiply`` functions are already :py:class:`~aiida.orm.nodes.data.int.Int` instances the sum will also be one.

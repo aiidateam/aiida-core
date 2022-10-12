@@ -52,7 +52,7 @@ dependencies = [
         "tqdm~=4.45",
         "upf_to_json~=0.9.2",
         "werkzeug<2.2",
-        "wrapt~=1.11"
+        "wrapt~=1.14"
 ]
 
 [project.urls]

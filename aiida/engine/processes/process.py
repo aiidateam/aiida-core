@@ -402,10 +402,6 @@ class Process(plumpy.processes.Process):
         self._pid = self._create_and_setup_db_record()  # pylint: disable=attribute-defined-outside-init
 
     @override
-    def on_entering(self, state: plumpy.process_states.State) -> None:
-        super().on_entering(state)
-        # Update the node attributes every time we enter a new state
-
     def on_entered(self, from_state: Optional[plumpy.process_states.State]) -> None:
         """After entering a new state, save a checkpoint and update the latest process state change timestamp."""
         # pylint: disable=cyclic-import
@@ -635,8 +631,8 @@ class Process(plumpy.processes.Process):
         return serialize.deserialize_unsafe(encoded)
 
     def update_node_state(self, state: plumpy.process_states.State) -> None:
-        self.update_outputs()
         self.node.set_process_state(state.LABEL)
+        self.update_outputs()
 
     def update_outputs(self) -> None:
         """Attach new outputs to the node since the last call.

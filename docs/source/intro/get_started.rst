@@ -60,10 +60,10 @@ If you are unsure, use the :ref:`system-wide installation <intro:get_started:sys
          :click-parent:
          :class: btn-link
 
-         Run AiiDA and prerequisite services as a single docker container.
+         Run AiiDA and prerequisite services as docker container.
 
       Does not require the separate installation of prerequisite services.
-      Especially well-suited to get directly started on the **tutorials**.
+      Especially well-suited to get clean environment for plugin development and to get directly started on the **tutorials**.
 
    .. grid-item-card:: :fa:`cloud;mr-1` Run via virtual machine
 

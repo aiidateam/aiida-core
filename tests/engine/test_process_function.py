@@ -496,3 +496,8 @@ def test_input_serialization(argument, node_cls):
         assert result.get_dict() == argument
     else:
         assert result.value == argument
+
+
+def test_input_serialization_none_default():
+    """Test that calling a function with explicit ``None`` for an argument that defines ``None`` as default works."""
+    assert function_with_none_default(int_a=1, int_b=2, int_c=None).value == 3

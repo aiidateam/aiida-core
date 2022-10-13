@@ -194,9 +194,9 @@ This allows one to pass any normal value that one would also be able to pass to 
 Automatic input serialization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Quite often, inputs which are given as python data types need to be cast to the corresponding AiiDA type before passing them to a process.
+Quite often, inputs which are given as Python data types need to be cast to the corresponding AiiDA type before passing them to a process.
 Doing this manually can be cumbersome, so you can define a function when defining the process specification, which does the conversion automatically.
-This function, passed as ``serializer`` parameter to ``spec.input``, is invoked if the given input is *not* already an AiiDA type.
+This function, passed as ``serializer`` parameter to ``spec.input``, is invoked if the given input is not ``None`` *and* not already an AiiDA type.
 
 For inputs which are stored in the database (``non_db=False``), the serialization function should return an AiiDA data type.
 For ``non_db`` inputs, the function must be idempotent because it might be applied more than once.

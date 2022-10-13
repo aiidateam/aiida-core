@@ -31,7 +31,7 @@ jobs:
 
     - name: Create commit comment
       if: failure() && steps.check_reqs.outputs.error
-      uses: peter-evans/commit-comment@v1
+      uses: peter-evans/commit-comment@v2
       with:
         path: pyproject.toml
         body: |

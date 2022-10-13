@@ -294,7 +294,7 @@ jobs:
 #
     - name: Create commit comment
       if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
-      uses: peter-evans/commit-comment@v1
+      uses: peter-evans/commit-comment@v2
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         path: pyproject.toml

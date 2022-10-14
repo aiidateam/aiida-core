@@ -122,4 +122,4 @@ class RabbitmqBroker(Broker):
         """
         from packaging.version import parse
 
-        return parse(self.get_communicator().server_properties['version'].decode('utf-8'))
+        return parse(self.get_communicator().server_properties['version'])

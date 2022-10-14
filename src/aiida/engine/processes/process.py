@@ -39,9 +39,10 @@ import plumpy.exceptions
 import plumpy.futures
 import plumpy.persistence
 import plumpy.processes
-from aio_pika.exceptions import ConnectionClosed
 from kiwipy.communications import UnroutableError
 from plumpy.process_states import Finished, ProcessState
+from plumpy.processes import ConnectionClosed  # type: ignore[attr-defined]
+from plumpy.processes import Process as PlumpyProcess
 from plumpy.utils import AttributesFrozendict
 
 from aiida import orm
@@ -66,7 +67,7 @@ __all__ = ('Process', 'ProcessState')
 
 
 @plumpy.persistence.auto_persist('_parent_pid', '_enable_persistence')
-class Process(plumpy.processes.Process):
+class Process(PlumpyProcess):
     """This class represents an AiiDA process which can be executed and will
     have full provenance saved in the database.
     """

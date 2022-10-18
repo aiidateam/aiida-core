@@ -40,43 +40,46 @@ Below is a list of the core data types already provided with AiiDA, along with t
 .. table::
   :widths: 20 20 45 45
 
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | **Class**                                                    | **Entry point**        | **Stored in database**                            | **Stored in repository**          |
-  +==============================================================+========================+===================================================+===================================+
-  | :ref:`Int <topics:data_types:core:base>`                     | ``core.int``           | The integer value                                 | ``-``                             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`Float <topics:data_types:core:base>`                   | ``core.float``         | The float value                                   | ``-``                             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`Str <topics:data_types:core:base>`                     | ``core.str``           | The string                                        | ``-``                             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`Bool <topics:data_types:core:base>`                    | ``core.bool``          | The boolean value                                 | ``-``                             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`List <topics:data_types:core:base:iterable>`           | ``core.list``          | The complete list                                 | ``-``                             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`Dict <topics:data_types:core:base:iterable>`           | ``core.dict``          | The complete dictionary                           | ``-``                             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`EnumData <topics:data_types:core:base:enum>`           | ``core.enum``          | The value, name and the class identifier          | ``-``                             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`JsonableData <topics:data_types:core:jsonable>`        | ``core.jsonable``      | The JSON data and the class identifier            | ``-``                             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`ArrayData <topics:data_types:core:array>`              | ``core.array``         | The array names and corresponding shapes          | The array data in ``.npy`` format |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`XyData <topics:data_types:core:array:xy>`              | ``core.array.xy``      | The array names and corresponding shapes          | The array data in ``.npy`` format |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`SinglefileData <topics:data_types:core:singlefile>`    | ``core.singlefile``    | The filename                                      | The file                          |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`FolderData <topics:data_types:core:folder>`            | ``core.folder``        | ``-``                                             | All files and folders             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`RemoteData <topics:data_types:core:remote>`            | ``core.remote``        | The computer and the absolute path to the folder  | All files and folders             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`AbstractCode <topics:data_types:core:code>`            | ``-``                  | Default plugin, append/prepend text               | ``-``                             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`Code <topics:data_types:core:code:legacy>`             | ``core.code``          | The computer and the executable path              | All files and folders             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`InstalledCode <topics:data_types:core:code:installed>` | ``core.code.installed``| The computer and the executable path              | ``-``                             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`PortableCode <topics:data_types:core:code:portable>`   | ``core.code.portable`` | The relative path of the executable               | All files and folders of the code |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | **Class**                                                                               | **Entry point**                      | **Stored in database**                                              | **Stored in repository**          |
+  +=========================================================================================+======================================+=====================================================================+===================================+
+  | :ref:`Int <topics:data_types:core:base>`                                                | ``core.int``                         | The integer value                                                   | ``-``                             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`Float <topics:data_types:core:base>`                                              | ``core.float``                       | The float value                                                     | ``-``                             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`Str <topics:data_types:core:base>`                                                | ``core.str``                         | The string                                                          | ``-``                             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`Bool <topics:data_types:core:base>`                                               | ``core.bool``                        | The boolean value                                                   | ``-``                             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`List <topics:data_types:core:base:iterable>`                                      | ``core.list``                        | The complete list                                                   | ``-``                             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`Dict <topics:data_types:core:base:iterable>`                                      | ``core.dict``                        | The complete dictionary                                             | ``-``                             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`EnumData <topics:data_types:core:base:enum>`                                      | ``core.enum``                        | The value, name and the class identifier                            | ``-``                             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`JsonableData <topics:data_types:core:jsonable>`                                   | ``core.jsonable``                    | The JSON data and the class identifier                              | ``-``                             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`ArrayData <topics:data_types:core:array>`                                         | ``core.array``                       | The array names and corresponding shapes                            | The array data in ``.npy`` format |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`XyData <topics:data_types:core:array:xy>`                                         | ``core.array.xy``                    | The array names and corresponding shapes                            | The array data in ``.npy`` format |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`SinglefileData <topics:data_types:core:singlefile>`                               | ``core.singlefile``                  | The filename                                                        | The file                          |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`FolderData <topics:data_types:core:folder>`                                       | ``core.folder``                      | ``-``                                                               | All files and folders             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`RemoteData <topics:data_types:core:remote>`                                       | ``core.remote``                      | The computer and the absolute path to the folder                    | All files and folders             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`AbstractCode <topics:data_types:core:code>`                                       | ``-``                                | Default plugin, append/prepend text                                 | ``-``                             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`Code <topics:data_types:core:code:legacy>`                                        | ``core.code``                        | The computer and the executable path                                | All files and folders             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`InstalledCode <topics:data_types:core:code:installed>`                            | ``core.code.installed``              | The computer and the executable path                                | ``-``                             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`PortableCode <topics:data_types:core:code:portable>`                              | ``core.code.portable``               | The relative path of the executable                                 | All files and folders of the code |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`ContainerizedCode <topics:data_types:core:code:containerized>`                    | ``core.code.containerized``          | The computer, the image and the executable path                     | ``-``                             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+
 
 .. _topics:data_types:core:base:
 
@@ -492,8 +495,92 @@ Example of creating an ``PortableCode``:
         filepath_executable='executable.exe'
     )
 
+.. _topics:data_types:core:code:containerized:
 
-.. _topics:data_types:materials:
+ContainerizedCode
+-----------------
+
+.. versionadded:: 2.1
+
+The :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode` class allows running an executable within a container image on a target computer.
+The data plugin stores the following information in the database:
+
+* ``image_name``: The name of the container image (e.g., ``docker://alpine:3``).
+* ``filepath_executable``: The filepath of the executable within the container (e.g. ``/usr/bin/bash``).
+* ``engine_command``: The bash command to invoke the container image (e.g. ``singularity exec --bind $PWD:$PWD {image_name}``).
+  The exact form of this command will depend on the containerization technology that is used.
+* ``computer``: The :class:`~aiida.orm.computers.Computer` on which to run the container.
+
+.. important::
+
+    If the ``engine_command`` contains variables (such as in the ``singularity exec --bind $PWD:$PWD {image_name}`` example), it is crucial that the ``Computer`` needs to have the ``use_double_quotes`` setting set to ``True``.
+    By default, a ``Computer`` will use single quotes to escape command line arguments and so the ``$PWD`` would not be expanded.
+    If this wasn't defined as such when the ``Computer`` was created, it can be changed through the API:
+
+    .. code-block::
+
+        computer = load_computer('some-computer')
+        computer.set_use_double_quotes(True)
+
+.. note::
+
+    The container image can be already download and stored on the target computer or can reference an image on a container index, such as Docker Hub.
+    In the latter case, the first time that the containerized code is run, the image will be automatically pulled from the index, which may take a while if the image is large.
+
+
+.. _topics:data_types:core:code:installed:containerized:setup:
+
+Setup
+^^^^^
+
+A ``ContainerizedCode`` can be created through the CLI as well as the API.
+The following examples show how to setup running ``bash`` in a base Docker container through Singularity to be run on the ``Computer`` named ``some-computer``:
+
+.. tab-set::
+
+    .. tab-item:: CLI
+
+        .. code-block:: console
+
+            verdi code create core.code.containerized \
+                --non-interactive \
+                --label containerized-code \
+                --default-calc-job-plugin core.arithmetic.add \
+                --computer some-computer \
+                --filepath-executable "/bin/sh" \
+                --image-name "docker://alpine:3" \
+                --engine-command "singularity exec --bind $PWD:$PWD {image_name}"
+
+    .. tab-item:: API
+
+        .. code-block:: python
+
+            from aiida.orm import ContainerizedCode, load_computer
+
+            code = ContainerizedCode(
+                computer=load_computer('some-computer')
+                filepath_executable='/bin/sh'
+                image_name='docker://alpine:3',
+                engine_command='singularity exec --bind $PWD:$PWD {image_name}'
+            ).store()
+
+
+.. _topics:data_types:core:code:installed:containerized:support:
+
+Supported container technologies
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``ContainerizedCode`` is compatible with a variety of containerization technologies:
+
+* `Singularity <https://singularity-docs.readthedocs.io/en/latest/>`__
+* `Sarus <https://sarus.readthedocs.io/en/stable/>`__
+* `NVIDIA/enroot <https://github.com/NVIDIA/enroot/>`__
+* `Shifter <https://github.com/NERSC/shifter>`__
+
+Using `Docker <https://www.docker.com/>`__ directly is currently not supported, since Docker has to run with root permissions and it cannot be launched as a normal MPI program to propagate execution context to the container application.
+Support may be added at a later time.
+
+
 
 Materials science data types
 ============================

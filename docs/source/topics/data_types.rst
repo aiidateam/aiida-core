@@ -620,12 +620,12 @@ The ``ContainerizedCode`` is compatible with a variety of containerization techn
 
         .. code-block:: console
 
-            sarus run {image_name}
+            sarus run --mount=src=$PWD,dst=/workdir,type=bind --workdir=/workdir {image_name}
 
 
 Using `Docker <https://www.docker.com/>`__ directly is currently not supported because:
 
-* Docker needs to be run as the root user and the files created in the working directory inside the container will be owned by root, which prevents AiiDA from deleting those files after execution.
+* The Docker daemon always runs as the root user and the files created in the working directory inside the container will usually be owned by root if uid is not specified in the image, which prevents AiiDA from deleting those files after execution.
 * Docker cannot be launched as a normal MPI program to propagate execution context to the container application.
 
 Support may be added at a later time.

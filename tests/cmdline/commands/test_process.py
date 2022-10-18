@@ -17,6 +17,7 @@ from aiida import get_profile
 from aiida.cmdline.commands import cmd_process
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.engine import ProcessState
 from aiida.orm import CalcJobNode, WorkChainNode, WorkflowNode, WorkFunctionNode
 from tests.utils.processes import WaitProcess
 
@@ -43,7 +44,6 @@ class TestVerdiProcess:
     def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
-        from aiida.engine import ProcessState
         from aiida.orm.groups import Group
 
         self.calcs = []
@@ -300,7 +300,7 @@ def test_list_worker_slot_warning(run_cli_command, monkeypatch):
     that the warning message is displayed to the user when running `verdi process list`
     """
     from aiida.cmdline.utils import common
-    from aiida.engine import DaemonClient, ProcessState
+    from aiida.engine import DaemonClient
     from aiida.manage.configuration import get_config
 
     monkeypatch.setattr(common, 'get_num_workers', lambda: 1)
@@ -386,7 +386,7 @@ class TestVerdiProcessCallRoot:
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_pause(submit_and_await, run_cli_command):
     """Test the ``verdi process pause`` command."""
-    node = submit_and_await(WaitProcess)
+    node = submit_and_await(WaitProcess, ProcessState.WAITING)
     assert not node.paused
 
     run_cli_command(cmd_process.process_pause, [str(node.pk), '--wait'])
@@ -397,7 +397,7 @@ def test_process_pause(submit_and_await, run_cli_command):
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_play(submit_and_await, run_cli_command):
     """Test the ``verdi process play`` command."""
-    node = submit_and_await(WaitProcess)
+    node = submit_and_await(WaitProcess, ProcessState.WAITING)
 
     run_cli_command(cmd_process.process_pause, [str(node.pk), '--wait'])
     await_condition(lambda: node.paused)
@@ -410,8 +410,8 @@ def test_process_play(submit_and_await, run_cli_command):
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_play_all(submit_and_await, run_cli_command):
     """Test the ``verdi process play`` command with the ``--all`` option."""
-    node_one = submit_and_await(WaitProcess)
-    node_two = submit_and_await(WaitProcess)
+    node_one = submit_and_await(WaitProcess, ProcessState.WAITING)
+    node_two = submit_and_await(WaitProcess, ProcessState.WAITING)
 
     run_cli_command(cmd_process.process_pause, ['--all', '--wait'])
     await_condition(lambda: node_one.paused)
@@ -426,7 +426,7 @@ def test_process_play_all(submit_and_await, run_cli_command):
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_kill(submit_and_await, run_cli_command):
     """Test the ``verdi process kill`` command."""
-    node = submit_and_await(WaitProcess)
+    node = submit_and_await(WaitProcess, ProcessState.WAITING)
 
     run_cli_command(cmd_process.process_pause, [str(node.pk), '--wait'])
     await_condition(lambda: node.paused)

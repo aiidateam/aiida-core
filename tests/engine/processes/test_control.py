@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """Tests for the :mod:`aiida.engine.processes.control` module."""
 from plumpy.process_comms import RemoteProcessThreadController
-from plumpy.process_states import ProcessState
 import pytest
 
+from aiida.engine import ProcessState
 from aiida.engine.daemon.client import DaemonException
 from aiida.engine.launch import submit
 from aiida.engine.processes import control
@@ -15,7 +15,7 @@ from tests.utils.processes import WaitProcess
 @pytest.mark.parametrize('action', (control.pause_processes, control.play_processes, control.kill_processes))
 def test_processes_all_exclusivity(submit_and_await, action):
     """Test that control methods raise if both ``processes`` is specified and ``all_entries=True``."""
-    node = submit_and_await(WaitProcess)
+    node = submit_and_await(WaitProcess, ProcessState.WAITING)
     assert not node.paused
 
     with pytest.raises(ValueError, match='cannot specify processes when `all_entries = True`.'):
@@ -33,7 +33,7 @@ def test_daemon_not_running(action):
 @pytest.mark.usefixtures('started_daemon_client')
 def test_pause_processes(submit_and_await):
     """Test :func:`aiida.engine.processes.control.pause_processes`."""
-    node = submit_and_await(WaitProcess)
+    node = submit_and_await(WaitProcess, ProcessState.WAITING)
     assert not node.paused
 
     control.pause_processes([node], wait=True)
@@ -43,7 +43,7 @@ def test_pause_processes(submit_and_await):
 @pytest.mark.usefixtures('started_daemon_client')
 def test_pause_processes_all_entries(submit_and_await):
     """Test :func:`aiida.engine.processes.control.pause_processes` with ``all_entries=True``."""
-    node = submit_and_await(WaitProcess)
+    node = submit_and_await(WaitProcess, ProcessState.WAITING)
     assert not node.paused
 
     control.pause_processes(all_entries=True, wait=True)
@@ -53,7 +53,7 @@ def test_pause_processes_all_entries(submit_and_await):
 @pytest.mark.usefixtures('started_daemon_client')
 def test_play_processes(submit_and_await):
     """Test :func:`aiida.engine.processes.control.play_processes`."""
-    node = submit_and_await(WaitProcess)
+    node = submit_and_await(WaitProcess, ProcessState.WAITING)
     assert not node.paused
 
     control.pause_processes([node], wait=True)
@@ -66,7 +66,7 @@ def test_play_processes(submit_and_await):
 @pytest.mark.usefixtures('started_daemon_client')
 def test_play_processes_all_entries(submit_and_await):
     """Test :func:`aiida.engine.processes.control.play_processes` with ``all_entries=True``."""
-    node = submit_and_await(WaitProcess)
+    node = submit_and_await(WaitProcess, ProcessState.WAITING)
     assert not node.paused
 
     control.pause_processes([node], wait=True)
@@ -79,7 +79,7 @@ def test_play_processes_all_entries(submit_and_await):
 @pytest.mark.usefixtures('started_daemon_client')
 def test_kill_processes(submit_and_await):
     """Test :func:`aiida.engine.processes.control.kill_processes`."""
-    node = submit_and_await(WaitProcess)
+    node = submit_and_await(WaitProcess, ProcessState.WAITING)
 
     control.kill_processes([node], wait=True)
     assert node.is_terminated
@@ -89,7 +89,7 @@ def test_kill_processes(submit_and_await):
 @pytest.mark.usefixtures('started_daemon_client')
 def test_kill_processes_all_entries(submit_and_await):
     """Test :func:`aiida.engine.processes.control.kill_processes` with ``all_entries=True``."""
-    node = submit_and_await(WaitProcess)
+    node = submit_and_await(WaitProcess, ProcessState.WAITING)
 
     control.kill_processes(all_entries=True, wait=True)
     assert node.is_terminated
@@ -120,5 +120,5 @@ def test_revive(monkeypatch, aiida_local_code_factory, submit_and_await):
 
     # Wait for the process to be picked up by the daemon and completed. If there is a problem with the code, this call
     # should timeout and raise an exception
-    submit_and_await(node, ProcessState.FINISHED)
+    submit_and_await(node)
     assert node.is_finished_ok

@@ -44,22 +44,22 @@ CalcJob & Parser plugins
 
 The following guidelines are useful to keep in mind when wrapping external codes:
 
- * | **Start simple.**
-   | Make use of existing classes like :py:class:`~aiida.orm.nodes.data.dict.Dict`, :py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`, ...
-     Write only what is necessary to pass information from and to AiiDA.
- * | **Don't break data provenance.**
-   | Store *at least* what is needed for full reproducibility.
- * | **Expose the full functionality.**
-   | Standardization is good but don't artificially limit the power of a code you are wrapping - or your users will get frustrated.
-     If the code can do it, there should be *some* way to do it with your plugin.
- * | **Don't rely on AiiDA internals.**
-     Functionality at deeper nesting levels is not considered part of the public API and may change between minor AiiDA releases, breaking your plugin.
- * | **Parse what you want to query for.**
-   | Make a list of which information to:
+* **Start simple.**
+  Make use of existing classes like :py:class:`~aiida.orm.nodes.data.dict.Dict`, :py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`, ...
+  Write only what is necessary to pass information from and to AiiDA.
+* **Don't break data provenance.**
+  Store *at least* what is needed for full reproducibility.
+* **Expose the full functionality.**
+  Standardization is good but don't artificially limit the power of a code you are wrapping - or your users will get frustrated.
+  If the code can do it, there should be *some* way to do it with your plugin.
+* **Don't rely on AiiDA internals.**
+  Functionality at deeper nesting levels is not considered part of the public API and may change between minor AiiDA releases, breaking your plugin.
+* **Parse what you want to query for.**
+  Make a list of which information to:
 
-     #. parse into the database for querying (:py:class:`~aiida.orm.nodes.data.dict.Dict`, ...)
-     #. store in the file repository for safe-keeping (:py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`, ...)
-     #. leave on the computer where the calculation ran (:py:class:`~aiida.orm.RemoteData`, ...)
+  #. parse into the database for querying (:py:class:`~aiida.orm.nodes.data.dict.Dict`, ...)
+  #. store in the file repository for safe-keeping (:py:class:`~aiida.orm.nodes.data.singlefile.SinglefileData`, ...)
+  #. leave on the computer where the calculation ran (:py:class:`~aiida.orm.RemoteData`, ...)
 
 
 .. _topics:plugins:entrypoints:
@@ -90,9 +90,9 @@ AiiDA defines a set of entry point groups (see :ref:`topics:plugins:entrypointgr
 By inspecting the entry points added to these groups by AiiDA plugins, AiiDA can offer uniform interfaces to interact with them.
 For example:
 
- *  ``verdi plugin list aiida.workflows`` provides an overview of all workflows installed by AiiDA plugins.
+*   ``verdi plugin list aiida.workflows`` provides an overview of all workflows installed by AiiDA plugins.
     Users can inspect the inputs/outputs of each workflow using the same command without having to study the documentation of the plugin.
- *  The ``DataFactory``, ``CalculationFactory`` and ``WorkflowFactory`` methods allow instantiating new classes through a simple short string (e.g. ``quantumespresso.pw``).
+*   The ``DataFactory``, ``CalculationFactory`` and ``WorkflowFactory`` methods allow instantiating new classes through a simple short string (e.g. ``quantumespresso.pw``).
     Users don't need to remember exactly where in the plugin package the class resides, and plugins can be refactored without users having to re-learn the plugin's API.
 
 
@@ -199,8 +199,8 @@ Usage::
 ``verdi`` uses the `click_` framework, which makes it possible to add new subcommands to existing verdi commands, such as ``verdi data mydata``.
 AiiDA expects each entry point to be either a ``click.Command`` or ``click.Group``. At present extra commands can be injected at the following levels:
 
-  * As a :ref:`direct subcommand of verdi data<spec-verdi-data>`
-  * As a :ref:`subcommand of verdi data structure import<spec-verdi-data-structure-import>`
+* As a :ref:`direct subcommand of verdi data<spec-verdi-data>`
+* As a :ref:`subcommand of verdi data structure import<spec-verdi-data-structure-import>`
 
 
 .. _spec-verdi-data:
@@ -336,44 +336,180 @@ When setting up a new computer, specify ``mytransport`` as the transport mode.
 Plugin test fixtures
 ====================
 
-One concern when running tests for AiiDA plugins is to separate the test environment from your production environment.
-Typically tests should be run against an empty AiiDA database.
+When developing AiiDA plugin packages, it is recommended to use `pytest <https://docs.pytest.org/>`__ as the unit test library, which is the de-facto standard in the Python ecosystem.
+It provides a number of `fixtures <https://docs.pytest.org/en/7.1.x/how-to/fixtures.html>`__ that make it easy to setup and write tests.
+``aiida-core`` also provides a number fixtures that are specific to AiiDA and make it easy to test various sorts of plugins.
 
-AiiDA ships with tools that take care of this for you. They will:
+To make use of these fixtures, create a ``conftest.py`` file in your ``tests`` folder and add the following code:
 
-* start a temporary postgres server
-* create a new database
-* create a temporary ``.aiida`` folder
-* create a test profile
-* (optional) reset the AiiDA database before every individual test
+.. code-block:: python
 
-thus letting you focus on testing the functionality of your plugin without having to worry about this separation.
+   pytest_plugins = ['aiida.manage.tests.pytest_fixtures']
 
-.. note:: The overhead for setting up the temporary environment is of the order of a few seconds and occurs only once per test session.
+Just by adding this line, the fixtures that are provided by the :mod:`~aiida.manage.tests.pytest_fixtures` module are automatically imported.
+The module provides the following fixtures:
 
-If you prefer to run tests on an existing profile, say ``test_profile``, simply set the following environment variable before running your tests::
+* :ref:`aiida_profile <topics:plugins:testfixtures:aiida-profile>`: Provide a loaded AiiDA test profile with loaded storage backend
+* :ref:`aiida_profile_clean <topics:plugins:testfixtures:aiida-profile-clean>`: Same as ``aiida_profile`` but the storage backend is cleaned
+* :ref:`aiida_profile_clean_class <topics:plugins:testfixtures:aiida-profile-clean-class>`: Same as ``aiida_profile_clean`` but should be used at the class scope
+* :ref:`aiida_localhost <topics:plugins:testfixtures:aiida-localhost>`: Setup a :class:`~aiida.orm.computers.Computer` instance for the ``localhost`` computer
+* :ref:`aiida_local_code_factory <topics:plugins:testfixtures:aiida-local-code-factory>`: Setup a :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` instance on the ``localhost`` computer
+* :ref:`submit_and_await <topics:plugins:testfixtures:submit-and-await>`: Submit a process or process builder to the daemon and wait for it to reach a certain process state
+* :ref:`started_daemon_client <topics:plugins:testfixtures:started-daemon-client>`: Same as ``daemon_client`` but the daemon is guaranteed to be running
+* :ref:`stopped_daemon_client <topics:plugins:testfixtures:stopped-daemon-client>`: Same as ``daemon_client`` but the daemon is guaranteed to *not* be running
+* :ref:`daemon_client <topics:plugins:testfixtures:daemon-client>`: Return a :class:`~aiida.engine.daemon.client.DaemonClient` instance to control the daemon
 
-  export AIIDA_TEST_PROFILE=test_profile
 
-.. note::
-   In order to prevent accidental data loss, AiiDA only allows to run tests on profiles generated with the ``verdi setup --test-profile`` flag.
+.. _topics:plugins:testfixtures:aiida-profile:
 
-AiiDA ships with a number of fixtures in :py:mod:`aiida.manage.tests.pytest_fixtures` for you to use.
+``aiida_profile``
+-----------------
 
-In particular:
+This fixture ensures that an AiiDA profile is loaded with an initialized storage backend, such that data can be stored.
+The fixture is session-scoped and it has set ``autouse=True``, so it is automatically enabled for the test session.
 
-* The :py:func:`~aiida.manage.tests.pytest_fixtures.aiida_profile` fixture initializes the :py:class:`~aiida.manage.tests.main.TestManager` and yields it to the test function.
-  Its parameters ``scope='session', autouse=True`` cause this fixture to automatically run once per test session, even if you don't explicitly require it.
-* The :py:func:`~aiida.manage.tests.pytest_fixtures.aiida_profile_clean` fixture depends on the :py:func:`~aiida.manage.tests.pytest_fixtures.aiida_profile` fixture and tells the received :py:class:`~aiida.manage.tests.main.TestManager` instance to reset the profile;
-  Clearing any data previously stored in the profile, and closing any open connections to resources.
-  This fixture lets each test start in a fresh AiiDA environment.
+By default, the fixture will generate a completely temporary independent AiiDA instance and test profile.
+This includes:
 
-  * Additionally, the ``aiida_profile_clean_class`` fixture can be used to reset the profile only once per test class.
+* A temporary ``.aiida`` configuration folder with configuration files
+* A temporary PostgreSQL cluster
+* A temporary test profile complete with storage backend (creates a database in the temporary PostgreSQL cluster)
 
-* ... you may want to add your own fixtures tailored for your plugins to set up specific ``Data`` nodes & more.
+The temporary test instance and profile are automatically destroyed at the end of the test session.
+The fixture guarantees that no changes are made to the actual instance of AiiDA with its configuration and profiles.
 
-.. _pytest: https://pytest.org
-.. _unittest: https://docs.python.org/library/unittest.html
-.. _fixture: https://docs.pytest.org/en/latest/fixture.html
+The creation of the temporary instance and profile takes a few seconds at the beginning of the test suite to setup.
+It is possible to avoid this by creating a dedicated test profile once and telling the fixture to use that instead of generating one each time:
+
+* Create a profile, by using `verdi setup` or `verdi quicksetup` and specify the ``--test-profile`` flag
+* Set the ``AIIDA_TEST_PROFILE`` environment variable to the name of the test profile: ``export AIIDA_TEST_PROFILE=<test-profile-name>``
+
+
+.. _topics:plugins:testfixtures:aiida-profile-clean:
+
+``aiida_profile_clean``
+-----------------------
+
+Provides a loaded test profile through ``aiida_profile`` but empties the storage before calling the test function.
+Note that a default user will be inserted into the database after cleaning it.
+
+
+.. _topics:plugins:testfixtures:aiida-profile-clean-class:
+
+``aiida_profile_clean_class``
+-----------------------------
+
+Provides the same as ``aiida_profile_clean`` but with ``scope=class``.
+Should be used for a test class:
+
+.. code-block:: python
+
+    @pytest.mark.usefixtures('aiida_profile_clean_class')
+    class TestClass:
+
+        def test():
+            ...
+
+The storage is cleaned once when the class is initialized.
+
+
+.. _topics:plugins:testfixtures:aiida-localhost:
+
+``aiida_localhost``
+-------------------
+
+This test is useful if a test requires a :class:`~aiida.orm.computers.Computer` instance.
+This fixture returns a :class:`~aiida.orm.computers.Computer` that represents the ``localhost``.
+
+.. code-block:: python
+
+    def test(aiida_localhost):
+        aiida_localhost.get_minimum_job_poll_interval()
+
+
+.. _topics:plugins:testfixtures:aiida-local-code-factory:
+
+``aiida_local_code_factory``
+----------------------------
+
+This test is useful if a test requires an :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` instance.
+For example:
+
+.. code-block:: python
+
+    def test(aiida_local_code_factory):
+        code = aiida_local_code_factory(
+            entry_point='core.arithmetic.add',
+            executable='/usr/bin/bash'
+        )
+
+By default, it will use the ``localhost`` computer returned by the ``aiida_localhost`` fixture.
+
+
+.. _topics:plugins:testfixtures:submit-and-await:
+
+``submit_and_await``
+--------------------
+
+This fixture is useful when testing submitting a process to the daemon.
+It submits the process to the daemon and will wait until it has reached a certain state.
+By default it will wait for the process to reach ``ProcessState.FINISHED``:
+
+.. code-block:: python
+
+    def test(aiida_local_code_factory, submit_and_await):
+        code = aiida_local_code_factory('core.arithmetic.add', '/usr/bin/bash')
+        builder = code.get_builder()
+        builder.x = orm.Int(1)
+        builder.y = orm.Int(1)
+        node = submit_and_await(builder)
+        assert node.is_finished_ok
+
+Note that the fixture automatically depends on the ``started_daemon_client`` fixture to guarantee the daemon is running.
+
+
+.. _topics:plugins:testfixtures:started-daemon-client:
+
+``started_daemon_client``
+-------------------------
+
+This fixture ensures that the daemon for the test profile is running and returns an instance of the :class:`~aiida.engine.daemon.client.DaemonClient` which can be used to control the daemon.
+
+.. code-block:: python
+
+    def test(started_daemon_client):
+        assert started_daemon_client.is_daemon_running
+
+
+.. _topics:plugins:testfixtures:stopped-daemon-client:
+
+``stopped_daemon_client``
+-------------------------
+
+This fixture ensures that the daemon for the test profile is stopped and returns an instance of the :class:`~aiida.engine.daemon.client.DaemonClient` which can be used to control the daemon.
+
+.. code-block:: python
+
+    def test(stopped_daemon_client):
+        assert not stopped_daemon_client.is_daemon_running
+
+
+.. _topics:plugins:testfixtures:daemon-client:
+
+``daemon_client``
+-----------------
+
+Return a :class:`~aiida.engine.daemon.client.DaemonClient` instance that can be used to control the daemon:
+
+.. code-block:: python
+
+    def test(daemon_client):
+        daemon_client.start_daemon()
+        assert daemon_client.is_daemon_running
+        daemon_client.stop_daemon(wait=True)
+
+
+
+
 .. _click: https://click.palletsprojects.com/
 .. _Entry points: https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/

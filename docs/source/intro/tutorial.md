@@ -289,7 +289,7 @@ For both commands, the *non-interactive* option (`-n`) is added to not prompt fo
 Next, let's set up the code we're going to use for the tutorial:
 
 ```console
-$ verdi code setup -L add --on-computer --computer=tutor -P core.arithmetic.add --remote-abs-path=/bin/bash -n
+$ verdi code create core.code.installed --label add --computer=tutor --default-calc-job-plugin core.arithmetic.add --filepath-executable=/bin/bash -n
 ```
 
 This command sets up a code with *label* `add` on the *computer* `tutor`, using the *plugin* `core.arithmetic.add`.
@@ -301,7 +301,7 @@ This command sets up a code with *label* `add` on the *computer* `tutor`, using 
 
 %verdi computer setup -L tutor -H localhost -T core.local -S core.direct -w /tmp -n
 %verdi computer configure core.local tutor --safe-interval 0 -n
-%verdi code setup -L add --on-computer --computer=tutor -P core.arithmetic.add --remote-abs-path=/bin/bash -n
+%verdi code create core.code.installed --label add --computer=tutor --default-calc-job-plugin core.arithmetic.add --filepath-executable=/bin/bash -n
 ```
 
 A typical real-world example of a computer is a remote supercomputing facility.

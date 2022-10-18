@@ -22,10 +22,10 @@
   - name: verdi add code setup
     when: aiida_check_code.rc != 0
     command: >
-      {{ venv_bin }}/verdi -p {{ aiida_backend }} code setup
-      -D "simple script that adds two numbers"
-      -n -L add -P core.arithmetic.add
-      -Y localhost --remote-abs-path=/bin/bash
+      {{ venv_bin }}/verdi -p {{ aiida_backend }} code create core.code.installed
+      --description "simple script that adds two numbers"
+      -n --label add --default-calc-job-plugin core.arithmetic.add
+      --computer localhost --filepath-executable=/bin/bash
 
   - name: Copy workchain files
     copy:

@@ -14,6 +14,7 @@ from functools import partial
 import io
 import json
 import os
+import pathlib
 import tempfile
 from unittest.mock import patch
 
@@ -227,6 +228,78 @@ def test_code_double_quotes(aiida_localhost, file_regression, code_use_double_qu
 
 
 @pytest.mark.requires_rmq
+@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
+def test_containerized_code(file_regression, aiida_localhost):
+    """Test the :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode`."""
+    aiida_localhost.set_use_double_quotes(True)
+    engine_command = """singularity exec --bind $PWD:$PWD {image_name}"""
+    containerized_code = orm.ContainerizedCode(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/bash',
+        engine_command=engine_command,
+        image_name='ubuntu',
+        computer=aiida_localhost,
+    ).store()
+
+    inputs = {
+        'code': containerized_code,
+        'metadata': {
+            'dry_run': True,
+            'options': {
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
+                },
+                'withmpi': False,
+            }
+        }
+    }
+
+    _, node = launch.run_get_node(DummyCalcJob, **inputs)
+    folder_name = node.dry_run_info['folder']
+    submit_script_filename = node.get_option('submit_script_filename')
+    content = (pathlib.Path(folder_name) / submit_script_filename).read_bytes().decode('utf-8')
+
+    file_regression.check(content, extension='.sh')
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
+def test_containerized_code_withmpi_true(file_regression, aiida_localhost):
+    """Test the :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode` with ``withmpi=True``."""
+    aiida_localhost.set_use_double_quotes(True)
+    engine_command = """singularity exec --bind $PWD:$PWD {image_name}"""
+    containerized_code = orm.ContainerizedCode(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/bash',
+        engine_command=engine_command,
+        image_name='ubuntu',
+        computer=aiida_localhost,
+    ).store()
+
+    inputs = {
+        'code': containerized_code,
+        'metadata': {
+            'dry_run': True,
+            'options': {
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
+                },
+                'withmpi': True,
+            }
+        }
+    }
+
+    _, node = launch.run_get_node(DummyCalcJob, **inputs)
+    folder_name = node.dry_run_info['folder']
+    submit_script_filename = node.get_option('submit_script_filename')
+    content = (pathlib.Path(folder_name) / submit_script_filename).read_bytes().decode('utf-8')
+
+    file_regression.check(content, extension='.sh')
+
+
+@pytest.mark.requires_rmq
 @pytest.mark.usefixtures('aiida_profile_clean', 'chdir_tmp_path')
 @pytest.mark.parametrize('calcjob_withmpi', [True, False])
 def test_multi_codes_run_withmpi(aiida_local_code_factory, file_regression, calcjob_withmpi):
@@ -260,7 +333,6 @@ def test_multi_codes_run_withmpi(aiida_local_code_factory, file_regression, calc
 @pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
 def test_portable_code(tmp_path, aiida_localhost):
     """test run container code"""
-    import pathlib
     (tmp_path / 'bash').write_bytes(b'bash implementation')
     subdir = tmp_path / 'sub'
     subdir.mkdir()

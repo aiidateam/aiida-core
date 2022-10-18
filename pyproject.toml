@@ -10,49 +10,49 @@ authors = [{name = "The AiiDA team", email = "developers@aiida.net"}]
 readme = "README.md"
 license = {file = "LICENSE.txt"}
 classifiers = [
-        "Development Status :: 5 - Production/Stable",
-        "Framework :: AiiDA",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: POSIX :: Linux",
-        "Operating System :: MacOS :: MacOS X",
-        "Programming Language :: Python",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
-        "Topic :: Scientific/Engineering"
+    "Development Status :: 5 - Production/Stable",
+    "Framework :: AiiDA",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering"
 ]
 keywords = ["aiida", "workflows"]
 requires-python = ">=3.8"
 dependencies = [
-        "alembic~=1.2",
-        "archive-path~=0.4.1",
-        "aio-pika~=6.6",
-        "circus~=0.17.1",
-        "click-config-file~=0.6.0",
-        "click-spinner~=0.1.8",
-        "click~=8.1",
-        "disk-objectstore~=0.6.0",
-        "graphviz~=0.13",
-        "ipython~=7.20",
-        "jinja2~=3.0",
-        "jsonschema~=3.0",
-        "kiwipy[rmq]~=0.7.5",
-        "importlib-metadata~=4.3",
-        "numpy~=1.19",
-        "pamqp~=2.3",
-        "paramiko~=2.7,>=2.7.2",
-        "plumpy~=0.21.0",
-        "pgsu~=0.2.1",
-        "psutil~=5.6",
-        "psycopg2-binary~=2.8",
-        "pytz~=2021.1",
-        "pyyaml~=5.4",
-        "sqlalchemy~=1.4.22",
-        "tabulate~=0.8.5",
-        "tqdm~=4.45",
-        "upf_to_json~=0.9.2",
-        "werkzeug<2.2",
-        "wrapt~=1.11"
+    "alembic~=1.2",
+    "archive-path~=0.4.1",
+    "aio-pika~=6.6",
+    "circus~=0.17.1",
+    "click-config-file~=0.6.0",
+    "click-spinner~=0.1.8",
+    "click~=8.1",
+    "disk-objectstore~=0.6.0",
+    "graphviz~=0.13",
+    "ipython~=7.20",
+    "jinja2~=3.0",
+    "jsonschema~=3.0",
+    "kiwipy[rmq]~=0.7.5",
+    "importlib-metadata~=4.3",
+    "numpy~=1.19",
+    "pamqp~=2.3",
+    "paramiko~=2.7,>=2.7.2",
+    "plumpy~=0.21.0",
+    "pgsu~=0.2.1",
+    "psutil~=5.6",
+    "psycopg2-binary~=2.8",
+    "pytz~=2021.1",
+    "pyyaml~=5.4",
+    "sqlalchemy~=1.4.22",
+    "tabulate~=0.8.5",
+    "tqdm~=4.45",
+    "upf_to_json~=0.9.2",
+    "werkzeug<2.2",
+    "wrapt~=1.11"
 ]
 
 [project.urls]
@@ -171,6 +171,7 @@ runaiida = "aiida.cmdline.commands.cmd_run:run"
 "core.code" = "aiida.orm.nodes.data.code.legacy:Code"
 "core.code.portable" = "aiida.orm.nodes.data.code.portable:PortableCode"
 "core.code.installed" = "aiida.orm.nodes.data.code.installed:InstalledCode"
+"core.code.containerized" = "aiida.orm.nodes.data.code.containerized:ContainerizedCode"
 "core.dict" = "aiida.orm.nodes.data.dict:Dict"
 "core.enum" = "aiida.orm.nodes.data.enum:EnumData"
 "core.float" = "aiida.orm.nodes.data.float:Float"

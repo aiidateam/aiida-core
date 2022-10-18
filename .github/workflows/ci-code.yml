@@ -110,8 +110,8 @@ jobs:
 
     - name: Install aiida-core
       run: |
-        pip install --use-feature=2020-resolver -r requirements/requirements-py-${{ matrix.python-version }}.txt
-        pip install --use-feature=2020-resolver --no-deps -e .
+        pip install -r requirements/requirements-py-${{ matrix.python-version }}.txt
+        pip install --no-deps -e .
         pip freeze
 
     - name: Setup environment

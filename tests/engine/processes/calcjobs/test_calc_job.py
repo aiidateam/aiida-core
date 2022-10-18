@@ -229,8 +229,8 @@ def test_code_double_quotes(aiida_localhost, file_regression, code_use_double_qu
 
 @pytest.mark.requires_rmq
 @pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
-def test_containerized_installed_code(file_regression, aiida_localhost):
-    """test run container code"""
+def test_containerized_code(file_regression, aiida_localhost):
+    """Test the :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode`."""
     aiida_localhost.set_use_double_quotes(True)
     engine_command = """singularity exec --bind $PWD:$PWD {image_name}"""
     containerized_code = orm.ContainerizedCode(
@@ -251,6 +251,42 @@ def test_containerized_installed_code(file_regression, aiida_localhost):
                     'num_mpiprocs_per_machine': 1
                 },
                 'withmpi': False,
+            }
+        }
+    }
+
+    _, node = launch.run_get_node(DummyCalcJob, **inputs)
+    folder_name = node.dry_run_info['folder']
+    submit_script_filename = node.get_option('submit_script_filename')
+    content = (pathlib.Path(folder_name) / submit_script_filename).read_bytes().decode('utf-8')
+
+    file_regression.check(content, extension='.sh')
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
+def test_containerized_code_withmpi_true(file_regression, aiida_localhost):
+    """Test the :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode` with ``withmpi=True``."""
+    aiida_localhost.set_use_double_quotes(True)
+    engine_command = """singularity exec --bind $PWD:$PWD {image_name}"""
+    containerized_code = orm.ContainerizedCode(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/bash',
+        engine_command=engine_command,
+        image_name='ubuntu',
+        computer=aiida_localhost,
+    ).store()
+
+    inputs = {
+        'code': containerized_code,
+        'metadata': {
+            'dry_run': True,
+            'options': {
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
+                },
+                'withmpi': True,
             }
         }
     }

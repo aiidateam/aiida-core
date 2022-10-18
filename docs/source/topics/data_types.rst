@@ -505,11 +505,16 @@ ContainerizedCode
 The :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode` class allows running an executable within a container image on a target computer.
 The data plugin stores the following information in the database:
 
-* ``image_name``: The name of the container image (e.g., ``docker://alpine:3``).
+* ``image_name``: The name of the container image (e.g., a URI like ``docker://alpine:3`` or an absolute file path like ``/path/to/image.sif``).
 * ``filepath_executable``: The filepath of the executable within the container (e.g. ``/usr/bin/bash``).
 * ``engine_command``: The bash command to invoke the container image (e.g. ``singularity exec --bind $PWD:$PWD {image_name}``).
   The exact form of this command will depend on the containerization technology that is used.
 * ``computer``: The :class:`~aiida.orm.computers.Computer` on which to run the container.
+
+.. note::
+
+    If the container image is not yet present on the target computer, most container engines will pull the image from the registry at first use.
+    This can take a while if the image is large.
 
 .. important::
 
@@ -521,11 +526,6 @@ The data plugin stores the following information in the database:
 
         computer = load_computer('some-computer')
         computer.set_use_double_quotes(True)
-
-.. note::
-
-    The container image can be already download and stored on the target computer or can reference an image on a container index, such as Docker Hub.
-    In the latter case, the first time that the containerized code is run, the image will be automatically pulled from the index, which may take a while if the image is large.
 
 
 .. _topics:data_types:core:code:installed:containerized:setup:
@@ -564,6 +564,38 @@ The following examples show how to setup running ``bash`` in a base Docker conta
                 engine_command='singularity exec --bind $PWD:$PWD {image_name}'
             ).store()
 
+Please refer to the section on :ref:`supported container technologies <topics:data_types:core:code:installed:containerized:support>` for an overview and specific setup instructions for each containerization solution.
+
+.. _topics:data_types:core:code:installed:containerized:run:
+
+Run
+^^^
+
+A ``ContainerizedCode`` is used to launch a calculation just like any other code.
+If a default calculation job plugin is defined, a process builder can be obtained with ``get_builder``:
+
+.. code-block:: python
+
+    from aiida.engine import submit
+    from aiida.orm import load_code
+
+    code = load_code('containerized-code')
+    builder = code.get_builder()
+    # Define the rest of the inputs
+    submit(builder)
+
+.. important::
+
+    If a containerized code is used for a calculation that sets the :ref:`metadata option <topics:calculations:usage:calcjobs:options>` ``withmpi`` to ``True``, the MPI command line arguments are placed in front of the container runtime.
+    For example, when running Singularity with ``metadata.options.withmpi = True``, the runline in the submission script will be written as:
+
+    .. code-block:: bash
+
+        "mpirun" "-np" "1" "singularity" "exec" "--bind" "$PWD:$PWD" "ubuntu" '/bin/bash' '--version' '-c' < "aiida.in" > "aiida.out" 2> "aiida.err"
+
+    This means that the containerization program is launched as a normal MPI program, and so it needs to support forwarding the execution context to the container application.
+    It is currently not possible to have MPI invoked inside the container runtime.
+
 
 .. _topics:data_types:core:code:installed:containerized:support:
 
@@ -572,12 +604,30 @@ Supported container technologies
 
 The ``ContainerizedCode`` is compatible with a variety of containerization technologies:
 
-* `Singularity <https://singularity-docs.readthedocs.io/en/latest/>`__
-* `Sarus <https://sarus.readthedocs.io/en/stable/>`__
-* `NVIDIA/enroot <https://github.com/NVIDIA/enroot/>`__
-* `Shifter <https://github.com/NERSC/shifter>`__
+.. tab-set::
 
-Using `Docker <https://www.docker.com/>`__ directly is currently not supported, since Docker has to run with root permissions and it cannot be launched as a normal MPI program to propagate execution context to the container application.
+    .. tab-item:: Singularity
+
+        To use `Singularity <https://singularity-docs.readthedocs.io/en/latest/>`__ use the following ``engine_command`` when setting up the code:
+
+        .. code-block:: console
+
+            singularity exec --bind $PWD:$PWD {image_name}
+
+    .. tab-item:: Sarus
+
+        To use `Sarus <https://sarus.readthedocs.io/en/stable/>`__ use the following ``engine_command`` when setting up the code:
+
+        .. code-block:: console
+
+            sarus run {image_name}
+
+
+Using `Docker <https://www.docker.com/>`__ directly is currently not supported because:
+
+* Docker needs to be run as the root user and the files created in the working directory inside the container will be owned by root, which prevents AiiDA from deleting those files after execution.
+* Docker cannot be launched as a normal MPI program to propagate execution context to the container application.
+
 Support may be added at a later time.
 
 

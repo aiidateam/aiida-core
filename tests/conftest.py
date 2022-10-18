@@ -14,20 +14,16 @@ from __future__ import annotations
 import copy
 import os
 import pathlib
-import time
 from typing import IO, List, Optional, Union
 import warnings
 
 import click
-import plumpy
 import pytest
 import wrapt
 
 from aiida import get_profile, plugins
 from aiida.common.lang import type_check
-from aiida.engine import Process, ProcessBuilder, submit
 from aiida.manage.configuration import Config, Profile, get_config, load_profile
-from aiida.orm import ProcessNode
 
 pytest_plugins = ['aiida.manage.tests.pytest_fixtures', 'sphinx.testing.fixtures']  # pylint: disable=invalid-name
 
@@ -394,43 +390,6 @@ def suppress_internal_deprecations():
         yield
 
 
-@pytest.fixture(scope='session')
-def daemon_client(aiida_profile):
-    """Return a daemon client for the configured test profile for the test session.
-
-    The daemon will be automatically stopped at the end of the session.
-    """
-    from aiida.engine.daemon.client import DaemonClient
-
-    daemon_client = DaemonClient(aiida_profile._manager._profile)  # pylint: disable=protected-access
-
-    try:
-        yield daemon_client
-    finally:
-        daemon_client.stop_daemon(wait=True)
-        assert not daemon_client.is_daemon_running
-
-
-@pytest.fixture()
-def started_daemon_client(daemon_client):
-    """Ensure that the daemon is running for the test profile and return the associated client."""
-    if not daemon_client.is_daemon_running:
-        daemon_client.start_daemon()
-        assert daemon_client.is_daemon_running
-
-    yield daemon_client
-
-
-@pytest.fixture()
-def stopped_daemon_client(daemon_client):
-    """Ensure that the daemon is not running for the test profile and return the associated client."""
-    if daemon_client.is_daemon_running:
-        daemon_client.stop_daemon(wait=True)
-        assert not daemon_client.is_daemon_running
-
-    yield daemon_client
-
-
 @pytest.fixture(scope='function')
 def chdir_tmp_path(request, tmp_path):
     """Change to a temporary directory before running the test and reverting to original working directory."""
@@ -516,48 +475,6 @@ def reset_log_level():
     finally:
         log.CLI_LOG_LEVEL = None
         log.configure_logging(with_orm=True)
-
-
-@pytest.fixture
-def submit_and_await(daemon_client):
-    """Submit a process and wait for it to achieve the given state."""
-
-    def _factory(
-        submittable: Process | ProcessBuilder | ProcessNode,
-        state: plumpy.ProcessState = plumpy.ProcessState.WAITING,
-        timeout: int = 5
-    ):
-        """Submit a process and wait for it to achieve the given state.
-
-        :param submittable: A process, a process builder or a process node. If it is a process or builder, it is
-            submitted first before awaiting the desired state.
-        :param state: The process state to wait for.
-        :param timeout: The time to wait for the process to achieve the state.
-        :raises RuntimeError: If the process fails to achieve the specified state before the timeout expires.
-        """
-        if not isinstance(submittable, ProcessNode):
-            node = submit(submittable)
-        else:
-            node = submittable
-
-        start_time = time.time()
-
-        while node.process_state is not state:
-
-            if node.is_excepted:
-                raise RuntimeError(f'The process excepted: {node.exception}')
-
-            if time.time() - start_time >= timeout:
-                daemon_log_file = pathlib.Path(daemon_client.daemon_log_file).read_text(encoding='utf-8')
-                daemon_status = 'running' if daemon_client.is_daemon_running else 'stopped'
-                raise RuntimeError(
-                    f'Timed out waiting for process with state `{node.process_state}` to enter state `{state}`.\n'
-                    f'Daemon <{daemon_client.profile.name}|{daemon_status}> log file content: \n{daemon_log_file}'
-                )
-
-        return node
-
-    return _factory
 
 
 @wrapt.decorator

@@ -9,11 +9,10 @@
 ###########################################################################
 """Tests for ``verdi devel``."""
 from plumpy.process_comms import RemoteProcessThreadController
-from plumpy.process_states import ProcessState
 import pytest
 
 from aiida.cmdline.commands import cmd_devel
-from aiida.engine import submit
+from aiida.engine import ProcessState, submit
 from aiida.orm import Int, Node
 
 
@@ -54,7 +53,7 @@ def test_revive(run_cli_command, monkeypatch, aiida_local_code_factory, submit_a
 
     # Wait for the process to be picked up by the daemon and completed. If there is a problem with the code, this call
     # should timeout and raise an exception
-    submit_and_await(node, ProcessState.FINISHED)
+    submit_and_await(node)
     assert node.is_finished_ok
 
     # Need to manually stop the daemon such that it cleans all state related to the submitted processes. It is not quite

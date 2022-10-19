@@ -108,7 +108,13 @@ def test_validate_filepath_executable():
 
 
 def test_full_label(aiida_localhost):
-    """Test the :meth:`aiida.orm.nodes.data.code.portable.PortableCode.full_label` property."""
+    """Test the :meth:`aiida.orm.nodes.data.code.installed.InstalledCode.full_label` property."""
     label = 'some-label'
     code = InstalledCode(label=label, computer=aiida_localhost, filepath_executable='/usr/bin/bash')
     assert code.full_label == f'{label}@{aiida_localhost.label}'
+
+
+def test_get_execname(aiida_localhost):
+    """Test the deprecated :meth:`aiida.orm.nodes.data.code.installed.InstalledCode.get_execname` method."""
+    code = InstalledCode(label='some-label', computer=aiida_localhost, filepath_executable='/usr/bin/bash')
+    assert code.get_execname() == '/usr/bin/bash'

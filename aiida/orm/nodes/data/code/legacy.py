@@ -93,8 +93,8 @@ class Code(AbstractCode):
         """
         if self.is_local():
             exec_path = f'./{self.get_local_executable()}'
-
-        exec_path = self.get_remote_exec_path()
+        else:
+            exec_path = self.get_remote_exec_path()
 
         return pathlib.Path(exec_path)
 
@@ -545,8 +545,4 @@ class Code(AbstractCode):
         For remote codes, it is the absolute path to the executable.
         """
         warn_deprecation('This method is deprecated, use `get_executable` instead.', version=3)
-
-        if self.is_local():
-            return f'./{self.get_local_executable()}'
-
-        return self.get_remote_exec_path()
+        return str(self.get_executable())

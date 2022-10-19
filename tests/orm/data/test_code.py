@@ -33,3 +33,14 @@ def test_validate_remote_exec_path():
 
     code = Code(remote_computer_exec=(computer, '/bin/bash'))
     code.validate_remote_exec_path()
+
+
+@pytest.mark.usefixtures('aiida_profile_clean', 'suppress_internal_deprecations')
+def test_get_execname():
+    """Test ``Code.get_execname``."""
+    computer = Computer(
+        label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.slurm'
+    ).store()
+    code = Code(remote_computer_exec=(computer, '/bin/invalid'))
+
+    assert code.get_execname() == '/bin/invalid'

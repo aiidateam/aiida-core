@@ -413,19 +413,34 @@ def command_options(request, aiida_localhost, tmp_path):
     """Return tuple of list of options and entry point."""
     options = [request.param, '-n', '--label', str(uuid.uuid4())]
 
-    if request.param == 'core.code.installed':
+    if 'installed' in request.param:
         options.extend(['--computer', str(aiida_localhost.pk), '--filepath-executable', '/usr/bin/bash'])
 
-    if request.param == 'core.code.portable':
+    if 'portable' in request.param:
         filepath_executable = 'bash'
         (tmp_path / filepath_executable).touch()
         options.extend(['--filepath-executable', filepath_executable, '--filepath-files', tmp_path])
+
+    if 'containerized' in request.param:
+        engine_command = 'singularity exec --bind $PWD:$PWD {image_name}'
+        image_name = 'ubuntu'
+        options.extend([
+            '--computer',
+            str(aiida_localhost.pk), '--filepath-executable', '/usr/bin/bash', '--engine-command', engine_command,
+            '--image-name', image_name
+        ])
 
     return options, request.param
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.parametrize('command_options', ('core.code.installed', 'core.code.portable'), indirect=True)
+@pytest.mark.parametrize(
+    'command_options', (
+        'core.code.installed',
+        'core.code.portable',
+        'core.code.containerized',
+    ), indirect=True
+)
 @pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
 def test_code_create(run_cli_command, command_options, non_interactive_editor):
     """Test the ``verdi code create`` command."""

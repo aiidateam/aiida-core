@@ -11,11 +11,13 @@
 Testing infrastructure for easy testing of AiiDA plugins.
 
 """
-from contextlib import contextmanager
+import contextlib
 import os
 import shutil
 import tempfile
+import warnings
 
+from aiida.common.log import override_log_level
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import configuration, get_manager
 from aiida.manage.configuration import settings
@@ -329,7 +331,11 @@ class TemporaryProfileManager(ProfileManager):
         configuration.CONFIG = None
 
         os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = self.config_dir
-        settings.set_configuration_directory()
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=UserWarning)
+            # This will raise a warning that the ``.aiida`` configuration directory is created.
+            settings.set_configuration_directory()
 
         manager.unload_profile()
         profile_name = self.profile_info['name']
@@ -339,10 +345,11 @@ class TemporaryProfileManager(ProfileManager):
         config.set_default_profile(profile_name).store()
         self._profile = profile
 
-        # initialise the profile
-        profile = manager.load_profile(profile_name)
-        # initialize the profile storage
-        profile.storage_cls.migrate(profile)
+        # Load the new profile and initialize the profile storage
+        with override_log_level():
+            profile = manager.load_profile(profile_name)
+            profile.storage_cls.migrate(profile)
+
         # create the default user for the profile
         created, user = User.collection.get_or_create(**get_user_dict(_DEFAULT_PROFILE_INFO))
         if created:
@@ -429,7 +436,7 @@ class TemporaryProfileManager(ProfileManager):
 _GLOBAL_TEST_MANAGER = TestManager()
 
 
-@contextmanager
+@contextlib.contextmanager
 def test_manager(backend='core.psql_dos', profile_name=None, pgtest=None):
     """ Context manager for TestManager objects.
 

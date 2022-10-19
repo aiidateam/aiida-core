@@ -25,7 +25,7 @@ class MockCode(AbstractCode):
 
     def get_executable(self) -> pathlib.Path:
         """Return the executable that the submission script should execute to run the code."""
-        return ''
+        return '/bin/executable'
 
     @property
     def full_label(self) -> str:

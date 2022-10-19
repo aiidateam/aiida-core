@@ -1,7 +1,7 @@
 name: test-install
 
 on:
-  pull_request:
+  pull_request_target:
     paths:
       - 'environment.yml'
       - '**/requirements*.txt'
@@ -294,12 +294,11 @@ jobs:
 #
     - name: Create commit comment
       if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
-      uses: peter-evans/commit-comment@v1
+      uses: peter-evans/commit-comment@v2
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         path: pyproject.toml
-        body: |
-          The requirements/ files are inconsistent!
+        body: The requirements/ files are inconsistent!
 
     # Check out the base branch so that we can prepare the pull request.
     - name: Checkout base branch

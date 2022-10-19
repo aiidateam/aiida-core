@@ -3,7 +3,7 @@ name: continuous-integration-code
 on:
   push:
     branches-ignore: [gh-pages]
-  pull_request:
+  pull_request_target:
     branches-ignore: [gh-pages]
     paths-ignore: ['docs/**']
 
@@ -31,7 +31,7 @@ jobs:
 
     - name: Create commit comment
       if: failure() && steps.check_reqs.outputs.error
-      uses: peter-evans/commit-comment@v1
+      uses: peter-evans/commit-comment@v2
       with:
         path: pyproject.toml
         body: |

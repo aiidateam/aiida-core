@@ -434,6 +434,21 @@ class TestProcess:
         with pytest.raises(KeyError):
             process.exposed_outputs(node_child, ChildProcess, namespace='cildh')
 
+    def test_build_process_label(self):
+        """Test the :meth:`~aiida.engine.processes.process.Process.build_process_label` method."""
+        custom_process_label = 'custom_process_label'
+
+        class CustomLabelProcess(Process):
+            """Class that provides custom process label."""
+
+            _node_class = orm.WorkflowNode
+
+            def _build_process_label(self):
+                return custom_process_label
+
+        _, node = run_get_node(CustomLabelProcess)
+        assert node.process_label == custom_process_label
+
 
 class TestValidateDynamicNamespaceProcess(Process):
     """Simple process with dynamic input namespace."""

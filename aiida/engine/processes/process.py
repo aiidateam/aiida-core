@@ -115,10 +115,21 @@ class Process(plumpy.processes.Process):
         )
         spec.inputs.valid_type = orm.Data
         spec.inputs.dynamic = False  # Settings a ``valid_type`` automatically makes it dynamic, so we reset it again
-        spec.exit_code(1, 'ERROR_UNSPECIFIED', message='The process has failed with an unspecified error.')
-        spec.exit_code(2, 'ERROR_LEGACY_FAILURE', message='The process failed with legacy failure mode.')
-        spec.exit_code(10, 'ERROR_INVALID_OUTPUT', message='The process returned an invalid output.')
-        spec.exit_code(11, 'ERROR_MISSING_OUTPUT', message='The process did not register a required output.')
+        spec.exit_code(
+            1, 'ERROR_UNSPECIFIED', invalidates_cache=True, message='The process has failed with an unspecified error.'
+        )
+        spec.exit_code(
+            2, 'ERROR_LEGACY_FAILURE', invalidates_cache=True, message='The process failed with legacy failure mode.'
+        )
+        spec.exit_code(
+            10, 'ERROR_INVALID_OUTPUT', invalidates_cache=True, message='The process returned an invalid output.'
+        )
+        spec.exit_code(
+            11,
+            'ERROR_MISSING_OUTPUT',
+            invalidates_cache=True,
+            message='The process did not register a required output.'
+        )
 
     @classmethod
     def get_builder(cls) -> ProcessBuilder:

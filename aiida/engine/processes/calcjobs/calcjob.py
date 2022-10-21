@@ -283,14 +283,20 @@ class CalcJob(Process):
             help='Files that are retrieved by the daemon will be stored in this node. By default the stdout and stderr '
                  'of the scheduler will be added, but one can add more by specifying them in `CalcInfo.retrieve_list`.')
 
-        # Errors caused or returned by the scheduler
-        spec.exit_code(100, 'ERROR_NO_RETRIEVED_FOLDER',
-            message='The process did not have the required `retrieved` output.')
-        spec.exit_code(110, 'ERROR_SCHEDULER_OUT_OF_MEMORY',
-            message='The job ran out of memory.')
-        spec.exit_code(120, 'ERROR_SCHEDULER_OUT_OF_WALLTIME',
-            message='The job ran out of walltime.')
         # yapf: enable
+        # Errors caused or returned by the scheduler
+        spec.exit_code(
+            100,
+            'ERROR_NO_RETRIEVED_FOLDER',
+            invalidates_cache=True,
+            message='The process did not have the required `retrieved` output.'
+        )
+        spec.exit_code(
+            110, 'ERROR_SCHEDULER_OUT_OF_MEMORY', invalidates_cache=True, message='The job ran out of memory.'
+        )
+        spec.exit_code(
+            120, 'ERROR_SCHEDULER_OUT_OF_WALLTIME', invalidates_cache=True, message='The job ran out of walltime.'
+        )
 
     @classproperty
     def spec_options(cls):  # pylint: disable=no-self-argument

@@ -61,29 +61,47 @@ class TemplatereplacerCalculation(CalcJob):
 
     @classmethod
     def define(cls, spec):
-        # yapf: disable
         super().define(spec)
         spec.inputs['metadata']['options']['parser_name'].default = 'core.templatereplacer'
-        spec.input('template', valid_type=orm.Dict,
-            help='A template for the input file.')
-        spec.input('parameters', valid_type=orm.Dict, required=False,
-            help='Parameters used to replace placeholders in the template.')
+        spec.input('template', valid_type=orm.Dict, help='A template for the input file.')
+        spec.input(
+            'parameters',
+            valid_type=orm.Dict,
+            required=False,
+            help='Parameters used to replace placeholders in the template.'
+        )
         spec.input_namespace('files', valid_type=(orm.RemoteData, orm.SinglefileData), required=False, dynamic=True)
 
         spec.output('output_parameters', valid_type=orm.Dict, required=True)
         spec.default_output_node = 'output_parameters'
 
-        spec.exit_code(101, 'ERROR_NO_TEMPORARY_RETRIEVED_FOLDER',
-            message='The temporary retrieved folder data node could not be accessed.')
-        spec.exit_code(105, 'ERROR_NO_OUTPUT_FILE_NAME_DEFINED',
-            message='The `template` input node did not specify the key `output_file_name`.')
-        spec.exit_code(110, 'ERROR_READING_OUTPUT_FILE',
-            message='The output file could not be read from the retrieved folder.')
-        spec.exit_code(111, 'ERROR_READING_TEMPORARY_RETRIEVED_FILE',
-            message='A temporary retrieved file could not be read from the temporary retrieved folder.')
-        spec.exit_code(120, 'ERROR_INVALID_OUTPUT',
-            message='The output file contains invalid output.')
-
+        spec.exit_code(
+            101,
+            'ERROR_NO_TEMPORARY_RETRIEVED_FOLDER',
+            invalidates_cache=True,
+            message='The temporary retrieved folder data node could not be accessed.'
+        )
+        spec.exit_code(
+            105,
+            'ERROR_NO_OUTPUT_FILE_NAME_DEFINED',
+            invalidates_cache=True,
+            message='The `template` input node did not specify the key `output_file_name`.'
+        )
+        spec.exit_code(
+            110,
+            'ERROR_READING_OUTPUT_FILE',
+            invalidates_cache=True,
+            message='The output file could not be read from the retrieved folder.'
+        )
+        spec.exit_code(
+            111,
+            'ERROR_READING_TEMPORARY_RETRIEVED_FILE',
+            invalidates_cache=True,
+            message='A temporary retrieved file could not be read from the temporary retrieved folder.'
+        )
+        spec.exit_code(
+            120, 'ERROR_INVALID_OUTPUT', invalidates_cache=True, message='The output file contains invalid output.'
+        )
 
     def prepare_for_submission(self, folder):
         """
@@ -113,7 +131,8 @@ class TemplatereplacerCalculation(CalcJob):
 
         if template:
             raise exceptions.InputValidationError(
-                f'The following keys could not be used in the template node: {template.keys()}')
+                f'The following keys could not be used in the template node: {template.keys()}'
+            )
 
         try:
             validate_list_of_string_tuples(files_to_copy, tuple_length=2)
@@ -127,8 +146,9 @@ class TemplatereplacerCalculation(CalcJob):
             try:
                 fileobj = self.inputs.files[link_name]
             except AttributeError:
-                raise exceptions.InputValidationError('You are asking to copy a file link {}, '
-                                                      'but there is no input link with such a name'.format(link_name))
+                raise exceptions.InputValidationError(
+                    f'You are asking to copy a file link {link_name}, but there is no input link with such a name'
+                )
             if isinstance(fileobj, orm.SinglefileData):
                 local_copy_list.append((fileobj.uuid, fileobj.filename, dest_rel_path))
             elif isinstance(fileobj, orm.RemoteData):  # can be a folder
@@ -137,15 +157,19 @@ class TemplatereplacerCalculation(CalcJob):
                 raise exceptions.InputValidationError(
                     'If you ask to copy a file link {}, '
                     'it must be either a SinglefileData or a RemoteData; it is instead of type {}'.format(
-                        link_name, fileobj.__class__.__name__))
+                        link_name, fileobj.__class__.__name__
+                    )
+                )
 
         if input_file_name is not None and not input_file_template:
             raise exceptions.InputValidationError(
-                'If you give an input_file_name, you must also specify a input_file_template')
+                'If you give an input_file_name, you must also specify a input_file_template'
+            )
 
         if input_through_stdin and input_file_name is None:
             raise exceptions.InputValidationError(
-                'If you ask for input_through_stdin you have to specify a input_file_name')
+                'If you ask for input_through_stdin you have to specify a input_file_name'
+            )
 
         input_content = input_file_template.format(**parameters)
         if input_file_name:

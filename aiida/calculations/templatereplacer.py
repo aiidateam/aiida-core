@@ -76,31 +76,31 @@ class TemplatereplacerCalculation(CalcJob):
         spec.default_output_node = 'output_parameters'
 
         spec.exit_code(
-            101,
+            301,
             'ERROR_NO_TEMPORARY_RETRIEVED_FOLDER',
             invalidates_cache=True,
             message='The temporary retrieved folder data node could not be accessed.'
         )
         spec.exit_code(
-            105,
+            305,
             'ERROR_NO_OUTPUT_FILE_NAME_DEFINED',
             invalidates_cache=True,
             message='The `template` input node did not specify the key `output_file_name`.'
         )
         spec.exit_code(
-            110,
+            310,
             'ERROR_READING_OUTPUT_FILE',
             invalidates_cache=True,
             message='The output file could not be read from the retrieved folder.'
         )
         spec.exit_code(
-            111,
+            311,
             'ERROR_READING_TEMPORARY_RETRIEVED_FILE',
             invalidates_cache=True,
             message='A temporary retrieved file could not be read from the temporary retrieved folder.'
         )
         spec.exit_code(
-            120, 'ERROR_INVALID_OUTPUT', invalidates_cache=True, message='The output file contains invalid output.'
+            320, 'ERROR_INVALID_OUTPUT', invalidates_cache=True, message='The output file contains invalid output.'
         )
 
     def prepare_for_submission(self, folder):

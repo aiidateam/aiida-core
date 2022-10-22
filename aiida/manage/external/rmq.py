@@ -14,7 +14,7 @@ from collections.abc import Mapping
 import logging
 import traceback
 
-from kiwipy import Future, communications
+from kiwipy import DuplicateSubscriberIdentifier, Future, communications
 import pamqp.encode
 import plumpy
 
@@ -212,6 +212,33 @@ class ProcessLauncher(plumpy.ProcessLauncher):
             message = 'the class of the process could not be imported.'
             self.handle_continue_exception(node, exception, message)
             raise
+        except DuplicateSubscriberIdentifier:
+            # This happens when the current worker has already subscribed itself with this process identifier. The call
+            # to ``_continue`` will call ``Process.init`` which will add RPC and broadcast subscribers. ``kiwipy`` and
+            # ``aiormq`` further down keep track of processes that are already subscribed and if subscribed again, a
+            # ``DuplicateSubscriberIdentifier`` is raised. Possible reasons for the worker receiving a process task that
+            # it already has, include:
+            #
+            #  1. The user mistakenly recreates the corresponding task, thinking the original task was lost.
+            #  2. RabbitMQ requeues the task because the daemon worker lost its connection or did not respond to the
+            #     heartbeat in time, and the task is sent to the same worker once it regains connection.
+            #
+            # Here we assume that the existence of another subscriber indicates that the process is still being run by
+            # this worker. We thus ignore the request to have the worker take it on again and acknowledge the current
+            # task (`return False`). If our assumption was wrong and the original task was no longer being worked on,
+            # the user can resubmit the task once the list of subscribers of the process has been cleared. Note: In the
+            # second case we are deleting the *original* task, and once the worker finishes running the process there
+            # won't be a task in RabbitMQ to acknowledge anymore. This, however, is silently ignored.
+            #
+            # Note: the exception is raised by ``kiwipy`` based on an internal cache it and ``aiormq`` keep of the
+            # current subscribers. This means that this will only occur when the tasks is resent to the *same* daemon
+            # worker. If another worker were to receive it, no exception would be raised as the check is client and not
+            # server based.
+            LOGGER.exception(
+                'A subscriber with the process id<%d> already exists, which most likely means this worker is already '
+                'working on it and this task was sent as a duplicate by mistake. Deleting the task now.', pid
+            )
+            return False
         except asyncio.CancelledError:  # pylint: disable=try-except-raise
             # note this is only required in python<=3.7,
             # where asyncio.CancelledError inherits from Exception

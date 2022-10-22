@@ -89,7 +89,7 @@ def test_get_unreferenced_keyset():
     ),
 ))
 # yapf: enable
-@pytest.mark.usefixtures('clear_storage_before_test')
+@pytest.mark.usefixtures('clear_storage_before_test', 'stopped_daemon_client')
 def test_maintain(caplog, monkeypatch, kwargs, logged_texts):
     """Test the ``maintain`` method."""
     import logging

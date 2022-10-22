@@ -446,7 +446,7 @@ class TestValidateDynamicNamespaceProcess(Process):
         spec.inputs.dynamic = True
 
 
-@pytest.mark.usefixtures('clear_database_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_input_validation_storable_nodes():
     """Test that validation catches non-storable inputs even if nested in dictionary for dynamic namespace.
 

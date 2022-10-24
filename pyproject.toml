@@ -373,6 +373,7 @@ module = [
     'kiwipy.*',
     'numpy.*',
     'pytz.*',
+    'requests.*',
     'ruamel.*',
     'scipy.*',
     'tabulate.*',

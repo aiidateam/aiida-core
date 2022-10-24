@@ -71,6 +71,7 @@ repos:
         pass_filenames: true
         files: >-
             (?x)^(
+                aiida/cmdline/commands/cmd_rabbitmq.py|
                 aiida/common/timezone.py|
                 aiida/common/progress_reporter.py|
                 aiida/engine/.*py|

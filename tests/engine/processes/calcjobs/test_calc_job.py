@@ -228,7 +228,7 @@ def test_code_double_quotes(aiida_localhost, file_regression, code_use_double_qu
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
+@pytest.mark.usefixtures('aiida_profile_clean', 'chdir_tmp_path')
 def test_containerized_code(file_regression, aiida_localhost):
     """Test the :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode`."""
     aiida_localhost.set_use_double_quotes(True)
@@ -264,7 +264,7 @@ def test_containerized_code(file_regression, aiida_localhost):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
+@pytest.mark.usefixtures('aiida_profile_clean', 'chdir_tmp_path')
 def test_containerized_code_withmpi_true(file_regression, aiida_localhost):
     """Test the :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode` with ``withmpi=True``."""
     aiida_localhost.set_use_double_quotes(True)
@@ -330,7 +330,7 @@ def test_multi_codes_run_withmpi(aiida_local_code_factory, file_regression, calc
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
+@pytest.mark.usefixtures('aiida_profile_clean', 'chdir_tmp_path')
 def test_portable_code(tmp_path, aiida_localhost):
     """test run container code"""
     (tmp_path / 'bash').write_bytes(b'bash implementation')

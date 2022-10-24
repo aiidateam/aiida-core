@@ -57,7 +57,7 @@ def test_invalid_process_type(generate_calculation_node):
 def test_process_class_no_default_node(generate_calculation_node):
     """`get_results` should raise `ValueError` if process class does not define default output node."""
     # This is a valid process class however ArithmeticAddCalculation does define a default output node
-    node = generate_calculation_node(entry_point='aiida.calculations:arithmetic.add')
+    node = generate_calculation_node(entry_point='aiida.calculations:core.arithmetic.add')
     manager = CalcJobResultManager(node)
 
     with pytest.raises(ValueError):

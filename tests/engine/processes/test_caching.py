@@ -23,15 +23,15 @@ class NestedOutputsProcess(Process):
 def test_caching_nested_output_namespace():
     """Test that caching from a process with a nested output namespace works."""
     _, node_original = run.get_node(NestedOutputsProcess, a=Int(1))
-    assert not node_original.is_created_from_cache
+    assert not node_original.base.caching.is_created_from_cache
 
     with enable_caching():
         _, node_clone = run.get_node(NestedOutputsProcess, a=Int(1))
 
-    assert node_clone.is_created_from_cache
-    assert node_clone.get_cache_source() == node_original.uuid
+    assert node_clone.base.caching.is_created_from_cache
+    assert node_clone.base.caching.get_cache_source() == node_original.uuid
 
-    outputs = node_clone.get_outgoing().nested()
+    outputs = node_clone.base.links.get_outgoing().nested()
     assert list(outputs.keys()) == ['nested']
     assert list(outputs['nested'].keys()) == ['a']
     assert isinstance(outputs['nested']['a'], Int)

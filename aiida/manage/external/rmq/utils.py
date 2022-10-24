@@ -25,7 +25,6 @@ def get_rmq_url(protocol=None, username=None, password=None, host=None, port=Non
     :param kwargs: remaining keyword arguments that will be encoded as query parameters.
     :returns: the connection URL string.
     """
-
     if 'heartbeat' not in kwargs:
         kwargs['heartbeat'] = defaults.BROKER_DEFAULTS.heartbeat
 

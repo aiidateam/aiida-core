@@ -448,7 +448,6 @@ def print_process_spec(process_spec):
 
     if process_spec.inputs:
         echo.echo('\nInputs:', fg=echo.COLORS['report'], bold=True)
-        echo.echo(style('Required inputs are displayed in bold red\n', italic=True))
 
     table = []
 
@@ -457,10 +456,10 @@ def print_process_spec(process_spec):
 
     if table:
         echo.echo(tabulate(table, tablefmt='plain', colalign=('right',)))
+        echo.echo(style('\nRequired inputs are displayed in bold red.\n', italic=True))
 
     if process_spec.outputs:
-        echo.echo('\nOutputs:', fg=echo.COLORS['report'], bold=True)
-        echo.echo(style('Required outputs are displayed in bold red\n', italic=True))
+        echo.echo('Outputs:', fg=echo.COLORS['report'], bold=True)
 
     table = []
 
@@ -469,9 +468,10 @@ def print_process_spec(process_spec):
 
     if table:
         echo.echo(tabulate(table, tablefmt='plain', colalign=('right',)))
+        echo.echo(style('\nRequired outputs are displayed in bold red.\n', italic=True))
 
     if process_spec.exit_codes:
-        echo.echo('\nExit codes:\n', fg=echo.COLORS['report'], bold=True)
+        echo.echo('Exit codes:\n', fg=echo.COLORS['report'], bold=True)
 
         table = [('0', 'The process finished successfully.')]
 
@@ -480,7 +480,7 @@ def print_process_spec(process_spec):
                 status = style(exit_code.status, bold=True, fg='red')
             else:
                 status = exit_code.status
-            table.append((status, exit_code.message))
+            table.append((status, '\n'.join(textwrap.wrap(exit_code.message, width=75))))
 
         echo.echo(tabulate(table, tablefmt='plain'))
         echo.echo(style('\nExit codes that invalidate the cache are marked in bold red.\n', italic=True))

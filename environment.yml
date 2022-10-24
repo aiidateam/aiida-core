@@ -21,7 +21,6 @@ dependencies:
 - kiwipy[rmq]~=0.7.5
 - importlib-metadata~=4.3
 - numpy~=1.19
-- pamqp~=2.3
 - paramiko>=2.7.2,~=2.7
 - plumpy~=0.21.0
 - pgsu~=0.2.1

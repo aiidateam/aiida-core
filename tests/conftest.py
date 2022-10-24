@@ -209,11 +209,9 @@ def empty_config(tmp_path) -> Config:
     manager.unload_profile()
     configuration.CONFIG = None
 
-    # Create a temporary folder, set it as the current config directory path and reset the loaded configuration
-    settings.AIIDA_CONFIG_FOLDER = str(tmp_path)
-
-    # Create the instance base directory structure, the config file and a dummy profile
-    settings.create_instance_directories()
+    # Set the configuration directory to a temporary directory. This will create the necessary folders for an empty
+    # AiiDA configuration and set relevant global variables in :mod:`aiida.manage.configuration.settings`.
+    settings.set_configuration_directory(tmp_path)
 
     # The constructor of `Config` called by `load_config` will print warning messages about migrating it
     with Capturing():
@@ -225,8 +223,15 @@ def empty_config(tmp_path) -> Config:
         # Reset the config folder path and the config instance. Note this will always be executed after the yield no
         # matter what happened in the test that used this fixture.
         manager.unload_profile()
-        settings.AIIDA_CONFIG_FOLDER = current_config_path
         configuration.CONFIG = current_config
+
+        # This sets important global constants that are based on the location of the config folder. Without it, things
+        # like the :class:`aiida.engine.daemon.client.DaemonClient` will not function properly after a test that uses
+        # this fixture because the paths of the daemon files would still point to the path of the temporary config
+        # folder created by this fixture.
+        settings.set_configuration_directory(pathlib.Path(current_config_path))
+
+        # Reload the original profile
         manager.load_profile(current_profile_name)
 
 

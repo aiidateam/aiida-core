@@ -66,14 +66,15 @@ def create_instance_directories():
         os.umask(umask)
 
 
-def set_configuration_directory():
-    """Determine the location of the configuration directory and set the related global variables.
+def set_configuration_directory(aiida_config_folder: pathlib.Path = None):
+    """Determine location of configuration directory, set related global variables and create instance directories.
 
     The location of the configuration folder will be determined and optionally created following these heuristics:
 
-        * If the `AIIDA_PATH` variable is set, all the paths will be checked to see if they contain a configuration
-          folder. The first one to be encountered will be set as `AIIDA_CONFIG_FOLDER`. If none of them contain one,
-          a configuration folder will be created in the last path considered.
+        * If an explicit path is provided by `aiida_config_folder`, that will be set as the configuration folder.
+        * Otherwise, if the `AIIDA_PATH` variable is set, all the paths will be checked to see if they contain a
+          configuration folder. The first one to be encountered will be set as `AIIDA_CONFIG_FOLDER`. If none of them
+          contain one, a configuration folder will be created in the last path considered.
         * If the `AIIDA_PATH` variable is not set the `DEFAULT_AIIDA_PATH` value will be used as base path and if it
           does not yet contain a configuration folder, one will be created.
 
@@ -87,7 +88,9 @@ def set_configuration_directory():
 
     environment_variable = os.environ.get(DEFAULT_AIIDA_PATH_VARIABLE, None)
 
-    if environment_variable:
+    if aiida_config_folder is not None:
+        AIIDA_CONFIG_FOLDER = aiida_config_folder
+    elif environment_variable:
 
         # Loop over all the paths in the `AIIDA_PATH` variable to see if any of them contain a configuration folder
         for base_dir_path in [path for path in environment_variable.split(':') if path]:

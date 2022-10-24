@@ -420,11 +420,12 @@ AbstractCode
 .. versionadded:: 2.1
 
 The :class:`aiida.orm.nodes.data.code.abstract.AbstractCode` class provides the abstract class for objects that represent a "code" that can be executed through a :class:`aiida.engine.processes.calcjobs.calcjob.CalcJob` plugin.
-There are currently three implementations of this abstract class:
+There are currently four implementations of this abstract class:
 
  * :class:`~aiida.orm.nodes.data.code.legacy.Code` (see :ref:`Code <topics:data_types:core:code:legacy>`)
  * :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` (see :ref:`InstalledCode <topics:data_types:core:code:installed>`)
  * :class:`~aiida.orm.nodes.data.code.portable.PortableCode` (see :ref:`PortableCode <topics:data_types:core:code:portable>`)
+ * :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode` (see :ref:`ContainerizedCode <topics:data_types:core:code:containerized>`)
 
 
 .. _topics:data_types:core:code:legacy:

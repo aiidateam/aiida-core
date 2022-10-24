@@ -216,46 +216,86 @@ Doing so will prevent AiiDA from connecting to the given computer to check the s
 
 .. _how-to:run-codes:code:
 
-How to setup a code
-===================
+How to create a code
+====================
 
-Once your computer is configured, you can set up codes on it.
+Before you can run a calculation, you need to define a "code" which represents what code the calculation should execute and how it should be executed.
+AiiDA supports a variety of codes:
 
-AiiDA stores a set of metadata for each code, which is attached automatically to each calculation using it.
-Besides being important for reproducibility, this also makes it easy to query for all calculations that were run with a given code (for instance, if a specific version is found to contain a bug).
+* ``Installed``: The executable code is already installed on the target computer
+* ``Portable``: The executable code is stored by AiiDA and can be deployed on a variety of computers
+* ``Containerized``: The executable code is part of a container image that can be deployed and run on the target computer
 
-.. _how-to:run-codes:code:setup:
+Each of these scenarios are supported through a code plugin, which stores all necessary data to fully define the code.
+A configured code is stored in the provenance graph, which besides being important for reproducibility, makes it easy to query for all calculations that were run with a given code.
 
-Setting up a code
------------------
+.. note::
 
-The ``verdi code`` CLI is the access point for managing codes in AiiDA.
-To setup a new code, execute:
-
-.. code-block:: console
-
-    $ verdi code setup
-
-and you will be guided through a process to setup your code.
-
-.. admonition:: On remote and local codes
-    :class: tip title-icon-lightbulb
-
-    In most cases, it is advisable to install the executables to be used by AiiDA on the target machine *before* submitting calculations using them in order to take advantage of the compilers and libraries present on the target machine.
-    This setup is referred to as *remote* codes (``Installed on target computer?: True``).
+    In most cases, it is advisable to install the executables to be used by AiiDA on the target machine *before* submitting calculations using them, in order to take advantage of the compilers and libraries present on the target machine.
+    This is the ``installed`` scenario.
 
     Occasionally, you may need to run small, reasonably machine-independent scripts (e.g. Python or bash), and copying them manually to a number of different target computers can be tedious.
-    For this use case, AiiDA provides *local* codes (``Installed on target computer?: False``).
-    Local codes are stored in the AiiDA file repository and copied to the target computer for every execution.
+    For this use case, the ``portable`` code is ideal.
+    The executable and associated files of the code are stored by AiiDA and automatically copied to the target computer for every execution.
 
     Do *not* use local codes as a way of encapsulating the environment of complex executables.
-    Containers are a much better solution to this problem, and we are working on adding native support for containers in AiiDA.
+    For this use case, it is best to use the ``containerized`` code.
+    Create a container of the required compute environment and create a containerized code.
 
+A new code can be configured in AiiDA through the ``verdi code create`` command.
+The type of code is specified as the first argument and the rest of the information is provided through options:
 
-At the end of these steps, you will be prompted to edit a script, where you can include ``bash`` commands that will be executed
+.. tab-set::
 
- * *before* running the submission script (after the 'Pre execution script' lines), and
- * *after* running the submission script (after the 'Post execution script' separator).
+    .. tab-item:: Installed
+
+        .. code-block:: console
+
+            The following example shows how to create an installed code for the ``bash`` binary on the ``localhost`` computer:
+
+            verdi code create core.code.installed \
+                --label installed-code \
+                --computer localhost \
+                --filepath-executable /usr/bin/bash
+
+        For more information, please refer to the dedicated :ref:`topic section <topics:data_types:core:code:installed>`.
+
+    .. tab-item:: Portable
+
+        The following example shows how to create a portable code for an executable ``executable.py`` in the ``/path/to/directory`` folder:
+
+        .. code-block:: console
+
+            verdi code create core.code.portable \
+                --label portable-code \
+                --filepath-files /path/to/directory \
+                --filepath-executable executable.py
+
+        Any other files that are part of ``/path/to/directory`` will also be stored by the code plugin.
+
+        For more information, please refer to the dedicated :ref:`topic section <topics:data_types:core:code:portable>`.
+
+    .. tab-item:: Containerized
+
+        The following example shows how to setup running ``bash`` in a base Docker container through Singularity to be run on the ``Computer`` named ``some-computer``:
+
+        .. code-block:: console
+
+            verdi code create core.code.containerized \
+                --non-interactive \
+                --label containerized-code \
+                --computer some-computer \
+                --filepath-executable "/bin/sh" \
+                --image-name "docker://alpine:3" \
+                --engine-command "singularity exec --bind $PWD:$PWD {image_name}"
+
+        For more information, please refer to the dedicated :ref:`topic section <topics:data_types:core:code:containerized>`.
+
+The code create command will prompt for any additional options.
+It will also open a text editor to specify the ``--prepend-text`` and ``--append-text`` options, where you can include ``bash`` commands that will be executed
+
+* *before* running the submission script (after the 'Pre execution script' lines), and
+* *after* running the submission script (after the 'Post execution script' separator).
 
 Use this, for instance, to load modules or set variables that are needed by the code, such as:
 
@@ -267,19 +307,18 @@ At the end, you receive a confirmation, with the *PK* and the *UUID* of your new
 
 .. tip::
 
-    The ``verdi code setup`` command performs minimal checks in order to keep it performant and not rely on an internet connection.
+    The ``verdi code create`` command performs minimal checks in order to keep it performant and not rely on an internet connection.
     If you want additional checks to verify the code is properly configured and usable, run the `verdi code test` command.
-    For remote codes for example, this will check whether the associated computer can be connected to and whether the specified executable exists.
+    For installed codes for example, this will check whether the associated computer can be connected to and whether the specified executable exists.
     Look at the command help to see what other checks may be run.
 
-.. admonition:: Using configuration files
-    :class: tip title-icon-lightbulb
+.. tip::
 
     Analogous to a :ref:`computer setup <how-to:run-codes:computer>`, some (or all) the information described above can be provided via a configuration file:
 
     .. code-block:: console
 
-        $ verdi code setup --config code.yml
+        $ verdi code create core.code.installed --config code.yml
 
     where ``code.yml`` is a configuration file in the `YAML format <https://en.wikipedia.org/wiki/YAML#Syntax>`_.
 
@@ -288,22 +327,21 @@ At the end, you receive a confirmation, with the *PK* and the *UUID* of your new
     .. code-block:: yaml
 
         ---
-        label: "qe-6.3-pw"
-        description: "quantum_espresso v6.3"
-        input_plugin: "quantumespresso.pw"
-        on_computer: true
-        remote_abs_path: "/path/to/code/pw.x"
-        computer: "localhost"
+        label: 'qe-6.3-pw'
+        description: 'quantum_espresso v6.3'
+        default_calc_job_plugin: 'quantumespresso.pw'
+        filepath_executable: '/path/to/code/pw.x'
+        computer: 'localhost'
         prepend_text: |
            module load module1
            module load module2
-        append_text: " "
+        append_text: ' '
 
-    The list of the keys for the ``yaml`` file is given by the available options of the ``code setup`` command:
+    The list of the keys for the ``yaml`` file is given by the available options of the ``code create`` sub-command:
 
         .. code-block:: console
 
-            $ verdi code setup --help
+            $ verdi code create core.code.installed --help
 
     Note: remove the ``--`` prefix and replace ``-`` within the keys with an underscore ``_``.
 
@@ -356,7 +394,7 @@ Finally, to delete a code use:
 How to submit a calculation
 ===========================
 
-After :ref:`setting up your computer <how-to:run-codes:computer>` and :ref:`setting up your code <how-to:run-codes:code:setup>`, you are ready to launch your calculations!
+After :ref:`setting up your computer <how-to:run-codes:computer>` and :ref:`setting up your code <how-to:run-codes:code>`, you are ready to launch your calculations!
 
  * Make sure the daemon is running:
 

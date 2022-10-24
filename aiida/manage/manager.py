@@ -65,6 +65,7 @@ class Manager:  # pylint: disable=too-many-public-methods
     """
 
     def __init__(self) -> None:
+        """Construct a new instance."""
         # note: the config currently references the global variables
         self._profile: Optional['Profile'] = None
         self._profile_storage: Optional['StorageBackend'] = None
@@ -441,18 +442,13 @@ class Manager:  # pylint: disable=too-many-public-methods
         return runner
 
     def check_rabbitmq_version(self, communicator: 'RmqThreadCommunicator'):
-        """Check the version of RabbitMQ that is being connected to and emit warning if the version is not compatible.
-
-        Versions 3.8.15 and above are not compatible with AiiDA with default configuration.
-        """
-        from packaging.version import parse
-
+        """Check the version of RabbitMQ that is being connected to and emit warning if it is not compatible."""
         from aiida.cmdline.utils import echo
 
         show_warning = self.get_option('warnings.rabbitmq_version')
         version = get_rabbitmq_version(communicator)
 
-        if show_warning and version >= parse('3.8.15'):
+        if show_warning and not is_rabbitmq_version_supported(communicator):
             echo.echo_warning(f'RabbitMQ v{version} is not supported and will cause unexpected problems!')
             echo.echo_warning('It can cause long-running workflows to crash and jobs to be submitted multiple times.')
             echo.echo_warning('See https://github.com/aiidateam/aiida-core/wiki/RabbitMQ-version-to-use for details.')
@@ -487,12 +483,14 @@ class Manager:  # pylint: disable=too-many-public-methods
 def is_rabbitmq_version_supported(communicator: 'RmqThreadCommunicator') -> bool:
     """Return whether the version of RabbitMQ configured for the current profile is supported.
 
-    Versions 3.8.15 and above are not compatible with AiiDA with default configuration.
+    Versions 3.5 and below are not supported at all, whereas versions 3.8.15 and above are not compatible with a default
+    configuration of the RabbitMQ server.
 
     :return: boolean whether the current RabbitMQ version is supported.
     """
     from packaging.version import parse
-    return get_rabbitmq_version(communicator) < parse('3.8.15')
+    version = get_rabbitmq_version(communicator)
+    return parse('3.6.0') <= version < parse('3.8.15')
 
 
 def get_rabbitmq_version(communicator: 'RmqThreadCommunicator'):

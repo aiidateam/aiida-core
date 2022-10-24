@@ -30,7 +30,8 @@ Installation issues
 RabbitMQ incompatibility
 ........................
 
-AiiDA is currently not compatible with RabbitMQ v3.8.15 and up with default configuration.
+RabbitMQ v3.5 and older are `end-of-life <https://www.rabbitmq.com/versions.html>`_ and are not supported in any way.
+For RabbitMQ v3.8.15 and up, AiiDA is not compatible with the default configuration of the server.
 When AiiDA is run with an incompatible version of RabbitMQ, the following warning will be displayed:
 
 .. code-block:: console

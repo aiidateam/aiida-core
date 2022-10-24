@@ -241,7 +241,7 @@ def aiida_local_code_factory(aiida_localhost):
     return get_code
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture()
 def daemon_client(aiida_profile):
     """Return a daemon client for the configured test profile for the test session.
 

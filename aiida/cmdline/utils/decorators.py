@@ -142,7 +142,42 @@ def only_if_daemon_running(echo_function=echo.echo_critical, message=None):
 
         daemon_client = get_daemon_client()
 
-        if not daemon_client.get_daemon_pid():
+        if not daemon_client.is_daemon_running:
+            echo_function(message)
+
+        return wrapped(*args, **kwargs)
+
+    return wrapper
+
+
+def only_if_daemon_not_running(echo_function=echo.echo_critical, message=None):
+    """Function decorator for CLI command to print critical error and exit automatically when daemon is running.
+
+    The error printing and exit behavior can be controlled with the decorator keyword arguments. The default message
+    that is printed can be overridden as well as the echo function that is to be used. By default it uses the
+    `aiida.cmdline.utils.echo.echo_critical` function which automatically aborts the command. The function can be
+    substituted by for example `aiida.cmdline.utils.echo.echo_warning` to instead print just a warning and continue.
+
+    Example::
+
+        @only_if_daemon_not_running(echo_function=echo.echo_warning, message='Cannot execute while daemon is running.')
+        def create_node():
+            pass
+
+    :param echo_function: echo function to issue the message, should be from `aiida.cmdline.utils.echo`
+    :param message: optional message to override the default message
+    """
+    if message is None:
+        message = 'The daemon needs to be stopped before running this command.'
+
+    @decorator
+    def wrapper(wrapped, _, args, kwargs):
+        """If daemon pid file is not found / empty, echo message and call decorated function."""
+        from aiida.engine.daemon.client import get_daemon_client
+
+        daemon_client = get_daemon_client()
+
+        if daemon_client.is_daemon_running:
             echo_function(message)
 
         return wrapped(*args, **kwargs)

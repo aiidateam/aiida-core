@@ -114,6 +114,9 @@ py:func click.shell_completion._start_of_option
 py:meth  click.Option.get_default
 py:meth fail
 
+py:class requests.models.Response
+py:class requests.Response
+
 py:class concurrent.futures._base.TimeoutError
 
 py:class disk_objectstore.utils.LazyOpener

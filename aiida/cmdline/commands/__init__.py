@@ -27,6 +27,7 @@ from aiida.cmdline.commands import (
     cmd_plugin,
     cmd_process,
     cmd_profile,
+    cmd_rabbitmq,
     cmd_restapi,
     cmd_run,
     cmd_setup,

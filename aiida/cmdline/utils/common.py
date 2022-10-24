@@ -13,6 +13,7 @@ import os
 import sys
 from typing import TYPE_CHECKING
 
+from click import style
 from tabulate import tabulate
 
 from . import echo
@@ -472,10 +473,19 @@ def print_process_spec(process_spec):
             echo.echo(template.format(*entry, width_name=max_width_name, width_type=max_width_type))
 
     if process_spec.exit_codes:
-        echo.echo('Exit codes:', fg=echo.COLORS['report'], bold=True)
-    for exit_code in sorted(process_spec.exit_codes.values(), key=lambda exit_code: exit_code.status):
-        message = exit_code.message
-        echo.echo('{:>{width_name}d}:  {}'.format(exit_code.status, message, width_name=max_width_name))
+        echo.echo('\nExit codes:\n', fg=echo.COLORS['report'], bold=True)
+
+        table = [('0', 'The process finished successfully.')]
+
+        for exit_code in sorted(process_spec.exit_codes.values(), key=lambda exit_code: exit_code.status):
+            if exit_code.invalidates_cache:
+                status = style(exit_code.status, bold=True, fg='red')
+            else:
+                status = exit_code.status
+            table.append((status, exit_code.message))
+
+        echo.echo(tabulate(table, tablefmt='plain'))
+        echo.echo(style('\nExit codes that invalidate the cache are marked in bold red.\n', italic=True))
 
 
 def get_num_workers():

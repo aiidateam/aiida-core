@@ -12,7 +12,6 @@ from plumpy.futures import unwrap_kiwi_future
 from aiida.common.exceptions import AiidaException
 from aiida.common.log import AIIDA_LOGGER
 from aiida.engine.daemon.client import DaemonException, get_daemon_client
-from aiida.manage.external.rmq import CommunicationTimeout
 from aiida.manage.manager import get_manager
 from aiida.orm import ProcessNode, QueryBuilder
 from aiida.tools.query.calculation import CalculationQueryBuilder
@@ -259,7 +258,7 @@ def _resolve_futures(
                 # unwrap is need here since LoopCommunicator will also wrap a future
                 future = unwrap_kiwi_future(future)
                 result = future.result()
-            except CommunicationTimeout:
+            except communications.CommunicationTimeout:
                 LOGGER.error(f'call to {infinitive} Process<{process.pk}> timed out')
             except Exception as exception:  # pylint: disable=broad-except
                 LOGGER.error(f'failed to {infinitive} Process<{process.pk}>: {exception}')

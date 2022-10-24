@@ -19,13 +19,14 @@ from .rmq import *
 
 __all__ = (
     'BROKER_DEFAULTS',
-    'CommunicationTimeout',
     'DEFAULT_DBINFO',
-    'DeliveryFailed',
     'Postgres',
     'PostgresConnectionMode',
     'ProcessLauncher',
-    'RemoteException',
+    'get_launch_queue_name',
+    'get_message_exchange_name',
+    'get_rmq_url',
+    'get_task_exchange_name',
 )
 
 # yapf: enable

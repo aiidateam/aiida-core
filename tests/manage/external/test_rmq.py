@@ -7,11 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=redefined-outer-name,no-self-use
 """Tests for the `aiida.manage.external.rmq` module."""
 import pathlib
+import uuid
 
 from kiwipy.rmq import RmqThreadCommunicator
 import pytest
+import requests
 
 from aiida.engine.processes import ProcessState, control
 from aiida.manage.external import rmq
@@ -109,3 +112,55 @@ def test_duplicate_subscriber_identifier(aiida_local_code_factory, started_daemo
     # Verify that the receiving of the duplicate task was logged by the daemon
     daemon_log = pathlib.Path(started_daemon_client.daemon_log_file).read_text(encoding='utf-8')
     assert f'Error: A subscriber with the process id<{node.pk}> already exists' in daemon_log
+
+
+@pytest.fixture
+def rabbitmq_client(aiida_profile):
+    profile = aiida_profile._manager._profile  # pylint: disable=protected-access
+    yield rmq.client.RabbitmqManagementClient(
+        username=profile.process_control_config['broker_username'],
+        password=profile.process_control_config['broker_password'],
+        hostname=profile.process_control_config['broker_host'],
+        virtual_host=profile.process_control_config['broker_virtual_host'],
+    )
+
+
+@pytest.mark.requires_rmq
+class TestRabbitmqManagementClient:
+    """Tests for the :class:`aiida.manage.external.rmq.client.RabbitmqManagementClient`."""
+
+    def test_is_connected(self, rabbitmq_client):
+        """Test the :meth:`aiida.manage.external.rmq.client.RabbitmqManagementClient.is_connected`."""
+        assert rabbitmq_client.is_connected
+
+    def test_not_is_connected(self, rabbitmq_client, monkeypatch):
+        """Test the :meth:`aiida.manage.external.rmq.client.RabbitmqManagementClient.is_connected` if not connected."""
+
+        def raise_connection_error(*_):
+            raise rmq.client.ManagementApiConnectionError
+
+        monkeypatch.setattr(rabbitmq_client, 'request', raise_connection_error)
+        assert not rabbitmq_client.is_connected
+
+    def test_request(self, rabbitmq_client):
+        """Test the :meth:`aiida.manage.external.rmq.client.RabbitmqManagementClient.request`."""
+        response = rabbitmq_client.request('cluster-name')
+        assert isinstance(response, requests.Response)
+        assert response.ok
+
+    def test_request_url_params(self, rabbitmq_client):
+        """Test the :meth:`aiida.manage.external.rmq.client.RabbitmqManagementClient.request` with ``url_params``.
+
+        Create a queue and delete it again.
+        """
+        name = f'test-queue-{uuid.uuid4()}'
+
+        response = rabbitmq_client.request('queues/{virtual_host}/{name}', {'name': name}, method='PUT')
+        assert isinstance(response, requests.Response)
+        assert response.ok
+        assert response.status_code == 201
+
+        response = rabbitmq_client.request('queues/{virtual_host}/{name}', {'name': name}, method='DELETE')
+        assert isinstance(response, requests.Response)
+        assert response.ok
+        assert response.status_code == 204

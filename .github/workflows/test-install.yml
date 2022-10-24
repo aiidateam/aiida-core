@@ -207,9 +207,10 @@ jobs:
         ports:
           - 5432:5432
       rabbitmq:
-        image: rabbitmq:latest
+        image: rabbitmq:3.8.14-management
         ports:
           - 5672:5672
+          - 15672:15672
       slurm:
         image: xenonmiddleware/slurm:17
         ports:
@@ -224,9 +225,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install system dependencies
-      run: |
-        sudo apt update
-        sudo apt install postgresql graphviz
+      run: sudo apt update && sudo apt install postgresql graphviz
 
     - name: Upgrade pip and setuptools
       # It is crucial to update `setuptools` or the installation of `pymatgen` can break

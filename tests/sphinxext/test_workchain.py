@@ -8,10 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the AiiDA workchain Sphinx directive."""
+import re
+
 import pytest
 
 
-def test_workchain_build(sphinx_build_factory, reference_result, xml_equal):
+def test_workchain_build(sphinx_build_factory, file_regression):
     """Test building sphinx documentation for WorkChain.
 
     Builds Sphinx documentation for workchain and compares against expected XML result.
@@ -19,8 +21,11 @@ def test_workchain_build(sphinx_build_factory, reference_result, xml_equal):
     sphinx_build = sphinx_build_factory('workchain', buildername='xml')
     sphinx_build.build(assert_pass=True)
 
-    index_file = sphinx_build.outdir / 'index.xml'
-    xml_equal(index_file, reference_result('workchain.xml'))
+    # Need to remove the ``source`` attribute of the ``document`` tag as that is variable.
+    output = (sphinx_build.outdir / 'index.xml').read_text()
+    output = re.sub(r'source=".*"', '', output)
+
+    file_regression.check(output, encoding='utf-8', extension='.xml')
 
 
 def test_broken_workchain_build(sphinx_build_factory):

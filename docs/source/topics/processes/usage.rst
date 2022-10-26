@@ -144,6 +144,12 @@ To signal that the value is invalid and to have a validation error raised, simpl
 
 The ``valid_type`` can define a single type, or a tuple of valid types.
 
+.. versionadded:: 2.1
+
+    If a port is marked as optional through ``required=False`` and defines ``valid_type``, the port will also accept ``None`` as values, whereas before this would raise validation error.
+    This is accomplished by automatically adding the ``NoneType`` to the ``valid_type`` tuple.
+    Ports that do not define a ``valid_type`` are not affected.
+
 .. note::
 
     Note that by default all ports are required, but specifying a default value implies that the input is not required and as such specifying ``required=False`` is not necessary in that case.

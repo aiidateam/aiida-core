@@ -14,7 +14,7 @@ import click
 
 from aiida import get_profile
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import arguments, options, types
+from aiida.cmdline.params import options, types
 from aiida.cmdline.utils import decorators, echo
 from aiida.common import exceptions
 
@@ -22,34 +22,6 @@ from aiida.common import exceptions
 @verdi.group('devel')
 def verdi_devel():
     """Commands for developers."""
-
-
-@verdi_devel.command('revive')
-@arguments.PROCESSES()
-@options.FORCE()
-@decorators.only_if_daemon_running(message='The daemon has to be running for this command to work.')
-def devel_revive(processes, force):
-    """Revive processes that seem stuck and are no longer reachable.
-
-    Warning: Use only as a last resort after you've gone through the checklist below.
-
-    \b
-        1. Does ``verdi status`` indicate that both daemon and RabbitMQ are running properly?
-           If not, restart the daemon with ``verdi daemon restart --reset`` and restart RabbitMQ.
-        2. Try ``verdi process play <PID>``.
-           If you receive a message that the process is no longer reachable, use ``verdi devel revive <PID>``.
-
-    Details: When RabbitMQ loses the process task before the process has completed, the process is never picked up by
-    the daemon and will remain "stuck". ``verdi devel revive`` recreates the task, which can lead to multiple instances
-    of the task being executed and should thus be used with caution.
-    """
-    from aiida.engine.processes.control import revive_processes
-
-    if not force:
-        echo.echo_warning('This command should only be used if you are absolutely sure the process task was lost.')
-        click.confirm(text='Do you want to continue?', abort=True)
-
-    revive_processes(processes)
 
 
 @verdi_devel.command('check-load-time')

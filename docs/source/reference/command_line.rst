@@ -218,7 +218,6 @@ Below is a list with all available subcommands.
       check-undesired-imports  Check that verdi does not import python modules it shouldn't.
       launch-add               Launch an ``ArithmeticAddCalculation``.
       rabbitmq                 Commands to interact with RabbitMQ.
-      revive                   Revive processes that seem stuck and are no longer reachable.
       run-sql                  Run a raw SQL command on the profile database (only...
       validate-plugins         Validate all plugins by checking they can be loaded.
 

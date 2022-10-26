@@ -662,6 +662,16 @@ class Process(plumpy.processes.Process):
 
             output.store()
 
+    def _build_process_label(self) -> str:
+        """Construct the process label that should be set on ``ProcessNode`` instances for this process class.
+
+        .. note:: By default this returns the name of the process class itself. It can be overridden by ``Process``
+            subclasses to provide a more specific label.
+
+        :returns: The process label to use for ``ProcessNode`` instances.
+        """
+        return self.__class__.__name__
+
     def _setup_db_record(self) -> None:
         """
         Create the database record for this process and the links with respect to its inputs
@@ -680,7 +690,7 @@ class Process(plumpy.processes.Process):
 
         # Store important process attributes in the node proxy
         self.node.set_process_state(None)
-        self.node.set_process_label(self.__class__.__name__)
+        self.node.set_process_label(self._build_process_label())
         self.node.set_process_type(self.__class__.build_process_type())
 
         parent_calc = self.get_parent_calc()

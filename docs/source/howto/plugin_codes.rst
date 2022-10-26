@@ -295,6 +295,30 @@ Note that some scheduler plugins can detect issues at the scheduler level (by pa
 The Topics section on :ref:`scheduler exit codes <topics:calculations:usage:calcjobs:scheduler-errors>` explains how these can be inspected inside a parser and how they can optionally be overridden.
 
 
+.. how-to:plugin-codes:customization:
+
+Customizations
+==============
+
+.. how-to:plugin-codes:customization:process-label:
+
+Process label
+-------------
+
+Each time a ``Process`` is run, a ``ProcessNode`` is stored in the database to record the execution.
+A human-readable label is stored in the ``process_label`` attribute.
+By default, the name of the process class is used as this label.
+If this default is not informative enough, it can be customized by overriding the :meth:`~aiida.engine.processes.process.Process._build_process_label`: method:
+
+.. code-block:: python
+
+    class SomeProcess(Process):
+
+        def _build_process_label(self):
+            return 'custom_process_label'
+
+Nodes created through executions of this process class will have ``node.process_label == 'custom_process_label'``.
+
 .. _how-to:plugin-codes:entry-points:
 
 Registering entry points

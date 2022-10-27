@@ -576,6 +576,7 @@ def retrieve_files_from_list(
     :param folder: an absolute path to a folder that contains the files to copy.
     :param retrieve_list: the list of files to retrieve.
     """
+    # pylint: disable=too-many-branches
     for item in retrieve_list:
         if isinstance(item, (list, tuple)):
             tmp_rname, tmp_lname, depth = item
@@ -584,13 +585,16 @@ def retrieve_files_from_list(
                 remote_names = transport.glob(tmp_rname)
                 local_names = []
                 for rem in remote_names:
-                    to_append = rem.split(os.path.sep)[-depth:] if depth > 0 else []
-                    local_names.append(os.path.sep.join([tmp_lname] + to_append))
+                    if depth is None:
+                        local_names.append(os.path.join(tmp_lname, rem))
+                    else:
+                        to_append = rem.split(os.path.sep)[-depth:] if depth > 0 else []
+                        local_names.append(os.path.sep.join([tmp_lname] + to_append))
             else:
                 remote_names = [tmp_rname]
                 to_append = tmp_rname.split(os.path.sep)[-depth:] if depth > 0 else []
                 local_names = [os.path.sep.join([tmp_lname] + to_append)]
-            if depth > 1:  # create directories in the folder, if needed
+            if depth is None or depth > 1:  # create directories in the folder, if needed
                 for this_local_file in local_names:
                     new_folder = os.path.join(folder, os.path.split(this_local_file)[0])
                     if not os.path.exists(new_folder):

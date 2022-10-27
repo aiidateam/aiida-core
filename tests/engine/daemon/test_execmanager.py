@@ -122,6 +122,8 @@ def test_hierarchy_utility(file_hierarchy, tmp_path):
     (['path/sub/file_c.txt'], {'file_c.txt': 'file_c'}),
     (['path'], {'path': {'file_b.txt': 'file_b', 'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}}),
     (['path/sub'], {'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}),
+    (['*.txt'], {'file_a.txt': 'file_a'}),
+    (['*/*.txt'], {'file_b.txt': 'file_b'}),
     # Single nested file that is retrieved keeping a varying level of depth of original hierarchy
     ([('path/sub/file_c.txt', '.', 3)], {'path': {'sub': {'file_c.txt': 'file_c'}}}),
     ([('path/sub/file_c.txt', '.', 2)], {'sub': {'file_c.txt': 'file_c'}}),
@@ -135,6 +137,9 @@ def test_hierarchy_utility(file_hierarchy, tmp_path):
     ([('path/sub/*', '.', 0)], {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}),  # This is identical to ['path/sub']
     ([('path/sub/*c.txt', '.', 2)], {'sub': {'file_c.txt': 'file_c'}}),
     ([('path/sub/*c.txt', '.', 0)], {'file_c.txt': 'file_c'}),
+    # Using globbing with depth `None` should maintain exact folder hierarchy
+    ([('path/*.txt', '.', None)], {'path': {'file_b.txt': 'file_b'}}),
+    ([('path/sub/*.txt', '.', None)], {'path': {'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}}),
     # Different target directory
     ([('path/sub/file_c.txt', 'target', 3)], {'target': {'path': {'sub': {'file_c.txt': 'file_c'}}}}),
     ([('path/sub', 'target', 1)], {'target': {'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}}),

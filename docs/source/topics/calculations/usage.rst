@@ -260,7 +260,7 @@ For example, imagine we have a `FolderData` node that is passed as the `folder` 
     │  └─ file_b.txt
     └─ file_a.txt
 
-If the entire content needs to be copied over, specify the `local_copy_list` as follows:
+If the entire content needs to be copied over, specify the ``local_copy_list`` as follows:
 
 .. code:: python
 
@@ -460,7 +460,19 @@ Pattern matching
 
 If the exact file or folder name is not known beforehand, glob patterns can be used.
 In the following examples, all files that match ``*c.txt`` in the directory ``path/sub`` will be retrieved.
-Since ``depth=0`` the files will be copied without the ``path/sub`` subdirectory.
+
+To maintain the folder structure set ``depth`` to ``None``:
+
+.. code:: bash
+
+    retrieve_list = [('path/sub/*c.txt', '.', None)]
+
+    └─ path
+        └─ sub
+           └─ file_c.txt
+
+Alternatively, the ``depth`` can be used to specify the number of levels of nesting that should be kept.
+For example, ``depth=0`` instructs to copy the matched files without any subfolders:
 
 .. code:: bash
 
@@ -468,7 +480,7 @@ Since ``depth=0`` the files will be copied without the ``path/sub`` subdirectory
 
     └─ file_c.txt
 
-To keep the subdirectory structure, one can set the depth parameter, just as in the previous examples.
+and ``depth=2`` will keep two levels in the final filepath:
 
 .. code:: bash
 

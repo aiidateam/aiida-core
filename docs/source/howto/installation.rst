@@ -313,77 +313,134 @@ Tuning performance
 ==================
 
 AiiDA supports running hundreds of thousands of calculations and graphs with millions of nodes.
-However, optimal performance at that scale might require some tweaks to the AiiDA configuration to balance the CPU and disk load.
-Here are a few general tips that might improve the AiiDA performance:
+However, optimal performance at that scale can require tweaking the AiiDA configuration to balance the CPU and disk load.
 
-    .. dropdown:: Prevent your operating system from indexing the file repository.
+Below, we share a few practical tips for assessing and tuning AiiDA performance.
+Further in-depth information is available in the dedicated :ref:`topic on performance<topics:performance>`.
 
-        Many Linux distributions include the ``locate`` command to quickly find files and folders, and run a daily cron job ``updatedb.mlocate`` to create the corresponding index.
-        A large file repository can take a long time to index, up to the point where the hard drive is constantly indexing.
+.. dropdown:: Benchmark workflow engine performance
 
-        In order to exclude the repository folder from indexing, add its path to the ``PRUNEPATH`` variable in the ``/etc/updatedb.conf`` configuration file (use ``sudo``).
+    Start the AiiDA daemon with a single worker, download the :download:`benchmark script <include/scripts/performance_benchmark_base.py>` :fa:`download`, and run it in your AiiDA environment.
 
-    .. dropdown:: Optimize the number of daemon workers
+    .. code:: console
 
-        The verdi deamon can manage an arbitrary number of parallel workers; by default only one is activated.
-        If ``verdi daemon status`` shows the daemon worker(s) constantly at high CPU usage, use ``verdi daemon incr X`` to add ``X`` daemon workers.
-        It is recommended that the number of workers does not exceed the number of CPU cores.
-        Ideally, if possible, one should use one or two cores less than the machine has, to avoid to degrade the PostgreSQL database performance.
+        sph@citadel:~/$ python performance_benchmark_base.py -n 100
+            Success: Created and configured temporary `Computer` benchmark-5fa8c67f for localhost.
+            Success: Created temporary `Code` bash for localhost.
+            Submitting 100 calculations.  [####################################]  100%
+            Submission completed in 9.36 seconds.
+            Waiting for calculations to complete  [####################################]  100%
+            Success: All calculations finished successfully.
+            Elapsed time: 46.55 seconds.
+            Cleaning up...
+            Success: Deleted all calculations.
+            Success: Deleted the created code bash@benchmark-5fa8c67f.
+            Success: Deleted the created computer benchmark-5fa8c67f.
+            Performance: 0.47 s / process
 
-    .. dropdown:: Move the Postgresql database to a fast disk (SSD), ideally on a large partition.
+    The output above was generated with a *single* daemon worker on one core of an AMD Ryzen 5 3600 6-Core processor (3.6 GHz, 4.2 GHz turbo boost) using AiiDA v1.6.9, and RabbitMQ and PostgreSQL running on the same machine.
+    Here, 100 ``ArithmeticAddCalculation`` processes completed in ~47s (including the time needed to submit them), corresponding to an average of half a second per process.
 
-        1. Stop the AiiDA daemon and :ref:`back up your database <how-to:installation:backup:postgresql>`.
+    If you observe a significantly higher runtime, you may want to check whether any relevant component (CPU, disk, postgresql, rabbitmq) is congested.
 
-        2. Find the data directory of your postgres installation (something like ``/var/lib/postgresql/9.6/main``, ``/scratch/postgres/9.6/main``, ...).
+.. dropdown:: Increase the number of daemon workers
 
-            The best way is to become the postgres UNIX user and enter the postgres shell::
+    By default, the AiiDA daemon only uses a single worker, i.e. a single operating system process.
+    If ``verdi daemon status`` shows the daemon worker constantly at high CPU usage, you can use ``verdi daemon incr X`` to add ``X`` parallel daemon workers.
 
-                psql
-                SHOW data_directory;
-                \q
+    Keep in mind that other processes need to run on your computer (e.g. rabbitmq, the PostgreSQL database, ...), i.e. it's a good idea to stop increasing the number of workers before you reach the number of cores of your CPU.
 
-            If you are unable to enter the postgres shell, try looking for the ``data_directory`` variable in a file ``/etc/postgresql/9.6/main/postgresql.conf`` or similar.
+    To make the change permanent, set
+    ::
 
-        3. Stop the postgres database service::
+        verdi config set daemon.default_workers 4
 
-            service postgresql stop
+.. dropdown:: Increase the number of daemon worker slots
 
-        4. Copy all files and folders from the postgres ``data_directory`` to the new location::
+    Each daemon worker accepts only a limited number of tasks at a time.
+    If ``verdi daemon status`` constantly warns about a high percentage of the available daemon worker slots being used, you can increase the number of tasks handled by each daemon worker (thus increasing the workload per worker).
+    Increasing it to 1000 should typically work.
 
-            cp -a SOURCE_DIRECTORY DESTINATION_DIRECTORY
+    Set the corresponding config variable and restart the daemon
+    ::
 
-            .. note:: Flag ``-a`` will create a directory within ``DESTINATION_DIRECTORY``, e.g.::
+        verdi config set daemon.worker_process_slots 1000
 
-            cp -a OLD_DIR/main/ NEW_DIR/
+.. dropdown:: Prevent your operating system from indexing the file repository.
 
-            creates ``NEW_DIR/main``.
-            It will also keep the file permissions (necessary).
+    Many Linux distributions include the ``locate`` command to quickly find files and folders, and run a daily cron job ``updatedb.mlocate`` to create the corresponding index.
+    A large file repository can take a long time to index, up to the point where the hard drive is constantly indexing.
 
-            The file permissions of the new and old directory need to be identical (including subdirectories).
-            In particular, the owner and group should be both ``postgres`` (except for symbolic links in ``server.crt`` and ``server.key`` that may or may not be present).
+    In order to exclude the repository folder from indexing, add its path to the ``PRUNEPATH`` variable in the ``/etc/updatedb.conf`` configuration file (use ``sudo``).
 
-            .. note::
+.. dropdown:: Move the Postgresql database to a fast disk (SSD), ideally on a large partition.
 
-                If the permissions of these links need to be changed, use the ``-h`` option of ``chown`` to avoid changing the permissions of the destination of the links.
-                In case you have changed the permission of the links destination by mistake, they should typically be (beware that this might depend on your actual distribution!)::
+    1. Stop the AiiDA daemon and :ref:`back up your database <how-to:installation:backup>`.
 
-                -rw-r--r-- 1 root root 989 Mar  1  2012 /etc/ssl/certs/ssl-cert-snakeoil.pem
-                -rw-r----- 1 root ssl-cert 1704 Mar  1  2012 /etc/ssl/private/ssl-cert-snakeoil.key
+    2. Find the data directory of your postgres installation (something like ``/var/lib/postgresql/9.6/main``, ``/scratch/postgres/9.6/main``, ...).
 
-        5. Point the ``data_directory`` variable in your postgres configuration file (e.g. ``/etc/postgresql/9.6/main/postgresql.conf``) to the new directory.
-
-        6. Restart the database daemon::
-
-            service postgresql start
-
-        Finally, check that the data directory has indeed changed::
+        The best way is to become the postgres UNIX user and enter the postgres shell::
 
             psql
             SHOW data_directory;
             \q
 
-        and try a simple AiiDA query with the new database.
-        If everything went fine, you can delete the old database location.
+        If you are unable to enter the postgres shell, try looking for the ``data_directory`` variable in a file ``/etc/postgresql/9.6/main/postgresql.conf`` or similar.
+
+    3. Stop the postgres database service::
+
+        service postgresql stop
+
+    4. Copy all files and folders from the postgres ``data_directory`` to the new location::
+
+        cp -a SOURCE_DIRECTORY DESTINATION_DIRECTORY
+
+        .. note:: Flag ``-a`` will create a directory within ``DESTINATION_DIRECTORY``, e.g.::
+
+        cp -a OLD_DIR/main/ NEW_DIR/
+
+        creates ``NEW_DIR/main``.
+        It will also keep the file permissions (necessary).
+
+        The file permissions of the new and old directory need to be identical (including subdirectories).
+        In particular, the owner and group should be both ``postgres`` (except for symbolic links in ``server.crt`` and ``server.key`` that may or may not be present).
+
+        .. note::
+
+            If the permissions of these links need to be changed, use the ``-h`` option of ``chown`` to avoid changing the permissions of the destination of the links.
+            In case you have changed the permission of the links destination by mistake, they should typically be (beware that this might depend on your actual distribution!)::
+
+            -rw-r--r-- 1 root root 989 Mar  1  2012 /etc/ssl/certs/ssl-cert-snakeoil.pem
+            -rw-r----- 1 root ssl-cert 1704 Mar  1  2012 /etc/ssl/private/ssl-cert-snakeoil.key
+
+    5. Point the ``data_directory`` variable in your postgres configuration file (e.g. ``/etc/postgresql/9.6/main/postgresql.conf``) to the new directory.
+
+    6. Restart the database daemon::
+
+        service postgresql start
+
+    Finally, check that the data directory has indeed changed::
+
+        psql
+        SHOW data_directory;
+        \q
+
+    and try a simple AiiDA query with the new database.
+    If everything went fine, you can delete the old database location.
+
+If you're still encountering performance issues, the following tips can help with pinpointing performance bottlenecks.
+
+.. dropdown:: Analyze the RabbitMQ message rate
+
+    If you're observing slow performance of the AiiDA engine, the `RabbitMQ management plugin <https://www.rabbitmq.com/management.html>`_ provides an intuitive dashboard that lets you monitor the message rate and check on what the AiiDA engine is up to.
+
+    Enable the management plugin via something like::
+
+        sudo rabbitmq-plugins enable rabbitmq_management
+
+    Then, navigate to http://localhost:15672/ and log in with ``guest``/``guest``.
+
+
 
 .. _how-to:installation:update:
 

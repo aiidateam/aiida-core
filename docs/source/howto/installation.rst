@@ -340,10 +340,35 @@ Tuning performance
 ==================
 
 AiiDA supports running hundreds of thousands of calculations and graphs with millions of nodes.
-However, optimal performance at that scale might require some tweaks to the AiiDA configuration to balance the CPU and disk load.
+However, optimal performance at that scale can require tweaking the AiiDA configuration to balance the CPU and disk load.
 
-Here are a few tips for tuning AiiDA performance:
+Below, we share a few practical tips for assessing and tuning AiiDA performance.
+Further in-depth information is available in the dedicated :ref:`topic on performance<topics:performance>`.
 
+.. dropdown:: Benchmark workflow engine performance
+
+    Start the AiiDA daemon with a single worker, download the :download:`benchmark script <include/scripts/performance_benchmark_base.py>` :fa:`download`, and run it in your AiiDA environment.
+
+    .. code:: console
+
+        sph@citadel:~/$ python performance_benchmark_base.py -n 100
+            Success: Created and configured temporary `Computer` benchmark-5fa8c67f for localhost.
+            Success: Created temporary `Code` bash for localhost.
+            Submitting 100 calculations.  [####################################]  100%
+            Submission completed in 9.36 seconds.
+            Waiting for calculations to complete  [####################################]  100%
+            Success: All calculations finished successfully.
+            Elapsed time: 46.55 seconds.
+            Cleaning up...
+            Success: Deleted all calculations.
+            Success: Deleted the created code bash@benchmark-5fa8c67f.
+            Success: Deleted the created computer benchmark-5fa8c67f.
+            Performance: 0.47 s / process
+
+    The output above was generated with a *single* daemon worker on one core of an AMD Ryzen 5 3600 6-Core processor (3.6 GHz, 4.2 GHz turbo boost) using AiiDA v1.6.9, and RabbitMQ and PostgreSQL running on the same machine.
+    Here, 100 ``ArithmeticAddCalculation`` processes completed in ~47s (including the time needed to submit them), corresponding to an average of half a second per process.
+
+    If you observe a significantly higher runtime, you may want to check whether any relevant component (CPU, disk, postgresql, rabbitmq) is congested.
 
 .. dropdown:: Increase the number of daemon workers
 
@@ -355,10 +380,9 @@ Here are a few tips for tuning AiiDA performance:
     To make the change permanent, set
     ::
 
-        verdi config set daemon.default_workers 5
+        verdi config set daemon.default_workers 4
 
 .. dropdown:: Increase the number of daemon worker slots
-
 
     Each daemon worker accepts only a limited number of tasks at a time.
     If ``verdi daemon status`` constantly warns about a high percentage of the available daemon worker slots being used, you can increase the number of tasks handled by each daemon worker (thus increasing the workload per worker).
@@ -368,8 +392,6 @@ Here are a few tips for tuning AiiDA performance:
     ::
 
         verdi config set daemon.worker_process_slots 1000
-
-
 
 .. dropdown:: Prevent your operating system from indexing the file repository.
 

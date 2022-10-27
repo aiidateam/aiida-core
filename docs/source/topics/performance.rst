@@ -7,7 +7,6 @@ Performance
 The performance of AiiDA depends on many factors:
 
 * the hardware that AiiDA is running on
-* the environment in which AiiDA is installed
 * how the services for AiiDA are configured (the database, message broker, filesystem, etc.)
 * the codes and their plugins that are being run.
 
@@ -28,14 +27,6 @@ A rule of thumb is to not have more workers than the number of cores of the mach
 If more workers are added, they will have to start sharing and swapping resources and the performance scaling will degrade.
 
 
-.. _topics:performance:environment:
-
-Environment
-===========
-
-To be added.
-
-
 .. _topics:performance:services:
 
 Services
@@ -52,6 +43,36 @@ Although this means that a part of the machine's resources is not available for 
 
 It is possible to configure an AiiDA profile to use services that are running on a different machine and can be reached over a network.
 However, this will typically affect the performance negatively as now each time a connection needs to be made to a service, the latency of the network is incurred.
+
+
+.. _topics:performance:benchmarks:
+
+Benchmarks
+==========
+
+The :download:`benchmark script <include/scripts/performance_benchmark_base.py>` :fa:`download` provides a basic way of assessing performance of the workflow engine that involves all components (CPU, file system, postgresql, rabbitmq).
+
+It launches 100 ``ArithmeticAddCalculation`` jobs on the localhost and measures the time until completion.
+Since the workload of the ``ArithmeticAddCalculation`` (summing two numbers) completes instantly, the time per process is a reasonable measure of the overhead incurred from the workflow engine.
+
+The numbers reported in the :ref:`howto section<howto:installation:performance>` were obtained using a single daemon worker and can be reduced by increasing the number of daemon workers:
+
+.. table::
+    :widths: auto
+
+    ========== ======================= ========================
+    # Workers  Total elapsed time (s)  Performance (s/process)
+    ========== ======================= ========================
+    1          46.55                   0.47
+    2          27.83                   0.28
+    4          16.43                   0.16
+    ========== ======================= ========================
+
+.. note::
+
+    While the process rate increases with the number of daemon workers, the scaling is not quite linear.
+    This is because, for simplicity, the benchmark script measures both the time required to submit the processes to the daemon (not parallelized) as well as the time needed to run the processes (parallelized over daemon workers).
+    In long-running processes, the time required to submit the process (roughly 0.1 seconds per process) is not relevant and linear scaling is achieved.
 
 
 .. _topics:performance:plugins:

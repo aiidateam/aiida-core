@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Script to benchmark the performance of the AiiDA workflow engine on a given installation."""
 import click
@@ -120,7 +121,7 @@ def main(code, number):
         orm.Computer.objects.delete(computer.pk)
         echo.echo_success(f'Deleted the created computer {computer_label}.')
 
-    echo.echo(f'Performance: {(number / (time_end - time_start)):.2f} processes / s')
+    echo.echo(f'Performance: {(time_end - time_start)/number:.2f} s per process')
 
 
 if __name__ == '__main__':

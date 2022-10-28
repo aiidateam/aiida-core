@@ -186,6 +186,23 @@ def test_source_code_attributes():
     assert node.function_name in function_name_from_source
 
 
+@pytest.mark.usefixtures('aiida_profile')
+def test_get_function_source_code():
+    """Test that ``get_function_source_code`` returns ``None`` if no source code was stored.
+
+    This is the case for example for functions defined in an interactive shell, where the retrieval of the source code
+    upon storing the node fails and nothing is stored. The function should not except in this case.
+    """
+    from aiida.orm.utils.mixins import FunctionCalculationMixin
+
+    _, node = function_return_true.run_get_node()
+
+    # Delete the source file by going down to the ``RepositoryBackend`` to circumvent the immutability check.
+    node.base.repository._repository.delete_object(FunctionCalculationMixin.FUNCTION_SOURCE_FILE_PATH)  # pylint: disable=protected-access
+
+    assert node.get_function_source_code() is None
+
+
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_function_varargs():
     """Variadic arguments are not supported and should raise."""

@@ -164,36 +164,45 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         """Return an iterator over all the results of a list of lists."""
         with self.query_session(data) as build:
 
-            stmt = build.query.statement.execution_options(yield_per=batch_size)
+            # Open a nested session such that :meth:`aiida.storage.psql_dos.orm.utils.ModelWrapper.save` does not commit
+            # when an entity returned from the cursor during iteration is mutated. The commit will be done on the same
+            # cursor, which will render it invalid for the next fetch of the iteration.
+            with self.get_session().begin_nested():
+                stmt = build.query.statement.execution_options(yield_per=batch_size)
 
-            for resultrow in self.get_session().execute(stmt):
-                yield [self.to_backend(rowitem) for rowitem in resultrow]
+                for resultrow in self.get_session().execute(stmt):
+                    yield [self.to_backend(rowitem) for rowitem in resultrow]
 
     def iterdict(self, data: QueryDictType, batch_size: Optional[int]) -> Iterable[Dict[str, Dict[str, Any]]]:
         """Return an iterator over all the results of a list of dictionaries."""
         with self.query_session(data) as build:
 
-            stmt = build.query.statement.execution_options(yield_per=batch_size)
+            # Open a nested session such that :meth:`aiida.storage.psql_dos.orm.utils.ModelWrapper.save` does not commit
+            # when an entity returned from the cursor during iteration is mutated. The commit will be done on the same
+            # cursor, which will render it invalid for the next fetch of the iteration.
+            with self.get_session().begin_nested():
 
-            for row in self.get_session().execute(stmt):
-                # build the yield result
-                yield_result: Dict[str, Dict[str, Any]] = {}
-                for (
-                    tag,
-                    projected_entities_dict,
-                ) in build.tag_to_projected.items():
-                    yield_result[tag] = {}
-                    for attrkey, project_index in projected_entities_dict.items():
-                        alias = build.tag_to_alias.get(tag)
-                        if alias is None:
-                            raise ValueError(f'No alias found for tag {tag}')
-                        field_name = get_corresponding_property(
-                            get_table_name(alias),
-                            attrkey,
-                            self.inner_to_outer_schema,
-                        )
-                        yield_result[tag][field_name] = self.to_backend(row[project_index])
-                yield yield_result
+                stmt = build.query.statement.execution_options(yield_per=batch_size)
+
+                for row in self.get_session().execute(stmt):
+                    # build the yield result
+                    yield_result: Dict[str, Dict[str, Any]] = {}
+                    for (
+                        tag,
+                        projected_entities_dict,
+                    ) in build.tag_to_projected.items():
+                        yield_result[tag] = {}
+                        for attrkey, project_index in projected_entities_dict.items():
+                            alias = build.tag_to_alias.get(tag)
+                            if alias is None:
+                                raise ValueError(f'No alias found for tag {tag}')
+                            field_name = get_corresponding_property(
+                                get_table_name(alias),
+                                attrkey,
+                                self.inner_to_outer_schema,
+                            )
+                            yield_result[tag][field_name] = self.to_backend(row[project_index])
+                    yield yield_result
 
     def get_query(self, data: QueryDictType) -> BuiltQuery:
         """Return the built query.

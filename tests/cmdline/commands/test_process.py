@@ -18,7 +18,7 @@ from aiida.cmdline.commands import cmd_process
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.engine import ProcessState
-from aiida.orm import CalcJobNode, WorkChainNode, WorkflowNode, WorkFunctionNode
+from aiida.orm import CalcJobNode, Group, WorkChainNode, WorkflowNode, WorkFunctionNode
 from tests.utils.processes import WaitProcess
 
 
@@ -44,7 +44,6 @@ class TestVerdiProcess:
     def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
-        from aiida.orm.groups import Group
 
         self.calcs = []
         self.process_label = 'SomeDummyWorkFunctionNode'
@@ -250,6 +249,29 @@ class TestVerdiProcess:
         result = self.cli_runner(cmd_process.process_report, options)
 
         assert len(get_result_lines(result)) > 0
+
+    def test_process_status(self):
+        """Test verdi process status"""
+        node = WorkflowNode().store()
+        node.set_process_state(ProcessState.RUNNING)
+
+        # Running without identifiers should not except and not print anything
+        options = []
+        result = self.cli_runner(cmd_process.process_status, options)
+        assert result.exception is None, result.output
+        assert len(get_result_lines(result)) == 0
+
+        # Giving a single identifier should print a non empty string message
+        options = [str(node.pk)]
+        result = self.cli_runner(cmd_process.process_status, options)
+        assert result.exception is None, result.output
+        assert len(get_result_lines(result)) > 0
+
+        # With max depth 0, the output should be empty
+        options = ['--max-depth', 0, str(node.pk)]
+        result = self.cli_runner(cmd_process.process_status, options)
+        assert result.exception is None, result.output
+        assert len(get_result_lines(result)) == 0
 
     def test_report(self):
         """Test the report command."""

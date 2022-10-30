@@ -13,12 +13,9 @@
 The purpose of these tests is to benchmark and compare processes,
 which are executed *via* both a local runner and the daemon.
 """
-import asyncio
-
 import pytest
 
-from aiida.engine import WorkChain, run_get_node, submit, while_
-from aiida.manage import get_manager
+from aiida.engine import WorkChain, run_get_node, while_
 from aiida.orm import InstalledCode, Int
 from aiida.plugins.factories import CalculationFactory
 
@@ -132,57 +129,20 @@ def test_workchain_local(benchmark, aiida_localhost, workchain, iterations, outg
     assert len(result.node.base.links.get_outgoing().all()) == outgoing
 
 
-async def with_timeout(what, timeout=60):
-    result = await asyncio.wait_for(what, timeout)
-    return result
-
-
-async def wait_for_process(runner, calc_node, timeout=60):
-    future = runner.get_process_future(calc_node.pk)
-    result = await with_timeout(future, timeout)
-    return result
-
-
-@pytest.fixture()
-def submit_get_node():
-    """A test fixture for running a process *via* submission to the daemon,
-    and blocking until it is complete.
-
-    Adapted from tests/engine/test_rmq.py
-    """
-    manager = get_manager()
-    runner = manager.get_runner()
-    # The daemon runner needs to share a common event loop,
-    # otherwise the local runner will never send the message while the daemon is running listening to intercept.
-    daemon_runner = manager.create_daemon_runner(loop=runner.loop)
-
-    def _submit(_process, timeout=60, **kwargs):
-
-        async def _do_submit():
-            node = submit(_process, **kwargs)
-            await wait_for_process(runner, node)
-            return node
-
-        result = runner.loop.run_until_complete(_do_submit())
-
-        return result
-
-    yield _submit
-
-    daemon_runner.close()
-
-
 @pytest.mark.parametrize('workchain,iterations,outgoing', WORKCHAINS.values(), ids=WORKCHAINS.keys())
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
 @pytest.mark.benchmark(group='engine')
-def test_workchain_daemon(benchmark, submit_get_node, aiida_localhost, workchain, iterations, outgoing):
+def test_workchain_daemon(benchmark, submit_and_await, aiida_localhost, workchain, iterations, outgoing):
     """Benchmark Workchains, executed in the via a daemon runner."""
     code = InstalledCode(
         default_calc_job_plugin='core.arithmetic.add', computer=aiida_localhost, filepath_executable='/bin/true'
     )
 
     def _run():
-        return submit_get_node(workchain, iterations=Int(iterations), code=code)
+        builder = workchain.get_builder()
+        builder.code = code
+        builder.iterations = Int(iterations)
+        return submit_and_await(builder, timeout=30)
 
     result = benchmark.pedantic(_run, iterations=1, rounds=10, warmup_rounds=1)
 

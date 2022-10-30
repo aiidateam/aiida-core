@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Mixin classes for ORM classes."""
+from __future__ import annotations
+
 import inspect
 from typing import List, Optional
 
@@ -104,12 +106,19 @@ class FunctionCalculationMixin:
         """
         self.base.attributes.set(self.FUNCTION_STARTING_LINE_KEY, function_starting_line_number)
 
-    def get_function_source_code(self):
-        """Return the absolute path to the source file in the repository.
+    def get_function_source_code(self) -> str | None:
+        """Return the source code of the function stored in the repository.
 
-        :returns: the absolute path of the source file in the repository, or None if it does not exist
+        If the source code file does not exist, this will return ``None`` instead. This can happen for example when the
+        function was defined in an interactive shell in which case ``store_source_info`` will have failed to retrieve
+        the source code using ``inspect.getsourcefile``.
+
+        :returns: The source code of the function or ``None`` if it could not be determined when storing the node.
         """
-        return self.base.repository.get_object_content(self.FUNCTION_SOURCE_FILE_PATH)
+        try:
+            return self.base.repository.get_object_content(self.FUNCTION_SOURCE_FILE_PATH)
+        except FileNotFoundError:
+            return None
 
 
 class Sealable:

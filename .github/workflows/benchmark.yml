@@ -4,15 +4,13 @@ on:
   push:
     branches: [main]
     paths-ignore: ['docs/**']
-  pull_request:
-    branches: [main]
 
 jobs:
 
   run-and-upload:
 
     # Only run on pushes and when the job is on the main repository and not on forks
-    if: ${{ github.event_name == 'push' && github.repository == 'aiidateam/aiida-core' }}
+    if: github.repository == 'aiidateam/aiida-core'
 
     strategy:
       fail-fast: false

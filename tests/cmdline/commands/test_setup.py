@@ -115,6 +115,10 @@ email: 123@234.de"""
 
         self.cli_runner(cmd_setup.quicksetup, options, raises=True)
 
+        # test
+        config = configuration.get_config()
+        assert config.get_option('autofill.user.email', scope=None) == user_email
+
     def test_setup(self):
         """Test `verdi setup` (non-interactive)."""
         postgres = Postgres(interactive=False, quiet=True, dbinfo=self.pg_test.dsn)

@@ -41,8 +41,9 @@ from aiida.manage.configuration import Profile, load_profile
 @options_setup.SETUP_TEST_PROFILE()
 @options_setup.SETUP_PROFILE_UUID()
 @options.CONFIG_FILE()
+@click.pass_context
 def setup(
-    non_interactive, profile: Profile, email, first_name, last_name, institution, db_engine, db_backend, db_host,
+    ctx, non_interactive, profile: Profile, email, first_name, last_name, institution, db_engine, db_backend, db_host,
     db_port, db_name, db_username, db_password, broker_protocol, broker_username, broker_password, broker_host,
     broker_port, broker_virtual_host, repository, test_profile, profile_uuid
 ):
@@ -52,7 +53,9 @@ def setup(
     """
     # pylint: disable=too-many-arguments,too-many-locals,unused-argument
     from aiida import orm
-    from aiida.manage.configuration import get_config
+
+    # store default user settings so user does not have to re-enter them
+    _store_default_user_settings(ctx.obj.config, email, first_name, last_name, institution)
 
     if profile_uuid is not None:
         profile.uuid = profile_uuid
@@ -80,7 +83,7 @@ def setup(
     )
     profile.is_test_profile = test_profile
 
-    config = get_config()
+    config = ctx.obj.config
 
     # Create the profile, set it as the default and load it
     config.add_profile(profile)
@@ -100,12 +103,6 @@ def setup(
         )
     else:
         echo.echo_success('storage initialisation completed.')
-
-    # Optionally setting configuration default user settings
-    config.set_option('autofill.user.email', email, override=False)
-    config.set_option('autofill.user.first_name', first_name, override=False)
-    config.set_option('autofill.user.last_name', last_name, override=False)
-    config.set_option('autofill.user.institution', institution, override=False)
 
     # Create the user if it does not yet exist
     created, user = orm.User.collection.get_or_create(
@@ -159,6 +156,9 @@ def quicksetup(
     # pylint: disable=too-many-arguments,too-many-locals
     from aiida.manage.external.postgres import Postgres, manual_setup_instructions
 
+    # store default user settings so user does not have to re-enter them
+    _store_default_user_settings(ctx.obj.config, email, first_name, last_name, institution)
+
     dbinfo_su = {
         'host': db_host,
         'port': db_port,
@@ -211,3 +211,12 @@ def quicksetup(
         'test_profile': test_profile,
     }
     ctx.invoke(setup, **setup_parameters)
+
+
+def _store_default_user_settings(config, email, first_name, last_name, institution):
+    """Store the default user settings if not already present."""
+    config.set_option('autofill.user.email', email, override=False)
+    config.set_option('autofill.user.first_name', first_name, override=False)
+    config.set_option('autofill.user.last_name', last_name, override=False)
+    config.set_option('autofill.user.institution', institution, override=False)
+    config.store()

@@ -11,6 +11,7 @@
 # pylint: disable=missing-function-docstring
 from contextlib import contextmanager, nullcontext
 import functools
+import gc
 import pathlib
 from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence, Set, Union
 
@@ -143,6 +144,10 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         self._session_factory.expunge_all()
         self._session_factory.close()
         self._session_factory = None
+
+        # Without this, sqlalchemy keeps a weakref to a session
+        # in sqlalchemy.orm.session._sessions
+        gc.collect()
 
     def _clear(self, recreate_user: bool = True) -> None:
         from aiida.storage.psql_dos.models.settings import DbSetting

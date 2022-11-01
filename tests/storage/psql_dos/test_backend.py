@@ -144,3 +144,24 @@ def test_get_info(monkeypatch):
     assert 'extra_value' in repository_info_out
     assert repository_info_out['value'] == 42
     assert repository_info_out['extra_value'] == 0
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_unload_profile():
+    """Test that unloading the profile closes all sqla sessions.
+
+    This is a regression test for #5506.
+    """
+    from sqlalchemy.orm.session import _sessions  # pylint: disable=import-outside-toplevel
+
+    # Just running the test suite itself should have opened at least one session
+    assert len(_sessions) != 0, str(_sessions)
+
+    manager = get_manager()
+    profile_name = manager.get_profile().name
+
+    try:
+        manager.unload_profile()
+        assert len(_sessions) == 0, str(_sessions)
+    finally:
+        manager.load_profile(profile_name)

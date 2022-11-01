@@ -164,10 +164,13 @@ class ProfileManager:
     def clear_profile():
         """Reset the global profile, clearing all its data and closing any open resources."""
         manager = get_manager()
-        manager.get_profile_storage()._clear(recreate_user=True)  # pylint: disable=protected-access
-        manager.get_profile_storage()  # reload the storage connection
         manager.reset_communicator()
         manager.reset_runner()
+
+        # Make sure profile storage is reset, closing any open sessions and connections and then recreate it, emptying
+        # the contents, except for the user.
+        manager.reset_profile_storage()
+        manager.get_profile_storage()._clear(recreate_user=True)  # pylint: disable=protected-access
 
     def has_profile_open(self):
         return self._profile is not None

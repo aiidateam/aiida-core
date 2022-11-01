@@ -1470,6 +1470,23 @@ class TestConsistency:
             qb.append(orm.Data, with_incoming='parent')
             assert len(qb.all()) == qb.count()
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_iterall_with_mutation(self):
+        """Test that nodes can be mutated while being iterated using ``QueryBuilder.iterall``."""
+        count = 10
+        pks = []
+
+        for _ in range(count):
+            node = orm.Data().store()
+            pks.append(node.pk)
+
+        # Ensure that batch size is smaller than the total rows yielded
+        for [node] in orm.QueryBuilder().append(orm.Data).iterall(batch_size=2):
+            node.base.extras.set('key', 'value')
+
+        for pk in pks:
+            assert orm.load_node(pk).get_extra('key') == 'value'
+
 
 class TestManager:
 

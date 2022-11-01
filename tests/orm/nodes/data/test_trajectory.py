@@ -1,20 +1,39 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=no-self-use
+# pylint: disable=no-self-use,redefined-outer-name
 """Tests for the `TrajectoryData` class."""
 import numpy as np
 import pytest
 
-from aiida.orm import TrajectoryData, load_node
+from aiida.orm import StructureData, TrajectoryData, load_node
+
+
+@pytest.fixture
+def trajectory_data():
+    """Return a dictionary of data to create a ``TrajectoryData``."""
+    symbols = ['H'] * 5 + ['Cl'] * 5
+    stepids = np.arange(1000, 3000, 10)
+    times = stepids * 0.01
+    positions = np.arange(6000, dtype=float).reshape((200, 10, 3))
+    velocities = -np.arange(6000, dtype=float).reshape((200, 10, 3))
+    cell = [[[3., 0.1, 0.3], [-0.05, 3., -0.2], [0.02, -0.08, 3.]]]
+    cells = np.array(cell * 200) + np.arange(0, 0.2, 0.001)[:, np.newaxis, np.newaxis]
+    return {
+        'symbols': symbols,
+        'positions': positions,
+        'stepids': stepids,
+        'cells': cells,
+        'times': times,
+        'velocities': velocities
+    }
 
 
 class TestTrajectory:
     """Test for the `TrajectoryData` class."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
-
         n_atoms = 5
         n_steps = 30
 
@@ -74,3 +93,54 @@ class TestTrajectory:
         tjd2 = load_node(tjd.pk)
         assert tjd2.base.attributes.get('units|positions') == 'some_random_pos_unit'
         assert tjd2.base.attributes.get('units|times') == 'some_random_time_unit'
+
+    def test_trajectory_get_index_from_stepid(self, trajectory_data):
+        """Test the ``get_index_from_stepid`` method."""
+        trajectory = TrajectoryData()
+        trajectory.set_trajectory(**trajectory_data)
+        assert trajectory.get_index_from_stepid(1050) == 5
+
+        with pytest.raises(ValueError):
+            trajectory.get_index_from_stepid(2333)
+
+    def test_trajectory_get_step_data(self, trajectory_data):
+        """Test the ``get_step_data`` method."""
+        trajectory = TrajectoryData()
+        trajectory.set_trajectory(**trajectory_data)
+        stepid, time, cell, symbols, positions, velocities = trajectory.get_step_data(-2)
+        assert stepid == trajectory_data['stepids'][-2]
+        assert time == trajectory_data['times'][-2]
+        np.array_equal(cell, trajectory_data['cells'][-2, :, :])
+        np.array_equal(symbols, trajectory_data['symbols'])
+        np.array_equal(positions, trajectory_data['positions'][-2, :, :])
+        np.array_equal(velocities, trajectory_data['velocities'][-2, :, :])
+
+    def test_trajectory_get_step_data_empty(self, trajectory_data):
+        """Test the `get_step_data` method when some arrays are not defined."""
+        trajectory = TrajectoryData()
+        trajectory.set_trajectory(symbols=trajectory_data['symbols'], positions=trajectory_data['positions'])
+        stepid, time, cell, symbols, positions, velocities = trajectory.get_step_data(3)
+        assert stepid == 3
+        assert time is None
+        assert cell is None
+        assert np.array_equal(symbols, trajectory_data['symbols'])
+        assert np.array_equal(positions, trajectory_data['positions'][3, :, :])
+        assert velocities is None
+
+    def test_trajectory_get_step_structure(self, trajectory_data):
+        """Test the `get_step_structure` method."""
+        trajectory = TrajectoryData()
+        trajectory.set_trajectory(**trajectory_data)
+        structure = trajectory.get_step_structure(50)
+
+        expected = StructureData()
+        expected.cell = trajectory_data['cells'][50]
+        for symbol, position in zip(trajectory_data['symbols'], trajectory_data['positions'][50, :, :]):
+            expected.append_atom(symbols=symbol, position=position)
+
+        structure.store()
+        expected.store()
+        assert structure.get_hash() == expected.get_hash()
+
+        with pytest.raises(IndexError):
+            trajectory.get_step_structure(500)

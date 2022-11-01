@@ -14,8 +14,9 @@ import click
 
 from aiida import get_profile
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import arguments, options
+from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
+from aiida.common import exceptions
 
 
 @verdi.group('devel')
@@ -140,3 +141,89 @@ def devel_play():
     """Play the Aida triumphal march by Giuseppe Verdi."""
     import webbrowser
     webbrowser.open_new('http://upload.wikimedia.org/wikipedia/commons/3/32/Triumphal_March_from_Aida.ogg')
+
+
+@verdi_devel.command('launch-add')
+@options.CODE(type=types.CodeParamType(entry_point='core.arithmetic.add'))
+@click.option('-d', '--daemon', is_flag=True, help='Submit to the daemon instead of running blockingly.')
+@click.option('-s', '--sleep', type=int, help='Set the `sleep` input in seconds.')
+def devel_launch_arithmetic_add(code, daemon, sleep):
+    """Launch an ``ArithmeticAddCalculation``.
+
+    Unless specified with the option ``--code``, a suitable ``Code`` is automatically setup. By default the command
+    configures ``bash`` on the ``localhost``. If the localhost is not yet configured as a ``Computer``, that is also
+    done automatically.
+    """
+    from shutil import which
+
+    from aiida.engine import run, submit
+    from aiida.orm import InstalledCode, Int, load_code
+
+    default_calc_job_plugin = 'core.arithmetic.add'
+
+    if not code:
+        try:
+            code = load_code('bash@localhost')
+        except exceptions.NotExistent:
+            localhost = prepare_localhost()
+            code = InstalledCode(
+                label='bash',
+                computer=localhost,
+                filepath_executable=which('bash'),
+                default_calc_job_plugin=default_calc_job_plugin
+            ).store()
+        else:
+            assert code.default_calc_job_plugin == default_calc_job_plugin
+
+    builder = code.get_builder()
+    builder.x = Int(1)
+    builder.y = Int(1)
+
+    if sleep:
+        builder.metadata.options.sleep = sleep
+
+    if daemon:
+        node = submit(builder)
+        echo.echo_success(f'Submitted calculation `{node}`')
+    else:
+        _, node = run.get_node(builder)
+        if node.is_finished_ok:
+            echo.echo_success(f'ArithmeticAddCalculation<{node.pk}> finished successfully.')
+        else:
+            echo.echo_warning(f'ArithmeticAddCalculation<{node.pk}> did not finish successfully.')
+
+
+def prepare_localhost():
+    """Prepare and return the localhost as ``Computer``.
+
+    If it doesn't already exist, the computer will be created, using ``core.local`` and ``core.direct`` as the entry
+    points for the transport and scheduler type, respectively. In that case, the safe transport interval and the minimum
+    job poll interval will both be set to 0 seconds in order to guarantee a throughput that is as fast as possible.
+
+    :return: The localhost configured as a ``Computer``.
+    """
+    import tempfile
+
+    from aiida.orm import Computer, load_computer
+
+    try:
+        computer = load_computer('localhost')
+    except exceptions.NotExistent:
+        echo.echo_warning('No `localhost` computer exists yet: creating and configuring the `localhost` computer.')
+        computer = Computer(
+            label='localhost',
+            hostname='localhost',
+            description='Localhost automatically created by `aiida.engine.launch_shell_job`',
+            transport_type='core.local',
+            scheduler_type='core.direct',
+            workdir=tempfile.gettempdir(),
+        ).store()
+        computer.configure(safe_interval=0.)
+        computer.set_minimum_job_poll_interval(0.)
+
+    default_user = computer.backend.default_user
+
+    if default_user and not computer.is_user_configured(default_user):
+        computer.configure(default_user)
+
+    return computer

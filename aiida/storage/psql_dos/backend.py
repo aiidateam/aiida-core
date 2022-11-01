@@ -92,6 +92,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         self.migrator(profile).validate_storage()
 
         self._session_factory: Optional[scoped_session] = None
+        self._session: Optional[Session] = None
         self._initialise_session()
         # save the URL of the database, for use in the __str__ method
         self._db_url = self.get_session().get_bind().url  # type: ignore
@@ -131,18 +132,27 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         """Return an SQLAlchemy session bound to the current thread."""
         if self._session_factory is None:
             raise ClosedStorage(str(self))
-        return self._session_factory()
+
+        if self._session is None:
+            self._session = self._session_factory()
+
+        return self._session
 
     def close(self) -> None:
         if self._session_factory is None:
             return  # the instance is already closed, and so this is a no-op
-        # close the connection
-        # pylint: disable=no-member
-        engine = self._session_factory.bind
+
+        engine = self._session_factory.bind  # pylint: disable=no-member
         if engine is not None:
             engine.dispose()  # type: ignore
-        self._session_factory.expunge_all()
-        self._session_factory.close()
+
+        if self._session is not None:
+            self._session.close()
+            del self._session
+            self._session = None
+
+        self._session_factory.expunge_all()  # pylint: disable=no-member
+        self._session_factory.close()  # pylint: disable=no-member
         self._session_factory = None
 
         # Without this, sqlalchemy keeps a weakref to a session

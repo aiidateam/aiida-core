@@ -31,11 +31,7 @@ def new_archive(aiida_profile_clean, tmp_path):
 def import_extras(path, import_new_extras=True) -> orm.Data:
     """Import an aiida database"""
     import_archive(path, import_new_extras=import_new_extras, merge_extras=('k', 'c', 'l'))
-
-    builder = orm.QueryBuilder().append(orm.Data, filters={'label': 'my_test_data_node'})
-    data = builder.all()
-    assert builder.count() == 1, data
-    return data[0][0]
+    return orm.QueryBuilder().append(orm.Data, filters={'label': 'my_test_data_node'}).one()[0]
 
 
 def modify_extras(path, imported_node, mode_existing) -> orm.Data:
@@ -47,9 +43,7 @@ def modify_extras(path, imported_node, mode_existing) -> orm.Data:
     import_archive(path, merge_extras=mode_existing)
 
     # Query again the database
-    builder = orm.QueryBuilder().append(orm.Data, filters={'label': 'my_test_data_node'})
-    assert builder.count() == 1
-    return builder.all()[0][0]
+    return orm.QueryBuilder().append(orm.Data, filters={'label': 'my_test_data_node'}).one()[0]
 
 
 def test_import_of_extras(new_archive):

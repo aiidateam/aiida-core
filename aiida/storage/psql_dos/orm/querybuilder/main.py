@@ -167,11 +167,15 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             # Open a nested session such that :meth:`aiida.storage.psql_dos.orm.utils.ModelWrapper.save` does not commit
             # when an entity returned from the cursor during iteration is mutated. The commit will be done on the same
             # cursor, which will render it invalid for the next fetch of the iteration.
-            with self.get_session().begin_nested():
-                stmt = build.query.statement.execution_options(yield_per=batch_size)
-
-                for resultrow in self.get_session().execute(stmt):
+            session = self.get_session()
+            try:
+                for resultrow in session.execute(build.query.statement.execution_options(yield_per=batch_size)):
                     yield [self.to_backend(rowitem) for rowitem in resultrow]
+            except Exception:  # pylint: disable=broad-except
+                session.rollback()
+            else:
+                if session.dirty:
+                    session.commit()
 
     def iterdict(self, data: QueryDictType, batch_size: Optional[int]) -> Iterable[Dict[str, Dict[str, Any]]]:
         """Return an iterator over all the results of a list of dictionaries."""
@@ -180,11 +184,10 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             # Open a nested session such that :meth:`aiida.storage.psql_dos.orm.utils.ModelWrapper.save` does not commit
             # when an entity returned from the cursor during iteration is mutated. The commit will be done on the same
             # cursor, which will render it invalid for the next fetch of the iteration.
-            with self.get_session().begin_nested():
+            session = self.get_session()
 
-                stmt = build.query.statement.execution_options(yield_per=batch_size)
-
-                for row in self.get_session().execute(stmt):
+            try:
+                for row in session.execute(build.query.statement.execution_options(yield_per=batch_size)):
                     # build the yield result
                     yield_result: Dict[str, Dict[str, Any]] = {}
                     for (
@@ -203,6 +206,11 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                             )
                             yield_result[tag][field_name] = self.to_backend(row[project_index])
                     yield yield_result
+            except Exception:  # pylint: disable=broad-except
+                session.rollback()
+            else:
+                if session.dirty:
+                    session.commit()
 
     def get_query(self, data: QueryDictType) -> BuiltQuery:
         """Return the built query.

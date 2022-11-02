@@ -164,6 +164,8 @@ def test_exit_status():
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_source_code_attributes():
     """Verify function properties are properly introspected and stored in the nodes attributes and repository."""
+    import inspect
+
     function_name = 'test_process_function'
 
     @calcfunction
@@ -178,6 +180,9 @@ def test_source_code_attributes():
     # Verify that the function name is correct and the first source code linenumber is stored
     assert node.function_name == function_name
     assert isinstance(node.function_starting_line_number, int)
+
+    # Check the source code of the function is stored
+    assert node.get_source_code_function() == inspect.getsource(test_process_function)
 
     # Check that first line number is correct. Note that the first line should correspond
     # to the `@workfunction` directive, but since the list is zero-indexed we actually get the

@@ -102,6 +102,7 @@ repos:
                 aiida/orm/nodes/process/.*py|
                 aiida/orm/nodes/repository.py|
                 aiida/orm/utils/links.py|
+                aiida/orm/utils/mixins.py|
                 aiida/plugins/entry_point.py|
                 aiida/plugins/factories.py|
                 aiida/plugins/utils.py|

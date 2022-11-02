@@ -220,7 +220,7 @@ class ProcessNode(Sealable, Node):
             raise ValueError(
                 f'could not load process class for entry point `{self.process_type}` for Node<{self.pk}>: {exception}'
             ) from exception
-        except ValueError:
+        except ValueError as exception:
             import importlib
 
             def str_rsplit_iter(string, sep='.'):
@@ -239,8 +239,8 @@ class ProcessNode(Sealable, Node):
                     pass
             else:
                 raise ValueError(
-                    f'could not load process class from `{self.process_type}` for Node<{self.pk}>: {exception}'
-                )
+                    f'could not load process class from `{self.process_type}` for Node<{self.pk}>'
+                ) from exception
 
         return process_class
 

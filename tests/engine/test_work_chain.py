@@ -21,7 +21,7 @@ from aiida.common.links import LinkType
 from aiida.common.utils import Capturing
 from aiida.engine import ExitCode, Process, ToContext, WorkChain, append_, calcfunction, if_, launch, return_, while_
 from aiida.engine.persistence import ObjectLoader
-from aiida.manage import get_manager
+from aiida.manage import enable_caching, get_manager
 from aiida.orm import Bool, Float, Int, Str, load_node
 
 
@@ -144,6 +144,36 @@ class Wf(WorkChain):
 
     def _set_finished(self, function_name):
         self.finished_steps[function_name] = True
+
+
+class CalcFunctionWorkChain(WorkChain):
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('a')
+        spec.input('b')
+        spec.output('out_member')
+        spec.output('out_static')
+        spec.outline(
+            cls.run_add_member,
+            cls.run_add_static,
+        )
+
+    @calcfunction
+    def add_member(a, b):  # pylint: disable=no-self-argument
+        return a + b
+
+    @staticmethod
+    @calcfunction
+    def add_static(a, b):
+        return a + b
+
+    def run_add_member(self):
+        self.out('out_member', CalcFunctionWorkChain.add_member(self.inputs.a, self.inputs.b))
+
+    def run_add_static(self):
+        self.out('out_static', self.add_static(self.inputs.a, self.inputs.b))
 
 
 class PotentialFailureWorkChain(WorkChain):
@@ -1030,6 +1060,47 @@ class TestWorkchain:
             inputs = {}
         proc = run_and_check_success(wf_class, **inputs)
         return proc.finished_steps
+
+    def test_member_calcfunction(self):
+        """Test defining a calcfunction as a ``WorkChain`` member method."""
+        results, node = launch.run.get_node(CalcFunctionWorkChain, a=Int(1), b=Int(2))
+        assert node.is_finished_ok
+        assert results['out_member'] == 3
+        assert results['out_static'] == 3
+
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_member_calcfunction_caching(self):
+        """Test defining a calcfunction as a ``WorkChain`` member method with caching enabled."""
+        results, node = launch.run.get_node(CalcFunctionWorkChain, a=Int(1), b=Int(2))
+        assert node.is_finished_ok
+        assert results['out_member'] == 3
+        assert results['out_static'] == 3
+
+        with enable_caching():
+            results, cached_node = launch.run.get_node(CalcFunctionWorkChain, a=Int(1), b=Int(2))
+            assert cached_node.is_finished_ok
+            assert results['out_member'] == 3
+            assert results['out_static'] == 3
+
+            # Check that the calcfunctions called by the workchain have been cached
+            for called in cached_node.called:
+                assert called.base.caching.is_created_from_cache
+                assert called.base.caching.get_cache_source() in [n.uuid for n in node.called]
+
+    def test_member_calcfunction_daemon(self, entry_points, daemon_client, submit_and_await):
+        """Test defining a calcfunction as a ``WorkChain`` member method submitted to the daemon."""
+        entry_points.add(CalcFunctionWorkChain, 'aiida.workflows:testing.calcfunction.workchain')
+
+        daemon_client.start_daemon()
+
+        builder = CalcFunctionWorkChain.get_builder()
+        builder.a = Int(1)
+        builder.b = Int(2)
+
+        node = submit_and_await(builder)
+        assert node.is_finished_ok
+        assert node.outputs.out_member == 3
+        assert node.outputs.out_static == 3
 
 
 @pytest.mark.requires_rmq

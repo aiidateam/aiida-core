@@ -212,6 +212,39 @@ The question you should ask yourself is whether a potential problem merits throw
 Or maybe, as in the example above, the problem is easily foreseeable and classifiable with a well defined exit status, in which case it might make more sense to return the exit code.
 At the end one should think which solution makes it easier for a workflow calling the function to respond based on the result and what makes it easier to query for these specific failure modes.
 
+As class member methods
+=======================
+
+.. versionadded:: 2.3
+
+Process functions can also be declared as class member methods, for example as part of a :class:`~aiida.engine.processes.workchains.workchain.WorkChain`:
+
+.. code-block:: python
+
+    class CalcFunctionWorkChain(WorkChain):
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('x')
+        spec.input('y')
+        spec.output('sum')
+        spec.outline(
+            cls.run_compute_sum,
+        )
+
+    @staticmethod
+    @calcfunction
+    def compute_sum(x, y):
+        return x + y
+
+    def run_compute_sum(self):
+        self.out('sum', self.compute_sum(self.inputs.x, self.inputs.y))
+
+In this example, the work chain declares a class method called ``compute_sum`` which is decorated with the ``calcfunction`` decorator to turn it into a calculation function.
+It is important that the method is also decorated with the ``staticmethod`` (see the `Python documentation <https://docs.python.org/3/library/functions.html#staticmethod>`_) such that the work chain instance is not passed when the method is invoked.
+The calcfunction can be called from a work chain step like any other class method, as is shown in the last line.
+
 
 Provenance
 ==========

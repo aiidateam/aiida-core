@@ -7,40 +7,23 @@ from aiida.restapi.run_api import run_api
 
 
 class NewResource(Resource):
-    """
-    resource containing GET and POST methods. Description of each method
-    follows:
-
-    GET: returns id, ctime, and attributes of the latest created Dict.
-
-    POST: creates a Dict object, stores it in the database,
-    and returns its newly assigned id.
-
-    """
+    """Resource implementing a GET method returning id, ctime, and attributes of the latest created Dict."""
 
     def get(self):
         from aiida.orm import Dict, QueryBuilder
 
-        qb = QueryBuilder()
-        qb.append(Dict,
-                  project=['id', 'ctime', 'attributes'],
-                  tag='pdata')
-        qb.order_by({'pdata': {'ctime': 'desc'}})
-        result = qb.first()
+        query = QueryBuilder()
+        query.append(Dict, project=['id', 'ctime', 'attributes'], tag='pdata')
+        query.order_by({'pdata': {'ctime': 'desc'}})
+        result = query.first()
 
-        # Results are returned as a dictionary, datetime objects is
-        # serialized as ISO 8601
-        return dict(id=result[0],
-                    ctime=result[1].isoformat(),
-                    attributes=result[2])
+        # Results are returned as a dictionary, datetime objects are serialized as ISO 8601
+        return dict(
+            id=result[0],
+            ctime=result[1].isoformat(),
+            attributes=result[2]
+        )
 
-    def post(self):
-        from aiida.orm import Dict
-
-        params = dict(property1='spam', property2='egg')
-        paramsData = Dict(dict=params).store()
-
-        return {'id': paramsData.pk}
 
 class NewApi(AiidaApi):
 

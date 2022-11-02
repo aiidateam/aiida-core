@@ -19,10 +19,12 @@ Extending the REST API
 ======================
 
 In the following, we will go through a minimal example of creating an API that extends the AiiDA REST API by adding an endpoint ``/new-endpoint``.
-The endpoint will support two HTTP methods:
+The endpoint implements a ``GET`` request that retrieves the latest created ``Dict`` node and returns its ``id``, ``ctime`` in ISO 8601 format, and ``attributes``.
 
- * *GET*: retrieves the latest created Dict object and returns its ``id``, ``ctime`` in ISO 8601 format, and ``attributes``.
- * *POST*: creates a ``Dict`` object with placeholder attributes, stores it, and returns its ``id``.
+.. warning::
+
+    The REST API is currently read-only and does not support end-points that create new data or mutate existing data in the database.
+    See `this AiiDA enhancement proposal draft <https://github.com/aiidateam/AEP/pull/24>`_ for efforts in this direction.
 
 In order to achieve this, we will need to:
 
@@ -53,44 +55,26 @@ Then we define a class representing the additional resource:
 .. code-block:: python
 
     class NewResource(Resource):
-        """
-        resource containing GET and POST methods. Description of each method
-        follows:
-
-        GET: returns id, ctime, and attributes of the latest created Dict.
-
-        POST: creates a Dict object, stores it in the database,
-        and returns its newly assigned id.
-
-        """
+        """Resource implementing a GET method returning id, ctime, and attributes of the latest created Dict."""
 
         def get(self):
-            from aiida.orm import QueryBuilder, Dict
+            from aiida.orm import Dict, QueryBuilder
 
-            qb = QueryBuilder()
-            qb.append(Dict,
-                      project=['id', 'ctime', 'attributes'],
-                      tag='pdata')
-            qb.order_by({'pdata': {'ctime': "desc"}})
-            result = qb.first()
+            query = QueryBuilder()
+            query.append(Dict, project=['id', 'ctime', 'attributes'], tag='pdata')
+            query.order_by({'pdata': {'ctime': 'desc'}})
+            result = query.first()
 
-            # Results are returned as a dictionary, datetime objects is
-            # serialized as ISO 8601
-            return dict(id=result[0],
-                        ctime=result[1].isoformat(),
-                        attributes=result[2])
+            # Results are returned as a dictionary, datetime objects are serialized as ISO 8601
+            return dict(
+                id=result[0],
+                ctime=result[1].isoformat(),
+                attributes=result[2]
+            )
 
-        def post(self):
-            from aiida.orm import Dict
-
-            params = dict(property1="spam", property2="egg")
-            paramsData = Dict(dict=params).store()
-
-            return {'id': paramsData.pk}
-
-The class ``NewResource`` contains two methods: ``get`` and ``post``.
-The names chosen for these functions are not arbitrary but fixed by ``Flask`` to individuate the functions that respond to HTTP request of type GET and POST, respectively.
-In other words, when the API receives a GET (POST) request to the URL ``new-endpoint``, the function ``NewResource.get()`` (``NewResource.post()``) will be executed.
+The class ``NewResource`` contains a single method ``get``.
+The name chosen for this method is not arbitrary but fixed by ``Flask`` which is called to respond to HTTP GET requests.
+In other words, when the API receives a GET request to the URL ``new-endpoint``, the function ``NewResource.get()`` is called.
 The HTTP response is constructed around the data returned by these functions.
 The data, which are packed as dictionaries, are serialized by Flask as a JSON stream of data.
 All the Python built-in types can be serialized by Flask (e.g. ``int``, ``float``, ``str``, etc.), whereas for serialization of custom types we let you refer to the `Flask documentation <http://flask.pocoo.org/docs/>`_ .
@@ -231,24 +215,6 @@ The form of the output (and only the form) should resemble
     }
 
 whereas the actual values of the response dictionary as well as the internal structure of the attributes field will be in general very different.
-
-Now, let us create a node through the POST method, and check it again through GET:
-
-.. code-block:: python
-
-    curl http://127.0.0.1:6000/api/v4/new-endpoint/ -X POST
-    {"id": 410618}
-    curl http://127.0.0.1:6000/api/v4/new-endpoint/ -X GET
-    {
-        "attributes": {
-            "property1": "spam",
-            "property2": "egg"
-        },
-        "ctime": "2017-06-20T15:36:56.320180+00:00",
-        "id": 410618
-    }
-
-The POST request triggers the creation of a new ``Dict`` node, as confirmed by the response to the GET request.
 
 As a final remark, there might be circumstances in which you do not want to use the internal werkzeug-based server.
 For example, you might want to run the app through Apache using a wsgi script.

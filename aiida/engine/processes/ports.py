@@ -109,6 +109,15 @@ class InputPort(WithSerialize, WithNonDb, ports.InputPort):
                     ' It is advised to use a lambda instead, e.g.: `default=lambda: orm.Int(5)`.'.format(args[0])
                 warnings.warn(UserWarning(message))  # pylint: disable=no-member
 
+        # If the port is not required and defines ``valid_type``, automatically add ``None`` as a valid type
+        valid_type = kwargs.get('valid_type', ())
+
+        if not isinstance(valid_type, (tuple, list)):
+            valid_type = [valid_type]
+
+        if not kwargs.get('required', True) and valid_type:
+            kwargs['valid_type'] = tuple(valid_type) + (type(None),)
+
         super().__init__(*args, **kwargs)
 
     def get_description(self) -> Dict[str, str]:

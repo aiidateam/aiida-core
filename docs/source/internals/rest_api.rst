@@ -23,7 +23,8 @@ The endpoint implements a ``GET`` request that retrieves the latest created ``Di
 
 .. warning::
 
-    The REST API is read-only and does not support end-points that create new data or mutate existing data in the database.
+    The REST API is currently read-only and does not support end-points that create new data or mutate existing data in the database.
+    See `this AiiDA enhancement proposal draft <https://github.com/aiidateam/AEP/pull/24>`_ for efforts in this direction.
 
 In order to achieve this, we will need to:
 

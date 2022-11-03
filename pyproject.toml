@@ -82,6 +82,7 @@ docs = [
     "sphinx-notfound-page~=0.5",
     "sphinxext-rediraffe~=0.2.4",
     "sphinx-sqlalchemy~=0.1.1",
+    "sphinx-intl[transifex]~=2.0.1",
     "myst-nb~=0.13.2"
 ]
 atomic_tools = [

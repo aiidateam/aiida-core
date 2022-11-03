@@ -23,23 +23,21 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Python 3.8
+    - name: Set up Python 3.10
       uses: actions/setup-python@v2
       with:
-        python-version: '3.8'
+        python-version: '3.10'
 
     - name: Install python dependencies
       run: |
-        pip install --upgrade pip
-        pip install transifex-client sphinx-intl
-        pip install -e .[docs,tests,rest,atomic_tools]
+        pip install -U -e .[docs,tests,rest,atomic_tools]
 
     - name: Build pot files
       env:
         READTHEDOCS: 'True'
-        RUN_APIDOC: 'False'
+        RUN_APIDOC: 'True'
       run:
-        sphinx-build -b gettext docs/source locale
+        make -C docs gettext
 
     - name: Setting transifex configuration and upload pot files
       env:
@@ -47,7 +45,10 @@ jobs:
         USER: ${{ secrets.TRANSIFEX_USER }}
         PASSWD: ${{ secrets.TRANSIFEX_PASSWORD }}
       run: |
-        tx init --no-interactive
-        sphinx-intl update-txconfig-resources --pot-dir locale --transifex-project-name ${PROJECT_NAME}
+        sphinx-intl create-txconfig
+        sphinx-intl update-txconfig-resources --pot-dir docs/build/locale --transifex-project-name ${PROJECT_NAME}
         echo $'[https://www.transifex.com]\nhostname = https://www.transifex.com\nusername = '"${USER}"$'\npassword = '"${PASSWD}"$'\n' > ~/.transifexrc
-        tx push -s
+
+    - name: Push to transifex
+      run: |
+        tx push -t -s

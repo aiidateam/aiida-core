@@ -469,3 +469,32 @@ def test_input_validation_storable_nodes():
     """
     with pytest.raises(ValueError):
         run(TestValidateDynamicNamespaceProcess, **{'namespace': {'a': 1}})
+
+
+class TestNotRequiredNoneProcess(Process):
+    """Process with an optional input port that should therefore also accept ``None``."""
+
+    _node_class = orm.WorkflowNode
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('valid_type', valid_type=orm.Int, required=False)
+        spec.input('any_type', required=False)
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_not_required_accepts_none():
+    """Test that a port that is not required, accepts ``None``."""
+    from aiida.engine.utils import instantiate_process
+    from aiida.manage import get_manager
+
+    runner = get_manager().get_runner()
+
+    process = instantiate_process(runner, TestNotRequiredNoneProcess, valid_type=None, any_type=None)
+    assert process.inputs.valid_type is None
+    assert process.inputs.any_type is None
+
+    process = instantiate_process(runner, TestNotRequiredNoneProcess, valid_type=orm.Int(1), any_type=orm.Bool(True))
+    assert process.inputs.valid_type == orm.Int(1)
+    assert process.inputs.any_type == orm.Bool(True)

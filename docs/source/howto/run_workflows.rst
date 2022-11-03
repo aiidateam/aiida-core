@@ -64,6 +64,18 @@ Just calling the ``add_and_multiply`` function with regular integers will result
         result = add_and_multiply(2, 3, 5)
 
     and AiiDA will recognize that the arguments are of type ``int`` and automatically wrap them in an ``Int`` node.
+    The same goes for argument defaults; if the argument accepts a Python base type it can specify a default value for it.
+    This will be automatically converted to the corresponding AiiDA data type when the function is called:
+
+    .. code-block:: python
+
+        @calcfunction
+        def add(a, b: int = 10):
+            return a + b
+
+        add(10)
+
+    The result will be an ``Int`` node with the value ``20``.
 
 
 .. note::

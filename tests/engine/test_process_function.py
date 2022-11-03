@@ -506,7 +506,7 @@ class DummyEnum(enum.Enum):
 ))
 # yapf: enable
 def test_input_serialization(argument, node_cls):
-    """Test that Python base type inputs are automatically serialized to AiiDA node counterpart."""
+    """Test that Python base type inputs are automatically serialized to the AiiDA node counterpart."""
     result = function_args(argument)
     assert isinstance(result, node_cls)
 
@@ -518,6 +518,50 @@ def test_input_serialization(argument, node_cls):
         assert result.get_dict() == argument
     else:
         assert result.value == argument
+
+
+# yapf: disable
+@pytest.mark.parametrize('default, node_cls', (
+    (True, orm.Bool),
+    ({'a': 1}, orm.Dict),
+    (1.0, orm.Float),
+    (1, orm.Int),
+    ('string', orm.Str),
+    ([1], orm.List),
+    (DummyEnum.VALUE, orm.EnumData),
+))
+# yapf: enable
+def test_default_serialization(default, node_cls):
+    """Test that Python base type defaults are automatically serialized to the AiiDA node counterpart."""
+
+    @workfunction
+    def function_with_default(data_a=default):
+        return data_a
+
+    result = function_with_default()
+    assert isinstance(result, node_cls)
+
+    if isinstance(result, orm.EnumData):
+        assert result.get_member() == default
+    elif isinstance(result, orm.List):
+        assert result.get_list() == default
+    elif isinstance(result, orm.Dict):
+        assert result.get_dict() == default
+    else:
+        assert result.value == default
+
+
+def test_multiple_default_serialization():
+    """Test that Python base type defaults are automatically serialized to the AiiDA node counterpart."""
+
+    @workfunction
+    def function_with_multiple_defaults(integer: int = 10, string: str = 'default', boolean: bool = False):
+        return {'integer': integer, 'string': string, 'boolean': boolean}
+
+    results = function_with_multiple_defaults()
+    assert results['integer'].value == 10
+    assert results['string'].value == 'default'
+    assert results['boolean'].value is False
 
 
 def test_input_serialization_none_default():

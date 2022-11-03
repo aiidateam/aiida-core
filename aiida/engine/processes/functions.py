@@ -234,10 +234,14 @@ class FunctionProcess(Process):
 
         def _define(cls, spec):  # pylint: disable=unused-argument
             """Define the spec dynamically"""
+            from plumpy.ports import UNSPECIFIED
+
             super().define(spec)
 
             for i, arg in enumerate(args):
-                default = ()
+
+                default = UNSPECIFIED
+
                 if defaults and i >= first_default_pos:
                     default = defaults[i - first_default_pos]
 
@@ -253,7 +257,18 @@ class FunctionProcess(Process):
                     else:
                         valid_type = (Data,)
 
-                    spec.input(arg, valid_type=valid_type, default=default, serializer=to_aiida_type)
+                    # If a default is defined and it is not a ``Data`` instance it should be serialized, but this should
+                    # be done lazily using a lambda, just as any port defaults should not define node instances directly
+                    # as is also checked by the ``spec.input`` call.
+                    if (
+                        default is not None and default != UNSPECIFIED and not isinstance(default, Data) and
+                        not callable(default)
+                    ):
+                        indirect_default = lambda value=default: to_aiida_type(value)
+                    else:
+                        indirect_default = default  # type: ignore[assignment]
+
+                    spec.input(arg, valid_type=valid_type, default=indirect_default, serializer=to_aiida_type)
 
             # Set defaults for label and description based on function name and docstring, if not explicitly defined
             port_label = spec.inputs['metadata']['label']

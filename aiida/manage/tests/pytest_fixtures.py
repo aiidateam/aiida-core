@@ -283,7 +283,7 @@ def submit_and_await(started_daemon_client):
     def _factory(
         submittable: Process | ProcessBuilder | ProcessNode,
         state: plumpy.ProcessState = plumpy.ProcessState.FINISHED,
-        timeout: int = 5
+        timeout: int = 20
     ):
         """Submit a process and wait for it to achieve the given state.
 

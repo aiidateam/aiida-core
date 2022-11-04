@@ -129,7 +129,7 @@ def import_archive(
     type_check(test_run, bool)
     backend = backend or get_manager().get_profile_storage()
     type_check(backend, StorageBackend)
-    qparams = QueryParams(batch_size=batch_size, filter_size=filter_size)
+    query_params = QueryParams(batch_size=batch_size, filter_size=filter_size)
 
     if group and not group.is_stored:
         group.store()
@@ -170,28 +170,28 @@ def import_archive(
         # Every addition/update is made in a single transaction, which is commited on exit
         with backend.transaction():
 
-            user_ids_archive_backend = _import_users(backend_from, backend, qparams)
-            computer_ids_archive_backend = _import_computers(backend_from, backend, qparams)
+            user_ids_archive_backend = _import_users(backend_from, backend, query_params)
+            computer_ids_archive_backend = _import_computers(backend_from, backend, query_params)
             if include_authinfos:
                 _import_authinfos(
-                    backend_from, backend, qparams, user_ids_archive_backend, computer_ids_archive_backend
+                    backend_from, backend, query_params, user_ids_archive_backend, computer_ids_archive_backend
                 )
             node_ids_archive_backend = _import_nodes(
-                backend_from, backend, qparams, user_ids_archive_backend, computer_ids_archive_backend,
+                backend_from, backend, query_params, user_ids_archive_backend, computer_ids_archive_backend,
                 import_new_extras, merge_extras
             )
-            _import_logs(backend_from, backend, qparams, node_ids_archive_backend)
+            _import_logs(backend_from, backend, query_params, node_ids_archive_backend)
             _import_comments(
-                backend_from, backend, qparams, user_ids_archive_backend, node_ids_archive_backend, merge_comments
+                backend_from, backend, query_params, user_ids_archive_backend, node_ids_archive_backend, merge_comments
             )
-            _import_links(backend_from, backend, qparams, node_ids_archive_backend)
+            _import_links(backend_from, backend, query_params, node_ids_archive_backend)
             group_labels = _import_groups(
-                backend_from, backend, qparams, user_ids_archive_backend, node_ids_archive_backend
+                backend_from, backend, query_params, user_ids_archive_backend, node_ids_archive_backend
             )
             import_group_id = None
             if create_group:
-                import_group_id = _make_import_group(group, group_labels, node_ids_archive_backend, backend, qparams)
-            new_repo_keys = _get_new_object_keys(archive_format.key_format, backend_from, backend, qparams)
+                import_group_id = _make_import_group(group, group_labels, node_ids_archive_backend, backend, query_params)
+            new_repo_keys = _get_new_object_keys(archive_format.key_format, backend_from, backend, query_params)
 
             if test_run:
                 # exit before we write anything to the database or repository

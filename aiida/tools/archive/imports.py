@@ -190,7 +190,9 @@ def import_archive(
             )
             import_group_id = None
             if create_group:
-                import_group_id = _make_import_group(group, group_labels, node_ids_archive_backend, backend, query_params)
+                import_group_id = _make_import_group(
+                    group, group_labels, node_ids_archive_backend, backend, query_params
+                )
             new_repo_keys = _get_new_object_keys(archive_format.key_format, backend_from, backend, query_params)
 
             if test_run:

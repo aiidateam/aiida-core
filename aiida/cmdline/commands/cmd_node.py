@@ -35,17 +35,27 @@ def verdi_node_repo():
 
 @verdi_node_repo.command('cat')
 @arguments.NODE()
-@click.argument('relative_path', type=str)
+@click.argument('relative_path', type=str, required=False)
 @with_dbenv()
 def repo_cat(node, relative_path):
-    """Output the content of a file in the node repository folder."""
+    """Output the content of a file in the node repository folder.
+
+    For ``SinglefileData`` nodes, the `RELATIVE_PATH` does not have to be specified as it is determined automatically.
+    """
     import errno
-    from shutil import copyfileobj
     import sys
+
+    from aiida.orm import SinglefileData
+
+    if not relative_path:
+        if not isinstance(node, SinglefileData):
+            raise click.BadArgumentUsage('Missing argument \'RELATIVE_PATH\'.')
+
+        relative_path = node.filename
 
     try:
         with node.base.repository.open(relative_path, mode='rb') as fhandle:
-            copyfileobj(fhandle, sys.stdout.buffer)
+            shutil.copyfileobj(fhandle, sys.stdout.buffer)
     except OSError as exception:
         # The sepcial case is breakon pipe error, which is usually OK.
         if exception.errno != errno.EPIPE:

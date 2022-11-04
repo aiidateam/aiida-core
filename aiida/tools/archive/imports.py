@@ -215,7 +215,7 @@ def _add_new_entities(
 
     # collect the unique entities from the input backend to be added to the output backend
     ufields = []
-    query = QueryBuilder(backend=backend_from).append(entity_type_to_orm[etype], project=[unique_field])
+    query = QueryBuilder(backend=backend_from).append(entity_type_to_orm[etype], project=unique_field)
     for (ufield,) in query.distinct().iterall(batch_size=qparams.batch_size):
         if ufield not in backend_unique_id:
             ufields.append(ufield)

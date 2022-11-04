@@ -178,6 +178,16 @@ class TestVerdiNode:
         result = self.cli_runner(cmd_node.repo_cat, options)
         assert gzip.decompress(result.stdout_bytes) == b'COMPRESS'
 
+    def test_node_repo_cat_singlefile(self):
+        """Test ``verdi node repo cat`` for a ``SinglefileNode``.
+
+        Here the relative path argument should be optional and the command should determine it automatically.
+        """
+        node = orm.SinglefileData(io.BytesIO(b'content')).store()
+        options = [str(node.pk)]
+        result = self.cli_runner(cmd_node.repo_cat, options)
+        assert result.stdout_bytes == b'content'
+
     def test_node_repo_dump(self, tmp_path):
         """Test 'verdi node repo dump' command."""
         folder_node = self.get_unstored_folder_node().store()

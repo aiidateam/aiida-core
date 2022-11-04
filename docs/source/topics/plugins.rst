@@ -358,6 +358,7 @@ The module provides the following fixtures:
 * :ref:`started_daemon_client <topics:plugins:testfixtures:started-daemon-client>`: Same as ``daemon_client`` but the daemon is guaranteed to be running
 * :ref:`stopped_daemon_client <topics:plugins:testfixtures:stopped-daemon-client>`: Same as ``daemon_client`` but the daemon is guaranteed to *not* be running
 * :ref:`daemon_client <topics:plugins:testfixtures:daemon-client>`: Return a :class:`~aiida.engine.daemon.client.DaemonClient` instance to control the daemon
+* :ref:`entry_points <topics:plugins:testfixtures:entry-points>`: Return a :class:`~aiida.manage.tests.pytest_fixtures.EntryPointManager` instance to add and remove entry points
 
 
 .. _topics:plugins:testfixtures:aiida-profile:
@@ -509,6 +510,28 @@ Return a :class:`~aiida.engine.daemon.client.DaemonClient` instance that can be 
         daemon_client.stop_daemon(wait=True)
 
 
+.. _topics:plugins:testfixtures:entry-points:
+
+``entry_points``
+----------------
+
+Return a :class:`~aiida.manage.tests.pytest_fixtures.EntryPointManager` instance to add and remove entry points.
+
+.. code-block:: python
+
+    def test_parser(entry_points):
+        """Test a custom ``Parser`` implementation."""
+        from aiida.parsers import Parser
+        from aiida.plugins import ParserFactory
+
+        class CustomParser(Parser):
+            """Parser implementation."""
+
+        entry_points.add(CustomParser, 'custom.parser')
+
+        assert ParserFactory('custom.parser', CustomParser)
+
+Any entry points additions and removals are automatically undone at the end of the test.
 
 
 .. _click: https://click.palletsprojects.com/

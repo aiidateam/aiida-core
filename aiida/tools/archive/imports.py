@@ -61,7 +61,7 @@ class QueryParams:
     batch_size: int
     """Batch size for streaming database rows."""
     filter_size: int
-    """Maximum size of parameters allowed in a single query filter."""
+    """Maximum number of parameters allowed in a single query filter."""
 
 
 def import_archive(
@@ -223,6 +223,8 @@ def _add_new_entities(
             ufields.append(ufield)
 
     with get_progress_reporter()(desc=f'Adding new {etype.value}(s)', total=total) as progress:
+        # batch the filtering of rows by filter size, to limit the number of query variables used in any one query,
+        # since certain backends have a limit on the number of variables in a query (such as SQLITE_MAX_VARIABLE_NUMBER)
         for nrows, ufields_batch in batch_iter(ufields, query_params.filter_size):
             rows = [
                 transform(row) for row in QueryBuilder(backend=backend_from).append(

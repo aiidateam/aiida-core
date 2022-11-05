@@ -509,6 +509,9 @@ Return a :class:`~aiida.engine.daemon.client.DaemonClient` instance that can be 
         assert daemon_client.is_daemon_running
         daemon_client.stop_daemon(wait=True)
 
+The fixture is session scoped.
+At the end of the test session, this fixture automatically shuts down the daemon if it is still running.
+
 
 .. _topics:plugins:testfixtures:entry-points:
 

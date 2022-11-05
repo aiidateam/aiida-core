@@ -246,11 +246,11 @@ def aiida_local_code_factory(aiida_localhost):
     return get_code
 
 
-@pytest.fixture()
+@pytest.fixture(scope='session')
 def daemon_client(aiida_profile):
-    """Return a daemon client for the configured test profile for the scope of the function.
+    """Return a daemon client for the configured test profile for the test session.
 
-    The daemon will be automatically stopped at the end of the test function.
+    The daemon will be automatically stopped at the end of the test session.
     """
     daemon_client = DaemonClient(aiida_profile._manager._profile)  # pylint: disable=protected-access
 

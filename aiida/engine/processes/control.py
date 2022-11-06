@@ -60,7 +60,7 @@ def revive_processes(processes: list[ProcessNode], *, wait: bool = False) -> Non
 
     for process in processes:
 
-        future = process_controller.continue_process(process.id, nowait=not wait, no_reply=False)
+        future = process_controller.continue_process(process.pk, nowait=not wait, no_reply=False)
 
         if future:
             response = future.result()  # type: ignore[union-attr]
@@ -68,11 +68,11 @@ def revive_processes(processes: list[ProcessNode], *, wait: bool = False) -> Non
             response = None
 
         if response and response.done():
-            LOGGER.info(f'Message to continue Process<{process.id}> received successfully.')
+            LOGGER.info(f'Message to continue Process<{process.pk}> received successfully.')
         elif response:
-            LOGGER.warning(f'Failed to deliver message to Process<{process.id}>: {response}|{response.exception()}')
+            LOGGER.warning(f'Failed to deliver message to Process<{process.pk}>: {response}|{response.exception()}')
         else:
-            LOGGER.warning(f'No response when trying to continue Process<{process.id}>, try resetting the daemon.')
+            LOGGER.warning(f'No response when trying to continue Process<{process.pk}>, try resetting the daemon.')
 
 
 def play_processes(

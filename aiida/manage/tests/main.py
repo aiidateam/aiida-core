@@ -162,7 +162,18 @@ class ProfileManager:
 
     @staticmethod
     def clear_profile():
-        """Reset the global profile, clearing all its data and closing any open resources."""
+        """Reset the global profile, clearing all its data and closing any open resources.
+
+        If the daemon is running, it will be stopped because it might be holding on to entities that will be cleared
+        from the storage backend.
+        """
+        from aiida.engine.daemon.client import get_daemon_client
+
+        daemon_client = get_daemon_client()
+
+        if daemon_client.is_daemon_running:
+            daemon_client.stop_daemon(wait=True)
+
         manager = get_manager()
         manager.get_profile_storage()._clear(recreate_user=True)  # pylint: disable=protected-access
         manager.get_profile_storage()  # reload the storage connection

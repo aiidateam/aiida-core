@@ -52,7 +52,7 @@ def test_help(run_cli_command):
 def test_code_list_no_codes_error_message(run_cli_command):
     """Test ``verdi code list`` when no codes exist."""
     result = run_cli_command(cmd_code.code_list)
-    assert '# No codes found matching the specified criteria.' in result.output
+    assert 'No codes found matching the specified criteria.' in result.output
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -66,12 +66,12 @@ def test_code_list(run_cli_command, code):
     code2.label = 'code2'
     code2.store()
 
-    options = ['-A', '-a', '-o', '--input-plugin=core.arithmetic.add', f'--computer={code.computer.label}']
+    options = ['-A', '-a', '-o', '-d', 'core.arithmetic.add', f'--computer={code.computer.label}']
     result = run_cli_command(cmd_code.code_list, options)
     assert str(code.pk) in result.output
     assert code2.label not in result.output
     assert code.computer.label in result.output
-    assert '# No codes found matching the specified criteria.' not in result.output
+    assert 'No codes found matching the specified criteria.' not in result.output
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

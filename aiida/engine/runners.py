@@ -164,11 +164,11 @@ class Runner:  # pylint: disable=too-many-public-methods
         reset_event_loop_policy()
         self._closed = True
 
-    def instantiate_process(self, process: TYPE_RUN_PROCESS, *args, **inputs):
+    def instantiate_process(self, process: TYPE_RUN_PROCESS, **inputs):
         from .utils import instantiate_process  # pylint: disable=no-name-in-module
-        return instantiate_process(self, process, *args, **inputs)
+        return instantiate_process(self, process, **inputs)
 
-    def submit(self, process: TYPE_SUBMIT_PROCESS, *args: Any, **inputs: Any):
+    def submit(self, process: TYPE_SUBMIT_PROCESS, **inputs: Any):
         """
         Submit the process with the supplied inputs to this runner immediately returning control to
         the interpreter. The return value will be the calculation node of the submitted process
@@ -180,7 +180,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         assert not utils.is_process_function(process), 'Cannot submit a process function'
         assert not self._closed
 
-        process_inited = self.instantiate_process(process, *args, **inputs)
+        process_inited = self.instantiate_process(process, **inputs)
 
         if not process_inited.metadata.store_provenance:
             raise exceptions.InvalidOperation('cannot submit a process with `store_provenance=False`')

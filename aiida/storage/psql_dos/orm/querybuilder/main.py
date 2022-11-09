@@ -9,7 +9,7 @@
 ###########################################################################
 # pylint: disable=too-many-lines
 """Sqla query builder implementation"""
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
 import uuid
@@ -165,35 +165,51 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         with self.query_session(data) as build:
 
             stmt = build.query.statement.execution_options(yield_per=batch_size)
+            session = self.get_session()
 
-            for resultrow in self.get_session().execute(stmt):
-                yield [self.to_backend(rowitem) for rowitem in resultrow]
+            # Open a session transaction unless already inside one. This prevents the `ModelWrapper` from calling commit
+            # on the session when a yielded row is mutated. This would reset the cursor invalidating it and causing an
+            # exception to be raised in the next batch of rows in the iteration.
+            # See https://github.com/python/mypy/issues/10109 for the reason of the type warning.
+            in_nested_transaction = session.in_nested_transaction()
+
+            with nullcontext() if in_nested_transaction else session.begin_nested():  # type: ignore[attr-defined]
+                for resultrow in session.execute(stmt):
+                    yield [self.to_backend(rowitem) for rowitem in resultrow]
 
     def iterdict(self, data: QueryDictType, batch_size: Optional[int]) -> Iterable[Dict[str, Dict[str, Any]]]:
         """Return an iterator over all the results of a list of dictionaries."""
         with self.query_session(data) as build:
 
             stmt = build.query.statement.execution_options(yield_per=batch_size)
+            session = self.get_session()
 
-            for row in self.get_session().execute(stmt):
-                # build the yield result
-                yield_result: Dict[str, Dict[str, Any]] = {}
-                for (
-                    tag,
-                    projected_entities_dict,
-                ) in build.tag_to_projected.items():
-                    yield_result[tag] = {}
-                    for attrkey, project_index in projected_entities_dict.items():
-                        alias = build.tag_to_alias.get(tag)
-                        if alias is None:
-                            raise ValueError(f'No alias found for tag {tag}')
-                        field_name = get_corresponding_property(
-                            get_table_name(alias),
-                            attrkey,
-                            self.inner_to_outer_schema,
-                        )
-                        yield_result[tag][field_name] = self.to_backend(row[project_index])
-                yield yield_result
+            # Open a session transaction unless already inside one. This prevents the `ModelWrapper` from calling commit
+            # on the session when a yielded row is mutated. This would reset the cursor invalidating it and causing an
+            # exception to be raised in the next batch of rows in the iteration.
+            # See https://github.com/python/mypy/issues/10109 for the reason of the type warning.
+            in_nested_transaction = session.in_nested_transaction()
+
+            with nullcontext() if in_nested_transaction else session.begin_nested():  # type: ignore[attr-defined]
+                for row in self.get_session().execute(stmt):
+                    # build the yield result
+                    yield_result: Dict[str, Dict[str, Any]] = {}
+                    for (
+                        tag,
+                        projected_entities_dict,
+                    ) in build.tag_to_projected.items():
+                        yield_result[tag] = {}
+                        for attrkey, project_index in projected_entities_dict.items():
+                            alias = build.tag_to_alias.get(tag)
+                            if alias is None:
+                                raise ValueError(f'No alias found for tag {tag}')
+                            field_name = get_corresponding_property(
+                                get_table_name(alias),
+                                attrkey,
+                                self.inner_to_outer_schema,
+                            )
+                            yield_result[tag][field_name] = self.to_backend(row[project_index])
+                    yield yield_result
 
     def get_query(self, data: QueryDictType) -> BuiltQuery:
         """Return the built query.

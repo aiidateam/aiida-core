@@ -513,14 +513,14 @@ class Process(plumpy.processes.Process):
         super().set_status(status)
         self.node.set_process_status(status)
 
-    def submit(self, process: Type['Process'], *args, **kwargs) -> orm.ProcessNode:
+    def submit(self, process: Type['Process'], **kwargs) -> orm.ProcessNode:
         """Submit process for execution.
 
         :param process: process
         :return: the calculation node of the process
 
         """
-        return self.runner.submit(process, *args, **kwargs)
+        return self.runner.submit(process, **kwargs)
 
     @property
     def runner(self) -> 'Runner':

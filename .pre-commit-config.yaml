@@ -13,6 +13,7 @@ repos:
             (?x)^(
                 tests/.*(?<!\.py)$|
                 docs/source/.+\.aiida/repo/.+|
+                CHANGELOG.md|
             )$
     -   id: fix-encoding-pragma
     -   id: mixed-line-ending

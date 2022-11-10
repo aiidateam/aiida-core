@@ -1,5 +1,42 @@
 # Changelog
 
+## v2.1.1 - 2022-11-10
+
+### Fixes
+
+- Engine: Remove `*args` from the `Process.submit` method. [[#5753]](https://github.com/aiidateam/aiida-core/pull/5753)  
+  Positional arguments were silently ignored leading to a misleading error message.
+  For example, if a user called
+  ```python
+  inputs = {}
+  self.submit(cls, inputs)
+  ```
+  instead of the intended
+  ```python
+  inputs = {}
+  self.submit(cls, **inputs)
+  ```
+  The returned error message was that one of the required inputs was not defined.
+  Now it will correctly raise a `TypeError` saying that positional arguments are not supported.
+- Process functions: Add serialization for Python base type defaults [[#5744]](https://github.com/aiidateam/aiida-core/pull/5744)  
+  Defining Python base types as defaults, such as:
+  ```python
+  @calcfunction
+  def function(a, b = 5):
+      return a + b
+  ```
+  would raise an exception.
+  The default is now automatically serialized, just as an input argument would be upon function call.
+- Process control: Reinstate process status for paused/killed processes [[#5754]](https://github.com/aiidateam/aiida-core/pull/5754)  
+  Regression introduced in `aiida-core==2.1.0` caused the message `Killed through 'verdi process list'` to no longer be set on the `process_status` of the node.
+- `QueryBuilder`: use a nested session in `iterall` and `iterdict` [[#5736]](https://github.com/aiidateam/aiida-core/pull/5736)  
+  Modifying entities yielded by `QueryBuilder.iterall` and `QueryBuilder.iterdict` would raise an exception, for example:
+  ```python
+  for [node] in QueryBuilder().append(Node).iterall():
+      node.base.extras.set('some', 'extra')
+  ```
+
+
 ## v2.1.0 - 2022-11-07
 
 This feature release comes with a number of new features as well as quite a few fixes of bugs and stability issues.

@@ -452,6 +452,8 @@ def test_process_kill(submit_and_await, run_cli_command):
 
     run_cli_command(cmd_process.process_pause, [str(node.pk), '--wait'])
     await_condition(lambda: node.paused)
+    assert node.process_status == 'Paused through `verdi process pause`'
 
     run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
     await_condition(lambda: node.is_killed)
+    assert node.process_status == 'Killed through `verdi process kill`'

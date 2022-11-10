@@ -38,6 +38,7 @@ def test_pause_processes(submit_and_await):
 
     control.pause_processes([node], wait=True)
     assert node.paused
+    assert node.process_status == 'Paused through `aiida.engine.processes.control.pause_processes`'
 
 
 @pytest.mark.usefixtures('started_daemon_client')
@@ -84,6 +85,7 @@ def test_kill_processes(submit_and_await):
     control.kill_processes([node], wait=True)
     assert node.is_terminated
     assert node.is_killed
+    assert node.process_status == 'Killed through `aiida.engine.processes.control.kill_processes`'
 
 
 @pytest.mark.usefixtures('started_daemon_client')

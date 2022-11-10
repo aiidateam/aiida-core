@@ -22,7 +22,7 @@ __all__ = ('Code',)
 
 warn_deprecation(
     'The `Code` class is deprecated. To create an instance, use the `aiida.orm.nodes.data.code.installed.InstalledCode`'
-    ' or `aiida.orm.nodes.data.code.portable.PortableCode` for a "remote" or "local" code, respetively. If you are '
+    ' or `aiida.orm.nodes.data.code.portable.PortableCode` for a "remote" or "local" code, respectively. If you are '
     'using this class to compare type, e.g. in `isinstance`, use `aiida.orm.nodes.data.code.abstract.AbstractCode`.',
     version=3
 )

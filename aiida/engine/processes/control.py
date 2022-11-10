@@ -112,6 +112,7 @@ def play_processes(
 def pause_processes(
     processes: list[ProcessNode] | None = None,
     *,
+    message: str = 'Paused through `aiida.engine.processes.control.pause_processes`',
     all_entries: bool = False,
     timeout: float = 5.0,
     wait: bool = False
@@ -140,12 +141,13 @@ def pause_processes(
         return
 
     controller = get_manager().get_process_controller()
-    _perform_actions(processes, controller.pause_process, 'pause', 'pausing', 'paused', timeout, wait)
+    _perform_actions(processes, controller.pause_process, 'pause', 'pausing', 'paused', timeout, wait, msg=message)
 
 
 def kill_processes(
     processes: list[ProcessNode] | None = None,
     *,
+    message: str = 'Killed through `aiida.engine.processes.control.kill_processes`',
     all_entries: bool = False,
     timeout: float = 5.0,
     wait: bool = False
@@ -174,7 +176,7 @@ def kill_processes(
         return
 
     controller = get_manager().get_process_controller()
-    _perform_actions(processes, controller.kill_process, 'kill', 'killing', 'killed', timeout, wait)
+    _perform_actions(processes, controller.kill_process, 'kill', 'killing', 'killed', timeout, wait, msg=message)
 
 
 def _perform_actions(
@@ -184,7 +186,8 @@ def _perform_actions(
     present: str,
     past: str,
     timeout: float = None,
-    wait: bool = False
+    wait: bool = False,
+    **kwargs: t.Any
 ) -> None:
     """Perform an action on a list of processes.
 
@@ -195,6 +198,7 @@ def _perform_actions(
     :param past: The past tense of the verb that represents the action.
     :param timeout: Raise a ``ProcessTimeoutException`` if the process does not respond within this amount of seconds.
     :param wait: Set to ``True`` to wait for process response, for ``False`` the action is fire-and-forget.
+    :param kwargs: Keyword arguments that will be passed to the method ``action``.
     :raises ``ProcessTimeoutException``: If the processes do not respond within the timeout.
     """
     futures = {}
@@ -206,7 +210,7 @@ def _perform_actions(
             continue
 
         try:
-            future = action(process.pk)
+            future = action(process.pk, **kwargs)
         except communications.UnroutableError:
             LOGGER.error(f'Process<{process.pk}> is unreachable.')
         else:

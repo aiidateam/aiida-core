@@ -198,7 +198,8 @@ def process_kill(processes, timeout, wait):
     from aiida.engine.processes import control
 
     try:
-        control.kill_processes(processes, timeout=timeout, wait=wait)
+        message = 'Killed through `verdi process kill`'
+        control.kill_processes(processes, timeout=timeout, wait=wait, message=message)
     except control.ProcessTimeoutException as exception:
         echo.echo_critical(str(exception) + '\nFrom the CLI you can call `verdi devel revive <PID>`.')
 
@@ -218,7 +219,8 @@ def process_pause(processes, all_entries, timeout, wait):
         raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
 
     try:
-        control.pause_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait)
+        message = 'Paused through `verdi process pause`'
+        control.pause_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait, message=message)
     except control.ProcessTimeoutException as exception:
         echo.echo_critical(str(exception) + '\nFrom the CLI you can call `verdi devel revive <PID>`.')
 

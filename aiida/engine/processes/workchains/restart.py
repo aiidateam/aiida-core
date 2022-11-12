@@ -427,10 +427,11 @@ class BaseRestartWorkChain(WorkChain):
                 continue
 
             port = port_namespace[key]
+            valid_types = port.valid_type if isinstance(port.valid_type, (list, tuple)) else (port.valid_type,)
 
             if isinstance(port, PortNamespace):
                 wrapped[key] = self._wrap_bare_dict_inputs(port, value)
-            elif port.valid_type == orm.Dict and isinstance(value, dict):
+            elif orm.Dict in valid_types and isinstance(value, dict):
                 wrapped[key] = orm.Dict(dict=value)
             else:
                 wrapped[key] = value

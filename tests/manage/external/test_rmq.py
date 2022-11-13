@@ -116,12 +116,11 @@ def test_duplicate_subscriber_identifier(aiida_local_code_factory, started_daemo
 
 @pytest.fixture
 def rabbitmq_client(aiida_profile):
-    profile = aiida_profile._manager._profile  # pylint: disable=protected-access
     yield rmq.client.RabbitmqManagementClient(
-        username=profile.process_control_config['broker_username'],
-        password=profile.process_control_config['broker_password'],
-        hostname=profile.process_control_config['broker_host'],
-        virtual_host=profile.process_control_config['broker_virtual_host'],
+        username=aiida_profile.process_control_config['broker_username'],
+        password=aiida_profile.process_control_config['broker_password'],
+        hostname=aiida_profile.process_control_config['broker_host'],
+        virtual_host=aiida_profile.process_control_config['broker_virtual_host'],
     )
 
 

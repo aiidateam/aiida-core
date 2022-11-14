@@ -21,7 +21,7 @@ import requests
 NO_OF_REQUESTS = 100
 
 
-@pytest.mark.usefixtures('aiida_profile', 'restrict_db_connections')
+@pytest.mark.usefixtures('restrict_db_connections')
 def test_run_threaded_server(restapi_server, server_url, aiida_localhost):
     """Run AiiDA REST API threaded in a separate thread and perform many sequential requests.
 
@@ -66,7 +66,7 @@ def test_run_threaded_server(restapi_server, server_url, aiida_localhost):
 
 
 @pytest.mark.skip('Is often failing on Python 3.8 and 3.9: see https://github.com/aiidateam/aiida-core/issues/4281')
-@pytest.mark.usefixtures('aiida_profile', 'restrict_db_connections')
+@pytest.mark.usefixtures('restrict_db_connections')
 def test_run_without_close_session(restapi_server, server_url, aiida_localhost, capfd):
     """Run AiiDA REST API threaded in a separate thread and perform many sequential requests"""
     from aiida.restapi.api import AiidaApi

@@ -7,8 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name,unused-variable,unused-argument
+# pylint: disable=redefined-outer-name,unused-variable
 """Tests for the `GroupParamType`."""
+import uuid
+
 import click
 import pytest
 
@@ -24,14 +26,14 @@ def parameter_type():
 
 
 @pytest.fixture
-def setup_groups(aiida_profile):
+def setup_groups():
     """Create some groups to test the `GroupParamType` parameter type for the command line infrastructure.
 
     We create an initial group with a random name and then on purpose create two groups with a name that matches exactly
     the ID and UUID, respectively, of the first one. This allows us to test the rules implemented to solve ambiguities
     that arise when determing the identifier type.
     """
-    entity_01 = Group(label='group_01').store()
+    entity_01 = Group(label=f'group-{uuid.uuid4()}').store()
     entity_02 = AutoGroup(label=str(entity_01.pk)).store()
     entity_03 = ImportGroup(label=str(entity_01.uuid)).store()
     return entity_01, entity_02, entity_03
@@ -93,7 +95,7 @@ def test_ambiguous_label_uuid(setup_groups, parameter_type):
     assert result.uuid == entity_03.uuid
 
 
-def test_create_if_not_exist(aiida_profile):
+def test_create_if_not_exist():
     """Test the `create_if_not_exist` constructor argument."""
     label = 'non-existing-label-01'
     parameter_type = GroupParamType(create_if_not_exist=True)
@@ -134,6 +136,7 @@ def test_sub_classes(setup_groups, sub_classes, expected):
     assert tuple(results) == expected
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_shell_complete(setup_groups, parameter_type):
     """Test the `shell_complete` method that provides auto-complete functionality."""
     entity_01, entity_02, entity_03 = setup_groups

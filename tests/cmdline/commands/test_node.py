@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Tests for verdi node"""
 import errno
 import gzip
@@ -28,7 +29,7 @@ class TestVerdiNode:
     """Tests for `verdi node`."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init,invalid-name
         node = orm.Data()
@@ -49,7 +50,6 @@ class TestVerdiNode:
 
         node.store()
         self.node = node
-        self.cli_runner = run_cli_command
 
     @classmethod
     def get_unstored_folder_node(cls):
@@ -66,12 +66,12 @@ class TestVerdiNode:
         folder_node.base.repository.put_object_from_filelike(io.StringIO(cls.content_file2), cls.key_file2)
         return folder_node
 
-    def test_node_show(self):
+    def test_node_show(self, run_cli_command):
         """Test `verdi node show`"""
         node = orm.Data().store()
         node.label = 'SOMELABEL'
         options = [str(node.pk)]
-        result = self.cli_runner(cmd_node.node_show, options)
+        result = run_cli_command(cmd_node.node_show, options)
 
         # Let's check some content in the output. At least the UUID and the label should be in there
         assert node.label in result.output
@@ -79,7 +79,7 @@ class TestVerdiNode:
 
         # Let's now test the '--print-groups' option
         options.append('--print-groups')
-        result = self.cli_runner(cmd_node.node_show, options)
+        result = run_cli_command(cmd_node.node_show, options)
         # I don't check the list of groups - it might be in an autogroup
 
         # Let's create a group and put the node in there
@@ -87,15 +87,15 @@ class TestVerdiNode:
         group = orm.Group(group_name).store()
         group.add_nodes(node)
 
-        result = self.cli_runner(cmd_node.node_show, options)
+        result = run_cli_command(cmd_node.node_show, options)
 
         # Now the group should be in there
         assert group_name in result.output
 
-    def test_node_attributes(self):
+    def test_node_attributes(self, run_cli_command):
         """Test verdi node attributes"""
         options = [str(self.node.uuid)]
-        result = self.cli_runner(cmd_node.attributes, options)
+        result = run_cli_command(cmd_node.attributes, options)
         assert self.ATTR_KEY_ONE in result.output
         assert self.ATTR_VAL_ONE in result.output
         assert self.ATTR_KEY_TWO in result.output
@@ -103,7 +103,7 @@ class TestVerdiNode:
 
         for flag in ['-k', '--keys']:
             options = [flag, self.ATTR_KEY_ONE, '--', str(self.node.uuid)]
-            result = self.cli_runner(cmd_node.attributes, options)
+            result = run_cli_command(cmd_node.attributes, options)
             assert self.ATTR_KEY_ONE in result.output
             assert self.ATTR_VAL_ONE in result.output
             assert self.ATTR_KEY_TWO not in result.output
@@ -111,22 +111,22 @@ class TestVerdiNode:
 
         for flag in ['-r', '--raw']:
             options = [flag, str(self.node.uuid)]
-            self.cli_runner(cmd_node.attributes, options)
+            run_cli_command(cmd_node.attributes, options)
 
         for flag in ['-f', '--format']:
             for fmt in ['json+date', 'yaml', 'yaml_expanded']:
                 options = [flag, fmt, str(self.node.uuid)]
-                self.cli_runner(cmd_node.attributes, options)
+                run_cli_command(cmd_node.attributes, options)
 
         for flag in ['-i', '--identifier']:
             for fmt in ['pk', 'uuid']:
                 options = [flag, fmt, str(self.node.uuid)]
-                self.cli_runner(cmd_node.attributes, options)
+                run_cli_command(cmd_node.attributes, options)
 
-    def test_node_extras(self):
+    def test_node_extras(self, run_cli_command):
         """Test verdi node extras"""
         options = [str(self.node.uuid)]
-        result = self.cli_runner(cmd_node.extras, options)
+        result = run_cli_command(cmd_node.extras, options)
         assert self.EXTRA_KEY_ONE in result.output
         assert self.EXTRA_VAL_ONE in result.output
         assert self.EXTRA_KEY_TWO in result.output
@@ -134,7 +134,7 @@ class TestVerdiNode:
 
         for flag in ['-k', '--keys']:
             options = [flag, self.EXTRA_KEY_ONE, '--', str(self.node.uuid)]
-            result = self.cli_runner(cmd_node.extras, options)
+            result = run_cli_command(cmd_node.extras, options)
             assert self.EXTRA_KEY_ONE in result.output
             assert self.EXTRA_VAL_ONE in result.output
             assert self.EXTRA_KEY_TWO not in result.output
@@ -142,32 +142,32 @@ class TestVerdiNode:
 
         for flag in ['-r', '--raw']:
             options = [flag, str(self.node.uuid)]
-            result = self.cli_runner(cmd_node.extras, options)
+            result = run_cli_command(cmd_node.extras, options)
 
         for flag in ['-f', '--format']:
             for fmt in ['json+date', 'yaml', 'yaml_expanded']:
                 options = [flag, fmt, str(self.node.uuid)]
-                self.cli_runner(cmd_node.extras, options)
+                run_cli_command(cmd_node.extras, options)
 
         for flag in ['-i', '--identifier']:
             for fmt in ['pk', 'uuid']:
                 options = [flag, fmt, str(self.node.uuid)]
-                self.cli_runner(cmd_node.extras, options)
+                run_cli_command(cmd_node.extras, options)
 
-    def test_node_repo_ls(self):
+    def test_node_repo_ls(self, run_cli_command):
         """Test 'verdi node repo ls' command."""
         folder_node = self.get_unstored_folder_node().store()
 
         options = [str(folder_node.pk), 'some/nested/folder']
-        result = self.cli_runner(cmd_node.repo_ls, options, catch_exceptions=False)
+        result = run_cli_command(cmd_node.repo_ls, options, catch_exceptions=False)
 
         assert 'filename.txt' in result.output
 
         options = [str(folder_node.pk), 'some/non-existing-folder']
-        result = self.cli_runner(cmd_node.repo_ls, options, catch_exceptions=False, raises=True)
+        result = run_cli_command(cmd_node.repo_ls, options, catch_exceptions=False, raises=True)
         assert 'does not exist for the given node' in result.output
 
-    def test_node_repo_cat(self):
+    def test_node_repo_cat(self, run_cli_command):
         """Test 'verdi node repo cat' command."""
         # Test cat binary files
         folder_node = orm.FolderData()
@@ -176,25 +176,25 @@ class TestVerdiNode:
         folder_node.store()
 
         options = [str(folder_node.pk), 'filename.txt.gz']
-        result = self.cli_runner(cmd_node.repo_cat, options)
+        result = run_cli_command(cmd_node.repo_cat, options)
         assert gzip.decompress(result.stdout_bytes) == b'COMPRESS'
 
-    def test_node_repo_cat_singlefile(self):
+    def test_node_repo_cat_singlefile(self, run_cli_command):
         """Test ``verdi node repo cat`` for a ``SinglefileNode``.
 
         Here the relative path argument should be optional and the command should determine it automatically.
         """
         node = orm.SinglefileData(io.BytesIO(b'content')).store()
         options = [str(node.pk)]
-        result = self.cli_runner(cmd_node.repo_cat, options)
+        result = run_cli_command(cmd_node.repo_cat, options)
         assert result.stdout_bytes == b'content'
 
-    def test_node_repo_dump(self, tmp_path):
+    def test_node_repo_dump(self, tmp_path, run_cli_command):
         """Test 'verdi node repo dump' command."""
         folder_node = self.get_unstored_folder_node().store()
         out_path = tmp_path / 'out_dir'
         options = [str(folder_node.uuid), str(out_path)]
-        res = self.cli_runner(cmd_node.repo_dump, options, catch_exceptions=False)
+        res = run_cli_command(cmd_node.repo_dump, options, catch_exceptions=False)
         assert not res.stdout
 
         for file_key, content in [(self.key_file1, self.content_file1), (self.key_file2, self.content_file2)]:
@@ -205,12 +205,12 @@ class TestVerdiNode:
             with curr_path.open('r') as res_file:
                 assert res_file.read() == content
 
-    def test_node_repo_dump_to_nested_folder(self, tmp_path):
+    def test_node_repo_dump_to_nested_folder(self, tmp_path, run_cli_command):
         """Test 'verdi node repo dump' command, with an output folder whose parent does not exist."""
         folder_node = self.get_unstored_folder_node().store()
         out_path = tmp_path / 'out_dir' / 'nested' / 'path'
         options = [str(folder_node.uuid), str(out_path)]
-        res = self.cli_runner(cmd_node.repo_dump, options, catch_exceptions=False)
+        res = run_cli_command(cmd_node.repo_dump, options, catch_exceptions=False)
         assert not res.stdout
 
         for file_key, content in [(self.key_file1, self.content_file1), (self.key_file2, self.content_file2)]:
@@ -221,7 +221,7 @@ class TestVerdiNode:
             with curr_path.open('r') as res_file:
                 assert res_file.read() == content
 
-    def test_node_repo_existing_out_dir(self, tmp_path):
+    def test_node_repo_existing_out_dir(self, tmp_path, run_cli_command):
         """Test 'verdi node repo dump' command, check that an existing output directory is not overwritten."""
         folder_node = self.get_unstored_folder_node().store()
         out_path = tmp_path / 'out_dir'
@@ -232,7 +232,7 @@ class TestVerdiNode:
         with some_file.open('w') as file_handle:
             file_handle.write(some_file_content)
         options = [str(folder_node.uuid), str(out_path)]
-        res = self.cli_runner(cmd_node.repo_dump, options, catch_exceptions=False)
+        res = run_cli_command(cmd_node.repo_dump, options, catch_exceptions=False)
         assert 'exists' in res.stdout
         assert 'Critical:' in res.stdout
 
@@ -261,13 +261,12 @@ class TestVerdiGraph:
     """Tests for the ``verdi node graph`` command."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile, run_cli_command, tmp_path):  # pylint: disable=unused-argument
+    def init_profile(self, run_cli_command, tmp_path):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         from aiida.orm import Data
 
         self.node = Data().store()
-        self.cli_runner = run_cli_command
 
         # some of the export tests write in the current directory,
         # make sure it is writeable and we don't pollute the current one
@@ -278,7 +277,7 @@ class TestVerdiGraph:
         os.chdir(self.old_cwd)
         os.rmdir(self.cwd)
 
-    def test_generate_graph(self):
+    def test_generate_graph(self, run_cli_command):
         """
         Test that the default graph can be generated
         The command should run without error and should produce the .dot file
@@ -288,12 +287,12 @@ class TestVerdiGraph:
         filename = f'{root_node}.dot.pdf'
         options = [root_node]
         try:
-            self.cli_runner(cmd_node.graph_generate, options)
+            run_cli_command(cmd_node.graph_generate, options)
             assert os.path.isfile(filename)
         finally:
             delete_temporary_file(filename)
 
-    def test_catch_bad_pk(self):
+    def test_catch_bad_pk(self, run_cli_command):
         """
         Test that an invalid root_node pk (non-numeric, negative, or decimal),
         or non-existent pk will produce an error
@@ -306,7 +305,7 @@ class TestVerdiGraph:
             options = [root_node]
             filename = f'{root_node}.dot.pdf'
             try:
-                self.cli_runner(cmd_node.graph_generate, options, raises=True)
+                run_cli_command(cmd_node.graph_generate, options, raises=True)
                 assert not os.path.isfile(filename)
             finally:
                 delete_temporary_file(filename)
@@ -324,12 +323,12 @@ class TestVerdiGraph:
         try:
             filename = f'{str(root_node)}.dot.pdf'
             options = [str(root_node)]
-            self.cli_runner(cmd_node.graph_generate, options, raises=True)
+            run_cli_command(cmd_node.graph_generate, options, raises=True)
             assert not os.path.isfile(filename)
         finally:
             delete_temporary_file(filename)
 
-    def test_check_recursion_flags(self):
+    def test_check_recursion_flags(self, run_cli_command):
         """
         Test the ancestor-depth and descendent-depth options.
         Test that they don't fail and that, if specified, they only accept
@@ -342,7 +341,7 @@ class TestVerdiGraph:
         for opt in ['-a', '--ancestor-depth', '-d', '--descendant-depth']:
             options = [opt, None, root_node]
             try:
-                self.cli_runner(cmd_node.graph_generate, options)
+                run_cli_command(cmd_node.graph_generate, options)
                 assert os.path.isfile(filename)
             finally:
                 delete_temporary_file(filename)
@@ -352,7 +351,7 @@ class TestVerdiGraph:
             for value in ['0', '1']:
                 options = [opt, value, root_node]
                 try:
-                    self.cli_runner(cmd_node.graph_generate, options)
+                    run_cli_command(cmd_node.graph_generate, options)
                     assert os.path.isfile(filename)
                 finally:
                     delete_temporary_file(filename)
@@ -362,12 +361,12 @@ class TestVerdiGraph:
             for badvalue in ['xyz', '3.14', '-5']:
                 options = [flag, badvalue, root_node]
                 try:
-                    self.cli_runner(cmd_node.graph_generate, options, raises=True)
+                    run_cli_command(cmd_node.graph_generate, options, raises=True)
                     assert not os.path.isfile(filename)
                 finally:
                     delete_temporary_file(filename)
 
-    def test_check_io_flags(self):
+    def test_check_io_flags(self, run_cli_command):
         """
         Test the input and output flags work.
         """
@@ -377,12 +376,12 @@ class TestVerdiGraph:
         for flag in ['-i', '--process-in', '-o', '--process-out']:
             options = [flag, root_node]
             try:
-                self.cli_runner(cmd_node.graph_generate, options)
+                run_cli_command(cmd_node.graph_generate, options)
                 assert os.path.isfile(filename)
             finally:
                 delete_temporary_file(filename)
 
-    def test_output_format(self):
+    def test_output_format(self, run_cli_command):
         """
         Test that the output file format can be specified
         """
@@ -398,12 +397,12 @@ class TestVerdiGraph:
                 filename = f'{root_node}.dot.{fileformat}'
                 options = [option, fileformat, root_node]
                 try:
-                    self.cli_runner(cmd_node.graph_generate, options)
+                    run_cli_command(cmd_node.graph_generate, options)
                     assert os.path.isfile(filename)
                 finally:
                     delete_temporary_file(filename)
 
-    def test_node_id_label_format(self):
+    def test_node_id_label_format(self, run_cli_command):
         """
         Test that the node id label format can be specified
         """
@@ -413,7 +412,7 @@ class TestVerdiGraph:
         for id_label_type in ['uuid', 'pk', 'label']:
             options = ['--identifier', id_label_type, root_node]
             try:
-                self.cli_runner(cmd_node.graph_generate, options)
+                run_cli_command(cmd_node.graph_generate, options)
                 assert os.path.isfile(filename)
             finally:
                 delete_temporary_file(filename)
@@ -426,145 +425,145 @@ class TestVerdiUserCommand:
     """Tests for the ``verdi node comment`` command."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init,invalid-name
-        self.cli_runner = run_cli_command
         self.node = orm.Data().store()
 
-    def test_comment_show_simple(self):
+    def test_comment_show_simple(self, run_cli_command):
         """Test simply calling the show command (without data to show)."""
-        result = self.cli_runner(cmd_node.comment_show, [], catch_exceptions=False)
+        result = run_cli_command(cmd_node.comment_show, [], catch_exceptions=False)
         assert result.output == ''
         assert result.exit_code == 0
 
-    def test_comment_show(self):
+    def test_comment_show(self, run_cli_command):
         """Test showing an existing comment."""
         self.node.base.comments.add(COMMENT)
 
         options = [str(self.node.pk)]
-        result = self.cli_runner(cmd_node.comment_show, options, catch_exceptions=False)
+        result = run_cli_command(cmd_node.comment_show, options, catch_exceptions=False)
         assert result.output.find(COMMENT) != -1
         assert result.exit_code == 0
 
-    def test_comment_add(self):
+    def test_comment_add(self, run_cli_command):
         """Test adding a comment."""
         options = ['-N', str(self.node.pk), '--', f'{COMMENT}']
-        result = self.cli_runner(cmd_node.comment_add, options, catch_exceptions=False)
+        result = run_cli_command(cmd_node.comment_add, options, catch_exceptions=False)
         assert result.exit_code == 0
 
         comment = self.node.base.comments.all()
         assert len(comment) == 1
         assert comment[0].content == COMMENT
 
-    def test_comment_remove(self):
+    def test_comment_remove(self, run_cli_command):
         """Test removing a comment."""
         comment = self.node.base.comments.add(COMMENT)
 
         assert len(self.node.base.comments.all()) == 1
 
         options = [str(comment.pk), '--force']
-        result = self.cli_runner(cmd_node.comment_remove, options, catch_exceptions=False)
+        result = run_cli_command(cmd_node.comment_remove, options, catch_exceptions=False)
         assert result.exit_code == 0, result.output
         assert len(self.node.base.comments.all()) == 0
 
 
+@pytest.fixture(scope='class')
+def create_nodes(aiida_profile_clean_class):  # pylint: disable=unused-argument
+    return [
+        orm.Data().store(),
+        orm.Bool(True).store(),
+        orm.Bool(False).store(),
+        orm.Float(1.0).store(),
+        orm.Int(1).store()
+    ]
+
+
+@pytest.mark.usefixtures('create_nodes')
 class TestVerdiRehash:
     """Tests for the ``verdi node rehash`` command."""
 
-    @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile, run_cli_command):  # pylint: disable=unused-argument
-        """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init,invalid-name
-        from aiida.orm import Bool, Data, Float, Int
-        self.cli_runner = run_cli_command
-
-        self.node_base = Data().store()
-        self.node_bool_true = Bool(True).store()
-        self.node_bool_false = Bool(False).store()
-        self.node_float = Float(1.0).store()
-        self.node_int = Int(1).store()
-
-    def test_rehash_interactive_yes(self):
+    def test_rehash_interactive_yes(self, run_cli_command):
         """Passing no options and answering 'Y' to the command will rehash all 5 nodes."""
         expected_node_count = 5
         options = []  # no option, will ask in the prompt
-        result = self.cli_runner(cmd_node.rehash, options, user_input='y')
-        assert f'{expected_node_count} nodes' in result.output
+        result = run_cli_command(cmd_node.rehash, options, user_input='y')
+        assert f'{expected_node_count} nodes re-hashed' in result.output
 
-    def test_rehash_interactive_no(self):
+    def test_rehash_interactive_no(self, run_cli_command):
         """Passing no options and answering 'N' to the command will abort the command."""
         options = []  # no option, will ask in the prompt
-        result = self.cli_runner(cmd_node.rehash, options, user_input='n', raises=True)
+        result = run_cli_command(cmd_node.rehash, options, user_input='n', raises=True)
         assert isinstance(result.exception, SystemExit)
         assert result.exit_code == ExitCode.CRITICAL
 
-    def test_rehash(self):
+    def test_rehash(self, run_cli_command):
         """Passing no options to the command will rehash all 5 nodes."""
         expected_node_count = 5
         options = ['-f']  # force, so no questions are asked
-        result = self.cli_runner(cmd_node.rehash, options)
-        assert f'{expected_node_count} nodes' in result.output
+        result = run_cli_command(cmd_node.rehash, options)
+        assert f'{expected_node_count} nodes re-hashed' in result.output
 
-    def test_rehash_bool(self):
+    def test_rehash_bool(self, run_cli_command):
         """Limiting the queryset by defining an entry point, in this case bool, should limit nodes to 2."""
         expected_node_count = 2
         options = ['-f', '-e', 'aiida.data:core.bool']
-        result = self.cli_runner(cmd_node.rehash, options)
+        result = run_cli_command(cmd_node.rehash, options)
 
-        assert f'{expected_node_count} nodes' in result.output
+        assert f'{expected_node_count} nodes re-hashed' in result.output
 
-    def test_rehash_float(self):
+    def test_rehash_float(self, run_cli_command):
         """Limiting the queryset by defining an entry point, in this case float, should limit nodes to 1."""
         expected_node_count = 1
         options = ['-f', '-e', 'aiida.data:core.float']
-        result = self.cli_runner(cmd_node.rehash, options)
+        result = run_cli_command(cmd_node.rehash, options)
 
-        assert f'{expected_node_count} nodes' in result.output
+        assert f'{expected_node_count} nodes re-hashed' in result.output
 
-    def test_rehash_int(self):
+    def test_rehash_int(self, run_cli_command):
         """Limiting the queryset by defining an entry point, in this case int, should limit nodes to 1."""
         expected_node_count = 1
         options = ['-f', '-e', 'aiida.data:core.int']
-        result = self.cli_runner(cmd_node.rehash, options)
+        result = run_cli_command(cmd_node.rehash, options)
 
-        assert f'{expected_node_count} nodes' in result.output
+        assert f'{expected_node_count} nodes re-hashed' in result.output
 
-    def test_rehash_explicit_pk(self):
+    def test_rehash_explicit_pk(self, run_cli_command):
         """Limiting the queryset by defining explicit identifiers, should limit nodes to 2 in this example."""
+        nodes = orm.QueryBuilder().append(orm.Bool, project='id').all(flat=True)
         expected_node_count = 2
-        options = ['-f', str(self.node_bool_true.pk), str(self.node_float.uuid)]
-        result = self.cli_runner(cmd_node.rehash, options)
+        options = ['-f'] + [str(pk) for pk in nodes]
+        result = run_cli_command(cmd_node.rehash, options)
 
-        assert f'{expected_node_count} nodes' in result.output
+        assert f'{expected_node_count} nodes re-hashed' in result.output
 
-    def test_rehash_explicit_pk_and_entry_point(self):
+    def test_rehash_explicit_pk_and_entry_point(self, run_cli_command):
         """Limiting the queryset by defining explicit identifiers and entry point, should limit nodes to 1."""
+        nodes = orm.QueryBuilder().append(orm.Float, project='id').all(flat=True)
         expected_node_count = 1
-        options = ['-f', '-e', 'aiida.data:core.bool', str(self.node_bool_true.pk), str(self.node_float.uuid)]
-        result = self.cli_runner(cmd_node.rehash, options)
+        options = ['-f', '-e', 'aiida.data:core.float'] + [str(pk) for pk in nodes]
+        result = run_cli_command(cmd_node.rehash, options)
 
-        assert f'{expected_node_count} nodes' in result.output
+        assert f'{expected_node_count} nodes re-hashed' in result.output
 
-    def test_rehash_entry_point_no_matches(self):
+    def test_rehash_entry_point_no_matches(self, run_cli_command):
         """Limiting the queryset by defining explicit entry point, with no nodes should exit with non-zero status."""
         options = ['-f', '-e', 'aiida.data:core.structure']
-        self.cli_runner(cmd_node.rehash, options, raises=True)
+        run_cli_command(cmd_node.rehash, options, raises=True)
 
-    def test_rehash_invalid_entry_point(self):
+    def test_rehash_invalid_entry_point(self, run_cli_command):
         """Passing an invalid entry point should exit with non-zero status."""
 
         # Incorrect entry point group
         options = ['-f', '-e', 'data:core.structure']
-        self.cli_runner(cmd_node.rehash, options, raises=True)
+        run_cli_command(cmd_node.rehash, options, raises=True)
 
         # Non-existent entry point name
         options = ['-f', '-e', 'aiida.data:inexistant']
-        self.cli_runner(cmd_node.rehash, options, raises=True)
+        run_cli_command(cmd_node.rehash, options, raises=True)
 
         # Incorrect syntax, no colon to join entry point group and name
         options = ['-f', '-e', 'aiida.data.structure']
-        self.cli_runner(cmd_node.rehash, options, raises=True)
+        run_cli_command(cmd_node.rehash, options, raises=True)
 
 
 @pytest.mark.parametrize(
@@ -577,7 +576,6 @@ class TestVerdiRehash:
         ['--force'],
     )
 )
-@pytest.mark.usefixtures('aiida_profile')
 def test_node_delete_basics(run_cli_command, options):
     """
     Testing the correct translation for the `--force` and `--verbosity` options.

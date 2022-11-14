@@ -16,7 +16,6 @@ from aiida.engine import Process, calcfunction
 from aiida.orm import CalcFunctionNode, CalculationNode, WorkflowNode
 
 
-@pytest.mark.usefixtures('aiida_profile')
 def test_get_node_summary(aiida_local_code_factory):
     """Test the ``get_node_summary`` utility."""
     code = aiida_local_code_factory(entry_point='core.arithmetic.add', executable='/bin/bash')
@@ -30,7 +29,6 @@ def test_get_node_summary(aiida_local_code_factory):
     assert node.computer.label in summary
 
 
-@pytest.mark.usefixtures('aiida_profile')
 def test_get_node_info_multiple_call_links():
     """Test the ``get_node_info`` utility.
 
@@ -52,7 +50,6 @@ def test_get_node_info_multiple_call_links():
     assert str(node_two.pk) in node_info
 
 
-@pytest.mark.usefixtures('aiida_profile')
 def test_get_process_function_report():
     """Test the ``get_process_function_report`` utility."""
     warning = 'You have been warned'

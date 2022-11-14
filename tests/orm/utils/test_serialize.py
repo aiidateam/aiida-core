@@ -9,6 +9,7 @@
 ###########################################################################
 """Tests for the :mod:`aiida.orm.utils.serialize` module."""
 import types
+import uuid
 
 import numpy as np
 import pytest
@@ -16,8 +17,6 @@ import pytest
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.orm.utils import serialize
-
-pytestmark = pytest.mark.usefixtures('aiida_profile')
 
 
 def test_serialize_round_trip():
@@ -47,8 +46,7 @@ def test_serialize_group():
     Test that serialization and deserialization of Groups works.
     Also make sure that the serialized data is json-serializable
     """
-    group_name = 'groupie'
-    group_a = orm.Group(label=group_name).store()
+    group_a = orm.Group(label=uuid.uuid4().hex).store()
 
     data = {'group': group_a}
 

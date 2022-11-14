@@ -115,7 +115,7 @@ def test_hierarchy_utility(file_hierarchy, tmp_path):
 
 
 # yapf: disable
-@pytest.mark.usefixtures('aiida_profile')
+
 @pytest.mark.parametrize('retrieve_list, expected_hierarchy', (
     # Single file or folder, either toplevel or nested
     (['file_a.txt'], {'file_a.txt': 'file_a'}),
@@ -166,7 +166,7 @@ def test_retrieve_files_from_list(
 
 
 # yapf: disable
-@pytest.mark.usefixtures('aiida_profile')
+
 @pytest.mark.parametrize(('local_copy_list', 'expected_hierarchy'), (
     ([None, None], {'sub': {'b': 'file_b'}, 'a': 'file_a'}),
     (['.', None], {'sub': {'b': 'file_b'}, 'a': 'file_a'}),
@@ -202,7 +202,6 @@ def test_upload_local_copy_list(
     assert written_hierarchy == expected_hierarchy
 
 
-@pytest.mark.usefixtures('aiida_profile')
 def test_upload_local_copy_list_files_folders(fixture_sandbox, node_and_calc_info, file_hierarchy, tmp_path):
     """Test the ``local_copy_list`` functionality in ``upload_calculation``.
 

@@ -11,7 +11,7 @@
 """Unit tests for the BackendLog and BackendLogCollection classes."""
 from datetime import datetime
 import logging
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -24,14 +24,14 @@ class TestBackendLog:
     """Test BackendLog."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile, aiida_localhost, backend):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost, backend):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.backend = backend
         self.computer = aiida_localhost.backend_entity  # Unwrap the `Computer` instance to `BackendComputer`
-        self.user = self.backend.users.create(email='tester@localhost').store()
+        self.user = self.backend.users.create(email=uuid4().hex).store()
         self.node = self.backend.nodes.create(
-            node_type='', user=self.user, computer=self.computer, label='label', description='description'
+            node_type='', user=self.user, computer=self.computer, label=uuid4().hex, description='description'
         ).store()
         self.log_message = 'log message'
 

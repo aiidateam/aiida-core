@@ -24,7 +24,6 @@ def remote_data(tmp_path, aiida_localhost):
     return node
 
 
-@pytest.mark.usefixtures('aiida_profile')
 def test_clean(remote_data):
     """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData.clean` method."""
     assert not remote_data.is_empty

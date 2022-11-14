@@ -8,12 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `FolderData` class."""
-import pytest
-
 from aiida.orm import FolderData
 
 
-@pytest.mark.usefixtures('aiida_profile')
 def test_constructor_tree(tmp_path):
     """Test the `tree` constructor keyword."""
     tree = {

@@ -67,6 +67,7 @@ def test_add_broadcast_subscriber(communicator):
 
 
 @pytest.mark.requires_rmq
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_duplicate_subscriber_identifier(aiida_local_code_factory, started_daemon_client, submit_and_await):
     """Test that a ``DuplicateSubscriberError`` in ``ProcessLauncher._continue`` does not except the process.
 

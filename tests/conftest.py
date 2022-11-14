@@ -337,7 +337,7 @@ def config_with_profile(config_with_profile_factory):
 
 
 @pytest.fixture
-def manager(aiida_profile):  # pylint: disable=unused-argument
+def manager():
     """Get the ``Manager`` instance of the currently loaded profile."""
     from aiida.manage import get_manager
     return get_manager()

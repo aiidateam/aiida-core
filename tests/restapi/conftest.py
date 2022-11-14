@@ -48,7 +48,7 @@ def server_url():
 
 
 @pytest.fixture
-def restrict_db_connections(aiida_profile):  # pylint: disable=unused-argument
+def restrict_db_connections():  # pylint: disable=unused-argument
     """Restrict the number of database connections allowed to the PSQL database."""
     from aiida.manage import get_manager
 
@@ -81,7 +81,7 @@ def restrict_db_connections(aiida_profile):  # pylint: disable=unused-argument
 
 
 @pytest.fixture
-def populate_restapi_database(aiida_profile):
+def populate_restapi_database():
     """Populates the database with a considerable set of nodes to test the restAPI"""
     # pylint: disable=unused-argument
     from aiida import orm

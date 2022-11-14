@@ -412,7 +412,7 @@ def temp_dir():
         shutil.rmtree(dirpath)
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture
 def aiida_local_code_factory(aiida_localhost):
     """Get an AiiDA code on localhost.
 

@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=redefined-outer-name
 """Tests for the `SinglefileData` class."""
 
 import io
@@ -37,7 +38,7 @@ def check_singlefile_content():
 
 
 @pytest.fixture
-def check_singlefile_content_with_store(check_singlefile_content):  # pylint: disable=redefined-outer-name
+def check_singlefile_content_with_store(check_singlefile_content):
     """Fixture to check the content of a SinglefileData before and after .store().
 
     Checks the content of a SinglefileData node against the given reference
@@ -62,11 +63,7 @@ def check_singlefile_content_with_store(check_singlefile_content):  # pylint: di
     return inner
 
 
-def test_reload_singlefile_data(
-    aiida_profile,  # pylint: disable=unused-argument
-    check_singlefile_content_with_store,  # pylint: disable=redefined-outer-name
-    check_singlefile_content  # pylint: disable=redefined-outer-name
-):
+def test_reload_singlefile_data(check_singlefile_content_with_store, check_singlefile_content):
     """Test writing and reloading a `SinglefileData` instance."""
     content_original = 'some text ABCDE'
 
@@ -98,10 +95,7 @@ def test_reload_singlefile_data(
     )
 
 
-def test_construct_from_filelike(
-    aiida_profile,  # pylint: disable=unused-argument
-    check_singlefile_content_with_store  # pylint: disable=redefined-outer-name
-):
+def test_construct_from_filelike(check_singlefile_content_with_store):
     """Test constructing an instance from filelike instead of filepath."""
     content_original = 'some testing text\nwith a newline'
 
@@ -119,10 +113,7 @@ def test_construct_from_filelike(
     )
 
 
-def test_construct_from_string(
-    aiida_profile,  # pylint: disable=unused-argument
-    check_singlefile_content_with_store  # pylint: disable=redefined-outer-name
-):
+def test_construct_from_string(check_singlefile_content_with_store):
     """Test constructing an instance from a string."""
     content_original = 'some testing text\nwith a newline'
 
@@ -136,10 +127,7 @@ def test_construct_from_string(
     )
 
 
-def test_construct_with_path(
-    aiida_profile,  # pylint: disable=unused-argument
-    check_singlefile_content_with_store  # pylint: disable=redefined-outer-name
-):
+def test_construct_with_path(check_singlefile_content_with_store):
     """Test constructing an instance from a pathlib.Path."""
     content_original = 'please report to the ministry of silly walks'
 
@@ -157,10 +145,7 @@ def test_construct_with_path(
     )
 
 
-def test_construct_with_filename(
-    aiida_profile,  # pylint: disable=unused-argument
-    check_singlefile_content  # pylint: disable=redefined-outer-name
-):
+def test_construct_with_filename(check_singlefile_content):
     """Test constructing an instance, providing a filename."""
     content_original = 'some testing text\nwith a newline'
     filename = 'myfile.txt'
@@ -181,10 +166,7 @@ def test_construct_with_filename(
     check_singlefile_content(node=node, content_reference=content_original, filename=filename)
 
 
-def test_binary_file(
-    aiida_profile,  # pylint: disable=unused-argument
-    check_singlefile_content_with_store  # pylint: disable=redefined-outer-name
-):
+def test_binary_file(check_singlefile_content_with_store):
     """Test that the constructor accepts binary files."""
     byte_array = [120, 3, 255, 0, 100]
     content_binary = bytearray(byte_array)

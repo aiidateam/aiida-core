@@ -105,7 +105,7 @@ def test_tasks_revive_without_daemon(run_cli_command):
     assert run_cli_command(cmd_rabbitmq.cmd_tasks_revive, raises=True)
 
 
-@pytest.mark.usefixtures('aiida_profile', 'started_daemon_client')
+@pytest.mark.usefixtures('started_daemon_client')
 def test_revive(run_cli_command, monkeypatch, aiida_local_code_factory, submit_and_await):
     """Test ``tasks revive``."""
     code = aiida_local_code_factory('core.arithmetic.add', '/bin/bash')

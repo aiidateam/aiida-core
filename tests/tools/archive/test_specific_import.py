@@ -14,7 +14,7 @@ from aiida import orm
 from aiida.tools.archive import create_archive, import_archive
 
 
-def test_simple_import(aiida_profile, tmp_path):
+def test_simple_import(aiida_profile_clean, tmp_path):
     """
     This is a very simple test which checks that an archive file with nodes
     that are not associated to a computer is imported correctly. In Django
@@ -50,7 +50,7 @@ def test_simple_import(aiida_profile, tmp_path):
     assert orm.QueryBuilder().append(orm.Node).count() == len(nodes)
 
     # Clean the database and verify there are no nodes left
-    aiida_profile.clear_profile()
+    aiida_profile_clean.clear_profile()
     assert orm.QueryBuilder().append(orm.Node).count() == 0
 
     # After importing we should have the original number of nodes again
@@ -58,7 +58,7 @@ def test_simple_import(aiida_profile, tmp_path):
     assert orm.QueryBuilder().append(orm.Node).count() == len(nodes)
 
 
-def test_cycle_structure_data(aiida_profile, aiida_localhost, tmp_path):
+def test_cycle_structure_data(aiida_profile_clean, aiida_localhost, tmp_path):
     """
     Create an export with some orm.CalculationNode and Data nodes and import it after having
     cleaned the database. Verify that the nodes and their attributes are restored
@@ -111,7 +111,7 @@ def test_cycle_structure_data(aiida_profile, aiida_localhost, tmp_path):
     assert orm.QueryBuilder().append(orm.Node).count() == len(nodes)
 
     # Clean the database and verify there are no nodes left
-    aiida_profile.clear_profile()
+    aiida_profile_clean.clear_profile()
     assert orm.QueryBuilder().append(orm.Node).count() == 0
 
     # After importing we should have the original number of nodes again
@@ -151,7 +151,7 @@ def test_cycle_structure_data(aiida_profile, aiida_localhost, tmp_path):
     assert len(builder.all()) > 0
 
 
-def test_import_checkpoints(aiida_profile, tmp_path):
+def test_import_checkpoints(aiida_profile_clean, tmp_path):
     """Check that process node checkpoints are stripped when importing.
 
     The process node checkpoints need to be stripped because they
@@ -172,7 +172,7 @@ def test_import_checkpoints(aiida_profile, tmp_path):
     assert orm.QueryBuilder().append(orm.Node).count() == len(nodes)
 
     # Clean the database and verify there are no nodes left
-    aiida_profile.clear_profile()
+    aiida_profile_clean.clear_profile()
     assert orm.QueryBuilder().append(orm.Node).count() == 0
 
     import_archive(archive_path)

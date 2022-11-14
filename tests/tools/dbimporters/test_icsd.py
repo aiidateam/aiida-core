@@ -53,7 +53,7 @@ class TestIcsd:
     """
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile):  # pylint: disable=unused-argument
+    def init_profile(self):  # pylint: disable=unused-argument
         """Initialize the profile and set up IcsdDbImporter for web and mysql db query."""
         # pylint: disable=attribute-defined-outside-init
         if not (has_mysqldb() and has_icsd_config()):

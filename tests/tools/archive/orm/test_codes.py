@@ -8,18 +8,20 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """orm.Code tests for the export and import routines"""
+import uuid
+
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.tools.archive import create_archive, import_archive
 from tests.tools.archive.utils import get_all_node_links
 
 
-def test_that_solo_code_is_exported_correctly(tmp_path, aiida_profile, aiida_localhost):
+def test_that_solo_code_is_exported_correctly(aiida_profile, tmp_path, aiida_localhost):
     """
     This test checks that when a calculation is exported then the
     corresponding code is also exported.
     """
-    code_label = 'test_code1'
+    code_label = uuid.uuid4().hex
 
     code = orm.InstalledCode(label=code_label, computer=aiida_localhost, filepath_executable='/bin/true').store()
     code_uuid = code.uuid
@@ -34,13 +36,13 @@ def test_that_solo_code_is_exported_correctly(tmp_path, aiida_profile, aiida_loc
     assert orm.load_node(code_uuid).label == code_label
 
 
-def test_input_code(tmp_path, aiida_profile, aiida_localhost):
+def test_input_code(aiida_profile, tmp_path, aiida_localhost):
     """
     This test checks that when a calculation is exported then the
     corresponding code is also exported. It also checks that the links
     are also in place after the import.
     """
-    code_label = 'test_code1'
+    code_label = uuid.uuid4().hex
 
     code = orm.InstalledCode(label=code_label, computer=aiida_localhost, filepath_executable='/bin/true').store()
     code_uuid = code.uuid
@@ -75,12 +77,12 @@ def test_input_code(tmp_path, aiida_profile, aiida_localhost):
         'the calculation node after import. {} found.'.format(len(import_links))
 
 
-def test_solo_code(tmp_path, aiida_profile, aiida_localhost):
+def test_solo_code(aiida_profile, tmp_path, aiida_localhost):
     """
     This test checks that when a calculation is exported then the
     corresponding code is also exported.
     """
-    code_label = 'test_code1'
+    code_label = uuid.uuid4().hex
 
     code = orm.InstalledCode(label=code_label, computer=aiida_localhost, filepath_executable='/bin/true').store()
     code_uuid = code.uuid

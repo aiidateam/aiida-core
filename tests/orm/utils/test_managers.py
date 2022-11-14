@@ -16,7 +16,7 @@ from aiida.common import AttributeDict, LinkType
 from aiida.common.exceptions import NotExistent, NotExistentAttributeError, NotExistentKeyError
 
 
-def test_dot_dict_manager(aiida_profile):
+def test_dot_dict_manager():
     """Verify that the Dict.dict manager behaves as intended."""
     dict_content = {'a': True, 'b': 1, 'c': 'Some string'}
     dict_node = orm.Dict(dict=dict_content)
@@ -47,7 +47,7 @@ def test_dot_dict_manager(aiida_profile):
         _ = dict_node.dict['NotExistentKey']
 
 
-def test_link_manager(aiida_profile):
+def test_link_manager():
     """Test the LinkManager via .inputs and .outputs from a ProcessNode."""
     # I first create a calculation with two inputs and two outputs
 
@@ -138,7 +138,7 @@ def test_link_manager(aiida_profile):
         _ = calc.outputs['NotExistentLabel']
 
 
-def test_link_manager_with_nested_namespaces(aiida_profile):
+def test_link_manager_with_nested_namespaces():
     """Test the ``LinkManager`` works with nested namespaces."""
     inp1 = orm.Data()
     inp1.store()
@@ -194,7 +194,7 @@ def test_link_manager_with_nested_namespaces(aiida_profile):
         _ = calc.outputs['remote_folder__namespace']
 
 
-def test_link_manager_contains(aiida_profile):
+def test_link_manager_contains():
     """Test the ``__contains__`` method for the ``LinkManager``."""
     data = orm.Data()
     data.store()

@@ -2,15 +2,12 @@
 """Tests for the :mod:`aiida.manage.tests.pytest_fixtures` module."""
 import uuid
 
-import pytest
-
 from aiida.manage.configuration import get_config
 from aiida.manage.configuration.config import Config
 from aiida.orm import Computer
 from aiida.transports import Transport
 
 
-@pytest.mark.usefixtures('aiida_profile')
 def test_profile_config():
     """Check that the config file created with the test profile passes validation."""
     Config.from_file(get_config().filepath)
@@ -27,7 +24,6 @@ def test_aiida_local_code(aiida_local_code_factory):
     assert code.computer.label == 'localhost'
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_aiida_computer_local(aiida_computer_local):
     """Test the ``aiida_computer_local`` fixture."""
     computer = aiida_computer_local()
@@ -50,7 +46,6 @@ def test_aiida_computer_local(aiida_computer_local):
     assert not computer_unconfigured.is_configured
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_aiida_computer_ssh(aiida_computer_ssh):
     """Test the ``aiida_computer_ssh`` fixture."""
     computer = aiida_computer_ssh()

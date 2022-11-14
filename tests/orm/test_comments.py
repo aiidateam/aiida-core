@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-self-use
+# pylint: disable=redefined-outer-name
 """Unit tests for the Comment ORM class."""
 import pytest
 
@@ -17,187 +17,207 @@ from aiida.orm.comments import Comment
 from aiida.tools.graph.deletions import delete_nodes
 
 
-class TestComment:
-    """Unit tests for the Comment ORM class."""
+@pytest.fixture
+def node():
+    """Return a stored node."""
+    return orm.Data().store()
 
-    @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile):  # pylint: disable=unused-argument
-        """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
-        self.node = orm.Data().store()
-        self.user = orm.User.collection.get_default()
-        self.content = 'Sometimes when I am freestyling, I lose confidence'
-        self.comment = Comment(self.node, self.user, self.content).store()
 
-    def test_comment_content(self):
-        """Test getting and setting content of a Comment."""
-        content = 'Be more constructive with your feedback'
-        self.comment.set_content(content)
-        assert self.comment.content == content
+@pytest.fixture
+def create_comment(default_user, node):
+    """Create a comment with a default user and node."""
 
-    def test_comment_mtime(self):
-        """Test getting and setting mtime of a Comment."""
-        mtime = self.comment.mtime
-        self.comment.set_content('Changing an attribute should automatically change the mtime')
-        assert self.comment.content == 'Changing an attribute should automatically change the mtime'
-        assert self.comment.mtime != mtime
+    def factory(content=''):
+        return Comment(node, default_user, content).store()
 
-    def test_comment_node(self):
-        """Test getting the node of a Comment."""
-        assert self.comment.node.uuid == self.node.uuid
+    return factory
 
-    def test_comment_user(self):
-        """Test getting the user of a Comment."""
-        assert self.comment.user.uuid == self.user.uuid
 
-    def test_comment_collection_get(self):
-        """Test retrieving a Comment through the collection."""
-        comment = Comment.collection.get(id=self.comment.pk)
-        assert self.comment.uuid == comment.uuid
+def test_comment_content(create_comment):
+    """Test getting and setting content of a Comment."""
+    content = 'Be more constructive with your feedback'
+    comment = create_comment(content)
+    assert comment.content == content
 
-    def test_comment_collection_delete(self):
-        """Test deleting a Comment through the collection."""
-        comment = Comment(self.node, self.user, 'I will perish').store()
-        comment_pk = comment.pk
 
-        Comment.collection.delete(comment.pk)
+def test_comment_mtime(create_comment):
+    """Test getting and setting mtime of a Comment."""
+    comment = create_comment()
+    mtime = comment.mtime
+    comment.set_content('Changing an attribute should automatically change the mtime')
+    assert comment.content == 'Changing an attribute should automatically change the mtime'
+    assert comment.mtime != mtime
 
+
+def test_comment_node(node, default_user):
+    """Test getting the node of a Comment."""
+    comment = Comment(node, default_user, 'comment').store()
+    assert comment.node.uuid == node.uuid
+
+
+def test_comment_user(node, default_user):
+    """Test getting the user of a Comment."""
+    comment = Comment(node, default_user, 'comment').store()
+    assert comment.user.uuid == default_user.uuid
+
+
+def test_comment_collection_get(create_comment):
+    """Test retrieving a Comment through the collection."""
+    comment = create_comment()
+    loaded = Comment.collection.get(id=comment.pk)
+    assert loaded.uuid == comment.uuid
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_comment_collection_delete(node, default_user):
+    """Test deleting a Comment through the collection."""
+    comment = Comment(node, default_user, 'I will perish').store()
+    comment_pk = comment.pk
+
+    Comment.collection.delete(comment.pk)
+
+    with pytest.raises(exceptions.NotExistent):
+        Comment.collection.delete(comment_pk)
+
+    with pytest.raises(exceptions.NotExistent):
+        Comment.collection.get(id=comment_pk)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_comment_collection_delete_all(node, default_user):
+    """Test deleting all Comments through the collection."""
+    comment = Comment(node, default_user, 'I will perish').store()
+    Comment(node, default_user, 'Surely not?').store()
+    comment_pk = comment.pk
+
+    # Assert the comments exist
+    assert len(Comment.collection.all()) == 2
+
+    # Delete all Comments
+    Comment.collection.delete_all()
+
+    with pytest.raises(exceptions.NotExistent):
+        Comment.collection.delete(comment_pk)
+
+    with pytest.raises(exceptions.NotExistent):
+        Comment.collection.get(id=comment_pk)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_comment_collection_delete_many(node, default_user):
+    """Test deleting many Comments through the collection."""
+    comment_one = Comment(node, default_user, 'I will perish').store()
+    comment_two = Comment(node, default_user, 'Surely not?').store()
+    comment_ids = [_.pk for _ in [comment_one, comment_two]]
+
+    # Assert the Comments exist
+    assert len(Comment.collection.all()) == 2
+
+    # Delete new Comments using filter
+    filters = {'id': {'in': comment_ids}}
+    Comment.collection.delete_many(filters=filters)
+
+    builder = orm.QueryBuilder().append(Comment, project='id')
+    assert builder.count() == 0
+
+    for comment_pk in comment_ids:
         with pytest.raises(exceptions.NotExistent):
             Comment.collection.delete(comment_pk)
 
         with pytest.raises(exceptions.NotExistent):
             Comment.collection.get(id=comment_pk)
 
-    def test_comment_collection_delete_all(self):
-        """Test deleting all Comments through the collection."""
-        comment = Comment(self.node, self.user, 'I will perish').store()
-        Comment(self.node, self.user, 'Surely not?').store()
-        comment_pk = comment.pk
 
-        # Assert the comments exist
-        assert len(Comment.collection.all()) == 3
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_comment_querybuilder(default_user):
+    # pylint: disable=too-many-locals
+    """Test querying for comments by joining on nodes in the QueryBuilder."""
+    user_one = default_user
+    user_two = orm.User(email='commenting@user.s').store()
 
-        # Delete all Comments
-        Comment.collection.delete_all()
+    node_one = orm.Data().store()
+    comment_one = Comment(node_one, user_one, 'comment_one').store()
 
-        with pytest.raises(exceptions.NotExistent):
-            Comment.collection.delete(comment_pk)
+    node_two = orm.Data().store()
+    comment_two = Comment(node_two, user_one, 'comment_two').store()
+    comment_three = Comment(node_two, user_one, 'comment_three').store()
 
-        with pytest.raises(exceptions.NotExistent):
-            Comment.collection.get(id=comment_pk)
+    node_three = orm.CalculationNode().store()
+    comment_four = Comment(node_three, user_two, 'new_user_comment').store()
 
-    def test_comment_collection_delete_many(self):
-        """Test deleting many Comments through the collection."""
-        comment_one = Comment(self.node, self.user, 'I will perish').store()
-        comment_two = Comment(self.node, self.user, 'Surely not?').store()
-        comment_ids = [_.pk for _ in [comment_one, comment_two]]
+    node_four = orm.CalculationNode().store()
+    comment_five = Comment(node_four, user_one, 'user one comment').store()
+    comment_six = Comment(node_four, user_two, 'user two comment').store()
 
-        # Assert the Comments exist
-        assert len(Comment.collection.all()) == 3
+    # Retrieve a node by joining on a specific comment
+    builder = orm.QueryBuilder()
+    builder.append(Comment, tag='comment', filters={'id': comment_one.pk})
+    builder.append(orm.Node, with_comment='comment', project=['uuid'])
+    nodes = builder.all()
 
-        # Delete new Comments using filter
-        filters = {'id': {'in': comment_ids}}
-        Comment.collection.delete_many(filters=filters)
+    assert len(nodes) == 1
+    for query_node in nodes:
+        assert str(query_node[0]) in [node_one.uuid]
 
-        # Make sure only the setUp Comment is left
-        builder = orm.QueryBuilder().append(Comment, project='id')
-        assert builder.count() == 1
-        assert builder.all()[0][0] == self.comment.pk
+    # Retrieve a comment by joining on a specific node
+    builder = orm.QueryBuilder()
+    builder.append(orm.Node, tag='node', filters={'id': node_two.pk})
+    builder.append(Comment, with_node='node', project=['uuid'])
+    comments = builder.all()
 
-        for comment_pk in comment_ids:
-            with pytest.raises(exceptions.NotExistent):
-                Comment.collection.delete(comment_pk)
+    assert len(comments) == 2
+    for comment in comments:
+        assert str(comment[0]) in [comment_two.uuid, comment_three.uuid]
 
-            with pytest.raises(exceptions.NotExistent):
-                Comment.collection.get(id=comment_pk)
+    # Retrieve a user by joining on a specific comment
+    builder = orm.QueryBuilder()
+    builder.append(Comment, tag='comment', filters={'id': comment_four.pk})
+    builder.append(orm.User, with_comment='comment', project=['email'])
+    users = builder.all()
 
-    def test_comment_querybuilder(self):
-        # pylint: disable=too-many-locals
-        """Test querying for comments by joining on nodes in the QueryBuilder."""
-        user_one = self.user
-        user_two = orm.User(email='commenting@user.s').store()
+    assert len(users) == 1
+    for user in users:
+        assert str(user[0]) == user_two.email
 
-        node_one = orm.Data().store()
-        comment_one = Comment(node_one, user_one, 'comment_one').store()
+    # Retrieve a comment by joining on a specific user
+    builder = orm.QueryBuilder()
+    builder.append(orm.User, tag='user', filters={'email': user_one.email})
+    builder.append(Comment, with_user='user', project=['uuid'])
+    comments = builder.all()
 
-        node_two = orm.Data().store()
-        comment_two = Comment(node_two, user_one, 'comment_two').store()
-        comment_three = Comment(node_two, user_one, 'comment_three').store()
+    assert len(comments) == 4
+    for comment in comments:
+        assert str(comment[0]) in [comment_one.uuid, comment_two.uuid, comment_three.uuid, comment_five.uuid]
 
-        node_three = orm.CalculationNode().store()
-        comment_four = Comment(node_three, user_two, 'new_user_comment').store()
+    # Retrieve users from comments of a single node by joining specific node
+    builder = orm.QueryBuilder()
+    builder.append(orm.Node, tag='node', filters={'id': node_four.pk})
+    builder.append(Comment, tag='comments', with_node='node', project=['uuid'])
+    builder.append(orm.User, with_comment='comments', project=['email'])
+    comments_and_users = builder.all()
 
-        node_four = orm.CalculationNode().store()
-        comment_five = Comment(node_four, user_one, 'user one comment').store()
-        comment_six = Comment(node_four, user_two, 'user two comment').store()
+    assert len(comments_and_users) == 2
+    for entry in comments_and_users:
+        assert len(entry) == 2
 
-        # Retrieve a node by joining on a specific comment
-        builder = orm.QueryBuilder()
-        builder.append(Comment, tag='comment', filters={'id': comment_one.pk})
-        builder.append(orm.Node, with_comment='comment', project=['uuid'])
-        nodes = builder.all()
+        comment_uuid = str(entry[0])
+        user_email = str(entry[1])
 
-        assert len(nodes) == 1
-        for node in nodes:
-            assert str(node[0]) in [node_one.uuid]
+        assert comment_uuid in [comment_five.uuid, comment_six.uuid]
+        assert user_email in [user_one.email, user_two.email]
 
-        # Retrieve a comment by joining on a specific node
-        builder = orm.QueryBuilder()
-        builder.append(orm.Node, tag='node', filters={'id': node_two.pk})
-        builder.append(Comment, with_node='node', project=['uuid'])
-        comments = builder.all()
 
-        assert len(comments) == 2
-        for comment in comments:
-            assert str(comment[0]) in [comment_two.uuid, comment_three.uuid]
+def test_objects_get(node):
+    """Test getting a comment from the collection"""
+    comment = node.base.comments.add('Check out the comment on _this_ one')
+    gotten_comment = Comment.collection.get(id=comment.pk)
+    assert isinstance(gotten_comment, Comment)
 
-        # Retrieve a user by joining on a specific comment
-        builder = orm.QueryBuilder()
-        builder.append(Comment, tag='comment', filters={'id': comment_four.pk})
-        builder.append(orm.User, with_comment='comment', project=['email'])
-        users = builder.all()
 
-        assert len(users) == 1
-        for user in users:
-            assert str(user[0]) == user_two.email
-
-        # Retrieve a comment by joining on a specific user
-        builder = orm.QueryBuilder()
-        builder.append(orm.User, tag='user', filters={'email': user_one.email})
-        builder.append(Comment, with_user='user', project=['uuid'])
-        comments = builder.all()
-
-        assert len(comments) == 5
-        for comment in comments:
-            assert str(comment[0]) in \
-                [self.comment.uuid, comment_one.uuid, comment_two.uuid, comment_three.uuid, comment_five.uuid]
-
-        # Retrieve users from comments of a single node by joining specific node
-        builder = orm.QueryBuilder()
-        builder.append(orm.Node, tag='node', filters={'id': node_four.pk})
-        builder.append(Comment, tag='comments', with_node='node', project=['uuid'])
-        builder.append(orm.User, with_comment='comments', project=['email'])
-        comments_and_users = builder.all()
-
-        assert len(comments_and_users) == 2
-        for entry in comments_and_users:
-            assert len(entry) == 2
-
-            comment_uuid = str(entry[0])
-            user_email = str(entry[1])
-
-            assert comment_uuid in [comment_five.uuid, comment_six.uuid]
-            assert user_email in [user_one.email, user_two.email]
-
-    def test_objects_get(self):
-        """Test getting a comment from the collection"""
-        node = orm.Data().store()
-        comment = node.base.comments.add('Check out the comment on _this_ one')
-        gotten_comment = Comment.collection.get(id=comment.pk)
-        assert isinstance(gotten_comment, Comment)
-
-    def test_delete_node_with_comments(self):
-        """Test deleting a node with comments."""
-        assert len(Comment.collection.all()) == 1
-        delete_nodes([self.node.pk], dry_run=False)
-        assert len(Comment.collection.all()) == 0
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_delete_node_with_comments(node, default_user):
+    """Test deleting a node with comments."""
+    Comment(node, default_user, 'I will perish').store()
+    assert len(Comment.collection.all()) == 1
+    delete_nodes([node.pk], dry_run=False)
+    assert len(Comment.collection.all()) == 0

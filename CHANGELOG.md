@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.1.2 - 2022-11-14
+
+### Fixes
+
+- `BaseRestartWorkChain`: Fix bug in `_wrap_bare_dict_inputs` introduced in `v2.1.0` [[#5757]](https://github.com/aiidateam/aiida-core/pull/5757)
+
+
 ## v2.1.1 - 2022-11-10
 
 ### Fixes

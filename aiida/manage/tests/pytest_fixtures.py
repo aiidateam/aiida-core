@@ -224,10 +224,11 @@ def clear_profile():
         daemon_client.stop_daemon(wait=True)
 
     manager = get_manager()
-    manager.get_profile_storage()._clear(recreate_user=True)  # pylint: disable=protected-access
-    manager.get_profile_storage()  # reload the storage connection
+    manager.get_profile_storage()._clear()  # pylint: disable=protected-access
     manager.reset_communicator()
     manager.reset_runner()
+
+    User(get_manager().get_profile().default_user_email).store()
 
 
 @pytest.fixture(scope='session')

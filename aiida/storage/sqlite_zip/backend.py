@@ -250,7 +250,7 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
     def users(self):
         return orm.SqliteUserCollection(self)
 
-    def _clear(self, recreate_user: bool = True) -> None:
+    def _clear(self) -> None:
         raise ReadOnlyError()
 
     def transaction(self):

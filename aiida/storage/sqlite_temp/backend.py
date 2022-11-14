@@ -153,7 +153,7 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
                 with session.begin_nested():
                     yield session
 
-    def _clear(self, recreate_user: bool = True) -> None:
+    def _clear(self) -> None:
         raise NotImplementedError
 
     def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:

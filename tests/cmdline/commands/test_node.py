@@ -28,7 +28,7 @@ class TestVerdiNode:
     """Tests for `verdi node`."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init,invalid-name
         node = orm.Data()
@@ -261,7 +261,7 @@ class TestVerdiGraph:
     """Tests for the ``verdi node graph`` command."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, run_cli_command, tmp_path):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile, run_cli_command, tmp_path):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         from aiida.orm import Data
@@ -426,7 +426,7 @@ class TestVerdiUserCommand:
     """Tests for the ``verdi node comment`` command."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init,invalid-name
         self.cli_runner = run_cli_command
@@ -473,7 +473,7 @@ class TestVerdiRehash:
     """Tests for the ``verdi node rehash`` command."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init,invalid-name
         from aiida.orm import Bool, Data, Float, Int
@@ -577,7 +577,7 @@ class TestVerdiRehash:
         ['--force'],
     )
 )
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_node_delete_basics(run_cli_command, options):
     """
     Testing the correct translation for the `--force` and `--verbosity` options.

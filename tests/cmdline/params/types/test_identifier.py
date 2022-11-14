@@ -15,7 +15,7 @@ from aiida.cmdline.params.types import IdentifierParamType, NodeParamType
 from aiida.orm import Bool, Float, Int
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestIdentifierParamType:
     """Tests for the `IdentifierParamType`."""
 

@@ -18,7 +18,7 @@ from aiida.orm import CalculationNode, Int
 from aiida.orm.utils.mixins import Sealable
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestSealable:
     """Tests for the `Sealable` mixin class."""
 

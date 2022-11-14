@@ -78,7 +78,7 @@ class TestUpfParser:
     """Tests UPF version / element_name parser function."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, tmp_path):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile, tmp_path):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         filepath_base = os.path.abspath(os.path.join(STATIC_DIR, 'pseudos'))

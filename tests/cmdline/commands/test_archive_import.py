@@ -112,7 +112,7 @@ def test_import_make_new_group(run_cli_command, newest_archive):
     assert not group.is_empty, 'The Group should not be empty.'
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_no_import_group(run_cli_command, newest_archive):
     """Test '--import-group/--no-import-group' options."""
     archives = [get_archive_file(newest_archive, filepath=ARCHIVE_PATH)]
@@ -216,7 +216,7 @@ def test_migration(run_cli_command):
     assert success_message not in result.output, result.exception
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 @pytest.mark.parametrize('version', [v for v in list_versions() if v not in ('main_0000a', 'main_0000b')])
 def test_import_old_local_archives(version, run_cli_command):
     """ Test import of old local archives

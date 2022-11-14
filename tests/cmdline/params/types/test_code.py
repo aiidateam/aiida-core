@@ -24,7 +24,7 @@ def parameter_type():
 
 
 @pytest.fixture
-def setup_codes(aiida_profile_clean, aiida_localhost):
+def setup_codes(aiida_profile, aiida_localhost):
     """Create some `Code` instances to test the `CodeParamType` parameter type for the command line infrastructure.
 
     We create an initial code with a random name and then on purpose create two code with a name that matches exactly

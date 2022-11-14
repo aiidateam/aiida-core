@@ -13,7 +13,7 @@ import pytest
 from aiida.orm import FolderData
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_constructor_tree(tmp_path):
     """Test the `tree` constructor keyword."""
     tree = {

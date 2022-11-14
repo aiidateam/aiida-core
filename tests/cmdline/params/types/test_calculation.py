@@ -19,7 +19,7 @@ class TestCalculationParamType:
     """Tests for the `CalculationParamType`."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile):  # pylint: disable=unused-argument
         """
         Create some code to test the CalculationParamType parameter type for the command line infrastructure
         We create an initial code with a random name and then on purpose create two code with a name

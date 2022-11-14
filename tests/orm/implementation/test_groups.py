@@ -13,7 +13,7 @@ import pytest
 from aiida import orm
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_creation_from_dbgroup(backend):
     """Test creation of a group from another group."""
     node = orm.Data().store()
@@ -30,7 +30,7 @@ def test_creation_from_dbgroup(backend):
     assert group.uuid == gcopy.uuid
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_add_nodes_skip_orm():
     """Test the `SqlaGroup.add_nodes` method with the `skip_orm=True` flag."""
     group = orm.Group(label='test_adding_nodes').store().backend_entity
@@ -53,7 +53,7 @@ def test_add_nodes_skip_orm():
     assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_add_nodes_skip_orm_batch():
     """Test the `SqlaGroup.add_nodes` method with the `skip_orm=True` flag and batches."""
     nodes = [orm.Data().store().backend_entity for _ in range(100)]
@@ -66,7 +66,7 @@ def test_add_nodes_skip_orm_batch():
         assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_remove_nodes_bulk():
     """Test node removal with `skip_orm=True`."""
     group = orm.Group(label='test_removing_nodes').store().backend_entity

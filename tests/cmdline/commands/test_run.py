@@ -21,7 +21,7 @@ class TestVerdiRun:
     """Tests for `verdi run`."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.cli_runner = run_cli_command
@@ -83,7 +83,7 @@ class TestAutoGroups:
     """Test the autogroup functionality."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.cli_runner = run_cli_command

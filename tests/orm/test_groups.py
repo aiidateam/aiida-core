@@ -16,7 +16,7 @@ from aiida.common import exceptions
 from aiida.tools.graph.deletions import delete_nodes
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestGroups:
     """Test backend entities and their collections"""
 
@@ -297,7 +297,7 @@ class TestGroups:
         assert builder.first(flat=True) == group.pk
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestGroupsSubclasses:
     """Test rules around creating `Group` subclasses."""
 
@@ -426,7 +426,7 @@ class TestGroupExtras:
     """Test the property and methods of group extras."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.group = orm.Group('test_extras')

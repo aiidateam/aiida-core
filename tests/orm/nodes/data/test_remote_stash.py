@@ -15,7 +15,7 @@ from aiida.common.exceptions import StoringNotAllowed
 from aiida.orm import RemoteStashData, RemoteStashFolderData
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_base_class():
     """Verify that base class cannot be stored."""
     node = RemoteStashData(stash_mode=StashMode.COPY)
@@ -24,7 +24,7 @@ def test_base_class():
         node.store()
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 @pytest.mark.parametrize('store', (False, True))
 def test_constructor(store):
     """Test the constructor and storing functionality."""
@@ -46,7 +46,7 @@ def test_constructor(store):
         assert data.source_list == source_list
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 @pytest.mark.parametrize(
     'argument, value', (
         ('stash_mode', 'copy'),

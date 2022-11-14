@@ -22,7 +22,7 @@ from aiida.storage.psql_dos.models.node import DbNode
 from aiida.storage.psql_dos.models.user import DbUser
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestRelationshipsSQLA:
     """Class of tests concerning the schema and the correct
     implementation of relationships within the AiiDA ORM

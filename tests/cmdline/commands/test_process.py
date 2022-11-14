@@ -41,7 +41,7 @@ class TestVerdiProcess:
     TEST_TIMEOUT = 5.
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
 
@@ -315,7 +315,7 @@ class TestVerdiProcess:
             assert get_result_lines(result)[0] == 'No log messages recorded for this entry'
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_list_worker_slot_warning(run_cli_command, monkeypatch):
     """
     Test that the if the number of used worker process slots exceeds a threshold,
@@ -359,7 +359,7 @@ class TestVerdiProcessCallRoot:
     """Tests for `verdi process call-root`."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.node_root = WorkflowNode()

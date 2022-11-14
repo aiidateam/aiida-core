@@ -39,7 +39,7 @@ def test_import_of_attributes(tmp_path, aiida_profile):
     assert imported_node.base.attributes.get('c') == 3
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_strip_checkpoints(tmp_path):
     """Test that `ProcessNode` checkpoints are stripped.
 

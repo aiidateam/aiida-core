@@ -22,7 +22,7 @@ class TestBackendComment:
     """Test BackendComment."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost, backend):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile, aiida_localhost, backend):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.backend = backend

@@ -112,7 +112,7 @@ WORKCHAINS = {
 
 
 @pytest.mark.parametrize('workchain,iterations,outgoing', WORKCHAINS.values(), ids=WORKCHAINS.keys())
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 @pytest.mark.benchmark(group='engine')
 def test_workchain_local(benchmark, aiida_localhost, workchain, iterations, outgoing):
     """Benchmark Workchains, executed in the local runner."""
@@ -130,7 +130,7 @@ def test_workchain_local(benchmark, aiida_localhost, workchain, iterations, outg
 
 
 @pytest.mark.parametrize('workchain,iterations,outgoing', WORKCHAINS.values(), ids=WORKCHAINS.keys())
-@pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
+@pytest.mark.usefixtures('aiida_profile', 'started_daemon_client')
 @pytest.mark.benchmark(group='engine')
 def test_workchain_daemon(benchmark, submit_and_await, aiida_localhost, workchain, iterations, outgoing):
     """Benchmark Workchains, executed in the via a daemon runner."""

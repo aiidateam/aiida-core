@@ -16,7 +16,7 @@ from aiida.tools.groups.paths import GroupAttr, GroupNotFoundError, GroupPath, I
 
 
 @pytest.fixture
-def setup_groups(aiida_profile_clean):
+def setup_groups(aiida_profile):
     """Setup some groups for testing."""
     for label in ['a', 'a/b', 'a/c/d', 'a/c/e/g', 'a/f']:
         group, _ = orm.Group.collection.get_or_create(label)
@@ -117,7 +117,7 @@ def test_walk(setup_groups):
 
 
 @pytest.mark.filterwarnings('ignore::UserWarning')
-def test_walk_with_invalid_path(aiida_profile_clean):
+def test_walk_with_invalid_path(aiida_profile):
     """Test the ``GroupPath.walk`` method with invalid paths."""
     for label in ['a', 'a/b', 'a/c/d', 'a/c/e/g', 'a/f', 'bad//group', 'bad/other']:
         orm.Group.collection.get_or_create(label)
@@ -126,7 +126,7 @@ def test_walk_with_invalid_path(aiida_profile_clean):
     assert [c.path for c in sorted(group_path.walk())] == expected
 
 
-def test_walk_nodes(aiida_profile_clean):
+def test_walk_nodes(aiida_profile):
     """Test the ``GroupPath.walk_nodes()`` function."""
     group, _ = orm.Group.collection.get_or_create('a')
     node = orm.Data()
@@ -141,7 +141,7 @@ def test_walk_nodes(aiida_profile_clean):
             })]
 
 
-def test_cls(aiida_profile_clean):
+def test_cls(aiida_profile):
     """Test that only instances of `cls` or its subclasses are matched by ``GroupPath``."""
     for label in ['a', 'a/b', 'a/c/d', 'a/c/e/g']:
         orm.Group.collection.get_or_create(label)
@@ -154,7 +154,7 @@ def test_cls(aiida_profile_clean):
     assert GroupPath('a/b/c') != GroupPath('a/b/c', cls=orm.UpfFamily)
 
 
-def test_attr(aiida_profile_clean):
+def test_attr(aiida_profile):
     """Test ``GroupAttr``."""
     for label in ['a', 'a/b', 'a/c/d', 'a/c/e/g', 'a/f', 'bad space', 'bad@char', '_badstart']:
         orm.Group.collection.get_or_create(label)
@@ -167,7 +167,7 @@ def test_attr(aiida_profile_clean):
         group_path.browse.a.c.x  # pylint: disable=pointless-statement
 
 
-def test_cls_label_clashes(aiida_profile_clean):
+def test_cls_label_clashes(aiida_profile):
     """Test behaviour when multiple group classes have the same label."""
     group_01, _ = orm.Group.collection.get_or_create('a')
     node_01 = orm.Data().store()

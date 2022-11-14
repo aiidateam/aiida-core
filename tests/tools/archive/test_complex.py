@@ -22,7 +22,7 @@ from aiida.common.links import LinkType
 from aiida.tools.archive import create_archive, import_archive
 
 
-def test_complex_graph_import_export(aiida_profile_clean, tmp_path, aiida_localhost):
+def test_complex_graph_import_export(aiida_profile, tmp_path, aiida_localhost):
     """
     This test checks that a small and bit complex graph can be correctly
     exported and imported.
@@ -81,7 +81,7 @@ def test_complex_graph_import_export(aiida_profile_clean, tmp_path, aiida_localh
     filename = tmp_path / 'export.aiida'
     create_archive([fd1], filename=filename)
 
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
 
     import_archive(filename)
 

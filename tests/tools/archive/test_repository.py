@@ -17,7 +17,7 @@ from aiida.manage import get_manager
 from aiida.tools.archive import create_archive, import_archive
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_export_repository(aiida_profile, tmp_path):
     """Test exporting a node with files in the repository."""
     node = orm.Data()
@@ -39,7 +39,7 @@ def test_export_repository(aiida_profile, tmp_path):
     assert loaded.base.repository.get_object_content('relative/file_b', mode='rb') == b'file_b'
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_export_repository_after_maintain(aiida_profile, tmp_path):
     """Test exporting a node with files in the repository after maintenance.
 

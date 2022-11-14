@@ -20,7 +20,7 @@ class TestBackend:
     """Test backend."""
 
     @pytest.fixture(autouse=True)
-    def init_test(self, aiida_profile_clean, backend):  # pylint: disable=unused-argument
+    def init_test(self, aiida_profile, backend):  # pylint: disable=unused-argument
         """Set up the backend."""
         self.backend = backend  # pylint: disable=attribute-defined-outside-init
 

@@ -184,6 +184,7 @@ class OutputNamespaceWorkChain(engine.WorkChain):
     @classmethod
     def define(cls, spec):
         super().define(spec)
+        spec.input('parameters', required=False, valid_type=orm.Dict)
         spec.output_namespace('sub', valid_type=orm.Int, dynamic=True)
         spec.outline(cls.finalize)
 
@@ -191,7 +192,7 @@ class OutputNamespaceWorkChain(engine.WorkChain):
         self.out('sub.result', orm.Int(1).store())
 
 
-class CustomBRWorkChain(engine.BaseRestartWorkChain):
+class CustomBaseRestartWorkChain(engine.BaseRestartWorkChain):
     """`BaseRestartWorkChain` of `OutputNamespaceWorkChain`"""
 
     _process_class = OutputNamespaceWorkChain
@@ -199,6 +200,7 @@ class CustomBRWorkChain(engine.BaseRestartWorkChain):
     @classmethod
     def define(cls, spec):
         super().define(spec)
+        spec.expose_inputs(cls._process_class, namespace='sub')
         spec.expose_outputs(cls._process_class)
         spec.output('extra', valid_type=orm.Int)
 
@@ -212,12 +214,30 @@ class CustomBRWorkChain(engine.BaseRestartWorkChain):
         )
 
     def setup(self):
+        """Unwrap the ``parameters`` input if specified.
+
+        This serves to test that the ``BaseRestartWorkChain._wrap_bare_dict_inputs`` method works properly.
+        """
         super().setup()
-        self.ctx.inputs = {}
+        self.ctx.inputs = self.exposed_inputs(self._process_class, namespace='sub')
+        if 'parameters' in self.ctx.inputs:
+            self.ctx.inputs.parameters = self.ctx.inputs.parameters.get_dict()
 
 
 @pytest.mark.requires_rmq
 def test_results():
-    res, node = engine.launch.run_get_node(CustomBRWorkChain)
-    assert res['sub'].result.value == 1
+    results, node = engine.launch.run_get_node(CustomBaseRestartWorkChain)
+    assert results['sub'].result.value == 1
     assert node.exit_status == 11
+
+
+@pytest.mark.requires_rmq
+def test_wrap_bare_dict_inputs():
+    """Test that ``BaseRestartWorkChain._wrap_bare_dict_inputs`` method works properly.
+
+    This is called in ``BaseRestartWorkChain.run_process`` which will automatically wrap any inputs that are plain
+    dictionaries that should be ``Dict`` nodes. This is useful if the implementation unwraps ``Dict`` inputs in the
+    preparation phase so they can be updated if needed, and they don't have to manually rewrap in a ``Dict`` node.
+    """
+    _, node = engine.launch.run_get_node(CustomBaseRestartWorkChain, **{'sub': {'parameters': orm.Dict({'a': 1})}})
+    assert node.is_finished

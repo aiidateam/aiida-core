@@ -41,7 +41,7 @@ class Code(AbstractCode):
     # pylint: disable=too-many-public-methods
 
     def __init__(self, remote_computer_exec=None, local_executable=None, input_plugin_name=None, files=None, **kwargs):
-        
+
         if self.__class__ == Code:
             warn_deprecation(
                 'The `Code` class is deprecated. To create an instance, use the `aiida.orm.nodes.data.code.installed.InstalledCode`'
@@ -50,7 +50,7 @@ class Code(AbstractCode):
                 version=3,
                 stacklevel=3
             )
-     
+
         super().__init__(**kwargs)
 
         if remote_computer_exec and local_executable:

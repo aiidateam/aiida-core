@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Unit tests for the ORM Backend class."""
+import uuid
+
 import pytest
 
 from aiida import orm
@@ -20,7 +22,7 @@ class TestBackend:
     """Test backend."""
 
     @pytest.fixture(autouse=True)
-    def init_test(self, aiida_profile, backend):  # pylint: disable=unused-argument
+    def init_test(self, backend):  # pylint: disable=unused-argument
         """Set up the backend."""
         self.backend = backend  # pylint: disable=attribute-defined-outside-init
 
@@ -76,7 +78,7 @@ class TestBackend:
 
     def test_bulk_insert(self):
         """Test that bulk insert works."""
-        rows = [{'email': 'user1@email.com'}, {'email': 'user2@email.com'}]
+        rows = [{'email': uuid.uuid4().hex}, {'email': uuid.uuid4().hex}]
         # should fail if all fields are not given and allow_defaults=False
         with pytest.raises(exceptions.IntegrityError, match='Incorrect fields'):
             self.backend.bulk_insert(EntityTypes.USER, rows)
@@ -89,7 +91,7 @@ class TestBackend:
 
     def test_bulk_insert_in_transaction(self):
         """Test that bulk insert in a cancelled transaction is not committed."""
-        rows = [{'email': 'user1@email.com'}, {'email': 'user2@email.com'}]
+        rows = [{'email': uuid.uuid4().hex}, {'email': uuid.uuid4().hex}]
         try:
             with self.backend.transaction():
                 self.backend.bulk_insert(EntityTypes.USER, rows, allow_defaults=True)
@@ -102,7 +104,8 @@ class TestBackend:
 
     def test_bulk_update(self):
         """Test that bulk update works."""
-        users = [orm.User(f'user{i}@email.com').store() for i in range(3)]
+        prefix = uuid.uuid4().hex
+        users = [orm.User(f'{prefix}-{i}').store() for i in range(3)]
         # should raise if the 'id' field is not present
         with pytest.raises(exceptions.IntegrityError, match="'id' field not given"):
             self.backend.bulk_update(EntityTypes.USER, [{'email': 'other'}])
@@ -120,27 +123,28 @@ class TestBackend:
         )
         assert users[0].email == 'other0'
         assert users[1].email == 'other1'
-        assert users[2].email == 'user2@email.com'
+        assert users[2].email == f'{prefix}-2'
 
     def test_bulk_update_in_transaction(self):
         """Test that bulk update in a cancelled transaction is not committed."""
-        users = [orm.User(f'user{i}@email.com').store() for i in range(3)]
+        prefix = uuid.uuid4().hex
+        users = [orm.User(f'{prefix}-{i}').store() for i in range(3)]
         try:
             with self.backend.transaction():
                 self.backend.bulk_update(
                     EntityTypes.USER, [{
                         'id': users[0].pk,
-                        'email': 'other0'
+                        'email': 'random0'
                     }, {
                         'id': users[1].pk,
-                        'email': 'other1'
+                        'email': 'random1'
                     }]
                 )
                 raise RuntimeError
         except RuntimeError:
             pass
         for i, user in enumerate(users):
-            assert user.email == f'user{i}@email.com'
+            assert user.email == f'{prefix}-{i}'
 
     def test_delete_nodes_and_connections(self):
         """Delete all nodes and connections."""

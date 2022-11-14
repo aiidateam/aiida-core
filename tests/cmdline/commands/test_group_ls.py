@@ -19,7 +19,7 @@ from aiida.cmdline.commands.cmd_group import group_path_ls
 
 
 @pytest.fixture
-def setup_groups(aiida_profile):
+def setup_groups(aiida_profile_clean):
     """Setup some groups for testing."""
     for label in ['a', 'a/b', 'a/c/d', 'a/c/e/g', 'a/f']:
         group, _ = orm.Group.collection.get_or_create(label)

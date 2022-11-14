@@ -19,7 +19,6 @@ from tests.utils import processes as test_processes
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile')
 class TestWf:
     """Test process futures."""
     TIMEOUT = 5.0  # seconds

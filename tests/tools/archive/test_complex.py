@@ -22,7 +22,7 @@ from aiida.common.links import LinkType
 from aiida.tools.archive import create_archive, import_archive
 
 
-def test_complex_graph_import_export(aiida_profile, tmp_path, aiida_localhost):
+def test_complex_graph_import_export(aiida_profile_clean, tmp_path, aiida_localhost):
     """
     This test checks that a small and bit complex graph can be correctly
     exported and imported.
@@ -81,7 +81,7 @@ def test_complex_graph_import_export(aiida_profile, tmp_path, aiida_localhost):
     filename = tmp_path / 'export.aiida'
     create_archive([fd1], filename=filename)
 
-    aiida_profile.clear_profile()
+    aiida_profile_clean.clear_profile()
 
     import_archive(filename)
 
@@ -92,7 +92,7 @@ def test_complex_graph_import_export(aiida_profile, tmp_path, aiida_localhost):
             raise NotExistent(f'Node with UUID {uuid} and label {label} was not found.')
 
 
-def test_reexport(aiida_profile, tmp_path):
+def test_reexport(aiida_profile_clean, tmp_path):
     """
     Export something, import and re-export and check if everything is valid.
     The export is rather easy::
@@ -103,8 +103,6 @@ def test_reexport(aiida_profile, tmp_path):
         |___|     |___|        |___|
 
     """
-    aiida_profile.clear_profile()
-
     # Creating a folder for the archive files
     chars = string.ascii_uppercase + string.digits
     size = 10
@@ -156,7 +154,7 @@ def test_reexport(aiida_profile, tmp_path):
         # this also checks if group memberships are preserved!
         create_archive([group] + list(group.nodes), filename=filename)
         # cleaning the DB!
-        aiida_profile.clear_profile()
+        aiida_profile_clean.clear_profile()
         # reimporting the data from the file
         import_archive(filename)
         # creating the hash from db content

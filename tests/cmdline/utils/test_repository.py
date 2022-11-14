@@ -34,14 +34,12 @@ def folder_data():
     return node
 
 
-@pytest.mark.usefixtures('aiida_profile')
 def test_list_repository_contents(capsys, folder_data):
     """Test the `list_repository_contents` method."""
     list_repository_contents(folder_data, path='', color=True)
     assert capsys.readouterr().out == 'file.txt\nnested\n'
 
 
-@pytest.mark.usefixtures('aiida_profile')
 def test_list_repository_contents_color(runner, folder_data):
     """Test the `list_repository_contents` method.
 

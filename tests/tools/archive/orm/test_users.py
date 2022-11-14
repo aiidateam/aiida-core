@@ -12,7 +12,7 @@ from aiida import orm
 from aiida.tools.archive import create_archive, import_archive
 
 
-def test_nodes_belonging_to_different_users(tmp_path, aiida_profile, aiida_localhost):
+def test_nodes_belonging_to_different_users(aiida_profile, tmp_path, aiida_localhost):
     """
     This test checks that nodes belonging to different users are correctly
     exported & imported.
@@ -79,7 +79,7 @@ def test_nodes_belonging_to_different_users(tmp_path, aiida_profile, aiida_local
         assert orm.load_node(uuid).user.email == manager.get_profile().default_user_email
 
 
-def test_non_default_user_nodes(tmp_path, aiida_profile, aiida_localhost_factory):  # pylint: disable=too-many-statements
+def test_non_default_user_nodes(aiida_profile_clean, tmp_path, aiida_localhost_factory):  # pylint: disable=too-many-statements
     """
     This test checks that nodes belonging to user A (which is not the
     default user) can be correctly exported, imported, enriched with nodes
@@ -123,7 +123,7 @@ def test_non_default_user_nodes(tmp_path, aiida_profile, aiida_localhost_factory
     filename1 = tmp_path.joinpath('export1.aiidaz')
     create_archive([sd2], filename=filename1)
     uuids1 = [sd1.uuid, jc1.uuid, sd2.uuid]
-    aiida_profile.clear_profile()
+    aiida_profile_clean.clear_profile()
     import_archive(filename1)
 
     # Check that the imported nodes are correctly imported and that
@@ -154,7 +154,7 @@ def test_non_default_user_nodes(tmp_path, aiida_profile, aiida_localhost_factory
 
     filename2 = tmp_path.joinpath('export2.aiida')
     create_archive([sd3], filename=filename2)
-    aiida_profile.clear_profile()
+    aiida_profile_clean.clear_profile()
     import_archive(filename2)
 
     # Check that the imported nodes are correctly imported and that

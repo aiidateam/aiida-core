@@ -19,7 +19,7 @@ class TestNodeBasicSQLA:
     """These tests check the basic features of nodes(setting of attributes, copying of files, ...)."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile, backend):  # pylint: disable=unused-argument
+    def init_profile(self, backend):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.backend = backend

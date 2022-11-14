@@ -9,6 +9,8 @@
 ###########################################################################
 # pylint: disable=import-error,no-name-in-module,no-member,protected-access
 """Testing Session possible problems."""
+import uuid
+
 import pytest
 from sqlalchemy.orm import sessionmaker
 
@@ -28,7 +30,7 @@ class TestSessionSqla:
     """
 
     @pytest.fixture(autouse=True)
-    def init_db(self, aiida_profile, backend):  # pylint: disable=unused-argument
+    def init_db(self, backend):  # pylint: disable=unused-argument
         """Initialize the database."""
         # pylint: disable=attribute-defined-outside-init
         self.backend = backend
@@ -52,12 +54,12 @@ class TestSessionSqla:
         self.set_connection(expire_on_commit=True)
         session = self.backend.get_session()
 
-        user = self.backend.users.create(email='other@example.com')
+        user = self.backend.users.create(email=uuid.uuid4().hex)
         session.add(user.bare_model)
         session.commit()
 
         defaults = dict(
-            label='localhost', hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
+            label=uuid.uuid4().hex, hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
         )
         computer = self.backend.computers.create(**defaults)
         session.add(computer.bare_model)
@@ -76,12 +78,12 @@ class TestSessionSqla:
         self.set_connection(expire_on_commit=True)
         session = self.backend.get_session()
 
-        user = self.backend.users.create(email='other@example.com')
+        user = self.backend.users.create(email=uuid.uuid4().hex)
         session.add(user.bare_model)
         session.commit()
 
         computer = self.backend.computers.create(
-            label='localhost', hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
+            label=uuid.uuid4().hex, hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
         )
         computer.store()
 
@@ -97,12 +99,12 @@ class TestSessionSqla:
 
         session = self.backend.get_session()
 
-        user = self.backend.users.create(email='other@example.com')
+        user = self.backend.users.create(email=uuid.uuid4().hex)
         session.add(user.bare_model)
         session.commit()
 
         defaults = dict(
-            label='localhost', hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
+            label=uuid.uuid4().hex, hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
         )
         computer = self.backend.computers.create(**defaults)
         session.add(computer.bare_model)
@@ -122,12 +124,12 @@ class TestSessionSqla:
 
         session = self.backend.get_session()
 
-        user = self.backend.users.create(email='other@example.com')
+        user = self.backend.users.create(email=uuid.uuid4().hex)
         session.add(user.bare_model)
         session.commit()
 
         defaults = dict(
-            label='localhost', hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
+            label=uuid.uuid4().hex, hostname='localhost', transport_type='core.local', scheduler_type='core.pbspro'
         )
         computer = self.backend.computers.create(**defaults)
         computer.store()
@@ -149,7 +151,7 @@ class TestSessionSqla:
         custom_session = session()
 
         try:
-            user = self.backend.users.create(email='test@localhost').store()
+            user = self.backend.users.create(email=uuid.uuid4().hex).store()
             node = self.backend.nodes.create(node_type='', user=user).store()
             master_session = node.model.session  # pylint: disable=protected-access
             assert master_session is not custom_session

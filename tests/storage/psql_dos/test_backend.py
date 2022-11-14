@@ -15,21 +15,12 @@ from aiida.manage import get_manager
 from aiida.orm import User
 
 
-@pytest.fixture(scope='function')
-def clear_storage_before_test(aiida_profile):  # pylint: disable=unused-argument
-    """Clears the storage before a test."""
-    repository = get_manager().get_profile_storage().get_repository()
-    object_keys = list(repository.list_objects())
-    repository.delete_objects(object_keys)
-    repository.maintain(live=False)
-
-
-@pytest.mark.usefixtures('clear_storage_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_default_user():
     assert isinstance(get_manager().get_profile_storage().default_user, User)
 
 
-@pytest.mark.usefixtures('clear_storage_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_get_unreferenced_keyset():
     """Test the ``get_unreferenced_keyset`` method."""
     # NOTE: This tests needs to use the database because there is a call inside
@@ -89,7 +80,7 @@ def test_get_unreferenced_keyset():
     ),
 ))
 # yapf: enable
-@pytest.mark.usefixtures('clear_storage_before_test', 'stopped_daemon_client')
+@pytest.mark.usefixtures('aiida_profile_clean', 'stopped_daemon_client')
 def test_maintain(caplog, monkeypatch, kwargs, logged_texts):
     """Test the ``maintain`` method."""
     import logging
@@ -146,7 +137,6 @@ def test_get_info(monkeypatch):
     assert repository_info_out['extra_value'] == 0
 
 
-@pytest.mark.usefixtures('aiida_profile')
 def test_unload_profile():
     """Test that unloading the profile closes all sqla sessions.
 

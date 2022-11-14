@@ -24,7 +24,7 @@ def test_qb_clsf_sqla():
         assert cls.value == orm_name
 
 
-@pytest.mark.usefixtures('aiida_profile')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_qb_ordering_limits_offsets_sqla():
     """Test ordering limits offsets of SQLA query results."""
     # Creating 10 nodes with an attribute that can be ordered

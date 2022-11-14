@@ -17,7 +17,7 @@ from aiida.tools.archive.imports import DUPLICATE_LABEL_TEMPLATE
 from tests.utils.archives import import_test_archive
 
 
-def test_same_computer_import(tmp_path, aiida_profile, aiida_localhost):
+def test_same_computer_import(aiida_profile, tmp_path, aiida_localhost):
     """
     Test that you can import nodes in steps without any problems. In this
     test we will import a first calculation and then a second one. The
@@ -113,7 +113,7 @@ def test_same_computer_import(tmp_path, aiida_profile, aiida_localhost):
     assert ret_labels == set([calc1_label, calc2_label]), 'The labels of the calculations are not correct.'
 
 
-def test_same_computer_different_name_import(tmp_path, aiida_profile, aiida_localhost):
+def test_same_computer_different_name_import(aiida_profile, tmp_path, aiida_localhost):
     """
     This test checks that if the computer is re-imported with a different
     name to the same database, then the original computer will not be
@@ -194,7 +194,7 @@ def test_same_computer_different_name_import(tmp_path, aiida_profile, aiida_loca
     assert str(builder.first(flat=True)) == comp1_name, 'The computer name is not correct.'
 
 
-def test_different_computer_same_name_import(tmp_path, aiida_profile, aiida_localhost_factory):
+def test_different_computer_same_name_import(aiida_profile, tmp_path, aiida_localhost_factory):
     """
     This test checks that if there is a name collision, the imported
     computers are renamed accordingly.
@@ -278,7 +278,7 @@ def test_different_computer_same_name_import(tmp_path, aiida_profile, aiida_loca
     assert [calc3_label, DUPLICATE_LABEL_TEMPLATE.format(comp1_name, 1)] in res, 'Calc-Computer combination not found.'
 
 
-def test_import_of_computer_json_params(tmp_path, aiida_profile, aiida_localhost):
+def test_import_of_computer_json_params(aiida_profile_clean, tmp_path, aiida_localhost):
     """
     This test checks that the metadata and transport params are exported and imported correctly in both backends.
     """
@@ -302,7 +302,7 @@ def test_import_of_computer_json_params(tmp_path, aiida_profile, aiida_localhost
     create_archive([calc1], filename=filename1)
 
     # Clean the local database
-    aiida_profile.clear_profile()
+    aiida_profile_clean.clear_profile()
 
     # Import the data
     import_archive(filename1)
@@ -315,8 +315,9 @@ def test_import_of_computer_json_params(tmp_path, aiida_profile, aiida_localhost
     assert res['comp']['metadata'] == comp1_metadata, 'Not the expected metadata were found'
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('backend', ['django', 'sqlalchemy'])
-def test_import_of_django_sqla_export_file(aiida_profile, aiida_localhost, backend):  # pylint: disable=unused-argument
+def test_import_of_django_sqla_export_file(aiida_localhost, backend):  # pylint: disable=unused-argument
     """Check that import manages to import the archive file correctly for legacy storage backends."""
     archive = f'{backend}.aiida'
 

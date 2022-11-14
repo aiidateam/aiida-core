@@ -21,7 +21,6 @@ ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile')
 class TestRegisterProcessHandler:
     """Tests for the `process_handler` decorator."""
 

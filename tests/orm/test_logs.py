@@ -25,7 +25,7 @@ class TestBackendLog:
     """Test the Log entity"""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile):  # pylint: disable=unused-argument
+    def init_profile(self):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.log_record = {
@@ -59,6 +59,7 @@ class TestBackendLog:
         assert entry.dbnode_id == self.log_record['dbnode_id']
         assert entry.dbnode_id == node.pk
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_create_log_unserializable_metadata(self):
         """Test that unserializable data will be removed before reaching the database causing an error."""
         import functools
@@ -84,6 +85,7 @@ class TestBackendLog:
 
         assert len(Log.collection.all()) == 3
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_log_delete_single(self):
         """Test that a single log entry can be deleted through the collection."""
         entry, _ = self.create_log()
@@ -99,6 +101,7 @@ class TestBackendLog:
         with pytest.raises(exceptions.NotExistent):
             Log.collection.delete(log_id)
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_log_collection_delete_all(self):
         """Test deleting all Log entries through collection"""
         count = 10
@@ -120,6 +123,7 @@ class TestBackendLog:
         with pytest.raises(exceptions.NotExistent):
             Log.collection.get(id=log_id)
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_log_collection_delete_many(self):
         """Test deleting many Logs through the collection."""
         log_ids = []
@@ -148,6 +152,7 @@ class TestBackendLog:
             with pytest.raises(exceptions.NotExistent):
                 Log.collection.get(id=log_id)
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_objects_find(self):
         """Put logs in and find them"""
         node = orm.Data().store()
@@ -160,6 +165,7 @@ class TestBackendLog:
         assert len(entries) == 10
         assert isinstance(entries[0], Log)
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_find_orderby(self):
         """
         Test the order_by option of log.find
@@ -209,6 +215,7 @@ class TestBackendLog:
         assert len(entries) == 1
         assert entries[0].dbnode_id == node_id_of_choice
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_db_log_handler(self):
         """
         Verify that the db log handler is attached correctly

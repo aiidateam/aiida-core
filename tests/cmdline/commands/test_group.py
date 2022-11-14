@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Tests for the `verdi group` command."""
 import pytest
 
@@ -16,109 +17,109 @@ from aiida.cmdline.utils.echo import ExitCode
 from aiida.common import exceptions
 
 
+@pytest.fixture(autouse=True)
+def groups():
+    """Delete all groups first, then recreate a fixed set."""
+    [orm.Group.collection.delete(group.pk) for group in orm.Group.collection.all()]  # pylint: disable=expression-not-assigned
+    for group in ['dummygroup1', 'dummygroup2', 'dummygroup3', 'dummygroup4']:
+        orm.Group(label=group).store()
+
+
 class TestVerdiGroup:
     """Tests for the `verdi group` command."""
 
-    @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile, run_cli_command):  # pylint: disable=unused-argument
-        """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
-        for group in ['dummygroup1', 'dummygroup2', 'dummygroup3', 'dummygroup4']:
-            orm.Group(label=group).store()
-        self.cli_runner = run_cli_command
-
-    def test_help(self):
+    def test_help(self, run_cli_command):
         """Tests help text for all group sub commands."""
         options = ['--help']
 
         # verdi group list
-        result = self.cli_runner(cmd_group.group_list, options)
+        result = run_cli_command(cmd_group.group_list, options)
         assert 'Usage' in result.output
 
         # verdi group create
-        result = self.cli_runner(cmd_group.group_create, options)
+        result = run_cli_command(cmd_group.group_create, options)
         assert 'Usage' in result.output
 
         # verdi group delete
-        result = self.cli_runner(cmd_group.group_delete, options)
+        result = run_cli_command(cmd_group.group_delete, options)
         assert 'Usage' in result.output
 
         # verdi group relabel
-        result = self.cli_runner(cmd_group.group_relabel, options)
+        result = run_cli_command(cmd_group.group_relabel, options)
         assert 'Usage' in result.output
 
         # verdi group description
-        result = self.cli_runner(cmd_group.group_description, options)
+        result = run_cli_command(cmd_group.group_description, options)
         assert 'Usage' in result.output
 
         # verdi group addnodes
-        result = self.cli_runner(cmd_group.group_add_nodes, options)
+        result = run_cli_command(cmd_group.group_add_nodes, options)
         assert 'Usage' in result.output
 
         # verdi group removenodes
-        result = self.cli_runner(cmd_group.group_remove_nodes, options)
+        result = run_cli_command(cmd_group.group_remove_nodes, options)
         assert 'Usage' in result.output
 
         # verdi group show
-        result = self.cli_runner(cmd_group.group_show, options)
+        result = run_cli_command(cmd_group.group_show, options)
         assert 'Usage' in result.output
 
         # verdi group copy
-        result = self.cli_runner(cmd_group.group_copy, options)
+        result = run_cli_command(cmd_group.group_copy, options)
         assert 'Usage' in result.output
 
-    def test_create(self):
+    def test_create(self, run_cli_command):
         """Test `verdi group create` command."""
-        result = self.cli_runner(cmd_group.group_create, ['dummygroup5'])
+        result = run_cli_command(cmd_group.group_create, ['dummygroup5'])
 
         # check if newly added group in present in list
-        result = self.cli_runner(cmd_group.group_list)
+        result = run_cli_command(cmd_group.group_list)
         assert 'dummygroup5' in result.output
 
-    def test_list(self):
+    def test_list(self, run_cli_command):
         """Test `verdi group list` command."""
-        result = self.cli_runner(cmd_group.group_list)
+        result = run_cli_command(cmd_group.group_list)
         for grp in ['dummygroup1', 'dummygroup2']:
             assert grp in result.output
 
-    def test_list_order(self):
+    def test_list_order(self, run_cli_command):
         """Test `verdi group list` command with ordering options."""
         orm.Group(label='agroup').store()
 
         options = []
-        result = self.cli_runner(cmd_group.group_list, options)
+        result = run_cli_command(cmd_group.group_list, options)
         group_ordering = [l.split()[1] for l in result.output.split('\n')[3:] if l]
         assert ['agroup', 'dummygroup1', 'dummygroup2', 'dummygroup3', 'dummygroup4'] == group_ordering
 
         options = ['--order-by', 'id']
-        result = self.cli_runner(cmd_group.group_list, options)
+        result = run_cli_command(cmd_group.group_list, options)
         group_ordering = [l.split()[1] for l in result.output.split('\n')[3:] if l]
         assert ['dummygroup1', 'dummygroup2', 'dummygroup3', 'dummygroup4', 'agroup'] == group_ordering
 
         options = ['--order-by', 'id', '--order-direction', 'desc']
-        result = self.cli_runner(cmd_group.group_list, options)
+        result = run_cli_command(cmd_group.group_list, options)
         group_ordering = [l.split()[1] for l in result.output.split('\n')[3:] if l]
         assert ['agroup', 'dummygroup4', 'dummygroup3', 'dummygroup2', 'dummygroup1'] == group_ordering
 
-    def test_copy(self):
+    def test_copy(self, run_cli_command):
         """Test `verdi group copy` command."""
-        result = self.cli_runner(cmd_group.group_copy, ['dummygroup1', 'dummygroup2'])
+        result = run_cli_command(cmd_group.group_copy, ['dummygroup1', 'dummygroup2'])
         assert 'Success' in result.output
 
-    def test_delete(self):
+    def test_delete(self, run_cli_command):
         """Test `verdi group delete` command."""
         orm.Group(label='group_test_delete_01').store()
         orm.Group(label='group_test_delete_02').store()
         orm.Group(label='group_test_delete_03').store()
 
         # dry run
-        result = self.cli_runner(cmd_group.group_delete, ['--dry-run', 'group_test_delete_01'])
+        result = run_cli_command(cmd_group.group_delete, ['--dry-run', 'group_test_delete_01'])
         orm.load_group(label='group_test_delete_01')
 
-        result = self.cli_runner(cmd_group.group_delete, ['--force', 'group_test_delete_01'])
+        result = run_cli_command(cmd_group.group_delete, ['--force', 'group_test_delete_01'])
 
         # Verify that removed group is not present in list
-        result = self.cli_runner(cmd_group.group_list)
+        result = run_cli_command(cmd_group.group_list)
         assert 'group_test_delete_01' not in result.output
 
         node_01 = orm.CalculationNode().store()
@@ -130,7 +131,7 @@ class TestVerdiGroup:
         group.add_nodes([node_01, node_02])
         assert group.count() == 2
 
-        result = self.cli_runner(cmd_group.group_delete, ['--force', 'group_test_delete_02'])
+        result = run_cli_command(cmd_group.group_delete, ['--force', 'group_test_delete_02'])
 
         with pytest.raises(exceptions.NotExistent):
             orm.load_group(label='group_test_delete_02')
@@ -142,7 +143,7 @@ class TestVerdiGroup:
         # delete the group and the nodes it contains
         group = orm.load_group(label='group_test_delete_03')
         group.add_nodes([node_01, node_02])
-        result = self.cli_runner(cmd_group.group_delete, ['--force', '--delete-nodes', 'group_test_delete_03'])
+        result = run_cli_command(cmd_group.group_delete, ['--force', '--delete-nodes', 'group_test_delete_03'])
 
         # check group and nodes no longer exist
         with pytest.raises(exceptions.NotExistent):
@@ -151,15 +152,15 @@ class TestVerdiGroup:
             with pytest.raises(exceptions.NotExistent):
                 orm.load_node(pk)
 
-    def test_show(self):
+    def test_show(self, run_cli_command):
         """Test `verdi group show` command."""
-        result = self.cli_runner(cmd_group.group_show, ['dummygroup1'])
+        result = run_cli_command(cmd_group.group_show, ['dummygroup1'])
         for grpline in [
             'Group label', 'dummygroup1', 'Group type_string', 'core', 'Group description', '<no description>'
         ]:
             assert grpline in result.output
 
-    def test_show_limit(self):
+    def test_show_limit(self, run_cli_command):
         """Test `--limit` option of the `verdi group show` command."""
         label = 'test_group_limit'
         nodes = [orm.Data().store(), orm.Data().store()]
@@ -167,12 +168,12 @@ class TestVerdiGroup:
         group.add_nodes(nodes)
 
         # Default should include all nodes in the output
-        result = self.cli_runner(cmd_group.group_show, [label])
+        result = run_cli_command(cmd_group.group_show, [label])
         for node in nodes:
             assert str(node.pk) in result.output
 
         # Repeat test with `limit=1`, use also the `--raw` option to only display nodes
-        result = self.cli_runner(cmd_group.group_show, [label, '--limit', '1', '--raw'])
+        result = run_cli_command(cmd_group.group_show, [label, '--limit', '1', '--raw'])
 
         # The current `verdi group show` does not support ordering so we cannot rely on that for now to test if only
         # one of the nodes is shown
@@ -180,55 +181,55 @@ class TestVerdiGroup:
         assert str(nodes[0].pk) in result.output or str(nodes[1].pk) in result.output
 
         # Repeat test with `limit=1` but without the `--raw` flag as it has a different code path that is affected
-        result = self.cli_runner(cmd_group.group_show, [label, '--limit', '1'])
+        result = run_cli_command(cmd_group.group_show, [label, '--limit', '1'])
 
         # Check that one, and only one pk appears in the output
         assert str(nodes[0].pk) in result.output or str(nodes[1].pk) in result.output
         assert not (str(nodes[0].pk) in result.output and str(nodes[1].pk) in result.output)
 
-    def test_description(self):
+    def test_description(self, run_cli_command):
         """Test `verdi group description` command."""
         description = 'It is a new description'
         group = orm.load_group(label='dummygroup2')
         assert group.description != description
 
         # Change the description of the group
-        result = self.cli_runner(cmd_group.group_description, [group.label, description])
+        result = run_cli_command(cmd_group.group_description, [group.label, description])
         assert group.description == description
 
         # When no description argument is passed the command should just echo the current description
-        result = self.cli_runner(cmd_group.group_description, [group.label])
+        result = run_cli_command(cmd_group.group_description, [group.label])
         assert description in result.output
 
-    def test_relabel(self):
+    def test_relabel(self, run_cli_command):
         """Test `verdi group relabel` command."""
-        result = self.cli_runner(cmd_group.group_relabel, ['dummygroup4', 'relabeled_group'])
+        result = run_cli_command(cmd_group.group_relabel, ['dummygroup4', 'relabeled_group'])
 
         # check if group list command shows changed group name
-        result = self.cli_runner(cmd_group.group_list)
+        result = run_cli_command(cmd_group.group_list)
 
         assert 'dummygroup4' not in result.output
         assert 'relabeled_group' in result.output
 
-    def test_add_remove_nodes(self):
+    def test_add_remove_nodes(self, run_cli_command):
         """Test `verdi group remove-nodes` command."""
         node_01 = orm.CalculationNode().store()
         node_02 = orm.CalculationNode().store()
         node_03 = orm.CalculationNode().store()
 
-        result = self.cli_runner(cmd_group.group_add_nodes, ['--force', '--group=dummygroup1', node_01.uuid])
+        result = run_cli_command(cmd_group.group_add_nodes, ['--force', '--group=dummygroup1', node_01.uuid])
 
         # Check if node is added in group using group show command
-        result = self.cli_runner(cmd_group.group_show, ['dummygroup1'])
+        result = run_cli_command(cmd_group.group_show, ['dummygroup1'])
 
         assert 'CalculationNode' in result.output
         assert str(node_01.pk) in result.output
 
         # Remove same node
-        result = self.cli_runner(cmd_group.group_remove_nodes, ['--force', '--group=dummygroup1', node_01.uuid])
+        result = run_cli_command(cmd_group.group_remove_nodes, ['--force', '--group=dummygroup1', node_01.uuid])
 
         # Check that the node is no longer in the group
-        result = self.cli_runner(cmd_group.group_show, ['-r', 'dummygroup1'])
+        result = run_cli_command(cmd_group.group_show, ['-r', 'dummygroup1'])
 
         assert 'CalculationNode' not in result.output
         assert str(node_01.pk) not in result.output
@@ -238,30 +239,30 @@ class TestVerdiGroup:
         group.add_nodes([node_01, node_02, node_03])
         assert group.count() == 3
 
-        result = self.cli_runner(cmd_group.group_remove_nodes, ['--force', '--clear', '--group=dummygroup1'])
+        result = run_cli_command(cmd_group.group_remove_nodes, ['--force', '--clear', '--group=dummygroup1'])
 
         assert group.count() == 0
 
         # Try to remove node that isn't in the group
-        result = self.cli_runner(cmd_group.group_remove_nodes, ['--group=dummygroup1', node_01.uuid], raises=True)
+        result = run_cli_command(cmd_group.group_remove_nodes, ['--group=dummygroup1', node_01.uuid], raises=True)
         assert result.exit_code == ExitCode.CRITICAL
 
         # Try to remove no nodes nor clear the group
-        result = self.cli_runner(cmd_group.group_remove_nodes, ['--group=dummygroup1'], raises=True)
+        result = run_cli_command(cmd_group.group_remove_nodes, ['--group=dummygroup1'], raises=True)
         assert result.exit_code == ExitCode.CRITICAL
 
         # Try to remove both nodes and clear the group
-        result = self.cli_runner(
+        result = run_cli_command(
             cmd_group.group_remove_nodes, ['--group=dummygroup1', '--clear', node_01.uuid], raises=True
         )
         assert result.exit_code == ExitCode.CRITICAL
 
         # Add a node with confirmation
-        result = self.cli_runner(cmd_group.group_add_nodes, ['--group=dummygroup1', node_01.uuid], user_input='y')
+        result = run_cli_command(cmd_group.group_add_nodes, ['--group=dummygroup1', node_01.uuid], user_input='y')
         assert group.count() == 1
 
         # Try to remove two nodes, one that isn't in the group, but abort
-        result = self.cli_runner(
+        result = run_cli_command(
             cmd_group.group_remove_nodes, ['--group=dummygroup1', node_01.uuid, node_02.uuid],
             user_input='N',
             raises=True
@@ -270,14 +271,14 @@ class TestVerdiGroup:
         assert group.count() == 1
 
         # Try to clear all nodes from the group, but abort
-        result = self.cli_runner(
+        result = run_cli_command(
             cmd_group.group_remove_nodes, ['--group=dummygroup1', '--clear'], user_input='N', raises=True
         )
         assert 'Are you sure you want to remove ALL' in result.output
         assert 'Aborted' in result.output
         assert group.count() == 1
 
-    def test_move_nodes(self):
+    def test_move_nodes(self, run_cli_command):
         """Test `verdi group move-nodes` command."""
         node_01 = orm.CalculationNode().store()
         node_02 = orm.Int(1).store()
@@ -289,31 +290,31 @@ class TestVerdiGroup:
         group1.add_nodes([node_01, node_02])
 
         # Moving the nodes to the same group
-        result = self.cli_runner(
+        result = run_cli_command(
             cmd_group.group_move_nodes, ['-s', 'dummygroup1', '-t', 'dummygroup1', node_01.uuid, node_02.uuid],
             raises=True
         )
         assert 'Source and target group are the same:' in result.output
 
         # Not specifying NODES or `--all`
-        result = self.cli_runner(cmd_group.group_move_nodes, ['-s', 'dummygroup1', '-t', 'dummygroup2'], raises=True)
+        result = run_cli_command(cmd_group.group_move_nodes, ['-s', 'dummygroup1', '-t', 'dummygroup2'], raises=True)
         assert 'Neither NODES or the `-a, --all` option was specified.' in result.output
 
         # Moving the nodes from the empty group
-        result = self.cli_runner(
+        result = run_cli_command(
             cmd_group.group_move_nodes, ['-s', 'dummygroup2', '-t', 'dummygroup1', node_01.uuid, node_02.uuid],
             raises=True
         )
         assert 'None of the specified nodes are in' in result.output
 
         # Move two nodes to the second dummy group, but specify a missing uuid
-        result = self.cli_runner(
+        result = run_cli_command(
             cmd_group.group_move_nodes, ['-s', 'dummygroup1', '-t', 'dummygroup2', node_01.uuid, node_03.uuid],
             raises=True
         )
         assert f'1 nodes with PK {{{node_03.pk}}} are not in' in result.output
         # Check that the node that is present is actually moved
-        result = self.cli_runner(
+        result = run_cli_command(
             cmd_group.group_move_nodes,
             ['-f', '-s', 'dummygroup1', '-t', 'dummygroup2', node_01.uuid, node_03.uuid],
         )
@@ -322,32 +323,32 @@ class TestVerdiGroup:
 
         # Add the first node back to the first group, and try to move it from the second one
         group1.add_nodes(node_01)
-        result = self.cli_runner(
+        result = run_cli_command(
             cmd_group.group_move_nodes, ['-s', 'dummygroup2', '-t', 'dummygroup1', node_01.uuid], raises=True
         )
         assert f'1 nodes with PK {{{node_01.pk}}} are already' in result.output
         # Check that it is still removed from the second group
-        result = self.cli_runner(
+        result = run_cli_command(
             cmd_group.group_move_nodes,
             ['-f', '-s', 'dummygroup2', '-t', 'dummygroup1', node_01.uuid],
         )
         assert node_01 not in group2.nodes
 
         # Force move the two nodes to the second dummy group
-        result = self.cli_runner(
+        result = run_cli_command(
             cmd_group.group_move_nodes, ['-f', '-s', 'dummygroup1', '-t', 'dummygroup2', node_01.uuid, node_02.uuid]
         )
         assert node_01 in group2.nodes
         assert node_02 in group2.nodes
 
         # Force move all nodes back to the first dummy group
-        result = self.cli_runner(cmd_group.group_move_nodes, ['-f', '-s', 'dummygroup2', '-t', 'dummygroup1', '--all'])
+        result = run_cli_command(cmd_group.group_move_nodes, ['-f', '-s', 'dummygroup2', '-t', 'dummygroup1', '--all'])
         assert node_01 not in group2.nodes
         assert node_02 not in group2.nodes
         assert node_01 in group1.nodes
         assert node_02 in group1.nodes
 
-    def test_copy_existing_group(self):
+    def test_copy_existing_group(self, run_cli_command):
         """Test user is prompted to continue if destination group exists and is not empty"""
         source_label = 'source_copy_existing_group'
         dest_label = 'dest_copy_existing_group'
@@ -361,7 +362,7 @@ class TestVerdiGroup:
 
         # Copy using `verdi group copy` - making sure all is successful
         options = [source_label, dest_label]
-        result = self.cli_runner(cmd_group.group_copy, options)
+        result = run_cli_command(cmd_group.group_copy, options)
         assert f'Success: Nodes copied from {source_group} to {source_group.__class__.__name__}<{dest_label}>.' in \
             result.output, result.exception
 
@@ -372,7 +373,7 @@ class TestVerdiGroup:
         assert nodes_source_group == nodes_dest_group
 
         # Copy again, making sure an abort error is raised, since no user input can be made and default is abort
-        result = self.cli_runner(cmd_group.group_copy, options, raises=True)
+        result = run_cli_command(cmd_group.group_copy, options, raises=True)
         assert f'Warning: Destination {dest_group} already exists and is not empty.' in result.output, result.exception
 
         # Check destination group is unchanged

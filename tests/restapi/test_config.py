@@ -16,7 +16,7 @@ from aiida.manage import get_manager
 
 
 @pytest.fixture
-def create_app(aiida_profile):  # pylint: disable=unused-argument
+def create_app():
     """Set up Flask App"""
     from aiida.restapi.run_api import configure_api
 

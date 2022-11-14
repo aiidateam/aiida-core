@@ -173,7 +173,6 @@ class DummyVerdiDataListable:
                 assert header.encode('utf-8') not in res.stdout_bytes
 
 
-@pytest.mark.usefixtures('aiida_profile')
 class TestVerdiData:
     """Testing reachability of the verdi data subcommands."""
 
@@ -200,7 +199,7 @@ class TestVerdiDataArray:
     """Testing verdi data array."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.arr = ArrayData()
@@ -223,7 +222,7 @@ class TestVerdiDataBands(DummyVerdiDataListable):
     """Testing verdi data bands."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.loop = asyncio.new_event_loop()
@@ -356,7 +355,7 @@ class TestVerdiDataDict:
     """Testing verdi data dict."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.dct = Dict()
@@ -381,7 +380,7 @@ class TestVerdiDataRemote:
     """Testing verdi data remote."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile, aiida_localhost, run_cli_command, tmp_path):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile_clean, aiida_localhost, run_cli_command, tmp_path):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         tmp_path.joinpath('file.txt').write_text('test string', encoding='utf8')
@@ -434,7 +433,7 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
     """Test verdi data trajectory."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile, aiida_localhost, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile_clean, aiida_localhost, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.comp = aiida_localhost
@@ -524,7 +523,7 @@ class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):
     from aiida.orm.nodes.data.structure import has_ase  # type: ignore
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile, aiida_localhost, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile_clean, aiida_localhost, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.comp = aiida_localhost
@@ -769,7 +768,7 @@ class TestVerdiDataCif(DummyVerdiDataListable, DummyVerdiDataExportable):
     '''
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile, aiida_localhost, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile_clean, aiida_localhost, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.comp = aiida_localhost
@@ -853,7 +852,7 @@ class TestVerdiDataSinglefile(DummyVerdiDataListable, DummyVerdiDataExportable):
     '''
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile, aiida_localhost, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile_clean, aiida_localhost, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.comp = aiida_localhost
@@ -877,7 +876,7 @@ class TestVerdiDataUpf:
     """Testing verdi data upf."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.filepath_pseudos = os.path.join(STATIC_DIR, 'pseudos')

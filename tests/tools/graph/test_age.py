@@ -79,7 +79,6 @@ def create_tree(max_depth=3, branching=3, starting_cls=orm.Data):
     return result
 
 
-@pytest.mark.usefixtures('aiida_profile')
 class TestAiidaGraphExplorer:
     """Tests for the AGE"""
 
@@ -659,7 +658,6 @@ class TestAiidaGraphExplorer:
         assert result == set()
 
 
-@pytest.mark.usefixtures('aiida_profile')
 class TestAiidaEntitySet:
     """Tests for AiidaEntitySets"""
 

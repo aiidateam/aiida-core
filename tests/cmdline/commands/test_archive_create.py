@@ -9,6 +9,7 @@
 ###########################################################################
 """Tests for `verdi archive`."""
 import shutil
+import uuid
 import zipfile
 
 import pytest
@@ -36,18 +37,12 @@ def test_create_force(run_cli_command, tmp_path):
     run_cli_command(cmd_archive.create, options)
 
 
-@pytest.mark.usefixtures('aiida_profile')
-def test_create_all(run_cli_command, tmp_path):
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_create_all(run_cli_command, tmp_path, aiida_localhost):
     """Test that creating an archive for a set of various ORM entities works with the zip format."""
-    computer = Computer(
-        label='comp',
-        hostname='localhost',
-        transport_type='core.local',
-        scheduler_type='core.direct',
-        workdir='/tmp/aiida'
-    ).store()
+    computer = aiida_localhost
     code = InstalledCode(computer=computer, filepath_executable='/bin/true').store()
-    group = Group(label='test_group').store()
+    group = Group(label=str(uuid.uuid4())).store()
     filename_output = tmp_path / 'archive.aiida'
 
     options = ['--all', filename_output]
@@ -60,18 +55,11 @@ def test_create_all(run_cli_command, tmp_path):
         assert archive.querybuilder().append(Group, project=['uuid']).all(flat=True) == [group.uuid]
 
 
-@pytest.mark.usefixtures('aiida_profile')
-def test_create_basic(run_cli_command, tmp_path):
+def test_create_basic(run_cli_command, tmp_path, aiida_localhost):
     """Test that creating an archive for a set of various ORM entities works with the zip format."""
-    computer = Computer(
-        label='comp',
-        hostname='localhost',
-        transport_type='core.local',
-        scheduler_type='core.direct',
-        workdir='/tmp/aiida'
-    ).store()
+    computer = aiida_localhost
     code = InstalledCode(computer=computer, filepath_executable='/bin/true').store()
-    group = Group(label='test_group').store()
+    group = Group(label=str(uuid.uuid4())).store()
     node = Dict().store()
     filename_output = tmp_path / 'archive.aiida'
 

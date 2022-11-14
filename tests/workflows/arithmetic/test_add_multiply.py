@@ -22,7 +22,6 @@ def test_factory():
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile')
 def test_run():
     """Test running the work function."""
     x = Int(1)

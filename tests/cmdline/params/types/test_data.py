@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the `DataParamType`."""
+import uuid
+
 import pytest
 
 from aiida.cmdline.params.types import DataParamType
@@ -19,7 +21,7 @@ class TestDataParamType:
     """Tests for the `DataParamType`."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile):  # pylint: disable=unused-argument
+    def init_profile(self):
         """
         Create some code to test the DataParamType parameter type for the command line infrastructure
         We create an initial code with a random name and then on purpose create two code with a name
@@ -32,7 +34,7 @@ class TestDataParamType:
         self.entity_02 = Data().store()
         self.entity_03 = Data().store()
 
-        self.entity_01.label = 'data_01'
+        self.entity_01.label = f'data-{uuid.uuid4()}'
         self.entity_02.label = str(self.entity_01.pk)
         self.entity_03.label = str(self.entity_01.uuid)
 

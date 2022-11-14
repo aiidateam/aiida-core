@@ -265,7 +265,7 @@ def test_multiple_user_comments_single_node(tmp_path, aiida_profile):
     assert imported_user_two_comment_uuids == set(user_two_comments_uuid)
 
 
-def test_mtime_of_imported_comments(tmp_path, aiida_profile):
+def test_mtime_of_imported_comments(tmp_path, aiida_profile_clean):
     """
     Test mtime does not change for imported comments
     This is related to correct usage of `merge_comments` when importing.
@@ -296,7 +296,7 @@ def test_mtime_of_imported_comments(tmp_path, aiida_profile):
     # Export, reset database and reimport
     export_file = tmp_path / 'export.aiida'
     create_archive([calc], filename=export_file)
-    aiida_profile.clear_profile()
+    aiida_profile_clean.clear_profile()
     import_archive(export_file)
 
     # Retrieve node and comment
@@ -321,7 +321,7 @@ def test_mtime_of_imported_comments(tmp_path, aiida_profile):
     assert import_calc_mtime == calc_mtime
 
 
-@pytest.mark.usefixtures('aiida_profile')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_import_arg_comment_mode(tmp_path):
     """
     Test the import modes of `merge_comments`.
@@ -389,7 +389,7 @@ def test_import_arg_comment_mode(tmp_path):
         import_archive(export_file, merge_comments='invalid')
 
 
-def test_reimport_of_comments_for_single_node(tmp_path, aiida_profile):
+def test_reimport_of_comments_for_single_node(tmp_path, aiida_profile_clean):
     """
     When a node with comments already exist in the DB, and more comments are
     imported for the same node (same UUID), test that only new comment-entries
@@ -475,7 +475,7 @@ def test_reimport_of_comments_for_single_node(tmp_path, aiida_profile):
     create_archive([calc], filename=export_file_full)
 
     # Clean database
-    aiida_profile.clear_profile()
+    aiida_profile_clean.clear_profile()
 
     ## Part II
     # Reimport "EXISTING" DB
@@ -514,7 +514,7 @@ def test_reimport_of_comments_for_single_node(tmp_path, aiida_profile):
     create_archive([calc], filename=export_file_new)
 
     # Clean database
-    aiida_profile.clear_profile()
+    aiida_profile_clean.clear_profile()
 
     ## Part III
     # Reimport "EXISTING" DB

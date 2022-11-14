@@ -107,7 +107,6 @@ def test_check_for_export_format_version(aiida_profile, tmp_path):
         import_archive(filename2)
 
 
-@pytest.mark.usefixtures('aiida_profile')
 def test_control_of_licenses(tmp_path):
     """Test control of licenses."""
     struct = orm.StructureData(pbc=False)

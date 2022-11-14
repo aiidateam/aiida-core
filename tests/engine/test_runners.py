@@ -46,7 +46,7 @@ def the_hans_klok_comeback(loop):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_call_on_process_finish(runner):
     """Test call on calculation finish."""
     loop = runner.loop

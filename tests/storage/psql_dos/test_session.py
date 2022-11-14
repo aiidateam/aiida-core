@@ -28,7 +28,7 @@ class TestSessionSqla:
     """
 
     @pytest.fixture(autouse=True)
-    def init_db(self, aiida_profile_clean, backend):  # pylint: disable=unused-argument
+    def init_db(self, aiida_profile, backend):  # pylint: disable=unused-argument
         """Initialize the database."""
         # pylint: disable=attribute-defined-outside-init
         self.backend = backend

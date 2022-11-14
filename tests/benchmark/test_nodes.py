@@ -42,7 +42,7 @@ def get_data_node_and_object(store=True):
     return (), {'node': data}
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 @pytest.mark.benchmark(group=GROUP_NAME, min_rounds=100)
 def test_store_backend(benchmark):
     """Benchmark for creating and storing a node directly,
@@ -59,7 +59,7 @@ def test_store_backend(benchmark):
     assert node.is_stored, node
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 @pytest.mark.benchmark(group=GROUP_NAME, min_rounds=100)
 def test_store(benchmark):
     """Benchmark for creating and storing a node,
@@ -69,7 +69,7 @@ def test_store(benchmark):
     assert node_dict['node'].is_stored, node_dict
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 @pytest.mark.benchmark(group=GROUP_NAME, min_rounds=100)
 def test_store_with_object(benchmark):
     """Benchmark for creating and storing a node,
@@ -79,7 +79,7 @@ def test_store_with_object(benchmark):
     assert node_dict['node'].is_stored, node_dict
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 @pytest.mark.benchmark(group=GROUP_NAME)
 def test_delete_backend(benchmark):
     """Benchmark for deleting a stored node directly,
@@ -96,7 +96,7 @@ def test_delete_backend(benchmark):
         load_node(pk)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 @pytest.mark.benchmark(group=GROUP_NAME)
 def test_delete(benchmark):
     """Benchmark for deleting a node,
@@ -113,7 +113,7 @@ def test_delete(benchmark):
         load_node(pk)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 @pytest.mark.benchmark(group=GROUP_NAME)
 def test_delete_with_object(benchmark):
     """Benchmark for deleting a node,

@@ -24,7 +24,7 @@ def parameter_type():
 
 
 @pytest.fixture
-def setup_groups(aiida_profile_clean):
+def setup_groups(aiida_profile):
     """Create some groups to test the `GroupParamType` parameter type for the command line infrastructure.
 
     We create an initial group with a random name and then on purpose create two groups with a name that matches exactly
@@ -93,7 +93,7 @@ def test_ambiguous_label_uuid(setup_groups, parameter_type):
     assert result.uuid == entity_03.uuid
 
 
-def test_create_if_not_exist(aiida_profile_clean):
+def test_create_if_not_exist(aiida_profile):
     """Test the `create_if_not_exist` constructor argument."""
     label = 'non-existing-label-01'
     parameter_type = GroupParamType(create_if_not_exist=True)

@@ -15,7 +15,7 @@ from aiida.common.exceptions import ValidationError
 from aiida.orm import Code, Computer
 
 
-@pytest.mark.usefixtures('aiida_profile_clean', 'suppress_internal_deprecations')
+@pytest.mark.usefixtures('aiida_profile', 'suppress_internal_deprecations')
 def test_validate_remote_exec_path():
     """Test ``Code.validate_remote_exec_path``."""
     computer = Computer(
@@ -35,7 +35,7 @@ def test_validate_remote_exec_path():
     code.validate_remote_exec_path()
 
 
-@pytest.mark.usefixtures('aiida_profile_clean', 'suppress_internal_deprecations')
+@pytest.mark.usefixtures('aiida_profile', 'suppress_internal_deprecations')
 def test_get_execname():
     """Test ``Code.get_execname``."""
     computer = Computer(

@@ -134,7 +134,7 @@ def test_node_process_type(aiida_profile, tmp_path):
 
 
 @pytest.mark.usefixtures('suppress_internal_deprecations')
-def test_code_type_change(aiida_profile_clean, tmp_path, aiida_localhost):
+def test_code_type_change(aiida_profile, tmp_path, aiida_localhost):
     """ Code type string changed
     Change: “code.Bool.” → “data.code.Code.”
     """
@@ -153,7 +153,7 @@ def test_code_type_change(aiida_profile_clean, tmp_path, aiida_localhost):
     create_archive([code], filename=filename)
 
     # Clean the database and reimport
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
     import_archive(filename)
 
     # Retrieve Code node and make sure exactly 1 is retrieved

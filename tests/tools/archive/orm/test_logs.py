@@ -13,7 +13,7 @@ from aiida import orm
 from aiida.tools.archive import create_archive, import_archive
 
 
-def test_critical_log_msg_and_metadata(tmp_path, aiida_profile_clean):
+def test_critical_log_msg_and_metadata(tmp_path, aiida_profile):
     """ Testing logging of critical message """
     message = 'Testing logging of critical failure'
     calc = orm.CalculationNode()
@@ -34,7 +34,7 @@ def test_critical_log_msg_and_metadata(tmp_path, aiida_profile_clean):
     export_file = tmp_path.joinpath('export.aiida')
     create_archive([calc], filename=export_file)
 
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
 
     import_archive(export_file)
 
@@ -46,7 +46,7 @@ def test_critical_log_msg_and_metadata(tmp_path, aiida_profile_clean):
     assert logs[0].metadata == log_metadata
 
 
-def test_exclude_logs_flag(tmp_path, aiida_profile_clean):
+def test_exclude_logs_flag(tmp_path, aiida_profile):
     """Test that the `include_logs` argument for `export` works."""
     log_msg = 'Testing logging of critical failure'
 
@@ -66,7 +66,7 @@ def test_exclude_logs_flag(tmp_path, aiida_profile_clean):
     create_archive([calc], filename=export_file, include_logs=False)
 
     # Clean database and reimport exported data
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
     import_archive(export_file)
 
     # Finding all the log messages
@@ -81,7 +81,7 @@ def test_exclude_logs_flag(tmp_path, aiida_profile_clean):
     assert str(import_calcs[0][0]) == calc_uuid
 
 
-def test_export_of_imported_logs(tmp_path, aiida_profile_clean):
+def test_export_of_imported_logs(tmp_path, aiida_profile):
     """Test export of imported Log"""
     log_msg = 'Testing export of imported log'
 
@@ -103,7 +103,7 @@ def test_export_of_imported_logs(tmp_path, aiida_profile_clean):
     create_archive([calc], filename=export_file)
 
     # Clean database and reimport exported data
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
     import_archive(export_file)
 
     # Finding all the log messages
@@ -124,7 +124,7 @@ def test_export_of_imported_logs(tmp_path, aiida_profile_clean):
     create_archive([calc], filename=re_export_file)
 
     # Clean database and reimport exported data
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
     import_archive(re_export_file)
 
     # Finding all the log messages
@@ -140,7 +140,7 @@ def test_export_of_imported_logs(tmp_path, aiida_profile_clean):
     assert str(import_logs[0][0]) == log_uuid
 
 
-def test_multiple_imports_for_single_node(tmp_path, aiida_profile_clean):
+def test_multiple_imports_for_single_node(tmp_path, aiida_profile):
     """Test multiple imports for single node with different logs are imported correctly"""
     log_msgs = ['Life is like riding a bicycle.', 'To keep your balance,', 'you must keep moving.']
 
@@ -167,7 +167,7 @@ def test_multiple_imports_for_single_node(tmp_path, aiida_profile_clean):
     create_archive([node], filename=export_file_full)
 
     # Clean database and reimport "EXISTING" DB
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
     import_archive(export_file_existing)
 
     # Check correct import
@@ -208,7 +208,7 @@ def test_multiple_imports_for_single_node(tmp_path, aiida_profile_clean):
         assert imported_log_content in log_msgs
 
 
-def test_reimport_of_logs_for_single_node(tmp_path, aiida_profile_clean):
+def test_reimport_of_logs_for_single_node(tmp_path, aiida_profile):
     """
     When a node with logs already exist in the DB, and more logs are imported
     for the same node (same UUID), test that only new log-entries are added.
@@ -291,7 +291,7 @@ def test_reimport_of_logs_for_single_node(tmp_path, aiida_profile_clean):
     create_archive([calc], filename=export_file_full)
 
     # Clean database
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
 
     ## Part II
     # Reimport "EXISTING" DB
@@ -329,7 +329,7 @@ def test_reimport_of_logs_for_single_node(tmp_path, aiida_profile_clean):
     create_archive([calc], filename=export_file_new)
 
     # Clean database
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
 
     ## Part III
     # Reimport "EXISTING" DB

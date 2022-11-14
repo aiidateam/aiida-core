@@ -16,7 +16,7 @@ from aiida.orm import AuthInfo, Computer, User
 from aiida.plugins import TransportFactory
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestComputer:
     """Tests for the `Computer` ORM class."""
 
@@ -89,7 +89,7 @@ class TestComputerConfigure:
     """Tests for the configuring of instance of the `Computer` ORM class."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile):  # pylint: disable=unused-argument
         """Prepare current user and computer builder with common properties."""
         # pylint: disable=attribute-defined-outside-init
         from aiida.orm.utils.builders.computer import ComputerBuilder

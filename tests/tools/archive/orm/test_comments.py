@@ -22,7 +22,7 @@ COMMENTS = (
 )
 
 
-def test_multiple_imports_for_single_node(tmp_path, aiida_profile_clean):
+def test_multiple_imports_for_single_node(tmp_path, aiida_profile):
     """Test multiple imports for single node with different comments are imported correctly"""
     user = orm.User.collection.get_default()
 
@@ -48,7 +48,7 @@ def test_multiple_imports_for_single_node(tmp_path, aiida_profile_clean):
     create_archive([node], filename=export_file_full)
 
     # Clean database and reimport "EXISTING" DB
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
     import_archive(export_file_existing)
 
     # Check correct import
@@ -90,7 +90,7 @@ def test_multiple_imports_for_single_node(tmp_path, aiida_profile_clean):
         assert imported_comment_content in COMMENTS
 
 
-def test_exclude_comments_flag(tmp_path, aiida_profile_clean):
+def test_exclude_comments_flag(tmp_path, aiida_profile):
     """Test comments and associated commenting users are not exported when using `include_comments=False`."""
     # Create users, node, and comments
     user_one = orm.User.collection.get_default()
@@ -115,7 +115,7 @@ def test_exclude_comments_flag(tmp_path, aiida_profile_clean):
     create_archive([node], filename=export_file, include_comments=False)
 
     # Clean database and reimport exported file
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
     import_archive(export_file)
 
     # Get node, users, and comments
@@ -133,7 +133,7 @@ def test_exclude_comments_flag(tmp_path, aiida_profile_clean):
     assert str(import_users[0][0]) == users_email[0]
 
 
-def test_calc_and_data_nodes_with_comments(tmp_path, aiida_profile_clean):
+def test_calc_and_data_nodes_with_comments(tmp_path, aiida_profile):
     """ Test comments for CalculatioNode and Data node are correctly ex-/imported """
     # Create user, nodes, and comments
     user = orm.User.collection.get_default()
@@ -159,7 +159,7 @@ def test_calc_and_data_nodes_with_comments(tmp_path, aiida_profile_clean):
     create_archive([calc_node, data_node], filename=export_file)
 
     # Clean database and reimport exported file
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
     import_archive(export_file)
 
     # Get nodes and comments
@@ -184,7 +184,7 @@ def test_calc_and_data_nodes_with_comments(tmp_path, aiida_profile_clean):
             assert import_comment_uuid in data_comments_uuid
 
 
-def test_multiple_user_comments_single_node(tmp_path, aiida_profile_clean):
+def test_multiple_user_comments_single_node(tmp_path, aiida_profile):
     """ Test multiple users commenting on a single orm.CalculationNode """
     # Create users, node, and comments
     user_one = orm.User.collection.get_default()
@@ -210,7 +210,7 @@ def test_multiple_user_comments_single_node(tmp_path, aiida_profile_clean):
     create_archive([node], filename=export_file)
 
     # Clean database and reimport exported file
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
     import_archive(export_file)
 
     # Get node, users, and comments
@@ -265,7 +265,7 @@ def test_multiple_user_comments_single_node(tmp_path, aiida_profile_clean):
     assert imported_user_two_comment_uuids == set(user_two_comments_uuid)
 
 
-def test_mtime_of_imported_comments(tmp_path, aiida_profile_clean):
+def test_mtime_of_imported_comments(tmp_path, aiida_profile):
     """
     Test mtime does not change for imported comments
     This is related to correct usage of `merge_comments` when importing.
@@ -296,7 +296,7 @@ def test_mtime_of_imported_comments(tmp_path, aiida_profile_clean):
     # Export, reset database and reimport
     export_file = tmp_path / 'export.aiida'
     create_archive([calc], filename=export_file)
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
     import_archive(export_file)
 
     # Retrieve node and comment
@@ -321,7 +321,7 @@ def test_mtime_of_imported_comments(tmp_path, aiida_profile_clean):
     assert import_calc_mtime == calc_mtime
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_import_arg_comment_mode(tmp_path):
     """
     Test the import modes of `merge_comments`.
@@ -389,7 +389,7 @@ def test_import_arg_comment_mode(tmp_path):
         import_archive(export_file, merge_comments='invalid')
 
 
-def test_reimport_of_comments_for_single_node(tmp_path, aiida_profile_clean):
+def test_reimport_of_comments_for_single_node(tmp_path, aiida_profile):
     """
     When a node with comments already exist in the DB, and more comments are
     imported for the same node (same UUID), test that only new comment-entries
@@ -475,7 +475,7 @@ def test_reimport_of_comments_for_single_node(tmp_path, aiida_profile_clean):
     create_archive([calc], filename=export_file_full)
 
     # Clean database
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
 
     ## Part II
     # Reimport "EXISTING" DB
@@ -514,7 +514,7 @@ def test_reimport_of_comments_for_single_node(tmp_path, aiida_profile_clean):
     create_archive([calc], filename=export_file_new)
 
     # Clean database
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
 
     ## Part III
     # Reimport "EXISTING" DB
@@ -567,7 +567,7 @@ def test_reimport_of_comments_for_single_node(tmp_path, aiida_profile_clean):
         assert comment_content in COMMENTS
 
 
-def test_import_newest(tmp_path, aiida_profile_clean):
+def test_import_newest(tmp_path, aiida_profile):
     """Test `merge_comments='newest'"""
     user = orm.User.collection.get_default()
     node = orm.Data().store()
@@ -583,7 +583,7 @@ def test_import_newest(tmp_path, aiida_profile_clean):
     export_file_new = tmp_path / 'export_new.aiida'
     create_archive([node], filename=export_file_new, include_comments=True)
 
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
 
     import_archive(export_file_old)
     assert orm.Comment.collection.get(uuid=comment_1_uuid).content == 'Comment old'

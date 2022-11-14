@@ -81,7 +81,7 @@ def restrict_db_connections(aiida_profile):  # pylint: disable=unused-argument
 
 
 @pytest.fixture
-def populate_restapi_database(aiida_profile_clean):
+def populate_restapi_database(aiida_profile):
     """Populates the database with a considerable set of nodes to test the restAPI"""
     # pylint: disable=unused-argument
     from aiida import orm

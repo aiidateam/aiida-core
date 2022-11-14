@@ -364,6 +364,13 @@ def communicator(manager):
     return manager.get_communicator()
 
 
+@pytest.fixture
+def default_user():
+    """Return the default user."""
+    from aiida.orm import User
+    return User.collection.get_default()
+
+
 @pytest.fixture(scope='function')
 def override_logging(isolated_config):
     """Temporarily override the log level for the AiiDA logger and the database log handler to ``DEBUG``.

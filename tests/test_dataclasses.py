@@ -71,7 +71,7 @@ def test_get_pymatgen_version():
     assert isinstance(get_pymatgen_version(), str)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestCifData:
     """Tests for CifData class."""
 
@@ -930,7 +930,7 @@ class TestKindTestMasses:
         assert round(abs(a.mass - 1000.), 7) == 0
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestStructureDataInit:
     """
     Tests the creation of StructureData objects (cell and pbc).
@@ -1038,7 +1038,7 @@ class TestStructureDataInit:
         assert a.pbc == tuple([True, False, True])
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
+@pytest.mark.usefixtures('aiida_profile_class')
 class TestStructureData:
     """
     Tests the creation of StructureData objects (cell and pbc).
@@ -1761,7 +1761,7 @@ Ag 0 0
                 StructureData()._parse_xyz(xyz_string)  # pylint: disable=protected-access
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_lock():
     """Test that the structure is locked after storage."""
     cell = ((1., 0., 0.), (0., 2., 0.), (0., 0., 3.))
@@ -1807,7 +1807,7 @@ def test_lock():
     b.pbc = [True, True, True]
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
+@pytest.mark.usefixtures('aiida_profile_class')
 class TestStructureDataReload:
     """
     Tests the creation of StructureData, converting it to a raw format and
@@ -1906,7 +1906,7 @@ class TestStructureDataReload:
             assert round(abs(c.sites[1].position[i] - 1.), 7) == 0
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
+@pytest.mark.usefixtures('aiida_profile_class')
 class TestStructureDataFromAse:
     """Tests the creation of Sites from/to a ASE object."""
 
@@ -2110,7 +2110,7 @@ class TestStructureDataFromAse:
         assert [s.position for s in c.sites] == [(0., 0., 0.), (2., 2., 2.), (1., 0., 1.), (1., 3., 1.)]
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
+@pytest.mark.usefixtures('aiida_profile_class')
 class TestStructureDataFromPymatgen:
     """
     Tests the creation of StructureData from a pymatgen Structure and
@@ -2306,7 +2306,7 @@ class TestStructureDataFromPymatgen:
         StructureData(pymatgen=a)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
+@pytest.mark.usefixtures('aiida_profile_class')
 class TestPymatgenFromStructureData:
     """Tests the creation of pymatgen Structure and Molecule objects from
     StructureData."""
@@ -2542,7 +2542,7 @@ class TestPymatgenFromStructureData:
             a.get_pymatgen(add_spin=True)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
+@pytest.mark.usefixtures('aiida_profile_class')
 class TestArrayData:
     """Tests the ArrayData objects."""
 
@@ -2662,7 +2662,7 @@ class TestArrayData:
                 assert round(abs(abs(third - array).max() - 0.), 7) == 0
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
+@pytest.mark.usefixtures('aiida_profile_class')
 class TestTrajectoryData:
     """Tests the TrajectoryData objects."""
 
@@ -3069,7 +3069,7 @@ class TestTrajectoryData:
                         os.remove(file)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
+@pytest.mark.usefixtures('aiida_profile_class')
 class TestKpointsData:
     """Tests the KpointsData objects."""
 
@@ -3266,7 +3266,7 @@ class TestKpointsData:
         assert round(abs(point_coords['Z'][0] - 0.), 7) == 0
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
+@pytest.mark.usefixtures('aiida_profile_class')
 class TestSpglibTupleConversion:
     """Tests for conversion of Spglib tuples."""
 
@@ -3408,7 +3408,7 @@ class TestSpglibTupleConversion:
 
 
 @pytest.mark.skipif(not has_seekpath(), reason='No seekpath available')
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_seekpath_explicit_path():
     """"Tests the `get_explicit_kpoints_path` from SeeK-path."""
     from aiida.plugins import DataFactory
@@ -3480,7 +3480,7 @@ def test_seekpath_explicit_path():
 
 
 @pytest.mark.skipif(not has_seekpath(), reason='No seekpath available')
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_seekpath():
     """Test SeekPath for BaTiO3 structure."""
     from aiida.plugins import DataFactory
@@ -3544,7 +3544,7 @@ def test_seekpath():
     ) == 0.
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
+@pytest.mark.usefixtures('aiida_profile_class')
 class TestBandsData:
     """
     Tests the BandsData objects.

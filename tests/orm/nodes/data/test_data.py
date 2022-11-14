@@ -19,7 +19,7 @@ from tests.static import STATIC_DIR
 
 
 @pytest.fixture
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def generate_class_instance():
     # pylint: disable=too-many-return-statements, too-many-statements
     """Generate a dummy `Data` instance for the given sub class."""
@@ -127,7 +127,7 @@ def data_plugin(request):
     return request.param.load()
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_constructor():
     """Test the constructor.
 
@@ -139,7 +139,7 @@ def test_constructor():
     assert node.source == source
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_data_exporters(data_plugin, generate_class_instance):
     """Verify that the return value of the export methods of all `Data` sub classes have the correct type.
 

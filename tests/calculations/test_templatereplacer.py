@@ -17,7 +17,7 @@ from aiida.common import datastructures
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_base_template(fixture_sandbox, aiida_localhost, generate_calc_job):
     """Test a base template that emulates the arithmetic add."""
 
@@ -73,7 +73,7 @@ def test_base_template(fixture_sandbox, aiida_localhost, generate_calc_job):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_file_usage(fixture_sandbox, aiida_localhost, generate_calc_job):
     """Test a base template that uses two files."""
 

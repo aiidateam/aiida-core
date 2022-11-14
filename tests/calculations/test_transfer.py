@@ -17,7 +17,7 @@ from aiida.common import datastructures
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_get_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path):
     """Test a default `TransferCalculation`."""
 
@@ -67,7 +67,7 @@ def test_get_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_p
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_put_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path):
     """Test a default `TransferCalculation`."""
 

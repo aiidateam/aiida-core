@@ -22,7 +22,7 @@ from aiida.orm import CalculationNode, Computer, Data, Int, Log, Node, User, Wor
 from aiida.orm.utils.links import LinkTriple
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
+@pytest.mark.usefixtures('aiida_profile_class')
 class TestNode:
     """Tests for generic node functionality."""
 
@@ -130,7 +130,7 @@ class TestNode:
         assert Custom.entry_point is None
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
+@pytest.mark.usefixtures('aiida_profile_class')
 class TestNodeAttributesExtras:
     """Test for node attributes and extras."""
 
@@ -469,7 +469,7 @@ class TestNodeAttributesExtras:
         assert self.node.base.attributes.get('a_val') == 3.141
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
+@pytest.mark.usefixtures('aiida_profile_class')
 class TestNodeLinks:
     """Test for linking from and to Node."""
 
@@ -843,7 +843,7 @@ class TestNodeDelete:
     """Tests for deleting nodes."""
     # pylint: disable=no-member,no-self-use
 
-    @pytest.mark.usefixtures('aiida_profile_clean')
+    @pytest.mark.usefixtures('aiida_profile')
     def test_delete_through_backend(self):
         """Test deletion works correctly through the backend."""
         backend = get_manager().get_profile_storage()
@@ -870,7 +870,7 @@ class TestNodeDelete:
         assert Log.collection.get_logs_for(data_one)[0].pk == log_one.pk
         assert len(Log.collection.get_logs_for(data_two)) == 0
 
-    @pytest.mark.usefixtures('aiida_profile_clean')
+    @pytest.mark.usefixtures('aiida_profile')
     def test_delete_collection_logs(self):
         """Test deletion works correctly through objects collection."""
         data_one = Data().store()
@@ -890,7 +890,7 @@ class TestNodeDelete:
         assert Log.collection.get_logs_for(data_one)[0].pk == log_one.pk
         assert len(Log.collection.get_logs_for(data_two)) == 0
 
-    @pytest.mark.usefixtures('aiida_profile_clean')
+    @pytest.mark.usefixtures('aiida_profile')
     def test_delete_collection_incoming_link(self):
         """Test deletion through objects collection raises when there are incoming links."""
         data = Data().store()
@@ -901,7 +901,7 @@ class TestNodeDelete:
         with pytest.raises(exceptions.InvalidOperation):
             Node.collection.delete(calculation.pk)
 
-    @pytest.mark.usefixtures('aiida_profile_clean')
+    @pytest.mark.usefixtures('aiida_profile')
     def test_delete_collection_outgoing_link(self):
         """Test deletion through objects collection raises when there are outgoing links."""
         calculation = CalculationNode().store()
@@ -913,7 +913,7 @@ class TestNodeDelete:
             Node.collection.delete(calculation.pk)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestNodeComments:
     """Tests for creating comments on nodes."""
 
@@ -958,7 +958,7 @@ class TestNodeComments:
         assert len(data.base.comments.all()) == 0
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestNodeCaching:
     """Tests the caching behavior of the ``Node`` class."""
 
@@ -1023,7 +1023,7 @@ class TestNodeCaching:
         assert hash(node_b) != hash(node_0)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_iter_repo_keys():
     """Test the ``iter_repo_keys`` method."""
     data1 = Data()

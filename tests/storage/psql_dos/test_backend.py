@@ -16,7 +16,7 @@ from aiida.orm import User
 
 
 @pytest.fixture(scope='function')
-def clear_storage_before_test(aiida_profile_clean):  # pylint: disable=unused-argument
+def clear_storage_before_test(aiida_profile):  # pylint: disable=unused-argument
     """Clears the storage before a test."""
     repository = get_manager().get_profile_storage().get_repository()
     object_keys = list(repository.list_objects())
@@ -146,7 +146,7 @@ def test_get_info(monkeypatch):
     assert repository_info_out['extra_value'] == 0
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_unload_profile():
     """Test that unloading the profile closes all sqla sessions.
 

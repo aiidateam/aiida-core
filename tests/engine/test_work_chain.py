@@ -186,7 +186,7 @@ class PotentialFailureWorkChain(WorkChain):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestExitStatus:
     """
     This class should test the various ways that one can exit from the outline flow of a WorkChain, other than
@@ -265,7 +265,7 @@ class IfTest(WorkChain):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestContext:
 
     def test_attributes(self):
@@ -293,7 +293,7 @@ class TestWorkchain:
     # pylint: disable=too-many-public-methods
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile):  # pylint: disable=unused-argument
         """Initialize the profile."""
         assert Process.current() is None
         yield
@@ -1041,7 +1041,7 @@ class TestWorkChainAbort:
     """
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile):  # pylint: disable=unused-argument
         """Initialize the profile."""
         assert Process.current() is None
         yield
@@ -1118,7 +1118,7 @@ class TestWorkChainAbortChildren:
     """
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile):  # pylint: disable=unused-argument
         """Initialize the profile."""
         assert Process.current() is None
         yield
@@ -1209,7 +1209,7 @@ class TestImmutableInputWorkchain:
     """
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile):  # pylint: disable=unused-argument
         """Initialize the profile."""
         assert Process.current() is None
         yield
@@ -1312,7 +1312,7 @@ class TestSerializeWorkChain:
     """
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile):  # pylint: disable=unused-argument
         """Initialize the profile."""
         assert Process.current() is None
         yield
@@ -1432,7 +1432,7 @@ class ChildExposeWorkChain(WorkChain):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestWorkChainExpose:
     """
     Test the expose inputs / outputs functionality
@@ -1540,7 +1540,7 @@ class TestWorkChainExpose:
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestWorkChainMisc:
 
     class PointlessWorkChain(WorkChain):
@@ -1578,7 +1578,7 @@ class TestWorkChainMisc:
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestDefaultUniqueness:
     """Test that default inputs of exposed nodes will get unique UUIDS."""
 

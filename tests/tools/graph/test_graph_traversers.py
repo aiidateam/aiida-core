@@ -83,7 +83,7 @@ def create_minimal_graph():
     return output_dict
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestTraverseGraph:
     """Test class for traverse_graph"""
 

@@ -20,7 +20,7 @@ class TestVerdiGroup:
     """Tests for the `verdi group` command."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         for group in ['dummygroup1', 'dummygroup2', 'dummygroup3', 'dummygroup4']:

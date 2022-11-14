@@ -107,13 +107,13 @@ def generate_setup_options_interactive(ordereddict):
     return options
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_help(run_cli_command):
     """Test the help of verdi computer setup."""
     run_cli_command(computer_setup, ['--help'], catch_exceptions=False)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_reachable():
     """Test if the verdi computer setup is reachable."""
     import subprocess as sp
@@ -121,7 +121,7 @@ def test_reachable():
     assert b'Usage:' in output
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_mixed(run_cli_command):
     """
     Test verdi computer setup in mixed mode.
@@ -170,7 +170,7 @@ def test_mixed(run_cli_command):
     assert new_computer.get_append_text() == options_dict_full['append-text']
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
 def test_noninteractive(run_cli_command, aiida_localhost, non_interactive_editor):
     """
@@ -201,7 +201,7 @@ def test_noninteractive(run_cli_command, aiida_localhost, non_interactive_editor
     assert 'already exists' in result.output
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_noninteractive_optional_default_mpiprocs(run_cli_command):
     """
     Check that if is ok not to specify mpiprocs-per-machine
@@ -216,7 +216,7 @@ def test_noninteractive_optional_default_mpiprocs(run_cli_command):
     assert new_computer.get_default_mpiprocs_per_machine() is None
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_noninteractive_optional_default_mpiprocs_2(run_cli_command):
     """
     Check that if is the specified value is zero, it means unspecified
@@ -231,7 +231,7 @@ def test_noninteractive_optional_default_mpiprocs_2(run_cli_command):
     assert new_computer.get_default_mpiprocs_per_machine() is None
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_noninteractive_optional_default_mpiprocs_3(run_cli_command):
     """
     Check that it fails for a negative number of mpiprocs
@@ -268,7 +268,7 @@ def test_noninteractive_optional_default_memory_invalid(run_cli_command):
     assert 'Invalid value for def_memory_per_machine, must be a positive int, got: -1' in result.output
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_noninteractive_wrong_transport_fail(run_cli_command):
     """
     Check that if fails as expected for an unknown transport
@@ -280,7 +280,7 @@ def test_noninteractive_wrong_transport_fail(run_cli_command):
     assert "entry point 'unknown_transport' is not valid" in result.output
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_noninteractive_wrong_scheduler_fail(run_cli_command):
     """
     Check that if fails as expected for an unknown transport
@@ -292,7 +292,7 @@ def test_noninteractive_wrong_scheduler_fail(run_cli_command):
     assert "entry point 'unknown_scheduler' is not valid" in result.output
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_noninteractive_invalid_shebang_fail(run_cli_command):
     """
     Check that if fails as expected for an unknown transport
@@ -304,7 +304,7 @@ def test_noninteractive_invalid_shebang_fail(run_cli_command):
     assert 'The shebang line should start with' in result.output
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_noninteractive_invalid_mpirun_fail(run_cli_command):
     """
     Check that if fails as expected for an unknown transport
@@ -318,7 +318,7 @@ def test_noninteractive_invalid_mpirun_fail(run_cli_command):
     assert "unknown replacement field 'unknown_key'" in str(result.output)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_noninteractive_from_config(run_cli_command):
     """Test setting up a computer from a config file"""
     label = 'noninteractive_config'
@@ -342,7 +342,7 @@ class TestVerdiComputerConfigure:
     """Test the ``verdi computer configure`` command."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         from aiida.orm.utils.builders.computer import ComputerBuilder
@@ -562,7 +562,7 @@ class TestVerdiComputerCommands:
     """
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile, aiida_localhost, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.computer_name = 'comp_cli_test_computer'
@@ -691,7 +691,7 @@ class TestVerdiComputerCommands:
             orm.Computer.collection.get(label=label)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
 def test_computer_duplicate_interactive(run_cli_command, aiida_localhost, non_interactive_editor):
     """Test 'verdi computer duplicate' in interactive mode."""
@@ -714,7 +714,7 @@ def test_computer_duplicate_interactive(run_cli_command, aiida_localhost, non_in
     assert new_computer.get_append_text() == computer.get_append_text()
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
 def test_computer_duplicate_non_interactive(run_cli_command, aiida_localhost, non_interactive_editor):
     """Test if 'verdi computer duplicate' in non-interactive mode."""
@@ -736,9 +736,9 @@ def test_computer_duplicate_non_interactive(run_cli_command, aiida_localhost, no
     assert new_computer.get_append_text() == computer.get_append_text()
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 @pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
-def test_direct_interactive(run_cli_command, aiida_profile_clean, non_interactive_editor):
+def test_direct_interactive(run_cli_command, aiida_profile, non_interactive_editor):
     """Test verdi computer setup in interactive mode."""
     label = 'interactive_computer'
 
@@ -770,7 +770,7 @@ def test_direct_interactive(run_cli_command, aiida_profile_clean, non_interactiv
     assert new_computer.get_append_text() == ''
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_computer_test_stderr(run_cli_command, aiida_localhost, monkeypatch):
     """Test `verdi computer test` where tested command returns non-empty stderr."""
     from aiida.transports.plugins.local import LocalTransport
@@ -788,7 +788,7 @@ def test_computer_test_stderr(run_cli_command, aiida_localhost, monkeypatch):
     assert stderr in result.output
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_computer_test_stdout(run_cli_command, aiida_localhost, monkeypatch):
     """Test `verdi computer test` where tested command returns non-empty stdout."""
     from aiida.transports.plugins.local import LocalTransport

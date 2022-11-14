@@ -63,7 +63,7 @@ def test_get_process_handlers():
     ({'handler_overrides': {'handler_a': False}}, [100]),  # This notation is deprecated
 ))
 # yapf: enable
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_get_process_handlers_by_priority(generate_work_chain, inputs, priorities):
     """Test the `BaseRestartWorkChain.get_process_handlers_by_priority` method."""
     process = generate_work_chain(SomeWorkChain, inputs)
@@ -80,7 +80,7 @@ def test_get_process_handlers_by_priority(generate_work_chain, inputs, prioritie
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_excepted_process(generate_work_chain, generate_calculation_node):
     """Test that the workchain aborts if the sub process was excepted."""
     process = generate_work_chain(SomeWorkChain, {})
@@ -90,7 +90,7 @@ def test_excepted_process(generate_work_chain, generate_calculation_node):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_killed_process(generate_work_chain, generate_calculation_node):
     """Test that the workchain aborts if the sub process was killed."""
     process = generate_work_chain(SomeWorkChain, {})
@@ -100,7 +100,7 @@ def test_killed_process(generate_work_chain, generate_calculation_node):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_unhandled_failure(generate_work_chain, generate_calculation_node):
     """Test the unhandled failure mechanism.
 
@@ -119,7 +119,7 @@ def test_unhandled_failure(generate_work_chain, generate_calculation_node):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_unhandled_reset_after_success(generate_work_chain, generate_calculation_node):
     """Test `ctx.unhandled_failure` is reset to `False` in `inspect_process` after a successful process."""
     process = generate_work_chain(SomeWorkChain, {})
@@ -134,7 +134,7 @@ def test_unhandled_reset_after_success(generate_work_chain, generate_calculation
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_unhandled_reset_after_handled(generate_work_chain, generate_calculation_node):
     """Test `ctx.unhandled_failure` is reset to `False` in `inspect_process` after a handled failed process."""
     process = generate_work_chain(SomeWorkChain, {})
@@ -156,7 +156,7 @@ def test_unhandled_reset_after_handled(generate_work_chain, generate_calculation
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_run_process(generate_work_chain, generate_calculation_node, monkeypatch):
     """Test the `run_process` method."""
 

@@ -16,7 +16,7 @@ from aiida.tools.archive import create_archive, import_archive
 
 
 @pytest.fixture(scope='function')
-def new_archive(aiida_profile_clean, tmp_path):
+def new_archive(aiida_profile, tmp_path):
     """Create a new archive"""
     data = orm.Data()
     data.label = 'my_test_data_node'
@@ -24,7 +24,7 @@ def new_archive(aiida_profile_clean, tmp_path):
     data.base.extras.set_many({'b': 2, 'c': 3})
     archive_file = tmp_path / 'export.aiida'
     create_archive([data], filename=archive_file)
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
     yield archive_file
 
 

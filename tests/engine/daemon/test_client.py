@@ -15,7 +15,7 @@ import zmq
 from aiida.engine.daemon.client import get_daemon_client
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 def test_ipc_socket_file_length_limit():
     """
     The maximum length of socket filepaths is often limited by the operating system.

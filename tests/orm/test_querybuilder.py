@@ -23,7 +23,7 @@ from aiida.orm.querybuilder import _get_ormclass
 from aiida.orm.utils.links import LinkQuadruple
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestBasic:
 
     def test_date_filters_support(self):
@@ -708,7 +708,7 @@ class TestBasic:
         assert builder.one()[0] == LinkQuadruple(d2.pk, c2.pk, LinkType.INPUT_CALC.value, 'link_d2c2')
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestMultipleProjections:
     """Unit tests for the QueryBuilder ORM class."""
 
@@ -733,7 +733,7 @@ class TestRepresentations:
     """Test representing the query in different formats."""
 
     @pytest.fixture(autouse=True)
-    def init_db(self, aiida_profile_clean, data_regression, file_regression):
+    def init_db(self, aiida_profile, data_regression, file_regression):
         self.regress_dict = data_regression.check
         self.regress_str = file_regression.check
 
@@ -822,7 +822,7 @@ class TestRepresentations:
             assert sorted([uuid for uuid, in qb.all()]) == sorted([uuid for uuid, in qb_new.all()])
 
 
-def test_analyze_query(aiida_profile_clean):
+def test_analyze_query(aiida_profile):
     """Test the query plan is correctly generated."""
     qb = orm.QueryBuilder()
     # include literal values in test
@@ -832,7 +832,7 @@ def test_analyze_query(aiida_profile_clean):
     assert 'uuid' in analysis_str, analysis_str
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestQueryBuilderCornerCases:
     """
     In this class corner cases of QueryBuilder are added.
@@ -867,7 +867,7 @@ class TestQueryBuilderCornerCases:
         assert qb.count() == 1
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestAttributes:
 
     def test_attribute_existence(self):
@@ -947,7 +947,7 @@ class TestAttributes:
         assert set(res) == set((n_arr.uuid,))
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestQueryBuilderLimitOffsets:
 
     def test_ordering_limits_offsets_of_results_general(self):
@@ -1015,7 +1015,7 @@ class TestQueryBuilderLimitOffsets:
         assert res == tuple(range(4, 1, -1))
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestQueryBuilderJoins:
 
     def test_joins_node_incoming(self):
@@ -1231,7 +1231,7 @@ class TestQueryBuilderJoins:
 class QueryBuilderPath:
 
     @pytest.fixture(autouse=True)
-    def init_db(self, aiida_profile_clean, backend):
+    def init_db(self, aiida_profile, backend):
         self.backend = backend
 
     @staticmethod
@@ -1433,7 +1433,7 @@ class QueryBuilderPath:
         # self.assertTrue(set(next(zip(*qb.all()))), set([5]))
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestConsistency:
 
     def test_create_node_and_query(self):
@@ -1470,7 +1470,7 @@ class TestConsistency:
             qb.append(orm.Data, with_incoming='parent')
             assert len(qb.all()) == qb.count()
 
-    @pytest.mark.usefixtures('aiida_profile_clean')
+    @pytest.mark.usefixtures('aiida_profile')
     def test_iterall_with_mutation(self):
         """Test that nodes can be mutated while being iterated using ``QueryBuilder.iterall``."""
         count = 10
@@ -1491,7 +1491,7 @@ class TestConsistency:
 class TestManager:
 
     @pytest.fixture(autouse=True)
-    def init_db(self, aiida_profile_clean, backend):
+    def init_db(self, aiida_profile, backend):
         self.backend = backend
 
     def test_statistics(self):
@@ -1577,7 +1577,7 @@ class TestDoubleStar:
     """
 
     @pytest.fixture(autouse=True)
-    def init_db(self, aiida_profile_clean, aiida_localhost):
+    def init_db(self, aiida_profile, aiida_localhost):
         self.computer = aiida_localhost
 
     def test_authinfo(self):

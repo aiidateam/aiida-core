@@ -17,7 +17,7 @@ from aiida import orm
 from aiida.common.exceptions import InvalidOperation
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('aiida_profile')
 class TestBackendEntitiesAndCollections:
     """Test backend entities and their collections"""
 

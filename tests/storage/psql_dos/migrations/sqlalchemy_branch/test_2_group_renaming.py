@@ -8,10 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test renaming of type strings: b8b23ddefad4 -> e72ad251bcdb"""
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_group_renaming(perform_migrations: PsqlDostoreMigrator):
+def test_group_renaming(perform_migrations: PsqlDosMigrator):
     """Test the migration that renames the DbGroup type strings."""
     # starting revision
     perform_migrations.migrate_up(

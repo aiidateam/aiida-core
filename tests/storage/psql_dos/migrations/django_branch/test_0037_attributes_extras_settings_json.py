@@ -13,10 +13,10 @@ from datetime import datetime
 from sqlalchemy import select
 
 from aiida.common import timezone
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_attr_extra_migration(perform_migrations: PsqlDostoreMigrator):
+def test_attr_extra_migration(perform_migrations: PsqlDosMigrator):
     """
     A "simple" test for the attributes and extra migration from EAV to JSONB.
     It stores a sample dictionary using the EAV deserialization of AiiDA Django
@@ -93,7 +93,7 @@ def test_attr_extra_migration(perform_migrations: PsqlDostoreMigrator):
     assert extras == {'extra_0': 'test', 'extra_1': 1, 'extra_2': True, 'extra_3': 1.0, 'extra_4': 2022}
 
 
-def test_settings_migration(perform_migrations: PsqlDostoreMigrator):
+def test_settings_migration(perform_migrations: PsqlDosMigrator):
     """
     This test checks the correct migration of the settings.
     Setting records were used as an example from a typical settings table of Django EAV.

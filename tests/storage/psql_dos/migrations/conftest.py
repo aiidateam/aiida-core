@@ -16,7 +16,7 @@ import pytest
 from sqlalchemy import text
 
 from aiida.manage.configuration import Profile
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
 
 
@@ -114,7 +114,7 @@ def uninitialised_profile(empty_pg_cluster: PGTest, tmp_path):  # pylint: disabl
 @pytest.fixture()
 def perform_migrations(uninitialised_profile):  # pylint: disable=redefined-outer-name
     """A fixture to setup a database for migration tests."""
-    yield PsqlDostoreMigrator(uninitialised_profile)
+    yield PsqlDosMigrator(uninitialised_profile)
 
 
 def _generate_column_schema(profile: Profile) -> dict:

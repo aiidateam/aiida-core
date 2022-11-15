@@ -20,10 +20,10 @@ Therefore, we need to check that the migration code handles this correctly.
 """
 import sqlalchemy as sa
 
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_v0x_django_0003(perform_migrations: PsqlDostoreMigrator, reflect_schema, data_regression):  # pylint: disable=too-many-locals
+def test_v0x_django_0003(perform_migrations: PsqlDosMigrator, reflect_schema, data_regression):  # pylint: disable=too-many-locals
     """Test against an archive database schema, created in aiida-core v0.x, at revision django_0003."""
     metadata = generate_schema()
     with perform_migrations._connection_context() as conn:  # pylint: disable=protected-access

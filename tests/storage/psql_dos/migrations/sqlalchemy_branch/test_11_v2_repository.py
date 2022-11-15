@@ -14,10 +14,10 @@ import os
 from aiida.common.utils import get_new_uuid
 from aiida.storage.psql_dos.backend import get_filepath_container
 from aiida.storage.psql_dos.migrations.utils import utils
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_node_repository_metadata(perform_migrations: PsqlDostoreMigrator):
+def test_node_repository_metadata(perform_migrations: PsqlDosMigrator):
     """Test migration adding the `repository_metadata` column to the `Node` model.
 
     Verify that the column is added and null by default.
@@ -49,7 +49,7 @@ def test_node_repository_metadata(perform_migrations: PsqlDostoreMigrator):
         assert node.repository_metadata == {}
 
 
-def test_entry_point_core_prefix(perform_migrations: PsqlDostoreMigrator):
+def test_entry_point_core_prefix(perform_migrations: PsqlDosMigrator):
     """Test migration that updates node types after `core.` prefix was added to entry point names.
 
     Verify that the column was successfully renamed.
@@ -109,7 +109,7 @@ def test_entry_point_core_prefix(perform_migrations: PsqlDostoreMigrator):
         assert workflow.process_type == 'aiida.workflows:core.arithmetic.add_multiply'
 
 
-def test_repository_migration(perform_migrations: PsqlDostoreMigrator):  # pylint: disable=too-many-statements,too-many-locals
+def test_repository_migration(perform_migrations: PsqlDosMigrator):  # pylint: disable=too-many-statements,too-many-locals
     """Test migration of the old file repository to the disk object store.
 
     Verify that the files are correctly migrated.
@@ -231,7 +231,7 @@ def test_repository_migration(perform_migrations: PsqlDostoreMigrator):  # pylin
         assert isinstance(repository_uuid.val, str)
 
 
-def test_computer_name_to_label(perform_migrations: PsqlDostoreMigrator):
+def test_computer_name_to_label(perform_migrations: PsqlDosMigrator):
     """Test the renaming of `name` to `label` for `DbComputer.
 
     Verify that the column was successfully renamed.

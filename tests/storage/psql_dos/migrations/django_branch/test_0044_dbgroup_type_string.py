@@ -11,10 +11,10 @@
 from uuid import uuid4
 
 from aiida.common import timezone
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_group_type_string(perform_migrations: PsqlDostoreMigrator):
+def test_group_type_string(perform_migrations: PsqlDosMigrator):
     """Test migration of `type_string` after the `Group` class became pluginnable."""
     # starting revision
     perform_migrations.migrate_up('django@django_0043')

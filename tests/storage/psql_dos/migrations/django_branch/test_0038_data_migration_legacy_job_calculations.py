@@ -14,10 +14,10 @@ from uuid import uuid4
 
 from aiida.common import timezone
 from aiida.storage.psql_dos.migrations.utils.calc_state import STATE_MAPPING, StateMapping
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_legacy_jobcalcstate(perform_migrations: PsqlDostoreMigrator):
+def test_legacy_jobcalcstate(perform_migrations: PsqlDosMigrator):
     """Test the migration that performs a data migration of legacy `JobCalcState`."""
     # starting revision
     perform_migrations.migrate_up('django@django_0037')

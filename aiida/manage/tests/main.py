@@ -359,7 +359,7 @@ class TemporaryProfileManager(ProfileManager):
         # Load the new profile and initialize the profile storage
         with override_log_level():
             profile = manager.load_profile(profile_name)
-            profile.storage_cls.migrate(profile)
+            profile.storage_cls.initialise(profile, reset=True)
 
         # create the default user for the profile
         created, user = User.collection.get_or_create(**get_user_dict(_DEFAULT_PROFILE_INFO))

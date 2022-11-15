@@ -82,6 +82,10 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         return cls.migrator(profile).get_schema_version_profile(check_legacy=True)
 
     @classmethod
+    def initialise(cls, profile: Profile, reset: bool = False) -> bool:
+        return cls.migrator(profile).initialise(reset=reset)
+
+    @classmethod
     def migrate(cls, profile: Profile) -> None:
         cls.migrator(profile).migrate()
 
@@ -103,15 +107,15 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         self._logs = logs.SqlaLogCollection(self)
         self._nodes = nodes.SqlaNodeCollection(self)
         self._users = users.SqlaUserCollection(self)
+        self._migrator = self.migrator(profile)
 
     @property
     def is_closed(self) -> bool:
         return self._session_factory is None
 
     def __str__(self) -> str:
-        repo_uri = self.profile.storage_config['repository_uri']
         state = 'closed' if self.is_closed else 'open'
-        return f'Storage for {self.profile.name!r} [{state}] @ {self._db_url!r} / {repo_uri}'
+        return f'Storage for {self.profile.name!r} [{state}] @ {self._db_url!r} / {self.get_repository()}'
 
     def _initialise_session(self):
         """Initialise the SQLAlchemy session factory.
@@ -183,13 +187,13 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
             if recreate_user and default_user_kwargs:
                 session.add(DbUser(**default_user_kwargs))
 
-        # Clear the repository and reset the repository UUID
-        container = Container(str(get_filepath_container(self.profile)))
-        container.init_container(clear=True, **CONTAINER_DEFAULTS)
-        container_id = container.container_id
+        self._migrator.reset_repository()
+        self._migrator.initialise_repository()
+        repository_uuid = self._migrator.get_repository_uuid()
+
         with self.transaction():
             session.execute(
-                DbSetting.__table__.update().where(DbSetting.key == REPOSITORY_UUID_KEY).values(val=container_id)
+                DbSetting.__table__.update().where(DbSetting.key == REPOSITORY_UUID_KEY).values(val=repository_uuid)
             )
 
     def get_repository(self) -> 'DiskObjectStoreRepositoryBackend':

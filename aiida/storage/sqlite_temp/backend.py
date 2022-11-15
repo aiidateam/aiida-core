@@ -71,6 +71,10 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
         return get_schema_version_head()
 
     @classmethod
+    def initialise(cls, profile: 'Profile', reset: bool = False) -> bool:  # pylint: disable=unused-argument
+        return False
+
+    @classmethod
     def migrate(cls, profile: Profile):
         pass
 

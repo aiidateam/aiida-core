@@ -93,10 +93,9 @@ def setup(
 
     # Initialise the storage
     echo.echo_report('initialising the profile storage.')
-    storage_cls = profile.storage_cls
 
     try:
-        storage_cls.migrate(profile)
+        profile.storage_cls.initialise(profile)
     except Exception as exception:  # pylint: disable=broad-except
         echo.echo_critical(
             f'storage initialisation failed, probably because connection details are incorrect:\n{exception}'

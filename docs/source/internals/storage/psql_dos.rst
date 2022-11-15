@@ -99,7 +99,7 @@ Between nodes themselves (Links)
 Storage schema migrations
 =========================
 
-Migrations of the storage schema, to bring it inline with updates to the ``aiida-core`` API, are implemented by :py:class:`~aiida.storage.psql_dos.migrator.PsqlDostoreMigrator` , using `alembic <https://alembic.sqlalchemy.org>`_.
+Migrations of the storage schema, to bring it inline with updates to the ``aiida-core`` API, are implemented by :py:class:`~aiida.storage.psql_dos.migrator.PsqlDosMigrator` , using `alembic <https://alembic.sqlalchemy.org>`_.
 
 Legacy schema
 -------------

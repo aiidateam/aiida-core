@@ -8,10 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the provenance redesign: 140c971ae0a3 -> 239cea6d2452"""
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_provenance_redesign(perform_migrations: PsqlDostoreMigrator):
+def test_provenance_redesign(perform_migrations: PsqlDosMigrator):
     """Test the data migration part of the provenance redesign migration.
 
     Verify that type string of the Data node are successfully adapted.

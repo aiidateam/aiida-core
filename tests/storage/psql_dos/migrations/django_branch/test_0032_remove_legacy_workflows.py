@@ -10,10 +10,10 @@
 """Test removing legacy workflows."""
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_node_repository(perform_migrations: PsqlDostoreMigrator):
+def test_node_repository(perform_migrations: PsqlDosMigrator):
     """Test removing legacy workflows."""
     # starting revision
     perform_migrations.migrate_up('django@django_0031')

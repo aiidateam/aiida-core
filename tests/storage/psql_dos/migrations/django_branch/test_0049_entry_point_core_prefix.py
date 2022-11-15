@@ -10,10 +10,10 @@
 """Test migration that updates node types after `core.` prefix was added to entry point names."""
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_entry_point_core_prefix(perform_migrations: PsqlDostoreMigrator):
+def test_entry_point_core_prefix(perform_migrations: PsqlDosMigrator):
     """Test the renaming of `name` to `label` for `db_dbcomputer`.
 
     Verify that the column was successfully renamed.

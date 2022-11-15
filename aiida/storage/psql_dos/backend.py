@@ -24,7 +24,7 @@ from aiida.manage.configuration.profile import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import BackendEntity, StorageBackend
 from aiida.storage.log import STORAGE_LOGGER
-from aiida.storage.psql_dos.migrator import REPOSITORY_UUID_KEY, PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import REPOSITORY_UUID_KEY, PsqlDosMigrator
 from aiida.storage.psql_dos.models import base
 
 from .orm import authinfos, comments, computers, convert, groups, logs, nodes, querybuilder, users
@@ -71,7 +71,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
     The `django` backend was removed, to consolidate access to this storage.
     """
 
-    migrator = PsqlDostoreMigrator
+    migrator = PsqlDosMigrator
 
     @classmethod
     def version_head(cls) -> str:

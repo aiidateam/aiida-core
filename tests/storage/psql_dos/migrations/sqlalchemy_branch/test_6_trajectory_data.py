@@ -13,7 +13,7 @@ import pytest
 
 from aiida.storage.psql_dos.backend import get_filepath_container
 from aiida.storage.psql_dos.migrations.utils import utils
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 from aiida.storage.psql_dos.utils import flag_modified
 
 
@@ -39,7 +39,7 @@ def get_node_array(node, repo_path, name):
     return utils.load_numpy_array_from_repository(repo_path, node.uuid, name)
 
 
-def test_trajectory_data(perform_migrations: PsqlDostoreMigrator):
+def test_trajectory_data(perform_migrations: PsqlDosMigrator):
     """Test the migration of the symbols from numpy array to attribute for TrajectoryData nodes.
 
     Verify that migration of symbols from repository array to attribute works properly.

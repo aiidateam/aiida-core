@@ -10,10 +10,10 @@
 """Test migration that renames all index/constraint names, to have parity between django/sqlalchemy."""
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_schema_parity(perform_migrations: PsqlDostoreMigrator):
+def test_schema_parity(perform_migrations: PsqlDosMigrator):
     """Test the renaming of indexes and constaints works, when data is in the database."""
     # starting revision
     perform_migrations.migrate_up('django@django_0049')

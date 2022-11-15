@@ -55,7 +55,7 @@ ALEMBIC_REL_PATH = 'migrations'
 REPOSITORY_UUID_KEY = 'repository|uuid'
 
 
-class PsqlDostoreMigrator:
+class PsqlDosMigrator:
     """Class for validating and migrating `psql_dos` storage instances.
 
     .. important:: This class should only be accessed via the storage backend class (apart from for test purposes)

@@ -16,7 +16,6 @@ import pathlib
 from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence, Set, Union
 
 from disk_objectstore import Container
-from sqlalchemy import table
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from aiida.common.exceptions import ClosedStorage, ConfigurationError, IntegrityError
@@ -170,18 +169,21 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
 
         super()._clear()
 
-        session = self.get_session()
-
         with self.migrator_context(self._profile) as migrator:
 
-            with self.transaction():
-                for table_name in (
-                    'db_dbgroup_dbnodes', 'db_dbgroup', 'db_dblink', 'db_dbnode', 'db_dblog', 'db_dbauthinfo',
-                    'db_dbuser', 'db_dbcomputer'
-                ):
-                    session.execute(table(table_name).delete())
+            # First clear the contents of the database
+            with self.transaction() as session:
+
+                # Close the session otherwise the ``delete_tables`` call will hang as there will be an open connection
+                # to the PostgreSQL server and it will block the deletion and the command will hang.
+                self.get_session().close()
+                exclude_tables = [migrator.alembic_version_tbl_name, 'db_dbsetting']
+                migrator.delete_tables(exclude_tables)
+
+                # Clear out all references to database model instances which are now invalid.
                 session.expunge_all()
 
+            # Now reset and reinitialise the repository
             migrator.reset_repository()
             migrator.initialise_repository()
             repository_uuid = migrator.get_repository_uuid()

@@ -87,6 +87,16 @@ def test_code_list_hide(run_cli_command, code):
     assert code.full_label in result.output
 
 
+@pytest.mark.usefixtures('aiida_profile')
+def test_code_list_raw(run_cli_command, code):
+    """Test ``verdi code list --raw``."""
+    options = ['--raw']
+    result = run_cli_command(cmd_code.code_list, options)
+    assert str(code.pk) in result.output
+    assert 'Full label' not in result.output
+    assert 'Use `verdi code show IDENTIFIER`' not in result.output
+
+
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_hide_one(run_cli_command, code):
     """Test ``verdi code hide``."""

@@ -127,7 +127,6 @@ class Postgres(PGSU):
         dbuser = start_from
         i = 0
         while self.dbuser_exists(dbuser):
-            echo.echo_warning(f'Database user "{dbuser}" already exists.')
             i = i + 1
             dbuser = f'{start_from}_{i}'
 
@@ -199,7 +198,6 @@ class Postgres(PGSU):
         dbname = start_from
         i = 0
         while self.db_exists(dbname):
-            echo.echo_warning(f'Database "{dbname}" already exists.')
             i = i + 1
             dbname = f'{start_from}_{i}'
 
@@ -221,11 +219,13 @@ class Postgres(PGSU):
         if not self.dbuser_exists(dbuser):
             self.create_dbuser(dbuser=dbuser, dbpass=dbpass)
         elif not self.can_user_authenticate(dbuser, dbpass):
+            echo.echo_warning(f'Database user "{dbuser}" already exists but is unable to authenticate.')
             dbuser = self.find_new_dbuser(dbuser)
             self.create_dbuser(dbuser=dbuser, dbpass=dbpass)
         echo.echo_info(f'Using database user "{dbuser}".')
 
         if self.db_exists(dbname):
+            echo.echo_warning(f'Database "{dbname}" already exists.')
             dbname = self.find_new_db(dbname)
         self.create_db(dbuser=dbuser, dbname=dbname)
         echo.echo_info(f'Using database "{dbname}".')

@@ -11,6 +11,7 @@ on:
         - '.molecule/default/files/**'
         - 'aiida/storage/psql_dos/migrations/**'
         - 'tests/storage/psql_dos/migrations/**'
+    workflow_dispatch:
 
 jobs:
 

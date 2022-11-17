@@ -90,7 +90,7 @@ atomic_tools = [
     "PyCifRW~=4.4",
     "ase~=3.18",
     "matplotlib~=3.3,>=3.3.4",
-    "pymatgen>=2019.7.2,<=2022.1.9,!=2019.9.7",
+    "pymatgen>=2022.1.20",
     "pymysql~=0.9.3",
     "seekpath~=1.9,>=1.9.3",
     "spglib~=1.14"

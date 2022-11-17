@@ -172,7 +172,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
 
         :return: an object that can be used to access entities of this type
         """
-        warn_deprecation('This property is deprecated, use `.collection` instead.', version=3, stacklevel=2)
+        warn_deprecation('`objects` property is deprecated, use `collection` instead.', version=3, stacklevel=2)
         return cls.collection
 
     @classproperty
@@ -191,7 +191,9 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
 
         """
         warn_deprecation(
-            f'This method is deprecated, use `{cls.__name__}.collection.get` instead.', version=3, stacklevel=2
+            f'`{cls.__name__}.get` method is deprecated, use `{cls.__name__}.collection.get` instead.',
+            version=3,
+            stacklevel=2
         )
         return cls.collection.get(**kwargs)  # pylint: disable=no-member
 
@@ -223,7 +225,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
 
         :return: the entity's id
         """
-        warn_deprecation('This method is deprecated, use `pk` instead.', version=3, stacklevel=2)
+        warn_deprecation('`id` property is deprecated, use `pk` instead.', version=3, stacklevel=2)
         return self._backend_entity.id
 
     @property

@@ -17,8 +17,6 @@ import functools
 import itertools
 import json
 
-from pkg_resources import parse_version
-
 from aiida.common.constants import elements
 from aiida.common.exceptions import UnsupportedSpeciesError
 
@@ -866,15 +864,9 @@ class StructureData(Data):
         self.pbc = [True, True, True]
         self.clear_kinds()
 
-        required_pmg_version = parse_version('2019.3.13')
-        current_pmg_version = parse_version(get_pymatgen_version())
         for site in struct.sites:
 
-            # site.species property first introduced in pymatgen version 2019.3.13
-            if current_pmg_version < required_pmg_version:
-                species_and_occu = site.species_and_occu
-            else:
-                species_and_occu = site.species
+            species_and_occu = site.species
 
             if 'kind_name' in site.properties:
                 kind_name = site.properties['kind_name']

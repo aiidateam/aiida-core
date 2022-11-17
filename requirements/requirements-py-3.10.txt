@@ -102,7 +102,7 @@ PyCifRW==4.4.3
 pycparser==2.21
 pydata-sphinx-theme==0.8.0
 Pygments==2.11.2
-pymatgen==2022.1.9
+pymatgen==2022.1.20
 Pympler==0.9
 PyMySQL==0.9.3
 PyNaCl==1.4.0

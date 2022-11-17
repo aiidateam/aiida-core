@@ -16,6 +16,7 @@ import copy
 import functools
 import itertools
 import json
+from pkg_resources import parse_version
 
 from aiida.common.constants import elements
 from aiida.common.exceptions import UnsupportedSpeciesError
@@ -823,8 +824,6 @@ class StructureData(Data):
 
         :raise ValueError: if there are partial occupancies together with spins.
         """
-
-        from pkg_resources import parse_version
 
         def build_kind_name(species_and_occu):
             """

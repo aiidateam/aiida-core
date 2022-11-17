@@ -824,8 +824,6 @@ class StructureData(Data):
         :raise ValueError: if there are partial occupancies together with spins.
         """
 
-        from pkg_resources import parse_version
-
         def build_kind_name(species_and_occu):
             """
             Build a kind name from a pymatgen Composition, including an additional ordinal if spin is included,
@@ -866,15 +864,9 @@ class StructureData(Data):
         self.pbc = [True, True, True]
         self.clear_kinds()
 
-        required_pmg_version = parse_version('2019.3.13')
-        current_pmg_version = parse_version(get_pymatgen_version())
         for site in struct.sites:
 
-            # site.species property first introduced in pymatgen version 2019.3.13
-            if current_pmg_version < required_pmg_version:
-                species_and_occu = site.species_and_occu
-            else:
-                species_and_occu = site.species
+            species_and_occu = site.species
 
             if 'kind_name' in site.properties:
                 kind_name = site.properties['kind_name']

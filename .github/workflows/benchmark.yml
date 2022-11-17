@@ -27,8 +27,7 @@ jobs:
         image: "postgres:${{ matrix.postgres }}"
         env:
           POSTGRES_DB: test_aiida
-          POSTGRES_PASSWORD: ''
-          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_PASSWORD: 'fakepw'
         options: >-
           --health-cmd pg_isready
           --health-interval 10s

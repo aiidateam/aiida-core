@@ -16,6 +16,7 @@ import copy
 import functools
 import itertools
 import json
+
 from pkg_resources import parse_version
 
 from aiida.common.constants import elements

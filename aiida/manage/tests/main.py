@@ -57,6 +57,10 @@ _DEFAULT_PROFILE_INFO = {
     'test_profile': True,
 }
 
+warn_deprecation(
+    'This module is deprecated; use the fixtures from `aiida.manage.tests.pytest_fixtures` instead', version=3
+)
+
 
 class TestManagerError(Exception):
     """Raised by TestManager in situations that may lead to inconsistent behaviour."""

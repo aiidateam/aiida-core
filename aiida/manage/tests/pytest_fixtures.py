@@ -8,16 +8,29 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=redefined-outer-name,unused-argument
-"""Collection of pytest fixtures using the TestManager for easy testing of AiiDA plugins."""
+"""Collection of ``pytest`` fixtures that are intended for use in plugin packages.
+
+To use these fixtures, simply create a ``conftest.py`` in the tests folder and add the following line:
+
+    pytest_plugins = ['aiida.manage.tests.pytest_fixtures']
+
+This will make all the fixtures in this file available and ready for use. Simply use them as you would any other
+``pytest`` fixture.
+"""
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import copy
 import inspect
+import io
+import os
 import pathlib
 import shutil
 import tempfile
 import time
+import typing as t
+import uuid
 import warnings
 
 import plumpy
@@ -30,8 +43,22 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.common.warnings import warn_deprecation
 from aiida.engine import Process, ProcessBuilder, submit
 from aiida.engine.daemon.client import DaemonClient
-from aiida.manage.tests import get_test_backend_name, get_test_profile_name, test_manager
-from aiida.orm import ProcessNode
+from aiida.manage import Config, Profile, get_manager, get_profile
+from aiida.manage.manager import Manager
+from aiida.orm import ProcessNode, User
+
+
+def recursive_merge(left: dict[t.Any, t.Any], right: dict[t.Any, t.Any]) -> None:
+    """Recursively merge the ``right`` dictionary into the ``left`` dictionary.
+
+    :param left: Base dictionary.
+    :param right: Dictionary to recurisvely merge on top of ``left`` dictionary.
+    """
+    for key, value in right.items():
+        if (key in left and isinstance(left[key], dict) and isinstance(value, dict)):
+            recursive_merge(left[key], value)
+        else:
+            left[key] = value
 
 
 @pytest.fixture(scope='function')
@@ -43,16 +70,263 @@ def aiida_caplog(caplog):
     AIIDA_LOGGER.propagate = propogate
 
 
-@pytest.fixture(scope='session', autouse=True)
-def aiida_profile():
-    """Set up AiiDA test profile for the duration of the tests.
+@pytest.fixture(scope='session')
+def postgres_cluster(
+    database_name: str | None = None,
+    database_username: str | None = None,
+    database_password: str | None = None
+) -> t.Generator[dict[str, str], None, None]:
+    """Create a temporary and isolated PostgreSQL cluster using ``pgtest`` and cleanup after the yield.
 
-    Note: scope='session' limits this fixture to run once per session. Thanks to ``autouse=True``, you don't actually
-     need to depend on it explicitly - it will activate as soon as you import it in your ``conftest.py``.
+    :param database_name: Name of the database.
+    :param database_username: Username to use for authentication.
+    :param database_password: Password to use for authentication.
+    :returns: Dictionary with parameters to connect to the PostgreSQL cluster.
     """
-    with test_manager(backend=get_test_backend_name(), profile_name=get_test_profile_name()) as manager:
-        yield manager
-    # Leaving the context manager will automatically cause the `TestManager` instance to be destroyed
+    from pgtest.pgtest import PGTest
+
+    from aiida.manage.external.postgres import Postgres
+
+    postgres_config = {
+        'database_engine': 'postgresql_psycopg2',
+        'database_name': database_name or str(uuid.uuid4()),
+        'database_username': database_username or 'guest',
+        'database_password': database_password or 'guest',
+    }
+
+    try:
+        cluster = PGTest()
+
+        postgres = Postgres(interactive=False, quiet=True, dbinfo=cluster.dsn)
+        postgres.create_dbuser(postgres_config['database_username'], postgres_config['database_password'], 'CREATEDB')
+        postgres.create_db(postgres_config['database_username'], postgres_config['database_name'])
+
+        postgres_config['database_hostname'] = postgres.host_for_psycopg2
+        postgres_config['database_port'] = postgres.port_for_psycopg2
+
+        yield postgres_config
+    finally:
+        cluster.close()
+
+
+@pytest.fixture(scope='session')
+def aiida_test_profile() -> str | None:
+    """Return the name of the AiiDA test profile if defined.
+
+    The name is taken from the ``AIIDA_TEST_PROFILE`` environment variable.
+
+    :returns: The name of the profile to you for the test session or ``None`` if not defined.
+    """
+    return os.environ.get('AIIDA_TEST_PROFILE', None)
+
+
+@pytest.fixture(scope='session')
+def aiida_manager() -> Manager:
+    """Return the global instance of the :class:`~aiida.manage.manager.Manager`.
+
+    :returns: The global manager instance.
+    """
+    return get_manager()
+
+
+@pytest.fixture(scope='session')
+def aiida_instance(
+    tmp_path_factory: pytest.TempPathFactory,
+    aiida_manager: Manager,
+    aiida_test_profile: str | None,
+) -> t.Generator[Config, None, None]:
+    """Return the :class:`~aiida.manage.configuration.config.Config` instance that is used for the test session.
+
+    If an existing test profile is defined through the ``aiida_test_profile`` fixture, the configuration of the actual
+    AiiDA instance is loaded and returned. If no test profile is defined, a completely independent and temporary AiiDA
+    instance is generated in a temporary directory with a clean `.aiida` folder and basic configuration file. The
+    currently loaded configuration and profile are stored in memory and are automatically restored at the end of the
+    test session. The temporary instance is automatically deleted.
+
+    :return: The configuration the AiiDA instance loaded for this test session.
+    """
+    from aiida.manage import configuration
+    from aiida.manage.configuration import settings
+
+    if aiida_test_profile:
+        yield configuration.get_config()
+
+    else:
+        reset = False
+
+        if configuration.CONFIG is not None:
+            reset = True
+            current_config = configuration.CONFIG
+            current_config_path = current_config.dirpath
+            current_profile = configuration.get_profile()
+            current_path_variable = os.environ.get(settings.DEFAULT_AIIDA_PATH_VARIABLE, None)
+
+        dirpath_config = tmp_path_factory.mktemp('config')
+        os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = str(dirpath_config)
+        settings.AIIDA_CONFIG_FOLDER = dirpath_config
+        settings.set_configuration_directory()
+        configuration.CONFIG = configuration.load_config(create=True)
+
+        try:
+            yield configuration.CONFIG
+        finally:
+            if reset:
+                if current_path_variable is None:
+                    os.environ.pop(settings.DEFAULT_AIIDA_PATH_VARIABLE, None)
+                else:
+                    os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = current_path_variable
+
+                settings.AIIDA_CONFIG_FOLDER = current_config_path
+                configuration.CONFIG = current_config
+                if current_profile:
+                    aiida_manager.load_profile(current_profile.name, allow_switch=True)
+
+
+@pytest.fixture(scope='session')
+def config_psql_dos(
+    tmp_path_factory: pytest.TempPathFactory,
+    postgres_cluster: dict[str, str],
+) -> t.Callable[[dict[str, t.Any] | None], dict[str, t.Any]]:
+    """Return a profile configuration for the :class:`~aiida.storage.psql_dos.backend.PsqlDosBackend`."""
+
+    def factory(custom_configuration: dict[str, t.Any] | None = None) -> dict[str, t.Any]:
+        """Return a profile configuration for the :class:`~aiida.storage.psql_dos.backend.PsqlDosBackend`.
+
+        :param custom_configuration: Custom configuration to override default profile configuration.
+        :returns: The profile configuration.
+        """
+        configuration = {
+            'storage': {
+                'backend': 'core.psql_dos',
+                'config': {
+                    **postgres_cluster,
+                    'repository_uri': f'file://{tmp_path_factory.mktemp("repository")}',
+                }
+            }
+        }
+        recursive_merge(configuration, custom_configuration or {})
+        return configuration
+
+    return factory
+
+
+def clear_profile():
+    """Clear the currently loaded profile.
+
+    This ensures that the contents of the profile are reset as well as the ``Manager``, which may hold references to
+    data that will be destroyed. The daemon will also be stopped if it was running.
+    """
+    from aiida.engine.daemon.client import get_daemon_client
+
+    daemon_client = get_daemon_client()
+
+    if daemon_client.is_daemon_running:
+        daemon_client.stop_daemon(wait=True)
+
+    manager = get_manager()
+    manager.get_profile_storage()._clear(recreate_user=True)  # pylint: disable=protected-access
+    manager.get_profile_storage()  # reload the storage connection
+    manager.reset_communicator()
+    manager.reset_runner()
+
+
+@pytest.fixture(scope='session')
+def aiida_profile_factory(
+    aiida_instance: Config,
+    aiida_manager: Manager,
+) -> t.Callable[[dict[str, t.Any]], Profile]:
+    """Create a temporary profile, add it to the config of the loaded AiiDA instance and load the profile.
+
+    The default configuration is complete except for the configuration of the storage, which should be provided through
+    the ``custom_configuration`` argument. The storage will be fully reset and initalised, destroying all data that it
+    contains and recreate the default user, making the profile ready for use.
+    """
+
+    def factory(custom_configuration: dict[str, t.Any]) -> Profile:
+        """Create an isolated AiiDA instance with a temporary and fully loaded profile.
+
+        :param custom_configuration: Custom configuration to override default profile configuration.
+        :returns: The constructed profile.
+        """
+        config = aiida_instance
+        configuration = {
+            'default_user_email': 'test@aiida.local',
+            'storage': {},
+            'process_control': {
+                'backend': 'rabbitmq',
+                'config': {
+                    'broker_protocol': 'amqp',
+                    'broker_username': 'guest',
+                    'broker_password': 'guest',
+                    'broker_host': '127.0.0.1',
+                    'broker_port': 5672,
+                    'broker_virtual_host': '',
+                }
+            },
+            'options': {
+                'warnings.development_version': False,
+                'warnings.rabbitmq_version': False,
+            }
+        }
+        recursive_merge(configuration, custom_configuration or {})
+        configuration['test_profile'] = True
+
+        with contextlib.redirect_stdout(io.StringIO()):
+            profile_name = str(uuid.uuid4())
+            profile = Profile(profile_name, configuration)
+            profile.storage_cls.initialise(profile, reset=True)
+
+            config.add_profile(profile)
+            config.set_default_profile(profile_name)
+            config.store()
+
+            aiida_manager.load_profile(profile_name, allow_switch=True)
+
+            User(profile.default_user_email).store()
+
+        # Add the ``clear_profile`` method, such that users can empty the storage through the ``Profile`` instance that
+        # is returned by this fixture. This functionality is added for backwards-compatibility as before the fixture
+        # used to return an instance of the :class:`~aiida.manage.tests.main.TestManager` which provided this method
+        # that was often used.
+        setattr(profile, 'clear_profile', clear_profile)
+
+        return profile
+
+    return factory
+
+
+@pytest.fixture(scope='session', autouse=True)
+def aiida_profile(
+    aiida_manager: Manager,
+    aiida_test_profile: str | None,
+    aiida_profile_factory: t.Callable[[dict[str, t.Any] | None], Profile],
+    config_psql_dos: t.Callable[[dict[str, t.Any] | None], dict[str, t.Any]],
+) -> t.Generator[Profile, None, None]:
+    """Return a loaded AiiDA test profile.
+
+    If a test profile has been declared, as returned by the ``aiida_test_profile`` fixture, that is loaded and yielded.
+    Otherwise, a temporary and fully isolated AiiDA instance is created, complete with a loaded test profile, that are
+    all automatically cleaned up at the end of the test session. The storage backend used for the profile is
+    :class:`~aiida.storage.psql_dos.backend.PsqlDosBackend`.
+    """
+    if aiida_test_profile is not None:
+        aiida_manager.load_profile(aiida_test_profile)
+        profile = get_profile()
+
+        if profile is None:
+            raise RuntimeError(f'could not load the `{aiida_test_profile}` test profile.')
+
+        if not profile.is_test_profile:
+            raise RuntimeError(f'specified test profile `{aiida_test_profile}` is not a test profile.')
+
+        # Add the ``clear_profile`` method. See ``aiida_profile_factory`` for the reasoning. Note that since it is added
+        # there, this only needs to be added here, for an existing test profile, because the temporarily created profile
+        # will have it added by the ``aiida_profile_factory`` fixture itself.
+        setattr(profile, 'clear_profile', clear_profile)
+    else:
+        profile = aiida_profile_factory(config_psql_dos({}))
+
+    yield profile
 
 
 @pytest.fixture(scope='function')
@@ -148,7 +422,7 @@ def aiida_localhost(tmp_path):
 
 
     :return: The computer node
-    :rtype: :py:class:`aiida.orm.Computer`
+    :rtype: :py:class:`~aiida.orm.Computer`
     """
     from aiida.common.exceptions import NotExistent
     from aiida.orm import Computer
@@ -201,7 +475,7 @@ def aiida_local_code_factory(aiida_localhost):
         :param prepend_text: a string of code that will be put in the scheduler script before the execution of the code.
         :param append_text: a string of code that will be put in the scheduler script after the execution of the code.
         :return: the `Code` either retrieved from the database or created if it did not yet exist.
-        :rtype: :py:class:`aiida.orm.Code`
+        :rtype: :py:class:`~aiida.orm.Code`
         """
         from aiida.common import exceptions
         from aiida.orm import Computer, InstalledCode, QueryBuilder
@@ -253,7 +527,7 @@ def daemon_client(aiida_profile):
 
     The daemon will be automatically stopped at the end of the test session.
     """
-    daemon_client = DaemonClient(aiida_profile._manager._profile)  # pylint: disable=protected-access
+    daemon_client = DaemonClient(aiida_profile)
 
     try:
         yield daemon_client

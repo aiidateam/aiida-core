@@ -219,7 +219,7 @@ If the profile parameter is specified in a request and the REST API does not hav
 Warning: this is beta functionality.
 It is now possible to implement custom storage backends to control where all data of an AiiDA profile is stored.
 To provide a data storage plugin, one should implement the `aiida.orm.implementation.storage_backend.StorageBackend` interface.
-The default implementation provided by `aiida-core` is the `aiida.storage.psql_dos.backend.PsqlDosBackend` which uses a PostgreSQL database for the provenance graph and a [`disk-objectstore`](#https://pypi.org/project/disk-objectstore/) container for repository files.
+The default implementation provided by `aiida-core` is the `aiida.storage.psql_dos.backend.PsqlDosBackend` which uses a PostgreSQL database for the provenance graph and a [`disk-objectstore`](https://pypi.org/project/disk-objectstore/) container for repository files.
 
 Storage backend plugins should be registered in the new entry point group `aiida.storage`.
 The default storage backend `PsqlDosBackend` has the `core.psql_dos` entry point name.

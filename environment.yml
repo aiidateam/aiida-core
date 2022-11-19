@@ -7,9 +7,9 @@ channels:
 dependencies:
 - python~=3.8
 - alembic~=1.2
-- archive-path~=0.4.1
+- archive-path~=0.4.2
 - aio-pika~=6.6
-- circus~=0.17.1
+- circus~=0.18.0
 - click-config-file~=0.6.0
 - click-spinner~=0.1.8
 - click~=8.1
@@ -18,17 +18,17 @@ dependencies:
 - ipython~=7.20
 - jinja2~=3.0
 - jsonschema~=3.0
-- kiwipy[rmq]~=0.7.5
+- kiwipy[rmq]~=0.7.7
 - importlib-metadata~=4.3
 - importlib-resources~=5.0
 - numpy~=1.19
 - paramiko>=2.7.2,~=2.7
-- plumpy~=0.21.1
+- plumpy~=0.21.2
 - pgsu~=0.2.1
 - psutil~=5.6
 - psycopg2-binary~=2.8
 - pytz~=2021.1
-- pyyaml~=5.4
+- pyyaml~=6.0
 - requests~=2.0
 - sqlalchemy~=1.4.22
 - tabulate~=0.8.5

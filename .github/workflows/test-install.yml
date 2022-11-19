@@ -63,8 +63,10 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Upgrade pip and setuptools
+      # Install specific version of setuptools, because 65.6.0 breaks a number of packages, such as numpy
       run: |
-        pip install --upgrade pip setuptools
+        pip install --upgrade pip
+        pip install setuptools==65.5.0
         pip --version
 
     - name: Create environment from requirements file.
@@ -229,8 +231,10 @@ jobs:
 
     - name: Upgrade pip and setuptools
       # It is crucial to update `setuptools` or the installation of `pymatgen` can break
+      # Install specific version of setuptools, because 65.6.0 breaks a number of packages, such as numpy
       run: |
-        pip install --upgrade pip setuptools
+        pip install --upgrade pip
+        pip install setuptools==65.5.0
         pip --version
 
     - name: Install aiida-core

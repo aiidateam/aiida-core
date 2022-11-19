@@ -25,9 +25,9 @@ keywords = ["aiida", "workflows"]
 requires-python = ">=3.8"
 dependencies = [
     "alembic~=1.2",
-    "archive-path~=0.4.1",
+    "archive-path~=0.4.2",
     "aio-pika~=6.6",
-    "circus~=0.17.1",
+    "circus~=0.18.0",
     "click-config-file~=0.6.0",
     "click-spinner~=0.1.8",
     "click~=8.1",
@@ -36,17 +36,17 @@ dependencies = [
     "ipython~=7.20",
     "jinja2~=3.0",
     "jsonschema~=3.0",
-    "kiwipy[rmq]~=0.7.5",
+    "kiwipy[rmq]~=0.7.7",
     "importlib-metadata~=4.3",
     "importlib-resources~=5.0;python_version<'3.9'",
     "numpy~=1.19",
     "paramiko~=2.7,>=2.7.2",
-    "plumpy~=0.21.1",
+    "plumpy~=0.21.2",
     "pgsu~=0.2.1",
     "psutil~=5.6",
     "psycopg2-binary~=2.8",
     "pytz~=2021.1",
-    "pyyaml~=5.4",
+    "pyyaml~=6.0",
     "requests~=2.0",
     "sqlalchemy~=1.4.22",
     "tabulate~=0.8.5",
@@ -84,7 +84,7 @@ docs = [
     "sphinxext-rediraffe~=0.2.4",
     "sphinx-sqlalchemy~=0.1.1",
     "sphinx-intl[transifex]~=2.0.1",
-    "myst-nb~=0.13.2"
+    "myst-nb~=0.17.0",
 ]
 atomic_tools = [
     "PyCifRW~=4.4",
@@ -114,15 +114,15 @@ tests = [
     "aiida-export-migration-tests==0.9.0",
     "pg8000~=1.13",
     "pgtest~=1.3,>=1.3.1",
-    "pytest~=6.2",
+    "pytest~=7.0",
     "pytest-asyncio~=0.12,<0.17",
     "pytest-timeout~=1.3",
     "pytest-cov~=2.7,<2.11",
     "pytest-rerunfailures~=9.1,>=9.1.1",
-    "pytest-benchmark~=3.2",
+    "pytest-benchmark~=4.0",
     "pytest-regressions~=2.2",
     "pympler~=0.9",
-    "coverage<5.0",
+    "coverage~=6.0",
     "sqlalchemy-utils~=0.37.2",
     "sphinx~=4.0",
     "docutils==0.16",
@@ -314,7 +314,7 @@ docstring-min-length = 5
 max-locals = 20
 
 [tool.pytest.ini_options]
-minversion = "6.0"
+minversion = "7.0"
 addopts = "--benchmark-skip --durations=50 --cov-report xml --cov-append "
 testpaths = [
     "tests",

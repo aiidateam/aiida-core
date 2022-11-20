@@ -38,6 +38,7 @@ dependencies = [
     "jsonschema~=3.0",
     "kiwipy[rmq]~=0.7.5",
     "importlib-metadata~=4.3",
+    "importlib-resources~=5.0;python_version<'3.9'",
     "numpy~=1.19",
     "paramiko~=2.7,>=2.7.2",
     "plumpy~=0.21.1",

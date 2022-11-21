@@ -357,8 +357,11 @@ The module provides the following fixtures:
 * :ref:`aiida_instance <topics:plugins:testfixtures:aiida-instance>`: Return the :class:`~aiida.manage.configuration.config.Config` instance that is used for the test session
 * :ref:`config_psql_dos <topics:plugins:testfixtures:config-psql-dos>`: Return a profile configuration for the :class:`~aiida.storage.psql_dos.backend.PsqlDosBackend`
 * :ref:`postgres_cluster <topics:plugins:testfixtures:postgres-cluster>`: Create a temporary and isolated PostgreSQL cluster using ``pgtest`` and cleanup after the yield
-* :ref:`aiida_localhost <topics:plugins:testfixtures:aiida-localhost>`: Setup a :class:`~aiida.orm.computers.Computer` instance for the ``localhost`` computer
 * :ref:`aiida_local_code_factory <topics:plugins:testfixtures:aiida-local-code-factory>`: Setup a :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` instance on the ``localhost`` computer
+* :ref: `aiida_computer` <topics:plugins:testfixtures:aiida-computer>`: Setup a :class:`~aiida.orm.computers.Computer` instance
+* :ref: `aiida_computer_local` <topics:plugins:testfixtures:aiida-computer-local>`: Setup the localhost as a :class:`~aiida.orm.computers.Computer` using local transport
+* :ref: `aiida_computer_ssh` <topics:plugins:testfixtures:aiida-computer-ssh>`: Setup the localhost as a :class:`~aiida.orm.computers.Computer` using SSH transport
+* :ref:`aiida_localhost <topics:plugins:testfixtures:aiida-localhost>`: Shortcut for <topics:plugins:testfixtures:aiida-computer-local> that immediately returns a :class:`~aiida.orm.computers.Computer` instance for the ``localhost`` computer instead of a factory
 * :ref:`submit_and_await <topics:plugins:testfixtures:submit-and-await>`: Submit a process or process builder to the daemon and wait for it to reach a certain process state
 * :ref:`started_daemon_client <topics:plugins:testfixtures:started-daemon-client>`: Same as ``daemon_client`` but the daemon is guaranteed to be running
 * :ref:`stopped_daemon_client <topics:plugins:testfixtures:stopped-daemon-client>`: Same as ``daemon_client`` but the daemon is guaranteed to *not* be running
@@ -569,6 +572,111 @@ For example:
         )
 
 By default, it will use the ``localhost`` computer returned by the ``aiida_localhost`` fixture.
+
+
+.. _topics:plugins:testfixtures:aiida-computer:
+
+``aiida_computer``
+------------------
+
+This fixture should be used to create and configure a :class:`~aiida.orm.computers.Computer` instance.
+The fixture provides a factory that can be called without any arguments:
+
+.. code-block:: python
+
+    def test(aiida_computer):
+        from aiida.orm import Computer
+        computer = aiida_computer()
+        assert isinstance(computer, Computer)
+
+By default, the localhost is used for the hostname and a random label is generated.
+
+.. code-block:: python
+
+    def test(aiida_computer):
+        custom_label = 'custom-label'
+        computer = aiida_computer(label=custom_label)
+        assert computer.label == custom_label
+
+First the database is queried to see if a computer with the given label already exist.
+If found, the existing computer is returned, otherwise a new instance is created.
+
+The returned computer is also configured for the current default user.
+The configuration can be customized through the ``configuration_kwargs`` dictionary:
+
+.. code-block:: python
+
+    def test(aiida_computer):
+        configuration_kwargs = {'safe_interval': 0}
+        computer = aiida_computer(configuration_kwargs=configuration_kwargs)
+        assert computer.get_minimum_job_poll_interval() == 0
+
+
+.. _topics:plugins:testfixtures:aiida-computer-local:
+
+``aiida_computer_local``
+----------------------------
+
+This fixture is a shortcut for ``aiida_computer`` to setup the localhost with local transport:
+
+.. code-block:: python
+
+    def test(aiida_computer_local):
+        localhost = aiida_computer_local()
+        assert localhost.hostname == 'localhost'
+        assert localhost.transport_type == 'core.local'
+
+To leave a newly created computer unconfigured, pass ``configure=False``:
+
+.. code-block:: python
+
+    def test(aiida_computer_local):
+        localhost = aiida_computer_local(configure=False)
+        assert not localhost.is_configured
+
+Note that if the computer already exists and was configured before, it won't be unconfigured.
+If you need a guarantee that the computer is not configured, make sure to clean the database before the test or use a unique label:
+
+.. code-block:: python
+
+    def test(aiida_computer_local):
+        import uuid
+        localhost = aiida_computer_local(label=str(uuid.uuid4()), configure=False)
+        assert not localhost.is_configured
+
+
+.. _topics:plugins:testfixtures:aiida-computer-ssh:
+
+``aiida_computer_ssh``
+----------------------
+
+This fixture is a shortcut for ``aiida_computer`` to setup the localhost with SSH transport:
+
+.. code-block:: python
+
+    def test(aiida_computer_ssh):
+        localhost = aiida_computer_ssh()
+        assert localhost.hostname == 'localhost'
+        assert localhost.transport_type == 'core.ssh'
+
+This can be useful if the functionality that needs to be tested involves testing the SSH transport, but these use-cases should be rare outside of `aiida-core`.
+To leave a newly created computer unconfigured, pass ``configure=False``:
+
+.. code-block:: python
+
+    def test(aiida_computer_ssh):
+        localhost = aiida_computer_ssh(configure=False)
+        assert not localhost.is_configured
+
+Note that if the computer already exists and was configured before, it won't be unconfigured.
+If you need a guarantee that the computer is not configured, make sure to clean the database before the test or use a unique label:
+
+.. code-block:: python
+
+    def test(aiida_computer_ssh):
+        import uuid
+        localhost = aiida_computer_ssh(label=str(uuid.uuid4()), configure=False)
+        assert not localhost.is_configured
 
 
 .. _topics:plugins:testfixtures:submit-and-await:

@@ -18,7 +18,7 @@ from __future__ import annotations
 import copy
 import os
 import pathlib
-from typing import IO, List, Optional, Union
+import typing as t
 import warnings
 
 import click
@@ -415,8 +415,8 @@ def run_cli_command(reset_log_level):  # pylint: disable=unused-argument
 
     def _run_cli_command(
         command: click.Command,
-        options: Optional[List] = None,
-        user_input: Optional[Union[str, bytes, IO]] = None,
+        options: list | None = None,
+        user_input: str | bytes | t.IO | None = None,
         raises: bool = False,
         catch_exceptions: bool = True,
         **kwargs

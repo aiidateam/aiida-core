@@ -106,6 +106,15 @@ class TestComputerConfigure:
         self.comp_builder.shebang = '#!xonsh'
         self.user = User.collection.get_default()
 
+    def test_is_configured(self):
+        """Test the :meth:`aiida.orm.computers.Computer.is_configured`."""
+        self.comp_builder.label = 'test_configure_local'
+        self.comp_builder.transport = 'core.local'
+        comp = self.comp_builder.new()
+        comp.store()
+        comp.configure()
+        assert comp.is_configured
+
     def test_configure_local(self):
         """Configure a computer for local transport and check it is configured."""
         self.comp_builder.label = 'test_configure_local'

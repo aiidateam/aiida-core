@@ -391,7 +391,7 @@ class TestVerdiComputerConfigure:
 
         options = ['core.local', comp.label, '--non-interactive', '--safe-interval', '0']
         result = self.cli_runner(computer_configure, options, catch_exceptions=False)
-        assert comp.is_user_configured(self.user), result.output
+        assert comp.is_configured, result.output
 
         self.comp_builder.label = 'test_local_ni_empty_mismatch'
         self.comp_builder.transport = 'core.ssh'
@@ -416,7 +416,7 @@ class TestVerdiComputerConfigure:
         result = self.cli_runner(
             computer_configure, ['core.local', comp.label], user_input=f'{invalid}\n{valid}\n', catch_exceptions=False
         )
-        assert comp.is_user_configured(self.user), result.output
+        assert comp.is_configured, result.output
 
         new_auth_params = comp.get_authinfo(self.user).get_auth_params()
         assert new_auth_params['use_login_shell'] is False
@@ -454,7 +454,7 @@ class TestVerdiComputerConfigure:
         result = self.cli_runner(
             computer_configure, ['core.ssh', comp.label], user_input=command_input, catch_exceptions=False
         )
-        assert comp.is_user_configured(self.user), result.output
+        assert comp.is_configured, result.output
         new_auth_params = comp.get_authinfo(self.user).get_auth_params()
         assert new_auth_params['username'] == remote_username
         assert new_auth_params['port'] == port
@@ -499,7 +499,7 @@ safe_interval: {interval}
 
         options = ['core.ssh', comp.label, '--non-interactive', '--safe-interval', '1']
         result = self.cli_runner(computer_configure, options, catch_exceptions=False)
-        assert comp.is_user_configured(self.user), result.output
+        assert comp.is_configured, result.output
 
         self.comp_builder.label = 'test_ssh_ni_empty_mismatch'
         self.comp_builder.transport = 'core.local'
@@ -523,7 +523,7 @@ safe_interval: {interval}
         options = ['core.ssh', comp.label, '--non-interactive', f'--username={username}', '--safe-interval', '1']
         result = self.cli_runner(computer_configure, options, catch_exceptions=False)
         auth_info = orm.AuthInfo.collection.get(dbcomputer_id=comp.pk, aiidauser_id=self.user.pk)
-        assert comp.is_user_configured(self.user), result.output
+        assert comp.is_configured, result.output
         assert auth_info.get_auth_params()['username'] == username
 
     def test_show(self):
@@ -546,7 +546,7 @@ safe_interval: {interval}
         config_cmd = ['core.ssh', comp.label, '--non-interactive']
         config_cmd.extend(result.output.replace("'", '').split(' '))
         result_config = self.cli_runner(computer_configure, config_cmd, catch_exceptions=False)
-        assert comp.is_user_configured(self.user), result_config.output
+        assert comp.is_configured, result_config.output
 
         result_cur = self.cli_runner(
             computer_configure, ['show', comp.label, '--as-option-string'], catch_exceptions=False
@@ -580,7 +580,7 @@ class TestVerdiComputerCommands:
         self.comp.store()
         self.comp.configure()
         self.user = orm.User.collection.get_default()
-        assert self.comp.is_user_configured(self.user), 'There was a problem configuring the test computer'
+        assert self.comp.is_configured, 'There was a problem configuring the test computer'
         self.cli_runner = run_cli_command
 
     def test_computer_test(self):

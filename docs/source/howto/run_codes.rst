@@ -107,8 +107,8 @@ The computer has now been created in the database but you still need to *configu
        ---
        label: "localhost"
        hostname: "localhost"
-       transport: local
-       scheduler: "direct"
+       transport: "core.local"
+       scheduler: "core.direct"
        work_dir: "/home/max/.aiida_run"
        mpirun_command: "mpirun -np {tot_num_mpiprocs}"
        mpiprocs_per_machine: "2"
@@ -135,7 +135,7 @@ The second step configures private connection details using:
 
     $ verdi computer configure TRANSPORTTYPE COMPUTERLABEL
 
-Replace ``COMPUTERLABEL`` with the computer label chosen during the setup and replace ``TRANSPORTTYPE`` with the name of chosen transport type, i.e., ``local`` for the localhost computer and ``ssh`` for any remote computer.
+Replace ``COMPUTERLABEL`` with the computer label chosen during the setup and replace ``TRANSPORTTYPE`` with the name of chosen transport type, i.e., ``core.local`` for the localhost computer and ``core.ssh`` for any remote computer.
 
 After the setup and configuration have been completed, let's check that everything is working properly:
 

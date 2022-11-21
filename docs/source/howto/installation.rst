@@ -109,7 +109,7 @@ Enable tab-completion for ``verdi`` one of the following supported shells
 
         .. code-block:: console
 
-            eval (env _FOO_BAR_COMPLETE=fish_source foo-bar)
+            eval (env _VERDI_COMPLETE=fish_source verdi)
 
 
 Place this command in your shell or virtual environment activation script to automatically enable tab completion when opening a new shell or activating an environment.

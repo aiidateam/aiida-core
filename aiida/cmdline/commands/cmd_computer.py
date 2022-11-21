@@ -265,7 +265,6 @@ def computer_setup(ctx, non_interactive, **kwargs):
 @with_dbenv()
 def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     """Duplicate a computer allowing to change some parameters."""
-    from aiida import orm
     from aiida.orm.utils.builders.computer import ComputerBuilder
 
     if kwargs['label'] in get_computer_names():
@@ -293,9 +292,7 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     else:
         echo.echo_success(f'Computer<{computer.pk}> {computer.label} created')
 
-    is_configured = computer.is_user_configured(orm.User.collection.get_default())
-
-    if not is_configured:
+    if not computer.is_configured:
         echo.echo_report('Note: before the computer can be used, it has to be configured with the command:')
 
         profile = ctx.obj['profile']
@@ -367,8 +364,8 @@ def computer_list(all_entries, raw):
         echo.echo_report("No computers configured yet. Use 'verdi computer setup'")
 
     sort = lambda computer: computer.label
-    highlight = lambda comp: comp.is_user_configured(user) and comp.is_user_enabled(user)
-    hide = lambda comp: not (comp.is_user_configured(user) and comp.is_user_enabled(user)) and not all_entries
+    highlight = lambda comp: comp.is_configured and comp.is_user_enabled(user)
+    hide = lambda comp: not (comp.is_configured and comp.is_user_enabled(user)) and not all_entries
     echo.echo_formatted_list(computers, ['label'], sort=sort, highlight=highlight, hide=hide)
 
 

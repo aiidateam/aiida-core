@@ -580,6 +580,14 @@ class Computer(entities.Entity['BackendComputer']):
 
         return authinfo
 
+    @property
+    def is_configured(self) -> bool:
+        """Return whether the computer is configured for the current default user.
+
+        :return: Boolean, ``True`` if the computer is configured for the current default user, ``False`` otherwise.
+        """
+        return self.is_user_configured(users.User.collection(self.backend).get_default())
+
     def is_user_configured(self, user: 'User') -> bool:
         """
         Is the user configured on this computer?

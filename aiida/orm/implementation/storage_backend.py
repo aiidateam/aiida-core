@@ -133,15 +133,14 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
         """Return whether the storage is closed."""
 
     @abc.abstractmethod
-    def _clear(self, recreate_user: bool = True) -> None:
+    def _clear(self) -> None:
         """Clear the storage, removing all data.
 
         .. warning:: This is a destructive operation, and should only be used for testing purposes.
-
-        :param recreate_user: Re-create the default `User` for the profile, after clearing the storage.
         """
         from aiida.orm.autogroup import AutogroupManager
         self._autogroup = AutogroupManager(self)
+        self._default_user = None
 
     @property
     @abc.abstractmethod

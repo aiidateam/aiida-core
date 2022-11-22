@@ -153,26 +153,15 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         # in sqlalchemy.orm.session._sessions
         gc.collect()
 
-    def _clear(self, recreate_user: bool = True) -> None:
+    def _clear(self) -> None:
         from aiida.storage.psql_dos.models.settings import DbSetting
-        from aiida.storage.psql_dos.models.user import DbUser
 
-        super()._clear(recreate_user)
+        super()._clear()
 
         session = self.get_session()
 
         # clear the database
         with self.transaction():
-
-            # save the default user
-            default_user_kwargs = None
-            if recreate_user and self.default_user is not None:
-                default_user_kwargs = {
-                    'email': self.default_user.email,
-                    'first_name': self.default_user.first_name,
-                    'last_name': self.default_user.last_name,
-                    'institution': self.default_user.institution,
-                }
 
             # now clear the database
             for table_name in (
@@ -181,11 +170,6 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
             ):
                 session.execute(table(table_name).delete())
             session.expunge_all()
-            self._default_user = None
-
-            # restore the default user
-            if recreate_user and default_user_kwargs:
-                session.add(DbUser(**default_user_kwargs))
 
         self._migrator.reset_repository()
         self._migrator.initialise_repository()

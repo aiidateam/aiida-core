@@ -79,21 +79,34 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
 
     @classmethod
     def version_profile(cls, profile: Profile) -> Optional[str]:
-        return cls.migrator(profile).get_schema_version_profile(check_legacy=True)
+        with cls.migrator_context(profile) as migrator:
+            return migrator.get_schema_version_profile(check_legacy=True)
 
     @classmethod
     def initialise(cls, profile: Profile, reset: bool = False) -> bool:
-        return cls.migrator(profile).initialise(reset=reset)
+        with cls.migrator_context(profile) as migrator:
+            return migrator.initialise(reset=reset)
 
     @classmethod
     def migrate(cls, profile: Profile) -> None:
-        cls.migrator(profile).migrate()
+        with cls.migrator_context(profile) as migrator:
+            migrator.migrate()
+
+    @classmethod
+    @contextmanager
+    def migrator_context(cls, profile: Profile):
+        migrator = cls.migrator(profile)
+        try:
+            yield migrator
+        finally:
+            migrator.close()
 
     def __init__(self, profile: Profile) -> None:
         super().__init__(profile)
 
         # check that the storage is reachable and at the correct version
-        self.migrator(profile).validate_storage()
+        with self.migrator_context(profile) as migrator:
+            migrator.validate_storage()
 
         self._session_factory: Optional[scoped_session] = None
         self._initialise_session()
@@ -107,7 +120,6 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         self._logs = logs.SqlaLogCollection(self)
         self._nodes = nodes.SqlaNodeCollection(self)
         self._users = users.SqlaUserCollection(self)
-        self._migrator = self.migrator(profile)
 
     @property
     def is_closed(self) -> bool:
@@ -160,25 +172,25 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
 
         session = self.get_session()
 
-        # clear the database
-        with self.transaction():
+        with self.migrator_context(self._profile) as migrator:
 
-            # now clear the database
-            for table_name in (
-                'db_dbgroup_dbnodes', 'db_dbgroup', 'db_dblink', 'db_dbnode', 'db_dblog', 'db_dbauthinfo', 'db_dbuser',
-                'db_dbcomputer'
-            ):
-                session.execute(table(table_name).delete())
-            session.expunge_all()
+            with self.transaction():
+                for table_name in (
+                    'db_dbgroup_dbnodes', 'db_dbgroup', 'db_dblink', 'db_dbnode', 'db_dblog', 'db_dbauthinfo',
+                    'db_dbuser', 'db_dbcomputer'
+                ):
+                    session.execute(table(table_name).delete())
+                session.expunge_all()
 
-        self._migrator.reset_repository()
-        self._migrator.initialise_repository()
-        repository_uuid = self._migrator.get_repository_uuid()
+            migrator.reset_repository()
+            migrator.initialise_repository()
+            repository_uuid = migrator.get_repository_uuid()
 
-        with self.transaction():
-            session.execute(
-                DbSetting.__table__.update().where(DbSetting.key == REPOSITORY_UUID_KEY).values(val=repository_uuid)
-            )
+            with self.transaction():
+                session.execute(
+                    DbSetting.__table__.update().where(DbSetting.key == REPOSITORY_UUID_KEY
+                                                       ).values(val=repository_uuid)
+                )
 
     def get_repository(self) -> 'DiskObjectStoreRepositoryBackend':
         from aiida.repository.backend import DiskObjectStoreRepositoryBackend

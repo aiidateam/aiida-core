@@ -22,6 +22,7 @@ from aiida.common.links import LinkType
         (orm.Dict, {'foo': 'bar'}),
         (orm.Float, 5.0),
         (orm.Int, 5),
+        (orm.Complex, 5.0 + 4.5j),
         (orm.List, [0, 1, 2]),
         (orm.Str, 'test-string'),
         (orm.EnumData, LinkType.RETURN),

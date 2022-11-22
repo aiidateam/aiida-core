@@ -12,6 +12,8 @@
 import copy
 from typing import TYPE_CHECKING, Any, Dict, Iterable, Iterator, List, Tuple, Union
 
+from .implementation.utils import clean_value, deserialize_value
+
 if TYPE_CHECKING:
     from .groups import Group
     from .nodes.node import Node
@@ -57,7 +59,7 @@ class EntityExtras:
         extras = self._backend_entity.extras
 
         if self._entity.is_stored:
-            extras = copy.deepcopy(extras)
+            extras = deserialize_value(copy.deepcopy(extras))
 
         return extras
 
@@ -83,7 +85,7 @@ class EntityExtras:
             extra = default
 
         if self._entity.is_stored:
-            extra = copy.deepcopy(extra)
+            extra = deserialize_value(copy.deepcopy(extra))
 
         return extra
 
@@ -105,7 +107,7 @@ class EntityExtras:
         extras = self._backend_entity.get_extra_many(keys)
 
         if self._entity.is_stored:
-            extras = copy.deepcopy(extras)
+            extras = deserialize_value(copy.deepcopy(extras))
 
         return extras
 
@@ -116,6 +118,8 @@ class EntityExtras:
         :param value: value of the extra
         :raise aiida.common.ValidationError: if the key is invalid, i.e. contains periods
         """
+        if self._entity.is_stored:
+            value = clean_value(value)
         self._backend_entity.set_extra(key, value)
 
     def set_many(self, extras: Dict[str, Any]) -> None:
@@ -126,6 +130,8 @@ class EntityExtras:
         :param extras: a dictionary with the extras to set
         :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
         """
+        if self._entity.is_stored:
+            extras = clean_value(extras)
         self._backend_entity.set_extra_many(extras)
 
     def reset(self, extras: Dict[str, Any]) -> None:
@@ -136,6 +142,8 @@ class EntityExtras:
         :param extras: a dictionary with the extras to set
         :raise aiida.common.ValidationError: if any of the keys are invalid, i.e. contain periods
         """
+        if self._entity.is_stored:
+            extras = clean_value(extras)
         self._backend_entity.reset_extras(extras)
 
     def delete(self, key: str) -> None:
@@ -163,7 +171,12 @@ class EntityExtras:
 
         :return: an iterator with extra key value pairs
         """
-        return self._backend_entity.extras_items()
+
+        def deserialize_values(items):
+            for key, value in items:
+                yield key, deserialize_value(value)
+
+        return deserialize_values(self._backend_entity.extras_items())
 
     def keys(self) -> Iterable[str]:
         """Return an iterator over the extra keys.

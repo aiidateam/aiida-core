@@ -26,11 +26,11 @@ from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 def test_v0x_django_0003(perform_migrations: PsqlDosMigrator, reflect_schema, data_regression):  # pylint: disable=too-many-locals
     """Test against an archive database schema, created in aiida-core v0.x, at revision django_0003."""
     metadata = generate_schema()
-    with perform_migrations._connection_context() as conn:  # pylint: disable=protected-access
-        metadata.create_all(conn.engine)
-        with perform_migrations._migration_context(conn) as context:  # pylint: disable=protected-access
-            context.stamp(context.script, 'django@django_0003')
-        conn.commit()
+    connection = perform_migrations.connection
+    metadata.create_all(connection.engine)
+    with perform_migrations._migration_context() as context:  # pylint: disable=protected-access
+        context.stamp(context.script, 'django@django_0003')
+    connection.commit()
 
     perform_migrations.migrate_up('django@django_0050')
     data_regression.check(reflect_schema(perform_migrations.profile))

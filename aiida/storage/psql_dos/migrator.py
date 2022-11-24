@@ -27,7 +27,7 @@ from alembic.runtime.environment import EnvironmentContext
 from alembic.runtime.migration import MigrationContext, MigrationInfo
 from alembic.script import ScriptDirectory
 from disk_objectstore import Container
-from sqlalchemy import String, Table, column, desc, insert, inspect, select, table
+from sqlalchemy import MetaData, String, Table, column, desc, insert, inspect, select, table
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
@@ -272,13 +272,7 @@ class PsqlDosMigrator:
 
         This will also destroy the settings table and so in order to use it again, it will have to be reinitialised.
         """
-        if inspect(self.connection).has_table(self.alembic_version_tbl_name):
-            for table_name in (
-                'db_dbgroup_dbnodes', 'db_dbgroup', 'db_dblink', 'db_dbnode', 'db_dblog', 'db_dbauthinfo', 'db_dbuser',
-                'db_dbcomputer', 'db_dbsetting'
-            ):
-                self.connection.execute(table(table_name).delete())
-            self.connection.commit()
+        self.delete_all_tables(exclude_tables=[self.alembic_version_tbl_name])
 
     def initialise_repository(self) -> None:
         """Initialise the repository."""
@@ -310,6 +304,30 @@ class PsqlDosMigrator:
         # finally, generate the version table, "stamping" it with the most recent revision
         with self._migration_context() as context:
             context.stamp(context.script, 'main@head')
+            self.connection.commit()
+
+    def delete_all_tables(self, *, exclude_tables: list[str] | None = None) -> None:
+        """Delete all tables of the current database schema.
+
+        The tables are determined dynamically through reflection of the current schema version. Any other tables in the
+        database that are not part of the schema should remain unaffected.
+
+        :param exclude_tables: Optional list of table names that should not be deleted.
+        """
+        exclude_tables = exclude_tables or []
+
+        if inspect(self.connection).has_table(self.alembic_version_tbl_name):
+
+            metadata = MetaData()
+            metadata.reflect(bind=self.connection)
+
+            # The ``sorted_tables`` property returns the tables sorted by their foreign-key dependencies, with those
+            # that are dependent on others first. Iterate over the list in reverse to ensure that the tables with
+            # the independent rows are deleted first.
+            for schema_table in reversed(metadata.sorted_tables):
+                if schema_table.name in exclude_tables:
+                    continue
+                self.connection.execute(schema_table.delete())
             self.connection.commit()
 
     def migrate(self) -> None:

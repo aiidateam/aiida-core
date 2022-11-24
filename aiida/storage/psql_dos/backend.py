@@ -178,7 +178,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
                 # to the PostgreSQL server and it will block the deletion and the command will hang.
                 self.get_session().close()
                 exclude_tables = [migrator.alembic_version_tbl_name, 'db_dbsetting']
-                migrator.delete_tables(exclude_tables)
+                migrator.delete_all_tables(exclude_tables=exclude_tables)
 
                 # Clear out all references to database model instances which are now invalid.
                 session.expunge_all()

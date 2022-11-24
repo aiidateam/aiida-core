@@ -272,7 +272,7 @@ class PsqlDosMigrator:
 
         This will also destroy the settings table and so in order to use it again, it will have to be reinitialised.
         """
-        self.delete_tables(exclude_tables=[self.alembic_version_tbl_name])
+        self.delete_all_tables(exclude_tables=[self.alembic_version_tbl_name])
 
     def initialise_repository(self) -> None:
         """Initialise the repository."""
@@ -306,8 +306,11 @@ class PsqlDosMigrator:
             context.stamp(context.script, 'main@head')
             self.connection.commit()
 
-    def delete_tables(self, exclude_tables: list[str] | None = None) -> None:
-        """Delete the tables of the database.
+    def delete_all_tables(self, *, exclude_tables: list[str] | None = None) -> None:
+        """Delete all tables of the current database schema.
+
+        The tables are determined dynamically through reflection of the current schema version. Any other tables in the
+        database that are not part of the schema should remain unaffected.
 
         :param exclude_tables: Optional list of table names that should not be deleted.
         """
@@ -320,7 +323,7 @@ class PsqlDosMigrator:
 
             # The ``sorted_tables`` property returns the tables sorted by their foreign-key dependencies, with those
             # that are dependent on others first. Iterate over the list in reverse to ensure that the tables with
-            # the independent rows first.
+            # the independent rows are deleted first.
             for schema_table in reversed(metadata.sorted_tables):
                 if schema_table.name in exclude_tables:
                     continue

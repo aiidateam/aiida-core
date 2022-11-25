@@ -159,12 +159,14 @@ class InstalledCode(Code):
         """Return the CLI options that would allow to create an instance of this class."""
         options = {
             'computer': {
+                'short_name': '-Y',
                 'required': True,
                 'prompt': 'Computer',
                 'help': 'The remote computer on which the executable resides.',
                 'type': ComputerParamType(),
             },
             'filepath_executable': {
+                'short_name': '-X',
                 'required': True,
                 'type': click.Path(exists=False),
                 'prompt': 'Absolute filepath executable',

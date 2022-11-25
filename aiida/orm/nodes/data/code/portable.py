@@ -148,12 +148,14 @@ class PortableCode(Code):
         """Return the CLI options that would allow to create an instance of this class."""
         options = {
             'filepath_executable': {
+                'short_name': '-X',
                 'required': True,
                 'type': click.STRING,
                 'prompt': 'Relative filepath executable',
                 'help': 'Relative filepath of executable with directory of code files.',
             },
             'filepath_files': {
+                'short_name': '-F',
                 'required': True,
                 'type': click.Path(exists=True, file_okay=False, dir_okay=True, path_type=pathlib.Path),
                 'prompt': 'Code directory',

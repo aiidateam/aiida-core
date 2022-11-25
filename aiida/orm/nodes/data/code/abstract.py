@@ -278,6 +278,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """Return the CLI options that would allow to create an instance of this class."""
         return {
             'label': {
+                'short_name': '-L',
                 'required': True,
                 'type': click.STRING,
                 'prompt': 'Label',
@@ -285,11 +286,13 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
                 'callback': cls.cli_validate_label_uniqueness,
             },
             'description': {
+                'short_name': '-D',
                 'type': click.STRING,
                 'prompt': 'Description',
                 'help': 'Human-readable description of this code ideally including version and compilation environment.'
             },
             'default_calc_job_plugin': {
+                'short_name': '-P',
                 'type': click.STRING,
                 'prompt': 'Default `CalcJob` plugin',
                 'help': 'Entry point name of the default plugin (as listed in `verdi plugin list aiida.calculations`).'

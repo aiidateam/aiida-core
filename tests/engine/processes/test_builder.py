@@ -17,7 +17,7 @@ import pytest
 
 from aiida import orm
 from aiida.common import LinkType
-from aiida.engine import Process, WorkChain
+from aiida.engine import Process, WorkChain, run_get_node
 from aiida.engine.processes.builder import ProcessBuilderNamespace
 from aiida.plugins import CalculationFactory
 
@@ -289,27 +289,32 @@ def test_port_names_overlapping_mutable_mapping_methods():  # pylint: disable=in
     assert builder.boolean == orm.Bool(False)
 
 
-def test_calc_job_node_get_builder_restart(aiida_localhost):
+def test_calc_job_node_get_builder_restart(aiida_local_code_factory):
     """Test the `CalcJobNode.get_builder_restart` method."""
-    original = orm.CalcJobNode(
-        computer=aiida_localhost, process_type='aiida.calculations:core.arithmetic.add', label='original'
-    )
-    original.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-    original.set_option('max_wallclock_seconds', 1800)
+    code = aiida_local_code_factory('core.arithmetic.add', '/bin/bash')
+    inputs = {
+        'metadata': {
+            'label': 'some-label',
+            'description': 'some-description',
+            'options': {
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
+                },
+                'max_wallclock_seconds': 1800
+            }
+        },
+        'x': orm.Int(1),
+        'y': orm.Int(2),
+        'code': code,
+    }
 
-    original.base.links.add_incoming(orm.Int(1).store(), link_type=LinkType.INPUT_CALC, link_label='x')
-    original.base.links.add_incoming(orm.Int(2).store(), link_type=LinkType.INPUT_CALC, link_label='y')
-    original.store()
+    _, node = run_get_node(CalculationFactory('core.arithmetic.add'), **inputs)
+    builder = node.get_builder_restart()
 
-    builder = original.get_builder_restart()
-
-    assert 'x' in builder
-    assert 'y' in builder
-    assert 'metadata' in builder
-    assert 'options' in builder.metadata
     assert builder.x == orm.Int(1)
     assert builder.y == orm.Int(2)
-    assert builder._inputs(prune=True)['metadata']['options'] == original.get_options()
+    assert builder._inputs(prune=True)['metadata'] == inputs['metadata']
 
 
 def test_code_get_builder(aiida_localhost):

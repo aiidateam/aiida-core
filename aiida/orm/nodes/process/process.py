@@ -9,7 +9,7 @@
 ###########################################################################
 """Module with `Node` sub class for processes."""
 import enum
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 from plumpy.process_states import ProcessState
 
@@ -143,6 +143,7 @@ class ProcessNode(Sealable, Node):
     PROCESS_LABEL_KEY = 'process_label'
     PROCESS_STATE_KEY = 'process_state'
     PROCESS_STATUS_KEY = 'process_status'
+    METADATA_INPUTS_KEY: str = 'metadata_inputs'
 
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
@@ -167,6 +168,14 @@ class ProcessNode(Sealable, Node):
             cls.PROCESS_STATUS_KEY,
         )
 
+    def set_metadata_inputs(self, value: Dict[str, Any]) -> None:
+        """Set the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""
+        return self.base.attributes.set(self.METADATA_INPUTS_KEY, value)
+
+    def get_metadata_inputs(self) -> Optional[Dict[str, Any]]:
+        """Return the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""
+        return self.base.attributes.get(self.METADATA_INPUTS_KEY, None)
+
     @property
     def logger(self):
         """
@@ -188,6 +197,7 @@ class ProcessNode(Sealable, Node):
         """
         builder = self.process_class.get_builder()
         builder._update(self.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)).nested())  # pylint: disable=protected-access
+        builder._merge(self.get_metadata_inputs() or {})  # pylint: disable=protected-access
 
         return builder
 

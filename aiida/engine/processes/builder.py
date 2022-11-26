@@ -162,7 +162,7 @@ class ProcessBuilderNamespace(MutableMapping):
 
     def _recursive_merge(self, dictionary, key, value):
         """Recursively merge the contents of ``dictionary`` setting its ``key`` to ``value``."""
-        if isinstance(value, Mapping):
+        if isinstance(value, Mapping) and key in dictionary:
             for inner_key, inner_value in value.items():
                 self._recursive_merge(dictionary[key], inner_key, inner_value)
         else:

@@ -72,6 +72,7 @@ class NestedNamespaceProcess(Process):
         spec.input('nested.namespace.int', valid_type=int, required=True, non_db=True)
         spec.input('nested.namespace.float', valid_type=float, required=True, non_db=True)
         spec.input('nested.namespace.str', valid_type=str, required=False, non_db=True)
+        spec.input_namespace('opt', required=False, dynamic=True)
 
 
 class MappingData(Mapping, orm.Data):  # type: ignore[misc]
@@ -378,12 +379,12 @@ def test_merge():
     # Define only one of the required ports of `nested.namespace`. This should leave the `float` input untouched and
     # even though not specified explicitly again, since the merged dictionary still contains it, the
     # `nested.namespace` port should still be valid.
-    builder._merge({'nested': {'namespace': {'int': 5}}})
-    assert builder._inputs(prune=True) == {'nested': {'namespace': {'int': 5, 'float': 2.0}}}
+    builder._merge({'nested': {'namespace': {'int': 5}}, 'opt': {'m': {'a': 1}}})
+    assert builder._inputs(prune=True) == {'nested': {'namespace': {'int': 5, 'float': 2.0}}, 'opt': {'m': {'a': 1}}}
 
     # Perform same test but passing the dictionary in as keyword arguments
     builder._merge(**{'nested': {'namespace': {'int': 5}}})
-    assert builder._inputs(prune=True) == {'nested': {'namespace': {'int': 5, 'float': 2.0}}}
+    assert builder._inputs(prune=True) == {'nested': {'namespace': {'int': 5, 'float': 2.0}}, 'opt': {'m': {'a': 1}}}
 
 
 def test_instance_interference():

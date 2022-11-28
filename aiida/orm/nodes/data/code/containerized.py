@@ -111,18 +111,15 @@ class ContainerizedCode(InstalledCode):
         """Return the CLI options that would allow to create an instance of this class."""
         options = {
             'engine_command': {
-                'required':
-                True,
-                'prompt':
-                'Engine command',
-                'help': (
-                    'The command to run the container. It must contain the placeholder '
-                    '{image_name} that will be replaced with the `image_name`.'
-                ),
-                'type':
-                click.STRING,
+                'short_name': '-E',
+                'required': True,
+                'prompt': 'Engine command',
+                'help': 'The command to run the container. It must contain the placeholder {image_name} that will be '
+                'replaced with the `image_name`.',
+                'type': click.STRING,
             },
             'image_name': {
+                'short_name': '-I',
                 'required': True,
                 'type': click.STRING,
                 'prompt': 'Image name',

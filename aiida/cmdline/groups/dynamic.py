@@ -117,6 +117,13 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         name_dashed = name.replace('_', '-')
         option_name = f'--{name_dashed}/--no-{name_dashed}' if is_flag else f'--{name_dashed}'
 
+        option_short_name = spec.pop('short_name', None)
+
         kwargs = {'cls': spec.pop('cls', InteractiveOption), 'show_default': True, 'is_flag': is_flag, **spec}
 
-        return click.option(option_name, **kwargs)
+        if option_short_name:
+            option = click.option(option_short_name, option_name, **kwargs)
+        else:
+            option = click.option(option_name, **kwargs)
+
+        return option

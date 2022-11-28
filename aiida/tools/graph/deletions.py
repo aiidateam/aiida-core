@@ -104,8 +104,7 @@ def delete_nodes(
         return (pks_set_to_delete, True)
 
     DELETE_LOGGER.report('Starting node deletion...')
-    with backend.transaction():
-        backend.delete_nodes_and_connections(pks_set_to_delete)
+    backend.delete_nodes_and_connections(pks_set_to_delete)
     DELETE_LOGGER.report('Deletion of nodes completed.')
 
     return (pks_set_to_delete, True)

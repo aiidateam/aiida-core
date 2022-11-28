@@ -162,12 +162,7 @@ class TestBackend:
         assert len(calc_node.base.links.get_outgoing().all()) == 1
         assert len(group.nodes) == 1
 
-        # cannot call outside a transaction
-        with pytest.raises(AssertionError):
-            self.backend.delete_nodes_and_connections([node_pk])
-
-        with self.backend.transaction():
-            self.backend.delete_nodes_and_connections([node_pk])
+        self.backend.delete_nodes_and_connections([node_pk])
 
         # checks after deletion
         with pytest.raises(exceptions.NotExistent):

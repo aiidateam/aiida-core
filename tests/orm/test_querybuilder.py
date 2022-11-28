@@ -1476,7 +1476,10 @@ class TestConsistency:
             assert len(qb.all()) == qb.count()
 
     def test_iterall_with_mutation(self):
-        """Test that nodes can be mutated while being iterated using ``QueryBuilder.iterall``."""
+        """Test that nodes can be mutated while being iterated using ``QueryBuilder.iterall``.
+
+        This is a regression test for https://github.com/aiidateam/aiida-core/issues/5672 .
+        """
         count = 10
         pks = []
 
@@ -1490,6 +1493,32 @@ class TestConsistency:
 
         for pk in pks:
             assert orm.load_node(pk).get_extra('key') == 'value'
+
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_iterall_with_store(self):
+        """Test that nodes can be stored while being iterated using ``QueryBuilder.iterall``.
+
+        This is a regression test for https://github.com/aiidateam/aiida-core/issues/5802 .
+        """
+        count = 10
+        pks = []
+        pks_clone = []
+
+        for index in range(count):
+            node = orm.Int(index).store()
+            pks.append(node.pk)
+
+        # Ensure that batch size is smaller than the total rows yielded
+        for [node] in orm.QueryBuilder().append(orm.Data).iterall(batch_size=2):
+            clone = copy.deepcopy(node)
+            clone.store()
+            pks_clone.append((clone.value, clone.pk))
+            group = orm.Group(label=str(node.uuid)).store()
+            group.add_nodes([node])
+
+        # Need to sort the cloned pks based on the value, because the order of ``iterall`` is not guaranteed
+        for pk, pk_clone in zip(pks, [e[1] for e in sorted(pks_clone)]):
+            assert orm.load_node(pk) == orm.load_node(pk_clone)
 
 
 class TestManager:

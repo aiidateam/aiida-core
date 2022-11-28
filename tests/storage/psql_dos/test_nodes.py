@@ -81,7 +81,7 @@ class TestNodeBasicSQLA:
         from aiida.storage.psql_dos.models.node import DbNode
 
         # Get the automatic user
-        dbuser = self.backend.users.create('user@aiida.net').store().bare_model
+        dbuser = self.backend.users.create(get_new_uuid()).store().bare_model
         # Create a new node but don't add it to the session
         node_uuid = get_new_uuid()
         DbNode(user=dbuser, uuid=node_uuid, node_type=None)

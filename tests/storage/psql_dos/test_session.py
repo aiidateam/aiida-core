@@ -151,13 +151,15 @@ class TestSessionSqla:
         custom_session = session()
 
         try:
-            user = self.backend.users.create(email=uuid.uuid4().hex).store()
-            node = self.backend.nodes.create(node_type='', user=user).store()
+            with self.backend.transaction():
+                user = self.backend.users.create(email=uuid.uuid4().hex).store()
+                node = self.backend.nodes.create(node_type='', user=user).store()
             master_session = node.model.session  # pylint: disable=protected-access
             assert master_session is not custom_session
 
             # Manually load the DbNode in a different session
             dbnode_reloaded = custom_session.get(sa.models.node.DbNode, node.id)
+            assert dbnode_reloaded is not None
 
             # Now, go through one by one changing the possible attributes (of the model)
             # and check that they're updated when the user reads them from the aiida node

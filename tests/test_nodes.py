@@ -272,14 +272,14 @@ class TestNodeBasic:
         """
         A uniqueness constraint on the UUID column of the Node model should prevent multiple nodes with identical UUID
         """
-        from sqlalchemy.exc import IntegrityError as SqlaIntegrityError
+        from aiida.common.exceptions import IntegrityError
 
         a = orm.Data()
         b = orm.Data()
         b.backend_entity.bare_model.uuid = a.uuid
         a.store()
 
-        with pytest.raises(SqlaIntegrityError):
+        with pytest.raises(IntegrityError):
             b.store()
 
     def test_attribute_mutability(self):

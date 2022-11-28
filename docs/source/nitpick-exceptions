@@ -134,6 +134,7 @@ py:class plumpy.utils.AttributesDict
 py:class plumpy.process_states.State
 py:class plumpy.workchains._If
 py:class plumpy.workchains._While
+py:class plumpy.processes.ProcessStateMachineMeta
 py:class PersistenceError
 py:class State
 py:class Stepper

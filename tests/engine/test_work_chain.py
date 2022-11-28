@@ -731,16 +731,15 @@ class TestWorkchain:
             @classmethod
             def define(cls, spec):
                 super().define(spec)
-                spec.outline(cls.run, cls.check)
+                spec.outline(cls.emit_report, cls.check)
                 spec.outputs.dynamic = True
 
-            def run(self):
-                orm.Log.collection.delete_all()
+            def emit_report(self):
                 self.report('Testing the report function')
 
             def check(self):
-                logs = self._backend.logs.find()
-                assert len(logs) == 1
+                messages = [log.message for log in orm.Log.collection.get_logs_for(self.node)]
+                assert any('Testing the report function' in message for message in messages)
 
         run_and_check_success(TestWorkChain)
 
@@ -996,11 +995,8 @@ class TestWorkchain:
             @classmethod
             def define(cls, spec):
                 super().define(spec)
-                spec.outline(cls.run)
+                spec.outline()
                 spec.exit_code(status, label, message)
-
-            def run(self):
-                pass
 
         wc = ExitCodeWorkChain()
 
@@ -1600,7 +1596,7 @@ class TestDefaultUniqueness:
             super().define(spec)
             spec.input('a', valid_type=Bool, default=lambda: Bool(True))
 
-        def run(self):
+        def step(self):
             pass
 
     def test_unique_default_inputs(self):
@@ -1623,3 +1619,19 @@ class TestDefaultUniqueness:
         # as both `child_one.a` and `child_two.a` should have the same UUID.
         node = load_node(uuid=node.base.links.get_incoming().get_node_by_label('child_one__a').uuid)
         assert len(uuids) == len(nodes), f'Only {len(uuids)} unique UUIDS for {len(nodes)} input nodes'
+
+
+def test_illegal_override_run():
+    """Test that overriding a protected workchain method raises a ``RuntimeError``."""
+    with pytest.raises(RuntimeError, match='the method `run` is protected cannot be overridden.'):
+
+        class IllegalWorkChain(WorkChain):  # pylint: disable=unused-variable
+            """Work chain that illegally overrides the ``run`` method."""
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.run)
+
+            def run(self):
+                pass

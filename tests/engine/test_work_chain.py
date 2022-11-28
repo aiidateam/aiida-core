@@ -371,7 +371,8 @@ class TestWorkchain:
     def test_out_unstored(self):
         """Calling `self.out` on an unstored `Node` should raise.
 
-        It indicates that users created new data whose provenance will be lost.
+        It indicates that users created new data whose provenance will be lost. The node should be properly marked as
+        excepted.
         """
 
         class IllegalWorkChain(WorkChain):
@@ -386,7 +387,15 @@ class TestWorkchain:
                 self.out('not_allowed', orm.Int(2))
 
         with pytest.raises(ValueError):
-            launch.run(IllegalWorkChain)
+            _, node = launch.run_get_node(IllegalWorkChain)
+
+        node = orm.QueryBuilder().append(orm.ProcessNode, tag='node').order_by({
+            'node': {
+                'id': 'desc'
+            }
+        }).first(flat=True)
+        assert node.is_excepted
+        assert 'ValueError: Workflow<IllegalWorkChain> tried returning an unstored `Data` node.' in node.exception
 
     def test_same_input_node(self):
 

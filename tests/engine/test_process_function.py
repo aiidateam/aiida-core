@@ -17,6 +17,7 @@ fly, but then anytime inputs or outputs would be attached to it in the tests, th
 complain as the dummy node class is not recognized as a valid process node.
 """
 import enum
+import re
 
 import pytest
 
@@ -567,3 +568,20 @@ def test_multiple_default_serialization():
 def test_input_serialization_none_default():
     """Test that calling a function with explicit ``None`` for an argument that defines ``None`` as default works."""
     assert function_with_none_default(int_a=1, int_b=2, int_c=None).value == 3
+
+
+def test_invalid_outputs():
+    """Test that returning an invalid output will properly lead the node to go in the excepted state."""
+
+    @calcfunction
+    def excepting():
+        node = orm.Int(2)
+        return {'a': node, 'b': node}
+
+    with pytest.raises(ValueError):
+        excepting()
+
+    # Since the calcfunction actually raises an exception, it cannot return the node, so we have to query for it
+    node = orm.QueryBuilder().append(orm.ProcessNode, tag='node').order_by({'node': {'id': 'desc'}}).first(flat=True)
+    assert node.is_excepted, node.process_state
+    assert re.match(r'ValueError: node<.*> already has an incoming LinkType.CREATE link', node.exception)

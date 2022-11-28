@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1669331054168,
+  "lastUpdate": 1669632031200,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -101114,6 +101114,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.0020867",
             "group": "node",
             "extra": "mean: 22.730 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "2.60",
+          "cores": 2,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.8.14",
+          "metadata": "postgres:12.3, rabbitmq:3.8.3"
+        },
+        "commit": {
+          "id": "79292577e826f9f1a432ca129ae723815c749653",
+          "message": "`WorkChain`: Protect public methods from being subclassed (#5779)\n\nThe paradigm of the `WorkChain` requires a user in an implementation to\r\ndefine the workflow logic through classmethods of the `WorkChain`\r\nsubclass. While this gives great flexibility and choice to the user,\r\nthere is a risk that a user inadvertently chooses a method name that\r\nalready exists on the `WorkChain` base class. Usually the `super` is not\r\ncalled in this scenario and so the functionality is broken.\r\n\r\nThe typical example is where the user uses the `run` method as a step in\r\nthe outline of the `WorkChain`. The work chain will still run, however,\r\nonly that one step in the outline is called. Since the logic to continue\r\nto the next step in the outline is defined in `WorkChain.run`, which is\r\noverridden and now no longer called, the rest of the work chain is\r\nskipped without any warning or error message, leaving the user\r\nscratching their head as to what happened.\r\n\r\nHere we protect this and other public methods on the `WorkChain` class\r\nto prevent them from being overridden in subclasses. This is\r\naccomplished by adding the `Protect` class as a metaclass. Since the\r\n`WorkChain` already has the metaclass `plumpy.ProcessStateMachineMeta`,\r\nwhich it inherits from its `Process` base class, and all metaclasses\r\nneed to share the same base, `Protect` also subclasses the\r\n`ProcessStateMachineMeta` class.\r\n\r\nThe `Protect` class provides the `final` classmethod which can be used\r\nto decorate a method in the `WorkChain` class that should be protected.\r\nIf a subclass implements it, as soon as the class is imported, a\r\n`RuntimeError` is raised mentioning that the method cannot be\r\noverridden.\r\n\r\nThe test `test_report_dbloghandler` had to be fixed because it actually\r\nsuffered from the very problem that is being fixed. It used the `run`\r\nmethod to setup the test, but since the `check` was never being called,\r\nthe test always passed, even though the code `self._backend` in the\r\n`check` is incorrect.",
+          "timestamp": "2022-11-28T11:29:39+01:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/79292577e826f9f1a432ca129ae723815c749653",
+          "distinct": true,
+          "tree_id": "deaf81641a3fb1eec50d54f1fc92ebd7570f3a96"
+        },
+        "date": 1669632025206,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 3.6036342041935114,
+            "unit": "iter/sec",
+            "range": "stddev: 0.015466",
+            "group": "import-export",
+            "extra": "mean: 277.50 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 3.3347274643180667,
+            "unit": "iter/sec",
+            "range": "stddev: 0.064000",
+            "group": "import-export",
+            "extra": "mean: 299.87 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 4.316182025025016,
+            "unit": "iter/sec",
+            "range": "stddev: 0.068058",
+            "group": "import-export",
+            "extra": "mean: 231.69 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 4.2950040850356626,
+            "unit": "iter/sec",
+            "range": "stddev: 0.066609",
+            "group": "import-export",
+            "extra": "mean: 232.83 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 3.409467168201585,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0040837",
+            "group": "engine",
+            "extra": "mean: 293.30 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.7355142274184299,
+            "unit": "iter/sec",
+            "range": "stddev: 0.079663",
+            "group": "engine",
+            "extra": "mean: 1.3596 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.8543159000293237,
+            "unit": "iter/sec",
+            "range": "stddev: 0.074108",
+            "group": "engine",
+            "extra": "mean: 1.1705 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.17148604828978625,
+            "unit": "iter/sec",
+            "range": "stddev: 0.13545",
+            "group": "engine",
+            "extra": "mean: 5.8314 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.19638062288390046,
+            "unit": "iter/sec",
+            "range": "stddev: 0.088594",
+            "group": "engine",
+            "extra": "mean: 5.0922 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.700151245137792,
+            "unit": "iter/sec",
+            "range": "stddev: 0.022765",
+            "group": "engine",
+            "extra": "mean: 370.35 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.5987043231035385,
+            "unit": "iter/sec",
+            "range": "stddev: 0.093964",
+            "group": "engine",
+            "extra": "mean: 1.6703 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.6701309525417437,
+            "unit": "iter/sec",
+            "range": "stddev: 0.072762",
+            "group": "engine",
+            "extra": "mean: 1.4922 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.12353110069477662,
+            "unit": "iter/sec",
+            "range": "stddev: 0.30311",
+            "group": "engine",
+            "extra": "mean: 8.0951 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.1433153787920894,
+            "unit": "iter/sec",
+            "range": "stddev: 0.30468",
+            "group": "engine",
+            "extra": "mean: 6.9776 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 395.7028717546829,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000088683",
+            "group": "node",
+            "extra": "mean: 2.5271 msec\nrounds: 173"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 155.5982993897079,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00012174",
+            "group": "node",
+            "extra": "mean: 6.4268 msec\nrounds: 111"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 86.00743892446782,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00071199",
+            "group": "node",
+            "extra": "mean: 11.627 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 267.0133724939282,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000070786",
+            "group": "node",
+            "extra": "mean: 3.7451 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 50.13933953096906,
+            "unit": "iter/sec",
+            "range": "stddev: 0.029282",
+            "group": "node",
+            "extra": "mean: 19.944 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 55.82578756865307,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0019320",
+            "group": "node",
+            "extra": "mean: 17.913 msec\nrounds: 100"
           }
         ]
       }

@@ -193,9 +193,7 @@ def prepare_localhost():
         computer.configure(safe_interval=0.)
         computer.set_minimum_job_poll_interval(0.)
 
-    default_user = computer.backend.default_user
-
-    if default_user and not computer.is_user_configured(default_user):
-        computer.configure(default_user)
+    if not computer.is_configured:
+        computer.configure()
 
     return computer

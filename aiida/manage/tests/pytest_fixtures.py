@@ -38,6 +38,7 @@ import pytest
 import wrapt
 
 from aiida import plugins
+from aiida.common.exceptions import NotExistent
 from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.warnings import warn_deprecation
@@ -45,7 +46,7 @@ from aiida.engine import Process, ProcessBuilder, submit
 from aiida.engine.daemon.client import DaemonClient
 from aiida.manage import Config, Profile, get_manager, get_profile
 from aiida.manage.manager import Manager
-from aiida.orm import ProcessNode, User
+from aiida.orm import Computer, ProcessNode, User
 
 
 def recursive_merge(left: dict[t.Any, t.Any], right: dict[t.Any, t.Any]) -> None:
@@ -224,10 +225,11 @@ def clear_profile():
         daemon_client.stop_daemon(wait=True)
 
     manager = get_manager()
-    manager.get_profile_storage()._clear(recreate_user=True)  # pylint: disable=protected-access
-    manager.get_profile_storage()  # reload the storage connection
+    manager.get_profile_storage()._clear()  # pylint: disable=protected-access
     manager.reset_communicator()
     manager.reset_runner()
+
+    User(get_manager().get_profile().default_user_email).store()
 
 
 @pytest.fixture(scope='session')
@@ -411,44 +413,6 @@ def temp_dir():
 
 
 @pytest.fixture(scope='function')
-def aiida_localhost(tmp_path):
-    """Get an AiiDA computer for localhost.
-
-    Usage::
-
-      def test_1(aiida_localhost):
-          label = aiida_localhost.label
-          # proceed to set up code or use 'aiida_local_code_factory' instead
-
-
-    :return: The computer node
-    :rtype: :py:class:`~aiida.orm.Computer`
-    """
-    from aiida.common.exceptions import NotExistent
-    from aiida.orm import Computer
-
-    label = 'localhost-test'
-
-    try:
-        computer = Computer.collection.get(label=label)
-    except NotExistent:
-        computer = Computer(
-            label=label,
-            description='localhost computer set up by test manager',
-            hostname=label,
-            workdir=str(tmp_path),
-            transport_type='core.local',
-            scheduler_type='core.direct'
-        )
-        computer.store()
-        computer.set_minimum_job_poll_interval(0.)
-        computer.set_default_mpiprocs_per_machine(1)
-        computer.configure()
-
-    return computer
-
-
-@pytest.fixture(scope='function')
 def aiida_local_code_factory(aiida_localhost):
     """Get an AiiDA code on localhost.
 
@@ -478,7 +442,7 @@ def aiida_local_code_factory(aiida_localhost):
         :rtype: :py:class:`~aiida.orm.Code`
         """
         from aiida.common import exceptions
-        from aiida.orm import Computer, InstalledCode, QueryBuilder
+        from aiida.orm import InstalledCode, QueryBuilder
 
         if label is None:
             label = executable
@@ -519,6 +483,172 @@ def aiida_local_code_factory(aiida_localhost):
         return code.store()
 
     return get_code
+
+
+@pytest.fixture(scope='session')
+def ssh_key(tmp_path_factory) -> t.Generator[pathlib.Path, None, None]:
+    """Generate a temporary SSH key pair for the test session and return the filepath of the private key.
+
+    The filepath of the public key is the same as the private key, but it adds the ``.pub`` file extension.
+    """
+    from cryptography.hazmat.backends import default_backend as crypto_default_backend
+    from cryptography.hazmat.primitives import serialization as crypto_serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    key = rsa.generate_private_key(
+        backend=crypto_default_backend(),
+        public_exponent=65537,
+        key_size=2048,
+    )
+
+    private_key = key.private_bytes(
+        crypto_serialization.Encoding.PEM,
+        crypto_serialization.PrivateFormat.PKCS8,
+        crypto_serialization.NoEncryption(),
+    )
+
+    public_key = key.public_key().public_bytes(
+        crypto_serialization.Encoding.OpenSSH,
+        crypto_serialization.PublicFormat.OpenSSH,
+    )
+
+    dirpath = tmp_path_factory.mktemp('keys')
+    filename = uuid.uuid4().hex
+    filepath_private_key = dirpath / filename
+    filepath_public_key = dirpath / f'{filename}.pub'
+
+    filepath_private_key.write_bytes(private_key)
+    filepath_public_key.write_bytes(public_key)
+
+    try:
+        yield filepath_private_key
+    finally:
+        filepath_private_key.unlink(missing_ok=True)
+        filepath_public_key.unlink(missing_ok=True)
+
+
+@pytest.fixture
+def aiida_computer(tmp_path) -> t.Callable[[], Computer]:
+    """Factory to return a :class:`aiida.orm.computers.Computer` instance."""
+
+    def factory(
+        label: str = None,
+        minimum_job_poll_interval: int = 0,
+        default_mpiprocs_per_machine: int = 1,
+        configuration_kwargs: dict[t.Any, t.Any] = None,
+        **kwargs
+    ) -> Computer:
+        """Return a :class:`aiida.orm.computers.Computer` instance.
+
+        The database is queried for an existing computer with the given label. If it exists, it means it was probably
+        created by this fixture in a previous call and it is simply returned. Otherwise a new instance is created.
+        Note that the computer is not explicitly configured, unless ``configure_kwargs`` are specified.
+
+        :param label: The computer label. If not specified, a random UUID4 is used.
+        :param minimum_job_poll_interval: The default minimum job poll interval to set.
+        :param configuration_kwargs: Optional keyword arguments that, if defined, are used to configure the computer
+            by calling :meth:`aiida.orm.computers.Computer.configure`.
+        :param kwargs: Optional keyword arguments that are passed to the :class:`aiida.orm.computers.Computer`
+            constructor if a computer with the given label doesn't already exist.
+        :return: A stored computer instance.
+        """
+        label = label or str(uuid.uuid4())
+
+        try:
+            computer = Computer.collection.get(label=label)
+        except NotExistent:
+            computer = Computer(
+                label=label,
+                description=kwargs.pop('description', 'computer created by `aiida_computer` fixture'),
+                hostname=kwargs.pop('hostname', 'localhost'),
+                workdir=kwargs.pop('workdir', str(tmp_path)),
+                transport_type=kwargs.pop('transport_type', 'core.local'),
+                scheduler_type=kwargs.pop('scheduler_type', 'core.direct'),
+            )
+            computer.store()
+            computer.set_minimum_job_poll_interval(minimum_job_poll_interval)
+            computer.set_default_mpiprocs_per_machine(default_mpiprocs_per_machine)
+
+        if configuration_kwargs:
+            computer.configure(**configuration_kwargs)
+
+        return computer
+
+    return factory
+
+
+@pytest.fixture
+def aiida_computer_local(aiida_computer) -> t.Callable[[], Computer]:
+    """Factory to return a :class:`aiida.orm.computers.Computer` instance with ``core.local`` transport."""
+
+    def factory(label: str = None, configure: bool = True) -> Computer:
+        """Return a :class:`aiida.orm.computers.Computer` instance representing localhost with ``core.local`` transport.
+
+        The database is queried for an existing computer with the given label. If it exists, it is returned, otherwise a
+        new instance is created.
+
+        :param label: The computer label. If not specified, a random UUID4 is used.
+        :param configure: Boolean, if ``True``, ensures the computer is configured, otherwise the computer is returned
+            as is. Note that if a computer with the given label already exists and it was configured before, the
+            computer will not be "un-"configured. If an unconfigured computer is absolutely required, make sure to first
+            delete the existing computer or specify another label.
+        :return: A stored computer instance.
+        """
+        computer = aiida_computer(label=label, hostname='localhost', transport_type='core.local')
+
+        if configure:
+            computer.configure()
+
+        return computer
+
+    return factory
+
+
+@pytest.fixture
+def aiida_computer_ssh(aiida_computer, ssh_key) -> t.Callable[[], Computer]:
+    """Factory to return a :class:`aiida.orm.computers.Computer` instance with ``core.ssh`` transport."""
+
+    def factory(label: str = None, configure: bool = True) -> Computer:
+        """Return a :class:`aiida.orm.computers.Computer` instance representing localhost with ``core.ssh`` transport.
+
+        The database is queried for an existing computer with the given label. If it exists, it is returned, otherwise a
+        new instance is created.
+
+        If ``configure=True``, an SSH key pair is automatically added to the ``.ssh`` folder of the user, allowing an
+        actual SSH connection to be made to the localhost.
+
+        :param label: The computer label. If not specified, a random UUID4 is used.
+        :param configure: Boolean, if ``True``, ensures the computer is configured, otherwise the computer is returned
+            as is. Note that if a computer with the given label already exists and it was configured before, the
+            computer will not be "un-"configured. If an unconfigured computer is absolutely required, make sure to first
+            delete the existing computer or specify another label.
+        :return: A stored computer instance.
+        """
+        computer = aiida_computer(label=label, hostname='localhost', transport_type='core.ssh')
+
+        if configure:
+            computer.configure(
+                key_filename=str(ssh_key),
+                key_policy='AutoAddPolicy',
+            )
+
+        return computer
+
+    return factory
+
+
+@pytest.fixture(scope='function')
+def aiida_localhost(aiida_computer_local) -> Computer:
+    """Return a :class:`aiida.orm.computers.Computer` instance representing localhost with ``core.local`` transport.
+
+    Usage::
+
+        def test(aiida_localhost):
+            assert aiida_localhost.transport_type == 'core.local'
+
+    :return: The computer.
+    """
+    return aiida_computer_local(label='localhost')
 
 
 @pytest.fixture(scope='session')

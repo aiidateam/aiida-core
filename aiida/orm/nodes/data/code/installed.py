@@ -72,11 +72,11 @@ class InstalledCode(Code):
         try:
             with override_log_level():  # Temporarily suppress noisy logging
                 with self.computer.get_transport() as transport:
-                    file_exists = transport.isfile(self.filepath_executable)
-        except Exception:  # pylint: disable=broad-except
+                    file_exists = transport.isfile(str(self.filepath_executable))
+        except Exception as exception:  # pylint: disable=broad-except
             raise exceptions.ValidationError(
                 'Could not connect to the configured computer to determine whether the specified executable exists.'
-            )
+            ) from exception
 
         if not file_exists:
             raise exceptions.ValidationError(

@@ -138,8 +138,10 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
             inputs['code'] = code
 
         if daemon:
-            result, workchain, total_time = run_via_daemon(workchains, inputs, sleep, timeout)
-
+            returned = run_via_daemon(workchains, inputs, sleep, timeout)
+            if returned is None:
+                sys.exit(1)
+            result, workchain, total_time = returned
         else:
             start_time = time.time()
             results, workchain = run_get_node(workchains.Polish00WorkChain, **inputs)

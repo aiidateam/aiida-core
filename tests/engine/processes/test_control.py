@@ -11,7 +11,7 @@ from aiida.orm import Int
 from tests.utils.processes import WaitProcess
 
 
-@pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
 @pytest.mark.parametrize('action', (control.pause_processes, control.play_processes, control.kill_processes))
 def test_processes_all_exclusivity(submit_and_await, action):
     """Test that control methods raise if both ``processes`` is specified and ``all_entries=True``."""
@@ -22,7 +22,7 @@ def test_processes_all_exclusivity(submit_and_await, action):
         action([node], all_entries=True)
 
 
-@pytest.mark.usefixtures('stopped_daemon_client')
+@pytest.mark.usefixtures('aiida_profile_clean', 'stopped_daemon_client')
 @pytest.mark.parametrize('action', (control.pause_processes, control.play_processes, control.kill_processes))
 def test_daemon_not_running(action):
     """Test that control methods raise if the daemon is not running."""
@@ -30,7 +30,7 @@ def test_daemon_not_running(action):
         action(all_entries=True)
 
 
-@pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
 def test_pause_processes(submit_and_await):
     """Test :func:`aiida.engine.processes.control.pause_processes`."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
@@ -41,7 +41,7 @@ def test_pause_processes(submit_and_await):
     assert node.process_status == 'Paused through `aiida.engine.processes.control.pause_processes`'
 
 
-@pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
 def test_pause_processes_all_entries(submit_and_await):
     """Test :func:`aiida.engine.processes.control.pause_processes` with ``all_entries=True``."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
@@ -51,7 +51,7 @@ def test_pause_processes_all_entries(submit_and_await):
     assert node.paused
 
 
-@pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
 def test_play_processes(submit_and_await):
     """Test :func:`aiida.engine.processes.control.play_processes`."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
@@ -64,7 +64,7 @@ def test_play_processes(submit_and_await):
     assert not node.paused
 
 
-@pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
 def test_play_processes_all_entries(submit_and_await):
     """Test :func:`aiida.engine.processes.control.play_processes` with ``all_entries=True``."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
@@ -77,7 +77,7 @@ def test_play_processes_all_entries(submit_and_await):
     assert not node.paused
 
 
-@pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
 def test_kill_processes(submit_and_await):
     """Test :func:`aiida.engine.processes.control.kill_processes`."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
@@ -88,7 +88,7 @@ def test_kill_processes(submit_and_await):
     assert node.process_status == 'Killed through `aiida.engine.processes.control.kill_processes`'
 
 
-@pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
 def test_kill_processes_all_entries(submit_and_await):
     """Test :func:`aiida.engine.processes.control.kill_processes` with ``all_entries=True``."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
@@ -98,7 +98,7 @@ def test_kill_processes_all_entries(submit_and_await):
     assert node.is_killed
 
 
-@pytest.mark.usefixtures('aiida_profile', 'started_daemon_client')
+@pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
 def test_revive(monkeypatch, aiida_local_code_factory, submit_and_await):
     """Test :func:`aiida.engine.processes.control.revive_processes`."""
     code = aiida_local_code_factory('core.arithmetic.add', '/bin/bash')

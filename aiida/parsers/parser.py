@@ -19,7 +19,8 @@ from aiida.engine import ExitCode, ExitCodesNamespace, calcfunction
 from aiida.engine.processes.ports import CalcJobOutputPort
 
 if TYPE_CHECKING:
-    from aiida.orm import CalcFunctionNode, CalcJobNode, Data, FolderData
+    from aiida import orm
+    from aiida.orm import CalcJobNode, Data, FolderData
 
 __all__ = ('Parser',)
 
@@ -113,7 +114,7 @@ class Parser(ABC):
     def parse_from_node(cls,
                         node: 'CalcJobNode',
                         store_provenance=True,
-                        retrieved_temporary_folder=None) -> Tuple[Optional[Dict[str, Any]], 'CalcFunctionNode']:
+                        retrieved_temporary_folder=None) -> Tuple[Optional[Dict[str, Any]], 'orm.CalcFunctionNode']:
         """Parse the outputs directly from the `CalcJobNode`.
 
         If `store_provenance` is set to False, a `CalcFunctionNode` will still be generated, but it will not be stored.

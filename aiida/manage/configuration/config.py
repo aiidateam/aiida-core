@@ -10,7 +10,13 @@
 """Module that defines the configuration file of an AiiDA instance and functions to create and load it."""
 import codecs
 from functools import lru_cache
-from importlib import resources
+
+try:
+    # Python <= 3.8
+    from importlib_resources import files
+except ImportError:
+    from importlib.resources import files
+
 import json
 import os
 import shutil
@@ -33,7 +39,7 @@ SCHEMA_FILE = 'config-v9.schema.json'
 @lru_cache(1)
 def config_schema() -> Dict[str, Any]:
     """Return the configuration schema."""
-    return json.loads(resources.read_text(schema_module, SCHEMA_FILE, encoding='utf8'))
+    return json.loads(files(schema_module).joinpath(SCHEMA_FILE).read_text(encoding='utf8'))
 
 
 class ConfigValidationError(ConfigurationError):

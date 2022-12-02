@@ -17,6 +17,7 @@ import pytest
 
 from aiida import orm
 from aiida.cmdline.commands import cmd_node
+from aiida.cmdline.utils.echo import ExitCode
 
 
 def get_result_lines(result):
@@ -496,7 +497,7 @@ class TestVerdiRehash:
         options = []  # no option, will ask in the prompt
         result = self.cli_runner(cmd_node.rehash, options, user_input='n', raises=True)
         assert isinstance(result.exception, SystemExit)
-        assert 'ExitCode.CRITICAL' in str(result.exception)
+        assert result.exit_code == ExitCode.CRITICAL
 
     def test_rehash(self):
         """Passing no options to the command will rehash all 5 nodes."""

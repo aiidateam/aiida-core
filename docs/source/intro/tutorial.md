@@ -231,7 +231,7 @@ It should look something like the graph shown {ref}`below <fig_calcfun_graph>`.
 ```{code-cell} ipython3
 ---
 tags: ["hide-input"]
-render:
+mystnb:
     image:
         align: center
         width: 300px
@@ -395,7 +395,7 @@ $ verdi node graph generate 7
 ```{code-cell} ipython3
 ---
 tags: ["hide-input"]
-render:
+mystnb:
     image:
         align: center
         width: 400px
@@ -576,7 +576,7 @@ $ verdi node graph generate 14
 ```{code-cell} ipython3
 ---
 tags: ["hide-input"]
-render:
+mystnb:
     image:
         align: center
         width: 400px

@@ -10,7 +10,7 @@
 # pylint: disable=invalid-name,cyclic-import
 """Definition of factories to load classes from the various plugin groups."""
 from inspect import isclass
-from typing import TYPE_CHECKING, Any, Callable, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, Tuple, Type, Union, overload
 
 from importlib_metadata import EntryPoint
 
@@ -23,7 +23,8 @@ __all__ = (
 
 if TYPE_CHECKING:
     from aiida.engine import CalcJob, CalcJobImporter, WorkChain
-    from aiida.orm import Data, Group, StorageBackend
+    from aiida.orm import Data, Group
+    from aiida.orm.implementation import StorageBackend
     from aiida.parsers import Parser
     from aiida.schedulers import Scheduler
     from aiida.tools.data.orbital import Orbital
@@ -31,7 +32,7 @@ if TYPE_CHECKING:
     from aiida.transports import Transport
 
 
-def raise_invalid_type_error(entry_point_name: str, entry_point_group: str, valid_classes: Tuple[Any, ...]) -> None:
+def raise_invalid_type_error(entry_point_name: str, entry_point_group: str, valid_classes: Tuple[Any, ...]) -> NoReturn:
     """Raise an `InvalidEntryPointTypeError` with formatted message.
 
     :param entry_point_name: name of the entry point
@@ -63,7 +64,17 @@ def BaseFactory(group: str, name: str, load: bool = True) -> Union[EntryPoint, A
     return get_entry_point(group, name)
 
 
-def CalculationFactory(entry_point_name: str, load: bool = True) -> Optional[Union[EntryPoint, 'CalcJob', Callable]]:
+@overload
+def CalculationFactory(entry_point_name: str, load: Literal[True] = True) -> Union[Type['CalcJob'], Callable]:
+    ...
+
+
+@overload
+def CalculationFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
+    ...
+
+
+def CalculationFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['CalcJob'], Callable]:
     """Return the `CalcJob` sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
@@ -88,7 +99,17 @@ def CalculationFactory(entry_point_name: str, load: bool = True) -> Optional[Uni
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-def CalcJobImporterFactory(entry_point_name: str, load: bool = True) -> Optional[Union[EntryPoint, 'CalcJobImporter']]:
+@overload
+def CalcJobImporterFactory(entry_point_name: str, load: Literal[True] = True) -> Type['CalcJobImporter']:
+    ...
+
+
+@overload
+def CalcJobImporterFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
+    ...
+
+
+def CalcJobImporterFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['CalcJobImporter']]:
     """Return the plugin registered under the given entry point.
 
     :param entry_point_name: the entry point name.
@@ -105,12 +126,22 @@ def CalcJobImporterFactory(entry_point_name: str, load: bool = True) -> Optional
         return entry_point
 
     if isclass(entry_point) and issubclass(entry_point, CalcJobImporter):
-        return entry_point  # type: ignore[return-value]
+        return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-def DataFactory(entry_point_name: str, load: bool = True) -> Optional[Union[EntryPoint, 'Data']]:
+@overload
+def DataFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Data']:
+    ...
+
+
+@overload
+def DataFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
+    ...
+
+
+def DataFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Data']]:
     """Return the `Data` sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
@@ -133,7 +164,17 @@ def DataFactory(entry_point_name: str, load: bool = True) -> Optional[Union[Entr
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-def DbImporterFactory(entry_point_name: str, load: bool = True) -> Optional[Union[EntryPoint, 'DbImporter']]:
+@overload
+def DbImporterFactory(entry_point_name: str, load: Literal[True] = True) -> Type['DbImporter']:
+    ...
+
+
+@overload
+def DbImporterFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
+    ...
+
+
+def DbImporterFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['DbImporter']]:
     """Return the `DbImporter` sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
@@ -156,7 +197,17 @@ def DbImporterFactory(entry_point_name: str, load: bool = True) -> Optional[Unio
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-def GroupFactory(entry_point_name: str, load: bool = True) -> Optional[Union[EntryPoint, 'Group']]:
+@overload
+def GroupFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Group']:
+    ...
+
+
+@overload
+def GroupFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
+    ...
+
+
+def GroupFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Group']]:
     """Return the `Group` sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
@@ -179,7 +230,17 @@ def GroupFactory(entry_point_name: str, load: bool = True) -> Optional[Union[Ent
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-def OrbitalFactory(entry_point_name: str, load: bool = True) -> Optional[Union[EntryPoint, 'Orbital']]:
+@overload
+def OrbitalFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Orbital']:
+    ...
+
+
+@overload
+def OrbitalFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
+    ...
+
+
+def OrbitalFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Orbital']]:
     """Return the `Orbital` sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
@@ -202,7 +263,17 @@ def OrbitalFactory(entry_point_name: str, load: bool = True) -> Optional[Union[E
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-def ParserFactory(entry_point_name: str, load: bool = True) -> Optional[Union[EntryPoint, 'Parser']]:
+@overload
+def ParserFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Parser']:
+    ...
+
+
+@overload
+def ParserFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
+    ...
+
+
+def ParserFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Parser']]:
     """Return the `Parser` sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
@@ -225,7 +296,17 @@ def ParserFactory(entry_point_name: str, load: bool = True) -> Optional[Union[En
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-def SchedulerFactory(entry_point_name: str, load: bool = True) -> Optional[Union[EntryPoint, 'Scheduler']]:
+@overload
+def SchedulerFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Scheduler']:
+    ...
+
+
+@overload
+def SchedulerFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
+    ...
+
+
+def SchedulerFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Scheduler']]:
     """Return the `Scheduler` sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
@@ -248,7 +329,17 @@ def SchedulerFactory(entry_point_name: str, load: bool = True) -> Optional[Union
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-def StorageFactory(entry_point_name: str, load: bool = True) -> Optional[Union[EntryPoint, 'StorageBackend']]:
+@overload
+def StorageFactory(entry_point_name: str, load: Literal[True] = True) -> Type['StorageBackend']:
+    ...
+
+
+@overload
+def StorageFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
+    ...
+
+
+def StorageFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['StorageBackend']]:
     """Return the ``StorageBackend`` sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
@@ -271,7 +362,17 @@ def StorageFactory(entry_point_name: str, load: bool = True) -> Optional[Union[E
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-def TransportFactory(entry_point_name: str, load: bool = True) -> Optional[Union[EntryPoint, Type['Transport']]]:
+@overload
+def TransportFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Transport']:
+    ...
+
+
+@overload
+def TransportFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
+    ...
+
+
+def TransportFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Transport']]:
     """Return the `Transport` sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
@@ -293,7 +394,17 @@ def TransportFactory(entry_point_name: str, load: bool = True) -> Optional[Union
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
 
 
-def WorkflowFactory(entry_point_name: str, load: bool = True) -> Optional[Union[EntryPoint, 'WorkChain', Callable]]:
+@overload
+def WorkflowFactory(entry_point_name: str, load: Literal[True] = True) -> Union[Type['WorkChain'], Callable]:
+    ...
+
+
+@overload
+def WorkflowFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
+    ...
+
+
+def WorkflowFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['WorkChain'], Callable]:
     """Return the `WorkChain` sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.

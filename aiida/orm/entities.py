@@ -159,13 +159,13 @@ class Collection(abc.ABC, Generic[EntityType]):
         return self.query(filters=filters).count()
 
 
-class Entity(abc.ABC, Generic[BackendEntityType]):
+class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
     """An AiiDA entity"""
 
-    _CLS_COLLECTION = Collection
+    _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore
 
     @classproperty
-    def objects(cls: EntityType) -> Collection[EntityType]:  # pylint: disable=no-self-argument,no-self-use
+    def objects(cls: EntityType) -> CollectionType:  # pylint: disable=no-self-argument,no-self-use
         """Get a collection for objects of this type, with the default backend.
 
         .. deprecated:: This will be removed in v3, use ``collection`` instead.
@@ -176,7 +176,7 @@ class Entity(abc.ABC, Generic[BackendEntityType]):
         return cls.collection
 
     @classproperty
-    def collection(cls: EntityType) -> Collection[EntityType]:  # pylint: disable=no-self-argument,no-self-use
+    def collection(cls) -> CollectionType:  # pylint: disable=no-self-argument,no-self-use
         """Get a collection for objects of this type, with the default backend.
 
         :return: an object that can be used to access entities of this type

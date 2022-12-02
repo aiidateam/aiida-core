@@ -9,6 +9,7 @@
 ###########################################################################
 """Utility functions to operate on datetime objects."""
 from datetime import datetime, timedelta, timezone, tzinfo
+from typing import Optional
 
 import pytz
 
@@ -23,7 +24,7 @@ def now() -> datetime:
     return datetime.now().astimezone()
 
 
-def make_aware(value: datetime, tz: tzinfo = None) -> datetime:
+def make_aware(value: datetime, tz: Optional[tzinfo] = None) -> datetime:
     """Make the given datetime object timezone aware.
 
     :param value: The datetime object to make aware.
@@ -56,7 +57,7 @@ def timezone_from_name(name: str) -> tzinfo:
         raise ValueError(f'unknown timezone: {name}') from exception
 
 
-def delta(from_time: datetime, to_time: datetime = None) -> timedelta:
+def delta(from_time: datetime, to_time: Optional[datetime] = None) -> timedelta:
     """Return the datetime object representing the different between two datetime objects.
 
     :param from_time: The starting datetime object.

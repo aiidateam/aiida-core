@@ -12,10 +12,14 @@ This module implements a generic output plugin, that is general enough
 to allow the reading of the outputs of a calculation.
 """
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
 
 from aiida.common import exceptions, extendeddicts
-from aiida.engine import calcfunction
+from aiida.engine import ExitCode, ExitCodesNamespace, calcfunction
 from aiida.engine.processes.ports import CalcJobOutputPort
+
+if TYPE_CHECKING:
+    from aiida.orm import CalcFunctionNode, CalcJobNode, Data, FolderData
 
 __all__ = ('Parser',)
 
@@ -23,7 +27,7 @@ __all__ = ('Parser',)
 class Parser(ABC):
     """Base class for a Parser that can parse the outputs produced by a CalcJob process."""
 
-    def __init__(self, node):
+    def __init__(self, node: 'CalcJobNode'):
         """Construct the Parser instance.
 
         :param node: the `CalcJobNode` that contains the results of the executed `CalcJob` process.
@@ -44,7 +48,7 @@ class Parser(ABC):
         return self._logger
 
     @property
-    def node(self):
+    def node(self) -> 'CalcJobNode':
         """Return the node instance
 
         :return: the `CalcJobNode` instance
@@ -52,7 +56,7 @@ class Parser(ABC):
         return self._node
 
     @property
-    def exit_codes(self):
+    def exit_codes(self) -> ExitCodesNamespace:
         """Return the exit codes defined for the process class of the node being parsed.
 
         :returns: ExitCodesNamespace of ExitCode named tuples
@@ -60,8 +64,10 @@ class Parser(ABC):
         return self.node.process_class.exit_codes
 
     @property
-    def retrieved(self):
-        return self.node.base.links.get_outgoing().get_node_by_label(self.node.process_class.link_label_retrieved)
+    def retrieved(self) -> 'FolderData':
+        return self.node.base.links.get_outgoing().get_node_by_label(
+            self.node.process_class.link_label_retrieved  # type: ignore
+        )
 
     @property
     def outputs(self):
@@ -71,7 +77,7 @@ class Parser(ABC):
         """
         return self._outputs
 
-    def out(self, link_label, node):
+    def out(self, link_label: str, node: 'Data') -> None:
         """Register a node as an output with the given link label.
 
         :param link_label: the name of the link label
@@ -104,7 +110,10 @@ class Parser(ABC):
         return result
 
     @classmethod
-    def parse_from_node(cls, node, store_provenance=True, retrieved_temporary_folder=None):
+    def parse_from_node(cls,
+                        node: 'CalcJobNode',
+                        store_provenance=True,
+                        retrieved_temporary_folder=None) -> Tuple[Optional[Dict[str, Any]], 'CalcFunctionNode']:
         """Parse the outputs directly from the `CalcJobNode`.
 
         If `store_provenance` is set to False, a `CalcFunctionNode` will still be generated, but it will not be stored.
@@ -149,7 +158,7 @@ class Parser(ABC):
                 # `parse_from_node` method will get an empty dictionary as a result, despite the `Parser.parse` method
                 # having registered outputs.
                 process = Process.current()
-                process.out_many(outputs)
+                process.out_many(outputs)  # type: ignore
                 return exit_code
 
             return dict(outputs)
@@ -157,10 +166,10 @@ class Parser(ABC):
         inputs = {'metadata': {'store_provenance': store_provenance}}
         inputs.update(parser.get_outputs_for_parsing())
 
-        return parse_calcfunction.run_get_node(**inputs)
+        return parse_calcfunction.run_get_node(**inputs)  # type: ignore
 
     @abstractmethod
-    def parse(self, **kwargs):
+    def parse(self, **kwargs) -> Optional[ExitCode]:
         """Parse the contents of the output files retrieved in the `FolderData`.
 
         This method should be implemented in the sub class. Outputs can be registered through the `out` method.

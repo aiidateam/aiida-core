@@ -37,7 +37,7 @@ class RabbitmqManagementClient:
         self._virtual_host = virtual_host
         self._authentication = requests.auth.HTTPBasicAuth(username, password)
 
-    def format_url(self, url: str, url_params: dict[str, str] = None) -> str:
+    def format_url(self, url: str, url_params: dict[str, str] | None = None) -> str:
         """Format the complete URL from a partial resource path with placeholders.
 
         The base URL will be automatically prepended.
@@ -55,9 +55,9 @@ class RabbitmqManagementClient:
     def request(
         self,
         url: str,
-        url_params: dict[str, str] = None,
+        url_params: dict[str, str] | None = None,
         method: str = 'GET',
-        params: dict[str, t.Any] = None,
+        params: dict[str, t.Any] | None = None,
     ) -> requests.Response:
         """Make a request.
 

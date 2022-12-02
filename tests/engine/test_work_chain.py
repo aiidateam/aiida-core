@@ -83,7 +83,7 @@ class Wf(WorkChain):
     """"Dummy work chain implementation with various steps and logical constructs in the outline."""
 
     # Keep track of which steps were completed by the workflow
-    finished_steps = {}
+    finished_steps: dict = {}
 
     @classmethod
     def define(cls, spec):

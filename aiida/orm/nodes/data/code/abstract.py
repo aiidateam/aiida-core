@@ -13,6 +13,7 @@ from __future__ import annotations
 import abc
 import collections
 import pathlib
+from typing import TYPE_CHECKING
 
 import click
 
@@ -24,6 +25,9 @@ from aiida.orm import Computer
 from aiida.plugins import CalculationFactory
 
 from ..data import Data
+
+if TYPE_CHECKING:
+    from aiida.engine import ProcessBuilder
 
 __all__ = ('AbstractCode',)
 
@@ -40,7 +44,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
 
     def __init__(
         self,
-        default_calc_job_plugin: str = None,
+        default_calc_job_plugin: str | None = None,
         append_text: str = '',
         prepend_text: str = '',
         use_double_quotes: bool = False,
@@ -125,7 +129,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         :return: The full label of the code.
         """
 
-    @Data.label.setter
+    @Data.label.setter  # type: ignore
     def label(self, value: str) -> None:
         """Set the label.
 
@@ -226,7 +230,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         type_check(value, bool)
         self.base.extras.set(self._KEY_EXTRA_IS_HIDDEN, value)
 
-    def get_builder(self):
+    def get_builder(self) -> 'ProcessBuilder':
         """Create and return a new ``ProcessBuilder`` for the ``CalcJob`` class of the plugin configured for this code.
 
         The configured calculation plugin class is defined by the ``default_calc_job_plugin`` property.
@@ -247,7 +251,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         except exceptions.EntryPointError:
             raise exceptions.EntryPointError(f'The calculation entry point `{entry_point}` could not be loaded')
 
-        builder = process_class.get_builder()
+        builder = process_class.get_builder()  # type: ignore
         builder.code = self
 
         return builder

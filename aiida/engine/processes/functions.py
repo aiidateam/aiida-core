@@ -13,7 +13,7 @@ import functools
 import inspect
 import logging
 import signal
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Sequence, Tuple, Type
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Sequence, Tuple, Type, TypeVar
 
 from aiida.common.lang import override
 from aiida.manage import get_manager
@@ -29,8 +29,10 @@ __all__ = ('calcfunction', 'workfunction', 'FunctionProcess')
 
 LOGGER = logging.getLogger(__name__)
 
+FunctionType = TypeVar('FunctionType', bound=Callable[..., Any])
 
-def calcfunction(function: Callable[..., Any]) -> Callable[..., Any]:
+
+def calcfunction(function: FunctionType) -> FunctionType:
     """
     A decorator to turn a standard python function into a calcfunction.
     Example usage:
@@ -52,15 +54,12 @@ def calcfunction(function: Callable[..., Any]) -> Callable[..., Any]:
     [4, 5]
 
     :param function: The function to decorate.
-    :type function: callable
-
     :return: The decorated function.
-    :rtype: callable
     """
     return process_function(node_class=CalcFunctionNode)(function)
 
 
-def workfunction(function: Callable[..., Any]) -> Callable[..., Any]:
+def workfunction(function: FunctionType) -> FunctionType:
     """
     A decorator to turn a standard python function into a workfunction.
     Example usage:
@@ -82,10 +81,7 @@ def workfunction(function: Callable[..., Any]) -> Callable[..., Any]:
     [4, 5]
 
     :param function: The function to decorate.
-    :type function: callable
-
     :return: The decorated function.
-
     """
     return process_function(node_class=WorkFunctionNode)(function)
 
@@ -95,7 +91,6 @@ def process_function(node_class: Type['ProcessNode']) -> Callable[[Callable[...,
     The base function decorator to create a FunctionProcess out of a normal python function.
 
     :param node_class: the ORM class to be used as the Node record for the FunctionProcess
-    :type node_class: :class:`aiida.orm.ProcessNode`
     """
 
     def decorator(function: Callable[..., Any]) -> Callable[..., Any]:

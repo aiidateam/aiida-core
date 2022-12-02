@@ -21,7 +21,7 @@ class BackendUser(BackendEntity):
     A user can be assigned as the creator of a variety of other entities.
     """
 
-    @property  # type: ignore[misc]
+    @property
     @abc.abstractmethod
     def email(self) -> str:
         """
@@ -30,7 +30,7 @@ class BackendUser(BackendEntity):
         :return: the email address
         """
 
-    @email.setter  # type: ignore[misc]
+    @email.setter
     @abc.abstractmethod
     def email(self, val: str) -> None:
         """
@@ -39,7 +39,7 @@ class BackendUser(BackendEntity):
         :param val: the new email address
         """
 
-    @property  # type: ignore[misc]
+    @property
     @abc.abstractmethod
     def first_name(self) -> str:
         """
@@ -48,7 +48,7 @@ class BackendUser(BackendEntity):
         :return: the first name
         """
 
-    @first_name.setter  # type: ignore[misc]
+    @first_name.setter
     @abc.abstractmethod
     def first_name(self, val: str) -> None:
         """
@@ -57,7 +57,7 @@ class BackendUser(BackendEntity):
         :param val: the new first name
         """
 
-    @property  # type: ignore[misc]
+    @property
     @abc.abstractmethod
     def last_name(self) -> str:
         """
@@ -66,7 +66,7 @@ class BackendUser(BackendEntity):
         :return: the last name
         """
 
-    @last_name.setter  # type: ignore[misc]
+    @last_name.setter
     @abc.abstractmethod
     def last_name(self, val: str) -> None:
         """
@@ -75,7 +75,7 @@ class BackendUser(BackendEntity):
         :param val: the new last name
         """
 
-    @property  # type: ignore[misc]
+    @property
     @abc.abstractmethod
     def institution(self) -> str:
         """
@@ -84,7 +84,7 @@ class BackendUser(BackendEntity):
         :return: the institution
         """
 
-    @institution.setter  # type: ignore[misc]
+    @institution.setter
     @abc.abstractmethod
     def institution(self, val: str) -> None:
         """

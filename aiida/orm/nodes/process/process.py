@@ -262,7 +262,7 @@ class ProcessNode(Sealable, Node):
 
         return ProcessState(state)
 
-    def set_process_state(self, state: Union[str, ProcessState]):
+    def set_process_state(self, state: Union[str, ProcessState, None]):
         """
         Set the process state
 

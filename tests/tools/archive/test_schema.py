@@ -65,7 +65,7 @@ def test_psql_sync_migrate(tmp_path):
 
 def diff_schemas(psql_insp: Inspector, sqlite_insp: Inspector):  # pylint: disable=too-many-branches,too-many-statements
     """Compare the reflected schemas of the two databases."""
-    diffs = {}
+    diffs: dict = {}
 
     for table_name in sqlite_insp.get_table_names():
         if not table_name.startswith('db_') or table_name == 'db_dbsetting':

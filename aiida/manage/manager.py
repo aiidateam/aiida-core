@@ -339,10 +339,16 @@ class Manager:  # pylint: disable=too-many-public-methods
         :raises aiida.common.MissingConfigurationError: if the configuration file cannot be found
         :raises aiida.common.ProfileConfigurationError: if the given profile does not exist
         """
+        from aiida.common import ConfigurationError
         from aiida.engine.daemon.client import DaemonClient
 
         if self._daemon_client is None:
-            self._daemon_client = DaemonClient(self.get_profile())
+            profile = self.get_profile()
+            if profile is None:
+                raise ConfigurationError(
+                    'Could not determine the current profile. Consider loading a profile using `aiida.load_profile()`.'
+                )
+            self._daemon_client = DaemonClient(profile)
 
         return self._daemon_client
 

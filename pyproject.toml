@@ -100,7 +100,7 @@ notebook = [
     "notebook~=6.1,>=6.1.5"
 ]
 pre-commit = [
-    "mypy==0.930",
+    "mypy==0.991",
     "packaging==20.3",
     "pre-commit~=2.2",
     "pylint~=2.11.1",
@@ -353,18 +353,27 @@ indent_dictionary_value = false
 
 [tool.mypy]
 show_error_codes = true
-check_untyped_defs = true
 scripts_are_modules = true
-warn_unused_ignores = true
-warn_redundant_casts = true
-no_warn_no_return = true
 show_traceback = true
 plugins = ["sqlalchemy.ext.mypy.plugin"]
 
+# strictness
+strict = true
+# these options reduce the strictness and should eventually be removed
+disallow_untyped_defs = false
+disallow_untyped_calls = false
+disallow_incomplete_defs = false
+warn_return_any = false
+disallow_any_generics = false
+disallow_subclassing_any = false
+
 [[tool.mypy.overrides]]
-module = 'aiida.*'
-# can only follow these imports when more of the code is typed
-follow_imports = "skip"
+module = 'aiida'
+implicit_reexport = true
+
+[[tool.mypy.overrides]]
+module = 'aiida.cmdline.commands.*'
+disallow_untyped_decorators = false
 
 [[tool.mypy.overrides]]
 module = 'tests.*'
@@ -372,18 +381,53 @@ check_untyped_defs = false
 
 [[tool.mypy.overrides]]
 module = [
+    'ase.*',
+    'bpython.*',
+    'bs4.*',
+    'CifFile.*',
     'circus.*',
+    'click_config_file.*',
+    'click_spinner.*',
+    'docutils.*',
+    'flask_cors.*',
+    'flask_restful.*',
+    'graphviz.*',
+    'importlib._bootstrap.*',
+    'IPython.*',
+    'jsonschema.*',
     'kiwipy.*',
+    'matplotlib.*',
+    'mayavi.*',
+    'MySQLdb.*',
     'numpy.*',
+    'paramiko.*',
+    'pgsu.*',
+    'pgtest.*',
+    'phonopy.*',
+    'psutil.*',
+    'psycopg2.*',
+    'pymatgen.*',
+    'pymysql.*',
+    'pyparsing.*',
+    'pympler.*',
     'pytz.*',
     'requests.*',
     'ruamel.*',
     'scipy.*',
+    'seekpath.*',
+    'spglib.*',
+    'sphinxcontrib.details.*',
+    'sqlalchemy_utils.*',
     'tabulate.*',
     'tqdm.*',
     'wrapt.*',
+    'upf_to_json.*',
 ]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = 'plumpy'
+ignore_errors = true
 
 [tool.tox]
 legacy_tox_ini = """

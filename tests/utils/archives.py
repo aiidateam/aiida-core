@@ -51,7 +51,7 @@ def get_archive_file(archive: str, filepath=None, external_module=None) -> str:
         raise TypeError('external_module must be a string')
     elif external_module:
         # Use external module (will prepend the absolute path to `external_module`)
-        external_path = os.path.dirname(os.path.realpath(importlib.import_module(external_module).__file__))
+        external_path = os.path.dirname(os.path.realpath(importlib.import_module(external_module).__file__ or ''))
 
         dirpath_archive = os.path.join(external_path, dirpath_archive)
     else:

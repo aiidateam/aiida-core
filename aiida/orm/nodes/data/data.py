@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module with `Node` sub class `Data` to be used as a base class for data structures."""
+from typing import Dict
+
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.common.links import LinkType
@@ -36,7 +38,7 @@ class Data(Node):
     # By default, if not found here,
     # The fileformat string is assumed to match the extension.
     # Example: {'dat': 'dat_multicolumn'}
-    _export_format_replacements = {}
+    _export_format_replacements: Dict[str, str] = {}
 
     # Data nodes are storable
     _storable = True
@@ -124,8 +126,9 @@ class Data(Node):
         :return: the creating node or None
         """
         inputs = self.base.links.get_incoming(link_type=LinkType.CREATE)
-        if inputs:
-            return inputs.first().node
+        link = inputs.first()
+        if link:
+            return link.node
 
         return None
 

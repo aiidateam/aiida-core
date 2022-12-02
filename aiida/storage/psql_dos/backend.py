@@ -139,7 +139,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         Although, in the future, we may want to move the multi-thread handling to higher in the AiiDA stack.
         """
         from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
-        engine = create_sqlalchemy_engine(self._profile.storage_config)
+        engine = create_sqlalchemy_engine(self._profile.storage_config)  # type: ignore
         self._session_factory = scoped_session(sessionmaker(bind=engine, future=True, expire_on_commit=True))
 
     def get_session(self) -> Session:
@@ -379,7 +379,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         if full:
             maintenance_context = ProfileAccessManager(self._profile).lock
         else:
-            maintenance_context = nullcontext
+            maintenance_context = nullcontext  # type: ignore
 
         with maintenance_context():
             unreferenced_objects = self.get_unreferenced_keyset()

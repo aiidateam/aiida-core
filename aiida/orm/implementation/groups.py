@@ -46,12 +46,12 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
     A group is a collection of nodes.
     """
 
-    @property  # type: ignore[misc]
+    @property
     @abc.abstractmethod
     def label(self) -> str:
         """Return the name of the group as a string."""
 
-    @label.setter  # type: ignore[misc]
+    @label.setter
     @abc.abstractmethod
     def label(self, name: str) -> None:
         """
@@ -63,12 +63,12 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
         :raises aiida.common.UniquenessError: if another group of same type and name already exists
         """
 
-    @property  # type: ignore[misc]
+    @property
     @abc.abstractmethod
     def description(self) -> Optional[str]:
         """Return the description of the group as a string."""
 
-    @description.setter  # type: ignore[misc]
+    @description.setter
     @abc.abstractmethod
     def description(self, value: Optional[str]):
         """Return the description of the group as a string."""
@@ -82,6 +82,11 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
     @abc.abstractmethod
     def user(self) -> 'BackendUser':
         """Return a backend user object, representing the user associated to this group."""
+
+    @user.setter
+    @abc.abstractmethod
+    def user(self, user: 'BackendUser') -> None:
+        """Set the user of this group."""
 
     @property
     @abc.abstractmethod

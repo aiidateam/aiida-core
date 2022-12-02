@@ -62,7 +62,7 @@ class ComputerCollection(entities.Collection['Computer']):
         return self._backend.computers.delete(pk)
 
 
-class Computer(entities.Entity['BackendComputer']):
+class Computer(entities.Entity['BackendComputer', ComputerCollection]):
     """
     Computer entity.
     """
@@ -79,12 +79,12 @@ class Computer(entities.Entity['BackendComputer']):
 
     def __init__(  # pylint: disable=too-many-arguments
         self,
-        label: str = None,
+        label: Optional[str] = None,
         hostname: str = '',
         description: str = '',
         transport_type: str = '',
         scheduler_type: str = '',
-        workdir: str = None,
+        workdir: Optional[str] = None,
         backend: Optional['StorageBackend'] = None,
     ) -> None:
         """Construct a new computer."""

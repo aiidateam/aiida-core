@@ -94,6 +94,11 @@ def test_node_repository(perform_migrations: PsqlDosMigrator):  # pylint: disabl
         node_03 = session.get(node_model, dbnode_03_id)
         node_04 = session.get(node_model, dbnode_04_id)
 
+        assert node_01 is not None
+        assert node_02 is not None
+        assert node_03 is not None
+        assert node_04 is not None
+
         assert node_01.repository_metadata == {
             'o': {
                 'sub': {

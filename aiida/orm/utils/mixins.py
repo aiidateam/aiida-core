@@ -184,7 +184,7 @@ class Sealable:
     SEALED_KEY = 'sealed'
 
     @classproperty
-    def _updatable_attributes(cls) -> tuple[str]:  # pylint: disable=no-self-argument
+    def _updatable_attributes(cls) -> tuple[str, ...]:  # pylint: disable=no-self-argument
         return (cls.SEALED_KEY,)
 
     @property

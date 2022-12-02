@@ -29,6 +29,7 @@ def test_v0x_django_0003(perform_migrations: PsqlDosMigrator, reflect_schema, da
     connection = perform_migrations.connection
     metadata.create_all(connection.engine)
     with perform_migrations._migration_context() as context:  # pylint: disable=protected-access
+        assert context.script
         context.stamp(context.script, 'django@django_0003')
     connection.commit()
 

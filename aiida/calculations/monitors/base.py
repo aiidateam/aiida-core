@@ -25,3 +25,5 @@ def always_kill(node: CalcJobNode, transport: Transport) -> str | None:  # pylin
 
     if output:
         return 'Detected a non-empty submission script'
+
+    return None

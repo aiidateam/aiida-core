@@ -10,6 +10,7 @@
 """Shared function for django_0024 and sqlalchemy ea2f50e7f615"""
 import sys
 from tempfile import NamedTemporaryFile
+from typing import Set
 
 import click
 import sqlalchemy as sa
@@ -232,7 +233,7 @@ def set_new_uuid(connection):
     ids = []
     for (curr_id,) in id_res:
         ids.append(curr_id)
-    uuids = set()
+    uuids: Set[str] = set()
     while len(uuids) < len(ids):
         uuids.add(get_new_uuid())
 

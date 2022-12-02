@@ -1222,7 +1222,7 @@ def _get_ormclass_from_cls(cls: EntityClsType) -> Tuple[EntityTypes, Classifier]
     classifiers: Classifier
 
     if issubclass(cls, nodes.Node):
-        classifiers = Classifier(cls.class_node_type)  # type: ignore[union-attr]
+        classifiers = Classifier(cls.class_node_type)
         ormclass = EntityTypes.NODE
     elif issubclass(cls, groups.Group):
         type_string = cls._type_string

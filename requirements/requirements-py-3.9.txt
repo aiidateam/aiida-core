@@ -135,7 +135,7 @@ shortuuid==1.0.8
 six==1.16.0
 snowballstemmer==2.2.0
 soupsieve==2.3.1
-spglib==1.16.1
+spglib==2.0.2
 sphinx==4.4.0
 sphinx-copybutton==0.5.0
 sphinx-design==0.0.13

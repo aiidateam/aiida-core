@@ -94,7 +94,7 @@ atomic_tools = [
     "pymatgen>=2022.1.20",
     "pymysql~=0.9.3",
     "seekpath~=1.9,>=1.9.3",
-    "spglib~=1.14"
+    "spglib>=1.14,<3.0"
 ]
 notebook = [
     "jupyter-client~=6.1,<6.1.13",

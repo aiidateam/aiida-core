@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# mypy: disable_error_code=var-annotated
 """Tests 37f3d4882837 -> ce56d84bcc35"""
 import numpy as np
 import pytest

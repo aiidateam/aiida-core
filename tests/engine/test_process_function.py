@@ -555,7 +555,7 @@ def test_default_serialization(default, node_cls):
 def test_multiple_default_serialization():
     """Test that Python base type defaults are automatically serialized to the AiiDA node counterpart."""
 
-    @workfunction
+    @workfunction  # type: ignore
     def function_with_multiple_defaults(integer: int = 10, string: str = 'default', boolean: bool = False):
         return {'integer': integer, 'string': string, 'boolean': boolean}
 

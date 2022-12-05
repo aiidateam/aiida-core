@@ -219,7 +219,6 @@ class Process(plumpy.processes.Process):
         """Return the ProcessNode used by this process to represent itself in the database.
 
         :return: instance of sub class of ProcessNode
-
         """
         assert self._node is not None
         return self._node
@@ -310,7 +309,7 @@ class Process(plumpy.processes.Process):
         super().load_instance_state(saved_state, load_context)
 
         if self.SaveKeys.CALC_ID.value in saved_state:
-            self._node = orm.load_node(saved_state[self.SaveKeys.CALC_ID.value])
+            self._node = orm.load_node(saved_state[self.SaveKeys.CALC_ID.value])  # type: ignore
             self._pid = self.node.pk  # pylint: disable=attribute-defined-outside-init
         else:
             self._pid = self._create_and_setup_db_record()  # pylint: disable=attribute-defined-outside-init
@@ -348,7 +347,7 @@ class Process(plumpy.processes.Process):
 
             if asyncio.isfuture(result):
                 # We ourselves are waiting to be killed so add it to the list
-                killing.append(result)  # type: ignore[arg-type]
+                killing.append(result)
 
             if killing:
                 # We are waiting for things to be killed, so return the 'gathered' future
@@ -418,7 +417,7 @@ class Process(plumpy.processes.Process):
         except ValueError:  # pylint: disable=try-except-raise
             raise
         finally:
-            self.node.set_process_state(self._state.LABEL)
+            self.node.set_process_state(self._state.LABEL)  # type: ignore
 
         self._save_checkpoint()
         set_process_state_change_timestamp(self)
@@ -548,7 +547,7 @@ class Process(plumpy.processes.Process):
         if self._parent_pid is None:
             return None
 
-        return orm.load_node(pk=self._parent_pid)
+        return orm.load_node(pk=self._parent_pid)  # type: ignore
 
     @classmethod
     def build_process_type(cls) -> str:
@@ -992,8 +991,11 @@ class Process(plumpy.processes.Process):
             codes may have no effect.
 
         """
+        exit_status = node.exit_status
+        if exit_status is None:
+            return True
         try:
-            return not cls.spec().exit_codes(node.exit_status).invalidates_cache
+            return not cls.spec().exit_codes(exit_status).invalidates_cache
         except ValueError:
             return True
 

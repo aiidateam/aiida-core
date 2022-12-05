@@ -135,6 +135,10 @@ class WorkChain(Process, metaclass=Protect):
         return super().spec()  # type: ignore[return-value]
 
     @property
+    def node(self) -> WorkChainNode:
+        return super().node  # type: ignore
+
+    @property
     def ctx(self) -> AttributeDict:
         """Get the context."""
         return self._context
@@ -405,7 +409,7 @@ class WorkChain(Process, metaclass=Protect):
         if awaitable.outputs:
             value = {entry.link_label: entry.node for entry in node.base.links.get_outgoing()}
         else:
-            value = node
+            value = node  # type: ignore
 
         self.resolve_awaitable(awaitable, value)
 

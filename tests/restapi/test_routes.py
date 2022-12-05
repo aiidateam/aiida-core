@@ -29,7 +29,7 @@ class TestRestApi:
     Setup of the tests for the AiiDA RESTful-api
     """
     _url_prefix = '/api/v4'
-    _dummy_data = {}
+    _dummy_data: dict = {}
     _PERPAGE_DEFAULT = 20
     _LIMIT_DEFAULT = 400
 

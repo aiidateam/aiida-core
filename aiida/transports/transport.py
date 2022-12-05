@@ -51,7 +51,7 @@ class Transport(abc.ABC):
     # See the ssh or local plugin to see the format
     _valid_auth_params = None
     _MAGIC_CHECK = re.compile('[*?[]')
-    _valid_auth_options = []
+    _valid_auth_options: list = []
     _common_auth_options = [
         (
             'use_login_shell', {

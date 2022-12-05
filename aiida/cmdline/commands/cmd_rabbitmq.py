@@ -245,7 +245,7 @@ def get_active_processes() -> list[int]:
     from aiida.engine import ProcessState
     from aiida.orm import ProcessNode, QueryBuilder
 
-    return QueryBuilder().append(
+    return QueryBuilder().append(  # type: ignore[return-value]
         ProcessNode,
         filters={
             'attributes.process_state': {

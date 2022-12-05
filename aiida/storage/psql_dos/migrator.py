@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import contextlib
 import pathlib
-from typing import Dict, Iterator, Optional
+from typing import Any, Dict, Iterator, Optional
 
 from alembic.command import downgrade, upgrade
 from alembic.config import Config
@@ -27,7 +27,7 @@ from alembic.runtime.environment import EnvironmentContext
 from alembic.runtime.migration import MigrationContext, MigrationInfo
 from alembic.script import ScriptDirectory
 from disk_objectstore import Container
-from sqlalchemy import MetaData, String, Table, column, desc, insert, inspect, select, table
+from sqlalchemy import MetaData, String, column, desc, insert, inspect, select, table
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
@@ -461,7 +461,7 @@ class PsqlDosMigrator:
         finally:
             session.close()
 
-    def get_current_table(self, table_name: str) -> Table:
+    def get_current_table(self, table_name: str) -> Any:
         """Return a table instantiated at the correct migration.
 
         Note that this is obtained by inspecting the database and not by looking into the models file.

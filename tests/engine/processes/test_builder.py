@@ -10,9 +10,9 @@
 # pylint: disable=protected-access,no-member,no-name-in-module,redefined-outer-name
 """Tests for `aiida.engine.processes.builder.ProcessBuilder`."""
 from collections.abc import Mapping, MutableMapping
+import textwrap
 
 from IPython.lib.pretty import pretty
-from importlib_metadata import textwrap
 import pytest
 
 from aiida import orm
@@ -74,7 +74,7 @@ class NestedNamespaceProcess(Process):
         spec.input('nested.namespace.str', valid_type=str, required=False, non_db=True)
 
 
-class MappingData(Mapping, orm.Data):
+class MappingData(Mapping, orm.Data):  # type: ignore[misc]
     """Data sub class that is also a `Mapping`."""
 
     def __init__(self, data=None):

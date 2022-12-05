@@ -12,6 +12,7 @@ import collections
 import contextlib
 import logging
 import types
+from typing import cast
 
 __all__ = ('AIIDA_LOGGER', 'override_log_level')
 
@@ -24,9 +25,15 @@ LOG_LEVEL_REPORT = 23
 logging.addLevelName(LOG_LEVEL_REPORT, 'REPORT')
 
 
-def report(self, msg, *args, **kwargs):
+def report(self: logging.Logger, msg, *args, **kwargs):
     """Log a message at the ``REPORT`` level."""
     self.log(LOG_LEVEL_REPORT, msg, *args, **kwargs)
+
+
+class AiidaLoggerType(logging.Logger):
+
+    def report(self, msg: str, *args, **kwargs) -> None:
+        """Log a message at the ``REPORT`` level."""
 
 
 setattr(logging, 'REPORT', LOG_LEVEL_REPORT)
@@ -43,7 +50,7 @@ LOG_LEVELS = {
     logging.getLevelName(logging.CRITICAL): logging.CRITICAL,
 }
 
-AIIDA_LOGGER = logging.getLogger('aiida')
+AIIDA_LOGGER = cast(AiidaLoggerType, logging.getLogger('aiida'))
 CLI_LOG_LEVEL = None
 
 

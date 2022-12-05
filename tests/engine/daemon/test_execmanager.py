@@ -31,7 +31,7 @@ def serialize_file_hierarchy(dirpath: pathlib.Path) -> typing.Dict:
     :return: a mapping representing the file hierarchy, where keys are filenames. The leafs correspond to files and the
         values are the text contents.
     """
-    serialized = {}
+    serialized: dict = {}
 
     for root, _, files in os.walk(dirpath):
         for filepath in files:

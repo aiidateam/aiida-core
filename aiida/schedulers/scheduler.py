@@ -9,6 +9,7 @@
 ###########################################################################
 """Implementation of `Scheduler` base class."""
 import abc
+from typing import Dict, Type
 
 from aiida.common import exceptions, log
 from aiida.common.escaping import escape_for_bash
@@ -36,10 +37,10 @@ class Scheduler(metaclass=abc.ABCMeta):
     # 'can_query_by_user': True if I can pass the 'user' argument to
     # get_joblist_command (and in this case, no 'jobs' should be given).
     # Otherwise, if False, a list of jobs is passed, and no 'user' is given.
-    _features = {}
+    _features: Dict[str, bool] = {}
 
     # The class to be used for the job resource.
-    _job_resource_class = None
+    _job_resource_class: Type[JobResource] = None  # type: ignore
 
     def __str__(self):
         return self.__class__.__name__
@@ -92,7 +93,7 @@ class Scheduler(metaclass=abc.ABCMeta):
 
         return 'No documentation available'
 
-    def get_feature(self, feature_name):
+    def get_feature(self, feature_name: str) -> bool:
         try:
             return self._features[feature_name]
         except KeyError:
@@ -107,7 +108,7 @@ class Scheduler(metaclass=abc.ABCMeta):
             raise exceptions.InternalError('No self._logger configured for {}!')
 
     @classproperty
-    def job_resource_class(cls):  # pylint: disable=no-self-argument
+    def job_resource_class(cls) -> Type[JobResource]:  # pylint: disable=no-self-argument
         return cls._job_resource_class
 
     @classmethod

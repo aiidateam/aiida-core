@@ -12,6 +12,7 @@ import collections
 import enum
 import json
 import sys
+from typing import Any, Optional
 
 import click
 import yaml
@@ -44,7 +45,7 @@ COLORS = {
 }
 
 
-def echo(message: str, fg: str = None, bold: bool = False, nl: bool = True, err: bool = False) -> None:
+def echo(message: Any, fg: Optional[str] = None, bold: bool = False, nl: bool = True, err: bool = False) -> None:
     """Log a message to the cmdline logger.
 
     .. note:: The message will be logged at the ``REPORT`` level but always without the log level prefix.

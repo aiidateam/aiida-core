@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import typing as t
+from typing import Optional, cast
 
 from aiida.common import exceptions
 from aiida.common.escaping import sql_string_match
@@ -11,6 +12,9 @@ from aiida.common.links import LinkType
 
 from ..querybuilder import QueryBuilder
 from ..utils.links import LinkManager, LinkTriple
+
+if t.TYPE_CHECKING:
+    from .node import Node  # pylint: disable=unused-import
 
 
 class NodeLinks:
@@ -75,7 +79,7 @@ class NodeLinks:
         """
         from aiida.orm.utils.links import validate_link
 
-        from .node import Node
+        from .node import Node  # pylint: disable=redefined-outer-name
 
         validate_link(source, self._node, link_type, link_label, backend=self._node.backend)
 
@@ -100,13 +104,13 @@ class NodeLinks:
         :raise TypeError: if `target` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid
         """
-        from .node import Node
+        from .node import Node  # pylint: disable=redefined-outer-name
         type_check(link_type, LinkType, f'link_type should be a LinkType enum but got: {type(link_type)}')
         type_check(target, Node, f'target should be a `Node` instance but got: {type(target)}')
 
     def get_stored_link_triples(
         self,
-        node_class: t.Type['Node'] = None,
+        node_class: Optional[t.Type['Node']] = None,
         link_type: t.Union[LinkType, t.Sequence[LinkType]] = (),
         link_label_filter: t.Optional[str] = None,
         link_direction: str = 'incoming',
@@ -123,10 +127,10 @@ class NodeLinks:
         :param link_direction: `incoming` or `outgoing` to get the incoming or outgoing links, respectively.
         :param only_uuid: project only the node UUID instead of the instance onto the `NodeTriple.node` entries
         """
-        from .node import Node
+        from .node import Node  # pylint: disable=redefined-outer-name
 
-        if not isinstance(link_type, tuple):
-            link_type = (link_type,)
+        if not isinstance(link_type, (tuple, list)):
+            link_type = cast(t.Sequence[LinkType], (link_type,))
 
         if link_type and not all(isinstance(t, LinkType) for t in link_type):
             raise TypeError(f'link_type should be a LinkType or tuple of LinkType: got {link_type}')
@@ -166,7 +170,7 @@ class NodeLinks:
 
     def get_incoming(
         self,
-        node_class: t.Type['Node'] = None,
+        node_class: Optional[t.Type['Node']] = None,
         link_type: t.Union[LinkType, t.Sequence[LinkType]] = (),
         link_label_filter: t.Optional[str] = None,
         only_uuid: bool = False
@@ -181,8 +185,8 @@ class NodeLinks:
             Here wildcards (% and _) can be passed in link label filter as we are using "like" in QB.
         :param only_uuid: project only the node UUID instead of the instance onto the `NodeTriple.node` entries
         """
-        if not isinstance(link_type, tuple):
-            link_type = (link_type,)
+        if not isinstance(link_type, (tuple, list)):
+            link_type = cast(t.Sequence[LinkType], (link_type,))
 
         if self._node.is_stored:
             link_triples = self.get_stored_link_triples(
@@ -195,7 +199,11 @@ class NodeLinks:
         for link_triple in self.incoming_cache:
 
             if only_uuid:
-                link_triple = LinkTriple(link_triple.node.uuid, link_triple.link_type, link_triple.link_label)
+                link_triple = LinkTriple(
+                    link_triple.node.uuid,  # type: ignore
+                    link_triple.link_type,
+                    link_triple.link_label,
+                )
 
             if link_triple in link_triples:
                 raise exceptions.InternalError(
@@ -213,7 +221,7 @@ class NodeLinks:
 
     def get_outgoing(
         self,
-        node_class: t.Type['Node'] = None,
+        node_class: Optional[t.Type['Node']] = None,
         link_type: t.Union[LinkType, t.Sequence[LinkType]] = (),
         link_label_filter: t.Optional[str] = None,
         only_uuid: bool = False

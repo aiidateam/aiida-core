@@ -28,7 +28,7 @@ class BackendAuthInfo(BackendEntity):
 
     METADATA_WORKDIR = 'workdir'
 
-    @property  # type: ignore[misc]
+    @property
     @abc.abstractmethod
     def enabled(self) -> bool:
         """Return whether this instance is enabled.
@@ -36,7 +36,7 @@ class BackendAuthInfo(BackendEntity):
         :return: boolean, True if enabled, False otherwise
         """
 
-    @enabled.setter  # type: ignore[misc]
+    @enabled.setter
     @abc.abstractmethod
     def enabled(self, value: bool) -> None:
         """Set the enabled state

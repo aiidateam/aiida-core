@@ -3,7 +3,7 @@
 import datetime
 import math
 
-from pymatgen.core import Molecule
+from pymatgen.core import Molecule  # type: ignore
 import pytest
 
 from aiida.orm import load_node

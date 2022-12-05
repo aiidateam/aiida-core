@@ -40,7 +40,7 @@ class AuthInfoCollection(entities.Collection['AuthInfo']):
         self._backend.authinfos.delete(pk)
 
 
-class AuthInfo(entities.Entity['BackendAuthInfo']):
+class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
     """ORM class that models the authorization information that allows a `User` to connect to a `Computer`."""
 
     _CLS_COLLECTION = AuthInfoCollection

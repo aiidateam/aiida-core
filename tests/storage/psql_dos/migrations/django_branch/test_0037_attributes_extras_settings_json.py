@@ -70,7 +70,7 @@ def test_attr_extra_migration(perform_migrations: PsqlDosMigrator):
             'datatype': 'date',
             'dval': datetime.fromisoformat('2022-01-01')
         })):
-            kwargs['tval'] = 'test'
+            kwargs['tval'] = 'test'  # type: ignore
             attr = attr_model(dbnode_id=node.id, key=f'attr_{idx}', **kwargs)
             session.add(attr)
             session.commit()
@@ -106,22 +106,29 @@ def test_settings_migration(perform_migrations: PsqlDosMigrator):
 
     with perform_migrations.session() as session:
 
-        for idx, kwargs in enumerate(({
-            'datatype': 'txt',
-            'tval': 'test'
-        }, {
-            'datatype': 'int',
-            'ival': 1
-        }, {
-            'datatype': 'bool',
-            'bval': True
-        }, {
-            'datatype': 'float',
-            'fval': 1.0
-        }, {
-            'datatype': 'date',
-            'dval': datetime.fromisoformat('2022-01-01')
-        })):
+        kwargs: dict
+        for idx, kwargs in enumerate((  # type: ignore
+            {
+                'datatype': 'txt',
+                'tval': 'test'
+            },
+            {
+                'datatype': 'int',
+                'ival': 1
+            },
+            {
+                'datatype': 'bool',
+                'bval': True
+            },
+            {
+                'datatype': 'float',
+                'fval': 1.0
+            },
+            {
+                'datatype': 'date',
+                'dval': datetime.fromisoformat('2022-01-01')
+            }
+        )):
             kwargs['tval'] = 'test'
             kwargs['description'] = 'description'
             kwargs['time'] = datetime.fromisoformat('2022-01-01')

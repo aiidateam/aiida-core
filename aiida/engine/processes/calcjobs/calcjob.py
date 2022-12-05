@@ -147,6 +147,7 @@ def validate_monitors(monitors: Any, _: PortNamespace) -> Optional[str]:
             CalcJobMonitor(**monitor_node.get_dict())
         except (exceptions.EntryPointError, TypeError, ValueError) as exception:
             return f'`monitors.{key}` is invalid: {exception}'
+    return None
 
 
 def validate_parser(parser_name: Any, _: PortNamespace) -> Optional[str]:
@@ -463,7 +464,7 @@ class CalcJob(Process):
         return cls.spec_metadata['options']  # pylint: disable=unsubscriptable-object
 
     @classmethod
-    def get_importer(cls, entry_point_name: str = None) -> CalcJobImporter:
+    def get_importer(cls, entry_point_name: str | None = None) -> CalcJobImporter:
         """Load the `CalcJobImporter` associated with this `CalcJob` if it exists.
 
         By default an importer with the same entry point as the ``CalcJob`` will be loaded, however, this can be
@@ -479,7 +480,9 @@ class CalcJob(Process):
         if entry_point_name is None:
             _, entry_point = get_entry_point_from_class(cls.__module__, cls.__name__)
             if entry_point is not None:
-                entry_point_name = entry_point.name  # type: ignore[attr-defined]
+                entry_point_name = entry_point.name  # type: ignore
+
+        assert entry_point_name is not None
 
         return CalcJobImporterFactory(entry_point_name)()
 
@@ -505,6 +508,10 @@ class CalcJob(Process):
         states_map = super().get_state_classes()
         states_map[ProcessState.WAITING] = Waiting
         return states_map
+
+    @property
+    def node(self) -> orm.CalcJobNode:
+        return super().node  # type: ignore
 
     @override
     def on_terminated(self) -> None:
@@ -598,7 +605,7 @@ class CalcJob(Process):
                 calc_info = self.presubmit(folder)
                 transport.chdir(folder.abspath)
                 upload_calculation(self.node, transport, calc_info, folder, inputs=self.inputs, dry_run=True)
-                self.node.dry_run_info = {
+                self.node.dry_run_info = {  # type: ignore
                     'folder': folder.abspath,
                     'script_filename': self.node.get_option('submit_script_filename')
                 }
@@ -803,6 +810,7 @@ class CalcJob(Process):
             raise InvalidOperation('calculation node is not stored.')
 
         computer = self.node.computer
+        assert computer is not None
         codes = [_ for _ in inputs.all_nodes() if isinstance(_, AbstractCode)]
 
         for code in codes:
@@ -850,7 +858,7 @@ class CalcJob(Process):
 
         # If the inputs contain a ``remote_folder`` input node, we are in an import scenario and can skip the rest
         if 'remote_folder' in inputs.all_link_labels():
-            return
+            return calc_info
 
         # The remaining code is only necessary for actual runs, for example, creating the submission script
         scheduler = computer.get_scheduler()
@@ -874,7 +882,7 @@ class CalcJob(Process):
         # Set resources, also with get_default_mpiprocs_per_machine
         resources = self.node.get_option('resources')
         scheduler.preprocess_resources(resources, computer.get_default_mpiprocs_per_machine())
-        job_tmpl.job_resource = scheduler.create_job_resource(**resources)
+        job_tmpl.job_resource = scheduler.create_job_resource(**resources)  # type: ignore
 
         subst_dict = {'tot_num_mpiprocs': job_tmpl.job_resource.get_tot_num_mpiprocs()}
 

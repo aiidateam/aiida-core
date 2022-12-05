@@ -17,7 +17,7 @@ from tests.static import STATIC_DIR
 @pytest.mark.usefixtures('aiida_profile_clean_class')
 class TestCodDbImporter:
     """Test the CodDbImporter class."""
-    from aiida.orm.nodes.data.cif import has_pycifrw
+    from aiida.orm.nodes.data.cif import has_pycifrw  # type: ignore
 
     def test_query_construction_1(self):
         """Test query construction."""

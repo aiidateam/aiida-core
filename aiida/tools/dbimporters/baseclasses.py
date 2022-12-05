@@ -9,6 +9,7 @@
 ###########################################################################
 """Base class implementation for an external database importer."""
 import io
+from typing import Optional
 
 
 class DbImporter:
@@ -84,7 +85,7 @@ class DbSearchResults:
     ``__getitem__``.
     """
 
-    _return_class = None
+    _return_class: type
 
     def __init__(self, results):
         self._results = results
@@ -179,7 +180,7 @@ class DbEntry:
     """
     Represents an entry from external database.
     """
-    _license = None
+    _license: Optional[str] = None
 
     def __init__(self, db_name=None, db_uri=None, id=None, version=None, extras=None, uri=None):  # pylint: disable=too-many-arguments,redefined-builtin
         """

@@ -14,9 +14,10 @@ from contextlib import contextmanager
 from functools import cached_property
 from typing import Any, Iterator, Sequence
 
+from sqlalchemy.exc import IntegrityError as SqlaIntegrityError
 from sqlalchemy.orm import Session
 
-from aiida.common.exceptions import ClosedStorage
+from aiida.common.exceptions import ClosedStorage, IntegrityError
 from aiida.manage import Profile, get_config_option
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import BackendEntity, StorageBackend
@@ -144,14 +145,17 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
         entering. Transactions can be nested.
         """
         session = self.get_session()
-        if session.in_transaction():
-            with session.begin_nested():
-                yield session
-            session.commit()
-        else:
-            with session.begin():
+
+        try:
+            if session.in_transaction():
                 with session.begin_nested():
                     yield session
+            else:
+                with session.begin():
+                    with session.begin_nested():
+                        yield session
+        except SqlaIntegrityError as exception:
+            raise IntegrityError(str(exception)) from exception
 
     def _clear(self) -> None:
         raise NotImplementedError

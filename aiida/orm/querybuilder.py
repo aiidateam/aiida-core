@@ -996,7 +996,7 @@ class QueryBuilder:
             return value
 
     @overload
-    def first(self, flat: Literal[False]) -> Optional[list[Any]]:
+    def first(self, flat: Literal[False] = False) -> Optional[list[Any]]:
         ...
 
     @overload

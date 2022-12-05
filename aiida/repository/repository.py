@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """Module for the implementation of a file repository."""
+from __future__ import annotations
+
 import contextlib
 import pathlib
 from typing import Any, BinaryIO, Dict, Iterable, Iterator, List, Optional, Tuple, Union
@@ -45,6 +47,8 @@ class Repository:
         self.set_backend(backend)
         self.reset()
 
+        self._hash: str | None = None
+
     def __str__(self) -> str:
         """Return the string representation of this repository."""
         return f'Repository<{str(self.backend)}>'
@@ -74,7 +78,16 @@ class Repository:
 
         return instance
 
+    def reset_hash(self) -> None:
+        """Reset the stored hash before calling the decorated function.
+
+        This decorator should be used on methods that mutate the state of the repository, which should invalidate the
+        hash and therefore reset it, such that it is recomputed the next time that it is requested.
+        """
+        self._hash = None
+
     def reset(self) -> None:
+        self.reset_hash()
         self._directory = self._file_cls()
 
     def serialize(self) -> Dict[str, Any]:
@@ -96,8 +109,10 @@ class Repository:
         """
         if serialized is None:
             return {}
+
         items: Dict[str, Optional[str]] = {}
         stack = [('', serialized)]
+
         while stack:
             path, sub_dict = stack.pop()
             for name, obj in sub_dict.get('o', {}).items():
@@ -109,6 +124,7 @@ class Repository:
                 else:
                     items[f'{sub_path}{delimiter}'] = None
                     stack.append((sub_path, obj))
+
         return items
 
     def hash(self) -> str:
@@ -118,6 +134,9 @@ class Repository:
 
         :return: the hash representing the contents of the repository.
         """
+        if self._hash is not None:
+            return self._hash
+
         objects: Dict[str, Any] = {}
         for root, dirnames, filenames in self.walk():
             objects['__dirnames__'] = dirnames
@@ -126,7 +145,9 @@ class Repository:
                 assert key is not None, 'Expected FileType.File to have a key'
                 objects[str(root / filename)] = self.backend.get_object_hash(key)
 
-        return make_hash(objects)
+        self._hash = make_hash(objects)
+
+        return self._hash
 
     @staticmethod
     def _pre_process_path(path: Optional[FilePath] = None) -> pathlib.PurePosixPath:
@@ -177,6 +198,7 @@ class Repository:
         :param path: the relative path where to store the object in the repository.
         :param key: fully qualified identifier for the object within the repository.
         """
+        self.reset_hash()
         directory = self.create_directory(path.parent)
         directory.objects[path.name] = self._file_cls(path.name, FileType.FILE, key)
 
@@ -190,6 +212,7 @@ class Repository:
         if path is None:
             raise TypeError('path cannot be `None`.')
 
+        self.reset_hash()
         path = self._pre_process_path(path)
         directory = self._directory
 
@@ -309,6 +332,7 @@ class Repository:
         :param path: the relative path where to store the object in the repository.
         :raises TypeError: if the path is not a string or ``Path``, or is an absolute path.
         """
+        self.reset_hash()
         path = self._pre_process_path(path)
         key = self.backend.put_object_from_filelike(handle)
         self._insert_file(path, key)
@@ -320,6 +344,8 @@ class Repository:
         :param path: the relative path where to store the object in the repository.
         :raises TypeError: if the path is not a string and relative path, or the handle is not a byte stream.
         """
+        self.reset_hash()
+
         with open(filepath, 'rb') as handle:
             self.put_object_from_filelike(handle, path)
 
@@ -424,6 +450,8 @@ class Repository:
         :raises IsADirectoryError: if the object is a directory and not a file.
         :raises OSError: if the file could not be deleted.
         """
+        self.reset_hash()
+
         path = self._pre_process_path(path)
         file_object = self.get_object(path)
 
@@ -445,8 +473,11 @@ class Repository:
             nodes. Therefore, we manually delete all file objects and then simply reset the internal file hierarchy.
 
         """
+        self.reset_hash()
+
         for file_key in self.get_file_keys():
             self.backend.delete_object(file_key)
+
         self.reset()
 
     def clone(self, source: 'Repository') -> None:
@@ -532,6 +563,7 @@ class Repository:
 
         :param kwargs: keyword argument that will be passed to the ``initialise`` call of the backend.
         """
+        self.reset_hash()
         self.backend.initialise(**kwargs)
 
     def delete(self) -> None:
@@ -540,5 +572,6 @@ class Repository:
         .. important:: This will not just delete the contents of the repository but also the repository itself and all
             of its assets. For example, if the repository is stored inside a folder on disk, the folder may be deleted.
         """
+        self.reset_hash()
         self.backend.erase()
         self.reset()

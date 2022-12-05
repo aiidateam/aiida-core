@@ -417,7 +417,7 @@ class Process(plumpy.processes.Process):
         except ValueError:  # pylint: disable=try-except-raise
             raise
         finally:
-            self.node.set_process_state(self._state.LABEL)
+            self.node.set_process_state(self._state.LABEL)  # type: ignore
 
         self._save_checkpoint()
         set_process_state_change_timestamp(self)

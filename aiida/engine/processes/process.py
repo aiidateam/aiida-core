@@ -405,7 +405,20 @@ class Process(plumpy.processes.Process):
         """After entering a new state, save a checkpoint and update the latest process state change timestamp."""
         # pylint: disable=cyclic-import
         from aiida.engine.utils import set_process_state_change_timestamp
-        self.update_node_state(self._state)
+
+        # For reasons unknown, it is important to update the outputs first, before doing anything else, otherwise there
+        # is the risk that certain outputs do not get attached before the process reaches a terminal state. Nevertheless
+        # we need to guarantee that the process state gets updated even if the ``update_outputs`` call excepts, for
+        # example if the process implementation attaches an invalid output through ``Process.out``, and so we call the
+        # ``ProcessNode.set_process_state`` in the finally-clause. This way the state gets properly set on the node even
+        # if the process is transitioning to the terminal excepted state.
+        try:
+            self.update_outputs()
+        except ValueError:  # pylint: disable=try-except-raise
+            raise
+        finally:
+            self.node.set_process_state(self._state.LABEL)
+
         self._save_checkpoint()
         set_process_state_change_timestamp(self)
         super().on_entered(from_state)
@@ -628,10 +641,6 @@ class Process(plumpy.processes.Process):
         :return: The decoded input args
         """
         return serialize.deserialize_unsafe(encoded)
-
-    def update_node_state(self, state: plumpy.process_states.State) -> None:
-        self.node.set_process_state(state.LABEL)  # type: ignore
-        self.update_outputs()
 
     def update_outputs(self) -> None:
         """Attach new outputs to the node since the last call.

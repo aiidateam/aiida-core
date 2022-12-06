@@ -186,7 +186,6 @@ repos:
                 aiida/tools/groups/paths.py|
                 aiida/tools/query/calculation.py|
                 aiida/tools/query/mapping.py|
-                aiida/tools/visualization/graph.py|
                 aiida/transports/cli.py|
                 aiida/transports/plugins/local.py|
                 aiida/transports/plugins/ssh.py|

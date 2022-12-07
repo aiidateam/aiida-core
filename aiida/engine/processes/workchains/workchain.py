@@ -215,7 +215,6 @@ class WorkChain(Process, metaclass=Protect):
 
         return ctx, ctx_path[-1]
 
-    @Protect.final
     def _insert_awaitable(self, awaitable: Awaitable) -> None:
         """Insert an awaitable that should be terminated before before continuing to the next step.
 

@@ -163,6 +163,7 @@ def quicksetup(
         'port': db_port,
         'user': su_db_username,
         'password': su_db_password,
+        'database': su_db_name,
     }
     postgres = Postgres(interactive=not non_interactive, quiet=False, dbinfo=dbinfo_su)
 
@@ -177,8 +178,8 @@ def quicksetup(
                 'Oops! quicksetup was unable to create the AiiDA database for you.',
                 'See `verdi quicksetup -h` for how to specify non-standard parameters for the postgresql connection.\n'
                 'Alternatively, create the AiiDA database yourself: ',
-                manual_setup_instructions(dbuser=su_db_username,
-                                          dbname=su_db_name), '', 'and then use `verdi setup` instead', ''
+                manual_setup_instructions(su_db_username=su_db_username, db_username=db_username,
+                                          db_name=db_name), '', 'and then use `verdi setup` instead', ''
             ])
         )
         raise exception

@@ -559,3 +559,35 @@ def test_invalid_outputs():
     node = orm.QueryBuilder().append(orm.ProcessNode, tag='node').order_by({'node': {'id': 'desc'}}).first(flat=True)
     assert node.is_excepted, node.process_state
     assert re.match(r'ValueError: node<.*> already has an incoming LinkType.CREATE link', node.exception)
+
+
+def test_nested_namespace():
+    """Test that dynamic nested namespaces are supported.
+
+    As long as the function declares ``**kwargs`` and all leaf values are storable ``Data`` instances, it should work.
+    """
+
+    @workfunction
+    def function(**kwargs):
+        return kwargs
+
+    inputs = {
+        'nested': {
+            'namespace': {
+                'int': orm.Int(1),
+            }
+        }
+    }
+    results, node = function.run_get_node(**inputs)
+    assert results == inputs
+    assert node.get_incoming().nested() == inputs
+
+    inputs = {
+        'nested': {
+            'namespace': {
+                'int': 1,
+            }
+        }
+    }
+    with pytest.raises(ValueError):
+        function.run_get_node(**inputs)

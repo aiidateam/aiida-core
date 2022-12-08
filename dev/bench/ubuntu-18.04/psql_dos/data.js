@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1670401760720,
+  "lastUpdate": 1670501646569,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -103127,6 +103127,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.0020215",
             "group": "node",
             "extra": "mean: 20.183 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "2.60",
+          "cores": 2,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.8.14",
+          "metadata": "postgres:12.3, rabbitmq:3.8.3"
+        },
+        "commit": {
+          "id": "a86e6fbf866fb670d93b3e32997f285de565af28",
+          "message": "Process functions: Restore support for dynamic nested input namespaces (#5808)\n\nThis behavior was supported before v2.0.4 but was accidentally removed by\r\nputting more strict type validation on inputs passed to process\r\nfunctions. In d2323d462a9c84ba83f24117fb78e5b102a53e85, a bug was fixed\r\nwhere it was possible to pass non-storable inputs to dynamic port\r\nnamespaces. For example, the following was allowed:\r\n\r\n    @calcfunction\r\n    def sum(**kwargs):\r\n        return sum(kwargs.values())\r\n\r\n    sum(**{'a': 1, 'b': 2})\r\n\r\nHowever, since the values in the `kwargs` are not `Data` nodes (and this\r\nwas before automatic input serialization was added for process functions)\r\nand so they could not be stored in the provenance graph. This would\r\ntherefore cause accidental provenance loss.\r\n\r\nThis bug was fixed in the aforementioned commit by explicitly setting\r\n`valid_type=Data` on the inputs namespace of the `Process` base class.\r\n\r\nThe fix, however, inadvertently also removed support for arbitrarily\r\nnested keyword arguments in process functions. While this would work\r\nbefore, it would now raise a `ValidationError` saying that the dynamic\r\nnamespace received a `dict` instead of a `Data` node. The cause is that\r\nthe `PortNamespace.validate_dynamic_ports` did not recurse down nested\r\nnamespaces, but only validated top-level values.\r\n\r\nThis behavior is fixed in `plumpy==0.21.3` where now the validation\r\nmethod will recursively go down any nested namespaces for a dynamic port\r\nnamespace and validate as long as all leaf-values match the `valid_type`\r\nof the `PortNamespace`.",
+          "timestamp": "2022-12-08T13:03:31+01:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/a86e6fbf866fb670d93b3e32997f285de565af28",
+          "distinct": true,
+          "tree_id": "673e8c9b8de85c8861ecef0854a4ce32257b0529"
+        },
+        "date": 1670501641175,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 3.4674725082791213,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0096113",
+            "group": "import-export",
+            "extra": "mean: 288.39 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 3.2980698501335266,
+            "unit": "iter/sec",
+            "range": "stddev: 0.063270",
+            "group": "import-export",
+            "extra": "mean: 303.21 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 4.187897327042471,
+            "unit": "iter/sec",
+            "range": "stddev: 0.058639",
+            "group": "import-export",
+            "extra": "mean: 238.78 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 3.956919497968455,
+            "unit": "iter/sec",
+            "range": "stddev: 0.076522",
+            "group": "import-export",
+            "extra": "mean: 252.72 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 2.818498938412669,
+            "unit": "iter/sec",
+            "range": "stddev: 0.086883",
+            "group": "engine",
+            "extra": "mean: 354.80 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.6564327361573362,
+            "unit": "iter/sec",
+            "range": "stddev: 0.034398",
+            "group": "engine",
+            "extra": "mean: 1.5234 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.7707527800221733,
+            "unit": "iter/sec",
+            "range": "stddev: 0.041669",
+            "group": "engine",
+            "extra": "mean: 1.2974 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.15977375108624578,
+            "unit": "iter/sec",
+            "range": "stddev: 0.16296",
+            "group": "engine",
+            "extra": "mean: 6.2589 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.18444221308480696,
+            "unit": "iter/sec",
+            "range": "stddev: 0.31793",
+            "group": "engine",
+            "extra": "mean: 5.4218 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.2367243416089617,
+            "unit": "iter/sec",
+            "range": "stddev: 0.087909",
+            "group": "engine",
+            "extra": "mean: 447.08 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.5590889150954663,
+            "unit": "iter/sec",
+            "range": "stddev: 0.083884",
+            "group": "engine",
+            "extra": "mean: 1.7886 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.6136457996357414,
+            "unit": "iter/sec",
+            "range": "stddev: 0.068968",
+            "group": "engine",
+            "extra": "mean: 1.6296 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.11618396432888321,
+            "unit": "iter/sec",
+            "range": "stddev: 0.38082",
+            "group": "engine",
+            "extra": "mean: 8.6070 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.1360517290588006,
+            "unit": "iter/sec",
+            "range": "stddev: 0.38227",
+            "group": "engine",
+            "extra": "mean: 7.3501 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 379.9985344718186,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00030117",
+            "group": "node",
+            "extra": "mean: 2.6316 msec\nrounds: 228"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 145.77448200112596,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00041655",
+            "group": "node",
+            "extra": "mean: 6.8599 msec\nrounds: 133"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 71.54967021642835,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0013036",
+            "group": "node",
+            "extra": "mean: 13.976 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 225.4551595285786,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00021932",
+            "group": "node",
+            "extra": "mean: 4.4355 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 54.50241400895982,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0018895",
+            "group": "node",
+            "extra": "mean: 18.348 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 47.51562091005247,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0023720",
+            "group": "node",
+            "extra": "mean: 21.046 msec\nrounds: 100"
           }
         ]
       }

@@ -14,6 +14,8 @@ storing the absolute filepath of the relevant executable and the computer on whi
 represented by an instance of :class:`aiida.orm.computers.Computer`. Each time a :class:`aiida.engine.CalcJob` is run
 using an ``InstalledCode``, it will run its executable on the associated computer.
 """
+from __future__ import annotations
+
 import pathlib
 
 import click
@@ -42,7 +44,7 @@ class InstalledCode(Code):
         """
         super().__init__(**kwargs)
         self.computer = computer
-        self.filepath_executable = filepath_executable
+        self.filepath_executable = filepath_executable  # type: ignore[assignment]
 
     def _validate(self):
         """Validate the instance by checking that a computer has been defined.
@@ -92,12 +94,30 @@ class InstalledCode(Code):
         type_check(computer, Computer)
         return computer.pk == self.computer.pk
 
-    def get_executable(self) -> pathlib.Path:
+    def get_executable(self) -> pathlib.PurePosixPath:
         """Return the executable that the submission script should execute to run the code.
 
         :return: The executable to be called in the submission script.
         """
         return self.filepath_executable
+
+    @property  # type: ignore[override]
+    def computer(self) -> Computer:
+        """Return the computer of this code."""
+        assert self.backend_entity.computer is not None
+        return Computer.from_backend_entity(self.backend_entity.computer)
+
+    @computer.setter
+    def computer(self, computer: Computer) -> None:
+        """Set the computer of this code.
+
+        :param computer: A `Computer`.
+        """
+        if self.is_stored:
+            raise exceptions.ModificationNotAllowed('cannot set the computer on a stored node')
+
+        type_check(computer, Computer, allow_none=False)
+        self.backend_entity.computer = computer.backend_entity
 
     @property
     def full_label(self) -> str:
@@ -111,12 +131,12 @@ class InstalledCode(Code):
         return f'{self.label}@{self.computer.label}'
 
     @property
-    def filepath_executable(self) -> pathlib.PurePath:
+    def filepath_executable(self) -> pathlib.PurePosixPath:
         """Return the absolute filepath of the executable that this code represents.
 
         :return: The absolute filepath of the executable.
         """
-        return pathlib.PurePath(self.base.attributes.get(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE))
+        return pathlib.PurePosixPath(self.base.attributes.get(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE))
 
     @filepath_executable.setter
     def filepath_executable(self, value: str) -> None:
@@ -126,7 +146,7 @@ class InstalledCode(Code):
         """
         type_check(value, str)
 
-        if not pathlib.PurePath(value).is_absolute():
+        if not pathlib.PurePosixPath(value).is_absolute():
             raise ValueError('the `filepath_executable` should be absolute.')
 
         self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, value)

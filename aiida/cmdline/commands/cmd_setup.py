@@ -178,7 +178,7 @@ def quicksetup(
                 'Oops! quicksetup was unable to create the AiiDA database for you.',
                 'See `verdi quicksetup -h` for how to specify non-standard parameters for the postgresql connection.\n'
                 'Alternatively, create the AiiDA database yourself: ',
-                manual_setup_instructions(su_db_username=su_db_username, db_username=db_username,
+                manual_setup_instructions(db_username=db_username,
                                           db_name=db_name), '', 'and then use `verdi setup` instead', ''
             ])
         )

@@ -37,7 +37,7 @@ _CREATE_DB_COMMAND = (
     'TEMPLATE=template0'
 )
 _DROP_DB_COMMAND = 'DROP DATABASE "{}"'
-_GRANT_ROLE_COMMAND = 'GRANT "{}" TO "{}"'
+_GRANT_ROLE_COMMAND = 'GRANT "{}" TO current_user'
 _USER_EXISTS_COMMAND = "SELECT usename FROM pg_user WHERE usename='{}'"
 _CHECK_DB_EXISTS_COMMAND = "SELECT datname FROM pg_database WHERE datname='{}'"
 _COPY_DB_COMMAND = 'CREATE DATABASE "{}" WITH TEMPLATE "{}" OWNER "{}"'
@@ -109,7 +109,7 @@ class Postgres(PGSU):
         """
         self.execute(_CREATE_USER_COMMAND.format(dbuser, dbpass, privileges))
         # this is needed on some postgresql installations
-        self.execute(_GRANT_ROLE_COMMAND.format(dbuser, self.dsn['user']))
+        self.execute(_GRANT_ROLE_COMMAND.format(dbuser))
 
     def drop_dbuser(self, dbuser):
         """
@@ -221,7 +221,7 @@ class Postgres(PGSU):
         return self.dsn.copy()
 
 
-def manual_setup_instructions(su_db_username, db_username, db_name):
+def manual_setup_instructions(db_username, db_name):
     """Create a message with instructions for manually creating a database"""
     db_pass = '<password>'
     instructions = '\n'.join([
@@ -229,7 +229,7 @@ def manual_setup_instructions(su_db_username, db_username, db_name):
         '',
         '\t$ psql template1',
         f'	==> {_CREATE_USER_COMMAND.format(db_username, db_pass, "")}',
-        f'	==> {_GRANT_ROLE_COMMAND.format(db_username, su_db_username)}',
+        f'	==> {_GRANT_ROLE_COMMAND.format(db_username)}',
         f'	==> {_CREATE_DB_COMMAND.format(db_name, db_username)}',
     ])
     return instructions

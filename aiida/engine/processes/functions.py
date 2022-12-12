@@ -421,8 +421,8 @@ class FunctionProcess(Process):
 
         for name, value in (self.inputs or {}).items():
             try:
-                if self.spec().inputs[name].non_db:  # type: ignore[union-attr]
-                    # Don't consider non-database inputs
+                if self.spec().inputs[name].is_metadata:  # type: ignore[union-attr]
+                    # Don't consider ports that defined ``is_metadata=True``
                     continue
             except KeyError:
                 pass  # No port found

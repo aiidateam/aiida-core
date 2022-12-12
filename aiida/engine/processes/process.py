@@ -92,7 +92,7 @@ class Process(plumpy.processes.Process):
 
         """
         super().define(spec)
-        spec.input_namespace(spec.metadata_key, required=False, non_db=True)
+        spec.input_namespace(spec.metadata_key, required=False, is_metadata=True)
         spec.input(
             f'{spec.metadata_key}.store_provenance',
             valid_type=bool,
@@ -802,7 +802,9 @@ class Process(plumpy.processes.Process):
         :return: flat list of inputs
 
         """
-        if (port is None and isinstance(port_value, orm.Node)) or (isinstance(port, InputPort) and not port.non_db):
+        if (port is None and
+            isinstance(port_value,
+                       orm.Node)) or (isinstance(port, InputPort) and not (port.is_metadata or port.non_db)):
             return [(parent_name, port_value)]
 
         if port is None and isinstance(port_value, Mapping) or isinstance(port, PortNamespace):
@@ -822,7 +824,7 @@ class Process(plumpy.processes.Process):
                 items.extend(sub_items)
             return items
 
-        assert (port is None) or (isinstance(port, InputPort) and port.non_db)
+        assert (port is None) or (isinstance(port, InputPort) and (port.is_metadata or port.non_db))
         return []
 
     def _flatten_outputs(

@@ -43,12 +43,6 @@ def test_validate(aiida_localhost):
     filepath_executable = '/usr/bin/bash'
     code = InstalledCode(computer=aiida_localhost, filepath_executable=filepath_executable)
 
-    code.computer = None
-    assert code.computer is None
-
-    with pytest.raises(ValidationError, match='The `computer` is undefined.'):
-        code.store()
-
     code.computer = aiida_localhost
     code.base.attributes.set(code._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, None)  # pylint: disable=protected-access
 

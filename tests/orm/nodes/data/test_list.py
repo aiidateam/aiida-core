@@ -25,7 +25,6 @@ def int_listing():
     return [2, 1, 3]
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_creation():
     """Test the creation of an empty ``List`` node."""
     node = List()
@@ -34,7 +33,6 @@ def test_creation():
         node[0]  # pylint: disable=pointless-statement
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_mutability():
     """Test list's mutability before and after storage."""
     node = List()
@@ -58,7 +56,6 @@ def test_mutability():
         node.reverse()
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_store_load(listing):
     """Test load_node on just stored object."""
     node = List(listing)
@@ -68,7 +65,6 @@ def test_store_load(listing):
     assert node.get_list() == node_loaded.get_list()
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_special_methods(listing):
     """Test the special methods of the ``List`` class."""
     node = List(listing)
@@ -89,7 +85,6 @@ def test_special_methods(listing):
     assert len(node) == 2
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_equality(listing):
     """Test equality comparison for ``List`` nodes."""
     different_list = ['I', 'am', 'different']
@@ -106,7 +101,6 @@ def test_equality(listing):
     assert node != different_node
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_append(listing):
     """Test the ``List.append()`` method."""
 
@@ -127,7 +121,6 @@ def test_append(listing):
     assert node[-1] == 'more'
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_extend(listing):
     """Test extend() member function."""
 
@@ -150,7 +143,6 @@ def test_extend(listing):
     do_checks(node, listing * 2)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_insert(listing):
     """Test the ``List.insert()`` method."""
     node = List(listing)
@@ -159,7 +151,6 @@ def test_insert(listing):
     assert len(node) == 4
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_remove(listing):
     """Test the ``List.remove()`` method."""
     node = List(listing)
@@ -171,7 +162,6 @@ def test_remove(listing):
         node.remove('non-existent')
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_pop(listing):
     """Test the ``List.pop()`` method."""
     node = List(listing)
@@ -179,7 +169,6 @@ def test_pop(listing):
     assert node.get_list() == listing[:-1]
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_index(listing):
     """Test the ``List.index()`` method."""
     node = List(listing)
@@ -187,7 +176,6 @@ def test_index(listing):
     assert node.index(True) == listing.index(True)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_count(listing):
     """Test the ``List.count()`` method."""
     node = List(listing)
@@ -195,7 +183,6 @@ def test_count(listing):
         assert node.count(value) == listing.count(value)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_sort(listing, int_listing):
     """Test the ``List.sort()`` method."""
     node = List(int_listing)
@@ -208,7 +195,6 @@ def test_sort(listing, int_listing):
         node.sort()
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_reverse(listing):
     """Test the ``List.reverse()`` method."""
     node = List(listing)
@@ -217,7 +203,6 @@ def test_reverse(listing):
     assert node.get_list() == listing
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_initialise_with_list_kwarg(listing):
     """Test that the ``List`` node can be initialized with the ``list`` keyword argument for backwards compatibility."""
     node = List(listing)

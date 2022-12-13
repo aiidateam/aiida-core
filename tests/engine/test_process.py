@@ -40,7 +40,7 @@ class TestProcessNamespace:
     """Test process namespace"""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+    def init_profile(self):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         assert Process.current() is None
@@ -98,7 +98,7 @@ class TestProcess:
     """Test AiiDA process."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         assert Process.current() is None
@@ -461,7 +461,6 @@ class TestValidateDynamicNamespaceProcess(Process):
         spec.inputs.dynamic = True
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_input_validation_storable_nodes():
     """Test that validation catches non-storable inputs even if nested in dictionary for dynamic namespace.
 

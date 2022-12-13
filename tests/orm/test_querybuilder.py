@@ -13,6 +13,7 @@ from collections import defaultdict
 import copy
 from datetime import date, datetime, timedelta
 from itertools import chain
+import uuid
 import warnings
 
 import pytest
@@ -23,9 +24,9 @@ from aiida.orm.querybuilder import _get_ormclass
 from aiida.orm.utils.links import LinkQuadruple
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestBasic:
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_date_filters_support(self):
         """Verify that `datetime.date` is supported in filters."""
         from aiida.common import timezone
@@ -129,6 +130,7 @@ class TestBasic:
     # Tracked in issue #4281
     @pytest.mark.flaky(reruns=2)
     @pytest.mark.requires_rmq
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_process_query(self):
         """
         Test querying for a process class.
@@ -220,6 +222,7 @@ class TestBasic:
         # There should be one result
         assert qb.count() == 1
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_simple_query_1(self):
         """
         Testing a simple query
@@ -290,6 +293,7 @@ class TestBasic:
         qb6.append(orm.Data, tag='node2')
         assert qb6.count() == 0
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_simple_query_2(self):
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
         n0 = orm.Data()
@@ -390,7 +394,7 @@ class TestBasic:
     def test_dict_multiple_projections(self):
         """Test that the `.dict()` accumulator with multiple projections returns the correct types."""
         node = orm.Data().store()
-        builder = orm.QueryBuilder().append(orm.Data, project=['*', 'id'])
+        builder = orm.QueryBuilder().append(orm.Data, filters={'id': node.pk}, project=['*', 'id'])
         results = builder.dict()
 
         assert isinstance(results, list)
@@ -484,6 +488,7 @@ class TestBasic:
         )
         assert qb.count() == 2
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_list_behavior(self):
         for _i in range(4):
             orm.Data().store()
@@ -650,6 +655,7 @@ class TestBasic:
         assert res2 == {d2.pk, d4.pk}
 
     @staticmethod
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_all_flat():
         """Test the `flat` keyword for the `QueryBuilder.all()` method."""
         pks = []
@@ -686,6 +692,7 @@ class TestBasic:
         query = orm.QueryBuilder().append(orm.Data, project=['id', 'uuid'], filters={'id': node.pk})
         assert query.first(flat=True) == [node.pk, node.uuid]
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_query_links(self):
         """Test querying for links"""
         d1, d2, d3, d4 = [orm.Data().store() for _ in range(4)]
@@ -708,7 +715,6 @@ class TestBasic:
         assert builder.one()[0] == LinkQuadruple(d2.pk, c2.pk, LinkType.INPUT_CALC.value, 'link_d2c2')
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestMultipleProjections:
     """Unit tests for the QueryBuilder ORM class."""
 
@@ -733,7 +739,7 @@ class TestRepresentations:
     """Test representing the query in different formats."""
 
     @pytest.fixture(autouse=True)
-    def init_db(self, aiida_profile_clean, data_regression, file_regression):
+    def init_db(self, data_regression, file_regression):
         self.regress_dict = data_regression.check
         self.regress_str = file_regression.check
 
@@ -792,7 +798,7 @@ class TestRepresentations:
         """Test the `as_dict` and `from_dict` methods,
         by seeing whether results are the same as using the append method.
         """
-        g = orm.Group(label='helloworld').store()
+        g = orm.Group(label=str(uuid.uuid4())).store()
         for cls in (orm.StructureData, orm.Dict, orm.Data):
             obj = cls()
             obj.base.attributes.set('foo-qh2', 'bar')
@@ -822,7 +828,7 @@ class TestRepresentations:
             assert sorted([uuid for uuid, in qb.all()]) == sorted([uuid for uuid, in qb_new.all()])
 
 
-def test_analyze_query(aiida_profile_clean):
+def test_analyze_query():
     """Test the query plan is correctly generated."""
     qb = orm.QueryBuilder()
     # include literal values in test
@@ -832,7 +838,6 @@ def test_analyze_query(aiida_profile_clean):
     assert 'uuid' in analysis_str, analysis_str
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestQueryBuilderCornerCases:
     """
     In this class corner cases of QueryBuilder are added.
@@ -860,16 +865,16 @@ class TestQueryBuilderCornerCases:
 
     def test_empty_filters(self):
         """Test that an empty filter is correctly handled."""
-        orm.Data().store()
+        count = orm.Data.collection.count()
         qb = orm.QueryBuilder().append(orm.Data, filters={})
-        assert qb.count() == 1
+        assert qb.count() == count
         qb = orm.QueryBuilder().append(orm.Data, filters={'or': [{}, {}]})
-        assert qb.count() == 1
+        assert qb.count() == count
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestAttributes:
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_attribute_existence(self):
         # I'm storing a value under key whatever:
         val = 1.
@@ -947,9 +952,9 @@ class TestAttributes:
         assert set(res) == set((n_arr.uuid,))
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestQueryBuilderLimitOffsets:
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_ordering_limits_offsets_of_results_general(self):
         # Creating 10 nodes with an attribute that can be ordered
         for i in range(10):
@@ -1015,7 +1020,6 @@ class TestQueryBuilderLimitOffsets:
         assert res == tuple(range(4, 1, -1))
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestQueryBuilderJoins:
 
     def test_joins_node_incoming(self):
@@ -1134,9 +1138,9 @@ class TestQueryBuilderJoins:
 
     def test_joins_authinfo(self):
         """Test querying for AuthInfo with specific computer/user."""
-        user = orm.User(email='email@new.com').store()
+        user = orm.User(email=str(uuid.uuid4())).store()
         computer = orm.Computer(
-            label='new', hostname='localhost', transport_type='core.local', scheduler_type='core.direct'
+            label=str(uuid.uuid4()), hostname='localhost', transport_type='core.local', scheduler_type='core.direct'
         ).store()
         authinfo = computer.configure(user)
 
@@ -1195,10 +1199,11 @@ class TestQueryBuilderJoins:
         qb.append(orm.Node, tag='node', project=['id'])
         qb.append(orm.Group, with_node='node', filters={'id': {'==': group.pk}})
         assert qb.count() == 4, 'There should be 4 nodes in the group'
-        id_res = [_ for [_] in qb.all()]
+        id_res = qb.all(flat=True)
         for curr_id in [n1.pk, n2.pk, n3.pk, n4.pk]:
             assert curr_id in id_res
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_joins_group_node_distinct(self):
         """Test that when protecting only the group for a join on nodes, only unique groups are returned.
 
@@ -1231,7 +1236,7 @@ class TestQueryBuilderJoins:
 class QueryBuilderPath:
 
     @pytest.fixture(autouse=True)
-    def init_db(self, aiida_profile_clean, backend):
+    def init_db(self, backend):
         self.backend = backend
 
     @staticmethod
@@ -1433,9 +1438,9 @@ class QueryBuilderPath:
         # self.assertTrue(set(next(zip(*qb.all()))), set([5]))
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestConsistency:
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_create_node_and_query(self):
         """
         Testing whether creating nodes within a iterall iteration changes the results.
@@ -1470,9 +1475,11 @@ class TestConsistency:
             qb.append(orm.Data, with_incoming='parent')
             assert len(qb.all()) == qb.count()
 
-    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_iterall_with_mutation(self):
-        """Test that nodes can be mutated while being iterated using ``QueryBuilder.iterall``."""
+        """Test that nodes can be mutated while being iterated using ``QueryBuilder.iterall``.
+
+        This is a regression test for https://github.com/aiidateam/aiida-core/issues/5672 .
+        """
         count = 10
         pks = []
 
@@ -1487,11 +1494,37 @@ class TestConsistency:
         for pk in pks:
             assert orm.load_node(pk).get_extra('key') == 'value'
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_iterall_with_store(self):
+        """Test that nodes can be stored while being iterated using ``QueryBuilder.iterall``.
+
+        This is a regression test for https://github.com/aiidateam/aiida-core/issues/5802 .
+        """
+        count = 10
+        pks = []
+        pks_clone = []
+
+        for index in range(count):
+            node = orm.Int(index).store()
+            pks.append(node.pk)
+
+        # Ensure that batch size is smaller than the total rows yielded
+        for [node] in orm.QueryBuilder().append(orm.Data).iterall(batch_size=2):
+            clone = copy.deepcopy(node)
+            clone.store()
+            pks_clone.append((clone.value, clone.pk))
+            group = orm.Group(label=str(node.uuid)).store()
+            group.add_nodes([node])
+
+        # Need to sort the cloned pks based on the value, because the order of ``iterall`` is not guaranteed
+        for pk, pk_clone in zip(pks, [e[1] for e in sorted(pks_clone)]):
+            assert orm.load_node(pk) == orm.load_node(pk_clone)
+
 
 class TestManager:
 
     @pytest.fixture(autouse=True)
-    def init_db(self, aiida_profile_clean, backend):
+    def init_db(self, backend):
         self.backend = backend
 
     def test_statistics(self):
@@ -1576,16 +1609,9 @@ class TestDoubleStar:
     when double star is provided as projection.
     """
 
-    @pytest.fixture(autouse=True)
-    def init_db(self, aiida_profile_clean, aiida_localhost):
-        self.computer = aiida_localhost
-
-    def test_authinfo(self):
-        user = orm.User(email='email@new.com').store()
-        computer = orm.Computer(
-            label='new', hostname='localhost', transport_type='core.local', scheduler_type='core.direct'
-        ).store()
-        authinfo = computer.configure(user)
+    def test_authinfo(self, aiida_localhost):
+        user = orm.User(email=str(uuid.uuid4())).store()
+        authinfo = aiida_localhost.configure(user)
         result = orm.QueryBuilder().append(
             orm.AuthInfo, tag='auth', filters={
                 'id': {
@@ -1594,22 +1620,19 @@ class TestDoubleStar:
             }, project=['**']
         ).dict()
         assert len(result) == 1
-        print(result)
         assert result[0]['auth']['id'] == authinfo.pk
 
-    def test_statistics_default_class(self):
-
-        # The expected result
-        # pylint: disable=no-member
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_statistics_default_class(self, aiida_localhost):
         expected_dict = {
-            'description': self.computer.description,
-            'scheduler_type': self.computer.scheduler_type,
-            'hostname': self.computer.hostname,
-            'uuid': self.computer.uuid,
-            'label': self.computer.label,
-            'transport_type': self.computer.transport_type,
-            'id': self.computer.pk,
-            'metadata': self.computer.metadata,
+            'description': aiida_localhost.description,
+            'scheduler_type': aiida_localhost.scheduler_type,
+            'hostname': aiida_localhost.hostname,
+            'uuid': aiida_localhost.uuid,
+            'label': aiida_localhost.label,
+            'transport_type': aiida_localhost.transport_type,
+            'id': aiida_localhost.pk,
+            'metadata': aiida_localhost.metadata,
         }
 
         qb = orm.QueryBuilder()

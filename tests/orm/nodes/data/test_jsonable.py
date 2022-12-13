@@ -68,7 +68,6 @@ def test_invalid_class_not_serializable():
         JsonableData(obj)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_store():
     """Test storing a ``JsonableData`` instance."""
     data = {'a': 1}
@@ -80,7 +79,6 @@ def test_store():
     assert node.is_stored
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_load():
     """Test loading a ``JsonableData`` instance."""
     data = {'a': 1}
@@ -93,7 +91,6 @@ def test_load():
     assert loaded == node
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_obj():
     """Test the ``JsonableData.obj`` property."""
     data = [1, float('inf'), float('-inf'), float('nan')]
@@ -117,7 +114,6 @@ def test_obj():
         assert left == right
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_unimportable_module():
     """Test the ``JsonableData.obj`` property if the associated module cannot be loaded."""
     obj = Molecule(['H'], [[0, 0, 0]])
@@ -133,7 +129,6 @@ def test_unimportable_module():
         _ = loaded.obj
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_unimportable_class():
     """Test the ``JsonableData.obj`` property if the associated class cannot be loaded."""
     obj = Molecule(['H'], [[0, 0, 0]])
@@ -149,7 +144,6 @@ def test_unimportable_class():
         _ = loaded.obj
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_msonable():
     """Test that an ``MSONAble`` object can be wrapped, stored and loaded again."""
     obj = Molecule(['H'], [[0, 0, 0]])

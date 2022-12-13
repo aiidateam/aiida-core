@@ -15,7 +15,7 @@ backcall==0.2.0
 bcrypt==3.2.0
 beautifulsoup4==4.10.0
 bleach==4.1.0
-certifi==2021.10.8
+certifi==2022.12.7
 cffi==1.15.0
 charset-normalizer==2.0.8
 circus==0.18.0
@@ -90,7 +90,7 @@ pickleshare==0.7.5
 Pillow==9.3.0
 plotly==5.4.0
 pluggy==1.0.0
-plumpy==0.21.2
+plumpy==0.21.3
 prometheus-client==0.12.0
 prompt-toolkit==3.0.23
 psutil==5.8.0
@@ -135,7 +135,7 @@ shortuuid==1.0.8
 six==1.16.0
 snowballstemmer==2.2.0
 soupsieve==2.3.1
-spglib==1.16.1
+spglib==2.0.2
 sphinx==4.4.0
 sphinx-copybutton==0.5.0
 sphinx-design==0.0.13

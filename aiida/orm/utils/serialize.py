@@ -14,10 +14,13 @@ WARNING: Changing the representation of things here may break people's current s
 checkpoints and messages in the RabbitMQ queue so do so with caution.  It is fine to add representers
 for new types though.
 """
+from __future__ import annotations
+
 from enum import Enum
 from functools import partial
+from typing import Any, Protocol, Type, overload
 
-from plumpy import Bundle, get_object_loader
+from plumpy import Bundle, get_object_loader  # type: ignore[attr-defined]
 from plumpy.utils import AttributesFrozendict
 import yaml
 
@@ -33,159 +36,91 @@ _PLUMPY_ATTRIBUTES_FROZENDICT_TAG = '!plumpy:attributes_frozendict'
 _PLUMPY_BUNDLE = '!plumpy:bundle'
 
 
-def represent_enum(dumper, enum):
-    """Represent an arbitrary enum in yaml.
-
-    :param dumper: the dumper to use.
-    :type dumper: :class:`yaml.dumper.Dumper`
-    :param bundle: the bundle to represent
-    :return: the representation
-    """
+def represent_enum(dumper: yaml.Dumper, enum: Enum) -> yaml.ScalarNode:
+    """Represent an arbitrary enum in yaml."""
     loader = get_object_loader()
     return dumper.represent_scalar(_ENUM_TAG, f'{loader.identify_object(enum)}|{enum.value}')
 
 
-def enum_constructor(loader, serialized):
-    """Construct an enum from the serialized representation.
-
-    :param loader: the yaml loader.
-    :type loader: :class:`yaml.loader.Loader`
-    :param bundle: the enum representation.
-    :return: the enum.
-    """
-    deserialized = loader.construct_scalar(serialized)
+def enum_constructor(loader: yaml.Loader, serialized: yaml.Node) -> Enum:
+    """Construct an enum from the serialized representation."""
+    deserialized: str = loader.construct_scalar(serialized)  # type: ignore[arg-type,assignment]
     identifier, value = deserialized.split('|')
     cls = get_object_loader().load_object(identifier)
     enum = cls(value)
     return enum
 
 
-def represent_node(dumper, node):
-    """Represent a node in yaml.
-
-    :param dumper: the dumper to use
-    :param node: the node to represent
-    :type node: :class:`aiida.orm.nodes.node.Node`
-    :return: the representation
-    """
+def represent_node(dumper: yaml.Dumper, node: orm.Node) -> yaml.ScalarNode:
+    """Represent a node in yaml."""
     if not node.is_stored:
         raise ValueError(f'node {type(node)}<{node.uuid}> cannot be represented because it is not stored')
     return dumper.represent_scalar(_NODE_TAG, f'{node.uuid}')
 
 
-def node_constructor(loader, node):
-    """Load a node from the yaml representation.
-
-    :param loader: the yaml loader
-    :param node: the yaml representation
-    :return: the aiida node
-    :rtype: :class:`aiida.orm.nodes.node.Node`
-    """
-    yaml_node = loader.construct_scalar(node)
+def node_constructor(loader: yaml.Loader, node: yaml.Node) -> orm.Node:
+    """Load a node from the yaml representation."""
+    yaml_node = loader.construct_scalar(node)  # type: ignore[arg-type]
     return orm.load_node(uuid=yaml_node)
 
 
-def represent_group(dumper, group):
-    """Represent a group in yaml.
-
-    :param dumper: the dumper to use
-    :param group: the group to represent
-    :type group: :class:`aiida.orm.Group`
-    :return: the representation
-    """
+def represent_group(dumper: yaml.Dumper, group: orm.Group) -> yaml.ScalarNode:
+    """Represent a group in yaml."""
     if not group.is_stored:
         raise ValueError(f'group {group} cannot be represented because it is not stored')
     return dumper.represent_scalar(_GROUP_TAG, f'{group.uuid}')
 
 
-def group_constructor(loader, group):
-    """Load a group from the yaml representation.
-
-    :param loader: the yaml loader
-    :param group: the yaml representation
-    :return: the aiida group
-    :rtype: :class:`aiida.orm.Group`
-    """
-    yaml_node = loader.construct_scalar(group)
+def group_constructor(loader: yaml.Loader, group: yaml.Node) -> orm.Group:
+    """Load a group from the yaml representation."""
+    yaml_node = loader.construct_scalar(group)  # type: ignore[arg-type]
     return orm.load_group(uuid=yaml_node)
 
 
-def represent_computer(dumper, computer):
-    """Represent a computer in yaml.
-
-    :param dumper: the dumper to use
-    :param computer: the computer to represent
-    :type computer: :class:`aiida.orm.Computer`
-    :return: the representation
-    """
+def represent_computer(dumper: yaml.Dumper, computer: orm.Computer) -> yaml.ScalarNode:
+    """Represent a computer in yaml."""
     if not computer.is_stored:
         raise ValueError(f'computer {computer} cannot be represented because it is not stored')
     return dumper.represent_scalar(_COMPUTER_TAG, f'{computer.uuid}')
 
 
-def computer_constructor(loader, computer):
-    """Load a computer from the yaml representation.
-
-    :param loader: the yaml loader
-    :param computer: the yaml representation
-    :return: the aiida computer
-    :rtype: :class:`aiida.orm.Computer`
-    """
-    yaml_node = loader.construct_scalar(computer)
+def computer_constructor(loader: yaml.Loader, computer: yaml.Node) -> orm.Computer:
+    """Load a computer from the yaml representation."""
+    yaml_node = loader.construct_scalar(computer)  # type: ignore[arg-type]
     return orm.Computer.collection.get(uuid=yaml_node)
 
 
-def represent_mapping(tag, dumper, mapping):
-    """Represent a mapping in yaml.
-
-    :param tag: the yaml tag to use
-    :param dumper: the dumper to use
-    :type dumper: :class:`yaml.dumper.Dumper`
-    :param mapping: the mapping to represent
-    :return: the representation
-    """
+def represent_mapping(tag: str, dumper: yaml.Dumper, mapping: Any) -> yaml.MappingNode:
+    """Represent a mapping in yaml."""
     return dumper.represent_mapping(tag, mapping)
 
 
-def mapping_constructor(mapping_type, loader, mapping):
-    """Construct a mapping from the representation.
+class _MappingType(Protocol):
 
-    :param mapping_type: the class of the mapping to construct, must accept a dictionary as a sole constructor argument
-        to be compatible.
-    :param loader: the yaml loader
-    :type loader: :class:`yaml.loader.Loader`
-    :param mapping: the mapping representation
-    :return: the reconstructed mapping
-    """
+    def __init__(self, mapping: dict) -> None:  # pylint: disable=super-init-not-called
+        ...
+
+
+def mapping_constructor(
+    mapping_type: Type[_MappingType], loader: yaml.Loader, mapping: yaml.MappingNode
+) -> _MappingType:
+    """Construct a mapping from the representation."""
     yaml_node = loader.construct_mapping(mapping, deep=True)
     return mapping_type(yaml_node)
 
 
-def represent_bundle(dumper, bundle):
-    """Represent an `plumpy.Bundle` in yaml
-
-    :param tag: the yaml  tag to use
-    :param dumper: the dumper to use
-    :type dumper: :class:`yaml.dumper.Dumper`
-    :param bundle: the bundle to represent
-    :return: the representation
-    """
+def represent_bundle(dumper: yaml.Dumper, bundle: Bundle) -> yaml.MappingNode:
+    """Represent an `plumpy.Bundle` in yaml."""
     as_dict = dict(bundle)
     return dumper.represent_mapping(_PLUMPY_BUNDLE, as_dict)
 
 
-def bundle_constructor(loader, bundle):
-    """Construct an `plumpy.Bundle` from the representation
-
-    :param loader: the yaml loader
-    :type loader: :class:`yaml.loader.Loader`
-    :param bundle: the bundle representation
-    :return: the mapping type
-    """
-    yaml_node = loader.construct_mapping(bundle)
-    bundle = Bundle.__new__(Bundle)
-    bundle.update(yaml_node)
-    return bundle
+def bundle_constructor(loader: yaml.Loader, bundle: yaml.Node) -> Bundle:
+    """Construct an `plumpy.Bundle` from the representation."""
+    yaml_node = loader.construct_mapping(bundle)  # type: ignore[arg-type]
+    bundle_inst = Bundle.__new__(Bundle)
+    bundle_inst.update(yaml_node)
+    return bundle_inst
 
 
 class AiiDADumper(yaml.Dumper):
@@ -230,7 +165,17 @@ yaml.add_constructor(_COMPUTER_TAG, computer_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_ENUM_TAG, enum_constructor, Loader=AiiDALoader)
 
 
-def serialize(data, encoding=None):
+@overload
+def serialize(data: Any, encoding: None = None) -> str:
+    ...
+
+
+@overload
+def serialize(data: Any, encoding: str) -> bytes:
+    ...
+
+
+def serialize(data: Any, encoding: str | None = None) -> str | bytes:
     """Serialize the given data structure into a yaml dump.
 
     The function supports standard data containers such as maps and lists as well as AiiDA nodes which will be
@@ -248,7 +193,7 @@ def serialize(data, encoding=None):
     return serialized
 
 
-def deserialize_unsafe(serialized):
+def deserialize_unsafe(serialized: str) -> Any:
     """Deserialize a yaml dump that represents a serialized data structure.
 
     .. note:: This function should not be used on untrusted input, since it is built upon `yaml.Loader` which is unsafe.

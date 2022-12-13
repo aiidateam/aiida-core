@@ -11,7 +11,7 @@
 """Unit tests for the BackendNode and BackendNodeCollection classes."""
 from collections import OrderedDict
 from datetime import datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -23,14 +23,14 @@ class TestBackendNode:
     """Test BackendNode."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost, backend):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost, backend):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.backend = backend
         self.computer = aiida_localhost.backend_entity  # Unwrap the `Computer` instance to `BackendComputer`
-        self.user = backend.users.create(email='tester@localhost').store()
+        self.user = backend.users.create(email=uuid4().hex).store()
         self.node_type = ''
-        self.node_label = 'label'
+        self.node_label = uuid4().hex
         self.node_description = 'description'
         self.node = backend.nodes.create(
             node_type=self.node_type,

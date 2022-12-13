@@ -17,7 +17,7 @@ from aiida.orm.utils.calcjob import CalcJobResultManager
 
 
 @pytest.fixture
-def get_calcjob_node(aiida_profile_clean, generate_calculation_node):
+def get_calcjob_node(generate_calculation_node):
     """Return a calculation node with `Dict` output with default output label and the dictionary it contains."""
     node = generate_calculation_node(entry_point='aiida.calculations:core.templatereplacer').store()
     dictionary = {
@@ -33,7 +33,6 @@ def get_calcjob_node(aiida_profile_clean, generate_calculation_node):
     return node, dictionary
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_no_process_type(generate_calculation_node):
     """`get_results` should raise `ValueError` if `CalcJobNode` has no `process_type`"""
     node = generate_calculation_node()
@@ -43,7 +42,6 @@ def test_no_process_type(generate_calculation_node):
         manager.get_results()
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_invalid_process_type(generate_calculation_node):
     """`get_results` should raise `ValueError` if `CalcJobNode` has invalid `process_type`"""
     node = generate_calculation_node(entry_point='aiida.calculations:invalid')
@@ -53,7 +51,6 @@ def test_invalid_process_type(generate_calculation_node):
         manager.get_results()
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_process_class_no_default_node(generate_calculation_node):
     """`get_results` should raise `ValueError` if process class does not define default output node."""
     # This is a valid process class however ArithmeticAddCalculation does define a default output node
@@ -64,7 +61,6 @@ def test_process_class_no_default_node(generate_calculation_node):
         manager.get_results()
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_iterator(get_calcjob_node):
     """Test that the manager can be iterated over."""
     node, dictionary = get_calcjob_node
@@ -73,7 +69,6 @@ def test_iterator(get_calcjob_node):
         assert key in dictionary.keys()
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_getitem(get_calcjob_node):
     """Test that the manager supports the getitem operator."""
     node, dictionary = get_calcjob_node
@@ -86,7 +81,6 @@ def test_getitem(get_calcjob_node):
         assert manager['non-existent-key']
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_getitem_no_results(generate_calculation_node):
     """Test that `getitem` raises `KeyError` if no results can be retrieved whatsoever e.g. there is no output."""
     node = generate_calculation_node()
@@ -96,7 +90,6 @@ def test_getitem_no_results(generate_calculation_node):
         assert manager['key']
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_getattr(get_calcjob_node):
     """Test that the manager supports the getattr operator."""
     node, dictionary = get_calcjob_node
@@ -109,7 +102,6 @@ def test_getattr(get_calcjob_node):
         assert getattr(manager, 'non-existent-key')
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_getattr_no_results(generate_calculation_node):
     """Test that `getattr` raises `AttributeError` if no results can be retrieved whatsoever e.g. there is no output."""
     node = generate_calculation_node()
@@ -119,7 +111,6 @@ def test_getattr_no_results(generate_calculation_node):
         assert getattr(manager, 'key')
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_dir(get_calcjob_node):
     """Test that `dir` returns all keys of the dictionary and nothing else."""
     node, dictionary = get_calcjob_node

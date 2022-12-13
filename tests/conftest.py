@@ -337,7 +337,7 @@ def config_with_profile(config_with_profile_factory):
 
 
 @pytest.fixture
-def manager(aiida_profile):  # pylint: disable=unused-argument
+def manager():
     """Get the ``Manager`` instance of the currently loaded profile."""
     from aiida.manage import get_manager
     return get_manager()
@@ -362,6 +362,13 @@ def backend(manager):
 def communicator(manager):
     """Get the ``Communicator`` instance of the currently loaded profile to communicate with RabbitMQ."""
     return manager.get_communicator()
+
+
+@pytest.fixture
+def default_user():
+    """Return the default user."""
+    from aiida.orm import User
+    return User.collection.get_default()
 
 
 @pytest.fixture(scope='function')

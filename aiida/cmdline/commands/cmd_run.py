@@ -28,7 +28,7 @@ def update_environment(argv):
         _argv = sys.argv[:]
 
         # Add the current working directory to the path, such that local modules can be imported
-        sys.path.append(pathlib.Path.cwd().resolve())
+        sys.path.append(str(pathlib.Path.cwd().resolve()))
         sys.argv = argv[:]
         yield
     finally:

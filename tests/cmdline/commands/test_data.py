@@ -173,7 +173,6 @@ class DummyVerdiDataListable:
                 assert header.encode('utf-8') not in res.stdout_bytes
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestVerdiData:
     """Testing reachability of the verdi data subcommands."""
 

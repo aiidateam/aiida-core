@@ -42,7 +42,7 @@ dependencies = [
     "importlib-resources~=5.0;python_version<'3.9'",
     "numpy~=1.19",
     "paramiko~=2.7,>=2.7.2",
-    "plumpy~=0.21.2",
+    "plumpy~=0.21.3",
     "pgsu~=0.2.1",
     "psutil~=5.6",
     "psycopg2-binary~=2.8",
@@ -94,7 +94,7 @@ atomic_tools = [
     "pymatgen>=2022.1.20",
     "pymysql~=0.9.3",
     "seekpath~=1.9,>=1.9.3",
-    "spglib~=1.14"
+    "spglib>=1.14,<3.0"
 ]
 notebook = [
     "jupyter-client~=6.1,<6.1.13",

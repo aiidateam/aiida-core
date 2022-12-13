@@ -7,9 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Tests for `verdi process`."""
 import time
 import typing as t
+import uuid
 
 import pytest
 
@@ -31,22 +33,24 @@ def await_condition(condition: t.Callable, timeout: int = 1):
             raise RuntimeError(f'waiting for {condition} to evaluate to `True` timed out after {timeout} seconds.')
 
 
-def get_result_lines(result):
-    return [e for e in result.output.split('\n') if e]
-
-
 class TestVerdiProcess:
     """Tests for `verdi process`."""
 
     TEST_TIMEOUT = 5.
 
-    @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
-        """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
+    def test_list_non_raw(self, run_cli_command):
+        """Test the list command as the user would run it (e.g. without -r)."""
 
-        self.calcs = []
-        self.process_label = 'SomeDummyWorkFunctionNode'
+        result = run_cli_command(cmd_process.process_list)
+
+        assert 'Total results:' in result.output
+        assert 'last time an entry changed state' in result.output
+
+    def test_list(self, run_cli_command):
+        """Test the list command."""
+        # pylint: disable=too-many-branches,too-many-statements
+        calcs = []
+        process_label = 'SomeDummyWorkFunctionNode'
 
         # Create 6 WorkFunctionNodes and WorkChainNodes (one for each ProcessState)
         for state in ProcessState:
@@ -59,10 +63,10 @@ class TestVerdiProcess:
                 calc.set_exit_status(0)
 
             # Give a `process_label` to the `WorkFunctionNodes` so the `--process-label` option can be tested
-            calc.base.attributes.set('process_label', self.process_label)
+            calc.base.attributes.set('process_label', process_label)
 
             calc.store()
-            self.calcs.append(calc)
+            calcs.append(calc)
 
             calc = WorkChainNode()
             calc.set_process_state(state)
@@ -76,114 +80,101 @@ class TestVerdiProcess:
                 calc.pause()
 
             calc.store()
-            self.calcs.append(calc)
+            calcs.append(calc)
 
-        self.group = Group('some_group').store()
-        self.group.add_nodes(self.calcs[0])
-        self.cli_runner = run_cli_command
-
-    def test_list_non_raw(self):
-        """Test the list command as the user would run it (e.g. without -r)."""
-
-        result = self.cli_runner(cmd_process.process_list)
-
-        assert 'Total results:' in result.output
-        assert 'last time an entry changed state' in result.output
-
-    def test_list(self):
-        """Test the list command."""
-        # pylint: disable=too-many-branches
+        group = Group(str(uuid.uuid4())).store()
+        group.add_nodes(calcs[0])
 
         # Default behavior should yield all active states (CREATED, RUNNING and WAITING) so six in total
-        result = self.cli_runner(cmd_process.process_list, ['-r'])
+        result = run_cli_command(cmd_process.process_list, ['-r'])
 
-        assert len(get_result_lines(result)) == 6
+        assert len(result.output_lines) == 6
 
         # Ordering shouldn't change the number of results,
         for flag in ['-O', '--order-by']:
             for flag_value in ['id', 'ctime']:
-                result = self.cli_runner(cmd_process.process_list, ['-r', flag, flag_value])
+                result = run_cli_command(cmd_process.process_list, ['-r', flag, flag_value])
 
-                assert len(get_result_lines(result)) == 6
+                assert len(result.output_lines) == 6
 
         # but the orders should be inverse
         for flag in ['-D', '--order-direction']:
 
             flag_value = 'asc'
-            result = self.cli_runner(cmd_process.process_list, ['-r', '-O', 'id', flag, flag_value])
+            result = run_cli_command(cmd_process.process_list, ['-r', '-O', 'id', flag, flag_value])
 
-            result_num_asc = [line.split()[0] for line in get_result_lines(result)]
+            result_num_asc = [line.split()[0] for line in result.output_lines]
             assert len(result_num_asc) == 6
 
             flag_value = 'desc'
-            result = self.cli_runner(cmd_process.process_list, ['-r', '-O', 'id', flag, flag_value])
+            result = run_cli_command(cmd_process.process_list, ['-r', '-O', 'id', flag, flag_value])
 
-            result_num_desc = [line.split()[0] for line in get_result_lines(result)]
+            result_num_desc = [line.split()[0] for line in result.output_lines]
             assert len(result_num_desc) == 6
 
             assert result_num_asc == list(reversed(result_num_desc))
 
         # Adding the all option should return all entries regardless of process state
         for flag in ['-a', '--all']:
-            result = self.cli_runner(cmd_process.process_list, ['-r', flag])
+            result = run_cli_command(cmd_process.process_list, ['-r', flag])
 
-            assert len(get_result_lines(result)) == 12
+            assert len(result.output_lines) == 12
 
         # Passing the limit option should limit the results
         for flag in ['-l', '--limit']:
-            result = self.cli_runner(cmd_process.process_list, ['-r', flag, '6'])
-            assert len(get_result_lines(result)) == 6
+            result = run_cli_command(cmd_process.process_list, ['-r', flag, '6'])
+            assert len(result.output_lines) == 6
 
         # Filtering for a specific process state
         for flag in ['-S', '--process-state']:
             for flag_value in ['created', 'running', 'waiting', 'killed', 'excepted', 'finished']:
-                result = self.cli_runner(cmd_process.process_list, ['-r', flag, flag_value])
-                assert len(get_result_lines(result)) == 2
+                result = run_cli_command(cmd_process.process_list, ['-r', flag, flag_value])
+                assert len(result.output_lines) == 2
 
         # Filtering for exit status should only get us one
         for flag in ['-E', '--exit-status']:
             for exit_status in ['0', '1']:
-                result = self.cli_runner(cmd_process.process_list, ['-r', flag, exit_status])
-                assert len(get_result_lines(result)) == 1
+                result = run_cli_command(cmd_process.process_list, ['-r', flag, exit_status])
+                assert len(result.output_lines) == 1
 
         # Passing the failed flag as a shortcut for FINISHED + non-zero exit status
         for flag in ['-X', '--failed']:
-            result = self.cli_runner(cmd_process.process_list, ['-r', flag])
+            result = run_cli_command(cmd_process.process_list, ['-r', flag])
 
-            assert len(get_result_lines(result)) == 1
+            assert len(result.output_lines) == 1
 
         # Projecting on pk should allow us to verify all the pks
         for flag in ['-P', '--project']:
-            result = self.cli_runner(cmd_process.process_list, ['-r', flag, 'pk'])
+            result = run_cli_command(cmd_process.process_list, ['-r', flag, 'pk'])
 
-            assert len(get_result_lines(result)) == 6
+            assert len(result.output_lines) == 6
 
-            for line in get_result_lines(result):
-                assert line.strip() in [str(calc.pk) for calc in self.calcs]
+            for line in result.output_lines:
+                assert line.strip() in [str(calc.pk) for calc in calcs]
 
         # The group option should limit the query set to nodes in the group
         for flag in ['-G', '--group']:
-            result = self.cli_runner(cmd_process.process_list, ['-r', '-P', 'pk', flag, str(self.group.pk)])
+            result = run_cli_command(cmd_process.process_list, ['-r', '-P', 'pk', flag, str(group.pk)])
 
-            assert len(get_result_lines(result)) == 1
-            assert get_result_lines(result)[0] == str(self.calcs[0].pk)
+            assert len(result.output_lines) == 1
+            assert result.output_lines[0] == str(calcs[0].pk)
 
         # The process label should limit the query set to nodes with the given `process_label` attribute
         for flag in ['-L', '--process-label']:
-            for process_label in [self.process_label, self.process_label.replace('Dummy', '%')]:
-                result = self.cli_runner(cmd_process.process_list, ['-r', flag, process_label])
+            for label in [process_label, process_label.replace('Dummy', '%')]:
+                result = run_cli_command(cmd_process.process_list, ['-r', flag, label])
 
-                assert len(get_result_lines(result)) == 3  # Should only match the active `WorkFunctionNodes`
-                for line in get_result_lines(result):
-                    assert self.process_label in line.strip()
+                assert len(result.output_lines) == 3  # Should only match the active `WorkFunctionNodes`
+                for line in result.output_lines:
+                    assert process_label in line.strip()
 
         # There should be exactly one paused
         for flag in ['--paused']:
-            result = self.cli_runner(cmd_process.process_list, ['-r', flag])
+            result = run_cli_command(cmd_process.process_list, ['-r', flag])
 
-            assert len(get_result_lines(result)) == 1
+            assert len(result.output_lines) == 1
 
-    def test_process_show(self):
+    def test_process_show(self, run_cli_command):
         """Test verdi process show"""
         workchain_one = WorkChainNode()
         workchain_two = WorkChainNode()
@@ -208,14 +199,14 @@ class TestVerdiProcess:
 
         # Running without identifiers should not except and not print anything
         options = []
-        result = self.cli_runner(cmd_process.process_show, options)
+        result = run_cli_command(cmd_process.process_show, options)
 
-        assert len(get_result_lines(result)) == 0
+        assert len(result.output_lines) == 0
 
         # Giving a single identifier should print a non empty string message
         options = [str(workchain_one.pk)]
-        result = self.cli_runner(cmd_process.process_show, options)
-        lines = get_result_lines(result)
+        result = run_cli_command(cmd_process.process_show, options)
+        lines = result.output_lines
 
         assert len(lines) > 0
         assert 'workchain_one_caller' in result.output
@@ -224,56 +215,56 @@ class TestVerdiProcess:
 
         # Giving multiple identifiers should print a non empty string message
         options = [str(node.pk) for node in workchains]
-        result = self.cli_runner(cmd_process.process_show, options)
+        result = run_cli_command(cmd_process.process_show, options)
 
-        assert len(get_result_lines(result)) > 0
+        assert len(result.output_lines) > 0
 
-    def test_process_report(self):
+    def test_process_report(self, run_cli_command):
         """Test verdi process report"""
         node = WorkflowNode().store()
 
         # Running without identifiers should not except and not print anything
         options = []
-        result = self.cli_runner(cmd_process.process_report, options)
+        result = run_cli_command(cmd_process.process_report, options)
 
-        assert len(get_result_lines(result)) == 0
+        assert len(result.output_lines) == 0
 
         # Giving a single identifier should print a non empty string message
         options = [str(node.pk)]
-        result = self.cli_runner(cmd_process.process_report, options)
+        result = run_cli_command(cmd_process.process_report, options)
 
-        assert len(get_result_lines(result)) > 0
+        assert len(result.output_lines) > 0
 
         # Giving multiple identifiers should print a non empty string message
         options = [str(calc.pk) for calc in [node]]
-        result = self.cli_runner(cmd_process.process_report, options)
+        result = run_cli_command(cmd_process.process_report, options)
 
-        assert len(get_result_lines(result)) > 0
+        assert len(result.output_lines) > 0
 
-    def test_process_status(self):
+    def test_process_status(self, run_cli_command):
         """Test verdi process status"""
         node = WorkflowNode().store()
         node.set_process_state(ProcessState.RUNNING)
 
         # Running without identifiers should not except and not print anything
         options = []
-        result = self.cli_runner(cmd_process.process_status, options)
+        result = run_cli_command(cmd_process.process_status, options)
         assert result.exception is None, result.output
-        assert len(get_result_lines(result)) == 0
+        assert len(result.output_lines) == 0
 
         # Giving a single identifier should print a non empty string message
         options = [str(node.pk)]
-        result = self.cli_runner(cmd_process.process_status, options)
+        result = run_cli_command(cmd_process.process_status, options)
         assert result.exception is None, result.output
-        assert len(get_result_lines(result)) > 0
+        assert len(result.output_lines) > 0
 
         # With max depth 0, the output should be empty
         options = ['--max-depth', 0, str(node.pk)]
-        result = self.cli_runner(cmd_process.process_status, options)
+        result = run_cli_command(cmd_process.process_status, options)
         assert result.exception is None, result.output
-        assert len(get_result_lines(result)) == 0
+        assert len(result.output_lines) == 0
 
-    def test_report(self):
+    def test_report(self, run_cli_command):
         """Test the report command."""
         grandparent = WorkChainNode().store()
         parent = WorkChainNode()
@@ -288,31 +279,31 @@ class TestVerdiProcess:
         parent.logger.log(LOG_LEVEL_REPORT, 'parent_message')
         child.logger.log(LOG_LEVEL_REPORT, 'child_message')
 
-        result = self.cli_runner(cmd_process.process_report, [str(grandparent.pk)])
+        result = run_cli_command(cmd_process.process_report, [str(grandparent.pk)])
 
-        assert len(get_result_lines(result)) == 3
+        assert len(result.output_lines) == 3
 
-        result = self.cli_runner(cmd_process.process_report, [str(parent.pk)])
+        result = run_cli_command(cmd_process.process_report, [str(parent.pk)])
 
-        assert len(get_result_lines(result)) == 2
+        assert len(result.output_lines) == 2
 
-        result = self.cli_runner(cmd_process.process_report, [str(child.pk)])
+        result = run_cli_command(cmd_process.process_report, [str(child.pk)])
 
-        assert len(get_result_lines(result)) == 1
+        assert len(result.output_lines) == 1
 
         # Max depth should limit nesting level
         for flag in ['-m', '--max-depth']:
             for flag_value in [1, 2]:
-                result = self.cli_runner(cmd_process.process_report, [str(grandparent.pk), flag, str(flag_value)])
+                result = run_cli_command(cmd_process.process_report, [str(grandparent.pk), flag, str(flag_value)])
 
-                assert len(get_result_lines(result)) == flag_value
+                assert len(result.output_lines) == flag_value
 
         # Filtering for other level name such as WARNING should not have any hits and only print the no log message
         for flag in ['-l', '--levelname']:
-            result = self.cli_runner(cmd_process.process_report, [str(grandparent.pk), flag, 'WARNING'])
+            result = run_cli_command(cmd_process.process_report, [str(grandparent.pk), flag, 'WARNING'])
 
-            assert len(get_result_lines(result)) == 1, get_result_lines(result)
-            assert get_result_lines(result)[0] == 'No log messages recorded for this entry'
+            assert len(result.output_lines) == 1, result.output_lines
+            assert result.output_lines[0] == 'No log messages recorded for this entry'
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -342,7 +333,7 @@ def test_list_worker_slot_warning(run_cli_command, monkeypatch):
     # Default cmd should not throw the warning as we are below the limit
     result = run_cli_command(cmd_process.process_list)
     warning_phrase = 'of the available daemon worker slots have been used!'
-    assert all(warning_phrase not in line for line in result.output_lines)
+    assert all(warning_phrase not in line for line in result.output_lines), result.output
 
     # Add one more running node to put us over the limit
     calc = WorkFunctionNode()
@@ -359,7 +350,7 @@ class TestVerdiProcessCallRoot:
     """Tests for `verdi process call-root`."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.node_root = WorkflowNode()
@@ -376,32 +367,30 @@ class TestVerdiProcessCallRoot:
         )
         self.node_terminal.store()
 
-        self.cli_runner = run_cli_command
-
-    def test_no_caller(self):
+    def test_no_caller(self, run_cli_command):
         """Test `verdi process call-root` when passing single process without caller."""
         options = [str(self.node_root.pk)]
-        result = self.cli_runner(cmd_process.process_call_root, options)
-        assert len(get_result_lines(result)) == 1
-        assert 'No callers found' in get_result_lines(result)[0]
+        result = run_cli_command(cmd_process.process_call_root, options)
+        assert len(result.output_lines) == 1
+        assert 'No callers found' in result.output_lines[0]
 
-    def test_single_caller(self):
+    def test_single_caller(self, run_cli_command):
         """Test `verdi process call-root` when passing single process with call root."""
         # Both the middle and terminal node should have the `root` node as call root.
         for node in [self.node_middle, self.node_terminal]:
             options = [str(node.pk)]
-            result = self.cli_runner(cmd_process.process_call_root, options)
-            assert len(get_result_lines(result)) == 1
-            assert str(self.node_root.pk) in get_result_lines(result)[0]
+            result = run_cli_command(cmd_process.process_call_root, options)
+            assert len(result.output_lines) == 1
+            assert str(self.node_root.pk) in result.output_lines[0]
 
-    def test_multiple_processes(self):
+    def test_multiple_processes(self, run_cli_command):
         """Test `verdi process call-root` when passing multiple processes."""
         options = [str(self.node_root.pk), str(self.node_middle.pk), str(self.node_terminal.pk)]
-        result = self.cli_runner(cmd_process.process_call_root, options)
-        assert len(get_result_lines(result)) == 3
-        assert 'No callers found' in get_result_lines(result)[0]
-        assert str(self.node_root.pk) in get_result_lines(result)[1]
-        assert str(self.node_root.pk) in get_result_lines(result)[2]
+        result = run_cli_command(cmd_process.process_call_root, options)
+        assert len(result.output_lines) == 3
+        assert 'No callers found' in result.output_lines[0]
+        assert str(self.node_root.pk) in result.output_lines[1]
+        assert str(self.node_root.pk) in result.output_lines[2]
 
 
 @pytest.mark.requires_rmq

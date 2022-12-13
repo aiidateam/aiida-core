@@ -20,7 +20,7 @@ from aiida.tools.archive import create_archive, import_archive
 
 
 @pytest.mark.parametrize('entities', ['all', 'specific'])
-def test_base_data_nodes(aiida_profile_clean, tmp_path, entities):
+def test_base_data_nodes(aiida_profile, tmp_path, entities):
     """Test ex-/import of Base Data nodes"""
     # producing values for each base type
     values = ('Hello', 6, -1.2399834e12, False)
@@ -36,7 +36,7 @@ def test_base_data_nodes(aiida_profile_clean, tmp_path, entities):
     else:
         create_archive(nodes, filename=filename)
     # cleaning:
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
     # Importing back the data:
     import_archive(filename)
     # Checking whether values are preserved:
@@ -44,7 +44,7 @@ def test_base_data_nodes(aiida_profile_clean, tmp_path, entities):
         assert orm.load_node(uuid).value == refval
 
 
-def test_calc_of_structuredata(aiida_profile_clean, tmp_path, aiida_localhost):
+def test_calc_of_structuredata(aiida_profile, tmp_path, aiida_localhost):
     """Simple ex-/import of CalcJobNode with input StructureData"""
     struct = orm.StructureData(pbc=False)
     struct.store()
@@ -70,7 +70,7 @@ def test_calc_of_structuredata(aiida_profile_clean, tmp_path, aiida_localhost):
 
     create_archive([calc], filename=filename)
 
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
 
     import_archive(filename)
     for uuid, value in attrs.items():
@@ -79,7 +79,7 @@ def test_calc_of_structuredata(aiida_profile_clean, tmp_path, aiida_localhost):
             assert value[k] == node.base.attributes.get(k)
 
 
-def test_check_for_export_format_version(aiida_profile_clean, tmp_path):
+def test_check_for_export_format_version(aiida_profile, tmp_path):
     """Test the check for the export format version."""
     # first create an archive
     struct = orm.StructureData(pbc=False)
@@ -102,12 +102,11 @@ def test_check_for_export_format_version(aiida_profile_clean, tmp_path):
                     (outpath / subpath.at).write_bytes(subpath.read_bytes())
 
     # then try to import it
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
     with pytest.raises(IncompatibleStorageSchema):
         import_archive(filename2)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_control_of_licenses(tmp_path):
     """Test control of licenses."""
     struct = orm.StructureData(pbc=False)

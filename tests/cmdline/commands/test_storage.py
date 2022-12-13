@@ -15,7 +15,6 @@ from aiida.cmdline.commands import cmd_storage
 from aiida.common import exceptions
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def tests_storage_version(run_cli_command):
     """Test the ``verdi storage version`` command."""
     result = run_cli_command(cmd_storage.storage_version)
@@ -23,7 +22,6 @@ def tests_storage_version(run_cli_command):
     assert version in result.output
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def tests_storage_info(aiida_localhost, run_cli_command):
     """Test the ``verdi storage info`` command with the ``--detailed`` option."""
     from aiida import orm

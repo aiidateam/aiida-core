@@ -203,7 +203,6 @@ class TestMakeHashTest:
             assert make_hash(folder, ignored_folder_content=['file3.npy', 'some_subdir']) == folder_hash
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestCheckDBRoundTrip:
     """
     Check that the hash does not change after a roundtrip via the DB.

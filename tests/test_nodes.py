@@ -21,7 +21,6 @@ from aiida.common.links import LinkType
 from aiida.tools import delete_group_nodes, delete_nodes
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
 class TestNodeIsStorable:
     """Test that checks on storability of certain node sub classes work correctly."""
 
@@ -48,7 +47,6 @@ class TestNodeIsStorable:
             SubData().store()
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
 class TestNodeCopyDeepcopy:
     """Test that calling copy and deepcopy on a Node does the right thing."""
 
@@ -65,7 +63,6 @@ class TestNodeCopyDeepcopy:
             copy.deepcopy(node)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
 class TestNodeHashing:
     """
     Tests the functionality of hashing a node
@@ -132,7 +129,6 @@ class TestNodeHashing:
         assert hash1 == hash2
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
 class TestTransitiveNoLoops:
     """
     Test the transitive closure functionality
@@ -154,7 +150,6 @@ class TestTransitiveNoLoops:
             d1.base.links.add_incoming(c2, link_type=LinkType.CREATE, link_label='link')
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
 class TestTypes:
     """
     Generic test class to test types
@@ -180,7 +175,7 @@ class TestQueryWithAiidaObjects:
     """
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
@@ -268,7 +263,7 @@ class TestNodeBasic:
     emptylist = []
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
@@ -277,14 +272,14 @@ class TestNodeBasic:
         """
         A uniqueness constraint on the UUID column of the Node model should prevent multiple nodes with identical UUID
         """
-        from sqlalchemy.exc import IntegrityError as SqlaIntegrityError
+        from aiida.common.exceptions import IntegrityError
 
         a = orm.Data()
         b = orm.Data()
         b.backend_entity.bare_model.uuid = a.uuid
         a.store()
 
-        with pytest.raises(SqlaIntegrityError):
+        with pytest.raises(IntegrityError):
             b.store()
 
     def test_attribute_mutability(self):
@@ -1207,7 +1202,7 @@ class TestNodeBasic:
 class TestSubNodesAndLinks:
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
@@ -1528,7 +1523,6 @@ class AnyValue:
         return True
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
 class TestNodeDeletion:
 
     def _check_existence(self, uuids_check_existence, uuids_check_deleted):

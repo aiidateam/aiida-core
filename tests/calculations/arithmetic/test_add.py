@@ -16,7 +16,6 @@ from aiida.common import datastructures
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile')
 def test_add_default(fixture_sandbox, aiida_localhost, generate_calc_job):
     """Test a default `ArithmeticAddCalculation`."""
     inputs = {
@@ -48,7 +47,6 @@ def test_add_default(fixture_sandbox, aiida_localhost, generate_calc_job):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile')
 def test_add_custom_filenames(fixture_sandbox, aiida_localhost, generate_calc_job):
     """Test an `ArithmeticAddCalculation` with non-default input and output filenames."""
     input_filename = 'custom.in'
@@ -74,7 +72,6 @@ def test_add_custom_filenames(fixture_sandbox, aiida_localhost, generate_calc_jo
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile')
 def test_sleep(fixture_sandbox, aiida_localhost, generate_calc_job):
     """Test the ``metadata.options.sleep`` input."""
     sleep = 5

@@ -14,7 +14,6 @@ import pytest
 from tests.static import STATIC_DIR
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
 class TestCodDbImporter:
     """Test the CodDbImporter class."""
     from aiida.orm.nodes.data.cif import has_pycifrw  # type: ignore
@@ -157,7 +156,6 @@ class TestCodDbImporter:
         }
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
 class TestTcodDbImporter:
     """Test the TcodDbImporter class."""
 
@@ -192,7 +190,6 @@ class TestTcodDbImporter:
         ]
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
 class TestPcodDbImporter:
     """Test the PcodDbImporter class."""
 
@@ -214,7 +211,6 @@ class TestPcodDbImporter:
         }
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
 class TestMpodDbImporter:
     """Test the MpodDbImporter class."""
 
@@ -236,7 +232,6 @@ class TestMpodDbImporter:
         }
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
 class TestNnincDbImporter:
     """Test the UpfEntry class."""
 

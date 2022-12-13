@@ -418,7 +418,7 @@ class CalcJob(Process):
             'metadata.options.stash.stash_mode',
             valid_type=str,
             required=False,
-            help='Mode with which to perform the stashing, should be value of `aiida.common.datastructures.StashMode.'
+            help='Mode with which to perform the stashing, should be value of `aiida.common.datastructures.StashMode`.'
         )
 
         spec.output(

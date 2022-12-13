@@ -69,7 +69,6 @@ TREE = {'no-objects': (4, 3, 0), 'with-objects': (4, 3, 2)}
 
 
 @pytest.mark.parametrize('depth,breadth,num_objects', TREE.values(), ids=TREE.keys())
-@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.benchmark(group='import-export')
 def test_export(benchmark, tmp_path, depth, breadth, num_objects):
     """Benchmark exporting a provenance graph."""

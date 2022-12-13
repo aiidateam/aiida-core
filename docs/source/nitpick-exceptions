@@ -39,6 +39,7 @@ py:class Logger
 py:class ModuleType
 py:class ExternalType
 py:class UserDefinedType
+py:class LinkAnnotateType
 py:obj ReturnType
 py:obj SelfType
 py:obj CollectionType
@@ -210,3 +211,6 @@ py:class sqlalchemy.sql.elements.ColumnElement
 
 py:class packaging.version.Version
 py:exc seekpath.hpkot.EdgeCaseWarning
+
+py:class graphviz.graphs.Digraph
+py:class Digraph

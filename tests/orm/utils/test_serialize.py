@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :mod:`aiida.orm.utils.serialize` module."""
+from dataclasses import dataclass
 import types
 import uuid
 
@@ -162,3 +163,19 @@ def test_enum():
 
     deserialized = serialize.deserialize_unsafe(serialized)
     assert deserialized == enum
+
+
+@dataclass
+class DataClass:
+    """A dataclass for testing."""
+    my_value: int
+
+
+def test_dataclass():
+    """Test serialization and deserialization of a ``dataclass``."""
+    obj = DataClass(1)
+    serialized = serialize.serialize(obj)
+    assert isinstance(serialized, str)
+
+    deserialized = serialize.deserialize_unsafe(serialized)
+    assert deserialized == DataClass(1)

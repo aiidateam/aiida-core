@@ -16,8 +16,10 @@ for new types though.
 """
 from __future__ import annotations
 
+from dataclasses import asdict, is_dataclass
 from enum import Enum
 from functools import partial
+import inspect
 from typing import Any, Protocol, Type, overload
 
 from plumpy import Bundle, get_object_loader  # type: ignore[attr-defined]
@@ -28,6 +30,7 @@ from aiida import orm
 from aiida.common import AttributeDict
 
 _ENUM_TAG = '!enum'
+_DATACLASS_TAG = '!dataclass'
 _NODE_TAG = '!aiida_node'
 _GROUP_TAG = '!aiida_group'
 _COMPUTER_TAG = '!aiida_computer'
@@ -49,6 +52,25 @@ def enum_constructor(loader: yaml.Loader, serialized: yaml.Node) -> Enum:
     cls = get_object_loader().load_object(identifier)
     enum = cls(value)
     return enum
+
+
+def represent_dataclass(dumper: yaml.Dumper, obj: Any) -> yaml.MappingNode:
+    """Represent an arbitrary dataclass in yaml."""
+    loader = get_object_loader()
+    data = {
+        '__type__': loader.identify_object(obj.__class__),
+        '__fields__': asdict(obj),
+    }
+    return dumper.represent_mapping(_DATACLASS_TAG, data)
+
+
+def dataclass_constructor(loader: yaml.Loader, serialized: yaml.Node) -> Any:
+    """Construct a dataclass from the serialized representation."""
+    deserialized = loader.construct_mapping(serialized, deep=True)  # type: ignore[arg-type]
+    identifier = deserialized['__type__']
+    cls = get_object_loader().load_object(identifier)
+    data = deserialized['__fields__']
+    return cls(**data)
 
 
 def represent_node(dumper: yaml.Dumper, node: orm.Node) -> yaml.ScalarNode:
@@ -136,6 +158,8 @@ class AiiDADumper(yaml.Dumper):
             return represent_computer(self, data)
         if isinstance(data, orm.Group):
             return represent_group(self, data)
+        if is_dataclass(data) and not inspect.isclass(data):
+            return represent_dataclass(self, data)
 
         return super().represent_data(data)
 
@@ -163,6 +187,7 @@ yaml.add_constructor(_NODE_TAG, node_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_GROUP_TAG, group_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_COMPUTER_TAG, computer_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_ENUM_TAG, enum_constructor, Loader=AiiDALoader)
+yaml.add_constructor(_DATACLASS_TAG, dataclass_constructor, Loader=AiiDALoader)
 
 
 @overload

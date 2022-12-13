@@ -178,4 +178,4 @@ def test_dataclass():
     assert isinstance(serialized, str)
 
     deserialized = serialize.deserialize_unsafe(serialized)
-    assert deserialized == DataClass(1)
+    assert deserialized == obj

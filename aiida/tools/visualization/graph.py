@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 __all__ = ('Graph', 'default_link_styles', 'default_node_styles', 'pstate_node_styles', 'default_node_sublabels')
 
-LinkAnnotateType = Literal[None, False, 'label', 'type', 'both']
+LinkAnnotateType = Literal[None, 'label', 'type', 'both']
 
 
 class LinkStyleFunc(Protocol):
@@ -629,7 +629,7 @@ class Graph:
         origin: int | str | orm.Node,
         depth: int | None = None,
         link_types: None | str | Sequence[str] | LinkType | Sequence[LinkType] = None,
-        annotate_links: LinkAnnotateType = False,
+        annotate_links: LinkAnnotateType = None,
         origin_style: dict | None = None,
         include_process_inputs: bool = False,
         highlight_classes: None | Sequence[str] = None,
@@ -714,7 +714,7 @@ class Graph:
         origin: int | str | orm.Node,
         depth: int | None = None,
         link_types: None | str | Sequence[str] | LinkType | Sequence[LinkType] = None,
-        annotate_links: LinkAnnotateType = False,
+        annotate_links: LinkAnnotateType = None,
         origin_style: dict | None = None,
         include_process_outputs: bool = False,
         highlight_classes: None | Sequence[str] = None,
@@ -802,7 +802,7 @@ class Graph:
         include_target_inputs: bool = False,
         include_target_outputs: bool = False,
         origin_style: Mapping[str, Any] | None = None,
-        annotate_links: LinkAnnotateType = False
+        annotate_links: LinkAnnotateType = None
     ) -> None:
         """Add nodes and edges from an origin node to all nodes of a target node class.
 
@@ -858,7 +858,7 @@ class Graph:
         include_target_inputs: bool = False,
         include_target_outputs: bool = False,
         origin_style: Mapping[str, Any] | None = None,
-        annotate_links: LinkAnnotateType = False
+        annotate_links: LinkAnnotateType = None
     ) -> None:
         """Add nodes and edges from all nodes of an origin class to all node of a target node class.
 

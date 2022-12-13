@@ -76,7 +76,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def get_executable(self) -> pathlib.Path:
+    def get_executable(self) -> pathlib.PurePosixPath:
         """Return the executable that the submission script should execute to run the code.
 
         :return: The executable to be called in the submission script.
@@ -129,7 +129,15 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         :return: The full label of the code.
         """
 
-    @Data.label.setter  # type: ignore
+    @property
+    def label(self) -> str:
+        """Return the label.
+
+        :return: The label.
+        """
+        return self.backend_entity.label
+
+    @label.setter
     def label(self, value: str) -> None:
         """Set the label.
 

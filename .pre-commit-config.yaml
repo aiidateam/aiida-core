@@ -128,9 +128,6 @@ repos:
                 aiida/orm/nodes/data/array/bands.py|
                 aiida/orm/nodes/data/array/trajectory.py|
                 aiida/orm/nodes/data/cif.py|
-                aiida/orm/nodes/data/code/installed.py|
-                aiida/orm/nodes/data/code/legacy.py|
-                aiida/orm/nodes/data/code/portable.py|
                 aiida/orm/nodes/data/remote/base.py|
                 aiida/orm/nodes/data/structure.py|
                 aiida/orm/nodes/data/upf.py|

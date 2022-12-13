@@ -9,7 +9,7 @@
 ###########################################################################
 """Module with `Node` sub class for processes."""
 import enum
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type, Union
 
 from plumpy.process_states import ProcessState
 
@@ -452,7 +452,7 @@ class ProcessNode(Sealable, Node):
         return self.base.attributes.set(self.EXCEPTION_KEY, exception)
 
     @property
-    def checkpoint(self) -> Optional[Dict[str, Any]]:
+    def checkpoint(self) -> Optional[str]:
         """
         Return the checkpoint bundle set for the process
 
@@ -460,7 +460,7 @@ class ProcessNode(Sealable, Node):
         """
         return self.base.attributes.get(self.CHECKPOINT_KEY, None)
 
-    def set_checkpoint(self, checkpoint: Dict[str, Any]) -> None:
+    def set_checkpoint(self, checkpoint: str) -> None:
         """
         Set the checkpoint bundle set for the process
 

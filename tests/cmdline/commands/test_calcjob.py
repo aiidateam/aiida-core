@@ -10,7 +10,6 @@
 # pylint: disable=protected-access,too-many-locals,invalid-name,too-many-public-methods
 """Tests for `verdi calcjob`."""
 import io
-import pathlib
 
 from click.testing import CliRunner
 import pytest
@@ -34,9 +33,9 @@ class TestVerdiCalculation:
     """Tests for `verdi calcjob`."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile_clean, aiida_localhost, tmp_path):  # pylint: disable=unused-argument
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
+        # pylint: disable=attribute-defined-outside-init,too-many-statements
 
         self.computer = aiida_localhost
         self.code = orm.InstalledCode(computer=self.computer, filepath_executable='/bin/true').store()
@@ -48,17 +47,20 @@ class TestVerdiCalculation:
         process_type = get_entry_point_string_from_class(process_class.__module__, process_class.__name__)
 
         # Create 5 CalcJobNodes (one for each CalculationState)
-        for calculation_state in CalcJobState:
+        for index, calculation_state in enumerate(CalcJobState):
+
+            dirpath = (tmp_path / str(index))
+            dirpath.mkdir()
 
             calc = orm.CalcJobNode(computer=self.computer, process_type=process_type)
             calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
             calc.set_option('output_filename', 'fileA.txt')
-            calc.set_remote_workdir('/tmp/aiida/work')
-            remote = RemoteData(remote_path='/tmp/aiida/work')
+            calc.set_remote_workdir(str(dirpath))
+            remote = RemoteData(remote_path=str(dirpath))
             remote.computer = calc.computer
             remote.base.links.add_incoming(calc, LinkType.CREATE, link_label='remote_folder')
-            (pathlib.Path('/tmp/aiida/work') / 'fileA.txt').write_text('test stringA')
-            (pathlib.Path('/tmp/aiida/work') / 'fileB.txt').write_text('test stringB')
+            (dirpath / 'fileA.txt').write_text('test stringA')
+            (dirpath / 'fileB.txt').write_text('test stringB')
             calc.store()
             remote.store()
 
@@ -85,14 +87,16 @@ class TestVerdiCalculation:
                 self.group.add_nodes([calc])
 
         # Create a single failed CalcJobNode
+        dirpath = (tmp_path / 'failed')
+        dirpath.mkdir()
         self.EXIT_STATUS = 100
         calc = orm.CalcJobNode(computer=self.computer)
         calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         calc.store()
         calc.set_exit_status(self.EXIT_STATUS)
         calc.set_process_state(ProcessState.FINISHED)
-        calc.set_remote_workdir('/tmp/aiida/work')
-        remote = RemoteData(remote_path='/tmp/aiida/work')
+        calc.set_remote_workdir(str(tmp_path))
+        remote = RemoteData(remote_path=str(tmp_path))
         remote.computer = calc.computer
         remote.base.links.add_incoming(calc, LinkType.CREATE, link_label='remote_folder')
         remote.store()
@@ -330,9 +334,11 @@ class TestVerdiCalculation:
         assert len(get_result_lines(result)) == 1
         assert get_result_lines(result)[0] == '5'
 
-    def test_calcjob_remotecat(self):
+    def test_calcjob_remotecat(self, monkeypatch):
         """Test the remotecat command that prints the remote file for a given calcjob"""
         # Specifying no filtering options and no explicit calcjobs should exit with non-zero status
+        import os
+
         options = []
         result = self.cli_runner.invoke(command.calcjob_remotecat, options)
         assert result.exception is not None, result.output
@@ -353,3 +359,10 @@ class TestVerdiCalculation:
         options = [str(self.result_job.uuid), 'fileA.txt']
         result = self.cli_runner.invoke(command.calcjob_remotecat, options)
         assert result.stdout == 'test stringA'
+
+        # To test the ``--monitor`` option, mock the ``os.system`` command and simply print the command it receives.
+        with monkeypatch.context() as ctx:
+            ctx.setattr(os, 'system', lambda x: print(x))  # pylint: disable=unnecessary-lambda
+            options = ['--monitor', str(self.result_job.uuid), 'fileA.txt']
+            result = self.cli_runner.invoke(command.calcjob_remotecat, options)
+            assert "bash -l  -c 'tail -f fileA.txt'" in result.stdout

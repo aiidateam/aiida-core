@@ -123,16 +123,14 @@ def calcjob_inputcat(calcjob, path):
 
 @verdi_calcjob.command('remotecat')
 @arguments.CALCULATION('calcjob', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
-@click.argument('path', type=click.STRING, required=False)
+@click.argument('path', type=str, required=False)
 @click.option('--monitor', is_flag=True, default=False, help='Monitor the file using `tail -f` instead.')
 @decorators.with_dbenv()
 def calcjob_remotecat(calcjob, path, monitor):
-    """
-    Show the contents of one of the calcjob files in the remote working directory
+    """Show the contents of a file in the remote working directory.
 
-    You can specify the relative PATH in the working folder of the CalcJob.
-
-    If PATH is not specified, the default output file path will be used which is defined by the calcjob plugin class.
+    The file to show can be specified using the PATH argument. If PATH is not specified, the default output file path
+    as defined by the `CalcJob` plugin class will be used instead.
     """
     from shutil import copyfileobj
     import sys
@@ -140,39 +138,30 @@ def calcjob_remotecat(calcjob, path, monitor):
 
     from aiida.common.exceptions import NotExistent
 
-    if monitor:
-        _, path = get_remote_and_path(calcjob, path)
+    remote_folder, path = get_remote_and_path(calcjob, path)
 
+    if monitor:
         try:
             transport = calcjob.get_transport()
         except NotExistent as exception:
-            echo.echo_critical(repr(exception))
+            echo.echo_critical(str(exception))
 
         remote_workdir = calcjob.get_remote_workdir()
 
         if not remote_workdir:
-            echo.echo_critical('no remote work directory for this calcjob, maybe the daemon did not submit it yet')
+            echo.echo_critical('no remote work directory for this calcjob, maybe it has not yet started running?')
         cmds = f"-c 'tail -f {path}'"
         command = transport.gotocomputer_command(remote_workdir, cmds)
         os.system(command)
         return
 
-    remote_folder, path = get_remote_and_path(calcjob, path)
-
-    try:
-        with tempfile.NamedTemporaryFile(delete=False) as tmpf:
-            tmpf.close()
-            remote_folder.getfile(path, tmpf.name)
-            with open(tmpf.name, 'rb') as fhandle:
-                copyfileobj(fhandle, sys.stdout.buffer)
-    except IOError as err:
-        echo.echo_critical(f'{err.errno}: {str(err)}')
-
-    try:
-        os.remove(tmpf.name)
-    except OSError:
-        # If you cannot delete, ignore (maybe I didn't manage to create it in the first place
-        pass
+    with tempfile.NamedTemporaryFile() as tmp_path:
+        try:
+            remote_folder.getfile(path, tmp_path.name)
+            with open(tmp_path.name, 'rb') as handle:
+                copyfileobj(handle, sys.stdout.buffer)
+        except IOError as exception:
+            echo.echo_critical(str(exception))
 
 
 @verdi_calcjob.command('outputcat')
@@ -336,38 +325,53 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force, exit
 
 
 def get_remote_and_path(calcjob, path=None):
-    """
-    Get the RemoteFolder and process the path argument
+    """Return the remote folder output node and process the path argument.
 
     :param calcjob: The ``CalcJobNode`` whose remote_folder to be returned.
-    :param path: The relative path of file. The default from the spec will be used if it is not defined.
-
+    :param path: The relative path of file. If not defined, it is attempted to determine the default output file from
+        the node options or otherwise from the associated process class. If neither are defined, a ``ValueError`` is
+        raised.
     :returns: A tuple of the ``RemoteData`` and the path of the output file to be used.
+    :raises ValueError: If path is not defined and no default output file is defined on the node nor its associated
+        process class.
     """
-
     remote_folder_linkname = 'remote_folder'  # The `remote_folder` is the standard output of a calculation.
 
     try:
         remote_folder = getattr(calcjob.outputs, remote_folder_linkname)
     except AttributeError:
-        echo.echo_critical(f'No "{remote_folder_linkname}" found. Have the calcjob files been submitted?')
-
-    # Get path from the given CalcJobNode if not defined by user
-    if path is None:
-        path = calcjob.get_option('output_filename')
-
-    # Get path from current process class spec of CalcJobNode if still not defined
-    if path is None:
-        fname = calcjob.process_class.spec_options.get('output_filename')
-        if fname and fname.has_default():
-            path = fname.default
-
-    if path is None:
-        # Still no path available?
         echo.echo_critical(
-            '"{}" and its process class "{}" do not define a default output file '
-            '(option "output_filename" not found).\n'
-            'Please specify a path explicitly.'.format(calcjob.__class__.__name__, calcjob.process_class.__name__)
+            f'`CalcJobNode<{calcjob.pk}>` has no `{remote_folder_linkname}` output. '
+            'It probably has not started running yet.'
         )
 
-    return remote_folder, path
+    if path is not None:
+        return remote_folder, path
+
+    # Try to get the default output filename from the node
+    path = calcjob.get_option('output_filename')
+
+    if path is not None:
+        return remote_folder, path
+
+    try:
+        process_class = calcjob.process_class
+    except ValueError as exception:
+        raise ValueError(
+            f'The process class of `CalcJobNode<{calcjob.pk}>` cannot be loaded and so the default output filename '
+            'cannot be determined.\nPlease specify a path explicitly.'
+        ) from exception
+
+    # Try to get the default output filename from the node's associated process class spec
+    port = process_class.spec_options.get('output_filename')
+    if port and port.has_default():
+        path = port.default
+
+    if path is not None:
+        return remote_folder, path
+
+    raise ValueError(
+        f'`CalcJobNode<{calcjob.pk}>` does not define a default output file (option "output_filename" not found) '
+        f'nor does its associated process class `{calcjob.process_class.__class__.__name__}`\n'
+        'Please specify a path explicitly.'
+    )

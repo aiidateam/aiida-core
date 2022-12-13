@@ -20,7 +20,7 @@ from enum import Enum
 from functools import partial
 from typing import Any, Protocol, Type, overload
 
-from plumpy import Bundle, get_object_loader  # type: ignore
+from plumpy import Bundle, get_object_loader  # type: ignore[attr-defined]
 from plumpy.utils import AttributesFrozendict
 import yaml
 
@@ -44,7 +44,7 @@ def represent_enum(dumper: yaml.Dumper, enum: Enum) -> yaml.ScalarNode:
 
 def enum_constructor(loader: yaml.Loader, serialized: yaml.Node) -> Enum:
     """Construct an enum from the serialized representation."""
-    deserialized: str = loader.construct_scalar(serialized)  # type: ignore
+    deserialized: str = loader.construct_scalar(serialized)  # type: ignore[arg-type,assignment]
     identifier, value = deserialized.split('|')
     cls = get_object_loader().load_object(identifier)
     enum = cls(value)
@@ -60,7 +60,7 @@ def represent_node(dumper: yaml.Dumper, node: orm.Node) -> yaml.ScalarNode:
 
 def node_constructor(loader: yaml.Loader, node: yaml.Node) -> orm.Node:
     """Load a node from the yaml representation."""
-    yaml_node = loader.construct_scalar(node)  # type: ignore
+    yaml_node = loader.construct_scalar(node)  # type: ignore[arg-type]
     return orm.load_node(uuid=yaml_node)
 
 
@@ -73,7 +73,7 @@ def represent_group(dumper: yaml.Dumper, group: orm.Group) -> yaml.ScalarNode:
 
 def group_constructor(loader: yaml.Loader, group: yaml.Node) -> orm.Group:
     """Load a group from the yaml representation."""
-    yaml_node = loader.construct_scalar(group)  # type: ignore
+    yaml_node = loader.construct_scalar(group)  # type: ignore[arg-type]
     return orm.load_group(uuid=yaml_node)
 
 
@@ -86,7 +86,7 @@ def represent_computer(dumper: yaml.Dumper, computer: orm.Computer) -> yaml.Scal
 
 def computer_constructor(loader: yaml.Loader, computer: yaml.Node) -> orm.Computer:
     """Load a computer from the yaml representation."""
-    yaml_node = loader.construct_scalar(computer)  # type: ignore
+    yaml_node = loader.construct_scalar(computer)  # type: ignore[arg-type]
     return orm.Computer.collection.get(uuid=yaml_node)
 
 
@@ -117,7 +117,7 @@ def represent_bundle(dumper: yaml.Dumper, bundle: Bundle) -> yaml.MappingNode:
 
 def bundle_constructor(loader: yaml.Loader, bundle: yaml.Node) -> Bundle:
     """Construct an `plumpy.Bundle` from the representation."""
-    yaml_node = loader.construct_mapping(bundle)  # type: ignore
+    yaml_node = loader.construct_mapping(bundle)  # type: ignore[arg-type]
     bundle_inst = Bundle.__new__(Bundle)
     bundle_inst.update(yaml_node)
     return bundle_inst

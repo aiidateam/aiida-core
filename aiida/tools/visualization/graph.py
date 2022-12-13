@@ -193,17 +193,21 @@ def pstate_node_styles(node: orm.Node) -> dict:
     return node_style
 
 
-_OVERRIDE_STYLES_DICT = {
-    'ignore_node': {
+def _default_ignore_node_styles() -> dict:
+    """Return the default style for ignored nodes."""
+    return {
         'color': 'lightgray',
         'fillcolor': 'white',
         'penwidth': 2,
-    },
-    'origin_node': {
+    }
+
+
+def _default_origin_node_styles() -> dict:
+    """Return the default style for origin nodes."""
+    return {
         'color': 'red',
         'penwidth': 6,
-    },
-}
+    }
 
 
 def default_node_sublabels(node: orm.Node) -> str:
@@ -400,8 +404,8 @@ class Graph:
         self._node_id_type = node_id_type
         self._backend = backend or get_manager().get_profile_storage()
 
-        self._ignore_node_style = _OVERRIDE_STYLES_DICT['ignore_node'].copy()
-        self._origin_node_style = _OVERRIDE_STYLES_DICT['origin_node'].copy()
+        self._ignore_node_style = _default_ignore_node_styles()
+        self._origin_node_style = _default_origin_node_styles()
 
     @property
     def backend(self) -> StorageBackend:
@@ -685,7 +689,7 @@ class Graph:
 
         # Pop the origin node and add it to the graph, applying custom styling
         origin_node = traversed_nodes.pop(origin_pk)
-        self.add_node(origin_node, style_override=origin_style or _OVERRIDE_STYLES_DICT['origin_node'].copy())
+        self.add_node(origin_node, style_override=origin_style or _default_origin_node_styles())
 
         # Add all traversed nodes to the graph with default styling
         for _, traversed_node in traversed_nodes.items():
@@ -770,7 +774,7 @@ class Graph:
 
         # Pop the origin node and add it to the graph, applying custom styling
         origin_node = traversed_nodes.pop(origin_pk)
-        self.add_node(origin_node, style_override=(origin_style or _OVERRIDE_STYLES_DICT['origin_node'].copy()))
+        self.add_node(origin_node, style_override=(origin_style or _default_origin_node_styles()))
 
         # Add all traversed nodes to the graph with default styling
         for _, traversed_node in traversed_nodes.items():

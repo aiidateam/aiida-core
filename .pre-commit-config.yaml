@@ -138,7 +138,6 @@ repos:
                 aiida/orm/utils/calcjob.py|
                 aiida/orm/utils/node.py|
                 aiida/orm/utils/remote.py|
-                aiida/orm/utils/serialize.py|
                 aiida/repository/backend/disk_object_store.py|
                 aiida/repository/backend/sandbox.py|
                 aiida/restapi/common/utils.py|

@@ -178,6 +178,9 @@ py:class yaml.dumper.Dumper
 py:class yaml.loader.Loader
 py:class yaml.UnsafeLoader
 py:class yaml.loader.UnsafeLoader
+py:class yaml.nodes.Node
+py:class yaml.nodes.MappingNode
+py:class yaml.nodes.ScalarNode
 py:class uuid.UUID
 
 py:class psycopg2.extensions.cursor

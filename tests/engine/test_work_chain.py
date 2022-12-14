@@ -19,7 +19,7 @@ from aiida import orm
 from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.common.utils import Capturing
-from aiida.engine import ExitCode, Process, ToContext, WorkChain, append_, calcfunction, if_, launch, return_, while_
+from aiida.engine import ExitCode, Process, WorkChain, calcfunction, if_, launch, return_, while_
 from aiida.engine.persistence import ObjectLoader
 from aiida.manage import get_manager
 from aiida.orm import Bool, Float, Int, Str, load_node
@@ -448,14 +448,15 @@ class TestWorkchain:
                 spec.outline(cls.s1, cls.s2, cls.s3)
 
             def s1(self):
-                return ToContext(r1=self.submit(ReturnA), r2=self.submit(ReturnB))
+                self.queue_subprocess("r1", ReturnA)
+                self.queue_subprocess("r2", ReturnB)
 
             def s2(self):
                 assert self.ctx.r1.outputs.res == A
                 assert self.ctx.r2.outputs.res == B
 
                 # Try overwriting r1
-                return ToContext(r1=self.submit(ReturnB))
+                self.queue_subprocess("r1", ReturnB)
 
             def s3(self):
                 assert self.ctx.r1.outputs.res == B
@@ -569,8 +570,7 @@ class TestWorkchain:
                 calculation_function(**inputs)  # pylint: disable=unexpected-keyword-arg
 
                 # Call a sub work chain
-                inputs = {'metadata': {'call_link_label': label_workchain}}
-                return ToContext(subwc=self.submit(SubWorkChain, **inputs))
+                self.queue_subprocess('subwc', SubWorkChain, {'metadata': {'call_link_label': label_workchain}})
 
         class SubWorkChain(WorkChain):
             pass
@@ -600,7 +600,7 @@ class TestWorkchain:
                 spec.outputs.dynamic = True
 
             def do_run(self):
-                return ToContext(subwc=self.submit(SubWorkChain))
+                self.queue_subprocess('subwc', SubWorkChain)
 
             def check(self):
                 assert self.ctx.subwc.outputs.value == Int(5)
@@ -631,7 +631,7 @@ class TestWorkchain:
                 spec.outputs.dynamic = True
 
             def do_run(self):
-                return ToContext(subwc=self.submit(SubWorkChain))
+                self.queue_subprocess('subwc', SubWorkChain)
 
             def check(self):
                 assert self.ctx.subwc.outputs.value == node
@@ -772,8 +772,8 @@ class TestWorkchain:
                 spec.outline(cls.begin, cls.result)
 
             def begin(self):
-                self.to_context(result_a=self.submit(SimpleWc))
-                return ToContext(result_b=self.submit(SimpleWc))
+                self.queue_subprocess("result_a", SimpleWc)
+                self.queue_subprocess("result_b", SimpleWc)
 
             def result(self):
                 assert self.ctx.result_a.outputs.result == val
@@ -803,8 +803,8 @@ class TestWorkchain:
                 spec.outline(cls.begin, cls.result)
 
             def begin(self):
-                self.to_context(**{'sub1.sub2.result_a': self.submit(SimpleWc)})
-                return ToContext(**{'sub1.sub2.result_b': self.submit(SimpleWc)})
+                self.queue_subprocess("sub1.sub2.result_a", SimpleWc)
+                self.queue_subprocess("sub1.sub2.result_b", SimpleWc)
 
             def result(self):
                 assert self.ctx.sub1.sub2.result_a.outputs.result == val
@@ -846,8 +846,8 @@ class TestWorkchain:
                 spec.outline(cls.begin, cls.result)
 
             def begin(self):
-                self.to_context(**{'sub1.workchains': append_(self.submit(SimpleWc1))})
-                return ToContext(**{'sub1.workchains': append_(self.submit(SimpleWc2))})
+                self.queue_subprocess("sub1.workchains", SimpleWc1, ctx_append=True)
+                self.queue_subprocess("sub1.workchains", SimpleWc2, ctx_append=True)
 
             def result(self):
                 assert self.ctx.sub1.workchains[0].outputs.result == val1
@@ -877,8 +877,8 @@ class TestWorkchain:
                 spec.outline(cls.begin, cls.result)
 
             def begin(self):
-                self.to_context(**{'result_a': self.submit(SimpleWc)})
-                return ToContext(**{'result_a.sub1': self.submit(SimpleWc)})
+                self.queue_subprocess("result_a", SimpleWc)
+                self.queue_subprocess("result_a.sub1", SimpleWc)
 
             def result(self):
                 raise RuntimeError('Never reached: the second to_context above should fail')
@@ -909,8 +909,8 @@ class TestWorkchain:
                 spec.outline(cls.begin, cls.result)
 
             def begin(self):
-                self.to_context(workchains=append_(self.submit(SimpleWc)))  # make the workchains point to a list
-                return ToContext(**{'workchains.sub1.sub2': self.submit(SimpleWc)})  # now try to treat it as a sub-dict
+                self.queue_subprocess("workchains", SimpleWc, ctx_append=True)  # make the workchains point to a list
+                self.queue_subprocess("workchains.sub1.sub2", SimpleWc)  # now try to treat it as a sub-dict
 
             def result(self):
                 raise RuntimeError('Never reached: the second to_context above should fail')
@@ -941,10 +941,8 @@ class TestWorkchain:
                 spec.outline(cls.begin, cls.result)
 
             def begin(self):
-                self.to_context(workchains=append_(self.submit(SimpleWc)))  # make the workchains point to a list
-                return ToContext(
-                    **{'workchains.sub1': self.submit(SimpleWc)}
-                )  # now try to treat the final path element it as a sub-dict
+                self.queue_subprocess("workchains", SimpleWc, ctx_append=True)  # make the workchains point to a list
+                self.queue_subprocess("workchains.sub1", SimpleWc)  # now try to treat it as a sub-dict
 
             def result(self):
                 raise RuntimeError('Never reached: the second to_context above should fail')
@@ -1149,7 +1147,7 @@ class TestWorkChainAbortChildren:
             spec.outline(cls.submit_child, cls.check)
 
         def submit_child(self):
-            return ToContext(child=self.submit(TestWorkChainAbortChildren.SubWorkChain, kill=self.inputs.kill))
+            self.queue_subprocess("child", TestWorkChainAbortChildren.SubWorkChain, {"kill": self.inputs.kill})
 
         def check(self):
             raise RuntimeError('should have been aborted by now')
@@ -1346,8 +1344,8 @@ class GrandParentExposeWorkChain(WorkChain):
         spec.outline(cls.do_run, cls.finalize)
 
     def do_run(self):
-        return ToContext(
-            child=self.submit(ParentExposeWorkChain, **self.exposed_inputs(ParentExposeWorkChain, namespace='sub.sub'))
+        self.queue_subprocess(
+            "child", ParentExposeWorkChain, self.exposed_inputs(ParentExposeWorkChain, namespace='sub.sub')
         )
 
     def finalize(self):
@@ -1385,18 +1383,18 @@ class ParentExposeWorkChain(WorkChain):
         spec.outline(cls.start_children, cls.finalize)
 
     def start_children(self):
-        child_1 = self.submit(
-            ChildExposeWorkChain,
-            a=self.exposed_inputs(ChildExposeWorkChain)['a'],
-            **self.exposed_inputs(ChildExposeWorkChain, namespace='sub_1', agglomerate=False)
+        self.queue_subprocess(
+            "child_1", ChildExposeWorkChain, {
+                "a": self.exposed_inputs(ChildExposeWorkChain)['a'],
+                **self.exposed_inputs(ChildExposeWorkChain, namespace='sub_1', agglomerate=False)
+            }
         )
-        child_2 = self.submit(
-            ChildExposeWorkChain, **self.exposed_inputs(
+        self.queue_subprocess(
+            "child_2", ChildExposeWorkChain, self.exposed_inputs(
                 ChildExposeWorkChain,
                 namespace='sub_2.sub_3',
             )
         )
-        return ToContext(child_1=child_1, child_2=child_2)
 
     def finalize(self):
         exposed_1 = self.exposed_outputs(self.ctx.child_1, ChildExposeWorkChain, namespace='sub_1', agglomerate=False)
@@ -1587,11 +1585,16 @@ class TestDefaultUniqueness:
             spec.outline(cls.do_run)
 
         def do_run(self):
-            inputs = self.exposed_inputs(TestDefaultUniqueness.Child, namespace='child_one')
-            child_one = self.submit(TestDefaultUniqueness.Child, **inputs)
-            inputs = self.exposed_inputs(TestDefaultUniqueness.Child, namespace='child_two')
-            child_two = self.submit(TestDefaultUniqueness.Child, **inputs)
-            return ToContext(workchain_child_one=child_one, workchain_child_two=child_two)
+            self.queue_subprocess(
+                "workchain_child_one",
+                TestDefaultUniqueness.Child,
+                self.exposed_inputs(TestDefaultUniqueness.Child, namespace='child_one'),
+            )
+            self.queue_subprocess(
+                "workchain_child_two",
+                TestDefaultUniqueness.Child,
+                self.exposed_inputs(TestDefaultUniqueness.Child, namespace='child_two'),
+            )
 
     class Child(WorkChain):
 

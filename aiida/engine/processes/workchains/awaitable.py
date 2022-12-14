@@ -8,18 +8,42 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Enums and function for the awaitables of Processes."""
-from enum import Enum
-from typing import Union
+from __future__ import annotations
 
-from plumpy.utils import AttributesDict
+from dataclasses import dataclass
+from enum import Enum
+from typing import Literal
 
 from aiida.orm import ProcessNode
 
-__all__ = ('Awaitable', 'AwaitableTarget', 'AwaitableAction', 'construct_awaitable')
+
+@dataclass
+class SubProcessRef:
+    """A pointer to a sub-process, for a workchain step to await on."""
+    pk: int
+    """The pk of the sub-process."""
+    action: Literal['assign', 'append'] = 'assign'
+    """How to store the result in the workchain context; either assigning directly to a key or appending to a list."""
+    outputs: bool = False
+    """Whether the node itself (False) or its outputs (True) should be added to the context."""
+    key: None | str = None
+    """The key to store the result under in the workchain context."""
+    resolved: bool = False
+    """Whether the process has been resolved and the result is available on the context."""
 
 
-class Awaitable(AttributesDict):
-    """An attribute dictionary that represents an action that a Process could be waiting for to finish."""
+def construct_sub_ref(target: ProcessNode | SubProcessRef) -> SubProcessRef:
+    """Construct a pointer for a given sub-process of a workchain step."""
+    if isinstance(target, SubProcessRef):
+        return target
+    if isinstance(target, ProcessNode):
+        return SubProcessRef(pk=target.pk)
+
+    raise ValueError(f'invalid class for sub-process: {type(target)}')
+
+
+# NOTE: the following classes are only here for back-compatibility,
+# if a profile still has a workchain context with the old format of awaitable stored in it.
 
 
 class AwaitableTarget(Enum):
@@ -31,38 +55,3 @@ class AwaitableAction(Enum):
     """Enum that describes the action to be taken for a given awaitable."""
     ASSIGN = 'assign'
     APPEND = 'append'
-
-
-def construct_awaitable(target: Union[Awaitable, ProcessNode]) -> Awaitable:
-    """
-    Construct an instance of the Awaitable class that will contain the information
-    related to the action to be taken with respect to the context once the awaitable
-    object is completed.
-
-    The awaitable is a simple dictionary with the following keys
-
-        * pk: the pk of the node that is being waited on
-        * action: the context action to be performed upon completion
-        * outputs: a boolean that toggles whether the node itself
-
-    Currently the only awaitable classes are ProcessNode and Workflow
-    The only awaitable actions are the Assign and Append operators
-    """
-    if isinstance(target, Awaitable):
-        return target
-
-    if isinstance(target, ProcessNode):
-        awaitable_target = AwaitableTarget.PROCESS
-    else:
-        raise ValueError(f'invalid class for awaitable target: {type(target)}')
-
-    awaitable = Awaitable(
-        **{
-            'pk': target.pk,
-            'action': AwaitableAction.ASSIGN,
-            'target': awaitable_target,
-            'outputs': False,
-        }
-    )
-
-    return awaitable

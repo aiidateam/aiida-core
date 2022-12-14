@@ -25,9 +25,6 @@ from .process_spec import *
 from .workchains import *
 
 __all__ = (
-    'Awaitable',
-    'AwaitableAction',
-    'AwaitableTarget',
     'BaseRestartWorkChain',
     'CalcJob',
     'CalcJobImporter',
@@ -56,7 +53,6 @@ __all__ = (
     'append_',
     'assign_',
     'calcfunction',
-    'construct_awaitable',
     'if_',
     'process_handler',
     'return_',

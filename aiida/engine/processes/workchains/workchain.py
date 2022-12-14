@@ -31,7 +31,7 @@ from aiida.orm.utils import load_node
 from ..exit_code import ExitCode
 from ..process import Process, ProcessState
 from ..process_spec import ProcessSpec
-from .awaitable import Awaitable, AwaitableAction, AwaitableTarget, construct_awaitable
+from .awaitable import SubProcessRef, construct_sub_ref
 
 if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner  # pylint: disable=unused-import
@@ -42,6 +42,8 @@ __all__ = ('WorkChain', 'if_', 'while_', 'return_')
 class WorkChainSpec(ProcessSpec, PlumpyWorkChainSpec):
     pass
 
+
+MethodType = t.TypeVar('MethodType')
 
 class Protect(ProcessStateMachineMeta):
     """Metaclass that allows protecting class methods from being overridden by subclasses.
@@ -84,14 +86,14 @@ class Protect(ProcessStateMachineMeta):
             return False
 
     @classmethod
-    def final(cls, method: t.Any):
+    def final(cls, method: MethodType) -> MethodType:
         """Decorate a method with this method to protect it from being overridden.
 
         Adds the ``__SENTINEL`` object as the ``__final`` private attribute to the given ``method`` and wraps it in
         the ``typing.final`` decorator. The latter indicates to typing systems that it cannot be overridden in
         subclasses.
         """
-        method.__final = cls.__SENTINEL  # pylint: disable=protected-access,unused-private-member
+        method.__final = cls.__SENTINEL  # type: ignore[attr-defined]  # pylint: disable=protected-access,unused-private-member
         return t.final(method)
 
 
@@ -127,7 +129,7 @@ class WorkChain(Process, metaclass=Protect):
         super().__init__(inputs, logger, runner, enable_persistence=enable_persistence)
 
         self._stepper: Stepper | None = None
-        self._awaitables: list[Awaitable] = []
+        self._awaitables: list[SubProcessRef] = []
         self._context = AttributeDict()
 
     @classmethod
@@ -175,6 +177,16 @@ class WorkChain(Process, metaclass=Protect):
 
         self.set_logger(self.node.logger)
 
+        new_awaitables = []
+        for awaitable in self._awaitables:
+            if isinstance(awaitable, AttributeDict):
+                # this means the context was stored with the old style awaitable format
+                # so, for backwards compatibility, we convert it to the new format
+                action = awaitable.action.value  # type: ignore[union-attr]
+                awaitable = SubProcessRef(awaitable.pk, action=action, outputs=awaitable.outputs, key=awaitable.key)
+            new_awaitables.append(awaitable)
+        self._awaitables = new_awaitables
+
         if self._awaitables:
             self._action_awaitables()
 
@@ -183,109 +195,47 @@ class WorkChain(Process, metaclass=Protect):
         super().on_run()
         self.node.set_stepper_state_info(str(self._stepper))
 
-    def _resolve_nested_context(self, key: str) -> tuple[AttributeDict, str]:
-        """
-        Returns a reference to a sub-dictionary of the context and the last key,
-        after resolving a potentially segmented key where required sub-dictionaries are created as needed.
-
-        :param key: A key into the context, where words before a dot are interpreted as a key for a sub-dictionary
-        """
-        ctx = self.ctx
-        ctx_path = key.split('.')
-
-        for index, path in enumerate(ctx_path[:-1]):
-            try:
-                ctx = ctx[path]
-            except KeyError:  # see below why this is the only exception we have to catch here
-                ctx[path] = AttributeDict()  # create the sub-dict and update the context
-                ctx = ctx[path]
-                continue
-
-            # Notes:
-            # * the first ctx (self.ctx) is guaranteed to be an AttributeDict, hence the post-"dereference" checking
-            # * the values can be many different things: on insertion they are either AtrributeDict, List or Awaitables
-            #   (subclasses of AttributeDict) but after resolution of an Awaitable this will be the value itself
-            # * assumption: a resolved value is never a plain AttributeDict, on the other hand if a resolved Awaitable
-            #   would be an AttributeDict we can append things to it since the order of tasks is maintained.
-            if type(ctx) != AttributeDict:  # pylint: disable=C0123
-                raise ValueError(
-                    f'Can not update the context for key `{key}`:'
-                    f' found instance of `{type(ctx)}` at `{".".join(ctx_path[:index+1])}`, expected AttributeDict'
-                )
-
-        return ctx, ctx_path[-1]
-
-    def _insert_awaitable(self, awaitable: Awaitable) -> None:
-        """Insert an awaitable that should be terminated before before continuing to the next step.
-
-        :param awaitable: the thing to await
-        """
-        ctx, key = self._resolve_nested_context(awaitable.key)
-
-        # Already assign the awaitable itself to the location in the context container where it is supposed to end up
-        # once it is resolved. This is especially important for the `APPEND` action, since it needs to maintain the
-        # order, but the awaitables will not necessarily be resolved in the order in which they are added. By using the
-        # awaitable as a placeholder, in the `_resolve_awaitable`, it can be found and replaced by the resolved value.
-        if awaitable.action == AwaitableAction.ASSIGN:
-            ctx[key] = awaitable
-        elif awaitable.action == AwaitableAction.APPEND:
-            ctx.setdefault(key, []).append(awaitable)
-        else:
-            raise AssertionError(f'Unsupported awaitable action: {awaitable.action}')
-
-        self._awaitables.append(
-            awaitable
-        )  # add only if everything went ok, otherwise we end up in an inconsistent state
-        self._update_process_status()
-
-    def _resolve_awaitable(self, awaitable: Awaitable, value: t.Any) -> None:
-        """Resolve an awaitable.
-
-        Precondition: must be an awaitable that was previously inserted.
-
-        :param awaitable: the awaitable to resolve
-        """
-
-        ctx, key = self._resolve_nested_context(awaitable.key)
-
-        if awaitable.action == AwaitableAction.ASSIGN:
-            ctx[key] = value
-        elif awaitable.action == AwaitableAction.APPEND:
-            # Find the same awaitable inserted in the context
-            container = ctx[key]
-            for index, placeholder in enumerate(container):
-                if isinstance(placeholder, Awaitable) and placeholder.pk == awaitable.pk:
-                    container[index] = value
-                    break
-            else:
-                raise AssertionError(f'Awaitable `{awaitable.pk} was not found in `ctx.{awaitable.key}`')
-        else:
-            raise AssertionError(f'Unsupported awaitable action: {awaitable.action}')
-
-        awaitable.resolved = True
-        self._awaitables.remove(awaitable)  # remove only if everything went ok, otherwise we may lose track
-
-        if not self.has_terminated():
-            # the process may be terminated, for example, if the process was killed or excepted
-            # then we should not try to update it
-            self._update_process_status()
-
     @Protect.final
-    def to_context(self, **kwargs: Awaitable | ProcessNode) -> None:
+    def to_context(self, **kwargs: ProcessNode | SubProcessRef) -> None:
         """Add a dictionary of awaitables to the context.
 
         This is a convenience method that provides syntactic sugar, for a user to add multiple intersteps that will
         assign a certain value to the corresponding key in the context of the work chain.
         """
         for key, value in kwargs.items():
-            awaitable = construct_awaitable(value)
+            awaitable = construct_sub_ref(value)
             awaitable.key = key
-            self._insert_awaitable(awaitable)
+            self._add_subprocess(awaitable)
+
+    @Protect.final
+    def queue_subprocess(
+        self,
+        ctx_key: str,
+        cls: type[Process],
+        inputs: dict[str, t.Any] | None = None,
+        *,
+        ctx_append=False
+    ) -> ProcessNode:
+        """Add a sub-process, which will be run to termination before the next step of the workchain commences.
+
+        :param ctx_key: the key to assign the result of the sub-process to, in the context.
+            Keys with `.` in them will be interpreted as nested dictionary paths.
+        :param cls: the process class to launch
+        :param inputs: the inputs for the process
+        :param ctx_append: if True, the result of the sub-process will be appended to the list of values already
+            assigned to the key in the context. If False, the result will be assigned to the key in the context.
+        """
+        node = self.submit(cls, **(inputs or {}))
+        ref = construct_sub_ref(node)
+        ref.key = ctx_key
+        ref.action = 'append' if ctx_append else 'assign'
+        self._add_subprocess(ref)
+        return node
 
     def _update_process_status(self) -> None:
         """Set the process status with a message accounting the current sub processes that we are waiting for."""
         if self._awaitables:
-            status = f"Waiting for child processes: {', '.join([str(_.pk) for _ in self._awaitables])}"
+            status = f"Waiting for sub-processes: {', '.join([str(sp.pk) for sp in self._awaitables])}"
             self.node.set_process_status(status)
         else:
             self.node.set_process_status(None)
@@ -365,7 +315,7 @@ class WorkChain(Process, metaclass=Protect):
             self.logger.exception('exception in _store_nodes called in on_exiting')
 
     @Protect.final
-    def on_wait(self, awaitables: t.Sequence[Awaitable]):
+    def on_wait(self, awaitables: t.Sequence[t.Awaitable]):
         """Entering the WAITING state."""
         super().on_wait(awaitables)
         if self._awaitables:
@@ -381,33 +331,109 @@ class WorkChain(Process, metaclass=Protect):
         call it when the target is completed
         """
         for awaitable in self._awaitables:
-            if awaitable.target == AwaitableTarget.PROCESS:
-                callback = functools.partial(self.call_soon, self._on_awaitable_finished, awaitable)
+            if isinstance(awaitable, SubProcessRef):
+                callback = functools.partial(self.call_soon, self._on_subprocess_finished, awaitable)
                 self.runner.call_on_process_finish(awaitable.pk, callback)
             else:
-                assert f"invalid awaitable target '{awaitable.target}'"
+                assert f"invalid awaitable target '{type(awaitable)}'"
 
-    def _on_awaitable_finished(self, awaitable: Awaitable) -> None:
-        """Callback function, for when an awaitable process instance is completed.
-
-        The awaitable will be effectuated on the context of the work chain and removed from the internal list. If all
-        awaitables have been dealt with, the work chain process is resumed.
-
-        :param awaitable: an Awaitable instance
+    def _resolve_nested_context(self, key: str) -> tuple[AttributeDict, str]:
         """
-        self.logger.info('received callback that awaitable %d has terminated', awaitable.pk)
+        Returns a reference to a sub-dictionary of the context and the last key,
+        after resolving a potentially segmented key where required sub-dictionaries are created as needed.
+
+        :param key: A key into the context, where words before a dot are interpreted as a key for a sub-dictionary
+        """
+        ctx = self.ctx
+        ctx_path = key.split('.')
+
+        for index, path in enumerate(ctx_path[:-1]):
+            try:
+                ctx = ctx[path]
+            except KeyError:  # see below why this is the only exception we have to catch here
+                ctx[path] = AttributeDict()  # create the sub-dict and update the context
+                ctx = ctx[path]
+                continue
+
+            # Notes:
+            # * the first ctx (self.ctx) is guaranteed to be an AttributeDict, hence the post-"dereference" checking
+            # * the values can be many different things: on insertion they are either AtrributeDict, List or Awaitables
+            #   (subclasses of AttributeDict) but after resolution of an Awaitable this will be the value itself
+            # * assumption: a resolved value is never a plain AttributeDict, on the other hand if a resolved Awaitable
+            #   would be an AttributeDict we can append things to it since the order of tasks is maintained.
+            if type(ctx) != AttributeDict:  # pylint: disable=C0123
+                raise ValueError(
+                    f'Can not update the context for key `{key}`:'
+                    f' found instance of `{type(ctx)}` at `{".".join(ctx_path[:index+1])}`, expected AttributeDict'
+                )
+
+        return ctx, ctx_path[-1]
+
+    def _add_subprocess(self, child: SubProcessRef) -> None:
+        """Add a sub-process that should be terminated before before continuing to the next step."""
+        assert child.key, 'sub-process context key must be set'
+        ctx, key = self._resolve_nested_context(child.key)
+
+        # Already assign the awaitable itself to the location in the context container where it is supposed to end up
+        # once it is resolved. This is especially important for the `APPEND` action, since it needs to maintain the
+        # order, but the awaitables will not necessarily be resolved in the order in which they are added. By using the
+        # awaitable as a placeholder, in the `_resolve_awaitable`, it can be found and replaced by the resolved value.
+        if child.action == 'assign':
+            ctx[key] = child
+        elif child.action == 'append':
+            ctx.setdefault(key, []).append(child)
+        else:
+            raise AssertionError(f'Unsupported awaitable action: {child.action}')
+
+        self._awaitables.append(child)  # add only if everything went ok, otherwise we end up in an inconsistent state
+        self._update_process_status()
+
+    def _on_subprocess_finished(self, child: SubProcessRef) -> None:
+        """Callback function, for when a sub-process is completed.
+
+        The child will be effectuated on the context of the work chain and removed from the internal list.
+        If all sub-processes have been dealt with, the work chain step is complete.
+        """
+        self.logger.info('received callback that sub-process %d has terminated', child.pk)
 
         try:
-            node = load_node(awaitable.pk)
+            node = load_node(child.pk)
         except (exceptions.MultipleObjectsError, exceptions.NotExistent):
-            raise ValueError(f'provided pk<{awaitable.pk}> could not be resolved to a valid Node instance')
+            raise ValueError(f'provided pk<{child.pk}> could not be resolved to a valid Node instance')
 
-        if awaitable.outputs:
+        if child.outputs:
             value = {entry.link_label: entry.node for entry in node.base.links.get_outgoing()}
         else:
             value = node  # type: ignore
 
-        self._resolve_awaitable(awaitable, value)
+        self._resolve_subprocess(child, value)
 
         if self.state == ProcessState.WAITING and not self._awaitables:
             self.resume()
+
+    def _resolve_subprocess(self, child: SubProcessRef, value: t.Any) -> None:
+        """Resolve a completed sub-process, replacing its placeholder in the context with the actual value."""
+        assert child.key, 'sub-process context key must be set'
+        ctx, key = self._resolve_nested_context(child.key)
+
+        if child.action == 'assign':
+            ctx[key] = value
+        elif child.action == 'append':
+            # Find the same awaitable inserted in the context
+            container = ctx[key]
+            for index, placeholder in enumerate(container):
+                if isinstance(placeholder, SubProcessRef) and placeholder.pk == child.pk:
+                    container[index] = value
+                    break
+            else:
+                raise AssertionError(f'Child process `{child.pk}` was not found in `ctx.{child.key}`')
+        else:
+            raise AssertionError(f'Unsupported awaitable action: {child.action}')
+
+        child.resolved = True
+        self._awaitables.remove(child)  # remove only if everything went ok, otherwise we may lose track
+
+        if not self.has_terminated():
+            # the process may be terminated, for example, if the process was killed or excepted
+            # then we should not try to update it
+            self._update_process_status()

@@ -21,16 +21,12 @@ from .utils import *
 from .workchain import *
 
 __all__ = (
-    'Awaitable',
-    'AwaitableAction',
-    'AwaitableTarget',
     'BaseRestartWorkChain',
     'ProcessHandlerReport',
     'ToContext',
     'WorkChain',
     'append_',
     'assign_',
-    'construct_awaitable',
     'if_',
     'process_handler',
     'return_',

@@ -121,6 +121,31 @@ def calcjob_inputcat(calcjob, path):
             echo.echo_critical(f'Could not open output path "{path}". Exception: {exception}')
 
 
+@verdi_calcjob.command('remotecat')
+@arguments.CALCULATION('calcjob', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
+@click.argument('path', type=str, required=False)
+@decorators.with_dbenv()
+def calcjob_remotecat(calcjob, path):
+    """Show the contents of a file in the remote working directory.
+
+    The file to show can be specified using the PATH argument. If PATH is not specified, the default output file path
+    as defined by the `CalcJob` plugin class will be used instead.
+    """
+    import shutil
+    import sys
+    import tempfile
+
+    remote_folder, path = get_remote_and_path(calcjob, path)
+
+    with tempfile.NamedTemporaryFile() as tmp_path:
+        try:
+            remote_folder.getfile(path, tmp_path.name)
+            with open(tmp_path.name, 'rb') as handle:
+                shutil.copyfileobj(handle, sys.stdout.buffer)
+        except IOError as exception:
+            echo.echo_critical(str(exception))
+
+
 @verdi_calcjob.command('outputcat')
 @arguments.CALCULATION('calcjob', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
 @click.argument('path', type=click.STRING, required=False)
@@ -279,3 +304,56 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force, exit
                 counter += 1
 
         echo.echo_success(f'{counter} remote folders cleaned on {computer.label}')
+
+
+def get_remote_and_path(calcjob, path=None):
+    """Return the remote folder output node and process the path argument.
+
+    :param calcjob: The ``CalcJobNode`` whose remote_folder to be returned.
+    :param path: The relative path of file. If not defined, it is attempted to determine the default output file from
+        the node options or otherwise from the associated process class. If neither are defined, a ``ValueError`` is
+        raised.
+    :returns: A tuple of the ``RemoteData`` and the path of the output file to be used.
+    :raises ValueError: If path is not defined and no default output file is defined on the node nor its associated
+        process class.
+    """
+    remote_folder_linkname = 'remote_folder'  # The `remote_folder` is the standard output of a calculation.
+
+    try:
+        remote_folder = getattr(calcjob.outputs, remote_folder_linkname)
+    except AttributeError:
+        echo.echo_critical(
+            f'`CalcJobNode<{calcjob.pk}>` has no `{remote_folder_linkname}` output. '
+            'It probably has not started running yet.'
+        )
+
+    if path is not None:
+        return remote_folder, path
+
+    # Try to get the default output filename from the node
+    path = calcjob.get_option('output_filename')
+
+    if path is not None:
+        return remote_folder, path
+
+    try:
+        process_class = calcjob.process_class
+    except ValueError as exception:
+        raise ValueError(
+            f'The process class of `CalcJobNode<{calcjob.pk}>` cannot be loaded and so the default output filename '
+            'cannot be determined.\nPlease specify a path explicitly.'
+        ) from exception
+
+    # Try to get the default output filename from the node's associated process class spec
+    port = process_class.spec_options.get('output_filename')
+    if port and port.has_default():
+        path = port.default
+
+    if path is not None:
+        return remote_folder, path
+
+    raise ValueError(
+        f'`CalcJobNode<{calcjob.pk}>` does not define a default output file (option "output_filename" not found) '
+        f'nor does its associated process class `{calcjob.process_class.__class__.__name__}`\n'
+        'Please specify a path explicitly.'
+    )

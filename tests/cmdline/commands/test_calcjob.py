@@ -334,11 +334,9 @@ class TestVerdiCalculation:
         assert len(get_result_lines(result)) == 1
         assert get_result_lines(result)[0] == '5'
 
-    def test_calcjob_remotecat(self, monkeypatch):
+    def test_calcjob_remotecat(self):
         """Test the remotecat command that prints the remote file for a given calcjob"""
         # Specifying no filtering options and no explicit calcjobs should exit with non-zero status
-        import os
-
         options = []
         result = self.cli_runner.invoke(command.calcjob_remotecat, options)
         assert result.exception is not None, result.output
@@ -359,10 +357,3 @@ class TestVerdiCalculation:
         options = [str(self.result_job.uuid), 'fileA.txt']
         result = self.cli_runner.invoke(command.calcjob_remotecat, options)
         assert result.stdout == 'test stringA'
-
-        # To test the ``--monitor`` option, mock the ``os.system`` command and simply print the command it receives.
-        with monkeypatch.context() as ctx:
-            ctx.setattr(os, 'system', lambda x: print(x))  # pylint: disable=unnecessary-lambda
-            options = ['--monitor', str(self.result_job.uuid), 'fileA.txt']
-            result = self.cli_runner.invoke(command.calcjob_remotecat, options)
-            assert "bash -l  -c 'tail -f fileA.txt'" in result.stdout

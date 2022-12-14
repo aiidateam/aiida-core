@@ -817,7 +817,7 @@ class LocalTransport(Transport):
 
         return retval, output_text, stderr_text
 
-    def gotocomputer_command(self, remotedir, extra_args=None):
+    def gotocomputer_command(self, remotedir):
         """
         Return a string to be run using os.system in order to connect
         via the transport to the remote directory.
@@ -829,7 +829,7 @@ class LocalTransport(Transport):
 
         :param str remotedir: the full path of the remote directory
         """
-        connect_string = self._gotocomputer_string(remotedir, extra_args)
+        connect_string = self._gotocomputer_string(remotedir)
         cmd = f'bash -c {connect_string}'
         return cmd
 

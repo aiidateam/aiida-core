@@ -1482,7 +1482,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         return (retval, b''.join(stdout_bytes), b''.join(stderr_bytes))
 
-    def gotocomputer_command(self, remotedir, extra_args=None):
+    def gotocomputer_command(self, remotedir):
         """
         Specific gotocomputer string to connect to a given remote computer via
         ssh and directly go to the calculation folder.
@@ -1505,7 +1505,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         further_params_str = ' '.join(further_params)
 
-        connect_string = self._gotocomputer_string(remotedir, extra_args)
+        connect_string = self._gotocomputer_string(remotedir)
         cmd = f'ssh -t {self._machine} {further_params_str} {connect_string}'
         return cmd
 

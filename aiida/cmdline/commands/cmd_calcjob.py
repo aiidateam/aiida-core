@@ -124,42 +124,24 @@ def calcjob_inputcat(calcjob, path):
 @verdi_calcjob.command('remotecat')
 @arguments.CALCULATION('calcjob', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
 @click.argument('path', type=str, required=False)
-@click.option('--monitor', is_flag=True, default=False, help='Monitor the file using `tail -f` instead.')
 @decorators.with_dbenv()
-def calcjob_remotecat(calcjob, path, monitor):
+def calcjob_remotecat(calcjob, path):
     """Show the contents of a file in the remote working directory.
 
     The file to show can be specified using the PATH argument. If PATH is not specified, the default output file path
     as defined by the `CalcJob` plugin class will be used instead.
     """
-    from shutil import copyfileobj
+    import shutil
     import sys
     import tempfile
 
-    from aiida.common.exceptions import NotExistent
-
     remote_folder, path = get_remote_and_path(calcjob, path)
-
-    if monitor:
-        try:
-            transport = calcjob.get_transport()
-        except NotExistent as exception:
-            echo.echo_critical(str(exception))
-
-        remote_workdir = calcjob.get_remote_workdir()
-
-        if not remote_workdir:
-            echo.echo_critical('no remote work directory for this calcjob, maybe it has not yet started running?')
-        cmds = f"-c 'tail -f {path}'"
-        command = transport.gotocomputer_command(remote_workdir, cmds)
-        os.system(command)
-        return
 
     with tempfile.NamedTemporaryFile() as tmp_path:
         try:
             remote_folder.getfile(path, tmp_path.name)
             with open(tmp_path.name, 'rb') as handle:
-                copyfileobj(handle, sys.stdout.buffer)
+                shutil.copyfileobj(handle, sys.stdout.buffer)
         except IOError as exception:
             echo.echo_critical(str(exception))
 

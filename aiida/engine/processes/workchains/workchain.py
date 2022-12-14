@@ -43,6 +43,9 @@ class WorkChainSpec(ProcessSpec, PlumpyWorkChainSpec):
     pass
 
 
+MethodType = t.TypeVar('MethodType')
+
+
 class Protect(ProcessStateMachineMeta):
     """Metaclass that allows protecting class methods from being overridden by subclasses.
 
@@ -84,14 +87,14 @@ class Protect(ProcessStateMachineMeta):
             return False
 
     @classmethod
-    def final(cls, method: t.Any):
+    def final(cls, method: MethodType) -> MethodType:
         """Decorate a method with this method to protect it from being overridden.
 
         Adds the ``__SENTINEL`` object as the ``__final`` private attribute to the given ``method`` and wraps it in
         the ``typing.final`` decorator. The latter indicates to typing systems that it cannot be overridden in
         subclasses.
         """
-        method.__final = cls.__SENTINEL  # pylint: disable=protected-access,unused-private-member
+        method.__final = cls.__SENTINEL  # type: ignore[attr-defined] # pylint: disable=protected-access,unused-private-member
         return t.final(method)
 
 
@@ -365,7 +368,7 @@ class WorkChain(Process, metaclass=Protect):
             self.logger.exception('exception in _store_nodes called in on_exiting')
 
     @Protect.final
-    def on_wait(self, awaitables: t.Sequence[Awaitable]):
+    def on_wait(self, awaitables: t.Sequence[t.Awaitable]):
         """Entering the WAITING state."""
         super().on_wait(awaitables)
         if self._awaitables:

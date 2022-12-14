@@ -195,22 +195,6 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         )
         return cls.collection.get(**kwargs)  # pylint: disable=no-member
 
-    @classmethod
-    def from_backend_entity(cls: Type[EntityType], backend_entity: BackendEntityType) -> EntityType:
-        """Construct an entity from a backend entity instance
-
-        :param backend_entity: the backend entity
-
-        :return: an AiiDA entity instance
-        """
-        from .implementation.entities import BackendEntity
-
-        type_check(backend_entity, BackendEntity)
-        entity = cls.__new__(cls)
-        entity._backend_entity = backend_entity
-        call_with_super_check(entity.initialize)
-        return entity
-
     def __init__(self, backend_entity: BackendEntityType) -> None:
         """
         :param backend_entity: the backend model supporting this entity
@@ -271,3 +255,19 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
     def backend_entity(self) -> BackendEntityType:
         """Get the implementing class for this object"""
         return self._backend_entity
+
+
+def from_backend_entity(cls: Type[EntityType], backend_entity: BackendEntityType) -> EntityType:
+    """Construct an entity from a backend entity instance
+
+    :param backend_entity: the backend entity
+
+    :return: an AiiDA entity instance
+    """
+    from .implementation.entities import BackendEntity
+
+    type_check(backend_entity, BackendEntity)
+    entity = cls.__new__(cls)
+    entity._backend_entity = backend_entity  # pylint: disable=protected-access
+    call_with_super_check(entity.initialize)
+    return entity

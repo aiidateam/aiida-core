@@ -13,6 +13,7 @@ from typing import Dict
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.common.links import LinkType
+from aiida.orm.entities import from_backend_entity
 
 from ..node import Node
 
@@ -70,7 +71,7 @@ class Data(Node):
         import copy
 
         backend_clone = self.backend_entity.clone()
-        clone = self.__class__.from_backend_entity(backend_clone)
+        clone = from_backend_entity(self.__class__, backend_clone)
         clone.base.attributes.reset(copy.deepcopy(self.base.attributes.all))
         clone.base.repository._clone(self.base.repository)  # pylint: disable=protected-access
 

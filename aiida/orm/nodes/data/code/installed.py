@@ -25,6 +25,7 @@ from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.common.log import override_log_level
 from aiida.orm import Computer
+from aiida.orm.entities import from_backend_entity
 
 from .legacy import Code
 
@@ -105,7 +106,7 @@ class InstalledCode(Code):
     def computer(self) -> Computer:
         """Return the computer of this code."""
         assert self.backend_entity.computer is not None
-        return Computer.from_backend_entity(self.backend_entity.computer)
+        return from_backend_entity(Computer, self.backend_entity.computer)
 
     @computer.setter
     def computer(self, computer: Computer) -> None:

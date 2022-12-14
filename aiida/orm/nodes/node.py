@@ -24,7 +24,7 @@ from aiida.orm.utils.node import AbstractNodeMeta
 
 from ..computers import Computer
 from ..entities import Collection as EntityCollection
-from ..entities import Entity
+from ..entities import Entity, from_backend_entity
 from ..extras import EntityExtras
 from ..querybuilder import QueryBuilder
 from ..users import User
@@ -358,7 +358,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
     def computer(self) -> Optional[Computer]:
         """Return the computer of this node."""
         if self.backend_entity.computer:
-            return Computer.from_backend_entity(self.backend_entity.computer)
+            return from_backend_entity(Computer, self.backend_entity.computer)
 
         return None
 
@@ -378,7 +378,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
     @property
     def user(self) -> User:
         """Return the user of this node."""
-        return User.from_backend_entity(self.backend_entity.user)
+        return from_backend_entity(User, self._backend_entity.user)
 
     @user.setter
     def user(self, user: User) -> None:

@@ -302,7 +302,7 @@ def test_from_config_url(non_interactive_editor, run_cli_command, aiida_localhos
 
     label = 'noninteractive_config_url'
     fake_url = 'https://my.url.com'
-    run_cli_command(cmd_code.setup_code, ['--non-interactive', '--config', fake_url])
+    run_cli_command(cmd_code.setup_code, ['--non-interactive', '--config', fake_url], use_subprocess=False)
     assert isinstance(load_code(label), InstalledCode)
 
 

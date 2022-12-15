@@ -95,7 +95,7 @@ class TestVerdiNode:
     def test_node_attributes(self, run_cli_command):
         """Test verdi node attributes"""
         options = [str(self.node.uuid)]
-        result = run_cli_command(cmd_node.attributes, options)
+        result = run_cli_command(cmd_node.attributes, options, suppress_warnings=True)
         assert self.ATTR_KEY_ONE in result.output
         assert self.ATTR_VAL_ONE in result.output
         assert self.ATTR_KEY_TWO in result.output
@@ -103,7 +103,7 @@ class TestVerdiNode:
 
         for flag in ['-k', '--keys']:
             options = [flag, self.ATTR_KEY_ONE, '--', str(self.node.uuid)]
-            result = run_cli_command(cmd_node.attributes, options)
+            result = run_cli_command(cmd_node.attributes, options, suppress_warnings=True)
             assert self.ATTR_KEY_ONE in result.output
             assert self.ATTR_VAL_ONE in result.output
             assert self.ATTR_KEY_TWO not in result.output
@@ -111,22 +111,22 @@ class TestVerdiNode:
 
         for flag in ['-r', '--raw']:
             options = [flag, str(self.node.uuid)]
-            run_cli_command(cmd_node.attributes, options)
+            run_cli_command(cmd_node.attributes, options, suppress_warnings=True)
 
         for flag in ['-f', '--format']:
             for fmt in ['json+date', 'yaml', 'yaml_expanded']:
                 options = [flag, fmt, str(self.node.uuid)]
-                run_cli_command(cmd_node.attributes, options)
+                run_cli_command(cmd_node.attributes, options, suppress_warnings=True)
 
         for flag in ['-i', '--identifier']:
             for fmt in ['pk', 'uuid']:
                 options = [flag, fmt, str(self.node.uuid)]
-                run_cli_command(cmd_node.attributes, options)
+                run_cli_command(cmd_node.attributes, options, suppress_warnings=True)
 
     def test_node_extras(self, run_cli_command):
         """Test verdi node extras"""
         options = [str(self.node.uuid)]
-        result = run_cli_command(cmd_node.extras, options)
+        result = run_cli_command(cmd_node.extras, options, suppress_warnings=True)
         assert self.EXTRA_KEY_ONE in result.output
         assert self.EXTRA_VAL_ONE in result.output
         assert self.EXTRA_KEY_TWO in result.output
@@ -134,7 +134,7 @@ class TestVerdiNode:
 
         for flag in ['-k', '--keys']:
             options = [flag, self.EXTRA_KEY_ONE, '--', str(self.node.uuid)]
-            result = run_cli_command(cmd_node.extras, options)
+            result = run_cli_command(cmd_node.extras, options, suppress_warnings=True)
             assert self.EXTRA_KEY_ONE in result.output
             assert self.EXTRA_VAL_ONE in result.output
             assert self.EXTRA_KEY_TWO not in result.output
@@ -142,17 +142,17 @@ class TestVerdiNode:
 
         for flag in ['-r', '--raw']:
             options = [flag, str(self.node.uuid)]
-            result = run_cli_command(cmd_node.extras, options)
+            result = run_cli_command(cmd_node.extras, options, suppress_warnings=True)
 
         for flag in ['-f', '--format']:
             for fmt in ['json+date', 'yaml', 'yaml_expanded']:
                 options = [flag, fmt, str(self.node.uuid)]
-                run_cli_command(cmd_node.extras, options)
+                run_cli_command(cmd_node.extras, options, suppress_warnings=True)
 
         for flag in ['-i', '--identifier']:
             for fmt in ['pk', 'uuid']:
                 options = [flag, fmt, str(self.node.uuid)]
-                run_cli_command(cmd_node.extras, options)
+                run_cli_command(cmd_node.extras, options, suppress_warnings=True)
 
     def test_node_repo_ls(self, run_cli_command):
         """Test 'verdi node repo ls' command."""
@@ -437,7 +437,7 @@ class TestVerdiUserCommand:
 
     def test_comment_show_simple(self, run_cli_command):
         """Test simply calling the show command (without data to show)."""
-        result = run_cli_command(cmd_node.comment_show, [])
+        result = run_cli_command(cmd_node.comment_show, [], suppress_warnings=True)
         assert result.output == ''
         assert result.exit_code == 0
 
@@ -498,7 +498,6 @@ class TestVerdiRehash:
         """Passing no options and answering 'N' to the command will abort the command."""
         options = []  # no option, will ask in the prompt
         result = run_cli_command(cmd_node.rehash, options, user_input='n', raises=True)
-        assert isinstance(result.exception, SystemExit)
         assert result.exit_code == ExitCode.CRITICAL
 
     def test_rehash(self, run_cli_command):

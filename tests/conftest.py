@@ -487,6 +487,7 @@ def run_cli_command(reset_log_level, aiida_instance, aiida_profile):  # pylint: 
         user_input: str | bytes | t.IO | None = None,
         raises: bool = False,
         use_subprocess: bool = True,
+        suppress_warnings: bool = False,
         **kwargs
     ) -> CliResult:
         """Run the command and check the result.
@@ -507,6 +508,11 @@ def run_cli_command(reset_log_level, aiida_instance, aiida_profile):  # pylint: 
             a test monkeypatches the behavior of code that is called by the command being tested, then a subprocess
             cannot be used, since the monkeypatch only applies to the current interpreter. In these cases it is
             necessary to set ``use_subprocesses = False``.
+        :param suppress_warnings: Boolean, if ``True``, the ``PYTHONWARNINGS`` environment variable is set to
+            ``ignore::Warning``. This is important when testing a command using ``use_subprocess = True`` and the check
+            on the output is very strict. By running in a sub process, any warnings that are emitted by the code will be
+            shown since they have not already been hit as would be the case when running the test through the test
+            runner in this interpreter.
         :returns: Instance of ``CliResult``.
         :raises AssertionError: If ``raises == True`` and the command didn't except, or if ``raises == True`` and the
             the command did except.
@@ -515,7 +521,7 @@ def run_cli_command(reset_log_level, aiida_instance, aiida_profile):  # pylint: 
         parameters = [str(param) for param in parameters or []]
 
         if use_subprocess:
-            result = run_cli_command_subprocess(command, parameters, user_input, aiida_profile.name)
+            result = run_cli_command_subprocess(command, parameters, user_input, aiida_profile.name, suppress_warnings)
         else:
             result = run_cli_command_runner(command, parameters, user_input, kwargs)
 
@@ -531,7 +537,7 @@ def run_cli_command(reset_log_level, aiida_instance, aiida_profile):  # pylint: 
     return factory
 
 
-def run_cli_command_subprocess(command, parameters, user_input, profile_name):
+def run_cli_command_subprocess(command, parameters, user_input, profile_name, suppress_warnings):
     """Run CLI command through ``subprocess``."""
     import subprocess
     import sys
@@ -539,6 +545,13 @@ def run_cli_command_subprocess(command, parameters, user_input, profile_name):
     env = os.environ.copy()
     command_path = cli_command_map()[command]
     args = command_path[:1] + ['-p', profile_name] + command_path[1:] + parameters
+
+    if suppress_warnings:
+        env['PYTHONWARNINGS'] = 'ignore::Warning'
+        # Need to explicitly remove the ``AIIDA_WARN_v3`` variable as this will trigger ``AiidaDeprecationWarning`` to
+        # be emitted by the ``aiida.common.warnings.warn_deprecation`` method and for an unknown reason these are not
+        # affected by the ``ignore::Warning`` setting.
+        env.pop('AIIDA_WARN_v3', None)
 
     try:
         completed_process = subprocess.run(

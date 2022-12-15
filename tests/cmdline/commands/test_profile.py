@@ -53,14 +53,14 @@ def mock_profiles(empty_config, profile_factory):
 )
 def test_help(run_cli_command, command):
     """Tests help text for all ``verdi profile`` commands."""
-    result = run_cli_command(command, ['--help'])
+    result = run_cli_command(command, ['--help'], use_subprocess=False)
     assert 'Usage' in result.output
 
 
 def test_list(run_cli_command, mock_profiles):
     """Test the ``verdi profile list`` command."""
     profile_list = mock_profiles()
-    result = run_cli_command(cmd_profile.profile_list)
+    result = run_cli_command(cmd_profile.profile_list, use_subprocess=False)
     assert 'Report: configuration folder:' in result.output
     assert f'* {profile_list[0]}' in result.output
     assert profile_list[1] in result.output
@@ -69,8 +69,8 @@ def test_list(run_cli_command, mock_profiles):
 def test_setdefault(run_cli_command, mock_profiles):
     """Test the ``verdi profile setdefault`` command."""
     profile_list = mock_profiles()
-    run_cli_command(cmd_profile.profile_setdefault, [profile_list[1]])
-    result = run_cli_command(cmd_profile.profile_list)
+    run_cli_command(cmd_profile.profile_setdefault, [profile_list[1]], use_subprocess=False)
+    result = run_cli_command(cmd_profile.profile_list, use_subprocess=False)
 
     assert 'Report: configuration folder:' in result.output
     assert f'* {profile_list[1]}' in result.output
@@ -83,7 +83,7 @@ def test_show(run_cli_command, mock_profiles):
     profile_name = profile_list[0]
     profile = config.get_profile(profile_name)
 
-    result = run_cli_command(cmd_profile.profile_show, [profile_name])
+    result = run_cli_command(cmd_profile.profile_show, [profile_name], use_subprocess=False)
     for key, value in profile.dictionary.items():
         if isinstance(value, str):
             assert key in result.output
@@ -96,11 +96,11 @@ def test_show_with_profile_option(run_cli_command, mock_profiles):
     profile_name_non_default = profile_list[1]
 
     # Specifying the non-default profile as argument should override the default
-    result = run_cli_command(cmd_profile.profile_show, [profile_name_non_default])
+    result = run_cli_command(cmd_profile.profile_show, [profile_name_non_default], use_subprocess=False)
     assert profile_name_non_default in result.output
 
     # Specifying ``-p/--profile`` should not override the argument default (which should be the default profile)
-    result = run_cli_command(cmd_verdi.verdi, ['-p', profile_name_non_default, 'profile', 'show'])
+    result = run_cli_command(cmd_verdi.verdi, ['-p', profile_name_non_default, 'profile', 'show'], use_subprocess=False)
     assert profile_name_non_default not in result.output
 
 
@@ -111,8 +111,8 @@ def test_delete_partial(run_cli_command, mock_profiles):
         defined in the file ``.github/system_tests/test_profile.py``
     """
     profile_list = mock_profiles()
-    run_cli_command(cmd_profile.profile_delete, ['--force', '--skip-db', profile_list[1]])
-    result = run_cli_command(cmd_profile.profile_list)
+    run_cli_command(cmd_profile.profile_delete, ['--force', '--skip-db', profile_list[1]], use_subprocess=False)
+    result = run_cli_command(cmd_profile.profile_list, use_subprocess=False)
     assert profile_list[1] not in result.output
 
 
@@ -122,12 +122,12 @@ def test_delete(run_cli_command, mock_profiles, pg_test_cluster):
     profile_list = mock_profiles(**kwargs)
 
     # Delete single profile
-    run_cli_command(cmd_profile.profile_delete, ['--force', profile_list[1]])
-    result = run_cli_command(cmd_profile.profile_list)
+    run_cli_command(cmd_profile.profile_delete, ['--force', profile_list[1]], use_subprocess=False)
+    result = run_cli_command(cmd_profile.profile_list, use_subprocess=False)
     assert profile_list[1] not in result.output
 
     # Delete multiple profiles
-    run_cli_command(cmd_profile.profile_delete, ['--force', profile_list[2], profile_list[3]])
-    result = run_cli_command(cmd_profile.profile_list)
+    run_cli_command(cmd_profile.profile_delete, ['--force', profile_list[2], profile_list[3]], use_subprocess=False)
+    result = run_cli_command(cmd_profile.profile_list, use_subprocess=False)
     assert profile_list[2] not in result.output
     assert profile_list[3] not in result.output

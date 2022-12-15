@@ -69,7 +69,7 @@ def tests_storage_migrate_cancel_prompt(run_cli_command, monkeypatch):
     import click
 
     monkeypatch.setattr(click, 'prompt', lambda text, **kwargs: exec('import click\nraise click.Abort()'))  # pylint: disable=exec-used
-    result = run_cli_command(cmd_storage.storage_migrate, raises=True)
+    result = run_cli_command(cmd_storage.storage_migrate, raises=True, use_subprocess=False)
 
     assert 'aborted' in result.output.lower()
 
@@ -107,7 +107,7 @@ def tests_storage_migrate_raises(run_cli_command, raise_type, call_kwargs, monke
         raise raise_type('passed error message')
 
     monkeypatch.setattr(manager.get_profile_storage().__class__, 'migrate', mocked_migrate)
-    result = run_cli_command(cmd_storage.storage_migrate, **call_kwargs)
+    result = run_cli_command(cmd_storage.storage_migrate, **call_kwargs, use_subprocess=False)
 
     assert result.exc_info[0] is SystemExit
     assert 'Critical:' in result.output
@@ -138,21 +138,21 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch, caplog):
     monkeypatch.setattr(storage, 'maintain', mock_maintain)
 
     with caplog.at_level(logging.INFO):
-        _ = run_cli_command(cmd_storage.storage_maintain, user_input='Y')
+        _ = run_cli_command(cmd_storage.storage_maintain, user_input='Y', use_subprocess=False)
 
     message_list = caplog.records[0].msg.splitlines()
     assert ' > full: False' in message_list
     assert ' > dry_run: False' in message_list
 
     with caplog.at_level(logging.INFO):
-        _ = run_cli_command(cmd_storage.storage_maintain, parameters=['--dry-run'])
+        _ = run_cli_command(cmd_storage.storage_maintain, parameters=['--dry-run'], use_subprocess=False)
 
     message_list = caplog.records[1].msg.splitlines()
     assert ' > full: False' in message_list
     assert ' > dry_run: True' in message_list
 
     with caplog.at_level(logging.INFO):
-        run_cli_command(cmd_storage.storage_maintain, parameters=['--full'], user_input='Y')
+        run_cli_command(cmd_storage.storage_maintain, parameters=['--full'], user_input='Y', use_subprocess=False)
 
     message_list = caplog.records[2].msg.splitlines()
     assert ' > full: True' in message_list

@@ -87,17 +87,17 @@ class TestVerdiGroup:
         orm.Group(label='agroup').store()
 
         options = []
-        result = run_cli_command(cmd_group.group_list, options)
+        result = run_cli_command(cmd_group.group_list, options, suppress_warnings=True)
         group_ordering = [l.split()[1] for l in result.output.split('\n')[3:] if l]
         assert ['agroup', 'dummygroup1', 'dummygroup2', 'dummygroup3', 'dummygroup4'] == group_ordering
 
         options = ['--order-by', 'id']
-        result = run_cli_command(cmd_group.group_list, options)
+        result = run_cli_command(cmd_group.group_list, options, suppress_warnings=True)
         group_ordering = [l.split()[1] for l in result.output.split('\n')[3:] if l]
         assert ['dummygroup1', 'dummygroup2', 'dummygroup3', 'dummygroup4', 'agroup'] == group_ordering
 
         options = ['--order-by', 'id', '--order-direction', 'desc']
-        result = run_cli_command(cmd_group.group_list, options)
+        result = run_cli_command(cmd_group.group_list, options, suppress_warnings=True)
         group_ordering = [l.split()[1] for l in result.output.split('\n')[3:] if l]
         assert ['agroup', 'dummygroup4', 'dummygroup3', 'dummygroup2', 'dummygroup1'] == group_ordering
 
@@ -173,7 +173,7 @@ class TestVerdiGroup:
             assert str(node.pk) in result.output
 
         # Repeat test with `limit=1`, use also the `--raw` option to only display nodes
-        result = run_cli_command(cmd_group.group_show, [label, '--limit', '1', '--raw'])
+        result = run_cli_command(cmd_group.group_show, [label, '--limit', '1', '--raw'], suppress_warnings=True)
 
         # The current `verdi group show` does not support ordering so we cannot rely on that for now to test if only
         # one of the nodes is shown

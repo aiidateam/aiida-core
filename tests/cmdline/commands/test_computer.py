@@ -141,6 +141,7 @@ def test_mixed(run_cli_command):
     non_interactive_options_dict['shebang'] = options_dict.pop('shebang')
     non_interactive_options_dict['scheduler'] = options_dict.pop('scheduler')
 
+    options_dict['use-login-shell'] = 'y'
     # In any case, these would be managed by the visual editor
     user_input = '\n'.join(generate_setup_options_interactive(options_dict))
     options = generate_setup_options(non_interactive_options_dict)
@@ -403,8 +404,8 @@ class TestVerdiComputerConfigure:
         assert comp.is_configured, result.output
 
         new_auth_params = comp.get_authinfo(self.user).get_auth_params()
+        assert new_auth_params['safe_interval'] == 1.0
         assert new_auth_params['use_login_shell'] is False
-        assert new_auth_params['use_login_shell'] == 1.0
 
     def test_ssh_interactive(self):
         """
@@ -423,16 +424,14 @@ class TestVerdiComputerConfigure:
         remote_username = 'some_remote_user'
         port = 345
         look_for_keys = False
-        key_filename = ''
 
         # I just pass the first four arguments:
         # the username, the port, look_for_keys, and the key_filename
         # This testing also checks that an empty key_filename is ok
-        command_input = ('{remote_username}\n{port}\n{look_for_keys}\n{key_filename}\n').format(
+        command_input = ('{remote_username}\n{port}\n{look_for_keys}\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n').format(
             remote_username=remote_username,
             port=port,
             look_for_keys='yes' if look_for_keys else 'no',
-            key_filename=key_filename
         )
 
         result = self.cli_runner(computer_configure, ['core.ssh', comp.label], user_input=command_input)
@@ -441,7 +440,6 @@ class TestVerdiComputerConfigure:
         assert new_auth_params['username'] == remote_username
         assert new_auth_params['port'] == port
         assert new_auth_params['look_for_keys'] == look_for_keys
-        assert new_auth_params['key_filename'] == key_filename
         assert new_auth_params['use_login_shell'] is True
 
     def test_local_from_config(self):
@@ -728,6 +726,7 @@ def test_direct_interactive(run_cli_command, non_interactive_editor):
     # In any case, these would be managed by the visual editor
     options_dict.pop('prepend-text')
     options_dict.pop('append-text')
+    options_dict['use-login-shell'] = 'y'
     user_input = '\n'.join(generate_setup_options_interactive(options_dict))
 
     result = run_cli_command(computer_setup, user_input=user_input)

@@ -207,12 +207,7 @@ class TestAutoGroups:
             node4 = CalculationNode().store()
             node5 = WorkflowNode().store()
             _, node6 = run_get_node(ArithmeticAdd, **inputs)
-            print(node1.pk)
-            print(node2.pk)
-            print(node3.pk)
-            print(node4.pk)
-            print(node5.pk)
-            print(node6.pk)
+            print(node1.pk, node2.pk, node3.pk, node4.pk, node5.pk, node6.pk)
             """
         )
 
@@ -262,7 +257,7 @@ class TestAutoGroups:
                 with override_log_level():
                     result = run_cli_command(cmd_run.run, options)
 
-                pk1_str, pk2_str, pk3_str, pk4_str, pk5_str, pk6_str = result.output.split()
+                pk1_str, pk2_str, pk3_str, pk4_str, pk5_str, pk6_str = result.output_lines[-1].split()
                 pk1 = int(pk1_str)
                 pk2 = int(pk2_str)
                 pk3 = int(pk3_str)

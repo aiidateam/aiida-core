@@ -63,7 +63,7 @@ class TestVerdiSetup:
             '--db-backend', self.storage_backend_name
         ]
 
-        self.cli_runner(cmd_setup.quicksetup, options)
+        self.cli_runner(cmd_setup.quicksetup, options, use_subprocess=False)
 
         config = configuration.get_config()
         assert profile_name in config.profile_names
@@ -97,7 +97,7 @@ db_port: {self.pg_test.dsn['port']}
 email: 123@234.de"""
             )
             handle.flush()
-            self.cli_runner(cmd_setup.quicksetup, ['--config', os.path.realpath(handle.name)])
+            self.cli_runner(cmd_setup.quicksetup, ['--config', os.path.realpath(handle.name)], use_subprocess=False)
 
     def test_quicksetup_autofill_on_early_exit(self):
         """Test `verdi quicksetup` stores user information even if command fails."""
@@ -120,7 +120,7 @@ email: 123@234.de"""
             self.pg_test.dsn['port'] + 100
         ]
 
-        self.cli_runner(cmd_setup.quicksetup, options, raises=True)
+        self.cli_runner(cmd_setup.quicksetup, options, raises=True, use_subprocess=False)
 
         assert config.get_option('autofill.user.email', scope=None) == user_email
         assert config.get_option('autofill.user.first_name', scope=None) == user_first_name
@@ -141,7 +141,7 @@ email: 123@234.de"""
             self.pg_test.dsn['port'] + 100
         ]
 
-        self.cli_runner(cmd_setup.quicksetup, options, raises=True)
+        self.cli_runner(cmd_setup.quicksetup, options, raises=True, use_subprocess=False)
 
     def test_setup(self):
         """Test `verdi setup` (non-interactive)."""
@@ -168,7 +168,7 @@ email: 123@234.de"""
             '--db-port', self.pg_test.dsn['port'], '--db-backend', self.storage_backend_name, '--profile', profile_name
         ]
 
-        self.cli_runner(cmd_setup.setup, options)
+        self.cli_runner(cmd_setup.setup, options, use_subprocess=False)
 
         config = configuration.get_config()
         assert profile_name in config.profile_names
@@ -209,7 +209,7 @@ email: 123@234.de"""
             '--db-port', self.pg_test.dsn['port']
         ]
 
-        self.cli_runner(cmd_setup.setup, options)
+        self.cli_runner(cmd_setup.setup, options, use_subprocess=False)
 
         config = configuration.get_config()
         assert profile_name in config.profile_names

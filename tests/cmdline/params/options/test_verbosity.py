@@ -7,7 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=redefined-outer-name
 """Tests for the :class:`~aiida.cmdline.params.options.main.VERBOSITY` option."""
+import functools
 import logging
 
 import click
@@ -16,6 +18,12 @@ import pytest
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
 from aiida.common.log import AIIDA_LOGGER, LOG_LEVELS
+
+
+@pytest.fixture
+def run_cli_command(run_cli_command):
+    """Override the ``run_cli_command`` fixture to always run with ``use_subprocess=False`` for tests in this module."""
+    return functools.partial(run_cli_command, use_subprocess=False)
 
 
 @click.command()

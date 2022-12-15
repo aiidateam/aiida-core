@@ -833,7 +833,7 @@ class TestVerdiDataCif(DummyVerdiDataListable, DummyVerdiDataExportable):
     def test_content(self):
         """Test that `verdi data cif content` returns the content of the file."""
         options = [str(self.cif.uuid)]
-        result = self.cli_runner(cmd_cif.cif_content, options)
+        result = self.cli_runner(cmd_cif.cif_content, options, suppress_warnings=True)
 
         for line in result.output.split('\n'):
             assert line in self.valid_sample_cif_str
@@ -866,7 +866,7 @@ class TestVerdiDataSinglefile(DummyVerdiDataListable, DummyVerdiDataExportable):
         singlefile = orm.SinglefileData(file=io.BytesIO(content.encode('utf8'))).store()
 
         options = [str(singlefile.uuid)]
-        result = self.cli_runner(cmd_singlefile.singlefile_content, options)
+        result = self.cli_runner(cmd_singlefile.singlefile_content, options, suppress_warnings=True)
 
         for line in result.output.split('\n'):
             assert line in content

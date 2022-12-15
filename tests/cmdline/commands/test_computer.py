@@ -12,6 +12,7 @@
 from collections import OrderedDict
 import os
 import tempfile
+import textwrap
 
 import pytest
 
@@ -403,7 +404,7 @@ class TestVerdiComputerConfigure:
 
         new_auth_params = comp.get_authinfo(self.user).get_auth_params()
         assert new_auth_params['use_login_shell'] is False
-        assert new_auth_params['safe_interval'] == 1.0
+        assert new_auth_params['use_login_shell'] == 1.0
 
     def test_ssh_interactive(self):
         """
@@ -452,17 +453,24 @@ class TestVerdiComputerConfigure:
         computer.store()
 
         interval = 20
+        use_login_shell = False
 
         with tempfile.NamedTemporaryFile('w') as handle:
-            handle.write(f"""---
-safe_interval: {interval}
-""")
+            handle.write(
+                textwrap.dedent(
+                    f"""---
+                    safe_interval: {interval}
+                    use_login_shell: {use_login_shell}
+                    """
+                )
+            )
             handle.flush()
 
             options = ['core.local', computer.label, '--config', os.path.realpath(handle.name)]
             self.cli_runner(computer_configure, options)
 
         assert computer.get_configuration()['safe_interval'] == interval
+        assert computer.get_configuration()['use_login_shell'] == use_login_shell
 
     def test_ssh_ni_empty(self):
         """
@@ -518,15 +526,19 @@ safe_interval: {interval}
         result = self.cli_runner(computer_configure, ['show', comp.label, '--defaults'])
         assert '* username' in result.output
 
-        result = self.cli_runner(computer_configure, ['show', comp.label, '--defaults', '--as-option-string'])
+        result = self.cli_runner(
+            computer_configure, ['show', comp.label, '--defaults', '--as-option-string'], suppress_warnings=True
+        )
         assert '--username=' in result.output
 
         config_cmd = ['core.ssh', comp.label, '--non-interactive']
         config_cmd.extend(result.output.replace("'", '').split(' '))
-        result_config = self.cli_runner(computer_configure, config_cmd)
+        result_config = self.cli_runner(computer_configure, config_cmd, suppress_warnings=True)
         assert comp.is_configured, result_config.output
 
-        result_cur = self.cli_runner(computer_configure, ['show', comp.label, '--as-option-string'])
+        result_cur = self.cli_runner(
+            computer_configure, ['show', comp.label, '--as-option-string'], suppress_warnings=True
+        )
         assert '--username=' in result.output
         assert result_cur.output == result.output
 
@@ -749,7 +761,7 @@ def test_computer_test_stderr(run_cli_command, aiida_localhost, monkeypatch):
 
     monkeypatch.setattr(LocalTransport, 'exec_command_wait', exec_command_wait)
 
-    result = run_cli_command(computer_test, [aiida_localhost.label])
+    result = run_cli_command(computer_test, [aiida_localhost.label], use_subprocess=False)
     assert 'Warning: 1 out of 6 tests failed' in result.output
     assert stderr in result.output
 
@@ -766,7 +778,7 @@ def test_computer_test_stdout(run_cli_command, aiida_localhost, monkeypatch):
 
     monkeypatch.setattr(LocalTransport, 'exec_command_wait', exec_command_wait)
 
-    result = run_cli_command(computer_test, [aiida_localhost.label])
+    result = run_cli_command(computer_test, [aiida_localhost.label], use_subprocess=False)
     assert 'Warning: 1 out of 6 tests failed' in result.output
     assert stdout in result.output
 
@@ -784,6 +796,6 @@ def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeyp
 
     monkeypatch.setattr(cmd_computer, 'time_use_login_shell', time_use_login_shell)
 
-    result = run_cli_command(computer_test, [aiida_localhost.label])
+    result = run_cli_command(computer_test, [aiida_localhost.label], use_subprocess=False)
     assert 'Warning: 1 out of 6 tests failed' in result.output
     assert 'computer is configured to use a login shell, which is slower compared to a normal shell' in result.output

@@ -46,8 +46,8 @@ class TestVerdiSetup:
         If this test hangs, most likely the `--help` eagerness is overruled by another option that has started the
         prompt cycle, which by waiting for input, will block the test from continuing.
         """
-        self.cli_runner(cmd_setup.setup, ['--help'], catch_exceptions=False)
-        self.cli_runner(cmd_setup.quicksetup, ['--help'], catch_exceptions=False)
+        self.cli_runner(cmd_setup.setup, ['--help'])
+        self.cli_runner(cmd_setup.quicksetup, ['--help'])
 
     def test_quicksetup(self):
         """Test `verdi quicksetup`."""

@@ -29,12 +29,12 @@ class TestVerdiHelpCommand:
         """
         # don't invoke the cmd directly to make sure ctx.parent is properly populated
         # as it would be when called as a cli
-        result_help = self.cli_runner(cmd_verdi.verdi, ['help'], catch_exceptions=False)
-        result_verdi = self.cli_runner(cmd_verdi.verdi, [], catch_exceptions=False)
+        result_help = self.cli_runner(cmd_verdi.verdi, ['help'])
+        result_verdi = self.cli_runner(cmd_verdi.verdi, [])
         assert result_help.output == result_verdi.output
 
     def test_cmd_help(self):
         """Ensure we get the same help for `verdi user --help` and `verdi help user`"""
-        result_help = self.cli_runner(cmd_verdi.verdi, ['help', 'user'], catch_exceptions=False)
-        result_user = self.cli_runner(cmd_verdi.verdi, ['user', '--help'], catch_exceptions=False)
+        result_help = self.cli_runner(cmd_verdi.verdi, ['help', 'user'])
+        result_user = self.cli_runner(cmd_verdi.verdi, ['user', '--help'])
         assert result_help.output == result_user.output

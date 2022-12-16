@@ -16,8 +16,10 @@ loaded in this file as well, such that they can also be used for the tests of ``
 from __future__ import annotations
 
 import copy
+import dataclasses
 import os
 import pathlib
+import types
 import typing as t
 import warnings
 
@@ -412,68 +414,162 @@ def chdir_tmp_path(request, tmp_path):
     os.chdir(request.config.invocation_dir)
 
 
+@pytest.fixture(scope='session')
+def cli_command_map() -> dict[click.Command, list[str]]:
+    """Return a map of all ``verdi`` subcommands and their path in the command tree."""
+    from aiida.cmdline.commands.cmd_verdi import verdi
+
+    def recurse_commands(ctx, command: click.Command, breadcrumbs: list[str] | None = None):
+        """Recursively return all subcommands that are part of ``command``.
+
+        :param command: The click command to start with.
+        :param parents: A list of strings that represent the parent commands leading up to the current command.
+        :returns: A list of strings denoting the full path to the current command.
+        """
+        breadcrumbs = (breadcrumbs or []) + [command.name]
+
+        yield command, breadcrumbs
+
+        if isinstance(command, click.Group):
+            for command_name in command.commands:
+                yield from recurse_commands(ctx, command.get_command(ctx, command_name), breadcrumbs)
+
+    ctx = click.Context(verdi)
+    command_map = {}
+
+    for command, breadcrumbs in recurse_commands(ctx, verdi):
+        command_map[command] = breadcrumbs
+
+    return command_map
+
+
+@dataclasses.dataclass
+class CliResult:
+    """Dataclass representing the result of a command line interface invocation."""
+
+    stderr_bytes: bytes
+    stdout_bytes: bytes
+    exc_info: tuple[t.Type[BaseException], BaseException, types.TracebackType] | tuple[None, None,
+                                                                                       None] = (None, None, None)
+    exception: BaseException | None = None
+    exit_code: int | None = 0
+
+    @property
+    def stdout(self) -> str:
+        """Return the output that was written to stdout."""
+        return self.stdout_bytes.decode('utf-8', 'replace').replace('\r\n', '\n')
+
+    @property
+    def stderr(self) -> str:
+        """Return the output that was written to stderr."""
+        return self.stderr_bytes.decode('utf-8', 'replace').replace('\r\n', '\n')
+
+    @property
+    def output_lines(self) -> list[str]:
+        """Return the output that was written to stdout as a list of lines."""
+        return [line for line in self.stdout.split('\n') if line.strip()]
+
+    @property
+    def output(self) -> str:
+        """Return the output that was written to stdout."""
+        return self.stdout + self.stderr
+
+
 @pytest.fixture
-def run_cli_command(reset_log_level):  # pylint: disable=unused-argument
-    """Run a `click` command with the given options.
+def run_cli_command(reset_log_level, aiida_profile, cli_command_map):  # pylint: disable=unused-argument
+    """Run a ``click`` command with the given options.
 
     The call will raise if the command triggered an exception or the exit code returned is non-zero.
     """
-    from click.testing import Result
 
-    def _run_cli_command(
+    def factory(
         command: click.Command,
-        options: list | None = None,
+        parameters: list[str] | None = None,
         user_input: str | bytes | t.IO | None = None,
         raises: bool = False,
-        catch_exceptions: bool = True,
+        use_subprocess: bool = False,
         **kwargs
-    ) -> Result:
+    ) -> CliResult:
         """Run the command and check the result.
 
-        .. note:: the `output_lines` attribute is added to return value containing list of stripped output lines.
-
-        :param options: the list of command line options to pass to the command invocation.
+        :param command: The base command to invoke.
+        :param parameters: The command line parameters to pass to the invocation.
         :param user_input: string with data to be provided at the prompt. Can include newline characters to simulate
             responses to multiple prompts.
-        :param raises: whether the command is expected to raise an exception.
-        :param catch_exceptions: if True and ``raise is False``, will assert that the exception is ``None`` and the exit
-            code of the result of the invoked command equals zero.
-        :param kwargs: keyword arguments that will be psased to the command invocation.
-        :return: test result.
+        :param raises: Boolean, if ``True``, the command should raise an exception.
+        :param use_subprocess: Boolean, if ``True``, runs the command in a subprocess, otherwise it is run in the same
+            interpreter using :class:`click.testing.CliRunner`. The advantage of running in a subprocess is that it
+            simulates exactly what a user would invoke through the CLI. The test runner provided by ``click`` invokes
+            commands in a way that is not always a 100% analogous to an actual CLI call and so tests may not cover the
+            exact behavior. However, if a test monkeypatches the behavior of code that is called by the command being
+            tested, then a subprocess cannot be used, since the monkeypatch only applies to the current interpreter. In
+            these cases it is necessary to set ``use_subprocesses = False``.
+        :returns: Instance of ``CliResult``.
+        :raises AssertionError: If ``raises == True`` and the command didn't except, or if ``raises == True`` and the
+            the command did except.
         """
+        # pylint: disable=too-many-locals
+        import subprocess
+        import sys
         import traceback
+
+        from click.testing import CliRunner
 
         from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup
         from aiida.common import AttributeDict
 
-        config = get_config()
-        profile = get_profile()
-        obj = AttributeDict({'config': config, 'profile': profile})
+        # Cast all elements in ``parameters`` to strings as that is required by ``subprocess.run``.
+        parameters = [str(param) for param in parameters or []]
 
-        # Convert any ``pathlib.Path`` objects in the ``options`` to their absolute filepath string representation.
-        # This is necessary because the ``invoke`` command does not support these path objects.
-        options = [str(option) if isinstance(option, pathlib.Path) else option for option in options or []]
+        if use_subprocess:
+            command_path = cli_command_map[command]
+            args = command_path[:1] + ['-p', aiida_profile.name] + command_path[1:] + parameters
 
-        # We need to apply the ``VERBOSITY`` option. When invoked through the command line, this is done by the logic
-        # of the ``VerdiCommandGroup``, but when testing commands, the command is retrieved directly from the module
-        # which circumvents this machinery.
-        command = VerdiCommandGroup.add_verbosity_option(command)
+            try:
+                completed_process = subprocess.run(args, capture_output=True, check=True)
+            except subprocess.CalledProcessError as exception:
+                result = CliResult(
+                    exc_info=sys.exc_info(),
+                    exception=exception,
+                    exit_code=exception.returncode,
+                    stderr_bytes=exception.stderr,
+                    stdout_bytes=exception.stdout,
+                )
+            else:
+                result = CliResult(
+                    stderr_bytes=completed_process.stderr,
+                    stdout_bytes=completed_process.stdout,
+                )
+        else:
+            config = get_config()
+            profile = get_profile()
+            obj = AttributeDict({'config': config, 'profile': profile})
 
-        runner = click.testing.CliRunner()
-        result = runner.invoke(command, options, input=user_input, obj=obj, **kwargs)
+            # We need to apply the ``VERBOSITY`` option. When invoked through the command line, this is done by the
+            # logic of the ``VerdiCommandGroup``, but when testing commands, the command is retrieved directly from the
+            # module which circumvents this machinery.
+            command = VerdiCommandGroup.add_verbosity_option(command)
+
+            runner = CliRunner(mix_stderr=False)
+            result_click = runner.invoke(command, parameters, input=user_input, obj=obj, **kwargs)
+            result = CliResult(
+                exc_info=result_click.exc_info or (None, None, None),
+                exception=result_click.exception,
+                exit_code=result_click.exit_code,
+                stderr_bytes=result_click.stderr_bytes or b'',
+                stdout_bytes=result_click.stdout_bytes,
+            )
 
         if raises:
             assert result.exception is not None, result.output
-            assert result.exit_code != 0
-        elif catch_exceptions:
+            assert result.exit_code != 0, result.exit_code
+        else:
             assert result.exception is None, ''.join(traceback.format_exception(*result.exc_info))
             assert result.exit_code == 0, result.output
 
-        result.output_lines = [line.strip() for line in result.output.split('\n') if line.strip()]
-
         return result
 
-    return _run_cli_command
+    return factory
 
 
 @pytest.fixture

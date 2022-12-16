@@ -47,7 +47,7 @@ class TestVerdiUserCommand:
         """Test `verdi user list`."""
         from aiida.cmdline.commands.cmd_user import user_list as list_user
 
-        result = self.cli_runner(list_user, [], catch_exceptions=False)
+        result = self.cli_runner(list_user, [])
         assert USER_1['email'] in result.output
 
     def test_user_create(self):
@@ -63,7 +63,7 @@ class TestVerdiUserCommand:
             USER_2['institution'],
         ]
 
-        result = self.cli_runner(cmd_user.user_configure, cli_options, catch_exceptions=False)
+        result = self.cli_runner(cmd_user.user_configure, cli_options)
         assert USER_2['email'] in result.output
         assert 'created' in result.output
         assert 'updated' not in result.output
@@ -87,7 +87,7 @@ class TestVerdiUserCommand:
             USER_2['institution'],
         ]
 
-        result = self.cli_runner(cmd_user.user_configure, cli_options, catch_exceptions=False)
+        result = self.cli_runner(cmd_user.user_configure, cli_options)
         assert email in result.output
         assert 'updated' in result.output
         assert 'created' not in result.output

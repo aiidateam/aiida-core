@@ -109,7 +109,7 @@ def generate_setup_options_interactive(ordereddict):
 
 def test_help(run_cli_command):
     """Test the help of verdi computer setup."""
-    run_cli_command(computer_setup, ['--help'], catch_exceptions=False)
+    run_cli_command(computer_setup, ['--help'])
 
 
 def test_reachable():
@@ -144,7 +144,7 @@ def test_mixed(run_cli_command):
     user_input = '\n'.join(generate_setup_options_interactive(options_dict))
     options = generate_setup_options(non_interactive_options_dict)
 
-    result = run_cli_command(computer_setup, options, user_input=user_input, catch_exceptions=False)
+    result = run_cli_command(computer_setup, options, user_input=user_input)
     assert result.exception is None, f'There was an unexpected exception. Output: {result.output}'
 
     new_computer = orm.Computer.collection.get(label=label)
@@ -204,7 +204,7 @@ def test_noninteractive_optional_default_mpiprocs(run_cli_command):
     options_dict = generate_setup_options_dict({'label': 'computer_default_mpiprocs'})
     options_dict.pop('mpiprocs-per-machine')
     options = generate_setup_options(options_dict)
-    run_cli_command(computer_setup, options, catch_exceptions=False)
+    run_cli_command(computer_setup, options)
 
     new_computer = orm.Computer.collection.get(label=options_dict['label'])
     assert isinstance(new_computer, orm.Computer)
@@ -218,7 +218,7 @@ def test_noninteractive_optional_default_mpiprocs_2(run_cli_command):
     options_dict = generate_setup_options_dict({'label': 'computer_default_mpiprocs_2'})
     options_dict['mpiprocs-per-machine'] = 0
     options = generate_setup_options(options_dict)
-    run_cli_command(computer_setup, options, catch_exceptions=False)
+    run_cli_command(computer_setup, options)
 
     new_computer = orm.Computer.collection.get(label=options_dict['label'])
     assert isinstance(new_computer, orm.Computer)
@@ -301,10 +301,8 @@ def test_noninteractive_invalid_mpirun_fail(run_cli_command):
     options_dict = generate_setup_options_dict(replace_args={'label': 'fail_computer'})
     options_dict['mpirun-command'] = 'mpirun -np {unknown_key}'
     options = generate_setup_options(options_dict)
-    result = run_cli_command(computer_setup, options, catch_exceptions=False)
-
-    assert isinstance(result.exception, SystemExit)
-    assert "unknown replacement field 'unknown_key'" in str(result.output)
+    result = run_cli_command(computer_setup, options, raises=True)
+    assert "unknown replacement field 'unknown_key'" in result.output
 
 
 def test_noninteractive_from_config(run_cli_command):
@@ -351,7 +349,7 @@ class TestVerdiComputerConfigure:
 
     def test_top_help(self):
         """Test help option of verdi computer configure."""
-        result = self.cli_runner(computer_configure, ['--help'], catch_exceptions=False)
+        result = self.cli_runner(computer_configure, ['--help'])
         assert 'core.ssh' in result.output
         assert 'core.local' in result.output
 
@@ -378,7 +376,7 @@ class TestVerdiComputerConfigure:
         comp.store()
 
         options = ['core.local', comp.label, '--non-interactive', '--safe-interval', '0']
-        result = self.cli_runner(computer_configure, options, catch_exceptions=False)
+        result = self.cli_runner(computer_configure, options)
         assert comp.is_configured, result.output
 
         self.comp_builder.label = 'test_local_ni_empty_mismatch'
@@ -387,8 +385,7 @@ class TestVerdiComputerConfigure:
         comp_mismatch.store()
 
         options = ['core.local', comp_mismatch.label, '--non-interactive']
-        result = self.cli_runner(computer_configure, options, catch_exceptions=False)
-        assert result.exception is not None
+        result = self.cli_runner(computer_configure, options, raises=True)
         assert 'core.ssh' in result.output
         assert 'core.local' in result.output
 
@@ -401,9 +398,7 @@ class TestVerdiComputerConfigure:
 
         invalid = 'n'
         valid = '1.0'
-        result = self.cli_runner(
-            computer_configure, ['core.local', comp.label], user_input=f'{invalid}\n{valid}\n', catch_exceptions=False
-        )
+        result = self.cli_runner(computer_configure, ['core.local', comp.label], user_input=f'{invalid}\n{valid}\n')
         assert comp.is_configured, result.output
 
         new_auth_params = comp.get_authinfo(self.user).get_auth_params()
@@ -439,9 +434,7 @@ class TestVerdiComputerConfigure:
             key_filename=key_filename
         )
 
-        result = self.cli_runner(
-            computer_configure, ['core.ssh', comp.label], user_input=command_input, catch_exceptions=False
-        )
+        result = self.cli_runner(computer_configure, ['core.ssh', comp.label], user_input=command_input)
         assert comp.is_configured, result.output
         new_auth_params = comp.get_authinfo(self.user).get_auth_params()
         assert new_auth_params['username'] == remote_username
@@ -486,7 +479,7 @@ safe_interval: {interval}
         comp.store()
 
         options = ['core.ssh', comp.label, '--non-interactive', '--safe-interval', '1']
-        result = self.cli_runner(computer_configure, options, catch_exceptions=False)
+        result = self.cli_runner(computer_configure, options)
         assert comp.is_configured, result.output
 
         self.comp_builder.label = 'test_ssh_ni_empty_mismatch'
@@ -495,8 +488,7 @@ safe_interval: {interval}
         comp_mismatch.store()
 
         options = ['core.ssh', comp_mismatch.label, '--non-interactive']
-        result = self.cli_runner(computer_configure, options, catch_exceptions=False)
-        assert result.exception is not None
+        result = self.cli_runner(computer_configure, options, raises=True)
         assert 'core.local' in result.output
         assert 'core.ssh' in result.output
 
@@ -509,7 +501,7 @@ safe_interval: {interval}
 
         username = 'TEST'
         options = ['core.ssh', comp.label, '--non-interactive', f'--username={username}', '--safe-interval', '1']
-        result = self.cli_runner(computer_configure, options, catch_exceptions=False)
+        result = self.cli_runner(computer_configure, options)
         auth_info = orm.AuthInfo.collection.get(dbcomputer_id=comp.pk, aiidauser_id=self.user.pk)
         assert comp.is_configured, result.output
         assert auth_info.get_auth_params()['username'] == username
@@ -521,24 +513,20 @@ safe_interval: {interval}
         comp = self.comp_builder.new()
         comp.store()
 
-        result = self.cli_runner(computer_configure, ['show', comp.label], catch_exceptions=False)
+        result = self.cli_runner(computer_configure, ['show', comp.label])
 
-        result = self.cli_runner(computer_configure, ['show', comp.label, '--defaults'], catch_exceptions=False)
+        result = self.cli_runner(computer_configure, ['show', comp.label, '--defaults'])
         assert '* username' in result.output
 
-        result = self.cli_runner(
-            computer_configure, ['show', comp.label, '--defaults', '--as-option-string'], catch_exceptions=False
-        )
+        result = self.cli_runner(computer_configure, ['show', comp.label, '--defaults', '--as-option-string'])
         assert '--username=' in result.output
 
         config_cmd = ['core.ssh', comp.label, '--non-interactive']
         config_cmd.extend(result.output.replace("'", '').split(' '))
-        result_config = self.cli_runner(computer_configure, config_cmd, catch_exceptions=False)
+        result_config = self.cli_runner(computer_configure, config_cmd)
         assert comp.is_configured, result_config.output
 
-        result_cur = self.cli_runner(
-            computer_configure, ['show', comp.label, '--as-option-string'], catch_exceptions=False
-        )
+        result_cur = self.cli_runner(computer_configure, ['show', comp.label, '--as-option-string'])
         assert '--username=' in result.output
         assert result_cur.output == result.output
 
@@ -661,7 +649,7 @@ class TestVerdiComputerCommands:
         ).store()
         # and configure it
         options = ['core.local', label, '--non-interactive', '--safe-interval', '0']
-        self.cli_runner(computer_configure, options, catch_exceptions=False)
+        self.cli_runner(computer_configure, options)
 
         # See if the command complains about not getting an invalid computer
         self.cli_runner(computer_delete, ['computer_that_does_not_exist'], raises=True)
@@ -679,7 +667,7 @@ def test_computer_duplicate_interactive(run_cli_command, aiida_localhost, non_in
     label = 'computer_duplicate_interactive'
     computer = aiida_localhost
     user_input = f'{label}\n\n\n\n\n\n\n\n\n\n'
-    result = run_cli_command(computer_duplicate, [str(computer.pk)], user_input=user_input, catch_exceptions=False)
+    result = run_cli_command(computer_duplicate, [str(computer.pk)], user_input=user_input)
     assert result.exception is None, result.output
 
     new_computer = orm.Computer.collection.get(label=label)

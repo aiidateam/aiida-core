@@ -71,7 +71,7 @@ class TestVerdiNode:
         node = orm.Data().store()
         node.label = 'SOMELABEL'
         options = [str(node.pk)]
-        result = run_cli_command(cmd_node.node_show, options)
+        result = run_cli_command(cmd_node.node_show, options, use_subprocess=True)
 
         # Let's check some content in the output. At least the UUID and the label should be in there
         assert node.label in result.output
@@ -79,7 +79,7 @@ class TestVerdiNode:
 
         # Let's now test the '--print-groups' option
         options.append('--print-groups')
-        result = run_cli_command(cmd_node.node_show, options)
+        result = run_cli_command(cmd_node.node_show, options, use_subprocess=True)
         # I don't check the list of groups - it might be in an autogroup
 
         # Let's create a group and put the node in there
@@ -87,7 +87,7 @@ class TestVerdiNode:
         group = orm.Group(group_name).store()
         group.add_nodes(node)
 
-        result = run_cli_command(cmd_node.node_show, options)
+        result = run_cli_command(cmd_node.node_show, options, use_subprocess=True)
 
         # Now the group should be in there
         assert group_name in result.output
@@ -591,10 +591,10 @@ def test_node_delete_basics(run_cli_command, options):
     node = orm.Data().store()
     pk = node.pk
 
-    run_cli_command(cmd_node.node_delete, options + [str(pk), '--dry-run'])
+    run_cli_command(cmd_node.node_delete, options + [str(pk), '--dry-run'], use_subprocess=True)
 
     # To delete the created node
-    run_cli_command(cmd_node.node_delete, [str(pk), '--force'])
+    run_cli_command(cmd_node.node_delete, [str(pk), '--force'], use_subprocess=True)
 
     with pytest.raises(NotExistent):
         orm.load_node(pk)

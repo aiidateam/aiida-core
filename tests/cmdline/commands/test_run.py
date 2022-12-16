@@ -61,7 +61,7 @@ class TestVerdiRun:
             fhandle.flush()
 
             options = [fhandle.name]
-            result = run_cli_command(cmd_run.run, options, suppress_warnings=True)
+            result = run_cli_command(cmd_run.run, options, suppress_warnings=True, use_subprocess=True)
 
             # Try to load the function calculation node from the printed pk in the output
             pk = int(result.output.splitlines()[-1])
@@ -94,7 +94,7 @@ class TestAutoGroups:
             fhandle.flush()
 
             options = ['--auto-group', fhandle.name]
-            result = run_cli_command(cmd_run.run, options, suppress_warnings=True)
+            result = run_cli_command(cmd_run.run, options, suppress_warnings=True, use_subprocess=True)
 
             pk = int(result.output)
             _ = load_node(pk)  # Check if the node can be loaded
@@ -122,7 +122,7 @@ class TestAutoGroups:
             fhandle.flush()
 
             options = [fhandle.name, '--auto-group', '--auto-group-label-prefix', autogroup_label]
-            result = run_cli_command(cmd_run.run, options, suppress_warnings=True)
+            result = run_cli_command(cmd_run.run, options, suppress_warnings=True, use_subprocess=True)
 
             pk = int(result.output)
             _ = load_node(pk)  # Check if the node can be loaded
@@ -333,7 +333,7 @@ class TestAutoGroups:
 
             # First run
             options = [fhandle.name, '--auto-group', '--auto-group-label-prefix', autogroup_label]
-            result = run_cli_command(cmd_run.run, options, suppress_warnings=True)
+            result = run_cli_command(cmd_run.run, options, suppress_warnings=True, use_subprocess=True)
 
             pk = int(result.output)
             _ = load_node(pk)  # Check if the node can be loaded
@@ -346,7 +346,7 @@ class TestAutoGroups:
             # A few more runs with the same label - it should not crash but append something to the group name
             for _ in range(10):
                 options = [fhandle.name, '--auto-group', '--auto-group-label-prefix', autogroup_label]
-                result = run_cli_command(cmd_run.run, options, suppress_warnings=True)
+                result = run_cli_command(cmd_run.run, options, suppress_warnings=True, use_subprocess=True)
 
                 pk = int(result.output)
                 _ = load_node(pk)  # Check if the node can be loaded

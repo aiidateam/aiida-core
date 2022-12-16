@@ -104,7 +104,7 @@ def test_import_make_new_group(run_cli_command, newest_archive):
 
     # Invoke `verdi import`, making sure there are no exceptions
     options = ['-G', group_label] + archives
-    run_cli_command(cmd_archive.import_archive, options)
+    run_cli_command(cmd_archive.import_archive, options, use_subprocess=True)
 
     # Make sure new Group was created
     (group, new_group) = Group.collection.get_or_create(group_label)

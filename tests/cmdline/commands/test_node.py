@@ -159,12 +159,12 @@ class TestVerdiNode:
         folder_node = self.get_unstored_folder_node().store()
 
         options = [str(folder_node.pk), 'some/nested/folder']
-        result = run_cli_command(cmd_node.repo_ls, options, catch_exceptions=False)
+        result = run_cli_command(cmd_node.repo_ls, options)
 
         assert 'filename.txt' in result.output
 
         options = [str(folder_node.pk), 'some/non-existing-folder']
-        result = run_cli_command(cmd_node.repo_ls, options, catch_exceptions=False, raises=True)
+        result = run_cli_command(cmd_node.repo_ls, options, raises=True)
         assert 'does not exist for the given node' in result.output
 
     def test_node_repo_cat(self, run_cli_command):
@@ -194,7 +194,7 @@ class TestVerdiNode:
         folder_node = self.get_unstored_folder_node().store()
         out_path = tmp_path / 'out_dir'
         options = [str(folder_node.uuid), str(out_path)]
-        res = run_cli_command(cmd_node.repo_dump, options, catch_exceptions=False)
+        res = run_cli_command(cmd_node.repo_dump, options)
         assert not res.stdout
 
         for file_key, content in [(self.key_file1, self.content_file1), (self.key_file2, self.content_file2)]:
@@ -210,7 +210,7 @@ class TestVerdiNode:
         folder_node = self.get_unstored_folder_node().store()
         out_path = tmp_path / 'out_dir' / 'nested' / 'path'
         options = [str(folder_node.uuid), str(out_path)]
-        res = run_cli_command(cmd_node.repo_dump, options, catch_exceptions=False)
+        res = run_cli_command(cmd_node.repo_dump, options)
         assert not res.stdout
 
         for file_key, content in [(self.key_file1, self.content_file1), (self.key_file2, self.content_file2)]:
@@ -232,9 +232,8 @@ class TestVerdiNode:
         with some_file.open('w') as file_handle:
             file_handle.write(some_file_content)
         options = [str(folder_node.uuid), str(out_path)]
-        res = run_cli_command(cmd_node.repo_dump, options, catch_exceptions=False)
-        assert 'exists' in res.stdout
-        assert 'Critical:' in res.stdout
+        res = run_cli_command(cmd_node.repo_dump, options, raises=True)
+        assert 'exists' in res.stderr
 
         # Make sure the directory content is still there
         with some_file.open('r') as file_handle:
@@ -329,22 +328,19 @@ class TestVerdiGraph:
             delete_temporary_file(filename)
 
     def test_check_recursion_flags(self, run_cli_command):
-        """
-        Test the ancestor-depth and descendent-depth options.
-        Test that they don't fail and that, if specified, they only accept
-        positive ints
+        """Test the ancestor-depth and descendent-depth options.
+
+        Test that they don't fail if not specified and that, if specified, they only accept positive ints
         """
         root_node = str(self.node.pk)
         filename = f'{root_node}.dot.pdf'
 
-        # Test that the options don't fail
-        for opt in ['-a', '--ancestor-depth', '-d', '--descendant-depth']:
-            options = [opt, None, root_node]
-            try:
-                run_cli_command(cmd_node.graph_generate, options)
-                assert os.path.isfile(filename)
-            finally:
-                delete_temporary_file(filename)
+        # Test that not specifying them works
+        try:
+            run_cli_command(cmd_node.graph_generate, [root_node])
+            assert os.path.isfile(filename)
+        finally:
+            delete_temporary_file(filename)
 
         # Test that the options accept zero or a positive int
         for opt in ['-a', '--ancestor-depth', '-d', '--descendant-depth']:
@@ -441,7 +437,7 @@ class TestVerdiUserCommand:
 
     def test_comment_show_simple(self, run_cli_command):
         """Test simply calling the show command (without data to show)."""
-        result = run_cli_command(cmd_node.comment_show, [], catch_exceptions=False)
+        result = run_cli_command(cmd_node.comment_show, [])
         assert result.output == ''
         assert result.exit_code == 0
 
@@ -450,14 +446,14 @@ class TestVerdiUserCommand:
         self.node.base.comments.add(COMMENT)
 
         options = [str(self.node.pk)]
-        result = run_cli_command(cmd_node.comment_show, options, catch_exceptions=False)
+        result = run_cli_command(cmd_node.comment_show, options)
         assert result.output.find(COMMENT) != -1
         assert result.exit_code == 0
 
     def test_comment_add(self, run_cli_command):
         """Test adding a comment."""
         options = ['-N', str(self.node.pk), '--', f'{COMMENT}']
-        result = run_cli_command(cmd_node.comment_add, options, catch_exceptions=False)
+        result = run_cli_command(cmd_node.comment_add, options)
         assert result.exit_code == 0
 
         comment = self.node.base.comments.all()
@@ -471,7 +467,7 @@ class TestVerdiUserCommand:
         assert len(self.node.base.comments.all()) == 1
 
         options = [str(comment.pk), '--force']
-        result = run_cli_command(cmd_node.comment_remove, options, catch_exceptions=False)
+        result = run_cli_command(cmd_node.comment_remove, options)
         assert result.exit_code == 0, result.output
         assert len(self.node.base.comments.all()) == 0
 

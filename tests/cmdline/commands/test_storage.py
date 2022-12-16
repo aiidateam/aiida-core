@@ -27,7 +27,7 @@ def tests_storage_info(aiida_localhost, run_cli_command):
     from aiida import orm
     node = orm.Dict().store()
 
-    result = run_cli_command(cmd_storage.storage_info, options=['--detailed'])
+    result = run_cli_command(cmd_storage.storage_info, parameters=['--detailed'])
 
     assert aiida_localhost.label in result.output
     assert node.node_type in result.output
@@ -36,7 +36,7 @@ def tests_storage_info(aiida_localhost, run_cli_command):
 @pytest.mark.usefixtures('stopped_daemon_client')
 def tests_storage_migrate_force(run_cli_command):
     """Test the ``verdi storage migrate`` command (with force option)."""
-    result = run_cli_command(cmd_storage.storage_migrate, options=['--force'])
+    result = run_cli_command(cmd_storage.storage_migrate, parameters=['--force'])
     assert 'Migrating to the head of the main branch' in result.output
 
 
@@ -86,7 +86,7 @@ def tests_storage_migrate_cancel_prompt(run_cli_command, monkeypatch):
         },
         {
             'raises': True,
-            'options': ['--force']
+            'parameters': ['--force']
         },
     ]
 )
@@ -145,14 +145,14 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch, caplog):
     assert ' > dry_run: False' in message_list
 
     with caplog.at_level(logging.INFO):
-        _ = run_cli_command(cmd_storage.storage_maintain, options=['--dry-run'])
+        _ = run_cli_command(cmd_storage.storage_maintain, parameters=['--dry-run'])
 
     message_list = caplog.records[1].msg.splitlines()
     assert ' > full: False' in message_list
     assert ' > dry_run: True' in message_list
 
     with caplog.at_level(logging.INFO):
-        run_cli_command(cmd_storage.storage_maintain, options=['--full'], user_input='Y')
+        run_cli_command(cmd_storage.storage_maintain, parameters=['--full'], user_input='Y')
 
     message_list = caplog.records[2].msg.splitlines()
     assert ' > full: True' in message_list

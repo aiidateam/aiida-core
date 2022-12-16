@@ -486,7 +486,7 @@ def run_cli_command(reset_log_level, aiida_instance, aiida_profile):  # pylint: 
         parameters: list[str] | None = None,
         user_input: str | bytes | t.IO | None = None,
         raises: bool = False,
-        use_subprocess: bool = True,
+        use_subprocess: bool = False,
         suppress_warnings: bool = False,
         **kwargs
     ) -> CliResult:

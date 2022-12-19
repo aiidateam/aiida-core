@@ -9,6 +9,7 @@
 ###########################################################################
 # pylint: disable=invalid-name,too-many-statements,too-many-branches
 """`verdi computer` command."""
+from copy import deepcopy
 from functools import partial
 
 import click
@@ -157,6 +158,55 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
         os.remove(destfile)
 
     transport.remove(remote_file_path)
+
+    return True, None
+
+
+def time_use_login_shell(authinfo, auth_params, use_login_shell: bool) -> float:
+    """Execute the ``whoami`` over the transport for the given ``use_login_shell`` and report the time taken."""
+    import time
+
+    auth_params['use_login_shell'] = use_login_shell
+    authinfo.set_auth_params(auth_params)
+
+    time_start = time.time()
+
+    with authinfo.get_transport() as transport:
+        transport.whoami()
+
+    return time.time() - time_start
+
+
+def _computer_use_login_shell_performance(transport, scheduler, authinfo):  # pylint: disable=unused-argument
+    """Execute a command over the transport with and without the ``use_login_shell`` option enabled.
+
+    By default, a computer is configured to use a login shell when connecting to it using the transport. For certain
+    environments, loading the login script of the shell is quite costly which will significantly slow down all commands
+    executed. This has a big impact on the throughput of calculation jobs. This test tries to execute a simple command
+    both with and without using a login shell and emits a warning if the ratio of the execution time exceeds 2.
+    """
+    factor = 2
+
+    auth_params = authinfo.get_auth_params()
+    auth_params_clone = deepcopy(auth_params)
+
+    # If ``use_login_shell=False`` we don't need to test for it being slower.
+    if not auth_params.get('use_login_shell', True):
+        return True, None
+
+    try:
+        timing_false = time_use_login_shell(authinfo, auth_params_clone, False)
+        timing_true = time_use_login_shell(authinfo, auth_params_clone, True)
+    finally:
+        authinfo.set_auth_params(auth_params)
+
+    if timing_true > (timing_false * factor):
+        message = (
+            f'computer is configured with `use_login_shell=True` which is slower by a factor of at least `{factor}`\n'
+            'unless this setting is really necessary, consider disabling it with\n'
+            'verdi computer configure core.local COMPUTER_NAME -n --no-use-login-shell'
+        )
+        return False, message
 
     return True, None
 
@@ -466,7 +516,8 @@ def computer_test(user, print_traceback, computer):
         _computer_test_no_unexpected_output: 'Checking for spurious output',
         _computer_test_get_jobs: 'Getting number of jobs from scheduler',
         _computer_get_remote_username: 'Determining remote user name',
-        _computer_create_temp_file: 'Creating and deleting temporary file'
+        _computer_create_temp_file: 'Creating and deleting temporary file',
+        _computer_use_login_shell_performance: 'Checking impact of using login shell',
     }
 
     try:

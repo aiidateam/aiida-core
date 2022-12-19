@@ -789,7 +789,7 @@ def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeyp
 
     aiida_localhost.configure()
 
-    def time_use_login_shell(authinfo, auth_params, use_login_shell: bool) -> float:  # pylint: disable=unused-argument
+    def time_use_login_shell(authinfo, auth_params, use_login_shell, iterations) -> float:  # pylint: disable=unused-argument
         if use_login_shell:
             return 5.0
         return 1.0
@@ -798,4 +798,4 @@ def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeyp
 
     result = run_cli_command(computer_test, [aiida_localhost.label])
     assert 'Warning: 1 out of 6 tests failed' in result.output
-    assert 'computer is configured with `use_login_shell=True` which is slower by a factor' in result.output
+    assert 'computer is configured to use a login shell, which is slower compared to a normal shell' in result.output

@@ -162,49 +162,77 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
     return True, None
 
 
-def time_use_login_shell(authinfo, auth_params, use_login_shell: bool) -> float:
-    """Execute the ``whoami`` over the transport for the given ``use_login_shell`` and report the time taken."""
+def time_use_login_shell(authinfo, auth_params, use_login_shell: bool, iterations: int = 3) -> float:
+    """Execute the ``whoami`` over the transport for the given ``use_login_shell`` and report the time taken.
+
+    :param authinfo: The ``AuthInfo`` instance to use.
+    :param auth_params: The base authentication parameters.
+    :param use_login_shell: Whether to use a login shell or not.
+    :param iterations: The number of iterations of the command to call. Command will return the average call time.
+    :return: The average call time of the ``Transport.whoami`` command.
+    """
     import time
 
     auth_params['use_login_shell'] = use_login_shell
     authinfo.set_auth_params(auth_params)
 
-    time_start = time.time()
+    timings = []
 
-    with authinfo.get_transport() as transport:
-        transport.whoami()
+    for _ in range(iterations):
+        time_start = time.time()
+        with authinfo.get_transport() as transport:
+            transport.whoami()
+        timings.append(time.time() - time_start)
 
-    return time.time() - time_start
+    return sum(timings) / iterations
 
 
 def _computer_use_login_shell_performance(transport, scheduler, authinfo):  # pylint: disable=unused-argument
     """Execute a command over the transport with and without the ``use_login_shell`` option enabled.
 
-    By default, a computer is configured to use a login shell when connecting to it using the transport. For certain
-    environments, loading the login script of the shell is quite costly which will significantly slow down all commands
-    executed. This has a big impact on the throughput of calculation jobs. This test tries to execute a simple command
-    both with and without using a login shell and emits a warning if the ratio of the execution time exceeds 2.
+    By default, AiiDA uses a login shell when connecting to a computer in order to operate in the same environment as a
+    user connecting to the computer. However, loading the login scripts of the shell can take time, which can
+    significantly slow down all commands executed by AiiDA and impact the throughput of calculation jobs. This test
+    executes a simple command both with and without using a login shell and emits a warning if the timing with the login
+    shell is larger compared to reference without login shell, with a relative tolerance of 2 and an absolute tolerance
+    of 100 ms. If the computer is already configured to avoid using a login shell, the test is skipped and the function
+    returns a successful test result.
     """
-    factor = 2
+    atol = 0.1  # 100 ms
+    rtol = 0.5  # factor of 2
+    iterations = 3
 
     auth_params = authinfo.get_auth_params()
-    auth_params_clone = deepcopy(auth_params)
 
     # If ``use_login_shell=False`` we don't need to test for it being slower.
     if not auth_params.get('use_login_shell', True):
         return True, None
 
+    auth_params_clone = deepcopy(auth_params)
+
     try:
-        timing_false = time_use_login_shell(authinfo, auth_params_clone, False)
-        timing_true = time_use_login_shell(authinfo, auth_params_clone, True)
+        timing_false = time_use_login_shell(authinfo, auth_params_clone, False, iterations)
+        timing_true = time_use_login_shell(authinfo, auth_params_clone, True, iterations)
     finally:
         authinfo.set_auth_params(auth_params)
 
-    if timing_true > (timing_false * factor):
+    echo.echo_debug(f'Execution time: {timing_true} vs {timing_false} for login shell and normal, respectively')
+
+    def is_close(a, b, rtol, atol):
+        """Return whether numbers a and b can be considered close to be equal within the given tolerances.
+
+        This implementation differs from ``math.isclose`` in that it takes the minimum of the relative and absolute
+        difference, instead of the maximum. This is necessary in our case since we want the numbers to be considered
+        not close if either the relative or absolute differences exceed the tolerance. For the ``math.isclose`` version
+        numbers are considered close as long as one of the differences falls within the tolerances.
+        """
+        return abs(a - b) <= min(rtol * max(abs(a), abs(b)), atol)
+
+    if timing_true > timing_false and not is_close(timing_true, timing_false, rtol, atol):
         message = (
-            f'computer is configured with `use_login_shell=True` which is slower by a factor of at least `{factor}`\n'
-            'unless this setting is really necessary, consider disabling it with\n'
-            'verdi computer configure core.local COMPUTER_NAME -n --no-use-login-shell'
+            'computer is configured to use a login shell, which is slower compared to a normal shell (Command execution'
+            f' time of {timing_true} s versus {timing_false}, respectively).\nUnless this setting is really necessary, '
+            'consider disabling it with: verdi computer configure core.local COMPUTER_NAME -n --no-use-login-shell'
         )
         return False, message
 
@@ -517,7 +545,7 @@ def computer_test(user, print_traceback, computer):
         _computer_test_get_jobs: 'Getting number of jobs from scheduler',
         _computer_get_remote_username: 'Determining remote user name',
         _computer_create_temp_file: 'Creating and deleting temporary file',
-        _computer_use_login_shell_performance: 'Checking impact of using login shell',
+        _computer_use_login_shell_performance: 'Checking for possible delay from using login shell',
     }
 
     try:

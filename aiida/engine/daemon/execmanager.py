@@ -13,6 +13,8 @@ results. These are general and contain only the main logic; where appropriate,
 the routines make reference to the suitable plugins for all
 plugin-specific operations.
 """
+from __future__ import annotations
+
 from collections.abc import Mapping
 from logging import LoggerAdapter
 import os
@@ -27,6 +29,7 @@ from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcInfo
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
+from aiida.engine.processes.exit_code import ExitCode
 from aiida.manage.configuration import get_config_option
 from aiida.orm import CalcJobNode, Code, FolderData, Node, PortableCode, RemoteData, load_node
 from aiida.orm.utils.log import get_dblogger_extra
@@ -351,7 +354,7 @@ def upload_calculation(
         remotedata.store()
 
 
-def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str:
+def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | ExitCode:
     """Submit a previously uploaded `CalcJob` to the scheduler.
 
     :param calculation: the instance of CalcJobNode to submit.
@@ -373,10 +376,12 @@ def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str:
 
     submit_script_filename = calculation.get_option('submit_script_filename')
     workdir = calculation.get_remote_workdir()
-    job_id = scheduler.submit_from_script(workdir, submit_script_filename)
-    calculation.set_job_id(job_id)
+    result = scheduler.submit_from_script(workdir, submit_script_filename)
 
-    return job_id
+    if isinstance(result, str):
+        calculation.set_job_id(result)
+
+    return result
 
 
 def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:

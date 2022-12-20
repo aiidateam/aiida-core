@@ -370,13 +370,14 @@ class Scheduler(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def _parse_submit_output(self, retval: int, stdout: str, stderr: str) -> str:
+    def _parse_submit_output(self, retval: int, stdout: str, stderr: str) -> str | ExitCode:
         """Parse the output of the submit command returned by calling the `_get_submit_command` command.
 
-        :return: a string with the job ID.
+        :return: a string with the job ID or an exit code if the submission failed because the submission script is
+            invalid and the job should be terminated.
         """
 
-    def submit_from_script(self, working_directory: str, submit_script: str) -> str:
+    def submit_from_script(self, working_directory: str, submit_script: str) -> str | ExitCode:
         """Submit the submission script to the scheduler.
 
         :return: return a string with the job ID in a valid format to be used for querying.

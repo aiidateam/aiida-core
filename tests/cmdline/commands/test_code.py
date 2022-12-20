@@ -123,7 +123,7 @@ def test_relabel_code_full_bad(run_cli_command, code):
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_code_delete_one_force(run_cli_command, code):
     """Test force code deletion."""
-    run_cli_command(cmd_code.delete, [str(code.pk), '--force'])
+    run_cli_command(cmd_code.delete, [str(code.pk), '--force'], use_subprocess=True)
 
     with pytest.raises(NotExistent):
         load_code('code')

@@ -46,6 +46,8 @@ def load_backend_if_not_loaded():
             manager.load_profile()  # This will load the default profile if no profile has already been loaded
             manager.get_profile_storage()  # This will load the backend of the loaded profile, if not already loaded
 
+    return manager.get_profile_storage()
+
 
 def with_dbenv():
     """Function decorator that will load the database environment for the currently loaded profile.
@@ -66,11 +68,12 @@ def with_dbenv():
         from aiida.common.exceptions import ConfigurationError, IntegrityError, LockedProfileError
 
         try:
-            load_backend_if_not_loaded()
+            storage = load_backend_if_not_loaded()
         except (IntegrityError, ConfigurationError, LockedProfileError) as exception:
             echo.echo_critical(str(exception))
 
-        return wrapped(*args, **kwargs)
+        with storage.transaction():
+            return wrapped(*args, **kwargs)
 
     return wrapper
 

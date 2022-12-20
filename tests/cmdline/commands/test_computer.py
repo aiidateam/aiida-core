@@ -791,8 +791,8 @@ def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeyp
 
     def time_use_login_shell(authinfo, auth_params, use_login_shell, iterations) -> float:  # pylint: disable=unused-argument
         if use_login_shell:
-            return 5.0
-        return 1.0
+            return 0.21
+        return 0.10
 
     monkeypatch.setattr(cmd_computer, 'time_use_login_shell', time_use_login_shell)
 

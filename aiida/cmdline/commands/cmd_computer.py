@@ -193,13 +193,11 @@ def _computer_use_login_shell_performance(transport, scheduler, authinfo):  # py
     By default, AiiDA uses a login shell when connecting to a computer in order to operate in the same environment as a
     user connecting to the computer. However, loading the login scripts of the shell can take time, which can
     significantly slow down all commands executed by AiiDA and impact the throughput of calculation jobs. This test
-    executes a simple command both with and without using a login shell and emits a warning if the timing with the login
-    shell is larger compared to reference without login shell, with a relative tolerance of 2 and an absolute tolerance
-    of 100 ms. If the computer is already configured to avoid using a login shell, the test is skipped and the function
-    returns a successful test result.
+    executes a simple command both with and without using a login shell and emits a warning if the login shell is slower
+    by at least 100 ms. If the computer is already configured to avoid using a login shell, the test is skipped and the
+    function returns a successful test result.
     """
-    atol = 0.1  # 100 ms
-    rtol = 0.5  # factor of 2
+    tolerance = 0.1  # 100 ms
     iterations = 3
 
     auth_params = authinfo.get_auth_params()
@@ -218,17 +216,7 @@ def _computer_use_login_shell_performance(transport, scheduler, authinfo):  # py
 
     echo.echo_debug(f'Execution time: {timing_true} vs {timing_false} for login shell and normal, respectively')
 
-    def is_close(a, b, rtol, atol):
-        """Return whether numbers a and b can be considered close to be equal within the given tolerances.
-
-        This implementation differs from ``math.isclose`` in that it takes the minimum of the relative and absolute
-        difference, instead of the maximum. This is necessary in our case since we want the numbers to be considered
-        not close if either the relative or absolute differences exceed the tolerance. For the ``math.isclose`` version
-        numbers are considered close as long as one of the differences falls within the tolerances.
-        """
-        return abs(a - b) <= min(rtol * max(abs(a), abs(b)), atol)
-
-    if timing_true > timing_false and not is_close(timing_true, timing_false, rtol, atol):
+    if timing_true - timing_false > tolerance:
         message = (
             'computer is configured to use a login shell, which is slower compared to a normal shell (Command execution'
             f' time of {timing_true} s versus {timing_false}, respectively).\nUnless this setting is really necessary, '

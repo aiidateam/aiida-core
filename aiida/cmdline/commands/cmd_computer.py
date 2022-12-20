@@ -9,6 +9,7 @@
 ###########################################################################
 # pylint: disable=invalid-name,too-many-statements,too-many-branches
 """`verdi computer` command."""
+from copy import deepcopy
 from functools import partial
 
 import click
@@ -157,6 +158,71 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
         os.remove(destfile)
 
     transport.remove(remote_file_path)
+
+    return True, None
+
+
+def time_use_login_shell(authinfo, auth_params, use_login_shell: bool, iterations: int = 3) -> float:
+    """Execute the ``whoami`` over the transport for the given ``use_login_shell`` and report the time taken.
+
+    :param authinfo: The ``AuthInfo`` instance to use.
+    :param auth_params: The base authentication parameters.
+    :param use_login_shell: Whether to use a login shell or not.
+    :param iterations: The number of iterations of the command to call. Command will return the average call time.
+    :return: The average call time of the ``Transport.whoami`` command.
+    """
+    import time
+
+    auth_params['use_login_shell'] = use_login_shell
+    authinfo.set_auth_params(auth_params)
+
+    timings = []
+
+    for _ in range(iterations):
+        time_start = time.time()
+        with authinfo.get_transport() as transport:
+            transport.whoami()
+        timings.append(time.time() - time_start)
+
+    return sum(timings) / iterations
+
+
+def _computer_use_login_shell_performance(transport, scheduler, authinfo):  # pylint: disable=unused-argument
+    """Execute a command over the transport with and without the ``use_login_shell`` option enabled.
+
+    By default, AiiDA uses a login shell when connecting to a computer in order to operate in the same environment as a
+    user connecting to the computer. However, loading the login scripts of the shell can take time, which can
+    significantly slow down all commands executed by AiiDA and impact the throughput of calculation jobs. This test
+    executes a simple command both with and without using a login shell and emits a warning if the login shell is slower
+    by at least 100 ms. If the computer is already configured to avoid using a login shell, the test is skipped and the
+    function returns a successful test result.
+    """
+    tolerance = 0.1  # 100 ms
+    iterations = 3
+
+    auth_params = authinfo.get_auth_params()
+
+    # If ``use_login_shell=False`` we don't need to test for it being slower.
+    if not auth_params.get('use_login_shell', True):
+        return True, None
+
+    auth_params_clone = deepcopy(auth_params)
+
+    try:
+        timing_false = time_use_login_shell(authinfo, auth_params_clone, False, iterations)
+        timing_true = time_use_login_shell(authinfo, auth_params_clone, True, iterations)
+    finally:
+        authinfo.set_auth_params(auth_params)
+
+    echo.echo_debug(f'Execution time: {timing_true} vs {timing_false} for login shell and normal, respectively')
+
+    if timing_true - timing_false > tolerance:
+        message = (
+            'computer is configured to use a login shell, which is slower compared to a normal shell (Command execution'
+            f' time of {timing_true} s versus {timing_false}, respectively).\nUnless this setting is really necessary, '
+            'consider disabling it with: verdi computer configure core.local COMPUTER_NAME -n --no-use-login-shell'
+        )
+        return False, message
 
     return True, None
 
@@ -466,7 +532,8 @@ def computer_test(user, print_traceback, computer):
         _computer_test_no_unexpected_output: 'Checking for spurious output',
         _computer_test_get_jobs: 'Getting number of jobs from scheduler',
         _computer_get_remote_username: 'Determining remote user name',
-        _computer_create_temp_file: 'Creating and deleting temporary file'
+        _computer_create_temp_file: 'Creating and deleting temporary file',
+        _computer_use_login_shell_performance: 'Checking for possible delay from using login shell',
     }
 
     try:

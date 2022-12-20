@@ -51,7 +51,7 @@ def main(code, number, daemon):
             scheduler_type='core.direct',
             workdir=tempfile.gettempdir(),
         ).store()
-        computer.configure(safe_interval=0.0)
+        computer.configure(safe_interval=0.0, use_login_shell=False)
         echo.echo_success(f'Created and configured temporary `Computer` {label} for localhost.')
         computer_created = True
 

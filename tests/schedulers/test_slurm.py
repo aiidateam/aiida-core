@@ -16,6 +16,7 @@ import uuid
 
 import pytest
 
+from aiida.engine import CalcJob
 from aiida.schedulers import JobState, SchedulerError
 from aiida.schedulers.plugins.slurm import SlurmJobResource, SlurmScheduler
 
@@ -416,8 +417,6 @@ class TestJoblistCommand:
 
 def test_parse_out_of_memory():
     """Test that for job that failed due to OOM `parse_output` return the `ERROR_SCHEDULER_OUT_OF_MEMORY` code."""
-    from aiida.engine import CalcJob
-
     scheduler = SlurmScheduler()
     stdout = ''
     stderr = ''
@@ -454,3 +453,11 @@ def test_parse_output_valid():
     scheduler = SlurmScheduler()
 
     assert scheduler.parse_output(detailed_job_info, '', '') is None
+
+
+def test_parse_submit_output_invalid_account():
+    """Test ``SlurmScheduler._parse_submit_output`` returns exit code if stderr contains error about invalid account."""
+    scheduler = SlurmScheduler()
+    stderr = 'Batch job submission failed: Invalid account or account/partition combination specified'
+    result = scheduler._parse_submit_output(1, '', stderr)  # pylint: disable=protected-access
+    assert result == CalcJob.exit_codes.ERROR_SCHEDULER_INVALID_ACCOUNT

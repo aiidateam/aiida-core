@@ -586,7 +586,7 @@ def test_node_delete_basics(run_cli_command, options):
     run_cli_command(cmd_node.node_delete, options + [str(pk), '--dry-run'])
 
     # To delete the created node
-    run_cli_command(cmd_node.node_delete, [str(pk), '--force'])
+    run_cli_command(cmd_node.node_delete, [str(pk), '--force'], use_subprocess=True)
 
     with pytest.raises(NotExistent):
         orm.load_node(pk)

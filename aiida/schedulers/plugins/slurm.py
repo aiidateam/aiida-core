@@ -422,8 +422,14 @@ class SlurmScheduler(Scheduler):
 
         Return a string with the JobID.
         """
+        from aiida.engine import CalcJob
+
         if retval != 0:
             self.logger.error(f'Error in _parse_submit_output: retval={retval}; stdout={stdout}; stderr={stderr}')
+
+            if 'Invalid account' in stderr:
+                return CalcJob.exit_codes.ERROR_SCHEDULER_INVALID_ACCOUNT
+
             raise SchedulerError(f'Error during submission, retval={retval}\nstdout={stdout}\nstderr={stderr}')
 
         try:

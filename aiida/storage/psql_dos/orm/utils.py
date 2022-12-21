@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for the implementation of the SqlAlchemy backend."""
+import contextlib
 from typing import TYPE_CHECKING
 
 # pylint: disable=import-error,no-name-in-module
@@ -166,3 +167,18 @@ class ModelWrapper:
         :return: boolean, True if currently in open transaction, False otherwise.
         """
         return self.session.in_nested_transaction()
+
+
+@contextlib.contextmanager
+def disable_expire_on_commit(session):
+    """Context manager that disables expire_on_commit and restores the original value on exit
+
+    :param session: The SQLA session
+    :type session: :class:`sqlalchemy.orm.session.Session`
+    """
+    current_value = session.expire_on_commit
+    session.expire_on_commit = False
+    try:
+        yield session
+    finally:
+        session.expire_on_commit = current_value

@@ -18,7 +18,7 @@ from aiida.storage.psql_dos.models.group import DbGroup, DbGroupNode
 from . import entities, users
 from .extras_mixin import ExtrasMixin
 from .nodes import SqlaNode
-from .utils import ModelWrapper
+from .utils import ModelWrapper, disable_expire_on_commit
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -193,7 +193,10 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
             if not given_node.is_stored:
                 raise ValueError('At least one of the provided nodes is unstored, stopping...')
 
-        with self.backend.transaction() as session:
+        session = self.backend.get_session()
+
+        with disable_expire_on_commit(session), self.backend.transaction() as session:
+            assert session.expire_on_commit is False
             if not skip_orm:
                 # Get dbnodes here ONCE, otherwise each call to dbnodes will re-read the current value in the database
                 dbnodes = self.model.dbnodes
@@ -247,7 +250,10 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
 
         list_nodes = []
 
-        with self.backend.transaction() as session:
+        session = self.backend.get_session()
+
+        with disable_expire_on_commit(session), self.backend.transaction() as session:
+            assert session.expire_on_commit is False
             if not skip_orm:
                 for node in nodes:
                     check_node(node)

@@ -41,7 +41,7 @@ def _store_structure(new_structure, dry_run):
         echo.echo(f'  Successfully imported structure {new_structure.get_formula()} (PK = {new_structure.pk})')
 
 
-@verdi_data.group('structure')
+@verdi_data.group('core.structure')
 def structure():
     """Manipulate StructureData objects (crystal structures)."""
 

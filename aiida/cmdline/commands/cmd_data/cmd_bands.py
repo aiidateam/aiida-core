@@ -26,7 +26,7 @@ EXPORT_FORMATS = [
 VISUALIZATION_FORMATS = ['xmgrace']
 
 
-@verdi_data.group('bands')
+@verdi_data.group('core.bands')
 def bands():
     """Manipulate BandsData objects (band structures)."""
 

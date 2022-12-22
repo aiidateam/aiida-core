@@ -14,7 +14,7 @@ from aiida.cmdline.params import arguments, types
 from aiida.cmdline.utils import decorators, echo
 
 
-@verdi_data.group('singlefile')
+@verdi_data.group('core.singlefile')
 def singlefile():
     """Work with SinglefileData nodes."""
 

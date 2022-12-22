@@ -19,7 +19,7 @@ from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 
 
-@verdi_data.group('upf')
+@verdi_data.group('core.upf')
 def upf():
     """Manipulate UpfData objects (UPF-format pseudopotentials)."""
 

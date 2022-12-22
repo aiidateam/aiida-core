@@ -22,7 +22,7 @@ EXPORT_FORMATS = ['cif']
 VISUALIZATION_FORMATS = ['jmol', 'vesta']
 
 
-@verdi_data.group('cif')
+@verdi_data.group('core.cif')
 def cif():
     """Manipulate CifData objects (crystal structures in .cif format)."""
 

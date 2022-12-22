@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.2.1 - 2022-12-22
+
+### Fixes
+- Critical bug fix: Revert the changes of PR [#5804](https://github.com/aiidateam/aiida-core/pull/5804) released with v2.2.0, which addressed a bug when mutating nodes during `QueryBuilder.iterall`. Unfortunately, the change caused changes performed by `verdi` commands (as well as changes made in `verdi shell`) to not be persisted to the database. [[#5851]](https://github.com/aiidateam/aiida-core/pull/5851)
+
+
 ## v2.2.0 - 2022-12-13
 
 This feature release comes with a significant feature and a number of improvements and fixes.

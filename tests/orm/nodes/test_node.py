@@ -860,7 +860,8 @@ class TestNodeDelete:
         assert len(Log.collection.get_logs_for(data_two)) == 1
         assert Log.collection.get_logs_for(data_two)[0].pk == log_two.pk
 
-        backend.delete_nodes_and_connections([data_two.pk])
+        with backend.transaction():
+            backend.delete_nodes_and_connections([data_two.pk])
 
         assert len(Log.collection.get_logs_for(data_one)) == 1
         assert Log.collection.get_logs_for(data_one)[0].pk == log_one.pk

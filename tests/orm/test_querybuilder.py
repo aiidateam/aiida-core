@@ -1495,6 +1495,7 @@ class TestConsistency:
             assert orm.load_node(pk).get_extra('key') == 'value'
 
     @pytest.mark.usefixtures('aiida_profile_clean')
+    @pytest.mark.skip('enable when https://github.com/aiidateam/aiida-core/issues/5802 is fixed')
     def test_iterall_with_store(self):
         """Test that nodes can be stored while being iterated using ``QueryBuilder.iterall``.
 

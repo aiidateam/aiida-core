@@ -28,9 +28,9 @@ def main(code, number, daemon):
     import uuid
 
     from aiida import orm
-    from aiida.common import exceptions
     from aiida.engine import run_get_node, submit
     from aiida.engine.daemon.client import get_daemon_client
+    from aiida.manage import get_manager
     from aiida.plugins import CalculationFactory
     from aiida.tools.graph.deletions import delete_nodes
 
@@ -41,6 +41,8 @@ def main(code, number, daemon):
 
     computer_created = False
     code_created = False
+
+    echo.echo(f'Running on profile {get_manager().get_profile().name}')
 
     if not code:
         label = f'benchmark-{uuid.uuid4().hex[:8]}'

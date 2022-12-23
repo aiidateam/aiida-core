@@ -9,7 +9,7 @@ from aiida.cmdline.utils import decorators, echo
 
 @click.command()
 @options.CODE(required=False, help='A code that can run the ``ArithmeticAddCalculation``, for example bash.')
-@click.option('-n', 'number', type=int, default=100, show_default=True, help='The number of processes to submit.')
+@click.option('-n', 'number', type=int, default=10, show_default=True, help='The number of processes to launch.')
 @click.option('--daemon/--without-daemon', default=False, is_flag=True, help='Submit to daemon or run synchronously.')
 @decorators.with_dbenv()
 def main(code, number, daemon):
@@ -28,9 +28,9 @@ def main(code, number, daemon):
     import uuid
 
     from aiida import orm
-    from aiida.common import exceptions
     from aiida.engine import run_get_node, submit
     from aiida.engine.daemon.client import get_daemon_client
+    from aiida.manage import get_manager
     from aiida.plugins import CalculationFactory
     from aiida.tools.graph.deletions import delete_nodes
 
@@ -41,6 +41,8 @@ def main(code, number, daemon):
 
     computer_created = False
     code_created = False
+
+    echo.echo(f'Running on profile {get_manager().get_profile().name}')
 
     if not code:
         label = f'benchmark-{uuid.uuid4().hex[:8]}'

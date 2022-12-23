@@ -9,7 +9,7 @@ from aiida.cmdline.utils import decorators, echo
 
 @click.command()
 @options.CODE(required=False, help='A code that can run the ``ArithmeticAddCalculation``, for example bash.')
-@click.option('-n', 'number', type=int, default=100, show_default=True, help='The number of processes to submit.')
+@click.option('-n', 'number', type=int, default=10, show_default=True, help='The number of processes to submit.')
 @click.option('--daemon/--without-daemon', default=False, is_flag=True, help='Submit to daemon or run synchronously.')
 @decorators.with_dbenv()
 def main(code, number, daemon):

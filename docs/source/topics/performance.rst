@@ -52,10 +52,11 @@ Benchmarks
 
 The :download:`benchmark script <../howto/include/scripts/performance_benchmark_base.py>` :fa:`download` provides a basic way of assessing performance of the workflow engine that involves all components (CPU, file system, postgresql, rabbitmq).
 
-It launches 100 ``ArithmeticAddCalculation`` jobs on the localhost and measures the time until completion.
+It launches ``ArithmeticAddCalculation``s on the localhost and measures the time until completion.
 Since the workload of the ``ArithmeticAddCalculation`` (summing two numbers) completes instantly, the time per process is a reasonable measure of the overhead incurred from the workflow engine.
 
-The numbers reported in the :ref:`howto section<how-to:installation:performance>` were obtained using a single daemon worker and can be reduced by increasing the number of daemon workers:
+The numbers reported in the :ref:`howto section<how-to:installation:performance>` were obtained by running the processes through the Python interpreter.
+The ``--daemon`` option can be used to run the calculations through the AiiDA daemon instead, and to look at parallelizing over multiple daemon workers:
 
 .. table::
     :widths: auto

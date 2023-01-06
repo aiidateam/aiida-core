@@ -236,6 +236,31 @@ def test_code_duplicate_ignore(run_cli_command, aiida_local_code_factory, non_in
     assert duplicate.description == ''
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_code_export(run_cli_command, aiida_local_code_factory, tmp_path, file_regression):
+    """Test export the code setup to str."""
+    prepend_text = 'module load something\n    some command'
+    code = aiida_local_code_factory('core.arithmetic.add', '/bin/cat', label='code', prepend_text=prepend_text)
+    filepath = tmp_path / 'code.yml'
+    options = [str(code.pk), str(filepath)]
+    run_cli_command(cmd_code.export, options)
+
+    # file regression check
+    with open(filepath, 'r', encoding='utf-8') as fhandle:
+        content = fhandle.read()
+    file_regression.check(content, extension='.yml')
+
+    # round trip test by create code from the config file
+    # we pass the new label to override since cannot have two code with same labels
+    new_label = 'code0'
+    run_cli_command(
+        cmd_code.code_create, ['core.code.installed', '--non-interactive', '--config', filepath, '--label', new_label]
+    )
+    new_code = load_code(new_label)
+    assert code.base.attributes.all == new_code.base.attributes.all
+    assert isinstance(new_code, InstalledCode)
+
+
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
 def test_from_config_local_file(non_interactive_editor, run_cli_command, aiida_localhost):
     """Test setting up a code from a config file on disk."""

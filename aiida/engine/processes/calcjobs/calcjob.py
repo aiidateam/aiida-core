@@ -455,6 +455,9 @@ class CalcJob(Process):
         spec.exit_code(
             131, 'ERROR_SCHEDULER_INVALID_ACCOUNT', invalidates_cache=True, message='The specified account is invalid.'
         )
+        spec.exit_code(
+            140, 'ERROR_SCHEDULER_NODE_FAILURE', invalidates_cache=True, message='The node running the job failed.'
+        )
         spec.exit_code(150, 'STOPPED_BY_MONITOR', invalidates_cache=True, message='{message}')
 
     @classproperty

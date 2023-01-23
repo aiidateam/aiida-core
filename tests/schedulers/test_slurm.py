@@ -431,6 +431,20 @@ def test_parse_out_of_memory():
     assert exit_code == CalcJob.exit_codes.ERROR_SCHEDULER_OUT_OF_MEMORY  # pylint: disable=no-member
 
 
+def test_parse_node_failure():
+    """Test that `ERROR_SCHEDULER_NODE_FAILURE` code is returned if `STATE == NODE_FAIL`."""
+    scheduler = SlurmScheduler()
+    detailed_job_info = {
+        'retval': 0,
+        'stderr': '',
+        'stdout': """||||||||||||||||||||||||||||||||||||||||||||||||||
+        |||||||||||||||||||||||||||||||||||||||||NODE_FAIL|||||||||"""
+    }  # yapf: disable
+
+    exit_code = scheduler.parse_output(detailed_job_info, '', '')
+    assert exit_code == CalcJob.exit_codes.ERROR_SCHEDULER_NODE_FAILURE  # pylint: disable=no-member
+
+
 @pytest.mark.parametrize('detailed_job_info, expected', [
     ('string', TypeError),  # Not a dictionary
     ({'stderr': ''}, ValueError),  # Key `stdout` missing

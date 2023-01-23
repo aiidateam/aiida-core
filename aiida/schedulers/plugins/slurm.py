@@ -767,6 +767,9 @@ stderr='{stderr.strip()}'"""
             if data['State'] == 'TIMEOUT':
                 return CalcJob.exit_codes.ERROR_SCHEDULER_OUT_OF_WALLTIME
 
+            if data['State'] == 'NODE_FAIL':
+                return CalcJob.exit_codes.ERROR_SCHEDULER_NODE_FAILURE
+
         # Alternatively, if the ``detailed_job_info`` is not defined or hasn't already determined an error, try to match
         # known error messages from the output written to the ``stderr`` descriptor.
         if stderr is not None:

@@ -8,7 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=no-self-use
-""""Implementation of `DbImporter` for the CISD database."""
+"""Implementation of `DbImporter` for the ICSD database.
+
+Note: The implementation in this file is not compatible with the recent versions
+of ICSD, which are built with Apache Lucene and Tomcat. Older ICSD versions are
+supported, which included a MySQL database and a php-based web interface. The
+last confirmed compatible version was released in 2020.
+"""
 import io
 
 from aiida.tools.dbimporters.baseclasses import CifEntry, DbImporter, DbSearchResults
@@ -468,6 +474,7 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
         self.number_of_results = None
         self._results = []
         self.cif_numbers = []
+        self.is_theoretical = []
         self.entries = {}
         self.page = 1
         self.position = 0
@@ -516,7 +523,10 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
                     db_name=self.db_name,
                     id=self.cif_numbers[position],
                     version=self.db_version,
-                    extras={'idnum': self._results[position]}
+                    extras={
+                        'idnum': self._results[position],
+                        'is_theoretical': self.is_theoretical[position]
+                    }
                 )
             else:
                 self.entries[position] = IcsdEntry(
@@ -579,6 +589,9 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
                 self.cursor.execute('SELECT FOUND_ROWS()')
                 self.number_of_results = int(self.cursor.fetchone()[0])
 
+            for idnum in self._results:
+                self.is_theoretical.append(self.query_db_is_theoretical(idnum))
+
             self._disconnect_db()
 
         else:
@@ -603,6 +616,29 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
 
             for i in self.soup.find_all('input', type='checkbox'):
                 self._results.append(i['id'])
+
+    def query_db_remarks(self, idnum):
+        """
+        Query the mysql db icsd_remarks table for the input crystal.
+        Explanations for all the remarks are included in the mysql "standard_remarks" table.
+        """
+        query_string = f'Select * from icsd_remarks WHERE IDNUM = {idnum}'
+        self.cursor.execute(query_string)
+        self.db.commit()
+        remarks = []
+        for row in self.cursor.fetchall():
+            remarks.append((row[1], row[2]))
+        return remarks
+
+    def query_db_is_theoretical(self, idnum):
+        """
+        Determine if the structure is theoretical based on the queried remarks.
+        """
+        remarks = self.query_db_remarks(idnum)
+        for remark in remarks:
+            if remark[0] in ['THE', 'ZTHE']:
+                return True
+        return False
 
     def _connect_db(self):
         """
@@ -647,6 +683,7 @@ class IcsdEntry(CifEntry):  # pylint: disable=abstract-method
         Create an instance of IcsdEntry, related to the supplied URI.
         """
         super().__init__(**kwargs)
+        _extras = kwargs.get('extras', {})
         self.source = {
             'db_name': kwargs.get('db_name', 'Icsd'),
             'db_uri': None,
@@ -654,7 +691,8 @@ class IcsdEntry(CifEntry):  # pylint: disable=abstract-method
             'version': kwargs.get('version', None),
             'uri': uri,
             'extras': {
-                'idnum': kwargs.get('extras', {}).get('idnum', None)
+                'idnum': _extras.get('idnum', None),
+                'is_theoretical': _extras.get('is_theoretical', None)
             },
             'license': self._license,
         }

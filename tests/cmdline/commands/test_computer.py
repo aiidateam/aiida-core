@@ -762,7 +762,7 @@ def test_computer_test_stderr(run_cli_command, aiida_localhost, monkeypatch):
     monkeypatch.setattr(LocalTransport, 'exec_command_wait', exec_command_wait)
 
     result = run_cli_command(computer_test, [aiida_localhost.label])
-    assert 'Warning: 1 out of 5 tests failed' in result.output
+    assert 'Warning: 1 out of 6 tests failed' in result.output
     assert stderr in result.output
 
 
@@ -779,5 +779,23 @@ def test_computer_test_stdout(run_cli_command, aiida_localhost, monkeypatch):
     monkeypatch.setattr(LocalTransport, 'exec_command_wait', exec_command_wait)
 
     result = run_cli_command(computer_test, [aiida_localhost.label])
-    assert 'Warning: 1 out of 5 tests failed' in result.output
+    assert 'Warning: 1 out of 6 tests failed' in result.output
     assert stdout in result.output
+
+
+def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeypatch):
+    """Test ``verdi computer test`` where ``use_login_shell=True`` is much slower."""
+    from aiida.cmdline.commands import cmd_computer
+
+    aiida_localhost.configure()
+
+    def time_use_login_shell(authinfo, auth_params, use_login_shell, iterations) -> float:  # pylint: disable=unused-argument
+        if use_login_shell:
+            return 0.21
+        return 0.10
+
+    monkeypatch.setattr(cmd_computer, 'time_use_login_shell', time_use_login_shell)
+
+    result = run_cli_command(computer_test, [aiida_localhost.label])
+    assert 'Warning: 1 out of 6 tests failed' in result.output
+    assert 'computer is configured to use a login shell, which is slower compared to a normal shell' in result.output

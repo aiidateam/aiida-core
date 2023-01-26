@@ -39,6 +39,7 @@ py:class Logger
 py:class ModuleType
 py:class ExternalType
 py:class UserDefinedType
+py:class LinkAnnotateType
 py:obj ReturnType
 py:obj SelfType
 py:obj CollectionType
@@ -121,6 +122,7 @@ py:class requests.models.Response
 py:class requests.Response
 
 py:class concurrent.futures._base.TimeoutError
+py:class concurrent.futures._base.Future
 
 py:class disk_objectstore.utils.LazyOpener
 
@@ -177,6 +179,9 @@ py:class yaml.dumper.Dumper
 py:class yaml.loader.Loader
 py:class yaml.UnsafeLoader
 py:class yaml.loader.UnsafeLoader
+py:class yaml.nodes.Node
+py:class yaml.nodes.MappingNode
+py:class yaml.nodes.ScalarNode
 py:class uuid.UUID
 
 py:class psycopg2.extensions.cursor
@@ -206,3 +211,6 @@ py:class sqlalchemy.sql.elements.ColumnElement
 
 py:class packaging.version.Version
 py:exc seekpath.hpkot.EdgeCaseWarning
+
+py:class graphviz.graphs.Digraph
+py:class Digraph

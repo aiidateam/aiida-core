@@ -418,7 +418,7 @@ class CalcJob(Process):
             'metadata.options.stash.stash_mode',
             valid_type=str,
             required=False,
-            help='Mode with which to perform the stashing, should be value of `aiida.common.datastructures.StashMode.'
+            help='Mode with which to perform the stashing, should be value of `aiida.common.datastructures.StashMode`.'
         )
 
         spec.output(
@@ -451,6 +451,12 @@ class CalcJob(Process):
         )
         spec.exit_code(
             120, 'ERROR_SCHEDULER_OUT_OF_WALLTIME', invalidates_cache=True, message='The job ran out of walltime.'
+        )
+        spec.exit_code(
+            131, 'ERROR_SCHEDULER_INVALID_ACCOUNT', invalidates_cache=True, message='The specified account is invalid.'
+        )
+        spec.exit_code(
+            140, 'ERROR_SCHEDULER_NODE_FAILURE', invalidates_cache=True, message='The node running the job failed.'
         )
         spec.exit_code(150, 'STOPPED_BY_MONITOR', invalidates_cache=True, message='{message}')
 
@@ -731,7 +737,7 @@ class CalcJob(Process):
             self.logger.warning('could not determine `stderr` filename because `scheduler_stderr` option was not set.')
         else:
             try:
-                scheduler_stderr = retrieved.base.repository.get_object_content(filename_stderr)
+                scheduler_stderr = retrieved.base.repository.get_object_content(filename_stderr, mode='r')
             except FileNotFoundError:
                 scheduler_stderr = None
                 self.logger.warning(f'could not parse scheduler output: the `{filename_stderr}` file is missing')
@@ -740,13 +746,17 @@ class CalcJob(Process):
             self.logger.warning('could not determine `stdout` filename because `scheduler_stdout` option was not set.')
         else:
             try:
-                scheduler_stdout = retrieved.base.repository.get_object_content(filename_stdout)
+                scheduler_stdout = retrieved.base.repository.get_object_content(filename_stdout, mode='r')
             except FileNotFoundError:
                 scheduler_stdout = None
                 self.logger.warning(f'could not parse scheduler output: the `{filename_stdout}` file is missing')
 
         try:
-            exit_code = scheduler.parse_output(detailed_job_info, scheduler_stdout, scheduler_stderr)
+            exit_code = scheduler.parse_output(
+                detailed_job_info,
+                scheduler_stdout or '',  # type: ignore[arg-type]
+                scheduler_stderr or '',  # type: ignore[arg-type]
+            )
         except exceptions.FeatureNotAvailable:
             self.logger.info(f'`{scheduler.__class__.__name__}` does not implement scheduler output parsing')
             return None
@@ -881,7 +891,7 @@ class CalcJob(Process):
 
         # Set resources, also with get_default_mpiprocs_per_machine
         resources = self.node.get_option('resources')
-        scheduler.preprocess_resources(resources, computer.get_default_mpiprocs_per_machine())
+        scheduler.preprocess_resources(resources or {}, computer.get_default_mpiprocs_per_machine())
         job_tmpl.job_resource = scheduler.create_job_resource(**resources)  # type: ignore
 
         subst_dict = {'tot_num_mpiprocs': job_tmpl.job_resource.get_tot_num_mpiprocs()}

@@ -9,9 +9,10 @@ from aiida.cmdline.utils import decorators, echo
 
 @click.command()
 @options.CODE(required=False, help='A code that can run the ``ArithmeticAddCalculation``, for example bash.')
-@click.option('-n', 'number', type=int, default=100, show_default=True, help='The number of processes to submit.')
+@click.option('-n', 'number', type=int, default=10, show_default=True, help='The number of processes to launch.')
+@click.option('--daemon/--without-daemon', default=False, is_flag=True, help='Submit to daemon or run synchronously.')
 @decorators.with_dbenv()
-def main(code, number):
+def main(code, number, daemon):
     """Submit a number of ``ArithmeticAddCalculation`` to the daemon and record time to completion.
 
     This command requires the daemon to be running.
@@ -27,19 +28,21 @@ def main(code, number):
     import uuid
 
     from aiida import orm
-    from aiida.common import exceptions
-    from aiida.engine import submit
+    from aiida.engine import run_get_node, submit
     from aiida.engine.daemon.client import get_daemon_client
+    from aiida.manage import get_manager
     from aiida.plugins import CalculationFactory
     from aiida.tools.graph.deletions import delete_nodes
 
     client = get_daemon_client()
 
-    if not client.is_daemon_running:
+    if daemon and not client.is_daemon_running:
         echo.echo_critical('The daemon is not running.')
 
     computer_created = False
     code_created = False
+
+    echo.echo(f'Running on profile {get_manager().get_profile().name}')
 
     if not code:
         label = f'benchmark-{uuid.uuid4().hex[:8]}'
@@ -50,7 +53,7 @@ def main(code, number):
             scheduler_type='core.direct',
             workdir=tempfile.gettempdir(),
         ).store()
-        computer.configure(safe_interval=0.0)
+        computer.configure(safe_interval=0.0, use_login_shell=False)
         echo.echo_success(f'Created and configured temporary `Computer` {label} for localhost.')
         computer_created = True
 
@@ -72,33 +75,41 @@ def main(code, number):
     time_start = time.time()
     nodes = []
 
-    with click.progressbar(range(number), label=f'Submitting {number} calculations.') as bar:
-        for iteration in bar:
-            node = submit(builder)
-            nodes.append(node)
+    if daemon:
+        with click.progressbar(range(number), label=f'Submitting {number} calculations.') as bar:
+            for iteration in bar:
+                node = submit(builder)
+                nodes.append(node)
 
-    time_end = time.time()
-    echo.echo(f'Submission completed in {(time_end - time_start):.2f} seconds.')
+        time_end = time.time()
+        echo.echo(f'Submission completed in {(time_end - time_start):.2f} seconds.')
 
-    completed = 0
+        completed = 0
 
-    with click.progressbar(length=number, label='Waiting for calculations to complete') as bar:
-        while True:
-            time.sleep(0.2)
+        with click.progressbar(length=number, label='Waiting for calculations to complete') as bar:
+            while True:
+                time.sleep(0.2)
 
-            terminated = [node.is_terminated for node in nodes]
-            newly_completed = terminated.count(True) - completed
-            completed = terminated.count(True)
+                terminated = [node.is_terminated for node in nodes]
+                newly_completed = terminated.count(True) - completed
+                completed = terminated.count(True)
 
-            bar.update(newly_completed)
+                bar.update(newly_completed)
 
-            if all(terminated):
-                break
+                if all(terminated):
+                    break
+
+    else:
+        with click.progressbar(range(number), label=f'Running {number} calculations.') as bar:
+            for iteration in bar:
+                _, node = run_get_node(builder)
+                nodes.append(node)
 
     if any(node.is_excepted or node.is_killed for node in nodes):
         echo.echo_warning('At least one submitted calculation excepted or was killed.')
     else:
         echo.echo_success('All calculations finished successfully.')
+
 
     time_end = time.time()
     echo.echo(f'Elapsed time: {(time_end - time_start):.2f} seconds.')

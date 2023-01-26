@@ -19,7 +19,7 @@ from aiida import get_profile
 from aiida.cmdline.commands import cmd_process
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
-from aiida.engine import ProcessState
+from aiida.engine import Process, ProcessState
 from aiida.orm import CalcJobNode, Group, WorkChainNode, WorkflowNode, WorkFunctionNode
 from tests.utils.processes import WaitProcess
 
@@ -73,7 +73,9 @@ class TestVerdiProcess:
 
             # Set the WorkChainNode as failed
             if state == ProcessState.FINISHED:
-                calc.set_exit_status(1)
+                exit_code = Process.exit_codes.ERROR_UNSPECIFIED
+                calc.set_exit_status(exit_code.status)
+                calc.set_exit_message(exit_code.message)
 
             # Set the waiting work chain as paused as well
             if state == ProcessState.WAITING:
@@ -173,6 +175,11 @@ class TestVerdiProcess:
             result = run_cli_command(cmd_process.process_list, ['-r', flag])
 
             assert len(result.output_lines) == 1
+
+        # There should be a failed WorkChain with exit status 1
+        for flag in ['-P', '--project']:
+            result = run_cli_command(cmd_process.process_list, ['-r', '-X', flag, 'exit_message'])
+            assert Process.exit_codes.ERROR_UNSPECIFIED.message in result.output
 
     def test_process_show(self, run_cli_command):
         """Test verdi process show"""

@@ -1,5 +1,100 @@
 # Changelog
 
+## v2.2.1 - 2022-12-22
+
+### Fixes
+- Critical bug fix: Revert the changes of PR [#5804](https://github.com/aiidateam/aiida-core/pull/5804) released with v2.2.0, which addressed a bug when mutating nodes during `QueryBuilder.iterall`. Unfortunately, the change caused changes performed by `verdi` commands (as well as changes made in `verdi shell`) to not be persisted to the database. [[#5851]](https://github.com/aiidateam/aiida-core/pull/5851)
+
+
+## v2.2.0 - 2022-12-13
+
+This feature release comes with a significant feature and a number of improvements and fixes.
+
+### Live calculation job monitoring
+
+In certain use cases, it is useful to have a calculation job stopped prematurely, before it finished or the requested wallclock time runs out.
+Examples are calculations that seem to be going nowhere and so continuing would only waste computational resources.
+Up till now, a calculation job could only be "manually" stopped, through `verdi process kill`.
+In this release, functionality is added that allows calculation jobs to be monitored automatically by the daemon and have them stopped when certain conditions are met.
+
+Monitors can be attached to a calculation job through the `monitors` input namespace:
+```python
+builder = load_code().get_builder()
+builder.monitors = {
+    'monitor_a': Dict({'entry_point': 'some.monitor'}),
+    'monitor_b': Dict({'entry_point': 'some.other.monitor'}),
+}
+```
+Monitors are referenced by their entry points with which they are registered in the `aiida.calculations.monitors` entry point group.
+A monitor is essentially a function that implements the following interface:
+```python
+from aiida.orm import CalcJobNode
+from aiida.transports import Transport
+
+def monitor(node: CalcJobNode, transport: Transport) -> str | CalcJobMonitorResult | None:
+    """Retrieve and inspect files in working directory of job to determine whether the job should be killed.
+
+    :param node: The node representing the calculation job.
+    :param transport: The transport that can be used to retrieve files from remote working directory.
+    :returns: A string if the job should be killed, `None` otherwise.
+    """
+```
+The `transport` allows to fetch files from the working directory of the calculation.
+If the job should be killed, the monitor simply returns a string with the message why and the daemon will send the message to kill the job.
+
+For more information and a complete description of the interface, please refer to the [documentation](https://aiida.readthedocs.io/projects/aiida-core/en/v2.1.0/howto/run_codes.html#how-to-monitor-and-prematurely-stop-a-calculation).
+This functionality was accepted based on [AEP 008](https://github.com/aiidateam/AEP/pull/36) which provides more detail on the design choices behind this implementation.
+
+
+### Full list of changes
+
+#### Features
+- `CalcJob`: Add functionality that allows live monitoring [[#5659]](https://github.com/aiidateam/aiida-core/pull/5659)
+- CLI: Add `--raw` option to `verdi code list` [[#5763]](https://github.com/aiidateam/aiida-core/pull/5763)
+- CLI: Add the `-h` short-hand flag for `--help` to `verdi` [[#5792]](https://github.com/aiidateam/aiida-core/pull/5792)
+- CLI: Add short option names for `verdi code create` [[#5799]](https://github.com/aiidateam/aiida-core/pull/5799)
+- `StorageBackend`: Add the `initialise` method [[#5760]](https://github.com/aiidateam/aiida-core/pull/5760)
+- Fixtures: Add support for `Process` inputs to `submit_and_await` [[#5780]](https://github.com/aiidateam/aiida-core/pull/5780)
+- Fixtures: Add `aiida_computer_local` and `aiida_computer_ssh` [[#5786]](https://github.com/aiidateam/aiida-core/pull/5786)
+- Fixtures: Modularize fixtures creating AiiDA test instance and profile [[#5758]](https://github.com/aiidateam/aiida-core/pull/5758)
+- `Computer`: Add the `is_configured` property [[#5786]](https://github.com/aiidateam/aiida-core/pull/5786)
+- Plugins: Add `aiida.storage` to `ENTRY_POINT_GROUP_FACTORY_MAPPING` [[#5798]](https://github.com/aiidateam/aiida-core/pull/5798)
+
+### Fixes
+- `verdi run`: Do not add `pathlib.Path` instance to `sys.path` [[#5810]](https://github.com/aiidateam/aiida-core/pull/5810)
+- Process functions: Restore support for dynamic nested input namespaces [[#5808]](https://github.com/aiidateam/aiida-core/pull/5808)
+- `Process`: properly cleanup when exception in state transition [[#5697]](https://github.com/aiidateam/aiida-core/pull/5697)
+- `Process`: Update outputs before updating node process state [[#5813]](https://github.com/aiidateam/aiida-core/pull/5813)
+- `PsqlDosMigrator`: refactor the connection handling [[#5783]](https://github.com/aiidateam/aiida-core/pull/5783)
+- `PsqlDosBackend`: Use transaction whenever mutating session state, fixing exception when storing a node or group during `QueryBuilder.iterall` [[#5804]](https://github.com/aiidateam/aiida-core/pull/5804)
+- `InstalledCode`: Fix bug in `validate_filepath_executable` for SSH [[#5787]](https://github.com/aiidateam/aiida-core/pull/5787)
+- `WorkChain`: Protect public methods from being subclassed. Now if you accidentally override, for example, the `run` method of the `WorkChain`, an exception is raised instead of silently breaking the work chain [[#5779]](https://github.com/aiidateam/aiida-core/pull/5779)
+
+#### Changes
+- Rename `PsqlDostoreMigrator` to `PsqlDosMigrator` [[#5761]](https://github.com/aiidateam/aiida-core/pull/5761)
+- ORM: Remove `pymatgen` version check in `StructureData.set_pymatgen_structure` [[#5777]](https://github.com/aiidateam/aiida-core/pull/5777)
+- `StorageBackend`: Remove `recreate_user` from `_clear` [[#5772]](https://github.com/aiidateam/aiida-core/pull/5772)
+- `PsqlDosMigrator`: Remove hardcoding of table name in database reset [[#5781]](https://github.com/aiidateam/aiida-core/pull/5781)
+
+### Dependencies
+- Dependencies: Add support for Python 3.11 [[#5778]](https://github.com/aiidateam/aiida-core/pull/5778)
+
+### Documentation
+- Docs: Correct command to enable `verdi` tab-completion for `fish` shell  [[#5784]](https://github.com/aiidateam/aiida-core/pull/5784)
+- Docs: Fix transport & scheduler type in localhost setup [[#5785]](https://github.com/aiidateam/aiida-core/pull/5785)
+- Docs: Fix minor formatting issues in "How to run a code" [[#5794]](https://github.com/aiidateam/aiida-core/pull/5794)
+
+### DevOps
+- CI: Increase load limit for `verdi` to 0.5 seconds [[#5773]](https://github.com/aiidateam/aiida-core/pull/5773)
+- CI: Add `workflow_dispatch` trigger to `nightly.yml` [[#5760]](https://github.com/aiidateam/aiida-core/pull/5760)
+- ORM: Fix typing of `aiida.orm.nodes.data.code` module [[#5830]](https://github.com/aiidateam/aiida-core/pull/5830)
+- Pin version of `setuptools` as it breaks dependencies [[#5782]](https://github.com/aiidateam/aiida-core/pull/5782)
+- Tests: Use explicit `aiida_profile_clean` in process control tests [[#5778]](https://github.com/aiidateam/aiida-core/pull/5778)
+- Tests: Replace all use of `aiida_profile_clean` with `aiida_profile` where a clean profile is not necessary [[#5814]](https://github.com/aiidateam/aiida-core/pull/5814)
+- Tests: Deal with `run_via_daemon` returning `None` in RPN tests [[#5813]](https://github.com/aiidateam/aiida-core/pull/5813)
+- Make type-checking opt-out [[#5811]](https://github.com/aiidateam/aiida-core/pull/5811)
+
+
 ## v2.1.2 - 2022-11-14
 
 ### Fixes

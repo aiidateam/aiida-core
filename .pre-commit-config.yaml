@@ -128,9 +128,6 @@ repos:
                 aiida/orm/nodes/data/array/bands.py|
                 aiida/orm/nodes/data/array/trajectory.py|
                 aiida/orm/nodes/data/cif.py|
-                aiida/orm/nodes/data/code/installed.py|
-                aiida/orm/nodes/data/code/legacy.py|
-                aiida/orm/nodes/data/code/portable.py|
                 aiida/orm/nodes/data/remote/base.py|
                 aiida/orm/nodes/data/structure.py|
                 aiida/orm/nodes/data/upf.py|
@@ -141,7 +138,6 @@ repos:
                 aiida/orm/utils/calcjob.py|
                 aiida/orm/utils/node.py|
                 aiida/orm/utils/remote.py|
-                aiida/orm/utils/serialize.py|
                 aiida/repository/backend/disk_object_store.py|
                 aiida/repository/backend/sandbox.py|
                 aiida/restapi/common/utils.py|
@@ -185,7 +181,6 @@ repos:
                 aiida/tools/groups/paths.py|
                 aiida/tools/query/calculation.py|
                 aiida/tools/query/mapping.py|
-                aiida/tools/visualization/graph.py|
                 aiida/transports/cli.py|
                 aiida/transports/plugins/local.py|
                 aiida/transports/plugins/ssh.py|

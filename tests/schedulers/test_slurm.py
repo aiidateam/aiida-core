@@ -16,6 +16,7 @@ import uuid
 
 import pytest
 
+from aiida.engine import CalcJob
 from aiida.schedulers import JobState, SchedulerError
 from aiida.schedulers.plugins.slurm import SlurmJobResource, SlurmScheduler
 
@@ -416,8 +417,6 @@ class TestJoblistCommand:
 
 def test_parse_out_of_memory():
     """Test that for job that failed due to OOM `parse_output` return the `ERROR_SCHEDULER_OUT_OF_MEMORY` code."""
-    from aiida.engine import CalcJob
-
     scheduler = SlurmScheduler()
     stdout = ''
     stderr = ''
@@ -430,6 +429,20 @@ def test_parse_out_of_memory():
 
     exit_code = scheduler.parse_output(detailed_job_info, stdout, stderr)
     assert exit_code == CalcJob.exit_codes.ERROR_SCHEDULER_OUT_OF_MEMORY  # pylint: disable=no-member
+
+
+def test_parse_node_failure():
+    """Test that `ERROR_SCHEDULER_NODE_FAILURE` code is returned if `STATE == NODE_FAIL`."""
+    scheduler = SlurmScheduler()
+    detailed_job_info = {
+        'retval': 0,
+        'stderr': '',
+        'stdout': """||||||||||||||||||||||||||||||||||||||||||||||||||
+        |||||||||||||||||||||||||||||||||||||||||NODE_FAIL|||||||||"""
+    }  # yapf: disable
+
+    exit_code = scheduler.parse_output(detailed_job_info, '', '')
+    assert exit_code == CalcJob.exit_codes.ERROR_SCHEDULER_NODE_FAILURE  # pylint: disable=no-member
 
 
 @pytest.mark.parametrize('detailed_job_info, expected', [
@@ -454,3 +467,11 @@ def test_parse_output_valid():
     scheduler = SlurmScheduler()
 
     assert scheduler.parse_output(detailed_job_info, '', '') is None
+
+
+def test_parse_submit_output_invalid_account():
+    """Test ``SlurmScheduler._parse_submit_output`` returns exit code if stderr contains error about invalid account."""
+    scheduler = SlurmScheduler()
+    stderr = 'Batch job submission failed: Invalid account or account/partition combination specified'
+    result = scheduler._parse_submit_output(1, '', stderr)  # pylint: disable=protected-access
+    assert result == CalcJob.exit_codes.ERROR_SCHEDULER_INVALID_ACCOUNT

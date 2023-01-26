@@ -36,7 +36,7 @@ class ContainerizedCode(InstalledCode):
         self.image_name = image_name
 
     @property
-    def filepath_executable(self) -> pathlib.PurePath:
+    def filepath_executable(self) -> pathlib.PurePosixPath:
         """Return the filepath of the executable that this code represents.
 
         .. note:: This is overridden from the base class since the path does not have to be absolute.

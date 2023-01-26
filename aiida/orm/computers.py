@@ -276,7 +276,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         """
         Return a copy of the current object to work with, not stored yet.
         """
-        return Computer.from_backend_entity(self._backend_entity.copy())
+        return entities.from_backend_entity(Computer, self._backend_entity.copy())
 
     def store(self) -> 'Computer':
         """

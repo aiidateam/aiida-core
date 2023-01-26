@@ -17,7 +17,7 @@ backcall==0.2.0
 bcrypt==4.0.1
 beautifulsoup4==4.11.1
 bleach==5.0.1
-certifi==2022.9.24
+certifi==2022.12.7
 cffi==1.15.1
 charset-normalizer==2.1.1
 circus==0.18.0
@@ -107,7 +107,7 @@ Pillow==9.3.0
 platformdirs==2.5.4
 plotly==5.11.0
 pluggy==1.0.0
-plumpy==0.21.2
+plumpy==0.21.3
 prometheus-client==0.15.0
 prompt-toolkit==3.0.33
 psutil==5.9.4

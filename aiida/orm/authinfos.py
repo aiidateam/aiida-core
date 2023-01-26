@@ -84,12 +84,12 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
     def computer(self) -> 'Computer':
         """Return the computer associated with this instance."""
         from . import computers  # pylint: disable=cyclic-import
-        return computers.Computer.from_backend_entity(self._backend_entity.computer)
+        return entities.from_backend_entity(computers.Computer, self._backend_entity.computer)
 
     @property
     def user(self) -> 'User':
         """Return the user associated with this instance."""
-        return users.User.from_backend_entity(self._backend_entity.user)
+        return entities.from_backend_entity(users.User, self._backend_entity.user)
 
     def get_auth_params(self) -> Dict[str, Any]:
         """Return the dictionary of authentication parameters

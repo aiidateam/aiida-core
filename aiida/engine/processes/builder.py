@@ -19,6 +19,8 @@ from aiida.engine.processes.ports import PortNamespace
 from aiida.orm import Dict, Node
 from aiida.orm.nodes.data.base import BaseType
 
+from .utils import prune_mapping
+
 if TYPE_CHECKING:
     from aiida.engine.processes.process import Process
 
@@ -162,7 +164,7 @@ class ProcessBuilderNamespace(MutableMapping):
 
     def _recursive_merge(self, dictionary, key, value):
         """Recursively merge the contents of ``dictionary`` setting its ``key`` to ``value``."""
-        if isinstance(value, Mapping):
+        if isinstance(value, Mapping) and key in dictionary:
             for inner_key, inner_value in value.items():
                 self._recursive_merge(dictionary[key], inner_key, inner_value)
         else:
@@ -219,29 +221,9 @@ class ProcessBuilderNamespace(MutableMapping):
         :return: mapping of inputs ports and their input values.
         """
         if prune:
-            return self._prune(dict(self))
+            return prune_mapping(dict(self))
 
         return dict(self)
-
-    def _prune(self, value):
-        """Prune a nested mapping from all mappings that are completely empty.
-
-        .. note:: a nested mapping that is completely empty means it contains at most other empty mappings. Other null
-            values, such as `None` or empty lists, should not be pruned.
-
-        :param value: a nested mapping of port values
-        :return: the same mapping but without any nested namespace that is completely empty.
-        """
-        if isinstance(value, Mapping) and not isinstance(value, Node):
-            result = {}
-            for key, sub_value in value.items():
-                pruned = self._prune(sub_value)
-                # If `pruned` is an "empty'ish" mapping and not an instance of `Node`, skip it, otherwise keep it.
-                if not (isinstance(pruned, Mapping) and not pruned and not isinstance(pruned, Node)):
-                    result[key] = pruned
-            return result
-
-        return value
 
 
 class ProcessBuilder(ProcessBuilderNamespace):  # pylint: disable=too-many-ancestors

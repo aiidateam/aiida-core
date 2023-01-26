@@ -176,7 +176,7 @@ class WorkChain(Process, metaclass=Protect):
         self.set_logger(self.node.logger)
 
         if self._awaitables:
-            self.action_awaitables()
+            self._action_awaitables()
 
     @Protect.final
     def on_run(self):
@@ -215,8 +215,7 @@ class WorkChain(Process, metaclass=Protect):
 
         return ctx, ctx_path[-1]
 
-    @Protect.final
-    def insert_awaitable(self, awaitable: Awaitable) -> None:
+    def _insert_awaitable(self, awaitable: Awaitable) -> None:
         """Insert an awaitable that should be terminated before before continuing to the next step.
 
         :param awaitable: the thing to await
@@ -226,7 +225,7 @@ class WorkChain(Process, metaclass=Protect):
         # Already assign the awaitable itself to the location in the context container where it is supposed to end up
         # once it is resolved. This is especially important for the `APPEND` action, since it needs to maintain the
         # order, but the awaitables will not necessarily be resolved in the order in which they are added. By using the
-        # awaitable as a placeholder, in the `resolve_awaitable`, it can be found and replaced by the resolved value.
+        # awaitable as a placeholder, in the `_resolve_awaitable`, it can be found and replaced by the resolved value.
         if awaitable.action == AwaitableAction.ASSIGN:
             ctx[key] = awaitable
         elif awaitable.action == AwaitableAction.APPEND:
@@ -239,8 +238,7 @@ class WorkChain(Process, metaclass=Protect):
         )  # add only if everything went ok, otherwise we end up in an inconsistent state
         self._update_process_status()
 
-    @Protect.final
-    def resolve_awaitable(self, awaitable: Awaitable, value: t.Any) -> None:
+    def _resolve_awaitable(self, awaitable: Awaitable, value: t.Any) -> None:
         """Resolve an awaitable.
 
         Precondition: must be an awaitable that was previously inserted.
@@ -282,7 +280,7 @@ class WorkChain(Process, metaclass=Protect):
         for key, value in kwargs.items():
             awaitable = construct_awaitable(value)
             awaitable.key = key
-            self.insert_awaitable(awaitable)
+            self._insert_awaitable(awaitable)
 
     def _update_process_status(self) -> None:
         """Set the process status with a message accounting the current sub processes that we are waiting for."""
@@ -371,12 +369,11 @@ class WorkChain(Process, metaclass=Protect):
         """Entering the WAITING state."""
         super().on_wait(awaitables)
         if self._awaitables:
-            self.action_awaitables()
+            self._action_awaitables()
         else:
             self.call_soon(self.resume)
 
-    @Protect.final
-    def action_awaitables(self) -> None:
+    def _action_awaitables(self) -> None:
         """Handle the awaitables that are currently registered with the work chain.
 
         Depending on the class type of the awaitable's target a different callback
@@ -385,14 +382,13 @@ class WorkChain(Process, metaclass=Protect):
         """
         for awaitable in self._awaitables:
             if awaitable.target == AwaitableTarget.PROCESS:
-                callback = functools.partial(self.call_soon, self.on_process_finished, awaitable)
+                callback = functools.partial(self.call_soon, self._on_awaitable_finished, awaitable)
                 self.runner.call_on_process_finish(awaitable.pk, callback)
             else:
                 assert f"invalid awaitable target '{awaitable.target}'"
 
-    @Protect.final
-    def on_process_finished(self, awaitable: Awaitable) -> None:
-        """Callback function called by the runner when the process instance identified by pk is completed.
+    def _on_awaitable_finished(self, awaitable: Awaitable) -> None:
+        """Callback function, for when an awaitable process instance is completed.
 
         The awaitable will be effectuated on the context of the work chain and removed from the internal list. If all
         awaitables have been dealt with, the work chain process is resumed.
@@ -411,7 +407,7 @@ class WorkChain(Process, metaclass=Protect):
         else:
             value = node  # type: ignore
 
-        self.resolve_awaitable(awaitable, value)
+        self._resolve_awaitable(awaitable, value)
 
         if self.state == ProcessState.WAITING and not self._awaitables:
             self.resume()

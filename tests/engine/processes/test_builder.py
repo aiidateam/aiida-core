@@ -17,7 +17,7 @@ import pytest
 
 from aiida import orm
 from aiida.common import LinkType
-from aiida.engine import Process, WorkChain
+from aiida.engine import Process, WorkChain, run_get_node
 from aiida.engine.processes.builder import ProcessBuilderNamespace
 from aiida.plugins import CalculationFactory
 
@@ -72,6 +72,7 @@ class NestedNamespaceProcess(Process):
         spec.input('nested.namespace.int', valid_type=int, required=True, non_db=True)
         spec.input('nested.namespace.float', valid_type=float, required=True, non_db=True)
         spec.input('nested.namespace.str', valid_type=str, required=False, non_db=True)
+        spec.input_namespace('opt', required=False, dynamic=True)
 
 
 class MappingData(Mapping, orm.Data):  # type: ignore[misc]
@@ -288,27 +289,32 @@ def test_port_names_overlapping_mutable_mapping_methods():  # pylint: disable=in
     assert builder.boolean == orm.Bool(False)
 
 
-def test_calc_job_node_get_builder_restart(aiida_localhost):
+def test_calc_job_node_get_builder_restart(aiida_local_code_factory):
     """Test the `CalcJobNode.get_builder_restart` method."""
-    original = orm.CalcJobNode(
-        computer=aiida_localhost, process_type='aiida.calculations:core.arithmetic.add', label='original'
-    )
-    original.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-    original.set_option('max_wallclock_seconds', 1800)
+    code = aiida_local_code_factory('core.arithmetic.add', '/bin/bash')
+    inputs = {
+        'metadata': {
+            'label': 'some-label',
+            'description': 'some-description',
+            'options': {
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
+                },
+                'max_wallclock_seconds': 1800
+            }
+        },
+        'x': orm.Int(1),
+        'y': orm.Int(2),
+        'code': code,
+    }
 
-    original.base.links.add_incoming(orm.Int(1).store(), link_type=LinkType.INPUT_CALC, link_label='x')
-    original.base.links.add_incoming(orm.Int(2).store(), link_type=LinkType.INPUT_CALC, link_label='y')
-    original.store()
+    _, node = run_get_node(CalculationFactory('core.arithmetic.add'), **inputs)
+    builder = node.get_builder_restart()
 
-    builder = original.get_builder_restart()
-
-    assert 'x' in builder
-    assert 'y' in builder
-    assert 'metadata' in builder
-    assert 'options' in builder.metadata
     assert builder.x == orm.Int(1)
     assert builder.y == orm.Int(2)
-    assert builder._inputs(prune=True)['metadata']['options'] == original.get_options()
+    assert builder._inputs(prune=True)['metadata'] == inputs['metadata']
 
 
 def test_code_get_builder(aiida_localhost):
@@ -378,12 +384,12 @@ def test_merge():
     # Define only one of the required ports of `nested.namespace`. This should leave the `float` input untouched and
     # even though not specified explicitly again, since the merged dictionary still contains it, the
     # `nested.namespace` port should still be valid.
-    builder._merge({'nested': {'namespace': {'int': 5}}})
-    assert builder._inputs(prune=True) == {'nested': {'namespace': {'int': 5, 'float': 2.0}}}
+    builder._merge({'nested': {'namespace': {'int': 5}}, 'opt': {'m': {'a': 1}}})
+    assert builder._inputs(prune=True) == {'nested': {'namespace': {'int': 5, 'float': 2.0}}, 'opt': {'m': {'a': 1}}}
 
     # Perform same test but passing the dictionary in as keyword arguments
     builder._merge(**{'nested': {'namespace': {'int': 5}}})
-    assert builder._inputs(prune=True) == {'nested': {'namespace': {'int': 5, 'float': 2.0}}}
+    assert builder._inputs(prune=True) == {'nested': {'namespace': {'int': 5, 'float': 2.0}}, 'opt': {'m': {'a': 1}}}
 
 
 def test_instance_interference():

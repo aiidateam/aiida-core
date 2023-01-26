@@ -8,13 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Implementation of `Scheduler` base class."""
+from __future__ import annotations
+
 import abc
-from typing import Dict, Type
+import typing as t
 
 from aiida.common import exceptions, log
+from aiida.common.datastructures import CodeRunMode
 from aiida.common.escaping import escape_for_bash
 from aiida.common.lang import classproperty
-from aiida.schedulers.datastructures import JobResource, JobTemplate
+from aiida.engine.processes.exit_code import ExitCode
+from aiida.schedulers.datastructures import JobInfo, JobResource, JobTemplate, JobTemplateCodeInfo
+from aiida.transports import Transport
 
 __all__ = ('Scheduler', 'SchedulerError', 'SchedulerParsingError')
 
@@ -37,16 +42,16 @@ class Scheduler(metaclass=abc.ABCMeta):
     # 'can_query_by_user': True if I can pass the 'user' argument to
     # get_joblist_command (and in this case, no 'jobs' should be given).
     # Otherwise, if False, a list of jobs is passed, and no 'user' is given.
-    _features: Dict[str, bool] = {}
+    _features: dict[str, bool] = {}
 
     # The class to be used for the job resource.
-    _job_resource_class: Type[JobResource] = None  # type: ignore
+    _job_resource_class: t.Type[JobResource] | None = None
 
     def __str__(self):
         return self.__class__.__name__
 
     @classmethod
-    def preprocess_resources(cls, resources, default_mpiprocs_per_machine=None):
+    def preprocess_resources(cls, resources: dict[str, t.Any], default_mpiprocs_per_machine: int | None = None):
         """Pre process the resources.
 
         Add the `num_mpiprocs_per_machine` key to the `resources` if it is not already defined and it cannot be deduced
@@ -54,9 +59,9 @@ class Scheduler(metaclass=abc.ABCMeta):
         class of this scheduler does not accept the `num_mpiprocs_per_machine` keyword. Note that the changes are made
         in place to the `resources` argument passed.
         """
-        num_machines = resources.get('num_machines', None)
-        tot_num_mpiprocs = resources.get('tot_num_mpiprocs', None)
-        num_mpiprocs_per_machine = resources.get('num_mpiprocs_per_machine', None)
+        num_machines: int | None = resources.get('num_machines', None)
+        tot_num_mpiprocs: int | None = resources.get('tot_num_mpiprocs', None)
+        num_mpiprocs_per_machine: int | None = resources.get('num_mpiprocs_per_machine', None)
 
         if (
             num_mpiprocs_per_machine is None and cls.job_resource_class.accepts_default_mpiprocs_per_machine()  # pylint: disable=no-member
@@ -71,13 +76,12 @@ class Scheduler(metaclass=abc.ABCMeta):
         :param resources: keyword arguments to define the job resources
         :raises ValueError: if the resources are invalid or incomplete
         """
+        assert cls._job_resource_class is not None and issubclass(cls._job_resource_class, JobResource)
         cls._job_resource_class.validate_resources(**resources)
 
     def __init__(self):
+        assert self._job_resource_class is not None and issubclass(self._job_resource_class, JobResource)
         self._transport = None
-
-        if not issubclass(self._job_resource_class, JobResource):
-            raise RuntimeError('the class attribute `_job_resource_class` is not a subclass of `JobResource`.')
 
     @classmethod
     def get_short_doc(cls):
@@ -108,16 +112,17 @@ class Scheduler(metaclass=abc.ABCMeta):
             raise exceptions.InternalError('No self._logger configured for {}!')
 
     @classproperty
-    def job_resource_class(cls) -> Type[JobResource]:  # pylint: disable=no-self-argument
+    def job_resource_class(cls) -> t.Type[JobResource]:  # pylint: disable=no-self-argument
+        assert cls._job_resource_class is not None and issubclass(cls._job_resource_class, JobResource)
         return cls._job_resource_class
 
     @classmethod
     def create_job_resource(cls, **kwargs):
         """Create a suitable job resource from the kwargs specified."""
-        # pylint: disable=not-callable
-        return cls._job_resource_class(**kwargs)
+        assert cls._job_resource_class is not None and issubclass(cls._job_resource_class, JobResource)
+        return cls._job_resource_class(**kwargs)  # pylint: disable=not-callable
 
-    def get_submit_script(self, job_tmpl):
+    def get_submit_script(self, job_tmpl: JobTemplate) -> str:
         """Return the submit script as a string.
 
         :parameter job_tmpl: a `aiida.schedulers.datastrutures.JobTemplate` instance.
@@ -164,14 +169,14 @@ class Scheduler(metaclass=abc.ABCMeta):
             script_lines.append(job_tmpl.append_text)
             script_lines.append(empty_line)
 
-        footer = self._get_submit_script_footer(job_tmpl)  # pylint: disable=assignment-from-none
+        footer = self._get_submit_script_footer(job_tmpl)
         if footer:
             script_lines.append(footer)
             script_lines.append(empty_line)
 
         return '\n'.join(script_lines)
 
-    def _get_submit_script_environment_variables(self, template):  # pylint: disable=no-self-use
+    def _get_submit_script_environment_variables(self, template: JobTemplate) -> str:  # pylint: disable=no-self-use
         """Return the part of the submit script header that defines environment variables.
 
         :parameter template: a `aiida.schedulers.datastrutures.JobTemplate` instance.
@@ -190,21 +195,23 @@ class Scheduler(metaclass=abc.ABCMeta):
         return '\n'.join(lines)
 
     @abc.abstractmethod
-    def _get_submit_script_header(self, job_tmpl):
+    def _get_submit_script_header(self, job_tmpl: JobTemplate) -> str:
         """Return the submit script header, using the parameters from the job template.
 
         :param job_tmpl: a `JobTemplate` instance with relevant parameters set.
+        :return: string with the submission script header.
         """
 
-    def _get_submit_script_footer(self, job_tmpl):
+    def _get_submit_script_footer(self, job_tmpl: JobTemplate) -> str:
         """Return the submit script final part, using the parameters from the job template.
 
         :param job_tmpl: a `JobTemplate` instance with relevant parameters set.
+        :return: string with the submission script footer.
         """
         # pylint: disable=no-self-use,unused-argument
-        return None
+        return ''
 
-    def _get_run_line(self, codes_info, codes_run_mode):
+    def _get_run_line(self, codes_info: list[JobTemplateCodeInfo], codes_run_mode: CodeRunMode) -> str:
         """Return a string with the line to execute a specific code with specific arguments.
 
         :parameter codes_info: a list of `aiida.scheduler.datastructures.JobTemplateCodeInfo` objects.
@@ -215,8 +222,6 @@ class Scheduler(metaclass=abc.ABCMeta):
             to launch the multiple codes.
         :return: string with format: [executable] [args] {[ < stdin ]} {[ < stdout ]} {[2>&1 | 2> stderr]}
         """
-        from aiida.common.datastructures import CodeRunMode
-
         list_of_runlines = []
 
         for code_info in codes_info:
@@ -259,7 +264,7 @@ class Scheduler(metaclass=abc.ABCMeta):
         raise NotImplementedError('Unrecognized code run mode')
 
     @abc.abstractmethod
-    def _get_joblist_command(self, jobs=None, user=None):
+    def _get_joblist_command(self, jobs: list[str] | None = None, user: str | None = None) -> str:
         """Return the command to get the most complete description possible of currently active jobs.
 
         .. note::
@@ -271,7 +276,7 @@ class Scheduler(metaclass=abc.ABCMeta):
         :param user: either None, or a string with the username (to show only jobs of the specific user).
         """
 
-    def _get_detailed_job_info_command(self, job_id):
+    def _get_detailed_job_info_command(self, job_id: str) -> dict[str, t.Any]:
         """Return the command to run to get detailed information for a given job.
 
         This is typically called after the job has finished, to retrieve the most detailed information possible about
@@ -283,7 +288,7 @@ class Scheduler(metaclass=abc.ABCMeta):
         # pylint: disable=no-self-use,not-callable,unused-argument
         raise exceptions.FeatureNotAvailable('Cannot get detailed job info')
 
-    def get_detailed_job_info(self, job_id):
+    def get_detailed_job_info(self, job_id: str) -> dict[str, str | int]:
         """Return the detailed job info.
 
         This will be a dictionary with the return value, stderr and stdout content returned by calling the command that
@@ -305,13 +310,18 @@ class Scheduler(metaclass=abc.ABCMeta):
         return detailed_job_info
 
     @abc.abstractmethod
-    def _parse_joblist_output(self, retval, stdout, stderr):
+    def _parse_joblist_output(self, retval: int, stdout: str, stderr: str) -> list[JobInfo]:
         """Parse the joblist output as returned by executing the command returned by `_get_joblist_command` method.
 
         :return: list of `JobInfo` objects, one of each job each with at least its default params implemented.
         """
 
-    def get_jobs(self, jobs=None, user=None, as_dict=False):
+    def get_jobs(
+        self,
+        jobs: list[str] | None = None,
+        user: str | None = None,
+        as_dict: bool = False,
+    ) -> list[JobInfo] | dict[str, JobInfo]:
         """Return the list of currently active jobs.
 
         .. note:: typically, only either jobs or user can be specified. See also comments in `_get_joblist_command`.
@@ -342,7 +352,7 @@ class Scheduler(metaclass=abc.ABCMeta):
 
         return self._transport
 
-    def set_transport(self, transport):
+    def set_transport(self, transport: Transport):
         """Set the transport to be used to query the machine or to submit scripts.
 
         This class assumes that the transport is open and active.
@@ -350,7 +360,7 @@ class Scheduler(metaclass=abc.ABCMeta):
         self._transport = transport
 
     @abc.abstractmethod
-    def _get_submit_command(self, submit_script):
+    def _get_submit_command(self, submit_script: str) -> str:
         """Return the string to execute to submit a given script.
 
         .. warning:: the `submit_script` should already have been bash-escaped
@@ -360,13 +370,14 @@ class Scheduler(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def _parse_submit_output(self, retval, stdout, stderr):
+    def _parse_submit_output(self, retval: int, stdout: str, stderr: str) -> str | ExitCode:
         """Parse the output of the submit command returned by calling the `_get_submit_command` command.
 
-        :return: a string with the job ID.
+        :return: a string with the job ID or an exit code if the submission failed because the submission script is
+            invalid and the job should be terminated.
         """
 
-    def submit_from_script(self, working_directory, submit_script):
+    def submit_from_script(self, working_directory: str, submit_script: str) -> str | ExitCode:
         """Submit the submission script to the scheduler.
 
         :return: return a string with the job ID in a valid format to be used for querying.
@@ -375,7 +386,7 @@ class Scheduler(metaclass=abc.ABCMeta):
         result = self.transport.exec_command_wait(self._get_submit_command(escape_for_bash(submit_script)))
         return self._parse_submit_output(*result)
 
-    def kill(self, jobid):
+    def kill(self, jobid: str) -> bool:
         """Kill a remote job and parse the return value of the scheduler to check if the command succeeded.
 
         ..note::
@@ -390,17 +401,22 @@ class Scheduler(metaclass=abc.ABCMeta):
         return self._parse_kill_output(retval, stdout, stderr)
 
     @abc.abstractmethod
-    def _get_kill_command(self, jobid):
+    def _get_kill_command(self, jobid: str) -> str:
         """Return the command to kill the job with specified jobid."""
 
     @abc.abstractmethod
-    def _parse_kill_output(self, retval, stdout, stderr):
+    def _parse_kill_output(self, retval: int, stdout: str, stderr: str) -> bool:
         """Parse the output of the kill command.
 
         :return: True if everything seems ok, False otherwise.
         """
 
-    def parse_output(self, detailed_job_info=None, stdout=None, stderr=None):
+    def parse_output(
+        self,
+        detailed_job_info: dict[str, str | int] | None = None,
+        stdout: str | None = None,
+        stderr: str | None = None
+    ) -> ExitCode | None:
         """Parse the output of the scheduler.
 
         :param detailed_job_info: dictionary with the output returned by the `Scheduler.get_detailed_job_info` command.

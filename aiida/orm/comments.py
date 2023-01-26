@@ -115,7 +115,7 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
 
     @property
     def user(self) -> 'User':
-        return users.User.from_backend_entity(self._backend_entity.user)
+        return entities.from_backend_entity(users.User, self._backend_entity.user)
 
     def set_user(self, value: 'User') -> None:
         self._backend_entity.user = value.backend_entity

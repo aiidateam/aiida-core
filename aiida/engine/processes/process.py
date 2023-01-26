@@ -48,12 +48,14 @@ from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.orm.implementation.utils import clean_value
 from aiida.orm.utils import serialize
 
 from .builder import ProcessBuilder
 from .exit_code import ExitCode, ExitCodesNamespace
 from .ports import PORT_NAMESPACE_SEPARATOR, InputPort, OutputPort, PortNamespace
 from .process_spec import ProcessSpec
+from .utils import prune_mapping
 
 if TYPE_CHECKING:
     from aiida.engine.runners import Runner
@@ -92,7 +94,7 @@ class Process(plumpy.processes.Process):
 
         """
         super().define(spec)
-        spec.input_namespace(spec.metadata_key, required=False, non_db=True)
+        spec.input_namespace(spec.metadata_key, required=False, is_metadata=True)
         spec.input(
             f'{spec.metadata_key}.store_provenance',
             valid_type=bool,
@@ -745,6 +747,16 @@ class Process(plumpy.processes.Process):
             else:
                 raise RuntimeError(f'unsupported metadata key: {name}')
 
+        # Store JSON-serializable values of ``metadata`` ports in the node's attributes. Note that instead of passing in
+        # the ``metadata`` inputs directly, the entire namespace of raw inputs is passed. The reason is that although
+        # currently in ``aiida-core`` all input ports with ``is_metadata=True`` in the port specification are located
+        # within the ``metadata`` port namespace, this may not always be the case. The ``_filter_serializable_metadata``
+        # method will filter out all ports that set ``is_metadata=True`` no matter where in the namespace they are
+        # defined so this approach is more robust for the future.
+        serializable_inputs = self._filter_serializable_metadata(self.spec().inputs, self.raw_inputs)
+        pruned = prune_mapping(serializable_inputs)
+        self.node.set_metadata_inputs(pruned)
+
     def _setup_inputs(self) -> None:
         """Create the links between the input nodes and the ProcessNode that represents this process."""
         for name, node in self._flat_inputs().items():
@@ -759,6 +771,51 @@ class Process(plumpy.processes.Process):
 
             elif isinstance(self.node, orm.WorkflowNode):
                 self.node.base.links.add_incoming(node, LinkType.INPUT_WORK, name)
+
+    def _filter_serializable_metadata(
+        self,
+        port: Union[None, InputPort, PortNamespace],
+        port_value: Any,
+    ) -> Union[Any, None]:
+        """Return the inputs that correspond to ports with ``is_metadata=True`` and that are JSON serializable.
+
+        The function is called recursively for any port namespaces.
+
+        :param port: An ``InputPort`` or ``PortNamespace``. If an ``InputPort`` that specifies ``is_metadata=True`` the
+            ``port_value`` is returned. For a ``PortNamespace`` this method is called recursively for the keys within
+            the namespace and the resulting dictionary is returned, omitting ``None`` values. If either ``port`` or
+            ``port_value`` is ``None``, ``None`` is returned.
+        :return: The ``port_value`` where all inputs that do no correspond to a metadata port or are not JSON
+            serializable, have been filtered out.
+        """
+        if port is None or port_value is None:
+            return None
+
+        if isinstance(port, InputPort):
+            if not port.is_metadata:
+                return None
+
+            try:
+                clean_value(port_value)
+            except exceptions.ValidationError:
+                return None
+            else:
+                return port_value
+
+        result = {}
+
+        for key, value in port_value.items():
+            if key not in port:
+                continue
+
+            metadata_value = self._filter_serializable_metadata(port[key], value)  # type: ignore[arg-type]
+
+            if metadata_value is None:
+                continue
+
+            result[key] = metadata_value
+
+        return result or None
 
     def _flat_inputs(self) -> Dict[str, Any]:
         """
@@ -802,7 +859,9 @@ class Process(plumpy.processes.Process):
         :return: flat list of inputs
 
         """
-        if (port is None and isinstance(port_value, orm.Node)) or (isinstance(port, InputPort) and not port.non_db):
+        if (port is None and
+            isinstance(port_value,
+                       orm.Node)) or (isinstance(port, InputPort) and not (port.is_metadata or port.non_db)):
             return [(parent_name, port_value)]
 
         if port is None and isinstance(port_value, Mapping) or isinstance(port, PortNamespace):
@@ -822,7 +881,7 @@ class Process(plumpy.processes.Process):
                 items.extend(sub_items)
             return items
 
-        assert (port is None) or (isinstance(port, InputPort) and port.non_db)
+        assert (port is None) or (isinstance(port, InputPort) and (port.is_metadata or port.non_db))
         return []
 
     def _flatten_outputs(

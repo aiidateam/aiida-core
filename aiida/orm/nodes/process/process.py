@@ -143,6 +143,7 @@ class ProcessNode(Sealable, Node):
     PROCESS_LABEL_KEY = 'process_label'
     PROCESS_STATE_KEY = 'process_state'
     PROCESS_STATUS_KEY = 'process_status'
+    METADATA_INPUTS_KEY: str = 'metadata_inputs'
 
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
@@ -167,6 +168,14 @@ class ProcessNode(Sealable, Node):
             cls.PROCESS_STATUS_KEY,
         )
 
+    def set_metadata_inputs(self, value: Dict[str, Any]) -> None:
+        """Set the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""
+        return self.base.attributes.set(self.METADATA_INPUTS_KEY, value)
+
+    def get_metadata_inputs(self) -> Optional[Dict[str, Any]]:
+        """Return the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""
+        return self.base.attributes.get(self.METADATA_INPUTS_KEY, None)
+
     @property
     def logger(self):
         """
@@ -188,6 +197,7 @@ class ProcessNode(Sealable, Node):
         """
         builder = self.process_class.get_builder()
         builder._update(self.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)).nested())  # pylint: disable=protected-access
+        builder._merge(self.get_metadata_inputs() or {})  # pylint: disable=protected-access
 
         return builder
 
@@ -452,7 +462,7 @@ class ProcessNode(Sealable, Node):
         return self.base.attributes.set(self.EXCEPTION_KEY, exception)
 
     @property
-    def checkpoint(self) -> Optional[Dict[str, Any]]:
+    def checkpoint(self) -> Optional[str]:
         """
         Return the checkpoint bundle set for the process
 
@@ -460,7 +470,7 @@ class ProcessNode(Sealable, Node):
         """
         return self.base.attributes.get(self.CHECKPOINT_KEY, None)
 
-    def set_checkpoint(self, checkpoint: Dict[str, Any]) -> None:
+    def set_checkpoint(self, checkpoint: str) -> None:
         """
         Set the checkpoint bundle set for the process
 

@@ -89,6 +89,10 @@ def status(all_profiles):
         profiles = [profile for profile in config.profiles if not profile.is_test_profile]
     else:
         profiles = [manager.get_profile()]
+    
+    if not profiles:
+        echo.echo_error('No profiles found')
+        sys.exit(1)
 
     daemons_running = []
     for profile in profiles:

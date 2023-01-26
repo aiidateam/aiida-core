@@ -479,8 +479,6 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
         self.page = 1
         self.position = 0
         self.db_version = None
-        self.sql_select_query = 'SELECT SQL_CALC_FOUND_ROWS icsd.IDNUM, icsd.COLL_CODE, icsd.STRUCT_FORM '
-        self.sql_from_query = 'FROM icsd '
 
         if self.db_parameters['querydb']:
             self.query_db_version()
@@ -569,28 +567,40 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
         Query the mysql or web page database, depending on the db_parameters.
         Store the number_of_results, cif file number and the corresponding icsd number.
 
+        Additionally, for the mysql case, determine if the origin of the structure is theoretical.
+        This information is stored in the `icsd_remarks` mysql table. If the crystal has either "THE"
+        or "ZTHE" tags, then it's classified as theoretical.
+
         :note: Icsd uses its own number system, different from the CIF
                 file numbers.
         """
         if self.db_parameters['querydb']:
 
-            self._connect_db()
-            query_statement = '{}{}{} LIMIT {}, 100'.format(
-                self.sql_select_query, self.sql_from_query, self.query, (self.page - 1) * 100
+            # Build the "THEORY" column based on the icsd_remarks table
+            sql_theory_column_query = (
+                "SELECT IDNUM, count(case when STD_REM_CODE IN ('THE', 'ZTHE') then 1 end) >= 1 AS THEORY " +
+                'FROM icsd_remarks GROUP BY IDNUM'
             )
+
+            # call it `tt` and join it with the main table based on IDNUM
+            sql_from_query = f'FROM icsd INNER JOIN ({sql_theory_column_query}) AS tt ON icsd.IDNUM=tt.IDNUM '
+
+            # Select the following columns
+            sql_select_query = 'SELECT SQL_CALC_FOUND_ROWS icsd.IDNUM, icsd.COLL_CODE, icsd.STRUCT_FORM, tt.THEORY '
+
+            self._connect_db()
+            query_statement = f'{sql_select_query}{sql_from_query}{self.query} LIMIT {(self.page - 1) * 100}, 100'
             self.cursor.execute(query_statement)
             self.db.commit()
 
             for row in self.cursor.fetchall():
                 self._results.append(str(row[0]))
                 self.cif_numbers.append(str(row[1]))
+                self.is_theoretical.append(bool(row[3]))
 
             if self.number_of_results is None:
                 self.cursor.execute('SELECT FOUND_ROWS()')
                 self.number_of_results = int(self.cursor.fetchone()[0])
-
-            for idnum in self._results:
-                self.is_theoretical.append(self.query_db_is_theoretical(idnum))
 
             self._disconnect_db()
 
@@ -616,29 +626,6 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
 
             for i in self.soup.find_all('input', type='checkbox'):
                 self._results.append(i['id'])
-
-    def query_db_remarks(self, idnum):
-        """
-        Query the mysql db icsd_remarks table for the input crystal.
-        Explanations for all the remarks are included in the mysql "standard_remarks" table.
-        """
-        query_string = f'Select * from icsd_remarks WHERE IDNUM = {idnum}'
-        self.cursor.execute(query_string)
-        self.db.commit()
-        remarks = []
-        for row in self.cursor.fetchall():
-            remarks.append((row[1], row[2]))
-        return remarks
-
-    def query_db_is_theoretical(self, idnum):
-        """
-        Determine if the structure is theoretical based on the queried remarks.
-        """
-        remarks = self.query_db_remarks(idnum)
-        for remark in remarks:
-            if remark[0] in ['THE', 'ZTHE']:
-                return True
-        return False
 
     def _connect_db(self):
         """

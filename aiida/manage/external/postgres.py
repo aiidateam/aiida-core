@@ -108,7 +108,8 @@ class Postgres(PGSU):
             self.connection_mode == PostgresConnectionMode.PSYCOPG
         """
         self.execute(_CREATE_USER_COMMAND.format(dbuser, dbpass, privileges))
-        # this is needed on some postgresql installations
+        # Ensure the database superuser (current_user) has the rights to grant `dbuser` access to new databases.
+        # Required for some postgresql installations.
         self.execute(_GRANT_ROLE_COMMAND.format(dbuser))
 
     def drop_dbuser(self, dbuser):

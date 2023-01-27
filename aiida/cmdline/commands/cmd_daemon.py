@@ -75,6 +75,7 @@ def start(foreground, number):
 
 @verdi_daemon.command()
 @click.option('--all', 'all_profiles', is_flag=True, help='Show status of all daemons.')
+@decorators.requires_loaded_profile()
 def status(all_profiles):
     """Print the status of the current daemon or all daemons.
 
@@ -89,10 +90,6 @@ def status(all_profiles):
         profiles = [profile for profile in config.profiles if not profile.is_test_profile]
     else:
         profiles = [manager.get_profile()]
-
-    if not profiles:
-        echo.echo_error('No profiles found')
-        sys.exit(1)
 
     daemons_running = []
     for profile in profiles:

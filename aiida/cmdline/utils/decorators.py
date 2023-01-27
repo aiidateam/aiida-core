@@ -237,6 +237,7 @@ def deprecated_command(message):
 
     return wrapper
 
+
 def requires_loaded_profile():
     """Function decorator for CLI command that requires a profile to be loaded.
 

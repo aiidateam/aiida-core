@@ -20,7 +20,7 @@ from sqlalchemy import func as sa_func
 from sqlalchemy import not_, or_
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Row
-from sqlalchemy.exc import SAWarning
+from sqlalchemy.exc import CompileError, SAWarning
 from sqlalchemy.orm import aliased
 from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
 from sqlalchemy.orm.query import Query
@@ -889,7 +889,8 @@ def compile_query(query: Query, literal_binds: bool = False) -> SQLCompiler:
 
             try:
                 return super().render_literal_value(value, type_)
-            except NotImplementedError:
+            # sqlalchemy<1.4.45 raises NotImplementedError, sqlalchemy>=1.4.45 raises CompileError
+            except (NotImplementedError, CompileError):
                 if isinstance(value, list):
                     values = ','.join(self.render_literal_value(item, type_) for item in value)
                     return f"'[{values}]'"

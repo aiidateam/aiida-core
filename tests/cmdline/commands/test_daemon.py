@@ -91,6 +91,7 @@ def test_daemon_status(run_cli_command):
     assert f'Profile: {get_profile().name}' in result.output
     assert last_line == 'Use verdi daemon [incr | decr] [num] to increase / decrease the amount of workers'
 
+
 @pytest.mark.usefixtures('empty_config')
 def test_daemon_status_no_profile(run_cli_command):
     """Test ``verdi daemon status`` when no profiles are defined."""

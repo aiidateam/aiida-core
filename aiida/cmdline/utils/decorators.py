@@ -254,7 +254,6 @@ def requires_loaded_profile():
 
     @decorator
     def wrapper(wrapped, _, args, kwargs):
-        """If daemon pid file is not found / empty, echo message and call decorated function."""
         from aiida.manage.configuration import get_profile
 
         if get_profile() is None:

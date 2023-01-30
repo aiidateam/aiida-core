@@ -609,7 +609,7 @@ The ``ContainerizedCode`` is compatible with a variety of containerization techn
 
     .. tab-item:: Docker
 
-        To use `Docker <https://www.docker.com/>`_ ``aiida-core==2.2.0`` or higher is required in order to be able to set ``wrap_cmdline_params = True``.
+        To use `Docker <https://www.docker.com/>`_ ``aiida-core==2.3.0`` or higher is required in order to be able to set ``wrap_cmdline_params = True``.
         When setting up a code for a Docker container, use the following ``engine_command`` when setting up the code:
 
         .. code-block:: console
@@ -617,6 +617,8 @@ The ``ContainerizedCode`` is compatible with a variety of containerization techn
             docker run -i -v $PWD:/workdir:rw -w /workdir {image_name} sh -c
 
         .. note:: Currently running with MPI is not yet supported, as it needs to be called inside of the container which is currently not possible.
+            The associated computer should also be configured to have the setting ``use_double_quotes = False``.
+            This can be set from the Python API using ``load_computer('idenfitier').set_use_double_quotes(False)``.
 
         The following configuration provides an example to setup Quantum ESPRESSO's ``pw.x`` to be run by Docker on the local host
 

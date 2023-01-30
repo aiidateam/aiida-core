@@ -269,7 +269,44 @@ def test_containerized_code(file_regression, aiida_localhost):
     _, node = launch.run_get_node(DummyCalcJob, **inputs)
     folder_name = node.dry_run_info['folder']
     submit_script_filename = node.get_option('submit_script_filename')
-    content = (pathlib.Path(folder_name) / submit_script_filename).read_bytes().decode('utf-8')
+    content = (pathlib.Path(folder_name) / submit_script_filename).read_text()
+
+    file_regression.check(content, extension='.sh')
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('chdir_tmp_path')
+def test_containerized_code_wrap_cmdline_params(file_regression, aiida_localhost):
+    """Test :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode` with ``wrap_cmdline_params = True``."""
+    aiida_localhost.set_use_double_quotes(False)
+    engine_command = """docker run -i -v $PWD:/workdir:rw -w /workdir {image_name} sh -c"""
+    containerized_code = orm.ContainerizedCode(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/bash',
+        engine_command=engine_command,
+        image_name='ubuntu',
+        computer=aiida_localhost,
+        wrap_cmdline_params=True,
+    ).store()
+
+    inputs = {
+        'code': containerized_code,
+        'metadata': {
+            'dry_run': True,
+            'options': {
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
+                },
+                'withmpi': False,
+            }
+        }
+    }
+
+    _, node = launch.run_get_node(DummyCalcJob, **inputs)
+    folder_name = node.dry_run_info['folder']
+    submit_script_filename = node.get_option('submit_script_filename')
+    content = (pathlib.Path(folder_name) / submit_script_filename).read_text()
 
     file_regression.check(content, extension='.sh')
 
@@ -305,7 +342,7 @@ def test_containerized_code_withmpi_true(file_regression, aiida_localhost):
     _, node = launch.run_get_node(DummyCalcJob, **inputs)
     folder_name = node.dry_run_info['folder']
     submit_script_filename = node.get_option('submit_script_filename')
-    content = (pathlib.Path(folder_name) / submit_script_filename).read_bytes().decode('utf-8')
+    content = (pathlib.Path(folder_name) / submit_script_filename).read_text()
 
     file_regression.check(content, extension='.sh')
 
@@ -379,9 +416,9 @@ def test_portable_code(tmp_path, aiida_localhost):
     for filename in code.base.repository.list_object_names():
         assert filename in uploaded_files
 
-    content = (pathlib.Path(folder_name) / code.filepath_executable).read_bytes().decode('utf-8')
-    subcontent = (pathlib.Path(folder_name) / 'sub' / 'dummy').read_bytes().decode('utf-8')
-    subsubcontent = (pathlib.Path(folder_name) / 'sub' / 'sub' / 'sub-dummy').read_bytes().decode('utf-8')
+    content = (pathlib.Path(folder_name) / code.filepath_executable).read_text()
+    subcontent = (pathlib.Path(folder_name) / 'sub' / 'dummy').read_text()
+    subsubcontent = (pathlib.Path(folder_name) / 'sub' / 'sub' / 'sub-dummy').read_text()
 
     assert content == 'bash implementation'
     assert subcontent == 'dummy'

@@ -75,6 +75,7 @@ def start(foreground, number):
 
 @verdi_daemon.command()
 @click.option('--all', 'all_profiles', is_flag=True, help='Show status of all daemons.')
+@decorators.requires_loaded_profile()
 def status(all_profiles):
     """Print the status of the current daemon or all daemons.
 

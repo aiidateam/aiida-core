@@ -37,7 +37,7 @@ _CREATE_DB_COMMAND = (
     'TEMPLATE=template0'
 )
 _DROP_DB_COMMAND = 'DROP DATABASE "{}"'
-_GRANT_PRIV_COMMAND = 'GRANT ALL PRIVILEGES ON DATABASE "{}" TO "{}"'
+_GRANT_ROLE_COMMAND = 'GRANT "{}" TO current_user'
 _USER_EXISTS_COMMAND = "SELECT usename FROM pg_user WHERE usename='{}'"
 _CHECK_DB_EXISTS_COMMAND = "SELECT datname FROM pg_database WHERE datname='{}'"
 _COPY_DB_COMMAND = 'CREATE DATABASE "{}" WITH TEMPLATE "{}" OWNER "{}"'
@@ -108,6 +108,9 @@ class Postgres(PGSU):
             self.connection_mode == PostgresConnectionMode.PSYCOPG
         """
         self.execute(_CREATE_USER_COMMAND.format(dbuser, dbpass, privileges))
+        # Ensure the database superuser (current_user) has the right to make `dbuser` the owner of new databases.
+        # Required for some postgresql installations.
+        self.execute(_GRANT_ROLE_COMMAND.format(dbuser))
 
     def drop_dbuser(self, dbuser):
         """
@@ -153,7 +156,6 @@ class Postgres(PGSU):
         :param str dbname: Name of the database.
         """
         self.execute(_CREATE_DB_COMMAND.format(dbname, dbuser))
-        self.execute(_GRANT_PRIV_COMMAND.format(dbname, dbuser))
 
     def drop_db(self, dbname):
         """
@@ -220,15 +222,15 @@ class Postgres(PGSU):
         return self.dsn.copy()
 
 
-def manual_setup_instructions(dbuser, dbname):
+def manual_setup_instructions(db_username, db_name):
     """Create a message with instructions for manually creating a database"""
-    dbpass = '<password>'
+    db_pass = '<password>'
     instructions = '\n'.join([
         'Run the following commands as a UNIX user with access to PostgreSQL (Ubuntu: $ sudo su postgres):',
         '',
         '\t$ psql template1',
-        f'	==> {_CREATE_USER_COMMAND.format(dbuser, dbpass, "")}',
-        f'	==> {_CREATE_DB_COMMAND.format(dbname, dbuser)}',
-        f'	==> {_GRANT_PRIV_COMMAND.format(dbname, dbuser)}',
+        f'	==> {_CREATE_USER_COMMAND.format(db_username, db_pass, "")}',
+        f'	==> {_GRANT_ROLE_COMMAND.format(db_username)}',
+        f'	==> {_CREATE_DB_COMMAND.format(db_name, db_username)}',
     ])
     return instructions

@@ -12,7 +12,9 @@ from tabulate import tabulate
 
 from aiida.cmdline.utils import echo
 
-_START_CIRCUS_COMMAND = 'start-circus'
+# circus daemon process can appear as 'start-circus' or 'circusd'
+# see https://github.com/aiidateam/aiida-core/issues/5336#issuecomment-1376093322
+_START_CIRCUS_COMMANDS = ['start-circus', 'circusd']
 
 
 def print_client_response_status(response):
@@ -127,7 +129,7 @@ def delete_stale_pid_file(client):
         try:
             process = psutil.Process(pid)
             # the PID got recycled, but a different process
-            if _START_CIRCUS_COMMAND not in process.cmdline():
+            if not any(cmd in process.cmdline() for cmd in _START_CIRCUS_COMMANDS):
                 raise StartCircusNotFound()  # Also this is a case in which the process is not there anymore
 
             # the PID got recycled, but for a daemon of someone else

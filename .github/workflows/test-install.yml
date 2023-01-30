@@ -86,9 +86,9 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Setup Conda
-      uses: s-weigand/setup-conda@v1
+      uses: conda-incubator/setup-miniconda@v2
       with:
-        conda-channels: conda-forge
+        channels: conda-forge
 
     - run: conda --version
 
@@ -156,16 +156,15 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Setup Conda
-      uses: s-weigand/setup-conda@v1
+      uses: conda-incubator/setup-miniconda@v2
       with:
-        conda-channels: conda-forge
-
-    - run: conda update conda
-    - run: conda --version
+        channels: conda-forge
 
     # Use mamba because conda is running out of memory
-    - run: conda install mamba -n base -c conda-forge
-    - run: mamba --version
+    # see https://github.com/conda-incubator/setup-miniconda/issues/274
+    - run: |
+        conda install -n base conda-libmamba-solver
+        conda config --set solver libmamba
 
     # Temporary workaround: https://github.com/mamba-org/mamba/issues/488
     - run: rm /usr/share/miniconda/pkgs/cache/*.json
@@ -174,7 +173,7 @@ jobs:
       id: test_installation
       continue-on-error: ${{ matrix.optional }}
       run: >
-        mamba create --dry-run -n test-install aiida-core
+        conda create --dry-run -n test-install aiida-core
         ${{ matrix.python-version && format('python={0}', matrix.python-version) }}
 
     - name: Warn about failure

@@ -236,3 +236,29 @@ def deprecated_command(message):
         return wrapped(*args, **kwargs)
 
     return wrapper
+
+
+def requires_loaded_profile():
+    """Function decorator for CLI command that requires a profile to be loaded.
+
+    Example::
+
+        @requires_loaded_profile()
+        def create_node():
+            pass
+
+    If no profile has been loaded, the command will exit with a critical error. Most ``verdi`` commands will
+    automatically load the default profile. So if this error is hit, it is most likely that either no profile have been
+    defined at all or the default is unspecified.
+    """
+
+    @decorator
+    def wrapper(wrapped, _, args, kwargs):
+        from aiida.manage.configuration import get_profile
+
+        if get_profile() is None:
+            echo.echo_critical('No profile loaded: make sure at least one profile is configured and a default is set.')
+
+        return wrapped(*args, **kwargs)
+
+    return wrapper

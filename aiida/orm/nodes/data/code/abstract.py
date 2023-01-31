@@ -64,7 +64,6 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         self.append_text = append_text
         self.prepend_text = prepend_text
         self.use_double_quotes = use_double_quotes
-        self.use_double_quotes = use_double_quotes
         self.is_hidden = is_hidden
 
     @abc.abstractmethod

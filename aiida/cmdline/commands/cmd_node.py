@@ -315,6 +315,7 @@ def node_delete(identifier, dry_run, force, **traversal_rules):
         if not pks or force:
             return False
         echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
+        echo.echo_info('The nodes with the following pks would be deleted: ' + ' '.join(map(str, pks)))
         return not click.confirm('Shall I continue?', abort=True)
 
     _, was_deleted = delete_nodes(pks, dry_run=dry_run or _dry_run_callback, **traversal_rules)

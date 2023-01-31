@@ -9,17 +9,19 @@
 ###########################################################################
 # pylint: disable=redefined-outer-name
 """Tests for :class:`aiida.orm.nodes.data.code.legacy.Code` class."""
+import uuid
+
 import pytest
 
 from aiida.common.exceptions import ValidationError
 from aiida.orm import Code, Computer
 
 
-@pytest.mark.usefixtures('aiida_profile_clean', 'suppress_internal_deprecations')
+@pytest.mark.usefixtures('suppress_internal_deprecations')
 def test_validate_remote_exec_path():
     """Test ``Code.validate_remote_exec_path``."""
     computer = Computer(
-        label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.slurm'
+        label=uuid.uuid4().hex, transport_type='core.local', hostname='localhost', scheduler_type='core.slurm'
     ).store()
     code = Code(remote_computer_exec=(computer, '/bin/invalid'))
 
@@ -35,11 +37,11 @@ def test_validate_remote_exec_path():
     code.validate_remote_exec_path()
 
 
-@pytest.mark.usefixtures('aiida_profile_clean', 'suppress_internal_deprecations')
+@pytest.mark.usefixtures('suppress_internal_deprecations')
 def test_get_execname():
     """Test ``Code.get_execname``."""
     computer = Computer(
-        label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.slurm'
+        label=uuid.uuid4().hex, transport_type='core.local', hostname='localhost', scheduler_type='core.slurm'
     ).store()
     code = Code(remote_computer_exec=(computer, '/bin/invalid'))
 

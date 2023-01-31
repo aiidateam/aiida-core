@@ -62,7 +62,7 @@ class ComputerCollection(entities.Collection['Computer']):
         return self._backend.computers.delete(pk)
 
 
-class Computer(entities.Entity['BackendComputer']):
+class Computer(entities.Entity['BackendComputer', ComputerCollection]):
     """
     Computer entity.
     """
@@ -79,12 +79,12 @@ class Computer(entities.Entity['BackendComputer']):
 
     def __init__(  # pylint: disable=too-many-arguments
         self,
-        label: str = None,
+        label: Optional[str] = None,
         hostname: str = '',
         description: str = '',
         transport_type: str = '',
         scheduler_type: str = '',
-        workdir: str = None,
+        workdir: Optional[str] = None,
         backend: Optional['StorageBackend'] = None,
     ) -> None:
         """Construct a new computer."""
@@ -276,7 +276,7 @@ class Computer(entities.Entity['BackendComputer']):
         """
         Return a copy of the current object to work with, not stored yet.
         """
-        return Computer.from_backend_entity(self._backend_entity.copy())
+        return entities.from_backend_entity(Computer, self._backend_entity.copy())
 
     def store(self) -> 'Computer':
         """
@@ -579,6 +579,14 @@ class Computer(entities.Entity['BackendComputer']):
             ) from exc
 
         return authinfo
+
+    @property
+    def is_configured(self) -> bool:
+        """Return whether the computer is configured for the current default user.
+
+        :return: Boolean, ``True`` if the computer is configured for the current default user, ``False`` otherwise.
+        """
+        return self.is_user_configured(users.User.collection(self.backend).get_default())
 
     def is_user_configured(self, user: 'User') -> bool:
         """

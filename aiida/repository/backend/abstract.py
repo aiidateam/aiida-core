@@ -140,10 +140,10 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
             flag to indicate to the backend whether AiiDA is live or not (i.e. if the profile of the
             backend is currently being used/accessed). The backend is expected then to only allow (and
             thus set by default) the operations that are safe to perform in this state.
-        """
+    """
 
     @contextlib.contextmanager
-    def open(self, key: str) -> Iterator[BinaryIO]:
+    def open(self, key: str) -> Iterator[BinaryIO]:  # type: ignore
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method

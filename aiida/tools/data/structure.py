@@ -89,7 +89,7 @@ def structure_to_spglib_tuple(structure):
     rel_pos = np.dot(abs_pos, np.linalg.inv(cell))
     # kinds = {k.name: k for k in structure.kinds}
 
-    kind_numbers = {}
+    kind_numbers: dict = {}
     for kind in structure.kinds:
         if len(kind.symbols) == 1:
             realnumber = z_numbers[kind.symbols[0]]

@@ -149,7 +149,7 @@ def process_call_root(processes):
 @click.option(
     '-l',
     '--levelname',
-    type=click.Choice(LOG_LEVELS.keys()),
+    type=click.Choice(list(LOG_LEVELS)),
     default='REPORT',
     help='Filter the results by name of the log level.'
 )

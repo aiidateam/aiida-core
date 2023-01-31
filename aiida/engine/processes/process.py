@@ -48,12 +48,14 @@ from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.orm.implementation.utils import clean_value
 from aiida.orm.utils import serialize
 
 from .builder import ProcessBuilder
 from .exit_code import ExitCode, ExitCodesNamespace
 from .ports import PORT_NAMESPACE_SEPARATOR, InputPort, OutputPort, PortNamespace
 from .process_spec import ProcessSpec
+from .utils import prune_mapping
 
 if TYPE_CHECKING:
     from aiida.engine.runners import Runner
@@ -92,7 +94,7 @@ class Process(plumpy.processes.Process):
 
         """
         super().define(spec)
-        spec.input_namespace(spec.metadata_key, required=False, non_db=True)
+        spec.input_namespace(spec.metadata_key, required=False, is_metadata=True)
         spec.input(
             f'{spec.metadata_key}.store_provenance',
             valid_type=bool,
@@ -219,7 +221,6 @@ class Process(plumpy.processes.Process):
         """Return the ProcessNode used by this process to represent itself in the database.
 
         :return: instance of sub class of ProcessNode
-
         """
         assert self._node is not None
         return self._node
@@ -310,7 +311,7 @@ class Process(plumpy.processes.Process):
         super().load_instance_state(saved_state, load_context)
 
         if self.SaveKeys.CALC_ID.value in saved_state:
-            self._node = orm.load_node(saved_state[self.SaveKeys.CALC_ID.value])
+            self._node = orm.load_node(saved_state[self.SaveKeys.CALC_ID.value])  # type: ignore
             self._pid = self.node.pk  # pylint: disable=attribute-defined-outside-init
         else:
             self._pid = self._create_and_setup_db_record()  # pylint: disable=attribute-defined-outside-init
@@ -348,7 +349,7 @@ class Process(plumpy.processes.Process):
 
             if asyncio.isfuture(result):
                 # We ourselves are waiting to be killed so add it to the list
-                killing.append(result)  # type: ignore[arg-type]
+                killing.append(result)
 
             if killing:
                 # We are waiting for things to be killed, so return the 'gathered' future
@@ -402,15 +403,24 @@ class Process(plumpy.processes.Process):
         self._pid = self._create_and_setup_db_record()  # pylint: disable=attribute-defined-outside-init
 
     @override
-    def on_entering(self, state: plumpy.process_states.State) -> None:
-        super().on_entering(state)
-        # Update the node attributes every time we enter a new state
-
     def on_entered(self, from_state: Optional[plumpy.process_states.State]) -> None:
         """After entering a new state, save a checkpoint and update the latest process state change timestamp."""
         # pylint: disable=cyclic-import
         from aiida.engine.utils import set_process_state_change_timestamp
-        self.update_node_state(self._state)
+
+        # For reasons unknown, it is important to update the outputs first, before doing anything else, otherwise there
+        # is the risk that certain outputs do not get attached before the process reaches a terminal state. Nevertheless
+        # we need to guarantee that the process state gets updated even if the ``update_outputs`` call excepts, for
+        # example if the process implementation attaches an invalid output through ``Process.out``, and so we call the
+        # ``ProcessNode.set_process_state`` in the finally-clause. This way the state gets properly set on the node even
+        # if the process is transitioning to the terminal excepted state.
+        try:
+            self.update_outputs()
+        except ValueError:  # pylint: disable=try-except-raise
+            raise
+        finally:
+            self.node.set_process_state(self._state.LABEL)  # type: ignore
+
         self._save_checkpoint()
         set_process_state_change_timestamp(self)
         super().on_entered(from_state)
@@ -539,7 +549,7 @@ class Process(plumpy.processes.Process):
         if self._parent_pid is None:
             return None
 
-        return orm.load_node(pk=self._parent_pid)
+        return orm.load_node(pk=self._parent_pid)  # type: ignore
 
     @classmethod
     def build_process_type(cls) -> str:
@@ -633,10 +643,6 @@ class Process(plumpy.processes.Process):
         :return: The decoded input args
         """
         return serialize.deserialize_unsafe(encoded)
-
-    def update_node_state(self, state: plumpy.process_states.State) -> None:
-        self.update_outputs()
-        self.node.set_process_state(state.LABEL)
 
     def update_outputs(self) -> None:
         """Attach new outputs to the node since the last call.
@@ -741,6 +747,16 @@ class Process(plumpy.processes.Process):
             else:
                 raise RuntimeError(f'unsupported metadata key: {name}')
 
+        # Store JSON-serializable values of ``metadata`` ports in the node's attributes. Note that instead of passing in
+        # the ``metadata`` inputs directly, the entire namespace of raw inputs is passed. The reason is that although
+        # currently in ``aiida-core`` all input ports with ``is_metadata=True`` in the port specification are located
+        # within the ``metadata`` port namespace, this may not always be the case. The ``_filter_serializable_metadata``
+        # method will filter out all ports that set ``is_metadata=True`` no matter where in the namespace they are
+        # defined so this approach is more robust for the future.
+        serializable_inputs = self._filter_serializable_metadata(self.spec().inputs, self.raw_inputs)
+        pruned = prune_mapping(serializable_inputs)
+        self.node.set_metadata_inputs(pruned)
+
     def _setup_inputs(self) -> None:
         """Create the links between the input nodes and the ProcessNode that represents this process."""
         for name, node in self._flat_inputs().items():
@@ -755,6 +771,51 @@ class Process(plumpy.processes.Process):
 
             elif isinstance(self.node, orm.WorkflowNode):
                 self.node.base.links.add_incoming(node, LinkType.INPUT_WORK, name)
+
+    def _filter_serializable_metadata(
+        self,
+        port: Union[None, InputPort, PortNamespace],
+        port_value: Any,
+    ) -> Union[Any, None]:
+        """Return the inputs that correspond to ports with ``is_metadata=True`` and that are JSON serializable.
+
+        The function is called recursively for any port namespaces.
+
+        :param port: An ``InputPort`` or ``PortNamespace``. If an ``InputPort`` that specifies ``is_metadata=True`` the
+            ``port_value`` is returned. For a ``PortNamespace`` this method is called recursively for the keys within
+            the namespace and the resulting dictionary is returned, omitting ``None`` values. If either ``port`` or
+            ``port_value`` is ``None``, ``None`` is returned.
+        :return: The ``port_value`` where all inputs that do no correspond to a metadata port or are not JSON
+            serializable, have been filtered out.
+        """
+        if port is None or port_value is None:
+            return None
+
+        if isinstance(port, InputPort):
+            if not port.is_metadata:
+                return None
+
+            try:
+                clean_value(port_value)
+            except exceptions.ValidationError:
+                return None
+            else:
+                return port_value
+
+        result = {}
+
+        for key, value in port_value.items():
+            if key not in port:
+                continue
+
+            metadata_value = self._filter_serializable_metadata(port[key], value)  # type: ignore[arg-type]
+
+            if metadata_value is None:
+                continue
+
+            result[key] = metadata_value
+
+        return result or None
 
     def _flat_inputs(self) -> Dict[str, Any]:
         """
@@ -798,7 +859,9 @@ class Process(plumpy.processes.Process):
         :return: flat list of inputs
 
         """
-        if (port is None and isinstance(port_value, orm.Node)) or (isinstance(port, InputPort) and not port.non_db):
+        if (port is None and
+            isinstance(port_value,
+                       orm.Node)) or (isinstance(port, InputPort) and not (port.is_metadata or port.non_db)):
             return [(parent_name, port_value)]
 
         if port is None and isinstance(port_value, Mapping) or isinstance(port, PortNamespace):
@@ -818,7 +881,7 @@ class Process(plumpy.processes.Process):
                 items.extend(sub_items)
             return items
 
-        assert (port is None) or (isinstance(port, InputPort) and port.non_db)
+        assert (port is None) or (isinstance(port, InputPort) and (port.is_metadata or port.non_db))
         return []
 
     def _flatten_outputs(
@@ -987,8 +1050,11 @@ class Process(plumpy.processes.Process):
             codes may have no effect.
 
         """
+        exit_status = node.exit_status
+        if exit_status is None:
+            return True
         try:
-            return not cls.spec().exit_codes(node.exit_status).invalidates_cache
+            return not cls.spec().exit_codes(exit_status).invalidates_cache
         except ValueError:
             return True
 

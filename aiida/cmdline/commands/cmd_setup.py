@@ -93,10 +93,9 @@ def setup(
 
     # Initialise the storage
     echo.echo_report('initialising the profile storage.')
-    storage_cls = profile.storage_cls
 
     try:
-        storage_cls.migrate(profile)
+        profile.storage_cls.initialise(profile)
     except Exception as exception:  # pylint: disable=broad-except
         echo.echo_critical(
             f'storage initialisation failed, probably because connection details are incorrect:\n{exception}'
@@ -164,6 +163,7 @@ def quicksetup(
         'port': db_port,
         'user': su_db_username,
         'password': su_db_password,
+        'database': su_db_name,
     }
     postgres = Postgres(interactive=not non_interactive, quiet=False, dbinfo=dbinfo_su)
 
@@ -178,8 +178,8 @@ def quicksetup(
                 'Oops! quicksetup was unable to create the AiiDA database for you.',
                 'See `verdi quicksetup -h` for how to specify non-standard parameters for the postgresql connection.\n'
                 'Alternatively, create the AiiDA database yourself: ',
-                manual_setup_instructions(dbuser=su_db_username,
-                                          dbname=su_db_name), '', 'and then use `verdi setup` instead', ''
+                manual_setup_instructions(db_username=db_username,
+                                          db_name=db_name), '', 'and then use `verdi setup` instead', ''
             ])
         )
         raise exception

@@ -304,7 +304,7 @@ def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Op
         try:
             time_stamp = backend.get_global_variable(key)
             if time_stamp is not None:
-                timestamps.append(datetime.fromisoformat(time_stamp))
+                timestamps.append(datetime.fromisoformat(str(time_stamp)))
         except KeyError:
             continue
 

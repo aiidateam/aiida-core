@@ -17,6 +17,8 @@ storage. The ``filepath_executable`` should indicate the filename of the executa
 :class:`aiida.engine.CalcJob` is run using a ``PortableCode``, the uploaded files will be automatically copied to the
 working directory on the selected computer and the executable will be run there.
 """
+from __future__ import annotations
+
 import pathlib
 
 import click
@@ -54,8 +56,8 @@ class PortableCode(Code):
         """
         super().__init__(**kwargs)
         type_check(filepath_files, pathlib.Path)
-        self.filepath_executable = filepath_executable
-        self.base.repository.put_object_from_tree(filepath_files)
+        self.filepath_executable = filepath_executable  # type: ignore[assignment]
+        self.base.repository.put_object_from_tree(str(filepath_files))
 
     def _validate(self):
         """Validate the instance by checking that an executable is defined and it is part of the repository files.
@@ -86,7 +88,7 @@ class PortableCode(Code):
         """
         return True
 
-    def get_executable(self) -> pathlib.Path:
+    def get_executable(self) -> pathlib.PurePosixPath:
         """Return the executable that the submission script should execute to run the code.
 
         :return: The executable to be called in the submission script.
@@ -123,12 +125,12 @@ class PortableCode(Code):
         return self.label
 
     @property
-    def filepath_executable(self) -> pathlib.PurePath:
+    def filepath_executable(self) -> pathlib.PurePosixPath:
         """Return the relative filepath of the executable that this code represents.
 
         :return: The relative filepath of the executable.
         """
-        return pathlib.PurePath(self.base.attributes.get(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE))
+        return pathlib.PurePosixPath(self.base.attributes.get(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE))
 
     @filepath_executable.setter
     def filepath_executable(self, value: str) -> None:
@@ -138,7 +140,7 @@ class PortableCode(Code):
         """
         type_check(value, str)
 
-        if pathlib.PurePath(value).is_absolute():
+        if pathlib.PurePosixPath(value).is_absolute():
             raise ValueError('The `filepath_executable` should not be absolute.')
 
         self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, value)
@@ -148,12 +150,14 @@ class PortableCode(Code):
         """Return the CLI options that would allow to create an instance of this class."""
         options = {
             'filepath_executable': {
+                'short_name': '-X',
                 'required': True,
                 'type': click.STRING,
                 'prompt': 'Relative filepath executable',
                 'help': 'Relative filepath of executable with directory of code files.',
             },
             'filepath_files': {
+                'short_name': '-F',
                 'required': True,
                 'type': click.Path(exists=True, file_okay=False, dir_okay=True, path_type=pathlib.Path),
                 'prompt': 'Code directory',

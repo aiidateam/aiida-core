@@ -14,9 +14,9 @@ If a plugin for your code is not yet available, see :ref:`how-to:plugin-codes`.
 Throughout the process, you will be prompted for information on the computer and code.
 In these prompts:
 
- * Type ``?`` followed by ``<enter>`` to get help on what is being asked at any prompt.
- * Press ``<CTRL>+C`` at any moment to abort the setup process.
-   Your AiiDA database will remain unmodified.
+* Type ``?`` followed by ``<enter>`` to get help on what is being asked at any prompt.
+* Press ``<CTRL>+C`` at any moment to abort the setup process.
+  Your AiiDA database will remain unmodified.
 
 .. note::
 
@@ -31,8 +31,8 @@ How to set up a computer
 A |Computer| in AiiDA denotes a computational resource on which you will run your calculations.
 It can either be:
 
- 1. the machine where AiiDA is installed or
- 2. any machine that is accessible via `SSH <https://en.wikipedia.org/wiki/Secure_Shell>`_ from the machine where AiiDA is installed (possibly :ref:`via a proxy server<how-to:ssh:proxy>`).
+1. the machine where AiiDA is installed or
+2. any machine that is accessible via `SSH <https://en.wikipedia.org/wiki/Secure_Shell>`_ from the machine where AiiDA is installed (possibly :ref:`via a proxy server<how-to:ssh:proxy>`).
 
 The second option allows managing multiple remote compute resources (including HPC clusters and cloud services) from the same AiiDA installation and moving computational jobs between them.
 
@@ -75,8 +75,8 @@ Start by creating a new computer instance in the database:
 At the end, the command will open your default editor on a file containing a summary of the configuration up to this point.
 You can add ``bash`` commands that will be executed
 
- * *before* the actual execution of the job (under 'Pre-execution script'), and
- * *after* the script submission (under 'Post execution script').
+* *before* the actual execution of the job (under 'Pre-execution script'), and
+* *after* the script submission (under 'Post execution script').
 
 Use these additional lines to perform any further set up of the environment on the computer, for example loading modules or exporting environment variables:
 
@@ -93,36 +93,37 @@ When you are done editing, save and quit.
 The computer has now been created in the database but you still need to *configure* access to it using your credentials.
 
 .. tip::
+
     In order to avoid having to retype the setup information the next time around, you can provide some (or all) of the information via a configuration file:
 
     .. code-block:: console
 
-       $ verdi computer setup --config computer.yml
+        $ verdi computer setup --config computer.yml
 
     where ``computer.yml`` is a configuration file in the `YAML format <https://en.wikipedia.org/wiki/YAML#Syntax>`__.
     This file contains the information in a series of key-value pairs:
 
     .. code-block:: yaml
 
-       ---
-       label: "localhost"
-       hostname: "localhost"
-       transport: local
-       scheduler: "direct"
-       work_dir: "/home/max/.aiida_run"
-       mpirun_command: "mpirun -np {tot_num_mpiprocs}"
-       mpiprocs_per_machine: "2"
-       prepend_text: |
-          module load mymodule
-          export NEWVAR=1
+        ---
+        label: "localhost"
+        hostname: "localhost"
+        transport: "core.local"
+        scheduler: "core.direct"
+        work_dir: "/home/max/.aiida_run"
+        mpirun_command: "mpirun -np {tot_num_mpiprocs}"
+        mpiprocs_per_machine: "2"
+        prepend_text: |
+            module load mymodule
+            export NEWVAR=1
 
-   The list of the keys for the ``yaml`` file is given by the options of the ``computer setup`` command:
+    The list of the keys for the ``yaml`` file is given by the options of the ``computer setup`` command:
 
-   .. code-block:: console
+    .. code-block:: console
 
-      $ verdi computer setup --help
+        $ verdi computer setup --help
 
-    Note: remove the ``--`` prefix and replace ``-`` within the keys with an underscore ``_``.
+    Note: remove the ``--`` prefix and replace dashes (``-``) within the keys with an underscore ( ``_`` ).
 
 .. _how-to:run-codes:computer:configuration:
 
@@ -135,7 +136,7 @@ The second step configures private connection details using:
 
     $ verdi computer configure TRANSPORTTYPE COMPUTERLABEL
 
-Replace ``COMPUTERLABEL`` with the computer label chosen during the setup and replace ``TRANSPORTTYPE`` with the name of chosen transport type, i.e., ``local`` for the localhost computer and ``ssh`` for any remote computer.
+Replace ``COMPUTERLABEL`` with the computer label chosen during the setup and replace ``TRANSPORTTYPE`` with the name of chosen transport type, i.e., ``core.local`` for the localhost computer and ``core.ssh`` for any remote computer.
 
 After the setup and configuration have been completed, let's check that everything is working properly:
 
@@ -152,13 +153,13 @@ Mitigating connection overloads
 
 Some compute resources, particularly large supercomputing centers, may not tolerate submitting too many jobs at once, executing scheduler commands too frequently, or opening too many SSH connections.
 
-  * Limit the number of jobs in the queue.
+*   Limit the number of jobs in the queue.
 
     Set a limit for the maximum number of workflows to submit, and only submit new ones once previous workflows start to complete.
     The supported number of jobs depends on the supercomputer configuration which may be documented as part of the center's user documentation.
     The supercomputer administrators may also find the information found on `this page <https://github.com/aiidateam/aiida-core/wiki/Optimising-the-SLURM-scheduler-configuration-(for-cluster-administrators)>`_ useful.
 
-  * Increase the time interval between polling the job queue.
+*   Increase the time interval between polling the job queue.
 
     The time interval (in seconds) can be set through the Python API by loading the corresponding |Computer| node, e.g. in the ``verdi shell``:
 
@@ -166,14 +167,14 @@ Some compute resources, particularly large supercomputing centers, may not toler
 
         load_computer('fidis').set_minimum_job_poll_interval(30.0)
 
-  * Increase the connection cooldown time.
+*   Increase the connection cooldown time.
 
     This is the minimum time (in seconds) to wait between opening a new connection.
     Modify it for an existing computer using:
 
     .. code-block:: bash
 
-      verdi computer configure core.ssh --non-interactive --safe-interval <SECONDS> <COMPUTER_NAME>
+        verdi computer configure core.ssh --non-interactive --safe-interval <SECONDS> <COMPUTER_NAME>
 
 .. important::
 
@@ -339,11 +340,11 @@ At the end, you receive a confirmation, with the *PK* and the *UUID* of your new
 
     The list of the keys for the ``yaml`` file is given by the available options of the ``code create`` sub-command:
 
-        .. code-block:: console
+    .. code-block:: console
 
-            $ verdi code create core.code.installed --help
+        $ verdi code create core.code.installed --help
 
-    Note: remove the ``--`` prefix and replace ``-`` within the keys with an underscore ``_``.
+    Note: remove the ``--`` prefix and replace dashes (``-``) within the keys with an underscore ( ``_`` ).
 
 Managing codes
 --------------
@@ -396,19 +397,19 @@ How to submit a calculation
 
 After :ref:`setting up your computer <how-to:run-codes:computer>` and :ref:`setting up your code <how-to:run-codes:code>`, you are ready to launch your calculations!
 
- * Make sure the daemon is running:
+*   Make sure the daemon is running:
 
     .. code-block:: bash
 
         verdi daemon status
 
- * Figure out which inputs your |CalcJob|  plugin needs, e.g. using:
+*   Figure out which inputs your |CalcJob|  plugin needs, e.g. using:
 
     .. code-block:: bash
 
         verdi plugin list aiida.calculations core.arithmetic.add
 
- * Write a ``submit.py`` script:
+*   Write a ``submit.py`` script:
 
     .. code-block:: python
 
@@ -430,13 +431,13 @@ After :ref:`setting up your computer <how-to:run-codes:computer>` and :ref:`sett
 
     Of course, the code label and builder inputs need to be adapted to your code and calculation.
 
- * Submit your calculation to the AiiDA daemon:
+*   Submit your calculation to the AiiDA daemon:
 
     .. code-block:: bash
 
         verdi run submit.py
 
-After this, use ``verdi process list`` to monitor the status of the calculations.
+    After this, use ``verdi process list`` to monitor the status of the calculations.
 
 .. tip::
 
@@ -462,9 +463,9 @@ How to monitor (and prematurely stop) a calculation
 
 A calculation job will terminate if and only if:
 
- * The calculation terminates; either nominally or due to an error.
- * The scheduler kills the job; e.g., due to the wallclock time being exceeded or the allocated memory being exhausted.
- * The calculation job is killed through AiiDA
+* The calculation terminates; either nominally or due to an error.
+* The scheduler kills the job; e.g., due to the wallclock time being exceeded or the allocated memory being exhausted.
+* The calculation job is killed through AiiDA
 
 One might want to kill the calculation job if it seems that the calculation is not going anywhere, and so instead of letting the calculation run to its end automatically, it is killed.
 It is possible to automate this procedure through *monitoring* of the calculation job.
@@ -881,7 +882,7 @@ Caching can be enabled or disabled on a case-by-case basis by using the :class:`
     This means that this technique is only useful when using :py:class:`~aiida.engine.run`, and **not** with :py:class:`~aiida.engine.submit`.
 
 
-Besides controlling which process classes are cached, it may be useful or necessary to control what already _stored_ nodes are used as caching _sources_.
+Besides controlling which process classes are cached, it may be useful or necessary to control what already *stored* nodes are used as caching *sources*.
 Section :ref:`topics:provenance:caching:control-caching` provides details how AiiDA decides which stored nodes are equivalent to the node being stored and which are considered valid caching sources.
 
 .. |Computer| replace:: :py:class:`~aiida.orm.Computer`

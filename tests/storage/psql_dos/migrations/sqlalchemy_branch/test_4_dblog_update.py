@@ -140,7 +140,7 @@ class TestDbLogMigrationRecordCleaning:
             session.commit()
 
             # Storing temporarily information needed for the check at the test
-            self.to_check = {}  # pylint: disable=attribute-defined-outside-init
+            self.to_check: dict = {}  # pylint: disable=attribute-defined-outside-init
 
             # Keeping calculation & calculation log ids
             self.to_check['CalculationNode'] = (

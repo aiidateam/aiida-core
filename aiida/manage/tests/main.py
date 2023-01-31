@@ -22,11 +22,11 @@ from aiida.common.warnings import warn_deprecation
 from aiida.manage import configuration, get_manager
 from aiida.manage.configuration import settings
 from aiida.manage.external.postgres import Postgres
+from aiida.orm import User
 
 __all__ = (
     'get_test_profile_name',
     'get_test_backend_name',
-    'get_user_dict',
     'test_manager',
     'TestManager',
     'TestManagerError',
@@ -56,6 +56,10 @@ _DEFAULT_PROFILE_INFO = {
     'broker_virtual_host': '',
     'test_profile': True,
 }
+
+warn_deprecation(
+    'This module is deprecated; use the fixtures from `aiida.manage.tests.pytest_fixtures` instead', version=3
+)
 
 
 class TestManagerError(Exception):
@@ -160,8 +164,13 @@ class ProfileManager:
         if not self._profile.is_test_profile:
             raise TestManagerError(f'Profile `{profile_name}` is not a valid test profile.')
 
-    @staticmethod
-    def clear_profile():
+    def ensure_default_user(self):
+        """Ensure that the default user defined by the profile exists in the database."""
+        created, user = User.collection.get_or_create(self._profile.default_user_email)
+        if created:
+            user.store()
+
+    def clear_profile(self):
         """Reset the global profile, clearing all its data and closing any open resources.
 
         If the daemon is running, it will be stopped because it might be holding on to entities that will be cleared
@@ -175,10 +184,12 @@ class ProfileManager:
             daemon_client.stop_daemon(wait=True)
 
         manager = get_manager()
-        manager.get_profile_storage()._clear(recreate_user=True)  # pylint: disable=protected-access
+        manager.get_profile_storage()._clear()  # pylint: disable=protected-access
         manager.get_profile_storage()  # reload the storage connection
         manager.reset_communicator()
         manager.reset_runner()
+
+        self.ensure_default_user()
 
     def has_profile_open(self):
         return self._profile is not None
@@ -264,6 +275,7 @@ class TemporaryProfileManager(ProfileManager):
         Used to set up AiiDA profile from self.profile_info dictionary.
         """
         dictionary = {
+            'default_user_email': 'test@aiida.net',
             'test_profile': True,
             'storage': {
                 'backend': self.profile_info.get('storage_backend'),
@@ -330,7 +342,6 @@ class TemporaryProfileManager(ProfileManager):
         Warning: the AiiDA dbenv must not be loaded when this is called!
         """
         from aiida.manage.configuration import Profile
-        from aiida.orm import User
 
         manager = get_manager()
 
@@ -359,19 +370,15 @@ class TemporaryProfileManager(ProfileManager):
         # Load the new profile and initialize the profile storage
         with override_log_level():
             profile = manager.load_profile(profile_name)
-            profile.storage_cls.migrate(profile)
-
-        # create the default user for the profile
-        created, user = User.collection.get_or_create(**get_user_dict(_DEFAULT_PROFILE_INFO))
-        if created:
-            user.store()
-        profile.default_user_email = user.email
+            profile.storage_cls.initialise(profile, reset=True)
 
         # Set options to suppress certain warnings
         config.set_option('warnings.development_version', False)
         config.set_option('warnings.rabbitmq_version', False)
 
         config.store()
+
+        self.ensure_default_user()
 
     def repo_ok(self):
         return bool(self.repo and os.path.isdir(os.path.dirname(self.repo)))
@@ -526,8 +533,3 @@ def get_test_profile_name():
     :returns: content of environment variable or `None`
     """
     return os.environ.get('AIIDA_TEST_PROFILE', None)
-
-
-def get_user_dict(profile_dict):
-    """Collect parameters required for creating users."""
-    return {k: profile_dict[k] for k in ('email', 'first_name', 'last_name', 'institution')}

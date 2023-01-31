@@ -32,7 +32,7 @@ def test_calc_attributes_keys(perform_migrations: PsqlDosMigrator):
     DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name
 
     resources = {'number_machines': 1}
-    environment_variables = {}
+    environment_variables: dict = {}
 
     with perform_migrations.session() as session:
         user = DbUser(email='user@aiida.net', is_superuser=True)

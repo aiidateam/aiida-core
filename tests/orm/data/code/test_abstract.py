@@ -23,9 +23,9 @@ class MockCode(AbstractCode):
         """Return whether the code can run on a given computer."""
         return True
 
-    def get_executable(self) -> pathlib.Path:
+    def get_executable(self) -> pathlib.PurePosixPath:
         """Return the executable that the submission script should execute to run the code."""
-        return '/bin/executable'
+        return pathlib.PurePosixPath('/bin/executable')
 
     @property
     def full_label(self) -> str:

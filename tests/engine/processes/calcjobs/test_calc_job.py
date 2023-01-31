@@ -149,7 +149,7 @@ class MultiCodesCalcJob(CalcJob):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean', 'chdir_tmp_path')
+@pytest.mark.usefixtures('chdir_tmp_path')
 @pytest.mark.parametrize('parallel_run', [True, False])
 def test_multi_codes_run_parallel(aiida_local_code_factory, file_regression, parallel_run):
     """test codes_run_mode set in CalcJob"""
@@ -178,16 +178,11 @@ def test_multi_codes_run_parallel(aiida_local_code_factory, file_regression, par
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean', 'chdir_tmp_path')
+@pytest.mark.usefixtures('chdir_tmp_path')
 @pytest.mark.parametrize('computer_use_double_quotes', [True, False])
-def test_computer_double_quotes(aiida_local_code_factory, file_regression, computer_use_double_quotes):
+def test_computer_double_quotes(aiida_computer, aiida_local_code_factory, file_regression, computer_use_double_quotes):
     """test that bash script quote escape behaviour can be controlled"""
-    computer = orm.Computer(
-        label='test-code-computer',
-        transport_type='core.local',
-        hostname='localhost',
-        scheduler_type='core.direct',
-    ).store()
+    computer = aiida_computer(label=f'test-code-computer-{computer_use_double_quotes}')
     computer.set_use_double_quotes(computer_use_double_quotes)
 
     inputs = {
@@ -214,7 +209,7 @@ def test_computer_double_quotes(aiida_local_code_factory, file_regression, compu
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean', 'chdir_tmp_path')
+@pytest.mark.usefixtures('chdir_tmp_path')
 @pytest.mark.parametrize('code_use_double_quotes', [True, False])
 def test_code_double_quotes(aiida_localhost, file_regression, code_use_double_quotes):
     """test that bash script quote escape behaviour can be controlled"""
@@ -244,7 +239,7 @@ def test_code_double_quotes(aiida_localhost, file_regression, code_use_double_qu
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean', 'chdir_tmp_path')
+@pytest.mark.usefixtures('chdir_tmp_path')
 def test_containerized_code(file_regression, aiida_localhost):
     """Test the :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode`."""
     aiida_localhost.set_use_double_quotes(True)
@@ -280,7 +275,7 @@ def test_containerized_code(file_regression, aiida_localhost):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean', 'chdir_tmp_path')
+@pytest.mark.usefixtures('chdir_tmp_path')
 def test_containerized_code_withmpi_true(file_regression, aiida_localhost):
     """Test the :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode` with ``withmpi=True``."""
     aiida_localhost.set_use_double_quotes(True)
@@ -316,13 +311,15 @@ def test_containerized_code_withmpi_true(file_regression, aiida_localhost):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean', 'chdir_tmp_path')
+@pytest.mark.usefixtures('chdir_tmp_path')
 @pytest.mark.parametrize('calcjob_withmpi', [True, False])
-def test_multi_codes_run_withmpi(aiida_local_code_factory, file_regression, calcjob_withmpi):
+def test_multi_codes_run_withmpi(aiida_computer, aiida_local_code_factory, file_regression, calcjob_withmpi):
     """test withmpi set in CalcJob only take effect for codes which have codeinfo.withmpi not set"""
+    computer = aiida_computer()
+    computer.set_use_double_quotes(False)
 
     inputs = {
-        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
+        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash', computer),
         'parallel_run': orm.Bool(False),
         'metadata': {
             'dry_run': True,
@@ -346,7 +343,7 @@ def test_multi_codes_run_withmpi(aiida_local_code_factory, file_regression, calc
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean', 'chdir_tmp_path')
+@pytest.mark.usefixtures('chdir_tmp_path')
 def test_portable_code(tmp_path, aiida_localhost):
     """test run container code"""
     (tmp_path / 'bash').write_bytes(b'bash implementation')
@@ -396,7 +393,7 @@ class TestCalcJob:
     """Test for the `CalcJob` process sub class."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost, tmp_path):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost, tmp_path):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         (tmp_path / 'bash').write_bytes(b'bash implementation')
@@ -742,7 +739,7 @@ def generate_process(aiida_local_code_factory):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean', 'override_logging')
+@pytest.mark.usefixtures('override_logging')
 def test_parse_insufficient_data(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
 
@@ -773,7 +770,7 @@ def test_parse_insufficient_data(generate_process):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean', 'override_logging')
+@pytest.mark.usefixtures('override_logging')
 def test_parse_non_zero_retval(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
 
@@ -793,7 +790,7 @@ def test_parse_non_zero_retval(generate_process):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean', 'override_logging')
+@pytest.mark.usefixtures('override_logging')
 def test_parse_not_implemented(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
 
@@ -825,7 +822,7 @@ def test_parse_not_implemented(generate_process):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean', 'override_logging')
+@pytest.mark.usefixtures('override_logging')
 def test_parse_scheduler_excepted(generate_process, monkeypatch):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
 
@@ -870,7 +867,6 @@ def test_parse_scheduler_excepted(generate_process, monkeypatch):
     (100, 400, 400),
     (100, 0, 0),
 ))
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_parse_exit_code_priority(
     exit_status_scheduler,
     exit_status_retrieved,
@@ -931,7 +927,6 @@ def test_parse_exit_code_priority(
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_additional_retrieve_list(generate_process, fixture_sandbox):
     """Test the ``additional_retrieve_list`` option."""
     process = generate_process()
@@ -973,7 +968,6 @@ def test_additional_retrieve_list(generate_process, fixture_sandbox):
         process = generate_process({'metadata': {'options': {'additional_retrieve_list': ['/abs/path']}}})
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize(('stash_options', 'expected'), (
     ({
         'target_base': None
@@ -1178,11 +1172,31 @@ def test_monitor_result_action_disable_self(get_calcjob_builder, entry_points, c
     assert len([record for record in caplog.records if 'Disable self.' in record.message]) == 1
 
 
+def test_submit_return_exit_code(get_calcjob_builder, monkeypatch):
+    """Test that a job is terminated if ``Scheduler.submit_from_script`` returns an exit code.
+
+    To simulate this situation we monkeypatch ``DirectScheduler._parse_submit_output`` because that is the method that
+    is called internally by ``Scheduler.submit_from_script`` and it returns its result, and the ``DirectScheduler`` is
+    the plugin that is used by the localhost computer used in the inputs for this calcjob.
+    """
+    from aiida.schedulers.plugins.direct import DirectScheduler
+
+    def _parse_submit_output(self, *args):  # pylint: disable=unused-argument
+        return ExitCode(418)
+
+    monkeypatch.setattr(DirectScheduler, '_parse_submit_output', _parse_submit_output)
+
+    builder = get_calcjob_builder()
+    _, node = launch.run_get_node(builder)
+    assert node.is_failed, (node.process_state, node.exit_status)
+    assert node.exit_status == 418
+
+
 class TestImport:
     """Test the functionality to import existing calculations completed outside of AiiDA."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost, aiida_local_code_factory):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost, aiida_local_code_factory):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost

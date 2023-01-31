@@ -254,9 +254,9 @@ def _import_users(backend_from: StorageBackend, backend_to: StorageBackend,
     input_id_email = dict(qbuilder.append(orm.User, project=['id', 'email']).all(batch_size=query_params.batch_size))
 
     # get matching emails from the backend
-    output_email_id = {}
+    output_email_id: Dict[str, int] = {}
     if input_id_email:
-        output_email_id = dict(
+        output_email_id = dict(  # type: ignore
             orm.QueryBuilder(
                 backend=backend_to
             ).append(orm.User, filters={
@@ -293,9 +293,9 @@ def _import_computers(backend_from: StorageBackend, backend_to: StorageBackend,
     input_id_uuid = dict(qbuilder.append(orm.Computer, project=['id', 'uuid']).all(batch_size=query_params.batch_size))
 
     # get matching uuids from the backend
-    backend_uuid_id = {}
+    backend_uuid_id: Dict[str, int] = {}
     if input_id_uuid:
-        backend_uuid_id = dict(
+        backend_uuid_id = dict(  # type: ignore
             orm.QueryBuilder(
                 backend=backend_to
             ).append(orm.Computer, filters={
@@ -450,9 +450,9 @@ def _import_nodes(
     input_id_uuid = dict(qbuilder.append(orm.Node, project=['id', 'uuid']).all(batch_size=query_params.batch_size))
 
     # get matching uuids from the backend
-    backend_uuid_id = {}
+    backend_uuid_id: Dict[str, int] = {}
     if input_id_uuid:
-        backend_uuid_id = dict(
+        backend_uuid_id = dict(  # type: ignore
             orm.QueryBuilder(
                 backend=backend_to
             ).append(orm.Node, filters={
@@ -530,9 +530,9 @@ def _import_logs(
     input_id_uuid = dict(qbuilder.append(orm.Log, project=['id', 'uuid']).all(batch_size=query_params.batch_size))
 
     # get matching uuids from the backend
-    backend_uuid_id = {}
+    backend_uuid_id: Dict[str, int] = {}
     if input_id_uuid:
-        backend_uuid_id = dict(
+        backend_uuid_id = dict(  # type: ignore
             orm.QueryBuilder(
                 backend=backend_to
             ).append(orm.Log, filters={
@@ -732,9 +732,9 @@ def _import_comments(
     input_id_uuid = dict(qbuilder.append(orm.Comment, project=['id', 'uuid']).all(batch_size=query_params.batch_size))
 
     # get matching uuids from the backend
-    backend_uuid_id = {}
+    backend_uuid_id: Dict[str, int] = {}
     if input_id_uuid:
-        backend_uuid_id = dict(
+        backend_uuid_id = dict(  # type: ignore
             orm.QueryBuilder(
                 backend=backend
             ).append(orm.Comment, filters={
@@ -987,9 +987,9 @@ def _import_groups(
     input_id_uuid = dict(qbuilder.append(orm.Group, project=['id', 'uuid']).all(batch_size=query_params.batch_size))
 
     # get matching uuids from the backend
-    backend_uuid_id = {}
+    backend_uuid_id: Dict[str, int] = {}
     if input_id_uuid:
-        backend_uuid_id = dict(
+        backend_uuid_id = dict(  # type: ignore
             orm.QueryBuilder(
                 backend=backend_to
             ).append(orm.Group, filters={
@@ -1156,7 +1156,7 @@ def _add_files_to_repo(backend_from: StorageBackend, backend_to: StorageBackend,
     repository_to = backend_to.get_repository()
     repository_from = backend_from.get_repository()
     with get_progress_reporter()(desc='Adding archive files to repository', total=len(new_keys)) as progress:
-        for key, handle in repository_from.iter_object_streams(new_keys):
+        for key, handle in repository_from.iter_object_streams(new_keys):  # type: ignore
             backend_key = repository_to.put_object_from_filelike(handle)
             if backend_key != key:
                 raise ImportValidationError(

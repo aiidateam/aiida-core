@@ -13,6 +13,7 @@ This module contains tests for UpfData and UpfData related functions.
 """
 import json
 import os
+import uuid
 
 import numpy
 from numpy import array, isclose
@@ -78,7 +79,7 @@ class TestUpfParser:
     """Tests UPF version / element_name parser function."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, tmp_path):  # pylint: disable=unused-argument
+    def init_profile(self, tmp_path):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         filepath_base = os.path.abspath(os.path.join(STATIC_DIR, 'pseudos'))
@@ -113,10 +114,12 @@ class TestUpfParser:
 
     def test_get_upf_groups(self):
         """Test the `UpfData.get_upf_groups` class method."""
+        [orm.UpfFamily.collection.delete(g.pk) for g in orm.UpfFamily.collection.all()]  # pylint: disable=expression-not-assigned
+
         label_01 = 'family_01'
         label_02 = 'family_02'
 
-        user = orm.User(email='alternate@localhost').store()
+        user = orm.User(email=uuid.uuid4().hex).store()
 
         assert orm.UpfFamily.collection.all() == []
 

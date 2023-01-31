@@ -9,12 +9,10 @@
 ###########################################################################
 """Tests for the :mod:`aiida.orm.nodes.data.array.array` module."""
 import numpy
-import pytest
 
 from aiida.orm import ArrayData, load_node
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_read_stored():
     """Test reading an array from an ``ArrayData`` after storing and loading it."""
     array = numpy.array([1, 2, 3, 4, 5, 6, 7, 8, 9])

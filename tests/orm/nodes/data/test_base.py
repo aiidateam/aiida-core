@@ -17,7 +17,6 @@ import pytest
 from aiida.orm import Bool, Float, Int, NumericType, Str, load_node
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize(
     'node_type, default, value', [
         (Bool, False, True),
@@ -36,7 +35,6 @@ def test_create(node_type, default, value):
     assert node.value == value
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('node_type', [Bool, Float, Int, Str])
 def test_store_load(node_type):
     """Test ``BaseType`` node storing and loading."""
@@ -46,7 +44,6 @@ def test_store_load(node_type):
     assert node.value == loaded.value
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_modulo():
     """Test ``Int`` modulus operation."""
     term_a = Int(12)
@@ -60,7 +57,6 @@ def test_modulo():
     assert isinstance(12 % term_b, NumericType)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('node_type, a, b', [
     (Int, 3, 5),
     (Float, 1.2, 5.5),
@@ -90,7 +86,6 @@ def test_add(node_type, a, b):
     assert result.value == a + b
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('node_type, a, b', [
     (Int, 3, 5),
     (Float, 1.2, 5.5),
@@ -121,12 +116,10 @@ def test_multiplication(node_type, a, b):
     assert result.value == a * b
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('node_type, a, b', [
     (Int, 3, 5),
     (Float, 1.2, 5.5),
 ])
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_division(node_type, a, b):
     """Test the ``BaseType`` normal division operator."""
     node_a = node_type(a)
@@ -137,12 +130,10 @@ def test_division(node_type, a, b):
     assert isinstance(result, Float)  # Should be a `Float` for both node types
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('node_type, a, b', [
     (Int, 3, 5),
     (Float, 1.2, 5.5),
 ])
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_division_integer(node_type, a, b):
     """Test the ``Int`` integer division operator."""
     node_a = node_type(a)
@@ -153,7 +144,6 @@ def test_division_integer(node_type, a, b):
     assert isinstance(result, node_type)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('node_type, base, power', [
     (Int, 5, 2),
     (Float, 3.5, 3),
@@ -168,7 +158,6 @@ def test_power(node_type, base, power):
     assert isinstance(result, node_type)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('node_type, a, b', [
     (Int, 5, 2),
     (Float, 3.5, 3),
@@ -188,7 +177,6 @@ def test_modulus(node_type, a, b):
     assert isinstance(a % node_b, node_type)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize(
     'opera', [
         operator.add, operator.mul, operator.pow, operator.lt, operator.le, operator.gt, operator.ge, operator.iadd,
@@ -207,7 +195,6 @@ def test_operator(opera):
         assert res == opera(node_x.value, node_y.value)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('node_type, a, b', [
     (Bool, False, True),
     (Int, 2, 5),

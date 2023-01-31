@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """orm.Group tests for the export and import routines"""
+import uuid
+
 import pytest
 
 from aiida import orm
@@ -16,13 +18,13 @@ from aiida.orm import load_group
 from aiida.tools.archive import create_archive, import_archive
 
 
-def test_nodes_in_group(tmp_path, aiida_profile_clean, aiida_localhost):
+def test_nodes_in_group(aiida_profile, tmp_path, aiida_localhost):
     """
     This test checks that nodes that belong to a specific group are
     correctly imported and exported.
     """
     # Create another user
-    new_email = 'newuser@new.n'
+    new_email = uuid.uuid4().hex
     user = orm.User(email=new_email)
     user.store()
 
@@ -51,13 +53,13 @@ def test_nodes_in_group(tmp_path, aiida_profile_clean, aiida_localhost):
     filename1 = tmp_path / 'export1.aiida'
     create_archive([sd1, jc1, gr1], filename=filename1)
     n_uuids = [sd1.uuid, jc1.uuid]
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
     import_archive(filename1)
 
     # Check that the imported nodes are correctly imported and that
     # the user assigned to the nodes is the right one
-    for uuid in n_uuids:
-        assert orm.load_node(uuid).user.email == new_email
+    for node_uuid in n_uuids:
+        assert orm.load_node(node_uuid).user.email == new_email
 
     # Check that the exported group is imported correctly
     builder = orm.QueryBuilder()
@@ -65,10 +67,10 @@ def test_nodes_in_group(tmp_path, aiida_profile_clean, aiida_localhost):
     assert builder.count() == 1, 'The group was not found.'
 
 
-def test_group_export(tmp_path, aiida_profile_clean):
+def test_group_export(tmp_path, aiida_profile):
     """Exporting a group includes its extras and nodes."""
     # Create a new user
-    new_email = 'newuser@new.n'
+    new_email = uuid.uuid4().hex
     user = orm.User(email=new_email)
     user.store()
 
@@ -79,7 +81,7 @@ def test_group_export(tmp_path, aiida_profile_clean):
     sd1.store()
 
     # Create a group and add the node
-    group = orm.Group(label='node_group')
+    group = orm.Group(label=uuid.uuid4().hex)
     group.base.extras.set('test', 1)
     group.store()
     group.add_nodes([sd1])
@@ -89,13 +91,13 @@ def test_group_export(tmp_path, aiida_profile_clean):
     filename = tmp_path / 'export.aiida'
     create_archive([group], filename=filename)
     n_uuids = [sd1.uuid]
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
     import_archive(filename)
 
     # Check that the imported nodes are correctly imported and that
     # the user assigned to the nodes is the right one
-    for uuid in n_uuids:
-        assert orm.load_node(uuid).user.email == new_email
+    for node_uuid in n_uuids:
+        assert orm.load_node(node_uuid).user.email == new_email
 
     # Check that the exported group is imported correctly
     builder = orm.QueryBuilder()
@@ -105,7 +107,7 @@ def test_group_export(tmp_path, aiida_profile_clean):
     assert imported_group.base.extras.get('test') == 1, 'Extra missing on imported group'
 
 
-def test_group_import_existing(tmp_path, aiida_profile_clean):
+def test_group_import_existing(tmp_path, aiida_profile):
     """
     Testing what happens when I try to import a group that already exists in the
     database. This should raise an appropriate exception
@@ -131,7 +133,7 @@ def test_group_import_existing(tmp_path, aiida_profile_clean):
     # At this point we export the generated data
     filename = tmp_path / 'export1.aiida'
     create_archive([group], filename=filename)
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
 
     # Creating a group of the same name
     group = orm.Group(label='node_group_existing')
@@ -155,7 +157,7 @@ def test_group_import_existing(tmp_path, aiida_profile_clean):
     assert builder.count() == 2
 
 
-def test_import_to_group(tmp_path, aiida_profile_clean):
+def test_import_to_group(tmp_path, aiida_profile):
     """Test `group` parameter
     Make sure an unstored Group is stored by the import function, forwarding the Group object.
     Make sure the Group is correctly handled and used for imported nodes.
@@ -168,7 +170,7 @@ def test_import_to_group(tmp_path, aiida_profile_clean):
     # Export Nodes
     filename = tmp_path / 'export.aiida'
     create_archive([data1, data2], filename=filename)
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
 
     # Create Group, do not store
     group_label = 'import_madness'
@@ -213,7 +215,8 @@ def test_import_to_group(tmp_path, aiida_profile_clean):
         assert node.uuid in node_uuids
 
 
-def test_create_group(tmp_path, aiida_profile_clean):  # pylint: disable=unused-argument
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_create_group(tmp_path):
     """Test create_group argument"""
     node = orm.Data().store()
     filename = tmp_path / 'export.aiida'

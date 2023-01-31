@@ -173,7 +173,6 @@ class DummyVerdiDataListable:
                 assert header.encode('utf-8') not in res.stdout_bytes
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestVerdiData:
     """Testing reachability of the verdi data subcommands."""
 
@@ -521,7 +520,7 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
 
 class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):
     """Test verdi data structure."""
-    from aiida.orm.nodes.data.structure import has_ase
+    from aiida.orm.nodes.data.structure import has_ase  # type: ignore
 
     @pytest.fixture(autouse=True)
     def init_profile(self, aiida_profile_clean, aiida_localhost, run_cli_command):  # pylint: disable=unused-argument

@@ -40,7 +40,7 @@ class TestProcessNamespace:
     """Test process namespace"""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+    def init_profile(self):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         assert Process.current() is None
@@ -98,7 +98,7 @@ class TestProcess:
     """Test AiiDA process."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         assert Process.current() is None
@@ -461,7 +461,6 @@ class TestValidateDynamicNamespaceProcess(Process):
         spec.inputs.dynamic = True
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_input_validation_storable_nodes():
     """Test that validation catches non-storable inputs even if nested in dictionary for dynamic namespace.
 
@@ -498,3 +497,46 @@ def test_not_required_accepts_none():
     process = instantiate_process(runner, TestNotRequiredNoneProcess, valid_type=orm.Int(1), any_type=orm.Bool(True))
     assert process.inputs.valid_type == orm.Int(1)
     assert process.inputs.any_type == orm.Bool(True)
+
+
+class TestMetadataInputsProcess(Process):
+    """Process with various ports that are ``is_metadata=True``."""
+
+    _node_class = orm.WorkflowNode
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('metadata_port', is_metadata=True)
+        spec.input('metadata_port_non_serializable', is_metadata=True)
+        spec.input_namespace('metadata_portnamespace', is_metadata=True)
+        spec.input('metadata_portnamespace.with_default', default='default-value', is_metadata=True)
+        spec.input('metadata_portnamespace.without_default', is_metadata=True)
+
+
+def test_metadata_inputs():
+    """Test that explicitly passed ``is_metadata`` inputs are stored in the attributes.
+
+    This is essential to make it possible to recreate a builder for the process with the original inputs.
+    """
+    from aiida.manage import get_manager
+
+    runner = get_manager().get_runner()
+
+    inputs = {
+        'metadata_port': 'value',
+        'metadata_port_non_serializable': orm.Data().store(),
+        'metadata_portnamespace': {
+            'without_default': 100
+        }
+    }
+    process = TestMetadataInputsProcess(runner=runner, inputs=inputs)
+
+    # The ``is_metadata`` inputs should only have stored the "raw" inputs (so not including any defaults) and any inputs
+    # that are not JSON-serializable should also have been filtered out.
+    assert process.node.get_metadata_inputs() == {
+        'metadata_port': 'value',
+        'metadata_portnamespace': {
+            'without_default': 100
+        }
+    }

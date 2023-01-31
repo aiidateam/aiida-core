@@ -39,6 +39,7 @@ py:class Logger
 py:class ModuleType
 py:class ExternalType
 py:class UserDefinedType
+py:class LinkAnnotateType
 py:obj ReturnType
 py:obj SelfType
 py:obj CollectionType
@@ -50,11 +51,13 @@ py:obj NodeType
 py:obj ModelType
 py:class aiida.common.ReturnType
 py:class aiida.common.SelfType
+py:class aiida.common.lang.MethodType
 py:class aiida.orm.entitites.CollectionType
 py:class aiida.orm.entitites.EntityType
 py:class aiida.orm.entitites.BackendEntityType
 py:class aiida.orm.groups.SelfType
 py:class aiida.orm.implementation.entitites.EntityType
+py:class aiida.engine.processes.functions.FunctionType
 py:class aiida.orm.entities.EntityType
 py:class aiida.orm.entities.BackendEntityType
 py:class aiida.orm.entities.CollectionType
@@ -119,6 +122,7 @@ py:class requests.models.Response
 py:class requests.Response
 
 py:class concurrent.futures._base.TimeoutError
+py:class concurrent.futures._base.Future
 
 py:class disk_objectstore.utils.LazyOpener
 
@@ -134,6 +138,7 @@ py:class plumpy.utils.AttributesDict
 py:class plumpy.process_states.State
 py:class plumpy.workchains._If
 py:class plumpy.workchains._While
+py:class plumpy.processes.ProcessStateMachineMeta
 py:class PersistenceError
 py:class State
 py:class Stepper
@@ -156,6 +161,8 @@ py:class disk_objectstore.container.Container
 
 py:class flask.app.Flask
 
+py:class pytest.TempPathFactory
+
 py:class sqlalchemy.orm.decl_api.SqliteModel
 py:class sqlalchemy.orm.decl_api.Base
 py:class sqlalchemy.sql.compiler.TypeCompiler
@@ -172,6 +179,9 @@ py:class yaml.dumper.Dumper
 py:class yaml.loader.Loader
 py:class yaml.UnsafeLoader
 py:class yaml.loader.UnsafeLoader
+py:class yaml.nodes.Node
+py:class yaml.nodes.MappingNode
+py:class yaml.nodes.ScalarNode
 py:class uuid.UUID
 
 py:class psycopg2.extensions.cursor
@@ -201,3 +211,6 @@ py:class sqlalchemy.sql.elements.ColumnElement
 
 py:class packaging.version.Version
 py:exc seekpath.hpkot.EdgeCaseWarning
+
+py:class graphviz.graphs.Digraph
+py:class Digraph

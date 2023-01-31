@@ -63,7 +63,7 @@ class CommentCollection(entities.Collection['Comment']):
         return self._backend.comments.delete_many(filters)
 
 
-class Comment(entities.Entity['BackendComment']):
+class Comment(entities.Entity['BackendComment', CommentCollection]):
     """Base class to map a DbComment that represents a comment attached to a certain Node."""
 
     _CLS_COLLECTION = CommentCollection
@@ -115,7 +115,7 @@ class Comment(entities.Entity['BackendComment']):
 
     @property
     def user(self) -> 'User':
-        return users.User.from_backend_entity(self._backend_entity.user)
+        return entities.from_backend_entity(users.User, self._backend_entity.user)
 
     def set_user(self, value: 'User') -> None:
         self._backend_entity.user = value.backend_entity

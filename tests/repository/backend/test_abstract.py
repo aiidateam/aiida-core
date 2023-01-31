@@ -32,7 +32,7 @@ class RepositoryBackend(AbstractRepositoryBackend):
         return True
 
     def _put_object_from_filelike(self, handle: BinaryIO) -> str:
-        pass
+        return 'key'
 
     # pylint useless-super-delegation needs to be disabled here because it refuses to
     # recognize that this is an abstract method and thus has to be overwritten. See the

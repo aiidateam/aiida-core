@@ -52,7 +52,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.8', '3.9', '3.10']
+        python-version: ['3.8', '3.9', '3.10', '3.11']
 
     steps:
     - uses: actions/checkout@v2
@@ -63,8 +63,10 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Upgrade pip and setuptools
+      # Install specific version of setuptools, because 65.6.0 breaks a number of packages, such as numpy
       run: |
-        pip install --upgrade pip setuptools
+        pip install --upgrade pip
+        pip install setuptools==65.5.0
         pip --version
 
     - name: Create environment from requirements file.
@@ -84,9 +86,9 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Setup Conda
-      uses: s-weigand/setup-conda@v1
+      uses: conda-incubator/setup-miniconda@v2
       with:
-        conda-channels: conda-forge
+        channels: conda-forge
 
     - run: conda --version
 
@@ -138,7 +140,7 @@ jobs:
       fail-fast: false
       matrix:
 
-        python-version: ['3.8', '3.9', '3.10']
+        python-version: ['3.8', '3.9', '3.10', '3.11']
 
         # Not being able to install with conda on a specific Python version is
         # not sufficient to fail the run, but something we want to be aware of.
@@ -154,16 +156,15 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Setup Conda
-      uses: s-weigand/setup-conda@v1
+      uses: conda-incubator/setup-miniconda@v2
       with:
-        conda-channels: conda-forge
-
-    - run: conda update conda
-    - run: conda --version
+        channels: conda-forge
 
     # Use mamba because conda is running out of memory
-    - run: conda install mamba -n base -c conda-forge
-    - run: mamba --version
+    # see https://github.com/conda-incubator/setup-miniconda/issues/274
+    - run: |
+        conda install -n base conda-libmamba-solver
+        conda config --set solver libmamba
 
     # Temporary workaround: https://github.com/mamba-org/mamba/issues/488
     - run: rm /usr/share/miniconda/pkgs/cache/*.json
@@ -172,7 +173,7 @@ jobs:
       id: test_installation
       continue-on-error: ${{ matrix.optional }}
       run: >
-        mamba create --dry-run -n test-install aiida-core
+        conda create --dry-run -n test-install aiida-core
         ${{ matrix.python-version && format('python={0}', matrix.python-version) }}
 
     - name: Warn about failure
@@ -190,7 +191,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.8', '3.9', '3.10']
+        python-version: ['3.8', '3.9', '3.10', '3.11']
 
     services:
       postgres:
@@ -229,8 +230,10 @@ jobs:
 
     - name: Upgrade pip and setuptools
       # It is crucial to update `setuptools` or the installation of `pymatgen` can break
+      # Install specific version of setuptools, because 65.6.0 breaks a number of packages, such as numpy
       run: |
-        pip install --upgrade pip setuptools
+        pip install --upgrade pip
+        pip install setuptools==65.5.0
         pip --version
 
     - name: Install aiida-core

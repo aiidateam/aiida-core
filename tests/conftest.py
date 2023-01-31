@@ -8,13 +8,17 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=redefined-outer-name
-"""Configuration file for pytest tests."""
+"""Collection of ``pytest`` fixtures that are intended for internal use to ``aiida-core`` only.
+
+Fixtures that are intended for use in plugin packages are kept in :mod:`aiida.manage.tests.pytest_fixtures`. They are
+loaded in this file as well, such that they can also be used for the tests of ``aiida-core`` itself.
+"""
 from __future__ import annotations
 
 import copy
 import os
 import pathlib
-from typing import IO, List, Optional, Union
+import typing as t
 import warnings
 
 import click
@@ -333,7 +337,7 @@ def config_with_profile(config_with_profile_factory):
 
 
 @pytest.fixture
-def manager(aiida_profile):  # pylint: disable=unused-argument
+def manager():
     """Get the ``Manager`` instance of the currently loaded profile."""
     from aiida.manage import get_manager
     return get_manager()
@@ -358,6 +362,13 @@ def backend(manager):
 def communicator(manager):
     """Get the ``Communicator`` instance of the currently loaded profile to communicate with RabbitMQ."""
     return manager.get_communicator()
+
+
+@pytest.fixture
+def default_user():
+    """Return the default user."""
+    from aiida.orm import User
+    return User.collection.get_default()
 
 
 @pytest.fixture(scope='function')
@@ -411,8 +422,8 @@ def run_cli_command(reset_log_level):  # pylint: disable=unused-argument
 
     def _run_cli_command(
         command: click.Command,
-        options: Optional[List] = None,
-        user_input: Optional[Union[str, bytes, IO]] = None,
+        options: list | None = None,
+        user_input: str | bytes | t.IO | None = None,
         raises: bool = False,
         catch_exceptions: bool = True,
         **kwargs

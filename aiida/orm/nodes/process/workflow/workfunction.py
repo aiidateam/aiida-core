@@ -45,7 +45,7 @@ class WorkFunctionNodeLinks(WorkflowNodeLinks):
             )
 
 
-class WorkFunctionNode(FunctionCalculationMixin, WorkflowNode):
+class WorkFunctionNode(FunctionCalculationMixin, WorkflowNode):  # type: ignore
     """ORM class for all nodes representing the execution of a workfunction."""
 
     _CLS_NODE_LINKS = WorkFunctionNodeLinks

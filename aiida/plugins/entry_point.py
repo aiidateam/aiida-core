@@ -97,6 +97,7 @@ ENTRY_POINT_GROUP_FACTORY_MAPPING = {
     'aiida.groups': factories.GroupFactory,
     'aiida.parsers': factories.ParserFactory,
     'aiida.schedulers': factories.SchedulerFactory,
+    'aiida.storage': factories.StorageFactory,
     'aiida.transports': factories.TransportFactory,
     'aiida.tools.dbimporters': factories.DbImporterFactory,
     'aiida.tools.data.orbital': factories.OrbitalFactory,

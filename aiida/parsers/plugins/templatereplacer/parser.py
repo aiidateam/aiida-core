@@ -34,7 +34,7 @@ class TemplatereplacerParser(Parser):
             self.logger.exception(f'unable to parse the output for CalcJobNode<{self.node.pk}>')
             return self.exit_codes.ERROR_READING_OUTPUT_FILE
 
-        output_dict = {'value': result, 'retrieved_temporary_files': []}
+        output_dict: dict = {'value': result, 'retrieved_temporary_files': []}
         retrieve_temporary_files = template.get('retrieve_temporary_files', None)
 
         # If the 'retrieve_temporary_files' key was set in the template input node, we expect a temporary directory
@@ -63,6 +63,7 @@ class TemplatereplacerParser(Parser):
                 # We always strip the content of the file from whitespace to simplify testing for expected output
                 output_dict['retrieved_temporary_files'].append((retrieved_file, parsed_value))
 
-        self.out(self.node.process_class.spec().default_output_node, Dict(dict=output_dict))
+        label = self.node.process_class.spec().default_output_node  # type: ignore
+        self.out(label, Dict(dict=output_dict))
 
         return

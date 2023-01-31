@@ -21,7 +21,7 @@ class TestCalcJobNode:
     """Tests for the `CalcJobNode` node sub class."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost

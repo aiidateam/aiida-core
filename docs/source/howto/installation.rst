@@ -109,7 +109,7 @@ Enable tab-completion for ``verdi`` one of the following supported shells
 
         .. code-block:: console
 
-            eval (env _FOO_BAR_COMPLETE=fish_source foo-bar)
+            eval (env _VERDI_COMPLETE=fish_source verdi)
 
 
 Place this command in your shell or virtual environment activation script to automatically enable tab completion when opening a new shell or activating an environment.
@@ -347,26 +347,27 @@ Further in-depth information is available in the dedicated :ref:`topic on perfor
 
 .. dropdown:: Benchmark workflow engine performance
 
-    Start the AiiDA daemon with a single worker, download the :download:`benchmark script <include/scripts/performance_benchmark_base.py>` :fa:`download`, and run it in your AiiDA environment.
+    Download the :download:`benchmark script <include/scripts/performance_benchmark_base.py>` :fa:`download`, and run it in your AiiDA environment.
 
     .. code:: console
 
         sph@citadel:~/$ python performance_benchmark_base.py -n 100
-            Success: Created and configured temporary `Computer` benchmark-5fa8c67f for localhost.
+            Success: Created and configured temporary `Computer` benchmark-e73b8647 for localhost.
             Success: Created temporary `Code` bash for localhost.
-            Submitting 100 calculations.  [####################################]  100%
-            Submission completed in 9.36 seconds.
-            Waiting for calculations to complete  [####################################]  100%
+            Running 100 calculations.  [####################################]  100%
             Success: All calculations finished successfully.
-            Elapsed time: 46.55 seconds.
+            Elapsed time: 24.90 seconds.
             Cleaning up...
+            12/19/2022 10:57:43 AM <12625> aiida.delete: [REPORT] 400 Node(s) marked for deletion
+            12/19/2022 10:57:43 AM <12625> aiida.delete: [REPORT] Starting node deletion...
+            12/19/2022 10:57:43 AM <12625> aiida.delete: [REPORT] Deletion of nodes completed.
             Success: Deleted all calculations.
-            Success: Deleted the created code bash@benchmark-5fa8c67f.
-            Success: Deleted the created computer benchmark-5fa8c67f.
-            Performance: 0.47 s / process
+            Success: Deleted the created code bash@benchmark-e73b8647.
+            Success: Deleted the created computer benchmark-e73b8647.
+            Performance: 0.25 s / process
 
-    The output above was generated with a *single* daemon worker on one core of an AMD Ryzen 5 3600 6-Core processor (3.6 GHz, 4.2 GHz turbo boost) using AiiDA v1.6.9, and RabbitMQ and PostgreSQL running on the same machine.
-    Here, 100 ``ArithmeticAddCalculation`` processes completed in ~47s (including the time needed to submit them), corresponding to an average of half a second per process.
+    The output above was generated on an AMD Ryzen 5 3600 6-Core processor (3.6 GHz, 4.2 GHz turbo boost) using AiiDA v2.2.0, and RabbitMQ and PostgreSQL running on the same machine.
+    Here, 100 ``ArithmeticAddCalculation`` processes completed in ~25s, corresponding to 0.25 seconds per process.
 
     If you observe a significantly higher runtime, you may want to check whether any relevant component (CPU, disk, postgresql, rabbitmq) is congested.
 

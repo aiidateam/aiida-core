@@ -142,21 +142,6 @@ class CalcJobNode(CalculationNode):
             'max_memory_kb',
         )
 
-    def get_builder_restart(self) -> 'ProcessBuilder':
-        """Return a `ProcessBuilder` that is ready to relaunch the same `CalcJob` that created this node.
-
-        The process class will be set based on the `process_type` of this node and the inputs of the builder will be
-        prepopulated with the inputs registered for this node. This functionality is very useful if a process has
-        completed and you want to relaunch it with slightly different inputs.
-
-        In addition to prepopulating the input nodes, which is implemented by the base `ProcessNode` class, here we
-        also add the `options` that were passed in the `metadata` input of the `CalcJob` process.
-
-        """
-        builder = super().get_builder_restart()
-        builder.metadata.options = self.get_options()  # type: ignore[attr-defined]
-        return builder
-
     @property
     def is_imported(self) -> bool:
         """Return whether the calculation job was imported instead of being an actual run."""

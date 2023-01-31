@@ -349,16 +349,38 @@ To make use of these fixtures, create a ``conftest.py`` file in your ``tests`` f
 Just by adding this line, the fixtures that are provided by the :mod:`~aiida.manage.tests.pytest_fixtures` module are automatically imported.
 The module provides the following fixtures:
 
+* :ref:`aiida_manager <topics:plugins:testfixtures:aiida-manager>`: Return the global instance of the :class:`~aiida.manage.manager.Manager`
 * :ref:`aiida_profile <topics:plugins:testfixtures:aiida-profile>`: Provide a loaded AiiDA test profile with loaded storage backend
 * :ref:`aiida_profile_clean <topics:plugins:testfixtures:aiida-profile-clean>`: Same as ``aiida_profile`` but the storage backend is cleaned
 * :ref:`aiida_profile_clean_class <topics:plugins:testfixtures:aiida-profile-clean-class>`: Same as ``aiida_profile_clean`` but should be used at the class scope
-* :ref:`aiida_localhost <topics:plugins:testfixtures:aiida-localhost>`: Setup a :class:`~aiida.orm.computers.Computer` instance for the ``localhost`` computer
+* :ref:`aiida_profile_factory <topics:plugins:testfixtures:aiida-profile-factory>`: Create a temporary profile ready to be used for testing
+* :ref:`aiida_instance <topics:plugins:testfixtures:aiida-instance>`: Return the :class:`~aiida.manage.configuration.config.Config` instance that is used for the test session
+* :ref:`config_psql_dos <topics:plugins:testfixtures:config-psql-dos>`: Return a profile configuration for the :class:`~aiida.storage.psql_dos.backend.PsqlDosBackend`
+* :ref:`postgres_cluster <topics:plugins:testfixtures:postgres-cluster>`: Create a temporary and isolated PostgreSQL cluster using ``pgtest`` and cleanup after the yield
 * :ref:`aiida_local_code_factory <topics:plugins:testfixtures:aiida-local-code-factory>`: Setup a :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` instance on the ``localhost`` computer
+* :ref: `aiida_computer` <topics:plugins:testfixtures:aiida-computer>`: Setup a :class:`~aiida.orm.computers.Computer` instance
+* :ref: `aiida_computer_local` <topics:plugins:testfixtures:aiida-computer-local>`: Setup the localhost as a :class:`~aiida.orm.computers.Computer` using local transport
+* :ref: `aiida_computer_ssh` <topics:plugins:testfixtures:aiida-computer-ssh>`: Setup the localhost as a :class:`~aiida.orm.computers.Computer` using SSH transport
+* :ref:`aiida_localhost <topics:plugins:testfixtures:aiida-localhost>`: Shortcut for <topics:plugins:testfixtures:aiida-computer-local> that immediately returns a :class:`~aiida.orm.computers.Computer` instance for the ``localhost`` computer instead of a factory
 * :ref:`submit_and_await <topics:plugins:testfixtures:submit-and-await>`: Submit a process or process builder to the daemon and wait for it to reach a certain process state
 * :ref:`started_daemon_client <topics:plugins:testfixtures:started-daemon-client>`: Same as ``daemon_client`` but the daemon is guaranteed to be running
 * :ref:`stopped_daemon_client <topics:plugins:testfixtures:stopped-daemon-client>`: Same as ``daemon_client`` but the daemon is guaranteed to *not* be running
 * :ref:`daemon_client <topics:plugins:testfixtures:daemon-client>`: Return a :class:`~aiida.engine.daemon.client.DaemonClient` instance to control the daemon
 * :ref:`entry_points <topics:plugins:testfixtures:entry-points>`: Return a :class:`~aiida.manage.tests.pytest_fixtures.EntryPointManager` instance to add and remove entry points
+
+
+.. _topics:plugins:testfixtures:aiida-manager:
+
+``aiida_manager``
+-----------------
+
+Return the global instance of the :class:`~aiida.manage.manager.Manager`.
+Can be used, for example, to retrieve the current :class:`~aiida.manage.configuration.config.Config` instance:
+
+.. code-block:: python
+
+   def test(aiida_manager):
+      aiida_manager.get_config().get_option('logging.aiida_loglevel')
 
 
 .. _topics:plugins:testfixtures:aiida-profile:
@@ -385,6 +407,22 @@ It is possible to avoid this by creating a dedicated test profile once and telli
 * Create a profile, by using `verdi setup` or `verdi quicksetup` and specify the ``--test-profile`` flag
 * Set the ``AIIDA_TEST_PROFILE`` environment variable to the name of the test profile: ``export AIIDA_TEST_PROFILE=<test-profile-name>``
 
+Although the fixture is automatically used, and so there is no need to explicitly pass it into a test function, it may
+still be useful, as it can be used to clean the storage backend from all data:
+
+.. code-block:: python
+
+   def test(aiida_profile):
+      from aiida.orm import Data, QueryBuilder
+
+      Data().store()
+      assert QueryBuilder().append(Data).count() != 0
+
+      # The following call clears the storage backend, deleting all data, except for the default user.
+      aiida_profile.clear_profile()
+
+      assert QueryBuilder().append(Data).count() == 0
+
 
 .. _topics:plugins:testfixtures:aiida-profile-clean:
 
@@ -393,6 +431,14 @@ It is possible to avoid this by creating a dedicated test profile once and telli
 
 Provides a loaded test profile through ``aiida_profile`` but empties the storage before calling the test function.
 Note that a default user will be inserted into the database after cleaning it.
+
+.. code-block:: python
+
+   def test(aiida_profile_clean):
+      """The profile storage is guaranteed to be emptied at the start of this test."""
+
+This functionality can be useful if it is easier to setup and write the test if there is no pre-existing data.
+However, cleaning the storage may take a non-negligible amount of time, so only use it when really needed in order to keep tests running as fast as possible.
 
 
 .. _topics:plugins:testfixtures:aiida-profile-clean-class:
@@ -412,6 +458,87 @@ Should be used for a test class:
             ...
 
 The storage is cleaned once when the class is initialized.
+
+
+.. _topics:plugins:testfixtures:aiida-profile-factory:
+
+``aiida_profile_factory``
+-------------------------
+
+Create a temporary profile, add it to the config of the loaded AiiDA instance and load the profile.
+Can be useful to create a test profile for a custom storage backend:
+
+.. code-block:: python
+
+    @pytest.fixture(scope='session')
+    def custom_storage_profile(aiida_profile_factory) -> Profile:
+        """Return a test profile for a custom :class:`~aiida.orm.implementation.storage_backend.StorageBackend`"""
+        from some_module import CustomStorage
+        configuration = {
+            'storage': {
+                'backend': 'plugin_package.custom_storage',
+                'config': {
+                    'username': 'joe'
+                    'api_key': 'super-secret-key'
+                }
+            }
+        }
+        yield aiida_profile_factory(configuration)
+
+Note that the configuration above is not actually functional and the actual configuration depends on the storage implementation that is used.
+
+
+.. _topics:plugins:testfixtures:aiida-instance:
+
+``aiida_instance``
+------------------
+
+Return the :class:`~aiida.manage.configuration.config.Config` instance that is used for the test session.
+
+.. code-block:: python
+
+    def test(aiida_instance):
+        aiida_instance.get_option('logging.aiida_loglevel')
+
+
+.. _topics:plugins:testfixtures:config-psql-dos:
+
+``config_psql_dos``
+-------------------
+
+Return a profile configuration for the :class:`~aiida.storage.psql_dos.backend.PsqlDosBackend`.
+This can be used in combination with the ``aiida_profile_factory`` fixture to create a test profile with customised database parameters:
+
+.. code-block:: python
+
+   @pytest.fixture(scope='session')
+   def psql_dos_profile(aiida_profile_factory, config_psql_dos) -> Profile:
+       """Return a test profile configured for the :class:`~aiida.storage.psql_dos.PsqlDosStorage`."""
+       configuration = config_psql_dos()
+       configuration['storage']['config']['repository_uri'] = '/some/custom/path'
+       yield aiida_profile_factory(configuration)
+
+
+Note that this is only useful if the storage configuration needs to be customized.
+If any configuration works, simply use the ``aiida_profile`` fixture straight away, which uses the ``PsqlDosStorage`` storage backend by default.
+
+
+.. _topics:plugins:testfixtures:postgres-cluster:
+
+``postgres_cluster``
+--------------------
+
+Create a temporary and isolated PostgreSQL cluster using ``pgtest`` and cleanup after the yield.
+
+.. code-block:: python
+
+    @pytest.fixture()
+    def custom_postgres_cluster(postgres_cluster):
+        yield postgres_cluster(
+            database_name='some-database-name',
+            database_username='guest',
+            database_password='guest',
+        )
 
 
 .. _topics:plugins:testfixtures:aiida-localhost:
@@ -445,6 +572,111 @@ For example:
         )
 
 By default, it will use the ``localhost`` computer returned by the ``aiida_localhost`` fixture.
+
+
+.. _topics:plugins:testfixtures:aiida-computer:
+
+``aiida_computer``
+------------------
+
+This fixture should be used to create and configure a :class:`~aiida.orm.computers.Computer` instance.
+The fixture provides a factory that can be called without any arguments:
+
+.. code-block:: python
+
+    def test(aiida_computer):
+        from aiida.orm import Computer
+        computer = aiida_computer()
+        assert isinstance(computer, Computer)
+
+By default, the localhost is used for the hostname and a random label is generated.
+
+.. code-block:: python
+
+    def test(aiida_computer):
+        custom_label = 'custom-label'
+        computer = aiida_computer(label=custom_label)
+        assert computer.label == custom_label
+
+First the database is queried to see if a computer with the given label already exist.
+If found, the existing computer is returned, otherwise a new instance is created.
+
+The returned computer is also configured for the current default user.
+The configuration can be customized through the ``configuration_kwargs`` dictionary:
+
+.. code-block:: python
+
+    def test(aiida_computer):
+        configuration_kwargs = {'safe_interval': 0}
+        computer = aiida_computer(configuration_kwargs=configuration_kwargs)
+        assert computer.get_minimum_job_poll_interval() == 0
+
+
+.. _topics:plugins:testfixtures:aiida-computer-local:
+
+``aiida_computer_local``
+----------------------------
+
+This fixture is a shortcut for ``aiida_computer`` to setup the localhost with local transport:
+
+.. code-block:: python
+
+    def test(aiida_computer_local):
+        localhost = aiida_computer_local()
+        assert localhost.hostname == 'localhost'
+        assert localhost.transport_type == 'core.local'
+
+To leave a newly created computer unconfigured, pass ``configure=False``:
+
+.. code-block:: python
+
+    def test(aiida_computer_local):
+        localhost = aiida_computer_local(configure=False)
+        assert not localhost.is_configured
+
+Note that if the computer already exists and was configured before, it won't be unconfigured.
+If you need a guarantee that the computer is not configured, make sure to clean the database before the test or use a unique label:
+
+.. code-block:: python
+
+    def test(aiida_computer_local):
+        import uuid
+        localhost = aiida_computer_local(label=str(uuid.uuid4()), configure=False)
+        assert not localhost.is_configured
+
+
+.. _topics:plugins:testfixtures:aiida-computer-ssh:
+
+``aiida_computer_ssh``
+----------------------
+
+This fixture is a shortcut for ``aiida_computer`` to setup the localhost with SSH transport:
+
+.. code-block:: python
+
+    def test(aiida_computer_ssh):
+        localhost = aiida_computer_ssh()
+        assert localhost.hostname == 'localhost'
+        assert localhost.transport_type == 'core.ssh'
+
+This can be useful if the functionality that needs to be tested involves testing the SSH transport, but these use-cases should be rare outside of `aiida-core`.
+To leave a newly created computer unconfigured, pass ``configure=False``:
+
+.. code-block:: python
+
+    def test(aiida_computer_ssh):
+        localhost = aiida_computer_ssh(configure=False)
+        assert not localhost.is_configured
+
+Note that if the computer already exists and was configured before, it won't be unconfigured.
+If you need a guarantee that the computer is not configured, make sure to clean the database before the test or use a unique label:
+
+.. code-block:: python
+
+    def test(aiida_computer_ssh):
+        import uuid
+        localhost = aiida_computer_ssh(label=str(uuid.uuid4()), configure=False)
+        assert not localhost.is_configured
 
 
 .. _topics:plugins:testfixtures:submit-and-await:

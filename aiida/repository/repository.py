@@ -33,7 +33,7 @@ class Repository:
 
     _file_cls = File
 
-    def __init__(self, backend: AbstractRepositoryBackend = None):
+    def __init__(self, backend: Optional[AbstractRepositoryBackend] = None):
         """Construct a new instance with empty metadata.
 
         :param backend: instance of repository backend to use to actually store the file objects. By default, an
@@ -129,7 +129,7 @@ class Repository:
         return make_hash(objects)
 
     @staticmethod
-    def _pre_process_path(path: FilePath = None) -> pathlib.PurePosixPath:
+    def _pre_process_path(path: Optional[FilePath] = None) -> pathlib.PurePosixPath:
         """Validate and convert the path to instance of ``pathlib.PurePosixPath``.
 
         This should be called by every method of this class before doing anything, such that it can safely assume that
@@ -220,7 +220,7 @@ class Repository:
 
         return file_keys
 
-    def get_object(self, path: FilePath = None) -> File:
+    def get_object(self, path: Optional[FilePath] = None) -> File:
         """Return the object at the given path.
 
         :param path: the relative path where to store the object in the repository.
@@ -242,7 +242,7 @@ class Repository:
 
         return file_object
 
-    def get_directory(self, path: FilePath = None) -> File:
+    def get_directory(self, path: Optional[FilePath] = None) -> File:
         """Return the directory object at the given path.
 
         :param path: the relative path of the directory.
@@ -279,7 +279,7 @@ class Repository:
 
         return file_object
 
-    def list_objects(self, path: FilePath = None) -> List[File]:
+    def list_objects(self, path: Optional[FilePath] = None) -> List[File]:
         """Return a list of the objects contained in this repository sorted by name, optionally in given sub directory.
 
         :param path: the relative path of the directory.
@@ -291,7 +291,7 @@ class Repository:
         directory = self.get_directory(path)
         return sorted(directory.objects.values(), key=lambda obj: obj.name)
 
-    def list_object_names(self, path: FilePath = None) -> List[str]:
+    def list_object_names(self, path: Optional[FilePath] = None) -> List[str]:
         """Return a sorted list of the object names contained in this repository, optionally in the given sub directory.
 
         :param path: the relative path of the directory.
@@ -323,7 +323,7 @@ class Repository:
         with open(filepath, 'rb') as handle:
             self.put_object_from_filelike(handle, path)
 
-    def put_object_from_tree(self, filepath: FilePath, path: FilePath = None) -> None:
+    def put_object_from_tree(self, filepath: FilePath, path: Optional[FilePath] = None) -> None:
         """Store the entire contents of `filepath` on the local file system in the repository with under given `path`.
 
         :param filepath: absolute path of the directory whose contents to copy to the repository.
@@ -461,7 +461,7 @@ class Repository:
                 with source.open(root / filename) as handle:
                     self.put_object_from_filelike(handle, root / filename)
 
-    def walk(self, path: FilePath = None) -> Iterable[Tuple[pathlib.PurePosixPath, List[str], List[str]]]:
+    def walk(self, path: Optional[FilePath] = None) -> Iterable[Tuple[pathlib.PurePosixPath, List[str], List[str]]]:
         """Walk over the directories and files contained within this repository.
 
         .. note:: the order of the dirname and filename lists that are returned is not necessarily sorted. This is in
@@ -484,7 +484,7 @@ class Repository:
 
         yield path, dirnames, filenames
 
-    def copy_tree(self, target: Union[str, pathlib.Path], path: FilePath = None) -> None:
+    def copy_tree(self, target: Union[str, pathlib.Path], path: Optional[FilePath] = None) -> None:
         """Copy the contents of the entire node repository to another location on the local file system.
 
         .. note:: If ``path`` is specified, only its contents are copied, and the relative path with respect to the

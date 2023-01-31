@@ -11,26 +11,41 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from datetime import datetime
 from functools import cached_property
+import json
 from pathlib import Path
+import shutil
 import tempfile
 from typing import BinaryIO, Iterable, Iterator, Optional, Sequence, Tuple, cast
 from zipfile import ZipFile, is_zipfile
 
-from archive_path import extract_file_in_zip
+from archive_path import ZipPath, extract_file_in_zip
 from sqlalchemy.orm import Session
 
+from aiida import __version__
 from aiida.common.exceptions import ClosedStorage, CorruptStorage
+from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
 from aiida.repository.backend.abstract import AbstractRepositoryBackend
 
 from . import orm
-from .migrator import get_schema_version_head, validate_storage
-from .utils import DB_FILENAME, REPO_FOLDER, ReadOnlyError, create_sqla_engine, extract_metadata, read_version
+from .migrator import get_schema_version_head, migrate, validate_storage
+from .utils import (
+    DB_FILENAME,
+    META_FILENAME,
+    REPO_FOLDER,
+    ReadOnlyError,
+    create_sqla_engine,
+    extract_metadata,
+    read_version,
+)
 
 __all__ = ('SqliteZipBackend',)
+
+LOGGER = AIIDA_LOGGER.getChild(__file__)
 
 
 class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-methods
@@ -79,8 +94,63 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
         return read_version(profile.storage_config['path'], search_limit=None)
 
     @classmethod
+    def initialise(cls, profile: 'Profile', reset: bool = False) -> bool:
+        """Initialise an instance of the ``SqliteZipBackend`` storage backend.
+
+        :param reset: If ``true``, destroy the backend if it already exists including all of its data before recreating
+            and initialising it. This is useful for example for test profiles that need to be reset before or after
+            tests having run.
+        :returns: ``True`` if the storage was initialised by the function call, ``False`` if it was already initialised.
+        """
+        filepath_archive = Path(profile.storage_config['path'])
+
+        if filepath_archive.exists() and not reset:
+            # The archive exists but ``reset == False``, so we try to migrate to the latest schema version. If the
+            # migration works, we replace the original archive with the migrated one.
+            with tempfile.TemporaryDirectory() as dirpath:
+                filepath_migrated = Path(dirpath) / 'migrated.zip'
+                LOGGER.report(f'Migrating existing {cls.__name__}')
+                migrate(filepath_archive, filepath_migrated, cls.version_head())
+                shutil.move(filepath_migrated, filepath_archive)  # type: ignore[arg-type]
+                return False
+
+        # Here the original archive either doesn't exist or ``reset == True`` so we simply create an empty base archive
+        # and move it to the path pointed to by the storage configuration of the profile.
+        with tempfile.TemporaryDirectory() as dirpath:
+            from .models import SqliteBase
+
+            if reset:
+                LOGGER.report(f'Resetting existing {cls.__name__} at {filepath_archive}')
+            else:
+                LOGGER.report(f'Initialising a new {cls.__name__} at {filepath_archive}')
+
+            filepath_database = Path(dirpath) / DB_FILENAME
+            filepath_zip = Path(dirpath) / 'profile.zip'
+
+            metadata = {
+                'export_version': cls.version_head(),
+                'aiida_version': __version__,
+                'key_format': 'sha256',
+                'compression': 6,
+                'ctime': datetime.now().isoformat(),
+            }
+
+            # Create the database schema
+            SqliteBase.metadata.create_all(create_sqla_engine(filepath_database))
+
+            with ZipPath(
+                filepath_zip, mode='w', compresslevel=metadata['compression'], info_order=(META_FILENAME, DB_FILENAME)
+            ) as zip_handle:
+                (zip_handle / META_FILENAME).write_text(json.dumps(metadata))
+                (zip_handle / DB_FILENAME).putfile(filepath_database)
+
+            shutil.move(filepath_zip, filepath_archive)  # type: ignore[arg-type]
+
+        return True
+
+    @classmethod
     def migrate(cls, profile: Profile):
-        raise NotImplementedError('use the migrate function directly.')
+        raise NotImplementedError('use the :func:`aiida.storage.sqlite_zip.migrator.migrate` function directly.')
 
     def __init__(self, profile: Profile):
         super().__init__(profile)
@@ -180,7 +250,7 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
     def users(self):
         return orm.SqliteUserCollection(self)
 
-    def _clear(self, recreate_user: bool = True) -> None:
+    def _clear(self) -> None:
         raise ReadOnlyError()
 
     def transaction(self):

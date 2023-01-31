@@ -82,20 +82,20 @@ todo_include_todos = False
 ipython_mplbackend = ''
 
 myst_enable_extensions = ['colon_fence', 'deflist']
+myst_heading_anchors = 3
+nb_execution_show_tb = 'READTHEDOCS' in os.environ
 nb_merge_streams = True
-nb_render_priority = {
-  'gettext': (
-            'application/vnd.jupyter.widget-view+json',
-            'application/javascript',
-            'text/html',
-            'image/svg+xml',
-            'image/png',
-            'image/jpeg',
-            'text/markdown',
-            'text/latex',
-            'text/plain',
-        )
-}
+nb_mime_priority_overrides = [
+    ('gettext', 'application/vnd.jupyter.widget-view+json', 0),
+    ('gettext', 'application/javascript', 10),
+    ('gettext', 'text/html', 20),
+    ('gettext', 'image/svg+xml', 30),
+    ('gettext', 'image/png', 40),
+    ('gettext', 'image/jpeg', 50),
+    ('gettext', 'text/markdown', 60),
+    ('gettext', 'text/latex', 70),
+    ('gettext', 'text/plain', 80),
+]
 
 # -- Options for HTML output ---------------------------------------------------
 

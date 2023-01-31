@@ -75,6 +75,7 @@ Below is a list with all available subcommands.
       create     Create a new code.
       delete     Delete a code.
       duplicate  Duplicate a code allowing to change some parameters.
+      export     Export code to a yaml file.
       hide       Hide one or more codes from `verdi code list`.
       list       List the available codes.
       relabel    Relabel a code.

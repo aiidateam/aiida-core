@@ -13,6 +13,7 @@ from functools import partial
 
 import click
 import tabulate
+import yaml
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
@@ -233,6 +234,26 @@ def show(code):
         table.append(['Calculations', len(code.base.links.get_outgoing().all())])
 
     echo.echo(tabulate.tabulate(table))
+
+
+@verdi_code.command()
+@arguments.CODE()
+@arguments.OUTPUT_FILE(type=click.Path(exists=False))
+@with_dbenv()
+def export(code, output_file):
+    """Export code to a yaml file."""
+    code_data = {}
+
+    for key in code.get_cli_options().keys():
+        if key == 'computer':
+            value = getattr(code, key).label
+        else:
+            value = getattr(code, key)
+
+        code_data[key] = str(value)
+
+    with open(output_file, 'w', encoding='utf-8') as yfhandle:
+        yaml.dump(code_data, yfhandle)
 
 
 @verdi_code.command()

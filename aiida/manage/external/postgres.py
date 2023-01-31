@@ -17,7 +17,6 @@ default installation, additional information needs to be provided.
 """
 from typing import TYPE_CHECKING
 
-import click
 from pgsu import DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-module
 from pgsu import PGSU, PostgresConnectionMode
 
@@ -120,22 +119,44 @@ class Postgres(PGSU):
         """
         self.execute(_DROP_USER_COMMAND.format(dbuser))
 
-    def check_dbuser(self, dbuser):
-        """Looks up if a given user already exists, prompts for using or creating a differently named one.
+    def find_new_dbuser(self, start_from='aiida'):
+        """Find database user that does not yet exist.
 
-        :param str dbuser: Name of the user to be created or reused.
-        :returns: tuple (dbuser, created)
+        Generates names of the form "aiida_1", "aiida_2", etc. until it finds a name that does not yet exist.
+
+        :param str start_from: start from this name
+        :returns: dbuser
         """
-        if not self.interactive:
-            return dbuser, not self.dbuser_exists(dbuser)
-        create = True
-        while create and self.dbuser_exists(dbuser):
-            echo.echo_warning(f'Database user "{dbuser}" already exists!')
-            if not click.confirm('Use it? '):
-                dbuser = click.prompt('New database user name: ', type=str, default=dbuser)
-            else:
-                create = False
-        return dbuser, create
+        dbuser = start_from
+        i = 0
+        while self.dbuser_exists(dbuser):
+            i = i + 1
+            dbuser = f'{start_from}_{i}'
+
+        return dbuser
+
+    def can_user_authenticate(self, dbuser, dbpass):
+        """Check whether the database user credentials are valid.
+
+        Checks whether dbuser has access to the `template1` postgres database
+        via psycopg2.
+
+        :param dbuser: the database user
+        :param dbpass: the database password
+        :return: True if the credentials are valid, False otherwise
+        """
+        from pgsu import _execute_psyco
+        import psycopg2
+        dsn = self.dsn.copy()
+        dsn['user'] = dbuser
+        dsn['password'] = dbpass
+
+        try:
+            _execute_psyco('SELECT 1', dsn)
+        except psycopg2.OperationalError:
+            return False
+
+        return True
 
     ### DB functions ###
 
@@ -168,35 +189,48 @@ class Postgres(PGSU):
     def copy_db(self, src_db, dest_db, dbuser):
         self.execute(_COPY_DB_COMMAND.format(dest_db, src_db, dbuser))
 
-    def check_db(self, dbname):
-        """Looks up if a database with the name exists, prompts for using or creating a differently named one.
+    def find_new_db(self, start_from='aiida'):
+        """Find database name that does not yet exist.
 
-        :param str dbname: Name of the database to be created or reused.
-        :returns: tuple (dbname, created)
+        Generates names of the form "aiida_1", "aiida_2", etc. until it finds a name that does not yet exist.
+
+        :param str start_from: start from this name
+        :returns: dbname
         """
-        if not self.interactive:
-            return dbname, not self.db_exists(dbname)
-        create = True
-        while create and self.db_exists(dbname):
-            echo.echo_warning(f'database {dbname} already exists!')
-            if not click.confirm('Use it (make sure it is not used by another profile)?'):
-                dbname = click.prompt('new name', type=str, default=dbname)
-            else:
-                create = False
-        return dbname, create
+        dbname = start_from
+        i = 0
+        while self.db_exists(dbname):
+            i = i + 1
+            dbname = f'{start_from}_{i}'
+
+        return dbname
 
     def create_dbuser_db_safe(self, dbname, dbuser, dbpass):
         """Create DB and user + grant privileges.
 
-        Prompts when reusing existing users / databases.
-        """
-        dbuser, create = self.check_dbuser(dbuser=dbuser)
-        if create:
-            self.create_dbuser(dbuser=dbuser, dbpass=dbpass)
+        An existing database user is reused, if it is able to authenticate.
+        If not, a new username is generated on the fly.
 
-        dbname, create = self.check_db(dbname=dbname)
-        if create:
-            self.create_db(dbuser, dbname)
+        An existing database is not reused (unsafe), a new database name is generated on the fly.
+
+        :param str dbname: Name of the database.
+        :param str dbuser: Name of the user which should own the db.
+        :param str dbpass: Password the user should be given.
+        :returns: (dbuser, dbname)
+        """
+        if not self.dbuser_exists(dbuser):
+            self.create_dbuser(dbuser=dbuser, dbpass=dbpass)
+        elif not self.can_user_authenticate(dbuser, dbpass):
+            echo.echo_warning(f'Database user "{dbuser}" already exists but is unable to authenticate.')
+            dbuser = self.find_new_dbuser(dbuser)
+            self.create_dbuser(dbuser=dbuser, dbpass=dbpass)
+        echo.echo_info(f'Using database user "{dbuser}".')
+
+        if self.db_exists(dbname):
+            echo.echo_warning(f'Database "{dbname}" already exists.')
+            dbname = self.find_new_db(dbname)
+        self.create_db(dbuser=dbuser, dbname=dbname)
+        echo.echo_info(f'Using database "{dbname}".')
 
         return dbuser, dbname
 

@@ -456,7 +456,7 @@ InstalledCode
 
 The :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` class is an implementation of the :class:`~aiida.orm.nodes.data.code.abstract.AbstractCode` class that represents an executable code on a remote computer.
 This plugin should be used if an executable is pre-installed on a computer.
-The ``InstalledCode`` represents the code by storing the absolute filepath of the relevant executable and the computer on which it is installed.
+The ``InstalledCode`` represents the code by storing the filepath of the relevant executable and the computer on which it is installed.
 The computer is represented by an instance of :class:`~aiida.orm.computers.Computer`.
 Each time a :class:`~aiida.engine.CalcJob` is run using an ``InstalledCode``, it will run its executable on the associated computer.
 Example of creating an ``InstalledCode``:
@@ -469,6 +469,9 @@ Example of creating an ``InstalledCode``:
         computer=load_computer('localhost'),
         filepath_executable='/usr/bin/bash'
     )
+
+.. versionchanged:: 2.3
+    The ``filepath_executable`` is no longer required to be an absolute path but can be just the executable name.
 
 
 .. _topics:data_types:core:code:portable:

@@ -103,7 +103,7 @@ What happens when SSH key pair expires for MFA-enabled remote computer?
 =======================================================================
 
 In some supercomputing centres, Multi-Factor Authentication (MFA) is required to connect to the remote computer.
-Often, when establishing a connection to such a computer, you will need to generate an SSH key pair with a limited lifetime.
+Often, when establishing a connection to such a computer, one needs to generate an SSH key pair with a limited lifetime.
 This is the case of Swiss National Supercomputing Centre (CSCS), for example.
 
 When the SSH key pair expires, AiiDA will fail to connect to the remote computer.

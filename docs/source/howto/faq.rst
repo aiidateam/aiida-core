@@ -109,4 +109,4 @@ This is the case of Swiss National Supercomputing Centre (CSCS), for example.
 When the SSH key pair expires, AiiDA will fail to connect to the remote computer.
 This will cause all calculations submitted on that computer to pause.
 To restart them, one needs to generate a new SSH key pair and play the paused processes using ``verdi process play --all``.
-Typically, this is all one needs to do - AiiDA will re-establish the connection to the computer and will continue following the calculation.
+Typically, this is all one needs to do - AiiDA will re-establish the connection to the computer and will continue following the calculations.

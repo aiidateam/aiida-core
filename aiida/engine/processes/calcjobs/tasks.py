@@ -430,7 +430,7 @@ async def task_kill_job(node: CalcJobNode, transport_queue: TransportQueue, canc
         return result
 
 
-@plumpy.persistence.auto_persist('msg', 'data', '_monitor_result')
+@plumpy.persistence.auto_persist('msg', 'data', '_command', '_monitor_result')
 class Waiting(plumpy.process_states.Waiting):
     """The waiting state for the `CalcJob` process."""
 
@@ -451,14 +451,25 @@ class Waiting(plumpy.process_states.Waiting):
         self._monitor_result: CalcJobMonitorResult | None = None
         self._monitors: CalcJobMonitors | None = None
 
-        if 'monitors' in self.process.node.inputs:
-            self._monitors = CalcJobMonitors(self.process.node.inputs.monitors)
-
         if isinstance(self.data, dict):
             self._command = self.data['command']
             self._monitor_result = self.data.get('monitor_result', None)
         else:
             self._command = self.data
+
+    @property
+    def monitors(self) -> CalcJobMonitors | None:
+        """Return the collection of monitors if specified in the inputs.
+
+        :return: Instance of ``CalcJobMonitors`` containing monitors if specified in the process' input.
+        """
+        if not hasattr(self, '_monitors'):
+            self._monitors = None
+
+        if self._monitors is None and 'monitors' in self.process.node.inputs:
+            self._monitors = CalcJobMonitors(self.process.node.inputs.monitors)
+
+        return self._monitors
 
     @property
     def process(self) -> 'CalcJob':
@@ -510,7 +521,7 @@ class Waiting(plumpy.process_states.Waiting):
                     process_status = f'Monitoring scheduler: job state {scheduler_state_string}'
                     node.set_process_status(process_status)
                     job_done = await self._launch_task(task_update_job, node, self.process.runner.job_manager)
-                    monitor_result = await self._monitor_job(node, transport_queue, self._monitors)
+                    monitor_result = await self._monitor_job(node, transport_queue, self.monitors)
 
                     if monitor_result and monitor_result.action is CalcJobMonitorAction.KILL:
                         await self._kill_job(node, transport_queue)

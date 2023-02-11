@@ -15,7 +15,7 @@ dependencies:
 - click~=8.1
 - disk-objectstore~=0.6.0
 - python-graphviz~=0.13
-- ipython~=7.20
+- ipython<9,>=7
 - jinja2~=3.0
 - jsonschema~=3.0
 - kiwipy[rmq]~=0.7.7

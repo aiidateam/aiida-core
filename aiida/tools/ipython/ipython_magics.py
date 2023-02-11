@@ -36,7 +36,7 @@ Usage
 import json
 import shlex
 
-from IPython import get_ipython, version_info
+from IPython import get_ipython, version_info  # type: ignore[attr-defined]
 from IPython.core import magic
 
 

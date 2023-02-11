@@ -49,7 +49,7 @@ imagesize==1.4.1
 importlib-metadata==4.13.0
 iniconfig==1.1.1
 ipykernel==6.17.1
-ipython==7.34.0
+ipython==8.10.0
 ipython-genutils==0.2.0
 ipywidgets==8.0.2
 itsdangerous==2.1.2
@@ -109,7 +109,7 @@ plotly==5.11.0
 pluggy==1.0.0
 plumpy==0.21.3
 prometheus-client==0.15.0
-prompt-toolkit==3.0.33
+prompt-toolkit==3.0.37
 psutil==5.9.4
 psycopg2-binary==2.9.5
 ptyprocess==0.7.0

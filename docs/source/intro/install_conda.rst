@@ -18,16 +18,17 @@ If you want to install AiiDA onto you own personal workstation/laptop, it is rec
 
     .. grid-item-card:: Install prerequisite services + AiiDA (core)
 
-        *Install all required services and the aiida-core package in a Conda environment.*
+        *Install the aiida-core package and all required services in a Conda environment.*
 
-        #. Make sure that conda is installed, e.g., by following `the instructions on installing Miniconda <https://docs.conda.io/en/latest/miniconda.html>`__.
+        #. We strongly recommend using ``mamba`` instead of the default ``conda`` (or environment resolution may time out).
+           Consider using `Mambaforge <https://github.com/conda-forge/miniforge#mambaforge>`_ when starting from scratch, or ``conda install -c conda-forge mamba``.
 
         #. Open a terminal and execute:
 
         .. code-block:: console
 
-            $ conda create -n aiida -c conda-forge aiida-core aiida-core.services
-            $ conda activate aiida
+            $ mamba create -n aiida -c conda-forge aiida-core aiida-core.services
+            $ mamba activate aiida
 
     .. grid-item-card:: Start-up services and initialize data storage
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.2.2 - 2023-02-10
+
+### Fixes
+- Critical bug fix: Fix bug causing `CalcJob`s to except after restarting daemon [#5886]](https://github.com/aiidateam/aiida-core/pull/5886)
+
+
 ## v2.2.1 - 2022-12-22
 
 ### Fixes

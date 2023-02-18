@@ -417,6 +417,22 @@ class TestVerdiGraph:
             finally:
                 delete_temporary_file(filename)
 
+    def test_file_base_name(self, run_cli_command):
+        """
+        Test that the output file base name can be specified.
+        """
+        root_node = str(self.node.pk)
+        option = '--basename'
+
+        for basename in ['name1', 'name2']:
+            filename = f'{basename}.dot.pdf'
+            options = [option, basename, root_node]
+            try:
+                run_cli_command(cmd_node.graph_generate, options)
+                assert os.path.isfile(filename)
+            finally:
+                delete_temporary_file(filename)
+
 
 COMMENT = 'Well I never...'
 

@@ -417,21 +417,15 @@ class TestVerdiGraph:
             finally:
                 delete_temporary_file(filename)
 
-    def test_file_base_name(self, run_cli_command):
-        """
-        Test that the output file base name can be specified.
-        """
+    @pytest.mark.parametrize('output_file', ['output_filename', 'with_extension.dot'])
+    def test_file_base_name(self, run_cli_command, output_file):
+        """Test that the output file base name can be specified through an argument."""
         root_node = str(self.node.pk)
-        option = '--basename'
-
-        for basename in ['name1', 'name2']:
-            filename = f'{basename}.dot.pdf'
-            options = [option, basename, root_node]
-            try:
-                run_cli_command(cmd_node.graph_generate, options)
-                assert os.path.isfile(filename)
-            finally:
-                delete_temporary_file(filename)
+        try:
+            run_cli_command(cmd_node.graph_generate, [root_node, output_file])
+            assert os.path.isfile(output_file)
+        finally:
+            delete_temporary_file(output_file)
 
 
 COMMENT = 'Well I never...'

@@ -435,11 +435,11 @@ def verdi_graph():
     multiple=True
 )
 @click.option('-s', '--show', is_flag=True, help='Open the rendered result with the default application.')
-@click.option('--basename', default=None, help='Select file name')
+@arguments.OUTPUT_FILE(required=False)
 @decorators.with_dbenv()
 def graph_generate(
     root_node, link_types, identifier, ancestor_depth, descendant_depth, process_out, process_in, engine, output_format,
-    highlight_classes, show, basename
+    highlight_classes, show, output_file
 ):
     """
     Generate a graph from a ROOT_NODE (specified by pk or uuid).
@@ -471,7 +471,7 @@ def graph_generate(
     )
     basename = basename if basename else root_node.pk
     output_file_name = graph.graphviz.render(
-        filename=f'{basename}.{engine}', format=output_format, view=show, cleanup=True
+        filename=output_file or f'{root_node.pk}.{engine}', format=output_format, view=show, cleanup=True
     )
 
     echo.echo_success(f'Output file: {output_file_name}')

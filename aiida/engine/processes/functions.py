@@ -222,10 +222,22 @@ class FunctionProcess(Process):
         if not issubclass(node_class, ProcessNode) or not issubclass(node_class, FunctionCalculationMixin):
             raise TypeError('the node_class should be a sub class of `ProcessNode` and `FunctionCalculationMixin`')
 
-        args, varargs, keywords, defaults, _, _, _ = inspect.getfullargspec(func)
-        nargs = len(args)
-        ndefaults = len(defaults) if defaults else 0
-        first_default_pos = nargs - ndefaults
+        signature = inspect.signature(func)
+
+        args: list[str] = []
+        varargs: str | None = None
+        keywords: str | None = None
+
+        for key, parameter in signature.parameters.items():
+
+            if parameter.kind in [parameter.POSITIONAL_ONLY, parameter.POSITIONAL_OR_KEYWORD, parameter.KEYWORD_ONLY]:
+                args.append(key)
+
+            if parameter.kind is parameter.VAR_POSITIONAL:
+                varargs = key
+
+            if parameter.kind is parameter.VAR_KEYWORD:
+                varargs = key
 
         def _define(cls, spec):  # pylint: disable=unused-argument
             """Define the spec dynamically"""
@@ -233,37 +245,38 @@ class FunctionProcess(Process):
 
             super().define(spec)
 
-            for i, arg in enumerate(args):
+            for parameter in signature.parameters.values():
 
-                default = UNSPECIFIED
+                if parameter.kind in [parameter.VAR_POSITIONAL, parameter.VAR_KEYWORD]:
+                    continue
 
-                if defaults and i >= first_default_pos:
-                    default = defaults[i - first_default_pos]
+                default = parameter.default if parameter.default is not parameter.empty else UNSPECIFIED
 
                 # If the keyword was already specified, simply override the default
-                if spec.has_input(arg):
-                    spec.inputs[arg].default = default
+                if spec.has_input(parameter.name):
+                    spec.inputs[parameter.name].default = default
+                    continue
+
+                # If the default is ``None`` make sure that the port also accepts a ``NoneType``. Note that we cannot
+                # use ``None`` because the validation will call ``isinstance`` which does not work when passing ``None``
+                # but it does work with ``NoneType`` which is returned by calling ``type(None)``.
+                if default is None:
+                    valid_type = (Data, type(None))
                 else:
-                    # If the default is `None` make sure that the port also accepts a `NoneType`
-                    # Note that we cannot use `None` because the validation will call `isinstance` which does not work
-                    # when passing `None`, but it does work with `NoneType` which is returned by calling `type(None)`
-                    if default is None:
-                        valid_type = (Data, type(None))
-                    else:
-                        valid_type = (Data,)
+                    valid_type = (Data,)
 
-                    # If a default is defined and it is not a ``Data`` instance it should be serialized, but this should
-                    # be done lazily using a lambda, just as any port defaults should not define node instances directly
-                    # as is also checked by the ``spec.input`` call.
-                    if (
-                        default is not None and default != UNSPECIFIED and not isinstance(default, Data) and
-                        not callable(default)
-                    ):
-                        indirect_default = lambda value=default: to_aiida_type(value)
-                    else:
-                        indirect_default = default  # type: ignore[assignment]
+                # If a default is defined and it is not a ``Data`` instance it should be serialized, but this should be
+                # done lazily using a lambda, just as any port defaults should not define node instances directly as is
+                # also checked by the ``spec.input`` call.
+                if (
+                    default is not None and default != UNSPECIFIED and not isinstance(default, Data) and
+                    not callable(default)
+                ):
+                    indirect_default = lambda value=default: to_aiida_type(value)
+                else:
+                    indirect_default = default  # type: ignore[assignment]
 
-                    spec.input(arg, valid_type=valid_type, default=indirect_default, serializer=to_aiida_type)
+                spec.input(parameter.name, valid_type=valid_type, default=indirect_default, serializer=to_aiida_type)
 
             # Set defaults for label and description based on function name and docstring, if not explicitly defined
             port_label = spec.inputs['metadata']['label']

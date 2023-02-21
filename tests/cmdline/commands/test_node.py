@@ -417,7 +417,7 @@ class TestVerdiGraph:
             finally:
                 delete_temporary_file(filename)
 
-    @pytest.mark.parametrize('output_file', ['output_filename', 'with_extension.dot'])
+    @pytest.mark.parametrize('output_file', ['output_filename.pdf', 'with_extension.dot.pdf'])
     def test_file_base_name(self, run_cli_command, output_file):
         """Test that the output file base name can be specified through an argument."""
         root_node = str(self.node.pk)

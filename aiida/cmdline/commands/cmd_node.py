@@ -469,7 +469,6 @@ def graph_generate(
         include_process_inputs=process_in,
         highlight_classes=highlight_classes,
     )
-    basename = basename if basename else root_node.pk
     output_file_name = graph.graphviz.render(
         filename=output_file or f'{root_node.pk}.{engine}', format=output_format, view=show, cleanup=True
     )

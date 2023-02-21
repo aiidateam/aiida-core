@@ -1149,8 +1149,8 @@ Therefore, we have to override the constructor :meth:`~aiida.orm.nodes.node.Node
 .. warning::
 
     For the class to function properly, the signature of the constructor **cannot be changed** and the constructor of the parent class **has to be called**.
-    Note that the constructor is **NOT** called when the node is loaded from the database afterwards.
-    Hence, one should avoid setting attributes that correspond to the sorted data inside the ``__init__`` itself. Instead, use the ``@property`` approach to provide easy access to any sorted data instead (see below).
+    Note also that the constructor is **NOT** called when the node is loaded from the database afterwards.
+    Hence, one should not rely on initializing instance attributes inside the ``__init__`` itself (here "attributes" does not refer to the data stored in the database, but the normal Python understanding of attributes that class instances have).
 
 Before calling the constructor of the base class, we have to remove the ``value`` keyword from the keyword arguments ``kwargs``, because the base class will not expect it and will raise an exception if left in the keyword arguments.
 The final step is to actually *store* the value that is passed by the caller of the constructor.

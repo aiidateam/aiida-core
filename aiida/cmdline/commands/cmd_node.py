@@ -469,11 +469,13 @@ def graph_generate(
         include_process_inputs=process_in,
         highlight_classes=highlight_classes,
     )
-    output_file_name = graph.graphviz.render(
-        filename=output_file or f'{root_node.pk}.{engine}', format=output_format, view=show, cleanup=True
-    )
 
-    echo.echo_success(f'Output file: {output_file_name}')
+    if not output_file:
+        output_file = pathlib.Path(f'{root_node.pk}.{engine}.{output_format}')
+
+    output_file_name = graph.graphviz.render(outfile=output_file, format=output_format, view=show, cleanup=True)
+
+    echo.echo_success(f'Output written to `{output_file_name}`')
 
 
 @verdi_node.group('comment')

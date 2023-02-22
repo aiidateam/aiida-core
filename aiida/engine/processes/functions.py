@@ -15,15 +15,40 @@ import functools
 import inspect
 import logging
 import signal
+import types
 import typing as t
 from typing import TYPE_CHECKING
 
 from aiida.common.lang import override
 from aiida.manage import get_manager
-from aiida.orm import CalcFunctionNode, Data, ProcessNode, WorkFunctionNode, to_aiida_type
+from aiida.orm import (
+    Bool,
+    CalcFunctionNode,
+    Data,
+    Dict,
+    Float,
+    Int,
+    List,
+    ProcessNode,
+    Str,
+    WorkFunctionNode,
+    to_aiida_type,
+)
 from aiida.orm.utils.mixins import FunctionCalculationMixin
 
 from .process import Process
+
+try:
+    UnionType = types.UnionType  # type: ignore[attr-defined]
+except AttributeError:
+    # This type is not available for Python 3.9 and older
+    UnionType = None  # pylint: disable=invalid-name
+
+try:
+    get_annotations = inspect.get_annotations  # type: ignore[attr-defined]
+except AttributeError:
+    # This is the backport for Python 3.9 and older
+    from get_annotations import get_annotations  # type: ignore[no-redef]
 
 if TYPE_CHECKING:
     from .exit_code import ExitCode
@@ -191,6 +216,43 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
     return decorator
 
 
+def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...]:
+    """Infer the value for the ``valid_type`` of an input port from the given function argument annotation.
+
+    :param annotation: The annotation of a function argument as returned by ``inspect.get_annotation``.
+    :returns: A tuple of valid types. If no valid types were defined or they could not be successfully parsed, an empty
+        tuple is returned.
+    """
+
+    def get_type_from_annotation(annotation):
+        valid_type_map = {
+            bool: Bool,
+            dict: Dict,
+            t.Dict: Dict,
+            float: Float,
+            int: Int,
+            list: List,
+            t.List: List,
+            str: Str,
+        }
+
+        if inspect.isclass(annotation) and issubclass(annotation, Data):
+            return annotation
+
+        return valid_type_map.get(annotation)
+
+    inferred_valid_type: tuple[t.Any, ...] = ()
+
+    if inspect.isclass(annotation):
+        inferred_valid_type = (get_type_from_annotation(annotation),)
+    elif t.get_origin(annotation) is t.Union or t.get_origin(annotation) is UnionType:
+        inferred_valid_type = tuple(get_type_from_annotation(valid_type) for valid_type in t.get_args(annotation))
+    elif t.get_origin(annotation) is t.Optional:
+        inferred_valid_type = (t.get_args(annotation),)
+
+    return tuple(valid_type for valid_type in inferred_valid_type if valid_type is not None)
+
+
 class FunctionProcess(Process):
     """Function process class used for turning functions into a Process"""
 
@@ -229,6 +291,14 @@ class FunctionProcess(Process):
         varargs: str | None = None
         keywords: str | None = None
 
+        try:
+            annotations = get_annotations(func, eval_str=True)
+        except Exception as exception:  # pylint: disable=broad-except
+            # Since we are running with ``eval_str=True`` to unstringize the annotations, the call can except if the
+            # annotations are incorrect. In this case we simply want to log a warning and continue with type inference.
+            LOGGER.warning(f'function `{func.__name__}` has invalid type hints: {exception}')
+            annotations = {}
+
         for key, parameter in signature.parameters.items():
 
             if parameter.kind in [parameter.POSITIONAL_ONLY, parameter.POSITIONAL_OR_KEYWORD, parameter.KEYWORD_ONLY]:
@@ -251,6 +321,9 @@ class FunctionProcess(Process):
                 if parameter.kind in [parameter.VAR_POSITIONAL, parameter.VAR_KEYWORD]:
                     continue
 
+                annotation = annotations.get(parameter.name)
+                valid_type = infer_valid_type_from_type_annotation(annotation) or (Data,)
+
                 default = parameter.default if parameter.default is not parameter.empty else UNSPECIFIED
 
                 # If the keyword was already specified, simply override the default
@@ -262,9 +335,7 @@ class FunctionProcess(Process):
                 # use ``None`` because the validation will call ``isinstance`` which does not work when passing ``None``
                 # but it does work with ``NoneType`` which is returned by calling ``type(None)``.
                 if default is None:
-                    valid_type = (Data, type(None))
-                else:
-                    valid_type = (Data,)
+                    valid_type += (type(None),)
 
                 # If a default is defined and it is not a ``Data`` instance it should be serialized, but this should be
                 # done lazily using a lambda, just as any port defaults should not define node instances directly as is

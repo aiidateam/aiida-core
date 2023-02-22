@@ -16,8 +16,12 @@ relating to the transformation of the wrapped function into a ``FunctionProcess`
 fly, but then anytime inputs or outputs would be attached to it in the tests, the ``validate_link`` function would
 complain as the dummy node class is not recognized as a valid process node.
 """
+from __future__ import annotations
+
 import enum
 import re
+import sys
+import typing as t
 
 import pytest
 
@@ -616,3 +620,96 @@ def test_nested_namespace():
     }
     with pytest.raises(ValueError):
         function.run_get_node(**inputs)
+
+
+def test_type_hinting_spec_inference():
+    """Test the parsing of type hinting to define the valid types of the dynamically generated input ports."""
+
+    @calcfunction  # type: ignore[misc]
+    def function(
+        a,
+        b: str,
+        c: bool,
+        d: orm.Str,
+        e: t.Union[orm.Str, orm.Int],
+        f: t.Union[str, int],
+        g: t.Optional[t.Dict] = None,
+    ):
+        # pylint: disable=invalid-name,unused-argument
+        pass
+
+    input_namespace = function.spec().inputs
+
+    expected = (
+        ('a', (orm.Data,)),
+        ('b', (orm.Str,)),
+        ('c', (orm.Bool,)),
+        ('d', (orm.Str,)),
+        ('e', (orm.Str, orm.Int)),
+        ('f', (orm.Str, orm.Int)),
+        ('g', (orm.Dict, type(None))),
+    )
+
+    for key, valid_types in expected:
+        assert key in input_namespace
+        assert input_namespace[key].valid_type == valid_types, key
+
+
+def test_type_hinting_spec_inference_pep_604(aiida_caplog):
+    """Test the parsing of type hinting that uses union typing of PEP 604 which is only available to Python 3.10 and up.
+
+    Even though adding ``from __future__ import annotations`` should backport this functionality to Python 3.9 and older
+    the ``get_annotations`` method (which was also added to the ``inspect`` package in Python 3.10) as provided by the
+    ``get-annotations`` backport package fails for this new syntax when called with ``eval_str=True``. Therefore type
+    inference using this syntax only works on Python 3.10 and up.
+
+    See https://peps.python.org/pep-0604
+    """
+
+    @calcfunction  # type: ignore[misc]
+    def function(
+        a: str | int,
+        b: orm.Str | orm.Int,
+        c: dict | None = None,
+    ):
+        # pylint: disable=invalid-name,unused-argument
+        pass
+
+    input_namespace = function.spec().inputs
+
+    # Since the PEP 604 union syntax is only available starting from Python 3.10 the type inference will not be
+    # available for older versions, and so the valid type will be the default ``(orm.Data,)``.
+    if sys.version_info[:2] >= (3, 10):
+        expected = (
+            ('a', (orm.Str, orm.Int)),
+            ('b', (orm.Str, orm.Int)),
+            ('c', (orm.Dict, type(None))),
+        )
+    else:
+        assert 'function `function` has invalid type hints: unsupported operand type' in aiida_caplog.records[0].message
+        expected = (
+            ('a', (orm.Data,)),
+            ('b', (orm.Data,)),
+            ('c', (orm.Data, type(None))),
+        )
+
+    for key, valid_types in expected:
+        assert key in input_namespace
+        assert input_namespace[key].valid_type == valid_types, key
+
+
+def test_type_hinting_validation():
+    """Test that type hints are converted to automatic type checking through the process specification."""
+
+    @calcfunction  # type: ignore[misc]
+    def function_type_hinting(a: t.Union[int, float]):
+        # pylint: disable=invalid-name
+        return a + 1
+
+    with pytest.raises(ValueError, match=r'.*value \'a\' is not of the right type.*'):
+        function_type_hinting('string')
+
+    assert function_type_hinting(1) == 2
+    assert function_type_hinting(orm.Int(1)) == 2
+    assert function_type_hinting(1.0) == 2.0
+    assert function_type_hinting(orm.Float(1)) == 2.0

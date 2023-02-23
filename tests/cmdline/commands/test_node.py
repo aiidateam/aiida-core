@@ -417,6 +417,15 @@ class TestVerdiGraph:
             finally:
                 delete_temporary_file(filename)
 
+    @pytest.mark.parametrize('output_file', ('without_extension', 'without_extension.pdf'))
+    def test_output_file(self, run_cli_command, output_file):
+        """Test that the output file can be specified through an argument."""
+        try:
+            run_cli_command(cmd_node.graph_generate, [str(self.node.pk), output_file])
+            assert os.path.isfile(output_file)
+        finally:
+            delete_temporary_file(output_file)
+
 
 COMMENT = 'Well I never...'
 

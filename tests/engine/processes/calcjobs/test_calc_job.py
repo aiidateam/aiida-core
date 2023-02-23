@@ -1229,6 +1229,41 @@ def test_submit_return_exit_code(get_calcjob_builder, monkeypatch):
     assert node.exit_status == 418
 
 
+def test_restart_after_daemon_reset(get_calcjob_builder, daemon_client, submit_and_await):
+    """Test that a job can be restarted when it is launched and the daemon is restarted.
+
+    This is a regression test for https://github.com/aiidateam/aiida-core/issues/5882.
+    """
+    import time
+
+    import plumpy
+
+    daemon_client.start_daemon()
+
+    # Launch a job with a one second sleep to ensure it doesn't finish before we get the chance to restart the daemon.
+    # A monitor is added to ensure that those are properly reinitialized in the ``Waiting`` state of the process.
+    builder = get_calcjob_builder()
+    builder.metadata.options.sleep = 1
+    builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.always_kill', 'disabled': True})}
+    node = submit_and_await(builder, plumpy.ProcessState.WAITING)
+
+    daemon_client.restart_daemon(wait=True)
+
+    start_time = time.time()
+    timeout = 10
+
+    while node.process_state not in [plumpy.ProcessState.FINISHED, plumpy.ProcessState.EXCEPTED]:
+
+        if node.is_excepted:
+            raise AssertionError(f'The process excepted: {node.exception}')
+
+        if time.time() - start_time >= timeout:
+            raise AssertionError(f'process failed to terminate within timeout, current state: {node.process_state}')
+
+    assert node.is_finished, node.process_state
+    assert node.is_finished_ok, node.exit_status
+
+
 class TestImport:
     """Test the functionality to import existing calculations completed outside of AiiDA."""
 

@@ -69,6 +69,12 @@ def test_filepath_executable(aiida_localhost):
     code = InstalledCode(computer=aiida_localhost, filepath_executable=filepath_executable)
     assert code.filepath_executable == pathlib.PurePath(filepath_executable)
 
+    # Relative path
+    filepath_executable = 'bash'
+    code = InstalledCode(computer=aiida_localhost, filepath_executable=filepath_executable)
+    assert code.filepath_executable == pathlib.PurePath(filepath_executable)
+
+    # Change through the property
     filepath_executable = '/usr/bin/cat'
     code.filepath_executable = filepath_executable
     assert code.filepath_executable == pathlib.PurePath(filepath_executable)

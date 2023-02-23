@@ -456,7 +456,7 @@ InstalledCode
 
 The :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` class is an implementation of the :class:`~aiida.orm.nodes.data.code.abstract.AbstractCode` class that represents an executable code on a remote computer.
 This plugin should be used if an executable is pre-installed on a computer.
-The ``InstalledCode`` represents the code by storing the absolute filepath of the relevant executable and the computer on which it is installed.
+The ``InstalledCode`` represents the code by storing the filepath of the relevant executable and the computer on which it is installed.
 The computer is represented by an instance of :class:`~aiida.orm.computers.Computer`.
 Each time a :class:`~aiida.engine.CalcJob` is run using an ``InstalledCode``, it will run its executable on the associated computer.
 Example of creating an ``InstalledCode``:
@@ -469,6 +469,9 @@ Example of creating an ``InstalledCode``:
         computer=load_computer('localhost'),
         filepath_executable='/usr/bin/bash'
     )
+
+.. versionchanged:: 2.3
+    The ``filepath_executable`` is no longer required to be an absolute path but can be just the executable name.
 
 
 .. _topics:data_types:core:code:portable:
@@ -1170,6 +1173,8 @@ Therefore, we have to override the constructor :meth:`~aiida.orm.nodes.node.Node
 .. warning::
 
     For the class to function properly, the signature of the constructor **cannot be changed** and the constructor of the parent class **has to be called**.
+    Note also that the constructor is **NOT** called when the node is loaded from the database afterwards.
+    Hence, one should not rely on initializing instance attributes inside the ``__init__`` itself (here "attributes" does not refer to the data stored in the database, but the normal Python understanding of attributes that class instances have).
 
 Before calling the constructor of the base class, we have to remove the ``value`` keyword from the keyword arguments ``kwargs``, because the base class will not expect it and will raise an exception if left in the keyword arguments.
 The final step is to actually *store* the value that is passed by the caller of the constructor.

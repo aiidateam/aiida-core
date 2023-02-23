@@ -9,11 +9,15 @@
 ###########################################################################
 """Utilities for operations on files on remote computers."""
 import os
+import typing as t
 
 from aiida.orm.nodes.data.remote.base import RemoteData
 
+if t.TYPE_CHECKING:
+    from aiida.client import ClientProtocol
 
-def clean_remote(transport, path):
+
+def clean_remote(client: "ClientProtocol", path: str) -> None:
     """
     Recursively remove a remote folder, with the given absolute path, and all its contents. The path should be
     made accessible through the transport channel, which should already be open
@@ -27,14 +31,14 @@ def clean_remote(transport, path):
     if not os.path.isabs(path):
         raise ValueError('the path should be absolute')
 
-    if not transport.is_open:
+    if not client.is_open:
         raise ValueError('the transport should already be open')
 
     basedir, relative_path = os.path.split(path)
 
     try:
-        transport.chdir(basedir)
-        transport.rmtree(relative_path)
+        client.chdir(basedir)
+        client.rmtree(relative_path)
     except IOError:
         pass
 

@@ -11,9 +11,15 @@
 """`verdi computer` command."""
 from copy import deepcopy
 from functools import partial
+import typing as t
 
 import click
 import tabulate
+
+if t.TYPE_CHECKING:
+    from aiida.client import ClientProtocol
+    from aiida.orm import Computer, AuthInfo
+
 
 from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup, verdi
 from aiida.cmdline.params import arguments, options
@@ -46,7 +52,7 @@ def prompt_for_computer_configuration(computer):  # pylint: disable=unused-argum
     pass
 
 
-def _computer_test_get_jobs(transport, scheduler, authinfo):  # pylint: disable=unused-argument
+def _computer_test_get_jobs(client: "ClientProtocol", authinfo):  # pylint: disable=unused-argument
     """Internal test to check if it is possible to check the queue state.
 
     :param transport: an open transport
@@ -54,11 +60,11 @@ def _computer_test_get_jobs(transport, scheduler, authinfo):  # pylint: disable=
     :param authinfo: the AuthInfo object (from which one can get computer and aiidauser)
     :return: tuple of boolean indicating success or failure and an optional string message
     """
-    found_jobs = scheduler.get_jobs(as_dict=True)
+    found_jobs = client.get_jobs(as_dict=True)
     return True, f'{len(found_jobs)} jobs found in the queue'
 
 
-def _computer_test_no_unexpected_output(transport, scheduler, authinfo):  # pylint: disable=unused-argument
+def _computer_test_no_unexpected_output(client: "ClientProtocol", authinfo: "AuthInfo"):  # pylint: disable=unused-argument
     """Test that there is no unexpected output from the connection.
 
     This can happen if e.g. there is some spurious command in the
@@ -71,7 +77,7 @@ def _computer_test_no_unexpected_output(transport, scheduler, authinfo):  # pyli
     :return: tuple of boolean indicating success or failure and an optional string message
     """
     # Execute a command that should not return any error
-    retval, stdout, stderr = transport.exec_command_wait('echo -n')
+    retval, stdout, stderr = client.exec_command_wait('echo -n')
     if retval != 0:
         return False, f'The command `echo -n` returned a non-zero return code ({retval})'
 
@@ -93,27 +99,25 @@ in this troubleshooting section of the online documentation: https://bit.ly/2FCR
     return True, None
 
 
-def _computer_get_remote_username(transport, scheduler, authinfo):  # pylint: disable=unused-argument
+def _computer_get_remote_username(client: "ClientProtocol", authinfo: "AuthInfo"):  # pylint: disable=unused-argument
     """Internal test to check if it is possible to determine the username on the remote.
 
-    :param transport: an open transport
-    :param scheduler: the corresponding scheduler class
+    :param client: an open client
     :param authinfo: the AuthInfo object
     :return: tuple of boolean indicating success or failure and an optional string message
     """
-    remote_user = transport.whoami()
+    remote_user = client.whoami()
     return True, remote_user
 
 
-def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disable=unused-argument
+def _computer_create_temp_file(client: "ClientProtocol", authinfo: "AuthInfo"):  # pylint: disable=unused-argument
     """
     Internal test to check if it is possible to create a temporary file
     and then delete it in the work directory
 
     :note: exceptions could be raised
 
-    :param transport: an open transport
-    :param scheduler: the corresponding scheduler class
+    :param client: an open client
     :param authinfo: the AuthInfo object (from which one can get computer and aiidauser)
     :return: tuple of boolean indicating success or failure and an optional string message
     """
@@ -122,29 +126,29 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
     import tempfile
 
     file_content = f"Test from 'verdi computer test' on {datetime.datetime.now().isoformat()}"
-    workdir = authinfo.get_workdir().format(username=transport.whoami())
+    workdir = authinfo.get_workdir().format(username=client.whoami())
 
     try:
-        transport.chdir(workdir)
+        client.chdir(workdir)
     except IOError:
-        transport.makedirs(workdir)
-        transport.chdir(workdir)
+        client.makedirs(workdir)
+        client.chdir(workdir)
 
     with tempfile.NamedTemporaryFile(mode='w+') as tempf:
         fname = os.path.split(tempf.name)[1]
         remote_file_path = os.path.join(workdir, fname)
         tempf.write(file_content)
         tempf.flush()
-        transport.putfile(tempf.name, remote_file_path)
+        client.putfile(tempf.name, remote_file_path)
 
-    if not transport.path_exists(remote_file_path):
+    if not client.path_exists(remote_file_path):
         return False, f'failed to create the file `{remote_file_path}` on the remote'
 
     handle, destfile = tempfile.mkstemp()
     os.close(handle)
 
     try:
-        transport.getfile(remote_file_path, destfile)
+        client.getfile(remote_file_path, destfile)
         with open(destfile, encoding='utf8') as dfile:
             read_string = dfile.read()
 
@@ -157,12 +161,12 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
     finally:
         os.remove(destfile)
 
-    transport.remove(remote_file_path)
+    client.remove(remote_file_path)
 
     return True, None
 
 
-def time_use_login_shell(authinfo, auth_params, use_login_shell: bool, iterations: int = 3) -> float:
+def time_use_login_shell(authinfo: "AuthInfo", auth_params, use_login_shell: bool, iterations: int = 3) -> float:
     """Execute the ``whoami`` over the transport for the given ``use_login_shell`` and report the time taken.
 
     :param authinfo: The ``AuthInfo`` instance to use.
@@ -180,14 +184,14 @@ def time_use_login_shell(authinfo, auth_params, use_login_shell: bool, iteration
 
     for _ in range(iterations):
         time_start = time.time()
-        with authinfo.get_transport() as transport:
+        with authinfo.get_client() as transport:
             transport.whoami()
         timings.append(time.time() - time_start)
 
     return sum(timings) / iterations
 
 
-def _computer_use_login_shell_performance(transport, scheduler, authinfo):  # pylint: disable=unused-argument
+def _computer_use_login_shell_performance(client: "ClientProtocol", authinfo: "AuthInfo"):  # pylint: disable=unused-argument
     """Execute a command over the transport with and without the ``use_login_shell`` option enabled.
 
     By default, AiiDA uses a login shell when connecting to a computer in order to operate in the same environment as a
@@ -521,8 +525,7 @@ def computer_test(user, print_traceback, computer):
         echo.echo_warning(f'Computer<{computer.label}> is disabled for user<{user.email}>')
         click.confirm('Do you really want to test it?', abort=True)
 
-    scheduler = authinfo.computer.get_scheduler()
-    transport = authinfo.get_transport()
+    client = authinfo.get_client()
 
     # STARTING TESTS HERE
     num_failures = 0
@@ -539,19 +542,17 @@ def computer_test(user, print_traceback, computer):
     try:
         echo.echo('* Opening connection... ', nl=False)
 
-        with transport:
+        with client:
             num_tests += 1
 
             echo.echo('[OK]', fg=echo.COLORS['success'])
-
-            scheduler.set_transport(transport)
 
             for test, test_label in tests.items():
 
                 echo.echo(f'* {test_label}... ', nl=False)
                 num_tests += 1
                 try:
-                    success, message = test(transport=transport, scheduler=scheduler, authinfo=authinfo)
+                    success, message = test(client=client, authinfo=authinfo)
                 except Exception as exception:  # pylint:disable=broad-except
                     success = False
                     message = f'{exception.__class__.__name__}: {str(exception)}'
@@ -648,17 +649,17 @@ def computer_configure():
     help='Email address of the AiiDA user for whom to configure this computer (if different from default user).'
 )
 @arguments.COMPUTER()
-def computer_config_show(computer, user, defaults, as_option_string):
+def computer_config_show(computer: "Computer", user, defaults, as_option_string):
     """Show the current configuration for a computer."""
     from aiida.common.escaping import escape_for_bash
     from aiida.transports import cli as transport_cli
 
-    transport_cls = computer.get_transport_class()
+    client_cls = computer.get_client_class()
     option_list = [
         param for param in transport_cli.create_configure_cmd(computer.transport_type).params
         if isinstance(param, click.core.Option)
     ]
-    option_list = [option for option in option_list if option.name in transport_cls.get_valid_auth_params()]
+    option_list = [option for option in option_list if option.name in client_cls.get_auth_params()]
 
     if defaults:
         config = {option.name: transport_cli.transport_option_default(option.name, computer) for option in option_list}
@@ -668,7 +669,7 @@ def computer_config_show(computer, user, defaults, as_option_string):
     option_items = []
     if as_option_string:
         for option in option_list:
-            t_opt = transport_cls.auth_options[option.name]
+            t_opt = client_cls.get_auth_params()[option.name]
             if config.get(option.name) or config.get(option.name) is False:
                 if t_opt.get('switch'):
                     option_value = option.opts[-1] if config.get(
@@ -685,7 +686,7 @@ def computer_config_show(computer, user, defaults, as_option_string):
         echo.echo(escape_for_bash(opt_string))
     else:
         table = []
-        for name in transport_cls.get_valid_auth_params():
+        for name in client_cls.get_auth_params():
             if name in config:
                 table.append((f'* {name}', config[name]))
             else:

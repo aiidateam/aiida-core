@@ -24,6 +24,7 @@ from tempfile import NamedTemporaryFile
 from typing import Any, List
 from typing import Mapping as MappingType
 from typing import Optional, Tuple, Union
+from aiida.client import ClientProtocol
 
 from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcInfo
@@ -354,7 +355,7 @@ def upload_calculation(
         remotedata.store()
 
 
-def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | ExitCode:
+def submit_calculation(calculation: CalcJobNode, client: ClientProtocol) -> str | ExitCode:
     """Submit a previously uploaded `CalcJob` to the scheduler.
 
     :param calculation: the instance of CalcJobNode to submit.
@@ -371,12 +372,9 @@ def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | 
     if job_id is not None:
         return job_id
 
-    scheduler = calculation.computer.get_scheduler()
-    scheduler.set_transport(transport)
-
     submit_script_filename = calculation.get_option('submit_script_filename')
     workdir = calculation.get_remote_workdir()
-    result = scheduler.submit_from_script(workdir, submit_script_filename)
+    result = client.submit_from_script(workdir, submit_script_filename)
 
     if isinstance(result, str):
         calculation.set_job_id(result)
@@ -519,7 +517,7 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
     )
 
 
-def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
+def kill_calculation(calculation: CalcJobNode, client: ClientProtocol) -> None:
     """
     Kill the calculation through the scheduler
 
@@ -532,17 +530,13 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
         # the calculation has not yet been submitted to the scheduler
         return
 
-    # Get the scheduler plugin class and initialize it with the correct transport
-    scheduler = calculation.computer.get_scheduler()
-    scheduler.set_transport(transport)
-
     # Call the proper kill method for the job ID of this calculation
-    result = scheduler.kill(job_id)
+    result = client.kill(job_id)
 
     if result is not True:
 
         # Failed to kill because the job might have already been completed
-        running_jobs = scheduler.get_jobs(jobs=[job_id], as_dict=True)
+        running_jobs = client.get_jobs(jobs=[job_id], as_dict=True)
         job = running_jobs.get(job_id, None)
 
         # If the job is returned it is still running and the kill really failed, so we raise

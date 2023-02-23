@@ -79,7 +79,7 @@ class InstalledCode(Code):
 
         try:
             with override_log_level():  # Temporarily suppress noisy logging
-                with self.computer.get_transport() as transport:
+                with self.computer.get_client() as transport:
                     file_exists = transport.isfile(str(self.filepath_executable))
         except Exception as exception:  # pylint: disable=broad-except
             raise exceptions.ValidationError(

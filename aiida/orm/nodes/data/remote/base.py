@@ -10,6 +10,7 @@
 """Data plugin that models a folder on a remote computer."""
 import os
 
+from aiida.client import ClientProtocol
 from aiida.orm import AuthInfo
 
 from ..data import Data
@@ -43,7 +44,7 @@ class RemoteData(Data):
         Check if remote folder is empty
         """
         authinfo = self.get_authinfo()
-        transport = authinfo.get_transport()
+        transport = authinfo.get_client()
 
         with transport:
             try:
@@ -63,7 +64,7 @@ class RemoteData(Data):
         """
         authinfo = self.get_authinfo()
 
-        with authinfo.get_transport() as transport:
+        with authinfo.get_client() as transport:
             try:
                 full_path = os.path.join(self.get_remote_path(), relpath)
                 transport.getfile(full_path, destpath)
@@ -86,7 +87,7 @@ class RemoteData(Data):
         """
         authinfo = self.get_authinfo()
 
-        with authinfo.get_transport() as transport:
+        with authinfo.get_client() as transport:
             try:
                 full_path = os.path.join(self.get_remote_path(), relpath)
                 transport.chdir(full_path)
@@ -123,7 +124,7 @@ class RemoteData(Data):
         """
         authinfo = self.get_authinfo()
 
-        with authinfo.get_transport() as transport:
+        with authinfo.get_client() as transport:
             try:
                 full_path = os.path.join(self.get_remote_path(), path)
                 transport.chdir(full_path)
@@ -151,6 +152,13 @@ class RemoteData(Data):
                 else:
                     raise
 
+    def get_client(self) -> 'ClientProtocol':
+        """Return the transport for this calculation.
+
+        :return: `Transport` configured with the `AuthInfo` associated to the computer of this node
+        """
+        return self.get_authinfo().get_client()
+
     def _clean(self, transport=None):
         """Remove all content of the remote folder on the remote computer.
 
@@ -167,7 +175,7 @@ class RemoteData(Data):
         remote_dir = self.get_remote_path()
 
         if transport is None:
-            with self.get_authinfo().get_transport() as transport:  # pylint: disable=redefined-argument-from-local
+            with self.get_client() as transport:  # pylint: disable=redefined-argument-from-local
                 clean_remote(transport, remote_dir)
         else:
             if transport.hostname != self.computer.hostname:

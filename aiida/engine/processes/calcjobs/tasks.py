@@ -26,7 +26,7 @@ from aiida.common.exceptions import FeatureNotAvailable, TransportTaskException
 from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
 from aiida.engine.processes.exit_code import ExitCode
-from aiida.engine.transports import TransportQueue
+from aiida.engine.transports import ClientQueue
 from aiida.engine.utils import InterruptableFuture, exponential_backoff_retry, interruptable_task
 from aiida.manage.configuration import get_config_option
 from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
@@ -55,7 +55,7 @@ class PreSubmitException(Exception):
     """Raise in the `do_upload` coroutine when an exception is raised in `CalcJob.presubmit`."""
 
 
-async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, cancellable: InterruptableFuture):
+async def task_upload_job(process: 'CalcJob', client_queue: ClientQueue, cancellable: InterruptableFuture):
     """Transport task that will attempt to upload the files of a job calculation to the remote.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
@@ -64,7 +64,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
     If all retries fail, the task will raise a TransportTaskException
 
     :param process: the job calculation
-    :param transport_queue: the TransportQueue from which to request a Transport
+    :param client_queue: the ClientQueue from which to request a Transport
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
 
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
@@ -82,7 +82,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
     authinfo = node.get_authinfo()
 
     async def do_upload():
-        with transport_queue.request_transport(authinfo) as request:
+        with client_queue.request_client(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
 
             with SandboxFolder(filepath_sandbox) as folder:
@@ -116,7 +116,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
         return skip_submit
 
 
-async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, cancellable: InterruptableFuture):
+async def task_submit_job(node: CalcJobNode, client_queue: ClientQueue, cancellable: InterruptableFuture):
     """Transport task that will attempt to submit a job calculation.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
@@ -125,7 +125,7 @@ async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, ca
     If all retries fail, the task will raise a TransportTaskException
 
     :param node: the node that represents the job calculation
-    :param transport_queue: the TransportQueue from which to request a Transport
+    :param client_queue: the ClientQueue from which to request a Transport
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
 
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
@@ -141,7 +141,7 @@ async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, ca
     authinfo = node.get_authinfo()
 
     async def do_submit():
-        with transport_queue.request_transport(authinfo) as request:
+        with client_queue.request_client(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
             return execmanager.submit_calculation(node, transport)
 
@@ -223,7 +223,7 @@ async def task_update_job(node: CalcJobNode, job_manager, cancellable: Interrupt
 
 
 async def task_monitor_job(
-    node: CalcJobNode, transport_queue: TransportQueue, cancellable: InterruptableFuture, monitors: CalcJobMonitors
+    node: CalcJobNode, client_queue: ClientQueue, cancellable: InterruptableFuture, monitors: CalcJobMonitors
 ):
     """Transport task that will monitor the job calculation if any monitors have been defined.
 
@@ -233,7 +233,7 @@ async def task_monitor_job(
     If all retries fail, the task will raise a TransportTaskException
 
     :param node: the node that represents the job calculation
-    :param transport_queue: the TransportQueue from which to request a Transport
+    :param client_queue: the ClientQueue from which to request a Transport
     :param cancellable: A cancel flag
     :param monitors: An instance of ``CalcJobMonitors`` holding the collection of monitors to process.
     :return: True if the tasks was successfully completed, False otherwise
@@ -250,7 +250,7 @@ async def task_monitor_job(
 
     async def do_monitor():
 
-        with transport_queue.request_transport(authinfo) as request:
+        with client_queue.request_client(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
             transport.chdir(node.get_remote_workdir())
             return monitors.process(node, transport)
@@ -272,7 +272,7 @@ async def task_monitor_job(
 
 
 async def task_retrieve_job(
-    node: CalcJobNode, transport_queue: TransportQueue, retrieved_temporary_folder: str,
+    node: CalcJobNode, client_queue: ClientQueue, retrieved_temporary_folder: str,
     cancellable: InterruptableFuture
 ):
     """Transport task that will attempt to retrieve all files of a completed job calculation.
@@ -283,7 +283,7 @@ async def task_retrieve_job(
     If all retries fail, the task will raise a TransportTaskException
 
     :param node: the node that represents the job calculation
-    :param transport_queue: the TransportQueue from which to request a Transport
+    :param client_queue: the ClientQueue from which to request a Transport
     :param retrieved_temporary_folder: the absolute path to a directory to store files
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
 
@@ -299,21 +299,20 @@ async def task_retrieve_job(
     authinfo = node.get_authinfo()
 
     async def do_retrieve():
-        with transport_queue.request_transport(authinfo) as request:
+        with client_queue.request_client(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
 
             # Perform the job accounting and set it on the node if successful. If the scheduler does not implement this
             # still set the attribute but set it to `None`. This way we can distinguish calculation jobs for which the
             # accounting was called but could not be set.
-            scheduler = node.computer.get_scheduler()  # type: ignore[union-attr]
-            scheduler.set_transport(transport)
+            client = node.computer.get_client()
 
             if node.get_job_id() is None:
                 logger.warning(f'there is no job id for CalcJobNoe<{node.pk}>: skipping `get_detailed_job_info`')
                 return execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder)
 
             try:
-                detailed_job_info = scheduler.get_detailed_job_info(node.get_job_id())
+                detailed_job_info = client.get_detailed_job_info(node.get_job_id())
             except FeatureNotAvailable:
                 logger.info(f'detailed job info not available for scheduler of CalcJob<{node.pk}>')
                 node.set_detailed_job_info(None)
@@ -339,7 +338,7 @@ async def task_retrieve_job(
         return result
 
 
-async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, cancellable: InterruptableFuture):
+async def task_stash_job(node: CalcJobNode, client_queue: ClientQueue, cancellable: InterruptableFuture):
     """Transport task that will optionally stash files of a completed job calculation on the remote.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
@@ -348,7 +347,7 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
     If all retries fail, the task will raise a TransportTaskException
 
     :param node: the node that represents the job calculation
-    :param transport_queue: the TransportQueue from which to request a Transport
+    :param client_queue: the ClientQueue from which to request a Transport
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
     :raises: Return if the tasks was successfully completed
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
@@ -363,7 +362,7 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
     authinfo = node.get_authinfo()
 
     async def do_stash():
-        with transport_queue.request_transport(authinfo) as request:
+        with client_queue.request_client(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
 
             logger.info(f'stashing calculation<{node.pk}>')
@@ -388,7 +387,7 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
         return
 
 
-async def task_kill_job(node: CalcJobNode, transport_queue: TransportQueue, cancellable: InterruptableFuture):
+async def task_kill_job(node: CalcJobNode, client_queue: ClientQueue, cancellable: InterruptableFuture):
     """Transport task that will attempt to kill a job calculation.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
@@ -397,7 +396,7 @@ async def task_kill_job(node: CalcJobNode, transport_queue: TransportQueue, canc
     If all retries fail, the task will raise a TransportTaskException
 
     :param node: the node that represents the job calculation
-    :param transport_queue: the TransportQueue from which to request a Transport
+    :param client_queue: the ClientQueue from which to request a Transport
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
 
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
@@ -412,7 +411,7 @@ async def task_kill_job(node: CalcJobNode, transport_queue: TransportQueue, canc
     authinfo = node.get_authinfo()
 
     async def do_kill():
-        with transport_queue.request_transport(authinfo) as request:
+        with client_queue.request_client(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
             return execmanager.kill_calculation(node, transport)
 
@@ -487,7 +486,7 @@ class Waiting(plumpy.process_states.Waiting):
         """Override the execute coroutine of the base `Waiting` state."""
         # pylint: disable=too-many-branches,too-many-statements,too-many-nested-blocks
         node = self.process.node
-        transport_queue = self.process.runner.transport
+        client_queue = self.process.runner.transport
         result: plumpy.process_states.State = self
 
         process_status = f'Waiting for transport task: {self._command}'
@@ -496,14 +495,14 @@ class Waiting(plumpy.process_states.Waiting):
         try:
 
             if self._command == UPLOAD_COMMAND:
-                skip_submit = await self._launch_task(task_upload_job, self.process, transport_queue)
+                skip_submit = await self._launch_task(task_upload_job, self.process, client_queue)
                 if skip_submit:
                     result = self.retrieve(monitor_result=self._monitor_result)
                 else:
                     result = self.submit()
 
             elif self._command == SUBMIT_COMMAND:
-                result = await self._launch_task(task_submit_job, node, transport_queue)
+                result = await self._launch_task(task_submit_job, node, client_queue)
 
                 if isinstance(result, ExitCode):
                     # The scheduler plugin returned an exit code from ``Scheduler.submit_from_script`` indicating the
@@ -521,10 +520,10 @@ class Waiting(plumpy.process_states.Waiting):
                     process_status = f'Monitoring scheduler: job state {scheduler_state_string}'
                     node.set_process_status(process_status)
                     job_done = await self._launch_task(task_update_job, node, self.process.runner.job_manager)
-                    monitor_result = await self._monitor_job(node, transport_queue, self.monitors)
+                    monitor_result = await self._monitor_job(node, client_queue, self.monitors)
 
                     if monitor_result and monitor_result.action is CalcJobMonitorAction.KILL:
-                        await self._kill_job(node, transport_queue)
+                        await self._kill_job(node, client_queue)
                         job_done = True
 
                     if monitor_result and not monitor_result.retrieve:
@@ -537,12 +536,12 @@ class Waiting(plumpy.process_states.Waiting):
 
             elif self._command == STASH_COMMAND:
                 if node.get_option('stash') is not None:
-                    await self._launch_task(task_stash_job, node, transport_queue)
+                    await self._launch_task(task_stash_job, node, client_queue)
                 result = self.retrieve(monitor_result=self._monitor_result)
 
             elif self._command == RETRIEVE_COMMAND:
                 temp_folder = tempfile.mkdtemp()
-                await self._launch_task(task_retrieve_job, node, transport_queue, temp_folder)
+                await self._launch_task(task_retrieve_job, node, client_queue, temp_folder)
 
                 if not self._monitor_result:
                     result = self.parse(temp_folder)
@@ -565,7 +564,7 @@ class Waiting(plumpy.process_states.Waiting):
         except TransportTaskException as exception:
             raise plumpy.process_states.PauseInterruption(f'Pausing after failed transport task: {exception}')
         except plumpy.process_states.KillInterruption as exception:
-            await self._kill_job(node, transport_queue)
+            await self._kill_job(node, client_queue)
             node.set_process_status(str(exception))
             return self.retrieve(monitor_result=self._monitor_result)
         except (plumpy.futures.CancelledError, asyncio.CancelledError):
@@ -582,7 +581,7 @@ class Waiting(plumpy.process_states.Waiting):
             if self._killing and not self._killing.done():
                 self._killing.set_result(False)
 
-    async def _monitor_job(self, node, transport_queue, monitors) -> CalcJobMonitorResult | None:
+    async def _monitor_job(self, node, client_queue, monitors) -> CalcJobMonitorResult | None:
         """Process job monitors if any were specified as inputs."""
         if monitors is None:
             return None
@@ -590,7 +589,7 @@ class Waiting(plumpy.process_states.Waiting):
         if self._monitor_result and self._monitor_result.action == CalcJobMonitorAction.DISABLE_ALL:
             return None
 
-        monitor_result = await self._launch_task(task_monitor_job, node, transport_queue, monitors=monitors)
+        monitor_result = await self._launch_task(task_monitor_job, node, client_queue, monitors=monitors)
 
         if monitor_result and monitor_result.action == CalcJobMonitorAction.DISABLE_SELF:
             monitors.monitors[monitor_result.key].disabled = True
@@ -600,9 +599,9 @@ class Waiting(plumpy.process_states.Waiting):
 
         return monitor_result
 
-    async def _kill_job(self, node, transport_queue) -> None:
+    async def _kill_job(self, node, client_queue) -> None:
         """Kill the job."""
-        await self._launch_task(task_kill_job, node, transport_queue)
+        await self._launch_task(task_kill_job, node, client_queue)
         if self._killing is not None:
             self._killing.set_result(True)
         else:

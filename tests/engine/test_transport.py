@@ -14,10 +14,10 @@ import asyncio
 import pytest
 
 from aiida import orm
-from aiida.engine.transports import TransportQueue
+from aiida.engine.transports import ClientQueue
 
 
-class TestTransportQueue:
+class TestClientQueue:
     """Tests for the transport queue."""
 
     @pytest.fixture(autouse=True)
@@ -29,12 +29,12 @@ class TestTransportQueue:
 
     def test_simple_request(self):
         """ Test a simple transport request """
-        queue = TransportQueue()
+        queue = ClientQueue()
         loop = queue.loop
 
         async def test():
             trans = None
-            with queue.request_transport(self.authinfo) as request:
+            with queue.request_client(self.authinfo) as request:
                 trans = await request
                 assert trans.is_open
             assert not trans.is_open
@@ -43,14 +43,14 @@ class TestTransportQueue:
 
     def test_get_transport_nested(self):
         """Test nesting calls to get the same transport."""
-        transport_queue = TransportQueue()
+        transport_queue = ClientQueue()
         loop = transport_queue.loop
 
         async def nested(queue, authinfo):
-            with queue.request_transport(authinfo) as request1:
+            with queue.request_client(authinfo) as request1:
                 trans1 = await request1
                 assert trans1.is_open
-                with queue.request_transport(authinfo) as request2:
+                with queue.request_client(authinfo) as request2:
                     trans2 = await request2
                     assert trans1 is trans2
                     assert trans2.is_open
@@ -59,22 +59,22 @@ class TestTransportQueue:
 
     def test_get_transport_interleaved(self):
         """Test interleaved calls to get the same transport."""
-        transport_queue = TransportQueue()
+        transport_queue = ClientQueue()
         loop = transport_queue.loop
 
         async def interleaved(authinfo):
-            with transport_queue.request_transport(authinfo) as trans_future:
+            with transport_queue.request_client(authinfo) as trans_future:
                 await trans_future
 
         loop.run_until_complete(asyncio.gather(interleaved(self.authinfo), interleaved(self.authinfo)))
 
     def test_return_from_context(self):
         """Test raising a Return from coroutine context."""
-        queue = TransportQueue()
+        queue = ClientQueue()
         loop = queue.loop
 
         async def test():
-            with queue.request_transport(self.authinfo) as request:
+            with queue.request_client(self.authinfo) as request:
                 trans = await request
                 return trans.is_open
 
@@ -83,11 +83,11 @@ class TestTransportQueue:
 
     def test_open_fail(self):
         """Test that if opening fails."""
-        queue = TransportQueue()
+        queue = ClientQueue()
         loop = queue.loop
 
         async def test():
-            with queue.request_transport(self.authinfo) as request:
+            with queue.request_client(self.authinfo) as request:
                 await request
 
         def broken_open(trans):
@@ -114,14 +114,14 @@ class TestTransportQueue:
             transport_class._DEFAULT_SAFE_OPEN_INTERVAL = 0.25  # pylint: disable=protected-access
 
             import time
-            queue = TransportQueue()
+            queue = ClientQueue()
             loop = queue.loop
 
             time_start = time.time()
 
             async def test(iteration):
                 trans = None
-                with queue.request_transport(self.authinfo) as request:
+                with queue.request_client(self.authinfo) as request:
                     trans = await request
                     time_current = time.time()
                     time_elapsed = time_current - time_start

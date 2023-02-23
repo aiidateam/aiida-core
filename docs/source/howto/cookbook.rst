@@ -26,17 +26,15 @@ If you want to know if which jobs are currently on the scheduler (e.g. to dynami
         from aiida import orm
 
         computer = Computer.collection.get(label=computer_label)
-        transport = computer.get_transport()
-        scheduler = computer.get_scheduler()
-        scheduler.set_transport(transport)
+        client = computer.get_client()
 
         # This opens the SSH connection, for SSH transports
-        with transport:
+        with client:
             if only_current_user:
-                remote_username = transport.whoami()
-                all_jobs = scheduler.get_jobs(user=remote_username, as_dict=True)
+                remote_username = client.whoami()
+                all_jobs = client.get_jobs(user=remote_username, as_dict=True)
             else:
-                all_jobs = scheduler.get_jobs(as_dict=True)
+                all_jobs = client.get_jobs(as_dict=True)
 
         return all_jobs
 

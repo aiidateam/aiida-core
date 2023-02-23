@@ -83,7 +83,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         self._loop = loop if loop is not None else asyncio.get_event_loop()
         self._poll_interval = poll_interval
         self._rmq_submit = rmq_submit
-        self._transport = transports.TransportQueue(self._loop)
+        self._transport = transports.ClientQueue(self._loop)
         self._job_manager = manager.JobManager(self._transport)
         self._persister = persister
         self._plugin_version_provider = PluginVersionProvider()
@@ -107,7 +107,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         return self._loop
 
     @property
-    def transport(self) -> transports.TransportQueue:
+    def transport(self) -> transports.ClientQueue:
         return self._transport
 
     @property

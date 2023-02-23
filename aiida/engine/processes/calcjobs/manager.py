@@ -19,7 +19,7 @@ from aiida.common import lang
 from aiida.orm import AuthInfo
 
 if TYPE_CHECKING:
-    from aiida.engine.transports import TransportQueue
+    from aiida.engine.transports import ClientQueue
     from aiida.schedulers.datastructures import JobInfo
 
 __all__ = ('JobsList', 'JobManager')
@@ -42,7 +42,7 @@ class JobsList:
     See the :py:class:`~aiida.engine.processes.calcjobs.manager.JobManager` for example usage.
     """
 
-    def __init__(self, authinfo: AuthInfo, transport_queue: 'TransportQueue', last_updated: Optional[float] = None):
+    def __init__(self, authinfo: AuthInfo, transport_queue: 'ClientQueue', last_updated: Optional[float] = None):
         """Construct an instance for the given authinfo and transport queue.
 
         :param authinfo: The authinfo used to check the jobs list
@@ -93,20 +93,17 @@ class JobsList:
         :return: a mapping of job ids to :py:class:`~aiida.schedulers.datastructures.JobInfo` instances
 
         """
-        with self._transport_queue.request_transport(self._authinfo) as request:
+        with self._transport_queue.request_client(self._authinfo) as request:
             self.logger.info('waiting for transport')
-            transport = await request
-
-            scheduler = self._authinfo.computer.get_scheduler()
-            scheduler.set_transport(transport)
+            client = await request
 
             kwargs: Dict[str, Any] = {'as_dict': True}
-            if scheduler.get_feature('can_query_by_user'):
+            if client.get_feature('can_query_by_user'):
                 kwargs['user'] = '$USER'
             else:
                 kwargs['jobs'] = self._get_jobs_with_scheduler()
 
-            scheduler_response = scheduler.get_jobs(**kwargs)
+            scheduler_response = client.get_jobs(**kwargs)
 
             # Update the last update time and clear the jobs cache
             self._last_updated = time.time()
@@ -261,7 +258,7 @@ class JobManager:
     only hold per runner.
     """
 
-    def __init__(self, transport_queue: 'TransportQueue') -> None:
+    def __init__(self, transport_queue: 'ClientQueue') -> None:
         self._transport_queue = transport_queue
         self._job_lists: Dict[Hashable, 'JobInfo'] = {}
 

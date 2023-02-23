@@ -20,14 +20,13 @@ from ..process import ProcessNodeCaching
 from .calculation import CalculationNode
 
 if TYPE_CHECKING:
-    from aiida.engine.processes.builder import ProcessBuilder
+    from aiida.client import ClientProtocol
     from aiida.orm import FolderData
     from aiida.orm.authinfos import AuthInfo
     from aiida.orm.utils.calcjob import CalcJobResultManager
     from aiida.parsers import Parser
     from aiida.schedulers.datastructures import JobInfo, JobState
     from aiida.tools.calculations import CalculationTools
-    from aiida.transports import Transport
 
 __all__ = ('CalcJobNode',)
 
@@ -362,14 +361,14 @@ class CalcJobNode(CalculationNode):
 
         return value
 
-    def set_detailed_job_info(self, detailed_job_info: Optional[dict]) -> None:
+    def set_detailed_job_info(self, detailed_job_info: Optional[dict]) -> None:  # TODO add typeddict type
         """Set the detailed job info dictionary.
 
         :param detailed_job_info: a dictionary with metadata with the accounting of a completed job
         """
         self.base.attributes.set(self.SCHEDULER_DETAILED_JOB_INFO_KEY, detailed_job_info)
 
-    def get_detailed_job_info(self) -> Optional[dict]:
+    def get_detailed_job_info(self) -> Optional[dict]:  # TODO add typeddict type
         """Return the detailed job info dictionary.
 
         The scheduler is polled for the detailed job info after the job is completed and ready to be retrieved.
@@ -419,12 +418,12 @@ class CalcJobNode(CalculationNode):
 
         return computer.get_authinfo(self.user)  # pylint: disable=no-member
 
-    def get_transport(self) -> 'Transport':
+    def get_client(self) -> 'ClientProtocol':
         """Return the transport for this calculation.
 
         :return: `Transport` configured with the `AuthInfo` associated to the computer of this node
         """
-        return self.get_authinfo().get_transport()
+        return self.get_authinfo().get_client()
 
     def get_parser_class(self) -> Optional[Type['Parser']]:
         """Return the output parser object for this calculation or None if no parser is set.

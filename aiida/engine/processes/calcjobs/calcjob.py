@@ -96,19 +96,19 @@ def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:  # pyli
     if not resources_port.required:
         return None
 
-    computer = computer_from_code or computer_from_metadata
-    scheduler = computer.get_scheduler()
+    computer: orm.Computer = computer_from_code or computer_from_metadata
+    client = computer.get_client()
     try:
         resources = inputs['metadata']['options']['resources']
     except KeyError:
         return 'input `metadata.options.resources` is required but is not specified'
 
-    scheduler.preprocess_resources(resources, computer.get_default_mpiprocs_per_machine())
+    resources = client.preprocess_resources(resources, computer.get_default_mpiprocs_per_machine())
 
     try:
-        scheduler.validate_resources(**resources)
+        client.validate_resources(**resources)
     except ValueError as exception:
-        return f'input `metadata.options.resources` is not valid for the `{scheduler}` scheduler: {exception}'
+        return f'input `metadata.options.resources` is not valid for the `{client}` client: {exception}'
 
     return None
 
@@ -721,7 +721,7 @@ class CalcJob(Process):
             )
             return None
 
-        scheduler = computer.get_scheduler()
+        client = computer.get_client()
         filename_stderr = self.node.get_option('scheduler_stderr')
         filename_stdout = self.node.get_option('scheduler_stdout')
 
@@ -752,20 +752,20 @@ class CalcJob(Process):
                 self.logger.warning(f'could not parse scheduler output: the `{filename_stdout}` file is missing')
 
         try:
-            exit_code = scheduler.parse_output(
+            exit_code = client.parse_output(
                 detailed_job_info,
                 scheduler_stdout or '',  # type: ignore[arg-type]
                 scheduler_stderr or '',  # type: ignore[arg-type]
             )
         except exceptions.FeatureNotAvailable:
-            self.logger.info(f'`{scheduler.__class__.__name__}` does not implement scheduler output parsing')
+            self.logger.info(f'`{client.__class__.__name__}` does not implement scheduler output parsing')
             return None
         except Exception as exception:  # pylint: disable=broad-except
             self.logger.error(f'the `parse_output` method of the scheduler excepted: {exception}')
             return None
 
         if exit_code is not None and not isinstance(exit_code, ExitCode):
-            args = (scheduler.__class__.__name__, type(exit_code))
+            args = (client.__class__.__name__, type(exit_code))
             raise ValueError('`{}.parse_output` returned neither an `ExitCode` nor None, but: {}'.format(*args))
 
         return exit_code
@@ -871,7 +871,7 @@ class CalcJob(Process):
             return calc_info
 
         # The remaining code is only necessary for actual runs, for example, creating the submission script
-        scheduler = computer.get_scheduler()
+        client = computer.get_client()
 
         # the if is done so that if the method returns None, this is
         # not added. This has two advantages:
@@ -891,8 +891,8 @@ class CalcJob(Process):
 
         # Set resources, also with get_default_mpiprocs_per_machine
         resources = self.node.get_option('resources')
-        scheduler.preprocess_resources(resources or {}, computer.get_default_mpiprocs_per_machine())
-        job_tmpl.job_resource = scheduler.create_job_resource(**resources)  # type: ignore
+        resources = client.preprocess_resources(resources or {}, computer.get_default_mpiprocs_per_machine())
+        job_tmpl.job_resource = client.create_job_resource(**resources)  # type: ignore
 
         subst_dict = {'tot_num_mpiprocs': job_tmpl.job_resource.get_tot_num_mpiprocs()}
 
@@ -983,7 +983,7 @@ class CalcJob(Process):
             job_tmpl.max_wallclock_seconds = max_wallclock_seconds
 
         submit_script_filename = self.node.get_option('submit_script_filename')
-        script_content = scheduler.get_submit_script(job_tmpl)
+        script_content = client.get_submit_script(job_tmpl)
         folder.create_file_from_filelike(io.StringIO(script_content), submit_script_filename, 'w', encoding='utf8')
 
         def encoder(obj):

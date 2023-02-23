@@ -36,7 +36,7 @@ def calcjob_gotocomputer(calcjob):
     from aiida.common.exceptions import NotExistent
 
     try:
-        transport = calcjob.get_transport()
+        transport = calcjob.get_client()
     except NotExistent as exception:
         echo.echo_critical(repr(exception))
 
@@ -296,7 +296,7 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force, exit
 
         counter = 0
         computer = orm.load_computer(uuid=computer_uuid)
-        transport = orm.AuthInfo.collection.get(dbcomputer_id=computer.pk, aiidauser_id=user.pk).get_transport()
+        transport = orm.AuthInfo.collection.get(dbcomputer_id=computer.pk, aiidauser_id=user.pk).get_client()
 
         with transport:
             for remote_folder in paths:

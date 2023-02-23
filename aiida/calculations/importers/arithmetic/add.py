@@ -21,7 +21,7 @@ class ArithmeticAddCalculationImporter(CalcJobImporter):
         :returns: a dictionary with the parsed inputs nodes that match the input spec of the associated ``CalcJob``.
         """
         with NamedTemporaryFile('w+') as handle:
-            with remote_data.get_authinfo().get_transport() as transport:
+            with remote_data.get_client() as transport:
                 filepath = Path(remote_data.get_remote_path()) / 'aiida.in'
                 transport.getfile(filepath, handle.name)
 

@@ -10,6 +10,7 @@
 """Common cli utilities for transport plugins."""
 from functools import partial
 import inspect
+import typing as t
 
 import click
 
@@ -19,6 +20,9 @@ from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import NotExistent
 from aiida.manage import get_manager
+
+if t.TYPE_CHECKING:
+    from aiida.orm import Computer
 
 TRANSPORT_PARAMS = []
 
@@ -55,9 +59,9 @@ def common_params(command_func):
     return command_func
 
 
-def transport_option_default(name, computer):
+def transport_option_default(name: str, computer: "Computer"):
     """Determine the default value for an auth_param key."""
-    transport_cls = computer.get_transport_class()
+    transport_cls = computer.get_client_class()
     suggester_name = f'_get_{name}_suggestion_string'
     members = dict(inspect.getmembers(transport_cls))
     suggester = members.get(suggester_name, None)
@@ -65,7 +69,7 @@ def transport_option_default(name, computer):
     if suggester:
         default = suggester(computer)
     else:
-        default = transport_cls.auth_options[name].get('default')
+        default = transport_cls.get_auth_params()[name].get('default')
     return default
 
 

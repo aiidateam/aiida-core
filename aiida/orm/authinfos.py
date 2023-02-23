@@ -11,16 +11,16 @@
 from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from aiida.common import exceptions
-from aiida.common.lang import classproperty
 from aiida.manage import get_manager
 from aiida.plugins import TransportFactory
+from aiida.plugins.factories import SchedulerFactory
 
 from . import entities, users
 
 if TYPE_CHECKING:
     from aiida.orm import Computer, User
     from aiida.orm.implementation import BackendAuthInfo, StorageBackend
-    from aiida.transports import Transport
+    from aiida.client import ClientProtocol
 
 __all__ = ('AuthInfo',)
 
@@ -131,14 +131,23 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         except KeyError:
             return self.computer.get_workdir()
 
-    def get_transport(self) -> 'Transport':
-        """Return a fully configured transport that can be used to connect to the computer set for this instance."""
+    def get_client(self) -> 'ClientProtocol':
+        """Return a fully configured client that can be used to connect to the computer set for this instance."""
         computer = self.computer
-        transport_type = computer.transport_type
 
         try:
-            transport_class = TransportFactory(transport_type)
+            transport_class = TransportFactory(computer.transport_type)
         except exceptions.EntryPointError as exception:
-            raise exceptions.ConfigurationError(f'transport type `{transport_type}` could not be loaded: {exception}')
+            raise exceptions.ConfigurationError(f'transport type `{computer.transport_type}` could not be loaded: {exception}')
+        transport = transport_class(machine=computer.hostname, **self.get_auth_params())
 
-        return transport_class(machine=computer.hostname, **self.get_auth_params())
+        try:
+            scheduler_class = SchedulerFactory(computer.scheduler_type)
+        except exceptions.EntryPointError as exception:
+            raise exceptions.ConfigurationError(
+                f'No scheduler found for {computer.label} [type {computer.scheduler_type}], message: {exception}'
+            )
+        scheduler = scheduler_class()
+        scheduler.set_transport(transport)
+
+        return LegacyClient(transport, scheduler)

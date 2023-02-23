@@ -13,17 +13,14 @@ import os
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 from aiida.common import exceptions
-from aiida.common.lang import classproperty
 from aiida.manage import get_manager
-from aiida.plugins import SchedulerFactory, TransportFactory
 
 from . import entities, users
 
 if TYPE_CHECKING:
     from aiida.orm import AuthInfo, User
     from aiida.orm.implementation import BackendComputer, StorageBackend
-    from aiida.schedulers import Scheduler
-    from aiida.transports import Transport
+    from aiida.client import ClientProtocol
 
 __all__ = ('Computer',)
 
@@ -202,7 +199,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             raise exceptions.ValidationError('the mpirun_command must be a list of strings')
 
         try:
-            job_resource_keys = self.get_scheduler().job_resource_class.get_valid_keys()
+            job_resource_keys = self.get_client().job_resource_class.get_valid_keys()
         except exceptions.EntryPointError:
             raise exceptions.ValidationError('Unable to load the scheduler for this computer')
 
@@ -517,7 +514,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         :return: The minimum interval (in seconds).
         """
         try:
-            default = self.get_transport_class().DEFAULT_MINIMUM_JOB_POLL_INTERVAL
+            default = self.get_client_class().DEFAULT_MINIMUM_JOB_POLL_INTERVAL
         except (exceptions.ConfigurationError, AttributeError):
             default = self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT
 
@@ -615,7 +612,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             # Return False if the user is not configured (in a sense, it is disabled for that user)
             return False
 
-    def get_transport(self, user: Optional['User'] = None) -> 'Transport':
+    def get_client(self, user: Optional['User'] = None) -> 'ClientProtocol':
         """
         Return a Transport class, configured with all correct parameters.
         The Transport is closed (meaning that if you want to run any operation with
@@ -623,7 +620,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         to open a connection). To do this you can call ``transports.open()``, or simply
         run within a ``with`` statement::
 
-           transport = Computer.get_transport()
+           transport = Computer.get_client()
            with transport:
                print(transports.whoami())
 
@@ -638,27 +635,17 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
         user = user or users.User.collection(self.backend).get_default()
         authinfo = authinfos.AuthInfo.collection(self.backend).get(dbcomputer=self, aiidauser=user)
-        return authinfo.get_transport()
+        return authinfo.get_client()
 
-    def get_transport_class(self) -> Type['Transport']:
+    def get_client_class(self) -> Type['ClientProtocol']:
         """Get the transport class for this computer.  Can be used to instantiate a transport instance."""
-        try:
-            return TransportFactory(self.transport_type)
-        except exceptions.EntryPointError as exception:
-            raise exceptions.ConfigurationError(
-                f'No transport found for {self.label} [type {self.transport_type}], message: {exception}'
-            )
-
-    def get_scheduler(self) -> 'Scheduler':
-        """Get a scheduler instance for this computer"""
-        try:
-            scheduler_class = SchedulerFactory(self.scheduler_type)
-            # I call the init without any parameter
-            return scheduler_class()
-        except exceptions.EntryPointError as exception:
-            raise exceptions.ConfigurationError(
-                f'No scheduler found for {self.label} [type {self.scheduler_type}], message: {exception}'
-            )
+        # TODO
+        # try:
+        #     return TransportFactory(self.transport_type)
+        # except exceptions.EntryPointError as exception:
+        #     raise exceptions.ConfigurationError(
+        #         f'No transport found for {self.label} [type {self.transport_type}], message: {exception}'
+        #     )
 
     def configure(self, user: Optional['User'] = None, **kwargs: Any) -> 'AuthInfo':
         """Configure a computer for a user with valid auth params passed via kwargs
@@ -669,9 +656,9 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         """
         from . import authinfos
 
-        transport_cls = self.get_transport_class()
+        transport_cls = self.get_client_class()
         user = user or users.User.collection(self.backend).get_default()
-        valid_keys = set(transport_cls.get_valid_auth_params())
+        valid_keys = set(transport_cls.get_auth_params())
 
         if not set(kwargs.keys()).issubset(valid_keys):
             invalid_keys = [key for key in kwargs if key not in valid_keys]

@@ -167,7 +167,7 @@ upf-to-json==0.9.3
 urllib3==1.26.7
 wcwidth==0.2.5
 webencodings==0.5.1
-Werkzeug==2.0.2
+Werkzeug==2.2.3
 widgetsnbextension==3.5.2
 wrapt==1.11.2
 yarl==1.7.2

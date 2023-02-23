@@ -68,7 +68,7 @@ kiwipy==0.7.7
 kiwisolver==1.4.4
 latexcodec==2.0.1
 Mako==1.2.4
-markdown-it-py==2.1.0
+markdown-it-py==2.2.0
 MarkupSafe==2.1.1
 matplotlib==3.6.2
 matplotlib-inline==0.1.6

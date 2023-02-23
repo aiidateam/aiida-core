@@ -18,9 +18,9 @@ from aiida.manage import get_manager
 from . import entities, users
 
 if TYPE_CHECKING:
+    from aiida.client import ClientProtocol
     from aiida.orm import AuthInfo, User
     from aiida.orm.implementation import BackendComputer, StorageBackend
-    from aiida.client import ClientProtocol
 
 __all__ = ('Computer',)
 

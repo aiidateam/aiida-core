@@ -17,7 +17,7 @@ if t.TYPE_CHECKING:
     from aiida.client import ClientProtocol
 
 
-def clean_remote(client: "ClientProtocol", path: str) -> None:
+def clean_remote(client: 'ClientProtocol', path: str) -> None:
     """
     Recursively remove a remote folder, with the given absolute path, and all its contents. The path should be
     made accessible through the transport channel, which should already be open

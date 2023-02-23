@@ -18,9 +18,9 @@ from aiida.plugins.factories import SchedulerFactory
 from . import entities, users
 
 if TYPE_CHECKING:
+    from aiida.client import ClientProtocol
     from aiida.orm import Computer, User
     from aiida.orm.implementation import BackendAuthInfo, StorageBackend
-    from aiida.client import ClientProtocol
 
 __all__ = ('AuthInfo',)
 
@@ -138,7 +138,9 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         try:
             transport_class = TransportFactory(computer.transport_type)
         except exceptions.EntryPointError as exception:
-            raise exceptions.ConfigurationError(f'transport type `{computer.transport_type}` could not be loaded: {exception}')
+            raise exceptions.ConfigurationError(
+                f'transport type `{computer.transport_type}` could not be loaded: {exception}'
+            )
         transport = transport_class(machine=computer.hostname, **self.get_auth_params())
 
         try:

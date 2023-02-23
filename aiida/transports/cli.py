@@ -59,7 +59,7 @@ def common_params(command_func):
     return command_func
 
 
-def transport_option_default(name: str, computer: "Computer"):
+def transport_option_default(name: str, computer: 'Computer'):
     """Determine the default value for an auth_param key."""
     transport_cls = computer.get_client_class()
     suggester_name = f'_get_{name}_suggestion_string'

@@ -272,8 +272,7 @@ async def task_monitor_job(
 
 
 async def task_retrieve_job(
-    node: CalcJobNode, client_queue: ClientQueue, retrieved_temporary_folder: str,
-    cancellable: InterruptableFuture
+    node: CalcJobNode, client_queue: ClientQueue, retrieved_temporary_folder: str, cancellable: InterruptableFuture
 ):
     """Transport task that will attempt to retrieve all files of a completed job calculation.
 

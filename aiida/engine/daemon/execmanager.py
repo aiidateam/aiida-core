@@ -24,8 +24,8 @@ from tempfile import NamedTemporaryFile
 from typing import Any, List
 from typing import Mapping as MappingType
 from typing import Optional, Tuple, Union
-from aiida.client import ClientProtocol
 
+from aiida.client import ClientProtocol
 from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcInfo
 from aiida.common.folders import SandboxFolder

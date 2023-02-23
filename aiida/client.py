@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 
 Notes:
@@ -26,6 +27,7 @@ Notes:
 TODO: `get_client_class`
 """
 from __future__ import annotations
+
 from pathlib import PurePath
 import typing as t
 
@@ -34,10 +36,9 @@ if t.TYPE_CHECKING:
 
     from aiida.engine.processes.exit_code import ExitCode
     # TODO can these be dataclasses instead or something?
-    from aiida.schedulers.datastructures import JobInfo, JobTemplate, JobResource
+    from aiida.schedulers.datastructures import JobInfo, JobResource, JobTemplate
 
-
-Self = t.TypeVar("Self", bound="ClientProtocol")
+Self = t.TypeVar('Self', bound='ClientProtocol')
 
 
 @t.runtime_checkable
@@ -69,7 +70,7 @@ class ClientProtocol(t.Protocol):
         :raises ValueError: if the resources are invalid or incomplete
         """
 
-    def get_feature(self, feature_name: t.Literal["can_query_by_user"]) -> bool:
+    def get_feature(self, feature_name: t.Literal['can_query_by_user']) -> bool:
         """Return a feature flag for the client.
 
         :param feature_name: The name of the feature to query
@@ -114,7 +115,8 @@ class ClientProtocol(t.Protocol):
         jobs: list[str] | None = None,
         user: str | None = None,
         as_dict: t.Literal[False] = False,
-    ) -> list[JobInfo]: ...
+    ) -> list[JobInfo]:
+        ...
 
     @t.overload
     def get_jobs(
@@ -122,7 +124,8 @@ class ClientProtocol(t.Protocol):
         jobs: list[str] | None = None,
         user: str | None = None,
         as_dict: t.Literal[True] = ...,
-    ) -> dict[str, JobInfo]: ...
+    ) -> dict[str, JobInfo]:
+        ...
 
     def get_jobs(
         self,
@@ -174,7 +177,6 @@ class ClientProtocol(t.Protocol):
     def open(self) -> None:
         """Open the client, in an omnipotent manner."""
 
-
     def close(self) -> None:
         """Close th client."""
 
@@ -192,7 +194,7 @@ class ClientProtocol(t.Protocol):
     @classmethod
     def get_auth_params(cls) -> t.Dict[str, AuthParamType]:
         """Return the authentication parameters.
-        
+
         This maps the name of the parameter, to an option list
         """
         # replaces Transport.get_valid_auth_params and Transport.auth_options
@@ -221,15 +223,16 @@ class ClientProtocol(t.Protocol):
 
     def chmod(self, path: str | PurePath, mode: int) -> None:
         """Change permissions of a path.
-        
+
         :param path: absolute or relative to the CWD
         """
 
     def chown(self, path: str | PurePath, uid: str, gid: str) -> None:
         """Change the owner (uid) and group (gid) of a path.
-        
+
         :param path: absolute or relative to the CWD
         """
+
 
 class AuthParamType(t.TypedDict, total=False):
     """A single authentication parameter."""

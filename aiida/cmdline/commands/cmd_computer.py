@@ -20,7 +20,6 @@ if t.TYPE_CHECKING:
     from aiida.client import ClientProtocol
     from aiida.orm import Computer, AuthInfo
 
-
 from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup, verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import computer as options_computer
@@ -52,7 +51,7 @@ def prompt_for_computer_configuration(computer):  # pylint: disable=unused-argum
     pass
 
 
-def _computer_test_get_jobs(client: "ClientProtocol", authinfo):  # pylint: disable=unused-argument
+def _computer_test_get_jobs(client: 'ClientProtocol', authinfo):  # pylint: disable=unused-argument
     """Internal test to check if it is possible to check the queue state.
 
     :param transport: an open transport
@@ -64,7 +63,7 @@ def _computer_test_get_jobs(client: "ClientProtocol", authinfo):  # pylint: disa
     return True, f'{len(found_jobs)} jobs found in the queue'
 
 
-def _computer_test_no_unexpected_output(client: "ClientProtocol", authinfo: "AuthInfo"):  # pylint: disable=unused-argument
+def _computer_test_no_unexpected_output(client: 'ClientProtocol', authinfo: 'AuthInfo'):  # pylint: disable=unused-argument
     """Test that there is no unexpected output from the connection.
 
     This can happen if e.g. there is some spurious command in the
@@ -99,7 +98,7 @@ in this troubleshooting section of the online documentation: https://bit.ly/2FCR
     return True, None
 
 
-def _computer_get_remote_username(client: "ClientProtocol", authinfo: "AuthInfo"):  # pylint: disable=unused-argument
+def _computer_get_remote_username(client: 'ClientProtocol', authinfo: 'AuthInfo'):  # pylint: disable=unused-argument
     """Internal test to check if it is possible to determine the username on the remote.
 
     :param client: an open client
@@ -110,7 +109,7 @@ def _computer_get_remote_username(client: "ClientProtocol", authinfo: "AuthInfo"
     return True, remote_user
 
 
-def _computer_create_temp_file(client: "ClientProtocol", authinfo: "AuthInfo"):  # pylint: disable=unused-argument
+def _computer_create_temp_file(client: 'ClientProtocol', authinfo: 'AuthInfo'):  # pylint: disable=unused-argument
     """
     Internal test to check if it is possible to create a temporary file
     and then delete it in the work directory
@@ -166,7 +165,7 @@ def _computer_create_temp_file(client: "ClientProtocol", authinfo: "AuthInfo"): 
     return True, None
 
 
-def time_use_login_shell(authinfo: "AuthInfo", auth_params, use_login_shell: bool, iterations: int = 3) -> float:
+def time_use_login_shell(authinfo: 'AuthInfo', auth_params, use_login_shell: bool, iterations: int = 3) -> float:
     """Execute the ``whoami`` over the transport for the given ``use_login_shell`` and report the time taken.
 
     :param authinfo: The ``AuthInfo`` instance to use.
@@ -191,7 +190,7 @@ def time_use_login_shell(authinfo: "AuthInfo", auth_params, use_login_shell: boo
     return sum(timings) / iterations
 
 
-def _computer_use_login_shell_performance(client: "ClientProtocol", authinfo: "AuthInfo"):  # pylint: disable=unused-argument
+def _computer_use_login_shell_performance(client: 'ClientProtocol', authinfo: 'AuthInfo'):  # pylint: disable=unused-argument
     """Execute a command over the transport with and without the ``use_login_shell`` option enabled.
 
     By default, AiiDA uses a login shell when connecting to a computer in order to operate in the same environment as a
@@ -649,7 +648,7 @@ def computer_configure():
     help='Email address of the AiiDA user for whom to configure this computer (if different from default user).'
 )
 @arguments.COMPUTER()
-def computer_config_show(computer: "Computer", user, defaults, as_option_string):
+def computer_config_show(computer: 'Computer', user, defaults, as_option_string):
     """Show the current configuration for a computer."""
     from aiida.common.escaping import escape_for_bash
     from aiida.transports import cli as transport_cli

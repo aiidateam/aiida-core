@@ -14,10 +14,9 @@ import contextvars
 import logging
 import traceback
 from typing import Awaitable, Dict, Hashable, Iterator, Optional
+
 from aiida.client import ClientProtocol
-
 from aiida.orm import AuthInfo
-
 
 _LOGGER = logging.getLogger(__name__)
 

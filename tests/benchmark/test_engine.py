@@ -50,8 +50,7 @@ class WorkchainLoopWcSerial(WorkchainLoop):
     """A WorkChain that submits another WorkChain n times in different steps."""
 
     def run_task(self):
-        future = self.submit(WorkchainLoop, iterations=Int(1))
-        return self.to_context(**{f'wkchain{str(self.ctx.counter)}': future})
+        self.queue_subprocess(f'wkchain{str(self.ctx.counter)}', WorkchainLoop, {'iterations': Int(1)})
 
 
 class WorkchainLoopWcThreaded(WorkchainLoop):

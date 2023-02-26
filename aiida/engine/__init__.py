@@ -24,9 +24,6 @@ from .utils import *
 
 __all__ = (
     'AiiDAPersister',
-    'Awaitable',
-    'AwaitableAction',
-    'AwaitableTarget',
     'BaseRestartWorkChain',
     'CalcJob',
     'CalcJobImporter',
@@ -60,7 +57,6 @@ __all__ = (
     'append_',
     'assign_',
     'calcfunction',
-    'construct_awaitable',
     'get_object_loader',
     'if_',
     'interruptable_task',

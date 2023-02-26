@@ -12,7 +12,7 @@
 import pytest
 
 from aiida import engine, orm
-from aiida.engine.processes.workchains.awaitable import Awaitable
+from aiida.engine.processes.workchains.awaitable import SubProcessRef
 
 
 class SomeWorkChain(engine.BaseRestartWorkChain):
@@ -167,7 +167,7 @@ def test_run_process(generate_work_chain, generate_calculation_node, monkeypatch
     result = process.run_process()
 
     assert isinstance(result, engine.ToContext)
-    assert isinstance(result['children'], Awaitable)
+    assert isinstance(result['children'], SubProcessRef)
     assert process.node.base.extras.get(SomeWorkChain._considered_handlers_extra) == [[]]  # pylint: disable=protected-access
 
 

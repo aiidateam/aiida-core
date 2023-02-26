@@ -39,6 +39,11 @@ jobs:
       run:
         make -C docs gettext
 
+    - name: Install Transifex CLI
+      run: |
+        curl -o- https://raw.githubusercontent.com/transifex/cli/master/install.sh | bash
+        mv tx /usr/local/bin/tx
+
     - name: Setting transifex configuration and upload pot files
       env:
         PROJECT_NAME: aiida-core

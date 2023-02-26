@@ -1122,6 +1122,10 @@ Creating a new data type is as simple as creating a new sub class of the base :c
     class NewData(Data):
         """A new data type that wraps a single value."""
 
+.. note::
+
+    You must register a new data entry point. See `aiida.data <https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/plugins.html#aiida-data>`
+
 At this point, our new data type does nothing special.
 Typically, one creates a new data type to represent a specific type of data.
 For the purposes of this example, let's assume that the goal of our ``NewData`` type is to store a single numerical value.

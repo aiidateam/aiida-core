@@ -138,7 +138,7 @@ spglib==2.0.2
 sphinx==4.4.0
 sphinx-copybutton==0.5.0
 sphinx-design==0.0.13
-sphinx-intl==2.0.1
+sphinx-intl==2.1.0
 sphinx-notfound-page==0.8
 sphinx-sqlalchemy==0.1.1
 sphinxcontrib-applehelp==1.0.2

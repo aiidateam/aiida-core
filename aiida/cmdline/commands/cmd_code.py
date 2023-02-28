@@ -11,6 +11,7 @@
 from collections import defaultdict
 from functools import partial
 
+import json
 import click
 import tabulate
 import yaml
@@ -341,10 +342,10 @@ VALID_PROJECTIONS = {
 @options.ALL(help='Include hidden codes.')
 @options.ALL_USERS(help='Include codes from all users.')
 @options.PROJECT(type=click.Choice(VALID_PROJECTIONS.keys()), default=['full_label', 'pk', 'entry_point'])
-@options.RAW()
+@click.option('--format', type = click.Choice(['json', 'yaml', 'raw', 'tabular']), default = 'raw')
 @click.option('-o', '--show-owner', 'show_owner', is_flag=True, default=False, help='Show owners of codes.')
 @with_dbenv()
-def code_list(computer, default_calc_job_plugin, all_entries, all_users, raw, show_owner, project):
+def code_list(computer, default_calc_job_plugin, all_entries, all_users, output_format, show_owner, project):
     # pylint: disable=too-many-branches,too-many-locals
     """List the available codes."""
     from aiida import orm
@@ -401,8 +402,8 @@ def code_list(computer, default_calc_job_plugin, all_entries, all_users, raw, sh
         return
 
     table = []
-    headers = [projection.replace('_', ' ').capitalize() for projection in project] if not raw else []
-    table_format = 'plain' if raw else None
+    headers = [projection.replace('_', ' ').capitalize() for projection in project] if output_format!='raw' else []
+    table_format = 'plain' if output_format == 'raw' else None
 
     for result in query.iterdict():
         row = []
@@ -415,7 +416,13 @@ def code_list(computer, default_calc_job_plugin, all_entries, all_users, raw, sh
                 row.append('@'.join(str(result[entity][projection]) for entity, projection in VALID_PROJECTIONS[key]))
         table.append(row)
 
-    echo.echo(tabulate.tabulate(table, headers=headers, tablefmt=table_format))
+    if output_format == 'json':
+        echo.echo(json.dumps(table))
+    elif output_format == 'yaml':
+        echo.echo(yaml.dump(table))
+    else:
+        echo.echo(tabulate.tabulate(table, headers=headers, tablefmt=table_format))
 
-    if not raw:
-        echo.echo_report('\nUse `verdi code show IDENTIFIER` to see details for a code', prefix=False)
+
+
+   

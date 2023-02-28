@@ -10,8 +10,8 @@
 """`verdi code` command."""
 from collections import defaultdict
 from functools import partial
-
 import json
+
 import click
 import tabulate
 import yaml
@@ -342,7 +342,7 @@ VALID_PROJECTIONS = {
 @options.ALL(help='Include hidden codes.')
 @options.ALL_USERS(help='Include codes from all users.')
 @options.PROJECT(type=click.Choice(VALID_PROJECTIONS.keys()), default=['full_label', 'pk', 'entry_point'])
-@click.option('--format', type = click.Choice(['json', 'yaml', 'raw', 'tabular']), default = 'raw')
+@click.option('--format', type=click.Choice(['json', 'yaml', 'raw', 'tabular']), default='raw')
 @click.option('-o', '--show-owner', 'show_owner', is_flag=True, default=False, help='Show owners of codes.')
 @with_dbenv()
 def code_list(computer, default_calc_job_plugin, all_entries, all_users, output_format, show_owner, project):
@@ -402,7 +402,7 @@ def code_list(computer, default_calc_job_plugin, all_entries, all_users, output_
         return
 
     table = []
-    headers = [projection.replace('_', ' ').capitalize() for projection in project] if output_format!='raw' else []
+    headers = [projection.replace('_', ' ').capitalize() for projection in project] if output_format != 'raw' else []
     table_format = 'plain' if output_format == 'raw' else None
 
     for result in query.iterdict():
@@ -422,7 +422,3 @@ def code_list(computer, default_calc_job_plugin, all_entries, all_users, output_
         echo.echo(yaml.dump(table))
     else:
         echo.echo(tabulate.tabulate(table, headers=headers, tablefmt=table_format))
-
-
-
-   

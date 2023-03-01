@@ -66,7 +66,7 @@ class PbsproScheduler(PbsBaseClass):
         if num_mpiprocs_per_machine:
             select_string += f':mpiprocs={num_mpiprocs_per_machine}'
         if num_cores_per_machine:
-            select_string += f':ppn={num_cores_per_machine}'
+            select_string += f':ncpus={num_cores_per_machine}'
 
         if max_wallclock_seconds is not None:
             try:

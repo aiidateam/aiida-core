@@ -1124,7 +1124,8 @@ Creating a new data type is as simple as creating a new sub class of the base :c
 
 .. note::
 
-    You must register a new data entry point. See `aiida.data <https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/plugins.html#aiida-data>`
+    To be able to use the new ``Data`` plugin, it must be registered using an entry point.
+	    See :ref:`What is an entry point?<topics:plugins:entrypoints>` for details.
 
 At this point, our new data type does nothing special.
 Typically, one creates a new data type to represent a specific type of data.

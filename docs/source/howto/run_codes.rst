@@ -250,9 +250,10 @@ The type of code is specified as the first argument and the rest of the informat
 
     .. tab-item:: Installed
 
+        The following example shows how to create an installed code for the ``bash`` binary on the ``localhost`` computer:
+
         .. code-block:: console
 
-            The following example shows how to create an installed code for the ``bash`` binary on the ``localhost`` computer:
 
             verdi code create core.code.installed \
                 --label installed-code \
@@ -309,7 +310,7 @@ At the end, you receive a confirmation, with the *PK* and the *UUID* of your new
 .. tip::
 
     The ``verdi code create`` command performs minimal checks in order to keep it performant and not rely on an internet connection.
-    If you want additional checks to verify the code is properly configured and usable, run the `verdi code test` command.
+    If you want additional checks to verify the code is properly configured and usable, run the ``verdi code test`` command.
     For installed codes for example, this will check whether the associated computer can be connected to and whether the specified executable exists.
     Look at the command help to see what other checks may be run.
 
@@ -345,6 +346,23 @@ At the end, you receive a confirmation, with the *PK* and the *UUID* of your new
         $ verdi code create core.code.installed --help
 
     Note: remove the ``--`` prefix and replace dashes (``-``) within the keys with an underscore ( ``_`` ).
+
+
+.. note::
+
+    It is possible to run codes that are provided by a `Conda environment <https://docs.conda.io/en/latest/>`_.
+    The associated ``Computer`` should be configured to create a submission script that uses a login shell by setting the ``shebang`` attribute to ``#!/bin/bash -l``.
+    The ``-l`` flag in bash enforces the script to be executed using a login shell, without which the ``conda activate`` command will fail.
+
+    The code configuration YAML would look something like the following:
+
+    .. code-block:: yaml
+
+        filepath_executable: 'executable-name'
+        prepend_text: conda activate environment-name
+
+    Note that the configuration is not complete but only shows the relevant lines.
+
 
 Managing codes
 --------------

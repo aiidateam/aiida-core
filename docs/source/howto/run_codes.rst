@@ -449,6 +449,10 @@ After :ref:`setting up your computer <how-to:run-codes:computer>` and :ref:`sett
 
     Of course, the code label and builder inputs need to be adapted to your code and calculation.
 
+    .. note::
+
+       See also the :ref:`complete list of metadata<topics:calculations:usage:calcjobs:options>` you can pass to a calculation.
+
 *   Submit your calculation to the AiiDA daemon:
 
     .. code-block:: bash

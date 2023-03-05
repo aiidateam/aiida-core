@@ -31,7 +31,10 @@ services:
     #   - db-volume:/var/lib/postgresql/data
 
   aiida:
-    image: "aiidateam/aiida-core:main"
+    #image: "aiidateam/aiida-core:main"
+    image: "aiida-core"
+    build:
+      dockerfile: Dockerfile
     container_name: aiida-core
     user: aiida
     environment:

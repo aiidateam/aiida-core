@@ -1,5 +1,5 @@
 {
-    "dockerComposeFile": "docker-compose.yaml",
+    "dockerComposeFile": "docker-compose.yml",
     "service": "aiida",
     // "build": {
     //     // Path is relative to the devcontainer.json file.

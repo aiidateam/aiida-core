@@ -1,13 +1,12 @@
 {
-    "workspaceFolder": "/home/aiida/aiida-core",
-    "workspaceMount": "/home/aiida/aiida-core",
     "dockerComposeFile": "docker-compose.yml",
     "service": "aiida",
+    "workspaceFolder": "/home/aiida/aiida-core",
     "postCreateCommand": "bash ./.devcontainer/post_create.sh",
     "waitFor": "postCreateCommand",
 	"customizations": {
         "vscode": {
-            "extensions": ["ms-python.python", "eamodio.gitlens"]
+            "extensions": ["ms-python.python","ms-python.vscode-pylance", "eamodio.gitlens"]
         }
     }
 }

@@ -4,7 +4,6 @@ services:
 
   rabbitmq:
     image: rabbitmq:3.8.3-management
-    container_name: aiida-rabbitmq
     environment:
         RABBITMQ_DEFAULT_USER: guest
         RABBITMQ_DEFAULT_PASS: guest
@@ -18,41 +17,37 @@ services:
       timeout: 30s
       retries: 5
     networks:
-      - aiida-rmq
+      - aiida
 
   postgres:
     image: postgres:12
-    container_name: aiida-postgres
     ports:
       - '5432:5432'
     networks:
-      - aiida-rmq
+      - aiida
     environment:
       POSTGRES_HOST_AUTH_METHOD: trust
-      POSTGRES_PASSWORD: password
     # volumes:
     #   - db-volume:/var/lib/postgresql/data
 
   aiida:
     #image: "aiidateam/aiida-core:main"
-    image: "aiida-core"
+    image: "aiida-core-dev"
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: aiida-core
     user: aiida
     environment:
-      DB_HOST: postgresql
+      DB_HOST: postgres
       BROKER_HOST: rabbitmq
 
-    #entrypoint: /opt/configure-aiida.sh
-    # entrypoint: "" 
-    # tty: true
+    # no need for /sbin/my_init
     entrypoint: tail -f /dev/null
-    # volumes:
+    volumes:
+      - ..:/home/aiida/aiida-core:cached
     #   - db-volume:/var/lib/assets
     networks:
-      - aiida-rmq
+      - aiida
     depends_on:
       - rabbitmq
       - postgres
@@ -61,4 +56,4 @@ services:
 #   db-volume:
 
 networks:
-  aiida-rmq:
+  aiida:

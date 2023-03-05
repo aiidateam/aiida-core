@@ -4,7 +4,8 @@
         "dockerfile": "../Dockerfile"
     },
     "postCreateCommand": [
-        "pip install ./aiida-core[test,pre-commit]",
+        "pip install ./aiida-core[tests,pre-commit]",
         "/opt/configure-aiida.sh"
-    ]
+    ],
+    "waitFor": "postCreateCommand"
 }

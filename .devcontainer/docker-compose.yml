@@ -10,7 +10,7 @@ services:
         RABBITMQ_DEFAULT_PASS: guest
     ports:
       - '5672:5672'
-      - '15672:15672':w
+      - '15672:15672'
 
     healthcheck:
       test: rabbitmq-diagnostics -q ping
@@ -33,7 +33,7 @@ services:
   aiida:
     image: "aiidateam/aiida-core:main"
     container_name: aiida-core
-    env:
+    environment:
       DB_HOST: postgresql
       BROKER_HOST: rabbitmq
     # volumes:

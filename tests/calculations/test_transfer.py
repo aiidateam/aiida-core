@@ -17,7 +17,6 @@ from aiida.common import datastructures
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_get_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path):
     """Test a default `TransferCalculation`."""
 
@@ -67,7 +66,6 @@ def test_get_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_p
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_put_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path):
     """Test a default `TransferCalculation`."""
 
@@ -142,7 +140,7 @@ def test_validate_instructions():
     assert result == expected
 
 
-def test_validate_transfer_inputs(aiida_localhost, tmp_path, temp_dir):
+def test_validate_transfer_inputs(aiida_localhost, tmp_path):
     """Test the `TransferCalculation` validators."""
     from aiida.calculations.transfer import check_node_type, validate_transfer_inputs
     from aiida.orm import Computer
@@ -151,7 +149,7 @@ def test_validate_transfer_inputs(aiida_localhost, tmp_path, temp_dir):
         label='localhost-fake',
         description='extra localhost computer set up by test',
         hostname='localhost-fake',
-        workdir=temp_dir,
+        workdir=str(tmp_path),
         transport_type='core.local',
         scheduler_type='core.direct'
     )

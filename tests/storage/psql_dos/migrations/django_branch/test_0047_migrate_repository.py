@@ -15,12 +15,12 @@ from uuid import uuid4
 from aiida.common import timezone
 from aiida.storage.psql_dos.backend import get_filepath_container
 from aiida.storage.psql_dos.migrations.utils import utils
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 REPOSITORY_UUID_KEY = 'repository|uuid'
 
 
-def test_node_repository(perform_migrations: PsqlDostoreMigrator):  # pylint: disable=too-many-locals
+def test_node_repository(perform_migrations: PsqlDosMigrator):  # pylint: disable=too-many-locals
     """Test migration of the old file repository to the disk object store."""
     # starting revision
     perform_migrations.migrate_up('django@django_0046')
@@ -93,6 +93,11 @@ def test_node_repository(perform_migrations: PsqlDostoreMigrator):  # pylint: di
         node_02 = session.get(node_model, dbnode_02_id)
         node_03 = session.get(node_model, dbnode_03_id)
         node_04 = session.get(node_model, dbnode_04_id)
+
+        assert node_01 is not None
+        assert node_02 is not None
+        assert node_03 is not None
+        assert node_04 is not None
 
         assert node_01.repository_metadata == {
             'o': {

@@ -7,21 +7,27 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Unit tests for the :mod:`aiida.engine.daemon.runner` module."""
-import pytest
+"""Module with utilities to interact with RabbitMQ."""
 
-from aiida.engine.daemon.runner import shutdown_runner
+# AUTO-GENERATED
 
+# yapf: disable
+# pylint: disable=wildcard-import
 
-@pytest.mark.requires_rmq
-@pytest.mark.asyncio
-async def test_shutdown_runner(manager):
-    """Test the ``shutdown_runner`` method."""
-    runner = manager.get_runner()
-    await shutdown_runner(runner)
+from .client import *
+from .defaults import *
+from .launcher import *
+from .utils import *
 
-    try:
-        assert runner.is_closed()
-    finally:
-        # Reset the runner of the manager, because once closed it cannot be reused by other tests.
-        manager._runner = None  # pylint: disable=protected-access
+__all__ = (
+    'BROKER_DEFAULTS',
+    'ManagementApiConnectionError',
+    'ProcessLauncher',
+    'RabbitmqManagementClient',
+    'get_launch_queue_name',
+    'get_message_exchange_name',
+    'get_rmq_url',
+    'get_task_exchange_name',
+)
+
+# yapf: enable

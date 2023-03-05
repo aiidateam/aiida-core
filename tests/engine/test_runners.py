@@ -17,24 +17,25 @@ import pytest
 
 from aiida.engine import Process
 from aiida.manage import get_manager
-from aiida.orm import WorkflowNode
+from aiida.orm import Str, WorkflowNode
 
 
 @pytest.fixture
-def create_runner():
+def runner():
     """Construct and return a `Runner`."""
-
-    def _create_runner(poll_interval=0.5):
-        loop = asyncio.new_event_loop()
-        return get_manager().create_runner(poll_interval=poll_interval, loop=loop)
-
-    return _create_runner
+    loop = asyncio.new_event_loop()
+    return get_manager().create_runner(poll_interval=0.5, loop=loop)
 
 
 class Proc(Process):
     """Process class."""
 
     _node_class = WorkflowNode
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('a')
 
     def run(self):
         pass
@@ -45,12 +46,10 @@ def the_hans_klok_comeback(loop):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
-def test_call_on_process_finish(create_runner):
+def test_call_on_process_finish(runner):
     """Test call on calculation finish."""
-    runner = create_runner()
     loop = runner.loop
-    proc = Proc(runner=runner)
+    proc = Proc(runner=runner, inputs={'a': Str('input')})
     future = plumpy.Future()
     event = threading.Event()
 
@@ -71,3 +70,13 @@ def test_call_on_process_finish(create_runner):
 
     assert not future.exception()
     assert future.result()
+
+
+def test_submit_args(runner):
+    """Test that a useful exception is raised when the inputs are passed as a dictionary instead of expanded kwargs.
+
+    Regression test for #3609. Before, it would throw the validation exception of the first port to be validated. If
+    a user accidentally forgot to expand the inputs with `**` it would be a misleading error.
+    """
+    with pytest.raises(TypeError, match=r'takes 2 positional arguments but 3 were given'):
+        runner.submit(Proc, {'a': Str('input')})

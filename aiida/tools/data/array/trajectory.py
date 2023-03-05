@@ -15,9 +15,11 @@ from aiida.engine import calcfunction
 @calcfunction
 def _get_aiida_structure_inline(trajectory, parameters):
     """
-    Creates :py:class:`aiida.orm.nodes.data.structure.StructureData` using ASE.
+    CalcFunction to extract a :py:class:`aiida.orm.nodes.data.structure.StructureData`
+    from a `TrajectoryData`.
 
-    .. note:: requires ASE module.
+    :param parameters: A dictionary whose key-value pairs are passed as
+        additional kwargs to the :py:meth:``TrajectoryData.get_step_structure`` method.
     """
     kwargs = {}
     if parameters is not None:

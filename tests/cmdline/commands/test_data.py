@@ -9,11 +9,9 @@
 ###########################################################################
 # pylint: disable=no-member,too-many-lines,no-self-use
 """Test data-related verdi commands."""
-
 import asyncio
 import io
 import os
-import shutil
 import subprocess as sp
 import tempfile
 
@@ -49,7 +47,7 @@ class DummyVerdiDataExportable:
     NON_EMPTY_GROUP_NAME_STR = 'non_empty_group'
 
     @pytest.mark.skipif(not has_pycifrw(), reason='Unable to import PyCifRW')
-    def data_export_test(self, datatype, ids, supported_formats):
+    def data_export_test(self, datatype, ids, supported_formats, output_flag, tmp_path):
         """This method tests that the data listing works as expected with all
         possible flags and arguments for different datatypes."""
         datatype_mapping = {
@@ -58,7 +56,7 @@ class DummyVerdiDataExportable:
             TrajectoryData: cmd_trajectory.trajectory_export,
         }
 
-        if datatype is None or datatype not in datatype_mapping.keys():
+        if datatype is None or datatype not in datatype_mapping:
             raise Exception(f'The listing of the objects {datatype} is not supported')
 
         export_cmd = datatype_mapping[datatype]
@@ -74,29 +72,21 @@ class DummyVerdiDataExportable:
                 res = self.cli_runner(export_cmd, options, catch_exceptions=False)
                 assert res.exit_code == 0, f'The command did not finish correctly. Output:\n{res.output}'
 
-        # Check that the output to file flags work correctly:
-        # -o, --output
-        output_flags = ['-o', '--output']
-        for flag in output_flags:
-            try:
-                tmpd = tempfile.mkdtemp()
-                filepath = os.path.join(tmpd, 'output_file.txt')
-                options = [flag, filepath, str(ids[self.NODE_ID_STR])]
-                res = self.cli_runner(export_cmd, options, catch_exceptions=False)
-                assert res.exit_code == 0, f'The command should finish correctly.Output:\n{res.output}'
+        filepath = tmp_path / 'output_file.txt'
+        options = [output_flag, str(filepath), str(ids[self.NODE_ID_STR])]
+        res = self.cli_runner(export_cmd, options, catch_exceptions=False)
+        assert res.exit_code == 0, f'The command should finish correctly.Output:\n{res.output}'
 
-                # Try to export it again. It should fail because the
-                # file exists
-                res = self.cli_runner(export_cmd, options, catch_exceptions=False)
-                assert res.exit_code != 0, 'The command should fail because the file already exists'
+        # Try to export it again. It should fail because the
+        # file exists
+        res = self.cli_runner(export_cmd, options, catch_exceptions=False)
+        assert res.exit_code != 0, 'The command should fail because the file already exists'
 
-                # Now we force the export of the file and it should overwrite
-                # existing files
-                options = [flag, filepath, '-f', str(ids[self.NODE_ID_STR])]
-                res = self.cli_runner(export_cmd, options, catch_exceptions=False)
-                assert res.exit_code == 0, f'The command should finish correctly.Output: {res.output}'
-            finally:
-                shutil.rmtree(tmpd)
+        # Now we force the export of the file and it should overwrite
+        # existing files
+        options = [output_flag, str(filepath), '-f', str(ids[self.NODE_ID_STR])]
+        res = self.cli_runner(export_cmd, options, catch_exceptions=False)
+        assert res.exit_code == 0, f'The command should finish correctly.Output: {res.output}'
 
 
 class DummyVerdiDataListable:
@@ -126,7 +116,7 @@ class DummyVerdiDataListable:
             BandsData: cmd_bands.bands_list
         }
 
-        if datatype is None or datatype not in datatype_mapping.keys():
+        if datatype is None or datatype not in datatype_mapping:
             raise Exception(f'The listing of the objects {datatype} is not supported')
 
         listing_cmd = datatype_mapping[datatype]
@@ -183,7 +173,6 @@ class DummyVerdiDataListable:
                 assert header.encode('utf-8') not in res.stdout_bytes
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestVerdiData:
     """Testing reachability of the verdi data subcommands."""
 
@@ -523,14 +512,15 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
         self.data_listing_test(TrajectoryData, str(self.pks[DummyVerdiDataListable.NODE_ID_STR]), self.pks)
 
     @pytest.mark.skipif(not has_pycifrw(), reason='Unable to import PyCifRW')
-    def test_export(self):
+    @pytest.mark.parametrize('output_flag', ['-o', '--output'])
+    def test_export(self, output_flag, tmp_path):
         new_supported_formats = list(cmd_trajectory.EXPORT_FORMATS)
-        self.data_export_test(TrajectoryData, self.pks, new_supported_formats)
+        self.data_export_test(TrajectoryData, self.pks, new_supported_formats, output_flag, tmp_path)
 
 
 class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):
     """Test verdi data structure."""
-    from aiida.orm.nodes.data.structure import has_ase
+    from aiida.orm.nodes.data.structure import has_ase  # type: ignore
 
     @pytest.fixture(autouse=True)
     def init_profile(self, aiida_profile_clean, aiida_localhost, run_cli_command):  # pylint: disable=unused-argument
@@ -749,8 +739,9 @@ PRIMVEC
     def test_list(self):
         self.data_listing_test(StructureData, 'BaO3Ti', self.pks)
 
-    def test_export(self):
-        self.data_export_test(StructureData, self.pks, cmd_structure.EXPORT_FORMATS)
+    @pytest.mark.parametrize('output_flag', ['-o', '--output'])
+    def test_export(self, output_flag, tmp_path):
+        self.data_export_test(StructureData, self.pks, cmd_structure.EXPORT_FORMATS, output_flag, tmp_path)
 
 
 @pytest.mark.skipif(not has_pycifrw(), reason='Unable to import PyCifRW')
@@ -847,10 +838,11 @@ class TestVerdiDataCif(DummyVerdiDataListable, DummyVerdiDataExportable):
         for line in result.output.split('\n'):
             assert line in self.valid_sample_cif_str
 
-    def test_export(self):
+    @pytest.mark.parametrize('output_flag', ['-o', '--output'])
+    def test_export(self, output_flag, tmp_path):
         """This method checks if the Cif export works as expected with all
         possible flags and arguments."""
-        self.data_export_test(CifData, self.pks, cmd_cif.EXPORT_FORMATS)
+        self.data_export_test(CifData, self.pks, cmd_cif.EXPORT_FORMATS, output_flag, tmp_path)
 
 
 class TestVerdiDataSinglefile(DummyVerdiDataListable, DummyVerdiDataExportable):
@@ -909,14 +901,13 @@ class TestVerdiDataUpf:
         output = sp.check_output(['verdi', 'data', 'core.upf', 'exportfamily', '--help'])
         assert b'Usage:' in output, 'Sub-command verdi data upf exportfamily --help failed.'
 
-    def test_exportfamily(self):
+    def test_exportfamily(self, tmp_path):
         """Test verdi data upf exportfamily."""
         self.upload_family()
 
-        path = tempfile.mkdtemp()
-        options = [path, 'test_group']
+        options = [tmp_path, 'test_group']
         self.cli_runner(cmd_upf.upf_exportfamily, options, catch_exceptions=False)
-        output = sp.check_output(['ls', path])
+        output = sp.check_output(['ls', tmp_path])
         assert b'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF' in output, \
             f'Sub-command verdi data upf exportfamily --help failed: {output}'
         assert b'O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF' in output, \

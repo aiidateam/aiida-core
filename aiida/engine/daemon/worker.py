@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Function that starts a daemon runner."""
+"""Function that starts a daemon worker."""
 import asyncio
 import logging
 import signal
@@ -20,11 +20,11 @@ from aiida.manage import get_manager
 LOGGER = logging.getLogger(__name__)
 
 
-async def shutdown_runner(runner: Runner) -> None:
+async def shutdown_worker(runner: Runner) -> None:
     """Cleanup tasks tied to the service's shutdown."""
     from asyncio import all_tasks, current_task
 
-    LOGGER.info('Received signal to shut down the daemon runner')
+    LOGGER.info('Received signal to shut down the daemon worker')
     tasks = [task for task in all_tasks() if task is not current_task()]
 
     for task in tasks:
@@ -33,11 +33,11 @@ async def shutdown_runner(runner: Runner) -> None:
     await asyncio.gather(*tasks, return_exceptions=True)
     runner.close()
 
-    LOGGER.info('Daemon runner stopped')
+    LOGGER.info('Daemon worker stopped')
 
 
-def start_daemon() -> None:
-    """Start a daemon runner for the currently configured profile."""
+def start_daemon_worker() -> None:
+    """Start a daemon worker for the currently configured profile."""
     daemon_client = get_daemon_client()
     configure_logging(daemon=True, daemon_log_file=daemon_client.daemon_log_file)
 
@@ -46,18 +46,18 @@ def start_daemon() -> None:
         runner = manager.create_daemon_runner()
         manager.set_runner(runner)
     except Exception:
-        LOGGER.exception('daemon runner failed to start')
+        LOGGER.exception('daemon worker failed to start')
         raise
 
     signals = (signal.SIGTERM, signal.SIGINT)
     for s in signals:  # pylint: disable=invalid-name
-        runner.loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown_runner(runner)))
+        runner.loop.add_signal_handler(s, lambda s=s: asyncio.create_task(shutdown_worker(runner)))
 
     try:
-        LOGGER.info('Starting a daemon runner')
+        LOGGER.info('Starting a daemon worker')
         runner.start()
     except SystemError as exception:
         LOGGER.info('Received a SystemError: %s', exception)
         runner.close()
 
-    LOGGER.info('Daemon runner started')
+    LOGGER.info('Daemon worker started')

@@ -49,6 +49,12 @@ class PostgresTest(TestCase):
         postgres = self._setup_postgres()
         postgres.create_dbuser(self.dbuser, self.dbpass)
         self.assertTrue(postgres.dbuser_exists(self.dbuser))
+
+        self.assertTrue(postgres.can_user_authenticate(self.dbuser, self.dbpass))
+        self.assertFalse(postgres.can_user_authenticate('non-existent-db-user', self.dbpass))
+        # note: connection with wrong password may work, if postgres server is set to trust local connections
+        # self.assertFalse(postgres.can_user_connect(self.dbuser, 'wrong-password'))
+
         postgres.drop_dbuser(self.dbuser)
         self.assertFalse(postgres.dbuser_exists(self.dbuser))
 
@@ -60,3 +66,15 @@ class PostgresTest(TestCase):
         self.assertTrue(postgres.db_exists(self.dbname))
         postgres.drop_db(self.dbname)
         self.assertFalse(postgres.db_exists(self.dbname))
+
+    def test_create_dbuser_db_safe(self):
+        """Test creating a database and user in a safe way"""
+        postgres = self._setup_postgres()
+        user1, db1 = postgres.create_dbuser_db_safe(self.dbname, self.dbuser, self.dbpass)
+        assert user1 == self.dbuser
+        assert db1 == self.dbname
+
+        # a second try should reuse the database user but create a new database
+        user2, db2 = postgres.create_dbuser_db_safe(self.dbname, self.dbuser, self.dbpass)
+        assert user2 == self.dbuser
+        assert db2 == f'{self.dbname}_1'

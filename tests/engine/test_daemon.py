@@ -22,7 +22,6 @@ async def reach_waiting_state(process):
         await asyncio.sleep(0.1)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_cancel_process_task():
     """This test is designed to replicate how processes are cancelled in the current `shutdown_runner` callback.
 

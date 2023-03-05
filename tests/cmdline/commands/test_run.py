@@ -21,7 +21,7 @@ class TestVerdiRun:
     """Tests for `verdi run`."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.cli_runner = run_cli_command
@@ -36,7 +36,7 @@ class TestVerdiRun:
         """
         from aiida.orm import WorkFunctionNode, load_node
 
-        script_content = textwrap.dedent(
+        source_file = textwrap.dedent(
             """\
             #!/usr/bin/env python
             from aiida.engine import workfunction
@@ -50,12 +50,19 @@ class TestVerdiRun:
                 print(node.pk)
             """
         )
+        source_function = textwrap.dedent(
+            """\
+            @workfunction
+            def wf():
+                pass
+            """
+        )
 
         # If `verdi run` is not setup correctly, the script above when run with `verdi run` will fail, because when
         # the engine will try to create the node for the workfunction and create a copy of its sourcefile, namely the
         # script itself, it will use `inspect.getsourcefile` which will return None
         with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
-            fhandle.write(script_content)
+            fhandle.write(source_file)
             fhandle.flush()
 
             options = [fhandle.name]
@@ -68,14 +75,15 @@ class TestVerdiRun:
             # Verify that the node has the correct function name and content
             assert isinstance(node, WorkFunctionNode)
             assert node.function_name == 'wf'
-            assert node.get_function_source_code() == script_content
+            assert node.get_source_code_file() == source_file
+            assert node.get_source_code_function() == source_function
 
 
 class TestAutoGroups:
     """Test the autogroup functionality."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.cli_runner = run_cli_command

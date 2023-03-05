@@ -9,6 +9,7 @@
 ###########################################################################
 """Data plugin represeting an executable code to be wrapped and called through a `CalcJob` plugin."""
 import os
+import pathlib
 
 from aiida.common import exceptions
 from aiida.common.log import override_log_level
@@ -18,6 +19,13 @@ from aiida.orm import Computer
 from .abstract import AbstractCode
 
 __all__ = ('Code',)
+
+warn_deprecation(
+    'The `Code` class is deprecated. To create an instance, use the `aiida.orm.nodes.data.code.installed.InstalledCode`'
+    ' or `aiida.orm.nodes.data.code.portable.PortableCode` for a "remote" or "local" code, respectively. If you are '
+    'using this class to compare type, e.g. in `isinstance`, use `aiida.orm.nodes.data.code.abstract.AbstractCode`.',
+    version=3
+)
 
 
 class Code(AbstractCode):
@@ -78,15 +86,17 @@ class Code(AbstractCode):
         type_check(computer, orm.Computer)
         return computer.pk == self.get_remote_computer().pk
 
-    def get_executable(self) -> str:
+    def get_executable(self) -> pathlib.PurePosixPath:
         """Return the executable that the submission script should execute to run the code.
 
         :return: The executable to be called in the submission script.
         """
         if self.is_local():
-            return f'./{self.get_local_executable()}'
+            exec_path = f'./{self.get_local_executable()}'
+        else:
+            exec_path = self.get_remote_exec_path()
 
-        return self.get_remote_exec_path()
+        return pathlib.PurePosixPath(exec_path)
 
     def hide(self):
         """
@@ -130,16 +140,17 @@ class Code(AbstractCode):
                     self.base.repository.put_object_from_filelike(handle, os.path.split(filename)[1])
 
     def __str__(self):
-        local_str = 'Local' if self.is_local() else 'Remote'
-        computer_str = self.computer.label
-        return f"{local_str} code '{self.label}' on {computer_str}, pk: {self.pk}, uuid: {self.uuid}"
+        if self.computer is None:
+            return f"Local code '{self.label}' pk: {self.pk}, uuid: {self.uuid}"
+
+        return f"Remote code '{self.label}' on {self.computer.label} pk: {self.pk}, uuid: {self.uuid}"
 
     def get_computer_label(self):
         """Get label of this code's computer."""
         warn_deprecation(
             'This method is deprecated, use the `InstalledCode.computer.label` property instead.', version=3
         )
-        return 'repository' if self.is_local() else self.computer.label
+        return 'repository' if self.computer is None else self.computer.label
 
     @property
     def full_label(self):
@@ -147,7 +158,7 @@ class Code(AbstractCode):
 
         Returns label of the form <code-label>@<computer-name>.
         """
-        return f'{self.label}@{"repository" if self.is_local() else self.computer.label}'
+        return f'{self.label}@{"repository" if self.computer is None else self.computer.label}'
 
     def relabel(self, new_label):
         """Relabel this code.
@@ -155,10 +166,10 @@ class Code(AbstractCode):
         :param new_label: new code label
         """
         warn_deprecation('This method is deprecated, use the `label` property instead.', version=3)
-        # pylint: disable=unused-argument
-        suffix = f'@{self.computer.label}'
-        if new_label.endswith(suffix):
-            new_label = new_label[:-len(suffix)]
+        if self.computer is not None:
+            suffix = f'@{self.computer.label}'
+            if new_label.endswith(suffix):
+                new_label = new_label[:-len(suffix)]
 
         self.label = new_label
 
@@ -195,11 +206,15 @@ class Code(AbstractCode):
         elif query.count() > 1:
             codes = query.all(flat=True)
             retstr = f"There are multiple codes with label '{label}', having IDs: "
-            retstr += f"{', '.join(sorted([str(c.pk) for c in codes]))}.\n"
+            retstr += f"{', '.join(sorted([str(c.pk) for c in codes]))}.\n"  # type: ignore[union-attr]
             retstr += ('Relabel them (using their ID), or refer to them with their ID.')
             raise MultipleObjectsError(retstr)
         else:
-            return query.first()[0]
+            result = query.first()
+            if not result:
+                raise NotExistent(f"code '{label}' does not exist.")
+
+            return result[0]
 
     @classmethod
     def get(cls, pk=None, label=None, machinename=None):
@@ -293,9 +308,9 @@ class Code(AbstractCode):
         valid_codes = query.all(flat=True)
 
         if labels:
-            return [c.label for c in valid_codes]
+            return [c.label for c in valid_codes]  # type: ignore[union-attr]
 
-        return [c.pk for c in valid_codes]
+        return [c.pk for c in valid_codes]  # type: ignore[union-attr]
 
     def _validate(self):
         super()._validate()
@@ -336,6 +351,9 @@ class Code(AbstractCode):
             version=3
         )
         filepath = self.get_remote_exec_path()
+
+        if self.computer is None:
+            raise exceptions.ValidationError('checking the remote exec path is not available for a local code.')
 
         try:
             with override_log_level():  # Temporarily suppress noisy logging
@@ -535,8 +553,4 @@ class Code(AbstractCode):
         For remote codes, it is the absolute path to the executable.
         """
         warn_deprecation('This method is deprecated, use `get_executable` instead.', version=3)
-
-        if self.is_local():
-            return f'./{self.get_local_executable()}'
-
-        return self.get_remote_exec_path()
+        return str(self.get_executable())

@@ -8,10 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests 61fc0913fae9 -> d254fdfed416"""
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_parameter_data_to_dict(perform_migrations: PsqlDostoreMigrator):
+def test_parameter_data_to_dict(perform_migrations: PsqlDosMigrator):
     """Test the data migration after `ParameterData` was renamed to `Dict`.
 
     Verify that type string of the Data node was successfully adapted.

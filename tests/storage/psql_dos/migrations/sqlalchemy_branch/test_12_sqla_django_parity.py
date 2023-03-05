@@ -9,10 +9,10 @@
 ###########################################################################
 """Tests for migrations to bring parity between SQLAlchemy and Django."""
 # pylint: disable=invalid-name,too-many-locals,too-many-statements
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_non_nullable(perform_migrations: PsqlDostoreMigrator):
+def test_non_nullable(perform_migrations: PsqlDosMigrator):
     """Test making columns non-nullable."""
     # starting revision
     perform_migrations.migrate_up('sqlalchemy@34a831f4286d')

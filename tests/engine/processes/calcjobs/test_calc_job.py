@@ -14,6 +14,7 @@ from functools import partial
 import io
 import json
 import os
+import pathlib
 import tempfile
 from unittest.mock import patch
 
@@ -22,7 +23,8 @@ import pytest
 from aiida import orm
 from aiida.common import CalcJobState, LinkType, StashMode, exceptions
 from aiida.engine import CalcJob, CalcJobImporter, ExitCode, Process, launch
-from aiida.engine.processes.calcjobs.calcjob import validate_stash_options
+from aiida.engine.processes.calcjobs.calcjob import validate_monitors, validate_stash_options
+from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorAction, CalcJobMonitorResult
 from aiida.engine.processes.ports import PortNamespace
 from aiida.plugins import CalculationFactory
 
@@ -35,6 +37,21 @@ def raise_exception(exception, *args, **kwargs):
     :param exception: exception class to raise
     """
     raise exception()
+
+
+@pytest.fixture
+def get_calcjob_builder(aiida_local_code_factory):
+    """Return a builder for the ``ArithmeticAddCalculation`` that is ready to go."""
+
+    def _factory(**kwargs):
+        code = aiida_local_code_factory('core.arithmetic.add', 'bash')
+        builder = code.get_builder()
+        builder.x = orm.Int(1)
+        builder.y = orm.Int(1)
+        builder._update(**kwargs)  # pylint: disable=protected-access
+        return builder
+
+    return _factory
 
 
 @pytest.mark.requires_rmq
@@ -132,7 +149,7 @@ class MultiCodesCalcJob(CalcJob):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean', 'chdir_tmp_path')
+@pytest.mark.usefixtures('chdir_tmp_path')
 @pytest.mark.parametrize('parallel_run', [True, False])
 def test_multi_codes_run_parallel(aiida_local_code_factory, file_regression, parallel_run):
     """test codes_run_mode set in CalcJob"""
@@ -161,16 +178,11 @@ def test_multi_codes_run_parallel(aiida_local_code_factory, file_regression, par
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean', 'chdir_tmp_path')
+@pytest.mark.usefixtures('chdir_tmp_path')
 @pytest.mark.parametrize('computer_use_double_quotes', [True, False])
-def test_computer_double_quotes(aiida_local_code_factory, file_regression, computer_use_double_quotes):
+def test_computer_double_quotes(aiida_computer, aiida_local_code_factory, file_regression, computer_use_double_quotes):
     """test that bash script quote escape behaviour can be controlled"""
-    computer = orm.Computer(
-        label='test-code-computer',
-        transport_type='core.local',
-        hostname='localhost',
-        scheduler_type='core.direct',
-    ).store()
+    computer = aiida_computer(label=f'test-code-computer-{computer_use_double_quotes}')
     computer.set_use_double_quotes(computer_use_double_quotes)
 
     inputs = {
@@ -197,7 +209,7 @@ def test_computer_double_quotes(aiida_local_code_factory, file_regression, compu
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean', 'chdir_tmp_path')
+@pytest.mark.usefixtures('chdir_tmp_path')
 @pytest.mark.parametrize('code_use_double_quotes', [True, False])
 def test_code_double_quotes(aiida_localhost, file_regression, code_use_double_quotes):
     """test that bash script quote escape behaviour can be controlled"""
@@ -227,13 +239,87 @@ def test_code_double_quotes(aiida_localhost, file_regression, code_use_double_qu
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean', 'chdir_tmp_path')
-@pytest.mark.parametrize('calcjob_withmpi', [True, False])
-def test_multi_codes_run_withmpi(aiida_local_code_factory, file_regression, calcjob_withmpi):
-    """test withmpi set in CalcJob only take effect for codes which have codeinfo.withmpi not set"""
+@pytest.mark.usefixtures('chdir_tmp_path')
+def test_containerized_code(file_regression, aiida_localhost):
+    """Test the :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode`."""
+    aiida_localhost.set_use_double_quotes(True)
+    engine_command = """singularity exec --bind $PWD:$PWD {image_name}"""
+    containerized_code = orm.ContainerizedCode(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/bash',
+        engine_command=engine_command,
+        image_name='ubuntu',
+        computer=aiida_localhost,
+    ).store()
 
     inputs = {
-        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
+        'code': containerized_code,
+        'metadata': {
+            'dry_run': True,
+            'options': {
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
+                },
+                'withmpi': False,
+            }
+        }
+    }
+
+    _, node = launch.run_get_node(DummyCalcJob, **inputs)
+    folder_name = node.dry_run_info['folder']
+    submit_script_filename = node.get_option('submit_script_filename')
+    content = (pathlib.Path(folder_name) / submit_script_filename).read_bytes().decode('utf-8')
+
+    file_regression.check(content, extension='.sh')
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('chdir_tmp_path')
+def test_containerized_code_withmpi_true(file_regression, aiida_localhost):
+    """Test the :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode` with ``withmpi=True``."""
+    aiida_localhost.set_use_double_quotes(True)
+    engine_command = """singularity exec --bind $PWD:$PWD {image_name}"""
+    containerized_code = orm.ContainerizedCode(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/bash',
+        engine_command=engine_command,
+        image_name='ubuntu',
+        computer=aiida_localhost,
+    ).store()
+
+    inputs = {
+        'code': containerized_code,
+        'metadata': {
+            'dry_run': True,
+            'options': {
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
+                },
+                'withmpi': True,
+            }
+        }
+    }
+
+    _, node = launch.run_get_node(DummyCalcJob, **inputs)
+    folder_name = node.dry_run_info['folder']
+    submit_script_filename = node.get_option('submit_script_filename')
+    content = (pathlib.Path(folder_name) / submit_script_filename).read_bytes().decode('utf-8')
+
+    file_regression.check(content, extension='.sh')
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('chdir_tmp_path')
+@pytest.mark.parametrize('calcjob_withmpi', [True, False])
+def test_multi_codes_run_withmpi(aiida_computer, aiida_local_code_factory, file_regression, calcjob_withmpi):
+    """test withmpi set in CalcJob only take effect for codes which have codeinfo.withmpi not set"""
+    computer = aiida_computer()
+    computer.set_use_double_quotes(False)
+
+    inputs = {
+        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash', computer),
         'parallel_run': orm.Bool(False),
         'metadata': {
             'dry_run': True,
@@ -257,10 +343,9 @@ def test_multi_codes_run_withmpi(aiida_local_code_factory, file_regression, calc
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('clear_database_before_test', 'chdir_tmp_path')
+@pytest.mark.usefixtures('chdir_tmp_path')
 def test_portable_code(tmp_path, aiida_localhost):
     """test run container code"""
-    import pathlib
     (tmp_path / 'bash').write_bytes(b'bash implementation')
     subdir = tmp_path / 'sub'
     subdir.mkdir()
@@ -308,7 +393,7 @@ class TestCalcJob:
     """Test for the `CalcJob` process sub class."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost, tmp_path):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost, tmp_path):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         (tmp_path / 'bash').write_bytes(b'bash implementation')
@@ -337,6 +422,12 @@ class TestCalcJob:
         process.node.set_state(state)
 
         return process
+
+    def test_process_status(self):
+        """Test that the process status is properly reset if calculation ends successfully."""
+        _, node = launch.run_get_node(ArithmeticAddCalculation, code=self.remote_code, **self.inputs)
+        assert node.is_finished_ok
+        assert node.process_status is None
 
     def test_run_base_class(self):
         """Verify that it is impossible to run, submit or instantiate a base `CalcJob` class."""
@@ -648,7 +739,7 @@ def generate_process(aiida_local_code_factory):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean', 'override_logging')
+@pytest.mark.usefixtures('override_logging')
 def test_parse_insufficient_data(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
 
@@ -679,7 +770,7 @@ def test_parse_insufficient_data(generate_process):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean', 'override_logging')
+@pytest.mark.usefixtures('override_logging')
 def test_parse_non_zero_retval(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
 
@@ -699,7 +790,7 @@ def test_parse_non_zero_retval(generate_process):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean', 'override_logging')
+@pytest.mark.usefixtures('override_logging')
 def test_parse_not_implemented(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
 
@@ -731,7 +822,7 @@ def test_parse_not_implemented(generate_process):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean', 'override_logging')
+@pytest.mark.usefixtures('override_logging')
 def test_parse_scheduler_excepted(generate_process, monkeypatch):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
 
@@ -776,7 +867,6 @@ def test_parse_scheduler_excepted(generate_process, monkeypatch):
     (100, 400, 400),
     (100, 0, 0),
 ))
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_parse_exit_code_priority(
     exit_status_scheduler,
     exit_status_retrieved,
@@ -837,7 +927,6 @@ def test_parse_exit_code_priority(
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_additional_retrieve_list(generate_process, fixture_sandbox):
     """Test the ``additional_retrieve_list`` option."""
     process = generate_process()
@@ -879,7 +968,6 @@ def test_additional_retrieve_list(generate_process, fixture_sandbox):
         process = generate_process({'metadata': {'options': {'additional_retrieve_list': ['/abs/path']}}})
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize(('stash_options', 'expected'), (
     ({
         'target_base': None
@@ -917,11 +1005,233 @@ def test_validate_stash_options(stash_options, expected):
         assert expected in validate_stash_options(stash_options, None)
 
 
+def test_validate_monitors_valid():
+    """Test the ``validate_monitors`` function for valid input."""
+    monitors = {'monitor': orm.Dict({'entry_point': 'core.always_kill'})}
+    result = validate_monitors(monitors, None)
+    assert result is None
+
+
+def test_validate_monitors_non_existent_entry_point():
+    """Test the ``validate_monitors`` function for invalid entry point."""
+    monitors = {'monitor': orm.Dict({'entry_point': 'not_existant_entry_point'})}
+    result = validate_monitors(monitors, None)
+    assert 'Entry point \'not_existant_entry_point\' not found in group' in result
+
+
+def test_validate_monitors_invalid_signature(monkeypatch):
+    """Test the ``validate_monitors`` function for existing monitor with invalid signature.
+
+    For this test, we monkeypatch the ``BaseFactory`` which is used by the validator to load the monitor. The patched
+    function will return a monitor implementation with an invalid signature.
+    """
+    from aiida.engine.processes.calcjobs.monitors import CalcJobMonitor
+
+    def monitor_invalid_signature(**kwargs):  # pylint: disable=unused-argument
+        """Monitor with invalid signature"""
+
+    def load_entry_point(*args, **kwargs):  # pylint: disable=unused-argument,invalid-name
+        return monitor_invalid_signature
+
+    monkeypatch.setattr(CalcJobMonitor, 'load_entry_point', load_entry_point)
+
+    monitors = {'monitor': orm.Dict({'entry_point': 'monitor_invalid_signature'})}
+    result = validate_monitors(monitors, None)
+    assert 'The monitor `monitor_invalid_signature` has an invalid function signature' in result
+
+
+def test_validate_monitors_unsupported_kwargs():
+    """Test the ``validate_monitors`` function for existing monitor receiving unsupported keyword argument."""
+    monitors = {'monitor': orm.Dict({'entry_point': 'core.always_kill', 'kwargs': {'unsupported_kwarg': True}})}
+    result = validate_monitors(monitors, None)
+    assert 'The monitor `core.always_kill` does not accept the keywords' in result
+
+
+def test_monitor_version(get_calcjob_builder):
+    """Test that the version of the package of the monitors are added as attributes on the node."""
+    from aiida import __version__
+    builder = get_calcjob_builder()
+    builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.always_kill'})}
+    _, node = launch.run_get_node(builder)
+    assert node.base.attributes.get('version')['monitors'] == {'monitor': __version__}
+
+
+def monitor_skip_parse(node, transport, **kwargs):  # pylint: disable=unused-argument
+    """Kill the job and skip the parsing of retrieved output files."""
+    return CalcJobMonitorResult(message='skip parsing', parse=False)
+
+
+def test_monitor_result_parse(get_calcjob_builder, entry_points):
+    """Test the ``parse`` attribute of :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult`.
+
+    If set to ``False``, parsing of output files should be skipped.
+    """
+    entry_points.add(monitor_skip_parse, group='aiida.calculations.monitors', name='core.skip_parse')
+
+    builder = get_calcjob_builder()
+    builder.metadata.options.sleep = 3
+    builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.skip_parse'})}
+    _, node = launch.run_get_node(builder)
+    assert sorted(node.outputs) == ['remote_folder', 'retrieved']
+    assert node.exit_status == CalcJob.exit_codes.STOPPED_BY_MONITOR.status
+
+
+def monitor_skip_retrieve(node, transport, **kwargs):  # pylint: disable=unused-argument
+    """Kill the job and skip the retrieval and parsing of retrieved output files."""
+    return CalcJobMonitorResult(message='skip retrieval', retrieve=False, parse=False)
+
+
+def test_monitor_result_retrieve(get_calcjob_builder, entry_points):
+    """Test the ``retrieve`` attribute of :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult`.
+
+    If set to ``False``, retrieval and parsing of output files should be skipped.
+    """
+    entry_points.add(monitor_skip_retrieve, group='aiida.calculations.monitors', name='core.skip_retrieval')
+
+    builder = get_calcjob_builder()
+    builder.metadata.options.sleep = 3
+    builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.skip_retrieval'})}
+    _, node = launch.run_get_node(builder)
+    assert 'retrieved' not in node.outputs
+    assert node.exit_status == CalcJob.exit_codes.STOPPED_BY_MONITOR.status
+
+
+def monitor_override_exit_code(node, transport, **kwargs):  # pylint: disable=unused-argument
+    """Kill the job and do not override the exit code of the parser."""
+    return CalcJobMonitorResult(message='do not override exit code', override_exit_code=False)
+
+
+def test_monitor_result_override_exit_code(get_calcjob_builder, entry_points):
+    """Test the ``override_exit_code`` attr of :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult`.
+
+    If set to ``False``, parsing of output files should be skipped.
+    """
+    entry_points.add(monitor_override_exit_code, group='aiida.calculations.monitors', name='core.override_exit_code')
+
+    builder = get_calcjob_builder()
+    builder.metadata.options.sleep = 3
+    builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.override_exit_code'})}
+    _, node = launch.run_get_node(builder)
+    assert sorted(node.outputs) == ['remote_folder', 'retrieved']
+    assert node.exit_status == ArithmeticAddCalculation.exit_codes.ERROR_INVALID_OUTPUT.status
+
+
+def monitor_disable_all(node, transport, **kwargs):  # pylint: disable=unused-argument
+    """Monitor that will disable all monitors."""
+    return CalcJobMonitorResult(action=CalcJobMonitorAction.DISABLE_ALL, message='Disable all monitors.')
+
+
+def test_monitor_result_action_disable_all(get_calcjob_builder, entry_points):
+    """Test the ``action`` attr of :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult`.
+
+    If set to ``CalcJobMonitorAction.DISABLE_ALL``, the calculation should continue running and no monitor should be
+    invoked anymore.
+    """
+    entry_points.add(monitor_disable_all, group='aiida.calculations.monitors', name='core.disable_all')
+
+    builder = get_calcjob_builder()
+    builder.metadata.options.sleep = 1
+    # Set priority to ensure that ``disable_all`` is run first. If the code works properly, it will be called first,
+    # and so the ``always_kill`` monitor will never be called. This should cause the calculation to finish nominally.
+    builder.monitors = {
+        'disable_all': orm.Dict({
+            'entry_point': 'core.disable_all',
+            'priority': 100
+        }),
+        'always_kill': orm.Dict({
+            'entry_point': 'core.always_kill',
+            'priority': 0
+        }),
+    }
+    _, node = launch.run_get_node(builder)
+    assert node.is_finished_ok
+
+
+def monitor_disable_self(node, transport, **kwargs):  # pylint: disable=unused-argument
+    """Monitor that will disable itself."""
+    return CalcJobMonitorResult(action=CalcJobMonitorAction.DISABLE_SELF, message='Disable self.')
+
+
+@pytest.mark.usefixtures('override_logging')
+def test_monitor_result_action_disable_self(get_calcjob_builder, entry_points, caplog):
+    """Test the ``action`` attr of :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult`.
+
+    If set to ``CalcJobMonitorAction.DISABLE_SELF``, the calculation should continue running and the monitor should not
+    be invoked anymore, but any other monitor should continue to be called.
+
+    The ``override_logging`` fixture is necessary to set the logging level to ``DEBUG`` because the monitor message is
+    logged at the ``INFO`` level and so without this change, it would not be captured.
+    """
+    entry_points.add(monitor_disable_self, group='aiida.calculations.monitors', name='core.disable_self')
+
+    builder = get_calcjob_builder()
+    builder.metadata.options.sleep = 1
+    builder.monitors = {'disable_self': orm.Dict({'entry_point': 'core.disable_self'})}
+    _, node = launch.run_get_node(builder)
+    assert node.is_finished_ok
+    assert len([record for record in caplog.records if 'Disable self.' in record.message]) == 1
+
+
+def test_submit_return_exit_code(get_calcjob_builder, monkeypatch):
+    """Test that a job is terminated if ``Scheduler.submit_from_script`` returns an exit code.
+
+    To simulate this situation we monkeypatch ``DirectScheduler._parse_submit_output`` because that is the method that
+    is called internally by ``Scheduler.submit_from_script`` and it returns its result, and the ``DirectScheduler`` is
+    the plugin that is used by the localhost computer used in the inputs for this calcjob.
+    """
+    from aiida.schedulers.plugins.direct import DirectScheduler
+
+    def _parse_submit_output(self, *args):  # pylint: disable=unused-argument
+        return ExitCode(418)
+
+    monkeypatch.setattr(DirectScheduler, '_parse_submit_output', _parse_submit_output)
+
+    builder = get_calcjob_builder()
+    _, node = launch.run_get_node(builder)
+    assert node.is_failed, (node.process_state, node.exit_status)
+    assert node.exit_status == 418
+
+
+def test_restart_after_daemon_reset(get_calcjob_builder, daemon_client, submit_and_await):
+    """Test that a job can be restarted when it is launched and the daemon is restarted.
+
+    This is a regression test for https://github.com/aiidateam/aiida-core/issues/5882.
+    """
+    import time
+
+    import plumpy
+
+    daemon_client.start_daemon()
+
+    # Launch a job with a one second sleep to ensure it doesn't finish before we get the chance to restart the daemon.
+    # A monitor is added to ensure that those are properly reinitialized in the ``Waiting`` state of the process.
+    builder = get_calcjob_builder()
+    builder.metadata.options.sleep = 1
+    builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.always_kill', 'disabled': True})}
+    node = submit_and_await(builder, plumpy.ProcessState.WAITING)
+
+    daemon_client.restart_daemon(wait=True)
+
+    start_time = time.time()
+    timeout = 10
+
+    while node.process_state not in [plumpy.ProcessState.FINISHED, plumpy.ProcessState.EXCEPTED]:
+
+        if node.is_excepted:
+            raise AssertionError(f'The process excepted: {node.exception}')
+
+        if time.time() - start_time >= timeout:
+            raise AssertionError(f'process failed to terminate within timeout, current state: {node.process_state}')
+
+    assert node.is_finished, node.process_state
+    assert node.is_finished_ok, node.exit_status
+
+
 class TestImport:
     """Test the functionality to import existing calculations completed outside of AiiDA."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost, aiida_local_code_factory):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost, aiida_local_code_factory):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
@@ -939,63 +1249,61 @@ class TestImport:
             }
         }
 
-    def test_import_from_valid(self):
+    def test_import_from_valid(self, tmp_path):
         """Test the import of a successfully completed `ArithmeticAddCalculation`."""
         expected_sum = (self.inputs['x'] + self.inputs['y']).value
 
-        with tempfile.TemporaryDirectory() as directory:
-            filepath = os.path.join(directory, ArithmeticAddCalculation.spec_options['output_filename'].default)
-            with open(filepath, 'w', encoding='utf8') as handle:
-                handle.write(f'{expected_sum}\n')
+        filepath = tmp_path / ArithmeticAddCalculation.spec_options['output_filename'].default
+        with open(filepath, 'w', encoding='utf8') as handle:
+            handle.write(f'{expected_sum}\n')
 
-            remote = orm.RemoteData(directory, computer=self.computer).store()
-            inputs = deepcopy(self.inputs)
-            inputs['remote_folder'] = remote
+        remote = orm.RemoteData(str(tmp_path), computer=self.computer).store()
+        inputs = deepcopy(self.inputs)
+        inputs['remote_folder'] = remote
 
-            results, node = launch.run.get_node(ArithmeticAddCalculation, **inputs)
+        results, node = launch.run.get_node(ArithmeticAddCalculation, **inputs)
 
-            # Check node attributes
-            assert isinstance(node, orm.CalcJobNode)
-            assert node.is_finished_ok
-            assert node.is_sealed
-            assert node.is_imported
+        # Check node attributes
+        assert isinstance(node, orm.CalcJobNode)
+        assert node.is_finished_ok
+        assert node.is_sealed
+        assert node.is_imported
 
-            # Verify the expected outputs are there
-            assert 'retrieved' in results
-            assert isinstance(results['retrieved'], orm.FolderData)
-            assert 'sum' in results
-            assert isinstance(results['sum'], orm.Int)
-            assert results['sum'].value == expected_sum
+        # Verify the expected outputs are there
+        assert 'retrieved' in results
+        assert isinstance(results['retrieved'], orm.FolderData)
+        assert 'sum' in results
+        assert isinstance(results['sum'], orm.Int)
+        assert results['sum'].value == expected_sum
 
-    def test_import_from_invalid(self):
+    def test_import_from_invalid(self, tmp_path):
         """Test the import of a completed `ArithmeticAddCalculation` where parsing will fail.
 
         The `ArithmeticParser` will return a non-zero exit code if the output file could not be parsed. Make sure that
         this is piped through correctly through the infrastructure and will cause the process to be marked as failed.
         """
-        with tempfile.TemporaryDirectory() as directory:
-            filepath = os.path.join(directory, ArithmeticAddCalculation.spec_options['output_filename'].default)
-            with open(filepath, 'w', encoding='utf8') as handle:
-                handle.write('a\n')  # On purpose write a non-integer to output so the parsing will fail
+        filepath = tmp_path / ArithmeticAddCalculation.spec_options['output_filename'].default
+        with open(filepath, 'w', encoding='utf8') as handle:
+            handle.write('a\n')  # On purpose write a non-integer to output so the parsing will fail
 
-            remote = orm.RemoteData(directory, computer=self.computer).store()
-            inputs = deepcopy(self.inputs)
-            inputs['remote_folder'] = remote
+        remote = orm.RemoteData(str(tmp_path), computer=self.computer).store()
+        inputs = deepcopy(self.inputs)
+        inputs['remote_folder'] = remote
 
-            results, node = launch.run.get_node(ArithmeticAddCalculation, **inputs)
+        results, node = launch.run.get_node(ArithmeticAddCalculation, **inputs)
 
-            # Check node attributes
-            assert isinstance(node, orm.CalcJobNode)
-            assert node.is_failed
-            assert node.is_sealed
-            assert node.is_imported
-            assert node.exit_status == ArithmeticAddCalculation.exit_codes.ERROR_INVALID_OUTPUT.status
+        # Check node attributes
+        assert isinstance(node, orm.CalcJobNode)
+        assert node.is_failed
+        assert node.is_sealed
+        assert node.is_imported
+        assert node.exit_status == ArithmeticAddCalculation.exit_codes.ERROR_INVALID_OUTPUT.status
 
-            # Verify the expected outputs are there
-            assert 'retrieved' in results
-            assert isinstance(results['retrieved'], orm.FolderData)
+        # Verify the expected outputs are there
+        assert 'retrieved' in results
+        assert isinstance(results['retrieved'], orm.FolderData)
 
-    def test_import_non_default_input_file(self):
+    def test_import_non_default_input_file(self, tmp_path):
         """Test the import of a successfully completed `ArithmeticAddCalculation`
 
         The only difference of this test with `test_import_from_valid` is that here the name of the output file
@@ -1004,27 +1312,26 @@ class TestImport:
 
         output_filename = 'non_standard.out'
 
-        with tempfile.TemporaryDirectory() as directory:
-            filepath = os.path.join(directory, output_filename)
-            with open(filepath, 'w', encoding='utf8') as handle:
-                handle.write(f'{expected_sum}\n')
+        filepath = tmp_path / output_filename
+        with open(filepath, 'w', encoding='utf8') as handle:
+            handle.write(f'{expected_sum}\n')
 
-            remote = orm.RemoteData(directory, computer=self.computer).store()
-            inputs = deepcopy(self.inputs)
-            inputs['remote_folder'] = remote
-            inputs['metadata']['options']['output_filename'] = output_filename
+        remote = orm.RemoteData(str(tmp_path), computer=self.computer).store()
+        inputs = deepcopy(self.inputs)
+        inputs['remote_folder'] = remote
+        inputs['metadata']['options']['output_filename'] = output_filename
 
-            results, node = launch.run.get_node(ArithmeticAddCalculation, **inputs)
+        results, node = launch.run.get_node(ArithmeticAddCalculation, **inputs)
 
-            # Check node attributes
-            assert isinstance(node, orm.CalcJobNode)
-            assert node.is_finished_ok
-            assert node.is_sealed
-            assert node.is_imported
+        # Check node attributes
+        assert isinstance(node, orm.CalcJobNode)
+        assert node.is_finished_ok
+        assert node.is_sealed
+        assert node.is_imported
 
-            # Verify the expected outputs are there
-            assert 'retrieved' in results
-            assert isinstance(results['retrieved'], orm.FolderData)
-            assert 'sum' in results
-            assert isinstance(results['sum'], orm.Int)
-            assert results['sum'].value == expected_sum
+        # Verify the expected outputs are there
+        assert 'retrieved' in results
+        assert isinstance(results['retrieved'], orm.FolderData)
+        assert 'sum' in results
+        assert isinstance(results['sum'], orm.Int)
+        assert results['sum'].value == expected_sum

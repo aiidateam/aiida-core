@@ -13,9 +13,8 @@ import pytest
 from aiida import orm
 from aiida.common.links import LinkType
 
-
 #yapf: disable
-@pytest.mark.usefixtures('aiida_profile_clean')
+
 @pytest.mark.parametrize(
     'expected_type, value', (
         (orm.Bool, True),

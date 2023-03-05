@@ -82,10 +82,10 @@ def test_get_filters_errors():
         get_full_type_filters(f'node_type{FULL_TYPE_CONCATENATOR}not_at_{LIKE_OPERATOR_CHARACTER}_the_end')
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize(
     'process_class', [orm.CalcFunctionNode, orm.CalcJobNode, orm.WorkFunctionNode, orm.WorkChainNode]
 )
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_full_type_unregistered(process_class, restapi_server, server_url):
     """Functionality test for the compatibility with old process_type entries.
 
@@ -173,8 +173,8 @@ def test_full_type_unregistered(process_class, restapi_server, server_url):
     assert query_type.count() == 1
 
 
-@pytest.mark.parametrize('node_class', [orm.CalcFunctionNode, orm.Dict])
 @pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.parametrize('node_class', [orm.CalcFunctionNode, orm.Dict])
 def test_full_type_backwards_compatibility(node_class, restapi_server, server_url):
     """Functionality test for the compatibility with old process_type entries.
 

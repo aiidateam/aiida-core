@@ -47,7 +47,7 @@ class UserCollection(entities.Collection['User']):
         return self.backend.default_user
 
 
-class User(entities.Entity['BackendUser']):
+class User(entities.Entity['BackendUser', UserCollection]):
     """AiiDA User"""
 
     _CLS_COLLECTION = UserCollection
@@ -64,7 +64,9 @@ class User(entities.Entity['BackendUser']):
         # pylint: disable=too-many-arguments
         backend = backend or get_manager().get_profile_storage()
         email = self.normalize_email(email)
-        backend_entity = backend.users.create(email, first_name, last_name, institution)
+        backend_entity = backend.users.create(
+            email=email, first_name=first_name, last_name=last_name, institution=institution
+        )
         super().__init__(backend_entity)
 
     def __str__(self) -> str:

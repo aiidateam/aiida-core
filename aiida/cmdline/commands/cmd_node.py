@@ -35,17 +35,27 @@ def verdi_node_repo():
 
 @verdi_node_repo.command('cat')
 @arguments.NODE()
-@click.argument('relative_path', type=str)
+@click.argument('relative_path', type=str, required=False)
 @with_dbenv()
 def repo_cat(node, relative_path):
-    """Output the content of a file in the node repository folder."""
+    """Output the content of a file in the node repository folder.
+
+    For ``SinglefileData`` nodes, the `RELATIVE_PATH` does not have to be specified as it is determined automatically.
+    """
     import errno
-    from shutil import copyfileobj
     import sys
+
+    from aiida.orm import SinglefileData
+
+    if not relative_path:
+        if not isinstance(node, SinglefileData):
+            raise click.BadArgumentUsage('Missing argument \'RELATIVE_PATH\'.')
+
+        relative_path = node.filename
 
     try:
         with node.base.repository.open(relative_path, mode='rb') as fhandle:
-            copyfileobj(fhandle, sys.stdout.buffer)
+            shutil.copyfileobj(fhandle, sys.stdout.buffer)
     except OSError as exception:
         # The sepcial case is breakon pipe error, which is usually OK.
         if exception.errno != errno.EPIPE:
@@ -305,6 +315,7 @@ def node_delete(identifier, dry_run, force, **traversal_rules):
         if not pks or force:
             return False
         echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
+        echo.echo_info('The nodes with the following pks would be deleted: ' + ' '.join(map(str, pks)))
         return not click.confirm('Shall I continue?', abort=True)
 
     _, was_deleted = delete_nodes(pks, dry_run=dry_run or _dry_run_callback, **traversal_rules)
@@ -424,10 +435,11 @@ def verdi_graph():
     multiple=True
 )
 @click.option('-s', '--show', is_flag=True, help='Open the rendered result with the default application.')
+@arguments.OUTPUT_FILE(required=False)
 @decorators.with_dbenv()
 def graph_generate(
     root_node, link_types, identifier, ancestor_depth, descendant_depth, process_out, process_in, engine, output_format,
-    highlight_classes, show
+    highlight_classes, show, output_file
 ):
     """
     Generate a graph from a ROOT_NODE (specified by pk or uuid).
@@ -457,11 +469,13 @@ def graph_generate(
         include_process_inputs=process_in,
         highlight_classes=highlight_classes,
     )
-    output_file_name = graph.graphviz.render(
-        filename=f'{root_node.pk}.{engine}', format=output_format, view=show, cleanup=True
-    )
 
-    echo.echo_success(f'Output file: {output_file_name}')
+    if not output_file:
+        output_file = pathlib.Path(f'{root_node.pk}.{engine}.{output_format}')
+
+    output_file_name = graph.graphviz.render(outfile=output_file, format=output_format, view=show, cleanup=True)
+
+    echo.echo_success(f'Output written to `{output_file_name}`')
 
 
 @verdi_node.group('comment')

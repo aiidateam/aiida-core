@@ -12,10 +12,10 @@ import json
 
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_dblog_update(perform_migrations: PsqlDostoreMigrator):  # pylint: disable=too-many-locals
+def test_dblog_update(perform_migrations: PsqlDosMigrator):  # pylint: disable=too-many-locals
     """Test the update to the ``DbLog`` table."""
     # starting revision
     perform_migrations.migrate_up('django@django_0023')

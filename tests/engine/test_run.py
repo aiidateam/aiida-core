@@ -17,7 +17,6 @@ from tests.utils.processes import DummyProcess
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestRun:
     """Tests for the `run` functions."""
 

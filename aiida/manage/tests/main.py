@@ -11,20 +11,22 @@
 Testing infrastructure for easy testing of AiiDA plugins.
 
 """
-from contextlib import contextmanager
+import contextlib
 import os
 import shutil
 import tempfile
+import warnings
 
+from aiida.common.log import override_log_level
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import configuration, get_manager
-from aiida.manage.configuration.settings import create_instance_directories
+from aiida.manage.configuration import settings
 from aiida.manage.external.postgres import Postgres
+from aiida.orm import User
 
 __all__ = (
     'get_test_profile_name',
     'get_test_backend_name',
-    'get_user_dict',
     'test_manager',
     'TestManager',
     'TestManagerError',
@@ -54,6 +56,10 @@ _DEFAULT_PROFILE_INFO = {
     'broker_virtual_host': '',
     'test_profile': True,
 }
+
+warn_deprecation(
+    'This module is deprecated; use the fixtures from `aiida.manage.tests.pytest_fixtures` instead', version=3
+)
 
 
 class TestManagerError(Exception):
@@ -158,19 +164,39 @@ class ProfileManager:
         if not self._profile.is_test_profile:
             raise TestManagerError(f'Profile `{profile_name}` is not a valid test profile.')
 
-    @staticmethod
-    def clear_profile():
-        """Reset the global profile, clearing all its data and closing any open resources."""
+    def ensure_default_user(self):
+        """Ensure that the default user defined by the profile exists in the database."""
+        created, user = User.collection.get_or_create(self._profile.default_user_email)
+        if created:
+            user.store()
+
+    def clear_profile(self):
+        """Reset the global profile, clearing all its data and closing any open resources.
+
+        If the daemon is running, it will be stopped because it might be holding on to entities that will be cleared
+        from the storage backend.
+        """
+        from aiida.engine.daemon.client import get_daemon_client
+
+        daemon_client = get_daemon_client()
+
+        if daemon_client.is_daemon_running:
+            daemon_client.stop_daemon(wait=True)
+
         manager = get_manager()
-        manager.get_profile_storage()._clear(recreate_user=True)  # pylint: disable=protected-access
-        manager.reset_profile()
+        manager.get_profile_storage()._clear()  # pylint: disable=protected-access
         manager.get_profile_storage()  # reload the storage connection
+        manager.reset_communicator()
+        manager.reset_runner()
+
+        self.ensure_default_user()
 
     def has_profile_open(self):
         return self._profile is not None
 
-    def destroy_all(self):
-        pass
+    def destroy_all(self):  # pylint: disable=no-self-use
+        manager = get_manager()
+        manager.reset_profile()
 
 
 class TemporaryProfileManager(ProfileManager):
@@ -227,8 +253,6 @@ class TemporaryProfileManager(ProfileManager):
            e.g. {'pg_ctl': '/somepath/pg_ctl'}. Should usually not be necessary.
 
         """
-        from aiida.manage.configuration import settings
-
         self.dbinfo = {}
         self.profile_info = _DEFAULT_PROFILE_INFO
         self.profile_info['storage_backend'] = backend
@@ -241,6 +265,7 @@ class TemporaryProfileManager(ProfileManager):
         self._backup = {
             'config': configuration.CONFIG,
             'config_dir': settings.AIIDA_CONFIG_FOLDER,
+            settings.DEFAULT_AIIDA_PATH_VARIABLE: os.environ.get(settings.DEFAULT_AIIDA_PATH_VARIABLE, None)
         }
 
     @property
@@ -250,6 +275,7 @@ class TemporaryProfileManager(ProfileManager):
         Used to set up AiiDA profile from self.profile_info dictionary.
         """
         dictionary = {
+            'default_user_email': 'test@aiida.net',
             'test_profile': True,
             'storage': {
                 'backend': self.profile_info.get('storage_backend'),
@@ -315,8 +341,7 @@ class TemporaryProfileManager(ProfileManager):
 
         Warning: the AiiDA dbenv must not be loaded when this is called!
         """
-        from aiida.manage.configuration import Profile, settings
-        from aiida.orm import User
+        from aiida.manage.configuration import Profile
 
         manager = get_manager()
 
@@ -324,11 +349,17 @@ class TemporaryProfileManager(ProfileManager):
             self.create_aiida_db()
 
         if not self.root_dir:
-            self.root_dir = tempfile.mkdtemp()
+            self.root_dir = tempfile.TemporaryDirectory().name  # pylint: disable=consider-using-with
         configuration.CONFIG = None
-        settings.AIIDA_CONFIG_FOLDER = self.config_dir
+
+        os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = self.config_dir
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=UserWarning)
+            # This will raise a warning that the ``.aiida`` configuration directory is created.
+            settings.set_configuration_directory()
+
         manager.unload_profile()
-        create_instance_directories()
         profile_name = self.profile_info['name']
         config = configuration.get_config(create=True)
         profile = Profile(profile_name, self.profile_dictionary)
@@ -336,15 +367,18 @@ class TemporaryProfileManager(ProfileManager):
         config.set_default_profile(profile_name).store()
         self._profile = profile
 
-        # initialise the profile
-        profile = manager.load_profile(profile_name)
-        # initialize the profile storage
-        profile.storage_cls.migrate(profile)
-        # create the default user for the profile
-        created, user = User.collection.get_or_create(**get_user_dict(_DEFAULT_PROFILE_INFO))
-        if created:
-            user.store()
-        profile.default_user_email = user.email
+        # Load the new profile and initialize the profile storage
+        with override_log_level():
+            profile = manager.load_profile(profile_name)
+            profile.storage_cls.initialise(profile, reset=True)
+
+        # Set options to suppress certain warnings
+        config.set_option('warnings.development_version', False)
+        config.set_option('warnings.rabbitmq_version', False)
+
+        config.store()
+
+        self.ensure_default_user()
 
     def repo_ok(self):
         return bool(self.repo and os.path.isdir(os.path.dirname(self.repo)))
@@ -395,7 +429,7 @@ class TemporaryProfileManager(ProfileManager):
 
     def destroy_all(self):
         """Remove all traces of the tests run"""
-        from aiida.manage.configuration import settings
+        super().destroy_all()
         if self.root_dir:
             shutil.rmtree(self.root_dir)
             self.root_dir = None
@@ -410,6 +444,9 @@ class TemporaryProfileManager(ProfileManager):
         if 'config_dir' in self._backup:
             settings.AIIDA_CONFIG_FOLDER = self._backup['config_dir']
 
+        if settings.DEFAULT_AIIDA_PATH_VARIABLE in self._backup and self._backup[settings.DEFAULT_AIIDA_PATH_VARIABLE]:
+            os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = self._backup[settings.DEFAULT_AIIDA_PATH_VARIABLE]
+
     def has_profile_open(self):
         return self._profile is not None
 
@@ -417,7 +454,7 @@ class TemporaryProfileManager(ProfileManager):
 _GLOBAL_TEST_MANAGER = TestManager()
 
 
-@contextmanager
+@contextlib.contextmanager
 def test_manager(backend='core.psql_dos', profile_name=None, pgtest=None):
     """ Context manager for TestManager objects.
 
@@ -496,8 +533,3 @@ def get_test_profile_name():
     :returns: content of environment variable or `None`
     """
     return os.environ.get('AIIDA_TEST_PROFILE', None)
-
-
-def get_user_dict(profile_dict):
-    """Collect parameters required for creating users."""
-    return {k: profile_dict[k] for k in ('email', 'first_name', 'last_name', 'institution')}

@@ -11,8 +11,10 @@
 import logging
 import os
 import sys
+import textwrap
 from typing import TYPE_CHECKING
 
+from click import style
 from tabulate import tabulate
 
 from . import echo
@@ -37,7 +39,13 @@ def is_verbose():
 
 def get_env_with_venv_bin():
     """Create a clone of the current running environment with the AIIDA_PATH variable set directory of the config."""
+    from aiida.common.warnings import warn_deprecation
     from aiida.manage.configuration import get_config
+
+    warn_deprecation(
+        '`get_env_with_venv_bin` function is deprecated use `aiida.engine.daemon.client.DaemonClient.get_env` instead.',
+        version=3
+    )
 
     config = get_config()
 
@@ -401,17 +409,11 @@ def print_process_info(process):
     """
     docstring = process.__doc__
 
-    if docstring is not None:
-        docstring = docstring.strip().split('\n')
-
-    if not docstring:
-        docstring = ['No description available']
+    if docstring is None or docstring.strip() is None:
+        docstring = 'No description available'
 
     echo.echo('Description:\n', fg=echo.COLORS['report'], bold=True)
-    for line in docstring:
-        echo.echo(f'    {line.lstrip()}')
-    echo.echo('')
-
+    echo.echo(textwrap.indent('\n'.join(textwrap.wrap(docstring, 100)), '    '))
     print_process_spec(process.spec())
 
 
@@ -436,40 +438,52 @@ def print_process_spec(process_spec):
 
             valid_types = port.valid_type if isinstance(port.valid_type, (list, tuple)) else (port.valid_type,)
             valid_types = ', '.join([valid_type.__name__ for valid_type in valid_types if valid_type is not None])
-            required = 'required' if port.required else 'optional'
-            info = port.help if port.help is not None else ''
-            info = f'{info[:75]} ...' if len(info) > 75 else info
-            result.append([name, required, valid_types, info])
+            info = textwrap.wrap(port.help if port.help is not None else '', width=75)
+            result.append([name, port.required, valid_types, info])
 
         return result
 
-    template = '{:>{width_name}s}:  {:10s}{:{width_type}}{}'
     inputs = build_entries(process_spec.inputs)
     outputs = build_entries(process_spec.outputs)
-    max_width_name = max([len(entry[0]) for entry in inputs + outputs]) + 2
-    max_width_type = max([len(entry[2]) for entry in inputs + outputs]) + 2
 
     if process_spec.inputs:
-        echo.echo('Inputs:', fg=echo.COLORS['report'], bold=True)
-    for entry in inputs:
-        if entry[1] == 'required':
-            echo.echo(template.format(*entry, width_name=max_width_name, width_type=max_width_type), bold=True)
-        else:
-            echo.echo(template.format(*entry, width_name=max_width_name, width_type=max_width_type))
+        echo.echo('\nInputs:', fg=echo.COLORS['report'], bold=True)
+
+    table = []
+
+    for name, required, valid_types, info in inputs:
+        table.append((style(name, bold=required, fg='red' if required else 'white'), valid_types, '\n'.join(info)))
+
+    if table:
+        echo.echo(tabulate(table, tablefmt='plain', colalign=('right',)))
+        echo.echo(style('\nRequired inputs are displayed in bold red.\n', italic=True))
 
     if process_spec.outputs:
         echo.echo('Outputs:', fg=echo.COLORS['report'], bold=True)
-    for entry in outputs:
-        if entry[1] == 'required':
-            echo.echo(template.format(*entry, width_name=max_width_name, width_type=max_width_type), bold=True)
-        else:
-            echo.echo(template.format(*entry, width_name=max_width_name, width_type=max_width_type))
+
+    table = []
+
+    for name, required, valid_types, info in outputs:
+        table.append((style(name, bold=required, fg='red' if required else 'white'), valid_types, '\n'.join(info)))
+
+    if table:
+        echo.echo(tabulate(table, tablefmt='plain', colalign=('right',)))
+        echo.echo(style('\nRequired outputs are displayed in bold red.\n', italic=True))
 
     if process_spec.exit_codes:
-        echo.echo('Exit codes:', fg=echo.COLORS['report'], bold=True)
-    for exit_code in sorted(process_spec.exit_codes.values(), key=lambda exit_code: exit_code.status):
-        message = exit_code.message
-        echo.echo('{:>{width_name}d}:  {}'.format(exit_code.status, message, width_name=max_width_name))
+        echo.echo('Exit codes:\n', fg=echo.COLORS['report'], bold=True)
+
+        table = [('0', 'The process finished successfully.')]
+
+        for exit_code in sorted(process_spec.exit_codes.values(), key=lambda exit_code: exit_code.status):
+            if exit_code.invalidates_cache:
+                status = style(exit_code.status, bold=True, fg='red')
+            else:
+                status = exit_code.status
+            table.append((status, '\n'.join(textwrap.wrap(exit_code.message, width=75))))
+
+        echo.echo(tabulate(table, tablefmt='plain'))
+        echo.echo(style('\nExit codes that invalidate the cache are marked in bold red.\n', italic=True))
 
 
 def get_num_workers():

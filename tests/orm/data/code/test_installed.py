@@ -10,7 +10,6 @@
 # pylint: disable=redefined-outer-name
 """Tests for the :class:`aiida.orm.nodes.data.code.installed.InstalledCode` class."""
 import pathlib
-import uuid
 
 import pytest
 
@@ -44,12 +43,6 @@ def test_validate(aiida_localhost):
     filepath_executable = '/usr/bin/bash'
     code = InstalledCode(computer=aiida_localhost, filepath_executable=filepath_executable)
 
-    code.computer = None
-    assert code.computer is None
-
-    with pytest.raises(ValidationError, match='The `computer` is undefined.'):
-        code.store()
-
     code.computer = aiida_localhost
     code.base.attributes.set(code._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, None)  # pylint: disable=protected-access
 
@@ -76,6 +69,12 @@ def test_filepath_executable(aiida_localhost):
     code = InstalledCode(computer=aiida_localhost, filepath_executable=filepath_executable)
     assert code.filepath_executable == pathlib.PurePath(filepath_executable)
 
+    # Relative path
+    filepath_executable = 'bash'
+    code = InstalledCode(computer=aiida_localhost, filepath_executable=filepath_executable)
+    assert code.filepath_executable == pathlib.PurePath(filepath_executable)
+
+    # Change through the property
     filepath_executable = '/usr/bin/cat'
     code.filepath_executable = filepath_executable
     assert code.filepath_executable == pathlib.PurePath(filepath_executable)
@@ -89,16 +88,31 @@ def test_filepath_executable(aiida_localhost):
         code.filepath_executable = filepath_executable
 
 
-def test_validate_filepath_executable():
+@pytest.fixture
+def computer(request, aiida_computer_local, aiida_computer_ssh):
+    """Return a computer configured for ``core.local`` and ``core.ssh`` transport."""
+    if request.param == 'core.local':
+        return aiida_computer_local(configure=False)
+
+    if request.param == 'core.ssh':
+        return aiida_computer_ssh(configure=False)
+
+    raise ValueError(f'unsupported request parameter: {request.param}')
+
+
+@pytest.mark.parametrize('computer', ('core.local', 'core.ssh'), indirect=True)
+def test_validate_filepath_executable(ssh_key, computer):
     """Test the :meth:`aiida.orm.nodes.data.code.installed.InstalledCode.validate_filepath_executable` method."""
     filepath_executable = '/usr/bin/not-existing'
-    computer = Computer(label=str(uuid.uuid4()), transport_type='core.local')
     code = InstalledCode(computer=computer, filepath_executable=filepath_executable)
 
     with pytest.raises(ValidationError, match=r'Could not connect to the configured computer.*'):
         code.validate_filepath_executable()
 
-    computer.configure()
+    if computer.transport_type == 'core.ssh':
+        computer.configure(key_filename=str(ssh_key), key_policy='AutoAddPolicy')
+    else:
+        computer.configure()
 
     with pytest.raises(ValidationError, match=r'The provided remote absolute path .* does not exist on the computer\.'):
         code.validate_filepath_executable()
@@ -108,7 +122,13 @@ def test_validate_filepath_executable():
 
 
 def test_full_label(aiida_localhost):
-    """Test the :meth:`aiida.orm.nodes.data.code.portable.PortableCode.full_label` property."""
+    """Test the :meth:`aiida.orm.nodes.data.code.installed.InstalledCode.full_label` property."""
     label = 'some-label'
     code = InstalledCode(label=label, computer=aiida_localhost, filepath_executable='/usr/bin/bash')
     assert code.full_label == f'{label}@{aiida_localhost.label}'
+
+
+def test_get_execname(aiida_localhost):
+    """Test the deprecated :meth:`aiida.orm.nodes.data.code.installed.InstalledCode.get_execname` method."""
+    code = InstalledCode(label='some-label', computer=aiida_localhost, filepath_executable='/usr/bin/bash')
+    assert code.get_execname() == '/usr/bin/bash'

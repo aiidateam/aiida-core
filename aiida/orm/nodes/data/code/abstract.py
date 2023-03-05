@@ -12,16 +12,22 @@ from __future__ import annotations
 
 import abc
 import collections
+import pathlib
+from typing import TYPE_CHECKING
 
 import click
 
 from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
 from aiida.common import exceptions
+from aiida.common.folders import Folder
 from aiida.common.lang import type_check
 from aiida.orm import Computer
 from aiida.plugins import CalculationFactory
 
 from ..data import Data
+
+if TYPE_CHECKING:
+    from aiida.engine import ProcessBuilder
 
 __all__ = ('AbstractCode',)
 
@@ -38,7 +44,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
 
     def __init__(
         self,
-        default_calc_job_plugin: str = None,
+        default_calc_job_plugin: str | None = None,
         append_text: str = '',
         prepend_text: str = '',
         use_double_quotes: bool = False,
@@ -58,7 +64,6 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         self.append_text = append_text
         self.prepend_text = prepend_text
         self.use_double_quotes = use_double_quotes
-        self.use_double_quotes = use_double_quotes
         self.is_hidden = is_hidden
 
     @abc.abstractmethod
@@ -70,10 +75,46 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def get_executable(self) -> str:
+    def get_executable(self) -> pathlib.PurePosixPath:
         """Return the executable that the submission script should execute to run the code.
 
         :return: The executable to be called in the submission script.
+        """
+
+    def get_executable_cmdline_params(self, cmdline_params: list[str] | None = None) -> list:
+        """Return the list of executable with its command line parameters.
+
+        :param cmdline_params: List of command line parameters provided by the ``CalcJob`` plugin.
+        :return: List of the executable followed by its command line parameters.
+        """
+        return [str(self.get_executable())] + (cmdline_params or [])
+
+    def get_prepend_cmdline_params( # pylint: disable=no-self-use
+        self,
+        mpi_args: list[str] | None = None,
+        extra_mpirun_params: list[str] | None = None
+    ) -> list[str]:
+        """Return List of command line parameters to be prepended to the executable in submission line.
+        These command line parameters are typically parameters related to MPI invocations.
+
+        :param mpi_args: List of MPI parameters provided by the ``Computer.get_mpirun_command`` method.
+        :param extra_mpiruns_params: List of MPI parameters provided by the ``metadata.options.extra_mpirun_params``
+            input of the ``CalcJob``.
+        :return: List of command line parameters to be prepended to the executable in submission line.
+        """
+        return (mpi_args or []) + (extra_mpirun_params or [])
+
+    def validate_working_directory(self, folder: Folder):
+        """Validate content of the working directory created by the :class:`~aiida.engine.CalcJob` plugin.
+
+        This method will be called by :meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.presubmit` when a new
+        calculation job is launched, passing the :class:`~aiida.common.folders.Folder` that was used by the plugin used
+        for the calculation to create the input files for the working directory. This method can be overridden by
+        implementations of the ``AbstractCode`` class that need to validate the contents of that folder.
+
+        :param folder: A sandbox folder that the ``CalcJob`` plugin wrote input files to that will be copied to the
+            working directory for the corresponding calculation job instance.
+        :raises PluginInternalError: If the content of the sandbox folder is not valid.
         """
 
     @property
@@ -87,7 +128,15 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         :return: The full label of the code.
         """
 
-    @Data.label.setter
+    @property
+    def label(self) -> str:
+        """Return the label.
+
+        :return: The label.
+        """
+        return self.backend_entity.label
+
+    @label.setter
     def label(self, value: str) -> None:
         """Set the label.
 
@@ -188,7 +237,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         type_check(value, bool)
         self.base.extras.set(self._KEY_EXTRA_IS_HIDDEN, value)
 
-    def get_builder(self):
+    def get_builder(self) -> 'ProcessBuilder':
         """Create and return a new ``ProcessBuilder`` for the ``CalcJob`` class of the plugin configured for this code.
 
         The configured calculation plugin class is defined by the ``default_calc_job_plugin`` property.
@@ -209,7 +258,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         except exceptions.EntryPointError:
             raise exceptions.EntryPointError(f'The calculation entry point `{entry_point}` could not be loaded')
 
-        builder = process_class.get_builder()
+        builder = process_class.get_builder()  # type: ignore
         builder.code = self
 
         return builder
@@ -240,6 +289,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """Return the CLI options that would allow to create an instance of this class."""
         return {
             'label': {
+                'short_name': '-L',
                 'required': True,
                 'type': click.STRING,
                 'prompt': 'Label',
@@ -247,11 +297,13 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
                 'callback': cls.cli_validate_label_uniqueness,
             },
             'description': {
+                'short_name': '-D',
                 'type': click.STRING,
                 'prompt': 'Description',
                 'help': 'Human-readable description of this code ideally including version and compilation environment.'
             },
             'default_calc_job_plugin': {
+                'short_name': '-P',
                 'type': click.STRING,
                 'prompt': 'Default `CalcJob` plugin',
                 'help': 'Entry point name of the default plugin (as listed in `verdi plugin list aiida.calculations`).'

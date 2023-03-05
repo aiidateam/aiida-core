@@ -9,6 +9,8 @@
 ###########################################################################
 # pylint: disable=redefined-outer-name
 """Tests for the :class:`aiida.orm.nodes.data.code.abstract.AbstractCode` class."""
+import pathlib
+
 import pytest
 
 from aiida.orm.nodes.data.code.abstract import AbstractCode
@@ -21,9 +23,9 @@ class MockCode(AbstractCode):
         """Return whether the code can run on a given computer."""
         return True
 
-    def get_executable(self) -> str:
+    def get_executable(self) -> pathlib.PurePosixPath:
         """Return the executable that the submission script should execute to run the code."""
-        return ''
+        return pathlib.PurePosixPath('/bin/executable')
 
     @property
     def full_label(self) -> str:

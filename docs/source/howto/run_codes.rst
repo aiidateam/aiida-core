@@ -14,9 +14,9 @@ If a plugin for your code is not yet available, see :ref:`how-to:plugin-codes`.
 Throughout the process, you will be prompted for information on the computer and code.
 In these prompts:
 
- * Type ``?`` followed by ``<enter>`` to get help on what is being asked at any prompt.
- * Press ``<CTRL>+C`` at any moment to abort the setup process.
-   Your AiiDA database will remain unmodified.
+* Type ``?`` followed by ``<enter>`` to get help on what is being asked at any prompt.
+* Press ``<CTRL>+C`` at any moment to abort the setup process.
+  Your AiiDA database will remain unmodified.
 
 .. note::
 
@@ -31,8 +31,8 @@ How to set up a computer
 A |Computer| in AiiDA denotes a computational resource on which you will run your calculations.
 It can either be:
 
- 1. the machine where AiiDA is installed or
- 2. any machine that is accessible via `SSH <https://en.wikipedia.org/wiki/Secure_Shell>`_ from the machine where AiiDA is installed (possibly :ref:`via a proxy server<how-to:ssh:proxy>`).
+1. the machine where AiiDA is installed or
+2. any machine that is accessible via `SSH <https://en.wikipedia.org/wiki/Secure_Shell>`_ from the machine where AiiDA is installed (possibly :ref:`via a proxy server<how-to:ssh:proxy>`).
 
 The second option allows managing multiple remote compute resources (including HPC clusters and cloud services) from the same AiiDA installation and moving computational jobs between them.
 
@@ -75,8 +75,8 @@ Start by creating a new computer instance in the database:
 At the end, the command will open your default editor on a file containing a summary of the configuration up to this point.
 You can add ``bash`` commands that will be executed
 
- * *before* the actual execution of the job (under 'Pre-execution script'), and
- * *after* the script submission (under 'Post execution script').
+* *before* the actual execution of the job (under 'Pre-execution script'), and
+* *after* the script submission (under 'Post execution script').
 
 Use these additional lines to perform any further set up of the environment on the computer, for example loading modules or exporting environment variables:
 
@@ -93,36 +93,37 @@ When you are done editing, save and quit.
 The computer has now been created in the database but you still need to *configure* access to it using your credentials.
 
 .. tip::
+
     In order to avoid having to retype the setup information the next time around, you can provide some (or all) of the information via a configuration file:
 
     .. code-block:: console
 
-       $ verdi computer setup --config computer.yml
+        $ verdi computer setup --config computer.yml
 
     where ``computer.yml`` is a configuration file in the `YAML format <https://en.wikipedia.org/wiki/YAML#Syntax>`__.
     This file contains the information in a series of key-value pairs:
 
     .. code-block:: yaml
 
-       ---
-       label: "localhost"
-       hostname: "localhost"
-       transport: local
-       scheduler: "direct"
-       work_dir: "/home/max/.aiida_run"
-       mpirun_command: "mpirun -np {tot_num_mpiprocs}"
-       mpiprocs_per_machine: "2"
-       prepend_text: |
-          module load mymodule
-          export NEWVAR=1
+        ---
+        label: "localhost"
+        hostname: "localhost"
+        transport: "core.local"
+        scheduler: "core.direct"
+        work_dir: "/home/max/.aiida_run"
+        mpirun_command: "mpirun -np {tot_num_mpiprocs}"
+        mpiprocs_per_machine: "2"
+        prepend_text: |
+            module load mymodule
+            export NEWVAR=1
 
-   The list of the keys for the ``yaml`` file is given by the options of the ``computer setup`` command:
+    The list of the keys for the ``yaml`` file is given by the options of the ``computer setup`` command:
 
-   .. code-block:: console
+    .. code-block:: console
 
-      $ verdi computer setup --help
+        $ verdi computer setup --help
 
-    Note: remove the ``--`` prefix and replace ``-`` within the keys with an underscore ``_``.
+    Note: remove the ``--`` prefix and replace dashes (``-``) within the keys with an underscore ( ``_`` ).
 
 .. _how-to:run-codes:computer:configuration:
 
@@ -135,7 +136,7 @@ The second step configures private connection details using:
 
     $ verdi computer configure TRANSPORTTYPE COMPUTERLABEL
 
-Replace ``COMPUTERLABEL`` with the computer label chosen during the setup and replace ``TRANSPORTTYPE`` with the name of chosen transport type, i.e., ``local`` for the localhost computer and ``ssh`` for any remote computer.
+Replace ``COMPUTERLABEL`` with the computer label chosen during the setup and replace ``TRANSPORTTYPE`` with the name of chosen transport type, i.e., ``core.local`` for the localhost computer and ``core.ssh`` for any remote computer.
 
 After the setup and configuration have been completed, let's check that everything is working properly:
 
@@ -152,13 +153,13 @@ Mitigating connection overloads
 
 Some compute resources, particularly large supercomputing centers, may not tolerate submitting too many jobs at once, executing scheduler commands too frequently, or opening too many SSH connections.
 
-  * Limit the number of jobs in the queue.
+*   Limit the number of jobs in the queue.
 
     Set a limit for the maximum number of workflows to submit, and only submit new ones once previous workflows start to complete.
     The supported number of jobs depends on the supercomputer configuration which may be documented as part of the center's user documentation.
     The supercomputer administrators may also find the information found on `this page <https://github.com/aiidateam/aiida-core/wiki/Optimising-the-SLURM-scheduler-configuration-(for-cluster-administrators)>`_ useful.
 
-  * Increase the time interval between polling the job queue.
+*   Increase the time interval between polling the job queue.
 
     The time interval (in seconds) can be set through the Python API by loading the corresponding |Computer| node, e.g. in the ``verdi shell``:
 
@@ -166,14 +167,14 @@ Some compute resources, particularly large supercomputing centers, may not toler
 
         load_computer('fidis').set_minimum_job_poll_interval(30.0)
 
-  * Increase the connection cooldown time.
+*   Increase the connection cooldown time.
 
     This is the minimum time (in seconds) to wait between opening a new connection.
     Modify it for an existing computer using:
 
     .. code-block:: bash
 
-      verdi computer configure core.ssh --non-interactive --safe-interval <SECONDS> <COMPUTER_NAME>
+        verdi computer configure core.ssh --non-interactive --safe-interval <SECONDS> <COMPUTER_NAME>
 
 .. important::
 
@@ -216,46 +217,87 @@ Doing so will prevent AiiDA from connecting to the given computer to check the s
 
 .. _how-to:run-codes:code:
 
-How to setup a code
-===================
+How to create a code
+====================
 
-Once your computer is configured, you can set up codes on it.
+Before you can run a calculation, you need to define a "code" which represents what code the calculation should execute and how it should be executed.
+AiiDA supports a variety of codes:
 
-AiiDA stores a set of metadata for each code, which is attached automatically to each calculation using it.
-Besides being important for reproducibility, this also makes it easy to query for all calculations that were run with a given code (for instance, if a specific version is found to contain a bug).
+* ``Installed``: The executable code is already installed on the target computer
+* ``Portable``: The executable code is stored by AiiDA and can be deployed on a variety of computers
+* ``Containerized``: The executable code is part of a container image that can be deployed and run on the target computer
 
-.. _how-to:run-codes:code:setup:
+Each of these scenarios are supported through a code plugin, which stores all necessary data to fully define the code.
+A configured code is stored in the provenance graph, which besides being important for reproducibility, makes it easy to query for all calculations that were run with a given code.
 
-Setting up a code
------------------
+.. note::
 
-The ``verdi code`` CLI is the access point for managing codes in AiiDA.
-To setup a new code, execute:
-
-.. code-block:: console
-
-    $ verdi code setup
-
-and you will be guided through a process to setup your code.
-
-.. admonition:: On remote and local codes
-    :class: tip title-icon-lightbulb
-
-    In most cases, it is advisable to install the executables to be used by AiiDA on the target machine *before* submitting calculations using them in order to take advantage of the compilers and libraries present on the target machine.
-    This setup is referred to as *remote* codes (``Installed on target computer?: True``).
+    In most cases, it is advisable to install the executables to be used by AiiDA on the target machine *before* submitting calculations using them, in order to take advantage of the compilers and libraries present on the target machine.
+    This is the ``installed`` scenario.
 
     Occasionally, you may need to run small, reasonably machine-independent scripts (e.g. Python or bash), and copying them manually to a number of different target computers can be tedious.
-    For this use case, AiiDA provides *local* codes (``Installed on target computer?: False``).
-    Local codes are stored in the AiiDA file repository and copied to the target computer for every execution.
+    For this use case, the ``portable`` code is ideal.
+    The executable and associated files of the code are stored by AiiDA and automatically copied to the target computer for every execution.
 
     Do *not* use local codes as a way of encapsulating the environment of complex executables.
-    Containers are a much better solution to this problem, and we are working on adding native support for containers in AiiDA.
+    For this use case, it is best to use the ``containerized`` code.
+    Create a container of the required compute environment and create a containerized code.
+
+A new code can be configured in AiiDA through the ``verdi code create`` command.
+The type of code is specified as the first argument and the rest of the information is provided through options:
+
+.. tab-set::
+
+    .. tab-item:: Installed
+
+        The following example shows how to create an installed code for the ``bash`` binary on the ``localhost`` computer:
+
+        .. code-block:: console
 
 
-At the end of these steps, you will be prompted to edit a script, where you can include ``bash`` commands that will be executed
+            verdi code create core.code.installed \
+                --label installed-code \
+                --computer localhost \
+                --filepath-executable /usr/bin/bash
 
- * *before* running the submission script (after the 'Pre execution script' lines), and
- * *after* running the submission script (after the 'Post execution script' separator).
+        For more information, please refer to the dedicated :ref:`topic section <topics:data_types:core:code:installed>`.
+
+    .. tab-item:: Portable
+
+        The following example shows how to create a portable code for an executable ``executable.py`` in the ``/path/to/directory`` folder:
+
+        .. code-block:: console
+
+            verdi code create core.code.portable \
+                --label portable-code \
+                --filepath-files /path/to/directory \
+                --filepath-executable executable.py
+
+        Any other files that are part of ``/path/to/directory`` will also be stored by the code plugin.
+
+        For more information, please refer to the dedicated :ref:`topic section <topics:data_types:core:code:portable>`.
+
+    .. tab-item:: Containerized
+
+        The following example shows how to setup running ``bash`` in a base Docker container through Singularity to be run on the ``Computer`` named ``some-computer``:
+
+        .. code-block:: console
+
+            verdi code create core.code.containerized \
+                --non-interactive \
+                --label containerized-code \
+                --computer some-computer \
+                --filepath-executable "/bin/sh" \
+                --image-name "docker://alpine:3" \
+                --engine-command "singularity exec --bind $PWD:$PWD {image_name}"
+
+        For more information, please refer to the dedicated :ref:`topic section <topics:data_types:core:code:containerized>`.
+
+The code create command will prompt for any additional options.
+It will also open a text editor to specify the ``--prepend-text`` and ``--append-text`` options, where you can include ``bash`` commands that will be executed
+
+* *before* running the submission script (after the 'Pre execution script' lines), and
+* *after* running the submission script (after the 'Post execution script' separator).
 
 Use this, for instance, to load modules or set variables that are needed by the code, such as:
 
@@ -267,19 +309,18 @@ At the end, you receive a confirmation, with the *PK* and the *UUID* of your new
 
 .. tip::
 
-    The ``verdi code setup`` command performs minimal checks in order to keep it performant and not rely on an internet connection.
-    If you want additional checks to verify the code is properly configured and usable, run the `verdi code test` command.
-    For remote codes for example, this will check whether the associated computer can be connected to and whether the specified executable exists.
+    The ``verdi code create`` command performs minimal checks in order to keep it performant and not rely on an internet connection.
+    If you want additional checks to verify the code is properly configured and usable, run the ``verdi code test`` command.
+    For installed codes for example, this will check whether the associated computer can be connected to and whether the specified executable exists.
     Look at the command help to see what other checks may be run.
 
-.. admonition:: Using configuration files
-    :class: tip title-icon-lightbulb
+.. tip::
 
     Analogous to a :ref:`computer setup <how-to:run-codes:computer>`, some (or all) the information described above can be provided via a configuration file:
 
     .. code-block:: console
 
-        $ verdi code setup --config code.yml
+        $ verdi code create core.code.installed --config code.yml
 
     where ``code.yml`` is a configuration file in the `YAML format <https://en.wikipedia.org/wiki/YAML#Syntax>`_.
 
@@ -288,24 +329,40 @@ At the end, you receive a confirmation, with the *PK* and the *UUID* of your new
     .. code-block:: yaml
 
         ---
-        label: "qe-6.3-pw"
-        description: "quantum_espresso v6.3"
-        input_plugin: "quantumespresso.pw"
-        on_computer: true
-        remote_abs_path: "/path/to/code/pw.x"
-        computer: "localhost"
+        label: 'qe-6.3-pw'
+        description: 'quantum_espresso v6.3'
+        default_calc_job_plugin: 'quantumespresso.pw'
+        filepath_executable: '/path/to/code/pw.x'
+        computer: 'localhost'
         prepend_text: |
            module load module1
            module load module2
-        append_text: " "
+        append_text: ' '
 
-    The list of the keys for the ``yaml`` file is given by the available options of the ``code setup`` command:
+    The list of the keys for the ``yaml`` file is given by the available options of the ``code create`` sub-command:
 
-        .. code-block:: console
+    .. code-block:: console
 
-            $ verdi code setup --help
+        $ verdi code create core.code.installed --help
 
-    Note: remove the ``--`` prefix and replace ``-`` within the keys with an underscore ``_``.
+    Note: remove the ``--`` prefix and replace dashes (``-``) within the keys with an underscore ( ``_`` ).
+
+
+.. note::
+
+    It is possible to run codes that are provided by a `Conda environment <https://docs.conda.io/en/latest/>`_.
+    The associated ``Computer`` should be configured to create a submission script that uses a login shell by setting the ``shebang`` attribute to ``#!/bin/bash -l``.
+    The ``-l`` flag in bash enforces the script to be executed using a login shell, without which the ``conda activate`` command will fail.
+
+    The code configuration YAML would look something like the following:
+
+    .. code-block:: yaml
+
+        filepath_executable: 'executable-name'
+        prepend_text: conda activate environment-name
+
+    Note that the configuration is not complete but only shows the relevant lines.
+
 
 Managing codes
 --------------
@@ -356,21 +413,21 @@ Finally, to delete a code use:
 How to submit a calculation
 ===========================
 
-After :ref:`setting up your computer <how-to:run-codes:computer>` and :ref:`setting up your code <how-to:run-codes:code:setup>`, you are ready to launch your calculations!
+After :ref:`setting up your computer <how-to:run-codes:computer>` and :ref:`setting up your code <how-to:run-codes:code>`, you are ready to launch your calculations!
 
- * Make sure the daemon is running:
+*   Make sure the daemon is running:
 
     .. code-block:: bash
 
         verdi daemon status
 
- * Figure out which inputs your |CalcJob|  plugin needs, e.g. using:
+*   Figure out which inputs your |CalcJob|  plugin needs, e.g. using:
 
     .. code-block:: bash
 
         verdi plugin list aiida.calculations core.arithmetic.add
 
- * Write a ``submit.py`` script:
+*   Write a ``submit.py`` script:
 
     .. code-block:: python
 
@@ -392,13 +449,17 @@ After :ref:`setting up your computer <how-to:run-codes:computer>` and :ref:`sett
 
     Of course, the code label and builder inputs need to be adapted to your code and calculation.
 
- * Submit your calculation to the AiiDA daemon:
+    .. note::
+
+       See also the :ref:`complete list of metadata<topics:calculations:usage:calcjobs:options>` you can pass to a calculation.
+
+*   Submit your calculation to the AiiDA daemon:
 
     .. code-block:: bash
 
         verdi run submit.py
 
-After this, use ``verdi process list`` to monitor the status of the calculations.
+    After this, use ``verdi process list`` to monitor the status of the calculations.
 
 .. tip::
 
@@ -416,6 +477,253 @@ After this, use ``verdi process list`` to monitor the status of the calculations
 
 See :ref:`topics:processes:usage:launching` and :ref:`topics:processes:usage:monitoring` for more details.
 
+
+.. _how-to:run-codes:monitoring:
+
+How to monitor (and prematurely stop) a calculation
+===================================================
+
+A calculation job will terminate if and only if:
+
+* The calculation terminates; either nominally or due to an error.
+* The scheduler kills the job; e.g., due to the wallclock time being exceeded or the allocated memory being exhausted.
+* The calculation job is killed through AiiDA
+
+One might want to kill the calculation job if it seems that the calculation is not going anywhere, and so instead of letting the calculation run to its end automatically, it is killed.
+It is possible to automate this procedure through *monitoring* of the calculation job.
+
+A monitor is a Python function that will be called in regular intervals while the calculation job is running.
+The function has access to the working directory of the running calculation and can retrieve and inspect their contents.
+Based on the output it can decide whether the job should continue running or should be killed.
+
+How to implement a monitor
+--------------------------
+
+A monitor is a function with the following signature:
+
+.. code-block:: python
+
+    from aiida.orm import CalcJobNode
+    from aiida.transports import Transport
+
+    def monitor(node: CalcJobNode, transport: Transport) -> str | None:
+        """Retrieve and inspect files in working directory of job to determine whether the job should be killed.
+
+        :param node: The node representing the calculation job.
+        :param transport: The transport that can be used to retrieve files from remote working directory.
+        :returns: A string if the job should be killed, `None` otherwise.
+        """
+
+The ``node`` and the ``transport`` arguments are required.
+The ``node`` is a reference to the calculation job node, which can be used to retrieve its input, for example.
+The ``transport`` can be used to retrieve files from the working directory of the calculation running on the remote computer.
+This allows you to inspect the content and determine whether the job should be prematurely killed.
+
+A monitor can define additional keyword arguments that a user can use to modify or configure its behavior.
+The arguments can take any value, as long as it is JSON-serializable.
+This is necessary because the arguments that are passed to a monitor are stored in the database in order to preserve provenance.
+It is recommended to write out each supported keyword argument and not use the ``**kwargs`` catch-all, for example:
+
+.. code-block:: python
+
+    from aiida.orm import CalcJobNode
+    from aiida.transports import Transport
+
+    def monitor(node: CalcJobNode, transport: Transport, custom_keyword: bool = False) -> str | None:
+        """Retrieve and inspect files in working directory of job to determine whether the job should be killed.
+
+        :param node: The node representing the calculation job.
+        :param transport: The transport that can be used to retrieve files from remote working directory.
+        :param custom_keyword: Optional keyword, when set to ``True`` will do something different.
+        :returns: A string if the job should be killed, `None` otherwise.
+        """
+
+This will allow the engine to validate the arguments provided by a user.
+If unsupported arguments are provided to a monitor, the calculation job will not start and the user will be notified of the mistake.
+
+As an example case, imagine a code that would print the string `WARNING` to stdout, in which case we want to stop the calculation.
+The following implementation would accomplish that:
+
+.. code-block:: python
+
+    import tempfile
+    from aiida.orm import CalcJobNode
+    from aiida.transports import Transport
+
+    def monitor(node: CalcJobNode, transport: Transport) -> str | None:
+        """Retrieve and inspect files in working directory of job to determine whether the job should be killed.
+
+        :param node: The node representing the calculation job.
+        :param transport: The transport that can be used to retrieve files from remote working directory.
+        :returns: A string if the job should be killed, `None` otherwise.
+        """
+        with tempfile.NamedTemporaryFile('w+') as handle:
+            transport.getfile(node.options.output_filename, handle.name)
+            handle.seek(0)
+            output = handle.read()
+
+        if 'WARNING' in output:
+            return 'Detected the string `WARNIGN` in the output file.'
+
+The content of the stdout stream, which should be written to the ``node.options.output_filename`` file, is retrieved using ``transport.getfile`` and is written to a temporary file on the local file system.
+The content is then read from the file and if the target string is detected, an error message is returned.
+If a monitor, attached to a calculation job, returns anything other than ``None``, the calculation job will be killed by the engine.
+
+Finally, the monitor needs to be declared using an entry point in the ``aiida.calculations.monitors`` group.
+The next section will show how this entry point is used to assign it to a calculation job.
+
+
+How to assign a monitor
+-----------------------
+
+A monitor can be assigned to a calculation job by adding it to the `monitors` input.
+It takes a dictionary of monitors, where each monitor is defined by a `Dict` node with the following keys:
+
+.. code-block:: python
+
+    monitor = Dict({
+        'entry_point': 'some.monitor'
+    })
+
+The `entry_point` key is required and should contain an entry point that refers to a monitor function registered in the `aiida.calculations.monitors` group.
+It is possible to assign multiple monitors to a single calculation:
+
+.. code-block:: python
+
+    builder = code.get_builder()
+    builder.monitors = {
+        'monitor_a': Dict({'entry_point': 'some.monitor'}),
+        'monitor_b': Dict({'entry_point': 'some.other.monitor'}),
+    }
+
+Note that the keys used in the `monitors` input can be any valid attribute name and does not influence the behavior whatsoever.
+
+If a monitor supports additional custom keyword arguments, these should be passed as a dictionary under the ``kwargs`` key.
+For example, if the monitor accepts a boolean value for the keyword ``custom_keyword``, it can be specified as follows:
+
+.. code-block:: python
+
+    builder = code.get_builder()
+    builder.monitors = {
+        'monitor_a': Dict({'entry_point': 'some.monitor', 'kwargs': {'custom_keyword': True}}),
+    }
+
+If a keyword is specified that is not declared explicitly by the monitor, the validation of the ``CalcJob`` will fail.
+
+
+Monitor execution order
+-----------------------
+By default, the monitors are executed in alphabetical order based on their keys in the ``monitors`` input namespace.
+The order can be controlled using the ``priority`` key in the ``monitors`` input.
+
+.. code-block:: python
+
+    builder.monitors = {
+        'monitor_one': Dict({'entry_point': 'entry_point_one', 'priority': 100})
+        'monitor_one': Dict({'entry_point': 'entry_point_one'})
+    }
+
+Higher priorities will be executed first.
+It is not necessary to define a priority for all monitors, in the absence of a priority, a priority of 0 is assumed.
+For monitors with identical priority, the order remains alphabetical based on their key in the ``monitors`` input namespace.
+
+
+Monitor execution frequency
+---------------------------
+By default, all monitors are executed during each scheduler update cycle.
+This interval is controlled by the ``minimum_scheduler_poll_interval`` property of the ``Computer``, which can be retrieved and set through the ``get_minimum_job_poll_interval`` and ``set_minimum_job_poll_interval``, respectively.
+The frequency of monitor execution can be reduced by setting a larger interval for the ``minimum_poll_interval`` key in the monitor input definition:
+
+.. code-block:: python
+
+    builder.monitors = {
+        'monitor_one': Dict({'entry_point': 'entry_point_one', 'minimum_poll_interval': 600})
+    }
+
+The engine will guarantee that the interval between calls of the monitor is at least the value specified by ``minimum_poll_interval``.
+Due to a number of other intervals that are part of the ``CalcJob`` pipeline, it is possible however, that the effective interval between monitor calls will be larger than that.
+
+
+Advanced functionality
+----------------------
+
+The most simple implementation of a monitor simply returns a string.
+This is interpreted by the engine that the job should be killed and the string contains the reason for doing so.
+This behavior can be controlled by returning an instance of :class:`~aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult` instead.
+
+Disable parsing of retrieved files
+..................................
+
+By default, when a job is stopped through a monitor, the engine will still retrieve and parse the files.
+To skip the parsing of the retrieved files, set ``CalcJobMonitorResult.parse`` to ``False``:
+
+.. code-block:: python
+
+    def monitor_skip_parsing(node: CalcJobNode, transport: Transport) -> str | None:
+        """Kill the job and do not call the parser, if specified in the inputs."""
+        from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorResult
+        return CalcJobMonitorResult(parse=False)
+
+Disable retrieving of files
+...........................
+
+By default, when a job is stopped through a monitor, the engine will still retrieve the files from the remote working directory.
+To skip the file retrieval, set ``CalcJobMonitorResult.retrieve`` to ``False``:
+
+.. code-block:: python
+
+    def monitor_skip_retrieval(node: CalcJobNode, transport: Transport) -> str | None:
+        """Kill the job and do not retrieve the output files."""
+        from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorResult
+        return CalcJobMonitorResult(retrieve=False, parse=False)
+
+Note that in this case ``parse`` should also be set to ``False`` since the engine cannot parse files that have not been retrieved.
+
+Disable overriding of parse exit code
+.....................................
+
+By default, when a job is stopped through a monitor, the engine will set the exit code ``STOPPED_BY_MONITOR``.
+This overrides any exit code that may be returned by the parser, if one is invoked.
+To keep the exit code of the parser instead, set ``CalcJobMonitorResult.override_exit_code`` to ``False``:
+
+.. code-block:: python
+
+    def monitor_do_not_override_exit_code(node: CalcJobNode, transport: Transport) -> str | None:
+        """Kill the job and do not override the exit code returned by the parser."""
+        from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorResult
+        return CalcJobMonitorResult(override_exit_code=False)
+
+Disable a monitor
+.................
+
+By default, when a monitor returns anything other than ``None``, the engine will immediately kill the job.
+In certain use-cases, a monitor may want to perform an action and then let the job terminate nominally, but not invoke the monitor again.
+To disable a monitor, set ``CalcJobMonitorResult.action`` to the ``DISABLE_SELF`` option of the :class:`~aiida.engine.processes.calcjobs.monitors.CalcJobMonitorAction`:
+
+.. code-block:: python
+
+    def monitor_disable_self(node: CalcJobNode, transport: Transport) -> str | None:
+        """Disable this monitor and let job terminate nominally."""
+        from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorResult, CalcJobMonitorAction
+        return CalcJobMonitorResult(action=CalcJobMonitorAction.DISABLE_SELF)
+
+All other monitors, if defined, will continue to be invoked by the engine.
+
+Disable all monitors
+....................
+
+By default, when a monitor returns anything other than ``None``, the engine will immediately kill the job.
+In certain use-cases, a monitor may want to perform an action and then let the job terminate nominally.
+An example might be where the monitor writes a sentinel file in the remote working directory, which will let the code running on the remote shut itself down gracefully.
+In this case it is desirable that the engine stops calling the monitors that were registered and just let the job continue normally.
+To disable all monitors, set ``CalcJobMonitorResult.action`` to the ``DISABLE_ALL`` option of the :class:`~aiida.engine.processes.calcjobs.monitors.CalcJobMonitorAction`:
+
+.. code-block:: python
+
+    def monitor_disable_all_monitors(node: CalcJobNode, transport: Transport) -> str | None:
+        """Disable all monitors and let job terminate nominally."""
+        from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorResult, CalcJobMonitorAction
+        return CalcJobMonitorResult(action=CalcJobMonitorAction.DISABLE_ALL)
 
 
 .. _how-to:run-codes:caching:
@@ -596,7 +904,7 @@ Caching can be enabled or disabled on a case-by-case basis by using the :class:`
     This means that this technique is only useful when using :py:class:`~aiida.engine.run`, and **not** with :py:class:`~aiida.engine.submit`.
 
 
-Besides controlling which process classes are cached, it may be useful or necessary to control what already _stored_ nodes are used as caching _sources_.
+Besides controlling which process classes are cached, it may be useful or necessary to control what already *stored* nodes are used as caching *sources*.
 Section :ref:`topics:provenance:caching:control-caching` provides details how AiiDA decides which stored nodes are equivalent to the node being stored and which are considered valid caching sources.
 
 .. |Computer| replace:: :py:class:`~aiida.orm.Computer`

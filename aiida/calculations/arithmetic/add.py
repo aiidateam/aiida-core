@@ -27,14 +27,19 @@ class ArithmeticAddCalculation(CalcJob):
         spec.input('x', valid_type=(orm.Int, orm.Float), help='The left operand.')
         spec.input('y', valid_type=(orm.Int, orm.Float), help='The right operand.')
         spec.output('sum', valid_type=(orm.Int, orm.Float), help='The sum of the left and right operand.')
+        spec.input('metadata.options.sleep', required=False, valid_type=int)
         # set default options (optional)
         spec.inputs['metadata']['options']['parser_name'].default = 'core.arithmetic.add'
         spec.inputs['metadata']['options']['input_filename'].default = 'aiida.in'
         spec.inputs['metadata']['options']['output_filename'].default = 'aiida.out'
         spec.inputs['metadata']['options']['resources'].default = {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
         # start exit codes - marker for docs
-        spec.exit_code(310, 'ERROR_READING_OUTPUT_FILE', message='The output file could not be read.')
-        spec.exit_code(320, 'ERROR_INVALID_OUTPUT', message='The output file contains invalid output.')
+        spec.exit_code(
+            310, 'ERROR_READING_OUTPUT_FILE', invalidates_cache=True, message='The output file could not be read.'
+        )
+        spec.exit_code(
+            320, 'ERROR_INVALID_OUTPUT', invalidates_cache=True, message='The output file contains invalid output.'
+        )
         spec.exit_code(410, 'ERROR_NEGATIVE_NUMBER', message='The sum of the operands is a negative number.')
         # end exit codes - marker for docs
 
@@ -50,6 +55,8 @@ class ArithmeticAddCalculation(CalcJob):
         :returns: the `CalcInfo` instance
         """
         with folder.open(self.options.input_filename, 'w', encoding='utf8') as handle:
+            if 'sleep' in self.options:
+                handle.write(f'sleep {self.options.sleep}\n')
             handle.write(f'echo $(({self.inputs.x.value} + {self.inputs.y.value}))\n')
 
         codeinfo = CodeInfo()

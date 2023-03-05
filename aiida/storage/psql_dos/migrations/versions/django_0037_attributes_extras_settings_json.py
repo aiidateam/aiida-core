@@ -162,7 +162,7 @@ def attributes_to_dict(attr_list: list):
     are ordered alphabetically, and that they all belong to the same node.
     """
     # pylint: disable=too-many-branches
-    d = {}
+    d: dict = {}
 
     error = False
     for a in attr_list:

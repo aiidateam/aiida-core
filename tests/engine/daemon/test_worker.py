@@ -7,21 +7,21 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Test pytest fixtures.
-"""
+"""Unit tests for the :mod:`aiida.engine.daemon.worker` module."""
+import pytest
+
+from aiida.engine.daemon.worker import shutdown_worker
 
 
-def test_aiida_localhost(aiida_localhost):
-    """Test aiida_localhost fixture.
+@pytest.mark.requires_rmq
+@pytest.mark.asyncio
+async def test_shutdown_worker(manager):
+    """Test the ``shutdown_worker`` method."""
+    runner = manager.get_runner()
+    await shutdown_worker(runner)
 
-    Note: This indirectly also tests that the aiida_profile, temp_dir and clean_database fixtures run.
-    """
-    assert aiida_localhost.label == 'localhost-test'
-
-
-def test_aiida_local_code(aiida_local_code_factory):
-    """Test aiida_local_code_factory fixture.
-    """
-    code = aiida_local_code_factory(entry_point='core.templatereplacer', executable='diff')
-    assert code.computer.label == 'localhost-test'
+    try:
+        assert runner.is_closed()
+    finally:
+        # Reset the runner of the manager, because once closed it cannot be reused by other tests.
+        manager._runner = None  # pylint: disable=protected-access

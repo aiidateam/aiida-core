@@ -13,6 +13,8 @@ results. These are general and contain only the main logic; where appropriate,
 the routines make reference to the suitable plugins for all
 plugin-specific operations.
 """
+from __future__ import annotations
+
 from collections.abc import Mapping
 from logging import LoggerAdapter
 import os
@@ -27,6 +29,7 @@ from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcInfo
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
+from aiida.engine.processes.exit_code import ExitCode
 from aiida.manage.configuration import get_config_option
 from aiida.orm import CalcJobNode, Code, FolderData, Node, PortableCode, RemoteData, load_node
 from aiida.orm.utils.log import get_dblogger_extra
@@ -225,7 +228,10 @@ def upload_calculation(
             if data_node.base.repository.get_object(filename_source).file_type == FileType.DIRECTORY:
                 # If the source object is a directory, we copy its entire contents
                 data_node.base.repository.copy_tree(filepath_target, filename_source)
-                provenance_exclude_list.extend(data_node.base.repository.list_object_names(filename_source))
+                sources = data_node.base.repository.list_object_names(filename_source)
+                if filename_target:
+                    sources = [str(pathlib.Path(filename_target) / subpath) for subpath in sources]
+                provenance_exclude_list.extend(sources)
             else:
                 # Otherwise, simply copy the file
                 with folder.open(target, 'wb') as handle:
@@ -348,7 +354,7 @@ def upload_calculation(
         remotedata.store()
 
 
-def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str:
+def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | ExitCode:
     """Submit a previously uploaded `CalcJob` to the scheduler.
 
     :param calculation: the instance of CalcJobNode to submit.
@@ -370,10 +376,12 @@ def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str:
 
     submit_script_filename = calculation.get_option('submit_script_filename')
     workdir = calculation.get_remote_workdir()
-    job_id = scheduler.submit_from_script(workdir, submit_script_filename)
-    calculation.set_job_id(job_id)
+    result = scheduler.submit_from_script(workdir, submit_script_filename)
 
-    return job_id
+    if isinstance(result, str):
+        calculation.set_job_id(result)
+
+    return result
 
 
 def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
@@ -573,6 +581,7 @@ def retrieve_files_from_list(
     :param folder: an absolute path to a folder that contains the files to copy.
     :param retrieve_list: the list of files to retrieve.
     """
+    # pylint: disable=too-many-branches
     for item in retrieve_list:
         if isinstance(item, (list, tuple)):
             tmp_rname, tmp_lname, depth = item
@@ -581,13 +590,16 @@ def retrieve_files_from_list(
                 remote_names = transport.glob(tmp_rname)
                 local_names = []
                 for rem in remote_names:
-                    to_append = rem.split(os.path.sep)[-depth:] if depth > 0 else []
-                    local_names.append(os.path.sep.join([tmp_lname] + to_append))
+                    if depth is None:
+                        local_names.append(os.path.join(tmp_lname, rem))
+                    else:
+                        to_append = rem.split(os.path.sep)[-depth:] if depth > 0 else []
+                        local_names.append(os.path.sep.join([tmp_lname] + to_append))
             else:
                 remote_names = [tmp_rname]
                 to_append = tmp_rname.split(os.path.sep)[-depth:] if depth > 0 else []
                 local_names = [os.path.sep.join([tmp_lname] + to_append)]
-            if depth > 1:  # create directories in the folder, if needed
+            if depth is None or depth > 1:  # create directories in the folder, if needed
                 for this_local_file in local_names:
                     new_folder = os.path.join(folder, os.path.split(this_local_file)[0])
                     if not os.path.exists(new_folder):

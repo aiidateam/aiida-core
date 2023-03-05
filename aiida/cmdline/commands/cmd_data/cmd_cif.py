@@ -124,4 +124,4 @@ def cif_import(filename):
         node, _ = CifData.get_or_create(filename)
         echo.echo_success(f'imported {str(node)}')
     except ValueError as err:
-        echo.echo_critical(err)
+        echo.echo_critical(str(err))

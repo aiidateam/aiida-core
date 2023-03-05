@@ -16,7 +16,9 @@ import typing
 
 import pytest
 
+from aiida.common.datastructures import CalcInfo, CodeInfo
 from aiida.engine.daemon import execmanager
+from aiida.orm import CalcJobNode, FolderData, SinglefileData
 from aiida.transports.plugins.local import LocalTransport
 
 
@@ -29,7 +31,7 @@ def serialize_file_hierarchy(dirpath: pathlib.Path) -> typing.Dict:
     :return: a mapping representing the file hierarchy, where keys are filenames. The leafs correspond to files and the
         values are the text contents.
     """
-    serialized = {}
+    serialized: dict = {}
 
     for root, _, files in os.walk(dirpath):
         for filepath in files:
@@ -75,6 +77,34 @@ def file_hierarchy():
     }
 
 
+@pytest.fixture
+def file_hierarchy_simple():
+    """Return a simple nested file hierarchy."""
+    return {
+        'sub': {
+            'b': 'file_b',
+        },
+        'a': 'file_a',
+    }
+
+
+@pytest.fixture
+def node_and_calc_info(aiida_localhost, aiida_local_code_factory):
+    """Return a ``CalcJobNode`` and associated ``CalcInfo`` instance."""
+    node = CalcJobNode(computer=aiida_localhost)
+    node.store()
+
+    code = aiida_local_code_factory('core.arithmetic.add', '/bin/bash').store()
+    code_info = CodeInfo()
+    code_info.code_uuid = code.uuid
+
+    calc_info = CalcInfo()
+    calc_info.uuid = node.uuid
+    calc_info.codes_info = [code_info]
+
+    return node, calc_info
+
+
 def test_hierarchy_utility(file_hierarchy, tmp_path):
     """Test that the ``create_file_hierarchy`` and ``serialize_file_hierarchy`` function as intended.
 
@@ -85,13 +115,15 @@ def test_hierarchy_utility(file_hierarchy, tmp_path):
 
 
 # yapf: disable
-@pytest.mark.usefixtures('aiida_profile_clean')
+
 @pytest.mark.parametrize('retrieve_list, expected_hierarchy', (
     # Single file or folder, either toplevel or nested
     (['file_a.txt'], {'file_a.txt': 'file_a'}),
     (['path/sub/file_c.txt'], {'file_c.txt': 'file_c'}),
     (['path'], {'path': {'file_b.txt': 'file_b', 'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}}),
     (['path/sub'], {'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}),
+    (['*.txt'], {'file_a.txt': 'file_a'}),
+    (['*/*.txt'], {'file_b.txt': 'file_b'}),
     # Single nested file that is retrieved keeping a varying level of depth of original hierarchy
     ([('path/sub/file_c.txt', '.', 3)], {'path': {'sub': {'file_c.txt': 'file_c'}}}),
     ([('path/sub/file_c.txt', '.', 2)], {'sub': {'file_c.txt': 'file_c'}}),
@@ -105,6 +137,9 @@ def test_hierarchy_utility(file_hierarchy, tmp_path):
     ([('path/sub/*', '.', 0)], {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}),  # This is identical to ['path/sub']
     ([('path/sub/*c.txt', '.', 2)], {'sub': {'file_c.txt': 'file_c'}}),
     ([('path/sub/*c.txt', '.', 0)], {'file_c.txt': 'file_c'}),
+    # Using globbing with depth `None` should maintain exact folder hierarchy
+    ([('path/*.txt', '.', None)], {'path': {'file_b.txt': 'file_b'}}),
+    ([('path/sub/*.txt', '.', None)], {'path': {'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}}),
     # Different target directory
     ([('path/sub/file_c.txt', 'target', 3)], {'target': {'path': {'sub': {'file_c.txt': 'file_c'}}}}),
     ([('path/sub', 'target', 1)], {'target': {'sub': {'file_c.txt': 'file_c', 'file_d.txt': 'file_d'}}}),
@@ -130,15 +165,48 @@ def test_retrieve_files_from_list(
     assert serialize_file_hierarchy(target) == expected_hierarchy
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
-def test_upload_local_copy_list(fixture_sandbox, aiida_localhost, aiida_local_code_factory, file_hierarchy, tmp_path):
+# yapf: disable
+
+@pytest.mark.parametrize(('local_copy_list', 'expected_hierarchy'), (
+    ([None, None], {'sub': {'b': 'file_b'}, 'a': 'file_a'}),
+    (['.', None], {'sub': {'b': 'file_b'}, 'a': 'file_a'}),
+    ([None, '.'], {'sub': {'b': 'file_b'}, 'a': 'file_a'}),
+    (['.', '.'], {'sub': {'b': 'file_b'}, 'a': 'file_a'}),
+    ([None, ''], {'sub': {'b': 'file_b'}, 'a': 'file_a'}),
+    (['sub', None], {'b': 'file_b'}),
+    ([None, 'target'], {'target': {'sub': {'b': 'file_b'}, 'a': 'file_a'}}),
+    (['sub', 'target'], {'target': {'b': 'file_b'}}),
+))
+# yapf: enable
+def test_upload_local_copy_list(
+    fixture_sandbox, node_and_calc_info, file_hierarchy_simple, tmp_path, local_copy_list, expected_hierarchy
+):
+    """Test the ``local_copy_list`` functionality in ``upload_calculation``."""
+    create_file_hierarchy(file_hierarchy_simple, tmp_path)
+    folder = FolderData()
+    folder.base.repository.put_object_from_tree(tmp_path)
+    folder.store()
+
+    node, calc_info = node_and_calc_info
+    calc_info.local_copy_list = [[folder.uuid] + local_copy_list]
+
+    with LocalTransport() as transport:
+        execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+
+    # Check that none of the files were written to the repository of the calculation node, since they were communicated
+    # through the ``local_copy_list``.
+    assert node.base.repository.list_object_names() == []
+
+    # Now check that all contents were successfully written to the sandbox
+    written_hierarchy = serialize_file_hierarchy(pathlib.Path(fixture_sandbox.abspath))
+    assert written_hierarchy == expected_hierarchy
+
+
+def test_upload_local_copy_list_files_folders(fixture_sandbox, node_and_calc_info, file_hierarchy, tmp_path):
     """Test the ``local_copy_list`` functionality in ``upload_calculation``.
 
     Specifically, verify that files in the ``local_copy_list`` do not end up in the repository of the node.
     """
-    from aiida.common.datastructures import CalcInfo, CodeInfo
-    from aiida.orm import CalcJobNode, FolderData, SinglefileData
-
     create_file_hierarchy(file_hierarchy, tmp_path)
     folder = FolderData()
     folder.base.repository.put_object_from_tree(tmp_path)
@@ -149,16 +217,8 @@ def test_upload_local_copy_list(fixture_sandbox, aiida_localhost, aiida_local_co
         'folder': folder.store(),
     }
 
-    node = CalcJobNode(computer=aiida_localhost)
-    node.store()
+    node, calc_info = node_and_calc_info
 
-    code = aiida_local_code_factory('core.arithmetic.add', '/bin/bash').store()
-    code_info = CodeInfo()
-    code_info.code_uuid = code.uuid
-
-    calc_info = CalcInfo()
-    calc_info.uuid = node.uuid
-    calc_info.codes_info = [code_info]
     calc_info.local_copy_list = [
         (inputs['file_x'].uuid, inputs['file_x'].filename, './files/file_x'),
         (inputs['file_y'].uuid, inputs['file_y'].filename, './files/file_y'),

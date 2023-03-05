@@ -17,22 +17,11 @@ from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional, Type
 from aiida.common import exceptions
 
 from .options import parse_option
-from .settings import DAEMON_DIR, DAEMON_LOG_DIR
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
 
 __all__ = ('Profile',)
-
-CIRCUS_PID_FILE_TEMPLATE = os.path.join(DAEMON_DIR, 'circus-{}.pid')
-DAEMON_PID_FILE_TEMPLATE = os.path.join(DAEMON_DIR, 'aiida-{}.pid')
-CIRCUS_LOG_FILE_TEMPLATE = os.path.join(DAEMON_LOG_DIR, 'circus-{}.log')
-DAEMON_LOG_FILE_TEMPLATE = os.path.join(DAEMON_LOG_DIR, 'aiida-{}.log')
-CIRCUS_PORT_FILE_TEMPLATE = os.path.join(DAEMON_DIR, 'circus-{}.port')
-CIRCUS_SOCKET_FILE_TEMPATE = os.path.join(DAEMON_DIR, 'circus-{}.sockets')
-CIRCUS_CONTROLLER_SOCKET_TEMPLATE = 'circus.c.sock'
-CIRCUS_PUBSUB_SOCKET_TEMPLATE = 'circus.p.sock'
-CIRCUS_STATS_SOCKET_TEMPLATE = 'circus.s.sock'
 
 
 class Profile:  # pylint: disable=too-many-public-methods
@@ -262,20 +251,22 @@ class Profile:  # pylint: disable=too-many-public-methods
 
         :return: a dictionary of filepaths
         """
+        from .settings import DAEMON_DIR, DAEMON_LOG_DIR
+
         return {
             'circus': {
-                'log': CIRCUS_LOG_FILE_TEMPLATE.format(self.name),
-                'pid': CIRCUS_PID_FILE_TEMPLATE.format(self.name),
-                'port': CIRCUS_PORT_FILE_TEMPLATE.format(self.name),
+                'log': str(DAEMON_LOG_DIR / f'circus-{self.name}.log'),
+                'pid': str(DAEMON_DIR / f'circus-{self.name}.pid'),
+                'port': str(DAEMON_DIR / f'circus-{self.name}.port'),
                 'socket': {
-                    'file': CIRCUS_SOCKET_FILE_TEMPATE.format(self.name),
-                    'controller': CIRCUS_CONTROLLER_SOCKET_TEMPLATE,
-                    'pubsub': CIRCUS_PUBSUB_SOCKET_TEMPLATE,
-                    'stats': CIRCUS_STATS_SOCKET_TEMPLATE,
+                    'file': str(DAEMON_DIR / f'circus-{self.name}.sockets'),
+                    'controller': 'circus.c.sock',
+                    'pubsub': 'circus.p.sock',
+                    'stats': 'circus.s.sock',
                 }
             },
             'daemon': {
-                'log': DAEMON_LOG_FILE_TEMPLATE.format(self.name),
-                'pid': DAEMON_PID_FILE_TEMPLATE.format(self.name),
+                'log': str(DAEMON_LOG_DIR / f'aiida-{self.name}.log'),
+                'pid': str(DAEMON_DIR / f'aiida-{self.name}.pid'),
             }
         }

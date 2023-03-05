@@ -96,3 +96,17 @@ However, this design is a double-egded sword, in that a user that might not be a
 
 The caching mechanism comes with some limitations and caveats that are important to understand.
 Refer to the :ref:`topics:provenance:caching:limitations` section for more details.
+
+.. _how-to:faq:mfa-key-expired:
+
+What happens when an SSH key pair expires for an MFA-enabled remote computer?
+=============================================================================
+
+In some supercomputing centres, Multi-Factor Authentication (MFA) is required to connect to the remote computer.
+Often, when establishing a connection to such a computer, one needs to generate an SSH key pair with a limited lifetime.
+This is the case of Swiss National Supercomputing Centre (CSCS), for example.
+
+When the SSH key pair expires, AiiDA will fail to connect to the remote computer.
+This will cause all calculations submitted on that computer to pause.
+To restart them, one needs to generate a new SSH key pair and play the paused processes using ``verdi process play --all``.
+Typically, this is all one needs to do - AiiDA will re-establish the connection to the computer and will continue following the calculations.

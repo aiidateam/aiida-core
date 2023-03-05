@@ -27,7 +27,7 @@ PROCESS_STATE_CHANGE_DESCRIPTION = 'The last time a process of type {}, changed 
 
 
 def instantiate_process(
-    runner: 'Runner', process: Union['Process', Type['Process'], 'ProcessBuilder'], *args, **inputs
+    runner: 'Runner', process: Union['Process', Type['Process'], 'ProcessBuilder'], **inputs
 ) -> 'Process':
     """
     Return an instance of the process with the given inputs. The function can deal with various types
@@ -45,7 +45,6 @@ def instantiate_process(
     from .processes import Process, ProcessBuilder
 
     if isinstance(process, Process):
-        assert not args
         assert not inputs
         assert runner is process.runner
         return process
@@ -305,7 +304,7 @@ def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Op
         try:
             time_stamp = backend.get_global_variable(key)
             if time_stamp is not None:
-                timestamps.append(datetime.fromisoformat(time_stamp))
+                timestamps.append(datetime.fromisoformat(str(time_stamp)))
         except KeyError:
             continue
 

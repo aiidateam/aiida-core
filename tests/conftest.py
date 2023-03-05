@@ -8,10 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=redefined-outer-name
-"""Configuration file for pytest tests."""
+"""Collection of ``pytest`` fixtures that are intended for internal use to ``aiida-core`` only.
+
+Fixtures that are intended for use in plugin packages are kept in :mod:`aiida.manage.tests.pytest_fixtures`. They are
+loaded in this file as well, such that they can also be used for the tests of ``aiida-core`` itself.
+"""
+from __future__ import annotations
+
+import copy
 import os
 import pathlib
-from typing import IO, List, Optional, Union
+import typing as t
+import warnings
 
 import click
 import pytest
@@ -165,8 +173,6 @@ def isolated_config(monkeypatch):
     changing it in tests maybe necessary if a command is invoked that will be reading the config from disk in another
     Python process and so doesn't have access to the loaded config in memory in the process that is running the test.
     """
-    import copy
-
     from aiida.manage import configuration
 
     monkeypatch.setattr(configuration.Config, '_backup', lambda *args, **kwargs: None)
@@ -205,11 +211,9 @@ def empty_config(tmp_path) -> Config:
     manager.unload_profile()
     configuration.CONFIG = None
 
-    # Create a temporary folder, set it as the current config directory path and reset the loaded configuration
-    settings.AIIDA_CONFIG_FOLDER = str(tmp_path)
-
-    # Create the instance base directory structure, the config file and a dummy profile
-    settings.create_instance_directories()
+    # Set the configuration directory to a temporary directory. This will create the necessary folders for an empty
+    # AiiDA configuration and set relevant global variables in :mod:`aiida.manage.configuration.settings`.
+    settings.set_configuration_directory(tmp_path)
 
     # The constructor of `Config` called by `load_config` will print warning messages about migrating it
     with Capturing():
@@ -221,8 +225,15 @@ def empty_config(tmp_path) -> Config:
         # Reset the config folder path and the config instance. Note this will always be executed after the yield no
         # matter what happened in the test that used this fixture.
         manager.unload_profile()
-        settings.AIIDA_CONFIG_FOLDER = current_config_path
         configuration.CONFIG = current_config
+
+        # This sets important global constants that are based on the location of the config folder. Without it, things
+        # like the :class:`aiida.engine.daemon.client.DaemonClient` will not function properly after a test that uses
+        # this fixture because the paths of the daemon files would still point to the path of the temporary config
+        # folder created by this fixture.
+        settings.set_configuration_directory(pathlib.Path(current_config_path))
+
+        # Reload the original profile
         manager.load_profile(current_profile_name)
 
 
@@ -326,7 +337,7 @@ def config_with_profile(config_with_profile_factory):
 
 
 @pytest.fixture
-def manager(aiida_profile):  # pylint: disable=unused-argument
+def manager():
     """Get the ``Manager`` instance of the currently loaded profile."""
     from aiida.manage import get_manager
     return get_manager()
@@ -351,6 +362,13 @@ def backend(manager):
 def communicator(manager):
     """Get the ``Communicator`` instance of the currently loaded profile to communicate with RabbitMQ."""
     return manager.get_communicator()
+
+
+@pytest.fixture
+def default_user():
+    """Return the default user."""
+    from aiida.orm import User
+    return User.collection.get_default()
 
 
 @pytest.fixture(scope='function')
@@ -379,52 +397,11 @@ def suppress_internal_deprecations():
 
     Warnings emmitted of type :class:`aiida.common.warnings.AiidaDeprecationWarning` for the duration of the test.
     """
-    import warnings
-
     from aiida.common.warnings import AiidaDeprecationWarning
 
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', category=AiidaDeprecationWarning)
         yield
-
-
-@pytest.fixture
-def with_daemon():
-    """Starts the daemon process and then makes sure to kill it once the test is done."""
-    import subprocess
-    import sys
-
-    from aiida.cmdline.utils.common import get_env_with_venv_bin
-    from aiida.engine.daemon.client import DaemonClient
-
-    # Add the current python path to the environment that will be used for the daemon sub process.
-    # This is necessary to guarantee the daemon can also import all the classes that are defined
-    # in this `tests` module.
-    env = get_env_with_venv_bin()
-    env['PYTHONPATH'] = ':'.join(sys.path)
-
-    profile = get_profile()
-
-    with subprocess.Popen(
-        DaemonClient(profile).cmd_string.split(),
-        stderr=sys.stderr,
-        stdout=sys.stdout,
-        env=env,
-    ):
-        yield
-
-
-@pytest.fixture
-def daemon_client():
-    """Return a daemon client instance and stop any daemon instances running for the test profile after the test."""
-    from aiida.engine.daemon.client import DaemonClient
-
-    client = DaemonClient(get_profile())
-
-    try:
-        yield client
-    finally:
-        client.stop_daemon(wait=True)
 
 
 @pytest.fixture(scope='function')
@@ -445,8 +422,8 @@ def run_cli_command(reset_log_level):  # pylint: disable=unused-argument
 
     def _run_cli_command(
         command: click.Command,
-        options: Optional[List] = None,
-        user_input: Optional[Union[str, bytes, IO]] = None,
+        options: list | None = None,
+        user_input: str | bytes | t.IO | None = None,
         raises: bool = False,
         catch_exceptions: bool = True,
         **kwargs

@@ -180,6 +180,9 @@ class AiidaProcessDirective(SphinxDirective):
         if _is_non_db(port):
             res.append(nodes.Text(', '))
             res.append(nodes.emphasis(text='non_db'))
+        if _is_metadata(port):
+            res.append(nodes.Text(', '))
+            res.append(nodes.emphasis(text='is_metadata'))
         if port.help:
             res.append(nodes.Text(' -- '))
             # publish_doctree returns <document: <paragraph...>>.
@@ -226,3 +229,7 @@ class AiidaProcessDirective(SphinxDirective):
 
 def _is_non_db(port):
     return getattr(port, 'non_db', False)
+
+
+def _is_metadata(port):
+    return getattr(port, 'is_metadata', False)

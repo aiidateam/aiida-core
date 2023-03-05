@@ -9,6 +9,8 @@
 ###########################################################################
 # pylint: disable=redefined-outer-name
 """Tests for the `ComputerParamType`."""
+import uuid
+
 import pytest
 
 from aiida import orm
@@ -23,7 +25,7 @@ def parameter_type():
 
 
 @pytest.fixture
-def setup_computers(aiida_profile_clean):  # pylint: disable=unused-argument
+def setup_computers():
     """Create some `Computer` instances to test the `ComputerParamType` parameter type for the command line
     infrastructure.
 
@@ -38,13 +40,14 @@ def setup_computers(aiida_profile_clean):  # pylint: disable=unused-argument
         'workdir': '/tmp/aiida'
     }
 
-    entity_01 = orm.Computer(label='computer_01', **kwargs).store()
+    entity_01 = orm.Computer(label=f'computer-{uuid.uuid4().hex}', **kwargs).store()
     entity_02 = orm.Computer(label=str(entity_01.pk), **kwargs).store()
     entity_03 = orm.Computer(label=str(entity_01.uuid), **kwargs).store()
 
     return entity_01, entity_02, entity_03
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_shell_complete(setup_computers, parameter_type):
     """Test the `shell_complete` method that provides auto-complete functionality."""
     kwargs = {

@@ -10,49 +10,50 @@ authors = [{name = "The AiiDA team", email = "developers@aiida.net"}]
 readme = "README.md"
 license = {file = "LICENSE.txt"}
 classifiers = [
-        "Development Status :: 5 - Production/Stable",
-        "Framework :: AiiDA",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: POSIX :: Linux",
-        "Operating System :: MacOS :: MacOS X",
-        "Programming Language :: Python",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
-        "Topic :: Scientific/Engineering"
+    "Development Status :: 5 - Production/Stable",
+    "Framework :: AiiDA",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering"
 ]
 keywords = ["aiida", "workflows"]
 requires-python = ">=3.8"
 dependencies = [
-        "alembic~=1.2",
-        "archive-path~=0.4.1",
-        "aio-pika~=6.6",
-        "circus~=0.17.1",
-        "click-config-file~=0.6.0",
-        "click-spinner~=0.1.8",
-        "click~=8.1",
-        "disk-objectstore~=0.6.0",
-        "graphviz~=0.13",
-        "ipython~=7.20",
-        "jinja2~=3.0",
-        "jsonschema~=3.0",
-        "kiwipy[rmq]~=0.7.5",
-        "importlib-metadata~=4.3",
-        "numpy~=1.19",
-        "pamqp~=2.3",
-        "paramiko~=2.7,>=2.7.2",
-        "plumpy~=0.21.0",
-        "pgsu~=0.2.1",
-        "psutil~=5.6",
-        "psycopg2-binary~=2.8",
-        "pytz~=2021.1",
-        "pyyaml~=5.4",
-        "sqlalchemy~=1.4.22",
-        "tabulate~=0.8.5",
-        "tqdm~=4.45",
-        "upf_to_json~=0.9.2",
-        "werkzeug<2.2",
-        "wrapt~=1.11"
+    "alembic~=1.2",
+    "archive-path~=0.4.2",
+    "aio-pika~=6.6",
+    "circus~=0.18.0",
+    "click-config-file~=0.6.0",
+    "click-spinner~=0.1.8",
+    "click~=8.1",
+    "disk-objectstore~=0.6.0",
+    "graphviz~=0.13",
+    "ipython>=7,<9",
+    "jinja2~=3.0",
+    "jsonschema~=3.0",
+    "kiwipy[rmq]~=0.7.7",
+    "importlib-metadata~=4.3",
+    "importlib-resources~=5.0;python_version<'3.9'",
+    "numpy~=1.19",
+    "paramiko~=2.7,>=2.7.2",
+    "plumpy~=0.21.3",
+    "pgsu~=0.2.1",
+    "psutil~=5.6",
+    "psycopg2-binary~=2.8",
+    "pytz~=2021.1",
+    "pyyaml~=6.0",
+    "requests~=2.0",
+    "sqlalchemy~=1.4.22",
+    "tabulate~=0.8.5",
+    "tqdm~=4.45",
+    "upf_to_json~=0.9.2",
+    "wrapt~=1.11"
 ]
 
 [project.urls]
@@ -82,16 +83,17 @@ docs = [
     "sphinx-notfound-page~=0.5",
     "sphinxext-rediraffe~=0.2.4",
     "sphinx-sqlalchemy~=0.1.1",
-    "myst-nb~=0.13.2"
+    "sphinx-intl[transifex]~=2.0.1",
+    "myst-nb~=0.17.0",
 ]
 atomic_tools = [
     "PyCifRW~=4.4",
     "ase~=3.18",
     "matplotlib~=3.3,>=3.3.4",
-    "pymatgen>=2019.7.2,<=2022.1.9,!=2019.9.7",
+    "pymatgen>=2022.1.20",
     "pymysql~=0.9.3",
     "seekpath~=1.9,>=1.9.3",
-    "spglib~=1.14"
+    "spglib>=1.14,<3.0"
 ]
 notebook = [
     "jupyter-client~=6.1,<6.1.13",
@@ -99,7 +101,7 @@ notebook = [
     "notebook~=6.1,>=6.1.5"
 ]
 pre-commit = [
-    "mypy==0.930",
+    "mypy==0.991",
     "packaging==20.3",
     "pre-commit~=2.2",
     "pylint~=2.11.1",
@@ -112,15 +114,15 @@ tests = [
     "aiida-export-migration-tests==0.9.0",
     "pg8000~=1.13",
     "pgtest~=1.3,>=1.3.1",
-    "pytest~=6.2",
+    "pytest~=7.0",
     "pytest-asyncio~=0.12,<0.17",
     "pytest-timeout~=1.3",
     "pytest-cov~=2.7,<2.11",
     "pytest-rerunfailures~=9.1,>=9.1.1",
-    "pytest-benchmark~=3.2",
+    "pytest-benchmark~=4.0",
     "pytest-regressions~=2.2",
     "pympler~=0.9",
-    "coverage<5.0",
+    "coverage~=6.0",
     "sqlalchemy-utils~=0.37.2",
     "sphinx~=4.0",
     "docutils==0.16",
@@ -140,6 +142,9 @@ runaiida = "aiida.cmdline.commands.cmd_run:run"
 
 [project.entry-points."aiida.calculations.importers"]
 "core.arithmetic.add" = "aiida.calculations.importers.arithmetic.add:ArithmeticAddCalculationImporter"
+
+[project.entry-points."aiida.calculations.monitors"]
+"core.always_kill" = "aiida.calculations.monitors.base:always_kill"
 
 [project.entry-points."aiida.cmdline.computer.configure"]
 "core.local" = "aiida.transports.plugins.local:CONFIGURE_LOCAL_CMD"
@@ -171,6 +176,7 @@ runaiida = "aiida.cmdline.commands.cmd_run:run"
 "core.code" = "aiida.orm.nodes.data.code.legacy:Code"
 "core.code.portable" = "aiida.orm.nodes.data.code.portable:PortableCode"
 "core.code.installed" = "aiida.orm.nodes.data.code.installed:InstalledCode"
+"core.code.containerized" = "aiida.orm.nodes.data.code.containerized:ContainerizedCode"
 "core.dict" = "aiida.orm.nodes.data.dict:Dict"
 "core.enum" = "aiida.orm.nodes.data.enum:EnumData"
 "core.float" = "aiida.orm.nodes.data.float:Float"
@@ -206,7 +212,7 @@ runaiida = "aiida.cmdline.commands.cmd_run:run"
 
 [project.entry-points."aiida.parsers"]
 "core.arithmetic.add" = "aiida.parsers.plugins.arithmetic.add:ArithmeticAddParser"
-"core.templatereplacer.doubler" = "aiida.parsers.plugins.templatereplacer.doubler:TemplatereplacerDoublerParser"
+"core.templatereplacer" = "aiida.parsers.plugins.templatereplacer.parser:TemplatereplacerParser"
 
 [project.entry-points."aiida.schedulers"]
 "core.direct" = "aiida.schedulers.plugins.direct:DirectScheduler"
@@ -266,7 +272,6 @@ max-line-length = 120
 [tool.pylint.messages_control]
 disable = [
     "bad-continuation",
-    "bad-option-value",
     "consider-using-f-string",
     "cyclic-import",
     "duplicate-code",
@@ -309,7 +314,7 @@ docstring-min-length = 5
 max-locals = 20
 
 [tool.pytest.ini_options]
-minversion = "6.0"
+minversion = "7.0"
 addopts = "--benchmark-skip --durations=50 --cov-report xml --cov-append "
 testpaths = [
     "tests",
@@ -349,18 +354,27 @@ indent_dictionary_value = false
 
 [tool.mypy]
 show_error_codes = true
-check_untyped_defs = true
 scripts_are_modules = true
-warn_unused_ignores = true
-warn_redundant_casts = true
-no_warn_no_return = true
 show_traceback = true
 plugins = ["sqlalchemy.ext.mypy.plugin"]
 
+# strictness
+strict = true
+# these options reduce the strictness and should eventually be removed
+disallow_untyped_defs = false
+disallow_untyped_calls = false
+disallow_incomplete_defs = false
+warn_return_any = false
+disallow_any_generics = false
+disallow_subclassing_any = false
+
 [[tool.mypy.overrides]]
-module = 'aiida.*'
-# can only follow these imports when more of the code is typed
-follow_imports = "skip"
+module = 'aiida'
+implicit_reexport = true
+
+[[tool.mypy.overrides]]
+module = 'aiida.cmdline.commands.*'
+disallow_untyped_decorators = false
 
 [[tool.mypy.overrides]]
 module = 'tests.*'
@@ -368,17 +382,53 @@ check_untyped_defs = false
 
 [[tool.mypy.overrides]]
 module = [
+    'ase.*',
+    'bpython.*',
+    'bs4.*',
+    'CifFile.*',
     'circus.*',
+    'click_config_file.*',
+    'click_spinner.*',
+    'docutils.*',
+    'flask_cors.*',
+    'flask_restful.*',
+    'graphviz.*',
+    'importlib._bootstrap.*',
+    'IPython.*',
+    'jsonschema.*',
     'kiwipy.*',
+    'matplotlib.*',
+    'mayavi.*',
+    'MySQLdb.*',
     'numpy.*',
+    'paramiko.*',
+    'pgsu.*',
+    'pgtest.*',
+    'phonopy.*',
+    'psutil.*',
+    'psycopg2.*',
+    'pymatgen.*',
+    'pymysql.*',
+    'pyparsing.*',
+    'pympler.*',
     'pytz.*',
+    'requests.*',
     'ruamel.*',
     'scipy.*',
+    'seekpath.*',
+    'spglib.*',
+    'sphinxcontrib.details.*',
+    'sqlalchemy_utils.*',
     'tabulate.*',
     'tqdm.*',
     'wrapt.*',
+    'upf_to_json.*',
 ]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = 'plumpy'
+ignore_errors = true
 
 [tool.tox]
 legacy_tox_ini = """

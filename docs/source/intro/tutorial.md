@@ -226,12 +226,12 @@ $ verdi node graph generate 3
 
 The command will write the provenance graph to a `.pdf` file.
 Use your favorite PDF viewer to have a look.
-It should look something like the graph shown {ref}`below <fig_calcfun_graph>`.
+It should look something like the graph shown below.
 
 ```{code-cell} ipython3
 ---
 tags: ["hide-input"]
-render:
+mystnb:
     image:
         align: center
         width: 300px
@@ -289,7 +289,7 @@ For both commands, the *non-interactive* option (`-n`) is added to not prompt fo
 Next, let's set up the code we're going to use for the tutorial:
 
 ```console
-$ verdi code setup -L add --on-computer --computer=tutor -P core.arithmetic.add --remote-abs-path=/bin/bash -n
+$ verdi code create core.code.installed --label add --computer=tutor --default-calc-job-plugin core.arithmetic.add --filepath-executable=/bin/bash -n
 ```
 
 This command sets up a code with *label* `add` on the *computer* `tutor`, using the *plugin* `core.arithmetic.add`.
@@ -301,7 +301,7 @@ This command sets up a code with *label* `add` on the *computer* `tutor`, using 
 
 %verdi computer setup -L tutor -H localhost -T core.local -S core.direct -w /tmp -n
 %verdi computer configure core.local tutor --safe-interval 0 -n
-%verdi code setup -L add --on-computer --computer=tutor -P core.arithmetic.add --remote-abs-path=/bin/bash -n
+%verdi code create core.code.installed --label add --computer=tutor --default-calc-job-plugin core.arithmetic.add --filepath-executable=/bin/bash -n
 ```
 
 A typical real-world example of a computer is a remote supercomputing facility.
@@ -395,7 +395,7 @@ $ verdi node graph generate 7
 ```{code-cell} ipython3
 ---
 tags: ["hide-input"]
-render:
+mystnb:
     image:
         align: center
         width: 400px
@@ -576,7 +576,7 @@ $ verdi node graph generate 14
 ```{code-cell} ipython3
 ---
 tags: ["hide-input"]
-render:
+mystnb:
     image:
         align: center
         width: 400px

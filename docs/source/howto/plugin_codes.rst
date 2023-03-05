@@ -295,6 +295,30 @@ Note that some scheduler plugins can detect issues at the scheduler level (by pa
 The Topics section on :ref:`scheduler exit codes <topics:calculations:usage:calcjobs:scheduler-errors>` explains how these can be inspected inside a parser and how they can optionally be overridden.
 
 
+.. how-to:plugin-codes:customization:
+
+Customizations
+==============
+
+.. how-to:plugin-codes:customization:process-label:
+
+Process label
+-------------
+
+Each time a ``Process`` is run, a ``ProcessNode`` is stored in the database to record the execution.
+A human-readable label is stored in the ``process_label`` attribute.
+By default, the name of the process class is used as this label.
+If this default is not informative enough, it can be customized by overriding the :meth:`~aiida.engine.processes.process.Process._build_process_label`: method:
+
+.. code-block:: python
+
+    class SomeProcess(Process):
+
+        def _build_process_label(self):
+            return 'custom_process_label'
+
+Nodes created through executions of this process class will have ``node.process_label == 'custom_process_label'``.
+
 .. _how-to:plugin-codes:entry-points:
 
 Registering entry points
@@ -310,27 +334,40 @@ With your ``calculations.py`` and ``parsers.py`` files at hand, let's register e
 
       $ mkdir aiida_diff_tutorial
       $ mv calculations.py parsers.py aiida_diff_tutorial/
+      $ touch aiida_diff_tutorial/__init__.py
 
    You have just created an ``aiida_diff_tutorial`` Python *package*!
 
- * Write a minimalistic ``setup.py`` script for your new package:
+ * Add a minimal set of metadata for your package by writing a ``pyproject.toml`` file:
 
-    .. code-block:: python
+    .. code-block:: toml
 
-        from setuptools import setup
+        [build-system]
+        # build the package with [flit](https://flit.readthedocs.io)
+        requires = ["flit_core >=3.4,<4"]
+        build-backend = "flit_core.buildapi"
 
-        setup(
-            name='aiida-diff-tutorial',
-            packages=['aiida_diff_tutorial'],
-            entry_points={
-                'aiida.calculations': ["diff-tutorial = aiida_diff_tutorial.calculations:DiffCalculation"],
-                'aiida.parsers': ["diff-tutorial = aiida_diff_tutorial.parsers:DiffParser"],
-            }
-        )
+        [project]
+        # See https://www.python.org/dev/peps/pep-0621/
+        name = "aiida-diff-tutorial"
+        version = "0.1.0"
+        description = "AiiDA demo plugin"
+        dependencies = [
+            "aiida-core>=2.0,<3",
+        ]
+
+        [project.entry-points."aiida.calculations"]
+        "diff-tutorial" = "aiida_diff_tutorial.calculations:DiffCalculation"
+
+        [project.entry-points."aiida.parsers"]
+        "diff-tutorial" = "aiida_diff_tutorial.parsers:DiffParser"
+
+        [tool.flit.module]
+        name = "aiida_diff_tutorial"
+
 
     .. note::
-        Strictly speaking, ``aiida-diff-tutorial`` is the name of the *distribution*, while ``aiida_diff_tutorial`` is the name of the *package*.
-        The aiida-core documentation uses the term *package* a bit more loosely.
+        This allows for the project metadata to be fully specified in the pyproject.toml file, using the PEP 621 format.
 
 
  * Install your new ``aiida-diff-tutorial`` plugin package.

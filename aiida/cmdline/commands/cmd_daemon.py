@@ -8,8 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi daemon` commands."""
-
-import os
 import subprocess
 import sys
 import time
@@ -19,13 +17,7 @@ from click_spinner import spinner
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import decorators, echo
-from aiida.cmdline.utils.common import get_env_with_venv_bin
-from aiida.cmdline.utils.daemon import (
-    _START_CIRCUS_COMMAND,
-    delete_stale_pid_file,
-    get_daemon_status,
-    print_client_response_status,
-)
+from aiida.cmdline.utils.daemon import delete_stale_pid_file, get_daemon_status, print_client_response_status
 from aiida.manage import get_manager
 
 
@@ -61,25 +53,17 @@ def start(foreground, number):
 
     Returns exit code 0 if the daemon is OK, non-zero if there was an error.
     """
-    from aiida.engine.daemon.client import get_daemon_client
+    from aiida.engine.daemon.client import DaemonException, get_daemon_client
 
     client = get_daemon_client()
 
-    echo.echo(f'Starting the daemon with {number} workers... ', nl=False)
-
-    if foreground:
-        command = ['verdi', '-p', client.profile.name, 'daemon', _START_CIRCUS_COMMAND, '--foreground', str(number)]
-    else:
-        command = ['verdi', '-p', client.profile.name, 'daemon', _START_CIRCUS_COMMAND, str(number)]
-
     try:
-        currenv = get_env_with_venv_bin()
-        subprocess.check_output(command, env=currenv, stderr=subprocess.STDOUT)  # pylint: disable=unexpected-keyword-arg
-    except subprocess.CalledProcessError as exception:
+        echo.echo(f'Starting the daemon with {number} workers... ', nl=False)
+        client.start_daemon(number_workers=number, foreground=foreground)
+    except DaemonException as exception:
         echo.echo('FAILED', fg=echo.COLORS['error'], bold=True)
         echo.echo_critical(str(exception))
 
-    # We add a small timeout to give the pid-file a chance to be created
     with spinner():
         time.sleep(1)
         response = client.get_status()
@@ -91,6 +75,7 @@ def start(foreground, number):
 
 @verdi_daemon.command()
 @click.option('--all', 'all_profiles', is_flag=True, help='Show status of all daemons.')
+@decorators.requires_loaded_profile()
 def status(all_profiles):
     """Print the status of the current daemon or all daemons.
 
@@ -161,8 +146,7 @@ def logshow():
 
     client = get_daemon_client()
 
-    currenv = get_env_with_venv_bin()
-    with subprocess.Popen(['tail', '-f', client.daemon_log_file], env=currenv) as process:
+    with subprocess.Popen(['tail', '-f', client.daemon_log_file], env=client.get_env()) as process:
         process.wait()
 
 
@@ -233,7 +217,6 @@ def restart(ctx, reset, no_wait):
     from aiida.engine.daemon.client import get_daemon_client
 
     client = get_daemon_client()
-
     wait = not no_wait
 
     if reset:
@@ -271,84 +254,13 @@ def start_circus(foreground, number):
 
     .. note:: this should not be called directly from the commandline!
     """
-    from circus import get_arbiter
-    from circus import logger as circus_logger
-    from circus.circusd import daemonize
-    from circus.pidfile import Pidfile
-    from circus.util import check_future_exception_and_log, configure_logger
-
     from aiida.engine.daemon.client import get_daemon_client
+    get_daemon_client()._start_daemon(number_workers=number, foreground=foreground)  # pylint: disable=protected-access
 
-    if foreground and number > 1:
-        raise click.ClickException('can only run a single worker when running in the foreground')
 
-    client = get_daemon_client()
-
-    loglevel = client.loglevel
-    logoutput = '-'
-
-    if not foreground:
-        logoutput = client.circus_log_file
-
-    arbiter_config = {
-        'controller': client.get_controller_endpoint(),
-        'pubsub_endpoint': client.get_pubsub_endpoint(),
-        'stats_endpoint': client.get_stats_endpoint(),
-        'logoutput': logoutput,
-        'loglevel': loglevel,
-        'debug': False,
-        'statsd': True,
-        'pidfile': client.circus_pid_file,
-        'watchers': [{
-            'cmd': client.cmd_string,
-            'name': client.daemon_name,
-            'numprocesses': number,
-            'virtualenv': client.virtualenv,
-            'copy_env': True,
-            'stdout_stream': {
-                'class': 'FileStream',
-                'filename': client.daemon_log_file,
-            },
-            'stderr_stream': {
-                'class': 'FileStream',
-                'filename': client.daemon_log_file,
-            },
-            'env': get_env_with_venv_bin(),
-        }]
-    }  # yapf: disable
-
-    if not foreground:
-        daemonize()
-
-    arbiter = get_arbiter(**arbiter_config)
-    pidfile = Pidfile(arbiter.pidfile)
-
-    try:
-        pidfile.create(os.getpid())
-    except RuntimeError as exception:
-        echo.echo_critical(str(exception))
-
-    # Configure the logger
-    loggerconfig = None
-    loggerconfig = loggerconfig or arbiter.loggerconfig or None
-    configure_logger(circus_logger, loglevel, logoutput, loggerconfig)
-
-    # Main loop
-    should_restart = True
-
-    while should_restart:
-        try:
-            future = arbiter.start()
-            should_restart = False
-            if check_future_exception_and_log(future) is None:
-                should_restart = arbiter._restarting  # pylint: disable=protected-access
-        except Exception as exception:
-            # Emergency stop
-            arbiter.loop.run_sync(arbiter._emergency_stop)  # pylint: disable=protected-access
-            raise exception
-        except KeyboardInterrupt:
-            pass
-        finally:
-            arbiter = None
-            if pidfile is not None:
-                pidfile.unlink()
+@verdi_daemon.command('worker')
+@decorators.with_dbenv()
+def worker():
+    """Run a single daemon worker in the current interpreter."""
+    from aiida.engine.daemon.worker import start_daemon_worker
+    start_daemon_worker()

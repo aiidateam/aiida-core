@@ -14,7 +14,7 @@ import pytest
 from sqlalchemy import column
 
 from aiida.storage.psql_dos.migrations.utils import dblog_update
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 # The values that will be exported for the log records that will be deleted
 values_to_export = ('id', 'time', 'loggername', 'levelname', 'objpk', 'objname', 'message', 'metadata')
@@ -23,10 +23,10 @@ values_to_export = ('id', 'time', 'loggername', 'levelname', 'objpk', 'objname',
 class TestDbLogMigrationRecordCleaning:
     """Test the migration of the keys of certain attribute for ProcessNodes and CalcJobNodes."""
 
-    migrator: PsqlDostoreMigrator
+    migrator: PsqlDosMigrator
 
     @pytest.fixture(autouse=True)
-    def setup_db(self, perform_migrations: PsqlDostoreMigrator):  # pylint: disable=too-many-locals,too-many-statements
+    def setup_db(self, perform_migrations: PsqlDosMigrator):  # pylint: disable=too-many-locals,too-many-statements
         """Setup the database schema."""
         from aiida.storage.psql_dos.migrations.utils.utils import dumps_json
 
@@ -140,7 +140,7 @@ class TestDbLogMigrationRecordCleaning:
             session.commit()
 
             # Storing temporarily information needed for the check at the test
-            self.to_check = {}  # pylint: disable=attribute-defined-outside-init
+            self.to_check: dict = {}  # pylint: disable=attribute-defined-outside-init
 
             # Keeping calculation & calculation log ids
             self.to_check['CalculationNode'] = (
@@ -258,7 +258,7 @@ class TestDbLogMigrationRecordCleaning:
                 assert 'objname' not in m_res.keys(), 'objname should not exist any more in metadata'
 
 
-def test_dblog_uuid_addition(perform_migrations: PsqlDostoreMigrator):
+def test_dblog_uuid_addition(perform_migrations: PsqlDosMigrator):
     """Test that the UUID column is correctly added to the DbLog table,
     and that the uniqueness constraint is added without problems
     (if the migration arrives until 375c2db70663 then the constraint is added properly).

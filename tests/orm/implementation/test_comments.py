@@ -10,7 +10,7 @@
 # pylint: disable=no-self-use
 """Unit tests for the BackendComment and BackendCommentCollection classes."""
 from datetime import datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -22,14 +22,14 @@ class TestBackendComment:
     """Test BackendComment."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost, backend):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost, backend):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.backend = backend
         self.computer = aiida_localhost.backend_entity  # Unwrap the `Computer` instance to `BackendComputer`
-        self.user = backend.users.create(email='tester@localhost').store()
+        self.user = backend.users.create(email=uuid4().hex).store()
         self.node = self.backend.nodes.create(
-            node_type='', user=self.user, computer=self.computer, label='label', description='description'
+            node_type='', user=self.user, computer=self.computer, label=uuid4().hex, description='description'
         ).store()
         self.comment_content = 'comment content'
 

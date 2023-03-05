@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """The `verdi setup` and `verdi quicksetup` commands."""
-
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -40,11 +39,13 @@ from aiida.manage.configuration import Profile, load_profile
 @options_setup.SETUP_BROKER_VIRTUAL_HOST()
 @options_setup.SETUP_REPOSITORY_URI()
 @options_setup.SETUP_TEST_PROFILE()
+@options_setup.SETUP_PROFILE_UUID()
 @options.CONFIG_FILE()
+@click.pass_context
 def setup(
-    non_interactive, profile: Profile, email, first_name, last_name, institution, db_engine, db_backend, db_host,
+    ctx, non_interactive, profile: Profile, email, first_name, last_name, institution, db_engine, db_backend, db_host,
     db_port, db_name, db_username, db_password, broker_protocol, broker_username, broker_password, broker_host,
-    broker_port, broker_virtual_host, repository, test_profile
+    broker_port, broker_virtual_host, repository, test_profile, profile_uuid
 ):
     """Setup a new profile.
 
@@ -52,7 +53,12 @@ def setup(
     """
     # pylint: disable=too-many-arguments,too-many-locals,unused-argument
     from aiida import orm
-    from aiida.manage.configuration import get_config
+
+    # store default user settings so user does not have to re-enter them
+    _store_default_user_settings(ctx.obj.config, email, first_name, last_name, institution)
+
+    if profile_uuid is not None:
+        profile.uuid = profile_uuid
 
     profile.set_storage(
         db_backend, {
@@ -77,7 +83,7 @@ def setup(
     )
     profile.is_test_profile = test_profile
 
-    config = get_config()
+    config = ctx.obj.config
 
     # Create the profile, set it as the default and load it
     config.add_profile(profile)
@@ -87,22 +93,15 @@ def setup(
 
     # Initialise the storage
     echo.echo_report('initialising the profile storage.')
-    storage_cls = profile.storage_cls
 
     try:
-        storage_cls.migrate(profile)
+        profile.storage_cls.initialise(profile)
     except Exception as exception:  # pylint: disable=broad-except
         echo.echo_critical(
             f'storage initialisation failed, probably because connection details are incorrect:\n{exception}'
         )
     else:
         echo.echo_success('storage initialisation completed.')
-
-    # Optionally setting configuration default user settings
-    config.set_option('autofill.user.email', email, override=False)
-    config.set_option('autofill.user.first_name', first_name, override=False)
-    config.set_option('autofill.user.last_name', last_name, override=False)
-    config.set_option('autofill.user.institution', institution, override=False)
 
     # Create the user if it does not yet exist
     created, user = orm.User.collection.get_or_create(
@@ -156,11 +155,15 @@ def quicksetup(
     # pylint: disable=too-many-arguments,too-many-locals
     from aiida.manage.external.postgres import Postgres, manual_setup_instructions
 
+    # store default user settings so user does not have to re-enter them
+    _store_default_user_settings(ctx.obj.config, email, first_name, last_name, institution)
+
     dbinfo_su = {
         'host': db_host,
         'port': db_port,
         'user': su_db_username,
         'password': su_db_password,
+        'database': su_db_name,
     }
     postgres = Postgres(interactive=not non_interactive, quiet=False, dbinfo=dbinfo_su)
 
@@ -175,8 +178,8 @@ def quicksetup(
                 'Oops! quicksetup was unable to create the AiiDA database for you.',
                 'See `verdi quicksetup -h` for how to specify non-standard parameters for the postgresql connection.\n'
                 'Alternatively, create the AiiDA database yourself: ',
-                manual_setup_instructions(dbuser=su_db_username,
-                                          dbname=su_db_name), '', 'and then use `verdi setup` instead', ''
+                manual_setup_instructions(db_username=db_username,
+                                          db_name=db_name), '', 'and then use `verdi setup` instead', ''
             ])
         )
         raise exception
@@ -208,3 +211,12 @@ def quicksetup(
         'test_profile': test_profile,
     }
     ctx.invoke(setup, **setup_parameters)
+
+
+def _store_default_user_settings(config, email, first_name, last_name, institution):
+    """Store the default user settings if not already present."""
+    config.set_option('autofill.user.email', email, override=False)
+    config.set_option('autofill.user.first_name', first_name, override=False)
+    config.set_option('autofill.user.last_name', last_name, override=False)
+    config.set_option('autofill.user.institution', institution, override=False)
+    config.store()

@@ -21,7 +21,7 @@ from aiida.common.links import LinkType
 from aiida.common.utils import Capturing
 from aiida.engine import ExitCode, Process, ToContext, WorkChain, append_, calcfunction, if_, launch, return_, while_
 from aiida.engine.persistence import ObjectLoader
-from aiida.manage import get_manager
+from aiida.manage import enable_caching, get_manager
 from aiida.orm import Bool, Float, Int, Str, load_node
 
 
@@ -83,7 +83,7 @@ class Wf(WorkChain):
     """"Dummy work chain implementation with various steps and logical constructs in the outline."""
 
     # Keep track of which steps were completed by the workflow
-    finished_steps = {}
+    finished_steps: dict = {}
 
     @classmethod
     def define(cls, spec):
@@ -146,6 +146,36 @@ class Wf(WorkChain):
         self.finished_steps[function_name] = True
 
 
+class CalcFunctionWorkChain(WorkChain):
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('a')
+        spec.input('b')
+        spec.output('out_member')
+        spec.output('out_static')
+        spec.outline(
+            cls.run_add_member,
+            cls.run_add_static,
+        )
+
+    @calcfunction
+    def add_member(a, b):  # pylint: disable=no-self-argument
+        return a + b
+
+    @staticmethod
+    @calcfunction
+    def add_static(a, b):
+        return a + b
+
+    def run_add_member(self):
+        self.out('out_member', CalcFunctionWorkChain.add_member(self.inputs.a, self.inputs.b))
+
+    def run_add_static(self):
+        self.out('out_static', self.add_static(self.inputs.a, self.inputs.b))
+
+
 class PotentialFailureWorkChain(WorkChain):
     """Work chain that can finish with a non-zero exit code."""
 
@@ -186,7 +216,6 @@ class PotentialFailureWorkChain(WorkChain):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestExitStatus:
     """
     This class should test the various ways that one can exit from the outline flow of a WorkChain, other than
@@ -265,7 +294,6 @@ class IfTest(WorkChain):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestContext:
 
     def test_attributes(self):
@@ -293,7 +321,7 @@ class TestWorkchain:
     # pylint: disable=too-many-public-methods
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+    def init_profile(self):  # pylint: disable=unused-argument
         """Initialize the profile."""
         assert Process.current() is None
         yield
@@ -371,7 +399,8 @@ class TestWorkchain:
     def test_out_unstored(self):
         """Calling `self.out` on an unstored `Node` should raise.
 
-        It indicates that users created new data whose provenance will be lost.
+        It indicates that users created new data whose provenance will be lost. The node should be properly marked as
+        excepted.
         """
 
         class IllegalWorkChain(WorkChain):
@@ -386,7 +415,15 @@ class TestWorkchain:
                 self.out('not_allowed', orm.Int(2))
 
         with pytest.raises(ValueError):
-            launch.run(IllegalWorkChain)
+            _, node = launch.run_get_node(IllegalWorkChain)
+
+        node = orm.QueryBuilder().append(orm.ProcessNode, tag='node').order_by({
+            'node': {
+                'id': 'desc'
+            }
+        }).first(flat=True)
+        assert node.is_excepted
+        assert 'ValueError: Workflow<IllegalWorkChain> tried returning an unstored `Data` node.' in node.exception
 
     def test_same_input_node(self):
 
@@ -731,16 +768,15 @@ class TestWorkchain:
             @classmethod
             def define(cls, spec):
                 super().define(spec)
-                spec.outline(cls.run, cls.check)
+                spec.outline(cls.emit_report, cls.check)
                 spec.outputs.dynamic = True
 
-            def run(self):
-                orm.Log.collection.delete_all()
+            def emit_report(self):
                 self.report('Testing the report function')
 
             def check(self):
-                logs = self._backend.logs.find()
-                assert len(logs) == 1
+                messages = [log.message for log in orm.Log.collection.get_logs_for(self.node)]
+                assert any('Testing the report function' in message for message in messages)
 
         run_and_check_success(TestWorkChain)
 
@@ -996,11 +1032,8 @@ class TestWorkchain:
             @classmethod
             def define(cls, spec):
                 super().define(spec)
-                spec.outline(cls.run)
+                spec.outline()
                 spec.exit_code(status, label, message)
-
-            def run(self):
-                pass
 
         wc = ExitCodeWorkChain()
 
@@ -1028,6 +1061,47 @@ class TestWorkchain:
         proc = run_and_check_success(wf_class, **inputs)
         return proc.finished_steps
 
+    def test_member_calcfunction(self):
+        """Test defining a calcfunction as a ``WorkChain`` member method."""
+        results, node = launch.run.get_node(CalcFunctionWorkChain, a=Int(1), b=Int(2))
+        assert node.is_finished_ok
+        assert results['out_member'] == 3
+        assert results['out_static'] == 3
+
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_member_calcfunction_caching(self):
+        """Test defining a calcfunction as a ``WorkChain`` member method with caching enabled."""
+        results, node = launch.run.get_node(CalcFunctionWorkChain, a=Int(1), b=Int(2))
+        assert node.is_finished_ok
+        assert results['out_member'] == 3
+        assert results['out_static'] == 3
+
+        with enable_caching():
+            results, cached_node = launch.run.get_node(CalcFunctionWorkChain, a=Int(1), b=Int(2))
+            assert cached_node.is_finished_ok
+            assert results['out_member'] == 3
+            assert results['out_static'] == 3
+
+            # Check that the calcfunctions called by the workchain have been cached
+            for called in cached_node.called:
+                assert called.base.caching.is_created_from_cache
+                assert called.base.caching.get_cache_source() in [n.uuid for n in node.called]
+
+    def test_member_calcfunction_daemon(self, entry_points, daemon_client, submit_and_await):
+        """Test defining a calcfunction as a ``WorkChain`` member method submitted to the daemon."""
+        entry_points.add(CalcFunctionWorkChain, 'aiida.workflows:testing.calcfunction.workchain')
+
+        daemon_client.start_daemon()
+
+        builder = CalcFunctionWorkChain.get_builder()
+        builder.a = Int(1)
+        builder.b = Int(2)
+
+        node = submit_and_await(builder)
+        assert node.is_finished_ok
+        assert node.outputs.out_member == 3
+        assert node.outputs.out_static == 3
+
 
 @pytest.mark.requires_rmq
 class TestWorkChainAbort:
@@ -1036,7 +1110,7 @@ class TestWorkChainAbort:
     """
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+    def init_profile(self):  # pylint: disable=unused-argument
         """Initialize the profile."""
         assert Process.current() is None
         yield
@@ -1113,7 +1187,7 @@ class TestWorkChainAbortChildren:
     """
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+    def init_profile(self):  # pylint: disable=unused-argument
         """Initialize the profile."""
         assert Process.current() is None
         yield
@@ -1204,7 +1278,7 @@ class TestImmutableInputWorkchain:
     """
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+    def init_profile(self):  # pylint: disable=unused-argument
         """Initialize the profile."""
         assert Process.current() is None
         yield
@@ -1307,7 +1381,7 @@ class TestSerializeWorkChain:
     """
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+    def init_profile(self):  # pylint: disable=unused-argument
         """Initialize the profile."""
         assert Process.current() is None
         yield
@@ -1427,7 +1501,6 @@ class ChildExposeWorkChain(WorkChain):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestWorkChainExpose:
     """
     Test the expose inputs / outputs functionality
@@ -1535,7 +1608,6 @@ class TestWorkChainExpose:
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestWorkChainMisc:
 
     class PointlessWorkChain(WorkChain):
@@ -1573,7 +1645,6 @@ class TestWorkChainMisc:
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestDefaultUniqueness:
     """Test that default inputs of exposed nodes will get unique UUIDS."""
 
@@ -1600,7 +1671,7 @@ class TestDefaultUniqueness:
             super().define(spec)
             spec.input('a', valid_type=Bool, default=lambda: Bool(True))
 
-        def run(self):
+        def step(self):
             pass
 
     def test_unique_default_inputs(self):
@@ -1623,3 +1694,19 @@ class TestDefaultUniqueness:
         # as both `child_one.a` and `child_two.a` should have the same UUID.
         node = load_node(uuid=node.base.links.get_incoming().get_node_by_label('child_one__a').uuid)
         assert len(uuids) == len(nodes), f'Only {len(uuids)} unique UUIDS for {len(nodes)} input nodes'
+
+
+def test_illegal_override_run():
+    """Test that overriding a protected workchain method raises a ``RuntimeError``."""
+    with pytest.raises(RuntimeError, match='the method `run` is protected cannot be overridden.'):
+
+        class IllegalWorkChain(WorkChain):  # pylint: disable=unused-variable
+            """Work chain that illegally overrides the ``run`` method."""
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls.run)
+
+            def run(self):
+                pass

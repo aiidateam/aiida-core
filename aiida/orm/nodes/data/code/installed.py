@@ -14,6 +14,8 @@ storing the absolute filepath of the relevant executable and the computer on whi
 represented by an instance of :class:`aiida.orm.computers.Computer`. Each time a :class:`aiida.engine.CalcJob` is run
 using an ``InstalledCode``, it will run its executable on the associated computer.
 """
+from __future__ import annotations
+
 import pathlib
 
 import click
@@ -23,13 +25,14 @@ from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.common.log import override_log_level
 from aiida.orm import Computer
+from aiida.orm.entities import from_backend_entity
 
-from .abstract import AbstractCode
+from .legacy import Code
 
 __all__ = ('InstalledCode',)
 
 
-class InstalledCode(AbstractCode):
+class InstalledCode(Code):
     """Data plugin representing an executable code on a remote computer."""
 
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
@@ -42,14 +45,14 @@ class InstalledCode(AbstractCode):
         """
         super().__init__(**kwargs)
         self.computer = computer
-        self.filepath_executable = filepath_executable
+        self.filepath_executable = filepath_executable  # type: ignore[assignment]
 
     def _validate(self):
         """Validate the instance by checking that a computer has been defined.
 
         :raises :class:`aiida.common.exceptions.ValidationError`: If the state of the node is invalid.
         """
-        super()._validate()
+        super(Code, self)._validate()  # Change to ``super()._validate()`` once deprecated ``Code`` class is removed.  # pylint: disable=bad-super-call
 
         if not self.computer:
             raise exceptions.ValidationError('The `computer` is undefined.')
@@ -66,17 +69,22 @@ class InstalledCode(AbstractCode):
         is intentionally not called in ``_validate`` as to allow the creation of ``Code`` instances whose computers can
         not yet be connected to and as to not require the overhead of opening transports in storing a new code.
 
+        .. note:: If the ``filepath_executable`` is not an absolute path, the check is skipped.
+
         :raises `~aiida.common.exceptions.ValidationError`: if no transport could be opened or if the defined executable
             does not exist on the remote computer.
         """
+        if not self.filepath_executable.is_absolute():
+            return
+
         try:
             with override_log_level():  # Temporarily suppress noisy logging
                 with self.computer.get_transport() as transport:
-                    file_exists = transport.isfile(self.filepath_executable)
-        except Exception:  # pylint: disable=broad-except
+                    file_exists = transport.isfile(str(self.filepath_executable))
+        except Exception as exception:  # pylint: disable=broad-except
             raise exceptions.ValidationError(
                 'Could not connect to the configured computer to determine whether the specified executable exists.'
-            )
+            ) from exception
 
         if not file_exists:
             raise exceptions.ValidationError(
@@ -92,12 +100,30 @@ class InstalledCode(AbstractCode):
         type_check(computer, Computer)
         return computer.pk == self.computer.pk
 
-    def get_executable(self) -> str:
+    def get_executable(self) -> pathlib.PurePosixPath:
         """Return the executable that the submission script should execute to run the code.
 
         :return: The executable to be called in the submission script.
         """
         return self.filepath_executable
+
+    @property  # type: ignore[override]
+    def computer(self) -> Computer:
+        """Return the computer of this code."""
+        assert self.backend_entity.computer is not None
+        return from_backend_entity(Computer, self.backend_entity.computer)
+
+    @computer.setter
+    def computer(self, computer: Computer) -> None:
+        """Set the computer of this code.
+
+        :param computer: A `Computer`.
+        """
+        if self.is_stored:
+            raise exceptions.ModificationNotAllowed('cannot set the computer on a stored node')
+
+        type_check(computer, Computer, allow_none=False)
+        self.backend_entity.computer = computer.backend_entity
 
     @property
     def full_label(self) -> str:
@@ -111,12 +137,12 @@ class InstalledCode(AbstractCode):
         return f'{self.label}@{self.computer.label}'
 
     @property
-    def filepath_executable(self) -> pathlib.PurePath:
+    def filepath_executable(self) -> pathlib.PurePosixPath:
         """Return the absolute filepath of the executable that this code represents.
 
         :return: The absolute filepath of the executable.
         """
-        return pathlib.PurePath(self.base.attributes.get(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE))
+        return pathlib.PurePosixPath(self.base.attributes.get(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE))
 
     @filepath_executable.setter
     def filepath_executable(self, value: str) -> None:
@@ -125,10 +151,6 @@ class InstalledCode(AbstractCode):
         :param value: The absolute filepath of the executable.
         """
         type_check(value, str)
-
-        if not pathlib.PurePath(value).is_absolute():
-            raise ValueError('the `filepath_executable` should be absolute.')
-
         self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, value)
 
     @staticmethod
@@ -159,12 +181,14 @@ class InstalledCode(AbstractCode):
         """Return the CLI options that would allow to create an instance of this class."""
         options = {
             'computer': {
+                'short_name': '-Y',
                 'required': True,
                 'prompt': 'Computer',
                 'help': 'The remote computer on which the executable resides.',
                 'type': ComputerParamType(),
             },
             'filepath_executable': {
+                'short_name': '-X',
                 'required': True,
                 'type': click.Path(exists=False),
                 'prompt': 'Absolute filepath executable',

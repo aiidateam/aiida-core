@@ -40,43 +40,46 @@ Below is a list of the core data types already provided with AiiDA, along with t
 .. table::
   :widths: 20 20 45 45
 
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | **Class**                                                    | **Entry point**        | **Stored in database**                            | **Stored in repository**          |
-  +==============================================================+========================+===================================================+===================================+
-  | :ref:`Int <topics:data_types:core:base>`                     | ``core.int``           | The integer value                                 | ``-``                             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`Float <topics:data_types:core:base>`                   | ``core.float``         | The float value                                   | ``-``                             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`Str <topics:data_types:core:base>`                     | ``core.str``           | The string                                        | ``-``                             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`Bool <topics:data_types:core:base>`                    | ``core.bool``          | The boolean value                                 | ``-``                             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`List <topics:data_types:core:base:iterable>`           | ``core.list``          | The complete list                                 | ``-``                             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`Dict <topics:data_types:core:base:iterable>`           | ``core.dict``          | The complete dictionary                           | ``-``                             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`EnumData <topics:data_types:core:base:enum>`           | ``core.enum``          | The value, name and the class identifier          | ``-``                             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`JsonableData <topics:data_types:core:jsonable>`        | ``core.jsonable``      | The JSON data and the class identifier            | ``-``                             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`ArrayData <topics:data_types:core:array>`              | ``core.array``         | The array names and corresponding shapes          | The array data in ``.npy`` format |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`XyData <topics:data_types:core:array:xy>`              | ``core.array.xy``      | The array names and corresponding shapes          | The array data in ``.npy`` format |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`SinglefileData <topics:data_types:core:singlefile>`    | ``core.singlefile``    | The filename                                      | The file                          |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`FolderData <topics:data_types:core:folder>`            | ``core.folder``        | ``-``                                             | All files and folders             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`RemoteData <topics:data_types:core:remote>`            | ``core.remote``        | The computer and the absolute path to the folder  | All files and folders             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`AbstractCode <topics:data_types:core:code>`            | ``-``                  | Default plugin, append/prepend text               | ``-``                             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`Code <topics:data_types:core:code:legacy>`             | ``core.code``          | The computer and the executable path              | All files and folders             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`InstalledCode <topics:data_types:core:code:installed>` | ``core.code.installed``| The computer and the executable path              | ``-``                             |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
-  | :ref:`PortableCode <topics:data_types:core:code:portable>`   | ``core.code.portable`` | The relative path of the executable               | All files and folders of the code |
-  +--------------------------------------------------------------+------------------------+---------------------------------------------------+-----------------------------------+
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | **Class**                                                                               | **Entry point**                      | **Stored in database**                                              | **Stored in repository**          |
+  +=========================================================================================+======================================+=====================================================================+===================================+
+  | :ref:`Int <topics:data_types:core:base>`                                                | ``core.int``                         | The integer value                                                   | ``-``                             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`Float <topics:data_types:core:base>`                                              | ``core.float``                       | The float value                                                     | ``-``                             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`Str <topics:data_types:core:base>`                                                | ``core.str``                         | The string                                                          | ``-``                             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`Bool <topics:data_types:core:base>`                                               | ``core.bool``                        | The boolean value                                                   | ``-``                             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`List <topics:data_types:core:base:iterable>`                                      | ``core.list``                        | The complete list                                                   | ``-``                             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`Dict <topics:data_types:core:base:iterable>`                                      | ``core.dict``                        | The complete dictionary                                             | ``-``                             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`EnumData <topics:data_types:core:base:enum>`                                      | ``core.enum``                        | The value, name and the class identifier                            | ``-``                             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`JsonableData <topics:data_types:core:jsonable>`                                   | ``core.jsonable``                    | The JSON data and the class identifier                              | ``-``                             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`ArrayData <topics:data_types:core:array>`                                         | ``core.array``                       | The array names and corresponding shapes                            | The array data in ``.npy`` format |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`XyData <topics:data_types:core:array:xy>`                                         | ``core.array.xy``                    | The array names and corresponding shapes                            | The array data in ``.npy`` format |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`SinglefileData <topics:data_types:core:singlefile>`                               | ``core.singlefile``                  | The filename                                                        | The file                          |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`FolderData <topics:data_types:core:folder>`                                       | ``core.folder``                      | ``-``                                                               | All files and folders             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`RemoteData <topics:data_types:core:remote>`                                       | ``core.remote``                      | The computer and the absolute path to the folder                    | All files and folders             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`AbstractCode <topics:data_types:core:code>`                                       | ``-``                                | Default plugin, append/prepend text                                 | ``-``                             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`Code <topics:data_types:core:code:legacy>`                                        | ``core.code``                        | The computer and the executable path                                | All files and folders             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`InstalledCode <topics:data_types:core:code:installed>`                            | ``core.code.installed``              | The computer and the executable path                                | ``-``                             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`PortableCode <topics:data_types:core:code:portable>`                              | ``core.code.portable``               | The relative path of the executable                                 | All files and folders of the code |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+  | :ref:`ContainerizedCode <topics:data_types:core:code:containerized>`                    | ``core.code.containerized``          | The computer, the image and the executable path                     | ``-``                             |
+  +-----------------------------------------------------------------------------------------+--------------------------------------+---------------------------------------------------------------------+-----------------------------------+
+
 
 .. _topics:data_types:core:base:
 
@@ -417,11 +420,12 @@ AbstractCode
 .. versionadded:: 2.1
 
 The :class:`aiida.orm.nodes.data.code.abstract.AbstractCode` class provides the abstract class for objects that represent a "code" that can be executed through a :class:`aiida.engine.processes.calcjobs.calcjob.CalcJob` plugin.
-There are currently three implementations of this abstract class:
+There are currently four implementations of this abstract class:
 
  * :class:`~aiida.orm.nodes.data.code.legacy.Code` (see :ref:`Code <topics:data_types:core:code:legacy>`)
  * :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` (see :ref:`InstalledCode <topics:data_types:core:code:installed>`)
  * :class:`~aiida.orm.nodes.data.code.portable.PortableCode` (see :ref:`PortableCode <topics:data_types:core:code:portable>`)
+ * :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode` (see :ref:`ContainerizedCode <topics:data_types:core:code:containerized>`)
 
 
 .. _topics:data_types:core:code:legacy:
@@ -452,7 +456,7 @@ InstalledCode
 
 The :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` class is an implementation of the :class:`~aiida.orm.nodes.data.code.abstract.AbstractCode` class that represents an executable code on a remote computer.
 This plugin should be used if an executable is pre-installed on a computer.
-The ``InstalledCode`` represents the code by storing the absolute filepath of the relevant executable and the computer on which it is installed.
+The ``InstalledCode`` represents the code by storing the filepath of the relevant executable and the computer on which it is installed.
 The computer is represented by an instance of :class:`~aiida.orm.computers.Computer`.
 Each time a :class:`~aiida.engine.CalcJob` is run using an ``InstalledCode``, it will run its executable on the associated computer.
 Example of creating an ``InstalledCode``:
@@ -465,6 +469,9 @@ Example of creating an ``InstalledCode``:
         computer=load_computer('localhost'),
         filepath_executable='/usr/bin/bash'
     )
+
+.. versionchanged:: 2.3
+    The ``filepath_executable`` is no longer required to be an absolute path but can be just the executable name.
 
 
 .. _topics:data_types:core:code:portable:
@@ -492,8 +499,142 @@ Example of creating an ``PortableCode``:
         filepath_executable='executable.exe'
     )
 
+.. _topics:data_types:core:code:containerized:
 
-.. _topics:data_types:materials:
+ContainerizedCode
+-----------------
+
+.. versionadded:: 2.1
+
+The :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode` class allows running an executable within a container image on a target computer.
+The data plugin stores the following information in the database:
+
+* ``image_name``: The name of the container image (e.g., a URI like ``docker://alpine:3`` or an absolute file path like ``/path/to/image.sif``).
+* ``filepath_executable``: The filepath of the executable within the container (e.g. ``/usr/bin/bash``).
+* ``engine_command``: The bash command to invoke the container image (e.g. ``singularity exec --bind $PWD:$PWD {image_name}``).
+  The exact form of this command will depend on the containerization technology that is used.
+* ``computer``: The :class:`~aiida.orm.computers.Computer` on which to run the container.
+
+.. note::
+
+    If the container image is not yet present on the target computer, most container engines will pull the image from the registry at first use.
+    This can take a while if the image is large.
+
+.. important::
+
+    If the ``engine_command`` contains variables (such as in the ``singularity exec --bind $PWD:$PWD {image_name}`` example), it is crucial that the ``Computer`` needs to have the ``use_double_quotes`` setting set to ``True``.
+    By default, a ``Computer`` will use single quotes to escape command line arguments and so the ``$PWD`` would not be expanded.
+    If this wasn't defined as such when the ``Computer`` was created, it can be changed through the API:
+
+    .. code-block::
+
+        computer = load_computer('some-computer')
+        computer.set_use_double_quotes(True)
+
+
+.. _topics:data_types:core:code:installed:containerized:setup:
+
+Setup
+^^^^^
+
+A ``ContainerizedCode`` can be created through the CLI as well as the API.
+The following examples show how to setup running ``bash`` in a base Docker container through Singularity to be run on the ``Computer`` named ``some-computer``:
+
+.. tab-set::
+
+    .. tab-item:: CLI
+
+        .. code-block:: console
+
+            verdi code create core.code.containerized \
+                --non-interactive \
+                --label containerized-code \
+                --default-calc-job-plugin core.arithmetic.add \
+                --computer some-computer \
+                --filepath-executable "/bin/sh" \
+                --image-name "docker://alpine:3" \
+                --engine-command "singularity exec --bind $PWD:$PWD {image_name}"
+
+    .. tab-item:: API
+
+        .. code-block:: python
+
+            from aiida.orm import ContainerizedCode, load_computer
+
+            code = ContainerizedCode(
+                computer=load_computer('some-computer')
+                filepath_executable='/bin/sh'
+                image_name='docker://alpine:3',
+                engine_command='singularity exec --bind $PWD:$PWD {image_name}'
+            ).store()
+
+Please refer to the section on :ref:`supported container technologies <topics:data_types:core:code:installed:containerized:support>` for an overview and specific setup instructions for each containerization solution.
+
+.. _topics:data_types:core:code:installed:containerized:run:
+
+Run
+^^^
+
+A ``ContainerizedCode`` is used to launch a calculation just like any other code.
+If a default calculation job plugin is defined, a process builder can be obtained with ``get_builder``:
+
+.. code-block:: python
+
+    from aiida.engine import submit
+    from aiida.orm import load_code
+
+    code = load_code('containerized-code')
+    builder = code.get_builder()
+    # Define the rest of the inputs
+    submit(builder)
+
+.. important::
+
+    If a containerized code is used for a calculation that sets the :ref:`metadata option <topics:calculations:usage:calcjobs:options>` ``withmpi`` to ``True``, the MPI command line arguments are placed in front of the container runtime.
+    For example, when running Singularity with ``metadata.options.withmpi = True``, the runline in the submission script will be written as:
+
+    .. code-block:: bash
+
+        "mpirun" "-np" "1" "singularity" "exec" "--bind" "$PWD:$PWD" "ubuntu" '/bin/bash' '--version' '-c' < "aiida.in" > "aiida.out" 2> "aiida.err"
+
+    This means that the containerization program is launched as a normal MPI program, and so it needs to support forwarding the execution context to the container application.
+    It is currently not possible to have MPI invoked inside the container runtime.
+
+
+.. _topics:data_types:core:code:installed:containerized:support:
+
+Supported container technologies
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``ContainerizedCode`` is compatible with a variety of containerization technologies:
+
+.. tab-set::
+
+    .. tab-item:: Singularity
+
+        To use `Singularity <https://singularity-docs.readthedocs.io/en/latest/>`__ use the following ``engine_command`` when setting up the code:
+
+        .. code-block:: console
+
+            singularity exec --bind $PWD:$PWD {image_name}
+
+    .. tab-item:: Sarus
+
+        To use `Sarus <https://sarus.readthedocs.io/en/stable/>`__ use the following ``engine_command`` when setting up the code:
+
+        .. code-block:: console
+
+            sarus run --mount=src=$PWD,dst=/workdir,type=bind --workdir=/workdir {image_name}
+
+
+Using `Docker <https://www.docker.com/>`__ directly is currently not supported because:
+
+* The Docker daemon always runs as the root user and the files created in the working directory inside the container will usually be owned by root if uid is not specified in the image, which prevents AiiDA from deleting those files after execution.
+* Docker cannot be launched as a normal MPI program to propagate execution context to the container application.
+
+Support may be added at a later time.
+
+
 
 Materials science data types
 ============================
@@ -981,6 +1122,11 @@ Creating a new data type is as simple as creating a new sub class of the base :c
     class NewData(Data):
         """A new data type that wraps a single value."""
 
+.. note::
+
+    To be able to use the new ``Data`` plugin, it must be registered using an entry point.
+    See :ref:`What is an entry point?<topics:plugins:entrypoints>` for details.
+
 At this point, our new data type does nothing special.
 Typically, one creates a new data type to represent a specific type of data.
 For the purposes of this example, let's assume that the goal of our ``NewData`` type is to store a single numerical value.
@@ -1008,6 +1154,8 @@ Therefore, we have to override the constructor :meth:`~aiida.orm.nodes.node.Node
 .. warning::
 
     For the class to function properly, the signature of the constructor **cannot be changed** and the constructor of the parent class **has to be called**.
+    Note also that the constructor is **NOT** called when the node is loaded from the database afterwards.
+    Hence, one should not rely on initializing instance attributes inside the ``__init__`` itself (here "attributes" does not refer to the data stored in the database, but the normal Python understanding of attributes that class instances have).
 
 Before calling the constructor of the base class, we have to remove the ``value`` keyword from the keyword arguments ``kwargs``, because the base class will not expect it and will raise an exception if left in the keyword arguments.
 The final step is to actually *store* the value that is passed by the caller of the constructor.

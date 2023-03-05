@@ -7,89 +7,82 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=redefined-outer-name,unused-variable
 """Tests for the `CalculationParamType`."""
+import uuid
+
 import pytest
 
 from aiida.cmdline.params.types import CalculationParamType
-from aiida.orm import CalcFunctionNode, CalcJobNode, CalculationNode, WorkChainNode, WorkFunctionNode
+from aiida.orm import CalculationNode
 from aiida.orm.utils.loaders import OrmEntityLoader
 
 
-class TestCalculationParamType:
-    """Tests for the `CalculationParamType`."""
+@pytest.fixture(scope='module')
+def entities():
+    """Create three ``CalculationNode``s."""
+    entity_01 = CalculationNode().store()
+    entity_02 = CalculationNode().store()
+    entity_03 = CalculationNode().store()
 
-    @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
-        """
-        Create some code to test the CalculationParamType parameter type for the command line infrastructure
-        We create an initial code with a random name and then on purpose create two code with a name
-        that matches exactly the ID and UUID, respectively, of the first one. This allows us to test
-        the rules implemented to solve ambiguities that arise when determing the identifier type
-        """
-        # pylint: disable=attribute-defined-outside-init
-        self.param = CalculationParamType()
-        self.entity_01 = CalculationNode().store()
-        self.entity_02 = CalculationNode().store()
-        self.entity_03 = CalculationNode().store()
-        self.entity_04 = WorkFunctionNode()
-        self.entity_05 = CalcFunctionNode()
-        self.entity_06 = CalcJobNode()
-        self.entity_07 = WorkChainNode()
+    entity_01.label = f'calculation-{uuid.uuid4().hex}'
+    entity_02.label = str(entity_01.pk)
+    entity_03.label = str(entity_01.uuid)
 
-        self.entity_01.label = 'calculation_01'
-        self.entity_02.label = str(self.entity_01.pk)
-        self.entity_03.label = str(self.entity_01.uuid)
+    return entity_01, entity_02, entity_03
 
-    def test_get_by_id(self):
-        """
-        Verify that using the ID will retrieve the correct entity
-        """
-        identifier = f'{self.entity_01.pk}'
-        result = self.param.convert(identifier, None, None)
-        assert result.uuid == self.entity_01.uuid
 
-    def test_get_by_uuid(self):
-        """
-        Verify that using the UUID will retrieve the correct entity
-        """
-        identifier = f'{self.entity_01.uuid}'
-        result = self.param.convert(identifier, None, None)
-        assert result.uuid == self.entity_01.uuid
+def test_get_by_id(entities):
+    """Verify that using the ID will retrieve the correct entity."""
+    entity_01, entity_02, entity_03 = entities
+    identifier = str(entity_01.pk)
+    result = CalculationParamType().convert(identifier, None, None)
+    assert result.uuid == entity_01.uuid
 
-    def test_get_by_label(self):
-        """
-        Verify that using the LABEL will retrieve the correct entity
-        """
-        identifier = f'{self.entity_01.label}'
-        result = self.param.convert(identifier, None, None)
-        assert result.uuid == self.entity_01.uuid
 
-    def test_ambiguous_label_pk(self):
-        """
-        Situation: LABEL of entity_02 is exactly equal to ID of entity_01
+def test_get_by_uuid(entities):
+    """Verify that using the UUID will retrieve the correct entity."""
+    entity_01, entity_02, entity_03 = entities
+    identifier = str(entity_01.uuid)
+    result = CalculationParamType().convert(identifier, None, None)
+    assert result.uuid == entity_01.uuid
 
-        Verify that using an ambiguous identifier gives precedence to the ID interpretation
-        Appending the special ambiguity breaker character will force the identifier to be treated as a LABEL
-        """
-        identifier = f'{self.entity_02.label}'
-        result = self.param.convert(identifier, None, None)
-        assert result.uuid == self.entity_01.uuid
 
-        identifier = f'{self.entity_02.label}{OrmEntityLoader.label_ambiguity_breaker}'
-        result = self.param.convert(identifier, None, None)
-        assert result.uuid == self.entity_02.uuid
+def test_get_by_label(entities):
+    """Verify that using the LABEL will retrieve the correct entity."""
+    entity_01, entity_02, entity_03 = entities
+    identifier = str(entity_01.label)
+    result = CalculationParamType().convert(identifier, None, None)
+    assert result.uuid == entity_01.uuid
 
-    def test_ambiguous_label_uuid(self):
-        """
-        Situation: LABEL of entity_03 is exactly equal to UUID of entity_01
 
-        Verify that using an ambiguous identifier gives precedence to the UUID interpretation
-        Appending the special ambiguity breaker character will force the identifier to be treated as a LABEL
-        """
-        identifier = f'{self.entity_03.label}'
-        result = self.param.convert(identifier, None, None)
-        assert result.uuid == self.entity_01.uuid
+def test_ambiguous_label_pk(entities):
+    """Situation: LABEL of entity_02 is exactly equal to ID of entity_01
 
-        identifier = f'{self.entity_03.label}{OrmEntityLoader.label_ambiguity_breaker}'
-        result = self.param.convert(identifier, None, None)
-        assert result.uuid == self.entity_03.uuid
+    Verify that using an ambiguous identifier gives precedence to the ID interpretation
+    Appending the special ambiguity breaker character will force the identifier to be treated as a LABEL
+    """
+    entity_01, entity_02, entity_03 = entities
+    identifier = str(entity_02.label)
+    result = CalculationParamType().convert(identifier, None, None)
+    assert result.uuid == entity_01.uuid
+
+    identifier = f'{entity_02.label}{OrmEntityLoader.label_ambiguity_breaker}'
+    result = CalculationParamType().convert(identifier, None, None)
+    assert result.uuid == entity_02.uuid
+
+
+def test_ambiguous_label_uuid(entities):
+    """Situation: LABEL of entity_03 is exactly equal to UUID of entity_01
+
+    Verify that using an ambiguous identifier gives precedence to the UUID interpretation
+    Appending the special ambiguity breaker character will force the identifier to be treated as a LABEL
+    """
+    entity_01, entity_02, entity_03 = entities
+    identifier = str(entity_03.label)
+    result = CalculationParamType().convert(identifier, None, None)
+    assert result.uuid == entity_01.uuid
+
+    identifier = f'{entity_03.label}{OrmEntityLoader.label_ambiguity_breaker}'
+    result = CalculationParamType().convert(identifier, None, None)
+    assert result.uuid == entity_03.uuid

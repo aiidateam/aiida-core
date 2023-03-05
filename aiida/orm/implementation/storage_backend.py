@@ -44,10 +44,10 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
     The two sources are inter-linked by the ``Node.base.repository.metadata``.
     Once stored, the leaf values of this dictionary must be valid pointers to object keys in the repository.
 
-    The class methods,`version_profile` and `migrate`,
-    should be able to be called for existing storage, at any supported schema version (or empty storage).
-    But an instance of this class should be created only for the latest schema version.
-
+    For a completely new storage, the ``initialise`` method should be called first. This will automatically initialise
+    the repository and the database with the current schema. The class methods,`version_profile` and `migrate` should be
+    able to be called for existing storage, at any supported schema version. But an instance of this class should be
+    created only for the latest schema version.
     """
 
     @classmethod
@@ -65,13 +65,28 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
 
     @classmethod
     @abc.abstractmethod
+    def initialise(cls, profile: 'Profile', reset: bool = False) -> bool:
+        """Initialise the storage backend.
+
+        This is typically used once when a new storage backed is created. If this method returns without exceptions the
+        storage backend is ready for use. If the backend already seems initialised, this method is a no-op.
+
+        :param reset: If ``true``, destroy the backend if it already exists including all of its data before recreating
+            and initialising it. This is useful for example for test profiles that need to be reset before or after
+            tests having run.
+        :returns: ``True`` if the storage was initialised by the function call, ``False`` if it was already initialised.
+        """
+
+    @classmethod
+    @abc.abstractmethod
     def migrate(cls, profile: 'Profile') -> None:
         """Migrate the storage of a profile to the latest schema version.
 
-        If the schema version is already the latest version, this method does nothing.
-        If the storage is empty/uninitialised, then it will be initialised at head.
+        If the schema version is already the latest version, this method does nothing. If the storage is uninitialised,
+        this method will raise an exception.
 
-        :raises: `~aiida.common.exceptions.UnreachableStorage` if the storage cannot be accessed
+        :raises: :class`~aiida.common.exceptions.UnreachableStorage` if the storage cannot be accessed.
+        :raises: :class:`~aiida.common.exceptions.StorageMigrationError` if the storage is not initialised.
         """
 
     @abc.abstractmethod
@@ -118,15 +133,14 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
         """Return whether the storage is closed."""
 
     @abc.abstractmethod
-    def _clear(self, recreate_user: bool = True) -> None:
+    def _clear(self) -> None:
         """Clear the storage, removing all data.
 
         .. warning:: This is a destructive operation, and should only be used for testing purposes.
-
-        :param recreate_user: Re-create the default `User` for the profile, after clearing the storage.
         """
         from aiida.orm.autogroup import AutogroupManager
         self._autogroup = AutogroupManager(self)
+        self._default_user = None
 
     @property
     @abc.abstractmethod

@@ -12,10 +12,10 @@ import json
 
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_text_to_jsonb(perform_migrations: PsqlDostoreMigrator):  # pylint: disable=too-many-locals
+def test_text_to_jsonb(perform_migrations: PsqlDosMigrator):  # pylint: disable=too-many-locals
     """Test replacing the use of text fields to store JSON data with JSONB fields.
 
     `db_dbauthinfo.auth_params`, `db_dbauthinfo.metadata`,

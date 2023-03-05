@@ -15,7 +15,6 @@ from aiida.cmdline.commands import cmd_storage
 from aiida.common import exceptions
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def tests_storage_version(run_cli_command):
     """Test the ``verdi storage version`` command."""
     result = run_cli_command(cmd_storage.storage_version)
@@ -23,7 +22,6 @@ def tests_storage_version(run_cli_command):
     assert version in result.output
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def tests_storage_info(aiida_localhost, run_cli_command):
     """Test the ``verdi storage info`` command with the ``--detailed`` option."""
     from aiida import orm
@@ -35,12 +33,14 @@ def tests_storage_info(aiida_localhost, run_cli_command):
     assert node.node_type in result.output
 
 
+@pytest.mark.usefixtures('stopped_daemon_client')
 def tests_storage_migrate_force(run_cli_command):
     """Test the ``verdi storage migrate`` command (with force option)."""
     result = run_cli_command(cmd_storage.storage_migrate, options=['--force'])
     assert 'Migrating to the head of the main branch' in result.output
 
 
+@pytest.mark.usefixtures('stopped_daemon_client')
 def tests_storage_migrate_interactive(run_cli_command):
     """Test the ``verdi storage migrate`` command (with interactive prompt)."""
     from aiida.manage import get_manager
@@ -54,17 +54,16 @@ def tests_storage_migrate_interactive(run_cli_command):
     assert 'migration completed' in result.output.lower()
 
 
-def tests_storage_migrate_running_daemon(run_cli_command, monkeypatch):
+@pytest.mark.usefixtures('started_daemon_client')
+def tests_storage_migrate_running_daemon(run_cli_command):
     """Test that ``verdi storage migrate`` raises if the daemon is running."""
-    from aiida.engine.daemon.client import DaemonClient
-
-    monkeypatch.setattr(DaemonClient, 'is_daemon_running', lambda: True)
     result = run_cli_command(cmd_storage.storage_migrate, raises=True)
 
     assert 'daemon' in result.output.lower()
     assert 'running' in result.output.lower()
 
 
+@pytest.mark.usefixtures('stopped_daemon_client')
 def tests_storage_migrate_cancel_prompt(run_cli_command, monkeypatch):
     """Test that ``verdi storage migrate`` detects the cancelling of the interactive prompt."""
     import click
@@ -91,6 +90,7 @@ def tests_storage_migrate_cancel_prompt(run_cli_command, monkeypatch):
         },
     ]
 )
+@pytest.mark.usefixtures('stopped_daemon_client')
 def tests_storage_migrate_raises(run_cli_command, raise_type, call_kwargs, monkeypatch):
     """Test that ``verdi storage migrate`` detects errors while migrating.
 

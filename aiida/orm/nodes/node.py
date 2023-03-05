@@ -24,7 +24,7 @@ from aiida.orm.utils.node import AbstractNodeMeta
 
 from ..computers import Computer
 from ..entities import Collection as EntityCollection
-from ..entities import Entity
+from ..entities import Entity, from_backend_entity
 from ..extras import EntityExtras
 from ..querybuilder import QueryBuilder
 from ..users import User
@@ -35,7 +35,7 @@ from .links import NodeLinks
 from .repository import NodeRepository
 
 if TYPE_CHECKING:
-    from aiida.plugins.entry_point import EntryPoint
+    from aiida.plugins.entry_point import EntryPoint  # type: ignore
 
     from ..implementation import BackendNode, StorageBackend
 
@@ -128,7 +128,7 @@ class NodeBase:
         return self._node._CLS_NODE_LINKS(self._node)  # pylint: disable=protected-access
 
 
-class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
+class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
     """
     Base class for all nodes in AiiDA.
 
@@ -182,14 +182,14 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
         if computer and not computer.is_stored:
             raise ValueError('the computer is not stored')
 
-        computer = computer.backend_entity if computer else None
+        backend_computer = computer.backend_entity if computer else None
         user = user if user else backend.default_user
 
         if user is None:
             raise ValueError('the user cannot be None')
 
         backend_entity = backend.nodes.create(
-            node_type=self.class_node_type, user=user.backend_entity, computer=computer, **kwargs
+            node_type=self.class_node_type, user=user.backend_entity, computer=backend_computer, **kwargs
         )
         super().__init__(backend_entity)
 
@@ -358,7 +358,7 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
     def computer(self) -> Optional[Computer]:
         """Return the computer of this node."""
         if self.backend_entity.computer:
-            return Computer.from_backend_entity(self.backend_entity.computer)
+            return from_backend_entity(Computer, self.backend_entity.computer)
 
         return None
 
@@ -378,7 +378,7 @@ class Node(Entity['BackendNode'], metaclass=AbstractNodeMeta):
     @property
     def user(self) -> User:
         """Return the user of this node."""
-        return User.from_backend_entity(self.backend_entity.user)
+        return from_backend_entity(User, self._backend_entity.user)
 
     @user.setter
     def user(self, user: User) -> None:

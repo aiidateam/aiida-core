@@ -109,7 +109,7 @@ Enable tab-completion for ``verdi`` one of the following supported shells
 
         .. code-block:: console
 
-            eval (env _FOO_BAR_COMPLETE=fish_source foo-bar)
+            eval (env _VERDI_COMPLETE=fish_source verdi)
 
 
 Place this command in your shell or virtual environment activation script to automatically enable tab completion when opening a new shell or activating an environment.
@@ -340,10 +340,36 @@ Tuning performance
 ==================
 
 AiiDA supports running hundreds of thousands of calculations and graphs with millions of nodes.
-However, optimal performance at that scale might require some tweaks to the AiiDA configuration to balance the CPU and disk load.
+However, optimal performance at that scale can require tweaking the AiiDA configuration to balance the CPU and disk load.
 
-Here are a few tips for tuning AiiDA performance:
+Below, we share a few practical tips for assessing and tuning AiiDA performance.
+Further in-depth information is available in the dedicated :ref:`topic on performance<topics:performance>`.
 
+.. dropdown:: Benchmark workflow engine performance
+
+    Download the :download:`benchmark script <include/scripts/performance_benchmark_base.py>` :fa:`download`, and run it in your AiiDA environment.
+
+    .. code:: console
+
+        sph@citadel:~/$ python performance_benchmark_base.py -n 100
+            Success: Created and configured temporary `Computer` benchmark-e73b8647 for localhost.
+            Success: Created temporary `Code` bash for localhost.
+            Running 100 calculations.  [####################################]  100%
+            Success: All calculations finished successfully.
+            Elapsed time: 24.90 seconds.
+            Cleaning up...
+            12/19/2022 10:57:43 AM <12625> aiida.delete: [REPORT] 400 Node(s) marked for deletion
+            12/19/2022 10:57:43 AM <12625> aiida.delete: [REPORT] Starting node deletion...
+            12/19/2022 10:57:43 AM <12625> aiida.delete: [REPORT] Deletion of nodes completed.
+            Success: Deleted all calculations.
+            Success: Deleted the created code bash@benchmark-e73b8647.
+            Success: Deleted the created computer benchmark-e73b8647.
+            Performance: 0.25 s / process
+
+    The output above was generated on an AMD Ryzen 5 3600 6-Core processor (3.6 GHz, 4.2 GHz turbo boost) using AiiDA v2.2.0, and RabbitMQ and PostgreSQL running on the same machine.
+    Here, 100 ``ArithmeticAddCalculation`` processes completed in ~25s, corresponding to 0.25 seconds per process.
+
+    If you observe a significantly higher runtime, you may want to check whether any relevant component (CPU, disk, postgresql, rabbitmq) is congested.
 
 .. dropdown:: Increase the number of daemon workers
 
@@ -355,10 +381,9 @@ Here are a few tips for tuning AiiDA performance:
     To make the change permanent, set
     ::
 
-        verdi config set daemon.default_workers 5
+        verdi config set daemon.default_workers 4
 
 .. dropdown:: Increase the number of daemon worker slots
-
 
     Each daemon worker accepts only a limited number of tasks at a time.
     If ``verdi daemon status`` constantly warns about a high percentage of the available daemon worker slots being used, you can increase the number of tasks handled by each daemon worker (thus increasing the workload per worker).
@@ -368,8 +393,6 @@ Here are a few tips for tuning AiiDA performance:
     ::
 
         verdi config set daemon.worker_process_slots 1000
-
-
 
 .. dropdown:: Prevent your operating system from indexing the file repository.
 

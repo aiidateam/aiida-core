@@ -9,7 +9,7 @@
 ###########################################################################
 """Interface to the attributes of a node instance."""
 import copy
-from typing import TYPE_CHECKING, Any, Dict, Iterable, Iterator, List, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Tuple
 
 if TYPE_CHECKING:
     from .node import Node
@@ -167,7 +167,7 @@ class NodeAttributes:
         self._node._check_mutability_attributes()  # pylint: disable=protected-access
         self._backend_node.clear_attributes()
 
-    def items(self) -> Iterator[Tuple[str, Any]]:
+    def items(self) -> Iterable[Tuple[str, Any]]:
         """Return an iterator over the attributes.
 
         :return: an iterator with attribute key value pairs

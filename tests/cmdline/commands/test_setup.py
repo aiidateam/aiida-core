@@ -7,9 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for `verdi profile`."""
+"""Tests for ``verdi setup``."""
 import os
 import tempfile
+import uuid
 
 from pgtest.pgtest import PGTest
 import pytest
@@ -98,6 +99,34 @@ email: 123@234.de"""
             handle.flush()
             self.cli_runner(cmd_setup.quicksetup, ['--config', os.path.realpath(handle.name)])
 
+    def test_quicksetup_autofill_on_early_exit(self):
+        """Test `verdi quicksetup` stores user information even if command fails."""
+        config = configuration.get_config()
+        assert config.get_option('autofill.user.email', scope=None) is None
+        assert config.get_option('autofill.user.first_name', scope=None) is None
+        assert config.get_option('autofill.user.last_name', scope=None) is None
+        assert config.get_option('autofill.user.institution', scope=None) is None
+
+        user_email = 'some@email.com'
+        user_first_name = 'John'
+        user_last_name = 'Smith'
+        user_institution = 'ECMA'
+
+        # The incorrect port will cause the command to fail, but the user information should have been stored on the
+        # configuration such that the user won't have to retype it but can use the pre-stored defaults.
+        options = [
+            '--non-interactive', '--profile', 'testing', '--email', user_email, '--first-name', user_first_name,
+            '--last-name', user_last_name, '--institution', user_institution, '--db-port',
+            self.pg_test.dsn['port'] + 100
+        ]
+
+        self.cli_runner(cmd_setup.quicksetup, options, raises=True)
+
+        assert config.get_option('autofill.user.email', scope=None) == user_email
+        assert config.get_option('autofill.user.first_name', scope=None) == user_first_name
+        assert config.get_option('autofill.user.last_name', scope=None) == user_last_name
+        assert config.get_option('autofill.user.institution', scope=None) == user_institution
+
     def test_quicksetup_wrong_port(self):
         """Test `verdi quicksetup` exits if port is wrong."""
         profile_name = 'testing'
@@ -158,3 +187,32 @@ email: 123@234.de"""
         # Check that the repository UUID was stored in the database
         backend = profile.storage_cls(profile)
         assert backend.get_global_variable('repository|uuid') == backend.get_repository().uuid
+
+    def test_setup_profile_uuid(self):
+        """Test ``verdi setup`` explicitly defining the ``--profile-uuid`` option.
+
+        This option intentionally does not work in interactive mode and should not be prompted for.
+        """
+        postgres = Postgres(interactive=False, quiet=True, dbinfo=self.pg_test.dsn)
+        postgres.determine_setup()
+        db_name = 'test_profile_uuid'
+        db_user = 'test_profile_uuid'
+        db_pass = 'test_profile_uuid'
+        postgres.create_dbuser(db_user, db_pass)
+        postgres.create_db(db_user, db_name)
+
+        profile_name = 'profile-copy'
+        profile_uuid = str(uuid.uuid4)
+        options = [
+            '--non-interactive', '--profile', profile_name, '--profile-uuid', profile_uuid, '--db-backend',
+            self.storage_backend_name, '--db-name', db_name, '--db-username', db_user, '--db-password', db_pass,
+            '--db-port', self.pg_test.dsn['port']
+        ]
+
+        self.cli_runner(cmd_setup.setup, options)
+
+        config = configuration.get_config()
+        assert profile_name in config.profile_names
+
+        profile = config.get_profile(profile_name)
+        profile.uuid = profile_uuid

@@ -6,6 +6,7 @@ transport: core.local
 scheduler: core.direct
 shebang: '#!/usr/bin/env bash'
 work_dir: PLACEHOLDER_WORK_DIR
+use_double_quotes: true
 mpirun_command: ' '
 mpiprocs_per_machine: 1
 prepend_text: ' '

@@ -8,34 +8,22 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Pytest fixtures for AiiDA sphinx extension tests."""
-import os
-from pathlib import Path
+import pathlib
 import shutil
 import sys
-import xml.etree.ElementTree as ET
 
 import pytest
 from sphinx.testing.path import path as sphinx_path
 from sphinx.testing.util import SphinxTestApp
 
-SRC_DIR = Path(__file__).parent / 'sources'
-WORKCHAIN_DIR = Path(__file__).parent / 'workchains'
-
-
-@pytest.fixture
-def reference_result():
-    """Return reference results (for check)."""
-
-    def inner(name):
-        return os.path.join(os.path.dirname(__file__), 'reference_results', name)
-
-    return inner
+SRC_DIR = pathlib.Path(__file__).parent / 'sources'
+WORKCHAIN_DIR = pathlib.Path(__file__).parent / 'workchains'
 
 
 class SphinxBuild:
     """Class for testing sphinx builds"""
 
-    def __init__(self, app: SphinxTestApp, src: Path):
+    def __init__(self, app: SphinxTestApp, src: pathlib.Path):
         self.app = app
         self.src = src
 
@@ -44,7 +32,7 @@ class SphinxBuild:
 
         :param assert_pass: if True, assert that no warnings are raised during build"""
         try:
-            sys.path.append(os.path.abspath(WORKCHAIN_DIR))
+            sys.path.append(str(WORKCHAIN_DIR.absolute()))
             self.app.build()
         finally:
             sys.path.pop()
@@ -62,7 +50,7 @@ class SphinxBuild:
 
     @property
     def outdir(self):
-        return Path(self.app.outdir)
+        return pathlib.Path(self.app.outdir)
 
 
 @pytest.fixture
@@ -78,33 +66,10 @@ def sphinx_build_factory(make_app, tmp_path):
     """
 
     def _func(src_folder, **kwargs):
-        shutil.copytree(SRC_DIR / src_folder, tmp_path / src_folder)
-        app = make_app(srcdir=sphinx_path(os.path.abspath((tmp_path / src_folder))), **kwargs)
-        return SphinxBuild(app, tmp_path / src_folder)
+        filepath_source = SRC_DIR / src_folder
+        filepath_target = tmp_path / src_folder
+        shutil.copytree(filepath_source, filepath_target)
+        app = make_app(srcdir=sphinx_path(filepath_target.absolute()), **kwargs)
+        return SphinxBuild(app, filepath_target)
 
     yield _func
-
-
-@pytest.fixture
-def xml_equal():
-    """Check whether output and reference XML are identical."""
-
-    def inner(test_file, reference_file):
-        if not os.path.isfile(reference_file):
-            shutil.copyfile(test_file, reference_file)
-            raise ValueError('Reference file does not exist!')
-        try:
-            assert _flatten_xml(test_file) == _flatten_xml(reference_file)
-        except AssertionError:
-            print(Path(test_file.read_text()))
-            raise
-
-    return inner
-
-
-def _flatten_xml(filename):
-    """Flatten XML to list of tuples of tag and dictionary."""
-    return [(el.tag, {k: v
-                      for k, v in el.attrib.items()
-                      if k not in ['source']}, el.text)
-            for el in ET.parse(filename).iter()]

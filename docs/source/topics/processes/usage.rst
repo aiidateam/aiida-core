@@ -144,6 +144,12 @@ To signal that the value is invalid and to have a validation error raised, simpl
 
 The ``valid_type`` can define a single type, or a tuple of valid types.
 
+.. versionadded:: 2.1
+
+    If a port is marked as optional through ``required=False`` and defines ``valid_type``, the port will also accept ``None`` as values, whereas before this would raise validation error.
+    This is accomplished by automatically adding the ``NoneType`` to the ``valid_type`` tuple.
+    Ports that do not define a ``valid_type`` are not affected.
+
 .. note::
 
     Note that by default all ports are required, but specifying a default value implies that the input is not required and as such specifying ``required=False`` is not necessary in that case.
@@ -194,9 +200,9 @@ This allows one to pass any normal value that one would also be able to pass to 
 Automatic input serialization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Quite often, inputs which are given as python data types need to be cast to the corresponding AiiDA type before passing them to a process.
+Quite often, inputs which are given as Python data types need to be cast to the corresponding AiiDA type before passing them to a process.
 Doing this manually can be cumbersome, so you can define a function when defining the process specification, which does the conversion automatically.
-This function, passed as ``serializer`` parameter to ``spec.input``, is invoked if the given input is *not* already an AiiDA type.
+This function, passed as ``serializer`` parameter to ``spec.input``, is invoked if the given input is not ``None`` *and* not already an AiiDA type.
 
 For inputs which are stored in the database (``non_db=False``), the serialization function should return an AiiDA data type.
 For ``non_db`` inputs, the function must be idempotent because it might be applied more than once.

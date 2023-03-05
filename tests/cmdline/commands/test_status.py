@@ -17,6 +17,7 @@ from aiida.storage.psql_dos import migrator
 
 
 @pytest.mark.requires_rmq
+@pytest.mark.usefixtures('stopped_daemon_client')
 def test_status(run_cli_command):
     """Test `verdi status`."""
     options = []
@@ -75,7 +76,7 @@ def test_storage_incompatible(run_cli_command, monkeypatch):
         from aiida.common.exceptions import IncompatibleStorageSchema
         raise IncompatibleStorageSchema()
 
-    monkeypatch.setattr(migrator.PsqlDostoreMigrator, 'validate_storage', storage_cls)
+    monkeypatch.setattr(migrator.PsqlDosMigrator, 'validate_storage', storage_cls)
 
     result = run_cli_command(cmd_status.verdi_status, raises=True)
     assert 'verdi storage migrate' in result.output
@@ -89,7 +90,7 @@ def test_storage_corrupted(run_cli_command, monkeypatch):
         from aiida.common.exceptions import CorruptStorage
         raise CorruptStorage()
 
-    monkeypatch.setattr(migrator.PsqlDostoreMigrator, 'validate_storage', storage_cls)
+    monkeypatch.setattr(migrator.PsqlDosMigrator, 'validate_storage', storage_cls)
 
     result = run_cli_command(cmd_status.verdi_status, raises=True)
     assert 'Storage is corrupted' in result.output

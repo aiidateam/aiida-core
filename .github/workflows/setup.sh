@@ -23,6 +23,7 @@ verdi computer configure core.local localhost --config "${CONFIG}/localhost-conf
 verdi computer test localhost
 verdi code create core.code.installed --non-interactive --config "${CONFIG}/doubler.yaml"
 verdi code create core.code.installed --non-interactive --config "${CONFIG}/add.yaml"
+verdi code create core.code.containerized --non-interactive --config "${CONFIG}/add-singularity.yaml"
 
 # set up slurm-ssh computer
 verdi computer setup --non-interactive --config "${CONFIG}/slurm-ssh.yaml"
@@ -31,3 +32,5 @@ verdi computer test slurm-ssh --print-traceback
 
 verdi profile setdefault test_aiida
 verdi config set runner.poll.interval 0
+verdi config set warnings.development_version False
+verdi config set warnings.rabbitmq_version False

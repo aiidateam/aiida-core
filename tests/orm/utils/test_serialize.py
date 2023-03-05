@@ -8,7 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :mod:`aiida.orm.utils.serialize` module."""
+from dataclasses import dataclass
 import types
+import uuid
 
 import numpy as np
 import pytest
@@ -16,8 +18,6 @@ import pytest
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.orm.utils import serialize
-
-pytestmark = pytest.mark.usefixtures('aiida_profile_clean')
 
 
 def test_serialize_round_trip():
@@ -47,8 +47,7 @@ def test_serialize_group():
     Test that serialization and deserialization of Groups works.
     Also make sure that the serialized data is json-serializable
     """
-    group_name = 'groupie'
-    group_a = orm.Group(label=group_name).store()
+    group_a = orm.Group(label=uuid.uuid4().hex).store()
 
     data = {'group': group_a}
 
@@ -164,3 +163,19 @@ def test_enum():
 
     deserialized = serialize.deserialize_unsafe(serialized)
     assert deserialized == enum
+
+
+@dataclass
+class DataClass:
+    """A dataclass for testing."""
+    my_value: int
+
+
+def test_dataclass():
+    """Test serialization and deserialization of a ``dataclass``."""
+    obj = DataClass(1)
+    serialized = serialize.serialize(obj)
+    assert isinstance(serialized, str)
+
+    deserialized = serialize.deserialize_unsafe(serialized)
+    assert deserialized == obj

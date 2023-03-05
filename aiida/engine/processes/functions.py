@@ -8,16 +8,18 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Class and decorators to generate processes out of simple python functions."""
+from __future__ import annotations
+
 import collections
 import functools
 import inspect
 import logging
 import signal
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Sequence, Tuple, Type
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Sequence, Tuple, Type, TypeVar
 
 from aiida.common.lang import override
 from aiida.manage import get_manager
-from aiida.orm import CalcFunctionNode, Data, ProcessNode, WorkFunctionNode
+from aiida.orm import CalcFunctionNode, Data, ProcessNode, WorkFunctionNode, to_aiida_type
 from aiida.orm.utils.mixins import FunctionCalculationMixin
 
 from .process import Process
@@ -29,8 +31,10 @@ __all__ = ('calcfunction', 'workfunction', 'FunctionProcess')
 
 LOGGER = logging.getLogger(__name__)
 
+FunctionType = TypeVar('FunctionType', bound=Callable[..., Any])
 
-def calcfunction(function: Callable[..., Any]) -> Callable[..., Any]:
+
+def calcfunction(function: FunctionType) -> FunctionType:
     """
     A decorator to turn a standard python function into a calcfunction.
     Example usage:
@@ -52,15 +56,12 @@ def calcfunction(function: Callable[..., Any]) -> Callable[..., Any]:
     [4, 5]
 
     :param function: The function to decorate.
-    :type function: callable
-
     :return: The decorated function.
-    :rtype: callable
     """
     return process_function(node_class=CalcFunctionNode)(function)
 
 
-def workfunction(function: Callable[..., Any]) -> Callable[..., Any]:
+def workfunction(function: FunctionType) -> FunctionType:
     """
     A decorator to turn a standard python function into a workfunction.
     Example usage:
@@ -82,10 +83,7 @@ def workfunction(function: Callable[..., Any]) -> Callable[..., Any]:
     [4, 5]
 
     :param function: The function to decorate.
-    :type function: callable
-
     :return: The decorated function.
-
     """
     return process_function(node_class=WorkFunctionNode)(function)
 
@@ -95,7 +93,6 @@ def process_function(node_class: Type['ProcessNode']) -> Callable[[Callable[...,
     The base function decorator to create a FunctionProcess out of a normal python function.
 
     :param node_class: the ORM class to be used as the Node record for the FunctionProcess
-    :type node_class: :class:`aiida.orm.ProcessNode`
     """
 
     def decorator(function: Callable[..., Any]) -> Callable[..., Any]:
@@ -197,6 +194,7 @@ class FunctionProcess(Process):
     """Function process class used for turning functions into a Process"""
 
     _func_args: Sequence[str] = ()
+    _varargs: str | None = None
 
     @staticmethod
     def _func(*_args, **_kwargs) -> dict:
@@ -229,15 +227,16 @@ class FunctionProcess(Process):
         ndefaults = len(defaults) if defaults else 0
         first_default_pos = nargs - ndefaults
 
-        if varargs is not None:
-            raise ValueError('variadic arguments are not supported')
-
         def _define(cls, spec):  # pylint: disable=unused-argument
             """Define the spec dynamically"""
+            from plumpy.ports import UNSPECIFIED
+
             super().define(spec)
 
             for i, arg in enumerate(args):
-                default = ()
+
+                default = UNSPECIFIED
+
                 if defaults and i >= first_default_pos:
                     default = defaults[i - first_default_pos]
 
@@ -253,7 +252,18 @@ class FunctionProcess(Process):
                     else:
                         valid_type = (Data,)
 
-                    spec.input(arg, valid_type=valid_type, default=default)
+                    # If a default is defined and it is not a ``Data`` instance it should be serialized, but this should
+                    # be done lazily using a lambda, just as any port defaults should not define node instances directly
+                    # as is also checked by the ``spec.input`` call.
+                    if (
+                        default is not None and default != UNSPECIFIED and not isinstance(default, Data) and
+                        not callable(default)
+                    ):
+                        indirect_default = lambda value=default: to_aiida_type(value)
+                    else:
+                        indirect_default = default  # type: ignore[assignment]
+
+                    spec.input(arg, valid_type=valid_type, default=indirect_default, serializer=to_aiida_type)
 
             # Set defaults for label and description based on function name and docstring, if not explicitly defined
             port_label = spec.inputs['metadata']['label']
@@ -261,8 +271,8 @@ class FunctionProcess(Process):
             if not port_label.has_default():
                 port_label.default = func.__name__
 
-            # If the function support kwargs then allow dynamic inputs, otherwise disallow
-            spec.inputs.dynamic = keywords is not None
+            # If the function supports varargs or kwargs then allow dynamic inputs, otherwise disallow
+            spec.inputs.dynamic = keywords is not None or varargs
 
             # Function processes must have a dynamic output namespace since we do not know beforehand what outputs
             # will be returned and the valid types for the value should be `Data` nodes as well as a dictionary because
@@ -270,12 +280,14 @@ class FunctionProcess(Process):
             spec.outputs.valid_type = (Data, dict)
 
         return type(
-            func.__name__, (FunctionProcess,), {
+            func.__qualname__, (FunctionProcess,), {
                 '__module__': func.__module__,
                 '__name__': func.__name__,
+                '__qualname__': func.__qualname__,
                 '_func': staticmethod(func),
                 Process.define.__name__: classmethod(_define),
                 '_func_args': args,
+                '_varargs': varargs or None,
                 '_node_class': node_class
             }
         )
@@ -289,13 +301,15 @@ class FunctionProcess(Process):
         """
         nargs = len(args)
         nparameters = len(cls._func_args)
+        has_varargs = cls._varargs is not None
 
         # If the spec is dynamic, i.e. the function signature includes `**kwargs` and the number of positional arguments
         # passed is larger than the number of explicitly defined parameters in the signature, the inputs are invalid and
         # we should raise. If we don't, some of the passed arguments, intended to be positional arguments, will be
         # misinterpreted as keyword arguments, but they won't have an explicit name to use for the link label, causing
-        # the input link to be completely lost.
-        if cls.spec().inputs.dynamic and nargs > nparameters:
+        # the input link to be completely lost. If the function supports variadic arguments, however, additional args
+        # should be accepted.
+        if cls.spec().inputs.dynamic and nargs > nparameters and not has_varargs:
             name = cls._func.__name__
             raise TypeError(f'{name}() takes {nparameters} positional arguments but {nargs} were given')
 
@@ -321,7 +335,35 @@ class FunctionProcess(Process):
         :return: A label -> value dictionary
 
         """
-        return dict(list(zip(cls._func_args, args)))
+        dictionary = {}
+        values = list(args)
+
+        for arg in cls._func_args:
+            try:
+                dictionary[arg] = values.pop(0)
+            except IndexError:
+                pass
+
+        # If arguments remain and the function supports variadic arguments, add those as well.
+        if cls._varargs and args:
+
+            # By default the prefix for variadic labels is the key with which the varargs were declared
+            variadic_prefix = cls._varargs
+
+            for index, arg in enumerate(values):
+                label = f'{variadic_prefix}_{index}'
+
+                # If the generated vararg label overlaps with a keyword argument, function signature should be changed
+                if label in dictionary:
+                    raise RuntimeError(
+                        f'variadic argument with index `{index}` would get the label `{label}` but this is already in '
+                        'use by another function argument with the exact same name. To avoid this error, please change '
+                        f'the name of argument `{label}` to something else.'
+                    )
+
+                dictionary[label] = arg
+
+        return dictionary
 
     @classmethod
     def get_or_create_db_record(cls) -> 'ProcessNode':
@@ -380,8 +422,8 @@ class FunctionProcess(Process):
 
         for name, value in (self.inputs or {}).items():
             try:
-                if self.spec().inputs[name].non_db:  # type: ignore[union-attr]
-                    # Don't consider non-database inputs
+                if self.spec().inputs[name].is_metadata:  # type: ignore[union-attr]
+                    # Don't consider ports that defined ``is_metadata=True``
                     continue
             except KeyError:
                 pass  # No port found
@@ -390,7 +432,10 @@ class FunctionProcess(Process):
             try:
                 args[self._func_args.index(name)] = value
             except ValueError:
-                kwargs[name] = value
+                if name.startswith(f'{self._varargs}_'):
+                    args.append(value)
+                else:
+                    kwargs[name] = value
 
         result = self._func(*args, **kwargs)
 

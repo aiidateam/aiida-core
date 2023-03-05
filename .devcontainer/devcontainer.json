@@ -2,5 +2,9 @@
     "build": {
         // Path is relataive to the devcontainer.json file.
         "dockerfile": "../Dockerfile"
-    }
+    },
+    "postCreateCommand": [
+        "pip install ./aiida-core[test,pre-commit]",
+        "/opt/configure-aiida.sh"
+    ]
 }

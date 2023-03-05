@@ -33,11 +33,14 @@ services:
   aiida:
     image: "aiidateam/aiida-core:main"
     container_name: aiida-core
+    user: aiida
     environment:
       DB_HOST: postgresql
       BROKER_HOST: rabbitmq
     # volumes:
     #   - db-volume:/var/lib/assets
+    networks:
+      - aiida-rmq
     depends_on:
       - rabbitmq
       - postgresql

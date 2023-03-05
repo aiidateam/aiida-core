@@ -1,4 +1,6 @@
 {
+    "workspaceFolder": "/home/aiida/aiida-core",
+    "workspaceMount": "/home/aiida/aiida-core",
     "dockerComposeFile": "docker-compose.yml",
     "service": "aiida",
     "postCreateCommand": "bash ./.devcontainer/post_create.sh",

@@ -1,4 +1,4 @@
-from aiidateam/aiida-core:main
+FROM aiidateam/aiida-core:main
 
 # Add test dependencies (not installed in image)
 RUN pip install .[tests,pre-commit]

@@ -20,7 +20,7 @@ services:
     networks:
       - aiida-rmq
 
-  postgresql:
+  postgres:
     image: postgres:12
     container_name: aiida-postgres
     ports:
@@ -34,6 +34,7 @@ services:
     #image: "aiidateam/aiida-core:main"
     image: "aiida-core"
     build:
+      context: .
       dockerfile: Dockerfile
     container_name: aiida-core
     user: aiida
@@ -46,7 +47,7 @@ services:
       - aiida-rmq
     depends_on:
       - rabbitmq
-      - postgresql
+      - postgres
 
 # volumes:
 #   db-volume:

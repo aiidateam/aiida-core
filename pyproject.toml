@@ -102,10 +102,10 @@ notebook = [
     "notebook~=6.1,>=6.1.5"
 ]
 pre-commit = [
-    "mypy==0.991",
+    "mypy~=1.0.1",
     "packaging==20.3",
     "pre-commit~=2.2",
-    "pylint~=2.11.1",
+    "pylint~=2.15.0",
     "pylint-aiida~=0.1.1",
     "sqlalchemy[mypy]~=1.4.29",
     "tomli",
@@ -288,6 +288,18 @@ disable = [
     "too-many-instance-attributes",
     # this can be removed when https://github.com/PyCQA/astroid/issues/1015 is fixed
     "not-context-manager",
+    # pylint 2.13, note this change: https://github.com/PyCQA/pylint/issues/6003#issuecomment-1080008925
+    # from pylint 2.14, should be fixed, but not critical
+    "consider-iterating-dictionary",
+    "consider-using-generator",
+    "missing-function-docstring",
+    "missing-timeout",
+    "useless-option-value",
+    "unnecessary-comprehension",
+    "unnecessary-dunder-call",
+    "unnecessary-ellipsis",
+    "unnecessary-lambda-assignment",
+    "unnecessary-list-index-lookup",
 ]
 
 [tool.pylint.basic]

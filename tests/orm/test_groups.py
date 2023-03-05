@@ -189,7 +189,7 @@ class TestGroups:
         assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
 
         group.clear()
-        assert list(group.nodes) == []
+        assert not list(group.nodes)
 
     def test_name_desc(self):
         """Test Group description."""

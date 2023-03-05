@@ -815,7 +815,7 @@ def test_parse_not_implemented(generate_process):
     # The `DirectScheduler` at this point in time does not implement the `parse_output` method. Instead of raising
     # a warning message should be logged. We verify here that said message is present.
     logs = [log.message for log in orm.Log.collection.get_logs_for(process.node)]
-    expected_logs = ['`DirectScheduler` does not implement scheduler output parsing']
+    expected_logs = ['`Client` does not implement scheduler output parsing']
 
     for log in expected_logs:
         assert log in logs
@@ -1056,7 +1056,7 @@ def test_monitor_version(get_calcjob_builder):
     assert node.base.attributes.get('version')['monitors'] == {'monitor': __version__}
 
 
-def monitor_skip_parse(node, transport, **kwargs):  # pylint: disable=unused-argument
+def monitor_skip_parse(node, client, **kwargs):  # pylint: disable=unused-argument
     """Kill the job and skip the parsing of retrieved output files."""
     return CalcJobMonitorResult(message='skip parsing', parse=False)
 
@@ -1076,7 +1076,7 @@ def test_monitor_result_parse(get_calcjob_builder, entry_points):
     assert node.exit_status == CalcJob.exit_codes.STOPPED_BY_MONITOR.status
 
 
-def monitor_skip_retrieve(node, transport, **kwargs):  # pylint: disable=unused-argument
+def monitor_skip_retrieve(node, client, **kwargs):  # pylint: disable=unused-argument
     """Kill the job and skip the retrieval and parsing of retrieved output files."""
     return CalcJobMonitorResult(message='skip retrieval', retrieve=False, parse=False)
 
@@ -1096,7 +1096,7 @@ def test_monitor_result_retrieve(get_calcjob_builder, entry_points):
     assert node.exit_status == CalcJob.exit_codes.STOPPED_BY_MONITOR.status
 
 
-def monitor_override_exit_code(node, transport, **kwargs):  # pylint: disable=unused-argument
+def monitor_override_exit_code(node, client, **kwargs):  # pylint: disable=unused-argument
     """Kill the job and do not override the exit code of the parser."""
     return CalcJobMonitorResult(message='do not override exit code', override_exit_code=False)
 
@@ -1116,7 +1116,7 @@ def test_monitor_result_override_exit_code(get_calcjob_builder, entry_points):
     assert node.exit_status == ArithmeticAddCalculation.exit_codes.ERROR_INVALID_OUTPUT.status
 
 
-def monitor_disable_all(node, transport, **kwargs):  # pylint: disable=unused-argument
+def monitor_disable_all(node, client, **kwargs):  # pylint: disable=unused-argument
     """Monitor that will disable all monitors."""
     return CalcJobMonitorResult(action=CalcJobMonitorAction.DISABLE_ALL, message='Disable all monitors.')
 
@@ -1147,7 +1147,7 @@ def test_monitor_result_action_disable_all(get_calcjob_builder, entry_points):
     assert node.is_finished_ok
 
 
-def monitor_disable_self(node, transport, **kwargs):  # pylint: disable=unused-argument
+def monitor_disable_self(node, client, **kwargs):  # pylint: disable=unused-argument
     """Monitor that will disable itself."""
     return CalcJobMonitorResult(action=CalcJobMonitorAction.DISABLE_SELF, message='Disable self.')
 

@@ -49,7 +49,8 @@ class ProcessTranslator(NodeTranslator):
 
         return report
 
-    def get_projectable_properties(self):
+    @staticmethod
+    def get_projectable_properties():
         """
         Get projectable properties specific for Process nodes
         :return: dict of projectable properties and column_order list

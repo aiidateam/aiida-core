@@ -267,7 +267,7 @@ class UnsupportedSpeciesError(ValueError):
 
 class TransportTaskException(AiidaException):
     """
-    Raised when a TransportTask, an task to be completed by the engine that requires transport, fails
+    Raised when a task to be completed by the engine, that requires a compute client interaction, fails
     """
 
 

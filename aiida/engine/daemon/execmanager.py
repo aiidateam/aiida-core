@@ -25,7 +25,7 @@ from typing import Any, List
 from typing import Mapping as MappingType
 from typing import Optional, Tuple, Union
 
-from aiida.client import ClientProtocol
+from aiida.client import ComputeClientProtocol
 from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcInfo
 from aiida.common.folders import SandboxFolder
@@ -36,7 +36,6 @@ from aiida.orm import CalcJobNode, Code, FolderData, Node, PortableCode, RemoteD
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.repository.common import FileType
 from aiida.schedulers.datastructures import JobState
-from aiida.transports import Transport
 
 REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 
@@ -65,7 +64,7 @@ def _find_data_node(inputs: MappingType[str, Any], uuid: str) -> Optional[Node]:
 
 def upload_calculation(
     node: CalcJobNode,
-    transport: Transport,
+    client: ComputeClientProtocol,
     calc_info: CalcInfo,
     folder: SandboxFolder,
     inputs: Optional[MappingType[str, Any]] = None,
@@ -74,7 +73,7 @@ def upload_calculation(
     """Upload a `CalcJob` instance
 
     :param node: the `CalcJobNode`.
-    :param transport: an already opened transport to use to submit the calculation.
+    :param client: an already opened compute client to use to submit the calculation.
     :param calc_info: the calculation info datastructure returned by `CalcJob.presubmit`
     :param folder: temporary local file system folder containing the inputs written by `CalcJob.prepare_for_submission`
     """
@@ -94,7 +93,7 @@ def upload_calculation(
     input_codes = [load_node(_.code_uuid, sub_classes=(Code,)) for _ in codes_info]
 
     logger_extra = get_dblogger_extra(node)
-    transport.set_logger_extra(logger_extra)
+    client.set_logger_extra(logger_extra)
     logger = LoggerAdapter(logger=EXEC_LOGGER, extra=logger_extra)
 
     if not dry_run and not node.is_stored:
@@ -105,9 +104,9 @@ def upload_calculation(
 
     # If we are performing a dry-run, the working directory should actually be a local folder that should already exist
     if dry_run:
-        workdir = transport.getcwd()
+        workdir = client.getcwd()
     else:
-        remote_user = transport.whoami()
+        remote_user = client.whoami()
         remote_working_directory = computer.get_workdir().format(username=remote_user)
         if not remote_working_directory.strip():
             raise exceptions.ConfigurationError(
@@ -118,7 +117,7 @@ def upload_calculation(
 
         # If it already exists, no exception is raised
         try:
-            transport.chdir(remote_working_directory)
+            client.chdir(remote_working_directory)
         except IOError:
             logger.debug(
                 '[submission of calculation {}] Unable to chdir in {}, trying to create it'.format(
@@ -126,8 +125,8 @@ def upload_calculation(
                 )
             )
             try:
-                transport.makedirs(remote_working_directory)
-                transport.chdir(remote_working_directory)
+                client.makedirs(remote_working_directory)
+                client.chdir(remote_working_directory)
             except EnvironmentError as exc:
                 raise exceptions.ConfigurationError(
                     '[submission of calculation {}] '
@@ -139,20 +138,20 @@ def upload_calculation(
         # in the calculation properties using _set_remote_dir
         # and I do not have to know the logic, but I just need to
         # read the absolute path from the calculation properties.
-        transport.mkdir(calc_info.uuid[:2], ignore_existing=True)
-        transport.chdir(calc_info.uuid[:2])
-        transport.mkdir(calc_info.uuid[2:4], ignore_existing=True)
-        transport.chdir(calc_info.uuid[2:4])
+        client.mkdir(calc_info.uuid[:2], ignore_existing=True)
+        client.chdir(calc_info.uuid[:2])
+        client.mkdir(calc_info.uuid[2:4], ignore_existing=True)
+        client.chdir(calc_info.uuid[2:4])
 
         try:
             # The final directory may already exist, most likely because this function was already executed once, but
             # failed and as a result was rescheduled by the eninge. In this case it would be fine to delete the folder
             # and create it from scratch, except that we cannot be sure that this the actual case. Therefore, to err on
             # the safe side, we move the folder to the lost+found directory before recreating the folder from scratch
-            transport.mkdir(calc_info.uuid[4:])
+            client.mkdir(calc_info.uuid[4:])
         except OSError:
             # Move the existing directory to lost+found, log a warning and create a clean directory anyway
-            path_existing = os.path.join(transport.getcwd(), calc_info.uuid[4:])
+            path_existing = os.path.join(client.getcwd(), calc_info.uuid[4:])
             path_lost_found = os.path.join(remote_working_directory, REMOTE_WORK_DIRECTORY_LOST_FOUND)
             path_target = os.path.join(path_lost_found, calc_info.uuid)
             logger.warning(
@@ -160,17 +159,17 @@ def upload_calculation(
             )
 
             # Make sure the lost+found directory exists, then copy the existing folder there and delete the original
-            transport.mkdir(path_lost_found, ignore_existing=True)
-            transport.copytree(path_existing, path_target)
-            transport.rmtree(path_existing)
+            client.mkdir(path_lost_found, ignore_existing=True)
+            client.copytree(path_existing, path_target)
+            client.rmtree(path_existing)
 
             # Now we can create a clean folder for this calculation
-            transport.mkdir(calc_info.uuid[4:])
+            client.mkdir(calc_info.uuid[4:])
         finally:
-            transport.chdir(calc_info.uuid[4:])
+            client.chdir(calc_info.uuid[4:])
 
         # I store the workdir of the calculation for later file retrieval
-        workdir = transport.getcwd()
+        workdir = client.getcwd()
         node.set_remote_workdir(workdir)
 
     # I first create the code files, so that the code can put
@@ -182,22 +181,22 @@ def upload_calculation(
             # Note: this will possibly overwrite files
             for root, dirnames, filenames in code.base.repository.walk():
                 # mkdir of root
-                transport.makedirs(root, ignore_existing=True)
+                client.makedirs(root, ignore_existing=True)
 
                 # remotely mkdir first
                 for dirname in dirnames:
-                    transport.makedirs((root / dirname), ignore_existing=True)
+                    client.makedirs((root / dirname), ignore_existing=True)
 
-                # Note, once #2579 is implemented, use the `node.open` method instead of the named temporary file in
-                # combination with the new `Transport.put_object_from_filelike`
+                # TODO once #2579 is implemented, use the `node.open` method instead of the named temporary file in
+                # combination with the new `client.put_object_from_filelike`
                 # Since the content of the node could potentially be binary, we read the raw bytes and pass them on
                 for filename in filenames:
                     with NamedTemporaryFile(mode='wb+') as handle:
                         content = code.base.repository.get_object_content((pathlib.Path(root) / filename), mode='rb')
                         handle.write(content)
                         handle.flush()
-                        transport.put(handle.name, (root / filename))
-            transport.chmod(code.filepath_executable, 0o755)  # rwxr-xr-x
+                        client.put(handle.name, (root / filename))
+            client.chmod(code.filepath_executable, 0o755)  # rwxr-xr-x
 
     # local_copy_list is a list of tuples, each with (uuid, dest_path, rel_path)
     # NOTE: validation of these lists are done inside calculation.presubmit()
@@ -245,7 +244,7 @@ def upload_calculation(
     if not dry_run:
         for filename in folder.get_content_list():
             logger.debug(f'[submission of calculation {node.pk}] copying file/folder {filename}...')
-            transport.put(folder.get_abs_path(filename), filename)
+            client.put(folder.get_abs_path(filename), filename)
 
         for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_copy_list:
             if remote_computer_uuid == computer.uuid:
@@ -255,7 +254,7 @@ def upload_calculation(
                     )
                 )
                 try:
-                    transport.copy(remote_abs_path, dest_rel_path)
+                    client.copy(remote_abs_path, dest_rel_path)
                 except (IOError, OSError):
                     logger.warning(
                         '[submission of calculation {}] Unable to copy remote resource from {} to {}! '
@@ -276,7 +275,7 @@ def upload_calculation(
                     )
                 )
                 try:
-                    transport.symlink(remote_abs_path, dest_rel_path)
+                    client.symlink(remote_abs_path, dest_rel_path)
                 except (IOError, OSError):
                     logger.warning(
                         '[submission of calculation {}] Unable to create remote symlink from {} to {}! '
@@ -355,19 +354,19 @@ def upload_calculation(
         remotedata.store()
 
 
-def submit_calculation(calculation: CalcJobNode, client: ClientProtocol) -> str | ExitCode:
-    """Submit a previously uploaded `CalcJob` to the scheduler.
+def submit_calculation(calculation: CalcJobNode, client: ComputeClientProtocol) -> str | ExitCode:
+    """Submit a previously uploaded `CalcJob` to the compute client.
 
     :param calculation: the instance of CalcJobNode to submit.
-    :param transport: an already opened transport to use to submit the calculation.
-    :return: the job id as returned by the scheduler `submit_from_script` call
+    :param client: an already opened compute client to use to submit the calculation.
+    :return: the job id as returned by the compute client
     """
     job_id = calculation.get_job_id()
 
-    # If the `job_id` attribute is already set, that means this function was already executed once and the scheduler
+    # If the `job_id` attribute is already set, that means this function was already executed once and the
     # submit command was successful as the job id it returned was set on the node. This scenario can happen when the
     # daemon runner gets shutdown right after accomplishing the submission task, but before it gets the chance to
-    # finalize the state transition of the `CalcJob` to the `UPDATE` transport task. Since the job is already submitted
+    # finalize the state transition of the `CalcJob` to the `UPDATE` client task. Since the job is already submitted
     # we do not want to submit it a second time, so we simply return the existing job id here.
     if job_id is not None:
         return job_id
@@ -382,7 +381,7 @@ def submit_calculation(calculation: CalcJobNode, client: ClientProtocol) -> str 
     return result
 
 
-def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
+def stash_calculation(calculation: CalcJobNode, client: ComputeClientProtocol) -> None:
     """Stash files from the working directory of a completed calculation to a permanent remote folder.
 
     After a calculation has been completed, optionally stash files from the work directory to a storage location on the
@@ -391,7 +390,7 @@ def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     Instructions of which files to copy where are retrieved from the `stash.source_list` option.
 
     :param calculation: the calculation job node.
-    :param transport: an already opened transport.
+    :param client: an already opened compute client.
     """
     from aiida.common.datastructures import StashMode
     from aiida.orm import RemoteStashFolderData
@@ -419,9 +418,9 @@ def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
 
     for source_filename in source_list:
 
-        if transport.has_magic(source_filename):
+        if client.has_magic(source_filename):
             copy_instructions = []
-            for globbed_filename in transport.glob(str(source_basepath / source_filename)):
+            for globbed_filename in client.glob(str(source_basepath / source_filename)):
                 target_filepath = target_basepath / pathlib.Path(globbed_filename).relative_to(source_basepath)
                 copy_instructions.append((globbed_filename, target_filepath))
         else:
@@ -430,10 +429,10 @@ def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
         for source_filepath, target_filepath in copy_instructions:
             # If the source file is in a (nested) directory, create those directories first in the target directory
             target_dirname = target_filepath.parent
-            transport.makedirs(str(target_dirname), ignore_existing=True)
+            client.makedirs(str(target_dirname), ignore_existing=True)
 
             try:
-                transport.copy(str(source_filepath), str(target_filepath))
+                client.copy(str(source_filepath), str(target_filepath))
             except (IOError, ValueError) as exception:
                 EXEC_LOGGER.warning(f'failed to stash {source_filepath} to {target_filepath}: {exception}')
             else:
@@ -448,14 +447,16 @@ def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     remote_stash.base.links.add_incoming(calculation, link_type=LinkType.CREATE, link_label='remote_stash')
 
 
-def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retrieved_temporary_folder: str) -> None:
-    """Retrieve all the files of a completed job calculation using the given transport.
+def retrieve_calculation(
+    calculation: CalcJobNode, client: ComputeClientProtocol, retrieved_temporary_folder: str
+) -> None:
+    """Retrieve all the files of a completed job calculation using the given compute client.
 
     If the job defined anything in the `retrieve_temporary_list`, those entries will be stored in the
     `retrieved_temporary_folder`. The caller is responsible for creating and destroying this folder.
 
     :param calculation: the instance of CalcJobNode to update.
-    :param transport: an already opened transport to use for the retrieval.
+    :param client: an already opened compute client to use for the retrieval.
     :param retrieved_temporary_folder: the absolute path to a directory in which to store the files
         listed, if any, in the `retrieved_temporary_folder` of the jobs CalcInfo
     """
@@ -479,22 +480,22 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
     # Create the FolderData node into which to store the files that are to be retrieved
     retrieved_files = FolderData()
 
-    with transport:
-        transport.chdir(workdir)
+    with client:
+        client.chdir(workdir)
 
         # First, retrieve the files of folderdata
         retrieve_list = calculation.get_retrieve_list()
         retrieve_temporary_list = calculation.get_retrieve_temporary_list()
 
         with SandboxFolder(filepath_sandbox) as folder:
-            retrieve_files_from_list(calculation, transport, folder.abspath, retrieve_list)
+            retrieve_files_from_list(calculation, client, folder.abspath, retrieve_list)
             # Here I retrieved everything; now I store them inside the calculation
             retrieved_files.base.repository.put_object_from_tree(folder.abspath)
 
         # Retrieve the temporary files in the retrieved_temporary_folder if any files were
         # specified in the 'retrieve_temporary_list' key
         if retrieve_temporary_list:
-            retrieve_files_from_list(calculation, transport, retrieved_temporary_folder, retrieve_temporary_list)
+            retrieve_files_from_list(calculation, client, retrieved_temporary_folder, retrieve_temporary_list)
 
             # Log the files that were retrieved in the temporary folder
             for filename in os.listdir(retrieved_temporary_folder):
@@ -517,17 +518,17 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
     )
 
 
-def kill_calculation(calculation: CalcJobNode, client: ClientProtocol) -> None:
+def kill_calculation(calculation: CalcJobNode, client: ComputeClientProtocol) -> None:
     """
-    Kill the calculation through the scheduler
+    Kill the calculation through the compute client
 
     :param calculation: the instance of CalcJobNode to kill.
-    :param transport: an already opened transport to use to address the scheduler
+    :param client: an already opened compute client
     """
     job_id = calculation.get_job_id()
 
     if job_id is None:
-        # the calculation has not yet been submitted to the scheduler
+        # the calculation has not yet been submitted to the compute client
         return
 
     # Call the proper kill method for the job ID of this calculation
@@ -549,12 +550,12 @@ def kill_calculation(calculation: CalcJobNode, client: ClientProtocol) -> None:
 
 
 def retrieve_files_from_list(
-    calculation: CalcJobNode, transport: Transport, folder: str, retrieve_list: List[Union[str, Tuple[str, str, int],
-                                                                                           list]]
+    calculation: CalcJobNode, client: ComputeClientProtocol, folder: str,
+    retrieve_list: List[Union[str, Tuple[str, str, int], list]]
 ) -> None:
     """
     Retrieve all the files in the retrieve_list from the remote into the
-    local folder instance through the transport. The entries in the retrieve_list
+    local folder instance through the client. The entries in the retrieve_list
     can be of two types:
 
         * a string
@@ -571,7 +572,7 @@ def retrieve_files_from_list(
     treated as the work directory of the folder and the depth integer determines
     upto what level of the original remotepath nesting the files will be copied.
 
-    :param transport: the Transport instance.
+    :param client: the compute client instance.
     :param folder: an absolute path to a folder that contains the files to copy.
     :param retrieve_list: the list of files to retrieve.
     """
@@ -580,8 +581,8 @@ def retrieve_files_from_list(
         if isinstance(item, (list, tuple)):
             tmp_rname, tmp_lname, depth = item
             # if there are more than one file I do something differently
-            if transport.has_magic(tmp_rname):
-                remote_names = transport.glob(tmp_rname)
+            if client.has_magic(tmp_rname):
+                remote_names = client.glob(tmp_rname)
                 local_names = []
                 for rem in remote_names:
                     if depth is None:
@@ -599,13 +600,13 @@ def retrieve_files_from_list(
                     if not os.path.exists(new_folder):
                         os.makedirs(new_folder)
         else:  # it is a string
-            if transport.has_magic(item):
-                remote_names = transport.glob(item)
+            if client.has_magic(item):
+                remote_names = client.glob(item)
                 local_names = [os.path.split(rem)[1] for rem in remote_names]
             else:
                 remote_names = [item]
                 local_names = [os.path.split(item)[1]]
 
         for rem, loc in zip(remote_names, local_names):
-            transport.logger.debug(f"[retrieval of calc {calculation.pk}] Trying to retrieve remote item '{rem}'")
-            transport.get(rem, os.path.join(folder, loc), ignore_nonexisting=True)
+            EXEC_LOGGER.debug(f"[retrieval of calc {calculation.pk}] Trying to retrieve remote item '{rem}'")
+            client.get(rem, os.path.join(folder, loc), ignore_nonexisting=True)

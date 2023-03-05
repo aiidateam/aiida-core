@@ -20,7 +20,7 @@ from tabulate import tabulate
 from . import echo
 
 if TYPE_CHECKING:
-    from aiida.orm import WorkChainNode
+    from aiida.orm import CalcJobNode, WorkChainNode
 
 __all__ = ('is_verbose',)
 
@@ -250,7 +250,7 @@ def format_nested_links(links, headers):
     return result
 
 
-def get_calcjob_report(calcjob):
+def get_calcjob_report(calcjob: 'CalcJobNode') -> str:
     """
     Return a multi line string representation of the log messages and output of a given calcjob
 

@@ -20,7 +20,7 @@ from ..process import ProcessNodeCaching
 from .calculation import CalculationNode
 
 if TYPE_CHECKING:
-    from aiida.client import ClientProtocol
+    from aiida.client import ComputeClientProtocol
     from aiida.orm import FolderData
     from aiida.orm.authinfos import AuthInfo
     from aiida.orm.utils.calcjob import CalcJobResultManager
@@ -306,18 +306,18 @@ class CalcJobNode(CalculationNode):
         return self.base.attributes.get(self.RETRIEVE_TEMPORARY_LIST_KEY, None)
 
     def set_job_id(self, job_id: Union[int, str]) -> None:
-        """Set the job id that was assigned to the calculation by the scheduler.
+        """Set the job id that was assigned to the calculation by the compute client.
 
         .. note:: the id will always be stored as a string
 
-        :param job_id: the id assigned by the scheduler after submission
+        :param job_id: the id assigned by the compute client after submission
         """
         return self.base.attributes.set(self.SCHEDULER_JOB_ID_KEY, str(job_id))
 
     def get_job_id(self) -> Optional[str]:
-        """Return job id that was assigned to the calculation by the scheduler.
+        """Return job id that was assigned to the calculation by the compute client.
 
-        :return: the string representation of the scheduler job id
+        :return: the string representation of the job id
         """
         return self.base.attributes.get(self.SCHEDULER_JOB_ID_KEY, None)
 
@@ -371,7 +371,7 @@ class CalcJobNode(CalculationNode):
     def get_detailed_job_info(self) -> Optional[dict]:  # TODO add typeddict type
         """Return the detailed job info dictionary.
 
-        The scheduler is polled for the detailed job info after the job is completed and ready to be retrieved.
+        The compute client is polled for the detailed job info after the job is completed and ready to be retrieved.
 
         :return: the dictionary with detailed job info if defined or None
         """
@@ -385,10 +385,10 @@ class CalcJobNode(CalculationNode):
         self.base.attributes.set(self.SCHEDULER_LAST_JOB_INFO_KEY, last_job_info.get_dict())
 
     def get_last_job_info(self) -> Optional['JobInfo']:
-        """Return the last information asked to the scheduler about the status of the job.
+        """Return the last information asked to the compute client about the status of the job.
 
-        The last job info is updated on every poll of the scheduler, except for the final poll when the job drops from
-        the scheduler's job queue.
+        The last job info is updated on every poll of the client, except for the final poll when the job drops from
+        the compute client's job queue.
         For completed jobs, the last job info therefore contains the "second-to-last" job info that still shows the job
         as running. Please use :meth:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.get_detailed_job_info`
         instead.
@@ -418,10 +418,10 @@ class CalcJobNode(CalculationNode):
 
         return computer.get_authinfo(self.user)  # pylint: disable=no-member
 
-    def get_client(self) -> 'ClientProtocol':
-        """Return the transport for this calculation.
+    def get_client(self) -> 'ComputeClientProtocol':
+        """Return the compute client for this calculation.
 
-        :return: `Transport` configured with the `AuthInfo` associated to the computer of this node
+        :return: the client configured with the `AuthInfo` associated to the computer of this node
         """
         return self.get_authinfo().get_client()
 

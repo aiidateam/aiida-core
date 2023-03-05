@@ -41,10 +41,10 @@ if TYPE_CHECKING:
 
 __all__ = ('Node',)
 
-NodeType = TypeVar('NodeType', bound='Node')
+NodeTv = TypeVar('NodeTv', bound='Node')
 
 
-class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
+class NodeCollection(EntityCollection[NodeTv], Generic[NodeTv]):
     """The collection of nodes."""
 
     @staticmethod

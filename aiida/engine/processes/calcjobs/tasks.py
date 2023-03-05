@@ -7,14 +7,16 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Transport tasks for calculation jobs."""
+"""Tasks for calculation jobs,
+that involve interfacing with the compute client's file system
+"""
 from __future__ import annotations
 
 import asyncio
 import functools
 import logging
 import tempfile
-from typing import TYPE_CHECKING, Any, Callable, Optional
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional, TypeVar
 
 import plumpy
 import plumpy.futures
@@ -24,9 +26,10 @@ import plumpy.process_states
 from aiida.common.datastructures import CalcJobState
 from aiida.common.exceptions import FeatureNotAvailable, TransportTaskException
 from aiida.common.folders import SandboxFolder
+from aiida.engine.compute_queue import ComputeClientQueue
 from aiida.engine.daemon import execmanager
+from aiida.engine.processes.calcjobs.manager import JobManager
 from aiida.engine.processes.exit_code import ExitCode
-from aiida.engine.transports import ClientQueue
 from aiida.engine.utils import InterruptableFuture, exponential_backoff_retry, interruptable_task
 from aiida.manage.configuration import get_config_option
 from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
@@ -34,6 +37,8 @@ from aiida.schedulers.datastructures import JobState
 
 from ..process import ProcessState
 from .monitors import CalcJobMonitorAction, CalcJobMonitorResult, CalcJobMonitors
+
+T = TypeVar('T')
 
 if TYPE_CHECKING:
     from .calcjob import CalcJob
@@ -55,19 +60,21 @@ class PreSubmitException(Exception):
     """Raise in the `do_upload` coroutine when an exception is raised in `CalcJob.presubmit`."""
 
 
-async def task_upload_job(process: 'CalcJob', client_queue: ClientQueue, cancellable: InterruptableFuture):
-    """Transport task that will attempt to upload the files of a job calculation to the remote.
+async def task_upload_job(
+    process: 'CalcJob', client_queue: ComputeClientQueue, cancellable: InterruptableFuture
+) -> bool:
+    """Task that will attempt to upload the files of a job calculation to the client.
 
-    The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
+    The task will first request a compute client from the queue. Once the client is yielded, the relevant execmanager
     function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
     retry after an interval that increases exponentially with the number of retries, for a maximum number of retries.
     If all retries fail, the task will raise a TransportTaskException
 
     :param process: the job calculation
-    :param client_queue: the ClientQueue from which to request a Transport
+    :param client_queue: the ComputeClientQueue from which to request a client
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
 
-    :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
+    :raises: TransportTaskException if after the maximum number of retries the upload still excepts
     """
     node = process.node
 
@@ -81,9 +88,9 @@ async def task_upload_job(process: 'CalcJob', client_queue: ClientQueue, cancell
 
     authinfo = node.get_authinfo()
 
-    async def do_upload():
+    async def do_upload() -> bool:
         with client_queue.request_client(authinfo) as request:
-            transport = await cancellable.with_interrupt(request)
+            client = await cancellable.with_interrupt(request)
 
             with SandboxFolder(filepath_sandbox) as folder:
                 # Any exception thrown in `presubmit` call is not transient so we circumvent the exponential backoff
@@ -92,7 +99,7 @@ async def task_upload_job(process: 'CalcJob', client_queue: ClientQueue, cancell
                 except Exception as exception:  # pylint: disable=broad-except
                     raise PreSubmitException('exception occurred in presubmit call') from exception
                 else:
-                    execmanager.upload_calculation(node, transport, calc_info, folder)
+                    execmanager.upload_calculation(node, client, calc_info, folder)
                     skip_submit = calc_info.skip_submit or False
 
             return skip_submit
@@ -116,19 +123,21 @@ async def task_upload_job(process: 'CalcJob', client_queue: ClientQueue, cancell
         return skip_submit
 
 
-async def task_submit_job(node: CalcJobNode, client_queue: ClientQueue, cancellable: InterruptableFuture):
-    """Transport task that will attempt to submit a job calculation.
+async def task_submit_job(
+    node: CalcJobNode, client_queue: ComputeClientQueue, cancellable: InterruptableFuture
+) -> str | ExitCode:
+    """Task that will attempt to submit a job calculation to a compute client
 
-    The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
+    The task will first request a compute client from the queue. Once the client is yielded, the relevant execmanager
     function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
     retry after an interval that increases exponentially with the number of retries, for a maximum number of retries.
     If all retries fail, the task will raise a TransportTaskException
 
     :param node: the node that represents the job calculation
-    :param client_queue: the ClientQueue from which to request a Transport
+    :param client_queue: the ComputeClientQueue from which to request a client
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
 
-    :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
+    :raises: TransportTaskException if after the maximum number of retries the submit task still excepts
     """
     if node.get_state() == CalcJobState.WITHSCHEDULER:
         assert node.get_job_id() is not None, 'job is WITHSCHEDULER, however, it does not have a job id'
@@ -142,8 +151,8 @@ async def task_submit_job(node: CalcJobNode, client_queue: ClientQueue, cancella
 
     async def do_submit():
         with client_queue.request_client(authinfo) as request:
-            transport = await cancellable.with_interrupt(request)
-            return execmanager.submit_calculation(node, transport)
+            client = await cancellable.with_interrupt(request)
+            return execmanager.submit_calculation(node, client)
 
     try:
         logger.info(f'scheduled request to submit CalcJob<{node.pk}>')
@@ -162,10 +171,10 @@ async def task_submit_job(node: CalcJobNode, client_queue: ClientQueue, cancella
         return result
 
 
-async def task_update_job(node: CalcJobNode, job_manager, cancellable: InterruptableFuture):
-    """Transport task that will attempt to update the scheduler status of the job calculation.
+async def task_update_job(node: CalcJobNode, job_manager: JobManager, cancellable: InterruptableFuture) -> bool:
+    """Task that will attempt to update the scheduler status of the job calculation.
 
-    The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
+    The task will first request a compute client from the queue. Once the client is yielded, the relevant execmanager
     function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
     retry after an interval that increases exponentially with the number of retries, for a maximum number of retries.
     If all retries fail, the task will raise a TransportTaskException
@@ -187,7 +196,7 @@ async def task_update_job(node: CalcJobNode, job_manager, cancellable: Interrupt
     authinfo = node.get_authinfo()
     job_id = node.get_job_id()
 
-    async def do_update():
+    async def do_update() -> bool:
         # Get the update request
         with job_manager.request_job_info_update(authinfo, job_id) as update_request:
             job_info = await cancellable.with_interrupt(update_request)
@@ -223,17 +232,17 @@ async def task_update_job(node: CalcJobNode, job_manager, cancellable: Interrupt
 
 
 async def task_monitor_job(
-    node: CalcJobNode, client_queue: ClientQueue, cancellable: InterruptableFuture, monitors: CalcJobMonitors
-):
-    """Transport task that will monitor the job calculation if any monitors have been defined.
+    node: CalcJobNode, client_queue: ComputeClientQueue, cancellable: InterruptableFuture, monitors: CalcJobMonitors
+) -> CalcJobMonitorResult | None:
+    """Task to monitor the job calculation, if any monitors have been defined.
 
-    The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
+    The task will first request a compute client from the queue. Once the client is yielded, the relevant execmanager
     function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
     retry after an interval that increases exponentially with the number of retries, for a maximum number of retries.
     If all retries fail, the task will raise a TransportTaskException
 
     :param node: the node that represents the job calculation
-    :param client_queue: the ClientQueue from which to request a Transport
+    :param client_queue: the ComputeClientQueue from which to request a client
     :param cancellable: A cancel flag
     :param monitors: An instance of ``CalcJobMonitors`` holding the collection of monitors to process.
     :return: True if the tasks was successfully completed, False otherwise
@@ -251,9 +260,9 @@ async def task_monitor_job(
     async def do_monitor():
 
         with client_queue.request_client(authinfo) as request:
-            transport = await cancellable.with_interrupt(request)
-            transport.chdir(node.get_remote_workdir())
-            return monitors.process(node, transport)
+            client = await cancellable.with_interrupt(request)
+            client.chdir(node.get_remote_workdir())
+            return monitors.process(node, client)
 
     try:
         logger.info(f'scheduled request to monitor CalcJob<{node.pk}>')
@@ -272,21 +281,22 @@ async def task_monitor_job(
 
 
 async def task_retrieve_job(
-    node: CalcJobNode, client_queue: ClientQueue, retrieved_temporary_folder: str, cancellable: InterruptableFuture
-):
-    """Transport task that will attempt to retrieve all files of a completed job calculation.
+    node: CalcJobNode, client_queue: ComputeClientQueue, retrieved_temporary_folder: str,
+    cancellable: InterruptableFuture
+) -> None:
+    """Task that will attempt to retrieve all files of a completed job calculation from a compute client.
 
-    The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
+    The task will first request a compute client from the queue. Once the client is yielded, the relevant execmanager
     function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
     retry after an interval that increases exponentially with the number of retries, for a maximum number of retries.
     If all retries fail, the task will raise a TransportTaskException
 
     :param node: the node that represents the job calculation
-    :param client_queue: the ClientQueue from which to request a Transport
+    :param client_queue: the ComputeClientQueue from which to request a client
     :param retrieved_temporary_folder: the absolute path to a directory to store files
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
 
-    :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
+    :raises: TransportTaskException if after the maximum number of retries the task still excepts
     """
     if node.get_state() == CalcJobState.PARSING:
         logger.warning(f'CalcJob<{node.pk}> already marked as PARSING, skipping task_retrieve_job')
@@ -299,16 +309,11 @@ async def task_retrieve_job(
 
     async def do_retrieve():
         with client_queue.request_client(authinfo) as request:
-            transport = await cancellable.with_interrupt(request)
-
-            # Perform the job accounting and set it on the node if successful. If the scheduler does not implement this
-            # still set the attribute but set it to `None`. This way we can distinguish calculation jobs for which the
-            # accounting was called but could not be set.
-            client = node.computer.get_client()
+            client = await cancellable.with_interrupt(request)
 
             if node.get_job_id() is None:
                 logger.warning(f'there is no job id for CalcJobNoe<{node.pk}>: skipping `get_detailed_job_info`')
-                return execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder)
+                return execmanager.retrieve_calculation(node, client, retrieved_temporary_folder)
 
             try:
                 detailed_job_info = client.get_detailed_job_info(node.get_job_id())
@@ -318,7 +323,7 @@ async def task_retrieve_job(
             else:
                 node.set_detailed_job_info(detailed_job_info)
 
-            return execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder)
+            return execmanager.retrieve_calculation(node, client, retrieved_temporary_folder)
 
     try:
         logger.info(f'scheduled request to retrieve CalcJob<{node.pk}>')
@@ -337,19 +342,19 @@ async def task_retrieve_job(
         return result
 
 
-async def task_stash_job(node: CalcJobNode, client_queue: ClientQueue, cancellable: InterruptableFuture):
-    """Transport task that will optionally stash files of a completed job calculation on the remote.
+async def task_stash_job(node: CalcJobNode, client_queue: ComputeClientQueue, cancellable: InterruptableFuture) -> None:
+    """Task that will optionally stash files of a completed job calculation on the client.
 
-    The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
+    The task will first request a compute client from the queue. Once the client is yielded, the relevant execmanager
     function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
     retry after an interval that increases exponentially with the number of retries, for a maximum number of retries.
     If all retries fail, the task will raise a TransportTaskException
 
     :param node: the node that represents the job calculation
-    :param client_queue: the ClientQueue from which to request a Transport
+    :param client_queue: the ComputeClientQueue from which to request a client
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
     :raises: Return if the tasks was successfully completed
-    :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
+    :raises: TransportTaskException if after the maximum number of retries the task still excepted
     """
     if node.get_state() == CalcJobState.RETRIEVING:
         logger.warning(f'calculation<{node.pk}> already marked as RETRIEVING, skipping task_stash_job')
@@ -360,12 +365,12 @@ async def task_stash_job(node: CalcJobNode, client_queue: ClientQueue, cancellab
 
     authinfo = node.get_authinfo()
 
-    async def do_stash():
+    async def do_stash() -> None:
         with client_queue.request_client(authinfo) as request:
-            transport = await cancellable.with_interrupt(request)
+            client = await cancellable.with_interrupt(request)
 
             logger.info(f'stashing calculation<{node.pk}>')
-            return execmanager.stash_calculation(node, transport)
+            return execmanager.stash_calculation(node, client)
 
     try:
         await exponential_backoff_retry(
@@ -386,33 +391,33 @@ async def task_stash_job(node: CalcJobNode, client_queue: ClientQueue, cancellab
         return
 
 
-async def task_kill_job(node: CalcJobNode, client_queue: ClientQueue, cancellable: InterruptableFuture):
-    """Transport task that will attempt to kill a job calculation.
+async def task_kill_job(node: CalcJobNode, client_queue: ComputeClientQueue, cancellable: InterruptableFuture) -> None:
+    """Task that will attempt to kill a job calculation on the client.
 
-    The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
+    The task will first request a client from the queue. Once the client is yielded, the relevant execmanager
     function is called, wrapped in the exponential_backoff_retry coroutine, which, in case of a caught exception, will
     retry after an interval that increases exponentially with the number of retries, for a maximum number of retries.
     If all retries fail, the task will raise a TransportTaskException
 
     :param node: the node that represents the job calculation
-    :param client_queue: the ClientQueue from which to request a Transport
+    :param client_queue: the ComputeClientQueue from which to request a client
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
 
-    :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
+    :raises: TransportTaskException if after the maximum number of retries the task still excepted
     """
     initial_interval = get_config_option(RETRY_INTERVAL_OPTION)
     max_attempts = get_config_option(MAX_ATTEMPTS_OPTION)
 
     if node.get_state() in [CalcJobState.UPLOADING, CalcJobState.SUBMITTING]:
         logger.warning(f'CalcJob<{node.pk}> killed, it was in the {node.get_state()} state')
-        return True
+        return
 
     authinfo = node.get_authinfo()
 
     async def do_kill():
         with client_queue.request_client(authinfo) as request:
-            transport = await cancellable.with_interrupt(request)
-            return execmanager.kill_calculation(node, transport)
+            client = await cancellable.with_interrupt(request)
+            return execmanager.kill_calculation(node, client)
 
     try:
         logger.info(f'scheduled request to kill CalcJob<{node.pk}>')
@@ -485,10 +490,10 @@ class Waiting(plumpy.process_states.Waiting):
         """Override the execute coroutine of the base `Waiting` state."""
         # pylint: disable=too-many-branches,too-many-statements,too-many-nested-blocks
         node = self.process.node
-        client_queue = self.process.runner.transport
+        client_queue = self.process.runner.client_queue
         result: plumpy.process_states.State = self
 
-        process_status = f'Waiting for transport task: {self._command}'
+        process_status = f'Waiting for compute client task: {self._command}'
         node.set_process_status(process_status)
 
         try:
@@ -504,7 +509,7 @@ class Waiting(plumpy.process_states.Waiting):
                 result = await self._launch_task(task_submit_job, node, client_queue)
 
                 if isinstance(result, ExitCode):
-                    # The scheduler plugin returned an exit code from ``Scheduler.submit_from_script`` indicating the
+                    # The compute client returned an exit code from ``submit_from_script`` indicating the
                     # job submission failed due to a non-transient problem and the job should be terminated.
                     return self.create_state(ProcessState.RUNNING, self.process.terminate, result)
 
@@ -561,16 +566,16 @@ class Waiting(plumpy.process_states.Waiting):
                 raise RuntimeError('Unknown waiting command')
 
         except TransportTaskException as exception:
-            raise plumpy.process_states.PauseInterruption(f'Pausing after failed transport task: {exception}')
+            raise plumpy.process_states.PauseInterruption(f'Pausing after failed compute client task: {exception}')
         except plumpy.process_states.KillInterruption as exception:
             await self._kill_job(node, client_queue)
             node.set_process_status(str(exception))
             return self.retrieve(monitor_result=self._monitor_result)
         except (plumpy.futures.CancelledError, asyncio.CancelledError):
-            node.set_process_status(f'Transport task {self._command} was cancelled')
+            node.set_process_status(f'Compute client task {self._command} was cancelled')
             raise
         except plumpy.process_states.Interruption:
-            node.set_process_status(f'Transport task {self._command} was interrupted')
+            node.set_process_status(f'Compute client task {self._command} was interrupted')
             raise
         else:
             node.set_process_status(None)
@@ -580,7 +585,9 @@ class Waiting(plumpy.process_states.Waiting):
             if self._killing and not self._killing.done():
                 self._killing.set_result(False)
 
-    async def _monitor_job(self, node, client_queue, monitors) -> CalcJobMonitorResult | None:
+    async def _monitor_job(
+        self, node: CalcJobNode, client_queue: ComputeClientQueue, monitors: CalcJobMonitors | None
+    ) -> CalcJobMonitorResult | None:
         """Process job monitors if any were specified as inputs."""
         if monitors is None:
             return None
@@ -598,7 +605,7 @@ class Waiting(plumpy.process_states.Waiting):
 
         return monitor_result
 
-    async def _kill_job(self, node, client_queue) -> None:
+    async def _kill_job(self, node: CalcJobNode, client_queue: ComputeClientQueue) -> None:
         """Kill the job."""
         await self._launch_task(task_kill_job, node, client_queue)
         if self._killing is not None:
@@ -606,7 +613,7 @@ class Waiting(plumpy.process_states.Waiting):
         else:
             logger.info(f'killed CalcJob<{node.pk}> but async future was None')
 
-    async def _launch_task(self, coro, *args, **kwargs):
+    async def _launch_task(self, coro: Callable[..., Awaitable[T]], *args, **kwargs) -> T:
         """Launch a coroutine as a task, making sure to make it interruptable."""
         task_fn = functools.partial(coro, *args, **kwargs)
         try:
@@ -663,7 +670,7 @@ class Waiting(plumpy.process_states.Waiting):
         )
 
     def interrupt(self, reason: Any) -> Optional[plumpy.futures.Future]:  # type: ignore[override]
-        """Interrupt the `Waiting` state by calling interrupt on the transport task `InterruptableFuture`."""
+        """Interrupt the `Waiting` state by calling interrupt on the compute client task `InterruptableFuture`."""
         if self._task is not None:
             self._task.interrupt(reason)
 

@@ -9,11 +9,11 @@ import enum
 import inspect
 import typing as t
 
+from aiida.client import ComputeClientProtocol
 from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
 from aiida.orm import CalcJobNode, Dict
 from aiida.plugins import BaseFactory
-from aiida.transports import Transport
 
 LOGGER = AIIDA_LOGGER.getChild(__name__)
 
@@ -116,10 +116,13 @@ class CalcJobMonitor:
         signature = inspect.signature(monitor)
         parameters = list(signature.parameters.keys())
 
-        if any(required_parameter not in parameters for required_parameter in ('node', 'transport')):
-            correct_signature = '(node: CalcJobNode, transport: Transport, **kwargs) str | None:'
+        # TODO these now accept client not transport, breaking?
+        if any(required_parameter not in parameters for required_parameter in ('node', 'client')):
+            name = ComputeClientProtocol.__name__
+            correct_signature = f'(node: CalcJobNode, client: {name}, **kwargs) str | None:'
             raise ValueError(
-                f'The monitor `{self.entry_point}` has an invalid function signature, it should be: {correct_signature}'
+                f'The monitor `{self.entry_point}` has an invalid function signature, it should be: '
+                f'{correct_signature}, got {signature}'
             )
 
         unsupported_kwargs = [kwarg for kwarg in self.kwargs if kwarg not in parameters]
@@ -144,21 +147,24 @@ class CalcJobMonitors:
     alphabetically on their key.
 
     The :meth:`~aiida.engine.processes.calcjobs.monitors.CalcJobMonitors.process` method can be called providing an
-    instance of a ``CalcJobNode`` and a ``Transport`` and it will iterate over the collection of monitors, executing
-    each monitor in order, and stopping on the first to return a ``CalcJobMonitorResult`` to pass it up to its caller.
+    instance of a ``CalcJobNode`` and a ``ComputeClientProtocol`` and it will iterate over the collection of monitors,
+    executing each monitor in order,
+    and stopping on the first to return a ``CalcJobMonitorResult`` to pass it up to its caller.
     """
 
-    def __init__(self, monitors: dict[str, Dict]):
+    def __init__(self, monitors: dict[str, Dict]) -> None:
         type_check(monitors, dict)
 
         if any(not isinstance(monitor, Dict) for monitor in monitors.values()):
             raise TypeError('at least one value of `monitors` is not a `Dict` node.')
 
         monitors = {key: CalcJobMonitor(**node.get_dict()) for key, node in monitors.items()}
-        self._monitors = collections.OrderedDict(sorted(monitors.items(), key=lambda x: (-x[1].priority, x[0])))
+        self._monitors: collections.OrderedDict[str, CalcJobMonitor] = collections.OrderedDict(
+            sorted(monitors.items(), key=lambda x: (-x[1].priority, x[0]))
+        )
 
     @property
-    def monitors(self) -> collections.OrderedDict:
+    def monitors(self) -> collections.OrderedDict[str, CalcJobMonitor]:
         """Return an ordered dictionary of the monitor collection.
 
         Monitors are first sorted on their priority (reversed, i.e., from high to low) and second on their key.
@@ -170,12 +176,12 @@ class CalcJobMonitors:
     def process(
         self,
         node: CalcJobNode,
-        transport: Transport,
+        client: ComputeClientProtocol,
     ) -> CalcJobMonitorResult | None:
         """Call all monitors in order and return the result as one returns anything other than ``None``.
 
         :param node: The node to pass to the monitor invocation.
-        :param transport: The transport to pass to the monitor invocation.
+        :param client: The compute client to pass to the monitor invocation.
         :returns: ``None`` or a monitor result.
         """
         for key, monitor in self.monitors.items():
@@ -195,7 +201,7 @@ class CalcJobMonitors:
 
             LOGGER.debug(f'calling monitor `{key}`')
             monitor.call_timestamp = datetime.now()
-            monitor_result = monitor_function(node, transport, **monitor.kwargs)
+            monitor_result = monitor_function(node, client, **monitor.kwargs)
 
             if isinstance(monitor_result, str):
                 monitor_result = CalcJobMonitorResult(message=monitor_result)

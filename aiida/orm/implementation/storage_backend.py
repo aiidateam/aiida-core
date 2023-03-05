@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 __all__ = ('StorageBackend',)
 
-TransactionType = TypeVar('TransactionType')
+TransactionTv = TypeVar('TransactionTv')
 
 
 class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods

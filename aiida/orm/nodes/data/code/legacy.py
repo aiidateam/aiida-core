@@ -339,11 +339,11 @@ class Code(AbstractCode):
     def validate_remote_exec_path(self):
         """Validate the ``remote_exec_path`` attribute.
 
-        Checks whether the executable exists on the remote computer if a transport can be opened to it. This method
+        Checks whether the executable exists on the remote computer if a client can be opened to it. This method
         is intentionally not called in ``_validate`` as to allow the creation of ``Code`` instances whose computers can
-        not yet be connected to and as to not require the overhead of opening transports in storing a new code.
+        not yet be connected to and as to not require the overhead of opening clients in storing a new code.
 
-        :raises `~aiida.common.exceptions.ValidationError`: if no transport could be opened or if the defined executable
+        :raises `~aiida.common.exceptions.ValidationError`: if no client could be opened or if the defined executable
             does not exist on the remote computer.
         """
         warn_deprecation(
@@ -357,8 +357,8 @@ class Code(AbstractCode):
 
         try:
             with override_log_level():  # Temporarily suppress noisy logging
-                with self.computer.get_client() as transport:
-                    file_exists = transport.isfile(filepath)
+                with self.computer.get_client() as client:
+                    file_exists = client.isfile(filepath)
         except Exception:  # pylint: disable=broad-except
             raise exceptions.ValidationError(
                 'Could not connect to the configured computer to determine whether the specified executable exists.'

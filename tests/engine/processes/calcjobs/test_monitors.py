@@ -152,7 +152,7 @@ def test_calc_job_monitors_process_poll_interval(monkeypatch):
     assert result.message == 'always_kill called'
 
 
-def monitor_emit_warning(node, transport, **kwargs):  # pylint: disable=unused-argument
+def monitor_emit_warning(node, client, **kwargs):  # pylint: disable=unused-argument
     """Test monitor that logs a warning when called."""
     from aiida.common.log import AIIDA_LOGGER
     AIIDA_LOGGER.warning('monitor_emit_warning monitor was called')

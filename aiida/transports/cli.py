@@ -9,7 +9,6 @@
 ###########################################################################
 """Common cli utilities for transport plugins."""
 from functools import partial
-import inspect
 import typing as t
 
 import click
@@ -38,7 +37,7 @@ def match_comp_transport(ctx, param, computer, transport_type):
 
 
 @with_dbenv()
-def configure_computer_main(computer, user, **kwargs):
+def configure_computer_main(computer: 'Computer', user, **kwargs):
     """Configure a computer via the CLI."""
     from aiida import orm
 
@@ -61,16 +60,8 @@ def common_params(command_func):
 
 def transport_option_default(name: str, computer: 'Computer'):
     """Determine the default value for an auth_param key."""
-    transport_cls = computer.get_client_class()
-    suggester_name = f'_get_{name}_suggestion_string'
-    members = dict(inspect.getmembers(transport_cls))
-    suggester = members.get(suggester_name, None)
-    default = None
-    if suggester:
-        default = suggester(computer)
-    else:
-        default = transport_cls.get_auth_params()[name].get('default')
-    return default
+    client_cls = computer.get_client_class()
+    return client_cls.get_auth_param_default(name, computer)
 
 
 def interactive_default(key, also_non_interactive=False):

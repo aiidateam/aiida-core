@@ -44,7 +44,7 @@ class CliFormatter(logging.Formatter):
     """Formatter that automatically prefixes log messages with a colored version of the log level."""
 
     @staticmethod
-    def format(record):
+    def format(record):  # pylint: disable=arguments-differ
         """Format the record using the style required for the command line interface."""
         try:
             fg = COLORS[record.levelname.lower()]

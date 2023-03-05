@@ -65,13 +65,13 @@ class InstalledCode(Code):
     def validate_filepath_executable(self):
         """Validate the ``filepath_executable`` attribute.
 
-        Checks whether the executable exists on the remote computer if a transport can be opened to it. This method
+        Checks whether the executable exists on the remote computer if a compute client can be opened to it. This method
         is intentionally not called in ``_validate`` as to allow the creation of ``Code`` instances whose computers can
-        not yet be connected to and as to not require the overhead of opening transports in storing a new code.
+        not yet be connected to and as to not require the overhead of opening clients in storing a new code.
 
         .. note:: If the ``filepath_executable`` is not an absolute path, the check is skipped.
 
-        :raises `~aiida.common.exceptions.ValidationError`: if no transport could be opened or if the defined executable
+        :raises `~aiida.common.exceptions.ValidationError`: if no client could be opened or if the defined executable
             does not exist on the remote computer.
         """
         if not self.filepath_executable.is_absolute():
@@ -79,8 +79,8 @@ class InstalledCode(Code):
 
         try:
             with override_log_level():  # Temporarily suppress noisy logging
-                with self.computer.get_client() as transport:
-                    file_exists = transport.isfile(str(self.filepath_executable))
+                with self.computer.get_client() as client:
+                    file_exists = client.isfile(str(self.filepath_executable))
         except Exception as exception:  # pylint: disable=broad-except
             raise exceptions.ValidationError(
                 'Could not connect to the configured computer to determine whether the specified executable exists.'

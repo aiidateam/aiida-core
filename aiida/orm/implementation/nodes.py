@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 __all__ = ('BackendNode', 'BackendNodeCollection')
 
-BackendNodeType = TypeVar('BackendNodeType', bound='BackendNode')
+BackendNodeTv = TypeVar('BackendNodeTv', bound='BackendNode')
 
 
 class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta):
@@ -33,7 +33,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
     # pylint: disable=too-many-public-methods
 
     @abc.abstractmethod
-    def clone(self: BackendNodeType) -> BackendNodeType:
+    def clone(self: BackendNodeTv) -> BackendNodeTv:
         """Return an unstored clone of ourselves.
 
         :return: an unstored `BackendNode` with the exact same attributes and extras as self
@@ -182,11 +182,11 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
 
     @abc.abstractmethod
     def store(  # pylint: disable=arguments-differ
-        self: BackendNodeType,
+        self: BackendNodeTv,
         links: Optional[Sequence['LinkTriple']] = None,
         with_transaction: bool = True,
         clean: bool = True
-    ) -> BackendNodeType:
+    ) -> BackendNodeTv:
         """Store the node in the database.
 
         :param links: optional links to add before storing

@@ -8,22 +8,26 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for operations on files on remote computers."""
+from __future__ import annotations
+
 import os
 import typing as t
 
 from aiida.orm.nodes.data.remote.base import RemoteData
 
 if t.TYPE_CHECKING:
-    from aiida.client import ClientProtocol
+    from aiida.client import ComputeClientProtocol
+    from aiida.orm import Computer, User
+    from aiida.orm.implementation import StorageBackend
 
 
-def clean_remote(client: 'ClientProtocol', path: str) -> None:
+def clean_remote(client: ComputeClientProtocol, path: str) -> None:
     """
     Recursively remove a remote folder, with the given absolute path, and all its contents. The path should be
-    made accessible through the transport channel, which should already be open
+    made accessible through the compute client, which should already be open
 
-    :param transport: an open Transport channel
-    :param path: an absolute path on the remote made available through the transport
+    :param client: an open compute client
+    :param path: an absolute path on the remote made available through the client
     """
     if not isinstance(path, str):
         raise ValueError('the path has to be a string type')
@@ -32,7 +36,7 @@ def clean_remote(client: 'ClientProtocol', path: str) -> None:
         raise ValueError('the path should be absolute')
 
     if not client.is_open:
-        raise ValueError('the transport should already be open')
+        raise ValueError('the compute client should already be open')
 
     basedir, relative_path = os.path.split(path)
 
@@ -44,15 +48,15 @@ def clean_remote(client: 'ClientProtocol', path: str) -> None:
 
 
 def get_calcjob_remote_paths(  # pylint: disable=too-many-locals
-    pks=None,
-    past_days=None,
-    older_than=None,
-    computers=None,
-    user=None,
-    backend=None,
-    exit_status=None,
-    only_not_cleaned=False,
-):
+    pks :list[int] | None=None,
+    past_days: int | None=None,
+    older_than: int | None=None,
+    computers: list[Computer] | None=None,
+    user: User | None=None,
+    backend: StorageBackend | None=None,
+    exit_status: str | None=None,
+    only_not_cleaned: bool=False,
+) -> dict[str, list[RemoteData]]:
     """
     Return a mapping of computer uuids to a list of remote paths, for a given set of calcjobs. The set of
     calcjobs will be determined by a query with filters based on the pks, past_days, older_than,
@@ -123,7 +127,7 @@ def get_calcjob_remote_paths(  # pylint: disable=too-many-locals
     if query.count() == 0:
         return None
 
-    path_mapping = {}
+    path_mapping: dict[str, list[RemoteData]] = {}
 
     for remote_data, computer_uuid in query.all():
         path_mapping.setdefault(computer_uuid, []).append(remote_data)

@@ -127,8 +127,8 @@ class TestProcessNode:
         authinfo = self.calcjob.get_authinfo()
         assert isinstance(authinfo, AuthInfo)
 
-    def test_get_transport(self):
+    def test_get_client(self):
         """Test that we can get the Transport object from the calculation instance."""
-        from aiida.transports import Transport
-        transport = self.calcjob.get_transport()
-        assert isinstance(transport, Transport)
+        from aiida.client.implementation import ComputeClientXY
+        client = self.calcjob.get_client()
+        assert isinstance(client, ComputeClientXY)

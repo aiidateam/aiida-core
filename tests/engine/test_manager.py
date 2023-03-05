@@ -14,8 +14,8 @@ import time
 
 import pytest
 
+from aiida.engine.compute_queue import ComputeClientQueue
 from aiida.engine.processes.calcjobs.manager import JobManager, JobsList
-from aiida.engine.transports import ClientQueue
 from aiida.orm import User
 
 
@@ -27,7 +27,7 @@ class TestJobManager:
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.loop = asyncio.get_event_loop()
-        self.transport_queue = ClientQueue(self.loop)
+        self.transport_queue = ComputeClientQueue(self.loop)
         self.user = User.collection.get_default()
         self.computer = aiida_localhost
         self.auth_info = self.computer.get_authinfo(self.user)
@@ -55,7 +55,7 @@ class TestJobsList:
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.loop = asyncio.get_event_loop()
-        self.transport_queue = ClientQueue(self.loop)
+        self.transport_queue = ComputeClientQueue(self.loop)
         self.user = User.collection.get_default()
         self.computer = aiida_localhost
         self.auth_info = self.computer.get_authinfo(self.user)

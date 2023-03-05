@@ -45,13 +45,13 @@ def type_check(what, of_type, msg=None, allow_none=False):
     return what
 
 
-MethodType = TypeVar('MethodType', bound=Callable[..., Any])
+MethodTv = TypeVar('MethodTv', bound=Callable[..., Any])
 
 
-def override_decorator(check=False) -> Callable[[MethodType], MethodType]:
+def override_decorator(check=False) -> Callable[[MethodTv], MethodTv]:
     """Decorator to signal that a method from a base class is being overridden completely."""
 
-    def wrap(func: MethodType) -> MethodType:  # pylint: disable=missing-docstring
+    def wrap(func: MethodTv) -> MethodTv:  # pylint: disable=missing-docstring
         if isinstance(func, property):
             raise RuntimeError('Override must go after @property decorator')
 
@@ -79,11 +79,11 @@ def override_decorator(check=False) -> Callable[[MethodType], MethodType]:
 
 override = override_decorator(check=False)  # pylint: disable=invalid-name
 
-ReturnType = TypeVar('ReturnType')
-SelfType = TypeVar('SelfType')
+ReturnTv = TypeVar('ReturnTv')
+SelfTv = TypeVar('SelfTv')
 
 
-class classproperty(Generic[ReturnType]):  # pylint: disable=invalid-name
+class classproperty(Generic[ReturnTv]):  # pylint: disable=invalid-name
     """
     A class that, when used as a decorator, works as if the
     two decorators @property and @classmethod where applied together
@@ -92,8 +92,8 @@ class classproperty(Generic[ReturnType]):  # pylint: disable=invalid-name
     instance as its first argument).
     """
 
-    def __init__(self, getter: Callable[[SelfType], ReturnType]) -> None:
+    def __init__(self, getter: Callable[[SelfTv], ReturnTv]) -> None:
         self.getter = getter
 
-    def __get__(self, instance: Any, owner: SelfType) -> ReturnType:
+    def __get__(self, instance: Any, owner: SelfTv) -> ReturnTv:
         return self.getter(owner)

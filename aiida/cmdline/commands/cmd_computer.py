@@ -9,16 +9,11 @@
 ###########################################################################
 # pylint: disable=invalid-name,too-many-statements,too-many-branches
 """`verdi computer` command."""
-from copy import deepcopy
 from functools import partial
 import typing as t
 
 import click
 import tabulate
-
-if t.TYPE_CHECKING:
-    from aiida.client import ClientProtocol
-    from aiida.orm import Computer, AuthInfo
 
 from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup, verdi
 from aiida.cmdline.params import arguments, options
@@ -27,6 +22,9 @@ from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import EntryPointError, ValidationError
 from aiida.plugins.entry_point import get_entry_point_names
+
+if t.TYPE_CHECKING:
+    from aiida.orm import Computer
 
 
 @verdi.group('computer')
@@ -49,185 +47,6 @@ def get_computer_names():
 
 def prompt_for_computer_configuration(computer):  # pylint: disable=unused-argument
     pass
-
-
-def _computer_test_get_jobs(client: 'ClientProtocol', authinfo):  # pylint: disable=unused-argument
-    """Internal test to check if it is possible to check the queue state.
-
-    :param transport: an open transport
-    :param scheduler: the corresponding scheduler class
-    :param authinfo: the AuthInfo object (from which one can get computer and aiidauser)
-    :return: tuple of boolean indicating success or failure and an optional string message
-    """
-    found_jobs = client.get_jobs(as_dict=True)
-    return True, f'{len(found_jobs)} jobs found in the queue'
-
-
-def _computer_test_no_unexpected_output(client: 'ClientProtocol', authinfo: 'AuthInfo'):  # pylint: disable=unused-argument
-    """Test that there is no unexpected output from the connection.
-
-    This can happen if e.g. there is some spurious command in the
-    .bashrc or .bash_profile that is not guarded in case of non-interactive
-    shells.
-
-    :param transport: an open transport
-    :param scheduler: the corresponding scheduler class
-    :param authinfo: the AuthInfo object (from which one can get computer and aiidauser)
-    :return: tuple of boolean indicating success or failure and an optional string message
-    """
-    # Execute a command that should not return any error
-    retval, stdout, stderr = client.exec_command_wait('echo -n')
-    if retval != 0:
-        return False, f'The command `echo -n` returned a non-zero return code ({retval})'
-
-    template = """
-We detected some spurious output in the {} when connecting to the computer, as shown between the bars
-=====================================================================================================
-{}
-=====================================================================================================
-Please check that you don't have code producing output in your ~/.bash_profile, ~/.bashrc or similar.
-If you don't want to remove the code, but just to disable it for non-interactive shells, see comments
-in this troubleshooting section of the online documentation: https://bit.ly/2FCRDc5
-"""
-    if stdout:
-        return False, template.format('stdout', stdout)
-
-    if stderr:
-        return False, template.format('stderr', stderr)
-
-    return True, None
-
-
-def _computer_get_remote_username(client: 'ClientProtocol', authinfo: 'AuthInfo'):  # pylint: disable=unused-argument
-    """Internal test to check if it is possible to determine the username on the remote.
-
-    :param client: an open client
-    :param authinfo: the AuthInfo object
-    :return: tuple of boolean indicating success or failure and an optional string message
-    """
-    remote_user = client.whoami()
-    return True, remote_user
-
-
-def _computer_create_temp_file(client: 'ClientProtocol', authinfo: 'AuthInfo'):  # pylint: disable=unused-argument
-    """
-    Internal test to check if it is possible to create a temporary file
-    and then delete it in the work directory
-
-    :note: exceptions could be raised
-
-    :param client: an open client
-    :param authinfo: the AuthInfo object (from which one can get computer and aiidauser)
-    :return: tuple of boolean indicating success or failure and an optional string message
-    """
-    import datetime
-    import os
-    import tempfile
-
-    file_content = f"Test from 'verdi computer test' on {datetime.datetime.now().isoformat()}"
-    workdir = authinfo.get_workdir().format(username=client.whoami())
-
-    try:
-        client.chdir(workdir)
-    except IOError:
-        client.makedirs(workdir)
-        client.chdir(workdir)
-
-    with tempfile.NamedTemporaryFile(mode='w+') as tempf:
-        fname = os.path.split(tempf.name)[1]
-        remote_file_path = os.path.join(workdir, fname)
-        tempf.write(file_content)
-        tempf.flush()
-        client.putfile(tempf.name, remote_file_path)
-
-    if not client.path_exists(remote_file_path):
-        return False, f'failed to create the file `{remote_file_path}` on the remote'
-
-    handle, destfile = tempfile.mkstemp()
-    os.close(handle)
-
-    try:
-        client.getfile(remote_file_path, destfile)
-        with open(destfile, encoding='utf8') as dfile:
-            read_string = dfile.read()
-
-        if read_string != file_content:
-            message = 'retrieved file content is different from what was expected'
-            message += f'\n  Expected: {file_content}'
-            message += f'\n  Retrieved: {read_string}'
-            return False, message
-
-    finally:
-        os.remove(destfile)
-
-    client.remove(remote_file_path)
-
-    return True, None
-
-
-def time_use_login_shell(authinfo: 'AuthInfo', auth_params, use_login_shell: bool, iterations: int = 3) -> float:
-    """Execute the ``whoami`` over the transport for the given ``use_login_shell`` and report the time taken.
-
-    :param authinfo: The ``AuthInfo`` instance to use.
-    :param auth_params: The base authentication parameters.
-    :param use_login_shell: Whether to use a login shell or not.
-    :param iterations: The number of iterations of the command to call. Command will return the average call time.
-    :return: The average call time of the ``Transport.whoami`` command.
-    """
-    import time
-
-    auth_params['use_login_shell'] = use_login_shell
-    authinfo.set_auth_params(auth_params)
-
-    timings = []
-
-    for _ in range(iterations):
-        time_start = time.time()
-        with authinfo.get_client() as transport:
-            transport.whoami()
-        timings.append(time.time() - time_start)
-
-    return sum(timings) / iterations
-
-
-def _computer_use_login_shell_performance(client: 'ClientProtocol', authinfo: 'AuthInfo'):  # pylint: disable=unused-argument
-    """Execute a command over the transport with and without the ``use_login_shell`` option enabled.
-
-    By default, AiiDA uses a login shell when connecting to a computer in order to operate in the same environment as a
-    user connecting to the computer. However, loading the login scripts of the shell can take time, which can
-    significantly slow down all commands executed by AiiDA and impact the throughput of calculation jobs. This test
-    executes a simple command both with and without using a login shell and emits a warning if the login shell is slower
-    by at least 100 ms. If the computer is already configured to avoid using a login shell, the test is skipped and the
-    function returns a successful test result.
-    """
-    tolerance = 0.1  # 100 ms
-    iterations = 3
-
-    auth_params = authinfo.get_auth_params()
-
-    # If ``use_login_shell=False`` we don't need to test for it being slower.
-    if not auth_params.get('use_login_shell', True):
-        return True, None
-
-    auth_params_clone = deepcopy(auth_params)
-
-    try:
-        timing_false = time_use_login_shell(authinfo, auth_params_clone, False, iterations)
-        timing_true = time_use_login_shell(authinfo, auth_params_clone, True, iterations)
-    finally:
-        authinfo.set_auth_params(auth_params)
-
-    echo.echo_debug(f'Execution time: {timing_true} vs {timing_false} for login shell and normal, respectively')
-
-    if timing_true - timing_false > tolerance:
-        message = (
-            'computer is configured to use a login shell, which is slower compared to a normal shell (Command execution'
-            f' time of {timing_true} s versus {timing_false}, respectively).\nUnless this setting is really necessary, '
-            'consider disabling it with: verdi computer configure core.local COMPUTER_NAME -n --no-use-login-shell'
-        )
-        return False, message
-
-    return True, None
 
 
 def get_parameter_default(parameter, ctx):
@@ -497,7 +316,7 @@ def computer_relabel(computer, label):
 @options.PRINT_TRACEBACK()
 @arguments.COMPUTER()
 @with_dbenv()
-def computer_test(user, print_traceback, computer):
+def computer_test(user, print_traceback: bool, computer: 'Computer') -> None:
     """
     Test the connection to a computer.
 
@@ -530,14 +349,6 @@ def computer_test(user, print_traceback, computer):
     num_failures = 0
     num_tests = 0
 
-    tests = {
-        _computer_test_no_unexpected_output: 'Checking for spurious output',
-        _computer_test_get_jobs: 'Getting number of jobs from scheduler',
-        _computer_get_remote_username: 'Determining remote user name',
-        _computer_create_temp_file: 'Creating and deleting temporary file',
-        _computer_use_login_shell_performance: 'Checking for possible delay from using login shell',
-    }
-
     try:
         echo.echo('* Opening connection... ', nl=False)
 
@@ -546,35 +357,33 @@ def computer_test(user, print_traceback, computer):
 
             echo.echo('[OK]', fg=echo.COLORS['success'])
 
-            for test, test_label in tests.items():
+            for result in client.validate_connection(authinfo):
 
-                echo.echo(f'* {test_label}... ', nl=False)
+                echo.echo(f'* {result.name}... ', nl=False)
                 num_tests += 1
-                try:
-                    success, message = test(client=client, authinfo=authinfo)
-                except Exception as exception:  # pylint:disable=broad-except
-                    success = False
-                    message = f'{exception.__class__.__name__}: {str(exception)}'
 
-                    if print_traceback:
-                        message += '\n  Full traceback:\n'
-                        message += '\n'.join([f'  {l}' for l in traceback.format_exc().splitlines()])
+                if result.success:
+                    if result.info:
+                        echo.echo('[OK]: ', fg=echo.COLORS['success'], nl=False)
+                        echo.echo(result.info)
                     else:
-                        message += '\n  Use the `--print-traceback` option to see the full traceback.'
-
-                if not success:
+                        echo.echo('[OK]', fg=echo.COLORS['success'])
+                else:
                     num_failures += 1
+                    message = result.info
+                    if result.exception is not None:
+                        message += '\n' if message else ''
+                        message += f'{result.exception.__class__.__name__}: {str(result.exception)}'
+                        if print_traceback:
+                            message += '\n  Full traceback:\n'
+                            message += '\n'.join([f'  {l}' for l in result.traceback.splitlines()])
+                        else:
+                            message += '\n  Use the `--print-traceback` option to see the full traceback.'
                     if message:
                         echo.echo('[Failed]: ', fg=echo.COLORS['error'], nl=False)
                         echo.echo(message)
                     else:
                         echo.echo('[Failed]', fg=echo.COLORS['error'])
-                else:
-                    if message:
-                        echo.echo('[OK]: ', fg=echo.COLORS['success'], nl=False)
-                        echo.echo(message)
-                    else:
-                        echo.echo('[OK]', fg=echo.COLORS['success'])
 
         if num_failures:
             echo.echo_warning(f'{num_failures} out of {num_tests} tests failed')
@@ -592,7 +401,7 @@ def computer_test(user, print_traceback, computer):
             message += '\n  Use the `--print-traceback` option to see the full traceback.'
 
         echo.echo(message)
-        echo.echo_warning(f'{1} out of {num_tests} tests failed')
+        echo.echo_warning(f'1 out of {num_tests} tests failed')
 
 
 @verdi_computer.command('delete')

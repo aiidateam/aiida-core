@@ -15,11 +15,11 @@ from aiida.storage.psql_dos.models.base import Base
 
 from . import utils
 
-ModelType = TypeVar('ModelType')  # pylint: disable=invalid-name
-SelfType = TypeVar('SelfType', bound='SqlaModelEntity')
+ModelTv = TypeVar('ModelTv')  # pylint: disable=invalid-name
+SelfTv = TypeVar('SelfTv', bound='SqlaModelEntity')
 
 
-class SqlaModelEntity(Generic[ModelType]):
+class SqlaModelEntity(Generic[ModelTv]):
     """A mixin that adds some common SQLA backend entity methods"""
 
     MODEL_CLASS = None
@@ -82,7 +82,7 @@ class SqlaModelEntity(Generic[ModelType]):
         """
         return self.model.id is not None
 
-    def store(self: SelfType) -> SelfType:
+    def store(self: SelfTv) -> SelfTv:
         """
         Store this entity
 

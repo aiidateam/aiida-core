@@ -8,17 +8,14 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for the `AuthInfo` ORM class."""
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type, cast
 
-from aiida.common import exceptions
 from aiida.manage import get_manager
-from aiida.plugins import TransportFactory
-from aiida.plugins.factories import SchedulerFactory
 
 from . import entities, users
 
 if TYPE_CHECKING:
-    from aiida.client import ClientProtocol
+    from aiida.client import ComputeClientProtocol
     from aiida.orm import Computer, User
     from aiida.orm.implementation import BackendAuthInfo, StorageBackend
 
@@ -131,25 +128,15 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         except KeyError:
             return self.computer.get_workdir()
 
-    def get_client(self) -> 'ClientProtocol':
+    def get_client(self) -> 'ComputeClientProtocol':
         """Return a fully configured client that can be used to connect to the computer set for this instance."""
+        # pylint: disable=protected-access
+        from aiida.client.implementation import ComputeClientXY
         computer = self.computer
 
-        try:
-            transport_class = TransportFactory(computer.transport_type)
-        except exceptions.EntryPointError as exception:
-            raise exceptions.ConfigurationError(
-                f'transport type `{computer.transport_type}` could not be loaded: {exception}'
-            )
-        transport = transport_class(machine=computer.hostname, **self.get_auth_params())
-
-        try:
-            scheduler_class = SchedulerFactory(computer.scheduler_type)
-        except exceptions.EntryPointError as exception:
-            raise exceptions.ConfigurationError(
-                f'No scheduler found for {computer.label} [type {computer.scheduler_type}], message: {exception}'
-            )
-        scheduler = scheduler_class()
+        class_ = cast(Type[ComputeClientXY], computer.get_client_class())
+        transport = class_._transport_class(machine=computer.hostname, **self.get_auth_params())
+        scheduler = class_._scheduler_class()
         scheduler.set_transport(transport)
 
-        return LegacyClient(transport, scheduler)
+        return class_(transport, scheduler)

@@ -14,12 +14,11 @@ from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Literal, Optional, 
 
 if TYPE_CHECKING:
     from aiida.orm import QueryBuilder
-    from aiida.orm.entities import Entity, EntityTypes
+    from aiida.orm.entities import EntityTv, EntityTypes
     from aiida.orm.implementation import StorageBackend
     from aiida.tools.visualization.graph import Graph
 
-SelfType = TypeVar('SelfType')
-EntityType = TypeVar('EntityType', bound='Entity')
+SelfTv = TypeVar('SelfTv')
 
 __all__ = ('ArchiveFormatAbstract', 'ArchiveReaderAbstract', 'ArchiveWriterAbstract', 'get_format')
 
@@ -67,7 +66,7 @@ class ArchiveWriterAbstract(ABC):
         """Return the compression level."""
         return self._compression
 
-    def __enter__(self: SelfType) -> SelfType:
+    def __enter__(self: SelfTv) -> SelfTv:
         """Start writing to the archive."""
         return self
 
@@ -130,7 +129,7 @@ class ArchiveReaderAbstract(ABC):
         """Return the path to the archive."""
         return self._path
 
-    def __enter__(self: SelfType) -> SelfType:
+    def __enter__(self: SelfTv) -> SelfTv:
         """Start reading from the archive."""
         return self
 
@@ -155,7 +154,7 @@ class ArchiveReaderAbstract(ABC):
         from aiida.orm import QueryBuilder
         return QueryBuilder(backend=self.get_backend(), **kwargs)
 
-    def get(self, entity_cls: Type[EntityType], **filters: Any) -> EntityType:
+    def get(self, entity_cls: Type['EntityTv'], **filters: Any) -> 'EntityTv':
         """Return the entity for the given filters.
 
         Example::

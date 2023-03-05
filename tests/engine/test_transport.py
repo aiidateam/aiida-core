@@ -14,22 +14,22 @@ import asyncio
 import pytest
 
 from aiida import orm
-from aiida.engine.transports import ClientQueue
+from aiida.engine.compute_queue import ComputeClientQueue
 
 
-class TestClientQueue:
+class TestComputeClientQueue:
     """Tests for the transport queue."""
 
     @pytest.fixture(autouse=True)
     def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
-        self.computer = aiida_localhost
-        self.authinfo = self.computer.get_authinfo(orm.User.collection.get_default())
+        self.computer: orm.Computer = aiida_localhost
+        self.authinfo: orm.AuthInfo = self.computer.get_authinfo(orm.User.collection.get_default())
 
     def test_simple_request(self):
         """ Test a simple transport request """
-        queue = ClientQueue()
+        queue = ComputeClientQueue()
         loop = queue.loop
 
         async def test():
@@ -43,7 +43,7 @@ class TestClientQueue:
 
     def test_get_transport_nested(self):
         """Test nesting calls to get the same transport."""
-        transport_queue = ClientQueue()
+        transport_queue = ComputeClientQueue()
         loop = transport_queue.loop
 
         async def nested(queue, authinfo):
@@ -59,7 +59,7 @@ class TestClientQueue:
 
     def test_get_transport_interleaved(self):
         """Test interleaved calls to get the same transport."""
-        transport_queue = ClientQueue()
+        transport_queue = ComputeClientQueue()
         loop = transport_queue.loop
 
         async def interleaved(authinfo):
@@ -70,7 +70,7 @@ class TestClientQueue:
 
     def test_return_from_context(self):
         """Test raising a Return from coroutine context."""
-        queue = ClientQueue()
+        queue = ComputeClientQueue()
         loop = queue.loop
 
         async def test():
@@ -83,7 +83,7 @@ class TestClientQueue:
 
     def test_open_fail(self):
         """Test that if opening fails."""
-        queue = ClientQueue()
+        queue = ComputeClientQueue()
         loop = queue.loop
 
         async def test():
@@ -96,36 +96,36 @@ class TestClientQueue:
         original = None
         try:
             # Let's put in a broken open method
-            original = self.authinfo.get_transport().__class__.open
-            self.authinfo.get_transport().__class__.open = broken_open
+            transport_class = self.computer.get_client_class()._transport_class  # pylint: disable=protected-access
+            original = transport_class.open
+            transport_class.open = broken_open
             with pytest.raises(RuntimeError):
                 loop.run_until_complete(test())
         finally:
-            self.authinfo.get_transport().__class__.open = original
+            transport_class.open = original
 
     def test_safe_interval(self):
         """Verify that the safe interval for a given in transport is respected by the transport queue."""
 
         # Temporarily set the safe open interval for the default transport to a finite value
-        transport_class = self.authinfo.get_transport().__class__
+        transport_class = self.computer.get_client_class()._transport_class  # pylint: disable=protected-access
         original_interval = transport_class._DEFAULT_SAFE_OPEN_INTERVAL  # pylint: disable=protected-access
 
         try:
             transport_class._DEFAULT_SAFE_OPEN_INTERVAL = 0.25  # pylint: disable=protected-access
 
             import time
-            queue = ClientQueue()
+            queue = ComputeClientQueue()
             loop = queue.loop
 
             time_start = time.time()
 
             async def test(iteration):
-                trans = None
                 with queue.request_client(self.authinfo) as request:
-                    trans = await request
+                    client = await request
                     time_current = time.time()
                     time_elapsed = time_current - time_start
-                    time_minimum = trans.get_safe_open_interval() * (iteration + 1)
+                    time_minimum = client.get_safe_open_interval() * (iteration + 1)
                     assert time_elapsed > time_minimum, 'transport safe interval was violated'
 
             for iteration in range(5):

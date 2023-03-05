@@ -18,7 +18,7 @@ from aiida.manage import get_manager
 from . import entities, users
 
 if TYPE_CHECKING:
-    from aiida.client import ClientProtocol
+    from aiida.client import ComputeClientProtocol
     from aiida.orm import AuthInfo, User
     from aiida.orm.implementation import BackendComputer, StorageBackend
 
@@ -199,7 +199,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             raise exceptions.ValidationError('the mpirun_command must be a list of strings')
 
         try:
-            job_resource_keys = self.get_client().job_resource_class.get_valid_keys()
+            job_resource_keys = self.get_client_class().valid_job_resource_keys()
         except exceptions.EntryPointError:
             raise exceptions.ValidationError('Unable to load the scheduler for this computer')
 
@@ -514,6 +514,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         :return: The minimum interval (in seconds).
         """
         try:
+            # TODO needs fixing
             default = self.get_client_class().DEFAULT_MINIMUM_JOB_POLL_INTERVAL
         except (exceptions.ConfigurationError, AttributeError):
             default = self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT
@@ -612,40 +613,54 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             # Return False if the user is not configured (in a sense, it is disabled for that user)
             return False
 
-    def get_client(self, user: Optional['User'] = None) -> 'ClientProtocol':
+    def get_client(self, user: Optional['User'] = None) -> 'ComputeClientProtocol':
         """
-        Return a Transport class, configured with all correct parameters.
-        The Transport is closed (meaning that if you want to run any operation with
-        it, you have to open it first (i.e., e.g. for a SSH transport, you have
-        to open a connection). To do this you can call ``transports.open()``, or simply
+        Return a compute client, configured with all correct parameters.
+        The client is closed (meaning that if you want to run any operation with
+        it, you have to open it first (i.e., e.g. for a SSH based client, you have
+        to open a connection). To do this you can call ``client.open()``, or simply
         run within a ``with`` statement::
 
-           transport = Computer.get_client()
-           with transport:
-               print(transports.whoami())
+           client = Computer.get_client()
+           with client:
+               print(client.whoami())
 
-        :param user: if None, try to obtain a transport for the default user.
+        :param user: if None, try to obtain a client for the default user.
             Otherwise, pass a valid User.
 
-        :return: a (closed) Transport, already configured with the connection
+        :return: a (closed) client, already configured with the connection
             parameters to the supercomputer, as configured with ``verdi computer configure``
             for the user specified as a parameter ``user``.
         """
         from . import authinfos  # pylint: disable=cyclic-import
 
         user = user or users.User.collection(self.backend).get_default()
+        # TODO handle if NotExistent
         authinfo = authinfos.AuthInfo.collection(self.backend).get(dbcomputer=self, aiidauser=user)
         return authinfo.get_client()
 
-    def get_client_class(self) -> Type['ClientProtocol']:
-        """Get the transport class for this computer.  Can be used to instantiate a transport instance."""
-        # TODO
-        # try:
-        #     return TransportFactory(self.transport_type)
-        # except exceptions.EntryPointError as exception:
-        #     raise exceptions.ConfigurationError(
-        #         f'No transport found for {self.label} [type {self.transport_type}], message: {exception}'
-        #     )
+    def get_client_class(self) -> Type['ComputeClientProtocol']:
+        """Get the compute client class for this computer."""
+        from aiida.client.implementation import ComputeClientXY
+        from aiida.plugins.factories import SchedulerFactory, TransportFactory
+        try:
+            transport_class = TransportFactory(self.transport_type)
+        except exceptions.EntryPointError as exception:
+            raise exceptions.ConfigurationError(
+                f'transport type `{self.transport_type}` could not be loaded: {exception}'
+            )
+        try:
+            scheduler_class = SchedulerFactory(self.scheduler_type)
+        except exceptions.EntryPointError as exception:
+            raise exceptions.ConfigurationError(
+                f'No scheduler found for {self.label} [type {self.scheduler_type}], message: {exception}'
+            )
+        return type(
+            'Client', (ComputeClientXY,), {
+                '_transport_class': transport_class,
+                '_scheduler_class': scheduler_class
+            }
+        )
 
     def configure(self, user: Optional['User'] = None, **kwargs: Any) -> 'AuthInfo':
         """Configure a computer for a user with valid auth params passed via kwargs
@@ -656,13 +671,13 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         """
         from . import authinfos
 
-        transport_cls = self.get_client_class()
+        client_cls = self.get_client_class()
         user = user or users.User.collection(self.backend).get_default()
-        valid_keys = set(transport_cls.get_auth_params())
+        valid_keys = set(client_cls.get_auth_params())
 
         if not set(kwargs.keys()).issubset(valid_keys):
             invalid_keys = [key for key in kwargs if key not in valid_keys]
-            raise ValueError(f'{transport_cls}: received invalid authentication parameter(s) "{invalid_keys}"')
+            raise ValueError(f'{client_cls}: received invalid authentication parameter(s) "{invalid_keys}"')
 
         try:
             authinfo = self.get_authinfo(user)

@@ -8,11 +8,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Reusable command line interface options for Computer commands."""
+import typing as t
+
 import click
 
 from aiida.cmdline.params import options, types
 from aiida.cmdline.params.options.interactive import InteractiveOption, TemplateInteractiveOption
 from aiida.cmdline.params.options.overridable import OverridableOption
+
+if t.TYPE_CHECKING:
+    from aiida.schedulers import Scheduler
 
 
 def get_job_resource_cls(ctx):
@@ -24,7 +29,7 @@ def get_job_resource_cls(ctx):
     scheduler_ep = ctx.params['scheduler']
     if scheduler_ep is not None:
         try:
-            scheduler_cls = scheduler_ep.load()
+            scheduler_cls: 'Scheduler' = scheduler_ep.load()
         except ImportError:
             raise ImportError(f"Unable to load the '{scheduler_ep.name}' scheduler")
     else:

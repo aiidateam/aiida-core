@@ -13,6 +13,7 @@ from collections import OrderedDict
 import os
 import tempfile
 
+from click.testing import Result
 import pytest
 
 from aiida import orm
@@ -439,9 +440,10 @@ class TestVerdiComputerConfigure:
             key_filename=key_filename
         )
 
-        result = self.cli_runner(
+        result: Result = self.cli_runner(
             computer_configure, ['core.ssh', comp.label], user_input=command_input, catch_exceptions=False
         )
+        print(result.exception)
         assert comp.is_configured, result.output
         new_auth_params = comp.get_authinfo(self.user).get_auth_params()
         assert new_auth_params['username'] == remote_username
@@ -785,7 +787,7 @@ def test_computer_test_stdout(run_cli_command, aiida_localhost, monkeypatch):
 
 def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeypatch):
     """Test ``verdi computer test`` where ``use_login_shell=True`` is much slower."""
-    from aiida.cmdline.commands import cmd_computer
+    from aiida.client import implementation
 
     aiida_localhost.configure()
 
@@ -794,7 +796,7 @@ def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeyp
             return 0.21
         return 0.10
 
-    monkeypatch.setattr(cmd_computer, 'time_use_login_shell', time_use_login_shell)
+    monkeypatch.setattr(implementation, 'time_use_login_shell', time_use_login_shell)
 
     result = run_cli_command(computer_test, [aiida_localhost.label])
     assert 'Warning: 1 out of 6 tests failed' in result.output

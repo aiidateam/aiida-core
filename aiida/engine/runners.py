@@ -27,7 +27,7 @@ from aiida.common import exceptions
 from aiida.orm import ProcessNode, load_node
 from aiida.plugins.utils import PluginVersionProvider
 
-from . import transports, utils
+from . import compute_queue, utils
 from .processes import Process, ProcessBuilder, ProcessState, futures
 from .processes.calcjobs import manager
 
@@ -83,8 +83,8 @@ class Runner:  # pylint: disable=too-many-public-methods
         self._loop = loop if loop is not None else asyncio.get_event_loop()
         self._poll_interval = poll_interval
         self._rmq_submit = rmq_submit
-        self._transport = transports.ClientQueue(self._loop)
-        self._job_manager = manager.JobManager(self._transport)
+        self._client_queue = compute_queue.ComputeClientQueue(self._loop)
+        self._job_manager = manager.JobManager(self._client_queue)
         self._persister = persister
         self._plugin_version_provider = PluginVersionProvider()
 
@@ -107,8 +107,8 @@ class Runner:  # pylint: disable=too-many-public-methods
         return self._loop
 
     @property
-    def transport(self) -> transports.ClientQueue:
-        return self._transport
+    def client_queue(self) -> compute_queue.ComputeClientQueue:
+        return self._client_queue
 
     @property
     def persister(self) -> Optional[Persister]:

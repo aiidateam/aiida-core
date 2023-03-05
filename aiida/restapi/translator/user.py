@@ -32,7 +32,8 @@ class UserTranslator(BaseTranslator):
 
     _default_projections = ['id', 'first_name', 'last_name', 'institution']
 
-    def get_projectable_properties(self):
+    @staticmethod
+    def get_projectable_properties():
         """
         Get projectable properties specific for User
         :return: dict of projectable properties and column_order list

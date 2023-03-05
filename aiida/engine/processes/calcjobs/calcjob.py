@@ -16,7 +16,7 @@ import io
 import json
 import os
 import shutil
-from typing import Any, Dict, Hashable, Optional, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, Hashable, Optional, Type, Union
 
 import plumpy.ports
 import plumpy.process_states
@@ -35,6 +35,9 @@ from ..process_spec import CalcJobProcessSpec
 from .importer import CalcJobImporter
 from .monitors import CalcJobMonitor
 from .tasks import UPLOAD_COMMAND, Waiting
+
+if TYPE_CHECKING:
+    from aiida.client.protocol import ResourcesType
 
 __all__ = ('CalcJob',)
 
@@ -92,23 +95,23 @@ def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:  # pyli
     except ValueError:
         return None
 
-    # If the resources port exists but is not required, we don't need to validate it against the computer's scheduler
+    # If the resources port exists but is not required, we don't need to validate it against the computer's client
     if not resources_port.required:
         return None
 
     computer: orm.Computer = computer_from_code or computer_from_metadata
-    client = computer.get_client()
+    client_cls = computer.get_client_class()
     try:
         resources = inputs['metadata']['options']['resources']
     except KeyError:
         return 'input `metadata.options.resources` is required but is not specified'
 
-    resources = client.preprocess_resources(resources, computer.get_default_mpiprocs_per_machine())
+    resources = client_cls.preprocess_resources(resources, computer.get_default_mpiprocs_per_machine())
 
     try:
-        client.validate_resources(**resources)
+        client_cls.validate_resources(**resources)
     except ValueError as exception:
-        return f'input `metadata.options.resources` is not valid for the `{client}` client: {exception}'
+        return f'input `metadata.options.resources` is not valid for the `{client_cls}` client: {exception}'
 
     return None
 
@@ -533,7 +536,7 @@ class CalcJob(Process):
         """Run the calculation job.
 
         This means invoking the `presubmit` and storing the temporary folder in the node's repository. Then we move the
-        process in the `Wait` state, waiting for the `UPLOAD` transport task to be started.
+        process in the `Wait` state, waiting for the `UPLOAD` client task to be started.
 
         :returns: the `Stop` command if a dry run, int if the process has an exit status,
             `Wait` command if the calcjob is to be uploaded
@@ -598,15 +601,15 @@ class CalcJob(Process):
 
         Instead of performing the normal sequence of steps, just the `presubmit` is called, which will call the method
         `prepare_for_submission` of the plugin to generate the input files based on the inputs. Then the upload action
-        is called, but using a normal local transport that will copy the files to a local sandbox folder. The generated
-        input script and the absolute path to the sandbox folder are stored in the `dry_run_info` attribute of the node
-        of this process.
+        is called, but using a normal local compute client that will copy the files to a local sandbox folder.
+        The generated input script and the absolute path to the sandbox folder
+        are stored in the `dry_run_info` attribute of the node of this process.
         """
         from aiida.common.folders import SubmitTestFolder
         from aiida.engine.daemon.execmanager import upload_calculation
         from aiida.transports.plugins.local import LocalTransport
 
-        with LocalTransport() as transport:
+        with LocalTransport() as transport:  # TODO should this be changed
             with SubmitTestFolder() as folder:
                 calc_info = self.presubmit(folder)
                 transport.chdir(folder.abspath)
@@ -631,7 +634,7 @@ class CalcJob(Process):
 
         filepath_sandbox = get_config_option('storage.sandbox') or None
 
-        with LocalTransport() as transport:
+        with LocalTransport() as transport:  # TODO this needs to be changed
             with SandboxFolder(filepath_sandbox) as folder:
                 with SandboxFolder(filepath_sandbox) as retrieved_temporary_folder:
                     self.presubmit(folder)
@@ -753,7 +756,7 @@ class CalcJob(Process):
 
         try:
             exit_code = client.parse_output(
-                detailed_job_info,
+                detailed_job_info,  # type: ignore[arg-type]
                 scheduler_stdout or '',  # type: ignore[arg-type]
                 scheduler_stderr or '',  # type: ignore[arg-type]
             )
@@ -871,7 +874,7 @@ class CalcJob(Process):
             return calc_info
 
         # The remaining code is only necessary for actual runs, for example, creating the submission script
-        client = computer.get_client()
+        client_cls = computer.get_client_class()
 
         # the if is done so that if the method returns None, this is
         # not added. This has two advantages:
@@ -890,9 +893,9 @@ class CalcJob(Process):
         job_tmpl.append_text = '\n\n'.join(append_text for append_text in append_texts if append_text)
 
         # Set resources, also with get_default_mpiprocs_per_machine
-        resources = self.node.get_option('resources')
-        resources = client.preprocess_resources(resources or {}, computer.get_default_mpiprocs_per_machine())
-        job_tmpl.job_resource = client.create_job_resource(**resources)  # type: ignore
+        resources: ResourcesType = self.node.get_option('resources') or {}  # type: ignore[assignment]
+        resources = client_cls.preprocess_resources(resources, computer.get_default_mpiprocs_per_machine())
+        job_tmpl.job_resource = client_cls.create_job_resource(**resources)
 
         subst_dict = {'tot_num_mpiprocs': job_tmpl.job_resource.get_tot_num_mpiprocs()}
 
@@ -941,7 +944,7 @@ class CalcJob(Process):
             tmpl_code_info.stdin_name = code_info.stdin_name
             tmpl_code_info.stdout_name = code_info.stdout_name
             tmpl_code_info.stderr_name = code_info.stderr_name
-            tmpl_code_info.join_files = code_info.join_files
+            tmpl_code_info.join_files = False if code_info.join_files is None else code_info.join_files
 
             tmpl_codes_info.append(tmpl_code_info)
         job_tmpl.codes_info = tmpl_codes_info
@@ -983,7 +986,7 @@ class CalcJob(Process):
             job_tmpl.max_wallclock_seconds = max_wallclock_seconds
 
         submit_script_filename = self.node.get_option('submit_script_filename')
-        script_content = client.get_submit_script(job_tmpl)
+        script_content = client_cls.get_submit_script(job_tmpl)
         folder.create_file_from_filelike(io.StringIO(script_content), submit_script_filename, 'w', encoding='utf8')
 
         def encoder(obj):

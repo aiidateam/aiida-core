@@ -151,7 +151,7 @@ class NodeTranslator(BaseTranslator):
             })
             self._query_help['project'][edge_tag] = [{'label': {}}, {'type': {}}]
 
-    def set_query(
+    def set_query(  # pylint: disable=arguments-renamed
         self,
         filters=None,
         orders=None,
@@ -762,7 +762,8 @@ class NodeTranslator(BaseTranslator):
 
         return {'nodes': nodes, 'metadata': metadata}
 
-    def get_projectable_properties(self):
+    @staticmethod
+    def get_projectable_properties():
         """
         Get projectable properties specific for Node
         :return: dict of projectable properties and column_order list

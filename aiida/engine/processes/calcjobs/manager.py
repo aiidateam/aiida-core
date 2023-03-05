@@ -7,19 +7,19 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module containing utilities and classes relating to job calculations running on systems that require transport."""
+"""Module containing utilities and classes relating to job calculations running on compute clients."""
 import asyncio
 import contextlib
 import contextvars
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Dict, Hashable, Iterator, List, Optional
+from typing import TYPE_CHECKING, Dict, Hashable, Iterator, List, Optional
 
 from aiida.common import lang
 from aiida.orm import AuthInfo
 
 if TYPE_CHECKING:
-    from aiida.engine.transports import ClientQueue
+    from aiida.engine.compute_queue import ComputeClientQueue
     from aiida.schedulers.datastructures import JobInfo
 
 __all__ = ('JobsList', 'JobManager')
@@ -29,32 +29,32 @@ class JobsList:
     """Manager of calculation jobs submitted with a specific ``AuthInfo``, i.e. computer configured for a specific user.
 
     This container of active calculation jobs is used to update their status periodically in batches, ensuring that
-    even when a lot of jobs are running, the scheduler update command is not triggered for each job individually.
+    even when a lot of jobs are running, calls to the compute client are not triggered for each job individually.
 
     In addition, the :py:class:`~aiida.orm.computers.Computer` for which the :py:class:`~aiida.orm.authinfos.AuthInfo`
     is configured, can define a minimum polling interval. This class will guarantee that the time between update calls
-    to the scheduler is larger or equal to that minimum interval.
+    to the compute client is larger or equal to that minimum interval.
 
-    Note that since each instance operates on a specific authinfo, the guarantees of batching scheduler update calls
+    Note that since each instance operates on a specific authinfo, the guarantees of batching client calls
     and the limiting of number of calls per unit time, through the minimum polling interval, is only applicable for jobs
     launched with that particular authinfo. If multiple authinfo instances with the same computer, have active jobs
     these limitations are not respected between them, since there is no communication between ``JobsList`` instances.
     See the :py:class:`~aiida.engine.processes.calcjobs.manager.JobManager` for example usage.
     """
 
-    def __init__(self, authinfo: AuthInfo, transport_queue: 'ClientQueue', last_updated: Optional[float] = None):
-        """Construct an instance for the given authinfo and transport queue.
+    def __init__(self, authinfo: AuthInfo, client_queue: 'ComputeClientQueue', last_updated: Optional[float] = None):
+        """Construct an instance for the given authinfo and compute client queue.
 
         :param authinfo: The authinfo used to check the jobs list
-        :param transport_queue: A transport queue
+        :param client_queue: A queue to get compute client instances from the authinfo.
         :param last_updated: initialize the last updated timestamp
 
         """
         lang.type_check(last_updated, float, allow_none=True)
 
         self._authinfo = authinfo
-        self._transport_queue = transport_queue
-        self._loop = transport_queue.loop
+        self._client_queue = client_queue
+        self._loop = client_queue.loop
         self._logger = logging.getLogger(__name__)
 
         self._jobs_cache: Dict[Hashable, 'JobInfo'] = {}
@@ -87,30 +87,28 @@ class JobsList:
         """
         return self._last_updated
 
-    async def _get_jobs_from_scheduler(self) -> Dict[Hashable, 'JobInfo']:
-        """Get the current jobs list from the scheduler.
+    async def _get_jobs_from_client(self) -> Dict[Hashable, 'JobInfo']:
+        """Get the current jobs list from the compute client.
 
         :return: a mapping of job ids to :py:class:`~aiida.schedulers.datastructures.JobInfo` instances
 
         """
-        with self._transport_queue.request_client(self._authinfo) as request:
-            self.logger.info('waiting for transport')
+        with self._client_queue.request_client(self._authinfo) as request:
+            self.logger.info('waiting for compute client to become available')
             client = await request
 
-            kwargs: Dict[str, Any] = {'as_dict': True}
             if client.get_feature('can_query_by_user'):
-                kwargs['user'] = '$USER'
+                client_response = client.get_jobs(user='$USER', as_dict=True)
             else:
-                kwargs['jobs'] = self._get_jobs_with_scheduler()
-
-            scheduler_response = client.get_jobs(**kwargs)
+                jobs = self._get_jobs_with_client()
+                client_response = client.get_jobs(jobs=jobs, as_dict=True)
 
             # Update the last update time and clear the jobs cache
             self._last_updated = time.time()
             jobs_cache = {}
             self.logger.info(f'AuthInfo<{self._authinfo.pk}>: successfully retrieved status of active jobs')
 
-            for job_id, job_info in scheduler_response.items():
+            for job_id, job_info in client_response.items():
                 jobs_cache[job_id] = job_info
 
             return jobs_cache
@@ -126,7 +124,7 @@ class JobsList:
                 return
 
             # Update our cache of the job states
-            self._jobs_cache = await self._get_jobs_from_scheduler()
+            self._jobs_cache = await self._get_jobs_from_client()
         except Exception as exception:
             # Set the exception on all the update futures
             for future in self._job_update_requests.values():
@@ -211,12 +209,12 @@ class JobsList:
         return old.job_state != new.job_state or old.job_substate != new.job_substate
 
     def _get_next_update_delay(self) -> float:
-        """Calculate when we are next allowed to poll the scheduler.
+        """Calculate when we are next allowed to poll the compute client.
 
         This delay is calculated as the minimum polling interval defined by the authentication info for this instance,
         minus time elapsed since the last update.
 
-        :return: delay (in seconds) after which the scheduler may be polled again
+        :return: delay (in seconds) after which the compute client may be polled again
 
         """
         if self.last_updated is None:
@@ -234,11 +232,10 @@ class JobsList:
     def _update_requests_outstanding(self) -> bool:
         return any(not request.done() for request in self._job_update_requests.values())
 
-    def _get_jobs_with_scheduler(self) -> List[str]:
-        """Get all the jobs that are currently with scheduler.
+    def _get_jobs_with_client(self) -> List[str]:
+        """Get all the jobs that are currently with the compute client.
 
-        :return: the list of jobs with the scheduler
-        :rtype: list
+        :return: the list of jobs with the compute client
         """
         return [str(job_id) for job_id, _ in self._job_update_requests.items()]
 
@@ -249,17 +246,22 @@ class JobManager:
     When a calculation job is submitted to a :py:class:`~aiida.orm.computers.Computer`, it actually uses a specific
     :py:class:`~aiida.orm.authinfos.AuthInfo`, which is a computer configured for a :py:class:`~aiida.orm.users.User`.
     The ``JobManager`` maintains a mapping of :py:class:`~aiida.engine.processes.calcjobs.manager.JobsList` instances
-    for each authinfo that has active calculation jobs. These jobslist instances are then responsible for bundling
-    scheduler updates for all the jobs they maintain (i.e. that all share the same authinfo) and update their status.
+    for each authinfo that has active calculation jobs.
+    These jobslist instances are then responsible for bundling compute client calls (i.e. since authinfo is shared),
+    for updates on all the jobs they maintain and update their status.
 
     As long as a :py:class:`~aiida.engine.runners.Runner` will create a single ``JobManager`` instance and use that for
-    its lifetime, the guarantees made by the ``JobsList`` about respecting the minimum polling interval of the scheduler
+    its lifetime, the guarantees made by the ``JobsList`` about respecting the minimum polling interval of the client
     will be maintained. Note, however, that since each ``Runner`` will create its own job manager, these guarantees
     only hold per runner.
     """
 
-    def __init__(self, transport_queue: 'ClientQueue') -> None:
-        self._transport_queue = transport_queue
+    def __init__(self, client_queue: 'ComputeClientQueue') -> None:
+        """Construct a new instance.
+
+        :param client_queue: the queue for requesting a compute client
+        """
+        self._client_queue = client_queue
         self._job_lists: Dict[Hashable, 'JobInfo'] = {}
 
     def get_jobs_list(self, authinfo: AuthInfo) -> JobsList:
@@ -269,7 +271,7 @@ class JobManager:
         :return: a `JobsList` instance
         """
         if authinfo.pk not in self._job_lists:
-            self._job_lists[authinfo.pk] = JobsList(authinfo, self._transport_queue)
+            self._job_lists[authinfo.pk] = JobsList(authinfo, self._client_queue)
 
         return self._job_lists[authinfo.pk]
 

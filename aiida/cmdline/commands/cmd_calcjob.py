@@ -10,6 +10,7 @@
 # pylint: disable=invalid-name,too-many-locals
 """`verdi calcjob` commands."""
 import os
+import typing as t
 
 import click
 
@@ -17,6 +18,9 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types import CalculationParamType
 from aiida.cmdline.utils import decorators, echo
+
+if t.TYPE_CHECKING:
+    from aiida.orm import CalcJobNode
 
 
 @verdi.group('calcjob')
@@ -26,7 +30,7 @@ def verdi_calcjob():
 
 @verdi_calcjob.command('gotocomputer')
 @arguments.CALCULATION('calcjob', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
-def calcjob_gotocomputer(calcjob):
+def calcjob_gotocomputer(calcjob: 'CalcJobNode'):
     """
     Open a shell in the remote folder on the calcjob.
 
@@ -36,7 +40,7 @@ def calcjob_gotocomputer(calcjob):
     from aiida.common.exceptions import NotExistent
 
     try:
-        transport = calcjob.get_client()
+        client = calcjob.get_client()
     except NotExistent as exception:
         echo.echo_critical(repr(exception))
 
@@ -45,7 +49,9 @@ def calcjob_gotocomputer(calcjob):
     if not remote_workdir:
         echo.echo_critical('no remote work directory for this calcjob, maybe the daemon did not submit it yet')
 
-    command = transport.gotocomputer_command(remote_workdir)
+    command = client.gotocomputer_command(remote_workdir)
+    if command is None:
+        echo.echo_critical('no command to open a shell on the remote computer')
     echo.echo_report('going to the remote work directory...')
     os.system(command)
 
@@ -55,7 +61,7 @@ def calcjob_gotocomputer(calcjob):
 @options.DICT_KEYS()
 @options.DICT_FORMAT()
 @decorators.with_dbenv()
-def calcjob_res(calcjob, fmt, keys):
+def calcjob_res(calcjob: 'CalcJobNode', fmt, keys):
     """Print data from the result output Dict node of a calcjob."""
     from aiida.cmdline.utils.echo import echo_dictionary
 
@@ -79,7 +85,7 @@ def calcjob_res(calcjob, fmt, keys):
 @arguments.CALCULATION('calcjob', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
 @click.argument('path', type=click.STRING, required=False)
 @decorators.with_dbenv()
-def calcjob_inputcat(calcjob, path):
+def calcjob_inputcat(calcjob: 'CalcJobNode', path):
     """
     Show the contents of one of the calcjob input files.
 
@@ -286,7 +292,7 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force, exit
         echo.echo_critical('no calcjobs found with the given criteria')
 
     if not force:
-        path_count = sum([len(paths) for computer, paths in path_mapping.items()])
+        path_count = sum([len(paths) for _, paths in path_mapping.items()])
         warning = f'Are you sure you want to clean the work directory of {path_count} calcjobs?'
         click.confirm(warning, abort=True)
 
@@ -296,11 +302,11 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force, exit
 
         counter = 0
         computer = orm.load_computer(uuid=computer_uuid)
-        transport = orm.AuthInfo.collection.get(dbcomputer_id=computer.pk, aiidauser_id=user.pk).get_client()
+        client = orm.AuthInfo.collection.get(dbcomputer_id=computer.pk, aiidauser_id=user.pk).get_client()
 
-        with transport:
+        with client:
             for remote_folder in paths:
-                remote_folder._clean(transport=transport)  # pylint:disable=protected-access
+                remote_folder._clean(client)  # pylint:disable=protected-access
                 counter += 1
 
         echo.echo_success(f'{counter} remote folders cleaned on {computer.label}')

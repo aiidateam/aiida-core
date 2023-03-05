@@ -13,7 +13,7 @@ import asyncio
 import contextlib
 from datetime import datetime
 import logging
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterator, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterator, List, Optional, Tuple, Type, TypeVar, Union
 
 if TYPE_CHECKING:
     from .processes import Process, ProcessBuilder
@@ -24,6 +24,8 @@ __all__ = ('interruptable_task', 'InterruptableFuture', 'is_process_function')
 LOGGER = logging.getLogger(__name__)
 PROCESS_STATE_CHANGE_KEY = 'process|state_change|{}'
 PROCESS_STATE_CHANGE_DESCRIPTION = 'The last time a process of type {}, changed state'
+
+T = TypeVar('T')
 
 
 def instantiate_process(
@@ -65,14 +67,14 @@ def instantiate_process(
     return process
 
 
-class InterruptableFuture(asyncio.Future):
+class InterruptableFuture(asyncio.Future):  # TODO make this generic
     """A future that can be interrupted by calling `interrupt`."""
 
     def interrupt(self, reason: Exception) -> None:
         """This method should be called to interrupt the coroutine represented by this InterruptableFuture."""
         self.set_exception(reason)
 
-    async def with_interrupt(self, coro: Awaitable[Any]) -> Any:
+    async def with_interrupt(self, coro: Awaitable[T]) -> T:
         """
         return result of a coroutine which will be interrupted if this future is interrupted ::
 
@@ -135,7 +137,7 @@ def interruptable_task(
     return future
 
 
-def ensure_coroutine(fct: Callable[..., Any]) -> Callable[..., Awaitable[Any]]:
+def ensure_coroutine(fct: Union[Callable[..., T], Callable[..., Awaitable[T]]]) -> Callable[..., Awaitable[T]]:
     """
     Ensure that the given function ``fct`` is a coroutine
 
@@ -154,12 +156,12 @@ def ensure_coroutine(fct: Callable[..., Any]) -> Callable[..., Awaitable[Any]]:
 
 
 async def exponential_backoff_retry(
-    fct: Callable[..., Any],
+    fct: Callable[..., Awaitable[T]],
     initial_interval: Union[int, float] = 10.0,
     max_attempts: int = 5,
     logger: Optional[logging.Logger] = None,
     ignore_exceptions: Union[None, Type[Exception], Tuple[Type[Exception], ...]] = None
-) -> Any:
+) -> T:
     """
     Coroutine to call a function, recalling it with an exponential backoff in the case of an exception
 
@@ -177,8 +179,8 @@ async def exponential_backoff_retry(
     if logger is None:
         logger = LOGGER
 
-    result: Any = None
-    coro = ensure_coroutine(fct)
+    result: Optional[T] = None
+    coro = ensure_coroutine(fct)  # type: ignore
     interval = initial_interval
 
     for iteration in range(max_attempts):
@@ -203,7 +205,8 @@ async def exponential_backoff_retry(
                 await asyncio.sleep(interval)
                 interval *= 2
 
-    return result
+    # TODO I assume None should never actually be returned
+    return result  # type: ignore
 
 
 def is_process_function(function: Any) -> bool:

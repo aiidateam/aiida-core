@@ -26,9 +26,9 @@ if TYPE_CHECKING:
 
 __all__ = ('Entity', 'Collection', 'EntityTypes')
 
-CollectionType = TypeVar('CollectionType', bound='Collection')
-EntityType = TypeVar('EntityType', bound='Entity')
-BackendEntityType = TypeVar('BackendEntityType', bound='BackendEntity')
+CollectionTv = TypeVar('CollectionTv', bound='Collection')
+EntityTv = TypeVar('EntityTv', bound='Entity')
+BackendEntityTv = TypeVar('BackendEntityTv', bound='BackendEntity')
 
 
 class EntityTypes(Enum):
@@ -44,17 +44,17 @@ class EntityTypes(Enum):
     GROUP_NODE = 'group_node'
 
 
-class Collection(abc.ABC, Generic[EntityType]):
+class Collection(abc.ABC, Generic[EntityTv]):
     """Container class that represents the collection of objects of a particular entity type."""
 
     @staticmethod
     @abc.abstractmethod
-    def _entity_base_cls() -> Type[EntityType]:
+    def _entity_base_cls() -> Type[EntityTv]:
         """The allowed entity class or subclasses thereof."""
 
     @classmethod
     @lru_cache(maxsize=100)
-    def get_cached(cls, entity_class: Type[EntityType], backend: 'StorageBackend'):
+    def get_cached(cls, entity_class: Type[EntityTv], backend: 'StorageBackend'):
         """Get the cached collection instance for the given entity class and backend.
 
         :param backend: the backend instance to get the collection for
@@ -63,7 +63,7 @@ class Collection(abc.ABC, Generic[EntityType]):
         type_check(backend, StorageBackend)
         return cls(entity_class, backend=backend)
 
-    def __init__(self, entity_class: Type[EntityType], backend: Optional['StorageBackend'] = None) -> None:
+    def __init__(self, entity_class: Type[EntityTv], backend: Optional['StorageBackend'] = None) -> None:
         """ Construct a new entity collection.
 
         :param entity_class: the entity type e.g. User, Computer, etc
@@ -75,14 +75,14 @@ class Collection(abc.ABC, Generic[EntityType]):
         self._backend = backend or get_manager().get_profile_storage()
         self._entity_type = entity_class
 
-    def __call__(self: CollectionType, backend: 'StorageBackend') -> CollectionType:
+    def __call__(self: CollectionTv, backend: 'StorageBackend') -> CollectionTv:
         """Get or create a cached collection using a new backend."""
         if backend is self._backend:
             return self
         return self.get_cached(self.entity_type, backend=backend)  # type: ignore
 
     @property
-    def entity_type(self) -> Type[EntityType]:
+    def entity_type(self) -> Type[EntityTv]:
         """The entity type for this instance."""
         return self._entity_type
 
@@ -115,7 +115,7 @@ class Collection(abc.ABC, Generic[EntityType]):
         query.order_by([order_by])
         return query
 
-    def get(self, **filters: Any) -> EntityType:
+    def get(self, **filters: Any) -> EntityTv:
         """Get a single collection entry that matches the filter criteria.
 
         :param filters: the filters identifying the object to get
@@ -130,7 +130,7 @@ class Collection(abc.ABC, Generic[EntityType]):
         filters: Optional['FilterType'] = None,
         order_by: Optional['OrderByType'] = None,
         limit: Optional[int] = None
-    ) -> List[EntityType]:
+    ) -> List[EntityTv]:
         """Find collection entries matching the filter criteria.
 
         :param filters: the keyword value pair filters to match
@@ -140,14 +140,14 @@ class Collection(abc.ABC, Generic[EntityType]):
         :return: a list of resulting matches
         """
         query = self.query(filters=filters, order_by=order_by, limit=limit)
-        return cast(List[EntityType], query.all(flat=True))
+        return cast(List[EntityTv], query.all(flat=True))
 
-    def all(self) -> List[EntityType]:
+    def all(self) -> List[EntityTv]:
         """Get all entities in this collection.
 
         :return: A list of all entities
         """
-        return cast(List[EntityType], self.query().all(flat=True))  # pylint: disable=no-member
+        return cast(List[EntityTv], self.query().all(flat=True))  # pylint: disable=no-member
 
     def count(self, filters: Optional['FilterType'] = None) -> int:
         """Count entities in this collection according to criteria.
@@ -159,13 +159,13 @@ class Collection(abc.ABC, Generic[EntityType]):
         return self.query(filters=filters).count()
 
 
-class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
+class Entity(abc.ABC, Generic[BackendEntityTv, CollectionTv]):
     """An AiiDA entity"""
 
-    _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore
+    _CLS_COLLECTION: Type[CollectionTv] = Collection  # type: ignore
 
     @classproperty
-    def objects(cls: EntityType) -> CollectionType:  # pylint: disable=no-self-argument,no-self-use
+    def objects(cls: EntityTv) -> CollectionTv:  # pylint: disable=no-self-argument,no-self-use
         """Get a collection for objects of this type, with the default backend.
 
         .. deprecated:: This will be removed in v3, use ``collection`` instead.
@@ -176,7 +176,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         return cls.collection
 
     @classproperty
-    def collection(cls) -> CollectionType:  # pylint: disable=no-self-argument,no-self-use
+    def collection(cls) -> CollectionTv:  # pylint: disable=no-self-argument,no-self-use
         """Get a collection for objects of this type, with the default backend.
 
         :return: an object that can be used to access entities of this type
@@ -195,7 +195,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         )
         return cls.collection.get(**kwargs)  # pylint: disable=no-member
 
-    def __init__(self, backend_entity: BackendEntityType) -> None:
+    def __init__(self, backend_entity: BackendEntityTv) -> None:
         """
         :param backend_entity: the backend model supporting this entity
         """
@@ -236,7 +236,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         """
         return self._backend_entity.id
 
-    def store(self: EntityType) -> EntityType:
+    def store(self: EntityTv) -> EntityTv:
         """Store the entity."""
         self._backend_entity.store()
         return self
@@ -252,12 +252,12 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         return self._backend_entity.backend
 
     @property
-    def backend_entity(self) -> BackendEntityType:
+    def backend_entity(self) -> BackendEntityTv:
         """Get the implementing class for this object"""
         return self._backend_entity
 
 
-def from_backend_entity(cls: Type[EntityType], backend_entity: BackendEntityType) -> EntityType:
+def from_backend_entity(cls: Type[EntityTv], backend_entity: BackendEntityTv) -> EntityTv:
     """Construct an entity from a backend entity instance
 
     :param backend_entity: the backend entity

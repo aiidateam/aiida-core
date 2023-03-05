@@ -31,10 +31,10 @@ __all__ = ('calcfunction', 'workfunction', 'FunctionProcess')
 
 LOGGER = logging.getLogger(__name__)
 
-FunctionType = TypeVar('FunctionType', bound=Callable[..., Any])
+FunctionTv = TypeVar('FunctionTv', bound=Callable[..., Any])
 
 
-def calcfunction(function: FunctionType) -> FunctionType:
+def calcfunction(function: FunctionTv) -> FunctionTv:
     """
     A decorator to turn a standard python function into a calcfunction.
     Example usage:
@@ -61,7 +61,7 @@ def calcfunction(function: FunctionType) -> FunctionType:
     return process_function(node_class=CalcFunctionNode)(function)
 
 
-def workfunction(function: FunctionType) -> FunctionType:
+def workfunction(function: FunctionTv) -> FunctionTv:
     """
     A decorator to turn a standard python function into a workfunction.
     Example usage:

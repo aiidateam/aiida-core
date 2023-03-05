@@ -32,7 +32,8 @@ class GroupTranslator(BaseTranslator):
 
     _result_type = __label__
 
-    def get_projectable_properties(self):
+    @staticmethod
+    def get_projectable_properties():
         """
         Get projectable properties specific for Group
         :return: dict of projectable properties and column_order list

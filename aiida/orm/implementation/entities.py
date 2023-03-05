@@ -14,9 +14,9 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, Iterable, List, 
 if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
 
-__all__ = ('BackendEntity', 'BackendCollection', 'EntityType', 'BackendEntityExtrasMixin')
+__all__ = ('BackendEntity', 'BackendCollection', 'BackendEntityTv', 'BackendEntityExtrasMixin')
 
-EntityType = TypeVar('EntityType', bound='BackendEntity')  # pylint: disable=invalid-name
+BackendEntityTv = TypeVar('BackendEntityTv', bound='BackendEntity')  # pylint: disable=invalid-name
 
 
 class BackendEntity(abc.ABC):
@@ -54,7 +54,7 @@ class BackendEntity(abc.ABC):
         return self.id
 
     @abc.abstractmethod
-    def store(self: EntityType) -> EntityType:
+    def store(self: BackendEntityTv) -> BackendEntityTv:
         """Store this entity in the backend.
 
         Whether it is possible to call store more than once is delegated to the object itself
@@ -69,10 +69,10 @@ class BackendEntity(abc.ABC):
         """
 
 
-class BackendCollection(Generic[EntityType]):
+class BackendCollection(Generic[BackendEntityTv]):
     """Container class that represents a collection of entries of a particular backend entity."""
 
-    ENTITY_CLASS: ClassVar[Type[EntityType]]  # type: ignore[misc]
+    ENTITY_CLASS: ClassVar[Type[BackendEntityTv]]  # type: ignore[misc]
 
     def __init__(self, backend: 'StorageBackend'):
         """
@@ -86,7 +86,7 @@ class BackendCollection(Generic[EntityType]):
         """Return the backend."""
         return self._backend
 
-    def create(self, **kwargs: Any) -> EntityType:
+    def create(self, **kwargs: Any) -> BackendEntityTv:
         """
         Create new a entry and set the attributes to those specified in the keyword arguments
 

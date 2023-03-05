@@ -22,11 +22,10 @@ from aiida.cmdline.utils import decorators
 @contextlib.contextmanager
 def update_environment(argv):
     """Context manager that temporarily replaces `sys.argv` with `argv` and adds current working dir to the path."""
+    # Store a copy of the current path and argv as a backup variable so it can be restored later
+    _path = sys.path[:]
+    _argv = sys.argv[:]
     try:
-        # Store a copy of the current path and argv as a backup variable so it can be restored later
-        _path = sys.path[:]
-        _argv = sys.argv[:]
-
         # Add the current working directory to the path, such that local modules can be imported
         sys.path.append(str(pathlib.Path.cwd().resolve()))
         sys.argv = argv[:]

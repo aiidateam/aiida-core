@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 __all__ = ('Group', 'AutoGroup', 'ImportGroup', 'UpfFamily')
 
-SelfType = TypeVar('SelfType', bound='Group')
+SelfTv = TypeVar('SelfTv', bound='Group')
 
 
 def load_group_class(type_string: str) -> Type['Group']:
@@ -179,7 +179,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection], metaclass=GroupMet
     def __str__(self) -> str:
         return f'{self.__class__.__name__}<{self.label}>'
 
-    def store(self: SelfType) -> SelfType:
+    def store(self: SelfTv) -> SelfTv:
         """Verify that the group is allowed to be stored, which is the case along as `type_string` is set."""
         if self._type_string is None:
             raise exceptions.StoringNotAllowed('`type_string` is `None` so the group cannot be stored.')

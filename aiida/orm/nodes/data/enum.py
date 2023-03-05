@@ -27,7 +27,7 @@ from .data import Data
 
 __all__ = ('EnumData',)
 
-EnumType = t.TypeVar('EnumType', bound=Enum)
+EnumTv = t.TypeVar('EnumTv', bound=Enum)
 
 
 @to_aiida_type.register(Enum)
@@ -72,7 +72,7 @@ class EnumData(Data):
         """Return the value of the enum member."""
         return self.base.attributes.get(self.KEY_VALUE)
 
-    def get_enum(self) -> t.Type[EnumType]:
+    def get_enum(self) -> t.Type[EnumTv]:
         """Return the enum class reconstructed from the serialized identifier stored in the database.
 
         :raises `ImportError`: if the enum class represented by the stored identifier cannot be imported.
@@ -83,7 +83,7 @@ class EnumData(Data):
         except ValueError as exc:
             raise ImportError(f'Could not reconstruct enum class because `{identifier}` could not be loaded.') from exc
 
-    def get_member(self) -> EnumType:  # type: ignore
+    def get_member(self) -> EnumTv:  # type: ignore
         """Return the enum member reconstructed from the serialized data stored in the database.
 
         For the enum member to be successfully reconstructed, the class of course has to still be importable and its
@@ -94,7 +94,7 @@ class EnumData(Data):
         :raises `ValueError`: if the stored enum member value is no longer valid for the imported enum class.
         """
         value = self.base.attributes.get(self.KEY_VALUE)
-        enum: t.Type[EnumType] = self.get_enum()
+        enum: t.Type[EnumTv] = self.get_enum()
 
         try:
             return enum(value)

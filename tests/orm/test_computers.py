@@ -21,7 +21,7 @@ from aiida.plugins import TransportFactory
 class TestComputer:
     """Tests for the `Computer` ORM class."""
 
-    def test_get_transport(self):
+    def test_get_client(self):
         """
         Test the get_transport method of Computer
         """
@@ -39,14 +39,14 @@ class TestComputer:
         authinfo = AuthInfo(computer=new_comp, user=User.collection.get_default())
         authinfo.store()
 
-        transport = new_comp.get_transport()
+        client = new_comp.get_client()
 
         # It's on localhost, so I see files that I create
-        with transport:
+        with client:
             with tempfile.NamedTemporaryFile() as handle:
-                assert transport.isfile(handle.name) is True
+                assert client.isfile(handle.name) is True
             # Here the file should have been deleted
-            assert transport.isfile(handle.name) is False
+            assert client.isfile(handle.name) is False
 
     def test_delete(self):
         """Test the deletion of a `Computer` instance."""
@@ -78,6 +78,7 @@ class TestComputer:
         # Transport class defined: use default of the transport class.
         transport = TransportFactory('core.local')
         computer.transport_type = 'core.local'
+        computer.scheduler_type = 'core.direct'
         assert computer.get_minimum_job_poll_interval() == transport.DEFAULT_MINIMUM_JOB_POLL_INTERVAL  # pylint: disable=protected-access
 
         # Explicit value defined: use value of the instance.

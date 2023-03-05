@@ -31,7 +31,8 @@ class ComputerTranslator(BaseTranslator):
 
     _result_type = __label__
 
-    def get_projectable_properties(self):
+    @staticmethod
+    def get_projectable_properties():
         """
         Get projectable properties specific for Computer
         :return: dict of projectable properties and column_order list

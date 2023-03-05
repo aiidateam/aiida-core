@@ -188,7 +188,7 @@ def xyz_parser_iterator(xyz_string):
         to extract the required fields directly from the match object
         """
 
-        def __init__(self, it, natoms):
+        def __init__(self, it, natoms):  # pylint: disable=invalid-name
             self._it = it
             self._natoms = natoms
             self._catom = 0

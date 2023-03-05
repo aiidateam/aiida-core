@@ -9,11 +9,15 @@
 ###########################################################################
 """Data plugin that models a folder on a remote computer."""
 import os
+import typing as t
 
-from aiida.client import ClientProtocol
 from aiida.orm import AuthInfo
 
 from ..data import Data
+
+if t.TYPE_CHECKING:
+    from aiida.client import ComputeClientProtocol
+    from aiida.client.protocol import ListResult
 
 __all__ = ('RemoteData',)
 
@@ -32,28 +36,27 @@ class RemoteData(Data):
         if remote_path is not None:
             self.set_remote_path(remote_path)
 
-    def get_remote_path(self):
+    def get_remote_path(self) -> str:
         return self.base.attributes.get('remote_path')
 
-    def set_remote_path(self, val):
+    def set_remote_path(self, val: str) -> None:
         self.base.attributes.set('remote_path', val)
 
     @property
-    def is_empty(self):
+    def is_empty(self) -> bool:
         """
         Check if remote folder is empty
         """
-        authinfo = self.get_authinfo()
-        transport = authinfo.get_client()
+        client = self.get_authinfo().get_client()
 
-        with transport:
+        with client:
             try:
-                transport.chdir(self.get_remote_path())
+                client.chdir(self.get_remote_path())
             except IOError:
-                # If the transport IOError the directory no longer exists and was deleted
+                # Tthe directory no longer exists and was deleted
                 return True
 
-            return not transport.listdir()
+            return not client.listdir()
 
     def getfile(self, relpath, destpath):
         """
@@ -64,10 +67,10 @@ class RemoteData(Data):
         """
         authinfo = self.get_authinfo()
 
-        with authinfo.get_client() as transport:
+        with authinfo.get_client() as client:
             try:
                 full_path = os.path.join(self.get_remote_path(), relpath)
-                transport.getfile(full_path, destpath)
+                client.getfile(full_path, destpath)
             except IOError as exception:
                 if exception.errno == 2:  # file does not exist
                     raise IOError(
@@ -87,10 +90,10 @@ class RemoteData(Data):
         """
         authinfo = self.get_authinfo()
 
-        with authinfo.get_client() as transport:
+        with authinfo.get_client() as client:
             try:
                 full_path = os.path.join(self.get_remote_path(), relpath)
-                transport.chdir(full_path)
+                client.chdir(full_path)
             except IOError as exception:
                 if exception.errno in (2, 20):  # directory not existing or not a directory
                     exc = IOError(
@@ -103,7 +106,7 @@ class RemoteData(Data):
                     raise
 
             try:
-                return transport.listdir()
+                return client.listdir()
             except IOError as exception:
                 if exception.errno in (2, 20):  # directory not existing or not a directory
                     exc = IOError(
@@ -115,19 +118,18 @@ class RemoteData(Data):
                 else:
                     raise
 
-    def listdir_withattributes(self, path='.'):
+    def listdir_withattributes(self, path: str = '.') -> t.List['ListResult']:
         """
         Connects to the remote folder and lists the directory content.
 
         :param relpath: If 'relpath' is specified, lists the content of the given subfolder.
-        :return: a list of dictionaries, where the documentation is in :py:class:Transport.listdir_withattributes.
         """
         authinfo = self.get_authinfo()
 
-        with authinfo.get_client() as transport:
+        with authinfo.get_client() as client:
             try:
                 full_path = os.path.join(self.get_remote_path(), path)
-                transport.chdir(full_path)
+                client.chdir(full_path)
             except IOError as exception:
                 if exception.errno in (2, 20):  # directory not existing or not a directory
                     exc = IOError(
@@ -140,7 +142,7 @@ class RemoteData(Data):
                     raise
 
             try:
-                return transport.listdir_withattributes()
+                return client.listdir_withattributes()
             except IOError as exception:
                 if exception.errno in (2, 20):  # directory not existing or not a directory
                     exc = IOError(
@@ -152,37 +154,37 @@ class RemoteData(Data):
                 else:
                     raise
 
-    def get_client(self) -> 'ClientProtocol':
-        """Return the transport for this calculation.
+    def get_client(self) -> 'ComputeClientProtocol':
+        """Return the compute client for this calculation.
 
-        :return: `Transport` configured with the `AuthInfo` associated to the computer of this node
+        :return: client configured with the `AuthInfo` associated to the computer of this node
         """
         return self.get_authinfo().get_client()
 
-    def _clean(self, transport=None):
+    def _clean(self, client: t.Optional['ComputeClientProtocol'] = None) -> None:
         """Remove all content of the remote folder on the remote computer.
 
         When the cleaning operation is successful, the extra with the key ``RemoteData.KEY_EXTRA_CLEANED`` is set.
 
-        :param transport: Provide an optional transport that is already open. If not provided, a transport will be
+        :param client: Provide an optional compute client that is already open. If not provided, a client will be
             automatically opened, based on the current default user and the computer of this data node. Passing in the
-            transport can be used for efficiency if a great number of nodes need to be cleaned for the same computer.
-            Note that the user should take care that the correct transport is passed.
-        :raises ValueError: If the hostname of the provided transport does not match that of the node's computer.
+            client can be used for efficiency if a great number of nodes need to be cleaned for the same computer.
+            Note that the user should take care that the correct client is passed.
+        :raises ValueError: If the hostname of the provided client does not match that of the node's computer.
         """
         from aiida.orm.utils.remote import clean_remote
 
         remote_dir = self.get_remote_path()
 
-        if transport is None:
-            with self.get_client() as transport:  # pylint: disable=redefined-argument-from-local
-                clean_remote(transport, remote_dir)
+        if client is None:
+            with self.get_client() as client:  # pylint: disable=redefined-argument-from-local
+                clean_remote(client, remote_dir)
         else:
-            if transport.hostname != self.computer.hostname:
+            if client.hostname != self.computer.hostname:
                 raise ValueError(
-                    f'Transport hostname `{transport.hostname}` does not equal `{self.computer.hostname}` of {self}.'
+                    f'Compute client hostname `{client.hostname}` does not equal `{self.computer.hostname}` of {self}.'
                 )
-            clean_remote(transport, remote_dir)
+            clean_remote(client, remote_dir)
 
         self.base.extras.set(self.KEY_EXTRA_CLEANED, True)
 

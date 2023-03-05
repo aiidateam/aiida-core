@@ -1,12 +1,13 @@
 {
-    "image": "aiidateam/aiida-core:main",
+    "dockerComposeFile": "docker-compose.yaml",
+    "service": "aiida",
     // "build": {
     //     // Path is relative to the devcontainer.json file.
     //     // "dockerfile": "../Dockerfile"
     // },
     "postCreateCommand": "bash ./.devcontainer/post_create.sh",
-    "postStartCommand": "/sbin/my_init",
-    "waitFor": "postCreateCommand",
+    "postStartCommand": "/opt/configure-aiida.sh",
+    "waitFor": "postStartCommand",
 	"customizations": {
         "vscode": {
             "extensions": ["ms-python.python", "eamodio.gitlens"]

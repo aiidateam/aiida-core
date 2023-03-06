@@ -85,11 +85,12 @@ def upload_calculation(
     link_label = 'remote_folder'
     if node.base.links.get_outgoing(RemoteData, link_label_filter=link_label).first():
         EXEC_LOGGER.warning(f'CalcJobNode<{node.pk}> already has a `{link_label}` output: skipping upload')
-        return calc_info
+        return
 
     computer = node.computer
+    assert computer is not None
 
-    codes_info = calc_info.codes_info
+    codes_info = calc_info.codes_info or []
     input_codes = [load_node(_.code_uuid, sub_classes=(Code,)) for _ in codes_info]
 
     logger_extra = get_dblogger_extra(node)
@@ -138,6 +139,7 @@ def upload_calculation(
         # in the calculation properties using _set_remote_dir
         # and I do not have to know the logic, but I just need to
         # read the absolute path from the calculation properties.
+        assert calc_info.uuid is not None
         client.mkdir(calc_info.uuid[:2], ignore_existing=True)
         client.chdir(calc_info.uuid[:2])
         client.mkdir(calc_info.uuid[2:4], ignore_existing=True)
@@ -181,21 +183,21 @@ def upload_calculation(
             # Note: this will possibly overwrite files
             for root, dirnames, filenames in code.base.repository.walk():
                 # mkdir of root
-                client.makedirs(root, ignore_existing=True)
+                client.makedirs(str(root), ignore_existing=True)
 
                 # remotely mkdir first
                 for dirname in dirnames:
-                    client.makedirs((root / dirname), ignore_existing=True)
+                    client.makedirs(str(root / dirname), ignore_existing=True)
 
                 # TODO once #2579 is implemented, use the `node.open` method instead of the named temporary file in
                 # combination with the new `client.put_object_from_filelike`
                 # Since the content of the node could potentially be binary, we read the raw bytes and pass them on
                 for filename in filenames:
                     with NamedTemporaryFile(mode='wb+') as handle:
-                        content = code.base.repository.get_object_content((pathlib.Path(root) / filename), mode='rb')
+                        content = code.base.repository.get_object_content(str(pathlib.Path(root) / filename), mode='rb')
                         handle.write(content)
                         handle.flush()
-                        client.put(handle.name, (root / filename))
+                        client.put(handle.name, str(root / filename))
             client.chmod(code.filepath_executable, 0o755)  # rwxr-xr-x
 
     # local_copy_list is a list of tuples, each with (uuid, dest_path, rel_path)
@@ -208,6 +210,7 @@ def upload_calculation(
     for uuid, filename, target in local_copy_list:
         logger.debug(f'[submission of calculation {node.uuid}] copying local file/folder to {target}')
 
+        data_node: Optional[Node]
         try:
             data_node = load_node(uuid=uuid)
         except exceptions.NotExistent:
@@ -290,7 +293,7 @@ def upload_calculation(
 
         if remote_copy_list:
             filepath = os.path.join(workdir, '_aiida_remote_copy_list.txt')
-            with open(filepath, 'w', encoding='utf-8') as handle:  # type: ignore[assignment]
+            with open(filepath, 'w', encoding='utf-8') as handle:
                 for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
                     handle.write(
                         'would have copied {} to {} in working directory on remote {}'.format(
@@ -300,7 +303,7 @@ def upload_calculation(
 
         if remote_symlink_list:
             filepath = os.path.join(workdir, '_aiida_remote_symlink_list.txt')
-            with open(filepath, 'w', encoding='utf-8') as handle:  # type: ignore[assignment]
+            with open(filepath, 'w', encoding='utf-8') as handle:
                 for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_symlink_list:
                     handle.write(
                         'would have created symlinks from {} to {} in working directory on remote {}'.format(
@@ -335,7 +338,7 @@ def upload_calculation(
             if relpath not in provenance_exclude_list and all(
                 dirname not in provenance_exclude_list for dirname in dirnames
             ):
-                with open(filepath, 'rb') as handle:  # type: ignore[assignment]
+                with open(filepath, 'rb') as handle:
                     node.base.repository._repository.put_object_from_filelike(handle, relpath)  # pylint: disable=protected-access
 
     # Since the node is already stored, we cannot use the normal repository interface since it will raise a
@@ -372,7 +375,9 @@ def submit_calculation(calculation: CalcJobNode, client: ComputeClientProtocol) 
         return job_id
 
     submit_script_filename = calculation.get_option('submit_script_filename')
+    assert submit_script_filename is not None
     workdir = calculation.get_remote_workdir()
+    assert workdir is not None
     result = client.submit_from_script(workdir, submit_script_filename)
 
     if isinstance(result, str):
@@ -397,7 +402,7 @@ def stash_calculation(calculation: CalcJobNode, client: ComputeClientProtocol) -
 
     logger_extra = get_dblogger_extra(calculation)
 
-    stash_options = calculation.get_option('stash')
+    stash_options: Any = calculation.get_option('stash')
     stash_mode = stash_options.get('mode', StashMode.COPY.value)
     source_list = stash_options.get('source_list', [])
 
@@ -413,7 +418,7 @@ def stash_calculation(calculation: CalcJobNode, client: ComputeClientProtocol) -
     EXEC_LOGGER.debug(f'stashing files for calculation<{calculation.pk}>: {source_list}', extra=logger_extra)
 
     uuid = calculation.uuid
-    source_basepath = pathlib.Path(calculation.get_remote_workdir())
+    source_basepath = pathlib.Path(calculation.get_remote_workdir() or '')
     target_basepath = pathlib.Path(stash_options['target_base']) / uuid[:2] / uuid[2:4] / uuid[4:]
 
     for source_filename in source_list:
@@ -481,21 +486,26 @@ def retrieve_calculation(
     retrieved_files = FolderData()
 
     with client:
-        client.chdir(workdir)
+        client.chdir(workdir)  # type: ignore
 
         # First, retrieve the files of folderdata
         retrieve_list = calculation.get_retrieve_list()
         retrieve_temporary_list = calculation.get_retrieve_temporary_list()
 
         with SandboxFolder(filepath_sandbox) as folder:
-            retrieve_files_from_list(calculation, client, folder.abspath, retrieve_list)
+            retrieve_files_from_list(calculation, client, folder.abspath, retrieve_list)  # type: ignore
             # Here I retrieved everything; now I store them inside the calculation
             retrieved_files.base.repository.put_object_from_tree(folder.abspath)
 
         # Retrieve the temporary files in the retrieved_temporary_folder if any files were
         # specified in the 'retrieve_temporary_list' key
         if retrieve_temporary_list:
-            retrieve_files_from_list(calculation, client, retrieved_temporary_folder, retrieve_temporary_list)
+            retrieve_files_from_list(
+                calculation,
+                client,
+                retrieved_temporary_folder,
+                retrieve_temporary_list  # type: ignore
+            )
 
             # Log the files that were retrieved in the temporary folder
             for filename in os.listdir(retrieved_temporary_folder):

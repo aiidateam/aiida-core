@@ -105,7 +105,6 @@ repos:
                 aiida/common/extendeddicts.py|
                 aiida/common/hashing.py|
                 aiida/common/utils.py|
-                aiida/engine/daemon/execmanager.py|
                 aiida/engine/processes/calcjobs/manager.py|
                 aiida/engine/processes/calcjobs/monitors.py|
                 aiida/engine/processes/calcjobs/tasks.py|

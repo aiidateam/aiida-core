@@ -80,7 +80,7 @@ async def task_upload_job(
 
     if node.get_state() == CalcJobState.SUBMITTING:
         logger.warning(f'CalcJob<{node.pk}> already marked as SUBMITTING, skipping task_update_job')
-        return
+        return False
 
     initial_interval = get_config_option(RETRY_INTERVAL_OPTION)
     max_attempts = get_config_option(MAX_ATTEMPTS_OPTION)
@@ -140,9 +140,10 @@ async def task_submit_job(
     :raises: TransportTaskException if after the maximum number of retries the submit task still excepts
     """
     if node.get_state() == CalcJobState.WITHSCHEDULER:
-        assert node.get_job_id() is not None, 'job is WITHSCHEDULER, however, it does not have a job id'
+        job_id = node.get_job_id()
+        assert job_id is not None, 'job is WITHSCHEDULER, however, it does not have a job id'
         logger.warning(f'CalcJob<{node.pk}> already marked as WITHSCHEDULER, skipping task_submit_job')
-        return node.get_job_id()
+        return job_id
 
     initial_interval = get_config_option(RETRY_INTERVAL_OPTION)
     max_attempts = get_config_option(MAX_ATTEMPTS_OPTION)
@@ -261,7 +262,7 @@ async def task_monitor_job(
 
         with client_queue.request_client(authinfo) as request:
             client = await cancellable.with_interrupt(request)
-            client.chdir(node.get_remote_workdir())
+            client.chdir(node.get_remote_workdir() or '')
             return monitors.process(node, client)
 
     try:
@@ -311,17 +312,18 @@ async def task_retrieve_job(
         with client_queue.request_client(authinfo) as request:
             client = await cancellable.with_interrupt(request)
 
-            if node.get_job_id() is None:
+            job_id = node.get_job_id()
+            if job_id is None:
                 logger.warning(f'there is no job id for CalcJobNoe<{node.pk}>: skipping `get_detailed_job_info`')
                 return execmanager.retrieve_calculation(node, client, retrieved_temporary_folder)
 
             try:
-                detailed_job_info = client.get_detailed_job_info(node.get_job_id())
+                detailed_job_info = client.get_detailed_job_info(job_id)
             except FeatureNotAvailable:
                 logger.info(f'detailed job info not available for scheduler of CalcJob<{node.pk}>')
                 node.set_detailed_job_info(None)
             else:
-                node.set_detailed_job_info(detailed_job_info)
+                node.set_detailed_job_info(detailed_job_info)  # type: ignore[arg-type]
 
             return execmanager.retrieve_calculation(node, client, retrieved_temporary_folder)
 
@@ -450,7 +452,7 @@ class Waiting(plumpy.process_states.Waiting):
         super().__init__(process, done_callback, msg, data)
         self._task: InterruptableFuture | None = None
         self._killing: plumpy.futures.Future | None = None
-        self._command: Callable[..., Any] | None = None
+        self._command: str | None = None
         self._monitor_result: CalcJobMonitorResult | None = None
         self._monitors: CalcJobMonitors | None = None
 
@@ -506,12 +508,14 @@ class Waiting(plumpy.process_states.Waiting):
                     result = self.submit()
 
             elif self._command == SUBMIT_COMMAND:
-                result = await self._launch_task(task_submit_job, node, client_queue)
+                task_result = await self._launch_task(task_submit_job, node, client_queue)
 
-                if isinstance(result, ExitCode):
+                if isinstance(task_result, ExitCode):
                     # The compute client returned an exit code from ``submit_from_script`` indicating the
                     # job submission failed due to a non-transient problem and the job should be terminated.
-                    return self.create_state(ProcessState.RUNNING, self.process.terminate, result)
+                    return self.create_state(
+                        ProcessState.RUNNING, self.process.terminate, task_result
+                    )  # type: ignore[return-value]
 
                 result = self.update()
 
@@ -598,7 +602,7 @@ class Waiting(plumpy.process_states.Waiting):
         monitor_result = await self._launch_task(task_monitor_job, node, client_queue, monitors=monitors)
 
         if monitor_result and monitor_result.action == CalcJobMonitorAction.DISABLE_SELF:
-            monitors.monitors[monitor_result.key].disabled = True
+            monitors.monitors[monitor_result.key].disabled = True  # type: ignore[index]
 
         if monitor_result is not None:
             self._monitor_result = monitor_result

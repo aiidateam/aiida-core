@@ -268,7 +268,7 @@ Using kerberos tokens
 
 If the remote machine requires authentication through a Kerberos token (that you need to obtain before using ssh), you typically need to
 
- * install ``libffi`` (``sudo apt-get install libffi-dev`` under Ubuntu)
- * install the ``ssh_kerberos`` extra during the installation of aiida-core (see :ref:`intro:install:setup`).
+* install ``libffi`` (``sudo apt-get install libffi-dev`` under Ubuntu)
+* install the ``ssh_kerberos`` extra during the installation of aiida-core (see :ref:`intro:install:setup`).
 
 If you provide all necessary ``GSSAPI`` options in your ``~/.ssh/config`` file, ``verdi computer configure`` should already pick up the appropriate values for all the gss-related options.

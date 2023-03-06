@@ -276,9 +276,9 @@ The ``DiffCalculation`` example, defines the following exit code:
 
 An ``exit_code`` defines:
 
- * an exit status (a positive integer, following the :ref:`topics:processes:usage:exit_code_conventions`),
- * a label that can be used to reference the code in the |parse| method (through the ``self.exit_codes`` property, as shown below), and
- * a message that provides a more detailed description of the problem.
+* an exit status (a positive integer, following the :ref:`topics:processes:usage:exit_code_conventions`),
+* a label that can be used to reference the code in the |parse| method (through the ``self.exit_codes`` property, as shown below), and
+* a message that provides a more detailed description of the problem.
 
 In order to inform AiiDA about a failed calculation, simply return from the ``parse`` method the exit code that corresponds to the detected issue.
 Here is a more complete version of the example |Parser| presented in the previous section:
@@ -328,7 +328,7 @@ Registering entry points
 
 With your ``calculations.py`` and ``parsers.py`` files at hand, let's register entry points for the plugins they contain:
 
- * Move your two scripts into a subfolder ``aiida_diff_tutorial``:
+* Move your two scripts into a subfolder ``aiida_diff_tutorial``:
 
    .. code-block:: console
 
@@ -338,7 +338,7 @@ With your ``calculations.py`` and ``parsers.py`` files at hand, let's register e
 
    You have just created an ``aiida_diff_tutorial`` Python *package*!
 
- * Add a minimal set of metadata for your package by writing a ``pyproject.toml`` file:
+* Add a minimal set of metadata for your package by writing a ``pyproject.toml`` file:
 
     .. code-block:: toml
 
@@ -370,7 +370,7 @@ With your ``calculations.py`` and ``parsers.py`` files at hand, let's register e
         This allows for the project metadata to be fully specified in the pyproject.toml file, using the PEP 621 format.
 
 
- * Install your new ``aiida-diff-tutorial`` plugin package.
+* Install your new ``aiida-diff-tutorial`` plugin package.
 
    .. code-block:: console
 
@@ -395,7 +395,7 @@ Running a calculation
 With the entry points set up, you are ready to launch your first calculation with the new plugin:
 
 
- * If you haven't already done so, :ref:`set up your computer<how-to:run-codes:computer>`.
+* If you haven't already done so, :ref:`set up your computer<how-to:run-codes:computer>`.
    In the following we assume it to be the localhost:
 
     .. code-block:: console
@@ -403,7 +403,7 @@ With the entry points set up, you are ready to launch your first calculation wit
         $ verdi computer setup -L localhost -H localhost -T core.local -S core.direct -w `echo $PWD/work` -n
         $ verdi computer configure core.local localhost --safe-interval 5 -n
 
- *  Create the input files for our calculation
+*  Create the input files for our calculation
 
     .. code-block:: console
 
@@ -412,7 +412,7 @@ With the entry points set up, you are ready to launch your first calculation wit
         $ mkdir input_files
         $ mv file1.txt file2.txt input_files
 
- * Write a ``launch.py`` script:
+* Write a ``launch.py`` script:
 
     .. literalinclude:: ./include/snippets/plugins/launch.py
       :language: python
@@ -423,7 +423,7 @@ With the entry points set up, you are ready to launch your first calculation wit
 
         This code is automatically set on the ``code`` input port of the builder and passed as an input to the calculation plugin.
 
- * Launch the calculation:
+* Launch the calculation:
 
     .. code-block:: console
 
@@ -449,13 +449,13 @@ With the entry points set up, you are ready to launch your first calculation wit
 
 Finally instead of running your calculation in the current shell, you can submit your calculation to the AiiDA daemon:
 
- * (Re)start the daemon to update its Python environment:
+* (Re)start the daemon to update its Python environment:
 
     .. code-block:: console
 
         $ verdi daemon restart --reset
 
- * Update your launch script to use:
+* Update your launch script to use:
 
     .. code-block:: python
 
@@ -469,7 +469,7 @@ Finally instead of running your calculation in the current shell, you can submit
         ``node`` is the |CalcJobNode| representing the state of the underlying calculation process (which may not be finished yet).
 
 
- * Launch the calculation:
+* Launch the calculation:
 
     .. code-block:: console
 

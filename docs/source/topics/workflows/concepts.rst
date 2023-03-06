@@ -7,8 +7,8 @@ Concepts
 A workflow in AiiDA is a process (see the :ref:`process section<topics:processes:concepts>` for details) that calls other workflows and calculations and optionally *returns* data and as such can encode the logic of a typical scientific workflow.
 Currently, there are two ways of implementing a workflow process:
 
- * :ref:`work functions<topics:workflows:concepts:workfunctions>`
- * :ref:`work chains<topics:workflows:concepts:workchains>`
+* :ref:`work functions<topics:workflows:concepts:workfunctions>`
+* :ref:`work chains<topics:workflows:concepts:workchains>`
 
 The first one is the simplest of the two and is basically a python function that is magically transformed into a process.
 This is ideal for workflows that are not very computationally intensive and can be easily implemented in a python function.

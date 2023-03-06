@@ -44,8 +44,8 @@ Possible status codes are:
 
 The header is a standard HTTP response header with the additional custom fields
 
- * ``X-Total-Counts`` and
- * ``Link`` (only if paginated results are required, see the Pagination section).
+* ``X-Total-Counts`` and
+* ``Link`` (only if paginated results are required, see the Pagination section).
 
 The ``data`` field of the JSON object contains the main payload returned by the API.
 The JSON object further contains information on the request in the ``method``, ``url``, ``url_root``, ``path``, ``query_string``, and ``resource_type`` fields.

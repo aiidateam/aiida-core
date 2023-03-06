@@ -515,7 +515,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         """
         try:
             # TODO needs fixing
-            default = self.get_client_class()._transport_class.DEFAULT_MINIMUM_JOB_POLL_INTERVAL  # pylint: disable=protected-access
+            default = self.get_client_class()._transport_class.DEFAULT_MINIMUM_JOB_POLL_INTERVAL  # type: ignore # pylint: disable=protected-access
         except (exceptions.ConfigurationError, AttributeError):
             default = self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT
 
@@ -584,7 +584,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
         :return: Boolean, ``True`` if the computer is configured for the current default user, ``False`` otherwise.
         """
-        return self.is_user_configured(users.User.collection(self.backend).get_default())
+        return self.is_user_configured(users.User.collection(self.backend).get_default())  # type: ignore[arg-type]
 
     def is_user_configured(self, user: 'User') -> bool:
         """
@@ -673,6 +673,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
         client_cls = self.get_client_class()
         user = user or users.User.collection(self.backend).get_default()
+        assert user is not None
         valid_keys = set(client_cls.get_auth_params())
 
         if not set(kwargs.keys()).issubset(valid_keys):
@@ -699,7 +700,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         :param user: the user to to get the configuration for, otherwise default user
         """
         user = user or users.User.collection(self.backend).get_default()
-
+        assert user is not None
         try:
             authinfo = self.get_authinfo(user)
         except exceptions.NotExistent:

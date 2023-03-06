@@ -118,7 +118,6 @@ repos:
                 aiida/manage/tests/main.py|
                 aiida/manage/tests/pytest_fixtures.py|
                 aiida/orm/comments.py|
-                aiida/orm/computers.py|
                 aiida/orm/implementation/storage_backend.py|
                 aiida/orm/nodes/caching.py|
                 aiida/orm/nodes/comments.py|

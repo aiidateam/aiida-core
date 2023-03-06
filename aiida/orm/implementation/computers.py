@@ -10,7 +10,7 @@
 """Backend specific computer objects and methods"""
 import abc
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from .entities import BackendCollection, BackendEntity
 
@@ -99,6 +99,10 @@ class BackendComputerCollection(BackendCollection[BackendComputer]):
     """The collection of Computer entries."""
 
     ENTITY_CLASS = BackendComputer
+
+    @abc.abstractmethod
+    def list_names(self) -> List[str]:
+        """Return a list of all computer names."""
 
     @abc.abstractmethod
     def delete(self, pk: int) -> None:

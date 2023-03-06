@@ -7,8 +7,8 @@ Concepts
 A calculation is a process (see the :ref:`process section<topics:processes:concepts>` for details) that *creates* new data.
 Currently, there are two ways of implementing a calculation process:
 
- * :ref:`calculation function<topics:calculations:concepts:calcfunctions>`
- * :ref:`calculation job<topics:calculations:concepts:calcjobs>`
+* :ref:`calculation function<topics:calculations:concepts:calcfunctions>`
+* :ref:`calculation job<topics:calculations:concepts:calcjobs>`
 
 The first one is the simplest of the two and is basically a python function that is magically transformed into a process.
 This is ideal for calculations that are not very computationally intensive and can be easily implemented in a python function.
@@ -155,10 +155,10 @@ Transport tasks
 To arrive at the provenance graph shown above in :numref:`fig_calculation_jobs_provenance_arithmetic_add`, the engine performed quite some tasks.
 When a calculation job is launched, the engine will take it roughly through the following steps:
 
- * **Upload**: the calculation job implementation is used to transform the input nodes into the required input files, which are uploaded to a 'working' directory on the target machine
- * **Submit**: to execute the calculation, a job is submitted to the scheduler of the computer on which the input `code` is configured.
- * **Update**: the engine will query the scheduler to check for the status of the calculation job
- * **Retrieve**: once the job has finished, the engine will retrieve the output files, specified by the calculation plugin and store them in a node attached as an output node to the calculation
+* **Upload**: the calculation job implementation is used to transform the input nodes into the required input files, which are uploaded to a 'working' directory on the target machine
+* **Submit**: to execute the calculation, a job is submitted to the scheduler of the computer on which the input `code` is configured.
+* **Update**: the engine will query the scheduler to check for the status of the calculation job
+* **Retrieve**: once the job has finished, the engine will retrieve the output files, specified by the calculation plugin and store them in a node attached as an output node to the calculation
 
 All of these tasks require the engine to interact with the computer, or machine, that will actually run the external code.
 Since the :py:class:`~aiida.orm.nodes.data.code.abstract.AbstractCode` that is used as an input for the calculation job, which is configured for a specific :py:class:`~aiida.orm.computers.Computer`, the engine knows exactly how to execute all these tasks.

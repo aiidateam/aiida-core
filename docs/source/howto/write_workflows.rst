@@ -10,8 +10,8 @@ Writing workflows
 A workflow in AiiDA is a :ref:`process <topics:processes:concepts>` that calls other workflows and calculations and optionally *returns* data and as such can encode the logic of a typical scientific workflow.
 Currently, there are two ways of implementing a workflow process:
 
- * :ref:`work functions<topics:workflows:concepts:workfunctions>`
- * :ref:`work chains<topics:workflows:concepts:workchains>`
+* :ref:`work functions<topics:workflows:concepts:workfunctions>`
+* :ref:`work chains<topics:workflows:concepts:workchains>`
 
 Here we present a brief introduction on how to write both workflow types.
 

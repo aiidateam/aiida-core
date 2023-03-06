@@ -6,11 +6,11 @@ How to interact with AiiDA
 
 There are a variety of manners to interact with AiiDA:
 
- * :ref:`Through the command line interface <how-to:interact-cli>`
- * :ref:`Through scripts <how-to:interact-scripts>`
- * :ref:`Through interactive shells <how-to:interact-shell>`
- * :ref:`Through interactive notebooks <how-to:interact-notebook>`
- * :ref:`Through the REST API <how-to:interact-restapi>`
+* :ref:`Through the command line interface <how-to:interact-cli>`
+* :ref:`Through scripts <how-to:interact-scripts>`
+* :ref:`Through interactive shells <how-to:interact-shell>`
+* :ref:`Through interactive notebooks <how-to:interact-notebook>`
+* :ref:`Through the REST API <how-to:interact-restapi>`
 
 
 .. _how-to:interact-cli:

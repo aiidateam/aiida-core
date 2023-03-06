@@ -65,14 +65,14 @@ Although in that case the relationship is "mandatory", this doesn't need to be t
 
 The following entities have a many-to-one relationship:
 
- * Many `nodes` can be created by the same `user`.
- * Many `nodes` can point to the same `computer`.
- * Many `groups` can be created by the same `user`.
- * Many `authinfos` can be set for the same `user`.
- * Many `authinfos` can be set for the same `computer`.
- * Many `comments` can be created by the same `user`.
- * Many `comments` can be attached to the same `node`.
- * Many `logs` can be attached to the same `node`.
+* Many `nodes` can be created by the same `user`.
+* Many `nodes` can point to the same `computer`.
+* Many `groups` can be created by the same `user`.
+* Many `authinfos` can be set for the same `user`.
+* Many `authinfos` can be set for the same `computer`.
+* Many `comments` can be created by the same `user`.
+* Many `comments` can be attached to the same `node`.
+* Many `logs` can be attached to the same `node`.
 
 The way to keep track of these relationships is by inserting a `foreign key` column in the table of the "many" entity that points to the corresponding id value of the "one" entity they are related to.
 For example, there is a ``user_id`` foreign key column in the **db_dbnode** table that stores the id of the user that created each node.

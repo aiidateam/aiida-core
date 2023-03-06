@@ -14,8 +14,8 @@ Parameters
 ==========
 Parameters to ``verdi`` commands come in two flavors:
 
-  * Arguments: positional parameters, e.g. ``123`` in ``verdi process kill 123``
-  * Options: announced by a flag (e.g. ``-f`` or ``--flag``), potentially followed by a value. E.g. ``verdi process list --limit 10`` or ``verdi process -h``.
+* Arguments: positional parameters, e.g. ``123`` in ``verdi process kill 123``
+* Options: announced by a flag (e.g. ``-f`` or ``--flag``), potentially followed by a value. E.g. ``verdi process list --limit 10`` or ``verdi process -h``.
 
 .. _topics:cli:multi_value_options:
 
@@ -54,16 +54,16 @@ For example, ``verdi process kill --help`` shows::
 
 All help strings consist of three parts:
 
-  * A ``Usage:`` line describing how to invoke the command
-  * A description of the command's functionality
-  * A list of the available options
+* A ``Usage:`` line describing how to invoke the command
+* A description of the command's functionality
+* A list of the available options
 
 The ``Usage:`` line encodes information on the command's parameters, e.g.:
 
- * ``[OPTIONS]``: this command takes one (or more) options
- * ``PROCESSES``: this command *requires* a process as a positional argument
- * ``[PROCESSES]``: this command takes a process as an *optional* positional argument
- * ``[PROCESSES]...``: this command takes one or more processes as *optional* positional arguments
+* ``[OPTIONS]``: this command takes one (or more) options
+* ``PROCESSES``: this command *requires* a process as a positional argument
+* ``[PROCESSES]``: this command takes a process as an *optional* positional argument
+* ``[PROCESSES]...``: this command takes one or more processes as *optional* positional arguments
 
 Multi-value options are followed by ``...`` in the help string and the ``Usage:`` line of the corresponding command will contain the 'endopts' marker.
 For example::
@@ -137,9 +137,9 @@ Identifiers
 When working with AiiDA entities, you need a way to *refer* to them on the command line.
 Any entity in AiiDA can be addressed via three identifiers:
 
- * "Primary Key" (PK): An integer, e.g. ``723``, identifying your entity within your database (automatically assigned)
- * `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)>`_ (UUID): A string, e.g. ``ce81c420-7751-48f6-af8e-eb7c6a30cec3`` identifying your entity globally (automatically assigned)
- * Label: A human-readable string, e.g. ``test_calculation`` (manually assigned)
+* "Primary Key" (PK): An integer, e.g. ``723``, identifying your entity within your database (automatically assigned)
+* `Universally Unique Identifier <https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_(random)>`_ (UUID): A string, e.g. ``ce81c420-7751-48f6-af8e-eb7c6a30cec3`` identifying your entity globally (automatically assigned)
+* Label: A human-readable string, e.g. ``test_calculation`` (manually assigned)
 
 .. note::
 
@@ -152,9 +152,9 @@ In almost all cases, this will work out of the box.
 Since command line parameters are passed as strings, AiiDA needs to deduce the type of identifier from its content, which can fail in edge cases (see :ref:`topics:cli:identifier_resolution` for details).
 You can take the following precautions in order to avoid such edge cases:
 
-  * PK: no precautions needed
-  * UUID: no precautions needed for full UUIDs. Partial UUIDs should include at least one non-numeric character or dash
-  * Label: add an exclamation mark ``!`` at the end of the identifier in order to force interpretation as a label
+* PK: no precautions needed
+* UUID: no precautions needed for full UUIDs. Partial UUIDs should include at least one non-numeric character or dash
+* Label: add an exclamation mark ``!`` at the end of the identifier in order to force interpretation as a label
 
 
 .. _topics:cli:identifier_resolution:
@@ -164,9 +164,9 @@ Implementation of identifier resolution
 
 The logic for deducing the identifier type is as follows:
 
- 1. Try interpreting the identifier as a PK (integer)
- 2. If this fails, try interpreting the identifier as a UUID (full or partial)
- 3. If this fails, interpret the identifier as a label
+1. Try interpreting the identifier as a PK (integer)
+2. If this fails, try interpreting the identifier as a UUID (full or partial)
+3. If this fails, interpret the identifier as a label
 
 The following example illustrates edge cases that can arise in this logic:
 
@@ -178,9 +178,9 @@ PK   UUID                                   LABEL
 12   3df34a1e-5215-4e1a-b626-7f75b9586ef5   deadbeef
 ===  =====================================  ========
 
- * trying to identify the first entity by its partial UUID ``12`` would match the third entity by its PK instead
- * trying to identify the second entity by its label ``10`` would match the first entity by its PK instead
- * trying to identify the third entity by its label ``deadbeef`` would match the second entity on its partial UUID ``deadbeef`` instead
+* trying to identify the first entity by its partial UUID ``12`` would match the third entity by its PK instead
+* trying to identify the second entity by its label ``10`` would match the first entity by its PK instead
+* trying to identify the third entity by its label ``deadbeef`` would match the second entity on its partial UUID ``deadbeef`` instead
 
 The ambiguity between a partial UUID and a PK can always be resolved by including a longer substring of the UUID, eventually rendering the identifier no longer a valid PK.
 

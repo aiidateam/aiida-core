@@ -12,6 +12,7 @@ py:class AbstractContextManager
 py:class BinaryIO
 py:class IO
 py:class Path
+py:class PurePath
 py:class str | list[str]
 py:class str | Path
 py:class typing.AbstractContextManager
@@ -26,6 +27,7 @@ py:class ReturnType
 py:class SelfTv
 py:class CollectionType
 py:class EntityType
+py:class EntityTv
 py:class EntityClsType
 py:class ProjectType
 py:class BackendEntityType
@@ -100,6 +102,25 @@ py:func QueryBuilder._get_ormclass
 py:class aiida.storage.sqlite_zip.models.DbGroupNode
 py:class aiida.engine.processes.workchains.context.ToContext
 py:func aiida.orm.implementation.BackendQueryBuilder
+py:obj aiida.orm.entities.BackendEntityTv
+py:class aiida.orm.entities.BackendEntityTv
+py:obj aiida.orm.implementation.entities.BackendEntityTv
+py:class aiida.orm.implementation.entities.BackendEntityTv
+py:class aiida.orm.implementation.nodes.BackendNodeTv
+py:obj aiida.orm.entities.CollectionTv
+py:class aiida.orm.entities.CollectionTv
+py:class aiida.orm.nodes.data.enum.EnumTv
+py:obj aiida.orm.entities.EntityTv
+py:class aiida.orm.entities.EntityTv
+py:class aiida.common.lang.MethodTv
+py:obj aiida.storage.psql_dos.orm.entities.ModelTv
+py:obj aiida.orm.nodes.node.NodeTv
+py:class aiida.common.lang.ReturnTv
+py:obj aiida.common.lang.ReturnTv
+py:class aiida.client.implementation.SelfTv
+py:class aiida.client.protocol.SelfTv
+py:class aiida.engine.utils.T
+py:class aiida.engine.processes.calcjobs.tasks.T
 
 ### third-party packages
 # Note: These exceptions are needed if

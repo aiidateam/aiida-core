@@ -2,10 +2,10 @@
 """Tests for the :mod:`aiida.manage.tests.pytest_fixtures` module."""
 import uuid
 
+from aiida.client.implementation import ComputeClientXY
 from aiida.manage.configuration import get_config
 from aiida.manage.configuration.config import Config
 from aiida.orm import Computer
-from aiida.transports import Transport
 
 
 def test_profile_config():
@@ -32,8 +32,8 @@ def test_aiida_computer_local(aiida_computer_local):
     assert computer.hostname == 'localhost'
     assert computer.transport_type == 'core.local'
 
-    with computer.get_transport() as transport:
-        assert isinstance(transport, Transport)
+    with computer.get_client() as client:
+        assert isinstance(client, ComputeClientXY)
 
     # Calling it again with the same label should simply return the existing computer
     computer_alt = aiida_computer_local(label=computer.label)
@@ -54,8 +54,8 @@ def test_aiida_computer_ssh(aiida_computer_ssh):
     assert computer.hostname == 'localhost'
     assert computer.transport_type == 'core.ssh'
 
-    with computer.get_transport() as transport:
-        assert isinstance(transport, Transport)
+    with computer.get_client() as client:
+        assert isinstance(client, ComputeClientXY)
 
     # Calling it again with the same label should simply return the existing computer
     computer_alt = aiida_computer_ssh(label=computer.label)

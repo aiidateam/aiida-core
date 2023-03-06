@@ -515,7 +515,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         """
         try:
             # TODO needs fixing
-            default = self.get_client_class().DEFAULT_MINIMUM_JOB_POLL_INTERVAL
+            default = self.get_client_class()._transport_class.DEFAULT_MINIMUM_JOB_POLL_INTERVAL  # pylint: disable=protected-access
         except (exceptions.ConfigurationError, AttributeError):
             default = self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT
 

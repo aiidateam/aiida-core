@@ -420,7 +420,7 @@ def stash_calculation(calculation: CalcJobNode, client: ComputeClientProtocol) -
 
         if client.has_magic(source_filename):
             copy_instructions = []
-            for globbed_filename in client.glob(str(source_basepath / source_filename)):
+            for globbed_filename in client.iglob(str(source_basepath / source_filename)):
                 target_filepath = target_basepath / pathlib.Path(globbed_filename).relative_to(source_basepath)
                 copy_instructions.append((globbed_filename, target_filepath))
         else:
@@ -582,7 +582,7 @@ def retrieve_files_from_list(
             tmp_rname, tmp_lname, depth = item
             # if there are more than one file I do something differently
             if client.has_magic(tmp_rname):
-                remote_names = client.glob(tmp_rname)
+                remote_names = list(client.iglob(tmp_rname))
                 local_names = []
                 for rem in remote_names:
                     if depth is None:
@@ -601,7 +601,7 @@ def retrieve_files_from_list(
                         os.makedirs(new_folder)
         else:  # it is a string
             if client.has_magic(item):
-                remote_names = client.glob(item)
+                remote_names = list(client.iglob(item))
                 local_names = [os.path.split(rem)[1] for rem in remote_names]
             else:
                 remote_names = [item]

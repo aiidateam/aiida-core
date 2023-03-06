@@ -42,7 +42,9 @@ class JobsList:
     See the :py:class:`~aiida.engine.processes.calcjobs.manager.JobManager` for example usage.
     """
 
-    def __init__(self, authinfo: AuthInfo, client_queue: 'ComputeClientQueue', last_updated: Optional[float] = None):
+    def __init__(
+        self, authinfo: AuthInfo, client_queue: 'ComputeClientQueue', last_updated: Optional[float] = None
+    ) -> None:
         """Construct an instance for the given authinfo and compute client queue.
 
         :param authinfo: The authinfo used to check the jobs list
@@ -105,7 +107,7 @@ class JobsList:
 
             # Update the last update time and clear the jobs cache
             self._last_updated = time.time()
-            jobs_cache = {}
+            jobs_cache: Dict[Hashable, 'JobInfo'] = {}
             self.logger.info(f'AuthInfo<{self._authinfo.pk}>: successfully retrieved status of active jobs')
 
             for job_id, job_info in client_response.items():
@@ -262,7 +264,7 @@ class JobManager:
         :param client_queue: the queue for requesting a compute client
         """
         self._client_queue = client_queue
-        self._job_lists: Dict[Hashable, 'JobInfo'] = {}
+        self._job_lists: Dict[Hashable, JobsList] = {}
 
     def get_jobs_list(self, authinfo: AuthInfo) -> JobsList:
         """Get or create a new `JobLists` instance for the given authinfo.

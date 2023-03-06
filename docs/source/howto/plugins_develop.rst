@@ -101,19 +101,19 @@ Registering plugins through entry points
 An AiiDA plugin is an extension of AiiDA that announces itself by means of a new *entry point* (for details, see :ref:`topics:plugins:entrypoints`).
 Adding a new entry point consists of the following steps:
 
- #. Deciding a name.
-    We *strongly* suggest to start the name of each entry point with the name of the plugin package (omitting the 'aiida-' prefix).
-    For a package ``aiida-mycode``, this will usually mean ``"mycode.<something>"``
+#. Deciding a name.
+   We *strongly* suggest to start the name of each entry point with the name of the plugin package (omitting the 'aiida-' prefix).
+   For a package ``aiida-mycode``, this will usually mean ``"mycode.<something>"``
 
- #. Finding the right entry point group. You can list the entry point groups defined by AiiDA via ``verdi plugin list``.
-    For a documentation of the groups, see :ref:`topics:plugins:entrypointgroups`.
+#. Finding the right entry point group. You can list the entry point groups defined by AiiDA via ``verdi plugin list``.
+   For a documentation of the groups, see :ref:`topics:plugins:entrypointgroups`.
 
- #. Adding the entry point to the ``entry_points`` field in the ``pyproject.toml`` file::
+#. Adding the entry point to the ``entry_points`` field in the ``pyproject.toml`` file::
 
-     ...
-     [project.entry-points."aiida.calculations"]
-     "mycode.<something>" = "aiida_mycode.calcs.some:MysomethingCalculation"
-     ...
+      ...
+      [project.entry-points."aiida.calculations"]
+      "mycode.<something>" = "aiida_mycode.calcs.some:MysomethingCalculation"
+      ...
 
 Your new entry point should now show up in ``verdi plugin list aiida.calculations``.
 

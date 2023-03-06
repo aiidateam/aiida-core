@@ -24,14 +24,14 @@ You can list these using the :ref:`verdi plugin<reference:command-line:verdi-plu
 Executing ``verdi plugin list aiida.data`` should display something like::
 
     Registered entry points for aiida.data:
-    * array
-    * bool
-    * code
-    * dict
-    * float
-    * folder
-    * list
-    * singlefile
+    * core.array
+    * core.bool
+    * core.code
+    * core.dict
+    * core.float
+    * core.folder
+    * core.list
+    * core.singlefile
 
     Info: Pass the entry point as an argument to display detailed information
 
@@ -101,15 +101,15 @@ Once stored, this data can always be retrieved through the ``source`` property:
 
 The following list shows all the keys that are allowed to be set in the ``source`` dictionary:
 
-* 'db_name': The name of the external database.
-* 'db_uri': The base URI of the external database.
-* 'uri': The exact URI of where the data can be retrieved. Ideally this is a persistent URI.
-* 'id': The external ID with which the data is identified in the external database.
-* 'version': The version of the data, if any.
-* 'extras': Optional dictionary with other fields for source description.
-* 'source_md5': MD5 checksum of the data.
-* 'description': Human-readable free form description of the data's source.
-* 'license': A string with the type of license that applies to the data, if any.
+* ``db_name``: The name of the external database.
+* ``db_uri``: The base URI of the external database.
+* ``uri``: The exact URI of where the data can be retrieved. Ideally this is a persistent URI.
+* ``id``: The external ID with which the data is identified in the external database.
+* ``version``: The version of the data, if any.
+* ``extras``: Optional dictionary with other fields for source description.
+* ``source_md5``: MD5 checksum of the data.
+* ``description``: Human-readable free form description of the data's source.
+* ``license``: A string with the type of license that applies to the data, if any.
 
 If any other keys are defined, an exception will be raised by the constructor.
 

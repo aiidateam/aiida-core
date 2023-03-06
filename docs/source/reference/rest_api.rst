@@ -34,13 +34,13 @@ The HTTP response of the REST API consists of a status code, a header, and a JSO
 
 Possible status codes are:
 
-    #. 200 for successful requests.
-    #. 400 for bad requests.
-       The JSON object contains an error message describing the issue with the request.
-    #. 500 for a generic internal server error.
-       The JSON object contains a generic error message.
-    #. 404 for invalid URL.
-       The request does not match any resource, and no JSON is returned.
+#. 200 for successful requests.
+#. 400 for bad requests.
+   The JSON object contains an error message describing the issue with the request.
+#. 500 for a generic internal server error.
+   The JSON object contains a generic error message.
+#. 404 for invalid URL.
+   The request does not match any resource, and no JSON is returned.
 
 The header is a standard HTTP response header with the additional custom fields
 
@@ -155,7 +155,7 @@ Nodes
           "url_root": "http://localhost:5000/"
         }
 
-#. Get a list of all available |Node| types from the database.
+#.  Get a list of all available |Node| types from the database.
 
     REST URL::
 
@@ -184,7 +184,7 @@ Nodes
             "url_root": "http://localhost:5000/"
         }
 
-#. Get a list of all available download formats.
+#.  Get a list of all available download formats.
 
     REST URL::
 
@@ -236,7 +236,7 @@ Nodes
             "url_root": "http://localhost:5000/"
         }
 
-#. Get the details of a single |Node| object.
+#.  Get the details of a single |Node| object.
 
     REST URL::
 
@@ -273,7 +273,7 @@ Nodes
           "url_root": "http://localhost:5000/"
         }
 
-#. Get the list of incoming of a specific |Node|.
+#.  Get the list of incoming of a specific |Node|.
 
     REST URL::
 
@@ -401,7 +401,7 @@ Nodes
           "url_root": "http://localhost:5000/"
         }
 
-#. Getting the list of the attributes/extras of a specific |Node|.
+#.  Getting the list of the attributes/extras of a specific |Node|.
 
     REST URL::
 
@@ -460,7 +460,7 @@ Nodes
           "url_root": "http://localhost:5000/"
         }
 
-#. Getting a user-defined list of attributes/extras of a specific |Node|.
+#.  Getting a user-defined list of attributes/extras of a specific |Node|.
 
     REST URL::
 
@@ -514,7 +514,7 @@ Nodes
           "url_root": "http://localhost:5000/"
         }
 
-#. Get comments of specific |Node|.
+#.  Get comments of specific |Node|.
 
     REST URL::
 
@@ -539,7 +539,7 @@ Nodes
             "url_root": "http://localhost:5000/"
         }
 
-#. Get list of all the files/directories from the repository of a specific |Node|.
+#.  Get list of all the files/directories from the repository of a specific |Node|.
 
     REST URL::
 
@@ -689,7 +689,7 @@ CalcJobs
 Computers
 ---------
 
-1. Get a list of |Computer| objects.
+1.  Get a list of |Computer| objects.
 
     REST URL::
 
@@ -743,7 +743,7 @@ Computers
           "url_root": "http://localhost:5000/"
         }
 
-2. Get details of a single |Computer| object:
+2.  Get details of a single |Computer| object:
 
     REST URL::
 
@@ -782,7 +782,7 @@ Computers
 Users
 -----
 
-1. Getting a list of the |User| s
+1.  Getting a list of the |User| s
 
     REST URL::
 
@@ -820,7 +820,7 @@ Users
           "url_root": "http://localhost:5000/"
         }
 
-2. Getting a list of |User| s whose first name starts with a given string
+2.  Getting a list of |User| s whose first name starts with a given string
 
     REST URL::
 
@@ -855,7 +855,7 @@ Users
 Groups
 ------
 
-1. Getting a list of |Group| s
+1.  Getting a list of |Group| s
 
     REST URL::
 
@@ -899,7 +899,7 @@ Groups
           "url_root": "http://localhost:5000/"
         }
 
-2. Getting the details of a specific group
+2.  Getting the details of a specific group
 
     REST URL::
 
@@ -1148,14 +1148,14 @@ Examples::
 If no page number is specified, the system redirects the request to page 1.
 When pagination is used, the **header** of the response contains two more non-empty fields:
 
-    - ``X-Total-Counts`` (custom field): the total number of results returned by the query, i.e. the sum of the results of all pages.
-    - ``Links``: links to the first, previous, next, and last page. Suppose that you send a request whose results fill 8 pages.
-      Then the value of the ``Links`` field would look like::
+- ``X-Total-Counts`` (custom field): the total number of results returned by the query, i.e. the sum of the results of all pages.
+- ``Links``: links to the first, previous, next, and last page. Suppose that you send a request whose results fill 8 pages.
+  Then the value of the ``Links`` field would look like::
 
-            <\http://localhost:5000/.../page/1?... >; rel=first,
-            <\http://localhost:5000/.../page/3?... >; rel=prev,
-            <\http://localhost:5000/.../page/5?... >; rel=next,
-            <\http://localhost:5000/.../page/8?... >; rel=last
+        <\http://localhost:5000/.../page/1?... >; rel=first,
+        <\http://localhost:5000/.../page/3?... >; rel=prev,
+        <\http://localhost:5000/.../page/5?... >; rel=next,
+        <\http://localhost:5000/.../page/8?... >; rel=last
 
 Besides pagination, the number of results can also be controlled using the ``limit`` and ``offset`` filters, see :ref:`below <reference:rest-api:filtering:unique>`.
 
@@ -1365,8 +1365,8 @@ Pattern matching
 
 The pattern matching operators ``=like=`` and ``=ilike=`` must be followed by the pattern definition, namely, a string where two characters assume special meaning:
 
-    1. ``%`` is used to replace an arbitrary sequence of characters, including no characters.
-    2. ``_`` is used to replace one or zero characters.
+1. ``%`` is used to replace an arbitrary sequence of characters, including no characters.
+2. ``_`` is used to replace one or zero characters.
 
 .. note:: When special characters are required verbatim, escape them by pre-pending a backslash ``\``.
 
@@ -1413,8 +1413,8 @@ The comparison operators ``<``, ``>``, ``<=``, ``>=`` assume natural ordering fo
 
 Examples:
 
-    - ``http://localhost:5000/api/v4/nodes?id>578`` selects the nodes having an id larger than 578.
-    - ``http://localhost:5000/api/v4/users/?last_name<="m"`` selects only the users whose last name begins with a character in the range [a-m].
+- ``http://localhost:5000/api/v4/nodes?id>578`` selects the nodes having an id larger than 578.
+- ``http://localhost:5000/api/v4/users/?last_name<="m"`` selects only the users whose last name begins with a character in the range [a-m].
 
 
 Filter value types

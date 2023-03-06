@@ -7,8 +7,8 @@ How to setup SSH connections
 AiiDA communicates with remote computers via the SSH protocol.
 There are two ways of setting up an SSH connection for AiiDA:
 
- 1. Using a passwordless SSH key (easier, less safe)
- 2. Using a password-protected SSH key through ``ssh-agent`` (one more step, safer)
+#. Using a passwordless SSH key (easier, less safe)
+#. Using a password-protected SSH key through ``ssh-agent`` (one more step, safer)
 
 .. _how-to:ssh:passwordless:
 

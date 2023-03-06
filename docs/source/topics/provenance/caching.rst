@@ -102,8 +102,8 @@ When a node is being stored (the `target`) and caching is enabled for its node c
 This method calls the iterator :meth:`~aiida.orm.nodes.caching.NodeCaching._iter_all_same_nodes` and takes the first one it returns if there are any.
 To find the list of `source` nodes that are equivalent to the `target` that is being stored, :meth:`~aiida.orm.nodes.caching.NodeCaching._iter_all_same_nodes` performs the following steps:
 
- 1. It queries the database for all nodes that have the same hash as the `target` node.
- 2. From the result, only those nodes are returned where the property :meth:`~aiida.orm.nodes.caching.NodeCaching.is_valid_cache` returns ``True``.
+1. It queries the database for all nodes that have the same hash as the `target` node.
+2. From the result, only those nodes are returned where the property :meth:`~aiida.orm.nodes.caching.NodeCaching.is_valid_cache` returns ``True``.
 
 The property :meth:`~aiida.orm.nodes.caching.NodeCaching.is_valid_cache` therefore allows to control whether a stored node can be used as a `source` in the caching mechanism.
 By default, for all nodes, the property returns ``True``.

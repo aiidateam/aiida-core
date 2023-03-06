@@ -13,4 +13,4 @@ verdi -p test_aiida run ${SYSTEM_TESTS}/test_containerized_code.py
 bash ${SYSTEM_TESTS}/test_polish_workchains.sh
 verdi daemon stop
 
-AIIDA_TEST_PROFILE=test_aiida pytest -v tests -m 'nightly'
+AIIDA_TEST_PROFILE=test_aiida pytest -v tests -m 'nightly' --timeout=200

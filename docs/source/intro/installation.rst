@@ -233,9 +233,9 @@ The AiiDA daemon process runs in the background and takes care of processing you
 
 The AiiDA daemon is controlled using three simple commands:
 
- * ``verdi daemon start``: start the daemon
- * ``verdi daemon status``: check the status of the daemon
- * ``verdi daemon stop``: stop the daemon
+* ``verdi daemon start``: start the daemon
+* ``verdi daemon status``: check the status of the daemon
+* ``verdi daemon stop``: stop the daemon
 
 .. note::
 

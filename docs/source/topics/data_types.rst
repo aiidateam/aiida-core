@@ -422,10 +422,10 @@ AbstractCode
 The :class:`aiida.orm.nodes.data.code.abstract.AbstractCode` class provides the abstract class for objects that represent a "code" that can be executed through a :class:`aiida.engine.processes.calcjobs.calcjob.CalcJob` plugin.
 There are currently four implementations of this abstract class:
 
- * :class:`~aiida.orm.nodes.data.code.legacy.Code` (see :ref:`Code <topics:data_types:core:code:legacy>`)
- * :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` (see :ref:`InstalledCode <topics:data_types:core:code:installed>`)
- * :class:`~aiida.orm.nodes.data.code.portable.PortableCode` (see :ref:`PortableCode <topics:data_types:core:code:portable>`)
- * :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode` (see :ref:`ContainerizedCode <topics:data_types:core:code:containerized>`)
+* :class:`~aiida.orm.nodes.data.code.legacy.Code` (see :ref:`Code <topics:data_types:core:code:legacy>`)
+* :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` (see :ref:`InstalledCode <topics:data_types:core:code:installed>`)
+* :class:`~aiida.orm.nodes.data.code.portable.PortableCode` (see :ref:`PortableCode <topics:data_types:core:code:portable>`)
+* :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode` (see :ref:`ContainerizedCode <topics:data_types:core:code:containerized>`)
 
 
 .. _topics:data_types:core:code:legacy:
@@ -437,8 +437,8 @@ Code
 
 Historically, there was only one code implementation, the :class:`~aiida.orm.nodes.data.code.legacy.Code`, which implemented two different types of code:
 
- * An executable pre-installed on a computer, represented by a :class:`~aiida.orm.computers.Computer`.
- * A directory containing all code files including an executable which would be uploaded to
+* An executable pre-installed on a computer, represented by a :class:`~aiida.orm.computers.Computer`.
+* A directory containing all code files including an executable which would be uploaded to
 
 These two types were referred to as "remote" and "local" codes.
 However, this nomenclature would lead to confusion as a "remote" code could also refer to an executable on the localhost, i.e., the machine where AiiDA itself runs.
@@ -1161,8 +1161,8 @@ Before calling the constructor of the base class, we have to remove the ``value`
 The final step is to actually *store* the value that is passed by the caller of the constructor.
 A new node has two locations to permanently store any of its properties:
 
-    * the database
-    * the file repository
+* the database
+* the file repository
 
 The section on :ref:`design guidelines<topics:data_types:plugin:design-guidelines>` will go into more detail what the advantages and disadvantages of each option are and when to use which.
 For now, since we are storing only a single value, the easiest and best option is to use the database.

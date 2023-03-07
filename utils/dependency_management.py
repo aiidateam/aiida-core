@@ -28,6 +28,7 @@ ROOT = Path(__file__).resolve().parent.parent  # repository root
 
 SETUPTOOLS_CONDA_MAPPINGS = {
     'graphviz': 'python-graphviz',
+    'docstring-parser': 'docstring_parser',
 }
 
 CONDA_IGNORE = []

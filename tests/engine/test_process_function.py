@@ -713,3 +713,39 @@ def test_type_hinting_validation():
     assert function_type_hinting(orm.Int(1)) == 2
     assert function_type_hinting(1.0) == 2.0
     assert function_type_hinting(orm.Float(1)) == 2.0
+
+
+def test_help_text_spec_inference():
+    """Test the parsing of docstrings to define the ``help`` message of the dynamically generated input ports."""
+
+    @calcfunction
+    def function(param_a, param_b, param_c):  # pylint: disable=unused-argument
+        """Some documentation.
+
+        :param param_a: Some description.
+        :param param_b: Fantastic docstring.
+        """
+
+    input_namespace = function.spec().inputs
+
+    assert input_namespace['param_a'].help == 'Some description.'
+    assert input_namespace['param_b'].help == 'Fantastic docstring.'
+    assert input_namespace['param_c'].help is None
+
+
+def test_help_text_spec_inference_invalid_docstring(aiida_caplog, monkeypatch):
+    """Test the parsing of docstrings does not except for invalid docstrings, but simply logs a warning."""
+    import docstring_parser
+
+    def raise_exception():
+        raise RuntimeError()
+
+    monkeypatch.setattr(docstring_parser, 'parse', lambda _: raise_exception())
+
+    @calcfunction
+    def function():
+        """Docstring."""
+
+    # Now call the spec to have it parse the docstring.
+    function.spec()  # pylint: disable=expression-not-assigned
+    assert 'function `function` has a docstring that could not be parsed' in aiida_caplog.records[0].message

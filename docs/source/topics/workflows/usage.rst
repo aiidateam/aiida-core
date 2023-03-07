@@ -534,7 +534,8 @@ At the lowest level, each workflow should perform exactly one task.
 These workflows can then be wrapped together by a "parent" workflow to create a larger logical unit.
 
 In order to make this approach manageable, it needs to be as simple as possible to glue together multiple workflows in a larger parent workflow.
-One of the tools that AiiDA provides to simplify this is the ability to *expose* the ports of another work chain.
+One of the tools that AiiDA provides to simplify this is the ability to *expose* the ports of another process class.
+This can be another ``WorkChain`` implementation, a ``CalcJob`` or even a process function (a ``calcfunction`` or ``workfunction``).
 
 .. _topics:workflows:usage:workchains:expose_inputs_outputs:
 

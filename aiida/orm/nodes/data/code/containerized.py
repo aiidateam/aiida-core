@@ -58,7 +58,7 @@ class ContainerizedCode(InstalledCode):
 
     @property
     def engine_command(self) -> str:
-        """Return the engine command with image as template field of the containerized code
+        """Return the engine command with image as template field of the containerized code.
 
         :return: The engine command of the containerized code
         """
@@ -66,7 +66,7 @@ class ContainerizedCode(InstalledCode):
 
     @engine_command.setter
     def engine_command(self, value: str) -> None:
-        """Set the engine command of the containerized code
+        """Set the engine command of the containerized code.
 
         :param value: The engine command of the containerized code
         """
@@ -79,7 +79,7 @@ class ContainerizedCode(InstalledCode):
 
     @property
     def image_name(self) -> str:
-        """The image name of container
+        """The image name of container.
 
         :return: The image name of container.
         """
@@ -87,12 +87,11 @@ class ContainerizedCode(InstalledCode):
 
     @image_name.setter
     def image_name(self, value: str) -> None:
-        """Set the image name of container
+        """Set the image name of container.
 
         :param value: The image name of container.
         """
         type_check(value, str)
-
         self.base.attributes.set(self._KEY_ATTRIBUTE_IMAGE_NAME, value)
 
     def get_prepend_cmdline_params(
@@ -125,6 +124,13 @@ class ContainerizedCode(InstalledCode):
                 'prompt': 'Image name',
                 'help': 'Name of the image container in which to the run the executable.',
             },
+            'wrap_cmdline_params': {
+                'is_flag': True,
+                'default': False,
+                'help': 'Whether all command line parameters to be passed to the engine command should be wrapped in '
+                'a double quotes to form a single argument. This should be set to `True` for Docker.',
+                'prompt': 'Wrap command line parameters',
+            }
         }
         options.update(**super()._get_cli_options())
 

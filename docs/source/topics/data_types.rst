@@ -610,9 +610,41 @@ The ``ContainerizedCode`` is compatible with a variety of containerization techn
 
 .. tab-set::
 
+    .. tab-item:: Docker
+
+        To use `Docker <https://www.docker.com/>`_ ``aiida-core==2.3.0`` or higher is required in order to be able to set ``wrap_cmdline_params = True``.
+        When setting up a code for a Docker container, use the following ``engine_command`` when setting up the code:
+
+        .. code-block:: console
+
+            docker run -i -v $PWD:/workdir:rw -w /workdir {image_name} sh -c
+
+        .. note:: Currently running with MPI is not yet supported, as it needs to be called inside of the container which is currently not possible.
+            The associated computer should also be configured to have the setting ``use_double_quotes = False``.
+            This can be set from the Python API using ``load_computer('idenfitier').set_use_double_quotes(False)``.
+
+        The following configuration provides an example to setup Quantum ESPRESSO's ``pw.x`` to be run by Docker on the local host
+
+        .. code-block:: yaml
+
+            label: qe-pw-on-docker
+            computer: localhost
+            engine_command: docker run -i -v $PWD:/workdir:rw -w /workdir {image_name} sh -c
+            image_name: haya4kun/quantum_espresso
+            filepath_executable: pw.x
+            default_calc_job_plugin: quantumespresso.pw
+            use_double_quotes: false
+            wrap_cmdline_params: true
+
+        Save the configuration to ``code.yml`` and create the code using the ``verdi`` CLI:
+
+        .. code-block:: console
+
+            verdi code create core.code.containerized -n --config=code.yml
+
     .. tab-item:: Singularity
 
-        To use `Singularity <https://singularity-docs.readthedocs.io/en/latest/>`__ use the following ``engine_command`` when setting up the code:
+        To use `Singularity <https://singularity-docs.readthedocs.io/en/latest/>`_ use the following ``engine_command`` when setting up the code:
 
         .. code-block:: console
 
@@ -620,19 +652,11 @@ The ``ContainerizedCode`` is compatible with a variety of containerization techn
 
     .. tab-item:: Sarus
 
-        To use `Sarus <https://sarus.readthedocs.io/en/stable/>`__ use the following ``engine_command`` when setting up the code:
+        To use `Sarus <https://sarus.readthedocs.io/en/stable/>`_ use the following ``engine_command`` when setting up the code:
 
         .. code-block:: console
 
             sarus run --mount=src=$PWD,dst=/workdir,type=bind --workdir=/workdir {image_name}
-
-
-Using `Docker <https://www.docker.com/>`__ directly is currently not supported because:
-
-* The Docker daemon always runs as the root user and the files created in the working directory inside the container will usually be owned by root if uid is not specified in the image, which prevents AiiDA from deleting those files after execution.
-* Docker cannot be launched as a normal MPI program to propagate execution context to the container application.
-
-Support may be added at a later time.
 
 
 

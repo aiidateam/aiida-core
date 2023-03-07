@@ -199,6 +199,12 @@ Calling :meth:`~plumpy.ProcessSpec.expose_inputs` for a particular ``Process`` c
         )
         spec.output('is_even', valid_type=Bool)
 
+.. note::
+
+    The exposing functionality is not just limited to ``WorkChain`` implementations but works for all process classes, such as ``CalcJob`` plugins for example.
+    It even works for process functions (i.e., ``calcfunctions`` and ``workfunctions``) since under the hood an actual ``Process`` class is generated for them on-the-fly.
+    For process functions, the ``valid_type`` and ``help`` attributes of the exposed inputs are even preserved if they could be inferred from provided function type hints and docstrings (see :ref:`type validation<topics:processes:functions:type-validation>` and :ref:`docstring parsing<topics:processes:functions:docstring-parsing>` for details).
+
 Be aware that any inputs that already exist in the namespace will be overridden.
 To prevent this, the method accepts the ``namespace`` argument, which will cause the inputs to be copied into that namespace instead of the top-level namespace.
 This is especially useful for exposing inputs since *all* processes have the ``metadata`` input.

@@ -116,6 +116,8 @@ The link labels for the example above will therefore be ``args_0``, ``args_1`` a
 If any of these labels were to overlap with the label of a positional or keyword argument, a ``RuntimeError`` will be raised.
 In this case, the conflicting argument name needs to be changed to something that does not overlap with the automatically generated labels for the variadic arguments.
 
+.. _topics:processes:functions:type-validation:
+
 Type validation
 ===============
 
@@ -167,6 +169,8 @@ The alternative syntax for union types ``X | Y`` `as introduced by PEP 604 <http
 
 If a process function has invalid type hints, they will simply be ignored and a warning message is logged: ``function 'function_name' has invalid type hints``.
 This ensures backwards compatibility in the case existing process functions had invalid type hints.
+
+.. _topics:processes:functions:docstring-parsing:
 
 Docstring parsing
 =================

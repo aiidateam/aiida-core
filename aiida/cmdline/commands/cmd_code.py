@@ -250,7 +250,10 @@ def export(code, output_file):
         else:
             value = getattr(code, key)
 
-        code_data[key] = str(value)
+        # If the attribute is not set, for example ``with_mpi`` do not export it, because the YAML won't be valid for
+        # use in ``verdi code create`` since ``None`` is not a valid value on the CLI.
+        if value is not None:
+            code_data[key] = str(value)
 
     with open(output_file, 'w', encoding='utf-8') as yfhandle:
         yaml.dump(code_data, yfhandle)

@@ -34,8 +34,9 @@ services:
     #image: "aiidateam/aiida-core:main"
     image: "aiida-core-dev"
     build:
-      context: .
-      dockerfile: Dockerfile
+      # need to add the parent directory to context to copy over new configure-aiida.sh
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
     user: aiida
     environment:
       DB_HOST: postgres

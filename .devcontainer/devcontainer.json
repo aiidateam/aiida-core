@@ -6,7 +6,7 @@
     "waitFor": "postCreateCommand",
 	"customizations": {
         "vscode": {
-            "extensions": ["ms-python.python","ms-python.vscode-pylance", "eamodio.gitlens"]
+            "extensions": ["ms-python.python", "eamodio.gitlens"]
         }
     }
 }

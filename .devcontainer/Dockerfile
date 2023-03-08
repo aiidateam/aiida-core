@@ -13,4 +13,4 @@ RUN /etc/my_init.d/10_create-system-user.sh
 
 # copy updated aiida configuration script
 # this line can be deleted after the new script has been merged
-COPY configure-aiida.sh /opt/configure-aiida.sh
+COPY ../.docker/opt/configure-aiida.sh /opt/configure-aiida.sh

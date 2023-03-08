@@ -20,7 +20,7 @@ import logging
 import traceback
 from typing import Awaitable, Dict, Hashable, Iterator, Optional
 
-from aiida.client import ComputeClientProtocol
+from aiida.client import ComputeClientOpenProtocol
 from aiida.orm import AuthInfo
 
 _LOGGER = logging.getLogger(__name__)
@@ -59,7 +59,7 @@ class ComputeClientQueue:
         return self._loop
 
     @contextlib.contextmanager
-    def request_client(self, authinfo: AuthInfo) -> Iterator[Awaitable[ComputeClientProtocol]]:
+    def request_client(self, authinfo: AuthInfo) -> Iterator[Awaitable[ComputeClientOpenProtocol]]:
         """
         Request a client from an authinfo.
         Because a client is not allowed to be requested immediately,
@@ -90,7 +90,7 @@ class ComputeClientQueue:
                     # The user still wants the client so open it
                     _LOGGER.debug('ComputeClient request opening client for %s', authinfo)
                     try:
-                        client.open()
+                        open_client = client.open()
                     except Exception as exception:  # pylint: disable=broad-except
                         _LOGGER.error('exception occurred while trying to open compute client:\n %s', exception)
                         client_request.future.set_exception(exception)
@@ -98,7 +98,7 @@ class ComputeClientQueue:
                         # Cleanup of the stale ClientRequest with the excepted client future
                         self._client_requests.pop(authinfo.pk, None)
                     else:
-                        client_request.future.set_result(client)
+                        client_request.future.set_result(open_client)
 
             # Save the handle so that we can cancel the callback if the user no longer wants it
             # Note: Don't pass the Process context, since (a) it is not needed by `do_open` and (b) the client is

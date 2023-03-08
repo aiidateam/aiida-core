@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for the `AuthInfo` ORM class."""
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type, cast
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from aiida.manage import get_manager
 
@@ -130,13 +130,4 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
 
     def get_client(self) -> 'ComputeClientProtocol':
         """Return a fully configured client that can be used to connect to the computer set for this instance."""
-        # pylint: disable=protected-access
-        from aiida.client.implementation import ComputeClientXY
-        computer = self.computer
-
-        class_ = cast(Type[ComputeClientXY], computer.get_client_class())
-        transport = class_._transport_class(machine=computer.hostname, **self.get_auth_params())
-        scheduler = class_._scheduler_class()
-        scheduler.set_transport(transport)
-
-        return class_(transport, scheduler)
+        return self.computer.get_client(authinfo=self)

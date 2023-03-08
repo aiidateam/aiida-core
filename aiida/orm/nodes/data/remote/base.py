@@ -16,7 +16,7 @@ from aiida.orm import AuthInfo
 from ..data import Data
 
 if t.TYPE_CHECKING:
-    from aiida.client import ComputeClientProtocol
+    from aiida.client import ComputeClientOpenProtocol, ComputeClientProtocol
     from aiida.client.protocol import ListResult
 
 __all__ = ('RemoteData',)
@@ -161,7 +161,7 @@ class RemoteData(Data):
         """
         return self.get_authinfo().get_client()
 
-    def _clean(self, client: t.Optional['ComputeClientProtocol'] = None) -> None:
+    def _clean(self, client: t.Optional['ComputeClientOpenProtocol'] = None) -> None:
         """Remove all content of the remote folder on the remote computer.
 
         When the cleaning operation is successful, the extra with the key ``RemoteData.KEY_EXTRA_CLEANED`` is set.

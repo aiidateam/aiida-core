@@ -199,7 +199,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             raise exceptions.ValidationError('the mpirun_command must be a list of strings')
 
         try:
-            job_resource_keys = self.get_client_class().valid_job_resource_keys()
+            job_resource_keys = self.get_client(load_authinfo=False).valid_job_resource_keys()
         except exceptions.EntryPointError:
             raise exceptions.ValidationError('Unable to load the scheduler for this computer')
 
@@ -514,8 +514,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         :return: The minimum interval (in seconds).
         """
         try:
-            # TODO needs fixing
-            default = self.get_client_class()._transport_class.DEFAULT_MINIMUM_JOB_POLL_INTERVAL  # type: ignore # pylint: disable=protected-access
+            default = self.get_client(load_authinfo=False).get_minimum_job_poll_interval()
         except (exceptions.ConfigurationError, AttributeError):
             default = self.PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT
 
@@ -613,7 +612,9 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             # Return False if the user is not configured (in a sense, it is disabled for that user)
             return False
 
-    def get_client(self, user: Optional['User'] = None) -> 'ComputeClientProtocol':
+    def get_client(
+        self, *, authinfo: Optional['AuthInfo'] = None, load_authinfo: bool = True
+    ) -> 'ComputeClientProtocol':
         """
         Return a compute client, configured with all correct parameters.
         The client is closed (meaning that if you want to run any operation with
@@ -625,22 +626,14 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
            with client:
                print(client.whoami())
 
-        :param user: if None, try to obtain a client for the default user.
-            Otherwise, pass a valid User.
+        :param authinfo: if not None, load the client with this authinfo.
+        :param load_authinfo: if True, and authinfo is None, load the client
+            with the default authinfo for the current profile.
 
         :return: a (closed) client, already configured with the connection
             parameters to the supercomputer, as configured with ``verdi computer configure``
             for the user specified as a parameter ``user``.
         """
-        from . import authinfos  # pylint: disable=cyclic-import
-
-        user = user or users.User.collection(self.backend).get_default()
-        # TODO handle if NotExistent
-        authinfo = authinfos.AuthInfo.collection(self.backend).get(dbcomputer=self, aiidauser=user)
-        return authinfo.get_client()
-
-    def get_client_class(self) -> Type['ComputeClientProtocol']:
-        """Get the compute client class for this computer."""
         from aiida.client.implementation import ComputeClientXY
         from aiida.plugins.factories import SchedulerFactory, TransportFactory
         try:
@@ -655,12 +648,18 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             raise exceptions.ConfigurationError(
                 f'No scheduler found for {self.label} [type {self.scheduler_type}], message: {exception}'
             )
-        return type(
-            'Client', (ComputeClientXY,), {
-                '_transport_class': transport_class,
-                '_scheduler_class': scheduler_class
-            }
-        )
+
+        client = ComputeClientXY(self, scheduler_class, transport_class)
+
+        if authinfo is not None or load_authinfo:
+            from . import authinfos  # pylint: disable=cyclic-import
+
+            if authinfo is None:
+                user = users.User.collection(self.backend).get_default()
+                authinfo = authinfos.AuthInfo.collection(self.backend).get(dbcomputer=self, aiidauser=user)
+            client._set_authinfo(authinfo)  # pylint: disable=protected-access
+
+        return client
 
     def configure(self, user: Optional['User'] = None, **kwargs: Any) -> 'AuthInfo':
         """Configure a computer for a user with valid auth params passed via kwargs
@@ -671,14 +670,14 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         """
         from . import authinfos
 
-        client_cls = self.get_client_class()
+        client = self.get_client(load_authinfo=False)
         user = user or users.User.collection(self.backend).get_default()
         assert user is not None
-        valid_keys = set(client_cls.get_auth_params())
+        valid_keys = set(client.get_cli_auth_options())
 
         if not set(kwargs.keys()).issubset(valid_keys):
             invalid_keys = [key for key in kwargs if key not in valid_keys]
-            raise ValueError(f'{client_cls}: received invalid authentication parameter(s) "{invalid_keys}"')
+            raise ValueError(f'{client}: received invalid authentication parameter(s) "{invalid_keys}"')
 
         try:
             authinfo = self.get_authinfo(user)

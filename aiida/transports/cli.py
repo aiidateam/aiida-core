@@ -60,8 +60,8 @@ def common_params(command_func):
 
 def transport_option_default(name: str, computer: 'Computer'):
     """Determine the default value for an auth_param key."""
-    client_cls = computer.get_client_class()
-    return client_cls.get_auth_param_default(name, computer)
+    client = computer.get_client(load_authinfo=False)
+    return client.get_auth_param_default(name)
 
 
 def interactive_default(key, also_non_interactive=False):

@@ -96,7 +96,7 @@ class TestComputeClientQueue:
         original = None
         try:
             # Let's put in a broken open method
-            transport_class = self.computer.get_client_class()._transport_class  # pylint: disable=protected-access
+            transport_class = self.computer.get_client(load_authinfo=False)._transport_class  # pylint: disable=protected-access
             original = transport_class.open
             transport_class.open = broken_open
             with pytest.raises(RuntimeError):
@@ -108,7 +108,7 @@ class TestComputeClientQueue:
         """Verify that the safe interval for a given in transport is respected by the transport queue."""
 
         # Temporarily set the safe open interval for the default transport to a finite value
-        transport_class = self.computer.get_client_class()._transport_class  # pylint: disable=protected-access
+        transport_class = self.computer.get_client(load_authinfo=False)._transport_class  # pylint: disable=protected-access
         original_interval = transport_class._DEFAULT_SAFE_OPEN_INTERVAL  # pylint: disable=protected-access
 
         try:

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import tempfile
 
-from aiida.client import ComputeClientProtocol
+from aiida.client import ComputeClientOpenProtocol
 from aiida.orm import CalcJobNode
 
 
-def always_kill(node: CalcJobNode, client: ComputeClientProtocol) -> str | None:  # pylint: disable=unused-argument
+def always_kill(node: CalcJobNode, client: ComputeClientOpenProtocol) -> str | None:  # pylint: disable=unused-argument
     """Retrieve and inspect files in working directory of job to determine whether the job should be killed.
 
     This particular implementation is just for demonstration purposes and will kill the job as long as there is a

@@ -27,7 +27,7 @@ Notes:
 - only used internally in Transport:
     - `_exec_command_internal`
     - `exec_command_wait_bytes`
-    - `exec_command_wait` BUT this is also used in `cmd_computer._computer_test_no_unexpected_output`
+    - `exec_command_wait`
     - `_gotocomputer_string`
 
 """
@@ -35,11 +35,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import PurePath
+from types import TracebackType
 import typing as t
 
 if t.TYPE_CHECKING:
     from aiida.engine.processes.exit_code import ExitCode
-    from aiida.orm import AuthInfo, Computer
     from aiida.schedulers.datastructures import JobInfo, JobResource, JobTemplate
     from aiida.transports.util import FileAttribute
 
@@ -61,7 +61,44 @@ class ConnectionTestResult:
     """The traceback of the exception, if any."""
 
 
-@t.runtime_checkable  # TODO # TODO overriden due to https://github.com/python/cpython/issues/102433
+class ListResult(t.TypedDict, total=False):
+    """Return type of listdir_withattributes."""
+
+    name: str
+    """the file or folder directory"""
+    attributes: FileAttribute
+    isdir: bool
+
+
+class AuthCliOptionType(t.TypedDict, total=False):
+    """A single authentication parameter, for use by the CLI"""
+
+    type: type
+    default: t.Any
+    switch: bool
+    help: str
+    prompt: str
+    non_interactive_default: bool
+    callback: t.Callable[..., t.Any]
+
+
+class ResourcesType(t.TypedDict, total=False):
+    """Resources used by preprocess_resources."""
+
+    num_machines: int | None
+    tot_num_mpiprocs: int | None
+    num_mpiprocs_per_machine: int | None
+
+
+class DetailedJobInfo(t.TypedDict, total=False):
+    """Return type of get_detailed_job_info."""
+
+    retval: int  # non-zero if failed
+    stdout: str
+    stderr: str
+
+
+# @t.runtime_checkable  # TODO # TODO overriden due to https://github.com/python/cpython/issues/102433
 class ComputeClientProtocol(t.Protocol):  # pylint: disable=too-many-public-methods
     """A user-facing protocol for a client, that can interact with a compute resource.
 
@@ -73,45 +110,40 @@ class ComputeClientProtocol(t.Protocol):  # pylint: disable=too-many-public-meth
        e.g. submitting jobs, querying job progress, etc.
     """
 
-    def validate_connection(self, authinfo: AuthInfo) -> t.Iterable[ConnectionTestResult]:
-        """Validate the connection to the compute resource.
-
-        :yields: results of specific connection tests
-        """
-        # Note, this replaces the code in `aiida.cmdline.commands.computer_test`
-        # TODO having to parse in the authinfo here seems a bit redundant?
+    # @property
+    # def
 
     # FROM SCHEDULER
 
-    @classmethod
-    def valid_job_resource_keys(cls) -> list[str]:
+    def valid_job_resource_keys(self) -> list[str]:
         """Return a list of valid keys for the scheduler.
 
         :return: a list of valid keys
         """
+        # Note this was originally a classmethod
 
-    @classmethod
-    def create_job_resource(cls, **kwargs: t.Any) -> JobResource:
+    def create_job_resource(self, **kwargs: t.Any) -> JobResource:
         """Create a suitable job resource from the kwargs specified."""
+        # Note this was originally a classmethod
 
-    @classmethod
     def preprocess_resources(
-        cls, resources: ResourcesType, default_mpiprocs_per_machine: None | int = None
+        self, resources: ResourcesType, default_mpiprocs_per_machine: None | int = None
     ) -> ResourcesType:
         """Preprocess the resources before submission.
 
         :param resources: The resources to preprocess.
         :return: The preprocessed resources.
         """
+        # Note this was originally a classmethod
         # Note: this originally mutated in place, but now returns
 
-    @classmethod
-    def validate_resources(cls, **resources: t.Any) -> None:
+    def validate_resources(self, **resources: t.Any) -> None:
         """Validate the resources against the job resource class of this scheduler.
 
         :param resources: keyword arguments to define the job resources
         :raises ValueError: if the resources are invalid or incomplete
         """
+        # Note this was originally a classmethod
         # TODO I thing ideally resources would be input as a dict,
         # and then the return type could be a https://docs.python.org/3/library/typing.html#typing.TypeGuard
 
@@ -127,18 +159,133 @@ class ComputeClientProtocol(t.Protocol):  # pylint: disable=too-many-public-meth
     # def logger(self, type_: t.Literal['transport', 'scheduler']) -> Logger:
     #     """Return a logger instance."""
 
-    @classmethod
-    def get_submit_script(cls, job_tmpl: JobTemplate) -> str:
+    def get_submit_script(self, job_tmpl: JobTemplate) -> str:
         """Return the submit script as a string.
 
         :return: the submit script as a string
         """
-        # TODO this was not a classmethod before, but it is required in CalcJob.presubmit,
-        # and at least in tests, the authinfo does not have to be available
-        # if think ideally, rather than having
-        # classmethods / instancemethods that work always / instancemethods that only work in a context
-        # the context manager would (would take an authinfo) yield a different protocol with all the "connected" methods
-        # and there would be no need for the classmethods
+        # Note this was originally a classmethod
+
+    def parse_output(
+        self,
+        detailed_job_info: None | DetailedJobInfo = None,
+        stdout: str | None = None,
+        stderr: str | None = None,
+    ) -> ExitCode | None:
+        """Parse the output of the scheduler, for a returned job
+
+        :param stdout: string with the output written by the scheduler to stdout.
+        :param stderr: string with the output written by the scheduler to stderr.
+
+        :raises: `FeatureNotAvailable` if not supported
+        """
+        # TODO instead of raising FeatureNotAvailable, use get_feature?
+
+    # FROM TRANSPORT
+
+    def set_logger_extra(self, extra: t.Dict[str, t.Any]) -> None:
+        """Set extra information to be added to the logger messages.
+
+        :param extra: a dictionary with the extra information to add
+        """
+
+    @property
+    def hostname(self) -> str | None:
+        """Return the hostname of the remote computer."""
+        # TODO is this a generic property of any compute client?
+        # It is only actually used one place, in `RemoteData._clean`,
+        # to check that the client (taken optionally as input) is compatible with the computer,
+        # and this in turn is only used in `cmd_calcjob.calcjob_cleanworkdir`
+
+    def get_cli_auth_options(self) -> t.Dict[str, AuthCliOptionType]:
+        """Return authentication parameters for the CLI.
+
+        This maps the name of the parameter, to an option list for use in the CLI
+        """
+        # Note this was originally a classmethod
+        # replaces Transport.get_valid_auth_params and Transport.auth_options
+
+    def get_auth_param_default(self, name: str) -> t.Any:
+        """Return the default value for the given authentication parameter.
+        """
+        # Note this was originally a classmethod
+        # replaces aiida.transports.cli.transport_option_default
+
+    def get_minimum_job_poll_interval(self) -> float:
+        """Return the minimum interval (in seconds) between job status queries.
+
+        This is used to avoid overloading the scheduler with too many queries.
+        """
+
+    def get_safe_open_interval(self) -> float:
+        """
+        Get an interval (in seconds) that suggests how long the user should wait
+        between consecutive calls to open the client.
+        This can be used as a way to get the user to not swamp a limited number of connections, etc.
+        However it is just advisory.
+
+        If returns 0, it is taken that there are no reasons to limit the
+        frequency of open calls.
+        """
+
+    def gotocomputer_command(self, remotedir: str) -> str | None:
+        """Return a string to be run using os.system in order to connect
+        via the to the remote directory, or None if not possible.
+
+        Expected behaviors:
+
+        * A new bash session is opened
+        * A reasonable error message is produced if the folder does not exist
+
+        :param remotedir: the full path of the remote directory
+        """
+        # TODO maybe this needs to be reimplemented
+        # for now we allow to return None, if the feature is not available
+
+    def has_magic(self, string: str) -> bool:
+        """Return True if the string has shell-style wildcards."""
+        # TODO this feels a bit too arbitrary to be part of the interface?
+
+    @property
+    def is_open(self) -> bool:
+        """Return whether the client is open."""
+
+    def open(self) -> ComputeClientOpenProtocol:
+        """Open the client, in an omnipotent manner."""
+
+    def __enter__(self) -> ComputeClientOpenProtocol:
+        """Open the client, in an omnipotent manner."""
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        """Close the client."""
+
+
+class ComputeClientOpenProtocol(ComputeClientProtocol, t.Protocol):  # pylint: disable=too-many-public-methods
+    """A user-facing protocol for a client, that can interact with a compute resource.
+
+    This is extended from the base protocol,
+    with operations only allowed on a connected compute client.
+    """
+
+    def close(self) -> ComputeClientProtocol:
+        """Close the client."""
+
+    def validate_connection(self) -> t.Iterable[ConnectionTestResult]:
+        """Validate the connection to the compute resource.
+
+        This performs a series of tests,
+        to verify that the connection to the compute resource is working correctly.
+
+        :yields: results of specific connection tests
+        """
+        # Note, this replaces the code in `aiida.cmdline.commands.computer_test`
+
+    # scheduler operations
 
     def submit_from_script(self, working_directory: str, submit_script: str) -> str | ExitCode:
         """Submit the submission script to the scheduler.
@@ -201,83 +348,7 @@ class ComputeClientProtocol(t.Protocol):  # pylint: disable=too-many-public-meth
         :return: True if everything seems ok, False otherwise.
         """
 
-    def parse_output(
-        self,
-        detailed_job_info: None | DetailedJobInfo = None,
-        stdout: str | None = None,
-        stderr: str | None = None,
-    ) -> ExitCode | None:
-        """Parse the output of the scheduler, for a returned job
-
-        :param stdout: string with the output written by the scheduler to stdout.
-        :param stderr: string with the output written by the scheduler to stderr.
-
-        :raises: `FeatureNotAvailable` if not supported
-        """
-        # TODO instead of raising FeatureNotAvailable, use get_feature?
-
-    # FROM TRANSPORT
-
-    def set_logger_extra(self, extra: t.Dict[str, t.Any]) -> None:
-        """Set extra information to be added to the logger messages.
-
-        :param extra: a dictionary with the extra information to add
-        """
-
-    @property
-    def is_open(self) -> bool:
-        """Return whether the client is open."""
-
-    def open(self) -> None:
-        """Open the client, in an omnipotent manner."""
-
-    def close(self) -> None:
-        """Close th client."""
-
-    def __enter__(self: SelfTv) -> SelfTv:
-        """Open the client, in an omnipotent manner."""
-
-    def __exit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: t.Any,
-    ) -> None:
-        """Close the client."""
-
-    @property
-    def hostname(self) -> str | None:
-        """Return the hostname of the remote computer."""
-
-    @classmethod
-    def get_auth_params(cls) -> t.Dict[str, AuthParamType]:
-        """Return the authentication parameters.
-
-        This maps the name of the parameter, to an option list
-        """
-        # replaces Transport.get_valid_auth_params and Transport.auth_options
-
-    @classmethod
-    def get_auth_param_default(cls, name: str, computer: Computer) -> t.Any:
-        """Return the default value for the given authentication parameter,
-        given the computer.
-        """
-        # replaces aiida.transports.cli.transport_option_default
-
-    def get_safe_open_interval(self) -> float:
-        """
-        Get an interval (in seconds) that suggests how long the user should wait
-        between consecutive calls to open the client.
-        This can be used as a way to get the user to not swamp a limited number of connections, etc.
-        However it is just advisory.
-
-        If returns 0, it is taken that there are no reasons to limit the
-        frequency of open calls.
-        """
-
-    @property
-    def cwd(self) -> PurePath:
-        """Return the current working directory."""
+    # file system (a.k.a transport) operations
 
     def chdir(self, path: str | PurePath) -> None:
         """Change the current directory.
@@ -381,6 +452,13 @@ class ComputeClientProtocol(t.Protocol):  # pylint: disable=too-many-public-meth
     def get_mode(self, path: str) -> int:
         """Return the portion of the file's mode that can be set by chmod()."""
 
+    def iglob(self, pathname: str) -> t.Iterable[str]:
+        """Return an iterator which yields the paths matching a pathname pattern.
+
+        The pattern may contain simple shell-style wildcards, as per fnmatch.
+        """
+        # Note removed glob, glob1 and glob0 as superfluous for the interface
+
     def isdir(self, path: str) -> bool:
         """Return whether the path is an existing directory."""
 
@@ -440,6 +518,9 @@ class ComputeClientProtocol(t.Protocol):  # pylint: disable=too-many-public-meth
 
         :raise IOError: if the path can't be resolved on the server
         """
+
+    def path_exists(self, path: str) -> bool:
+        """Returns True if path exists, False otherwise."""
 
     def put(self, localpath: str, remotepath: str, *args, **kwargs) -> None:
         """Put a file or a directory from local src to remote dst.
@@ -506,20 +587,6 @@ class ComputeClientProtocol(t.Protocol):  # pylint: disable=too-many-public-meth
         :param path: absolute path to remove
         """
 
-    def gotocomputer_command(self, remotedir: str) -> str | None:
-        """Return a string to be run using os.system in order to connect
-        via the to the remote directory, or None if not possible.
-
-        Expected behaviors:
-
-        * A new bash session is opened
-        * A reasonable error message is produced if the folder does not exist
-
-        :param remotedir: the full path of the remote directory
-        """
-        # TODO maybe this needs to be reimplemented
-        # for now we allow to return None, if the feature is not available
-
     def symlink(self, remotesource: str, remotedestination: str) -> None:
         """Create a symbolic link between the remote source and the remote
         destination.
@@ -533,53 +600,3 @@ class ComputeClientProtocol(t.Protocol):  # pylint: disable=too-many-public-meth
 
         :raise IOError: if the username cannot be retrieved
         """
-
-    def path_exists(self, path: str) -> bool:
-        """Returns True if path exists, False otherwise."""
-
-    def iglob(self, pathname: str) -> t.Iterable[str]:
-        """Return an iterator which yields the paths matching a pathname pattern.
-
-        The pattern may contain simple shell-style wildcards, as per fnmatch.
-        """
-        # TODO removed glob, glob1 and glob0 as superfluous for the interface
-
-    def has_magic(self, string: str) -> bool:
-        """Return True if the string has shell-style wildcards."""
-
-
-class ListResult(t.TypedDict, total=False):
-    """Return type of listdir_withattributes."""
-
-    name: str
-    """the file or folder directory"""
-    attributes: FileAttribute
-    isdir: bool
-
-
-class AuthParamType(t.TypedDict, total=False):
-    """A single authentication parameter."""
-
-    type: type
-    default: t.Any
-    switch: bool
-    help: str
-    prompt: str
-    non_interactive_default: bool
-    callback: t.Callable[..., t.Any]
-
-
-class ResourcesType(t.TypedDict, total=False):
-    """Resources used by preprocess_resources."""
-
-    num_machines: int | None
-    tot_num_mpiprocs: int | None
-    num_mpiprocs_per_machine: int | None
-
-
-class DetailedJobInfo(t.TypedDict, total=False):
-    """Return type of get_detailed_job_info."""
-
-    retval: int  # non-zero if failed
-    stdout: str
-    stderr: str

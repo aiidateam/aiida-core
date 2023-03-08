@@ -352,12 +352,12 @@ def computer_test(user, print_traceback: bool, computer: 'Computer') -> None:
     try:
         echo.echo('* Opening connection... ', nl=False)
 
-        with client:
+        with client as opened_client:
             num_tests += 1
 
             echo.echo('[OK]', fg=echo.COLORS['success'])
 
-            for result in client.validate_connection(authinfo):
+            for result in opened_client.validate_connection():
 
                 echo.echo(f'* {result.name}... ', nl=False)
                 num_tests += 1
@@ -462,12 +462,12 @@ def computer_config_show(computer: 'Computer', user, defaults, as_option_string)
     from aiida.common.escaping import escape_for_bash
     from aiida.transports import cli as transport_cli
 
-    client_cls = computer.get_client_class()
+    client = computer.get_client(load_authinfo=False)
     option_list = [
         param for param in transport_cli.create_configure_cmd(computer.transport_type).params
         if isinstance(param, click.core.Option)
     ]
-    option_list = [option for option in option_list if option.name in client_cls.get_auth_params()]
+    option_list = [option for option in option_list if option.name in client.get_cli_auth_options()]
 
     if defaults:
         config = {option.name: transport_cli.transport_option_default(option.name, computer) for option in option_list}
@@ -477,7 +477,7 @@ def computer_config_show(computer: 'Computer', user, defaults, as_option_string)
     option_items = []
     if as_option_string:
         for option in option_list:
-            t_opt = client_cls.get_auth_params()[option.name]
+            t_opt = client.get_cli_auth_options()[option.name]
             if config.get(option.name) or config.get(option.name) is False:
                 if t_opt.get('switch'):
                     option_value = option.opts[-1] if config.get(
@@ -494,7 +494,7 @@ def computer_config_show(computer: 'Computer', user, defaults, as_option_string)
         echo.echo(escape_for_bash(opt_string))
     else:
         table = []
-        for name in client_cls.get_auth_params():
+        for name in client.get_cli_auth_options():
             if name in config:
                 table.append((f'* {name}', config[name]))
             else:

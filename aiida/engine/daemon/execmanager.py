@@ -25,7 +25,7 @@ from typing import Any, List
 from typing import Mapping as MappingType
 from typing import Optional, Tuple, Union
 
-from aiida.client import ComputeClientProtocol
+from aiida.client import ComputeClientOpenProtocol
 from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcInfo
 from aiida.common.folders import SandboxFolder
@@ -64,7 +64,7 @@ def _find_data_node(inputs: MappingType[str, Any], uuid: str) -> Optional[Node]:
 
 def upload_calculation(
     node: CalcJobNode,
-    client: ComputeClientProtocol,
+    client: ComputeClientOpenProtocol,
     calc_info: CalcInfo,
     folder: SandboxFolder,
     inputs: Optional[MappingType[str, Any]] = None,
@@ -357,7 +357,7 @@ def upload_calculation(
         remotedata.store()
 
 
-def submit_calculation(calculation: CalcJobNode, client: ComputeClientProtocol) -> str | ExitCode:
+def submit_calculation(calculation: CalcJobNode, client: ComputeClientOpenProtocol) -> str | ExitCode:
     """Submit a previously uploaded `CalcJob` to the compute client.
 
     :param calculation: the instance of CalcJobNode to submit.
@@ -386,7 +386,7 @@ def submit_calculation(calculation: CalcJobNode, client: ComputeClientProtocol) 
     return result
 
 
-def stash_calculation(calculation: CalcJobNode, client: ComputeClientProtocol) -> None:
+def stash_calculation(calculation: CalcJobNode, client: ComputeClientOpenProtocol) -> None:
     """Stash files from the working directory of a completed calculation to a permanent remote folder.
 
     After a calculation has been completed, optionally stash files from the work directory to a storage location on the
@@ -453,7 +453,7 @@ def stash_calculation(calculation: CalcJobNode, client: ComputeClientProtocol) -
 
 
 def retrieve_calculation(
-    calculation: CalcJobNode, client: ComputeClientProtocol, retrieved_temporary_folder: str
+    calculation: CalcJobNode, client: ComputeClientOpenProtocol, retrieved_temporary_folder: str
 ) -> None:
     """Retrieve all the files of a completed job calculation using the given compute client.
 
@@ -528,7 +528,7 @@ def retrieve_calculation(
     )
 
 
-def kill_calculation(calculation: CalcJobNode, client: ComputeClientProtocol) -> None:
+def kill_calculation(calculation: CalcJobNode, client: ComputeClientOpenProtocol) -> None:
     """
     Kill the calculation through the compute client
 
@@ -560,7 +560,7 @@ def kill_calculation(calculation: CalcJobNode, client: ComputeClientProtocol) ->
 
 
 def retrieve_files_from_list(
-    calculation: CalcJobNode, client: ComputeClientProtocol, folder: str,
+    calculation: CalcJobNode, client: ComputeClientOpenProtocol, folder: str,
     retrieve_list: List[Union[str, Tuple[str, str, int], list]]
 ) -> None:
     """

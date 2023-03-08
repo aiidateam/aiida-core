@@ -12,14 +12,16 @@ from pathlib import PurePath
 import tempfile
 import time
 import traceback
+from types import TracebackType
 import typing as t
 
+from aiida.common.exceptions import InvalidOperation
 from aiida.schedulers import Scheduler
 from aiida.transports import Transport
 
 from .protocol import (
-    AuthParamType,
-    ComputeClientProtocol,
+    AuthCliOptionType,
+    ComputeClientOpenProtocol,
     ConnectionTestResult,
     DetailedJobInfo,
     ListResult,
@@ -35,22 +37,44 @@ if t.TYPE_CHECKING:
 SelfTv = t.TypeVar('SelfTv', bound='ComputeClientXY')
 
 
-class ComputeClientXY(ComputeClientProtocol):  # pylint: disable=too-many-public-methods
+class ComputeClientXY(ComputeClientOpenProtocol):  # pylint: disable=too-many-public-methods
     """A compute client that uses a separate transport and scheduler."""
 
-    # TODO I think this needs to be changed
-    _transport_class: t.ClassVar[type[Transport]]
-    _scheduler_class: t.ClassVar[type[Scheduler]]
-
-    def __init__(self, transport: Transport, scheduler: Scheduler) -> None:
-        self._transport = transport
-        self._scheduler = scheduler
+    def __init__(self, computer: Computer, scheduler_cls: type[Scheduler], transport_cls: type[Transport]) -> None:
+        """Construct a new instance."""
+        self._scheduler = scheduler_cls()
+        self._transport_class = transport_cls
+        # TODO we can't directly instantiate the transport here, because it requires an authinfo
+        # and, at least in some existing tests, the authinfo is not yet set.
+        self._maybe_transport: Transport | None = None
+        # we have to save the authinfo, currently only for a few validate_connection tests
+        self._maybe_authinfo: AuthInfo | None = None
+        # we have to save the computer, currently only for get_auth_param_default,
+        # and that only uses it to get the hostname (in some _suggestion_string methods)
+        self._computer = computer
         super().__init__()
 
-    def validate_connection(self, authinfo: AuthInfo) -> t.Iterable[ConnectionTestResult]:
+    def _set_authinfo(self, authinfo: AuthInfo) -> None:
+        self._maybe_authinfo = authinfo
+        self._maybe_transport = self._transport_class(machine=authinfo.computer.hostname, **authinfo.get_auth_params())
+        self._scheduler.set_transport(self._maybe_transport)
+
+    @property
+    def _authinfo(self):
+        if self._maybe_authinfo is None:
+            raise InvalidOperation('AuthInfo is not set')
+        return self._maybe_authinfo
+
+    @property
+    def _transport(self):
+        if self._maybe_transport is None:
+            raise InvalidOperation('AuthInfo is not set')
+        return self._maybe_transport
+
+    def validate_connection(self) -> t.Iterable[ConnectionTestResult]:
         if not self.is_open:
             raise ValueError('Connection is not open')
-        tests: list[tuple[str, t.Callable[[ComputeClientXY, AuthInfo], tuple[bool, str]]]] = [
+        tests: list[tuple[str, t.Callable[[ComputeClientXY], tuple[bool, str]]]] = [
             ('Checking for spurious output', _computer_test_no_unexpected_output),
             ('Getting number of jobs from scheduler', _computer_test_get_jobs),
             ('Determining remote user name', _computer_get_remote_username),
@@ -59,7 +83,7 @@ class ComputeClientXY(ComputeClientProtocol):  # pylint: disable=too-many-public
         ]
         for test_name, test in tests:
             try:
-                success, message = test(self, authinfo)
+                success, message = test(self)
             except Exception as exc:  # pylint: disable=broad-except
                 yield ConnectionTestResult(test_name, False, '', exc, traceback.format_exc())
             else:
@@ -68,25 +92,21 @@ class ComputeClientXY(ComputeClientProtocol):  # pylint: disable=too-many-public
                 else:
                     yield ConnectionTestResult(test_name, False, message)
 
-    @classmethod
-    def valid_job_resource_keys(cls) -> list[str]:
-        return cls._scheduler_class.job_resource_class.get_valid_keys()
+    def valid_job_resource_keys(self) -> list[str]:
+        return self._scheduler.job_resource_class.get_valid_keys()
 
-    @classmethod
-    def create_job_resource(cls, **kwargs: t.Any) -> JobResource:
-        return cls._scheduler_class.create_job_resource(**kwargs)
+    def create_job_resource(self, **kwargs: t.Any) -> JobResource:
+        return self._scheduler.create_job_resource(**kwargs)
 
-    @classmethod
     def preprocess_resources(
-        cls, resources: ResourcesType, default_mpiprocs_per_machine: None | int = None
+        self, resources: ResourcesType, default_mpiprocs_per_machine: None | int = None
     ) -> ResourcesType:
         # TODO perhaps should create a copy here
-        cls._scheduler_class.preprocess_resources(resources, default_mpiprocs_per_machine)  # type: ignore
+        self._scheduler.preprocess_resources(resources, default_mpiprocs_per_machine)  # type: ignore
         return resources
 
-    @classmethod
-    def validate_resources(cls, **resources: t.Any) -> None:
-        return cls._scheduler_class.validate_resources(**resources)
+    def validate_resources(self, **resources: t.Any) -> None:
+        return self._scheduler.validate_resources(**resources)
 
     def get_feature(self, feature_name: t.Literal['can_query_by_user']) -> bool:
         return self._scheduler.get_feature(feature_name)
@@ -100,9 +120,8 @@ class ComputeClientXY(ComputeClientProtocol):  # pylint: disable=too-many-public
     #         return self._transport._logger
     #     raise ValueError(f'Invalid type {type_}')
 
-    @classmethod
-    def get_submit_script(cls, job_tmpl: JobTemplate) -> str:
-        return cls._scheduler_class().get_submit_script(job_tmpl)
+    def get_submit_script(self, job_tmpl: JobTemplate) -> str:
+        return self._scheduler.get_submit_script(job_tmpl)
 
     def submit_from_script(self, working_directory: str, submit_script: str) -> str | ExitCode:
         return self._scheduler.submit_from_script(working_directory, submit_script)
@@ -136,11 +155,13 @@ class ComputeClientXY(ComputeClientProtocol):  # pylint: disable=too-many-public
     def is_open(self) -> bool:
         return self._transport.is_open
 
-    def open(self) -> None:
+    def open(self: SelfTv) -> SelfTv:
         self._transport.open()
+        return self
 
-    def close(self) -> None:
+    def close(self: SelfTv) -> SelfTv:
         self._transport.close()
+        return self
 
     def __enter__(self: SelfTv) -> SelfTv:
         self._transport.__enter__()
@@ -150,27 +171,30 @@ class ComputeClientXY(ComputeClientProtocol):  # pylint: disable=too-many-public
         self,
         exc_type: type[BaseException] | None,
         exc_value: BaseException | None,
-        traceback: t.Any,  # pylint: disable=redefined-outer-name
+        traceback: TracebackType | None,  # pylint: disable=redefined-outer-name
     ) -> None:
         self._transport.__exit__(exc_type, exc_value, traceback)
 
-    @classmethod
-    def get_auth_params(cls) -> t.Dict[str, AuthParamType]:
-        return cls._transport_class.auth_options
+    def get_cli_auth_options(self) -> t.Dict[str, AuthCliOptionType]:
+        return self._transport_class.auth_options
 
-    @classmethod
-    def get_auth_param_default(cls, name: str, computer: Computer) -> t.Any:
+    def get_auth_param_default(self, name: str) -> t.Any:
         suggester_name = f'_get_{name}_suggestion_string'
-        members = dict(inspect.getmembers(cls._transport_class))
+        members = dict(inspect.getmembers(self._transport_class))
         suggester = members.get(suggester_name, None)
         default = None
         if suggester:
-            default = suggester(computer)
+            default = suggester(self._computer)
         else:
-            default = cls.get_auth_params().get(name, {}).get('default')
+            default = self.get_cli_auth_options().get(name, {}).get('default')
         return default
 
+    def get_minimum_job_poll_interval(self) -> float:
+        return self._transport_class.DEFAULT_MINIMUM_JOB_POLL_INTERVAL
+
     def get_safe_open_interval(self) -> float:
+        if self._maybe_transport is None:
+            return self._transport_class._DEFAULT_SAFE_OPEN_INTERVAL
         return self._transport.get_safe_open_interval()
 
     @property
@@ -284,7 +308,7 @@ class ComputeClientXY(ComputeClientProtocol):  # pylint: disable=too-many-public
         return self._transport.has_magic(string)
 
 
-def _computer_test_get_jobs(client: ComputeClientXY, authinfo: 'AuthInfo') -> tuple[bool, str]:  # pylint: disable=unused-argument
+def _computer_test_get_jobs(client: ComputeClientXY) -> tuple[bool, str]:  # pylint: disable=unused-argument
     """Internal test to check if it is possible to check the queue state.
 
     :param client: an open compute client
@@ -295,7 +319,7 @@ def _computer_test_get_jobs(client: ComputeClientXY, authinfo: 'AuthInfo') -> tu
     return True, f'{len(found_jobs)} jobs found in the queue'
 
 
-def _computer_test_no_unexpected_output(client: ComputeClientXY, authinfo: 'AuthInfo') -> tuple[bool, str]:  # pylint: disable=unused-argument
+def _computer_test_no_unexpected_output(client: ComputeClientXY) -> tuple[bool, str]:  # pylint: disable=unused-argument
     """Test that there is no unexpected output from the connection.
 
     This can happen if e.g. there is some spurious command in the
@@ -329,7 +353,7 @@ in this troubleshooting section of the online documentation: https://bit.ly/2FCR
     return True, ''
 
 
-def _computer_get_remote_username(client: ComputeClientXY, authinfo: 'AuthInfo') -> tuple[bool, str]:  # pylint: disable=unused-argument
+def _computer_get_remote_username(client: ComputeClientXY) -> tuple[bool, str]:  # pylint: disable=unused-argument
     """Internal test to check if it is possible to determine the username on the remote.
 
     :param client: an open compute client
@@ -340,7 +364,7 @@ def _computer_get_remote_username(client: ComputeClientXY, authinfo: 'AuthInfo')
     return True, remote_user
 
 
-def _computer_create_temp_file(client: ComputeClientXY, authinfo: 'AuthInfo') -> tuple[bool, str]:  # pylint: disable=unused-argument
+def _computer_create_temp_file(client: ComputeClientXY) -> tuple[bool, str]:  # pylint: disable=unused-argument
     """
     Internal test to check if it is possible to create a temporary file
     and then delete it in the work directory
@@ -352,7 +376,7 @@ def _computer_create_temp_file(client: ComputeClientXY, authinfo: 'AuthInfo') ->
     :return: tuple of boolean indicating success or failure and an optional string message
     """
     file_content = f"Test from 'verdi computer test' on {datetime.datetime.now().isoformat()}"
-    workdir = authinfo.get_workdir().format(username=client.whoami())
+    workdir = client._authinfo.get_workdir().format(username=client.whoami())
 
     try:
         client.chdir(workdir)
@@ -392,7 +416,7 @@ def _computer_create_temp_file(client: ComputeClientXY, authinfo: 'AuthInfo') ->
     return True, ''
 
 
-def _computer_use_login_shell_performance(client: ComputeClientXY, authinfo: 'AuthInfo') -> tuple[bool, str]:  # pylint: disable=unused-argument
+def _computer_use_login_shell_performance(client: ComputeClientXY) -> tuple[bool, str]:  # pylint: disable=unused-argument
     """Execute a command over the client with and without the ``use_login_shell`` option enabled.
 
     By default, AiiDA uses a login shell when connecting to a computer in order to operate in the same environment as a
@@ -405,6 +429,7 @@ def _computer_use_login_shell_performance(client: ComputeClientXY, authinfo: 'Au
     tolerance = 0.1  # 100 ms
     iterations = 3
 
+    authinfo = client._authinfo
     auth_params = authinfo.get_auth_params()
 
     # If ``use_login_shell=False`` we don't need to test for it being slower.

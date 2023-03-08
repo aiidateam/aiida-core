@@ -100,18 +100,18 @@ def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:  # pyli
         return None
 
     computer: orm.Computer = computer_from_code or computer_from_metadata
-    client_cls = computer.get_client_class()
+    client = computer.get_client(load_authinfo=False)
     try:
         resources = inputs['metadata']['options']['resources']
     except KeyError:
         return 'input `metadata.options.resources` is required but is not specified'
 
-    resources = client_cls.preprocess_resources(resources, computer.get_default_mpiprocs_per_machine())
+    resources = client.preprocess_resources(resources, computer.get_default_mpiprocs_per_machine())
 
     try:
-        client_cls.validate_resources(**resources)
+        client.validate_resources(**resources)
     except ValueError as exception:
-        return f'input `metadata.options.resources` is not valid for the `{client_cls}` client: {exception}'
+        return f'input `metadata.options.resources` is not valid for the `{client}` client: {exception}'
 
     return None
 
@@ -874,7 +874,7 @@ class CalcJob(Process):
             return calc_info
 
         # The remaining code is only necessary for actual runs, for example, creating the submission script
-        client_cls = computer.get_client_class()
+        client = computer.get_client(load_authinfo=False)
 
         # the if is done so that if the method returns None, this is
         # not added. This has two advantages:
@@ -894,8 +894,8 @@ class CalcJob(Process):
 
         # Set resources, also with get_default_mpiprocs_per_machine
         resources: ResourcesType = self.node.get_option('resources') or {}  # type: ignore[assignment]
-        resources = client_cls.preprocess_resources(resources, computer.get_default_mpiprocs_per_machine())
-        job_tmpl.job_resource = client_cls.create_job_resource(**resources)
+        resources = client.preprocess_resources(resources, computer.get_default_mpiprocs_per_machine())
+        job_tmpl.job_resource = client.create_job_resource(**resources)
 
         subst_dict = {'tot_num_mpiprocs': job_tmpl.job_resource.get_tot_num_mpiprocs()}
 
@@ -986,7 +986,7 @@ class CalcJob(Process):
             job_tmpl.max_wallclock_seconds = max_wallclock_seconds
 
         submit_script_filename = self.node.get_option('submit_script_filename')
-        script_content = client_cls.get_submit_script(job_tmpl)
+        script_content = client.get_submit_script(job_tmpl)
         folder.create_file_from_filelike(io.StringIO(script_content), submit_script_filename, 'w', encoding='utf8')
 
         def encoder(obj):

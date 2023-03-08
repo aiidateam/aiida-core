@@ -16,12 +16,12 @@ import typing as t
 from aiida.orm.nodes.data.remote.base import RemoteData
 
 if t.TYPE_CHECKING:
-    from aiida.client import ComputeClientProtocol
+    from aiida.client import ComputeClientOpenProtocol
     from aiida.orm import Computer, User
     from aiida.orm.implementation import StorageBackend
 
 
-def clean_remote(client: ComputeClientProtocol, path: str) -> None:
+def clean_remote(client: ComputeClientOpenProtocol, path: str) -> None:
     """
     Recursively remove a remote folder, with the given absolute path, and all its contents. The path should be
     made accessible through the compute client, which should already be open
@@ -56,7 +56,7 @@ def get_calcjob_remote_paths(  # pylint: disable=too-many-locals
     backend: StorageBackend | None=None,
     exit_status: str | None=None,
     only_not_cleaned: bool=False,
-) -> dict[str, list[RemoteData]]:
+) -> dict[str, list[RemoteData]] | None:
     """
     Return a mapping of computer uuids to a list of remote paths, for a given set of calcjobs. The set of
     calcjobs will be determined by a query with filters based on the pks, past_days, older_than,
@@ -77,12 +77,13 @@ def get_calcjob_remote_paths(  # pylint: disable=too-many-locals
     from aiida.common import timezone
     from aiida.orm import CalcJobNode
 
-    filters_calc = {}
-    filters_computer = {}
-    filters_remote = {}
+    filters_calc: dict[str, t.Any] = {}
+    filters_computer: dict[str, t.Any] = {}
+    filters_remote: dict[str, t.Any] = {}
 
     if user is None:
         user = orm.User.collection.get_default()
+        assert user is not None
 
     if computers is not None:
         filters_computer['id'] = {'in': [computer.pk for computer in computers]}

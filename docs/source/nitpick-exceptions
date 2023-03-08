@@ -21,6 +21,7 @@ py:class json.encoder.JSONEncoder
 py:class EXPOSED_TYPE
 py:class EVENT_CALLBACK_TYPE
 py:class datetime
+py:class TracebackType
 
 ### AiiDA
 py:class ReturnType

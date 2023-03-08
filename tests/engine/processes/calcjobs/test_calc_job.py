@@ -815,7 +815,7 @@ def test_parse_not_implemented(generate_process):
     # The `DirectScheduler` at this point in time does not implement the `parse_output` method. Instead of raising
     # a warning message should be logged. We verify here that said message is present.
     logs = [log.message for log in orm.Log.collection.get_logs_for(process.node)]
-    expected_logs = ['`Client` does not implement scheduler output parsing']
+    expected_logs = ['`ComputeClientXY` does not implement scheduler output parsing']
 
     for log in expected_logs:
         assert log in logs

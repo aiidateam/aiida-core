@@ -40,7 +40,7 @@ def verdi_config_list(ctx, prefix, description: bool):
     from aiida.manage.configuration import Config, Profile
 
     config: Config = ctx.obj.config
-    profile: Profile = ctx.obj.profile
+    profile: Profile = ctx.obj.get('profile', None)
 
     if not profile:
         echo.echo_warning('no profiles configured: run `verdi setup` to create one')

@@ -514,6 +514,40 @@ class TestWorkchain:
     def test_str(self):
         assert isinstance(str(Wf.spec()), str)
 
+    def test_invalid_if_predicate(self):
+        """Test that workchain raises if the predicate of an ``if_`` condition does not return a boolean."""
+
+        class TestWorkChain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(if_(cls.predicate))
+
+            def predicate(self):
+                """Invalid predicate whose return value is not a boolean."""
+                return 'true'
+
+        with pytest.raises(TypeError, match=r'The conditional predicate `predicate` did not return a boolean'):
+            launch.run(TestWorkChain)
+
+    def test_invalid_while_predicate(self):
+        """Test that workchain raises if the predicate of an ``while_`` condition does not return a boolean."""
+
+        class TestWorkChain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(while_(cls.predicate))
+
+            def predicate(self):
+                """Invalid predicate whose return value is not a boolean."""
+                return 'true'
+
+        with pytest.raises(TypeError, match=r'The conditional predicate `predicate` did not return a boolean'):
+            launch.run(TestWorkChain)
+
     def test_malformed_outline(self):
         """
         Test some malformed outlines

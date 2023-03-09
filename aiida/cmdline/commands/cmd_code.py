@@ -224,12 +224,12 @@ def show(code):
     table = []
     table.append(['PK', code.pk])
     table.append(['UUID', code.uuid])
-    table.append(['Label', code.label])
-    table.append(['Description', code.description])
-    table.append(['Default plugin', code.default_calc_job_plugin])
-    table.append(['Prepend text', code.prepend_text])
-    table.append(['Append text', code.append_text])
-
+    table.append(['Type', code.entry_point.name])
+    for key in code.get_cli_options().keys():
+        try:
+            table.append([key.capitalize().replace('_', ' '), getattr(code, key)])
+        except AttributeError:
+            continue
     if is_verbose():
         table.append(['Calculations', len(code.base.links.get_outgoing().all())])
 

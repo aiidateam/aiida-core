@@ -47,6 +47,12 @@
           "default": "REPORT",
           "description": "Minimum level to log to daemon log and the `DbLog` table for the `aiida` logger"
         },
+        "logging.verdi_loglevel": {
+          "type": "string",
+          "enum": ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"],
+          "default": "REPORT",
+          "description": "Minimum level to log to console when running a `verdi` command"
+        },
         "logging.db_loglevel": {
           "type": "string",
           "enum": ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"],

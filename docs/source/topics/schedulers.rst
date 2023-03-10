@@ -223,15 +223,15 @@ A scheduler plugin allows AiiDA to communicate with a specific type of scheduler
 The plugin should subclass the :class:`~aiida.schedulers.scheduler.Scheduler` class and implement a number of methods, that will instruct how certain key commands are to be executed, such as submitting a new job or requesting the current active jobs.
 To get you started, you can download :download:`this template <include/scheduler_template.py>` and implement the following methods:
 
-    1) ``_get_joblist_command``: returns the command to report a full information on existing jobs.
-    2) ``_get_detailed_job_info_command``: returns the command to get the detailed information on  a job, even after the job has finished.
-    3) ``_get_submit_script_header``: return the submit script header.
-    4) ``_get_submit_command``: return the string to submit a given script.
-    5) ``_parse_joblist_output``: parse the queue output string, as returned by executing the command returned by `_get_joblist_command`.
-    6) ``_parse_submit_output``: parse the output of the submit command, as returned by executing the command returned by `_get_submit_command`.
-    7) ``_get_kill_command``: return the command to kill the job with specified jobid.
-    8) ``_parse_kill_output``: parse the output of the kill command.
-    9) ``parse_output``: parse the output of the scheduler.
+#. ``_get_joblist_command``: returns the command to report a full information on existing jobs.
+#. ``_get_detailed_job_info_command``: returns the command to get the detailed information on  a job, even after the job has finished.
+#. ``_get_submit_script_header``: return the submit script header.
+#. ``_get_submit_command``: return the string to submit a given script.
+#. ``_parse_joblist_output``: parse the queue output string, as returned by executing the command returned by `_get_joblist_command`.
+#. ``_parse_submit_output``: parse the output of the submit command, as returned by executing the command returned by `_get_submit_command`.
+#. ``_get_kill_command``: return the command to kill the job with specified jobid.
+#. ``_parse_kill_output``: parse the output of the kill command.
+#. ``parse_output``: parse the output of the scheduler.
 
 All these methods *have* to be implemented, except for ``_get_detailed_job_info_command`` and ``parse_output``, which are optional.
 In addition to these methods, the ``_job_resource_class`` class attribute needs to be set to a subclass :class:`~aiida.schedulers.datastructures.JobResource`.

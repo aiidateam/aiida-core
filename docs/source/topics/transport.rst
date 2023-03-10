@@ -37,9 +37,9 @@ The ``ssh`` logic is instead given by the property sftp.
 
 The other functions that require some care are the copying functions, called using the following terminology:
 
-    1) ``put``: from local source to remote destination
-    2) ``get``: from remote source to local destination
-    3) ``copy``: copying files from remote source to remote destination
+#. ``put``: from local source to remote destination
+#. ``get``: from remote source to local destination
+#. ``copy``: copying files from remote source to remote destination
 
 Note that these functions must accept both files and folders and internally they will fallback to functions like ``putfile`` or ``puttree``.
 

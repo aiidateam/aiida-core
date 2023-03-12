@@ -632,6 +632,112 @@ The ``rerunnable`` option enables the scheduler to re-launch the calculation if 
 
 Because this depends on the scheduler, its configuration, and the code used, we cannot say conclusively when it will work -- do your own testing! It has been tested on a cluster using SLURM, but that does not guarantee other SLURM clusters behave in the same way.
 
+
+.. _topics:calculations:usage:calcjobs:mpi:
+
+Controlling MPI
+---------------
+
+The `Message Passing Interface <https://en.wikipedia.org/wiki/Message_Passing_Interface>`_ (MPI) is a standardized and portable message-passing standard designed to function on parallel computing architectures.
+AiiDA implements support for running calculation jobs with or without MPI enabled.
+There are a number of settings that can be used to control when and how MPI is used.
+
+.. _topics:calculations:usage:calcjobs:mpi:computer:
+
+The ``Computer``
+~~~~~~~~~~~~~~~~
+
+Each calculation job is executed on a compute resource, which is modeled by an instance of the :class:`~aiida.orm.computers.Computer` class.
+If the computer supports running with MPI, the command to use is stored in the ``mpirun_command`` attribute, which is retrieved and set using the :meth:`~aiida.orm.computers.Computer.get_mpirun_command` and :meth:`~aiida.orm.computers.Computer.get_mpirun_command`, respectively.
+For example, if the computer has `OpenMPI <https://docs.open-mpi.org/en/v5.0.x/index.html>`_ installed, it can be set to ``mpirun``.
+If the ``Computer`` does not specify an MPI command, then enabling MPI for a calculation job is ineffective.
+
+.. _topics:calculations:usage:calcjobs:mpi:code:
+
+The ``Code``
+~~~~~~~~~~~~
+
+.. versionadded:: 2.3
+
+When creating a code, you can tell AiiDA that it should be run as an MPI program, by setting the ``with_mpi`` attribute to ``True`` or ``False``.
+From AiiDA 2.3 onward, this is the **recommended** way of controlling MPI behavior.
+If the code can be run with or without MPI, setting the ``with_mpi`` attribute can be skipped.
+It will default to ``None``, leaving the question of whether to run with or without MPI up to the ``CalcJob`` plugin or user input.
+
+.. _topics:calculations:usage:calcjobs:mpi:calcjob-implementation:
+
+The ``CalcJob`` implementation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``CalcJob`` implementation instructs AiiDA how the codes should be run through the :class:`~aiida.common.datastructures.CalcInfo` object, which it returns from the :meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.prepare_for_submission` method.
+For each code that the job should run (usually only a single one), a :class:`~aiida.common.datastructures.CodeInfo` object should be added to the list of the ``CalcInfo.codes_info`` attribute.
+If the plugin developer knows that the executable being wrapped is *always* MPI program (no serial version available) or *never* an MPI program, they can set the ``withmpi`` attribute of the ``CodeInfo`` to ``True`` or ``False``, respectively.
+Note that this setting is fully optional; if the code could be run either way, it is best not to set it and leave it up to the ``Code`` or the ``metadata.options.withmpi`` input.
+
+.. note::
+
+    When implementing a ``CalcJob`` that runs a single code, consider using specifying whether MPI should be enabled or disabled through the :ref:`metadata option<topics:calculations:usage:calcjobs:mpi:calcjob-inputs>`.
+    This can be accomplished by changing the default in the process specification:
+
+    .. code:: python
+
+        class SomeCalcJob(CalcJob):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.inputs['metadata']['options']['withmpi'].default = True
+
+    The advantage over using the ``CodeInfo.withmpi`` attribute is that the default of the metadata option can be introspected programmatically from the process spec, and so is more visible to the user.
+
+    Naturally, this approach is not viable for calculation jobs that run multiple codes that are different in whether they require MPI or not.
+    In this case, one should resort to using the ``CodeInfo.withmpi`` attribute.
+
+.. _topics:calculations:usage:calcjobs:mpi:calcjob-inputs:
+
+The ``CalcJob`` inputs
+~~~~~~~~~~~~~~~~~~~~~~
+
+Finally, the MPI setting can be controlled on a per-instance basis, using the ``withmpi`` :ref:`metadata option<topics:calculations:usage:calcjobs:options>`.
+If MPI should be enabled or disabled, explicitly set this option to ``True`` or ``False``, respectively.
+For example, the following instructs to run all codes in the calculation job with MPI enabled:
+
+.. code:: python
+
+    inputs = {
+        ...,
+        'metadata': {
+            'options': {
+                'withmpi': True
+            }
+        }
+    }
+    submit(CalcJob, **inputs)
+
+The default for this option is set to ``False`` on the base ``CalcJob`` implementation, but it will be overruled if explicitly defined.
+
+.. note::
+
+    The value set for the ``withmpi`` option will be applied to all codes.
+    If a calculation job runs more than one code, and each requires a different MPI setting, this option should not be used, and instead MPI should be controlled :ref:`through the code input <topics:calculations:usage:calcjobs:mpi:code>`.
+
+.. _topics:calculations:usage:calcjobs:mpi:conflict-resolution:
+
+Conflict resolution
+~~~~~~~~~~~~~~~~~~~
+
+As described above, MPI can be enabled or disabled for a calculation job on a number of levels:
+
+* The ``Code`` input
+* The ``CalcJob`` implementation
+* The ``metadata.options.withmpi`` input
+
+MPI is enabled or disabled if any of these values is explicitly set to ``True`` or ``False``, respectively.
+If multiple values are specified and they are not equivalent, a ``RuntimeError`` is raised.
+Depending on the conflict, one has to change the ``Code`` or ``metadata.options.withmpi`` input.
+If none of the values are explicitly defined, the value specified by the default of ``metadata.options.withmpi`` is taken.
+
+
 .. _topics:calculations:usage:calcjobs:launch:
 
 Launch

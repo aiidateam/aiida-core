@@ -590,8 +590,8 @@ If a default calculation job plugin is defined, a process builder can be obtaine
 
 .. important::
 
-    If a containerized code is used for a calculation that sets the :ref:`metadata option <topics:calculations:usage:calcjobs:options>` ``withmpi`` to ``True``, the MPI command line arguments are placed in front of the container runtime.
-    For example, when running Singularity with ``metadata.options.withmpi = True``, the runline in the submission script will be written as:
+    If a containerized code is used for a calculation that enables MPI (see :ref:`Controlling MPI <topics:calculations:usage:calcjobs:mpi>`), the MPI command line arguments are placed in front of the container runtime.
+    For example, when running Singularity with MPI enabled, the runline in the submission script will be written as:
 
     .. code-block:: bash
 

@@ -40,6 +40,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     _KEY_ATTRIBUTE_APPEND_TEXT: str = 'append_text'
     _KEY_ATTRIBUTE_PREPEND_TEXT: str = 'prepend_text'
     _KEY_ATTRIBUTE_USE_DOUBLE_QUOTES: str = 'use_double_quotes'
+    _KEY_ATTRIBUTE_WITH_MPI: str = 'with_mpi'
     _KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS: str = 'wrap_cmdline_params'
     _KEY_EXTRA_IS_HIDDEN: str = 'hidden'  # Should become ``is_hidden`` once ``Code`` is dropped
 
@@ -49,6 +50,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         append_text: str = '',
         prepend_text: str = '',
         use_double_quotes: bool = False,
+        with_mpi: bool | None = None,
         is_hidden: bool = False,
         wrap_cmdline_params: bool = False,
         **kwargs
@@ -59,6 +61,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         :param append_text: The text that should be appended to the run line in the job script.
         :param prepend_text: The text that should be prepended to the run line in the job script.
         :param use_double_quotes: Whether the command line invocation of this code should be escaped with double quotes.
+        :param with_mpi: Whether the command should be run as an MPI program.
         :param wrap_cmdline_params: Whether to wrap the executable and all its command line parameters into quotes to
             form a single string. This is required to enable support for Docker with the ``ContainerizedCode``.
         :param is_hidden: Whether the code is hidden.
@@ -68,6 +71,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         self.append_text = append_text
         self.prepend_text = prepend_text
         self.use_double_quotes = use_double_quotes
+        self.with_mpi = with_mpi
         self.wrap_cmdline_params = wrap_cmdline_params
         self.is_hidden = is_hidden
 
@@ -226,6 +230,24 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         self.base.attributes.set(self._KEY_ATTRIBUTE_USE_DOUBLE_QUOTES, value)
 
     @property
+    def with_mpi(self) -> bool | None:
+        """Return whether the command should be run as an MPI program.
+
+        :return: ``True`` if the code should be run as an MPI program, ``False`` if it shouldn't, ``None`` if unknown.
+        """
+        return self.base.attributes.get(self._KEY_ATTRIBUTE_WITH_MPI, None)
+
+    @with_mpi.setter
+    def with_mpi(self, value: bool | None) -> None:
+        """Set whether the command should be run as an MPI program.
+
+        :param value: ``True`` if the code should be run as an MPI program, ``False`` if it shouldn't, ``None`` if
+            unknown.
+        """
+        type_check(value, bool, allow_none=True)
+        self.base.attributes.set(self._KEY_ATTRIBUTE_WITH_MPI, value)
+
+    @property
     def wrap_cmdline_params(self) -> bool:
         """Return whether all command line parameters should be wrapped with double quotes to form a single argument.
 
@@ -360,5 +382,11 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
                 'help': 'Whether the executable and arguments of the code in the submission script should be escaped '
                 'with single or double quotes.',
                 'prompt': 'Escape using double quotes',
+            },
+            'with_mpi': {
+                'is_flag': True,
+                'default': None,
+                'help': 'Whether the executable should be run as an MPI program.',
+                'prompt': 'Run with MPI',
             },
         }

@@ -913,31 +913,52 @@ class CalcJob(Process):
 
             if code_info.code_uuid is None:
                 raise PluginInternalError('CalcInfo should have the information of the code to be launched')
-            this_code = load_code(code_info.code_uuid)
 
-            # To determine whether this code should be run with MPI enabled, we get the value that was set in the inputs
-            # of the entire process, which can then be overwritten by the value from the `CodeInfo`. This allows plugins
-            # to force certain codes to run without MPI, even if the user wants to run all codes with MPI whenever
-            # possible. This use case is typically useful for `CalcJob`s that consist of multiple codes where one or
-            # multiple codes always have to be executed without MPI.
+            code = load_code(code_info.code_uuid)
 
-            this_withmpi = self.node.get_option('withmpi')
+            # Here are the three values that will determine whether the code is to be run with MPI _if_ they are not
+            # ``None``. If any of them are explicitly defined but are not equivalent, an exception is raised. We use the
+            # ``self._raw_inputs`` to determine the actual value passed for ``metadata.options.withmpi`` and
+            # distinghuish it from the default.
+            raw_inputs = self._raw_inputs or {}  # type: ignore[var-annotated]
+            with_mpi_option = raw_inputs.get('metadata', {}).get('options', {}).get('withmpi', None)
+            with_mpi_plugin = code_info.withmpi
+            with_mpi_code = code.with_mpi
 
-            # Override the value of `withmpi` with that of the `CodeInfo` if and only if it is set
-            if code_info.withmpi is not None:
-                this_withmpi = code_info.withmpi
+            with_mpi_values = [with_mpi_option, with_mpi_plugin, with_mpi_code]
+            with_mpi_values_defined = [value for value in with_mpi_values if value is not None]
+            with_mpi_values_set = set(with_mpi_values_defined)
 
-            if this_withmpi:
-                prepend_cmdline_params = this_code.get_prepend_cmdline_params(mpi_args, extra_mpirun_params)
+            # If more than one value is defined, they have to be identical, or we raise that a conflict is encountered
+            if len(with_mpi_values_set) > 1:
+                error = f'Inconsistent requirements as to whether code `{code}` should be run with or without MPI.'
+                if with_mpi_option is not None:
+                    error += f'\nThe `metadata.options.withmpi` input was set to `{with_mpi_option}`.'
+                if with_mpi_plugin is not None:
+                    error += f'\nThe plugin require `{with_mpi_plugin}`.'
+                if with_mpi_code is not None:
+                    error += f'\nThe code `{code}` required `{with_mpi_code}`.'
+                raise RuntimeError(error)
+
+            # At this point we know that the three explicit values agree if they are defined, so we simply set the value
+            if with_mpi_values_set:
+                with_mpi = with_mpi_values_set.pop()
             else:
-                prepend_cmdline_params = this_code.get_prepend_cmdline_params()
+                # Fall back to the default of the ``metadata.options.withmpi`` of the ``Calcjob`` class
+                with_mpi = self.node.get_option('withmpi')
 
-            cmdline_params = this_code.get_executable_cmdline_params(code_info.cmdline_params)
+            if with_mpi:
+                prepend_cmdline_params = code.get_prepend_cmdline_params(mpi_args, extra_mpirun_params)
+            else:
+                prepend_cmdline_params = code.get_prepend_cmdline_params()
+
+            cmdline_params = code.get_executable_cmdline_params(code_info.cmdline_params)
 
             tmpl_code_info = JobTemplateCodeInfo()
             tmpl_code_info.prepend_cmdline_params = prepend_cmdline_params
             tmpl_code_info.cmdline_params = cmdline_params
-            tmpl_code_info.use_double_quotes = [computer.get_use_double_quotes(), this_code.use_double_quotes]
+            tmpl_code_info.use_double_quotes = [computer.get_use_double_quotes(), code.use_double_quotes]
+            tmpl_code_info.wrap_cmdline_params = code.wrap_cmdline_params
             tmpl_code_info.stdin_name = code_info.stdin_name
             tmpl_code_info.stdout_name = code_info.stdout_name
             tmpl_code_info.stderr_name = code_info.stderr_name

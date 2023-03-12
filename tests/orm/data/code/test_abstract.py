@@ -46,6 +46,19 @@ def test_set_label():
         code.label = 'illegal@label'
 
 
+def test_with_mpi():
+    """Test the :meth:`aiida.orm.nodes.data.code.abstract.AbstractCode.with_mpi` property setter."""
+    code = MockCode()
+    assert code.with_mpi is None
+
+    for value in (True, False, None):
+        code.with_mpi = value
+        assert code.with_mpi is value
+
+    with pytest.raises(TypeError):
+        code.with_mpi = 'False'
+
+
 def test_constructor_defaults():
     """Test the defaults of the constructor."""
     code = MockCode()

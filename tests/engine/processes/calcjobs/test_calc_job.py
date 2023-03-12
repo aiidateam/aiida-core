@@ -17,6 +17,7 @@ import os
 import pathlib
 import tempfile
 from unittest.mock import patch
+import uuid
 
 import pytest
 
@@ -120,32 +121,114 @@ class FileCalcJob(CalcJob):
 class MultiCodesCalcJob(CalcJob):
     """`MultiCodesCalcJob` implementation to test the calcinfo with multiple codes set.
 
-    The codes are run in parallel. The codeinfo1 is set to run without mpi, and codeinfo2
-    is set to run with mpi.
+    The codes are run in parallel and each code enforces a different value for ``withmpi`` on the ``CodeInfo``.
     """
 
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input('parallel_run', valid_type=orm.Bool)
+        spec.input('code_info_with_mpi_none', valid_type=orm.AbstractCode, required=False)
+        spec.input('code_info_with_mpi_true', valid_type=orm.AbstractCode, required=False)
+        spec.input('code_info_with_mpi_false', valid_type=orm.AbstractCode, required=False)
+        spec.input('parallel_run', valid_type=orm.Bool, default=lambda: orm.Bool(True))
 
     def prepare_for_submission(self, folder):
         from aiida.common.datastructures import CalcInfo, CodeInfo, CodeRunMode
 
-        codeinfo1 = CodeInfo()
-        codeinfo1.code_uuid = self.inputs.code.uuid
-        codeinfo1.withmpi = False
+        calc_info = CalcInfo()
+        calc_info.codes_info = []
 
-        codeinfo2 = CodeInfo()
-        codeinfo2.code_uuid = self.inputs.code.uuid
+        for key, with_mpi in [
+            ('code_info_with_mpi_none', None),
+            ('code_info_with_mpi_true', True),
+            ('code_info_with_mpi_false', False),
+        ]:
+            if key in self.inputs:
+                code_info = CodeInfo()
+                code_info.code_uuid = self.inputs[key].uuid
+                if with_mpi is not None:
+                    code_info.withmpi = with_mpi
+                calc_info.codes_info.append(code_info)
 
-        calcinfo = CalcInfo()
-        calcinfo.codes_info = [codeinfo1, codeinfo2]
         if self.inputs.parallel_run:
-            calcinfo.codes_run_mode = CodeRunMode.PARALLEL
+            calc_info.codes_run_mode = CodeRunMode.PARALLEL
         else:
-            calcinfo.codes_run_mode = CodeRunMode.SERIAL
-        return calcinfo
+            calc_info.codes_run_mode = CodeRunMode.SERIAL
+
+        return calc_info
+
+
+@pytest.mark.parametrize(
+    'code_key, with_mpi_code, with_mpi_option, expected', (
+        ('code_info_with_mpi_none', None, True, 3),
+        ('code_info_with_mpi_none', None, False, 0),
+        ('code_info_with_mpi_none', None, None, 0),
+        ('code_info_with_mpi_none', True, True, 3),
+        ('code_info_with_mpi_none', True, False, None),
+        ('code_info_with_mpi_none', False, True, None),
+        ('code_info_with_mpi_none', False, False, 0),
+        ('code_info_with_mpi_true', None, True, 3),
+        ('code_info_with_mpi_true', None, False, None),
+        ('code_info_with_mpi_true', None, None, 3),
+        ('code_info_with_mpi_true', True, True, 3),
+        ('code_info_with_mpi_true', True, False, None),
+        ('code_info_with_mpi_true', False, True, None),
+        ('code_info_with_mpi_true', False, False, None),
+        ('code_info_with_mpi_false', None, True, None),
+        ('code_info_with_mpi_false', None, False, 0),
+        ('code_info_with_mpi_false', None, None, 0),
+        ('code_info_with_mpi_false', True, True, None),
+        ('code_info_with_mpi_false', True, False, None),
+        ('code_info_with_mpi_false', False, True, None),
+        ('code_info_with_mpi_false', False, False, 0),
+    )
+)
+def test_multi_codes_with_mpi(
+    aiida_local_code_factory, fixture_sandbox, manager, code_key, with_mpi_code, with_mpi_option, expected
+):
+    """Test the functionality that controls whether the calculation is to be run with MPI.
+
+    The value specified by the ``metadata.options.withmpi`` input is the default. This value can be overidden by either
+    the plugin (through the ``CodeInfo.withmpi`` attribute) or the code input (through the ``AbstractCode.with_mpi``
+    property). If both of these are explicitly defined, i.e. are not ``None``, they have to be equivalent or an
+    exception is raised. The parametrization represents the matrix of all possible combinations. If the final value for
+    ``with_mpi`` is ``True`` we can check that this is correctly propagated by checking the length of the
+    ``prepend_cmdline_params`` list in the ``codes_info`` which should not be empty. Since the ``presubmit`` method does
+    not return this value directly but writes it to a file in the sandbox, we have to read and deserialize it first.
+    """
+    from aiida.engine.utils import instantiate_process
+
+    inputs = {
+        'code':
+        aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
+        code_key:
+        aiida_local_code_factory('core.arithmetic.add', '/bin/bash', label=str(uuid.uuid4()), with_mpi=with_mpi_code),
+        'metadata': {
+            'options': {
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
+                },
+            }
+        }
+    }
+
+    if with_mpi_option is not None:
+        inputs['metadata']['options']['withmpi'] = with_mpi_option
+
+    process = instantiate_process(manager.get_runner(), MultiCodesCalcJob, **inputs)
+
+    if expected is None:
+        with pytest.raises(RuntimeError, match=r'Inconsistent requirements as to whether'):
+            process.presubmit(fixture_sandbox)
+        return
+
+    process.presubmit(fixture_sandbox)
+
+    with fixture_sandbox.get_subfolder('.aiida').open('job_tmpl.json') as handle:
+        job_tmpl = json.load(handle)
+
+    assert len(job_tmpl['codes_info'][0]['prepend_cmdline_params']) == expected
 
 
 @pytest.mark.requires_rmq
@@ -153,10 +236,15 @@ class MultiCodesCalcJob(CalcJob):
 @pytest.mark.parametrize('parallel_run', [True, False])
 def test_multi_codes_run_parallel(aiida_local_code_factory, file_regression, parallel_run):
     """test codes_run_mode set in CalcJob"""
-
     inputs = {
-        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
-        'parallel_run': orm.Bool(parallel_run),
+        'code':
+        aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
+        'code_info_with_mpi_none':
+        aiida_local_code_factory('core.arithmetic.add', '/bin/bash', label=str(uuid.uuid4())),
+        'code_info_with_mpi_false':
+        aiida_local_code_factory('core.arithmetic.add', '/bin/bash', label=str(uuid.uuid4()), with_mpi=False),
+        'parallel_run':
+        orm.Bool(parallel_run),
         'metadata': {
             'dry_run': True,
             'options': {
@@ -269,7 +357,44 @@ def test_containerized_code(file_regression, aiida_localhost):
     _, node = launch.run_get_node(DummyCalcJob, **inputs)
     folder_name = node.dry_run_info['folder']
     submit_script_filename = node.get_option('submit_script_filename')
-    content = (pathlib.Path(folder_name) / submit_script_filename).read_bytes().decode('utf-8')
+    content = (pathlib.Path(folder_name) / submit_script_filename).read_text()
+
+    file_regression.check(content, extension='.sh')
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('chdir_tmp_path')
+def test_containerized_code_wrap_cmdline_params(file_regression, aiida_localhost):
+    """Test :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode` with ``wrap_cmdline_params = True``."""
+    aiida_localhost.set_use_double_quotes(False)
+    engine_command = """docker run -i -v $PWD:/workdir:rw -w /workdir {image_name} sh -c"""
+    containerized_code = orm.ContainerizedCode(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/bash',
+        engine_command=engine_command,
+        image_name='ubuntu',
+        computer=aiida_localhost,
+        wrap_cmdline_params=True,
+    ).store()
+
+    inputs = {
+        'code': containerized_code,
+        'metadata': {
+            'dry_run': True,
+            'options': {
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
+                },
+                'withmpi': False,
+            }
+        }
+    }
+
+    _, node = launch.run_get_node(DummyCalcJob, **inputs)
+    folder_name = node.dry_run_info['folder']
+    submit_script_filename = node.get_option('submit_script_filename')
+    content = (pathlib.Path(folder_name) / submit_script_filename).read_text()
 
     file_regression.check(content, extension='.sh')
 
@@ -305,39 +430,7 @@ def test_containerized_code_withmpi_true(file_regression, aiida_localhost):
     _, node = launch.run_get_node(DummyCalcJob, **inputs)
     folder_name = node.dry_run_info['folder']
     submit_script_filename = node.get_option('submit_script_filename')
-    content = (pathlib.Path(folder_name) / submit_script_filename).read_bytes().decode('utf-8')
-
-    file_regression.check(content, extension='.sh')
-
-
-@pytest.mark.requires_rmq
-@pytest.mark.usefixtures('chdir_tmp_path')
-@pytest.mark.parametrize('calcjob_withmpi', [True, False])
-def test_multi_codes_run_withmpi(aiida_computer, aiida_local_code_factory, file_regression, calcjob_withmpi):
-    """test withmpi set in CalcJob only take effect for codes which have codeinfo.withmpi not set"""
-    computer = aiida_computer()
-    computer.set_use_double_quotes(False)
-
-    inputs = {
-        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash', computer),
-        'parallel_run': orm.Bool(False),
-        'metadata': {
-            'dry_run': True,
-            'options': {
-                'resources': {
-                    'num_machines': 1,
-                    'num_mpiprocs_per_machine': 1
-                },
-                'withmpi': calcjob_withmpi,
-            }
-        }
-    }
-
-    _, node = launch.run_get_node(MultiCodesCalcJob, **inputs)
-    folder_name = node.dry_run_info['folder']
-    submit_script_filename = node.get_option('submit_script_filename')
-    with open(os.path.join(folder_name, submit_script_filename), encoding='utf8') as handle:
-        content = handle.read()
+    content = (pathlib.Path(folder_name) / submit_script_filename).read_text()
 
     file_regression.check(content, extension='.sh')
 
@@ -379,9 +472,9 @@ def test_portable_code(tmp_path, aiida_localhost):
     for filename in code.base.repository.list_object_names():
         assert filename in uploaded_files
 
-    content = (pathlib.Path(folder_name) / code.filepath_executable).read_bytes().decode('utf-8')
-    subcontent = (pathlib.Path(folder_name) / 'sub' / 'dummy').read_bytes().decode('utf-8')
-    subsubcontent = (pathlib.Path(folder_name) / 'sub' / 'sub' / 'sub-dummy').read_bytes().decode('utf-8')
+    content = (pathlib.Path(folder_name) / code.filepath_executable).read_text()
+    subcontent = (pathlib.Path(folder_name) / 'sub' / 'dummy').read_text()
+    subsubcontent = (pathlib.Path(folder_name) / 'sub' / 'sub' / 'sub-dummy').read_text()
 
     assert content == 'bash implementation'
     assert subcontent == 'dummy'

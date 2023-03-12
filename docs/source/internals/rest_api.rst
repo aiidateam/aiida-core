@@ -9,8 +9,8 @@ REST API
 
 The AiiDA REST API is made of two main classes:
 
- * ``App``, inheriting from ``flask.Flask`` (generic class for Flask web applications).
- * ``AiidaApi``, inheriting ``flask_restful.Api``. This class defines the resources served by the REST API.
+* ``App``, inheriting from ``flask.Flask`` (generic class for Flask web applications).
+* ``AiidaApi``, inheriting ``flask_restful.Api``. This class defines the resources served by the REST API.
 
 The instances of both ``AiidaApi`` (let's call it ``api``) and ``App`` (let's call it ``app``) need to be coupled by setting ``api.app = app``.
 
@@ -28,9 +28,9 @@ The endpoint implements a ``GET`` request that retrieves the latest created ``Di
 
 In order to achieve this, we will need to:
 
- * Create the ``flask_restful.Resource`` class that will be bound to the new endpoint.
- * Extend the :py:class:`~aiida.restapi.api.AiidaApi` class in order to register the new endpoint.
- * (Optional) Extend the :py:class:`~aiida.restapi.api.App` class for additional customization.
+* Create the ``flask_restful.Resource`` class that will be bound to the new endpoint.
+* Extend the :py:class:`~aiida.restapi.api.AiidaApi` class in order to register the new endpoint.
+* (Optional) Extend the :py:class:`~aiida.restapi.api.App` class for additional customization.
 
 Let's start by putting the following code into a  file ``api.py``:
 
@@ -165,19 +165,19 @@ Consequently, the app is configured and, if required, hooked up.
 
 It takes as inputs:
 
- * the classes representing the API and the application.
+* the classes representing the API and the application.
    We strongly suggest to pass to ``run_api()`` the :py:class:`aiida.restapi.api.App` class, inheriting from ``flask.Flask``, as it handles correctly AiiDA RESTApi-specific exceptions.
 
- * positional arguments representing the command-line arguments/options, passed by the click function.
+* positional arguments representing the command-line arguments/options, passed by the click function.
    Types, defaults and help strings can be set in the ``@click.option`` definitions, and will be handled by the command line call.
 
 
 A few more things before using the script:
 
- * if you want to customize further the error handling, you can take inspiration by looking at the definition of ``App`` and create your derived class ``NewApp(App)``.
+* if you want to customize further the error handling, you can take inspiration by looking at the definition of ``App`` and create your derived class ``NewApp(App)``.
 
 
- * the supported command line options are identical to those of ``verdi restapi``.
+* the supported command line options are identical to those of ``verdi restapi``.
    Use ``verdi restapi --help`` for their full documentation.
    If you want to add more options or modify the existing ones, create you custom runner taking inspiration from ``run_api``.
 

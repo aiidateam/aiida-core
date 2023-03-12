@@ -46,7 +46,7 @@ def test_create_all(run_cli_command, tmp_path, aiida_localhost):
     filename_output = tmp_path / 'archive.aiida'
 
     options = ['--all', filename_output]
-    run_cli_command(cmd_archive.create, options)
+    run_cli_command(cmd_archive.create, options, use_subprocess=True)
     assert filename_output.is_file()
     assert ArchiveFormatSqlZip().read_version(filename_output) == ArchiveFormatSqlZip().latest_version
     with ArchiveFormatSqlZip().open(filename_output, 'r') as archive:
@@ -159,7 +159,7 @@ def test_migrate_low_verbosity(run_cli_command, tmp_path):
     filename_output = tmp_path / 'archive.aiida'
 
     options = ['--verbosity', 'WARNING', filename_input, filename_output]
-    result = run_cli_command(cmd_archive.migrate, options)
+    result = run_cli_command(cmd_archive.migrate, options, suppress_warnings=True)
     assert result.output == ''
     assert filename_output.is_file()
     assert ArchiveFormatSqlZip().read_version(filename_output) == ArchiveFormatSqlZip().latest_version

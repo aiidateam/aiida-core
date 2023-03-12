@@ -65,7 +65,7 @@ def test_daemon_start_number_config(run_cli_command, stopped_daemon_client, isol
     isolated_config.set_option('daemon.default_workers', number, scope=get_profile().name)
     isolated_config.store()
 
-    run_cli_command(cmd_daemon.start)
+    run_cli_command(cmd_daemon.start, use_subprocess=False)
 
     daemon_response = stopped_daemon_client.get_daemon_info()
     worker_response = stopped_daemon_client.get_worker_info()

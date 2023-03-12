@@ -19,11 +19,11 @@ Design
 
 The following requirements were considered during the design of the file repository implementation:
 
- * Scalability: the repository should be able to store millions of files, all the while permitting efficient backups.
- * Heterogeneity: the repository should operate efficiently for data that is heterogeneous in size, with object of size ranging from a few bytes to multiple gigabytes.
- * Simplicity: the solution should not require an actively running server to operate.
- * Concurrency: the repository should support multiple concurrent reading and writing processes.
- * Efficiency: the repository should automatically deduplicate file content in an effort to reduce the total amount of required storage space.
+* Scalability: the repository should be able to store millions of files, all the while permitting efficient backups.
+* Heterogeneity: the repository should operate efficiently for data that is heterogeneous in size, with object of size ranging from a few bytes to multiple gigabytes.
+* Simplicity: the solution should not require an actively running server to operate.
+* Concurrency: the repository should support multiple concurrent reading and writing processes.
+* Efficiency: the repository should automatically deduplicate file content in an effort to reduce the total amount of required storage space.
 
 These are merely the requirements for the data store that persists the content of the files, or the *backend* file repository.
 The frontend interface that is employed by users to store files has another set of requirements altogether.
@@ -76,8 +76,8 @@ Note that upon constructing from a serialized file hierarchy, the :class:`~aiida
 The final integration of the :class:`~aiida.repository.repository.Repository` class with the ORM is through the :class:`~aiida.orm.nodes.repository.NodeRepository` class, which is mixed into the :class:`~aiida.orm.nodes.node.Node` class.
 This layer serves a couple of functions:
 
- * It implements the mutability rules of nodes
- * It serves as a translation layer between string and byte streams.
+* It implements the mutability rules of nodes
+* It serves as a translation layer between string and byte streams.
 
 The first is necessary because after a node has been stored, its content is considered immutable, which includes the content of its file repository.
 The :class:`~aiida.orm.utils.mixins.Sealable` mixin overrides the :class:`~aiida.repository.repository.Repository` methods that mutate repository content, to ensure that process nodes *can* mutate their content, as long as they are not sealed.

@@ -224,12 +224,12 @@ def show(code):
     table = []
     table.append(['PK', code.pk])
     table.append(['UUID', code.uuid])
-    table.append(['Label', code.label])
-    table.append(['Description', code.description])
-    table.append(['Default plugin', code.default_calc_job_plugin])
-    table.append(['Prepend text', code.prepend_text])
-    table.append(['Append text', code.append_text])
-
+    table.append(['Type', code.entry_point.name])
+    for key in code.get_cli_options().keys():
+        try:
+            table.append([key.capitalize().replace('_', ' '), getattr(code, key)])
+        except AttributeError:
+            continue
     if is_verbose():
         table.append(['Calculations', len(code.base.links.get_outgoing().all())])
 
@@ -250,7 +250,10 @@ def export(code, output_file):
         else:
             value = getattr(code, key)
 
-        code_data[key] = str(value)
+        # If the attribute is not set, for example ``with_mpi`` do not export it, because the YAML won't be valid for
+        # use in ``verdi code create`` since ``None`` is not a valid value on the CLI.
+        if value is not None:
+            code_data[key] = str(value)
 
     with open(output_file, 'w', encoding='utf-8') as yfhandle:
         yaml.dump(code_data, yfhandle)

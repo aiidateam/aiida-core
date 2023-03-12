@@ -17,7 +17,7 @@ from aiida.cmdline.params import arguments, types
 from aiida.cmdline.utils import echo
 
 
-@verdi_data.group('remote')
+@verdi_data.group('core.remote')
 def remote():
     """Manipulate RemoteData objects (reference to remote folders).
 

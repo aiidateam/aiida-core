@@ -7,8 +7,8 @@ Process functions
 A process function is a process (see the :ref:`concepts<topics:processes:concepts>` for a definition and explanation) that is implemented as a decorated python function.
 Currently, there are two types of process functions:
 
- * :ref:`calculation function<topics:calculations:concepts:calcfunctions>`
- * :ref:`work function<topics:workflows:concepts:workfunctions>`
+* :ref:`calculation function<topics:calculations:concepts:calcfunctions>`
+* :ref:`work function<topics:workflows:concepts:workfunctions>`
 
 The former can *create* new data, whereas the latter can orchestrate other processes and *return* their results.
 This section will provide detailed information and best practices on how to implement these two process types.
@@ -23,8 +23,8 @@ Function signatures
 To explain what features of python function definitions and calls are supported we first need to be clear about some terminology.
 When dealing with functions, there are two distinct parts:
 
- * `function definitions <https://docs.python.org/3/reference/compound_stmts.html#function-definitions>`_
- * `function calls <https://docs.python.org/3/reference/expressions.html#calls>`_
+* `function definitions <https://docs.python.org/3/reference/compound_stmts.html#function-definitions>`_
+* `function calls <https://docs.python.org/3/reference/expressions.html#calls>`_
 
 Consider the following code snippet that defines a simple python function:
 
@@ -250,10 +250,10 @@ Provenance
 ==========
 In addition to the basic attributes that are stored for all processes such as the process state and label, the process functions automatically store additional information that relates to the source code of the function they represent:
 
- * Function name
- * Function namespace
- * Function starting line number
- * Function source file
+* Function name
+* Function namespace
+* Function starting line number
+* Function source file
 
 The first three are retrieved by inspecting the python source code as soon as the process function is executed and are stored as attributes on the process node.
 They can be accessed through the corresponding properties on the process node as follows:
@@ -273,9 +273,9 @@ Reproducibility guidelines
 --------------------------
 Due to the nature of the way process functions are implemented, it is impossible to guarantee 100% reproducibility, but by following the following guidelines, one can come as close as possible.
 
- * Do not leak data into functions
- * Limit importing of external code
- * Keep functions self-consistent and in separate files
+* Do not leak data into functions
+* Limit importing of external code
+* Keep functions self-consistent and in separate files
 
 Leaking data into functions is accomplished for example by reading a file on the local file system in the function body and using its contents for the creation of the outputs.
 Even if you store the source code, if you don't possess the file that was read, it is impossible to reproduce the results.

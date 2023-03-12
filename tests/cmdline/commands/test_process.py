@@ -9,6 +9,7 @@
 ###########################################################################
 # pylint: disable=no-self-use
 """Tests for `verdi process`."""
+import functools
 import time
 import typing as t
 import uuid
@@ -86,6 +87,8 @@ class TestVerdiProcess:
 
         group = Group(str(uuid.uuid4())).store()
         group.add_nodes(calcs[0])
+
+        run_cli_command = functools.partial(run_cli_command, suppress_warnings=True)
 
         # Default behavior should yield all active states (CREATED, RUNNING and WAITING) so six in total
         result = run_cli_command(cmd_process.process_list, ['-r'])
@@ -338,7 +341,7 @@ def test_list_worker_slot_warning(run_cli_command, monkeypatch):
         calc.store()
 
     # Default cmd should not throw the warning as we are below the limit
-    result = run_cli_command(cmd_process.process_list)
+    result = run_cli_command(cmd_process.process_list, use_subprocess=False)
     warning_phrase = 'of the available daemon worker slots have been used!'
     assert all(warning_phrase not in line for line in result.output_lines), result.output
 
@@ -348,7 +351,7 @@ def test_list_worker_slot_warning(run_cli_command, monkeypatch):
     calc.store()
 
     # Now the warning should fire
-    result = run_cli_command(cmd_process.process_list)
+    result = run_cli_command(cmd_process.process_list, use_subprocess=False)
     warning_phrase = '% of the available daemon worker slots have been used!'
     assert any(warning_phrase in line for line in result.output_lines)
 

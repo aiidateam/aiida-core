@@ -101,19 +101,19 @@ Registering plugins through entry points
 An AiiDA plugin is an extension of AiiDA that announces itself by means of a new *entry point* (for details, see :ref:`topics:plugins:entrypoints`).
 Adding a new entry point consists of the following steps:
 
- #. Deciding a name.
-    We *strongly* suggest to start the name of each entry point with the name of the plugin package (omitting the 'aiida-' prefix).
-    For a package ``aiida-mycode``, this will usually mean ``"mycode.<something>"``
+#. Deciding a name.
+   We *strongly* suggest to start the name of each entry point with the name of the plugin package (omitting the 'aiida-' prefix).
+   For a package ``aiida-mycode``, this will usually mean ``"mycode.<something>"``
 
- #. Finding the right entry point group. You can list the entry point groups defined by AiiDA via ``verdi plugin list``.
-    For a documentation of the groups, see :ref:`topics:plugins:entrypointgroups`.
+#. Finding the right entry point group. You can list the entry point groups defined by AiiDA via ``verdi plugin list``.
+   For a documentation of the groups, see :ref:`topics:plugins:entrypointgroups`.
 
- #. Adding the entry point to the ``entry_points`` field in the ``pyproject.toml`` file::
+#. Adding the entry point to the ``entry_points`` field in the ``pyproject.toml`` file::
 
-     ...
-     [project.entry-points."aiida.calculations"]
-     "mycode.<something>" = "aiida_mycode.calcs.some:MysomethingCalculation"
-     ...
+      ...
+      [project.entry-points."aiida.calculations"]
+      "mycode.<something>" = "aiida_mycode.calcs.some:MysomethingCalculation"
+      ...
 
 Your new entry point should now show up in ``verdi plugin list aiida.calculations``.
 
@@ -219,9 +219,9 @@ Repository-level documentation
 
 Since the source code of most AiiDA plugins is hosted on GitHub, the first contact of a new user with your plugin package is likely the landing page of your GitHub repository.
 
- * Make sure to have a useful ``README.md``, describing what your plugin does and how to install it.
- * Leaving a contact email and adding a license is also a good idea.
- * Make sure the information in the ``pyproject.toml`` file is correct and up to date (in particular the version number), since this information is used to advertise your package on the AiiDA plugin registry.
+* Make sure to have a useful ``README.md``, describing what your plugin does and how to install it.
+* Leaving a contact email and adding a license is also a good idea.
+* Make sure the information in the ``pyproject.toml`` file is correct and up to date (in particular the version number), since this information is used to advertise your package on the AiiDA plugin registry.
 
 Source-code-level documentation
 -------------------------------
@@ -254,9 +254,9 @@ You can now use the ``aiida-process``, ``aiida-calcjob`` or ``aiida-workchain`` 
 
 Here,
 
- * ``MyWorkChain`` is the name of the workchain to be documented.
- * ``:module:`` is the python module from which the workchain can be imported.
- * ``:hide-unstored-inputs:`` hides workchain inputs that are not stored in the database (shown by default).
+* ``MyWorkChain`` is the name of the workchain to be documented.
+* ``:module:`` is the python module from which the workchain can be imported.
+* ``:hide-unstored-inputs:`` hides workchain inputs that are not stored in the database (shown by default).
 
 .. note::
 
@@ -273,8 +273,8 @@ AiiDA plugin packages are published on the `AiiDA plugin registry <registry_>`_ 
 
 Before publishing your plugin, make sure your plugin comes with:
 
- * a ``pyproject.toml`` file with the plugin metadata and for installing your plugin via ``pip``
- * a license
+* a ``pyproject.toml`` file with the plugin metadata and for installing your plugin via ``pip``
+* a license
 
 For examples of these files, see the `aiida-diff demo plugin <aiida-diff_>`_.
 

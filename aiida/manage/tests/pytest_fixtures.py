@@ -428,7 +428,7 @@ def aiida_local_code_factory(aiida_localhost):
     :rtype: object
     """
 
-    def get_code(entry_point, executable, computer=aiida_localhost, label=None, prepend_text=None, append_text=None):
+    def get_code(entry_point, executable, computer=aiida_localhost, label=None, **kwargs):
         """Get local code.
 
         Sets up code for given entry point on given computer.
@@ -436,8 +436,9 @@ def aiida_local_code_factory(aiida_localhost):
         :param entry_point: Entry point of calculation plugin
         :param executable: name of executable; will be searched for in local system PATH.
         :param computer: (local) AiiDA computer
-        :param prepend_text: a string of code that will be put in the scheduler script before the execution of the code.
-        :param append_text: a string of code that will be put in the scheduler script after the execution of the code.
+        :param label: Define the label of the code. By default the ``executable`` is taken. This can be useful if
+            multiple codes need to be created in a test which require unique labels.
+        :param kwargs: Additional keyword arguments that are passed to the code's constructor.
         :return: the `Code` either retrieved from the database or created if it did not yet exist.
         :rtype: :py:class:`~aiida.orm.Code`
         """
@@ -471,14 +472,9 @@ def aiida_local_code_factory(aiida_localhost):
             description=label,
             default_calc_job_plugin=entry_point,
             computer=computer,
-            filepath_executable=executable_path
+            filepath_executable=executable_path,
+            **kwargs
         )
-
-        if prepend_text is not None:
-            code.prepend_text = prepend_text
-
-        if append_text is not None:
-            code.append_text = append_text
 
         return code.store()
 

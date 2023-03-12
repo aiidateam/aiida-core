@@ -27,8 +27,6 @@ services:
       - aiida
     environment:
       POSTGRES_HOST_AUTH_METHOD: trust
-    # volumes:
-    #   - db-volume:/var/lib/postgresql/data
 
   aiida:
     #image: "aiidateam/aiida-core:main"
@@ -46,15 +44,11 @@ services:
     entrypoint: tail -f /dev/null
     volumes:
       - ..:/home/aiida/aiida-core:cached
-    #   - db-volume:/var/lib/assets
     networks:
       - aiida
     depends_on:
       - rabbitmq
       - postgres
-
-# volumes:
-#   db-volume:
 
 networks:
   aiida:

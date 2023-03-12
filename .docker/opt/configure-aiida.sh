@@ -29,7 +29,8 @@ if [[ ${NEED_SETUP_PROFILE} == true ]]; then
         --first-name "${USER_FIRST_NAME}"      \
         --last-name "${USER_LAST_NAME}"        \
         --institution "${USER_INSTITUTION}"    \
-        --db-backend "${AIIDADB_BACKEND}"
+        --db-host "${DB_HOST:localhost}"    \
+        --broker-host "${BROKER_HOST:localhost}"
 
     # Setup and configure local computer.
     computer_name=localhost

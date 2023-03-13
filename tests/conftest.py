@@ -488,6 +488,7 @@ def run_cli_command(reset_log_level, aiida_instance, aiida_profile):  # pylint: 
         raises: bool = False,
         use_subprocess: bool = False,
         suppress_warnings: bool = False,
+        initialize_ctx_obj: bool = True,
         **kwargs
     ) -> CliResult:
         """Run the command and check the result.
@@ -513,6 +514,12 @@ def run_cli_command(reset_log_level, aiida_instance, aiida_profile):  # pylint: 
             on the output is very strict. By running in a sub process, any warnings that are emitted by the code will be
             shown since they have not already been hit as would be the case when running the test through the test
             runner in this interpreter.
+        :param initialize_ctx_obj: Boolean, if ``True``, the custom ``obj`` attribute of the ``ctx`` is initialized when
+            ``use_subprocess == False``. When invoking the ``verdi`` command from the command line (and when running
+            tests with ``use_subprocess == True``), this is done by the ``VerdiContext``, but when using the test runner
+            in this interpreter, the object has to be initialized manually and passed to the test runner. In certain
+            cases, however, this initialization should not be done, to simulate for example the absence of a loaded
+            profile.
         :returns: Instance of ``CliResult``.
         :raises AssertionError: If ``raises == True`` and the command didn't except, or if ``raises == True`` and the
             the command did except.
@@ -523,7 +530,7 @@ def run_cli_command(reset_log_level, aiida_instance, aiida_profile):  # pylint: 
         if use_subprocess:
             result = run_cli_command_subprocess(command, parameters, user_input, aiida_profile.name, suppress_warnings)
         else:
-            result = run_cli_command_runner(command, parameters, user_input, kwargs)
+            result = run_cli_command_runner(command, parameters, user_input, initialize_ctx_obj, kwargs)
 
         if raises:
             assert result.exception is not None, result.output
@@ -574,16 +581,19 @@ def run_cli_command_subprocess(command, parameters, user_input, profile_name, su
     return result
 
 
-def run_cli_command_runner(command, parameters, user_input, kwargs):
+def run_cli_command_runner(command, parameters, user_input, initialize_ctx_obj, kwargs):
     """Run CLI command through ``click.testing.CliRunner``."""
     from click.testing import CliRunner
 
     from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup
     from aiida.common import AttributeDict
 
-    config = get_config()
-    profile = get_profile()
-    obj = AttributeDict({'config': config, 'profile': profile})
+    if initialize_ctx_obj:
+        config = get_config()
+        profile = get_profile()
+        obj = AttributeDict({'config': config, 'profile': profile})
+    else:
+        obj = None
 
     # We need to apply the ``VERBOSITY`` option. When invoked through the command line, this is done by the logic of the
     # ``VerdiCommandGroup``, but when testing commands, the command is retrieved directly from the module which

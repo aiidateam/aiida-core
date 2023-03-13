@@ -8,8 +8,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for ``verdi config``."""
+import pytest
+
 from aiida import get_profile
 from aiida.cmdline.commands import cmd_verdi
+
+
+@pytest.mark.usefixtures('empty_config')
+def test_config_list_no_profile(run_cli_command):
+    """Test the `verdi config list` command when no profile is present in the config, it should not except."""
+    run_cli_command(cmd_verdi.verdi, ['config', 'list'], initialize_ctx_obj=False)
 
 
 def test_config_set_option_no_profile(run_cli_command, empty_config):

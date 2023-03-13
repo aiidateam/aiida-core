@@ -9,6 +9,8 @@
 ###########################################################################
 # pylint: disable=redefined-outer-name
 """Tests for ``verdi daemon``."""
+import time
+
 import pytest
 
 from aiida import get_profile
@@ -80,6 +82,38 @@ def test_daemon_start_number_config(run_cli_command, stopped_daemon_client, isol
 def test_foreground_multiple_workers(run_cli_command):
     """Test `verdi daemon start` in foreground with more than one worker will fail."""
     run_cli_command(cmd_daemon.start, ['--foreground', str(4)], raises=True)
+
+
+def test_start_timeout(run_cli_command, started_daemon_client):
+    """Test that the daemon response for `verdi daemon start` would change based on the specified timeout."""
+    timeout = 10
+
+    run_cli_command(cmd_daemon.start, [timeout])
+
+    daemon_response = started_daemon_client.get_daemon_info()
+
+    assert daemon_response['status'] == 'ok'
+
+    time.sleep(timeout)
+    daemon_response = started_daemon_client.get_daemon_info()
+
+    assert daemon_response['status'] == 'daemon-error-timeout'
+
+
+def test_stop_timeout(run_cli_command, stopped_daemon_client):
+    """Test that the daemon response for `verdi daemon stop` would change based on the specified timeout."""
+    timeout = 10
+
+    run_cli_command(cmd_daemon.start, [timeout])
+
+    daemon_response = stopped_daemon_client.get_daemon_info()
+
+    assert daemon_response['status'] == 'ok'
+
+    time.sleep(timeout)
+    daemon_response = stopped_daemon_client.get_daemon_info()
+
+    assert daemon_response['status'] == 'daemon-error-timeout'
 
 
 @pytest.mark.usefixtures('started_daemon_client', 'isolated_config')

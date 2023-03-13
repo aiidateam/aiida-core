@@ -42,10 +42,11 @@ def verdi_daemon():
 
 @verdi_daemon.command()
 @click.option('--foreground', is_flag=True, help='Run in foreground.')
+@click.option('--timeout', type=int, default=5, help='Set timeout in seconds.')
 @click.argument('number', required=False, type=int, callback=validate_daemon_workers)
 @decorators.with_dbenv()
 @decorators.check_circus_zmq_version
-def start(foreground, number):
+def start(foreground, number, timeout):
     """Start the daemon with NUMBER workers.
 
     If the NUMBER of desired workers is not specified, the default is used, which is determined by the configuration
@@ -59,7 +60,7 @@ def start(foreground, number):
 
     try:
         echo.echo(f'Starting the daemon with {number} workers... ', nl=False)
-        client.start_daemon(number_workers=number, foreground=foreground)
+        client.start_daemon(number_workers=number, foreground=foreground, timeout=timeout)
     except DaemonException as exception:
         echo.echo('FAILED', fg=echo.COLORS['error'], bold=True)
         echo.echo_critical(str(exception))
@@ -153,7 +154,8 @@ def logshow():
 @verdi_daemon.command()
 @click.option('--no-wait', is_flag=True, help='Do not wait for confirmation.')
 @click.option('--all', 'all_profiles', is_flag=True, help='Stop all daemons.')
-def stop(no_wait, all_profiles):
+@click.option('--timeout', type=int, help='Set timeout in seconds.')
+def stop(no_wait, all_profiles, timeout):
     """Stop the daemon.
 
     Returns exit code 0 if the daemon was shut down successfully (or was not running), non-zero if there was an error.
@@ -188,7 +190,7 @@ def stop(no_wait, all_profiles):
         else:
             echo.echo('Shutting the daemon down')
 
-        response = client.stop_daemon(wait)
+        response = client.stop_daemon(wait, timeout=timeout)
 
         if wait:
             if response['status'] == client.DAEMON_ERROR_NOT_RUNNING:

@@ -114,12 +114,17 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         spec = copy.deepcopy(spec)
 
         is_flag = spec.pop('is_flag', False)
+        default = spec.get('default')
         name_dashed = name.replace('_', '-')
         option_name = f'--{name_dashed}/--no-{name_dashed}' if is_flag else f'--{name_dashed}'
-
         option_short_name = spec.pop('short_name', None)
 
         kwargs = {'cls': spec.pop('cls', InteractiveOption), 'show_default': True, 'is_flag': is_flag, **spec}
+
+        # If the option is a flag with no default, make sure it is not prompted for, as that will force the user to
+        # specify it to be on or off, but cannot let it unspecified.
+        if kwargs['cls'] is InteractiveOption and is_flag and default is None:
+            kwargs['cls'] = functools.partial(InteractiveOption, prompt_fn=lambda ctx: False)
 
         if option_short_name:
             option = click.option(option_short_name, option_name, **kwargs)

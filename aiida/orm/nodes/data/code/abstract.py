@@ -354,6 +354,23 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
                 'prompt': 'Default `CalcJob` plugin',
                 'help': 'Entry point name of the default plugin (as listed in `verdi plugin list aiida.calculations`).'
             },
+            'use_double_quotes': {
+                'is_flag': True,
+                'default': False,
+                'help': 'Whether the executable and arguments of the code in the submission script should be escaped '
+                'with single or double quotes.',
+                'prompt': 'Escape using double quotes',
+            },
+            'with_mpi': {
+                'is_flag': True,
+                'default': None,
+                'help': (
+                    'Whether the executable should be run as an MPI program. This option can be left unspecified '
+                    'in which case `None` will be set and it is left up to the calculation job plugin or inputs '
+                    'whether to run with MPI.'
+                ),
+                'prompt': 'Run with MPI',
+            },
             'prepend_text': {
                 'cls': TemplateInteractiveOption,
                 'type': click.STRING,
@@ -375,18 +392,5 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
                 'header': 'APPEND_TEXT: if there is any bash commands that should be appended to the executable call '
                 'in all submit scripts for this code, type that between the equal signs below and save the file.',
                 'footer': 'All lines that start with `#=`: will be ignored.'
-            },
-            'use_double_quotes': {
-                'is_flag': True,
-                'default': False,
-                'help': 'Whether the executable and arguments of the code in the submission script should be escaped '
-                'with single or double quotes.',
-                'prompt': 'Escape using double quotes',
-            },
-            'with_mpi': {
-                'is_flag': True,
-                'default': None,
-                'help': 'Whether the executable should be run as an MPI program.',
-                'prompt': 'Run with MPI',
             },
         }

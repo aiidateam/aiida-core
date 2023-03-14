@@ -27,6 +27,7 @@ class ProjectionMapper:
     _valid_projections = []
 
     def __init__(self, projection_labels=None, projection_attributes=None, projection_formatters=None):
+        """Construct new instance."""
         if not self._valid_projections:
             raise NotImplementedError('no valid projections were specified by the sub class')
 
@@ -111,17 +112,12 @@ class CalculationProjectionMapper(ProjectionMapper):
         }
 
         default_formatters = {
-            'ctime':
-            lambda value: formatting.format_relative_time(value['ctime']),
-            'mtime':
-            lambda value: formatting.format_relative_time(value['mtime']),
-            'state':
-            lambda value: formatting.
+            'ctime': lambda value: formatting.format_relative_time(value['ctime']),
+            'mtime': lambda value: formatting.format_relative_time(value['mtime']),
+            'state': lambda value: formatting.
             format_state(value[process_state_key], value[process_paused_key], value[exit_status_key]),
-            'process_state':
-            lambda value: formatting.format_process_state(value[process_state_key]),
-            'sealed':
-            lambda value: formatting.format_sealed(value[sealed_key]),
+            'process_state': lambda value: formatting.format_process_state(value[process_state_key]),
+            'sealed': lambda value: formatting.format_sealed(value[sealed_key]),
         }
 
         if projection_labels is not None:

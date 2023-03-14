@@ -199,10 +199,10 @@ def test_multi_codes_with_mpi(
     from aiida.engine.utils import instantiate_process
 
     inputs = {
-        'code':
-        aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
-        code_key:
-        aiida_local_code_factory('core.arithmetic.add', '/bin/bash', label=str(uuid.uuid4()), with_mpi=with_mpi_code),
+        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
+        code_key: aiida_local_code_factory(
+            'core.arithmetic.add', '/bin/bash', label=str(uuid.uuid4()), with_mpi=with_mpi_code
+        ),
         'metadata': {
             'options': {
                 'resources': {
@@ -237,14 +237,14 @@ def test_multi_codes_with_mpi(
 def test_multi_codes_run_parallel(aiida_local_code_factory, file_regression, parallel_run):
     """test codes_run_mode set in CalcJob"""
     inputs = {
-        'code':
-        aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
-        'code_info_with_mpi_none':
-        aiida_local_code_factory('core.arithmetic.add', '/bin/bash', label=str(uuid.uuid4())),
-        'code_info_with_mpi_false':
-        aiida_local_code_factory('core.arithmetic.add', '/bin/bash', label=str(uuid.uuid4()), with_mpi=False),
-        'parallel_run':
-        orm.Bool(parallel_run),
+        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
+        'code_info_with_mpi_none': aiida_local_code_factory(
+            'core.arithmetic.add', '/bin/bash', label=str(uuid.uuid4())
+        ),
+        'code_info_with_mpi_false': aiida_local_code_factory(
+            'core.arithmetic.add', '/bin/bash', label=str(uuid.uuid4()), with_mpi=False
+        ),
+        'parallel_run': orm.Bool(parallel_run),
         'metadata': {
             'dry_run': True,
             'options': {

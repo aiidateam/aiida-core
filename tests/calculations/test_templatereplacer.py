@@ -22,8 +22,7 @@ def test_base_template(fixture_sandbox, aiida_localhost, generate_calc_job):
 
     entry_point_name = 'core.templatereplacer'
     inputs = {
-        'code':
-        orm.InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
+        'code': orm.InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
         'metadata': {
             'options': {
                 'resources': {
@@ -32,8 +31,7 @@ def test_base_template(fixture_sandbox, aiida_localhost, generate_calc_job):
                 }
             }
         },
-        'template':
-        orm.Dict(
+        'template': orm.Dict(
             dict={
                 'input_file_template': 'echo $(({x} + {y}))',
                 'input_file_name': 'input.txt',
@@ -41,8 +39,7 @@ def test_base_template(fixture_sandbox, aiida_localhost, generate_calc_job):
                 'output_file_name': 'output.txt',
             }
         ),
-        'parameters':
-        orm.Dict(dict={
+        'parameters': orm.Dict(dict={
             'x': 1,
             'y': 2
         }),

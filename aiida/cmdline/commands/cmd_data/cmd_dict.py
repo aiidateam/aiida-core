@@ -13,7 +13,7 @@ from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.params import arguments, options, types
 
 
-@verdi_data.group('dict')
+@verdi_data.group('core.dict')
 def dictionary():
     """Manipulate Dict objects (python dictionaries)."""
 

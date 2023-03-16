@@ -398,26 +398,30 @@ def link_flags_export_helper(name, all_nodes, tmp_path, nodes_to_export, flags, 
         expected_nodes.append(expected_nodes_uuid)
 
     ret = {
-        f'{name}_follow_none':
-        (tmp_path.joinpath(f'{name}_none.aiida'), {
-            calc_flag: False,
-            work_flag: False
-        }, expected_nodes[0]),
-        f'{name}_follow_only_calc':
-        (tmp_path.joinpath(f'{name}_calc.aiida'), {
-            calc_flag: True,
-            work_flag: False
-        }, expected_nodes[1]),
-        f'{name}_follow_only_work':
-        (tmp_path.joinpath(f'{name}_work.aiida'), {
-            calc_flag: False,
-            work_flag: True
-        }, expected_nodes[2]),
-        f'{name}_follow_only_all':
-        (tmp_path.joinpath(f'{name}_all.aiida'), {
-            calc_flag: True,
-            work_flag: True
-        }, expected_nodes[3])
+        f'{name}_follow_none': (
+            tmp_path.joinpath(f'{name}_none.aiida'), {
+                calc_flag: False,
+                work_flag: False
+            }, expected_nodes[0]
+        ),
+        f'{name}_follow_only_calc': (
+            tmp_path.joinpath(f'{name}_calc.aiida'), {
+                calc_flag: True,
+                work_flag: False
+            }, expected_nodes[1]
+        ),
+        f'{name}_follow_only_work': (
+            tmp_path.joinpath(f'{name}_work.aiida'), {
+                calc_flag: False,
+                work_flag: True
+            }, expected_nodes[2]
+        ),
+        f'{name}_follow_only_all': (
+            tmp_path.joinpath(f'{name}_all.aiida'), {
+                calc_flag: True,
+                work_flag: True
+            }, expected_nodes[3]
+        )
     }
 
     prepare_link_flags_export(nodes_to_export, ret)

@@ -122,27 +122,21 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         ),
         (
             'proxy_jump', {
-                'prompt':
-                'SSH proxy jump',
-                'help':
-                'SSH proxy jump for tunneling through other SSH hosts.'
+                'prompt': 'SSH proxy jump',
+                'help': 'SSH proxy jump for tunneling through other SSH hosts.'
                 ' Use a comma-separated list of hosts of the form [user@]host[:port].'
                 ' If user or port are not specified for a host, the user & port values from the target host are used.'
                 ' This option must be provided explicitly and is not parsed from the SSH config file when left empty.',
-                'non_interactive_default':
-                True
+                'non_interactive_default': True
             }
         ),  # Managed 'manually' in connect
         (
             'proxy_command', {
-                'prompt':
-                'SSH proxy command',
-                'help':
-                'SSH proxy command for tunneling through a proxy server.'
+                'prompt': 'SSH proxy command',
+                'help': 'SSH proxy command for tunneling through a proxy server.'
                 ' For tunneling through another SSH host, consider using the "SSH proxy jump" option instead!'
                 ' Leave empty to parse the proxy command from the SSH config file.',
-                'non_interactive_default':
-                True
+                'non_interactive_default': True
             }
         ),  # Managed 'manually' in connect
         (

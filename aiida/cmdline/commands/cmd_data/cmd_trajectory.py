@@ -23,7 +23,7 @@ EXPORT_FORMATS = ['cif', 'xsf']
 VISUALIZATION_FORMATS = ['jmol', 'xcrysden', 'mpl_heatmap', 'mpl_pos']
 
 
-@verdi_data.group('trajectory')
+@verdi_data.group('core.trajectory')
 def trajectory():
     """Manipulate TrajectoryData objects (molecular trajectories)."""
 

@@ -63,29 +63,29 @@ class DummyVerdiDataExportable:
 
         # Check that the simple command works as expected
         options = [str(ids[self.NODE_ID_STR])]
-        res = self.cli_runner(export_cmd, options, catch_exceptions=False)
+        res = self.cli_runner(export_cmd, options)
         assert res.exit_code == 0, 'The command did not finish correctly'
 
         for flag in ['-F', '--format']:
             for frmt in supported_formats:
                 options = [flag, frmt, str(ids[self.NODE_ID_STR])]
-                res = self.cli_runner(export_cmd, options, catch_exceptions=False)
+                res = self.cli_runner(export_cmd, options)
                 assert res.exit_code == 0, f'The command did not finish correctly. Output:\n{res.output}'
 
         filepath = tmp_path / 'output_file.txt'
         options = [output_flag, str(filepath), str(ids[self.NODE_ID_STR])]
-        res = self.cli_runner(export_cmd, options, catch_exceptions=False)
+        res = self.cli_runner(export_cmd, options)
         assert res.exit_code == 0, f'The command should finish correctly.Output:\n{res.output}'
 
         # Try to export it again. It should fail because the
         # file exists
-        res = self.cli_runner(export_cmd, options, catch_exceptions=False)
+        res = self.cli_runner(export_cmd, options, raises=True)
         assert res.exit_code != 0, 'The command should fail because the file already exists'
 
         # Now we force the export of the file and it should overwrite
         # existing files
         options = [output_flag, str(filepath), '-f', str(ids[self.NODE_ID_STR])]
-        res = self.cli_runner(export_cmd, options, catch_exceptions=False)
+        res = self.cli_runner(export_cmd, options)
         assert res.exit_code == 0, f'The command should finish correctly.Output: {res.output}'
 
 
@@ -125,18 +125,18 @@ class DummyVerdiDataListable:
         search_string_bytes = search_string.encode('utf-8')
 
         # Check that the normal listing works as expected
-        res = self.cli_runner(listing_cmd, [], catch_exceptions=False)
+        res = self.cli_runner(listing_cmd, [])
         assert search_string_bytes in res.stdout_bytes, f'The string {search_string} was not found in the listing'
 
         # Check that the past days filter works as expected
         past_days_flags = ['-p', '--past-days']
         for flag in past_days_flags:
             options = [flag, '1']
-            res = self.cli_runner(listing_cmd, options, catch_exceptions=False)
+            res = self.cli_runner(listing_cmd, options)
             assert search_string_bytes in res.stdout_bytes, f'The string {search_string} was not found in the listing'
 
             options = [flag, '0']
-            res = self.cli_runner(listing_cmd, options, catch_exceptions=False)
+            res = self.cli_runner(listing_cmd, options)
             assert search_string_bytes not in res.stdout_bytes, (
                 f'A not expected string {search_string} was found in the listing'
             )
@@ -148,27 +148,27 @@ class DummyVerdiDataListable:
             # Non empty group
             for non_empty in [self.NON_EMPTY_GROUP_NAME_STR, str(ids[self.NON_EMPTY_GROUP_ID_STR])]:
                 options = [flag, non_empty]
-                res = self.cli_runner(listing_cmd, options, catch_exceptions=False)
+                res = self.cli_runner(listing_cmd, options)
                 assert search_string_bytes in res.stdout_bytes, 'The string {} was not found in the listing'
 
             # Empty group
             for empty in [self.EMPTY_GROUP_NAME_STR, str(ids[self.EMPTY_GROUP_ID_STR])]:
                 options = [flag, empty]
-                res = self.cli_runner(listing_cmd, options, catch_exceptions=False)
+                res = self.cli_runner(listing_cmd, options)
                 assert search_string_bytes not in res.stdout_bytes, 'A not expected string {} was found in the listing'
 
             # Group combination
             for non_empty in [self.NON_EMPTY_GROUP_NAME_STR, str(ids[self.NON_EMPTY_GROUP_ID_STR])]:
                 for empty in [self.EMPTY_GROUP_NAME_STR, str(ids[self.EMPTY_GROUP_ID_STR])]:
                     options = [flag, non_empty, empty]
-                    res = self.cli_runner(listing_cmd, options, catch_exceptions=False)
+                    res = self.cli_runner(listing_cmd, options)
                     assert search_string_bytes in res.stdout_bytes, 'The string {} was not found in the listing'
 
         # Check raw flag
         raw_flags = ['-r', '--raw']
         for flag in raw_flags:
             options = [flag]
-            res = self.cli_runner(listing_cmd, options, catch_exceptions=False)
+            res = self.cli_runner(listing_cmd, options)
             for header in headers_mapping[datatype]:
                 assert header.encode('utf-8') not in res.stdout_bytes
 
@@ -213,7 +213,7 @@ class TestVerdiDataArray:
 
     def test_arrayshow(self):
         options = [str(self.arr.pk)]
-        res = self.cli_runner(cmd_array.array_show, options, catch_exceptions=False)
+        res = self.cli_runner(cmd_array.array_show, options)
         assert res.exit_code == 0, 'The command did not finish correctly'
 
 
@@ -310,7 +310,7 @@ class TestVerdiDataBands(DummyVerdiDataListable):
 
     def test_bandslist_with_elements(self):
         options = ['-e', 'Fe']
-        res = self.cli_runner(cmd_bands.bands_list, options, catch_exceptions=False)
+        res = self.cli_runner(cmd_bands.bands_list, options)
         assert b'FeO' in res.stdout_bytes, 'The string "FeO" was not found in the listing'
         assert b'<<NOT FOUND>>' not in res.stdout_bytes, 'The string "<<NOT FOUND>>" should not in the listing'
 
@@ -320,7 +320,7 @@ class TestVerdiDataBands(DummyVerdiDataListable):
 
     def test_bandsexport(self):
         options = [str(self.pks[DummyVerdiDataListable.NODE_ID_STR])]
-        res = self.cli_runner(cmd_bands.bands_export, options, catch_exceptions=False)
+        res = self.cli_runner(cmd_bands.bands_export, options)
         assert res.exit_code == 0, 'The command did not finish correctly'
         assert b'[1.0, 3.0]' in res.stdout_bytes, 'The string [1.0, 3.0] was not found in the bands export'
 
@@ -338,14 +338,14 @@ class TestVerdiDataBands(DummyVerdiDataListable):
 
         # matplotlib
         options = [str(bands.pk), '--format', 'mpl_singlefile']
-        res = self.cli_runner(cmd_bands.bands_export, options, catch_exceptions=False)
+        res = self.cli_runner(cmd_bands.bands_export, options)
         assert b'p.scatter' in res.stdout_bytes, 'The string p.scatter was not found in the bands mpl export'
 
         # gnuplot
         from click.testing import CliRunner
         with CliRunner().isolated_filesystem():
             options = [str(bands.pk), '--format', 'gnuplot', '-o', 'bands.gnu']
-            self.cli_runner(cmd_bands.bands_export, options, catch_exceptions=False)
+            self.cli_runner(cmd_bands.bands_export, options)
             with open('bands.gnu', 'r', encoding='utf8') as gnu_file:
                 res = gnu_file.read()
                 assert 'vectors nohead' in res, 'The string "vectors nohead" was not found in the gnuplot script'
@@ -370,7 +370,7 @@ class TestVerdiDataDict:
     def test_dictshow(self):
         """Test verdi data dict show."""
         options = [str(self.dct.pk)]
-        res = self.cli_runner(cmd_dict.dictionary_show, options, catch_exceptions=False)
+        res = self.cli_runner(cmd_dict.dictionary_show, options)
         assert res.exit_code == 0, 'The command verdi data dict show did not finish correctly'
         assert b'"a": 1' in res.stdout_bytes, 'The string "a": 1 was not found in the output' \
             ' of verdi data dict show'
@@ -397,7 +397,7 @@ class TestVerdiDataRemote:
     def test_remoteshow(self):
         """Test verdi data remote show."""
         options = [str(self.rmt.pk)]
-        res = self.cli_runner(cmd_remote.remote_show, options, catch_exceptions=False)
+        res = self.cli_runner(cmd_remote.remote_show, options)
         assert res.exit_code == 0, 'The command verdi data remote show did not finish correctly'
         assert b'Remote computer name:' in res.stdout_bytes, (
             'The string "Remote computer name:" was not found in the output of verdi data remote show'
@@ -412,7 +412,7 @@ class TestVerdiDataRemote:
 
     def test_remotels(self):
         options = ['--long', str(self.rmt.pk)]
-        res = self.cli_runner(cmd_remote.remote_ls, options, catch_exceptions=False)
+        res = self.cli_runner(cmd_remote.remote_ls, options)
         assert res.exit_code == 0, 'The command verdi data remote ls did not finish correctly'
         assert b'file.txt' in res.stdout_bytes, 'The file "file.txt" was not found in the output' \
             ' of verdi data remote ls'
@@ -423,7 +423,7 @@ class TestVerdiDataRemote:
 
     def test_remotecat(self):
         options = [str(self.rmt.pk), 'file.txt']
-        res = self.cli_runner(cmd_remote.remote_cat, options, catch_exceptions=False)
+        res = self.cli_runner(cmd_remote.remote_cat, options)
         assert res.exit_code == 0, 'The command verdi data remote cat did not finish correctly'
         assert b'test string' in res.stdout_bytes, 'The string "test string" was not found in the output' \
             ' of verdi data remote cat file.txt'
@@ -616,7 +616,7 @@ class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):
                 '1',
                 '1',
             ]
-            res = self.cli_runner(cmd_structure.import_aiida_xyz, options, catch_exceptions=False)
+            res = self.cli_runner(cmd_structure.import_aiida_xyz, options)
             assert b'Successfully imported' in res.stdout_bytes, \
                 'The string "Successfully imported" was not found in the output' \
                 ' of verdi data structure import.'
@@ -638,7 +638,7 @@ class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):
                 fhandle.name,
                 '-n'  # dry-run
             ]
-            res = self.cli_runner(cmd_structure.import_aiida_xyz, options, catch_exceptions=False)
+            res = self.cli_runner(cmd_structure.import_aiida_xyz, options)
             assert b'Successfully imported' in res.stdout_bytes, \
                 'The string "Successfully imported" was not found in the output' \
                 ' of verdi data structure import.'
@@ -672,7 +672,7 @@ class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):
                 '--group',
                 group_label,
             ]
-            res = self.cli_runner(cmd_structure.import_aiida_xyz, options, catch_exceptions=False)
+            res = self.cli_runner(cmd_structure.import_aiida_xyz, options)
             assert b'Successfully imported' in res.stdout_bytes, \
                 'The string "Successfully imported" was not found in the output' \
                 ' of verdi data structure import.'
@@ -701,7 +701,7 @@ PRIMVEC
             options = [
                 fhandle.name,
             ]
-            res = self.cli_runner(cmd_structure.import_ase, options, catch_exceptions=False)
+            res = self.cli_runner(cmd_structure.import_ase, options)
             assert b'Successfully imported' in res.stdout_bytes, \
                 'The string "Successfully imported" was not found in the output' \
                 ' of verdi data structure import.'
@@ -726,7 +726,7 @@ PRIMVEC
             fhandle.write(xsfcontent)
             fhandle.flush()
             options = [fhandle.name, '--label', 'another  structure', '--group', group_label]
-            res = self.cli_runner(cmd_structure.import_ase, options, catch_exceptions=False)
+            res = self.cli_runner(cmd_structure.import_ase, options)
             assert b'Successfully imported' in res.stdout_bytes, \
                 'The string "Successfully imported" was not found in the output' \
                 ' of verdi data structure import.'
@@ -810,13 +810,13 @@ class TestVerdiDataCif(DummyVerdiDataListable, DummyVerdiDataExportable):
 
     def test_showhelp(self):
         options = ['--help']
-        res = self.cli_runner(cmd_cif.cif_show, options, catch_exceptions=False)
+        res = self.cli_runner(cmd_cif.cif_show, options)
         assert b'Usage:' in res.stdout_bytes, 'The string "Usage: " was not found in the output' \
             ' of verdi data show help'
 
     def test_importhelp(self):
         options = ['--help']
-        res = self.cli_runner(cmd_cif.cif_import, options, catch_exceptions=False)
+        res = self.cli_runner(cmd_cif.cif_import, options)
         assert b'Usage:' in res.stdout_bytes, 'The string "Usage: " was not found in the output' \
             ' of verdi data import help'
 
@@ -826,14 +826,14 @@ class TestVerdiDataCif(DummyVerdiDataListable, DummyVerdiDataExportable):
             fhandle.write(self.valid_sample_cif_str)
             fhandle.flush()
             options = [fhandle.name]
-            res = self.cli_runner(cmd_cif.cif_import, options, catch_exceptions=False)
+            res = self.cli_runner(cmd_cif.cif_import, options)
             assert b'imported uuid' in res.stdout_bytes, 'The string "imported uuid" was not found in the output' \
                 ' of verdi data import.'
 
     def test_content(self):
         """Test that `verdi data cif content` returns the content of the file."""
         options = [str(self.cif.uuid)]
-        result = self.cli_runner(cmd_cif.cif_content, options, catch_exceptions=False)
+        result = self.cli_runner(cmd_cif.cif_content, options, suppress_warnings=True)
 
         for line in result.output.split('\n'):
             assert line in self.valid_sample_cif_str
@@ -866,7 +866,7 @@ class TestVerdiDataSinglefile(DummyVerdiDataListable, DummyVerdiDataExportable):
         singlefile = orm.SinglefileData(file=io.BytesIO(content.encode('utf8'))).store()
 
         options = [str(singlefile.uuid)]
-        result = self.cli_runner(cmd_singlefile.singlefile_content, options, catch_exceptions=False)
+        result = self.cli_runner(cmd_singlefile.singlefile_content, options, suppress_warnings=True)
 
         for line in result.output.split('\n'):
             assert line in content
@@ -884,7 +884,7 @@ class TestVerdiDataUpf:
 
     def upload_family(self):
         options = [self.filepath_pseudos, 'test_group', 'test description']
-        res = self.cli_runner(cmd_upf.upf_uploadfamily, options, catch_exceptions=False)
+        res = self.cli_runner(cmd_upf.upf_uploadfamily, options)
         assert b'UPF files found: 4' in res.stdout_bytes, 'The string "UPF files found: 4" was not found in the' \
             ' output of verdi data upf uploadfamily'
 
@@ -906,7 +906,7 @@ class TestVerdiDataUpf:
         self.upload_family()
 
         options = [tmp_path, 'test_group']
-        self.cli_runner(cmd_upf.upf_exportfamily, options, catch_exceptions=False)
+        self.cli_runner(cmd_upf.upf_exportfamily, options)
         output = sp.check_output(['ls', tmp_path])
         assert b'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF' in output, \
             f'Sub-command verdi data upf exportfamily --help failed: {output}'
@@ -925,7 +925,7 @@ class TestVerdiDataUpf:
         self.upload_family()
 
         options = ['-d', '-e', 'Ba']
-        res = self.cli_runner(cmd_upf.upf_listfamilies, options, catch_exceptions=False)
+        res = self.cli_runner(cmd_upf.upf_listfamilies, options)
 
         assert b'test_group' in res.stdout_bytes, 'The string "test_group" was not found in the' \
             ' output of verdi data upf listfamilies: {}'.format(res.output)
@@ -934,7 +934,7 @@ class TestVerdiDataUpf:
             ' output of verdi data upf listfamilies'
 
         options = ['-d', '-e', 'Fe']
-        res = self.cli_runner(cmd_upf.upf_listfamilies, options, catch_exceptions=False)
+        res = self.cli_runner(cmd_upf.upf_listfamilies, options)
         assert b'No valid UPF pseudopotential' in res.stdout_bytes, (
             'The string "No valid UPF pseudopotential" was not found in the output of verdi data upf listfamilies'
         )
@@ -945,7 +945,7 @@ class TestVerdiDataUpf:
 
     def test_import(self):
         options = [os.path.join(self.filepath_pseudos, 'Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF')]
-        res = self.cli_runner(cmd_upf.upf_import, options, catch_exceptions=False)
+        res = self.cli_runner(cmd_upf.upf_import, options)
 
         assert b'Imported' in res.stdout_bytes, 'The string "Imported" was not' \
             ' found in the output of verdi data import: {}'.format(res.output)

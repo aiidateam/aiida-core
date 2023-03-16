@@ -21,7 +21,7 @@ def test_run_restapi(run_cli_command, monkeypatch):
     monkeypatch.setattr(run_api, 'run_api', run_api_noop)
 
     options = ['--hostname', 'localhost', '--port', '6000', '--debug', '--wsgi-profile']
-    run_cli_command(restapi, options)
+    run_cli_command(restapi, options, use_subprocess=False)
 
 
 def test_help(run_cli_command):

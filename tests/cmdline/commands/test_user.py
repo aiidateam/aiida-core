@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=no-self-use
 """Tests for `verdi user`."""
 import pytest
 
@@ -31,11 +32,9 @@ class TestVerdiUserCommand:
     """Test verdi user."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
-        self.cli_runner = run_cli_command
-
         created, user = orm.User.collection.get_or_create(email=USER_1['email'])
         for key, value in USER_1.items():
             if key != 'email':
@@ -43,14 +42,14 @@ class TestVerdiUserCommand:
         if created:
             orm.User(**USER_1).store()
 
-    def test_user_list(self):
+    def test_user_list(self, run_cli_command):
         """Test `verdi user list`."""
         from aiida.cmdline.commands.cmd_user import user_list as list_user
 
-        result = self.cli_runner(list_user, [], catch_exceptions=False)
+        result = run_cli_command(list_user, [])
         assert USER_1['email'] in result.output
 
-    def test_user_create(self):
+    def test_user_create(self, run_cli_command):
         """Create a new user with `verdi user configure`."""
         cli_options = [
             '--email',
@@ -61,9 +60,10 @@ class TestVerdiUserCommand:
             USER_2['last_name'],
             '--institution',
             USER_2['institution'],
+            '--set-default',
         ]
 
-        result = self.cli_runner(cmd_user.user_configure, cli_options, catch_exceptions=False)
+        result = run_cli_command(cmd_user.user_configure, cli_options)
         assert USER_2['email'] in result.output
         assert 'created' in result.output
         assert 'updated' not in result.output
@@ -72,7 +72,7 @@ class TestVerdiUserCommand:
         for key, val in USER_2.items():
             assert val == getattr(user_obj, key)
 
-    def test_user_update(self):
+    def test_user_update(self, run_cli_command):
         """Reconfigure an existing user with `verdi user configure`."""
         email = USER_1['email']
 
@@ -85,9 +85,10 @@ class TestVerdiUserCommand:
             USER_2['last_name'],
             '--institution',
             USER_2['institution'],
+            '--set-default',
         ]
 
-        result = self.cli_runner(cmd_user.user_configure, cli_options, catch_exceptions=False)
+        result = run_cli_command(cmd_user.user_configure, cli_options)
         assert email in result.output
         assert 'updated' in result.output
         assert 'created' not in result.output

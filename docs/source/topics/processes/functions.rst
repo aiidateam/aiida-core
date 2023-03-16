@@ -116,6 +116,57 @@ The link labels for the example above will therefore be ``args_0``, ``args_1`` a
 If any of these labels were to overlap with the label of a positional or keyword argument, a ``RuntimeError`` will be raised.
 In this case, the conflicting argument name needs to be changed to something that does not overlap with the automatically generated labels for the variadic arguments.
 
+Type validation
+===============
+
+.. versionadded:: 2.3
+
+Type hints (introduced with `PEP 484 <https://peps.python.org/pep-0484/>`_ in Python 3.5) can be used to add automatic type validation of process function arguments.
+For example, the following will raise a ``ValueError`` exception:
+
+.. include:: include/snippets/functions/typing_call_raise.py
+    :code: python
+
+When the process function is declared, the process specification (``ProcessSpec``) is built dynamically.
+For each function argument, if a correct type hint is provided, it is set as the ``valid_type`` attribute of the corresponding input port.
+In the example above, the ``x`` and ``y`` inputs have ``Int`` as type hint, which is why the call that passes a ``Float`` raises a ``ValueError``.
+
+.. note::
+
+    Type hints for return values are currently not parsed.
+
+If an argument accepts multiple types, the ``typing.Union`` class can be used as normal:
+
+.. include:: include/snippets/functions/typing_union.py
+    :code: python
+
+The call with an ``Int`` and a ``Float`` will now finish correctly.
+Similarly, optional arguments, with ``None`` as a default, can be declared using ``typing.Optional``:
+
+.. include:: include/snippets/functions/typing_none.py
+    :code: python
+
+The `postponed evaluation of annotations introduced by PEP 563 <https://peps.python.org/pep-0563/>`_ is also supported.
+This means it is possible to use Python base types for the type hint instead of AiiDA's ``Data`` node equivalent:
+
+.. include:: include/snippets/functions/typing_pep_563.py
+    :code: python
+
+The type hints are automatically serialized just as the actual inputs are when the function is called, :ref:`as introduced in v2.1<topics:calculations:concepts:calcfunctions:automatic-serialization>`.
+
+The alternative syntax for union types ``X | Y`` `as introduced by PEP 604 <https://peps.python.org/pep-0604/>`_ is also supported:
+
+.. include:: include/snippets/functions/typing_pep_604.py
+    :code: python
+
+.. warning::
+
+    The usage of notation as defined by PEP 563 and PEP 604 are not supported for Python versions older than 3.10, even if the ``from __future__ import annotations`` statement is added.
+    The reason is that the type inference uses the `inspect.get_annotations <https://docs.python.org/3/library/inspect.html#inspect.get_annotations>`_ method, which was introduced in Python 3.10.
+    For older Python versions, the `get-annotations <https://pypi.org/project/get-annotations>`_ backport is used, but that does not work with PEP 563 and PEP 604, so the constructs from the ``typing`` module have to be used instead.
+
+If a process function has invalid type hints, they will simply be ignored and a warning message is logged: ``function 'function_name' has invalid type hints``.
+This ensures backwards compatibility in the case existing process functions had invalid type hints.
 
 Return values
 =============

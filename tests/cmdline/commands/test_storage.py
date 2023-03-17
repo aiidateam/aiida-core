@@ -137,7 +137,7 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch, caplog):
 
     monkeypatch.setattr(storage, 'maintain', mock_maintain)
 
-    # Test that not passing user input Y or `--yes` should causing the command to exit without executing `storage.mantain`
+    # Not passing user input Y or `--yes` should causing the command to exit without executing `storage.mantain`
     # Checking that no logs are produced in the with caplog context
     with caplog.at_level(logging.INFO):
         _ = run_cli_command(cmd_storage.storage_maintain, use_subprocess=False)

@@ -14,6 +14,7 @@ dependencies:
 - click-spinner~=0.1.8
 - click~=8.1
 - disk-objectstore~=0.6.0
+- docstring_parser
 - get-annotations~=0.1
 - python-graphviz~=0.13
 - ipython<9,>=7

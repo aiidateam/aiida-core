@@ -1640,6 +1640,32 @@ class TestWorkChainExpose:
 
         launch.run(Child)
 
+    def test_expose_process_function(self):
+        """Test that process functions can be exposed and the port attributes are preserved."""
+
+        @calcfunction  # type: ignore[misc]
+        def test_function(a: str, b: int):  # pylint: disable=unused-argument
+            """Some calcfunction.
+
+            :param a: A string argument.
+            :param b: An integer argument.
+            """
+
+        class ExposeProcessFunctionWorkChain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.expose_inputs(test_function)
+
+        input_namespace = ExposeProcessFunctionWorkChain.spec().inputs
+        assert 'a' in input_namespace
+        assert 'b' in input_namespace
+        assert input_namespace['a'].valid_type == (orm.Str,)
+        assert input_namespace['a'].help == 'A string argument.'
+        assert input_namespace['b'].valid_type == (orm.Int,)
+        assert input_namespace['b'].help == 'An integer argument.'
+
 
 @pytest.mark.requires_rmq
 class TestWorkChainMisc:

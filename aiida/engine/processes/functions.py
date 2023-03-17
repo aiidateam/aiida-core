@@ -19,6 +19,8 @@ import types
 import typing as t
 from typing import TYPE_CHECKING
 
+import docstring_parser
+
 from aiida.common.lang import override
 from aiida.manage import get_manager
 from aiida.orm import (
@@ -282,6 +284,7 @@ class FunctionProcess(Process):
         :return: A Process class that represents the function
 
         """
+        # pylint: disable=too-many-statements
         if not issubclass(node_class, ProcessNode) or not issubclass(node_class, FunctionCalculationMixin):
             raise TypeError('the node_class should be a sub class of `ProcessNode` and `FunctionCalculationMixin`')
 
@@ -298,6 +301,18 @@ class FunctionProcess(Process):
             # annotations are incorrect. In this case we simply want to log a warning and continue with type inference.
             LOGGER.warning(f'function `{func.__name__}` has invalid type hints: {exception}')
             annotations = {}
+
+        try:
+            parsed_docstring = docstring_parser.parse(func.__doc__)
+        except Exception as exception:  # pylint: disable=broad-except
+            LOGGER.warning(f'function `{func.__name__}` has a docstring that could not be parsed: {exception}')
+            param_help_string = {}
+            namespace_help_string = None
+        else:
+            param_help_string = {param.arg_name: param.description for param in parsed_docstring.params}
+            namespace_help_string = parsed_docstring.short_description if parsed_docstring.short_description else ''
+            if parsed_docstring.long_description is not None:
+                namespace_help_string += f'\n\n{parsed_docstring.long_description}'
 
         for key, parameter in signature.parameters.items():
 
@@ -323,6 +338,7 @@ class FunctionProcess(Process):
 
                 annotation = annotations.get(parameter.name)
                 valid_type = infer_valid_type_from_type_annotation(annotation) or (Data,)
+                help_string = param_help_string.get(parameter.name, None)
 
                 default = parameter.default if parameter.default is not parameter.empty else UNSPECIFIED
 
@@ -348,13 +364,21 @@ class FunctionProcess(Process):
                 else:
                     indirect_default = default
 
-                spec.input(parameter.name, valid_type=valid_type, default=indirect_default, serializer=to_aiida_type)
+                spec.input(
+                    parameter.name,
+                    valid_type=valid_type,
+                    default=indirect_default,
+                    serializer=to_aiida_type,
+                    help=help_string,
+                )
 
             # Set defaults for label and description based on function name and docstring, if not explicitly defined
             port_label = spec.inputs['metadata']['label']
 
             if not port_label.has_default():
                 port_label.default = func.__name__
+
+            spec.inputs.help = namespace_help_string
 
             # If the function supports varargs or kwargs then allow dynamic inputs, otherwise disallow
             spec.inputs.dynamic = keywords is not None or varargs

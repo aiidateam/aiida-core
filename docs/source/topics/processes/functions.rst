@@ -116,6 +116,8 @@ The link labels for the example above will therefore be ``args_0``, ``args_1`` a
 If any of these labels were to overlap with the label of a positional or keyword argument, a ``RuntimeError`` will be raised.
 In this case, the conflicting argument name needs to be changed to something that does not overlap with the automatically generated labels for the variadic arguments.
 
+.. _topics:processes:functions:type-validation:
+
 Type validation
 ===============
 
@@ -167,6 +169,31 @@ The alternative syntax for union types ``X | Y`` `as introduced by PEP 604 <http
 
 If a process function has invalid type hints, they will simply be ignored and a warning message is logged: ``function 'function_name' has invalid type hints``.
 This ensures backwards compatibility in the case existing process functions had invalid type hints.
+
+.. _topics:processes:functions:docstring-parsing:
+
+Docstring parsing
+=================
+
+.. versionadded:: 2.3
+
+If a process function provides a docstring, AiiDA will attempt to parse it.
+If successful, the function argument descriptions will be set as the ``help`` attributes of the input ports of the dynamically generated process specification.
+This means the descriptions of the function arguments can be retrieved programmatically from the process specification (as returned by the ``spec`` classmethod):
+
+.. include:: include/snippets/functions/parse_docstring.py
+    :code: python
+
+This particularly useful when exposing a process function in a wrapping workchain:
+
+.. include:: include/snippets/functions/parse_docstring_expose.py
+    :code: python
+
+The user can now access the input description directly through the spec of the work chain, without having to go to the process function itself.
+For example, in an interactive shell:
+
+.. include:: include/snippets/functions/parse_docstring_expose_ipython.py
+    :code: ipython
 
 Return values
 =============

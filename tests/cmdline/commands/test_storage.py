@@ -150,7 +150,7 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch, caplog):
 
     message_list = caplog.records[0].msg.splitlines()
     assert ' > full: False' in message_list
-    assert ' > dry_run: False' in message_list   
+    assert ' > dry_run: False' in message_list
 
     # Test `storage.mantain` with user input Y
     with caplog.at_level(logging.INFO):
@@ -178,7 +178,9 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch, caplog):
 
     # Test `storage.mantain` with `--full` and `--no-repack`
     with caplog.at_level(logging.INFO):
-        run_cli_command(cmd_storage.storage_maintain, parameters=['--full', '--no-repack'], user_input='Y', use_subprocess=False)
+        run_cli_command(
+            cmd_storage.storage_maintain, parameters=['--full', '--no-repack'], user_input='Y', use_subprocess=False
+        )
 
     message_list = caplog.records[4].msg.splitlines()
     assert ' > full: True' in message_list

@@ -43,7 +43,7 @@ from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.warnings import warn_deprecation
 from aiida.engine import Process, ProcessBuilder, submit
-from aiida.engine.daemon.client import DaemonClient
+from aiida.engine.daemon.client import DaemonClient, DaemonNotRunningException
 from aiida.manage import Config, Profile, get_manager, get_profile
 from aiida.manage.manager import Manager
 from aiida.orm import Computer, ProcessNode, User
@@ -658,7 +658,10 @@ def daemon_client(aiida_profile):
     try:
         yield daemon_client
     finally:
-        daemon_client.stop_daemon(wait=True)
+        try:
+            daemon_client.stop_daemon(wait=True)
+        except DaemonNotRunningException:
+            pass
         assert not daemon_client.is_daemon_running
 
 

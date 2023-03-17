@@ -83,6 +83,8 @@ def test_config_get_option(run_cli_command, config_with_profile_factory):
 
 def test_config_unset_option(run_cli_command, config_with_profile_factory):
     """Test the `verdi config` command when unsetting an option."""
+    from aiida.manage.configuration.options import get_option
+
     config_with_profile_factory()
     option_name = 'daemon.timeout'
     option_value = str(30)
@@ -100,7 +102,7 @@ def test_config_unset_option(run_cli_command, config_with_profile_factory):
 
     options = ['config', 'get', option_name]
     result = run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
-    assert result.output.strip() == str(20)  # back to the default
+    assert result.output.strip() == str(get_option(option_name).default)  # back to the default
 
 
 def test_config_set_option_global_only(run_cli_command, config_with_profile_factory):

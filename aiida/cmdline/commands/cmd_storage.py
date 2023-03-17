@@ -115,7 +115,7 @@ def storage_info(detailed):
     help='Disable the repacking of the storage when running a `full maintenance`. Useful for improving rsync backup efficiency of huge repos.'
 )
 @click.option(
-    '--yes', '-y', 'skip_prompt'.
+    '--yes', '-y', 'skip_prompt',
     is_flag=True,
     help='Skip confirmation prompt.'
 )

@@ -1203,19 +1203,37 @@ class StructureData(Data):
         """
         return [this_site.kind_name for this_site in self.sites]
 
-    def get_composition(self):
+    def get_composition(self, mode='full'):
         """
         Returns the chemical composition of this structure as a dictionary,
         where each key is the kind symbol (e.g. H, Li, Ba),
         and each value is the number of occurences of that element in this
-        structure. For BaZrO3 it would return {'Ba':1, 'Zr':1, 'O':3}.
-        No reduction with smallest common divisor!
+        structure.
+
+        :param mode: Specify the mode of the composition to return. Choose from ``full``, ``reduced`` or ``fractional``.
+            For example, given the structure with formula Ba2Zr2O6, the various modes operate as follows.
+            ``full``: The default, the counts are left unnnormalized.
+            ``reduced``: The counts are renormalized to the greatest common denominator.
+            ``fractional``: The counts are renormalized such that the sum equals 1.
 
         :returns: a dictionary with the composition
         """
+        import numpy as np
         symbols_list = [self.get_kind(s.kind_name).get_symbols_string() for s in self.sites]
-        composition = {symbol: symbols_list.count(symbol) for symbol in set(symbols_list)}
-        return composition
+        symbols_set = set(symbols_list)
+
+        if mode == 'full':
+            return {symbol: symbols_list.count(symbol) for symbol in symbols_set}
+
+        if mode == 'reduced':
+            gcd = np.gcd.reduce([symbols_list.count(symbol) for symbol in symbols_set])
+            return {symbol: (symbols_list.count(symbol) / gcd) for symbol in symbols_set}
+
+        if mode == 'fractional':
+            sum_comp = sum(symbols_list.count(symbol) for symbol in symbols_set)
+            return {symbol: symbols_list.count(symbol) / sum_comp for symbol in symbols_set}
+
+        raise ValueError(f'mode `{mode}` is invalid, choose from `full`, `reduced` or `fractional`.')
 
     def get_ase(self):
         """

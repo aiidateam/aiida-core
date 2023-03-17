@@ -110,9 +110,7 @@ def storage_info(detailed):
     help='Perform all maintenance tasks, including the ones that should not be executed while the profile is in use.'
 )
 @click.option(
-    '--no-repack',
-    is_flag=True,
-    help='Disable the repacking of the storage when running a `full maintenance`.'
+    '--no-repack', is_flag=True, help='Disable the repacking of the storage when running a `full maintenance`.'
 )
 @click.option('--yes', '-y', 'skip_prompt', is_flag=True, help='Skip confirmation prompt.')
 @click.option(

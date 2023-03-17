@@ -9,9 +9,11 @@
 ###########################################################################
 # pylint: disable=no-self-use
 """Unit tests for the `DaemonClient` class."""
+from unittest.mock import patch
+
 import zmq
 
-from aiida.engine.daemon.client import get_daemon_client
+from aiida.engine.daemon.client import DaemonClient, get_daemon_client
 
 
 def test_ipc_socket_file_length_limit():
@@ -35,3 +37,20 @@ def test_ipc_socket_file_length_limit():
     assert len(controller_endpoint) <= zmq.IPC_PATH_MAX_LEN
     assert len(pubsub_endpoint) <= zmq.IPC_PATH_MAX_LEN
     assert len(stats_endpoint) <= zmq.IPC_PATH_MAX_LEN
+
+
+def test_get_status_daemon_not_running(stopped_daemon_client):
+    """Test ``DaemonClient.get_status`` output when the daemon is not running."""
+    status = stopped_daemon_client.get_status()
+    assert status.is_running is False
+    assert status.error is False
+    assert status.message == 'The daemon is not running.'
+
+
+@patch.object(DaemonClient, 'get_daemon_status', lambda _: {'status': 'timeout'})
+def test_get_status_circus_timeout(stopped_daemon_client):
+    """Test ``DaemonClient.get_status`` output when the circus daemon process cannot be reached."""
+    status = stopped_daemon_client.get_status()
+    assert status.is_running is False
+    assert status.error is True
+    assert status.message == 'The daemon is running but the call to the circus controller timed out.'

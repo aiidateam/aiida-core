@@ -17,7 +17,7 @@ from click_spinner import spinner
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import decorators, echo
-from aiida.cmdline.utils.daemon import delete_stale_pid_file, get_daemon_status, print_client_response_status
+from aiida.cmdline.utils.daemon import print_client_response_status
 from aiida.manage import get_manager
 
 
@@ -66,7 +66,7 @@ def start(foreground, number):
 
     with spinner():
         time.sleep(1)
-        response = client.get_status()
+        response = client.get_daemon_status()
 
     retcode = print_client_response_status(response)
     if retcode:
@@ -81,6 +81,9 @@ def status(all_profiles):
 
     Returns exit code 0 if all requested daemons are running, else exit code 3.
     """
+    from tabulate import tabulate
+
+    from aiida.cmdline.utils.common import format_local_time
     from aiida.engine.daemon.client import get_daemon_client
 
     manager = get_manager()
@@ -92,14 +95,42 @@ def status(all_profiles):
         profiles = [manager.get_profile()]
 
     daemons_running = []
+
     for profile in profiles:
         client = get_daemon_client(profile.name)
-        delete_stale_pid_file(client)
         echo.echo('Profile: ', fg=echo.COLORS['report'], bold=True, nl=False)
         echo.echo(f'{profile.name}', bold=True)
-        result = get_daemon_status(client)
-        echo.echo(result)
-        daemons_running.append(client.is_daemon_running)
+
+        daemon_status = client.get_status()
+
+        if not daemon_status.is_running:
+            echo.echo_error(daemon_status.message)
+            daemons_running.append(False)
+            continue
+
+        worker_response = client.get_worker_info()
+        daemon_response = client.get_daemon_info()
+
+        workers = []
+        for pid, info in worker_response['info'].items():
+            if isinstance(info, dict):
+                row = [pid, info['mem'], info['cpu'], format_local_time(info['create_time'])]
+            else:
+                row = [pid, '-', '-', '-']
+            workers.append(row)
+
+        if workers:
+            workers_info = tabulate(workers, headers=['PID', 'MEM %', 'CPU %', 'started'], tablefmt='simple')
+        else:
+            workers_info = '--> No workers are running. Use `verdi daemon incr` to start some!\n'
+
+        start_time = format_local_time(daemon_response['info']['create_time'])
+        echo.echo(
+            f'Daemon is running as PID {daemon_response["info"]["pid"]} since {start_time}\n'
+            f'Active workers [{len(workers)}]:\n{workers_info}\n'
+            'Use `verdi daemon [incr | decr] [num]` to increase / decrease the amount of workers'
+        )
+        daemons_running.append(True)
 
     if not all(daemons_running):
         sys.exit(3)
@@ -179,8 +210,6 @@ def stop(no_wait, all_profiles):
             echo.echo('Daemon was not running')
             continue
 
-        delete_stale_pid_file(client)
-
         wait = not no_wait
 
         if wait:
@@ -227,19 +256,19 @@ def restart(ctx, reset, no_wait):
         # As a temporary workaround, we fetch the default here manually and pass that in explicitly.
         number = ctx.obj.config.get_option('daemon.default_workers', ctx.obj.profile.name)
         ctx.invoke(start, number=number)
+        return
+
+    if wait:
+        echo.echo('Restarting the daemon... ', nl=False)
     else:
+        echo.echo('Restarting the daemon')
 
-        if wait:
-            echo.echo('Restarting the daemon... ', nl=False)
-        else:
-            echo.echo('Restarting the daemon')
+    response = client.restart_daemon(wait)
 
-        response = client.restart_daemon(wait)
-
-        if wait:
-            retcode = print_client_response_status(response)
-            if retcode:
-                sys.exit(retcode)
+    if wait:
+        retcode = print_client_response_status(response)
+        if retcode:
+            sys.exit(retcode)
 
 
 @verdi_daemon.command(hidden=True)

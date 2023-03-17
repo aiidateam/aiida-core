@@ -57,7 +57,6 @@ def verdi_status(print_traceback, no_rmq):
     """Print status of AiiDA services."""
     # pylint: disable=broad-except,too-many-statements,too-many-branches,too-many-locals,
     from aiida import __version__
-    from aiida.cmdline.utils.daemon import delete_stale_pid_file, get_daemon_status
     from aiida.common.utils import Capturing
     from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
     from aiida.manage.manager import get_manager
@@ -136,15 +135,14 @@ def verdi_status(print_traceback, no_rmq):
 
     # Getting the daemon status
     try:
-        client = manager.get_daemon_client()
-        delete_stale_pid_file(client)
-        daemon_status = get_daemon_status(client)
+        daemon_status = manager.get_daemon_client().get_status()
 
-        daemon_status = daemon_status.split('\n', maxsplit=1)[0]  # take only the first line
-        if client.is_daemon_running:
-            print_status(ServiceStatus.UP, 'daemon', daemon_status)
+        if daemon_status.is_running:
+            print_status(ServiceStatus.UP, 'daemon', daemon_status.message)
+        elif daemon_status.error:
+            print_status(ServiceStatus.ERROR, 'daemon', daemon_status.message)
         else:
-            print_status(ServiceStatus.WARNING, 'daemon', daemon_status)
+            print_status(ServiceStatus.WARNING, 'daemon', daemon_status.message)
 
     except Exception as exc:
         message = 'Error getting daemon status'

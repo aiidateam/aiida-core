@@ -164,7 +164,10 @@ def storage_maintain(ctx, full, no_repack, skip_prompt, dry_run):
                 return
 
     try:
-        storage.maintain(full=full, dry_run=dry_run, do_repack=not no_repack)
+        if full and no_repack:
+            storage.maintain(full=full, dry_run=dry_run, do_repack=False)
+        else:
+            storage.maintain(full=full, dry_run=dry_run)
     except LockingProfileError as exception:
         echo.echo_critical(str(exception))
     echo.echo_success('Requested maintenance procedures finished.')

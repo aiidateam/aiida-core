@@ -20,7 +20,7 @@
         },
         "daemon.timeout": {
           "type": "integer",
-          "default": 20,
+          "default": 5,
           "minimum": 0,
           "description": "Timeout in seconds for calls to the circus client"
         },

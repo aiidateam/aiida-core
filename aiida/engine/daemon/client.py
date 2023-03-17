@@ -13,6 +13,7 @@ from __future__ import annotations
 import contextlib
 import enum
 import os
+import pathlib
 import shutil
 import socket
 import subprocess
@@ -22,8 +23,11 @@ import time
 import typing as t
 from typing import TYPE_CHECKING
 
+import psutil
+
 from aiida.common.exceptions import AiidaException, ConfigurationError
 from aiida.common.lang import type_check
+from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration import get_config, get_config_option
 from aiida.manage.configuration.profile import Profile
 from aiida.manage.manager import get_manager
@@ -31,12 +35,11 @@ from aiida.manage.manager import get_manager
 if TYPE_CHECKING:
     from circus.client import CircusClient
 
+LOGGER = AIIDA_LOGGER.getChild('engine.daemon.client')
+
 VERDI_BIN = shutil.which('verdi')
 # Recent versions of virtualenv create the environment variable VIRTUAL_ENV
 VIRTUALENV = os.environ.get('VIRTUAL_ENV', None)
-
-# see https://github.com/python/typing/issues/182
-JsonDictType = t.Dict[str, t.Any]
 
 __all__ = ('DaemonClient',)
 
@@ -49,7 +52,19 @@ class ControllerProtocol(enum.Enum):
 
 
 class DaemonException(AiidaException):
-    """Raised when the starting of the daemon failed."""
+    """Base class for exceptions related to the daemon."""
+
+
+class DaemonNotRunningException(DaemonException):
+    """Raised when a connection to the daemon is attempted but it is not running."""
+
+
+class DaemonTimeoutException(DaemonException):
+    """Raised when a connection to the daemon is attempted but it times out."""
+
+
+class DaemonStalePidException(DaemonException):
+    """Raised when a connection to the daemon is attempted but it fails and the PID file appears to be stale."""
 
 
 def get_daemon_client(profile_name: str | None = None) -> 'DaemonClient':
@@ -68,9 +83,6 @@ def get_daemon_client(profile_name: str | None = None) -> 'DaemonClient':
 class DaemonClient:  # pylint: disable=too-many-public-methods
     """Client to interact with the daemon."""
 
-    DAEMON_ERROR_NOT_RUNNING = 'daemon-error-not-running'
-    DAEMON_ERROR_TIMEOUT = 'daemon-error-timeout'
-
     _DAEMON_NAME = 'aiida-{name}'
     _ENDPOINT_PROTOCOL = ControllerProtocol.IPC
 
@@ -82,8 +94,8 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         type_check(profile, Profile)
         config = get_config()
         self._profile = profile
-        self._SOCKET_DIRECTORY: str | None = None  # pylint: disable=invalid-name
-        self._DAEMON_TIMEOUT: int = config.get_option('daemon.timeout')  # pylint: disable=invalid-name
+        self._socket_directory: str | None = None
+        self._daemon_timeout: int = config.get_option('daemon.timeout')
 
     @property
     def profile(self) -> Profile:
@@ -229,14 +241,14 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         else:
 
             # The SOCKET_DIRECTORY is already set, a temporary directory was already created and the same should be used
-            if self._SOCKET_DIRECTORY is not None:
-                return self._SOCKET_DIRECTORY
+            if self._socket_directory is not None:
+                return self._socket_directory
 
             socket_dir_path = tempfile.mkdtemp()
             with open(self.circus_socket_file, 'w', encoding='utf8') as fhandle:
                 fhandle.write(str(socket_dir_path))
 
-            self._SOCKET_DIRECTORY = socket_dir_path
+            self._socket_directory = socket_dir_path
             return socket_dir_path
 
     def get_daemon_pid(self) -> int | None:
@@ -379,12 +391,12 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         from circus.client import CircusClient
 
         try:
-            client = CircusClient(endpoint=self.get_controller_endpoint(), timeout=self._DAEMON_TIMEOUT)
+            client = CircusClient(endpoint=self.get_controller_endpoint(), timeout=self._daemon_timeout)
             yield client
         finally:
             client.stop()
 
-    def call_client(self, command: JsonDictType) -> JsonDictType:
+    def call_client(self, command: dict[str, t.Any]) -> dict[str, t.Any]:
         """Call the client with a specific command.
 
         Will check whether the daemon is running first by checking for the pid file. When the pid is found yet the call
@@ -393,31 +405,43 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
 
         :param command: Command to call the circus client with.
         :return: The result of the circus client call.
+        :raises DaemonException: If the daemon is not running or cannot be reached.
+        :raises DaemonTimeoutException: If the connection to the daemon timed out.
+        :raises DaemonException: If the connection to the daemon failed for any other reason.
         """
         from circus.exc import CallError
-
-        if not self.get_daemon_pid():
-            return {'status': self.DAEMON_ERROR_NOT_RUNNING}
 
         try:
             with self.get_client() as client:
                 result = client.call(command)
         except CallError as exception:
+            if self.get_daemon_pid() is None:
+                raise DaemonNotRunningException('The daemon is not running.') from exception
+
+            if self._is_pid_file_stale:
+                raise DaemonStalePidException(
+                    'The daemon could not be reached, seemingly because of a stale PID file. Try starting the daemon '
+                    'to remove it and restore the daemon.'
+                ) from exception
+
             if str(exception) == 'Timed out.':
-                return {'status': self.DAEMON_ERROR_TIMEOUT}
-            raise exception
+                raise DaemonTimeoutException('Connection to the daemon timed out.') from exception
+
+            raise DaemonException('Connection to the daemon failed.') from exception
 
         return result
 
-    def get_status(self) -> JsonDictType:
-        """Get the daemon running status.
+    def get_status(self) -> dict[str, t.Any]:
+        """Return the status of the daemon.
 
-        :return: The client call response. If successful, will will contain 'status' key.
+        :returns: Instance of ``DaemonStatus``.
         """
         command = {'command': 'status', 'properties': {'name': self.daemon_name}}
-        return self.call_client(command)
+        response = self.call_client(command)
+        response['pid'] = self.get_daemon_pid()
+        return response
 
-    def get_numprocesses(self) -> JsonDictType:
+    def get_numprocesses(self) -> dict[str, t.Any]:
         """Get the number of running daemon processes.
 
         :return: The client call response. If successful, will contain 'numprocesses' key.
@@ -425,7 +449,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         command = {'command': 'numprocesses', 'properties': {'name': self.daemon_name}}
         return self.call_client(command)
 
-    def get_worker_info(self) -> JsonDictType:
+    def get_worker_info(self) -> dict[str, t.Any]:
         """Get workers statistics for this daemon.
 
         :return: The client call response. If successful, will contain 'info' key.
@@ -433,7 +457,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         command = {'command': 'stats', 'properties': {'name': self.daemon_name}}
         return self.call_client(command)
 
-    def get_daemon_info(self) -> JsonDictType:
+    def get_daemon_info(self) -> dict[str, t.Any]:
         """Get statistics about this daemon itself.
 
         :return: The client call response. If successful, will contain 'info' key.
@@ -441,7 +465,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         command = {'command': 'dstats', 'properties': {}}
         return self.call_client(command)
 
-    def increase_workers(self, number: int) -> JsonDictType:
+    def increase_workers(self, number: int) -> dict[str, t.Any]:
         """Increase the number of workers.
 
         :param number: The number of workers to add.
@@ -450,7 +474,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         command = {'command': 'incr', 'properties': {'name': self.daemon_name, 'nb': number}}
         return self.call_client(command)
 
-    def decrease_workers(self, number: int) -> JsonDictType:
+    def decrease_workers(self, number: int) -> dict[str, t.Any]:
         """Decrease the number of workers.
 
         :param number: The number of workers to remove.
@@ -459,7 +483,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         command = {'command': 'decr', 'properties': {'name': self.daemon_name, 'nb': number}}
         return self.call_client(command)
 
-    def stop_daemon(self, wait: bool = True, timeout: int = 5) -> JsonDictType:
+    def stop_daemon(self, wait: bool = True, timeout: int = 5) -> dict[str, t.Any]:
         """Stop the daemon.
 
         :param wait: Boolean to indicate whether to wait for the result of the command.
@@ -468,14 +492,13 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         :raises DaemonException: If ``is_daemon_running`` returns ``True`` after the ``timeout`` has passed.
         """
         command = {'command': 'quit', 'properties': {'waiting': wait}}
-
-        result = self.call_client(command)
+        response = self.call_client(command)
 
         if self._ENDPOINT_PROTOCOL == ControllerProtocol.IPC:
             self.delete_circus_socket_directory()
 
         if not wait:
-            return result
+            return response
 
         self._await_condition(
             lambda: not self.is_daemon_running,
@@ -483,9 +506,9 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
             timeout=timeout,
         )
 
-        return result
+        return response
 
-    def restart_daemon(self, wait: bool) -> JsonDictType:
+    def restart_daemon(self, wait: bool) -> dict[str, t.Any]:
         """Restart the daemon.
 
         :param wait: Boolean to indicate whether to wait for the result of the command.
@@ -504,6 +527,8 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         :raises DaemonException: If the daemon starts but then is unresponsive or in an unexpected state.
         :raises DaemonException: If ``is_daemon_running`` returns ``False`` after the ``timeout`` has passed.
         """
+        self._clean_potentially_stale_pid_file()
+
         env = self.get_env()
         command = self.cmd_start_daemon(number_workers, foreground)
 
@@ -517,6 +542,73 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
             DaemonException(f'The daemon failed to start within {timeout} seconds.'),
             timeout=timeout,
         )
+
+    def _clean_potentially_stale_pid_file(self) -> None:
+        """Check the daemon PID file and delete it if it is likely to be stale."""
+        try:
+            self._check_pid_file()
+        except DaemonException as exception:
+            pathlib.Path(self.circus_pid_file).unlink(missing_ok=True)
+            LOGGER.warning(f'Deleted apparently stale daemon PID file: {exception}')
+
+    @property
+    def _is_pid_file_stale(self) -> bool:
+        """Return whether the daemon PID file is likely to be stale.
+
+        :returns: ``True`` if the PID file is likely to be stale, ``False`` otherwise.
+        """
+        try:
+            self._check_pid_file()
+        except DaemonException:
+            return True
+
+        return False
+
+    def _check_pid_file(self) -> None:
+        """Check that the daemon's PID file is not stale.
+
+        Checks if the PID contained in the circus PID file matches a valid running ``verdi`` process. The PID file is
+        considered stale if any of the following conditions are true:
+
+        * The process with the given PID no longer exists
+        * The process name does not match the command of the circus daemon
+        * The process username does not match the username of this Python interpreter
+
+        In the latter two cases, the process with the PID of the PID file exists, but it is very likely that it is not
+        the original process that created the PID file, since the command or user is different, indicating the original
+        process died and the PID was recycled for a new process.
+
+        The PID file can got stale if a system is shut down suddenly and so the process is killed but the PID file is
+        not deleted in time. When the `get_daemon_pid()` method is called, an incorrect PID is returned. Alternatively,
+        another process or the user may have meddled with the PID file in some way, corrupting it.
+
+        :raises DaemonException: If the PID file is likely to be stale.
+        """
+        pid = self.get_daemon_pid()
+
+        if pid is None:
+            return
+
+        try:
+            process = psutil.Process(pid)
+
+            # The circus daemon process can appear as ``start-circus`` or ``circusd``. See this issue comment for
+            # details: https://github.com/aiidateam/aiida-core/issues/5336#issuecomment-1376093322
+            if not any(cmd in process.cmdline() for cmd in ['start-circus', 'circusd']):
+                raise DaemonException(
+                    f'process command `{process.cmdline()}` of PID `{pid}` does not match expected AiiDA daemon command'
+                )
+
+            process_user = process.username()
+            current_user = psutil.Process().username()
+
+            if process_user != current_user:
+                raise DaemonException(
+                    f'process user `{process_user}` of PID `{pid}` does not match current user `{current_user}`'
+                )
+
+        except (psutil.AccessDenied, psutil.NoSuchProcess, DaemonException) as exception:
+            raise DaemonException(exception) from exception
 
     @staticmethod
     def _await_condition(condition: t.Callable, exception: Exception, timeout: int = 5, interval: float = 0.1):

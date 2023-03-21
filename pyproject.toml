@@ -29,7 +29,6 @@ dependencies = [
     "archive-path~=0.4.2",
     "aio-pika~=6.6",
     "circus~=0.18.0",
-    "click-config-file~=0.6.0",
     "click-spinner~=0.1.8",
     "click~=8.1",
     "disk-objectstore~=0.6.0",

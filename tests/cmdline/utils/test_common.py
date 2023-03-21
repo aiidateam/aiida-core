@@ -8,8 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :mod:`aiida.cmdline.utils.common` module."""
-import pytest
-
 from aiida.cmdline.utils import common
 from aiida.common import LinkType
 from aiida.engine import Process, calcfunction
@@ -92,36 +90,3 @@ def test_print_process_info():
     common.print_process_info(TestProcessWithDocstring)
     common.print_process_info(test_without_docstring)
     common.print_process_info(test_with_docstring)
-
-
-@pytest.mark.parametrize(
-    'active_workers, active_slots, expected', (
-        (None, None, 'No active daemon workers.'),
-        (1, 0, 'Report: Using 0% of the available daemon worker slots.'),
-        (1, 200, 'Warning: 100% of the available daemon worker slots have been used!'),
-    )
-)
-def test_check_worker_load(monkeypatch, capsys, active_workers, active_slots, expected):
-    """Test the ``check_worker_load`` function.
-
-    We monkeypatch the ``get_num_workers`` method which is called by ``check_worker_load`` to return the number of
-    active workers that we parametrize.
-    """
-    monkeypatch.setattr(common, 'get_num_workers', lambda: active_workers)
-    common.check_worker_load(active_slots)
-    assert expected in capsys.readouterr().out
-
-
-def test_check_worker_load_fail(monkeypatch, capsys):
-    """Test the ``check_worker_load`` function when ``get_num_workers`` will except with ``CircusCallError``."""
-
-    def get_num_workers():
-        from aiida.common.exceptions import CircusCallError
-        raise CircusCallError
-
-    monkeypatch.setattr(common, 'get_num_workers', get_num_workers)
-
-    with pytest.raises(SystemExit):
-        common.check_worker_load(None)
-
-    assert 'Could not contact Circus to get the number of active workers.' in capsys.readouterr().err

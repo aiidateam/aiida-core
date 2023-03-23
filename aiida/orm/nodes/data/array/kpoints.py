@@ -36,6 +36,34 @@ class KpointsData(ArrayData):
     set_cell_from_structure methods.
     """
 
+    def __init__(
+        self,
+        structuredata=None,
+        cell=None,
+        pbc=None,
+        mesh=None,
+        distance=None,
+        offset=None,
+        force_parity=False,
+        kpoints=None,
+        cartesian=False,
+        labels=None,
+        weights=None,
+        fill_values=0
+    ):
+        """Set the properties directly in the constructor."""
+        super().__init__()
+        if structuredata is not None:
+            self.set_cell_from_structure(structuredata)
+        if cell is not None:
+            self.set_cell(cell, pbc)
+        if mesh is not None:
+            self.set_kpoints_mesh(mesh, offset)
+        if distance is not None:
+            self.set_kpoints_mesh_from_density(distance, offset, force_parity)
+        if kpoints is not None:
+            self.set_kpoints(kpoints, cartesian, labels, weights, fill_values)
+
     def get_description(self):
         """
         Returns a string with infos retrieved from  kpoints node's properties.

@@ -156,11 +156,27 @@ def process_call_root(processes):
 @click.option(
     '-m', '--max-depth', 'max_depth', type=int, default=None, help='Limit the number of levels to be printed.'
 )
+@click.option(
+    '-e', '--end', 'last', is_flag=True, default=False, help='report for the most recent node in verdi process list -a'
+)
 @decorators.with_dbenv()
-def process_report(processes, levelname, indent_size, max_depth):
+def process_report(processes, levelname, indent_size, max_depth, last):
     """Show the log report for one or multiple processes."""
     from aiida.cmdline.utils.common import get_calcjob_report, get_process_function_report, get_workchain_report
     from aiida.orm import CalcFunctionNode, CalcJobNode, WorkChainNode, WorkFunctionNode
+    from aiida.tools.query.calculation import CalculationQueryBuilder
+    from aiida.orm import load_node
+
+    if last:
+        # query all nodes, getting the last one available
+        builder = CalculationQueryBuilder()
+        lastnode_info = builder.get_projected(builder.get_query_set(), CalculationQueryBuilder.default_projections)[-1]
+        # take pk from node info and load that node
+        pk = lastnode_info[0]
+        node = load_node(pk)
+        # set process list to the singular final node
+        processes = [node]
+        echo.echo(f'Reporting for final node (pk: {pk})')
 
     for process in processes:
         if isinstance(process, CalcJobNode):

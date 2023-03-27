@@ -267,9 +267,9 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         if def_memory_per_machine is None:
             return
 
-        if not isinstance(def_memory_per_machine, int) or def_memory_per_machine <= 0:
+        if not isinstance(def_memory_per_machine, int) or def_memory_per_machine < 0:
             raise exceptions.ValidationError(
-                f'Invalid value for def_memory_per_machine, must be a positive int, got: {def_memory_per_machine}'
+                f'Invalid value for def_memory_per_machine, must not be a negative int, got: {def_memory_per_machine}'
             )
 
     def copy(self) -> 'Computer':

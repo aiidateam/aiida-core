@@ -260,7 +260,7 @@ def test_noninteractive_optional_default_memory_invalid(run_cli_command):
     options_dict['default-memory-per-machine'] = -1
     options = generate_setup_options(options_dict)
     result = run_cli_command(computer_setup, options, raises=True)
-    assert 'Invalid value for def_memory_per_machine, must be a positive int, got: -1' in result.output
+    assert 'Invalid value for def_memory_per_machine, must not be a negative int, got: -1' in result.output
 
 
 def test_noninteractive_wrong_transport_fail(run_cli_command):

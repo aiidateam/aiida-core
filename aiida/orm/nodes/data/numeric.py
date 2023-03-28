@@ -124,3 +124,9 @@ class NumericType(BaseType):
 
     def __int__(self):
         return int(self.value)
+
+    def __pos__(self):
+        return self.value
+
+    def __neg__(self):
+        return self.new(-self.value)

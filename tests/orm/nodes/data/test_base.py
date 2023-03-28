@@ -214,3 +214,28 @@ def test_equality(node_type, a, b):
     # Test equality comparison with other `BaseType` nodes
     assert node_a == node_a_clone
     assert node_a != node_b
+
+
+def test_unary():
+    """Test Unary operations for orm.Int and orm.Float"""
+
+    # Int
+    int_a = Int(5)
+    int_b = Int(-5)
+
+    # Float
+    float_a = Float(10.0)
+    float_b = Float(-10.0)
+
+    # Test __pos__
+    assert +int_a == int_a  # True +5 > 5 == 5
+    assert +int_b == int_b # True +(-5) > -5 == -5
+    assert +float_a == float_a # True +10.0 > 10 == 10
+    assert +float_b == float_b # True +(-10.0) > -10.0 == 10.0
+
+    # Test __neg__
+    assert -int_a != int_a # True -(5) != 5 
+    assert -int_b != int_b # True -(-5) != -5 
+    assert -float_a != float_a # True (-10.0) != 10.0
+    assert -float_b != float_b # True -(-10.0) > 10.0 != -10.0
+    assert -int_a == -int_a # True -5 == -5

@@ -229,13 +229,13 @@ def test_unary():
 
     # Test __pos__
     assert +int_a == int_a  # True +5 > 5 == 5
-    assert +int_b == int_b # True +(-5) > -5 == -5
-    assert +float_a == float_a # True +10.0 > 10 == 10
-    assert +float_b == float_b # True +(-10.0) > -10.0 == 10.0
+    assert +int_b == int_b  # True +(-5) > -5 == -5
+    assert +float_a == float_a  # True +10.0 > 10 == 10
+    assert +float_b == float_b  # True +(-10.0) > -10.0 == 10.0
 
     # Test __neg__
-    assert -int_a != int_a # True -(5) != 5 
-    assert -int_b != int_b # True -(-5) != -5 
-    assert -float_a != float_a # True (-10.0) != 10.0
-    assert -float_b != float_b # True -(-10.0) > 10.0 != -10.0
-    assert -int_a == -int_a # True -5 == -5
+    assert -int_a != int_a  # True -(5) != 5
+    assert -int_b != int_b  # True -(-5) != -5
+    assert -float_a != float_a  # True (-10.0) != 10.0
+    assert -float_b != float_b  # True -(-10.0) > 10.0 != -10.0
+    assert -int_a == -int_a  # True -5 == -5

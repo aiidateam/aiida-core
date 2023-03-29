@@ -20,7 +20,6 @@ cffi==1.15.0
 charset-normalizer==2.0.8
 circus==0.18.0
 click==8.1.0
-click-config-file==0.6.0
 click-spinner==0.1.10
 configobj==5.0.6
 coverage==6.5.0

@@ -262,7 +262,7 @@ def _resolve_futures(
                 # unwrap is need here since LoopCommunicator will also wrap a future
                 future = unwrap_kiwi_future(future)
                 result = future.result()
-            except communications.CommunicationTimeout:
+            except communications.TimeoutError:
                 LOGGER.error(f'call to {infinitive} Process<{process.pk}> timed out')
             except Exception as exception:  # pylint: disable=broad-except
                 LOGGER.error(f'failed to {infinitive} Process<{process.pk}>: {exception}')

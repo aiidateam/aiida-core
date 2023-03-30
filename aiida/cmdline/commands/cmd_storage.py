@@ -112,7 +112,7 @@ def storage_info(detailed):
 @click.option(
     '--no-repack', is_flag=True, help='Disable the repacking of the storage when running a `full maintenance`.'
 )
-@click.option('--yes', '-y', 'skip_prompt', is_flag=True, help='Skip confirmation prompt.')
+@options.FORCE()
 @click.option(
     '--dry-run',
     is_flag=True,
@@ -121,7 +121,7 @@ def storage_info(detailed):
 )
 @decorators.with_dbenv()
 @click.pass_context
-def storage_maintain(ctx, full, no_repack, skip_prompt, dry_run):
+def storage_maintain(ctx, full, no_repack, force, dry_run):
     """Performs maintenance tasks on the repository."""
     from aiida.common.exceptions import LockingProfileError
     from aiida.manage.manager import get_manager
@@ -152,10 +152,8 @@ def storage_maintain(ctx, full, no_repack, skip_prompt, dry_run):
             'for a more complete optimization.\n'
         )
 
-    if not dry_run:
-        if not skip_prompt:
-            if not click.confirm('Are you sure you want continue in this mode?'):
-                return
+    if not dry_run and not force and not click.confirm('Are you sure you want continue in this mode?'):
+        return
 
     try:
         if full and no_repack:

@@ -351,9 +351,6 @@ At the end, you receive a confirmation, with the *PK* and the *UUID* of your new
 .. note::
 
     It is possible to run codes that are provided by a `Conda environment <https://docs.conda.io/en/latest/>`_.
-    The associated ``Computer`` should be configured to create a submission script that uses a login shell by setting the ``shebang`` attribute to ``#!/bin/bash -l``.
-    The ``-l`` flag in bash enforces the script to be executed using a login shell, without which the ``conda activate`` command will fail.
-
     The code configuration YAML would look something like the following:
 
     .. code-block:: yaml
@@ -362,6 +359,21 @@ At the end, you receive a confirmation, with the *PK* and the *UUID* of your new
         prepend_text: conda activate environment-name
 
     Note that the configuration is not complete but only shows the relevant lines.
+    For the ``conda activate`` statement to work, it needs to be properly initialized in the shell in which the job is executed.
+
+    This can be achieved by configuring the ``shebang`` property of the ``Computer`` to ``#!/bin/bash -l``.
+    This ensures that the submission script uses a login shell which initializes conda properly.
+
+    If the submission script should not use a login shell (e.g. because that sources other dotfiles that are unnecessary), the following ``prepend_text`` can be used instead:
+
+    .. code-block:: yaml
+
+        filepath_executable: 'executable-name'
+        prepend_text: |
+            eval "$(conda shell.bash hook)"
+            conda activate environment-name
+
+    For further details, please refer to the `Conda documentation <https://docs.conda.io/projects/conda/en/latest/dev-guide/deep-dives/activation.html#conda-initialization>`_.
 
 
 Managing codes

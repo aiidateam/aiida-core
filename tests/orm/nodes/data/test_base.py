@@ -214,29 +214,31 @@ def test_equality(node_type, a, b):
     # Test equality comparison with other `BaseType` nodes
     assert node_a == node_a_clone
     assert node_a != node_b
-    
+
+
 @pytest.mark.parametrize('numeric_type', (Float, Int))
 def test_unary_pos(numeric_type):
-
     """Test the ``__pos__`` unary operator for all ``NumericType`` subclasses."""
-    
+
     node_positive = numeric_type(1)
     node_negative = numeric_type(-1)
-    
+
     assert +node_positive == node_positive
     assert +node_negative == node_negative
+
 
 @pytest.mark.parametrize('numeric_type', (Float, Int))
 def test_unary_neg(numeric_type):
     """Test the ``__neg__`` unary operator for all ``NumericType`` subclasses."""
-    
+
     node_positive = numeric_type(1)
     node_negative = numeric_type(-1)
-    
+
     assert -node_positive != node_positive
     assert -node_negative != node_negative
     assert -node_positive == node_negative
-    assert -node_negative == node_positive 
+    assert -node_negative == node_positive
+
 
 @pytest.mark.parametrize('numeric_type', (Float, Int))
 def tesr_unary_abs(numeric_type):
@@ -248,7 +250,7 @@ def tesr_unary_abs(numeric_type):
     # Test positive number
     abs_positive = node_positive.abs()
     assert abs_positive == node_positive
-    
+
     # Test negative number
     abs_negative = node_negative.abs()
     assert abs_negative != node_negative

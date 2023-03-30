@@ -238,19 +238,21 @@ def test_unary_neg(numeric_type):
     assert -node_negative != node_negative
     assert -node_positive == node_negative
     assert -node_negative == node_positive
+    assert -node_negative == node_positive
 
 
 @pytest.mark.parametrize('numeric_type', (Float, Int))
-def tesr_unary_abs(numeric_type):
+def test_unary_abs(numeric_type):
     """Test the ``__abs__`` unary operator for all ``NumericType`` subclasses"""
 
     node_positive = numeric_type(1)
     node_negative = numeric_type(-1)
 
     # Test positive number
-    abs_positive = node_positive.abs()
+    abs_positive = abs(node_positive)
     assert abs_positive == node_positive
 
     # Test negative number
-    abs_negative = node_negative.abs()
+    abs_negative = abs(node_negative)
     assert abs_negative != node_negative
+    assert abs_positive == abs_negative

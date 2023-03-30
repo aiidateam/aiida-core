@@ -261,7 +261,7 @@ class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-insta
         before the execution of the code.
       * ``environment_variables_double_quotes``: if set to True, use double quotes
         instead of single quotes to escape the environment variables specified
-        in ``environment_variables``.
+        in ``job_environment``.
       * ``working_directory``: the working directory for this job. During
         submission, the transport will first do a 'chdir' to this directory,
         and then possibly set a scheduler parameter, if this is supported

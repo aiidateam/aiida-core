@@ -137,23 +137,52 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch, caplog):
 
     monkeypatch.setattr(storage, 'maintain', mock_maintain)
 
+    # Not passing user input Y or `--force` should causing the command to exit without executing `storage.mantain`
+    # Checking that no logs are produced in the with caplog context
     with caplog.at_level(logging.INFO):
-        _ = run_cli_command(cmd_storage.storage_maintain, user_input='Y', use_subprocess=False)
+        _ = run_cli_command(cmd_storage.storage_maintain, use_subprocess=False)
+
+    assert len(caplog.records) == 0
+
+    # Test `storage.mantain` with `--force`
+    with caplog.at_level(logging.INFO):
+        _ = run_cli_command(cmd_storage.storage_maintain, parameters=['--force'], use_subprocess=False)
 
     message_list = caplog.records[0].msg.splitlines()
     assert ' > full: False' in message_list
     assert ' > dry_run: False' in message_list
 
+    # Test `storage.mantain` with user input Y
     with caplog.at_level(logging.INFO):
-        _ = run_cli_command(cmd_storage.storage_maintain, parameters=['--dry-run'], use_subprocess=False)
+        _ = run_cli_command(cmd_storage.storage_maintain, user_input='Y', use_subprocess=False)
 
     message_list = caplog.records[1].msg.splitlines()
     assert ' > full: False' in message_list
+    assert ' > dry_run: False' in message_list
+
+    # Test `storage.mantain` with `--dry-run`
+    with caplog.at_level(logging.INFO):
+        _ = run_cli_command(cmd_storage.storage_maintain, parameters=['--dry-run'], use_subprocess=False)
+
+    message_list = caplog.records[2].msg.splitlines()
+    assert ' > full: False' in message_list
     assert ' > dry_run: True' in message_list
 
+    # Test `storage.mantain` with `--full`
     with caplog.at_level(logging.INFO):
         run_cli_command(cmd_storage.storage_maintain, parameters=['--full'], user_input='Y', use_subprocess=False)
 
-    message_list = caplog.records[2].msg.splitlines()
+    message_list = caplog.records[3].msg.splitlines()
     assert ' > full: True' in message_list
+    assert ' > dry_run: False' in message_list
+
+    # Test `storage.mantain` with `--full` and `--no-repack`
+    with caplog.at_level(logging.INFO):
+        run_cli_command(
+            cmd_storage.storage_maintain, parameters=['--full', '--no-repack'], user_input='Y', use_subprocess=False
+        )
+
+    message_list = caplog.records[4].msg.splitlines()
+    assert ' > full: True' in message_list
+    assert ' > do_repack: False' in message_list
     assert ' > dry_run: False' in message_list

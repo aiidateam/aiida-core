@@ -176,7 +176,14 @@ def process_report(processes, levelname, indent_size, max_depth, last):
         node = load_node(pk)
         # set process list to the singular final node
         processes = [node]
-        echo.echo(f'Reporting for final node (pk: {pk})')
+
+        echo.echo(f"Reporting for final node (pk: {pk})")
+
+        try:
+            remote_dir = node.outputs.remote_folder.get_attribute("remote_path")
+            echo.echo(f"Remote Directory: {remote_dir}")
+        except AttributeError:
+            echo.echo(f"No Remote Directory Found")
 
     for process in processes:
         if isinstance(process, CalcJobNode):

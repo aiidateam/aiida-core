@@ -161,7 +161,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         """
         if live and (do_repack or clean_storage or do_vacuum):
             overrides = {'do_repack': do_repack, 'clean_storage': clean_storage, 'do_vacuum': do_vacuum}
-            keys = ', '.join([key for key, override in overrides if override is True])  # type: ignore
+            keys = ', '.join([key for key, override in overrides.items() if override is True])  # type: ignore
             raise ValueError(f'The following overrides were enabled but cannot be if `live=True`: {keys}')
 
         pack_loose = True if pack_loose is None else pack_loose

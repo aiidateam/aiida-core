@@ -130,3 +130,6 @@ class NumericType(BaseType):
 
     def __neg__(self):
         return self.new(-self.value)
+
+    def __abs__(self):
+        return abs(self.value)

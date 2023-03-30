@@ -214,28 +214,41 @@ def test_equality(node_type, a, b):
     # Test equality comparison with other `BaseType` nodes
     assert node_a == node_a_clone
     assert node_a != node_b
+    
+@pytest.mark.parametrize('numeric_type', (Float, Int))
+def test_unary_pos(numeric_type):
 
+    """Test the ``__pos__`` unary operator for all ``NumericType`` subclasses."""
+    
+    node_positive = numeric_type(1)
+    node_negative = numeric_type(-1)
+    
+    assert +node_positive == node_positive
+    assert +node_negative == node_negative
 
-def test_unary():
-    """Test Unary operations for orm.Int and orm.Float"""
+@pytest.mark.parametrize('numeric_type', (Float, Int))
+def test_unary_neg(numeric_type):
+    """Test the ``__neg__`` unary operator for all ``NumericType`` subclasses."""
+    
+    node_positive = numeric_type(1)
+    node_negative = numeric_type(-1)
+    
+    assert -node_positive != node_positive
+    assert -node_negative != node_negative
+    assert -node_positive == node_negative
+    assert -node_negative == node_positive 
 
-    # Int
-    int_a = Int(5)
-    int_b = Int(-5)
+@pytest.mark.parametrize('numeric_type', (Float, Int))
+def tesr_unary_abs(numeric_type):
+    """Test the ``__abs__`` unary operator for all ``NumericType`` subclasses"""
 
-    # Float
-    float_a = Float(10.0)
-    float_b = Float(-10.0)
+    node_positive = numeric_type(1)
+    node_negative = numeric_type(-1)
 
-    # Test __pos__
-    assert +int_a == int_a  # True +5 > 5 == 5
-    assert +int_b == int_b  # True +(-5) > -5 == -5
-    assert +float_a == float_a  # True +10.0 > 10 == 10
-    assert +float_b == float_b  # True +(-10.0) > -10.0 == 10.0
-
-    # Test __neg__
-    assert -int_a != int_a  # True -(5) != 5
-    assert -int_b != int_b  # True -(-5) != -5
-    assert -float_a != float_a  # True (-10.0) != 10.0
-    assert -float_b != float_b  # True -(-10.0) > 10.0 != -10.0
-    assert -int_a == -int_a  # True -5 == -5
+    # Test positive number
+    abs_positive = node_positive.abs()
+    assert abs_positive == node_positive
+    
+    # Test negative number
+    abs_negative = node_negative.abs()
+    assert abs_negative != node_negative

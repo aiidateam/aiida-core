@@ -840,7 +840,6 @@ class CalcJob(Process):
         job_tmpl = JobTemplate()
         job_tmpl.submit_as_hold = False
         job_tmpl.rerunnable = self.options.get('rerunnable', False)
-        job_tmpl.job_environment = {}
         # 'email', 'email_on_started', 'email_on_terminated',
         job_tmpl.job_name = f'aiida-{self.node.pk}'
         job_tmpl.sched_output_path = self.options.scheduler_stdout

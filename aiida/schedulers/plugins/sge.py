@@ -265,9 +265,6 @@ class SgeScheduler(aiida.schedulers.Scheduler):
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)
 
-        if job_tmpl.job_environment:
-            lines.append(self._get_submit_script_environment_variables(job_tmpl))
-
         return '\n'.join(lines)
 
     def _get_submit_command(self, submit_script):

@@ -297,9 +297,6 @@ class PbsBaseClass(Scheduler):
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)
 
-        if job_tmpl.job_environment:
-            lines.append(self._get_submit_script_environment_variables(job_tmpl))
-
         # Required to change directory to the working directory, that is
         # the one from which the job was submitted
         lines.append('cd "$PBS_O_WORKDIR"')

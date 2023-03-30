@@ -31,6 +31,8 @@ def cmd():
 
     The messages to the ``verdi`` are performed indirect through the utilities of the ``echo`` module.
     """
+    assert 'cli' in [handler.name for handler in AIIDA_LOGGER.handlers]
+
     for log_level in LOG_LEVELS.values():
         AIIDA_LOGGER.log(log_level, 'aiida')
 

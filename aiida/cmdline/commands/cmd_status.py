@@ -57,8 +57,8 @@ def verdi_status(print_traceback, no_rmq):
     """Print status of AiiDA services."""
     # pylint: disable=broad-except,too-many-statements,too-many-branches,too-many-locals,
     from aiida import __version__
-    from aiida.cmdline.utils.daemon import delete_stale_pid_file, get_daemon_status
     from aiida.common.utils import Capturing
+    from aiida.engine.daemon.client import DaemonException, DaemonNotRunningException
     from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
     from aiida.manage.manager import get_manager
 
@@ -136,20 +136,17 @@ def verdi_status(print_traceback, no_rmq):
 
     # Getting the daemon status
     try:
-        client = manager.get_daemon_client()
-        delete_stale_pid_file(client)
-        daemon_status = get_daemon_status(client)
-
-        daemon_status = daemon_status.split('\n', maxsplit=1)[0]  # take only the first line
-        if client.is_daemon_running:
-            print_status(ServiceStatus.UP, 'daemon', daemon_status)
-        else:
-            print_status(ServiceStatus.WARNING, 'daemon', daemon_status)
-
-    except Exception as exc:
+        status = manager.get_daemon_client().get_status()
+    except DaemonNotRunningException as exception:
+        print_status(ServiceStatus.WARNING, 'daemon', str(exception))
+    except DaemonException as exception:
+        print_status(ServiceStatus.ERROR, 'daemon', str(exception))
+    except Exception as exception:
         message = 'Error getting daemon status'
-        print_status(ServiceStatus.ERROR, 'daemon', message, exception=exc, print_traceback=print_traceback)
+        print_status(ServiceStatus.ERROR, 'daemon', message, exception=exception, print_traceback=print_traceback)
         exit_code = ExitCode.CRITICAL
+    else:
+        print_status(ServiceStatus.UP, 'daemon', f'Daemon is running with PID {status["pid"]}')
 
     # Note: click does not forward return values to the exit code, see https://github.com/pallets/click/issues/747
     if exit_code != ExitCode.SUCCESS:

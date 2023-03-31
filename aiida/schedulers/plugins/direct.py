@@ -160,9 +160,6 @@ class DirectScheduler(aiida.schedulers.Scheduler):
         if job_tmpl.job_resource and job_tmpl.job_resource.num_cores_per_mpiproc:
             lines.append(f'export OMP_NUM_THREADS={job_tmpl.job_resource.num_cores_per_mpiproc}')
 
-        if job_tmpl.job_environment:
-            lines.append(self._get_submit_script_environment_variables(job_tmpl))
-
         if job_tmpl.rerunnable:
             self.logger.warning(
                 "The 'rerunnable' option is set to 'True', but has no effect when using the direct scheduler."

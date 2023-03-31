@@ -127,6 +127,7 @@ is identical to
     verdi --verbosity debug process list
 
 When the option is specified multiple times, only the last value will be considered.
+If the `--verbosity` option is specified, it overrides the log level of all the loggers configured by AiiDA, e.g. `logging.aiida_loglevel`.
 
 
 .. _topics:cli:identifiers:

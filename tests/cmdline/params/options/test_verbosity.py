@@ -12,10 +12,9 @@
 import functools
 import logging
 
-import click
 import pytest
 
-from aiida.cmdline.params import options
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import echo
 from aiida.common.log import AIIDA_LOGGER, LOG_LEVELS
 
@@ -26,13 +25,14 @@ def run_cli_command(run_cli_command):
     return functools.partial(run_cli_command, use_subprocess=False)
 
 
-@click.command()
-@options.VERBOSITY()
+@verdi.command('test')
 def cmd():
-    """Test command prints messages through the ``AIIDA_LOGGER`` and the ``CMDLINE_LOGGER``.
+    """Test command prints messages through the ``aiida`` and the ``verdi``.
 
-    The messages to the ``CMDLINE_LOGGER`` are performed indirect through the utilities of the ``echo`` module.
+    The messages to the ``verdi`` are performed indirect through the utilities of the ``echo`` module.
     """
+    assert 'cli' in [handler.name for handler in AIIDA_LOGGER.handlers]
+
     for log_level in LOG_LEVELS.values():
         AIIDA_LOGGER.log(log_level, 'aiida')
 
@@ -44,6 +44,27 @@ def cmd():
     echo.echo_critical('verdi')
 
 
+def verify_log_output(output: str, log_level_aiida: int, log_level_verdi: int):
+    """Verify that the expected log messages are in the output for the given log levels
+
+    :param output: The output written to stdout by the command.
+    :param log_level_aiida: The expected log level of the ``aiida`` logger.
+    :param log_level_verdi: The expected log level of the ``verdi`` logger.
+    """
+    for log_level_name, log_level in LOG_LEVELS.items():
+        prefix = log_level_name.capitalize()
+
+        if log_level >= log_level_aiida:
+            assert f'{prefix}: aiida' in output
+        else:
+            assert f'{prefix}: aiida' not in output
+
+        if log_level >= log_level_verdi:
+            assert f'{prefix}: verdi' in output
+        else:
+            assert f'{prefix}: verdi' not in output
+
+
 @pytest.mark.usefixtures('reset_log_level')
 def test_default(run_cli_command):
     """Test the command without explicitly specifying the verbosity.
@@ -51,14 +72,7 @@ def test_default(run_cli_command):
     The default log level is ``REPORT`` so its messages and everything above should show and the rest not.
     """
     result = run_cli_command(cmd, raises=True)
-
-    for log_level_name, log_level in LOG_LEVELS.items():
-        if log_level >= logging.REPORT:  # pylint: disable=no-member
-            assert f'{log_level_name.capitalize()}: verdi' in result.output
-            assert f'{log_level_name.capitalize()}: aiida' in result.output
-        else:
-            assert f'{log_level_name.capitalize()}: verdi' not in result.output
-            assert f'{log_level_name.capitalize()}: aiida' not in result.output
+    verify_log_output(result.output, logging.REPORT, logging.REPORT)  # pylint: disable=no-member
 
 
 @pytest.mark.parametrize('option_log_level', [level for level in LOG_LEVELS.values() if level != logging.NOTSET])
@@ -67,42 +81,19 @@ def test_explicit(run_cli_command, option_log_level):
     """Test explicitly settings a verbosity"""
     log_level_name = logging.getLevelName(option_log_level)
     result = run_cli_command(cmd, ['--verbosity', log_level_name], raises=True)
-
-    for log_level_name, log_level in LOG_LEVELS.items():
-        if log_level >= option_log_level:
-            assert f'{log_level_name.capitalize()}: verdi' in result.output
-            assert f'{log_level_name.capitalize()}: aiida' in result.output
-        else:
-            assert f'{log_level_name.capitalize()}: verdi' not in result.output
-            assert f'{log_level_name.capitalize()}: aiida' not in result.output
+    verify_log_output(result.output, option_log_level, option_log_level)
 
 
-@pytest.mark.usefixtures('reset_log_level', 'override_logging')
-def test_config_aiida_loglevel(run_cli_command, caplog):
-    """Test the behavior of the ``--verbosity`` option when the ``logging.aiida_loglevel`` config option is set.
+@pytest.mark.usefixtures('reset_log_level')
+def test_config_option_override(run_cli_command, isolated_config):
+    """Test that config log levels are only overridden if the ``--verbosity`` is explicitly passed."""
+    isolated_config.set_option('logging.aiida_loglevel', 'ERROR', scope=None)
+    isolated_config.set_option('logging.verdi_loglevel', 'WARNING', scope=None)
 
-    Even though the ``CMDLINE_LOGGER`` is technically a child of the ``AIIDA_LOGLEVEL`` and so normally the former
-    should not override the latter, that is actually the desired behavior. The option should ensure that it overrides
-    the value of the ``AIIDA_LOGGER`` that may be specified on the profile config.
-    """
-    # First log a ``DEBUG`` message to the ``AIIDA_LOGGER`` and capture it to see the logger is properly configured.
-    message = 'debug test message'
+    # If ``--verbosity`` is not explicitly defined, values from the config options should be used.
+    result = run_cli_command(cmd, raises=True, use_subprocess=False)
+    verify_log_output(result.output, logging.ERROR, logging.WARNING)
 
-    with caplog.at_level(logging.DEBUG):
-        AIIDA_LOGGER.debug(message)
-
-    assert message in caplog.text
-
-    # Now we invoke the command while passing a verbosity level that is higher than is configured for the
-    # ``AIIDA_LOGGER``. The explicit verbosity value should override the value configured on the profile.
-    option_log_level = logging.WARNING
-    option_log_level_name = logging.getLevelName(option_log_level)
-    result = run_cli_command(cmd, ['--verbosity', option_log_level_name], raises=True)
-
-    for log_level_name, log_level in LOG_LEVELS.items():
-        if log_level >= option_log_level:
-            assert f'{log_level_name.capitalize()}: verdi' in result.output
-            assert f'{log_level_name.capitalize()}: aiida' in result.output
-        else:
-            assert f'{log_level_name.capitalize()}: verdi' not in result.output
-            assert f'{log_level_name.capitalize()}: aiida' not in result.output
+    # If ``--verbosity`` is explicitly defined, it override both both config options.
+    result = run_cli_command(cmd, ['--verbosity', 'INFO'], raises=True, use_subprocess=False)
+    verify_log_output(result.output, logging.INFO, logging.INFO)

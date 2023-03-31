@@ -8,17 +8,16 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi daemon` commands."""
+from __future__ import annotations
+
 import subprocess
 import sys
-import time
+import typing as t
 
 import click
-from click_spinner import spinner
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import decorators, echo
-from aiida.cmdline.utils.daemon import delete_stale_pid_file, get_daemon_status, print_client_response_status
-from aiida.manage import get_manager
 
 
 def validate_daemon_workers(ctx, param, value):  # pylint: disable=unused-argument,invalid-name
@@ -40,6 +39,36 @@ def verdi_daemon():
     """Inspect and manage the daemon."""
 
 
+def execute_client_command(command: str, daemon_not_running_ok: bool = False, **kwargs) -> dict[str, t.Any] | None:
+    """Execute a command of the :class:`aiida.engine.daemon.client.DaemonClient` and echo whether it failed or not.
+
+    :param command: The name of hte method.
+    :param daemon_not_running_ok: If ``True``, the command raising an exception because the daemon was not running is
+        not treated as a failure.
+    :param kwargs: Keyword arguments that are passed to the client method.
+    """
+    from aiida.engine.daemon.client import DaemonException, DaemonNotRunningException, get_daemon_client
+
+    client = get_daemon_client()
+
+    try:
+        response = getattr(client, command)(**kwargs)
+    except DaemonNotRunningException as exception:
+        if daemon_not_running_ok:
+            echo.echo('OK', fg=echo.COLORS['success'], bold=True)
+        else:
+            echo.echo('FAILED', fg=echo.COLORS['error'], bold=True)
+            echo.echo_critical(str(exception))
+    except DaemonException as exception:
+        echo.echo('FAILED', fg=echo.COLORS['error'], bold=True)
+        echo.echo_critical(str(exception))
+    else:
+        echo.echo('OK', fg=echo.COLORS['success'], bold=True)
+        return response
+
+    return None
+
+
 @verdi_daemon.command()
 @click.option('--foreground', is_flag=True, help='Run in foreground.')
 @click.argument('number', required=False, type=int, callback=validate_daemon_workers)
@@ -53,53 +82,65 @@ def start(foreground, number):
 
     Returns exit code 0 if the daemon is OK, non-zero if there was an error.
     """
-    from aiida.engine.daemon.client import DaemonException, get_daemon_client
-
-    client = get_daemon_client()
-
-    try:
-        echo.echo(f'Starting the daemon with {number} workers... ', nl=False)
-        client.start_daemon(number_workers=number, foreground=foreground)
-    except DaemonException as exception:
-        echo.echo('FAILED', fg=echo.COLORS['error'], bold=True)
-        echo.echo_critical(str(exception))
-
-    with spinner():
-        time.sleep(1)
-        response = client.get_status()
-
-    retcode = print_client_response_status(response)
-    if retcode:
-        sys.exit(retcode)
+    echo.echo(f'Starting the daemon with {number} workers... ', nl=False)
+    execute_client_command('start_daemon', number_workers=number, foreground=foreground)
 
 
 @verdi_daemon.command()
 @click.option('--all', 'all_profiles', is_flag=True, help='Show status of all daemons.')
+@click.pass_context
 @decorators.requires_loaded_profile()
-def status(all_profiles):
+def status(ctx, all_profiles):
     """Print the status of the current daemon or all daemons.
 
     Returns exit code 0 if all requested daemons are running, else exit code 3.
     """
-    from aiida.engine.daemon.client import get_daemon_client
+    from tabulate import tabulate
 
-    manager = get_manager()
-    config = manager.get_config()
+    from aiida.cmdline.utils.common import format_local_time
+    from aiida.engine.daemon.client import DaemonException, get_daemon_client
 
     if all_profiles is True:
-        profiles = [profile for profile in config.profiles if not profile.is_test_profile]
+        profiles = [profile for profile in ctx.obj.config.profiles if not profile.is_test_profile]
     else:
-        profiles = [manager.get_profile()]
+        profiles = [ctx.obj.profile]
 
     daemons_running = []
+
     for profile in profiles:
         client = get_daemon_client(profile.name)
-        delete_stale_pid_file(client)
         echo.echo('Profile: ', fg=echo.COLORS['report'], bold=True, nl=False)
         echo.echo(f'{profile.name}', bold=True)
-        result = get_daemon_status(client)
-        echo.echo(result)
-        daemons_running.append(client.is_daemon_running)
+
+        try:
+            client.get_status()
+        except DaemonException as exception:
+            echo.echo_error(str(exception))
+            daemons_running.append(False)
+            continue
+
+        worker_response = client.get_worker_info()
+        daemon_response = client.get_daemon_info()
+
+        workers = []
+        for pid, info in worker_response['info'].items():
+            if isinstance(info, dict):
+                row = [pid, info['mem'], info['cpu'], format_local_time(info['create_time'])]
+            else:
+                row = [pid, '-', '-', '-']
+            workers.append(row)
+
+        if workers:
+            workers_info = tabulate(workers, headers=['PID', 'MEM %', 'CPU %', 'started'], tablefmt='simple')
+        else:
+            workers_info = '--> No workers are running. Use `verdi daemon incr` to start some!\n'
+
+        start_time = format_local_time(daemon_response['info']['create_time'])
+        echo.echo(
+            f'Daemon is running as PID {daemon_response["info"]["pid"]} since {start_time}\n'
+            f'Active workers [{len(workers)}]:\n{workers_info}\n'
+            'Use `verdi daemon [incr | decr] [num]` to increase / decrease the number of workers'
+        )
 
     if not all(daemons_running):
         sys.exit(3)
@@ -113,13 +154,8 @@ def incr(number):
 
     Returns exit code 0 if the daemon is OK, non-zero if there was an error.
     """
-    from aiida.engine.daemon.client import get_daemon_client
-
-    client = get_daemon_client()
-    response = client.increase_workers(number)
-    retcode = print_client_response_status(response)
-    if retcode:
-        sys.exit(retcode)
+    echo.echo(f'Starting {number} daemon workers... ', nl=False)
+    execute_client_command('increase_workers', number=number)
 
 
 @verdi_daemon.command()
@@ -130,13 +166,8 @@ def decr(number):
 
     Returns exit code 0 if the daemon is OK, non-zero if there was an error.
     """
-    from aiida.engine.daemon.client import get_daemon_client
-
-    client = get_daemon_client()
-    response = client.decrease_workers(number)
-    retcode = print_client_response_status(response)
-    if retcode:
-        sys.exit(retcode)
+    echo.echo(f'Stopping {number} daemon workers... ', nl=False)
+    execute_client_command('decrease_workers', number=number)
 
 
 @verdi_daemon.command()
@@ -153,50 +184,22 @@ def logshow():
 @verdi_daemon.command()
 @click.option('--no-wait', is_flag=True, help='Do not wait for confirmation.')
 @click.option('--all', 'all_profiles', is_flag=True, help='Stop all daemons.')
-def stop(no_wait, all_profiles):
+@click.pass_context
+def stop(ctx, no_wait, all_profiles):
     """Stop the daemon.
 
     Returns exit code 0 if the daemon was shut down successfully (or was not running), non-zero if there was an error.
     """
-    from aiida.engine.daemon.client import get_daemon_client
-
-    manager = get_manager()
-    config = manager.get_config()
-
     if all_profiles is True:
-        profiles = [profile for profile in config.profiles if not profile.is_test_profile]
+        profiles = [profile for profile in ctx.obj.config.profiles if not profile.is_test_profile]
     else:
-        profiles = [manager.get_profile()]
+        profiles = [ctx.obj.profile]
 
     for profile in profiles:
-
-        client = get_daemon_client(profile.name)
-
         echo.echo('Profile: ', fg=echo.COLORS['report'], bold=True, nl=False)
         echo.echo(f'{profile.name}', bold=True)
-
-        if not client.is_daemon_running:
-            echo.echo('Daemon was not running')
-            continue
-
-        delete_stale_pid_file(client)
-
-        wait = not no_wait
-
-        if wait:
-            echo.echo('Waiting for the daemon to shut down... ', nl=False)
-        else:
-            echo.echo('Shutting the daemon down')
-
-        response = client.stop_daemon(wait)
-
-        if wait:
-            if response['status'] == client.DAEMON_ERROR_NOT_RUNNING:
-                echo.echo('The daemon was not running.')
-            else:
-                retcode = print_client_response_status(response)
-                if retcode:
-                    sys.exit(retcode)
+        echo.echo('Stopping the daemon... ', nl=False)
+        execute_client_command('stop_daemon', daemon_not_running_ok=True, wait=not no_wait)
 
 
 @verdi_daemon.command()
@@ -214,32 +217,18 @@ def restart(ctx, reset, no_wait):
 
     Returns exit code 0 if the result is OK, non-zero if there was an error.
     """
-    from aiida.engine.daemon.client import get_daemon_client
-
-    client = get_daemon_client()
-    wait = not no_wait
-
     if reset:
-        ctx.invoke(stop)
         # These two lines can be simplified to `ctx.invoke(start)` once issue #950 in `click` is resolved.
         # Due to that bug, the `callback` of the `number` argument the `start` command is not being called, which is
         # responsible for settting the default value, which causes `None` to be passed and that triggers an exception.
         # As a temporary workaround, we fetch the default here manually and pass that in explicitly.
         number = ctx.obj.config.get_option('daemon.default_workers', ctx.obj.profile.name)
+        ctx.invoke(stop)
         ctx.invoke(start, number=number)
-    else:
+        return
 
-        if wait:
-            echo.echo('Restarting the daemon... ', nl=False)
-        else:
-            echo.echo('Restarting the daemon')
-
-        response = client.restart_daemon(wait)
-
-        if wait:
-            retcode = print_client_response_status(response)
-            if retcode:
-                sys.exit(retcode)
+    echo.echo('Restarting the daemon... ', nl=False)
+    execute_client_command('restart_daemon', wait=not no_wait)
 
 
 @verdi_daemon.command(hidden=True)

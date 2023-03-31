@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for all logging methods/classes that don't need the ORM."""
+from __future__ import annotations
+
 import collections
 import contextlib
 import logging
@@ -51,7 +53,12 @@ LOG_LEVELS = {
 }
 
 AIIDA_LOGGER = cast(AiidaLoggerType, logging.getLogger('aiida'))
-CLI_LOG_LEVEL = None
+
+CLI_ACTIVE: bool | None = None
+"""Flag that is set to ``True`` if the module is imported by ``verdi`` being called."""
+
+CLI_LOG_LEVEL: str | None = None
+"""Set if ``verdi`` is called with ``--verbosity`` flag specified, and is set to corresponding log level."""
 
 
 # The default logging dictionary for AiiDA that can be used in conjunction
@@ -82,8 +89,8 @@ def get_logging_config():
             },
             'cli': {
                 'class': 'aiida.cmdline.utils.log.CliHandler',
-                'formatter': 'cli',
-            }
+                'formatter': 'cli'
+            },
         },
         'loggers': {
             'aiida': {
@@ -91,9 +98,10 @@ def get_logging_config():
                 'level': lambda: get_config_option('logging.aiida_loglevel'),
                 'propagate': True,
             },
-            'aiida.cmdline': {
+            'verdi': {
                 'handlers': ['cli'],
-                'propagate': False,
+                'level': lambda: get_config_option('logging.verdi_loglevel'),
+                'propagate': True,
             },
             'plumpy': {
                 'handlers': ['console'],
@@ -169,8 +177,6 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
     """
     from logging.config import dictConfig
 
-    from aiida.manage.configuration import get_config_option
-
     # Evaluate the `LOGGING` configuration to resolve the lambdas that will retrieve the correct values based on the
     # currently configured profile.
     config = evaluate_logging_configuration(get_logging_config())
@@ -204,20 +210,29 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
             except ValueError:
                 pass
 
+    # If the ``CLI_ACTIVE`` is set, a ``verdi`` command is being executed, so we replace the ``console`` handler with
+    # the ``cli`` one for all loggers.
+    if CLI_ACTIVE is True:
+        for logger in config['loggers'].values():
+            handlers = logger['handlers']
+            if 'console' in handlers:
+                handlers.remove('console')
+            handlers.append('cli')
+
+    # If ``CLI_LOG_LEVEL`` is set, a ``verdi`` command is being executed with the ``--verbosity`` option. In this case
+    # we override the log levels of all loggers with the specified log level.
     if CLI_LOG_LEVEL is not None:
-        config['loggers']['aiida']['handlers'] = ['cli']
-        config['loggers']['aiida']['level'] = CLI_LOG_LEVEL
+        for logger in config['loggers'].values():
+            logger['level'] = CLI_LOG_LEVEL
 
     # Add the `DbLogHandler` if `with_orm` is `True`
     if with_orm:
-
-        handler_dblogger = 'dblogger'
-
-        config['handlers'][handler_dblogger] = {
+        from aiida.manage.configuration import get_config_option
+        config['handlers']['db_logger'] = {
             'level': get_config_option('logging.db_loglevel'),
-            'class': 'aiida.orm.utils.log.DBLogHandler',
+            'class': 'aiida.orm.utils.log.DBLogHandler'
         }
-        config['loggers']['aiida']['handlers'].append(handler_dblogger)
+        config['loggers']['aiida']['handlers'].append('db_logger')
 
     dictConfig(config)
 

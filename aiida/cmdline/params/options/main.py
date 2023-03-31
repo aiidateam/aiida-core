@@ -91,18 +91,28 @@ def graph_traversal_rules(rules):
 
 
 def set_log_level(_ctx, _param, value):
-    """Fix the log level for all loggers from the cli.
+    """Configure the logging for the CLI command being executed.
 
-    Note that we cannot use the most obvious approach of directly setting the level on the ``AIIDA_LOGGER``. The reason
+    Note that we cannot use the most obvious approach of directly setting the level on the various loggers. The reason
     is that after this callback is finished, the :meth:`aiida.common.log.configure_logging` method can be called again,
-    for example when the database backend is loaded, and this will undo this change. So instead, we change the value of
-    the `aiida.common.log.CLI_LOG_LEVEL` constant. When the logging is reconfigured, that value is no longer ``None``
-    which will ensure that the ``cli`` handler is configured for all handlers with the level of ``CLI_LOG_LEVEL``. This
-    approach tighly couples the generic :mod:`aiida.common.log` module to the :mod:`aiida.cmdline` module, which is not
-    the cleanest, but given that other module code can undo the logging configuration by calling that method, there
-    seems no easy way around this approach.
+    for example when the database backend is loaded, and this will undo this change. So instead, we set to globals in
+    the :mod:`aiida.common.log` module: ``CLI_ACTIVE`` and ``CLI_LOG_LEVEL``. The ``CLI_ACTIVE`` global is always set to
+    ``True``. The ``configure_logging`` function will interpret this as the code being executed through a ``verdi``
+    call. The ``CLI_LOG_LEVEL`` global is only set if an explicit value is set for the ``--verbosity`` option. In this
+    case, it is set to the specified log level and ``configure_logging`` will then set this log level for all loggers.
+
+    This approach tightly couples the generic :mod:`aiida.common.log` module to the :mod:`aiida.cmdline` module, which
+    is not the cleanest, but given that other module code can undo the logging configuration by calling that method,
+    there seems no easy way around this approach.
     """
     from aiida.common import log
+
+    log.CLI_ACTIVE = True
+
+    # If the value is ``None``, it means the option was not specified, but we still configure logging for the CLI
+    if value is None:
+        configure_logging()
+        return None
 
     try:
         log_level = value.upper()
@@ -124,7 +134,6 @@ VERBOSITY = OverridableOption(
     '-v',
     '--verbosity',
     type=click.Choice(tuple(map(str.lower, LOG_LEVELS.keys())), case_sensitive=False),
-    default='REPORT',
     callback=set_log_level,
     expose_value=False,  # Ensures that the option is not actually passed to the command, because it doesn't need it
     help='Set the verbosity of the output.'

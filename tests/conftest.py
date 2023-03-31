@@ -613,14 +613,15 @@ def run_cli_command_runner(command, parameters, user_input, initialize_ctx_obj, 
 
 @pytest.fixture
 def reset_log_level():
-    """Reset the `aiida.common.log.CLI_LOG_LEVEL` global and reconfigure the logging.
+    """Reset the ``CLI_LOG_ACTIVE`` and ``CLI_LOG_LEVEL`` globals in ``aiida.common.log`` and reconfigure the logging.
 
-    This fixture should be used by tests that will change the ``CLI_LOG_LEVEL`` global, for example, through the
+    This fixture should be used by tests that will change these globals, for example, through the
     :class:`~aiida.cmdline.params.options.main.VERBOSITY` option in a CLI command invocation.
     """
     from aiida.common import log
     try:
         yield
     finally:
+        log.CLI_ACTIVE = None
         log.CLI_LOG_LEVEL = None
         log.configure_logging(with_orm=True)

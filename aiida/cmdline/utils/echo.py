@@ -11,15 +11,14 @@
 import collections
 import enum
 import json
+import logging
 import sys
 from typing import Any, Optional
 
 import click
 import yaml
 
-from aiida.common.log import AIIDA_LOGGER
-
-CMDLINE_LOGGER = AIIDA_LOGGER.getChild('cmdline')
+CMDLINE_LOGGER = logging.getLogger('verdi')
 
 __all__ = ('echo_report', 'echo_info', 'echo_success', 'echo_warning', 'echo_error', 'echo_critical', 'echo_dictionary')
 

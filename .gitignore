@@ -17,6 +17,7 @@
 .eggs
 .vscode
 .tox
+Pipfile
 
 # files created by coverage
 .cache

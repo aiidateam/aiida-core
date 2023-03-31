@@ -114,10 +114,9 @@ def tests_storage_migrate_raises(run_cli_command, raise_type, call_kwargs, monke
     assert 'passed error message' in result.output
 
 
-def tests_storage_maintain_logging(run_cli_command, monkeypatch, caplog):
+def tests_storage_maintain_logging(run_cli_command, monkeypatch):
     """Test all the information and cases of the storage maintain command."""
-    import logging
-
+    from aiida.common.log import AIIDA_LOGGER
     from aiida.manage import get_manager
     storage = get_manager().get_profile_storage()
 
@@ -133,27 +132,45 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch, caplog):
         for key, val in kwargs.items():
             log_message += f' > {key}: {val}\n'
 
-        logging.info(log_message)
+        AIIDA_LOGGER.report(log_message)
 
     monkeypatch.setattr(storage, 'maintain', mock_maintain)
 
-    with caplog.at_level(logging.INFO):
-        _ = run_cli_command(cmd_storage.storage_maintain, user_input='Y', use_subprocess=False)
+    # Not passing user input should cause the command to exit without executing `storage.mantain` and so the last
+    # message should be the prompt to continue or not.
+    result = run_cli_command(cmd_storage.storage_maintain, use_subprocess=False)
+    message_list = result.output_lines
+    assert message_list[-1] == 'Are you sure you want continue in this mode? [y/N]: '
 
-    message_list = caplog.records[0].msg.splitlines()
+    # Test `storage.mantain` with `--force`
+    result = run_cli_command(cmd_storage.storage_maintain, parameters=['--force'], use_subprocess=False)
+    message_list = result.output_lines
     assert ' > full: False' in message_list
     assert ' > dry_run: False' in message_list
 
-    with caplog.at_level(logging.INFO):
-        _ = run_cli_command(cmd_storage.storage_maintain, parameters=['--dry-run'], use_subprocess=False)
+    # Test `storage.mantain` with user input Y
+    result = run_cli_command(cmd_storage.storage_maintain, user_input='Y', use_subprocess=False)
+    message_list = result.output_lines
+    assert ' > full: False' in message_list
+    assert ' > dry_run: False' in message_list
 
-    message_list = caplog.records[1].msg.splitlines()
+    # Test `storage.mantain` with `--dry-run`
+    result = run_cli_command(cmd_storage.storage_maintain, parameters=['--dry-run'], use_subprocess=False)
+    message_list = result.output_lines
     assert ' > full: False' in message_list
     assert ' > dry_run: True' in message_list
 
-    with caplog.at_level(logging.INFO):
-        run_cli_command(cmd_storage.storage_maintain, parameters=['--full'], user_input='Y', use_subprocess=False)
-
-    message_list = caplog.records[2].msg.splitlines()
+    # Test `storage.mantain` with `--full`
+    result = run_cli_command(cmd_storage.storage_maintain, parameters=['--full'], user_input='Y', use_subprocess=False)
+    message_list = result.output_lines
     assert ' > full: True' in message_list
+    assert ' > dry_run: False' in message_list
+
+    # Test `storage.mantain` with `--full` and `--no-repack`
+    result = run_cli_command(
+        cmd_storage.storage_maintain, parameters=['--full', '--no-repack'], user_input='Y', use_subprocess=False
+    )
+    message_list = result.output_lines
+    assert ' > full: True' in message_list
+    assert ' > do_repack: False' in message_list
     assert ' > dry_run: False' in message_list

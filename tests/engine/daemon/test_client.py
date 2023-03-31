@@ -9,9 +9,17 @@
 ###########################################################################
 # pylint: disable=no-self-use
 """Unit tests for the `DaemonClient` class."""
+from unittest.mock import patch
+
+import pytest
 import zmq
 
-from aiida.engine.daemon.client import get_daemon_client
+from aiida.engine.daemon.client import (
+    DaemonClient,
+    DaemonNotRunningException,
+    DaemonTimeoutException,
+    get_daemon_client,
+)
 
 
 def test_ipc_socket_file_length_limit():
@@ -35,3 +43,21 @@ def test_ipc_socket_file_length_limit():
     assert len(controller_endpoint) <= zmq.IPC_PATH_MAX_LEN
     assert len(pubsub_endpoint) <= zmq.IPC_PATH_MAX_LEN
     assert len(stats_endpoint) <= zmq.IPC_PATH_MAX_LEN
+
+
+def test_get_status_daemon_not_running(stopped_daemon_client):
+    """Test ``DaemonClient.get_status`` output when the daemon is not running."""
+    with pytest.raises(DaemonNotRunningException, match='The daemon is not running.'):
+        stopped_daemon_client.get_status()
+
+
+def raise_daemon_timeout():
+    """Raise a ``DaemonTimeoutException``."""
+    raise DaemonTimeoutException('Connection to the daemon timed out.')
+
+
+@patch.object(DaemonClient, 'get_status', lambda _: raise_daemon_timeout())
+def test_get_status_timeout(stopped_daemon_client):
+    """Test ``DaemonClient.get_status`` output when the circus daemon process cannot be reached."""
+    with pytest.raises(DaemonTimeoutException, match='Connection to the daemon timed out.'):
+        stopped_daemon_client.get_status()

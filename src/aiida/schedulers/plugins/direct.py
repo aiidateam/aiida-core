@@ -14,6 +14,8 @@ from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import SchedulerError
 from aiida.schedulers.datastructures import JobInfo, JobState, NodeNumberJobResource
 
+from .bash import BashCliScheduler
+
 ## From the ps man page on Mac OS X 10.12
 #     state     The state is given by a sequence of characters, for example,
 #               ``RWNA''.  The first character indicates the run state of the
@@ -75,7 +77,7 @@ class DirectJobResource(NodeNumberJobResource):
         return False
 
 
-class DirectScheduler(aiida.schedulers.Scheduler):
+class DirectScheduler(BashCliScheduler):
     """Support for the direct execution bypassing schedulers."""
 
     _logger = aiida.schedulers.Scheduler._logger.getChild('direct')

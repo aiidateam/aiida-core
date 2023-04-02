@@ -16,6 +16,8 @@ from aiida.common.extendeddicts import AttributeDict
 from aiida.schedulers import SchedulerError, SchedulerParsingError
 from aiida.schedulers.datastructures import JobInfo, JobResource, JobState
 
+from .bash import BashCliScheduler
+
 # This maps LSF status codes to our own state list
 #
 # List of states from
@@ -167,9 +169,10 @@ class LsfJobResource(JobResource):
         return False
 
 
-class LsfScheduler(aiida.schedulers.Scheduler):
+class LsfScheduler(BashCliScheduler):
     """Support for the IBM LSF scheduler
-    'https://www-01.ibm.com/support/knowledgecenter/SSETD4_9.1.2/lsf_welcome.html'
+
+    https://www-01.ibm.com/support/knowledgecenter/SSETD4_9.1.2/lsf_welcome.html
     """
 
     _logger = aiida.schedulers.Scheduler._logger.getChild('lsf')

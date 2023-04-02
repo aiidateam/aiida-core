@@ -368,7 +368,7 @@ def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | 
 
     submit_script_filename = calculation.get_option('submit_script_filename')
     workdir = calculation.get_remote_workdir()
-    result = scheduler.submit_from_script(workdir, submit_script_filename)
+    result = scheduler.submit_job(workdir, submit_script_filename)
 
     if isinstance(result, str):
         calculation.set_job_id(result)
@@ -526,7 +526,7 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     scheduler.set_transport(transport)
 
     # Call the proper kill method for the job ID of this calculation
-    result = scheduler.kill(job_id)
+    result = scheduler.kill_job(job_id)
 
     if result is not True:
         # Failed to kill because the job might have already been completed

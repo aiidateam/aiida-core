@@ -15,7 +15,13 @@ import pytest
 
 from aiida import orm
 from aiida.engine import calcfunction, workfunction
-from aiida.engine.utils import InterruptableFuture, exponential_backoff_retry, interruptable_task, is_process_function
+from aiida.engine.utils import (
+    InterruptableFuture,
+    exponential_backoff_retry,
+    instantiate_process,
+    interruptable_task,
+    is_process_function,
+)
 
 ITERATION = 0
 MAX_ITERATIONS = 3
@@ -64,6 +70,12 @@ class TestExponentialBackoffRetry:
         max_attempts = MAX_ITERATIONS - 1
         with pytest.raises(RuntimeError):
             loop.run_until_complete(exponential_backoff_retry(coro, initial_interval=0.1, max_attempts=max_attempts))
+
+
+def test_instantiate_process_invalid(manager):
+    """Test the :func:`aiida.engine.utils.instantiate_process` function for invalid ``process`` argument."""
+    with pytest.raises(ValueError, match=r'invalid process <class \'bool\'>, needs to be Process or ProcessBuilder'):
+        instantiate_process(manager.get_runner(), True)
 
 
 def test_is_process_function():

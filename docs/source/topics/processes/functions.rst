@@ -220,6 +220,13 @@ As always, all the values returned by a calculation function have to be storable
     Because of the calculation/workflow duality in AiiDA, a ``calcfunction``, which is a calculation-like process, can only *create* and not *return* data nodes.
     This means that if a node is returned from a ``calcfunction`` that *is already stored*, the engine will throw an exception.
 
+.. versionadded:: 2.3
+
+    Outputs can be attached with nested namespaces in the output labels:
+
+    .. include:: include/snippets/functions/calcfunction_nested_outputs.py
+        :code: python
+
 .. _topics:processes:functions:exit_codes:
 
 Exit codes

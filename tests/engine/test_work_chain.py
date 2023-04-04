@@ -514,7 +514,7 @@ class TestWorkchain:
     def test_str(self):
         assert isinstance(str(Wf.spec()), str)
 
-    def test_invalid_if_predicate(self):
+    def test_invalid_if_predicate(self, recwarn):
         """Test that workchain raises if the predicate of an ``if_`` condition does not return a boolean."""
 
         class TestWorkChain(WorkChain):
@@ -522,16 +522,19 @@ class TestWorkchain:
             @classmethod
             def define(cls, spec):
                 super().define(spec)
-                spec.outline(if_(cls.predicate))
+                spec.outline(if_(cls.predicate)(cls.run_step))
 
             def predicate(self):
                 """Invalid predicate whose return value is not a boolean."""
                 return 'true'
 
-        with pytest.raises(TypeError, match=r'The conditional predicate `predicate` did not return a boolean'):
-            launch.run(TestWorkChain)
+            def run_step(self):
+                pass
 
-    def test_invalid_while_predicate(self):
+        launch.run(TestWorkChain)
+        assert len(recwarn) == 1
+
+    def test_invalid_while_predicate(self, recwarn):
         """Test that workchain raises if the predicate of an ``while_`` condition does not return a boolean."""
 
         class TestWorkChain(WorkChain):
@@ -539,14 +542,18 @@ class TestWorkchain:
             @classmethod
             def define(cls, spec):
                 super().define(spec)
-                spec.outline(while_(cls.predicate))
+                spec.outline(while_(cls.predicate)(cls.run_step))
 
             def predicate(self):
                 """Invalid predicate whose return value is not a boolean."""
                 return 'true'
 
-        with pytest.raises(TypeError, match=r'The conditional predicate `predicate` did not return a boolean'):
-            launch.run(TestWorkChain)
+            def run_step(self):
+                # Need to return an exit code to abort the workchain, otherwise we would be stuck in an infinite loop
+                return ExitCode(1)
+
+        launch.run(TestWorkChain)
+        assert len(recwarn) == 1
 
     def test_malformed_outline(self):
         """

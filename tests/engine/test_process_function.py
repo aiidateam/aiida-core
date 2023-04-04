@@ -123,6 +123,11 @@ def function_out_unstored():
     return orm.Int(DEFAULT_INT)
 
 
+@workfunction
+def function_return_nested():
+    return {'nested.output': orm.Int(DEFAULT_INT).store()}
+
+
 def test_properties():
     """Test that the `is_process_function` and `node_class` attributes are set."""
     assert function_return_input.is_process_function
@@ -442,6 +447,13 @@ def test_function_out_unstored():
     """A workfunction that returns an unstored node should raise as it indicates users tried to create data."""
     with pytest.raises(ValueError):
         function_out_unstored()
+
+
+def test_function_return_nested():
+    """Test that a process function can returned outputs in nested namespaces."""
+    results, node = function_return_nested.run_get_node()
+    assert results['nested']['output'] == DEFAULT_INT
+    assert node.outputs.nested.output == DEFAULT_INT
 
 
 def test_simple_workflow():

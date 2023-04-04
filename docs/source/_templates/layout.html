@@ -13,8 +13,8 @@
 var editPagePath = document.querySelector("div.tocsection.editthispage a").href;
 var pathSegments = editPagePath.split('/');
 if (pathSegments.includes('apidoc') == true ) {
-    var tocSection = document.querySelector("div.tocsection.editthispage");
-    tocSection.style.display = "none";
+    var editPageButton = document.querySelector("div.tocsection.editthispage");
+    editPageButton.style.display = "none";
       }
 </script>
 {% endblock %}

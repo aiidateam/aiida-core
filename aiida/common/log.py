@@ -101,7 +101,7 @@ def get_logging_config():
             'verdi': {
                 'handlers': ['cli'],
                 'level': lambda: get_config_option('logging.verdi_loglevel'),
-                'propagate': True,
+                'propagate': False,
             },
             'plumpy': {
                 'handlers': ['console'],

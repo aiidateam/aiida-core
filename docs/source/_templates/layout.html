@@ -9,4 +9,12 @@
         </p>
   </div>
 </footer>
+<script>
+var editPagePath = document.querySelector("div.tocsection.editthispage a").href;
+var pathSegments = editPagePath.split('/');
+if (pathSegments.includes('apidoc') == true ) {
+    var editPageButton = document.querySelector("div.tocsection.editthispage");
+    editPageButton.style.display = "none";
+      }
+</script>
 {% endblock %}

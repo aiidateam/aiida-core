@@ -68,7 +68,7 @@ class GroupMeta(ABCMeta):
             warnings.warn(message)  # pylint: disable=no-member
         else:
             assert entry_point is not None
-            newcls._type_string = cast(str, entry_point.name)  # type: ignore[attr-defined]  # pylint: disable=protected-access
+            newcls._type_string = entry_point.name  # type: ignore[attr-defined]  # pylint: disable=protected-access
 
         return newcls
 

@@ -20,9 +20,9 @@
         },
         "daemon.timeout": {
           "type": "integer",
-          "default": 5,
+          "default": 2,
           "minimum": 0,
-          "description": "Timeout in seconds for calls to the circus client"
+          "description": "Used to set default timeout in the :class:`aiida.engine.daemon.client.DaemonClient` for calls to the daemon"
         },
         "daemon.worker_process_slots": {
           "type": "integer",

@@ -486,7 +486,7 @@ class CalcJob(Process):
         if entry_point_name is None:
             _, entry_point = get_entry_point_from_class(cls.__module__, cls.__name__)
             if entry_point is not None:
-                entry_point_name = entry_point.name  # type: ignore
+                entry_point_name = entry_point.name
 
         assert entry_point_name is not None
 

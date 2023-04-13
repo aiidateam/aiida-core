@@ -357,7 +357,7 @@ def get_entry_point_string_from_class(class_module: str, class_name: str) -> Opt
     group, entry_point = get_entry_point_from_class(class_module, class_name)
 
     if group and entry_point:
-        return ENTRY_POINT_STRING_SEPARATOR.join([group, entry_point.name])  # type: ignore[attr-defined]
+        return ENTRY_POINT_STRING_SEPARATOR.join([group, entry_point.name])
     return None
 
 

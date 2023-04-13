@@ -11,7 +11,12 @@
         "pytest-benchmarks:ubuntu-18.04,psql_dos": {
             "header": "Performance Benchmarks (Ubuntu-18.04)",
             "description": "Performance benchmark tests, generated using pytest-benchmark."
+        },
+        "pytest-benchmarks:ubuntu-22.04,psql_dos": {
+            "header": "Performance Benchmarks (Ubuntu-22.04)",
+            "description": "Performance benchmark tests, generated using pytest-benchmark."
         }
+
     },
     "groups": {
         "node": {

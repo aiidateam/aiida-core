@@ -15,7 +15,7 @@ dependencies:
 - disk-objectstore~=0.6.0
 - docstring_parser
 - get-annotations~=0.1
-- python-graphviz~=0.13
+- python-graphviz~=0.19
 - ipython<9,>=7
 - jinja2~=3.0
 - jsonschema~=3.0

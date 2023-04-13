@@ -34,7 +34,7 @@ dependencies = [
     "disk-objectstore~=0.6.0",
     "docstring-parser",
     "get-annotations~=0.1;python_version<'3.10'",
-    "graphviz~=0.13",
+    "graphviz~=0.19",
     "ipython>=7,<9",
     "jinja2~=3.0",
     "jsonschema~=3.0",

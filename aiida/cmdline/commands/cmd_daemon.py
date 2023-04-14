@@ -17,6 +17,7 @@ import typing as t
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators, echo
 
 
@@ -72,9 +73,10 @@ def execute_client_command(command: str, daemon_not_running_ok: bool = False, **
 @verdi_daemon.command()
 @click.option('--foreground', is_flag=True, help='Run in foreground.')
 @click.argument('number', required=False, type=int, callback=validate_daemon_workers)
+@options.TIMEOUT(default=None, required=False, type=int)
 @decorators.with_dbenv()
 @decorators.check_circus_zmq_version
-def start(foreground, number):
+def start(foreground, number, timeout):
     """Start the daemon with NUMBER workers.
 
     If the NUMBER of desired workers is not specified, the default is used, which is determined by the configuration
@@ -83,14 +85,15 @@ def start(foreground, number):
     Returns exit code 0 if the daemon is OK, non-zero if there was an error.
     """
     echo.echo(f'Starting the daemon with {number} workers... ', nl=False)
-    execute_client_command('start_daemon', number_workers=number, foreground=foreground)
+    execute_client_command('start_daemon', number_workers=number, foreground=foreground, timeout=timeout)
 
 
 @verdi_daemon.command()
 @click.option('--all', 'all_profiles', is_flag=True, help='Show status of all daemons.')
+@options.TIMEOUT(default=None, required=False, type=int)
 @click.pass_context
 @decorators.requires_loaded_profile()
-def status(ctx, all_profiles):
+def status(ctx, all_profiles, timeout):
     """Print the status of the current daemon or all daemons.
 
     Returns exit code 0 if all requested daemons are running, else exit code 3.
@@ -113,7 +116,7 @@ def status(ctx, all_profiles):
         echo.echo(f'{profile.name}', bold=True)
 
         try:
-            client.get_status()
+            client.get_status(timeout=timeout)
         except DaemonException as exception:
             echo.echo_error(str(exception))
             daemons_running.append(False)
@@ -148,26 +151,28 @@ def status(ctx, all_profiles):
 
 @verdi_daemon.command()
 @click.argument('number', default=1, type=int)
+@options.TIMEOUT(default=None, required=False, type=int)
 @decorators.only_if_daemon_running()
-def incr(number):
+def incr(number, timeout):
     """Add NUMBER [default=1] workers to the running daemon.
 
     Returns exit code 0 if the daemon is OK, non-zero if there was an error.
     """
     echo.echo(f'Starting {number} daemon workers... ', nl=False)
-    execute_client_command('increase_workers', number=number)
+    execute_client_command('increase_workers', number=number, timeout=timeout)
 
 
 @verdi_daemon.command()
 @click.argument('number', default=1, type=int)
+@options.TIMEOUT(default=None, required=False, type=int)
 @decorators.only_if_daemon_running()
-def decr(number):
+def decr(number, timeout):
     """Remove NUMBER [default=1] workers from the running daemon.
 
     Returns exit code 0 if the daemon is OK, non-zero if there was an error.
     """
     echo.echo(f'Stopping {number} daemon workers... ', nl=False)
-    execute_client_command('decrease_workers', number=number)
+    execute_client_command('decrease_workers', number=number, timeout=timeout)
 
 
 @verdi_daemon.command()
@@ -184,8 +189,9 @@ def logshow():
 @verdi_daemon.command()
 @click.option('--no-wait', is_flag=True, help='Do not wait for confirmation.')
 @click.option('--all', 'all_profiles', is_flag=True, help='Stop all daemons.')
+@options.TIMEOUT(default=None, required=False, type=int)
 @click.pass_context
-def stop(ctx, no_wait, all_profiles):
+def stop(ctx, no_wait, all_profiles, timeout):
     """Stop the daemon.
 
     Returns exit code 0 if the daemon was shut down successfully (or was not running), non-zero if there was an error.
@@ -199,16 +205,17 @@ def stop(ctx, no_wait, all_profiles):
         echo.echo('Profile: ', fg=echo.COLORS['report'], bold=True, nl=False)
         echo.echo(f'{profile.name}', bold=True)
         echo.echo('Stopping the daemon... ', nl=False)
-        execute_client_command('stop_daemon', daemon_not_running_ok=True, wait=not no_wait)
+        execute_client_command('stop_daemon', daemon_not_running_ok=True, wait=not no_wait, timeout=timeout)
 
 
 @verdi_daemon.command()
 @click.option('--reset', is_flag=True, help='Completely reset the daemon.')
 @click.option('--no-wait', is_flag=True, help='Do not wait for confirmation.')
+@options.TIMEOUT(default=None, required=False, type=int)
 @click.pass_context
 @decorators.with_dbenv()
 @decorators.only_if_daemon_running()
-def restart(ctx, reset, no_wait):
+def restart(ctx, reset, no_wait, timeout):
     """Restart the daemon.
 
     By default will only reset the workers of the running daemon. After the restart the same amount of workers will be
@@ -228,7 +235,7 @@ def restart(ctx, reset, no_wait):
         return
 
     echo.echo('Restarting the daemon... ', nl=False)
-    execute_client_command('restart_daemon', wait=not no_wait)
+    execute_client_command('restart_daemon', wait=not no_wait, timeout=timeout)
 
 
 @verdi_daemon.command(hidden=True)

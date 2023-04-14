@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1681421455580,
+  "lastUpdate": 1681457053567,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -734,6 +734,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.0017975",
             "group": "node",
             "extra": "mean: 17.564 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "2.60",
+          "cores": 2,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.10.11",
+          "metadata": "postgres:12.14, rabbitmq:3.8.14-management"
+        },
+        "commit": {
+          "id": "30c7f442951fdb22a8e63e4f761352a56d5f8713",
+          "message": "`DaemonClient`: Fix and homogenize use of `timeout` in client calls (#5960)\n\nThe `DaemonClient` provides a number of methods that will attempt to\r\ncommunicate with the daemon process, e.g., `stop_daemon` and `get_status`.\r\nThis is done through the `CircusClient`, as the main daemon process is\r\nthe circus daemonizer, which takes a timeout as argument indicating the\r\nnumber of seconds after which the call should raise if the daemon did\r\nnot respond in time.\r\n\r\nThe default timeout is set in the constructor of the `DaemonClient`\r\nbased on the `daemon.timeout` config option. It was incorrectly getting\r\nthe global value instead of the profile specific one, which is corrected\r\nby using `config.get_option('daemon.timeout', scope=profile.name)` to\r\nfetch the conifg option.\r\n\r\nA `timeout` argument is added to all `DaemonClient` methods that call\r\nthrough to the `CircusClient` that can be used to override the default\r\nthat is based on the `daemon.timeout` config option.\r\n\r\nA default is added for `wait` in the `restart_daemon` method, to\r\nhomogenize its interface with `start_daemon` and `stop_daemon`. The\r\nmanual timeout cycle in `stop_daemon` by calling `_await_condition` has\r\nbeen removed as this functionality is already performed by the circus\r\nclient itself and so is superfluous. The only place it is still used is\r\nin `start_daemon` because there the circus client is not used, since the\r\ncircus process is not actually running yet, and a \"manual\" health check\r\nneeds to be performed after the daemon process is launched. The manual\r\ncheck is added to the `stop_daemon` fixture since the check in certain\r\nunit test scenarios could give a false positive without an additional\r\nmanual grace period for `is_daemon_running` to start returning `False`.\r\n\r\nThe default for the `daemon.timeout` configuration option is decreased\r\nto 2 seconds, as this should be sufficient for most conditions for the\r\ncircus daemon process to respond. Note that this daemon process is only\r\ncharged with monitoring the daemon workers and so won't be under heavy\r\nload that will prevent it from responding in time.",
+          "timestamp": "2023-04-14T09:15:13+02:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/30c7f442951fdb22a8e63e4f761352a56d5f8713",
+          "distinct": true,
+          "tree_id": "fe77a0319479452c2795c546c47ec1a97d2eb7a4"
+        },
+        "date": 1681457046546,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 3.2997224938332144,
+            "unit": "iter/sec",
+            "range": "stddev: 0.071597",
+            "group": "import-export",
+            "extra": "mean: 303.06 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 3.3570458903909723,
+            "unit": "iter/sec",
+            "range": "stddev: 0.055168",
+            "group": "import-export",
+            "extra": "mean: 297.88 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 4.3315996525647575,
+            "unit": "iter/sec",
+            "range": "stddev: 0.064538",
+            "group": "import-export",
+            "extra": "mean: 230.86 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 4.294291421202677,
+            "unit": "iter/sec",
+            "range": "stddev: 0.062341",
+            "group": "import-export",
+            "extra": "mean: 232.87 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 3.5444146757326354,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0027946",
+            "group": "engine",
+            "extra": "mean: 282.13 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.769041177036133,
+            "unit": "iter/sec",
+            "range": "stddev: 0.065674",
+            "group": "engine",
+            "extra": "mean: 1.3003 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.8686261766001969,
+            "unit": "iter/sec",
+            "range": "stddev: 0.064401",
+            "group": "engine",
+            "extra": "mean: 1.1512 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.19571260925455708,
+            "unit": "iter/sec",
+            "range": "stddev: 0.10536",
+            "group": "engine",
+            "extra": "mean: 5.1095 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.22286670063899944,
+            "unit": "iter/sec",
+            "range": "stddev: 0.073531",
+            "group": "engine",
+            "extra": "mean: 4.4870 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.5352644182458897,
+            "unit": "iter/sec",
+            "range": "stddev: 0.087450",
+            "group": "engine",
+            "extra": "mean: 394.44 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.6046988609474692,
+            "unit": "iter/sec",
+            "range": "stddev: 0.15224",
+            "group": "engine",
+            "extra": "mean: 1.6537 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.692229784177772,
+            "unit": "iter/sec",
+            "range": "stddev: 0.10284",
+            "group": "engine",
+            "extra": "mean: 1.4446 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.17364218522123598,
+            "unit": "iter/sec",
+            "range": "stddev: 0.091529",
+            "group": "engine",
+            "extra": "mean: 5.7590 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.1976613372622021,
+            "unit": "iter/sec",
+            "range": "stddev: 0.055858",
+            "group": "engine",
+            "extra": "mean: 5.0592 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 331.59521465127705,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00030117",
+            "group": "node",
+            "extra": "mean: 3.0157 msec\nrounds: 218"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 134.81457061789422,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00057737",
+            "group": "node",
+            "extra": "mean: 7.4176 msec\nrounds: 116"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 82.39036564303916,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00058462",
+            "group": "node",
+            "extra": "mean: 12.137 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 224.47989988244467,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00022570",
+            "group": "node",
+            "extra": "mean: 4.4547 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 52.48126894702487,
+            "unit": "iter/sec",
+            "range": "stddev: 0.022283",
+            "group": "node",
+            "extra": "mean: 19.054 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 57.023670827983416,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0018535",
+            "group": "node",
+            "extra": "mean: 17.537 msec\nrounds: 100"
           }
         ]
       }

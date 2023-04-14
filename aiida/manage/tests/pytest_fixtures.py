@@ -43,7 +43,7 @@ from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.warnings import warn_deprecation
 from aiida.engine import Process, ProcessBuilder, submit
-from aiida.engine.daemon.client import DaemonClient, DaemonNotRunningException
+from aiida.engine.daemon.client import DaemonClient, DaemonNotRunningException, DaemonTimeoutException
 from aiida.manage import Config, Profile, get_manager, get_profile
 from aiida.manage.manager import Manager
 from aiida.orm import Computer, ProcessNode, User
@@ -680,7 +680,13 @@ def stopped_daemon_client(daemon_client):
     """Ensure that the daemon is not running for the test profile and return the associated client."""
     if daemon_client.is_daemon_running:
         daemon_client.stop_daemon(wait=True)
-        assert not daemon_client.is_daemon_running
+        # Give an additional grace period by manually waiting for the daemon to be stopped. In certain unit test
+        # scenarios, the built in wait time in ``daemon_client.stop_daemon`` is not sufficient and even though the
+        # daemon is stopped, ``daemon_client.is_daemon_running`` will return false for a little bit longer.
+        daemon_client._await_condition(  # pylint: disable=protected-access
+            lambda: not daemon_client.is_daemon_running,
+            DaemonTimeoutException('The daemon failed to stop.'),
+        )
 
     yield daemon_client
 

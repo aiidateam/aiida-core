@@ -47,7 +47,6 @@ exclude_patterns = [
     'internals/global_design.rst',
     'internals/orm.rst',
     'scheduler/index.rst',
-    'topics/daemon.rst',
     'working_with_aiida/**',
 ]
 

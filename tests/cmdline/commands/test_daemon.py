@@ -116,6 +116,20 @@ def test_daemon_status_no_profile(run_cli_command):
     assert 'No profile loaded: make sure at least one profile is configured and a default is set.' in result.output
 
 
+@pytest.mark.usefixtures('started_daemon_client', 'isolated_config')
+def test_daemon_status_timeout(run_cli_command):
+    """Test ``verdi daemon status`` with the ``--timeout`` option.
+
+    This will just test the timeout is accepted and doesn't cause an exception. It is not testing whether the command
+    will actually timeout if provided a small number, but that is difficult to make reproducible in a test environment.
+    """
+    result = run_cli_command(cmd_daemon.status, ['--timeout', '5'])
+    last_line = result.output_lines[-1]
+
+    assert f'Profile: {get_profile().name}' in result.output
+    assert last_line == 'Use `verdi daemon [incr | decr] [num]` to increase / decrease the number of workers'
+
+
 def get_daemon_info(_):
     """Mock replacement of :meth:`aiida.engine.daemon.client.DaemonClient.get_daemon_info`."""
     return {
@@ -165,7 +179,7 @@ def get_worker_info_broken(_):
     }
 
 
-@patch.object(DaemonClient, 'get_status', lambda _: {'status': 'running'})
+@patch.object(DaemonClient, 'get_status', lambda *_, **__: {'status': 'running'})
 @patch.object(DaemonClient, 'get_daemon_info', get_daemon_info)
 @patch.object(DaemonClient, 'get_worker_info', get_worker_info)
 @patch('aiida.cmdline.utils.common.format_local_time', format_local_time)
@@ -184,7 +198,7 @@ def test_daemon_status_worker_info(run_cli_command):
     assert literal in result.output
 
 
-@patch.object(DaemonClient, 'get_status', lambda _: {'status': 'running'})
+@patch.object(DaemonClient, 'get_status', lambda *_, **__: {'status': 'running'})
 @patch.object(DaemonClient, 'get_daemon_info', get_daemon_info)
 @patch.object(DaemonClient, 'get_worker_info', get_worker_info_broken)
 @patch('aiida.cmdline.utils.common.format_local_time', format_local_time)

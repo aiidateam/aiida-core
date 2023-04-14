@@ -66,8 +66,16 @@ def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:  # pyli
         # checked for consistency.
         return None
 
-    code = inputs.get('code', None)
-    computer_from_code = code.computer
+    try:
+        ctx.get_port('code')
+    except ValueError:
+        # The namespace no longer contains the `code` input, so we should get the computer from the metadata
+        code = None
+        computer_from_code = None
+    else:
+        code = inputs['code']
+        computer_from_code = code.computer
+
     computer_from_metadata = inputs.get('metadata', {}).get('computer', None)
 
     if not computer_from_code and not computer_from_metadata:

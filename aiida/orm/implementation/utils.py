@@ -12,6 +12,7 @@ from collections.abc import Iterable, Mapping
 from decimal import Decimal
 import math
 import numbers
+from typing import Any
 
 from aiida.common import exceptions
 from aiida.common.constants import AIIDA_FLOAT_PRECISION
@@ -20,21 +21,32 @@ from aiida.common.constants import AIIDA_FLOAT_PRECISION
 # therefore is not allowed in individual attribute or extra keys.
 FIELD_SEPARATOR = '.'
 
-__all__ = ('validate_attribute_extra_key', 'clean_value')
+__all__ = ('validate_attribute_extra_key', 'validate_attribute_extra_dict_value', 'clean_value')
 
 
-def validate_attribute_extra_key(key):
+def validate_attribute_extra_key(key: Any) -> None:
     """Validate the key for an entity attribute or extra.
 
-    :raise aiida.common.ValidationError: if the key is not a string or contains reserved separator character
+    :raise aiida.common.ValidationError: if the key is not a string or contains reserved separator character.
     """
     if not key or not isinstance(key, str):
-        raise exceptions.ValidationError('key for attributes or extras should be a string')
+        raise exceptions.ValidationError('all (nested) keys for attributes or extras should be a string')
 
     if FIELD_SEPARATOR in key:
         raise exceptions.ValidationError(
             f'key for attributes or extras cannot contain the character `{FIELD_SEPARATOR}`'
         )
+
+
+def validate_attribute_extra_dict_value(dictionary: dict) -> None:
+    """Recursively validate dictionary contents for the value of an attribute or extra.
+
+    :raise aiida.common.ValidationError: if any (nested) key is not a string or contains reserved separator character.
+    """
+    for key, value in dictionary.items():
+        validate_attribute_extra_key(key)
+        if isinstance(value, dict):
+            validate_attribute_extra_dict_value(value)
 
 
 def clean_value(value):

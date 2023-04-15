@@ -20,6 +20,7 @@ from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
+from aiida.orm.implementation.utils import validate_attribute_extra_dict_value
 from aiida.orm.utils.node import AbstractNodeMeta
 
 from ..computers import Computer
@@ -235,10 +236,12 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         """Deep copying a Node is not supported in general, but only for the Data sub class."""
         raise exceptions.InvalidOperation('deep copying a base Node is not supported')
 
-    def _validate(self) -> bool:
+    def _validate(self) -> None:
         """Validate information stored in Node object.
 
-        For the :py:class:`~aiida.orm.Node` base class, this check is always valid.
+        For the :py:class:`~aiida.orm.Node` base class, this does a basic check on nested keys in case the value of any
+        attribute or extra is a dictionary.
+
         Subclasses can override this method to perform additional checks
         and should usually call ``super()._validate()`` first!
 
@@ -246,8 +249,13 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         Therefore, use :py:meth:`~aiida.orm.nodes.attributes.NodeAttributes.get()` and similar methods that
         automatically read either from the DB or from the internal attribute cache.
         """
-        # pylint: disable=no-self-use
-        return True
+        for value in self.base.attributes.all.values():
+            if isinstance(value, dict):
+                validate_attribute_extra_dict_value(value)
+
+        for value in self.base.extras.all.values():
+            if isinstance(value, dict):
+                validate_attribute_extra_dict_value(value)
 
     def _validate_storability(self) -> None:
         """Verify that the current node is allowed to be stored.

@@ -65,7 +65,7 @@ Finally, python knows the concept of ``*args`` and ``**kwargs``, which allow one
 .. include:: include/snippets/functions/signature_plain_python_args_kwargs.py
     :code: python
 
-The placeholder for positional arguments ``*args`` recieves the positionally passed arguments as a tuple, while ``**kwargs`` receives the named arguments as a dictionary.
+The placeholder for positional arguments ``*args`` receives the positionally passed arguments as a tuple, while ``**kwargs`` receives the named arguments as a dictionary.
 With the formal definitions out of the way, let's now see which of these concepts are supported by process functions.
 
 Default arguments

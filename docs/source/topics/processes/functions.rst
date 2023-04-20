@@ -60,7 +60,7 @@ What this means is that *both* the function definition and function call below a
 .. include:: include/snippets/functions/signature_plain_python_call_illegal.py
     :code: python
 
-Finally, python knows the concept of ``*args`` and ``**kwargs``, which allow one to define a function that accepts an variable number of positional and keyword arguments (also known as a _variadic_ function).
+Finally, python knows the concept of ``*args`` and ``**kwargs``, which allow one to define a function that accepts a variable number of positional and keyword arguments (also known as a _variadic_ function).
 
 .. include:: include/snippets/functions/signature_plain_python_args_kwargs.py
     :code: python

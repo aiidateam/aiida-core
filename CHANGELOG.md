@@ -26,8 +26,8 @@ A full list of changes can be found below.
 A number of improvements in the usage of process functions, i.e., `calcfunction` and `workfunction`, have been added.
 Each subsection title is a link to the documentation for more details.
 
-#### [Variable arguments](https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/processes/functions.html#variable-and-keyword-arguments)
-Variable arguments can be used in case the function should accept a list of inputs of unknown length.
+#### [Variadic arguments](https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/processes/functions.html#variadic-and-keyword-arguments)
+Variadic arguments can be used in case the function should accept a list of inputs of unknown length.
 Consider the example of a calculation function that computes the average of a number of `Int` nodes:
 ```python
 @calcfunction

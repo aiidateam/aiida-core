@@ -60,12 +60,12 @@ What this means is that *both* the function definition and function call below a
 .. include:: include/snippets/functions/signature_plain_python_call_illegal.py
     :code: python
 
-Finally, python knows the concept of ``*args`` and ``**kwargs``, also referred to as variable arguments and keyword arguments, which allow one to define a function which accepts an undetermined number of positional and keyword arguments.
+Finally, python knows the concept of ``*args`` and ``**kwargs``, which allow one to define a function that accepts an variable number of positional and keyword arguments (also known as a _variadic_ function).
 
 .. include:: include/snippets/functions/signature_plain_python_args_kwargs.py
     :code: python
 
-The variable arguments ``*args`` will receive the positionally passed arguments as a tuple and the keyword arguments ``**kwargs`` will receive the named arguments as a dictionary.
+The placeholder for positional arguments ``*args`` recieves the positionally passed arguments as a tuple, while ``**kwargs`` receives the named arguments as a dictionary.
 With the formal definitions out of the way, let's now see which of these concepts are supported by process functions.
 
 Default arguments
@@ -80,8 +80,8 @@ This pattern looks like the following:
 
 Both function calls in the example above will have the exact same result.
 
-Variable and keyword arguments
-==============================
+Variadic arguments
+==================
 
 Keyword arguments can be used effectively if a process function should take a number of arguments that is unknown beforehand:
 
@@ -101,9 +101,9 @@ For this reason, invoking a 'dynamic' function, i.e. one that supports ``**kwarg
 
 .. versionadded:: 2.3
 
-    Variable arguments are now supported.
+    Variadic positional arguments are now supported.
 
-Variable arguments can be used in case the function should accept a list of inputs of unknown length.
+Variadic positional arguments can be used in case the function should accept a list of inputs of unknown length.
 Consider the example of a calculation function that computes the average of a number of ``Int`` nodes:
 
 .. include:: include/snippets/functions/signature_calcfunction_args.py

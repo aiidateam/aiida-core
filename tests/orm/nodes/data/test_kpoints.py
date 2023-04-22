@@ -33,7 +33,6 @@ class TestKpoints:
             0.5 * alat,
             0.5 * alat,
         ], [0.5 * alat, 0., 0.5 * alat]]
-        self.cell = cell
         self.alat = alat
         structure = StructureData(cell=cell)
         structure.append_atom(position=(0.000 * alat, 0.000 * alat, 0.000 * alat), symbols=['Si'])

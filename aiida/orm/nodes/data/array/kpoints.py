@@ -38,6 +38,7 @@ class KpointsData(ArrayData):
 
     def __init__(
         self,
+        *args,
         structuredata=None,
         cell=None,
         pbc=None,
@@ -49,17 +50,18 @@ class KpointsData(ArrayData):
         cartesian=False,
         labels=None,
         weights=None,
-        fill_values=0
+        fill_values=0,
+        **kwargs
     ):
         """Set the properties directly in the constructor."""
-        super().__init__()
-        if structuredata is not None:
-            self.set_cell_from_structure(structuredata)
+        super().__init__(*args, **kwargs)
         if cell is not None:
             self.set_cell(cell, pbc)
+        elif structuredata is not None:
+            self.set_cell_from_structure(structuredata)
         if mesh is not None:
             self.set_kpoints_mesh(mesh, offset)
-        if distance is not None:
+        elif distance is not None:
             self.set_kpoints_mesh_from_density(distance, offset, force_parity)
         if kpoints is not None:
             self.set_kpoints(kpoints, cartesian, labels, weights, fill_values)

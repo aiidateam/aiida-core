@@ -33,6 +33,7 @@ class TestKpoints:
             0.5 * alat,
             0.5 * alat,
         ], [0.5 * alat, 0., 0.5 * alat]]
+        self.cell = cell
         self.alat = alat
         structure = StructureData(cell=cell)
         structure.append_atom(position=(0.000 * alat, 0.000 * alat, 0.000 * alat), symbols=['Si'])
@@ -41,6 +42,8 @@ class TestKpoints:
         # Define the expected reciprocal cell
         val = 2. * np.pi / alat
         self.expected_reciprocal_cell = np.array([[val, val, -val], [-val, val, val], [val, -val, val]])
+        self.mesh = [4, 4, 4]
+        self.offset = [0., 0., 0.]
 
     def test_reciprocal_cell(self):
         """
@@ -48,7 +51,8 @@ class TestKpoints:
 
         This is a regression test for #2749.
         """
-        kpt = KpointsData(structuredata=self.structure)
+        kpt = KpointsData()
+        kpt.set_cell_from_structure(self.structure)
 
         assert np.abs(kpt.reciprocal_cell - self.expected_reciprocal_cell).sum() == 0.
 
@@ -81,3 +85,11 @@ class TestKpoints:
         kpt2 = load_node(kpt.pk)
         assert np.abs(kpt2.get_kpoints() - np.array(kpoints)).sum() == 0.
         assert np.abs(kpt2.get_kpoints(cartesian=True) - np.array(cartesian_kpoints)).sum() == 0.
+
+    def test_init(self):
+        """Test that the setters methods of `KpointsData` can be defined via the constructor."""
+
+        kpt = KpointsData(mesh=self.mesh, offset=self.offset)
+        offset_kpoints_size = self.mesh[0] * self.mesh[1] * self.mesh[2]
+
+        assert len(kpt.get_kpoints_mesh(print_list=True)) == offset_kpoints_size

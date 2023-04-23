@@ -662,7 +662,13 @@ def daemon_client(aiida_profile):
             daemon_client.stop_daemon(wait=True)
         except DaemonNotRunningException:
             pass
-        assert not daemon_client.is_daemon_running
+        # Give an additional grace period by manually waiting for the daemon to be stopped. In certain unit test
+        # scenarios, the built in wait time in ``daemon_client.stop_daemon`` is not sufficient and even though the
+        # daemon is stopped, ``daemon_client.is_daemon_running`` will return false for a little bit longer.
+        daemon_client._await_condition(  # pylint: disable=protected-access
+            lambda: not daemon_client.is_daemon_running,
+            DaemonTimeoutException('The daemon failed to stop.'),
+        )
 
 
 @pytest.fixture()

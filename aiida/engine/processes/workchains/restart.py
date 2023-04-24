@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Tuple, Typ
 
 from aiida import orm
 from aiida.common import AttributeDict
+from aiida.common.links import LinkType
 from aiida.common.warnings import warn_deprecation
 
 from .context import ToContext, append_
@@ -320,8 +321,17 @@ class BaseRestartWorkChain(WorkChain):
             return self.exit_codes.ERROR_MAXIMUM_ITERATIONS_EXCEEDED  # pylint: disable=no-member
 
         self.report(f'work chain completed after {self.ctx.iteration} iterations')
+        self._attach_outputs(node)
+        return None
 
+    def _attach_outputs(self, node) -> Mapping[str, orm.Node]:
+        """Attach the outputs of the given calculation job to the work chain.
+
+        :param node: The ``CalcJobNode`` whose outputs to attach.
+        :returns: The mapping of output nodes that were attached.
+        """
         outputs = self.get_outputs(node)
+        existing_outputs = self.node.base.links.get_outgoing(link_type=LinkType.RETURN).all_link_labels()
 
         for name, port in self.spec().outputs.items():
 
@@ -330,13 +340,16 @@ class BaseRestartWorkChain(WorkChain):
             except KeyError:
                 if port.required:
                     self.report(
-                        f'required output \'{name}\' was not an output of {self.ctx.process_name}<{node.pk}> '
+                        f'required output `{name}` was not an output of {self.ctx.process_name}<{node.pk}> '
                         f'(or an incorrect class/output is being exposed).'
                     )
             else:
-                self.out(name, output)
+                if name in existing_outputs:
+                    self.logger.info(f'output `{name}` was already attached, skipping.')
+                else:
+                    self.out(name, output)
 
-        return None
+        return outputs
 
     def __init__(self, *args, **kwargs) -> None:
         """Construct the instance."""

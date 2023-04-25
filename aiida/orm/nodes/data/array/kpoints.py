@@ -14,6 +14,7 @@ periodic crystal structure).
 """
 import numpy
 
+from typing import List, Optional
 from .array import ArrayData
 
 __all__ = ('KpointsData',)
@@ -39,32 +40,45 @@ class KpointsData(ArrayData):
     def __init__(
         self,
         *args,
-        structuredata=None,
-        cell=None,
-        pbc=None,
-        mesh=None,
-        distance=None,
-        offset=None,
-        force_parity=False,
+        cell: Optional[List[List[float]]] = None,
+        pbc: Optional[List[bool]] = None,
+        mesh: Optional[List[int]] = None,
+        offset: Optional[List[float]] = None,
         kpoints=None,
-        cartesian=False,
-        labels=None,
-        weights=None,
-        fill_values=0,
         **kwargs
     ):
-        """Set the properties directly in the constructor."""
+        """Allow setting cell and mesh in the constructor"""
         super().__init__(*args, **kwargs)
         if cell is not None:
             self.set_cell(cell, pbc)
-        elif structuredata is not None:
-            self.set_cell_from_structure(structuredata)
+
         if mesh is not None:
             self.set_kpoints_mesh(mesh, offset)
-        elif distance is not None:
-            self.set_kpoints_mesh_from_density(distance, offset, force_parity)
-        if kpoints is not None:
-            self.set_kpoints(kpoints, cartesian, labels, weights, fill_values)
+
+    @classmethod
+    def from_structure(cls, structuredata: object):
+        kpt = cls()
+        kpt.set_cell_from_structure(structuredata=structuredata)
+        return kpt
+
+    @classmethod
+    def from_density(cls, distance: float, offset: Optional[List[float]] = None, force_parity: bool = False):
+        kpt = cls()
+        kpt.set_kpoints_mesh_from_density(distance=distance, offset=offset, force_parity=force_parity)
+        return kpt
+
+    @classmethod
+    def from_list(
+        cls,
+        kpoints: List[List[float]],
+        cartesian: bool = False,
+        labels: Optional[List[List]] = None,
+        weights: Optional[List[float]] = None,
+        fill_values: int=0
+        ):
+        kpt = cls()
+        kpt.set_kpoints(kpoints=kpoints, cartesian=cartesian, labels=labels, weights=weights, fill_values=fill_values)
+        return kpt
 
     def get_description(self):
         """

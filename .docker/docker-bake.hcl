@@ -8,8 +8,15 @@ variable "PYTHON_VERSION" {
 variable "PGSQL_VERSION" {
 }
 
+variable "AIIDA_VERSION" {
+}
+
+variable "PIP_VERSION" {
+  default = "22.0.4"
+}
+
 variable "BASE_IMAGE" {
-  default = "jupyter/minimal-notebook:python-${PYTHON_VERSION}" 
+  default = "mambaorg/micromamba:jammy"
 }
 
 variable "ORGANIZATION" {
@@ -54,6 +61,9 @@ target "base" {
   platforms = "${PLATFORMS}"
   args = {
     "BASE" = "${BASE_IMAGE}"
+    "PYTHON_VERSION" = "${PYTHON_VERSION}"
+    "PIP_VERSION" = "${PIP_VERSION}"
+    "AIIDA_VERSION" = "${AIIDA_VERSION}"
   }
 }
 target "base-with-services" {

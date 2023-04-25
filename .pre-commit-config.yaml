@@ -74,6 +74,7 @@ repos:
             (?x)^(
                 .github/.*|
                 .molecule/.*|
+                .docker/.*|
                 docs/.*|
                 utils/.*|
 

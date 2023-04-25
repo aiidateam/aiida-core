@@ -8,11 +8,8 @@ set -x
 # Environment.
 export SHELL=/bin/bash
 
-# Setup AiiDA autocompletion.
-grep _VERDI_COMPLETE /home/${SYSTEM_USER}/.bashrc &> /dev/null || echo 'eval "$(_VERDI_COMPLETE=source verdi)"' >> /home/${SYSTEM_USER}/.bashrc
-
 # Check if user requested to set up AiiDA profile (and if it exists already)
-if [[ ${SETUP_DEFAULT_PROFILE} == true ]] && ! verdi profile show ${PROFILE_NAME} &> /dev/null; then
+if [[ ${SETUP_DEFAULT_AIIDA_PROFILE} == true ]] && ! verdi profile show ${AIIDA_PROFILE_NAME} &> /dev/null; then
     NEED_SETUP_PROFILE=true;
 else
     NEED_SETUP_PROFILE=false;
@@ -22,15 +19,14 @@ fi
 if [[ ${NEED_SETUP_PROFILE} == true ]]; then
 
     # Create AiiDA profile.
-    verdi quicksetup                           \
-        --non-interactive                      \
-        --profile "${PROFILE_NAME}"            \
-        --email "${USER_EMAIL}"                \
-        --first-name "${USER_FIRST_NAME}"      \
-        --last-name "${USER_LAST_NAME}"        \
-        --institution "${USER_INSTITUTION}"    \
-        --db-host "${DB_HOST:localhost}"    \
-        --broker-host "${BROKER_HOST:localhost}"
+    verdi quicksetup              \
+        --non-interactive                            \
+        --profile "${AIIDA_PROFILE_NAME}"            \
+        --email "${AIIDA_USER_EMAIL}"                \
+        --first-name "${AIIDA_USER_FIRST_NAME}"      \
+        --last-name "${AIIDA_USER_LAST_NAME}"        \
+        --institution "${AIIDA_USER_INSTITUTION}"    \
+        --config /opt/config-quick-setup.yaml
 
     # Setup and configure local computer.
     computer_name=localhost
@@ -52,18 +48,18 @@ if [[ ${NEED_SETUP_PROFILE} == true ]]; then
       exit 1
     fi
 
-    verdi computer show ${computer_name} || verdi computer setup   \
-        --non-interactive                                          \
-        --label "${computer_name}"                                 \
-        --description "this computer"                              \
-        --hostname "${computer_name}"                              \
+    verdi computer show ${computer_name} || verdi computer setup \
+        --non-interactive                                               \
+        --label "${computer_name}"                                      \
+        --description "this computer"                                   \
+        --hostname "${computer_name}"                                   \
         --transport core.local                                          \
-        --scheduler core.direct                                    \
-        --work-dir /home/aiida/aiida_run/                          \
-        --mpirun-command "mpirun -np {tot_num_mpiprocs}"           \
-        --mpiprocs-per-machine ${LOCALHOST_MPI_PROCS_PER_MACHINE} && \
-    verdi computer configure core.local "${computer_name}"              \
-        --non-interactive                                          \
+        --scheduler core.direct                                         \
+        --work-dir /home/${NB_USER}/aiida_run/                          \
+        --mpirun-command "mpirun -np {tot_num_mpiprocs}"                \
+        --mpiprocs-per-machine ${LOCALHOST_MPI_PROCS_PER_MACHINE} &&    \
+    verdi computer configure core.local "${computer_name}" \
+        --non-interactive                                               \
         --safe-interval 0.0
 fi
 
@@ -75,16 +71,7 @@ verdi profile show || echo "The default profile is not set."
 verdi daemon stop
 
 # Migration will run for the default profile.
-verdi storage migrate --force || echo "Database migration failed."
-
-# Supress rabbitmq version warning for arm64 since
-# the it build using latest version rabbitmq from apt install
-# We explicitly set consumer_timeout to 100 hours in /etc/rabbitmq/rabbitmq.conf
-export ARCH=`uname -m`
-if [ "$ARCH" = "aarch64" ]; then \
-    verdi config set warnings.rabbitmq_version False
-fi
-
+verdi storage migrate --force
 
 # Daemon will start only if the database exists and is migrated to the latest version.
 verdi daemon start || echo "AiiDA daemon is not running."

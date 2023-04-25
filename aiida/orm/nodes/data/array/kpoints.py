@@ -12,9 +12,10 @@ Module of the KpointsData class, defining the AiiDA data type for storing
 lists and meshes of k-points (i.e., points in the reciprocal space of a
 periodic crystal structure).
 """
+from typing import List, Optional
+
 import numpy
 
-from typing import List, Optional
 from .array import ArrayData
 
 __all__ = ('KpointsData',)
@@ -74,8 +75,8 @@ class KpointsData(ArrayData):
         cartesian: bool = False,
         labels: Optional[List[List]] = None,
         weights: Optional[List[float]] = None,
-        fill_values: int=0
-        ):
+        fill_values: int = 0
+    ):
         kpt = cls()
         kpt.set_kpoints(kpoints=kpoints, cartesian=cartesian, labels=labels, weights=weights, fill_values=fill_values)
         return kpt

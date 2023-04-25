@@ -1,0 +1,8 @@
+docker
+pre-commit
+pytest
+requests
+tabulate
+pytest-docker
+docker-compose
+pyyaml<=5.3.1

@@ -101,7 +101,7 @@ notebook = [
 ]
 pre-commit = [
     "mypy==0.991",
-    "packaging==20.3",
+    "packaging~=20.9",
     "pre-commit~=2.2",
     "pylint~=2.17.4",
     "pylint-aiida~=0.1.1",

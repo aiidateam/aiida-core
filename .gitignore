@@ -38,3 +38,6 @@ docs/source/reference/apidoc
 _sandbox
 
 pplot_out/
+
+# docker
+.dodo.*

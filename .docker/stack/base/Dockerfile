@@ -53,7 +53,9 @@ RUN echo "aiida-core==${AIIDA_VERSION}" >> /opt/requirements.txt
 ENV PIP_CONSTRAINT=/opt/requirements.txt
 
 # copy the entrypoint script
-COPY --chmod=755 init.d/* /usr/local/bin/init.d
+RUN mkdir -p /usr/local/bin/init.d
+COPY --chmod=755 init.d/* /usr/local/bin/init.d/
+COPY --chmod=755 _init.sh /usr/local/bin/_init.sh
 
 # Enable verdi autocompletion.
 RUN mkdir -p "/opt/conda/etc/conda/activate.d" && \

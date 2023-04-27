@@ -55,7 +55,7 @@ if [[ ${NEED_SETUP_PROFILE} == true ]]; then
         --hostname "${computer_name}"                                   \
         --transport core.local                                          \
         --scheduler core.direct                                         \
-        --work-dir /home/${NB_USER}/aiida_run/                          \
+        --work-dir /home/${MAMBA_USER}/aiida_run/                          \
         --mpirun-command "mpirun -np {tot_num_mpiprocs}"                \
         --mpiprocs-per-machine ${LOCALHOST_MPI_PROCS_PER_MACHINE} &&    \
     verdi computer configure core.local "${computer_name}" \

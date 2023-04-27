@@ -1,13 +1,13 @@
 #!/bin/bash
 set -em
 
-RABBITMQ_DATA_DIR="/home/${NB_USER}/.rabbitmq"
+SYSTEM_USER=${MAMBA_USER}
+RABBITMQ_DATA_DIR="/home/${SYSTEM_USER}/.rabbitmq"
 
 mkdir -p "${RABBITMQ_DATA_DIR}"
-fix-permissions "${RABBITMQ_DATA_DIR}"
 
 # Fix issue where the erlang cookie permissions are corrupted.
-chmod 400 "/home/${NB_USER}/.erlang.cookie" || echo "erlang cookie not created yet."
+chmod 400 "/home/${SYSTEM_USER}/.erlang.cookie" || echo "erlang cookie not created yet."
 
 # Set base directory for RabbitMQ to persist its data. This needs to be set to a folder in the system user's home
 # directory as that is the only folder that is persisted outside of the container.
@@ -22,4 +22,4 @@ echo LOG_BASE="${RABBITMQ_DATA_DIR}/log" >> "${RMQ_ETC_DIR}/rabbitmq-env.conf"
 # isolated mnesia directories. Since in the AiiDA setup we only need and run a single node, we can simply use localhost.
 echo NODENAME=rabbit@localhost >> "${RMQ_ETC_DIR}/rabbitmq-env.conf"
 
-mamba run -n aiida-core-services rabbitmq-server -detached
+micromamba run -n aiida-core-services rabbitmq-server -detached

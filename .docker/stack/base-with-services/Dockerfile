@@ -10,21 +10,19 @@ ARG AIIDA_VERSION
 ARG PGSQL_VERSION
 ARG TARGETARCH
 
-RUN mamba create -p /opt/conda/envs/aiida-core-services --yes \
+RUN micromamba create -p /opt/conda/envs/aiida-core-services --yes \
+     --channel conda-forge \
      postgresql=${PGSQL_VERSION} \
-     && mamba clean --all -f -y && \
-     fix-permissions "${CONDA_DIR}" && \
-     fix-permissions "/home/${NB_USER}"
+     && micromamba clean --all -f -y
 
 # Install RabbitMQ in a dedicated conda environment.
 # If the architecture is arm64, we install the default version of rabbitmq provided by the generic binary,
 # # https://www.rabbitmq.com/install-generic-unix.html the version needs to be compatible with system's erlang version.
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
-     mamba install -p /opt/conda/envs/aiida-core-services --yes \
+     micromamba install -p /opt/conda/envs/aiida-core-services --yes \
+          --channel conda-forge \
           rabbitmq-server=3.8.14  && \
-     mamba clean --all -f -y && \
-     fix-permissions "${CONDA_DIR}" && \
-     fix-permissions "/home/${NB_USER}"; \
+     micromamba clean --all -f -y && \
 elif [ "$TARGETARCH" = "arm64" ]; then \
      # Install erlang.
      apt-get update --yes && \
@@ -44,15 +42,15 @@ fi
 
 # Configure AiiDA profile.
 COPY config-quick-setup.yaml .
-COPY before-notebook.d/20_start-postgresql.sh /usr/local/bin/before-notebook.d/
-COPY before-notebook.d/30_start-rabbitmq-${TARGETARCH}.sh /usr/local/bin/before-notebook.d/
+COPY init.d/start-postgresql.sh /usr/local/bin/init.d/
+COPY init.d/start-rabbitmq-${TARGETARCH}.sh /usr/local/bin/init.d/
 
 # Supress rabbitmq version warning for arm64 since
 # it is built using latest version rabbitmq from apt install.
 # We explicitly set consumer_timeout to 100 hours in /etc/rabbitmq/rabbitmq.conf
-COPY before-notebook.d/41_suppress-rabbitmq-version-warning.sh /usr/local/bin/before-notebook.d/
+COPY init.d/suppress-rabbitmq-version-warning.sh /usr/local/bin/init.d/
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
-     rm /usr/local/bin/before-notebook.d/41_suppress-rabbitmq-version-warning.sh; \
+     rm /usr/local/bin/init.d/suppress-rabbitmq-version-warning.sh; \
 fi
 
 USER ${NB_USER}
@@ -60,4 +58,4 @@ USER ${NB_USER}
 WORKDIR "/home/${NB_USER}"
 
 # Initialize the database
-RUN mamba run -n aiida-core-services initdb -D aiida_db -U aiida
+RUN micromamba run -n aiida-core-services initdb -D aiida_db -U aiida

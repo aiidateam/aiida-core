@@ -6,10 +6,10 @@
 /usr/local/bin/_entrypoint.sh ssh-agent
 
 # Start postgresql
-# /usr/local/bin/_entrypoint.sh /usr/local/bin/init.d/start-postgres.sh
+/usr/local/bin/_entrypoint.sh /usr/local/bin/init.d/start-postgres.sh
 
-# Start rabbitmq
-/usr/local/bin/_entrypoint.sh /usr/local/bin/init.d/start-rabbitmq.sh
+# Start rabbitmq, needs to bu run by root
+/usr/local/bin/init.d/start-rabbitmq.sh
 
 # setup aiida must be run in the environment
 /usr/local/bin/_entrypoint.sh /usr/local/bin/init.d/aiida-profile-preparation.sh

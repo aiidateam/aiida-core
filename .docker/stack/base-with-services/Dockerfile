@@ -15,6 +15,12 @@ RUN micromamba create -p /opt/conda/envs/aiida-core-services --yes \
      postgresql=${PGSQL_VERSION} \
      && micromamba clean --all -f -y
 
+RUN apt-get update --yes && \
+    apt-get install --yes --no-install-recommends \
+    locales && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+     locale-gen en_US.UTF-8
+
 # Install RabbitMQ in a dedicated conda environment.
 # If the architecture is arm64, we install the default version of rabbitmq provided by the generic binary,
 # # https://www.rabbitmq.com/install-generic-unix.html the version needs to be compatible with system's erlang version.
@@ -50,6 +56,7 @@ COPY --chmod=755 _init.sh /usr/local/bin/_init.sh
 # Supress rabbitmq version warning for arm64 since
 # it is built using latest version rabbitmq from apt install.
 # We explicitly set consumer_timeout to 100 hours in /etc/rabbitmq/rabbitmq.conf
+COPY --chmod=755 init.d/suppress-rabbitmq-version-warning.sh /usr/local/bin/init.d/suppress-rabbitmq-version-warning.sh
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
      rm /usr/local/bin/init.d/suppress-rabbitmq-version-warning.sh; \
 fi
@@ -57,9 +64,6 @@ fi
 USER $MAMBA_USER
 
 WORKDIR "/home/${MAMBA_USER}"
-
-# Initialize the database
-RUN micromamba run -n aiida-core-services initdb -D aiida_db -U aiida
 
 ENTRYPOINT [ "/usr/local/bin/_init.sh" ]
 # ENTRYPOINT ["_entrypoint.sh"]

@@ -16,7 +16,7 @@ dependencies:
 - docstring_parser
 - get-annotations~=0.1
 - python-graphviz~=0.19
-- ipython<9,>=7
+- ipython<8.13,>=7
 - jinja2~=3.0
 - jsonschema~=3.0
 - kiwipy[rmq]~=0.7.7

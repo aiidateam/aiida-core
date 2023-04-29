@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 import urllib.parse
 
 from flask import json, jsonify
-from flask.json.provider import JSONProvider
+from flask.json.provider import DefaultJSONProvider
 from wrapt import decorator
 
 from aiida.common.exceptions import InputValidationError, ValidationError
@@ -27,7 +27,7 @@ UUID_REF = 'd55082b6-76dc-426b-af89-0e08b59524d2'
 
 
 ########################## Classes #####################
-class CustomJSONProvider(JSONProvider):
+class CustomJSONProvider(DefaultJSONProvider):
     """
     Custom json encoder for serialization.
     This has to be provided to the Flask app in order to replace the default
@@ -35,6 +35,12 @@ class CustomJSONProvider(JSONProvider):
     """
 
     def dumps(self, obj, **kwargs):
+        """
+        Override ``dumps`` method from ``DefaultJSONProvider`` for ``datetime`` and ``bytes`` objects.
+
+        :param obj: Object e.g. dict, list that will be serialized.
+        :return: Serialized object as a string.
+        """
 
         from aiida.restapi.common.config import SERIALIZER_CONFIG
 
@@ -58,9 +64,6 @@ class CustomJSONProvider(JSONProvider):
 
         # If not returned yet, do it in the default way
         return json.dumps(self, obj, **kwargs)  # pylint: disable=too-many-function-args
-
-    def loads(self, s, **kwargs):
-        return json.loads(s, **kwargs)
 
 
 class Utils:

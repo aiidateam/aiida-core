@@ -109,7 +109,7 @@ class AiiDALoaderMagics(magic.Magics):
         # Construct the subcommand that will be executed, thereby circumventing the profile option of ``verdi`` itself.
         # If the caller specified a subcommand that doesn't exist, the following will raise an exception.
         context = Context(verdi)
-        command = verdi.get_command(context, command_name)
+        command = verdi.get_command(context, command_name)  # type: ignore[attr-defined]
 
         return command(  # pylint: disable=too-many-function-args,unexpected-keyword-arg
             cmdline_arguments[1:],

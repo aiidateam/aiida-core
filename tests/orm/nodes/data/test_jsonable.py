@@ -3,7 +3,7 @@
 import datetime
 import math
 
-from pymatgen.core import Molecule  # type: ignore
+from pymatgen.core import Molecule
 import pytest
 
 from aiida.orm import load_node
@@ -107,8 +107,8 @@ def test_obj():
     for left, right in zip(loaded.obj.data, data):
 
         # Need this explicit case to compare NaN because of the peculiarity in Python where ``float(nan) != float(nan)``
-        if isinstance(left, float) and math.isnan(left):
-            assert math.isnan(right)
+        if isinstance(left, float) and math.isnan(left):  # pylint: disable=c-extension-no-member
+            assert math.isnan(right)  # pylint: disable=c-extension-no-member
             continue
 
         assert left == right

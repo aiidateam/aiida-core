@@ -131,7 +131,7 @@ class MaterialsProjectImporter(DbImporter):
 
         :param query: a dictionary with the query parameters
         """
-        for entry in self._mpr.query(criteria=query, properties=properties):
+        for entry in self._mpr.query(criteria=query, properties=properties):  #pylint: disable=no-member
             yield entry
 
 

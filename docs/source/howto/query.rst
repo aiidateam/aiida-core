@@ -150,7 +150,7 @@ In case you want all calculation jobs with state ``finished`` or ``excepted``, y
         },
     )
 
-You can **negate** a filter by adding an exclamation mark, ``!`` or a ``~``, in front of the operator, that is a ``NOT`` operatror.
+A filter can be turned into its associated **negation** by adding an exclamation mark, ``!``, in front of the operator.
 So, to query for all calculation jobs that are not a ``finished`` or ``excepted`` state:
 
 .. code-block:: python

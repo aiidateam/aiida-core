@@ -181,7 +181,8 @@ List of all operators:
 As mentioned in the :ref:`section about filters<how-to:query:filters>` all operators can be turned into their associated negation (``NOT`` operator) by adding a ``!`` in front of the operator.
 
 .. note::
-    The negation operator can look different than the one in base SQL, where to indicate a value **not equal to** one would write ``!=`` whilst when using the ``QueryBuilder`` one should instead write ``!==`` or ``~==``.
+    The form of (negation) operators in the rendered SQL may differ from the ones specified in the ``QueryBuilder`` instance.
+    For example, the ``!==`` operator of the ``QueryBuilder`` will be rendered to ``!=`` in SQL.
 
 
 .. _topics:database:advancedquery:tables:relationships:

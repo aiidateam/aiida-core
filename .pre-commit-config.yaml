@@ -28,7 +28,7 @@ repos:
     - id: isort
 
 -   repo: https://github.com/ikamensh/flynt/
-    rev: '0.77'
+    rev: '0.78'
     hooks:
     -   id: flynt
         args: [
@@ -37,7 +37,7 @@ repos:
         ]
 
 -   repo: https://github.com/google/yapf
-    rev: v0.32.0
+    rev: v0.33.0
     hooks:
     -   id: yapf
         name: yapf

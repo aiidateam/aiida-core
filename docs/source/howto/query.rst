@@ -150,6 +150,11 @@ In case you want all calculation jobs with state ``finished`` or ``excepted``, y
         },
     )
 
+.. _how-to:query:filters-operator-negations:
+
+Operator negations
+------------------
+
 A filter can be turned into its associated **negation** by adding an exclamation mark, ``!``, in front of the operator.
 So, to query for all calculation jobs that are not a ``finished`` or ``excepted`` state:
 

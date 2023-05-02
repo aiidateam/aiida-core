@@ -150,7 +150,7 @@ In case you want all calculation jobs with state ``finished`` or ``excepted``, y
         },
     )
 
-.. _how-to:query:filters-operator-negations:
+.. _how-to:query:filters:operator-negations:
 
 Operator negations
 ------------------

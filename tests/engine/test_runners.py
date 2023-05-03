@@ -15,9 +15,11 @@ import threading
 import plumpy
 import pytest
 
-from aiida.engine import Process
+from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+from aiida.engine import Process, launch
 from aiida.manage import get_manager
-from aiida.orm import Str, WorkflowNode
+from aiida.manage.caching import enable_caching
+from aiida.orm import Int, Str, WorkflowNode
 
 
 @pytest.fixture
@@ -80,3 +82,24 @@ def test_submit_args(runner):
     """
     with pytest.raises(TypeError, match=r'takes 2 positional arguments but 3 were given'):
         runner.submit(Proc, {'a': Str('input')})
+
+
+def test_run_return_value_cached(aiida_local_code_factory):
+    """Test that :meth:`aiida.engine.runners.Runner._run` return process results even when cached.
+
+    Regression test for https://github.com/aiidateam/aiida-core/issues/5994.
+    """
+    inputs = {
+        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
+        'x': Int(1),
+        'y': Int(-2),
+    }
+    results_source, node_source = launch.run_get_node(ArithmeticAddCalculation, **inputs)
+    assert node_source.is_valid_cache
+
+    with enable_caching():
+        results_cached, node_cached = launch.run_get_node(ArithmeticAddCalculation, **inputs)
+
+    assert node_cached.base.caching.get_cache_source() == node_source.uuid
+    assert sorted(results_cached.keys()) == sorted(results_source.keys())
+    assert sorted(results_cached.keys()) == ['remote_folder', 'retrieved', 'sum']

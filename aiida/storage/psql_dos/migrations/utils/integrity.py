@@ -186,14 +186,12 @@ def write_database_integrity_violation(results, headers, reason_message, action_
         handle.write(tabulate(results, headers))
 
 
-# Currently valid hash key
-_HASH_EXTRA_KEY = '_aiida_hash'
-
-
-def drop_hashes(conn):
+def drop_hashes(conn, hash_extra_key):
     """Drop hashes of nodes.
 
     Print warning only if the DB actually contains nodes.
+
+    :param hash_extra_key: The key in the extras used to store the hash at the time of this migration.
     """
     # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
     # pylint: disable=no-name-in-module,import-error
@@ -204,5 +202,5 @@ def drop_hashes(conn):
     if n_nodes > 0:
         echo.echo_warning('Invalidating the hashes of all nodes. Please run "verdi rehash".', bold=True)
 
-    statement = text(f"UPDATE db_dbnode SET extras = extras #- '{{{_HASH_EXTRA_KEY}}}'::text[];")
+    statement = text(f"UPDATE db_dbnode SET extras = extras #- '{{{hash_extra_key}}}'::text[];")
     conn.execute(statement)

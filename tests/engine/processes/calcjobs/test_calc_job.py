@@ -516,6 +516,12 @@ class TestCalcJob:
 
         return process
 
+    def test_get_hash(self, get_calcjob_builder):
+        """Test that :meth:`aiida.orm.CalcJobNode.get_hash` returns the same hash as what is stored in the extras."""
+        builder = get_calcjob_builder()
+        _, node = launch.run_get_node(builder)
+        assert node.base.extras.get(node.base.caching._HASH_EXTRA_KEY) == node.get_hash()  # pylint: disable=protected-access
+
     def test_process_status(self):
         """Test that the process status is properly reset if calculation ends successfully."""
         _, node = launch.run_get_node(ArithmeticAddCalculation, code=self.remote_code, **self.inputs)

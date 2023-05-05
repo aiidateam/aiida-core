@@ -132,7 +132,7 @@ def aiida_manager() -> Manager:
 
 @pytest.fixture(scope='session')
 def aiida_instance(
-    tmp_path_factory: pytest.TempPathFactory,
+    tmp_path_factory: pytest.tmpdir.TempPathFactory,
     aiida_manager: Manager,
     aiida_test_profile: str | None,
 ) -> t.Generator[Config, None, None]:
@@ -185,7 +185,7 @@ def aiida_instance(
 
 @pytest.fixture(scope='session')
 def config_psql_dos(
-    tmp_path_factory: pytest.TempPathFactory,
+    tmp_path_factory: pytest.tmpdir.TempPathFactory,
     postgres_cluster: dict[str, str],
 ) -> t.Callable[[dict[str, t.Any] | None], dict[str, t.Any]]:
     """Return a profile configuration for the :class:`~aiida.storage.psql_dos.backend.PsqlDosBackend`."""

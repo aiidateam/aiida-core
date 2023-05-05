@@ -30,9 +30,9 @@ depends_on = None
 
 def upgrade():
     """drop the hashes when upgrading"""
-    drop_hashes(op.get_bind())  # pylint: disable=no-member
+    drop_hashes(op.get_bind(), hash_extra_key='_aiida_hash')  # pylint: disable=no-member
 
 
 def downgrade():
     """drop the hashes also when downgrading"""
-    drop_hashes(op.get_bind())  # pylint: disable=no-member
+    drop_hashes(op.get_bind(), hash_extra_key='_aiida_hash')  # pylint: disable=no-member

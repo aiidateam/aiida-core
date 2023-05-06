@@ -329,7 +329,7 @@ def node_delete(identifier, dry_run, force, **traversal_rules):
 @click.option(
     '-e',
     '--entry-point',
-    type=PluginParamType(group=('aiida.calculations', 'aiida.data', 'aiida.workflows'), load=True),
+    type=PluginParamType(group=('aiida.calculations', 'aiida.data', 'aiida.node', 'aiida.workflows'), load=True),
     default=None,
     help='Only include nodes that are class or sub class of the class identified by this entry point.'
 )
@@ -342,8 +342,15 @@ def rehash(nodes, entry_point, force):
     """
     from aiida.orm import Data, ProcessNode, QueryBuilder
 
+    # If no explicit entry point is defined, rehash all nodes, which are either Data nodes or ProcessNodes
+    if entry_point is None:
+        classes = (Data, ProcessNode)
+    else:
+        classes = (entry_point,)
+
     if not force:
-        echo.echo_warning('This command will recompute and overwrite the hashes of all nodes.')
+        class_names = ', '.join([cls.__name__ for cls in classes])
+        echo.echo_warning(f'This command will recompute and overwrite the hashes of all {class_names} nodes.')
         echo.echo_warning('Note that this can take a lot of time for big databases.')
         echo.echo_warning('')
         echo.echo_warning('', nl=False)
@@ -356,16 +363,12 @@ def rehash(nodes, entry_point, force):
             echo.echo('\n')
             echo.echo_critical('Migration aborted, the data has not been affected.')
 
-    # If no explicit entry point is defined, rehash all nodes, which are either Data nodes or ProcessNodes
-    if entry_point is None:
-        entry_point = (Data, ProcessNode)
-
     if nodes:
-        to_hash = [(node,) for node in nodes if isinstance(node, entry_point)]
+        to_hash = [(node,) for node in nodes if isinstance(node, classes)]
         num_nodes = len(to_hash)
     else:
         builder = QueryBuilder()
-        builder.append(entry_point, tag='node')
+        builder.append(classes, tag='node')
         to_hash = builder.all()
         num_nodes = builder.count()
 

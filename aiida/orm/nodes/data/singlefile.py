@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Data class that can be used to store a single file in its repository."""
+from __future__ import annotations
+
 import contextlib
 import os
 import pathlib
@@ -24,7 +26,7 @@ class SinglefileData(Data):
 
     DEFAULT_FILENAME = 'file.txt'
 
-    def __init__(self, file, filename=None, **kwargs):
+    def __init__(self, file, filename: str | pathlib.Path | None = None, **kwargs):
         """Construct a new instance and set the contents to that of the file.
 
         :param file: an absolute filepath or filelike object whose contents to copy.
@@ -67,7 +69,7 @@ class SinglefileData(Data):
         with self.open() as handle:
             return handle.read()
 
-    def set_file(self, file, filename=None):
+    def set_file(self, file, filename: str | pathlib.Path | None = None):
         """Store the content of the file in the node's repository, deleting any other existing objects.
 
         :param file: an absolute filepath or filelike object whose contents to copy
@@ -92,8 +94,7 @@ class SinglefileData(Data):
             except AttributeError:
                 key = self.DEFAULT_FILENAME
 
-        key = filename or key
-
+        key = str(filename) if filename is not None else key
         existing_object_names = self.base.repository.list_object_names()
 
         try:
@@ -126,5 +127,5 @@ class SinglefileData(Data):
 
         if [filename] != objects:
             raise exceptions.ValidationError(
-                f'respository files {objects} do not match the `filename` attribute {filename}.'
+                f'respository files {objects} do not match the `filename` attribute `{filename}`.'
             )

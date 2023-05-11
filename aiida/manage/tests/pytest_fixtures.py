@@ -132,7 +132,7 @@ def aiida_manager() -> Manager:
 
 @pytest.fixture(scope='session')
 def aiida_instance(
-    tmp_path_factory: pytest.TempPathFactory,
+    tmp_path_factory: pytest.tmpdir.TempPathFactory,
     aiida_manager: Manager,
     aiida_test_profile: str | None,
 ) -> t.Generator[Config, None, None]:
@@ -185,7 +185,7 @@ def aiida_instance(
 
 @pytest.fixture(scope='session')
 def config_psql_dos(
-    tmp_path_factory: pytest.TempPathFactory,
+    tmp_path_factory: pytest.tmpdir.TempPathFactory,
     postgres_cluster: dict[str, str],
 ) -> t.Callable[[dict[str, t.Any] | None], dict[str, t.Any]]:
     """Return a profile configuration for the :class:`~aiida.storage.psql_dos.backend.PsqlDosBackend`."""
@@ -662,7 +662,13 @@ def daemon_client(aiida_profile):
             daemon_client.stop_daemon(wait=True)
         except DaemonNotRunningException:
             pass
-        assert not daemon_client.is_daemon_running
+        # Give an additional grace period by manually waiting for the daemon to be stopped. In certain unit test
+        # scenarios, the built in wait time in ``daemon_client.stop_daemon`` is not sufficient and even though the
+        # daemon is stopped, ``daemon_client.is_daemon_running`` will return false for a little bit longer.
+        daemon_client._await_condition(  # pylint: disable=protected-access
+            lambda: not daemon_client.is_daemon_running,
+            DaemonTimeoutException('The daemon failed to stop.'),
+        )
 
 
 @pytest.fixture()

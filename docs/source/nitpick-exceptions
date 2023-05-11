@@ -162,7 +162,7 @@ py:class disk_objectstore.container.Container
 py:class flask.app.Flask
 py:class Flask
 
-py:class pytest.TempPathFactory
+py:class pytest.tmpdir.TempPathFactory
 
 py:class sqlalchemy.orm.decl_api.SqliteModel
 py:class sqlalchemy.orm.decl_api.Base

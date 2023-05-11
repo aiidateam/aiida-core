@@ -66,6 +66,7 @@ class CalcJobNode(CalculationNode):
     """ORM class for all nodes representing the execution of a CalcJob."""
 
     # pylint: disable=too-many-public-methods
+    _CLS_NODE_CACHING = CalcJobNodeCaching
 
     CALC_JOB_STATE_KEY = 'state'
     IMMIGRATED_KEY = 'imported'

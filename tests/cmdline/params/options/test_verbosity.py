@@ -25,7 +25,7 @@ def run_cli_command(run_cli_command):
     return functools.partial(run_cli_command, use_subprocess=False)
 
 
-@verdi.command('test')
+@verdi.command('test')  # type: ignore[attr-defined]
 def cmd():
     """Test command prints messages through the ``aiida`` and the ``verdi``.
 

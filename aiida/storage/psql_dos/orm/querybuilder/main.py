@@ -997,7 +997,8 @@ def generate_projections(
 
     # check the consistency of projections
     projection_index_to_field = {
-        index_in_sql_result: attrkey for _, projected_entities_dict in tag_to_projected_fields.items()
+        index_in_sql_result: attrkey
+        for _, projected_entities_dict in tag_to_projected_fields.items()
         for attrkey, index_in_sql_result in projected_entities_dict.items()
     }
     if len(projections) > len(projection_index_to_field):

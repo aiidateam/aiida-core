@@ -6,9 +6,15 @@ version: 2
 # https://github.com/aiidateam/aiida-core/issues/1472
 formats: []
 
+build:
+  apt_packages:
+    - graphviz
+  os: ubuntu-22.04
+  tools:
+    python: "3.10"
+
 # Need to install the package itself such that the entry points are installed and the API doc can build properly
 python:
-    version: 3.8
     install:
         - method: pip
           path: .

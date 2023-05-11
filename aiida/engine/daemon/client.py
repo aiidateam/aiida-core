@@ -41,7 +41,7 @@ VERDI_BIN = shutil.which('verdi')
 # Recent versions of virtualenv create the environment variable VIRTUAL_ENV
 VIRTUALENV = os.environ.get('VIRTUAL_ENV', None)
 
-__all__ = ('DaemonClient',)
+__all__ = ('DaemonClient', 'get_daemon_client')
 
 
 class ControllerProtocol(enum.Enum):

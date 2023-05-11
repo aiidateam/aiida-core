@@ -18,6 +18,7 @@ from .client import *
 
 __all__ = (
     'DaemonClient',
+    'get_daemon_client',
 )
 
 # yapf: enable

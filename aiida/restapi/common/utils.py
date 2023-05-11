@@ -34,9 +34,9 @@ class CustomJSONProvider(DefaultJSONProvider):
     encoder.
     """
 
-    def dumps(self, obj, **kwargs):
+    def default(self, obj, **kwargs):
         """
-        Override ``dumps`` method from ``DefaultJSONProvider`` for ``datetime`` and ``bytes`` objects.
+        Override serialization of ``DefaultJSONProvider`` for ``datetime`` and ``bytes`` objects.
 
         :param obj: Object e.g. dict, list that will be serialized.
         :return: Serialized object as a string.
@@ -63,7 +63,7 @@ class CustomJSONProvider(DefaultJSONProvider):
             pass
 
         # If not returned yet, do it in the default way
-        return super().dumps(self, obj, **kwargs)  # pylint: disable=too-many-function-args
+        return super().default(obj, **kwargs)  # pylint: disable=too-many-function-args
 
 
 class Utils:

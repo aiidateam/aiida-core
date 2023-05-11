@@ -558,7 +558,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         :raises DaemonException: If the connection to the daemon failed for any other reason.
         """
         self._clean_potentially_stale_pid_file()
-        
+
         command = {'command': 'quit', 'properties': {'waiting': wait}}
         response = self.call_client(command, timeout=timeout)
 

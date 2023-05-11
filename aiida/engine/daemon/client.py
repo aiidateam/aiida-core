@@ -424,8 +424,8 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
 
             if self._is_pid_file_stale:
                 raise DaemonStalePidException(
-                    'The daemon could not be reached, seemingly because of a stale PID file. Try starting the daemon '
-                    'to remove it and restore the daemon.'
+                    'The daemon could not be reached, seemingly because of a stale PID file. Either stop or start the '
+                    'daemon to remove it and restore the daemon to a functional state.'
                 ) from exception
 
             if str(exception) == 'Timed out.':

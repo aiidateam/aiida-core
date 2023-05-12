@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 import urllib.parse
 
 from flask import jsonify
-from flask.json import JSONEncoder
+from flask.json.provider import DefaultJSONProvider
 from wrapt import decorator
 
 from aiida.common.exceptions import InputValidationError, ValidationError
@@ -27,43 +27,43 @@ UUID_REF = 'd55082b6-76dc-426b-af89-0e08b59524d2'
 
 
 ########################## Classes #####################
-class CustomJSONEncoder(JSONEncoder):
+class CustomJSONProvider(DefaultJSONProvider):
     """
     Custom json encoder for serialization.
     This has to be provided to the Flask app in order to replace the default
     encoder.
     """
 
-    def default(self, o):
-        # pylint: disable=method-hidden
+    def default(self, obj, **kwargs):
         """
-        Override default method from JSONEncoder to change serializer
-        :param o: Object e.g. dict, list that will be serialized
-        :return: serialized object
+        Override serialization of ``DefaultJSONProvider`` for ``datetime`` and ``bytes`` objects.
+
+        :param obj: Object e.g. dict, list that will be serialized.
+        :return: Serialized object as a string.
         """
 
         from aiida.restapi.common.config import SERIALIZER_CONFIG
 
         # Treat the datetime objects
-        if isinstance(o, datetime):
+        if isinstance(obj, datetime):
             if 'datetime_format' in SERIALIZER_CONFIG and SERIALIZER_CONFIG['datetime_format'] != 'default':
                 if SERIALIZER_CONFIG['datetime_format'] == 'asinput':
-                    if o.utcoffset() is not None:
-                        o = o - o.utcoffset()
-                        return '-'.join([str(o.year), str(o.month).zfill(2),
-                                         str(o.day).zfill(2)]) + 'T' + \
+                    if obj.utcoffset() is not None:
+                        obj = obj - obj.utcoffset()
+                        return '-'.join([str(obj.year), str(obj.month).zfill(2),
+                                         str(obj.day).zfill(2)]) + 'T' + \
                                ':'.join([str(
-                                   o.hour).zfill(2), str(o.minute).zfill(2),
-                                         str(o.second).zfill(2)])
+                                   obj.hour).zfill(2), str(obj.minute).zfill(2),
+                                         str(obj.second).zfill(2)])
 
         # To support bytes objects, try to decode to a string
         try:
-            return o.decode('utf-8')
+            return obj.decode('utf-8')
         except (UnicodeDecodeError, AttributeError):
             pass
 
         # If not returned yet, do it in the default way
-        return JSONEncoder.default(self, o)
+        return super().default(obj, **kwargs)
 
 
 class Utils:

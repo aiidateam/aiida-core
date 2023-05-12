@@ -95,8 +95,8 @@ def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **k
 
     # Configure the serializer
     if config_module.SERIALIZER_CONFIG:
-        from aiida.restapi.common.utils import CustomJSONEncoder
-        app.json_encoder = CustomJSONEncoder
+        from aiida.restapi.common.utils import CustomJSONProvider
+        app.json = CustomJSONProvider(app)
 
     # Set up WSGI profiler if requested
     if wsgi_profile:

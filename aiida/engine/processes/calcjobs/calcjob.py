@@ -539,11 +539,11 @@ class CalcJob(Process):
             `Wait` command if the calcjob is to be uploaded
 
         """
-        if self.inputs.metadata.dry_run:  # type: ignore[union-attr]
+        if self.inputs.metadata.dry_run:
             self._perform_dry_run()
             return plumpy.process_states.Stop(None, True)
 
-        if 'remote_folder' in self.inputs:  # type: ignore[operator]
+        if 'remote_folder' in self.inputs:
             exit_code = self._perform_import()
             return exit_code
 
@@ -596,7 +596,7 @@ class CalcJob(Process):
         # will have an associated computer, but in that case the ``computer`` property should return ``None`` and
         # nothing would change anyway.
         if not self.node.computer:
-            self.node.computer = self.inputs.code.computer  # type: ignore[union-attr]
+            self.node.computer = self.inputs.code.computer
 
     def _perform_dry_run(self):
         """Perform a dry run.
@@ -640,9 +640,7 @@ class CalcJob(Process):
             with SandboxFolder(filepath_sandbox) as folder:
                 with SandboxFolder(filepath_sandbox) as retrieved_temporary_folder:
                     self.presubmit(folder)
-                    self.node.set_remote_workdir(
-                        self.inputs.remote_folder.get_remote_path()  # type: ignore[union-attr]
-                    )
+                    self.node.set_remote_workdir(self.inputs.remote_folder.get_remote_path())
                     retrieve_calculation(self.node, transport, retrieved_temporary_folder.abspath)
                     self.node.set_state(CalcJobState.PARSING)
                     self.node.base.attributes.set(orm.CalcJobNode.IMMIGRATED_KEY, True)
@@ -821,7 +819,7 @@ class CalcJob(Process):
 
         inputs = self.node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
 
-        if not self.inputs.metadata.dry_run and not self.node.is_stored:  # type: ignore[union-attr]
+        if not self.inputs.metadata.dry_run and not self.node.is_stored:
             raise InvalidOperation('calculation node is not stored.')
 
         computer = self.node.computer

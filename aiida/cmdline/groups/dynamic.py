@@ -68,15 +68,15 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         :returns: The :class:`click.Command`.
         """
         try:
-            command = self.create_command(cmd_name)
+            command = self.create_command(ctx, cmd_name)
         except exceptions.EntryPointError:
             command = super().get_command(ctx, cmd_name)
         return command
 
-    def create_command(self, entry_point):
+    def create_command(self, ctx, entry_point):
         """Create a subcommand for the given ``entry_point``."""
         cls = self.factory(entry_point)
-        command = functools.partial(self.command, cls)
+        command = functools.partial(self.command, ctx, cls)
         command.__doc__ = cls.__doc__
         return click.command(entry_point)(self.create_options(entry_point)(command))
 

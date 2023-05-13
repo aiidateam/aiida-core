@@ -29,7 +29,7 @@ def verdi_code():
     """Setup and manage codes."""
 
 
-def create_code(cls, non_interactive, **kwargs):  # pylint: disable=unused-argument
+def create_code(ctx: click.Context, cls, non_interactive: bool, **kwargs):  # pylint: disable=unused-argument
     """Create a new `Code` instance."""
     try:
         instance = cls(**kwargs)

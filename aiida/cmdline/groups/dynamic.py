@@ -41,12 +41,20 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
     """
 
-    def __init__(self, command, entry_point_group: str, entry_point_name_filter=r'.*', **kwargs):
+    def __init__(
+        self,
+        command,
+        entry_point_group: str,
+        entry_point_name_filter: str = r'.*',
+        shared_options: list[click.Option] | None = None,
+        **kwargs
+    ):
         super().__init__(**kwargs)
         self.command = command
         self.entry_point_group = entry_point_group
         self.entry_point_name_filter = entry_point_name_filter
         self.factory = ENTRY_POINT_GROUP_FACTORY_MAPPING[entry_point_group]
+        self.shared_options = shared_options
 
     def list_commands(self, ctx) -> list[str]:
         """Return the sorted list of subcommands for this group.
@@ -95,6 +103,12 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             options_list.reverse()
 
             for option in options_list:
+                func = option(func)
+
+            shared_options = self.shared_options or []
+            shared_options.reverse()
+
+            for option in shared_options:
                 func = option(func)
 
             return func

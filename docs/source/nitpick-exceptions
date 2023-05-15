@@ -199,6 +199,7 @@ py:class Flask
 
 py:class pytest.tmpdir.TempPathFactory
 
+py:class scoped_session
 py:class sqlalchemy.orm.decl_api.SqliteModel
 py:class sqlalchemy.orm.decl_api.Base
 py:class sqlalchemy.sql.compiler.TypeCompiler

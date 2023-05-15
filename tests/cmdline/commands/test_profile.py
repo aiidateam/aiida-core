@@ -133,10 +133,14 @@ def test_delete(run_cli_command, mock_profiles, pg_test_cluster):
     assert profile_list[3] not in result.output
 
 
-def test_setup(run_cli_command, isolated_config, tmp_path):
-    """Test the ``verdi profile setup`` command."""
+@pytest.mark.parametrize('entry_point', ('core.sqlite_temp', 'core.sqlite_dos'))
+def test_setup(run_cli_command, isolated_config, tmp_path, entry_point):
+    """Test the ``verdi profile setup`` command.
+
+    Note that the options for user name and institution are not given in purpose
+    """
     profile_name = 'temp-profile'
-    options = ['core.sqlite_temp', '-n', '--filepath', str(tmp_path), '--profile', profile_name]
+    options = [entry_point, '-n', '--filepath', str(tmp_path), '--profile', profile_name, '--email', 'email@host']
     result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
     assert f'Created new profile `{profile_name}`.' in result.output
     assert profile_name in isolated_config.profile_names

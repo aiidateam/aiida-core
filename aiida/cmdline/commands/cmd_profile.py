@@ -11,15 +11,52 @@
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
+from aiida.cmdline.groups import DynamicEntryPointCommandGroup
 from aiida.cmdline.params import arguments, options
+from aiida.cmdline.params.options.commands import setup
 from aiida.cmdline.utils import defaults, echo
 from aiida.common import exceptions
-from aiida.manage.configuration import get_config
+from aiida.manage.configuration import Profile, create_profile, get_config
 
 
 @verdi.group('profile')
 def verdi_profile():
     """Inspect and manage the configured profiles."""
+
+
+def command_create_profile(ctx: click.Context, storage_cls, non_interactive: bool, profile: Profile, **kwargs):  # pylint: disable=unused-argument
+    """Create a new profile, initialise its storage and create a default user.
+
+    :param ctx: The context of the CLI command.
+    :param storage_cls: The storage class obtained through loading the entry point from ``aiida.storage`` group.
+    :param non_interactive: Whether the command was invoked interactively or not.
+    :param profile: The profile instance. This is an empty ``Profile`` instance created by the command line argument
+        which currently only contains the selected profile name for the profile that is to be created.
+    :param kwargs: Arguments to initialise instance of the selected storage implementation.
+    """
+    try:
+        profile = create_profile(ctx.obj.config, storage_cls, name=profile.name, **kwargs)
+    except (ValueError, TypeError, exceptions.EntryPointError, exceptions.StorageMigrationError) as exception:
+        echo.echo_critical(str(exception))
+
+    echo.echo_success(f'Created new profile `{profile.name}`.')
+
+
+@verdi_profile.group(
+    'setup',
+    cls=DynamicEntryPointCommandGroup,
+    command=command_create_profile,
+    entry_point_group='aiida.storage',
+    shared_options=[
+        setup.SETUP_PROFILE(),
+        setup.SETUP_USER_EMAIL(),
+        setup.SETUP_USER_FIRST_NAME(),
+        setup.SETUP_USER_LAST_NAME(),
+        setup.SETUP_USER_INSTITUTION(),
+    ]
+)
+def profile_setup():
+    """Set up a new profile."""
 
 
 @verdi_profile.command('list')

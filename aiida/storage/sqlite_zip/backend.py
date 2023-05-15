@@ -90,6 +90,23 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
         )
 
     @classmethod
+    def create_config(cls, filepath: str):
+        """Create a configuration dictionary based on the CLI options that can be used to initialize an instance."""
+        return {'path': filepath}
+
+    @classmethod
+    def _get_cli_options(cls) -> dict:
+        """Return the CLI options that would allow to create an instance of this class."""
+        return {
+            'filepath': {
+                'required': True,
+                'type': str,
+                'prompt': 'Filepath of the archive',
+                'help': 'Filepath of the archive in which to store data for this backend.',
+            }
+        }
+
+    @classmethod
     def version_profile(cls, profile: Profile) -> Optional[str]:
         return read_version(profile.storage_config['path'], search_limit=None)
 
@@ -427,5 +444,5 @@ class FolderBackendRepository(_RoBackendRepository):
     def open(self, key: str) -> Iterator[BinaryIO]:
         if not self._path.joinpath(key).is_file():
             raise FileNotFoundError(f'object with key `{key}` does not exist.')
-        with self._path.joinpath(key).open('rb') as handle:
+        with self._path.joinpath(key).open('rb', encoding='utf-8') as handle:
             yield handle

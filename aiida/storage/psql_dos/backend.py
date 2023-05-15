@@ -102,6 +102,56 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         finally:
             migrator.close()
 
+    @classmethod
+    def create_config(cls, **kwargs):
+        """Create a configuration dictionary based on the CLI options that can be used to initialize an instance."""
+        return {key: kwargs[key] for key in cls._get_cli_options()}
+
+    @classmethod
+    def _get_cli_options(cls) -> dict:
+        """Return the CLI options that would allow to create an instance of this class."""
+        return {
+            'database_engine': {
+                'required': True,
+                'type': str,
+                'prompt': 'Postgresql engine',
+                'default': 'postgresql_psycopg2',
+                'help': 'The engine to use to connect to the database.',
+            },
+            'database_hostname': {
+                'required': True,
+                'type': str,
+                'prompt': 'Postgresql hostname',
+                'default': 'localhost',
+                'help': 'The hostname of the PostgreSQL server.',
+            },
+            'database_port': {
+                'required': True,
+                'type': int,
+                'prompt': 'Postgresql port',
+                'default': '5432',
+                'help': 'The port of the PostgreSQL server.',
+            },
+            'database_username': {
+                'required': True,
+                'type': str,
+                'prompt': 'Postgresql username',
+                'help': 'The username with which to connect to the PostgreSQL server.',
+            },
+            'database_password': {
+                'required': True,
+                'type': str,
+                'prompt': 'Postgresql password',
+                'help': 'The password with which to connect to the PostgreSQL server.',
+            },
+            'database_name': {
+                'required': True,
+                'type': str,
+                'prompt': 'Postgresql database name',
+                'help': 'The name of the database in the PostgreSQL server.',
+            }
+        }
+
     def __init__(self, profile: Profile) -> None:
         super().__init__(profile)
 

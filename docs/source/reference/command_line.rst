@@ -356,6 +356,7 @@ Below is a list with all available subcommands.
       delete      Delete one or more profiles.
       list        Display a list of all available profiles.
       setdefault  Set a profile as the default one.
+      setup       Set up a new profile.
       show        Show details for a profile.
 
 

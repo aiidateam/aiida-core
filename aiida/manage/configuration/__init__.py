@@ -184,6 +184,43 @@ def profile_context(profile: Optional[str] = None, allow_switch=False) -> 'Profi
         manager.load_profile(current_profile, allow_switch=True)
 
 
+def create_profile(
+    config: Config,
+    storage_cls,
+    *,
+    name: str,
+    email: str,
+    first_name: Optional[str] = None,
+    last_name: Optional[str] = None,
+    institution: Optional[str] = None,
+    **kwargs
+) -> Profile:
+    """Create a new profile, initialise its storage and create a default user.
+
+    :param config: The config instance.
+    :param storage_cls: The storage class obtained through loading the entry point from ``aiida.storage`` group.
+    :param name: Name of the profile.
+    :param email: Email for the default user.
+    :param first_name: First name for the default user.
+    :param last_name: Last name for the default user.
+    :param institution: Institution for the default user.
+    :param kwargs: Arguments to initialise instance of the selected storage implementation.
+    """
+    from aiida.orm import User
+
+    storage_config = {key: kwargs[key] for key in storage_cls.get_cli_options().keys() if key in kwargs}
+    profile: Profile = config.create_profile(name=name, storage_cls=storage_cls, storage_config=storage_config)
+
+    with profile_context(profile.name, allow_switch=True):
+        user = User(email=email, first_name=first_name, last_name=last_name, institution=institution).store()
+        profile.default_user_email = user.email
+
+    config.update_profile(profile)
+    config.store()
+
+    return profile
+
+
 def reset_config():
     """Reset the globally loaded config.
 

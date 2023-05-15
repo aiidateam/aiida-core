@@ -3,8 +3,19 @@
 import pytest
 
 import aiida
-from aiida.manage.configuration import get_profile, profile_context
+from aiida.manage.configuration import Profile, create_profile, get_profile, profile_context
 from aiida.manage.manager import get_manager
+from aiida.storage.sqlite_temp.backend import SqliteTempBackend
+
+
+def test_create_profile(isolated_config, tmp_path):
+    """Test :func:`aiida.manage.configuration.tools.create_profile`."""
+    profile_name = 'testing'
+    profile = create_profile(
+        isolated_config, SqliteTempBackend, name=profile_name, email='test@localhost', filepath=str(tmp_path)
+    )
+    assert isinstance(profile, Profile)
+    assert profile_name in isolated_config.profile_names
 
 
 def test_check_version_release(monkeypatch, capsys, isolated_config):

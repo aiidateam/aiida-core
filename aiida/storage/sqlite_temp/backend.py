@@ -12,18 +12,18 @@ from __future__ import annotations
 
 from contextlib import contextmanager, nullcontext
 import functools
-from functools import cached_property
 import hashlib
 import os
 from pathlib import Path
 import shutil
+from tempfile import mkdtemp
 from typing import Any, BinaryIO, Iterator, Sequence
 
 from sqlalchemy import column, insert, update
 from sqlalchemy.orm import Session
 
 from aiida.common.exceptions import ClosedStorage, IntegrityError
-from aiida.manage import Profile
+from aiida.manage.configuration import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import BackendEntity, StorageBackend
 from aiida.repository.backend.sandbox import SandboxRepositoryBackend
@@ -49,7 +49,7 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
         default_user_email='user@email.com',
         options: dict | None = None,
         debug: bool = False,
-        repo_path: str | Path | None = None,
+        filepath: str | Path | None = None,
     ) -> Profile:
         """Create a new profile instance for this backend, from the path to the zip file."""
         return Profile(
@@ -58,8 +58,8 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
                 'storage': {
                     'backend': 'core.sqlite_temp',
                     'config': {
+                        'filepath': filepath,
                         'debug': debug,
-                        'repo_path': repo_path,
                     }
                 },
                 'process_control': {
@@ -69,6 +69,23 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
                 'options': options or {},
             }
         )
+
+    @classmethod
+    def create_config(cls, filepath: str | None = None):
+        """Create a configuration dictionary based on the CLI options that can be used to initialize an instance."""
+        return {'filepath': filepath or mkdtemp()}
+
+    @classmethod
+    def _get_cli_options(cls) -> dict:
+        """Return the CLI options that would allow to create an instance of this class."""
+        return {
+            'filepath': {
+                'required': False,
+                'type': str,
+                'prompt': 'Temporary directory',
+                'help': 'Temporary directory in which to store data for this backend.',
+            }
+        }
 
     @classmethod
     def version_head(cls) -> str:
@@ -89,7 +106,7 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
     def __init__(self, profile: Profile):
         super().__init__(profile)
         self._session: Session | None = None
-        self._repo: SandboxShaRepositoryBackend | None = None
+        self._repo: SandboxShaRepositoryBackend = SandboxShaRepositoryBackend(profile.storage_config['filepath'])
         self._globals: dict[str, tuple[Any, str | None]] = {}
         self._closed = False
         self.get_session()  # load the database on initialization
@@ -135,10 +152,6 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
     def get_repository(self) -> SandboxShaRepositoryBackend:
         if self._closed:
             raise ClosedStorage(str(self))
-        if self._repo is None:
-            # to-do this does not seem to be removing the folder on garbage collection?
-            repo_path = self.profile.storage_config.get('repo_path')
-            self._repo = SandboxShaRepositoryBackend(filepath=Path(repo_path) if repo_path else None)
         return self._repo
 
     @property
@@ -175,31 +188,31 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
         """Return the backend entity that corresponds to the given Model instance."""
         return orm.get_backend_entity(model, self)
 
-    @cached_property
+    @functools.cached_property
     def authinfos(self):
         return orm.SqliteAuthInfoCollection(self)
 
-    @cached_property
+    @functools.cached_property
     def comments(self):
         return orm.SqliteCommentCollection(self)
 
-    @cached_property
+    @functools.cached_property
     def computers(self):
         return orm.SqliteComputerCollection(self)
 
-    @cached_property
+    @functools.cached_property
     def groups(self):
         return orm.SqliteGroupCollection(self)
 
-    @cached_property
+    @functools.cached_property
     def logs(self):
         return orm.SqliteLogCollection(self)
 
-    @cached_property
+    @functools.cached_property
     def nodes(self):
         return orm.SqliteNodeCollection(self)
 
-    @cached_property
+    @functools.cached_property
     def users(self):
         return orm.SqliteUserCollection(self)
 

@@ -8,7 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Generic backend related objects"""
+from __future__ import annotations
+
 import abc
+import collections
 from typing import TYPE_CHECKING, Any, ContextManager, List, Optional, Sequence, TypeVar, Union
 
 if TYPE_CHECKING:
@@ -88,6 +91,16 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
         :raises: :class`~aiida.common.exceptions.UnreachableStorage` if the storage cannot be accessed.
         :raises: :class:`~aiida.common.exceptions.StorageMigrationError` if the storage is not initialised.
         """
+
+    @classmethod
+    def get_cli_options(cls) -> collections.OrderedDict:
+        """Return the CLI options that would allow to create an instance of this class."""
+        return collections.OrderedDict(cls._get_cli_options())
+
+    @classmethod
+    @abc.abstractmethod
+    def _get_cli_options(cls) -> dict[str, Any]:
+        """Return the CLI options that would allow to create an instance of this class."""
 
     @abc.abstractmethod
     def __init__(self, profile: 'Profile') -> None:

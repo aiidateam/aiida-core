@@ -41,6 +41,7 @@ import plumpy.futures
 import plumpy.persistence
 from plumpy.process_states import Finished, ProcessState
 import plumpy.processes
+from plumpy.utils import AttributesFrozendict
 
 from aiida import orm
 from aiida.common import exceptions
@@ -232,6 +233,15 @@ class Process(plumpy.processes.Process):
         :return: the UUID associated to this process instance
         """
         return self.node.uuid
+
+    @property
+    def inputs(self) -> AttributesFrozendict:
+        """Return the inputs attribute dictionary or an empty one.
+
+        This overrides the property of the base class because that can also return ``None``. This override ensures
+        calling functions that they will always get an instance of ``AttributesFrozenDict``.
+        """
+        return super().inputs or AttributesFrozendict()
 
     @property
     def metadata(self) -> AttributeDict:
@@ -953,7 +963,7 @@ class Process(plumpy.processes.Process):
             else:
                 inputs = self.inputs
                 for part in sub_namespace.split('.'):
-                    inputs = inputs[part]  # type: ignore[index]
+                    inputs = inputs[part]
                 try:
                     port_namespace = self.spec().inputs.get_port(sub_namespace)  # type: ignore[assignment]
                 except KeyError:

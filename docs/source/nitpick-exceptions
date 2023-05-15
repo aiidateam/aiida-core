@@ -135,6 +135,7 @@ py:class paramiko.proxy.ProxyCommand
 # These can be removed once they are properly included in the `__all__` in `plumpy`
 py:class plumpy.ports.PortNamespace
 py:class plumpy.utils.AttributesDict
+py:class plumpy.utils.AttributesFrozendict
 py:class plumpy.process_states.State
 py:class plumpy.workchains._If
 py:class plumpy.workchains._While

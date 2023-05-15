@@ -14,8 +14,10 @@
 # yapf: disable
 # pylint: disable=wildcard-import
 
+from .sqlite_dos import *
 
 __all__ = (
+    'SqliteDosStorage',
 )
 
 # yapf: enable

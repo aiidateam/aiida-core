@@ -131,3 +131,12 @@ def test_delete(run_cli_command, mock_profiles, pg_test_cluster):
     result = run_cli_command(cmd_profile.profile_list, use_subprocess=False)
     assert profile_list[2] not in result.output
     assert profile_list[3] not in result.output
+
+
+def test_setup(run_cli_command, isolated_config, tmp_path):
+    """Test the ``verdi profile setup`` command."""
+    profile_name = 'temp-profile'
+    options = ['core.sqlite_temp', '-n', '--filepath', str(tmp_path), '--profile', profile_name]
+    result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+    assert f'Created new profile `{profile_name}`.' in result.output
+    assert profile_name in isolated_config.profile_names

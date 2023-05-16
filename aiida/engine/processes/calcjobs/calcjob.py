@@ -325,7 +325,7 @@ class CalcJob(Process):
         spec.input(
             'metadata.options.withmpi',
             valid_type=bool,
-            default=False,
+            required=False,
             help='Set the calculation to use mpi',
         )
         spec.input(
@@ -946,8 +946,8 @@ class CalcJob(Process):
             if with_mpi_values_set:
                 with_mpi = with_mpi_values_set.pop()
             else:
-                # Fall back to the default of the ``metadata.options.withmpi`` of the ``Calcjob`` class
-                with_mpi = self.node.get_option('withmpi')
+                # Fall back to the default, which is to not use MPI
+                with_mpi = False
 
             if with_mpi:
                 prepend_cmdline_params = code.get_prepend_cmdline_params(mpi_args, extra_mpirun_params)

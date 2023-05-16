@@ -172,7 +172,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
 
         :return: an object that can be used to access entities of this type
         """
-        warn_deprecation('`objects` property is deprecated, use `collection` instead.', version=3, stacklevel=2)
+        warn_deprecation('`objects` property is deprecated, use `collection` instead.', version=3, stacklevel=4)
         return cls.collection
 
     @classproperty

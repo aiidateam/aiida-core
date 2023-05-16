@@ -102,7 +102,7 @@ class Code(AbstractCode):
         """
         Hide the code (prevents from showing it in the verdi code list)
         """
-        warn_deprecation('This property is deprecated, use the `Code.is_hidden` property instead.', version=3)
+        warn_deprecation('`Code.hide` property is deprecated, use the `Code.is_hidden` property instead.', version=3)
         self.is_hidden = True
 
     def reveal(self):
@@ -110,7 +110,7 @@ class Code(AbstractCode):
         Reveal the code (allows to show it in the verdi code list)
         By default, it is revealed
         """
-        warn_deprecation('This property is deprecated, use the `Code.is_hidden` property instead.', version=3)
+        warn_deprecation('`Code.reveal` property is deprecated, use the `Code.is_hidden` property instead.', version=3)
         self.is_hidden = False
 
     @property
@@ -118,7 +118,7 @@ class Code(AbstractCode):
         """
         Determines whether the Code is hidden or not
         """
-        warn_deprecation('This property is deprecated, use the `Code.is_hidden` property instead.', version=3)
+        warn_deprecation('`Code.hidden` property is deprecated, use the `Code.is_hidden` property instead.', version=3)
         return self.is_hidden
 
     def set_files(self, files):
@@ -148,7 +148,8 @@ class Code(AbstractCode):
     def get_computer_label(self):
         """Get label of this code's computer."""
         warn_deprecation(
-            'This method is deprecated, use the `InstalledCode.computer.label` property instead.', version=3
+            '`Code.get_computer_label` method is deprecated, use the `InstalledCode.computer.label` property instead.',
+            version=3
         )
         return 'repository' if self.computer is None else self.computer.label
 
@@ -165,7 +166,7 @@ class Code(AbstractCode):
 
         :param new_label: new code label
         """
-        warn_deprecation('This method is deprecated, use the `label` property instead.', version=3)
+        warn_deprecation('`Code.relabel` method is deprecated, use the `label` property instead.', version=3)
         if self.computer is not None:
             suffix = f'@{self.computer.label}'
             if new_label.endswith(suffix):
@@ -178,7 +179,9 @@ class Code(AbstractCode):
 
         :return: string description of this Code instance
         """
-        warn_deprecation('This method is deprecated, use the `description` property instead.', version=3)
+        warn_deprecation(
+            '`Code.get_description` method is deprecated, use the `description` property instead.', version=3
+        )
         return f'{self.description}'
 
     @classmethod
@@ -194,7 +197,9 @@ class Code(AbstractCode):
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
         from aiida.orm.querybuilder import QueryBuilder
 
-        warn_deprecation('This method is deprecated, use `aiida.orm.load_code` instead.', version=3)
+        warn_deprecation(
+            '`Code.get_code_helper` classmethod is deprecated, use `aiida.orm.load_code` instead.', version=3
+        )
 
         query = QueryBuilder(backend=backend)
         query.append(cls, filters={'label': label}, project='*', tag='code')
@@ -233,7 +238,7 @@ class Code(AbstractCode):
         # pylint: disable=arguments-differ
         from aiida.orm.utils import load_code
 
-        warn_deprecation('This method is deprecated, use `aiida.orm.load_code` instead.', version=3)
+        warn_deprecation('`Code.get` classmethod is deprecated, use `aiida.orm.load_code` instead.', version=3)
 
         # first check if code pk is provided
         if pk:
@@ -274,7 +279,9 @@ class Code(AbstractCode):
         """
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
 
-        warn_deprecation('This method is deprecated, use `aiida.orm.load_code` instead.', version=3)
+        warn_deprecation(
+            '`Code.get_from_string` classmethod is deprecated, use `aiida.orm.load_code` instead.', version=3
+        )
 
         try:
             label, _, machinename = code_string.partition('@')
@@ -301,7 +308,7 @@ class Code(AbstractCode):
         """
         from aiida.orm.querybuilder import QueryBuilder
 
-        warn_deprecation('This method has been deprecated, there is no replacement.', version=3)
+        warn_deprecation('`Code.list_for_plugin` classmethod has been deprecated, there is no replacement.', version=3)
 
         query = QueryBuilder(backend=backend)
         query.append(cls, filters={'attributes.input_plugin': {'==': plugin}})
@@ -347,7 +354,8 @@ class Code(AbstractCode):
             does not exist on the remote computer.
         """
         warn_deprecation(
-            'This method is deprecated, use the `InstalledCode.validate_filepath_executable` property instead.',
+            '`Code.validate_remote_exec_path` method is deprecated, use the '
+            '`InstalledCode.validate_filepath_executable` property instead.',
             version=3
         )
         filepath = self.get_remote_exec_path()
@@ -374,7 +382,9 @@ class Code(AbstractCode):
         Pass a string of code that will be put in the scheduler script before the
         execution of the code.
         """
-        warn_deprecation('This method is deprecated, use the `prepend_text` property instead.', version=3)
+        warn_deprecation(
+            '`Code.set_prepend_text` method is deprecated, use the `prepend_text` property instead.', version=3
+        )
         self.prepend_text = code
 
     def get_prepend_text(self):
@@ -382,7 +392,9 @@ class Code(AbstractCode):
         Return the code that will be put in the scheduler script before the
         execution, or an empty string if no pre-exec code was defined.
         """
-        warn_deprecation('This method is deprecated, use the `prepend_text` property instead.', version=3)
+        warn_deprecation(
+            '`Code.get_prepend_text` method is deprecated, use the `prepend_text` property instead.', version=3
+        )
         return self.prepend_text
 
     def set_input_plugin_name(self, input_plugin):
@@ -390,7 +402,10 @@ class Code(AbstractCode):
         Set the name of the default input plugin, to be used for the automatic
         generation of a new calculation.
         """
-        warn_deprecation('This method is deprecated, use the `default_calc_job_plugin` property instead.', version=3)
+        warn_deprecation(
+            '`Code.set_input_plugin_name` method is deprecated, use the `default_calc_job_plugin` property instead.',
+            version=3
+        )
         self.default_calc_job_plugin = input_plugin
 
     def get_input_plugin_name(self):
@@ -398,7 +413,10 @@ class Code(AbstractCode):
         Return the name of the default input plugin (or None if no input plugin
         was set.
         """
-        warn_deprecation('This method is deprecated, use the `default_calc_job_plugin` property instead.', version=3)
+        warn_deprecation(
+            '`Code.get_input_plugin_name` method is deprecated, use the `default_calc_job_plugin` property instead.',
+            version=3
+        )
         return self.default_calc_job_plugin
 
     def set_use_double_quotes(self, use_double_quotes: bool):
@@ -406,7 +424,10 @@ class Code(AbstractCode):
 
         :param use_double_quotes: True if to escape with double quotes, False otherwise.
         """
-        warn_deprecation('This method is deprecated, use the `use_double_quotes` property instead.', version=3)
+        warn_deprecation(
+            '`Code.set_use_double_quotes` method is deprecated, use the `use_double_quotes` property instead.',
+            version=3
+        )
         self.use_double_quotes = use_double_quotes
 
     def get_use_double_quotes(self) -> bool:
@@ -414,7 +435,10 @@ class Code(AbstractCode):
 
         :returns: True if to escape with double quotes, False otherwise which is also the default.
         """
-        warn_deprecation('This method is deprecated, use the `use_double_quotes` property instead.', version=3)
+        warn_deprecation(
+            '`Code.get_use_double_quotes` method is deprecated, use the `use_double_quotes` property instead.',
+            version=3
+        )
         return self.use_double_quotes
 
     def set_append_text(self, code):
@@ -422,14 +446,18 @@ class Code(AbstractCode):
         Pass a string of code that will be put in the scheduler script after the
         execution of the code.
         """
-        warn_deprecation('This method is deprecated, use the `append_text` property instead.', version=3)
+        warn_deprecation(
+            '`Code.set_append_text` method is deprecated, use the `append_text` property instead.', version=3
+        )
         self.append_text = code
 
     def get_append_text(self):
         """
         Return the postexec_code, or an empty string if no post-exec code was defined.
         """
-        warn_deprecation('This method is deprecated, use the `append_text` property instead.', version=3)
+        warn_deprecation(
+            '`Code.get_append_text` method is deprecated, use the `append_text` property instead.', version=3
+        )
         return self.append_text
 
     def set_local_executable(self, exec_name):
@@ -437,13 +465,17 @@ class Code(AbstractCode):
         Set the filename of the local executable.
         Implicitly set the code as local.
         """
-        warn_deprecation('This method is deprecated, use `PortableCode`.', version=3)
+        warn_deprecation('`Code.set_local_executable` method is deprecated, use `PortableCode`.', version=3)
 
         self._set_local()
         self.filepath_executable = exec_name
 
     def get_local_executable(self):
-        warn_deprecation('This method is deprecated, use `PortableCode.filepath_executable` instead.', version=3)
+        """Return the local executable."""
+        warn_deprecation(
+            '`Code.get_local_executable` method is deprecated, use `PortableCode.filepath_executable` instead.',
+            version=3
+        )
         return self.filepath_executable
 
     def set_remote_computer_exec(self, remote_computer_exec):
@@ -457,7 +489,7 @@ class Code(AbstractCode):
         from aiida import orm
         from aiida.common.lang import type_check
 
-        warn_deprecation('This method is deprecated, use `InstalledCode`.', version=3)
+        warn_deprecation('`Code.set_remote_computer_exec` method is deprecated, use `InstalledCode`.', version=3)
 
         if (not isinstance(remote_computer_exec, (list, tuple)) or len(remote_computer_exec) != 2):
             raise ValueError(
@@ -476,14 +508,20 @@ class Code(AbstractCode):
         self.base.attributes.set('remote_exec_path', remote_exec_path)
 
     def get_remote_exec_path(self):
-        warn_deprecation('This method is deprecated, use `InstalledCode.filepath_executable` instead.', version=3)
+        """Return the ``remote_exec_path`` attribute."""
+        warn_deprecation(
+            '`Code.get_remote_exec_path` method is deprecated, use `InstalledCode.filepath_executable` instead.',
+            version=3
+        )
         if self.is_local():
             raise ValueError('The code is local')
         return self.base.attributes.get('remote_exec_path', '')
 
     def get_remote_computer(self):
         """Return the remote computer associated with this code."""
-        warn_deprecation('This method is deprecated, use the `computer` attribute instead.', version=3)
+        warn_deprecation(
+            '`Code.get_remote_computer` method is deprecated, use the `computer` attribute instead.', version=3
+        )
         if self.is_local():
             raise ValueError('The code is local')
 
@@ -523,7 +561,9 @@ class Code(AbstractCode):
         Return True if the code is 'local', False if it is 'remote' (see also documentation
         of the set_local and set_remote functions).
         """
-        warn_deprecation('This method is deprecated, use a `PortableCode` instance and check the type.', version=3)
+        warn_deprecation(
+            '`Code.is_local` method is deprecated, use a `PortableCode` instance and check the type.', version=3
+        )
         return self.base.attributes.get('is_local', None)
 
     def can_run_on(self, computer):
@@ -538,7 +578,7 @@ class Code(AbstractCode):
         from aiida import orm
         from aiida.common.lang import type_check
 
-        warn_deprecation('This method is deprecated, use `can_run_on_computer` instead.', version=3)
+        warn_deprecation('`Code.can_run_on` method is deprecated, use `can_run_on_computer` instead.', version=3)
 
         if self.is_local():
             return True
@@ -552,5 +592,5 @@ class Code(AbstractCode):
         For local codes, it is ./LOCAL_EXECUTABLE_NAME
         For remote codes, it is the absolute path to the executable.
         """
-        warn_deprecation('This method is deprecated, use `get_executable` instead.', version=3)
+        warn_deprecation('`Code.get_execname` method is deprecated, use `get_executable` instead.', version=3)
         return str(self.get_executable())

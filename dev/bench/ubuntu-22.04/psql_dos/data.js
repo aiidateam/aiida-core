@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1684183094105,
+  "lastUpdate": 1684244885373,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -4028,6 +4028,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.0024153",
             "group": "node",
             "extra": "mean: 23.517 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "2.60",
+          "cores": 2,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.10.11",
+          "metadata": "postgres:12.14, rabbitmq:3.8.14-management"
+        },
+        "commit": {
+          "id": "6a88cb3158c0b84b601a289f50f51cfe6ae42687",
+          "message": "`CalcJob`: Remove default of `withmpi` input and make it optional (#6020)\n\nThe `metadata.options.withmpi` specified `False` as the default. This\r\ncan pose a problem for `CalcJob` implementations that can run with and\r\nwithout MPI.\r\n\r\nSince the recent changes in the handling of MPI for `CalcJob` runs, see\r\ncdb3eed92b052dea5ca697adffaf3025cbc0ab03, there are now three ways that\r\nit is controlled:\r\n\r\n * `metadata.options.withmpi` input\r\n * `CodeInfo.withmpi` returned by the `CalcJob` implementation\r\n * `AbstractCode.with_mpi` attribute\r\n\r\nThe engine will check each of these, and when any of them are explicitly\r\nset to conflicting values, an error is raised. The problem is that the\r\n`CalcJob` base class, set a default for the `metadata.options.withmpi`\r\ninput, and set it to `False`.\r\n\r\nThis forces all `CalcJob` plugins to manually unset it if they can in\r\nprinciple run with or without MPI, as it would except if a `Code` would\r\nbe passed in the inputs that set `with_mpi` to `True`. The code to do it\r\nis non-trivial though:\r\n\r\n    options['withmpi'].default = None\r\n    options['withmpi'].required = False\r\n    options['withmpi'].valid_type = (bool, type(None))\r\n\r\nThis is not user-friendly for users wanting to implement `CalcJob`\r\nplugins and it is better to remove the default on the base class.\r\n\r\nThis change should be fully-backwards compatible since the logic in\r\n`CalcJob.presubmit` will check the case where none of the three methods\r\nexplicitly set a value. In this case, the logic used to fall back on the\r\nvalue of the option set on the node. This branch would actually never be\r\nhit, because in this case, the default of `metadata.options.withmpi`\r\nwould always be set to `False`. This fallback keeps `False` as default,\r\nbut hardcodes it instead of taking it from the option input.",
+          "timestamp": "2023-05-16T15:38:41+02:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/6a88cb3158c0b84b601a289f50f51cfe6ae42687",
+          "distinct": true,
+          "tree_id": "c5ba0efa67ec2dc27bfec28051483e9cacab526b"
+        },
+        "date": 1684244879097,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 3.387988728893277,
+            "unit": "iter/sec",
+            "range": "stddev: 0.055355",
+            "group": "import-export",
+            "extra": "mean: 295.16 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 3.3539750410526556,
+            "unit": "iter/sec",
+            "range": "stddev: 0.060011",
+            "group": "import-export",
+            "extra": "mean: 298.15 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 4.412378170823918,
+            "unit": "iter/sec",
+            "range": "stddev: 0.062181",
+            "group": "import-export",
+            "extra": "mean: 226.64 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 4.314477632235739,
+            "unit": "iter/sec",
+            "range": "stddev: 0.060532",
+            "group": "import-export",
+            "extra": "mean: 231.78 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 3.5676103593760695,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0061497",
+            "group": "engine",
+            "extra": "mean: 280.30 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.7856233806156364,
+            "unit": "iter/sec",
+            "range": "stddev: 0.033279",
+            "group": "engine",
+            "extra": "mean: 1.2729 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.8969586767701287,
+            "unit": "iter/sec",
+            "range": "stddev: 0.070926",
+            "group": "engine",
+            "extra": "mean: 1.1149 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.1994433236912906,
+            "unit": "iter/sec",
+            "range": "stddev: 0.12493",
+            "group": "engine",
+            "extra": "mean: 5.0140 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.22307454438054805,
+            "unit": "iter/sec",
+            "range": "stddev: 0.12116",
+            "group": "engine",
+            "extra": "mean: 4.4828 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.8929217060919634,
+            "unit": "iter/sec",
+            "range": "stddev: 0.019568",
+            "group": "engine",
+            "extra": "mean: 345.67 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.6286237638813598,
+            "unit": "iter/sec",
+            "range": "stddev: 0.040465",
+            "group": "engine",
+            "extra": "mean: 1.5908 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.7093214340921488,
+            "unit": "iter/sec",
+            "range": "stddev: 0.056505",
+            "group": "engine",
+            "extra": "mean: 1.4098 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.1741590688628506,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11064",
+            "group": "engine",
+            "extra": "mean: 5.7419 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.19773671450349403,
+            "unit": "iter/sec",
+            "range": "stddev: 0.12621",
+            "group": "engine",
+            "extra": "mean: 5.0572 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 365.0036050760932,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00036176",
+            "group": "node",
+            "extra": "mean: 2.7397 msec\nrounds: 247"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 146.70742568449134,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00027050",
+            "group": "node",
+            "extra": "mean: 6.8163 msec\nrounds: 126"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 86.4353712430177,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00058294",
+            "group": "node",
+            "extra": "mean: 11.569 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 247.71504668333412,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00020065",
+            "group": "node",
+            "extra": "mean: 4.0369 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 60.06620932470433,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0014262",
+            "group": "node",
+            "extra": "mean: 16.648 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 51.4958354772114,
+            "unit": "iter/sec",
+            "range": "stddev: 0.022201",
+            "group": "node",
+            "extra": "mean: 19.419 msec\nrounds: 100"
           }
         ]
       }

@@ -32,7 +32,7 @@ class SinglefileData(Data):
         """Construct a new instance and set ``content`` as its contents.
 
         :param content: The content as a string.
-        :param filename: Specify filename to use (defaults to name of provided file).
+        :param filename: Specify filename to use (defaults to ``file.txt``).
         """
         return cls(io.StringIO(content), filename, **kwargs)
 

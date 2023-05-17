@@ -151,7 +151,7 @@ class JobsList:
             self._job_update_requests = {}
 
     @contextlib.contextmanager
-    def request_job_info_update(self, job_id: Hashable) -> Iterator['asyncio.Future[JobInfo]']:
+    def request_job_info_update(self, authinfo: AuthInfo, job_id: Hashable) -> Iterator['asyncio.Future[JobInfo]']:
         """Request job info about a job when the job next changes state.
 
         If the job is not found in the jobs list at the update, the future will resolve to `None`.
@@ -159,6 +159,7 @@ class JobsList:
         :param job_id: job identifier
         :return: future that will resolve to a `JobInfo` object when the job changes state
         """
+        self._authinfo = authinfo
         # Get or create the future
         request = self._job_update_requests.setdefault(job_id, asyncio.Future())
         assert not request.done(), 'Expected pending job info future, found in done state.'
@@ -283,7 +284,7 @@ class JobManager:
         This is a context manager so that if the user leaves the context the request is automatically cancelled.
 
         """
-        with self.get_jobs_list(authinfo).request_job_info_update(job_id) as request:
+        with self.get_jobs_list(authinfo).request_job_info_update(authinfo, job_id) as request:
             try:
                 yield request
             finally:

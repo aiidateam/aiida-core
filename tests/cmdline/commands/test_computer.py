@@ -796,5 +796,5 @@ def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeyp
     monkeypatch.setattr(cmd_computer, 'time_use_login_shell', time_use_login_shell)
 
     result = run_cli_command(computer_test, [aiida_localhost.label], use_subprocess=False)
-    assert 'Warning: 1 out of 6 tests failed' in result.output
+    assert 'Success: all 6 tests succeeded' in result.output
     assert 'computer is configured to use a login shell, which is slower compared to a normal shell' in result.output

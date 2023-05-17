@@ -57,3 +57,21 @@ It contains the interface with all the methods that need to be implemented, incl
 
     To inform AiiDA about your new transport plugin you must register an entry point in the ``aiida.transports`` entry point group.
     Please visit the `AiiDA registry <https://aiidateam.github.io/aiida-registry/>`_ to see an example of how this can be done.
+
+
+.. _topics:transport:login-shells:
+
+Login shells
+------------
+
+The base transport class :class:`aiida.transports.transport.Transport` defines the ``use_login_shell`` option.
+When set to ``True``, all commands executed over the transport will use the ``-l/--login`` option of ``bash``.
+This instructs bash to load a login shell, which, according to the ``bash`` manpage, means:
+
+    When bash is invoked as an interactive login shell, or as a non-interactive shell with the ``--login`` option, it first reads and executes commands from the file ``/etc/profile``, if that file exists.
+    After reading that file, it looks for ``~/.bash_profile``, ``~/.bash_login``, and ``~/.profile``, in that order, and reads and executes commands from the first one that exists and is readable.
+
+By default ``use_login_shell`` is set to ``True`` as it ensures that the commands executed over the transport by AiiDA see the same shell environment as the user, if they were to login manually and execute the command.
+However, in certain cases, the login scripts might not be necessary for AiiDA to properly run codes on the target computer.
+At the same time, it is possible that the login scripts have a non-negligible run time, and so can significantly slow down all the commands AiiDA has to execute.
+In this case, it may be useful to set the ``use_login_shell`` to ``False``.

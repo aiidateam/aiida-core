@@ -184,3 +184,17 @@ def test_binary_file(check_singlefile_content_with_store):
         filename=basename,
         open_mode='rb',
     )
+
+
+def test_from_string():
+    """Test the :meth:`aiida.orm.nodes.data.singlefile.SinglefileData.from_string` classmethod."""
+    content = 'some\ncontent'
+    node = SinglefileData.from_string(content).store()
+    assert node.get_content() == content
+    assert node.filename == SinglefileData.DEFAULT_FILENAME
+
+    content = 'some\ncontent'
+    filename = 'custom_filename.dat'
+    node = SinglefileData.from_string(content, filename).store()
+    assert node.get_content() == content
+    assert node.filename == filename

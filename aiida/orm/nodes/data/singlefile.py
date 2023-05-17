@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import contextlib
+import io
 import os
 import pathlib
 
@@ -25,6 +26,15 @@ class SinglefileData(Data):
     """Data class that can be used to store a single file in its repository."""
 
     DEFAULT_FILENAME = 'file.txt'
+
+    @classmethod
+    def from_string(cls, content: str, filename: str | pathlib.Path | None = None, **kwargs):
+        """Construct a new instance and set ``content`` as its contents.
+
+        :param content: The content as a string.
+        :param filename: Specify filename to use (defaults to ``file.txt``).
+        """
+        return cls(io.StringIO(content), filename, **kwargs)
 
     def __init__(self, file, filename: str | pathlib.Path | None = None, **kwargs):
         """Construct a new instance and set the contents to that of the file.

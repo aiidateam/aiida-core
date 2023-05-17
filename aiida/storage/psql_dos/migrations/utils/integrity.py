@@ -226,9 +226,9 @@ def drop_hashes(conn, hash_extra_key: str, entry_point_string: str | None = None
 
     if node_count > 0:
         if entry_point_string:
-            msg = f'Invalidating the hashes of certain nodes. Please run `verdi rehash -p {entry_point_string}`.'
+            msg = f'Invalidating the hashes of certain nodes. Please run `verdi node rehash -e {entry_point_string}`.'
         else:
-            msg = 'Invalidating the hashes of all nodes. Please run `verdi rehash`.'
+            msg = 'Invalidating the hashes of all nodes. Please run `verdi node rehash`.'
         LOGGER.warning(msg)
 
     conn.execute(statement_update)

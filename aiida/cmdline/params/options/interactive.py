@@ -115,7 +115,10 @@ class InteractiveOption(ConditionalOption):
             return self.prompt_for_value(ctx)
 
         if value == self.CHARACTER_IGNORE_DEFAULT and source is click.core.ParameterSource.PROMPT:
-            return None
+            # This means the user does not want to set a specific value for this option, so the ``!`` character is
+            # translated to ``None`` and processed as normal. If the option is required, a validation error will be
+            # raised further down below, forcing the user to specify a valid value.
+            value = None
 
         try:
             return super().process_value(ctx, value)

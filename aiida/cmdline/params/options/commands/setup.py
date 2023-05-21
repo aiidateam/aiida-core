@@ -177,7 +177,6 @@ SETUP_PROFILE = options.OverridableOption(
 SETUP_USER_EMAIL = options.USER_EMAIL.clone(
     prompt='Email Address (for sharing data)',
     default=get_config_option('autofill.user.email'),
-    required_fn=lambda x: get_config_option('autofill.user.email') is None,
     required=True,
     cls=options.interactive.InteractiveOption
 )
@@ -185,7 +184,6 @@ SETUP_USER_EMAIL = options.USER_EMAIL.clone(
 SETUP_USER_FIRST_NAME = options.USER_FIRST_NAME.clone(
     prompt='First name',
     default=get_config_option('autofill.user.first_name'),
-    required_fn=lambda x: get_config_option('autofill.user.first_name') is None,
     required=True,
     cls=options.interactive.InteractiveOption
 )
@@ -193,7 +191,6 @@ SETUP_USER_FIRST_NAME = options.USER_FIRST_NAME.clone(
 SETUP_USER_LAST_NAME = options.USER_LAST_NAME.clone(
     prompt='Last name',
     default=get_config_option('autofill.user.last_name'),
-    required_fn=lambda x: get_config_option('autofill.user.last_name') is None,
     required=True,
     cls=options.interactive.InteractiveOption
 )
@@ -201,7 +198,6 @@ SETUP_USER_LAST_NAME = options.USER_LAST_NAME.clone(
 SETUP_USER_INSTITUTION = options.USER_INSTITUTION.clone(
     prompt='Institution',
     default=get_config_option('autofill.user.institution'),
-    required_fn=lambda x: get_config_option('autofill.user.institution') is None,
     required=True,
     cls=options.interactive.InteractiveOption
 )

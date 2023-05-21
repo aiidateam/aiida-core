@@ -200,7 +200,7 @@ Usage::
 AiiDA expects each entry point to be either a ``click.Command`` or ``click.Group``. At present extra commands can be injected at the following levels:
 
 * As a :ref:`direct subcommand of verdi data<spec-verdi-data>`
-* As a :ref:`subcommand of verdi data structure import<spec-verdi-data-structure-import>`
+* As a :ref:`subcommand of verdi data core.structure import<spec-verdi-data-structure-import>`
 
 
 .. _spec-verdi-data:
@@ -232,7 +232,7 @@ Usage:
 
 .. _spec-verdi-data-structure-import:
 
-Spec for ``verdi data structure import``::
+Spec for ``verdi data core.structure import``::
 
    entry_points={
       "aiida.cmdline.data.structure.import": [
@@ -255,7 +255,7 @@ Usage:
 
 .. code-block:: bash
 
-   verdi data structure import myformat a_file.myfmt
+   verdi data core.structure import myformat a_file.myfmt
 
 
 ``aiida.tools.dbexporters``

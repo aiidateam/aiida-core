@@ -220,12 +220,13 @@ def _computer_use_login_shell_performance(transport, scheduler, authinfo, comput
 
     if not isclose(timing_true, timing_false, rel_tol=rel_tol, abs_tol=abs_tol):
         return True, (
-            '\nWarning: the computer is configured to use a login shell, which is slower compared to a normal shell.\n'
+            f"\n\n{click.style('Warning:', fg='yellow', bold=True)} "
+            'The computer is configured to use a login shell, which is slower compared to a normal shell.\n'
             f'Command execution time of {timing_true:.3f} versus {timing_false:.3f} seconds, respectively).\n'
             'Unless this setting is really necessary, consider disabling it with:\n'
             f'\n    verdi computer configure {computer.transport_type} {computer.label} -n --no-use-login-shell\n\n'
-            'For details, please refer to the documentation '
-            ' https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/transport.html#login-shells\n'
+            'For details, please refer to the documentation: '
+            'https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/transport.html#login-shells\n'
         )
 
     return True, None

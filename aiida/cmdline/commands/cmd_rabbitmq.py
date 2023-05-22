@@ -372,11 +372,12 @@ def cmd_tasks_revive(processes, force):
         1. Does ``verdi status`` indicate that both daemon and RabbitMQ are running properly?
            If not, restart the daemon with ``verdi daemon restart --reset`` and restart RabbitMQ.
         2. Try ``verdi process play <PID>``.
-           If you receive a message that the process is no longer reachable, use ``verdi devel revive <PID>``.
+           If you receive a message that the process is no longer reachable,
+           use ``verdi devel rabbitmq tasks revive <PID>``.
 
     Details: When RabbitMQ loses the process task before the process has completed, the process is never picked up by
-    the daemon and will remain "stuck". ``verdi devel revive`` recreates the task, which can lead to multiple instances
-    of the task being executed and should thus be used with caution.
+    the daemon and will remain "stuck". ``verdi devel rabbitmq tasks revive`` recreates the task, which can lead to
+    multiple instances of the task being executed and should thus be used with caution.
     """
     from aiida.engine.processes.control import revive_processes
 

@@ -215,7 +215,7 @@ def serialize(data: Any, encoding: str | None = None) -> str | bytes:
     if encoding is not None:
         serialized = yaml.dump(data, encoding=encoding, Dumper=AiiDADumper)
     else:
-        serialized = yaml.dump(data, Dumper=AiiDADumper)  # type: ignore[assignment]
+        serialized = yaml.dump(data, Dumper=AiiDADumper)
 
     return serialized
 

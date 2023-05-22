@@ -210,6 +210,8 @@ def serialize(data: Any, encoding: str | None = None) -> str | bytes:
     :param encoding: optional encoding for the serialized string
     :return: string representation of the serialized data structure or byte array if specific encoding is specified
     """
+    serialized: bytes | str
+
     if encoding is not None:
         serialized = yaml.dump(data, encoding=encoding, Dumper=AiiDADumper)
     else:

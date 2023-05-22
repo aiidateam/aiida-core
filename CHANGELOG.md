@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.3.1 - 2023-05-22
+
+### Fixes
+- `DaemonClient`: Clean stale PID file in `stop_daemon` [[#6007]](https://github.com/aiidateam/aiida-core/pull/6007)
+
+
 ## v2.3.0 - 2023-04-17
 
 This release comes with a number of improvements, some of the more useful and important of which are quickly highlighted.

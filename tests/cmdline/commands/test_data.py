@@ -178,14 +178,14 @@ class TestVerdiData:
 
     def test_reachable(self):
         """Testing reachability of the following commands:
-        verdi data array
-        verdi data bands
-        verdi data cif
-        verdi data dict
-        verdi data remote
-        verdi data structure
-        verdi data trajectory
-        verdi data upf"""
+        verdi data core.array
+        verdi data core.bands
+        verdi data core.cif
+        verdi data core.dict
+        verdi data core.upf
+        verdi data core.structure
+        verdi data core.trajectory
+        verdi data core.upf"""
         subcommands = [
             'core.array', 'core.bands', 'core.cif', 'core.dict', 'core.remote', 'core.structure', 'core.trajectory',
             'core.upf'
@@ -196,7 +196,7 @@ class TestVerdiData:
 
 
 class TestVerdiDataArray:
-    """Testing verdi data array."""
+    """Testing verdi data core.array."""
 
     @pytest.fixture(autouse=True)
     def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
@@ -209,7 +209,7 @@ class TestVerdiDataArray:
 
     def test_arrayshowhelp(self):
         output = sp.check_output(['verdi', 'data', 'core.array', 'show', '--help'])
-        assert b'Usage:' in output, 'Sub-command verdi data array show --help failed.'
+        assert b'Usage:' in output, 'Sub-command verdi data core.array show --help failed.'
 
     def test_arrayshow(self):
         options = [str(self.arr.pk)]
@@ -219,7 +219,7 @@ class TestVerdiDataArray:
 
 @pytest.mark.requires_rmq
 class TestVerdiDataBands(DummyVerdiDataListable):
-    """Testing verdi data bands."""
+    """Testing verdi data core.bands."""
 
     @pytest.fixture(autouse=True)
     def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
@@ -298,11 +298,11 @@ class TestVerdiDataBands(DummyVerdiDataListable):
 
     def test_bandsshowhelp(self):
         output = sp.check_output(['verdi', 'data', 'core.bands', 'show', '--help'])
-        assert b'Usage:' in output, 'Sub-command verdi data bands show --help failed.'
+        assert b'Usage:' in output, 'Sub-command verdi data core.bands show --help failed.'
 
     def test_bandlistshelp(self):
         output = sp.check_output(['verdi', 'data', 'core.bands', 'list', '--help'])
-        assert b'Usage:' in output, 'Sub-command verdi data bands show --help failed.'
+        assert b'Usage:' in output, 'Sub-command verdi data core.bands show --help failed.'
 
     def test_bandslist(self):
         self.data_listing_test(BandsData, 'FeO', self.pks)
@@ -316,7 +316,7 @@ class TestVerdiDataBands(DummyVerdiDataListable):
 
     def test_bandexporthelp(self):
         output = sp.check_output(['verdi', 'data', 'core.bands', 'export', '--help'])
-        assert b'Usage:' in output, 'Sub-command verdi data bands export --help failed.'
+        assert b'Usage:' in output, 'Sub-command verdi data core.bands export --help failed.'
 
     def test_bandsexport(self):
         options = [str(self.pks[DummyVerdiDataListable.NODE_ID_STR])]
@@ -352,7 +352,7 @@ class TestVerdiDataBands(DummyVerdiDataListable):
 
 
 class TestVerdiDataDict:
-    """Testing verdi data dict."""
+    """Testing verdi data core.dict."""
 
     @pytest.fixture(autouse=True)
     def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
@@ -365,19 +365,19 @@ class TestVerdiDataDict:
 
     def test_dictshowhelp(self):
         output = sp.check_output(['verdi', 'data', 'core.dict', 'show', '--help'])
-        assert b'Usage:' in output, 'Sub-command verdi data dict show --help failed.'
+        assert b'Usage:' in output, 'Sub-command verdi data core.dict show --help failed.'
 
     def test_dictshow(self):
-        """Test verdi data dict show."""
+        """Test verdi data core.dict show."""
         options = [str(self.dct.pk)]
         res = self.cli_runner(cmd_dict.dictionary_show, options)
-        assert res.exit_code == 0, 'The command verdi data dict show did not finish correctly'
+        assert res.exit_code == 0, 'The command verdi data core.dict show did not finish correctly'
         assert b'"a": 1' in res.stdout_bytes, 'The string "a": 1 was not found in the output' \
-            ' of verdi data dict show'
+            ' of verdi data core.dict show'
 
 
 class TestVerdiDataRemote:
-    """Testing verdi data remote."""
+    """Testing verdi data core.upf."""
 
     @pytest.fixture(autouse=True)
     def init_profile(self, aiida_profile_clean, aiida_localhost, run_cli_command, tmp_path):  # pylint: disable=unused-argument
@@ -392,45 +392,45 @@ class TestVerdiDataRemote:
 
     def test_remoteshowhelp(self):
         output = sp.check_output(['verdi', 'data', 'core.remote', 'show', '--help'])
-        assert b'Usage:' in output, 'Sub-command verdi data remote show --help failed.'
+        assert b'Usage:' in output, 'Sub-command verdi data core.upf show --help failed.'
 
     def test_remoteshow(self):
-        """Test verdi data remote show."""
+        """Test verdi data core.upf show."""
         options = [str(self.rmt.pk)]
         res = self.cli_runner(cmd_remote.remote_show, options)
-        assert res.exit_code == 0, 'The command verdi data remote show did not finish correctly'
+        assert res.exit_code == 0, 'The command verdi data core.upf show did not finish correctly'
         assert b'Remote computer name:' in res.stdout_bytes, (
-            'The string "Remote computer name:" was not found in the output of verdi data remote show'
+            'The string "Remote computer name:" was not found in the output of verdi data core.upf show'
         )
         assert b'Remote folder full path:' in res.stdout_bytes, (
-            'The string "Remote folder full path:" was not found in the output of verdi data remote show'
+            'The string "Remote folder full path:" was not found in the output of verdi data core.upf show'
         )
 
     def test_remotelshelp(self):
         output = sp.check_output(['verdi', 'data', 'core.remote', 'ls', '--help'])
-        assert b'Usage:' in output, 'Sub-command verdi data remote ls --help failed.'
+        assert b'Usage:' in output, 'Sub-command verdi data core.upf ls --help failed.'
 
     def test_remotels(self):
         options = ['--long', str(self.rmt.pk)]
         res = self.cli_runner(cmd_remote.remote_ls, options)
-        assert res.exit_code == 0, 'The command verdi data remote ls did not finish correctly'
+        assert res.exit_code == 0, 'The command verdi data core.upf ls did not finish correctly'
         assert b'file.txt' in res.stdout_bytes, 'The file "file.txt" was not found in the output' \
-            ' of verdi data remote ls'
+            ' of verdi data core.upf ls'
 
     def test_remotecathelp(self):
         output = sp.check_output(['verdi', 'data', 'core.remote', 'cat', '--help'])
-        assert b'Usage:' in output, 'Sub-command verdi data remote cat --help failed.'
+        assert b'Usage:' in output, 'Sub-command verdi data core.upf cat --help failed.'
 
     def test_remotecat(self):
         options = [str(self.rmt.pk), 'file.txt']
         res = self.cli_runner(cmd_remote.remote_cat, options)
-        assert res.exit_code == 0, 'The command verdi data remote cat did not finish correctly'
+        assert res.exit_code == 0, 'The command verdi data core.upf cat did not finish correctly'
         assert b'test string' in res.stdout_bytes, 'The string "test string" was not found in the output' \
-            ' of verdi data remote cat file.txt'
+            ' of verdi data core.upf cat file.txt'
 
 
 class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
-    """Test verdi data trajectory."""
+    """Test verdi data core.trajectory."""
 
     @pytest.fixture(autouse=True)
     def init_profile(self, aiida_profile_clean, aiida_localhost, run_cli_command):  # pylint: disable=unused-argument
@@ -519,7 +519,7 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
 
 
 class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):
-    """Test verdi data structure."""
+    """Test verdi data core.structure."""
     from aiida.orm.nodes.data.structure import has_ase  # type: ignore
 
     @pytest.fixture(autouse=True)
@@ -582,17 +582,17 @@ class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):
     def test_importhelp(self):
         res = self.cli_runner(cmd_structure.structure_import, ['--help'])
         assert b'Usage:' in res.stdout_bytes, 'The string "Usage: " was not found in the output' \
-            ' of verdi data structure import --help'
+            ' of verdi core.data structure import --help'
 
     def test_importhelp_ase(self):
         res = self.cli_runner(cmd_structure.import_ase, ['--help'])
         assert b'Usage:' in res.stdout_bytes, 'The string "Usage: " was not found in the output' \
-            ' of verdi data structure import ase --help'
+            ' of verdi data core.structure import ase --help'
 
     def test_importhelp_aiida_xyz(self):
         res = self.cli_runner(cmd_structure.import_aiida_xyz, ['--help'])
         assert b'Usage:' in res.stdout_bytes, 'The string "Usage: " was not found in the output' \
-            ' of verdi data structure import aiida-xyz --help'
+            ' of verdi data core.structure import aiida-xyz --help'
 
     def test_import_aiida_xyz(self):
         """Test import xyz file."""
@@ -619,9 +619,9 @@ class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):
             res = self.cli_runner(cmd_structure.import_aiida_xyz, options)
             assert b'Successfully imported' in res.stdout_bytes, \
                 'The string "Successfully imported" was not found in the output' \
-                ' of verdi data structure import.'
+                ' of verdi data core.structure import.'
             assert b'PK' in res.stdout_bytes, 'The string "PK" was not found in the output' \
-                ' of verdi data structure import.'
+                ' of verdi data core.structure import.'
 
     def test_import_aiida_xyz_2(self):
         """Test import xyz file."""
@@ -641,9 +641,9 @@ class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):
             res = self.cli_runner(cmd_structure.import_aiida_xyz, options)
             assert b'Successfully imported' in res.stdout_bytes, \
                 'The string "Successfully imported" was not found in the output' \
-                ' of verdi data structure import.'
+                ' of verdi data core.structure import.'
             assert b'dry-run' in res.stdout_bytes, 'The string "dry-run" was not found in the output' \
-                ' of verdi data structure import.'
+                ' of verdi data core.structure import.'
 
     def test_import_aiida_xyz_w_group_label(self):
         """Test import xyz file including setting label and group."""
@@ -675,9 +675,9 @@ class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):
             res = self.cli_runner(cmd_structure.import_aiida_xyz, options)
             assert b'Successfully imported' in res.stdout_bytes, \
                 'The string "Successfully imported" was not found in the output' \
-                ' of verdi data structure import.'
+                ' of verdi data core.structure import.'
             assert b'PK' in res.stdout_bytes, 'The string "PK" was not found in the output' \
-                ' of verdi data structure import.'
+                ' of verdi data core.structure import.'
             res = self.cli_runner(cmd_group.group_show, [group_label])
             for grpline in [group_label, 'StructureData']:
                 assert grpline in res.output
@@ -704,9 +704,9 @@ PRIMVEC
             res = self.cli_runner(cmd_structure.import_ase, options)
             assert b'Successfully imported' in res.stdout_bytes, \
                 'The string "Successfully imported" was not found in the output' \
-                ' of verdi data structure import.'
+                ' of verdi data core.structure import.'
             assert b'PK' in res.stdout_bytes, 'The string "PK" was not found in the output' \
-                ' of verdi data structure import.'
+                ' of verdi data core.structure import.'
 
     @pytest.mark.skipif(not has_ase(), reason='Unable to import ase')
     def test_import_ase_w_group_label(self):
@@ -729,9 +729,9 @@ PRIMVEC
             res = self.cli_runner(cmd_structure.import_ase, options)
             assert b'Successfully imported' in res.stdout_bytes, \
                 'The string "Successfully imported" was not found in the output' \
-                ' of verdi data structure import.'
+                ' of verdi data core.structure import.'
             assert b'PK' in res.stdout_bytes, 'The string "PK" was not found in the output' \
-                ' of verdi data structure import.'
+                ' of verdi data core.structure import.'
             res = self.cli_runner(cmd_group.group_show, [group_label])
             for grpline in [group_label, 'StructureData']:
                 assert grpline in res.output
@@ -746,7 +746,7 @@ PRIMVEC
 
 @pytest.mark.skipif(not has_pycifrw(), reason='Unable to import PyCifRW')
 class TestVerdiDataCif(DummyVerdiDataListable, DummyVerdiDataExportable):
-    """Test verdi data cif."""
+    """Test verdi data core.cif."""
     valid_sample_cif_str = '''
         data_test
         _cell_length_a    10
@@ -821,7 +821,7 @@ class TestVerdiDataCif(DummyVerdiDataListable, DummyVerdiDataExportable):
             ' of verdi data import help'
 
     def test_import(self):
-        """Test verdi data cif import."""
+        """Test verdi data core.cif import."""
         with tempfile.NamedTemporaryFile(mode='w+') as fhandle:
             fhandle.write(self.valid_sample_cif_str)
             fhandle.flush()
@@ -831,7 +831,7 @@ class TestVerdiDataCif(DummyVerdiDataListable, DummyVerdiDataExportable):
                 ' of verdi data import.'
 
     def test_content(self):
-        """Test that `verdi data cif content` returns the content of the file."""
+        """Test that `verdi data core.cif content` returns the content of the file."""
         options = [str(self.cif.uuid)]
         result = self.cli_runner(cmd_cif.cif_content, options, suppress_warnings=True)
 
@@ -873,7 +873,7 @@ class TestVerdiDataSinglefile(DummyVerdiDataListable, DummyVerdiDataExportable):
 
 
 class TestVerdiDataUpf:
-    """Testing verdi data upf."""
+    """Testing verdi data core.upf."""
 
     @pytest.fixture(autouse=True)
     def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
@@ -886,11 +886,11 @@ class TestVerdiDataUpf:
         options = [self.filepath_pseudos, 'test_group', 'test description']
         res = self.cli_runner(cmd_upf.upf_uploadfamily, options)
         assert b'UPF files found: 4' in res.stdout_bytes, 'The string "UPF files found: 4" was not found in the' \
-            ' output of verdi data upf uploadfamily'
+            ' output of verdi data core.upf uploadfamily'
 
     def test_uploadfamilyhelp(self):
         output = sp.check_output(['verdi', 'data', 'core.upf', 'uploadfamily', '--help'])
-        assert b'Usage:' in output, f'Sub-command verdi data upf uploadfamily --help failed: {output}'
+        assert b'Usage:' in output, f'Sub-command verdi data core.upf uploadfamily --help failed: {output}'
 
     def test_uploadfamily(self):
         self.upload_family()
@@ -899,49 +899,49 @@ class TestVerdiDataUpf:
 
     def test_exportfamilyhelp(self):
         output = sp.check_output(['verdi', 'data', 'core.upf', 'exportfamily', '--help'])
-        assert b'Usage:' in output, 'Sub-command verdi data upf exportfamily --help failed.'
+        assert b'Usage:' in output, 'Sub-command verdi data core.upf exportfamily --help failed.'
 
     def test_exportfamily(self, tmp_path):
-        """Test verdi data upf exportfamily."""
+        """Test verdi data core.upf exportfamily."""
         self.upload_family()
 
         options = [tmp_path, 'test_group']
         self.cli_runner(cmd_upf.upf_exportfamily, options)
         output = sp.check_output(['ls', tmp_path])
         assert b'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF' in output, \
-            f'Sub-command verdi data upf exportfamily --help failed: {output}'
+            f'Sub-command verdi data core.upf exportfamily --help failed: {output}'
         assert b'O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF' in output, \
-            'Sub-command verdi data upf exportfamily --help failed.'
+            'Sub-command verdi data core.upf exportfamily --help failed.'
         assert b'Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF' in output, \
-            'Sub-command verdi data upf exportfamily --help failed.'
-        assert b'C_pbe_v1.2.uspp.F.UPF' in output, 'Sub-command verdi data upf exportfamily --help failed.'
+            'Sub-command verdi data core.upf exportfamily --help failed.'
+        assert b'C_pbe_v1.2.uspp.F.UPF' in output, 'Sub-command verdi data core.upf exportfamily --help failed.'
 
     def test_listfamilieshelp(self):
         output = sp.check_output(['verdi', 'data', 'core.upf', 'listfamilies', '--help'])
-        assert b'Usage:' in output, 'Sub-command verdi data upf listfamilies --help failed.'
+        assert b'Usage:' in output, 'Sub-command verdi data core.upf listfamilies --help failed.'
 
     def test_listfamilies(self):
-        """Test verdi data upf listfamilies"""
+        """Test verdi data core.upf listfamilies"""
         self.upload_family()
 
         options = ['-d', '-e', 'Ba']
         res = self.cli_runner(cmd_upf.upf_listfamilies, options)
 
         assert b'test_group' in res.stdout_bytes, 'The string "test_group" was not found in the' \
-            ' output of verdi data upf listfamilies: {}'.format(res.output)
+            ' output of verdi data core.upf listfamilies: {}'.format(res.output)
 
         assert b'test description' in res.stdout_bytes, 'The string "test_group" was not found in the' \
-            ' output of verdi data upf listfamilies'
+            ' output of verdi data core.upf listfamilies'
 
         options = ['-d', '-e', 'Fe']
         res = self.cli_runner(cmd_upf.upf_listfamilies, options)
         assert b'No valid UPF pseudopotential' in res.stdout_bytes, (
-            'The string "No valid UPF pseudopotential" was not found in the output of verdi data upf listfamilies'
+            'The string "No valid UPF pseudopotential" was not found in the output of verdi data core.upf listfamilies'
         )
 
     def test_importhelp(self):
         output = sp.check_output(['verdi', 'data', 'core.upf', 'import', '--help'])
-        assert b'Usage:' in output, 'Sub-command verdi data upf listfamilies --help failed.'
+        assert b'Usage:' in output, 'Sub-command verdi data core.upf listfamilies --help failed.'
 
     def test_import(self):
         options = [os.path.join(self.filepath_pseudos, 'Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF')]

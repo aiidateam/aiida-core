@@ -1751,7 +1751,7 @@ class StructureData(Data):
 
         from .dict import Dict
 
-        param = Dict(dict=kwargs)
+        param = Dict(kwargs)
         try:
             conv_f = getattr(structure_tools, f'_get_cif_{converter}_inline')
         except AttributeError:

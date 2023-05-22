@@ -293,22 +293,20 @@ def create_calculation_process(code, inputval):
     Create the process and inputs for a submitting / running a calculation.
     """
     TemplatereplacerCalculation = CalculationFactory('core.templatereplacer')
-    parameters = Dict(dict={'value': inputval})
-    template = Dict(
-        dict={
-            # The following line adds a significant sleep time.
-            # I set it to 1 second to speed up tests
-            # I keep it to a non-zero value because I want
-            # To test the case when AiiDA finds some calcs
-            # in a queued state
-            # 'cmdline_params': ["{}".format(counter % 3)], # Sleep time
-            'cmdline_params': ['1'],
-            'input_file_template': '{value}',  # File just contains the value to double
-            'input_file_name': 'value_to_double.txt',
-            'output_file_name': 'output.txt',
-            'retrieve_temporary_files': ['triple_value.tmp']
-        }
-    )
+    parameters = Dict({'value': inputval})
+    template = Dict({
+        # The following line adds a significant sleep time.
+        # I set it to 1 second to speed up tests
+        # I keep it to a non-zero value because I want
+        # To test the case when AiiDA finds some calcs
+        # in a queued state
+        # 'cmdline_params': ["{}".format(counter % 3)], # Sleep time
+        'cmdline_params': ['1'],
+        'input_file_template': '{value}',  # File just contains the value to double
+        'input_file_name': 'value_to_double.txt',
+        'output_file_name': 'output.txt',
+        'retrieve_temporary_files': ['triple_value.tmp']
+    })
     options = {
         'resources': {
             'num_machines': 1
@@ -384,7 +382,7 @@ def run_base_restart_workchain():
 
     # Check that overriding default handler enabled status works
     inputs['add']['y'] = Int(1)
-    inputs['handler_overrides'] = Dict(dict={'disabled_handler': True})
+    inputs['handler_overrides'] = Dict({'disabled_handler': True})
     results, node = run.get_node(ArithmeticAddBaseWorkChain, **inputs)
     assert not node.is_finished_ok, node.process_state
     assert node.exit_status == ArithmeticAddBaseWorkChain.exit_codes.ERROR_ENABLED_DOOM.status, node.exit_status  # pylint: disable=no-member

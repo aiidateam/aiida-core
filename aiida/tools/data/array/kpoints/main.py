@@ -188,7 +188,7 @@ def _legacy_get_kpoints_path(structure, **kwargs):
         'path': path,
     }
 
-    return {'parameters': Dict(dict=parameters)}
+    return {'parameters': Dict(parameters)}
 
 
 def _legacy_get_explicit_kpoints_path(structure, **kwargs):
@@ -227,7 +227,7 @@ def _legacy_get_explicit_kpoints_path(structure, **kwargs):
         'path': path,
     }
 
-    return {'parameters': Dict(dict=parameters), 'explicit_kpoints': kpoints}
+    return {'parameters': Dict(parameters), 'explicit_kpoints': kpoints}
 
 
 _GET_KPOINTS_PATH_METHODS = {

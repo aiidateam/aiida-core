@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""`verdi data structure` command."""
+"""`verdi data core.structure` command."""
 
 import click
 

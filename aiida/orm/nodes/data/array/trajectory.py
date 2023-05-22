@@ -502,7 +502,7 @@ class TrajectoryData(ArrayData):
         from aiida.orm.nodes.data.dict import Dict
         from aiida.tools.data.array.trajectory import _get_aiida_structure_inline
 
-        param = Dict(dict=kwargs)
+        param = Dict(kwargs)
 
         ret_dict = _get_aiida_structure_inline(trajectory=self, parameters=param, metadata={'store_provenance': store})  # pylint: disable=unexpected-keyword-arg
         return ret_dict['structure']

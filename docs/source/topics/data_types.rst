@@ -761,7 +761,7 @@ The node can be exported using the verdi CLI, for example:
 
 .. code-block:: console
 
-    $ verdi data structure export --format xsf <IDENTIFIER> > Li.xsf
+    $ verdi data core.structure export --format xsf <IDENTIFIER> > Li.xsf
 
 Where ``<IDENTIFIER>`` is one of the possible identifiers of the node, e.g. its PK or UUID.
 This outputs the structure in ``xsf`` format and writes it to a file.
@@ -786,7 +786,7 @@ Note that contrary with the :py:class:`~aiida.orm.nodes.data.structure.Structure
 Exporting
 ^^^^^^^^^
 
-You can export the py:class:`~aiida.orm.nodes.data.array.trajectory.TrajectoryData` node with ``verdi data trajectory export``, which accepts a number of formats including ``xsf`` and  ``cif``, and additional parameters like ``--step NUM`` (to choose to export only a given trajectory step).
+You can export the py:class:`~aiida.orm.nodes.data.array.trajectory.TrajectoryData` node with ``verdi data core.trajectory export``, which accepts a number of formats including ``xsf`` and  ``cif``, and additional parameters like ``--step NUM`` (to choose to export only a given trajectory step).
 
 The following export formats are available:
 
@@ -813,7 +813,7 @@ To see the pseudopotential families that have been installed in your AiiDA profi
 
 .. code-block:: console
 
-  $ verdi data upf listfamilies
+  $ verdi data core.upf listfamilies
   Success: * SSSP_v1.1_precision_PBE [85 pseudos]
   Success: * SSSP_v1.1_efficiency_PBE [85 pseudos]
 
@@ -1044,7 +1044,7 @@ The dropdown panels below explain some expanded use cases on how to create a :py
 
 .. dropdown:: Exporting
 
-  The :py:class:`~aiida.orm.nodes.data.array.bands.BandsData` data type can be exported with ``verdi data bands export``, which accepts a number of formats including (see also below) and additional parameters like ``--prettify-format FORMATNAME``, see valid formats below, or ``--y-min-lim``, ``--y-max-lim`` to specify the ``y``-axis limits.
+  The :py:class:`~aiida.orm.nodes.data.array.bands.BandsData` data type can be exported with ``verdi data core.bands export``, which accepts a number of formats including (see also below) and additional parameters like ``--prettify-format FORMATNAME``, see valid formats below, or ``--y-min-lim``, ``--y-max-lim`` to specify the ``y``-axis limits.
 
   The following export formats are available:
 

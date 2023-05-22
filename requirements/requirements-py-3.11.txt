@@ -77,7 +77,7 @@ mdurl==0.1.2
 mistune==2.0.4
 monty==2022.9.9
 mp-api==0.29.8
-mpmath==1.2.1
+mpmath==1.3.0
 msgpack==1.0.4
 multidict==6.0.2
 myst-nb==0.17.1

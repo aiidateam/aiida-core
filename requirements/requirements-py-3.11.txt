@@ -143,7 +143,7 @@ PyYAML==6.0
 pyzmq==24.0.1
 qtconsole==5.4.0
 QtPy==2.3.0
-requests==2.28.1
+requests==2.31.0
 ruamel.yaml==0.17.21
 scipy==1.9.3
 scramp==1.4.4

@@ -177,7 +177,7 @@ tenacity==8.1.0
 terminado==0.17.0
 tinycss2==1.2.1
 toml==0.10.2
-tornado==6.2
+tornado==6.3.2
 tqdm==4.64.1
 traitlets==5.6.0
 transifex-client==0.12.5

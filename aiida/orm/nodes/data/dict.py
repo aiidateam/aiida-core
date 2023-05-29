@@ -8,8 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`Data` sub class to represent a dictionary."""
+from __future__ import annotations
+
 import copy
-from typing import Any, Iterator, Tuple, Union
+from typing import Any, Iterator
 
 from aiida.common import exceptions
 
@@ -47,7 +49,7 @@ class Dict(Data):
     Finally, all dictionary mutations will be forbidden once the node is stored.
     """
 
-    def __init__(self, value: Union[None, dict, 'Dict'] = None, **kwargs) -> None:
+    def __init__(self, value: None | dict | Dict = None, **kwargs) -> None:
         """Initialise a ``Dict`` node instance.
 
         Usual rules for attribute names apply, in particular, keys cannot start with an underscore, or a ``ValueError``
@@ -80,7 +82,7 @@ class Dict(Data):
         """Return whether the node contains a key."""
         return key in self.base.attributes
 
-    def set_dict(self, dictionary: Union[dict, 'Dict']) -> None:
+    def set_dict(self, dictionary: dict | Dict) -> None:
         """Replace the current dictionary with another one.
 
         :param dictionary: dictionary to set
@@ -100,7 +102,7 @@ class Dict(Data):
             self.update_dict(dictionary_backup)
             raise
 
-    def update_dict(self, dictionary: Union[dict, 'Dict']) -> None:
+    def update_dict(self, dictionary: dict | Dict) -> None:
         """Update the current dictionary with the keys provided in the dictionary.
 
         .. note:: works exactly as `dict.update()` where new keys are simply added and existing keys are overwritten.
@@ -125,7 +127,7 @@ class Dict(Data):
         for key in self.base.attributes.keys():
             yield key
 
-    def items(self) -> Iterator[Tuple[str, Any]]:
+    def items(self) -> Iterator[tuple[str, Any]]:
         """Iterator of all items stored in the Dict node."""
         for key, value in self.base.attributes.items():
             yield key, value

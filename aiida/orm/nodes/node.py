@@ -239,8 +239,8 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
     def _validate(self) -> None:
         """Validate information stored in Node object.
 
-        For the :py:class:`~aiida.orm.Node` base class, this does a basic check on nested keys in case the value of any
-        attribute or extra is a dictionary.
+        For the :py:class:`~aiida.orm.Node` base class, recursively validates that all keys in the ``attributes`` and
+        ``extras`` dictionaries are valid.
 
         Subclasses can override this method to perform additional checks
         and should usually call ``super()._validate()`` first!

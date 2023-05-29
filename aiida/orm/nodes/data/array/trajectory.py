@@ -197,6 +197,7 @@ class TrajectoryData(ArrayData):
         dimension are correct.
         """
         # check dimensions, types
+        super()._validate()
         from aiida.common.exceptions import ValidationError
 
         try:

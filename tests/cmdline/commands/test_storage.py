@@ -138,17 +138,16 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch):
 
     # Not passing user input should cause the command to exit without executing `storage.mantain` and so the last
     # message should be the prompt to continue or not.
-    result = run_cli_command(cmd_storage.storage_maintain, use_subprocess=False, options=['--compress'])
+    result = run_cli_command(cmd_storage.storage_maintain, use_subprocess=False)
     message_list = result.output_lines
     assert message_list[-1] == 'Are you sure you want continue in this mode? [y/N]: '
-    assert ' > compress: True' in message_list
 
     # Test `storage.mantain` with `--force`
-    result = run_cli_command(cmd_storage.storage_maintain, parameters=['--force'], use_subprocess=False)
+    result = run_cli_command(cmd_storage.storage_maintain, parameters=['--force', '--compress'], use_subprocess=False)
     message_list = result.output_lines
     assert ' > full: False' in message_list
     assert ' > dry_run: False' in message_list
-    assert ' > compress: False' in message_list
+    assert ' > compress: True' in message_list
 
     # Test `storage.mantain` with user input Y
     result = run_cli_command(cmd_storage.storage_maintain, user_input='Y', use_subprocess=False)
@@ -161,7 +160,7 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch):
     result = run_cli_command(cmd_storage.storage_maintain, parameters=['--dry-run'], use_subprocess=False)
     message_list = result.output_lines
     assert ' > full: False' in message_list
-    assert ' > dry_run: False' in message_list
+    assert ' > dry_run: True' in message_list
 
     # Test `storage.mantain` with `--full`
     result = run_cli_command(cmd_storage.storage_maintain, parameters=['--full'], user_input='Y', use_subprocess=False)

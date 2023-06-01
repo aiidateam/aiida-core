@@ -119,7 +119,9 @@ def storage_info(detailed):
     help=
     'Run the maintenance in dry-run mode which will print actions that would be taken without actually executing them.'
 )
-@click.option('--compress', default=False, help='Use compression if possible when carrying out maintenance tasks.')
+@click.option(
+    '--compress', is_flag=True, default=False, help='Use compression if possible when carrying out maintenance tasks.'
+)
 @decorators.with_dbenv()
 @click.pass_context
 def storage_maintain(ctx, full, no_repack, force, dry_run, compress):

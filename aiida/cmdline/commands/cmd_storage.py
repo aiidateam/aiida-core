@@ -116,7 +116,7 @@ def storage_info(detailed):
     'Run the maintenance in dry-run mode which will print actions that would be taken without actually executing them.'
 )
 @click.option(
-    '--compress/--no-compress', default=True, help='Use compression if possible when carrying out maintainance tasks.'
+    '--compress', default=False, help='Use compression if possible when carrying out maintenance tasks.'
 )
 @decorators.with_dbenv()
 @click.pass_context

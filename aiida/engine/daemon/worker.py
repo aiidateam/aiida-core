@@ -50,8 +50,9 @@ def start_daemon_worker() -> None:
         LOGGER.exception('daemon worker failed to start')
         raise
 
-    if isinstance(limit := get_config_option('daemon.recursion_limit'), int):
-        sys.setrecursionlimit(limit)
+    if isinstance(rlimit := get_config_option('daemon.recursion_limit'), int):
+        LOGGER.info('Setting maximum recursion limit of daemon worker to %s', rlimit)
+        sys.setrecursionlimit(rlimit)
 
     signals = (signal.SIGTERM, signal.SIGINT)
     for s in signals:  # pylint: disable=invalid-name

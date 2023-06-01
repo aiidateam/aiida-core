@@ -16,7 +16,7 @@ import sys
 from aiida.common.log import configure_logging
 from aiida.engine.daemon.client import get_daemon_client
 from aiida.engine.runners import Runner
-from aiida.manage import get_manager, get_config_option
+from aiida.manage import get_config_option, get_manager
 
 LOGGER = logging.getLogger(__name__)
 

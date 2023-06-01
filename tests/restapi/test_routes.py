@@ -14,11 +14,13 @@ import io
 import json
 
 from flask_cors.core import ACL_ORIGIN
+import numpy as np
 import pytest
 
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.manage import get_manager
+from aiida.orm.nodes.data.array.array import clean_array
 from aiida.restapi.run_api import configure_api
 
 
@@ -27,7 +29,7 @@ class TestRestApi:
     Setup of the tests for the AiiDA RESTful-api
     """
     _url_prefix = '/api/v4'
-    _dummy_data = {}
+    _dummy_data: dict = {}
     _PERPAGE_DEFAULT = 20
     _LIMIT_DEFAULT = 400
 
@@ -141,6 +143,12 @@ class TestRestApi:
             computer = orm.Computer(**dummy_computer)
             computer.store()
 
+        # Setting array data for the tests
+        array = orm.ArrayData()
+        array.set_array('array_clean', np.asarray([[4, 5, 7], [9, 5, 1], [3, 4, 4]]))
+        array.set_array('array_dirty', np.asarray([[4, 5, np.nan], [9, np.inf, -1 * np.inf], [np.nan, 4, 4]]))
+        array.store()
+
         # Prepare typical REST responses
         self.process_dummy_data()
 
@@ -205,6 +213,7 @@ class TestRestApi:
             'parameterdata': orm.Dict,
             'structuredata': orm.StructureData,
             'data': orm.Data,
+            'arraydata': orm.ArrayData,
         }
         for label, dataclass in data_types.items():
             data = orm.QueryBuilder().append(dataclass, tag='data', project=data_projections).order_by({
@@ -300,7 +309,6 @@ class TestRestApi:
         if result_node_type is None and result_name is None:
             result_node_type = entity_type
             result_name = entity_type
-
         url = self._url_prefix + url
 
         with self.app.test_client() as client:
@@ -321,7 +329,6 @@ class TestRestApi:
                 else:
                     from aiida.common.exceptions import InputValidationError
                     raise InputValidationError('Pass the expected range of the dummydata')
-
                 expected_node_uuids = [node['uuid'] for node in expected_data]
                 result_node_uuids = [node['uuid'] for node in response['data'][result_name]]
                 assert expected_node_uuids == result_node_uuids
@@ -745,7 +752,7 @@ class TestRestApi:
         self.process_test(
             'nodes',
             f'/nodes/{str(node_uuid)}/links/incoming?orderby=id',
-            expected_list_ids=[5, 3],
+            expected_list_ids=[6, 4],
             uuid=node_uuid,
             result_node_type='data',
             result_name='incoming'
@@ -759,7 +766,7 @@ class TestRestApi:
         self.process_test(
             'nodes',
             f"/nodes/{str(node_uuid)}/links/incoming?node_type=\"data.core.dict.Dict.\"",
-            expected_list_ids=[3],
+            expected_list_ids=[4],
             uuid=node_uuid,
             result_node_type='data',
             result_name='incoming'
@@ -1013,6 +1020,22 @@ class TestRestApi:
             rv_obj = client.get(url)
         structure_data = load_node(node_uuid)._exportcontent('xsf')[0]  # pylint: disable=protected-access
         assert rv_obj.data == structure_data
+
+    @pytest.mark.parametrize('download', ['false', 'False'])
+    def test_structure_download_false(self, download):
+        """
+        Test download=false that displays the content in the browser instead
+        of downloading the structure file
+        """
+        from aiida.orm import load_node
+
+        node_uuid = self.get_dummy_data()['structuredata'][0]['uuid']
+        url = f'{self.get_url_prefix()}/nodes/{node_uuid}/download?download_format=xsf&download={download}'
+        with self.app.test_client() as client:
+            rv_obj = client.get(url)
+            response = json.loads(rv_obj.data)
+        structure_data = load_node(node_uuid)._exportcontent('xsf')[0]  # pylint: disable=protected-access
+        assert response['data']['download']['data'] == structure_data.decode('utf-8')
 
     def test_cif(self):
         """
@@ -1331,3 +1354,26 @@ class TestRestApi:
                 # All are Nodes, and all properties are projected, full_type should be present
                 assert 'full_type' in entity
                 assert 'attributes' in entity
+
+    def test_array_download(self):
+        """
+        Test download of arraydata as a json file
+        """
+        from aiida.orm import load_node
+
+        node_uuid = self.get_dummy_data()['arraydata'][0]['uuid']
+        url = f'{self.get_url_prefix()}/nodes/{node_uuid}/download?download_format=json&download=False'
+        with self.app.test_client() as client:
+            rv_obj = client.get(url)
+
+        data_json = json.loads(rv_obj.json['data']['download']['data'])
+
+        assert json.dumps(data_json, allow_nan=False)
+
+        data_array = load_node(node_uuid)
+        array_names = data_array.get_arraynames()
+        for name in array_names:
+            if not np.isnan(data_array.get_array(name)).any():
+                assert np.allclose(data_array.get_array(name), data_json[name])
+            else:
+                assert clean_array(data_array.get_array(name)) == data_json[name]

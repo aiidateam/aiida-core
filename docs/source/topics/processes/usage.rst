@@ -9,10 +9,10 @@ Usage
 This section will explain the aspects of working with processes that apply to all processes.
 Details that only pertain to a specific sub type of process, will be documented in their respective sections:
 
-    * :ref:`calculation functions<topics:calculations:usage:calcfunctions>`
-    * :ref:`calculation jobs<topics:calculations:usage:calcjobs>`
-    * :ref:`work functions<topics:workflows:usage:workfunctions>`
-    * :ref:`work chains<topics:workflows:usage:workchains>`
+* :ref:`calculation functions<topics:calculations:usage:calcfunctions>`
+* :ref:`calculation jobs<topics:calculations:usage:calcjobs>`
+* :ref:`work functions<topics:workflows:usage:workfunctions>`
+* :ref:`work chains<topics:workflows:usage:workchains>`
 
 
 .. _topics:processes:usage:defining:
@@ -32,9 +32,9 @@ For the :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob` and :py:cla
 
 The three most important attributes of the :py:class:`~aiida.engine.processes.process_spec.ProcessSpec` are:
 
-    * ``inputs``
-    * ``outputs``
-    * ``exit_codes``
+* ``inputs``
+* ``outputs``
+* ``exit_codes``
 
 Through these attributes, one can define what inputs a process takes, what outputs it will produce and what potential exit codes it can return in case of errors.
 Just by looking at a process specification then, one will know exactly *what* will happen, just not *how* it will happen.
@@ -109,10 +109,10 @@ The underlying concept that allows this nesting of ports is that the ``PortNames
 And as different subclasses of the same class, they have more properties and attributes in common, for example related to the concept of validation and default values.
 All three have the following attributes (with the exception of the ``OutputPort`` not having a ``default`` attribute):
 
-    * ``default``
-    * ``required``
-    * ``valid_type``
-    * ``validator``
+* ``default``
+* ``required``
+* ``valid_type``
+* ``validator``
 
 These attributes can all be set upon construction of the port or after the fact, as long as the spec has not been sealed, which means that they can be altered without limit as long as it is within the ``define`` method of the corresponding ``Process``.
 An example input port that explicitly sets all these attributes is the following:
@@ -143,6 +143,12 @@ To signal that the value is invalid and to have a validation error raised, simpl
             return 'The number has to be greater or equal to zero'
 
 The ``valid_type`` can define a single type, or a tuple of valid types.
+
+.. versionadded:: 2.1
+
+    If a port is marked as optional through ``required=False`` and defines ``valid_type``, the port will also accept ``None`` as values, whereas before this would raise validation error.
+    This is accomplished by automatically adding the ``NoneType`` to the ``valid_type`` tuple.
+    Ports that do not define a ``valid_type`` are not affected.
 
 .. note::
 
@@ -194,9 +200,9 @@ This allows one to pass any normal value that one would also be able to pass to 
 Automatic input serialization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Quite often, inputs which are given as python data types need to be cast to the corresponding AiiDA type before passing them to a process.
+Quite often, inputs which are given as Python data types need to be cast to the corresponding AiiDA type before passing them to a process.
 Doing this manually can be cumbersome, so you can define a function when defining the process specification, which does the conversion automatically.
-This function, passed as ``serializer`` parameter to ``spec.input``, is invoked if the given input is *not* already an AiiDA type.
+This function, passed as ``serializer`` parameter to ``spec.input``, is invoked if the given input is not ``None`` *and* not already an AiiDA type.
 
 For inputs which are stored in the database (``non_db=False``), the serialization function should return an AiiDA data type.
 For ``non_db`` inputs, the function must be idempotent because it might be applied more than once.
@@ -273,10 +279,10 @@ Note that since the following rules are *guidelines* you can choose to ignore th
 Regardless, we advise you to follow the guidelines since it will improve the interoperability of your code with other existing plugins.
 The following integer ranges are reserved or suggested:
 
-    *   0 -  99: Reserved for internal use by `aiida-core`
-    * 100 - 199: Reserved for errors parsed from scheduler output of calculation jobs (note: this is not yet implemented)
-    * 200 - 299: Suggested to be used for process input validation errors
-    * 300 - 399: Suggested for critical process errors
+*   0 -  99: Reserved for internal use by `aiida-core`
+* 100 - 199: Reserved for errors parsed from scheduler output of calculation jobs (note: this is not yet implemented)
+* 200 - 299: Suggested to be used for process input validation errors
+* 300 - 399: Suggested for critical process errors
 
 For any other exit codes, one can use the integers from 400 and up.
 
@@ -291,9 +297,9 @@ These metadata differ from inputs in the sense that they are not nodes that will
 Rather, these are inputs that slightly modify the behavior of the process or allow to set attributes on the process node that represents its execution.
 The following metadata inputs are available for *all* process classes:
 
-    * ``label``: will set the label on the ``ProcessNode``
-    * ``description``: will set the description on the ``ProcessNode``
-    * ``store_provenance``: boolean flag, by default ``True``, that when set to ``False``, will ensure that the execution of the process **is not** stored in the provenance graph
+* ``label``: will set the label on the ``ProcessNode``
+* ``description``: will set the description on the ``ProcessNode``
+* ``store_provenance``: boolean flag, by default ``True``, that when set to ``False``, will ensure that the execution of the process **is not** stored in the provenance graph
 
 Sub classes of the :py:class:`~aiida.engine.processes.process.Process` class can specify further metadata inputs, refer to their specific documentation for details.
 To pass any of these metadata options to a process, simply pass them in a dictionary under the key ``metadata`` in the inputs when launching the process.
@@ -319,10 +325,10 @@ Process launch
 To launch a process, one can use the free functions that can be imported from the :py:mod:`aiida.engine` module.
 There are four different functions:
 
-    * :py:func:`~aiida.engine.launch.run`
-    * :py:func:`~aiida.engine.launch.run_get_node`
-    * :py:func:`~aiida.engine.launch.run_get_pk`
-    * :py:func:`~aiida.engine.launch.submit`
+* :py:func:`~aiida.engine.launch.run`
+* :py:func:`~aiida.engine.launch.run_get_node`
+* :py:func:`~aiida.engine.launch.run_get_pk`
+* :py:func:`~aiida.engine.launch.submit`
 
 As the name suggest, the first three will 'run' the process and the latter will 'submit' it to the daemon.
 Running means that the process will be executed in the same interpreter in which it is launched, blocking the interpreter, until the process is terminated.
@@ -330,8 +336,8 @@ Submitting to the daemon, in contrast, means that the process will be sent to th
 
 All functions have the exact same interface ``launch(process, **inputs)`` where:
 
-    * ``process`` is the process class or process function to launch
-    * ``inputs`` are the inputs as keyword arguments to pass to the process.
+* ``process`` is the process class or process function to launch
+* ``inputs`` are the inputs as keyword arguments to pass to the process.
 
 What inputs can be passed depends on the exact process class that is to be launched.
 For example, when we want to run an instance of the :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation` process, which takes two :py:class:`~aiida.orm.nodes.data.int.Int` nodes as inputs under the name ``x`` and ``y`` [#f1]_, we would do the following:
@@ -371,8 +377,8 @@ The examples used above would look like the following:
 Process functions, i.e. :ref:`calculation functions<topics:calculations:concepts:calcfunctions>` and :ref:`work functions<topics:workflows:concepts:workfunctions>`, can be launched like any other process as explained above.
 Process functions have two additional methods of being launched:
 
- * Simply *calling* the function
- * Using the internal run method attributes
+* Simply *calling* the function
+* Using the internal run method attributes
 
 Using a calculation function to add two numbers as an example, these two methods look like the following:
 
@@ -410,7 +416,7 @@ In an interactive shell, you can get this information to display as follows::
         "name": "code",
         "required": "True"
         "non_db": "False"
-        "valid_type": "<class 'aiida.orm.nodes.data.code.Code'>"
+        "valid_type": "<class 'aiida.orm.nodes.data.code.abstract.AbstractCode'>"
         "help": "The Code to use for this job.",
 
 In the ``Docstring`` you will see a ``help`` string that contains more detailed information about the input port.
@@ -525,9 +531,9 @@ For a complete list of all the available options, please refer to the documentat
 
 If you are looking for information about a specific process node, the following three commands are at your disposal:
 
- * ``verdi process report`` gives a list of the log messages attached to the process
- * ``verdi process status`` print the call hierarchy of the process and status of all its nodes
- * ``verdi process show`` print details about the status, inputs, outputs, callers and callees of the process
+* ``verdi process report`` gives a list of the log messages attached to the process
+* ``verdi process status`` print the call hierarchy of the process and status of all its nodes
+* ``verdi process show`` print details about the status, inputs, outputs, callers and callees of the process
 
 In the following sections, we will explain briefly how the commands work.
 For the purpose of example, we will show the output of the commands for a completed ``PwBaseWorkChain`` from the ``aiida-quantumespresso`` plugin, which simply calls a ``PwCalculation``.
@@ -638,9 +644,9 @@ verdi process pause/play/kill
 -----------------------------
 The ``verdi`` command line interface provides three commands to interact with 'live' processes.
 
-    * ``verdi process pause``
-    * ``verdi process play``
-    * ``verdi process kill``
+* ``verdi process pause``
+* ``verdi process play``
+* ``verdi process kill``
 
 The first pauses a process temporarily, the second resumes any paused processes and the third one permanently kills them.
 The sub command names might seem to tell you this already and it might look like that is all there is to know, but the functionality underneath is quite complicated and deserves additional explanation nonetheless.

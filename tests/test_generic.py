@@ -14,8 +14,12 @@ import pytest
 from aiida import orm
 
 
-def test_code_local(aiida_profile_clean, aiida_localhost):
-    """Test local code."""
+@pytest.mark.usefixtures('suppress_internal_deprecations')
+def test_code_local(aiida_localhost):
+    """Test local code.
+
+    Remove this test when legacy `Code` is removed in v3.0.
+    """
     import tempfile
 
     from aiida.common.exceptions import ValidationError
@@ -37,8 +41,12 @@ def test_code_local(aiida_profile_clean, aiida_localhost):
     assert code.get_execname(), 'stest.sh'
 
 
-def test_code_remote(aiida_profile_clean, aiida_localhost):
-    """Test remote code."""
+@pytest.mark.usefixtures('suppress_internal_deprecations')
+def test_code_remote(aiida_localhost):
+    """Test remote code.
+
+    Remove this test when legacy `Code` is removed in v3.0.
+    """
     import tempfile
 
     from aiida.common.exceptions import ValidationError
@@ -89,7 +97,6 @@ def test_code_remote(aiida_profile_clean, aiida_localhost):
     assert not code.can_run_on(othercomputer)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
 class TestBool:
     """Test AiiDA Bool class."""
 

@@ -8,10 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for group migrations: 118349c10896 -> 0edcdd5a30f0"""
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_group_typestring(perform_migrations: PsqlDostoreMigrator):
+def test_group_typestring(perform_migrations: PsqlDosMigrator):
     """Test the migration that renames the DbGroup type strings.
 
     Verify that the type strings are properly migrated.
@@ -70,7 +70,7 @@ def test_group_typestring(perform_migrations: PsqlDostoreMigrator):
         assert group_autorun.type_string == 'core.auto'
 
 
-def test_group_extras(perform_migrations: PsqlDostoreMigrator):
+def test_group_extras(perform_migrations: PsqlDosMigrator):
     """Test migration to add the `extras` JSONB column to the `DbGroup` model.
 
     Verify that the model now has an extras column with empty dictionary as default.

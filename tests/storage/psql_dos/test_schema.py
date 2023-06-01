@@ -11,7 +11,6 @@
 """Test object relationships in the database."""
 import warnings
 
-import pytest
 from sqlalchemy import exc as sa_exc
 
 from aiida.common.links import LinkType
@@ -22,7 +21,6 @@ from aiida.storage.psql_dos.models.node import DbNode
 from aiida.storage.psql_dos.models.user import DbUser
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestRelationshipsSQLA:
     """Class of tests concerning the schema and the correct
     implementation of relationships within the AiiDA ORM

@@ -8,10 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests 041a79fc615f -> 6a5c2ea1439d"""
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_data_move_with_node(perform_migrations: PsqlDostoreMigrator):
+def test_data_move_with_node(perform_migrations: PsqlDosMigrator):
     """Test the migration of Data nodes after the data module was moved within the node module.
 
     Verify that type string of the Data node was successfully adapted.

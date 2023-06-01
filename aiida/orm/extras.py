@@ -10,7 +10,7 @@
 # pylint: disable=too-many-lines,too-many-arguments
 """Interface to the extras of a node instance."""
 import copy
-from typing import TYPE_CHECKING, Any, Dict, Iterable, Iterator, List, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Tuple, Union
 
 if TYPE_CHECKING:
     from .groups import Group
@@ -158,7 +158,7 @@ class EntityExtras:
         """Delete all extras."""
         self._backend_entity.clear_extras()
 
-    def items(self) -> Iterator[Tuple[str, Any]]:
+    def items(self) -> Iterable[Tuple[str, Any]]:
         """Return an iterator over the extras.
 
         :return: an iterator with extra key value pairs

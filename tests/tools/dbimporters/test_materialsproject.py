@@ -19,7 +19,6 @@ def run_materialsproject_api_tests():
     return profile.dictionary.get('run_materialsproject_api_tests', False)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestMaterialsProject:
     """
     Contains the tests to verify the functionality of the Materials Project importer

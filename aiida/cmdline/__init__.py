@@ -14,6 +14,7 @@
 # yapf: disable
 # pylint: disable=wildcard-import
 
+from .groups import *
 from .params import *
 from .utils import *
 
@@ -24,6 +25,7 @@ __all__ = (
     'ComputerParamType',
     'ConfigOptionParamType',
     'DataParamType',
+    'DynamicEntryPointCommandGroup',
     'EmailType',
     'EntryPointType',
     'FileOrUrl',
@@ -42,6 +44,7 @@ __all__ = (
     'ProfileParamType',
     'ShebangParamType',
     'UserParamType',
+    'VerdiCommandGroup',
     'WorkflowParamType',
     'dbenv',
     'echo_critical',

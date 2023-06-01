@@ -9,7 +9,9 @@
 ###########################################################################
 # pylint: disable=invalid-name,too-many-statements,too-many-branches
 """`verdi computer` command."""
+from copy import deepcopy
 from functools import partial
+from math import isclose
 
 import click
 import tabulate
@@ -45,7 +47,7 @@ def prompt_for_computer_configuration(computer):  # pylint: disable=unused-argum
     pass
 
 
-def _computer_test_get_jobs(transport, scheduler, authinfo):  # pylint: disable=unused-argument
+def _computer_test_get_jobs(transport, scheduler, authinfo, computer):  # pylint: disable=unused-argument
     """Internal test to check if it is possible to check the queue state.
 
     :param transport: an open transport
@@ -57,7 +59,7 @@ def _computer_test_get_jobs(transport, scheduler, authinfo):  # pylint: disable=
     return True, f'{len(found_jobs)} jobs found in the queue'
 
 
-def _computer_test_no_unexpected_output(transport, scheduler, authinfo):  # pylint: disable=unused-argument
+def _computer_test_no_unexpected_output(transport, scheduler, authinfo, computer):  # pylint: disable=unused-argument
     """Test that there is no unexpected output from the connection.
 
     This can happen if e.g. there is some spurious command in the
@@ -92,7 +94,7 @@ in this troubleshooting section of the online documentation: https://bit.ly/2FCR
     return True, None
 
 
-def _computer_get_remote_username(transport, scheduler, authinfo):  # pylint: disable=unused-argument
+def _computer_get_remote_username(transport, scheduler, authinfo, computer):  # pylint: disable=unused-argument
     """Internal test to check if it is possible to determine the username on the remote.
 
     :param transport: an open transport
@@ -104,7 +106,7 @@ def _computer_get_remote_username(transport, scheduler, authinfo):  # pylint: di
     return True, remote_user
 
 
-def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disable=unused-argument
+def _computer_create_temp_file(transport, scheduler, authinfo, computer):  # pylint: disable=unused-argument
     """
     Internal test to check if it is possible to create a temporary file
     and then delete it in the work directory
@@ -157,6 +159,75 @@ def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disab
         os.remove(destfile)
 
     transport.remove(remote_file_path)
+
+    return True, None
+
+
+def time_use_login_shell(authinfo, auth_params, use_login_shell: bool, iterations: int = 3) -> float:
+    """Execute the ``whoami`` over the transport for the given ``use_login_shell`` and report the time taken.
+
+    :param authinfo: The ``AuthInfo`` instance to use.
+    :param auth_params: The base authentication parameters.
+    :param use_login_shell: Whether to use a login shell or not.
+    :param iterations: The number of iterations of the command to call. Command will return the average call time.
+    :return: The average call time of the ``Transport.whoami`` command.
+    """
+    import time
+
+    auth_params['use_login_shell'] = use_login_shell
+    authinfo.set_auth_params(auth_params)
+
+    timings = []
+
+    for _ in range(iterations):
+        time_start = time.time()
+        with authinfo.get_transport() as transport:
+            transport.whoami()
+        timings.append(time.time() - time_start)
+
+    return sum(timings) / iterations
+
+
+def _computer_use_login_shell_performance(transport, scheduler, authinfo, computer):  # pylint: disable=unused-argument
+    """Execute a command over the transport with and without the ``use_login_shell`` option enabled.
+
+    By default, AiiDA uses a login shell when connecting to a computer in order to operate in the same environment as a
+    user connecting to the computer. However, loading the login scripts of the shell can take time, which can
+    significantly slow down all commands executed by AiiDA and impact the throughput of calculation jobs. This test
+    executes a simple command both with and without using a login shell and emits a warning if the login shell is slower
+    by at least 100 ms. If the computer is already configured to avoid using a login shell, the test is skipped and the
+    function returns a successful test result.
+    """
+    rel_tol = 0.5  # Factor of two
+    abs_tol = 0.1  # 100 ms
+    iterations = 3
+
+    auth_params = authinfo.get_auth_params()
+
+    # If ``use_login_shell=False`` we don't need to test for it being slower.
+    if not auth_params.get('use_login_shell', True):
+        return True, None
+
+    auth_params_clone = deepcopy(auth_params)
+
+    try:
+        timing_false = time_use_login_shell(authinfo, auth_params_clone, False, iterations)
+        timing_true = time_use_login_shell(authinfo, auth_params_clone, True, iterations)
+    finally:
+        authinfo.set_auth_params(auth_params)
+
+    echo.echo_debug(f'Execution time: {timing_true} vs {timing_false} for login shell and normal, respectively')
+
+    if not isclose(timing_true, timing_false, rel_tol=rel_tol, abs_tol=abs_tol):
+        return True, (
+            f"\n\n{click.style('Warning:', fg='yellow', bold=True)} "
+            'The computer is configured to use a login shell, which is slower compared to a normal shell.\n'
+            f'Command execution time of {timing_true:.3f} versus {timing_false:.3f} seconds, respectively).\n'
+            'Unless this setting is really necessary, consider disabling it with:\n'
+            f'\n    verdi computer configure {computer.transport_type} {computer.label} -n --no-use-login-shell\n\n'
+            'For details, please refer to the documentation: '
+            'https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/transport.html#login-shells\n'
+        )
 
     return True, None
 
@@ -265,7 +336,6 @@ def computer_setup(ctx, non_interactive, **kwargs):
 @with_dbenv()
 def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     """Duplicate a computer allowing to change some parameters."""
-    from aiida import orm
     from aiida.orm.utils.builders.computer import ComputerBuilder
 
     if kwargs['label'] in get_computer_names():
@@ -293,9 +363,7 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
     else:
         echo.echo_success(f'Computer<{computer.pk}> {computer.label} created')
 
-    is_configured = computer.is_user_configured(orm.User.collection.get_default())
-
-    if not is_configured:
+    if not computer.is_configured:
         echo.echo_report('Note: before the computer can be used, it has to be configured with the command:')
 
         profile = ctx.obj['profile']
@@ -367,8 +435,8 @@ def computer_list(all_entries, raw):
         echo.echo_report("No computers configured yet. Use 'verdi computer setup'")
 
     sort = lambda computer: computer.label
-    highlight = lambda comp: comp.is_user_configured(user) and comp.is_user_enabled(user)
-    hide = lambda comp: not (comp.is_user_configured(user) and comp.is_user_enabled(user)) and not all_entries
+    highlight = lambda comp: comp.is_configured and comp.is_user_enabled(user)
+    hide = lambda comp: not (comp.is_configured and comp.is_user_enabled(user)) and not all_entries
     echo.echo_formatted_list(computers, ['label'], sort=sort, highlight=highlight, hide=hide)
 
 
@@ -469,7 +537,8 @@ def computer_test(user, print_traceback, computer):
         _computer_test_no_unexpected_output: 'Checking for spurious output',
         _computer_test_get_jobs: 'Getting number of jobs from scheduler',
         _computer_get_remote_username: 'Determining remote user name',
-        _computer_create_temp_file: 'Creating and deleting temporary file'
+        _computer_create_temp_file: 'Creating and deleting temporary file',
+        _computer_use_login_shell_performance: 'Checking for possible delay from using login shell',
     }
 
     try:
@@ -478,7 +547,7 @@ def computer_test(user, print_traceback, computer):
         with transport:
             num_tests += 1
 
-            echo.echo('[OK]', fg='green')
+            echo.echo('[OK]', fg=echo.COLORS['success'])
 
             scheduler.set_transport(transport)
 
@@ -487,7 +556,9 @@ def computer_test(user, print_traceback, computer):
                 echo.echo(f'* {test_label}... ', nl=False)
                 num_tests += 1
                 try:
-                    success, message = test(transport=transport, scheduler=scheduler, authinfo=authinfo)
+                    success, message = test(
+                        transport=transport, scheduler=scheduler, authinfo=authinfo, computer=computer
+                    )
                 except Exception as exception:  # pylint:disable=broad-except
                     success = False
                     message = f'{exception.__class__.__name__}: {str(exception)}'
@@ -501,16 +572,16 @@ def computer_test(user, print_traceback, computer):
                 if not success:
                     num_failures += 1
                     if message:
-                        echo.echo('[Failed]: ', fg='red', nl=False)
+                        echo.echo('[Failed]: ', fg=echo.COLORS['error'], nl=False)
                         echo.echo(message)
                     else:
-                        echo.echo('[Failed]', fg='red')
+                        echo.echo('[Failed]', fg=echo.COLORS['error'])
                 else:
                     if message:
-                        echo.echo('[OK]: ', fg='green', nl=False)
+                        echo.echo('[OK]: ', fg=echo.COLORS['success'], nl=False)
                         echo.echo(message)
                     else:
-                        echo.echo('[OK]', fg='green')
+                        echo.echo('[OK]', fg=echo.COLORS['success'])
 
         if num_failures:
             echo.echo_warning(f'{num_failures} out of {num_tests} tests failed')
@@ -518,7 +589,7 @@ def computer_test(user, print_traceback, computer):
             echo.echo_success(f'all {num_tests} tests succeeded')
 
     except Exception:  # pylint:disable=broad-except
-        echo.echo('[FAILED]: ', fg='red', nl=False)
+        echo.echo('[FAILED]: ', fg=echo.COLORS['error'], nl=False)
         message = 'Error while trying to connect to the computer'
 
         if print_traceback:

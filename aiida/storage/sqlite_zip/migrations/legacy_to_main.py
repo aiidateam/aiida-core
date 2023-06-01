@@ -255,7 +255,9 @@ def _iter_entity_fields(
             uuid = all_fields['uuid']
             repository_metadata = _create_repo_metadata(node_repos[uuid]) if uuid in node_repos else {}
             yield {
-                **{keys.get(key, key): _convert_datetime(key, val) for key, val in all_fields.items()},
+                **{
+                    keys.get(key, key): _convert_datetime(key, val) for key, val in all_fields.items()
+                },
                 **{
                     'id': pk,
                     'attributes': attributes[pk],

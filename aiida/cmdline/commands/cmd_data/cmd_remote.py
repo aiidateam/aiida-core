@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""`verdi data remote` command."""
+"""`verdi data core.remote` command."""
 import stat
 
 import click
@@ -17,7 +17,7 @@ from aiida.cmdline.params import arguments, types
 from aiida.cmdline.utils import echo
 
 
-@verdi_data.group('remote')
+@verdi_data.group('core.remote')
 def remote():
     """Manipulate RemoteData objects (reference to remote folders).
 
@@ -50,7 +50,7 @@ def remote_ls(ls_long, path, datum):
             )
             echo.echo(pre_line, nl=False)
         if metadata['isdir']:
-            echo.echo(metadata['name'], fg='blue')
+            echo.echo(metadata['name'], fg=echo.COLORS['info'])
         else:
             echo.echo(metadata['name'])
 

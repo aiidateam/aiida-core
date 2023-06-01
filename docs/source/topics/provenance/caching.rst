@@ -102,8 +102,8 @@ When a node is being stored (the `target`) and caching is enabled for its node c
 This method calls the iterator :meth:`~aiida.orm.nodes.caching.NodeCaching._iter_all_same_nodes` and takes the first one it returns if there are any.
 To find the list of `source` nodes that are equivalent to the `target` that is being stored, :meth:`~aiida.orm.nodes.caching.NodeCaching._iter_all_same_nodes` performs the following steps:
 
- 1. It queries the database for all nodes that have the same hash as the `target` node.
- 2. From the result, only those nodes are returned where the property :meth:`~aiida.orm.nodes.caching.NodeCaching.is_valid_cache` returns ``True``.
+1. It queries the database for all nodes that have the same hash as the `target` node.
+2. From the result, only those nodes are returned where the property :meth:`~aiida.orm.nodes.caching.NodeCaching.is_valid_cache` returns ``True``.
 
 The property :meth:`~aiida.orm.nodes.caching.NodeCaching.is_valid_cache` therefore allows to control whether a stored node can be used as a `source` in the caching mechanism.
 By default, for all nodes, the property returns ``True``.
@@ -159,7 +159,9 @@ Limitations and Guidelines
    While AiiDA's hashes include the version of the Python package containing the calculation/data classes, it cannot detect cases where the underlying Python code was changed without increasing the version number.
    Another scenario that can lead to an erroneous cache hit is if the parser and calculation are not implemented as part of the same Python package, because the calculation nodes store only the name, but not the version of the used parser.
 
-#. Note that while caching saves unnecessary computations, it does not save disk space: the output nodes of the cached calculation are full copies of the original outputs.
+#. While caching saves unnecessary computations, it does not necessarily save space as the cached calculation and its output nodes are duplicated in the provenance graph.
+   However, AiiDA's default disk-objectstore storage backend comes with automatic de-duplication at the object level.
+   Disk usage therefore remains unaffected with this backend, except for node metadata stored at the database level.
 
 #. Finally, When modifying the hashing/caching behaviour of your classes, keep in mind that cache matches can go wrong in two ways:
 

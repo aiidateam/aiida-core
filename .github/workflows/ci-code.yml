@@ -44,12 +44,12 @@ jobs:
     needs: [check-requirements]
 
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
 
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.8', '3.10']
+        python-version: ['3.8', '3.11']
 
     services:
       postgres:
@@ -66,9 +66,10 @@ jobs:
         ports:
           - 5432:5432
       rabbitmq:
-        image: rabbitmq:latest
+        image: rabbitmq:3.8.14-management
         ports:
           - 5672:5672
+          - 15672:15672
       slurm:
         image: xenonmiddleware/slurm:17
         ports:
@@ -83,35 +84,19 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install system dependencies
-      run: |
-        sudo apt update
-        sudo apt install postgresql graphviz
+      run: sudo apt update && sudo apt install postgresql graphviz
 
     - name: Upgrade pip and setuptools
+      # Install specific version of setuptools, because 65.6.0 breaks a number of packages, such as numpy
       run: |
-        pip install --upgrade pip setuptools
+        pip install --upgrade pip
+        pip install setuptools==65.5.0
         pip --version
-
-    - name: Build pymatgen with compatible numpy
-      run: |
-        # This step is necessary because certain versions of `pymatgen` will not specify an explicit version of
-        # `numpy` in its build requirements, and so the latest version will be used. This causes problems,
-        # however, because this means that the compiled version of `pymatgen` can only be used with that version
-        # of `numpy` or higher, since `numpy` only guarantees forward compatibility of the ABI. If we want to
-        # run with an older version of `numpy`, we need to ensure that `pymatgen` is built with that same
-        # version. This we can accomplish by installing the desired version of `numpy` manually and then calling
-        # the install command for `pymatgen` with the `--no-build-isolation` flag. This flag will ensure that
-        # build dependencies are ignored and won't be installed (preventing the most recent version of `numpy`
-        # to be installed) and the build relies on those requirements already being present in the environment.
-        # We also need to install `wheel` because otherwise the `pymatgen` build will fail because `bdist_wheel`
-        # will not be available.
-        pip install numpy==1.21.4 wheel
-        pip install pymatgen==2022.0.16 --no-cache-dir --no-build-isolation
 
     - name: Install aiida-core
       run: |
-        pip install --use-feature=2020-resolver -r requirements/requirements-py-${{ matrix.python-version }}.txt
-        pip install --use-feature=2020-resolver --no-deps -e .
+        pip install -r requirements/requirements-py-${{ matrix.python-version }}.txt
+        pip install --no-deps -e .
         pip freeze
 
     - name: Setup environment
@@ -141,7 +126,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.8', '3.10']
+        python-version: ['3.8', '3.11']
 
     steps:
     - uses: actions/checkout@v2

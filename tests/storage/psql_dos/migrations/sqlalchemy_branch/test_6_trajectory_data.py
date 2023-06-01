@@ -7,12 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# mypy: disable_error_code=var-annotated
 """Tests 37f3d4882837 -> ce56d84bcc35"""
 import numpy as np
 import pytest
 
+from aiida.storage.psql_dos.backend import get_filepath_container
 from aiida.storage.psql_dos.migrations.utils import utils
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 from aiida.storage.psql_dos.utils import flag_modified
 
 
@@ -38,12 +40,12 @@ def get_node_array(node, repo_path, name):
     return utils.load_numpy_array_from_repository(repo_path, node.uuid, name)
 
 
-def test_trajectory_data(perform_migrations: PsqlDostoreMigrator):
+def test_trajectory_data(perform_migrations: PsqlDosMigrator):
     """Test the migration of the symbols from numpy array to attribute for TrajectoryData nodes.
 
     Verify that migration of symbols from repository array to attribute works properly.
     """
-    repo_path = perform_migrations.profile.repository_path
+    repo_path = get_filepath_container(perform_migrations.profile).parent
 
     # starting revision
     perform_migrations.migrate_up('sqlalchemy@37f3d4882837')  # 37f3d4882837_make_all_uuid_columns_unique

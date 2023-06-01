@@ -14,10 +14,10 @@ from uuid import uuid4
 
 from aiida.common import timezone
 from aiida.storage.psql_dos.migrations.utils.calc_state import STATE_MAPPING, StateMapping
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_legacy_jobcalcstate(perform_migrations: PsqlDostoreMigrator):
+def test_legacy_jobcalcstate(perform_migrations: PsqlDosMigrator):
     """Test the migration that performs a data migration of legacy `JobCalcState`."""
     # starting revision
     perform_migrations.migrate_up('django@django_0037')
@@ -57,7 +57,7 @@ def test_legacy_jobcalcstate(perform_migrations: PsqlDostoreMigrator):
     node_model = perform_migrations.get_current_table('db_dbnode')
     with perform_migrations.session() as session:
         for node_id, mapping in nodes.items():
-            attributes = session.get(node_model, node_id).attributes
+            attributes = session.get(node_model, node_id).attributes  # type: ignore
             assert attributes.get('process_state', None) == mapping.process_state
             assert attributes.get('process_status', None) == mapping.process_status
             assert attributes.get('exit_status', None) == mapping.exit_status

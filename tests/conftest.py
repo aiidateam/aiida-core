@@ -8,10 +8,20 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=redefined-outer-name
-"""Configuration file for pytest tests."""
+"""Collection of ``pytest`` fixtures that are intended for internal use to ``aiida-core`` only.
+
+Fixtures that are intended for use in plugin packages are kept in :mod:`aiida.manage.tests.pytest_fixtures`. They are
+loaded in this file as well, such that they can also be used for the tests of ``aiida-core`` itself.
+"""
+from __future__ import annotations
+
+import copy
+import dataclasses
 import os
 import pathlib
-from typing import IO, List, Optional, Union
+import types
+import typing as t
+import warnings
 
 import click
 import pytest
@@ -165,8 +175,6 @@ def isolated_config(monkeypatch):
     changing it in tests maybe necessary if a command is invoked that will be reading the config from disk in another
     Python process and so doesn't have access to the loaded config in memory in the process that is running the test.
     """
-    import copy
-
     from aiida.manage import configuration
 
     monkeypatch.setattr(configuration.Config, '_backup', lambda *args, **kwargs: None)
@@ -205,11 +213,9 @@ def empty_config(tmp_path) -> Config:
     manager.unload_profile()
     configuration.CONFIG = None
 
-    # Create a temporary folder, set it as the current config directory path and reset the loaded configuration
-    settings.AIIDA_CONFIG_FOLDER = str(tmp_path)
-
-    # Create the instance base directory structure, the config file and a dummy profile
-    settings.create_instance_directories()
+    # Set the configuration directory to a temporary directory. This will create the necessary folders for an empty
+    # AiiDA configuration and set relevant global variables in :mod:`aiida.manage.configuration.settings`.
+    settings.set_configuration_directory(tmp_path)
 
     # The constructor of `Config` called by `load_config` will print warning messages about migrating it
     with Capturing():
@@ -221,8 +227,15 @@ def empty_config(tmp_path) -> Config:
         # Reset the config folder path and the config instance. Note this will always be executed after the yield no
         # matter what happened in the test that used this fixture.
         manager.unload_profile()
-        settings.AIIDA_CONFIG_FOLDER = current_config_path
         configuration.CONFIG = current_config
+
+        # This sets important global constants that are based on the location of the config folder. Without it, things
+        # like the :class:`aiida.engine.daemon.client.DaemonClient` will not function properly after a test that uses
+        # this fixture because the paths of the daemon files would still point to the path of the temporary config
+        # folder created by this fixture.
+        settings.set_configuration_directory(pathlib.Path(current_config_path))
+
+        # Reload the original profile
         manager.load_profile(current_profile_name)
 
 
@@ -240,7 +253,7 @@ def profile_factory() -> Profile:
         profile_dictionary = {
             'default_user_email': kwargs.pop('default_user_email', 'dummy@localhost'),
             'storage': {
-                'backend': kwargs.pop('storage_backend', 'psql_dos'),
+                'backend': kwargs.pop('storage_backend', 'core.psql_dos'),
                 'config': {
                     'database_engine': kwargs.pop('database_engine', 'postgresql_psycopg2'),
                     'database_hostname': kwargs.pop('database_hostname', 'localhost'),
@@ -262,7 +275,8 @@ def profile_factory() -> Profile:
                     'broker_virtual_host': kwargs.pop('broker_virtual_host', ''),
                     'broker_parameters': kwargs.pop('broker_parameters', {}),
                 }
-            }
+            },
+            'test_profile': kwargs.pop('test_profile', True)
         }
 
         return Profile(name, profile_dictionary)
@@ -325,7 +339,7 @@ def config_with_profile(config_with_profile_factory):
 
 
 @pytest.fixture
-def manager(aiida_profile):  # pylint: disable=unused-argument
+def manager():
     """Get the ``Manager`` instance of the currently loaded profile."""
     from aiida.manage import get_manager
     return get_manager()
@@ -352,6 +366,13 @@ def communicator(manager):
     return manager.get_communicator()
 
 
+@pytest.fixture
+def default_user():
+    """Return the default user."""
+    from aiida.orm import User
+    return User.collection.get_default()
+
+
 @pytest.fixture(scope='function')
 def override_logging(isolated_config):
     """Temporarily override the log level for the AiiDA logger and the database log handler to ``DEBUG``.
@@ -373,42 +394,16 @@ def override_logging(isolated_config):
 
 
 @pytest.fixture
-def with_daemon():
-    """Starts the daemon process and then makes sure to kill it once the test is done."""
-    import subprocess
-    import sys
+def suppress_internal_deprecations():
+    """Suppress all internal deprecations.
 
-    from aiida.cmdline.utils.common import get_env_with_venv_bin
-    from aiida.engine.daemon.client import DaemonClient
+    Warnings emmitted of type :class:`aiida.common.warnings.AiidaDeprecationWarning` for the duration of the test.
+    """
+    from aiida.common.warnings import AiidaDeprecationWarning
 
-    # Add the current python path to the environment that will be used for the daemon sub process.
-    # This is necessary to guarantee the daemon can also import all the classes that are defined
-    # in this `tests` module.
-    env = get_env_with_venv_bin()
-    env['PYTHONPATH'] = ':'.join(sys.path)
-
-    profile = get_profile()
-
-    with subprocess.Popen(
-        DaemonClient(profile).cmd_string.split(),
-        stderr=sys.stderr,
-        stdout=sys.stdout,
-        env=env,
-    ):
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=AiidaDeprecationWarning)
         yield
-
-
-@pytest.fixture
-def daemon_client():
-    """Return a daemon client instance and stop any daemon instances running for the test profile after the test."""
-    from aiida.engine.daemon.client import DaemonClient
-
-    client = DaemonClient(get_profile())
-
-    try:
-        yield client
-    finally:
-        client.stop_daemon(wait=True)
 
 
 @pytest.fixture(scope='function')
@@ -419,80 +414,214 @@ def chdir_tmp_path(request, tmp_path):
     os.chdir(request.config.invocation_dir)
 
 
+def cli_command_map() -> dict[click.Command, list[str]]:
+    """Return a map of all ``verdi`` subcommands and their path in the command tree."""
+    from aiida.cmdline.commands.cmd_verdi import verdi
+
+    def recurse_commands(ctx, command: click.Command, breadcrumbs: list[str] | None = None):
+        """Recursively return all subcommands that are part of ``command``.
+
+        :param command: The click command to start with.
+        :param parents: A list of strings that represent the parent commands leading up to the current command.
+        :returns: A list of strings denoting the full path to the current command.
+        """
+        breadcrumbs = (breadcrumbs or []) + [command.name]
+
+        yield command, breadcrumbs
+
+        if isinstance(command, click.Group):
+            for command_name in command.commands:
+                yield from recurse_commands(ctx, command.get_command(ctx, command_name), breadcrumbs)
+
+    ctx = click.Context(verdi)
+    command_map = {}
+
+    for command, breadcrumbs in recurse_commands(ctx, verdi):
+        command_map[command] = breadcrumbs
+
+    return command_map
+
+
+@dataclasses.dataclass
+class CliResult:
+    """Dataclass representing the result of a command line interface invocation."""
+
+    stderr_bytes: bytes
+    stdout_bytes: bytes
+    exc_info: tuple[t.Type[BaseException], BaseException, types.TracebackType] | tuple[None, None,
+                                                                                       None] = (None, None, None)
+    exception: BaseException | None = None
+    exit_code: int | None = 0
+
+    @property
+    def stdout(self) -> str:
+        """Return the output that was written to stdout."""
+        return self.stdout_bytes.decode('utf-8', 'replace').replace('\r\n', '\n')
+
+    @property
+    def stderr(self) -> str:
+        """Return the output that was written to stderr."""
+        return self.stderr_bytes.decode('utf-8', 'replace').replace('\r\n', '\n')
+
+    @property
+    def output(self) -> str:
+        """Return the output that was written to stdout."""
+        return self.stdout + self.stderr
+
+    @property
+    def output_lines(self) -> list[str]:
+        """Return the output that was written to stdout as a list of lines."""
+        return [line for line in self.output.split('\n') if line.strip()]
+
+
 @pytest.fixture
-def run_cli_command(reset_log_level):  # pylint: disable=unused-argument
-    """Run a `click` command with the given options.
+def run_cli_command(reset_log_level, aiida_instance, aiida_profile):  # pylint: disable=unused-argument
+    """Run a ``click`` command with the given options.
 
     The call will raise if the command triggered an exception or the exit code returned is non-zero.
     """
-    from click.testing import Result
 
-    def _run_cli_command(
+    def factory(
         command: click.Command,
-        options: Optional[List] = None,
-        user_input: Optional[Union[str, bytes, IO]] = None,
+        parameters: list[str] | None = None,
+        user_input: str | bytes | t.IO | None = None,
         raises: bool = False,
-        catch_exceptions: bool = True,
+        use_subprocess: bool = False,
+        suppress_warnings: bool = False,
+        initialize_ctx_obj: bool = True,
         **kwargs
-    ) -> Result:
+    ) -> CliResult:
         """Run the command and check the result.
 
-        .. note:: the `output_lines` attribute is added to return value containing list of stripped output lines.
-
-        :param options: the list of command line options to pass to the command invocation.
+        :param command: The base command to invoke.
+        :param parameters: The command line parameters to pass to the invocation.
         :param user_input: string with data to be provided at the prompt. Can include newline characters to simulate
             responses to multiple prompts.
-        :param raises: whether the command is expected to raise an exception.
-        :param catch_exceptions: if True and ``raise is False``, will assert that the exception is ``None`` and the exit
-            code of the result of the invoked command equals zero.
-        :param kwargs: keyword arguments that will be psased to the command invocation.
-        :return: test result.
+        :param raises: Boolean, if ``True``, the command should raise an exception.
+        :param use_subprocess: Boolean, if ``True``, runs the command in a subprocess, otherwise it is run in the same
+            interpreter using :class:`click.testing.CliRunner`. The advantage of running in a subprocess is that it
+            simulates exactly what a user would invoke through the CLI. The test runner provided by ``click`` invokes
+            commands in a way that is not always a 100% analogous to an actual CLI call and so tests may not cover the
+            exact behavior. The direct reason for adding this argument was when a bug was introduced that was not caught
+            because of this problem. The changes made by the command to the database were properly added to the session
+            but were never flushed to the database, meaning the changes were not persisted. This was not caught by the
+            test runner, since the test saw the correct changes but didn't know they wouldn't be persisted. Finally, if
+            a test monkeypatches the behavior of code that is called by the command being tested, then a subprocess
+            cannot be used, since the monkeypatch only applies to the current interpreter. In these cases it is
+            necessary to set ``use_subprocesses = False``.
+        :param suppress_warnings: Boolean, if ``True``, the ``PYTHONWARNINGS`` environment variable is set to
+            ``ignore::Warning``. This is important when testing a command using ``use_subprocess = True`` and the check
+            on the output is very strict. By running in a sub process, any warnings that are emitted by the code will be
+            shown since they have not already been hit as would be the case when running the test through the test
+            runner in this interpreter.
+        :param initialize_ctx_obj: Boolean, if ``True``, the custom ``obj`` attribute of the ``ctx`` is initialized when
+            ``use_subprocess == False``. When invoking the ``verdi`` command from the command line (and when running
+            tests with ``use_subprocess == True``), this is done by the ``VerdiContext``, but when using the test runner
+            in this interpreter, the object has to be initialized manually and passed to the test runner. In certain
+            cases, however, this initialization should not be done, to simulate for example the absence of a loaded
+            profile.
+        :returns: Instance of ``CliResult``.
+        :raises AssertionError: If ``raises == True`` and the command didn't except, or if ``raises == True`` and the
+            the command did except.
         """
-        import traceback
+        # Cast all elements in ``parameters`` to strings as that is required by ``subprocess.run``.
+        parameters = [str(param) for param in parameters or []]
 
-        from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup
-        from aiida.common import AttributeDict
-
-        config = get_config()
-        profile = get_profile()
-        obj = AttributeDict({'config': config, 'profile': profile})
-
-        # Convert any ``pathlib.Path`` objects in the ``options`` to their absolute filepath string representation.
-        # This is necessary because the ``invoke`` command does not support these path objects.
-        options = [str(option) if isinstance(option, pathlib.Path) else option for option in options or []]
-
-        # We need to apply the ``VERBOSITY`` option. When invoked through the command line, this is done by the logic
-        # of the ``VerdiCommandGroup``, but when testing commands, the command is retrieved directly from the module
-        # which circumvents this machinery.
-        command = VerdiCommandGroup.add_verbosity_option(command)
-
-        runner = click.testing.CliRunner()
-        result = runner.invoke(command, options, input=user_input, obj=obj, **kwargs)
+        if use_subprocess:
+            result = run_cli_command_subprocess(command, parameters, user_input, aiida_profile.name, suppress_warnings)
+        else:
+            result = run_cli_command_runner(command, parameters, user_input, initialize_ctx_obj, kwargs)
 
         if raises:
             assert result.exception is not None, result.output
-            assert result.exit_code != 0
-        elif catch_exceptions:
-            assert result.exception is None, ''.join(traceback.format_exception(*result.exc_info))
-            assert result.exit_code == 0, result.output
-
-        result.output_lines = [line.strip() for line in result.output.split('\n') if line.strip()]
+            assert result.exit_code != 0, result.exit_code
+        else:
+            assert result.exception is None, result.output
+            assert result.exit_code == 0, result.exit_code
 
         return result
 
-    return _run_cli_command
+    return factory
+
+
+def run_cli_command_subprocess(command, parameters, user_input, profile_name, suppress_warnings):
+    """Run CLI command through ``subprocess``."""
+    import subprocess
+    import sys
+
+    env = os.environ.copy()
+    command_path = cli_command_map()[command]
+    args = command_path[:1] + ['-p', profile_name] + command_path[1:] + parameters
+
+    if suppress_warnings:
+        env['PYTHONWARNINGS'] = 'ignore::Warning'
+        # Need to explicitly remove the ``AIIDA_WARN_v3`` variable as this will trigger ``AiidaDeprecationWarning`` to
+        # be emitted by the ``aiida.common.warnings.warn_deprecation`` method and for an unknown reason these are not
+        # affected by the ``ignore::Warning`` setting.
+        env.pop('AIIDA_WARN_v3', None)
+
+    try:
+        completed_process = subprocess.run(
+            args, capture_output=True, check=True, input=user_input.encode('utf-8') if user_input else None, env=env
+        )
+    except subprocess.CalledProcessError as exception:
+        result = CliResult(
+            exc_info=sys.exc_info(),
+            exception=exception,
+            exit_code=exception.returncode,
+            stderr_bytes=exception.stderr,
+            stdout_bytes=exception.stdout,
+        )
+    else:
+        result = CliResult(
+            stderr_bytes=completed_process.stderr,
+            stdout_bytes=completed_process.stdout,
+        )
+
+    return result
+
+
+def run_cli_command_runner(command, parameters, user_input, initialize_ctx_obj, kwargs):
+    """Run CLI command through ``click.testing.CliRunner``."""
+    from click.testing import CliRunner
+
+    from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup
+    from aiida.common import AttributeDict
+
+    if initialize_ctx_obj:
+        config = get_config()
+        profile = get_profile()
+        obj = AttributeDict({'config': config, 'profile': profile})
+    else:
+        obj = None
+
+    # We need to apply the ``VERBOSITY`` option. When invoked through the command line, this is done by the logic of the
+    # ``VerdiCommandGroup``, but when testing commands, the command is retrieved directly from the module which
+    # circumvents this machinery.
+    command = VerdiCommandGroup.add_verbosity_option(command)
+
+    runner = CliRunner(mix_stderr=False)
+    result = runner.invoke(command, parameters, input=user_input, obj=obj, **kwargs)
+    return CliResult(
+        exc_info=result.exc_info or (None, None, None),
+        exception=result.exception,
+        exit_code=result.exit_code,
+        stderr_bytes=result.stderr_bytes or b'',
+        stdout_bytes=result.stdout_bytes,
+    )
 
 
 @pytest.fixture
 def reset_log_level():
-    """Reset the `aiida.common.log.CLI_LOG_LEVEL` global and reconfigure the logging.
+    """Reset the ``CLI_LOG_ACTIVE`` and ``CLI_LOG_LEVEL`` globals in ``aiida.common.log`` and reconfigure the logging.
 
-    This fixture should be used by tests that will change the ``CLI_LOG_LEVEL`` global, for example, through the
+    This fixture should be used by tests that will change these globals, for example, through the
     :class:`~aiida.cmdline.params.options.main.VERBOSITY` option in a CLI command invocation.
     """
     from aiida.common import log
     try:
         yield
     finally:
+        log.CLI_ACTIVE = None
         log.CLI_LOG_LEVEL = None
         log.configure_logging(with_orm=True)

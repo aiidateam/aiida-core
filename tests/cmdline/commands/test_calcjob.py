@@ -33,12 +33,12 @@ class TestVerdiCalculation:
     """Tests for `verdi calcjob`."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile_clean, aiida_localhost, tmp_path):  # pylint: disable=unused-argument
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
+        # pylint: disable=attribute-defined-outside-init,too-many-statements
 
         self.computer = aiida_localhost
-        self.code = orm.Code(remote_computer_exec=(self.computer, '/bin/true')).store()
+        self.code = orm.InstalledCode(computer=self.computer, filepath_executable='/bin/true').store()
         self.group = orm.Group(label='test_group').store()
         self.node = orm.Data().store()
         self.calcs = []
@@ -47,14 +47,20 @@ class TestVerdiCalculation:
         process_type = get_entry_point_string_from_class(process_class.__module__, process_class.__name__)
 
         # Create 5 CalcJobNodes (one for each CalculationState)
-        for calculation_state in CalcJobState:
+        for index, calculation_state in enumerate(CalcJobState):
+
+            dirpath = (tmp_path / str(index))
+            dirpath.mkdir()
 
             calc = orm.CalcJobNode(computer=self.computer, process_type=process_type)
             calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
-            calc.set_remote_workdir('/tmp/aiida/work')
-            remote = RemoteData(remote_path='/tmp/aiida/work')
+            calc.set_option('output_filename', 'fileA.txt')
+            calc.set_remote_workdir(str(dirpath))
+            remote = RemoteData(remote_path=str(dirpath))
             remote.computer = calc.computer
             remote.base.links.add_incoming(calc, LinkType.CREATE, link_label='remote_folder')
+            (dirpath / 'fileA.txt').write_text('test stringA')
+            (dirpath / 'fileB.txt').write_text('test stringB')
             calc.store()
             remote.store()
 
@@ -81,14 +87,16 @@ class TestVerdiCalculation:
                 self.group.add_nodes([calc])
 
         # Create a single failed CalcJobNode
+        dirpath = (tmp_path / 'failed')
+        dirpath.mkdir()
         self.EXIT_STATUS = 100
         calc = orm.CalcJobNode(computer=self.computer)
         calc.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
         calc.store()
         calc.set_exit_status(self.EXIT_STATUS)
         calc.set_process_state(ProcessState.FINISHED)
-        calc.set_remote_workdir('/tmp/aiida/work')
-        remote = RemoteData(remote_path='/tmp/aiida/work')
+        calc.set_remote_workdir(str(tmp_path))
+        remote = RemoteData(remote_path=str(tmp_path))
         remote.computer = calc.computer
         remote.base.links.add_incoming(calc, LinkType.CREATE, link_label='remote_folder')
         remote.store()
@@ -100,7 +108,7 @@ class TestVerdiCalculation:
         # Get the imported ArithmeticAddCalculation node
         ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
         calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()[0]
-        self.arithmetic_job: orm.CalcJobNode = calculations[0]
+        self.arithmetic_job: orm.CalcJobNode = calculations[0]  # type: ignore
 
         self.cli_runner = CliRunner()
 
@@ -325,3 +333,27 @@ class TestVerdiCalculation:
         assert result.exception is None, result.output
         assert len(get_result_lines(result)) == 1
         assert get_result_lines(result)[0] == '5'
+
+    def test_calcjob_remotecat(self):
+        """Test the remotecat command that prints the remote file for a given calcjob"""
+        # Specifying no filtering options and no explicit calcjobs should exit with non-zero status
+        options = []
+        result = self.cli_runner.invoke(command.calcjob_remotecat, options)
+        assert result.exception is not None, result.output
+
+        # This should be the failed calc without remote data - exception raised
+        options = [str(self.calcs[-1].uuid), 'fileB.txt']
+        result = self.cli_runner.invoke(command.calcjob_remotecat, options)
+        assert result.exception is not None, result.output
+
+        options = [str(self.result_job.uuid), 'fileB.txt']
+        result = self.cli_runner.invoke(command.calcjob_remotecat, options)
+        assert result.stdout == 'test stringB'
+
+        options = [str(self.result_job.uuid)]
+        result = self.cli_runner.invoke(command.calcjob_remotecat, options)
+        assert result.stdout == 'test stringA'
+
+        options = [str(self.result_job.uuid), 'fileA.txt']
+        result = self.cli_runner.invoke(command.calcjob_remotecat, options)
+        assert result.stdout == 'test stringA'

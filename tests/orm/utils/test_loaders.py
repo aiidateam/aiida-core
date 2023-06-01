@@ -21,7 +21,7 @@ class TestOrmUtils:
     """Test orm utils."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
@@ -52,13 +52,10 @@ class TestOrmUtils:
 
     def test_load_code(self):
         """Test the functionality of load_code."""
-        from aiida.orm import Code
+        from aiida.orm import InstalledCode
 
         label = 'compy'
-        code = Code()
-        code.label = label
-        code.set_remote_computer_exec((self.computer, '/x.x'))
-        code.store()
+        code = InstalledCode(label=label, computer=self.computer, filepath_executable='/x.x').store()
 
         # Load through full label
         loaded_code = load_code(code.full_label)

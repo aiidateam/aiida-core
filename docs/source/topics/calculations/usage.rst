@@ -9,8 +9,8 @@ Usage
 A calculation is a process (see the :ref:`process section<topics:processes:concepts>` for details) that *creates* new data.
 Currently, there are two ways of implementing a calculation process:
 
- * :ref:`calculation function<topics:calculations:usage:calcfunctions>`
- * :ref:`calculation job<topics:calculations:usage:calcjobs>`
+* :ref:`calculation function<topics:calculations:usage:calcfunctions>`
+* :ref:`calculation job<topics:calculations:usage:calcjobs>`
 
 This section will provide detailed information and best practices on how to implement these two calculation types.
 
@@ -83,8 +83,8 @@ Here you define, what inputs it takes and what outputs it will generate.
 
 As the snippet above demonstrates, the class method takes two arguments:
 
- * ``cls`` this is the reference of the class itself and is mandatory for any class method
- * ``spec`` which is the 'specification'
+* ``cls`` this is the reference of the class itself and is mandatory for any class method
+* ``spec`` which is the 'specification'
 
 .. warning::
     Do not forget to add the line ``super().define(spec)`` as the first line of the ``define`` method, where you replace the class name with the name of your calculation job.
@@ -125,9 +125,9 @@ We have now defined through the process specification, what inputs the calculati
 The final remaining task is to instruct the engine how the calculation job should actually be run.
 To understand what the engine would have to do to accomplish this, let's consider what one typically does when manually preparing to run a computing job through a scheduler:
 
-    * Prepare a working directory in some scratch space on the machine where the job will run
-    * Create the raw input files required by the executable
-    * Create a launch script containing scheduler directives, loading of environment variables and finally calling the executable with certain command line parameters.
+* Prepare a working directory in some scratch space on the machine where the job will run
+* Create the raw input files required by the executable
+* Create a launch script containing scheduler directives, loading of environment variables and finally calling the executable with certain command line parameters.
 
 So all we need to do now is instruct the engine how to accomplish these things for a specific calculation job.
 Since these instructions will be calculation dependent, we will implement this with the :py:meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.prepare_for_submission` method.
@@ -151,9 +151,9 @@ The raw input files that are required can be written to a sandbox folder that is
 All the other required information, such as the directives of which files to copy and what command line options to use are defined through the :py:class:`~aiida.common.datastructures.CalcInfo` datastructure, which should be returned from the method as the only value.
 In principle, this is what one **should do** in the ``prepare_for_submission`` method:
 
-    * Writing raw inputs files required for the calculation to run to the ``folder`` sandbox folder.
-    * Use a ``CalcInfo`` to instruct the engine which files to copy to the working directory
-    * Use a ``CalcInfo`` to tell which codes should run, using which command line parameters, such as standard input and output redirection.
+* Writing raw inputs files required for the calculation to run to the ``folder`` sandbox folder.
+* Use a ``CalcInfo`` to instruct the engine which files to copy to the working directory
+* Use a ``CalcInfo`` to tell which codes should run, using which command line parameters, such as standard input and output redirection.
 
 .. note::
 
@@ -179,10 +179,10 @@ With the input file written, we now have to create an instance of :py:class:`~ai
 This data structure will instruct the engine exactly what needs to be done to execute the code, such as what files should be copied to the remote computer where the code will be executed.
 In this simple example, we define four simple attributes:
 
-    * ``codes_info``: a list of :py:class:`~aiida.common.datastructures.CodeInfo` datastructures, that tell which codes to run consecutively during the job
-    * ``local_copy_list``: a list of tuples that instruct what files to copy to the working directory from the local machine
-    * ``remote_copy_list``: a list of tuples that instruct what files to copy to the working directory from the machine on which the job will run
-    * ``retrieve_list``: a list of tuples instructing which files should be retrieved from the working directory and stored in the local repository after the job has finished
+* ``codes_info``: a list of :py:class:`~aiida.common.datastructures.CodeInfo` datastructures, that tell which codes to run consecutively during the job
+* ``local_copy_list``: a list of tuples that instruct what files to copy to the working directory from the local machine
+* ``remote_copy_list``: a list of tuples that instruct what files to copy to the working directory from the machine on which the job will run
+* ``retrieve_list``: a list of tuples instructing which files should be retrieved from the working directory and stored in the local repository after the job has finished
 
 In this example we only need to run a single code, so the ``codes_info`` list has a single ``CodeInfo`` datastructure.
 This datastructure needs to define which code it needs to run, which is one of the inputs passed to the ``CalcJob``, and does so by means of its UUID.
@@ -231,9 +231,9 @@ Local copy list
 ~~~~~~~~~~~~~~~
 The local copy list takes tuples of length three, each of which represents a file or directory to be copied, defined through the following items:
 
-    * `node uuid`: the node whose repository contains the file, typically a ``SinglefileData`` or ``FolderData`` node
-    * `source relative path`: the relative path of the file or directory within the node repository
-    * `target relative path`: the relative path within the working directory to which to copy the file or directory contents
+* `node uuid`: the node whose repository contains the file, typically a ``SinglefileData`` or ``FolderData`` node
+* `source relative path`: the relative path of the file or directory within the node repository
+* `target relative path`: the relative path within the working directory to which to copy the file or directory contents
 
 As an example, consider a ``CalcJob`` implementation that receives a ``SinglefileData`` node as input with the name ``pseudopotential``, to copy its contents one can specify:
 
@@ -260,7 +260,7 @@ For example, imagine we have a `FolderData` node that is passed as the `folder` 
     │  └─ file_b.txt
     └─ file_a.txt
 
-If the entire content needs to be copied over, specify the `local_copy_list` as follows:
+If the entire content needs to be copied over, specify the ``local_copy_list`` as follows:
 
 .. code:: python
 
@@ -335,9 +335,9 @@ Remote copy list
 ~~~~~~~~~~~~~~~~
 The remote copy list takes tuples of length three, each of which represents a file to be copied on the remote machine where the calculation will run, defined through the following items:
 
-    * `computer uuid`: this is the UUID of the ``Computer`` on which the source file resides. For now the remote copy list can only copy files on the same machine where the job will run.
-    * `source absolute path`: the absolute path of the source file on the remote machine
-    * `target relative path`: the relative path within the working directory to which to copy the file
+* `computer uuid`: this is the UUID of the ``Computer`` on which the source file resides. For now the remote copy list can only copy files on the same machine where the job will run.
+* `source absolute path`: the absolute path of the source file on the remote machine
+* `target relative path`: the relative path within the working directory to which to copy the file
 
 .. code:: python
 
@@ -352,16 +352,16 @@ Retrieve list
 The retrieve list is a list of instructions of what files and folders should be retrieved by the engine once a calculation job has terminated.
 Each instruction should have one of two formats:
 
-    * a string representing a relative filepath in the remote working directory
-    * a tuple of length three that allows to control the name of the retrieved file or folder in the retrieved folder
+* a string representing a relative filepath in the remote working directory
+* a tuple of length three that allows to control the name of the retrieved file or folder in the retrieved folder
 
 The retrieve list can contain any number of instructions and can use both formats at the same time.
 The first format is obviously the simplest, however, this requires one knows the exact name of the file or folder to be retrieved and in addition any subdirectories will be ignored when it is retrieved.
 If the exact filename is not known and `glob patterns <https://en.wikipedia.org/wiki/Glob_%28programming%29>`_ should be used, or if the original folder structure should be (partially) kept, one should use the tuple format, which has the following format:
 
-    * `source relative path`: the relative path, with respect to the working directory on the remote, of the file or directory to retrieve.
-    * `target relative path`: the relative path of the directory in the retrieved folder in to which the content of the source will be copied. The string ``'.'`` indicates the top level in the retrieved folder.
-    * `depth`: the number of levels of nesting in the source path to maintain when copying, starting from the deepest file.
+* `source relative path`: the relative path, with respect to the working directory on the remote, of the file or directory to retrieve.
+* `target relative path`: the relative path of the directory in the retrieved folder in to which the content of the source will be copied. The string ``'.'`` indicates the top level in the retrieved folder.
+* `depth`: the number of levels of nesting in the source path to maintain when copying, starting from the deepest file.
 
 To illustrate the various possibilities, consider the following example file hierarchy in the remote working directory:
 
@@ -460,7 +460,19 @@ Pattern matching
 
 If the exact file or folder name is not known beforehand, glob patterns can be used.
 In the following examples, all files that match ``*c.txt`` in the directory ``path/sub`` will be retrieved.
-Since ``depth=0`` the files will be copied without the ``path/sub`` subdirectory.
+
+To maintain the folder structure set ``depth`` to ``None``:
+
+.. code:: bash
+
+    retrieve_list = [('path/sub/*c.txt', '.', None)]
+
+    └─ path
+        └─ sub
+           └─ file_c.txt
+
+Alternatively, the ``depth`` can be used to specify the number of levels of nesting that should be kept.
+For example, ``depth=0`` instructs to copy the matched files without any subfolders:
 
 .. code:: bash
 
@@ -468,7 +480,7 @@ Since ``depth=0`` the files will be copied without the ``path/sub`` subdirectory
 
     └─ file_c.txt
 
-To keep the subdirectory structure, one can set the depth parameter, just as in the previous examples.
+and ``depth=2`` will keep two levels in the final filepath:
 
 .. code:: bash
 
@@ -620,6 +632,112 @@ The ``rerunnable`` option enables the scheduler to re-launch the calculation if 
 
 Because this depends on the scheduler, its configuration, and the code used, we cannot say conclusively when it will work -- do your own testing! It has been tested on a cluster using SLURM, but that does not guarantee other SLURM clusters behave in the same way.
 
+
+.. _topics:calculations:usage:calcjobs:mpi:
+
+Controlling MPI
+---------------
+
+The `Message Passing Interface <https://en.wikipedia.org/wiki/Message_Passing_Interface>`_ (MPI) is a standardized and portable message-passing standard designed to function on parallel computing architectures.
+AiiDA implements support for running calculation jobs with or without MPI enabled.
+There are a number of settings that can be used to control when and how MPI is used.
+
+.. _topics:calculations:usage:calcjobs:mpi:computer:
+
+The ``Computer``
+~~~~~~~~~~~~~~~~
+
+Each calculation job is executed on a compute resource, which is modeled by an instance of the :class:`~aiida.orm.computers.Computer` class.
+If the computer supports running with MPI, the command to use is stored in the ``mpirun_command`` attribute, which is retrieved and set using the :meth:`~aiida.orm.computers.Computer.get_mpirun_command` and :meth:`~aiida.orm.computers.Computer.get_mpirun_command`, respectively.
+For example, if the computer has `OpenMPI <https://docs.open-mpi.org/en/v5.0.x/index.html>`_ installed, it can be set to ``mpirun``.
+If the ``Computer`` does not specify an MPI command, then enabling MPI for a calculation job is ineffective.
+
+.. _topics:calculations:usage:calcjobs:mpi:code:
+
+The ``Code``
+~~~~~~~~~~~~
+
+.. versionadded:: 2.3
+
+When creating a code, you can tell AiiDA that it should be run as an MPI program, by setting the ``with_mpi`` attribute to ``True`` or ``False``.
+From AiiDA 2.3 onward, this is the **recommended** way of controlling MPI behavior.
+If the code can be run with or without MPI, setting the ``with_mpi`` attribute can be skipped.
+It will default to ``None``, leaving the question of whether to run with or without MPI up to the ``CalcJob`` plugin or user input.
+
+.. _topics:calculations:usage:calcjobs:mpi:calcjob-implementation:
+
+The ``CalcJob`` implementation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``CalcJob`` implementation instructs AiiDA how the codes should be run through the :class:`~aiida.common.datastructures.CalcInfo` object, which it returns from the :meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.prepare_for_submission` method.
+For each code that the job should run (usually only a single one), a :class:`~aiida.common.datastructures.CodeInfo` object should be added to the list of the ``CalcInfo.codes_info`` attribute.
+If the plugin developer knows that the executable being wrapped is *always* MPI program (no serial version available) or *never* an MPI program, they can set the ``withmpi`` attribute of the ``CodeInfo`` to ``True`` or ``False``, respectively.
+Note that this setting is fully optional; if the code could be run either way, it is best not to set it and leave it up to the ``Code`` or the ``metadata.options.withmpi`` input.
+
+.. note::
+
+    When implementing a ``CalcJob`` that runs a single code, consider using specifying whether MPI should be enabled or disabled through the :ref:`metadata option<topics:calculations:usage:calcjobs:mpi:calcjob-inputs>`.
+    This can be accomplished by changing the default in the process specification:
+
+    .. code:: python
+
+        class SomeCalcJob(CalcJob):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.inputs['metadata']['options']['withmpi'].default = True
+
+    The advantage over using the ``CodeInfo.withmpi`` attribute is that the default of the metadata option can be introspected programmatically from the process spec, and so is more visible to the user.
+
+    Naturally, this approach is not viable for calculation jobs that run multiple codes that are different in whether they require MPI or not.
+    In this case, one should resort to using the ``CodeInfo.withmpi`` attribute.
+
+.. _topics:calculations:usage:calcjobs:mpi:calcjob-inputs:
+
+The ``CalcJob`` inputs
+~~~~~~~~~~~~~~~~~~~~~~
+
+Finally, the MPI setting can be controlled on a per-instance basis, using the ``withmpi`` :ref:`metadata option<topics:calculations:usage:calcjobs:options>`.
+If MPI should be enabled or disabled, explicitly set this option to ``True`` or ``False``, respectively.
+For example, the following instructs to run all codes in the calculation job with MPI enabled:
+
+.. code:: python
+
+    inputs = {
+        ...,
+        'metadata': {
+            'options': {
+                'withmpi': True
+            }
+        }
+    }
+    submit(CalcJob, **inputs)
+
+The default for this option is set to ``False`` on the base ``CalcJob`` implementation, but it will be overruled if explicitly defined.
+
+.. note::
+
+    The value set for the ``withmpi`` option will be applied to all codes.
+    If a calculation job runs more than one code, and each requires a different MPI setting, this option should not be used, and instead MPI should be controlled :ref:`through the code input <topics:calculations:usage:calcjobs:mpi:code>`.
+
+.. _topics:calculations:usage:calcjobs:mpi:conflict-resolution:
+
+Conflict resolution
+~~~~~~~~~~~~~~~~~~~
+
+As described above, MPI can be enabled or disabled for a calculation job on a number of levels:
+
+* The ``Code`` input
+* The ``CalcJob`` implementation
+* The ``metadata.options.withmpi`` input
+
+MPI is enabled or disabled if any of these values is explicitly set to ``True`` or ``False``, respectively.
+If multiple values are specified and they are not equivalent, a ``RuntimeError`` is raised.
+Depending on the conflict, one has to change the ``Code`` or ``metadata.options.withmpi`` input.
+If none of the values are explicitly defined, the value specified by the default of ``metadata.options.withmpi`` is taken.
+
+
 .. _topics:calculations:usage:calcjobs:launch:
 
 Launch
@@ -703,10 +821,10 @@ The only method that needs to be implemented is the :py:meth:`~aiida.parsers.par
 Its signature should include ``**kwargs``, the reason for which will become clear later.
 The goal of the ``parse`` method is very simple:
 
-    * Open and load the content of the output files generated by the calculation job and have been retrieved by the engine
-    * Create data nodes out of this raw data that are attached as output nodes
-    * Log human-readable warning messages in the case of worrying output
-    * Optionally return an :ref:`exit code<topics:processes:concepts:exit_codes>` to indicate that the results of the calculation was not successful
+* Open and load the content of the output files generated by the calculation job and have been retrieved by the engine
+* Create data nodes out of this raw data that are attached as output nodes
+* Log human-readable warning messages in the case of worrying output
+* Optionally return an :ref:`exit code<topics:processes:concepts:exit_codes>` to indicate that the results of the calculation was not successful
 
 The advantage of adding the raw output data in different form as output nodes, is that in that form the content becomes queryable.
 This allows one to query for calculations that produced specific outputs with a certain value, which becomes a very powerful approach for post-processing and analyses of big databases.
@@ -745,12 +863,12 @@ You might now pose the question: "what part of the raw data should I parse and i
 This not an easy question to answer in the general, because it will heavily depend on the type of raw output that is produced by the calculation and what parts you would like to be queryable.
 However, we can give you some guidelines:
 
-    *   Store data that you might want to query for, in the lightweight data nodes, such as :py:class:`~aiida.orm.nodes.data.dict.Dict`, :py:class:`~aiida.orm.nodes.data.list.List` and :py:class:`~aiida.orm.nodes.data.structure.StructureData`.
-        The contents of these nodes are stored as attributes in the database, which makes sure that they can be queried for.
-    *   Bigger data sets, such as large (multi-dimnensional) arrays, are better stored in an :py:class:`~aiida.orm.nodes.data.array.array.ArrayData` or one of its sub classes.
-        If you were to store all this data in the database, it would become unnecessarily bloated, because the chances you would have to query for this data are unlikely.
-        Instead these array type data nodes store the bulk of their content in the repository.
-        This way you still keep the data and therewith the provenance of your calculations, while keeping your database lean and fast!
+*   Store data that you might want to query for, in the lightweight data nodes, such as :py:class:`~aiida.orm.nodes.data.dict.Dict`, :py:class:`~aiida.orm.nodes.data.list.List` and :py:class:`~aiida.orm.nodes.data.structure.StructureData`.
+    The contents of these nodes are stored as attributes in the database, which makes sure that they can be queried for.
+*   Bigger data sets, such as large (multi-dimnensional) arrays, are better stored in an :py:class:`~aiida.orm.nodes.data.array.array.ArrayData` or one of its sub classes.
+    If you were to store all this data in the database, it would become unnecessarily bloated, because the chances you would have to query for this data are unlikely.
+    Instead these array type data nodes store the bulk of their content in the repository.
+    This way you still keep the data and therewith the provenance of your calculations, while keeping your database lean and fast!
 
 
 .. _topics:calculations:usage:calcjobs:scheduler-errors:

@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 import urllib.parse
 
 from flask import jsonify
-from flask.json import JSONEncoder
+from flask.json.provider import DefaultJSONProvider
 from wrapt import decorator
 
 from aiida.common.exceptions import InputValidationError, ValidationError
@@ -27,37 +27,43 @@ UUID_REF = 'd55082b6-76dc-426b-af89-0e08b59524d2'
 
 
 ########################## Classes #####################
-class CustomJSONEncoder(JSONEncoder):
+class CustomJSONProvider(DefaultJSONProvider):
     """
     Custom json encoder for serialization.
     This has to be provided to the Flask app in order to replace the default
     encoder.
     """
 
-    def default(self, o):
-        # pylint: disable=method-hidden
+    def default(self, obj, **kwargs):
         """
-        Override default method from JSONEncoder to change serializer
-        :param o: Object e.g. dict, list that will be serialized
-        :return: serialized object
+        Override serialization of ``DefaultJSONProvider`` for ``datetime`` and ``bytes`` objects.
+
+        :param obj: Object e.g. dict, list that will be serialized.
+        :return: Serialized object as a string.
         """
 
         from aiida.restapi.common.config import SERIALIZER_CONFIG
 
         # Treat the datetime objects
-        if isinstance(o, datetime):
+        if isinstance(obj, datetime):
             if 'datetime_format' in SERIALIZER_CONFIG and SERIALIZER_CONFIG['datetime_format'] != 'default':
                 if SERIALIZER_CONFIG['datetime_format'] == 'asinput':
-                    if o.utcoffset() is not None:
-                        o = o - o.utcoffset()
-                        return '-'.join([str(o.year), str(o.month).zfill(2),
-                                         str(o.day).zfill(2)]) + 'T' + \
+                    if obj.utcoffset() is not None:
+                        obj = obj - obj.utcoffset()
+                        return '-'.join([str(obj.year), str(obj.month).zfill(2),
+                                         str(obj.day).zfill(2)]) + 'T' + \
                                ':'.join([str(
-                                   o.hour).zfill(2), str(o.minute).zfill(2),
-                                         str(o.second).zfill(2)])
+                                   obj.hour).zfill(2), str(obj.minute).zfill(2),
+                                         str(obj.second).zfill(2)])
+
+        # To support bytes objects, try to decode to a string
+        try:
+            return obj.decode('utf-8')
+        except (UnicodeDecodeError, AttributeError):
+            pass
 
         # If not returned yet, do it in the default way
-        return JSONEncoder.default(self, o)
+        return super().default(obj, **kwargs)
 
 
 class Utils:
@@ -480,6 +486,7 @@ class Utils:
         extras = None
         extras_filter = None
         full_type = None
+        profile = None
 
         # io tree limit parameters
         tree_in_limit = None
@@ -533,10 +540,17 @@ class Utils:
             raise RestInputValidationError('You cannot specify extras_filter more than once')
         if 'full_type' in field_counts and field_counts['full_type'] > 1:
             raise RestInputValidationError('You cannot specify full_type more than once')
+        if 'profile' in field_counts and field_counts['profile'] > 1:
+            raise RestInputValidationError('You cannot specify profile more than once')
 
         ## Extract results
         for field in field_list:
-            if field[0] == 'limit':
+            if field[0] == 'profile':
+                if field[1] == '=':
+                    profile = field[2]
+                else:
+                    raise RestInputValidationError("only assignment operator '=' is permitted after 'profile'")
+            elif field[0] == 'limit':
                 if field[1] == '=':
                     limit = field[2]
                 else:
@@ -652,7 +666,7 @@ class Utils:
 
         return (
             limit, offset, perpage, orderby, filters, download_format, download, filename, tree_in_limit,
-            tree_out_limit, attributes, attributes_filter, extras, extras_filter, full_type
+            tree_out_limit, attributes, attributes_filter, extras, extras_filter, full_type, profile
         )
 
     def parse_query_string(self, query_string):
@@ -674,7 +688,7 @@ class Utils:
 
         ## Define grammar
         # key types
-        key = Word(f'{alphas}_', f'{alphanums}_')
+        key = Word(f'{alphas}_', f'{alphanums}_-')
         # operators
         operator = (
             Literal('=like=') | Literal('=ilike=') | Literal('=in=') | Literal('=notin=') | Literal('=') |
@@ -682,7 +696,7 @@ class Utils:
         )
         # Value types
         value_num = ppc.number
-        value_bool = (Literal('true') | Literal('false')).addParseAction(lambda toks: bool(toks[0]))
+        value_bool = (Literal('true') | Literal('false')).addParseAction(lambda toks: toks[0] == 'true')
         value_string = QuotedString('"', escQuote='""')
         value_orderby = Combine(Optional(Word('+-', exact=1)) + key)
 

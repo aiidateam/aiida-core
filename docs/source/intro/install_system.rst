@@ -7,7 +7,7 @@ System-wide installation
 The system-wide installation will install the prerequisite services (PostgreSQL and RabbitMQ) via standard package managers such that their startup and shut-down is largely managed by the operating system.
 The AiiDA (core) Python package is then installed either with Conda or pip.
 
-.. warning:: AiiDA is currently not compatible with RabbitMQ v3.8.15 and up with default configurations. For details refer to the :ref:`dedicated troubleshooting section<intro:troubleshooting:installation:rabbitmq>`.
+.. warning:: RabbitMQ v3.5 and below are EOL and not supported at all. For versions RabbitMQ v3.8.15 and up, AiiDA is not compatible with default server configurations. For details refer to the :ref:`dedicated troubleshooting section<intro:troubleshooting:installation:rabbitmq>`.
 
 This is the *recommended* installation method to setup AiiDA on a personal laptop or workstation for the majority of users.
 

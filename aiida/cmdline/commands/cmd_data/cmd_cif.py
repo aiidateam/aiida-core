@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""`verdi data cif` command."""
+"""`verdi data core.cif` command."""
 
 import click
 
@@ -22,7 +22,7 @@ EXPORT_FORMATS = ['cif']
 VISUALIZATION_FORMATS = ['jmol', 'vesta']
 
 
-@verdi_data.group('cif')
+@verdi_data.group('core.cif')
 def cif():
     """Manipulate CifData objects (crystal structures in .cif format)."""
 
@@ -124,4 +124,4 @@ def cif_import(filename):
         node, _ = CifData.get_or_create(filename)
         echo.echo_success(f'imported {str(node)}')
     except ValueError as err:
-        echo.echo_critical(err)
+        echo.echo_critical(str(err))

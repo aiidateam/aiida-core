@@ -75,8 +75,8 @@ Start by creating a file ``calculations.py`` and subclass the |CalcJob| class:
 
 In the following, we will tell AiiDA how to run our code by implementing two key methods:
 
- #. :py:meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.define`
- #. :py:meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.prepare_for_submission`
+#. :py:meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.define`
+#. :py:meth:`~aiida.engine.processes.calcjobs.calcjob.CalcJob.prepare_for_submission`
 
 Defining the spec
 -----------------
@@ -125,7 +125,7 @@ There is no ``return`` statement in ``define``: the ``define`` method directly m
 
         .. code-block:: python
 
-            spec.input('code', valid_type=orm.Code, help='The `Code` to use for this job.')
+            spec.input('code', valid_type=orm.AbstractCode, help='The `Code` to use for this job.')
 
 .. admonition:: Further reading
 
@@ -210,9 +210,9 @@ To create a parser plugin, subclass the |Parser| class in a file called ``parser
 
 Before the ``parse()`` method is called, two important attributes are set on the |Parser|  instance:
 
-  1. ``self.retrieved``: An instance of |FolderData|, which points to the folder containing all output files that the |CalcJob| instructed to retrieve, and provides the means to :py:meth:`~aiida.orm.nodes.repository.NodeRepository.open` any file it contains.
+1. ``self.retrieved``: An instance of |FolderData|, which points to the folder containing all output files that the |CalcJob| instructed to retrieve, and provides the means to :py:meth:`~aiida.orm.nodes.repository.NodeRepository.open` any file it contains.
 
-  2. ``self.node``: The :py:class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode` representing the finished calculation, which, among other things, provides access to all of its inputs (``self.node.inputs``).
+2. ``self.node``: The :py:class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode` representing the finished calculation, which, among other things, provides access to all of its inputs (``self.node.inputs``).
 
 Now implement its :py:meth:`~aiida.parsers.parser.Parser.parse` method as
 
@@ -238,9 +238,9 @@ If your code produces output in a structured format, instead of just returning t
     Consider the different output files produced by your favorite simulation code.
     Which information would you want to:
 
-     1. parse into the database for querying (e.g. as |Dict|, |StructureData|, ...)?
-     2. store in the AiiDA file repository for safe-keeping (e.g. as |SinglefileData|, ...)?
-     3. leave on the computer where the calculation ran (e.g. recording their remote location using |RemoteData| or simply ignoring them)?
+    1. parse into the database for querying (e.g. as |Dict|, |StructureData|, ...)?
+    2. store in the AiiDA file repository for safe-keeping (e.g. as |SinglefileData|, ...)?
+    3. leave on the computer where the calculation ran (e.g. recording their remote location using |RemoteData| or simply ignoring them)?
 
     Once you know the answers to these questions, you are ready to start writing a parser for your code.
 
@@ -276,9 +276,9 @@ The ``DiffCalculation`` example, defines the following exit code:
 
 An ``exit_code`` defines:
 
- * an exit status (a positive integer, following the :ref:`topics:processes:usage:exit_code_conventions`),
- * a label that can be used to reference the code in the |parse| method (through the ``self.exit_codes`` property, as shown below), and
- * a message that provides a more detailed description of the problem.
+* an exit status (a positive integer, following the :ref:`topics:processes:usage:exit_code_conventions`),
+* a label that can be used to reference the code in the |parse| method (through the ``self.exit_codes`` property, as shown below), and
+* a message that provides a more detailed description of the problem.
 
 In order to inform AiiDA about a failed calculation, simply return from the ``parse`` method the exit code that corresponds to the detected issue.
 Here is a more complete version of the example |Parser| presented in the previous section:
@@ -295,6 +295,30 @@ Note that some scheduler plugins can detect issues at the scheduler level (by pa
 The Topics section on :ref:`scheduler exit codes <topics:calculations:usage:calcjobs:scheduler-errors>` explains how these can be inspected inside a parser and how they can optionally be overridden.
 
 
+.. how-to:plugin-codes:customization:
+
+Customizations
+==============
+
+.. how-to:plugin-codes:customization:process-label:
+
+Process label
+-------------
+
+Each time a ``Process`` is run, a ``ProcessNode`` is stored in the database to record the execution.
+A human-readable label is stored in the ``process_label`` attribute.
+By default, the name of the process class is used as this label.
+If this default is not informative enough, it can be customized by overriding the :meth:`~aiida.engine.processes.process.Process._build_process_label`: method:
+
+.. code-block:: python
+
+    class SomeProcess(Process):
+
+        def _build_process_label(self):
+            return 'custom_process_label'
+
+Nodes created through executions of this process class will have ``node.process_label == 'custom_process_label'``.
+
 .. _how-to:plugin-codes:entry-points:
 
 Registering entry points
@@ -304,50 +328,63 @@ Registering entry points
 
 With your ``calculations.py`` and ``parsers.py`` files at hand, let's register entry points for the plugins they contain:
 
- * Move your two scripts into a subfolder ``aiida_diff_tutorial``:
+* Move your two scripts into a subfolder ``aiida_diff_tutorial``:
 
-   .. code-block:: console
+.. code-block:: console
 
-      $ mkdir aiida_diff_tutorial
-      $ mv calculations.py parsers.py aiida_diff_tutorial/
+  $ mkdir aiida_diff_tutorial
+  $ mv calculations.py parsers.py aiida_diff_tutorial/
+  $ touch aiida_diff_tutorial/__init__.py
 
-   You have just created an ``aiida_diff_tutorial`` Python *package*!
+You have just created an ``aiida_diff_tutorial`` Python *package*!
 
- * Write a minimalistic ``setup.py`` script for your new package:
+* Add a minimal set of metadata for your package by writing a ``pyproject.toml`` file:
 
-    .. code-block:: python
+.. code-block:: toml
 
-        from setuptools import setup
+    [build-system]
+    # build the package with [flit](https://flit.readthedocs.io)
+    requires = ["flit_core >=3.4,<4"]
+    build-backend = "flit_core.buildapi"
 
-        setup(
-            name='aiida-diff-tutorial',
-            packages=['aiida_diff_tutorial'],
-            entry_points={
-                'aiida.calculations': ["diff-tutorial = aiida_diff_tutorial.calculations:DiffCalculation"],
-                'aiida.parsers': ["diff-tutorial = aiida_diff_tutorial.parsers:DiffParser"],
-            }
-        )
+    [project]
+    # See https://www.python.org/dev/peps/pep-0621/
+    name = "aiida-diff-tutorial"
+    version = "0.1.0"
+    description = "AiiDA demo plugin"
+    dependencies = [
+        "aiida-core>=2.0,<3",
+    ]
 
-    .. note::
-        Strictly speaking, ``aiida-diff-tutorial`` is the name of the *distribution*, while ``aiida_diff_tutorial`` is the name of the *package*.
-        The aiida-core documentation uses the term *package* a bit more loosely.
+    [project.entry-points."aiida.calculations"]
+    "diff-tutorial" = "aiida_diff_tutorial.calculations:DiffCalculation"
+
+    [project.entry-points."aiida.parsers"]
+    "diff-tutorial" = "aiida_diff_tutorial.parsers:DiffParser"
+
+    [tool.flit.module]
+    name = "aiida_diff_tutorial"
 
 
- * Install your new ``aiida-diff-tutorial`` plugin package.
+.. note::
+    This allows for the project metadata to be fully specified in the pyproject.toml file, using the PEP 621 format.
 
-   .. code-block:: console
 
-       $ pip install -e .  # install package in "editable mode"
+* Install your new ``aiida-diff-tutorial`` plugin package.
 
-   See the :ref:`how-to:plugins-install` section for details.
+.. code-block:: console
+
+   $ pip install -e .  # install package in "editable mode"
+
+See the :ref:`how-to:plugins-install` section for details.
 
 After this, you should see your plugins listed:
 
-   .. code-block:: console
+.. code-block:: console
 
-      $ verdi plugin list aiida.calculations
-      $ verdi plugin list aiida.calculations diff-tutorial
-      $ verdi plugin list aiida.parsers
+  $ verdi plugin list aiida.calculations
+  $ verdi plugin list aiida.calculations diff-tutorial
+  $ verdi plugin list aiida.parsers
 
 
 .. _how-to:plugin-codes:run:
@@ -358,51 +395,51 @@ Running a calculation
 With the entry points set up, you are ready to launch your first calculation with the new plugin:
 
 
- * If you haven't already done so, :ref:`set up your computer<how-to:run-codes:computer>`.
-   In the following we assume it to be the localhost:
+* If you haven't already done so, :ref:`set up your computer<how-to:run-codes:computer>`.
+  In the following we assume it to be the localhost:
 
-    .. code-block:: console
+.. code-block:: console
 
-        $ verdi computer setup -L localhost -H localhost -T core.local -S core.direct -w `echo $PWD/work` -n
-        $ verdi computer configure core.local localhost --safe-interval 5 -n
+    $ verdi computer setup -L localhost -H localhost -T core.local -S core.direct -w `echo $PWD/work` -n
+    $ verdi computer configure core.local localhost --safe-interval 5 -n
 
- *  Create the input files for our calculation
+*  Create the input files for our calculation
 
-    .. code-block:: console
+.. code-block:: console
 
-        $ echo -e "File with content\ncontent1" > file1.txt
-        $ echo -e "File with content\ncontent2" > file2.txt
-        $ mkdir input_files
-        $ mv file1.txt file2.txt input_files
+    $ echo -e "File with content\ncontent1" > file1.txt
+    $ echo -e "File with content\ncontent2" > file2.txt
+    $ mkdir input_files
+    $ mv file1.txt file2.txt input_files
 
- * Write a ``launch.py`` script:
+* Write a ``launch.py`` script:
 
-    .. literalinclude:: ./include/snippets/plugins/launch.py
-      :language: python
+.. literalinclude:: ./include/snippets/plugins/launch.py
+  :language: python
 
-    .. note::
+.. note::
 
-        The ``launch.py`` script sets up an AiiDA |Code| instance that associates the ``/usr/bin/diff`` executable with the ``DiffCalculation`` class (through its entry point ``diff``).
+    The ``launch.py`` script sets up an AiiDA |Code| instance that associates the ``/usr/bin/diff`` executable with the ``DiffCalculation`` class (through its entry point ``diff``).
 
-        This code is automatically set on the ``code`` input port of the builder and passed as an input to the calculation plugin.
+    This code is automatically set on the ``code`` input port of the builder and passed as an input to the calculation plugin.
 
- * Launch the calculation:
+* Launch the calculation:
 
-    .. code-block:: console
+.. code-block:: console
 
-        $ verdi run launch.py
+    $ verdi run launch.py
 
 
-    If everything goes well, this should print the results of your calculation, something like:
+If everything goes well, this should print the results of your calculation, something like:
 
-    .. code-block:: console
+.. code-block:: console
 
-        $ verdi run launch.py
-        Computed diff between files:
-        2c2
-        < content1
-        ---
-        > content2
+    $ verdi run launch.py
+    Computed diff between files:
+    2c2
+    < content1
+    ---
+    > content2
 
 .. tip::
 
@@ -412,33 +449,33 @@ With the entry points set up, you are ready to launch your first calculation wit
 
 Finally instead of running your calculation in the current shell, you can submit your calculation to the AiiDA daemon:
 
- * (Re)start the daemon to update its Python environment:
+* (Re)start the daemon to update its Python environment:
 
-    .. code-block:: console
+.. code-block:: console
 
-        $ verdi daemon restart --reset
+    $ verdi daemon restart --reset
 
- * Update your launch script to use:
+* Update your launch script to use:
 
-    .. code-block:: python
+.. code-block:: python
 
-        # Submit calculation to the aiida daemon
-        node = engine.submit(builder)
-        print("Submitted calculation {}".format(node))
-
-
-    .. note::
-
-        ``node`` is the |CalcJobNode| representing the state of the underlying calculation process (which may not be finished yet).
+    # Submit calculation to the aiida daemon
+    node = engine.submit(builder)
+    print("Submitted calculation {}".format(node))
 
 
- * Launch the calculation:
+.. note::
 
-    .. code-block:: console
+    ``node`` is the |CalcJobNode| representing the state of the underlying calculation process (which may not be finished yet).
 
-        $ verdi run launch.py
 
-    This should print the UUID and the PK of the submitted calculation.
+* Launch the calculation:
+
+.. code-block:: console
+
+    $ verdi run launch.py
+
+This should print the UUID and the PK of the submitted calculation.
 
 You can use the verdi command line interface to :ref:`monitor<topics:processes:usage:monitoring>` this processes:
 
@@ -567,9 +604,9 @@ Here is a simple code snippet for translating the dictionary to a list of comman
 
 Let's open our previous ``calculations.py`` file and start modifying the ``DiffCalculation`` class:
 
- 1. In the ``define`` method, add a new ``input`` to the ``spec`` with label ``'parameters'`` and type |Dict|  (``from aiida.orm import Dict``)
- 2. | In the ``prepare_for_submission`` method run the ``cli_options`` function from above on ``self.inputs.parameters.get_dict()`` to get the list of command-line options.
-    | Add them to the ``codeinfo.cmdline_params``.
+1. In the ``define`` method, add a new ``input`` to the ``spec`` with label ``'parameters'`` and type |Dict|  (``from aiida.orm import Dict``)
+2. In the ``prepare_for_submission`` method run the ``cli_options`` function from above on ``self.inputs.parameters.get_dict()`` to get the list of command-line options.
+   Add them to the ``codeinfo.cmdline_params``.
 
 .. dropdown:: Solution
 
@@ -614,7 +651,7 @@ Continue with :ref:`how-to:plugins-develop` in order to learn how to quickly cre
 .. |StructureData| replace:: :py:class:`~aiida.orm.nodes.data.structure.StructureData`
 .. |RemoteData| replace:: :py:class:`~aiida.orm.RemoteData`
 .. |Dict| replace:: :py:class:`~aiida.orm.nodes.data.dict.Dict`
-.. |Code| replace:: :py:class:`~aiida.orm.Code`
+.. |Code| replace:: :py:class:`~aiida.orm.nodes.data.code.abstract.AbstractCode`
 .. |Parser| replace:: :py:class:`~aiida.parsers.parser.Parser`
 .. |parse| replace:: :py:class:`~aiida.parsers.parser.Parser.parse`
 .. |folder| replace:: :py:class:`~aiida.common.folders.Folder`

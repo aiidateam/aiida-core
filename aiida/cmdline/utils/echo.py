@@ -11,14 +11,14 @@
 import collections
 import enum
 import json
+import logging
 import sys
+from typing import Any, Optional
 
 import click
 import yaml
 
-from aiida.common.log import AIIDA_LOGGER
-
-CMDLINE_LOGGER = AIIDA_LOGGER.getChild('cmdline')
+CMDLINE_LOGGER = logging.getLogger('verdi')
 
 __all__ = ('echo_report', 'echo_info', 'echo_success', 'echo_warning', 'echo_error', 'echo_critical', 'echo_dictionary')
 
@@ -44,7 +44,7 @@ COLORS = {
 }
 
 
-def echo(message: str, fg: str = None, bold: bool = False, nl: bool = True, err: bool = False) -> None:
+def echo(message: Any, fg: Optional[str] = None, bold: bool = False, nl: bool = True, err: bool = False) -> None:
     """Log a message to the cmdline logger.
 
     .. note:: The message will be logged at the ``REPORT`` level but always without the log level prefix.

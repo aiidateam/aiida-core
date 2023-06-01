@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""`verdi data structure` command."""
+"""`verdi data core.structure` command."""
 
 import click
 
@@ -41,7 +41,7 @@ def _store_structure(new_structure, dry_run):
         echo.echo(f'  Successfully imported structure {new_structure.get_formula()} (PK = {new_structure.pk})')
 
 
-@verdi_data.group('structure')
+@verdi_data.group('core.structure')
 def structure():
     """Manipulate StructureData objects (crystal structures)."""
 

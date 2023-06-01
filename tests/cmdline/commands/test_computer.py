@@ -12,6 +12,7 @@
 from collections import OrderedDict
 import os
 import tempfile
+import textwrap
 
 import pytest
 
@@ -107,13 +108,11 @@ def generate_setup_options_interactive(ordereddict):
     return options
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_help(run_cli_command):
     """Test the help of verdi computer setup."""
-    run_cli_command(computer_setup, ['--help'], catch_exceptions=False)
+    run_cli_command(computer_setup, ['--help'])
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_reachable():
     """Test if the verdi computer setup is reachable."""
     import subprocess as sp
@@ -121,7 +120,6 @@ def test_reachable():
     assert b'Usage:' in output
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_mixed(run_cli_command):
     """
     Test verdi computer setup in mixed mode.
@@ -143,11 +141,12 @@ def test_mixed(run_cli_command):
     non_interactive_options_dict['shebang'] = options_dict.pop('shebang')
     non_interactive_options_dict['scheduler'] = options_dict.pop('scheduler')
 
+    options_dict['use-login-shell'] = 'y'
     # In any case, these would be managed by the visual editor
     user_input = '\n'.join(generate_setup_options_interactive(options_dict))
     options = generate_setup_options(non_interactive_options_dict)
 
-    result = run_cli_command(computer_setup, options, user_input=user_input, catch_exceptions=False)
+    result = run_cli_command(computer_setup, options, user_input=user_input)
     assert result.exception is None, f'There was an unexpected exception. Output: {result.output}'
 
     new_computer = orm.Computer.collection.get(label=label)
@@ -161,14 +160,15 @@ def test_mixed(run_cli_command):
     assert new_computer.get_shebang() == options_dict_full['shebang']
     assert new_computer.get_workdir() == options_dict_full['work-dir']
     assert new_computer.get_default_mpiprocs_per_machine() == int(options_dict_full['mpiprocs-per-machine'])
-    assert new_computer.get_default_memory_per_machine() == int(options_dict_full['default-memory-per-machine'])
+
+    # default_memory_per_machine should not prompt and set
+    assert new_computer.get_default_memory_per_machine() is None
 
     # For now I'm not writing anything in them
     assert new_computer.get_prepend_text() == options_dict_full['prepend-text']
     assert new_computer.get_append_text() == options_dict_full['append-text']
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
 def test_noninteractive(run_cli_command, aiida_localhost, non_interactive_editor):
     """
@@ -199,7 +199,6 @@ def test_noninteractive(run_cli_command, aiida_localhost, non_interactive_editor
     assert 'already exists' in result.output
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_noninteractive_optional_default_mpiprocs(run_cli_command):
     """
     Check that if is ok not to specify mpiprocs-per-machine
@@ -207,14 +206,13 @@ def test_noninteractive_optional_default_mpiprocs(run_cli_command):
     options_dict = generate_setup_options_dict({'label': 'computer_default_mpiprocs'})
     options_dict.pop('mpiprocs-per-machine')
     options = generate_setup_options(options_dict)
-    run_cli_command(computer_setup, options, catch_exceptions=False)
+    run_cli_command(computer_setup, options)
 
     new_computer = orm.Computer.collection.get(label=options_dict['label'])
     assert isinstance(new_computer, orm.Computer)
     assert new_computer.get_default_mpiprocs_per_machine() is None
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_noninteractive_optional_default_mpiprocs_2(run_cli_command):
     """
     Check that if is the specified value is zero, it means unspecified
@@ -222,14 +220,13 @@ def test_noninteractive_optional_default_mpiprocs_2(run_cli_command):
     options_dict = generate_setup_options_dict({'label': 'computer_default_mpiprocs_2'})
     options_dict['mpiprocs-per-machine'] = 0
     options = generate_setup_options(options_dict)
-    run_cli_command(computer_setup, options, catch_exceptions=False)
+    run_cli_command(computer_setup, options)
 
     new_computer = orm.Computer.collection.get(label=options_dict['label'])
     assert isinstance(new_computer, orm.Computer)
     assert new_computer.get_default_mpiprocs_per_machine() is None
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_noninteractive_optional_default_mpiprocs_3(run_cli_command):
     """
     Check that it fails for a negative number of mpiprocs
@@ -266,7 +263,6 @@ def test_noninteractive_optional_default_memory_invalid(run_cli_command):
     assert 'Invalid value for def_memory_per_machine, must be a positive int, got: -1' in result.output
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_noninteractive_wrong_transport_fail(run_cli_command):
     """
     Check that if fails as expected for an unknown transport
@@ -278,7 +274,6 @@ def test_noninteractive_wrong_transport_fail(run_cli_command):
     assert "entry point 'unknown_transport' is not valid" in result.output
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_noninteractive_wrong_scheduler_fail(run_cli_command):
     """
     Check that if fails as expected for an unknown transport
@@ -290,7 +285,6 @@ def test_noninteractive_wrong_scheduler_fail(run_cli_command):
     assert "entry point 'unknown_scheduler' is not valid" in result.output
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_noninteractive_invalid_shebang_fail(run_cli_command):
     """
     Check that if fails as expected for an unknown transport
@@ -302,7 +296,6 @@ def test_noninteractive_invalid_shebang_fail(run_cli_command):
     assert 'The shebang line should start with' in result.output
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_noninteractive_invalid_mpirun_fail(run_cli_command):
     """
     Check that if fails as expected for an unknown transport
@@ -310,13 +303,10 @@ def test_noninteractive_invalid_mpirun_fail(run_cli_command):
     options_dict = generate_setup_options_dict(replace_args={'label': 'fail_computer'})
     options_dict['mpirun-command'] = 'mpirun -np {unknown_key}'
     options = generate_setup_options(options_dict)
-    result = run_cli_command(computer_setup, options, catch_exceptions=False)
-
-    assert isinstance(result.exception, SystemExit)
-    assert "unknown replacement field 'unknown_key'" in str(result.output)
+    result = run_cli_command(computer_setup, options, raises=True)
+    assert "unknown replacement field 'unknown_key'" in result.output
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_noninteractive_from_config(run_cli_command):
     """Test setting up a computer from a config file"""
     label = 'noninteractive_config'
@@ -340,7 +330,7 @@ class TestVerdiComputerConfigure:
     """Test the ``verdi computer configure`` command."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         from aiida.orm.utils.builders.computer import ComputerBuilder
@@ -361,7 +351,7 @@ class TestVerdiComputerConfigure:
 
     def test_top_help(self):
         """Test help option of verdi computer configure."""
-        result = self.cli_runner(computer_configure, ['--help'], catch_exceptions=False)
+        result = self.cli_runner(computer_configure, ['--help'])
         assert 'core.ssh' in result.output
         assert 'core.local' in result.output
 
@@ -388,8 +378,8 @@ class TestVerdiComputerConfigure:
         comp.store()
 
         options = ['core.local', comp.label, '--non-interactive', '--safe-interval', '0']
-        result = self.cli_runner(computer_configure, options, catch_exceptions=False)
-        assert comp.is_user_configured(self.user), result.output
+        result = self.cli_runner(computer_configure, options)
+        assert comp.is_configured, result.output
 
         self.comp_builder.label = 'test_local_ni_empty_mismatch'
         self.comp_builder.transport = 'core.ssh'
@@ -397,8 +387,7 @@ class TestVerdiComputerConfigure:
         comp_mismatch.store()
 
         options = ['core.local', comp_mismatch.label, '--non-interactive']
-        result = self.cli_runner(computer_configure, options, catch_exceptions=False)
-        assert result.exception is not None
+        result = self.cli_runner(computer_configure, options, raises=True)
         assert 'core.ssh' in result.output
         assert 'core.local' in result.output
 
@@ -411,14 +400,12 @@ class TestVerdiComputerConfigure:
 
         invalid = 'n'
         valid = '1.0'
-        result = self.cli_runner(
-            computer_configure, ['core.local', comp.label], user_input=f'{invalid}\n{valid}\n', catch_exceptions=False
-        )
-        assert comp.is_user_configured(self.user), result.output
+        result = self.cli_runner(computer_configure, ['core.local', comp.label], user_input=f'{invalid}\n{valid}\n')
+        assert comp.is_configured, result.output
 
         new_auth_params = comp.get_authinfo(self.user).get_auth_params()
-        assert new_auth_params['use_login_shell'] is False
         assert new_auth_params['safe_interval'] == 1.0
+        assert new_auth_params['use_login_shell'] is False
 
     def test_ssh_interactive(self):
         """
@@ -437,27 +424,22 @@ class TestVerdiComputerConfigure:
         remote_username = 'some_remote_user'
         port = 345
         look_for_keys = False
-        key_filename = ''
 
         # I just pass the first four arguments:
         # the username, the port, look_for_keys, and the key_filename
         # This testing also checks that an empty key_filename is ok
-        command_input = ('{remote_username}\n{port}\n{look_for_keys}\n{key_filename}\n').format(
+        command_input = ('{remote_username}\n{port}\n{look_for_keys}\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n').format(
             remote_username=remote_username,
             port=port,
             look_for_keys='yes' if look_for_keys else 'no',
-            key_filename=key_filename
         )
 
-        result = self.cli_runner(
-            computer_configure, ['core.ssh', comp.label], user_input=command_input, catch_exceptions=False
-        )
-        assert comp.is_user_configured(self.user), result.output
+        result = self.cli_runner(computer_configure, ['core.ssh', comp.label], user_input=command_input)
+        assert comp.is_configured, result.output
         new_auth_params = comp.get_authinfo(self.user).get_auth_params()
         assert new_auth_params['username'] == remote_username
         assert new_auth_params['port'] == port
         assert new_auth_params['look_for_keys'] == look_for_keys
-        assert new_auth_params['key_filename'] == key_filename
         assert new_auth_params['use_login_shell'] is True
 
     def test_local_from_config(self):
@@ -469,17 +451,24 @@ class TestVerdiComputerConfigure:
         computer.store()
 
         interval = 20
+        use_login_shell = False
 
         with tempfile.NamedTemporaryFile('w') as handle:
-            handle.write(f"""---
-safe_interval: {interval}
-""")
+            handle.write(
+                textwrap.dedent(
+                    f"""---
+                    safe_interval: {interval}
+                    use_login_shell: {use_login_shell}
+                    """
+                )
+            )
             handle.flush()
 
             options = ['core.local', computer.label, '--config', os.path.realpath(handle.name)]
             self.cli_runner(computer_configure, options)
 
         assert computer.get_configuration()['safe_interval'] == interval
+        assert computer.get_configuration()['use_login_shell'] == use_login_shell
 
     def test_ssh_ni_empty(self):
         """
@@ -496,8 +485,8 @@ safe_interval: {interval}
         comp.store()
 
         options = ['core.ssh', comp.label, '--non-interactive', '--safe-interval', '1']
-        result = self.cli_runner(computer_configure, options, catch_exceptions=False)
-        assert comp.is_user_configured(self.user), result.output
+        result = self.cli_runner(computer_configure, options)
+        assert comp.is_configured, result.output
 
         self.comp_builder.label = 'test_ssh_ni_empty_mismatch'
         self.comp_builder.transport = 'core.local'
@@ -505,8 +494,7 @@ safe_interval: {interval}
         comp_mismatch.store()
 
         options = ['core.ssh', comp_mismatch.label, '--non-interactive']
-        result = self.cli_runner(computer_configure, options, catch_exceptions=False)
-        assert result.exception is not None
+        result = self.cli_runner(computer_configure, options, raises=True)
         assert 'core.local' in result.output
         assert 'core.ssh' in result.output
 
@@ -519,9 +507,9 @@ safe_interval: {interval}
 
         username = 'TEST'
         options = ['core.ssh', comp.label, '--non-interactive', f'--username={username}', '--safe-interval', '1']
-        result = self.cli_runner(computer_configure, options, catch_exceptions=False)
+        result = self.cli_runner(computer_configure, options)
         auth_info = orm.AuthInfo.collection.get(dbcomputer_id=comp.pk, aiidauser_id=self.user.pk)
-        assert comp.is_user_configured(self.user), result.output
+        assert comp.is_configured, result.output
         assert auth_info.get_auth_params()['username'] == username
 
     def test_show(self):
@@ -531,23 +519,23 @@ safe_interval: {interval}
         comp = self.comp_builder.new()
         comp.store()
 
-        result = self.cli_runner(computer_configure, ['show', comp.label], catch_exceptions=False)
+        result = self.cli_runner(computer_configure, ['show', comp.label])
 
-        result = self.cli_runner(computer_configure, ['show', comp.label, '--defaults'], catch_exceptions=False)
+        result = self.cli_runner(computer_configure, ['show', comp.label, '--defaults'])
         assert '* username' in result.output
 
         result = self.cli_runner(
-            computer_configure, ['show', comp.label, '--defaults', '--as-option-string'], catch_exceptions=False
+            computer_configure, ['show', comp.label, '--defaults', '--as-option-string'], suppress_warnings=True
         )
         assert '--username=' in result.output
 
         config_cmd = ['core.ssh', comp.label, '--non-interactive']
         config_cmd.extend(result.output.replace("'", '').split(' '))
-        result_config = self.cli_runner(computer_configure, config_cmd, catch_exceptions=False)
-        assert comp.is_user_configured(self.user), result_config.output
+        result_config = self.cli_runner(computer_configure, config_cmd, suppress_warnings=True)
+        assert comp.is_configured, result_config.output
 
         result_cur = self.cli_runner(
-            computer_configure, ['show', comp.label, '--as-option-string'], catch_exceptions=False
+            computer_configure, ['show', comp.label, '--as-option-string'], suppress_warnings=True
         )
         assert '--username=' in result.output
         assert result_cur.output == result.output
@@ -560,17 +548,11 @@ class TestVerdiComputerCommands:
     """
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_computer, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.computer_name = 'comp_cli_test_computer'
-        self.comp = orm.Computer(
-            label=self.computer_name,
-            hostname='localhost',
-            transport_type='core.local',
-            scheduler_type='core.direct',
-            workdir='/tmp/aiida'
-        )
+        self.comp = aiida_computer(label=self.computer_name)
         self.comp.set_default_mpiprocs_per_machine(1)
         self.comp.set_default_memory_per_machine(1000000)
         self.comp.set_prepend_text('text to prepend')
@@ -578,7 +560,7 @@ class TestVerdiComputerCommands:
         self.comp.store()
         self.comp.configure()
         self.user = orm.User.collection.get_default()
-        assert self.comp.is_user_configured(self.user), 'There was a problem configuring the test computer'
+        assert self.comp.is_configured, 'There was a problem configuring the test computer'
         self.cli_runner = run_cli_command
 
     def test_computer_test(self):
@@ -677,7 +659,7 @@ class TestVerdiComputerCommands:
         ).store()
         # and configure it
         options = ['core.local', label, '--non-interactive', '--safe-interval', '0']
-        self.cli_runner(computer_configure, options, catch_exceptions=False)
+        self.cli_runner(computer_configure, options)
 
         # See if the command complains about not getting an invalid computer
         self.cli_runner(computer_delete, ['computer_that_does_not_exist'], raises=True)
@@ -689,14 +671,13 @@ class TestVerdiComputerCommands:
             orm.Computer.collection.get(label=label)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
 def test_computer_duplicate_interactive(run_cli_command, aiida_localhost, non_interactive_editor):
     """Test 'verdi computer duplicate' in interactive mode."""
     label = 'computer_duplicate_interactive'
     computer = aiida_localhost
     user_input = f'{label}\n\n\n\n\n\n\n\n\n\n'
-    result = run_cli_command(computer_duplicate, [str(computer.pk)], user_input=user_input, catch_exceptions=False)
+    result = run_cli_command(computer_duplicate, [str(computer.pk)], user_input=user_input)
     assert result.exception is None, result.output
 
     new_computer = orm.Computer.collection.get(label=label)
@@ -712,7 +693,6 @@ def test_computer_duplicate_interactive(run_cli_command, aiida_localhost, non_in
     assert new_computer.get_append_text() == computer.get_append_text()
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
 def test_computer_duplicate_non_interactive(run_cli_command, aiida_localhost, non_interactive_editor):
     """Test if 'verdi computer duplicate' in non-interactive mode."""
@@ -734,16 +714,19 @@ def test_computer_duplicate_non_interactive(run_cli_command, aiida_localhost, no
     assert new_computer.get_append_text() == computer.get_append_text()
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
-def test_interactive(run_cli_command, aiida_profile_clean, non_interactive_editor):
+def test_direct_interactive(run_cli_command, non_interactive_editor):
     """Test verdi computer setup in interactive mode."""
     label = 'interactive_computer'
 
     options_dict = generate_setup_options_dict(replace_args={'label': label}, non_interactive=False)
+    # default-memory-per-machine will not prompt for direct
+    options_dict.pop('default-memory-per-machine')
+
     # In any case, these would be managed by the visual editor
     options_dict.pop('prepend-text')
     options_dict.pop('append-text')
+    options_dict['use-login-shell'] = 'y'
     user_input = '\n'.join(generate_setup_options_interactive(options_dict))
 
     result = run_cli_command(computer_setup, user_input=user_input)
@@ -765,7 +748,6 @@ def test_interactive(run_cli_command, aiida_profile_clean, non_interactive_edito
     assert new_computer.get_append_text() == ''
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_computer_test_stderr(run_cli_command, aiida_localhost, monkeypatch):
     """Test `verdi computer test` where tested command returns non-empty stderr."""
     from aiida.transports.plugins.local import LocalTransport
@@ -778,12 +760,11 @@ def test_computer_test_stderr(run_cli_command, aiida_localhost, monkeypatch):
 
     monkeypatch.setattr(LocalTransport, 'exec_command_wait', exec_command_wait)
 
-    result = run_cli_command(computer_test, [aiida_localhost.label])
-    assert 'Warning: 1 out of 5 tests failed' in result.output
+    result = run_cli_command(computer_test, [aiida_localhost.label], use_subprocess=False)
+    assert 'Warning: 1 out of 6 tests failed' in result.output
     assert stderr in result.output
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_computer_test_stdout(run_cli_command, aiida_localhost, monkeypatch):
     """Test `verdi computer test` where tested command returns non-empty stdout."""
     from aiida.transports.plugins.local import LocalTransport
@@ -796,6 +777,24 @@ def test_computer_test_stdout(run_cli_command, aiida_localhost, monkeypatch):
 
     monkeypatch.setattr(LocalTransport, 'exec_command_wait', exec_command_wait)
 
-    result = run_cli_command(computer_test, [aiida_localhost.label])
-    assert 'Warning: 1 out of 5 tests failed' in result.output
+    result = run_cli_command(computer_test, [aiida_localhost.label], use_subprocess=False)
+    assert 'Warning: 1 out of 6 tests failed' in result.output
     assert stdout in result.output
+
+
+def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeypatch):
+    """Test ``verdi computer test`` where ``use_login_shell=True`` is much slower."""
+    from aiida.cmdline.commands import cmd_computer
+
+    aiida_localhost.configure()
+
+    def time_use_login_shell(authinfo, auth_params, use_login_shell, iterations) -> float:  # pylint: disable=unused-argument
+        if use_login_shell:
+            return 0.21
+        return 0.10
+
+    monkeypatch.setattr(cmd_computer, 'time_use_login_shell', time_use_login_shell)
+
+    result = run_cli_command(computer_test, [aiida_localhost.label], use_subprocess=False)
+    assert 'Success: all 6 tests succeeded' in result.output
+    assert 'computer is configured to use a login shell, which is slower compared to a normal shell' in result.output

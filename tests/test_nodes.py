@@ -21,7 +21,6 @@ from aiida.common.links import LinkType
 from aiida.tools import delete_group_nodes, delete_nodes
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
 class TestNodeIsStorable:
     """Test that checks on storability of certain node sub classes work correctly."""
 
@@ -48,7 +47,6 @@ class TestNodeIsStorable:
             SubData().store()
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
 class TestNodeCopyDeepcopy:
     """Test that calling copy and deepcopy on a Node does the right thing."""
 
@@ -65,7 +63,6 @@ class TestNodeCopyDeepcopy:
             copy.deepcopy(node)
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
 class TestNodeHashing:
     """
     Tests the functionality of hashing a node
@@ -108,16 +105,14 @@ class TestNodeHashing:
             node.base.repository.put_object_from_filelike(handle, 'path/name')
         return node
 
-    @staticmethod
-    def create_folderdata_with_empty_folder():
-        dirpath = tempfile.mkdtemp()
+    def create_folderdata_with_empty_folder(self, tmp_path):
         node = orm.FolderData()
-        node.base.repository.put_object_from_tree(dirpath, 'path/name')
+        node.base.repository.put_object_from_tree(tmp_path, 'path/name')
         return node
 
-    def test_folder_file_different(self):
+    def test_folder_file_different(self, tmp_path):
         f1 = self.create_folderdata_with_empty_file().store()
-        f2 = self.create_folderdata_with_empty_folder().store()
+        f2 = self.create_folderdata_with_empty_folder(tmp_path).store()
 
         assert f1.base.repository.list_object_names('path') == f2.base.repository.list_object_names('path')
         assert f1.base.caching.get_hash() != f2.base.caching.get_hash()
@@ -134,7 +129,6 @@ class TestNodeHashing:
         assert hash1 == hash2
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
 class TestTransitiveNoLoops:
     """
     Test the transitive closure functionality
@@ -156,7 +150,6 @@ class TestTransitiveNoLoops:
             d1.base.links.add_incoming(c2, link_type=LinkType.CREATE, link_label='link')
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
 class TestTypes:
     """
     Generic test class to test types
@@ -182,7 +175,7 @@ class TestQueryWithAiidaObjects:
     """
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
@@ -270,7 +263,7 @@ class TestNodeBasic:
     emptylist = []
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
@@ -1023,6 +1016,7 @@ class TestNodeBasic:
             (default_user_email, 'text2'),
         ]
 
+    @pytest.mark.usefixtures('suppress_internal_deprecations')
     def test_code_loading_from_string(self):
         """
         Checks that the method Code.get_from_string works correctly.
@@ -1070,6 +1064,7 @@ class TestNodeBasic:
         with pytest.raises(MultipleObjectsError):
             orm.Code.get_from_string(code3.label)
 
+    @pytest.mark.usefixtures('suppress_internal_deprecations')
     def test_code_loading_using_get(self):
         """
         Checks that the method Code.get(pk) works correctly.
@@ -1129,7 +1124,7 @@ class TestNodeBasic:
         pk_label_duplicate = code1.pk
         code4 = orm.Code()
         code4.set_remote_computer_exec((self.computer, '/bin/true'))
-        code4.label = pk_label_duplicate
+        code4.label = str(pk_label_duplicate)
         code4.store()
 
         # Since the label of code4 is identical to the pk of code1, calling
@@ -1140,24 +1135,7 @@ class TestNodeBasic:
         assert q_code_4.label == code1.label
         assert q_code_4.get_remote_exec_path() == code1.get_remote_exec_path()
 
-    def test_code_description(self):
-        """
-        This test checks that the code description is retrieved correctly
-        when the code is searched with its id and label.
-        """
-        # Create a code node
-        code = orm.Code()
-        code.set_remote_computer_exec((self.computer, '/bin/true'))
-        code.label = 'test_code_label'
-        code.description = 'test code description'
-        code.store()
-
-        q_code1 = orm.Code.get(label=code.label)
-        assert code.description == str(q_code1.description)
-
-        q_code2 = orm.Code.get(code.pk)
-        assert code.description == str(q_code2.description)
-
+    @pytest.mark.usefixtures('suppress_internal_deprecations')
     def test_list_for_plugin(self):
         """
         This test checks the Code.list_for_plugin()
@@ -1224,7 +1202,7 @@ class TestNodeBasic:
 class TestSubNodesAndLinks:
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
@@ -1545,7 +1523,6 @@ class AnyValue:
         return True
 
 
-@pytest.mark.usefixtures('aiida_profile_clean_class')
 class TestNodeDeletion:
 
     def _check_existence(self, uuids_check_existence, uuids_check_deleted):

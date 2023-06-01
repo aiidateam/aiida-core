@@ -29,7 +29,8 @@ if [[ ${NEED_SETUP_PROFILE} == true ]]; then
         --first-name "${USER_FIRST_NAME}"      \
         --last-name "${USER_LAST_NAME}"        \
         --institution "${USER_INSTITUTION}"    \
-        --db-backend "${AIIDADB_BACKEND}"
+        --db-host "${DB_HOST:localhost}"    \
+        --broker-host "${BROKER_HOST:localhost}"
 
     # Setup and configure local computer.
     computer_name=localhost
@@ -75,6 +76,15 @@ verdi daemon stop
 
 # Migration will run for the default profile.
 verdi storage migrate --force || echo "Database migration failed."
+
+# Supress rabbitmq version warning for arm64 since
+# the it build using latest version rabbitmq from apt install
+# We explicitly set consumer_timeout to 100 hours in /etc/rabbitmq/rabbitmq.conf
+export ARCH=`uname -m`
+if [ "$ARCH" = "aarch64" ]; then \
+    verdi config set warnings.rabbitmq_version False
+fi
+
 
 # Daemon will start only if the database exists and is migrated to the latest version.
 verdi daemon start || echo "AiiDA daemon is not running."

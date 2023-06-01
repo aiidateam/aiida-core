@@ -9,12 +9,13 @@
 ###########################################################################
 """Tests for `verdi archive`."""
 import shutil
+import uuid
 import zipfile
 
 import pytest
 
 from aiida.cmdline.commands import cmd_archive
-from aiida.orm import Code, Computer, Dict, Group
+from aiida.orm import Computer, Dict, Group, InstalledCode
 from aiida.storage.sqlite_zip.migrator import list_versions
 from aiida.tools.archive import ArchiveFormatSqlZip
 from tests.utils.archives import get_archive_file
@@ -37,41 +38,28 @@ def test_create_force(run_cli_command, tmp_path):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_create_all(run_cli_command, tmp_path):
+def test_create_all(run_cli_command, tmp_path, aiida_localhost):
     """Test that creating an archive for a set of various ORM entities works with the zip format."""
-    computer = Computer(
-        label='comp',
-        hostname='localhost',
-        transport_type='core.local',
-        scheduler_type='core.direct',
-        workdir='/tmp/aiida'
-    ).store()
-    code = Code(remote_computer_exec=(computer, '/bin/true')).store()
-    group = Group(label='test_group').store()
+    computer = aiida_localhost
+    code = InstalledCode(computer=computer, filepath_executable='/bin/true').store()
+    group = Group(label=str(uuid.uuid4())).store()
     filename_output = tmp_path / 'archive.aiida'
 
     options = ['--all', filename_output]
-    run_cli_command(cmd_archive.create, options)
+    run_cli_command(cmd_archive.create, options, use_subprocess=True)
     assert filename_output.is_file()
     assert ArchiveFormatSqlZip().read_version(filename_output) == ArchiveFormatSqlZip().latest_version
     with ArchiveFormatSqlZip().open(filename_output, 'r') as archive:
         assert archive.querybuilder().append(Computer, project=['uuid']).all(flat=True) == [computer.uuid]
-        assert archive.querybuilder().append(Code, project=['uuid']).all(flat=True) == [code.uuid]
+        assert archive.querybuilder().append(InstalledCode, project=['uuid']).all(flat=True) == [code.uuid]
         assert archive.querybuilder().append(Group, project=['uuid']).all(flat=True) == [group.uuid]
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
-def test_create_basic(run_cli_command, tmp_path):
+def test_create_basic(run_cli_command, tmp_path, aiida_localhost):
     """Test that creating an archive for a set of various ORM entities works with the zip format."""
-    computer = Computer(
-        label='comp',
-        hostname='localhost',
-        transport_type='core.local',
-        scheduler_type='core.direct',
-        workdir='/tmp/aiida'
-    ).store()
-    code = Code(remote_computer_exec=(computer, '/bin/true')).store()
-    group = Group(label='test_group').store()
+    computer = aiida_localhost
+    code = InstalledCode(computer=computer, filepath_executable='/bin/true').store()
+    group = Group(label=str(uuid.uuid4())).store()
     node = Dict().store()
     filename_output = tmp_path / 'archive.aiida'
 
@@ -81,7 +69,7 @@ def test_create_basic(run_cli_command, tmp_path):
     assert ArchiveFormatSqlZip().read_version(filename_output) == ArchiveFormatSqlZip().latest_version
     with ArchiveFormatSqlZip().open(filename_output, 'r') as archive:
         assert archive.querybuilder().append(Computer, project=['uuid']).all(flat=True) == [computer.uuid]
-        assert archive.querybuilder().append(Code, project=['uuid']).all(flat=True) == [code.uuid]
+        assert archive.querybuilder().append(InstalledCode, project=['uuid']).all(flat=True) == [code.uuid]
         assert archive.querybuilder().append(Group, project=['uuid']).all(flat=True) == [group.uuid]
         assert archive.querybuilder().append(Dict, project=['uuid']).all(flat=True) == [node.uuid]
 
@@ -171,7 +159,7 @@ def test_migrate_low_verbosity(run_cli_command, tmp_path):
     filename_output = tmp_path / 'archive.aiida'
 
     options = ['--verbosity', 'WARNING', filename_input, filename_output]
-    result = run_cli_command(cmd_archive.migrate, options)
+    result = run_cli_command(cmd_archive.migrate, options, suppress_warnings=True)
     assert result.output == ''
     assert filename_output.is_file()
     assert ArchiveFormatSqlZip().read_version(filename_output) == ArchiveFormatSqlZip().latest_version

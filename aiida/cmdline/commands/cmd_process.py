@@ -10,14 +10,30 @@
 # pylint: disable=too-many-arguments
 """`verdi process` command."""
 import click
-from kiwipy import communications
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import arguments, options
+from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
-from aiida.cmdline.utils.query.calculation import CalculationQueryBuilder
 from aiida.common.log import LOG_LEVELS
 from aiida.manage import get_manager
+
+
+def valid_projections():
+    """Return list of valid projections for the ``--project`` option of ``verdi process list``.
+
+    This indirection is necessary to prevent loading the imported module which slows down tab-completion.
+    """
+    from aiida.tools.query.calculation import CalculationQueryBuilder
+    return CalculationQueryBuilder.valid_projections
+
+
+def default_projections():
+    """Return list of default projections for the ``--project`` option of ``verdi process list``.
+
+    This indirection is necessary to prevent loading the imported module which slows down tab-completion.
+    """
+    from aiida.tools.query.calculation import CalculationQueryBuilder
+    return CalculationQueryBuilder.default_projections
 
 
 @verdi.group('process')
@@ -26,9 +42,7 @@ def verdi_process():
 
 
 @verdi_process.command('list')
-@options.PROJECT(
-    type=click.Choice(CalculationQueryBuilder.valid_projections), default=CalculationQueryBuilder.default_projections
-)
+@options.PROJECT(type=types.LazyChoice(valid_projections), default=lambda: default_projections())  # pylint: disable=unnecessary-lambda
 @options.ORDER_BY()
 @options.ORDER_DIRECTION()
 @options.GROUP(help='Only include entries that are a member of this group.')
@@ -41,20 +55,24 @@ def verdi_process():
 @options.PAST_DAYS()
 @options.LIMIT()
 @options.RAW()
+@click.pass_context
 @decorators.with_dbenv()
 def process_list(
-    all_entries, group, process_state, process_label, paused, exit_status, failed, past_days, limit, project, raw,
+    ctx, all_entries, group, process_state, process_label, paused, exit_status, failed, past_days, limit, project, raw,
     order_by, order_dir
 ):
     """Show a list of running or terminated processes.
 
-    By default, only those that are still running are shown, but there are options
-    to show also the finished ones."""
+    By default, only those that are still running are shown, but there are options to show also the finished ones.
+    """
     # pylint: disable=too-many-locals
     from tabulate import tabulate
 
-    from aiida.cmdline.utils.common import check_worker_load, print_last_process_state_change
+    from aiida.cmdline.commands.cmd_daemon import execute_client_command
+    from aiida.cmdline.utils.common import print_last_process_state_change
     from aiida.engine.daemon.client import get_daemon_client
+    from aiida.orm import ProcessNode, QueryBuilder
+    from aiida.tools.query.calculation import CalculationQueryBuilder
 
     relationships = {}
 
@@ -67,30 +85,51 @@ def process_list(
         relationships=relationships, filters=filters, order_by={order_by: order_dir}, past_days=past_days, limit=limit
     )
     projected = builder.get_projected(query_set, projections=project)
-
     headers = projected.pop(0)
 
     if raw:
         tabulated = tabulate(projected, tablefmt='plain')
         echo.echo(tabulated)
-    else:
-        tabulated = tabulate(projected, headers=headers)
-        echo.echo(tabulated)
-        echo.echo(f'\nTotal results: {len(projected)}\n')
-        print_last_process_state_change()
+        return
 
-        if not get_daemon_client().is_daemon_running:
-            echo.echo_warning('the daemon is not running', bold=True)
+    tabulated = tabulate(projected, headers=headers)
+    echo.echo(tabulated)
+    echo.echo(f'\nTotal results: {len(projected)}\n')
+    print_last_process_state_change()
+
+    if not get_daemon_client().is_daemon_running:
+        echo.echo_warning('The daemon is not running', bold=True)
+        return
+
+    echo.echo_report('Checking daemon load... ', nl=False)
+    response = execute_client_command('get_numprocesses')
+
+    if not response:
+        # Daemon could not be reached
+        return
+
+    try:
+        active_workers = response['numprocesses']
+    except KeyError:
+        echo.echo_report('No active daemon workers.')
+    else:
+        # Second query to get active process count. Currently this is slow but will be fixed with issue #2770. It is
+        # placed at the end of the command so that the user can Ctrl+C after getting the process table.
+        slots_per_worker = ctx.obj.config.get_option('daemon.worker_process_slots', scope=ctx.obj.profile.name)
+        active_processes = QueryBuilder().append(
+            ProcessNode, filters={
+                'attributes.process_state': {
+                    'in': ('created', 'waiting', 'running')
+                }
+            }
+        ).count()
+        available_slots = active_workers * slots_per_worker
+        percent_load = active_processes / available_slots
+        if percent_load > 0.9:  # 90%
+            echo.echo_warning(f'{percent_load * 100:.0f}% of the available daemon worker slots have been used!')
+            echo.echo_warning('Increase the number of workers with `verdi daemon incr`.')
         else:
-            # Second query to get active process count
-            # Currently this is slow but will be fixed with issue #2770
-            # We place it at the end so that the user can Ctrl+C after getting the process table.
-            builder = CalculationQueryBuilder()
-            filters = builder.get_filters(process_state=('created', 'waiting', 'running'))
-            query_set = builder.get_query_set(filters=filters)
-            projected = builder.get_projected(query_set, projections=['pk'])
-            worker_slot_use = len(projected) - 1
-            check_worker_load(worker_slot_use)
+            echo.echo_report(f'Using {percent_load * 100:.0f}% of the available daemon worker slots.')
 
 
 @verdi_process.command('show')
@@ -134,7 +173,7 @@ def process_call_root(processes):
 @click.option(
     '-l',
     '--levelname',
-    type=click.Choice(LOG_LEVELS.keys()),
+    type=click.Choice(list(LOG_LEVELS)),
     default='REPORT',
     help='Filter the results by name of the log level.'
 )
@@ -159,13 +198,16 @@ def process_report(processes, levelname, indent_size, max_depth):
 
 
 @verdi_process.command('status')
+@click.option(
+    '-m', '--max-depth', 'max_depth', type=int, default=None, help='Limit the number of levels to be printed.'
+)
 @arguments.PROCESSES()
-def process_status(processes):
+def process_status(max_depth, processes):
     """Print the status of one or multiple processes."""
     from aiida.cmdline.utils.ascii_vis import format_call_graph
 
     for process in processes:
-        graph = format_call_graph(process)
+        graph = format_call_graph(process, max_depth=max_depth)
         echo.echo(graph)
 
 
@@ -177,24 +219,13 @@ def process_status(processes):
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_kill(processes, timeout, wait):
     """Kill running processes."""
+    from aiida.engine.processes import control
 
-    controller = get_manager().get_process_controller()
-
-    futures = {}
-    for process in processes:
-
-        if process.is_terminated:
-            echo.echo_error(f'Process<{process.pk}> is already terminated')
-            continue
-
-        try:
-            future = controller.kill_process(process.pk, msg='Killed through `verdi process kill`')
-        except communications.UnroutableError:
-            echo.echo_error(f'Process<{process.pk}> is unreachable')
-        else:
-            futures[future] = process
-
-    process_actions(futures, 'kill', 'killing', 'killed', wait, timeout)
+    try:
+        message = 'Killed through `verdi process kill`'
+        control.kill_processes(processes, timeout=timeout, wait=wait, message=message)
+    except control.ProcessTimeoutException as exception:
+        echo.echo_critical(str(exception) + '\nFrom the CLI you can call `verdi devel revive <PID>`.')
 
 
 @verdi_process.command('pause')
@@ -206,33 +237,16 @@ def process_kill(processes, timeout, wait):
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_pause(processes, all_entries, timeout, wait):
     """Pause running processes."""
-    from aiida.orm import ProcessNode, QueryBuilder
-
-    controller = get_manager().get_process_controller()
+    from aiida.engine.processes import control
 
     if processes and all_entries:
         raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
 
-    if not processes and all_entries:
-        active_states = options.active_process_states()
-        builder = QueryBuilder().append(ProcessNode, filters={'attributes.process_state': {'in': active_states}})
-        processes = builder.all(flat=True)
-
-    futures = {}
-    for process in processes:
-
-        if process.is_terminated:
-            echo.echo_error(f'Process<{process.pk}> is already terminated')
-            continue
-
-        try:
-            future = controller.pause_process(process.pk, msg='Paused through `verdi process pause`')
-        except communications.UnroutableError:
-            echo.echo_error(f'Process<{process.pk}> is unreachable')
-        else:
-            futures[future] = process
-
-    process_actions(futures, 'pause', 'pausing', 'paused', wait, timeout)
+    try:
+        message = 'Paused through `verdi process pause`'
+        control.pause_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait, message=message)
+    except control.ProcessTimeoutException as exception:
+        echo.echo_critical(str(exception) + '\nFrom the CLI you can call `verdi devel revive <PID>`.')
 
 
 @verdi_process.command('play')
@@ -244,33 +258,15 @@ def process_pause(processes, all_entries, timeout, wait):
 @decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_play(processes, all_entries, timeout, wait):
     """Play (unpause) paused processes."""
-    from aiida.orm import ProcessNode, QueryBuilder
-
-    controller = get_manager().get_process_controller()
+    from aiida.engine.processes import control
 
     if processes and all_entries:
         raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
 
-    if not processes and all_entries:
-        filters = CalculationQueryBuilder().get_filters(process_state=('created', 'waiting', 'running'), paused=True)
-        builder = QueryBuilder().append(ProcessNode, filters=filters)
-        processes = builder.all(flat=True)
-
-    futures = {}
-    for process in processes:
-
-        if process.is_terminated:
-            echo.echo_error(f'Process<{process.pk}> is already terminated')
-            continue
-
-        try:
-            future = controller.play_process(process.pk)
-        except communications.UnroutableError:
-            echo.echo_error(f'Process<{process.pk}> is unreachable')
-        else:
-            futures[future] = process
-
-    process_actions(futures, 'play', 'playing', 'played', wait, timeout)
+    try:
+        control.play_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait)
+    except control.ProcessTimeoutException as exception:
+        echo.echo_critical(str(exception) + '\nFrom the CLI you can call `verdi devel revive <PID>`.')
 
 
 @verdi_process.command('watch')
@@ -318,79 +314,3 @@ def process_watch(processes):
 
         # Reraise to trigger clicks builtin abort sequence
         raise
-
-
-def process_actions(futures_map, infinitive, present, past, wait=False, timeout=None):
-    """
-    Process the requested actions sent to a set of Processes given a map of the futures and the
-    corresponding processes.  This function will echo the correct information strings based on
-    the outcomes of the futures and the given verb conjugations.  You can optionally wait for
-    any pending actions to be completed before the functions returns and use a timeout to put
-    a maximum wait time on the actions.
-
-    :param futures_map: the map of action futures and the corresponding processes
-    :type futures_map: dict
-    :param infinitive: the infinitive form of the action verb
-    :type infinitive: str
-    :param present: the present tense form
-    :type present: str
-    :param past: the past tense form
-    :type past: str
-    :param wait: if True, waits for pending actions to be competed, otherwise just returns
-    :type wait: bool
-    :param timeout: the timeout (in seconds) to wait for actions to be completed
-    :type timeout: float
-    """
-    # pylint: disable=too-many-branches
-    from concurrent import futures
-
-    import kiwipy
-    from plumpy.futures import unwrap_kiwi_future
-
-    from aiida.manage.external.rmq import CommunicationTimeout
-
-    scheduled = {}
-    try:
-        for future in futures.as_completed(futures_map.keys(), timeout=timeout):
-            # Get the corresponding process
-            process = futures_map[future]
-
-            try:
-                # unwrap is need here since LoopCommunicator will also wrap a future
-                future = unwrap_kiwi_future(future)
-                result = future.result()
-            except CommunicationTimeout:
-                echo.echo_error(f'call to {infinitive} Process<{process.pk}> timed out')
-            except Exception as exception:  # pylint: disable=broad-except
-                echo.echo_error(f'failed to {infinitive} Process<{process.pk}>: {exception}')
-            else:
-                if result is True:
-                    echo.echo_success(f'{past} Process<{process.pk}>')
-                elif result is False:
-                    echo.echo_error(f'problem {present} Process<{process.pk}>')
-                elif isinstance(result, kiwipy.Future):
-                    echo.echo_success(f'scheduled {infinitive} Process<{process.pk}>')
-                    scheduled[result] = process
-                else:
-                    echo.echo_error(f'got unexpected response when {present} Process<{process.pk}>: {result}')
-
-        if wait and scheduled:
-            echo.echo_report(f"waiting for process(es) {','.join([str(proc.pk) for proc in scheduled.values()])}")
-
-            for future in futures.as_completed(scheduled.keys(), timeout=timeout):
-                process = scheduled[future]
-
-                try:
-                    result = future.result()
-                except Exception as exception:  # pylint: disable=broad-except
-                    echo.echo_error(f'failed to {infinitive} Process<{process.pk}>: {exception}')
-                else:
-                    if result is True:
-                        echo.echo_success(f'{past} Process<{process.pk}>')
-                    elif result is False:
-                        echo.echo_error(f'problem {present} Process<{process.pk}>')
-                    else:
-                        echo.echo_error(f'got unexpected response when {present} Process<{process.pk}>: {result}')
-
-    except futures.TimeoutError:
-        echo.echo_error(f'timed out trying to {infinitive} processes {futures_map.values()}')

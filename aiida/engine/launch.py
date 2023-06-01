@@ -14,8 +14,9 @@ from aiida.common import InvalidOperation
 from aiida.manage import manager
 from aiida.orm import ProcessNode
 
+from .processes.builder import ProcessBuilder
 from .processes.functions import FunctionProcess
-from .processes.process import Process, ProcessBuilder
+from .processes.process import Process
 from .utils import instantiate_process, is_process_scoped  # pylint: disable=no-name-in-module
 
 __all__ = ('run', 'run_get_pk', 'run_get_node', 'submit')

@@ -8,22 +8,51 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi code` command."""
+from collections import defaultdict
 from functools import partial
 
 import click
 import tabulate
+import yaml
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.params import arguments, options
+from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
+from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.params.options.commands import code as options_code
 from aiida.cmdline.utils import echo
-from aiida.cmdline.utils.decorators import with_dbenv
+from aiida.cmdline.utils.decorators import deprecated_command, with_dbenv
 from aiida.common import exceptions
 
 
 @verdi.group('code')
 def verdi_code():
     """Setup and manage codes."""
+
+
+def create_code(ctx: click.Context, cls, non_interactive: bool, **kwargs):  # pylint: disable=unused-argument
+    """Create a new `Code` instance."""
+    try:
+        instance = cls(**kwargs)
+    except (TypeError, ValueError) as exception:
+        echo.echo_critical(f'Failed to create instance `{cls}`: {exception}')
+
+    try:
+        instance.store()
+    except exceptions.ValidationError as exception:
+        echo.echo_critical(f'Failed to store instance of `{cls}`: {exception}')
+
+    echo.echo_success(f'Created {cls.__name__}<{instance.pk}>')
+
+
+@verdi_code.group(
+    'create',
+    cls=DynamicEntryPointCommandGroup,
+    command=create_code,
+    entry_point_group='aiida.data',
+    entry_point_name_filter=r'core\.code\..*'
+)
+def code_create():
+    """Create a new code."""
 
 
 def get_default(key, ctx):
@@ -79,6 +108,7 @@ def set_code_builder(ctx, param, value):
 @options.CONFIG_FILE()
 @click.pass_context
 @with_dbenv()
+@deprecated_command('This command will be removed soon, use `verdi code create` instead.')
 def setup_code(ctx, non_interactive, **kwargs):
     """Setup a new code."""
     from aiida.orm.utils.builders.code import CodeBuilder
@@ -106,7 +136,6 @@ def setup_code(ctx, non_interactive, **kwargs):
     except Exception as exception:  # pylint: disable=broad-except
         echo.echo_critical(f'Unable to store the Code: {exception}')
 
-    code.reveal()
     echo.echo_success(f'Code<{code.pk}> {code.full_label} created')
 
 
@@ -121,9 +150,11 @@ def code_test(code):
      * Whether the remote executable exists.
 
     """
-    if not code.is_local():
+    from aiida.orm import InstalledCode
+
+    if isinstance(code, InstalledCode):
         try:
-            code.validate_remote_exec_path()
+            code.validate_filepath_executable()
         except exceptions.ValidationError as exception:
             echo.echo_critical(f'validation failed: {exception}')
 
@@ -163,10 +194,11 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
         kwargs['code_type'] = CodeBuilder.CodeType.STORE_AND_UPLOAD
 
     if kwargs.pop('hide_original'):
-        code.hide()
+        code.is_hidden = True
 
     # Convert entry point to its name
-    kwargs['input_plugin'] = kwargs['input_plugin'].name
+    if kwargs['input_plugin']:
+        kwargs['input_plugin'] = kwargs['input_plugin'].name
 
     code_builder = ctx.code_builder
     for key, value in kwargs.items():
@@ -175,7 +207,7 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 
     try:
         new_code.store()
-        new_code.reveal()
+        new_code.is_hidden = False
     except ValidationError as exception:
         echo.echo_critical(f'Unable to store the Code: {exception}')
 
@@ -188,36 +220,43 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 def show(code):
     """Display detailed information for a code."""
     from aiida.cmdline import is_verbose
-    from aiida.repository import FileType
 
     table = []
     table.append(['PK', code.pk])
     table.append(['UUID', code.uuid])
-    table.append(['Label', code.label])
-    table.append(['Description', code.description])
-    table.append(['Default plugin', code.get_input_plugin_name()])
-
-    if code.is_local():
-        table.append(['Type', 'local'])
-        table.append(['Exec name', code.get_execname()])
-        table.append(['List of files/folders:', ''])
-        for obj in code.list_objects():
-            if obj.file_type == FileType.DIRECTORY:
-                table.append(['directory', obj.name])
-            else:
-                table.append(['file', obj.name])
-    else:
-        table.append(['Type', 'remote'])
-        table.append(['Remote machine', code.get_remote_computer().label])
-        table.append(['Remote absolute path', code.get_remote_exec_path()])
-
-    table.append(['Prepend text', code.get_prepend_text()])
-    table.append(['Append text', code.get_append_text()])
-
+    table.append(['Type', code.entry_point.name])
+    for key in code.get_cli_options().keys():
+        try:
+            table.append([key.capitalize().replace('_', ' '), getattr(code, key)])
+        except AttributeError:
+            continue
     if is_verbose():
         table.append(['Calculations', len(code.base.links.get_outgoing().all())])
 
     echo.echo(tabulate.tabulate(table))
+
+
+@verdi_code.command()
+@arguments.CODE()
+@arguments.OUTPUT_FILE(type=click.Path(exists=False))
+@with_dbenv()
+def export(code, output_file):
+    """Export code to a yaml file."""
+    code_data = {}
+
+    for key in code.get_cli_options().keys():
+        if key == 'computer':
+            value = getattr(code, key).label
+        else:
+            value = getattr(code, key)
+
+        # If the attribute is not set, for example ``with_mpi`` do not export it, because the YAML won't be valid for
+        # use in ``verdi code create`` since ``None`` is not a valid value on the CLI.
+        if value is not None:
+            code_data[key] = str(value)
+
+    with open(output_file, 'w', encoding='utf-8') as yfhandle:
+        yaml.dump(code_data, yfhandle)
 
 
 @verdi_code.command()
@@ -252,7 +291,7 @@ def delete(codes, dry_run, force):
 def hide(codes):
     """Hide one or more codes from `verdi code list`."""
     for code in codes:
-        code.hide()
+        code.is_hidden = True
         echo.echo_success(f'Code<{code.pk}> {code.full_label} hidden')
 
 
@@ -262,7 +301,7 @@ def hide(codes):
 def reveal(codes):
     """Reveal one or more hidden codes in `verdi code list`."""
     for code in codes:
-        code.reveal()
+        code.is_hidden = False
         echo.echo_success(f'Code<{code.pk}> {code.full_label} revealed')
 
 
@@ -275,124 +314,111 @@ def relabel(code, label):
     old_label = code.full_label
 
     try:
-        code.relabel(label)
+        code.label = label
     except (TypeError, ValueError) as exception:
         echo.echo_critical(f'invalid code label: {exception}')
     else:
         echo.echo_success(f'Code<{code.pk}> relabeled from {old_label} to {code.full_label}')
 
 
+VALID_PROJECTIONS = {
+    'full_label': [('code', 'label'), ('computer', 'label')],
+    'entry_point': [('code', 'node_type')],
+    'pk': [('code', 'id')],
+    'uuid': [('code', 'uuid')],
+    'label': [('code', 'label')],
+    'default_calc_job_plugin': [('code', 'attributes.input_plugin')],
+    'computer': [('computer', 'label')],
+    'user': [('user', 'email')],
+}
+
+
 @verdi_code.command('list')
 @options.COMPUTER(help='Filter codes by computer.')
-@options.INPUT_PLUGIN(help='Filter codes by calculation input plugin.')
+@click.option(
+    '-d',
+    '--default-calc-job-plugin',
+    type=types.PluginParamType(group='calculations', load=False),
+    help='Filter codes by their optional default calculation job plugin.'
+)
 @options.ALL(help='Include hidden codes.')
 @options.ALL_USERS(help='Include codes from all users.')
+@options.PROJECT(type=click.Choice(VALID_PROJECTIONS.keys()), default=['full_label', 'pk', 'entry_point'])
+@options.RAW()
 @click.option('-o', '--show-owner', 'show_owner', is_flag=True, default=False, help='Show owners of codes.')
 @with_dbenv()
-def code_list(computer, input_plugin, all_entries, all_users, show_owner):
+def code_list(computer, default_calc_job_plugin, all_entries, all_users, raw, show_owner, project):
+    # pylint: disable=too-many-branches,too-many-locals
     """List the available codes."""
     from aiida import orm
-    from aiida.orm import Code  # pylint: disable=redefined-outer-name
+    from aiida.orm.utils.node import load_node_class
 
-    qb_user_filters = {}
-    if not all_users:
-        user = orm.User.collection.get_default()
-        qb_user_filters['email'] = user.email
+    if show_owner:
+        echo.echo_deprecated(
+            'the `-o/--show-owner` option is deprecated. To show the user use the `-P/--project` option instead, e.g., '
+            '`verdi code list -P full_label user`.'
+        )
+        if 'user' not in project:
+            project = project + ('user',)
 
-    qb_computer_filters = {}
-    if computer is not None:
-        qb_computer_filters['label'] = computer.label
+    filters = defaultdict(dict)
+    projections = defaultdict(list)
 
-    qb_code_filters = {}
-    if input_plugin is not None:
-        qb_code_filters['attributes.input_plugin'] = input_plugin.name
+    for key in project:
+        for entity, projection in VALID_PROJECTIONS[key]:
+            if projection not in projections[entity]:
+                projections[entity].append(projection)
 
-    # If not all_entries, hide codes with HIDDEN_KEY extra set to True
     if not all_entries:
-        qb_code_filters['or'] = [{
-            'extras': {
-                '!has_key': Code.HIDDEN_KEY
-            }
-        }, {
-            f'extras.{Code.HIDDEN_KEY}': {
-                '==': False
-            }
-        }]
+        filters['code'][f'extras.{orm.Code.HIDDEN_KEY}'] = {'!==': True}
 
-    echo.echo('# List of configured codes:')
-    echo.echo("# (use 'verdi code show CODEID' to see the details)")
+    if not all_users:
+        filters['user']['email'] = orm.User.collection.get_default().email
 
-    showed_results = False
-
-    # pylint: disable=invalid-name
     if computer is not None:
-        qb = orm.QueryBuilder()
-        qb.append(Code, tag='code', filters=qb_code_filters, project=['id', 'label'])
-        # We have a user assigned to the code so we can ask for the
-        # presence of a user even if there is no user filter
-        qb.append(orm.User, with_node='code', project=['email'], filters=qb_user_filters)
-        # We also add the filter on computer. This will automatically
-        # return codes that have a computer (and of course satisfy the
-        # other filters). The codes that have a computer attached are the
-        # remote codes.
-        qb.append(orm.Computer, with_node='code', project=['label'], filters=qb_computer_filters)
-        qb.order_by({Code: {'id': 'asc'}})
-        showed_results = qb.count() > 0
-        print_list_res(qb, show_owner)
+        filters['computer']['uuid'] = computer.uuid
 
-    # If there is no filter on computers
-    else:
-        # Print all codes that have a computer assigned to them
-        # (these are the remote codes)
-        qb = orm.QueryBuilder()
-        qb.append(Code, tag='code', filters=qb_code_filters, project=['id', 'label'])
-        # We have a user assigned to the code so we can ask for the
-        # presence of a user even if there is no user filter
-        qb.append(orm.User, with_node='code', project=['email'], filters=qb_user_filters)
-        qb.append(orm.Computer, with_node='code', project=['label'])
-        qb.order_by({Code: {'id': 'asc'}})
-        print_list_res(qb, show_owner)
-        showed_results = showed_results or qb.count() > 0
+    if default_calc_job_plugin is not None:
+        filters['code']['attributes.input_plugin'] = default_calc_job_plugin.name
 
-        # Now print all the local codes. To get the local codes we ask
-        # the dbcomputer_id variable to be None.
-        qb = orm.QueryBuilder()
-        comp_non_existence = {'dbcomputer_id': {'==': None}}
-        if not qb_code_filters:
-            qb_code_filters = comp_non_existence
-        else:
-            new_qb_code_filters = {'and': [qb_code_filters, comp_non_existence]}
-            qb_code_filters = new_qb_code_filters
-        qb.append(Code, tag='code', filters=qb_code_filters, project=['id', 'label'])
-        # We have a user assigned to the code so we can ask for the
-        # presence of a user even if there is no user filter
-        qb.append(orm.User, with_node='code', project=['email'], filters=qb_user_filters)
-        qb.order_by({Code: {'id': 'asc'}})
-        showed_results = showed_results or qb.count() > 0
-        print_list_res(qb, show_owner)
-    if not showed_results:
-        echo.echo('# No codes found matching the specified criteria.')
+    query = orm.QueryBuilder()
+    query.append(orm.Code, tag='code', project=projections.get('code', None), filters=filters.get('code', None))
+    query.append(
+        orm.Computer,
+        tag='computer',
+        with_node='code',
+        project=projections.get('computer', None),
+        filters=filters.get('computer', None)
+    )
+    query.append(
+        orm.User,
+        tag='user',
+        with_node='code',
+        project=projections.get('user', None),
+        filters=filters.get('user', None)
+    )
+    query.order_by({'code': {'id': 'asc'}})
 
+    if not query.count():
+        echo.echo_report('No codes found matching the specified criteria.')
+        return
 
-def print_list_res(qb_query, show_owner):
-    """Print a list of available codes."""
-    # pylint: disable=invalid-name
-    for tuple_ in qb_query.all():
-        if len(tuple_) == 3:
-            (pk, label, useremail) = tuple_
-            computername = None
-        elif len(tuple_) == 4:
-            (pk, label, useremail, computername) = tuple_
-        else:
-            echo.echo_warning('Wrong tuple size')
-            return
+    table = []
+    headers = [projection.replace('_', ' ').capitalize() for projection in project] if not raw else []
+    table_format = 'plain' if raw else None
 
-        if show_owner:
-            owner_string = f' ({useremail})'
-        else:
-            owner_string = ''
-        if computername is None:
-            computernamestring = ''
-        else:
-            computernamestring = f'@{computername}'
-        echo.echo(f'* pk {pk} - {label}{computernamestring}{owner_string}')
+    for result in query.iterdict():
+        row = []
+        for key in project:
+            if key == 'entry_point':
+                node_type = result['code']['node_type']
+                entry_point = load_node_class(node_type).entry_point
+                row.append(entry_point.name)
+            else:
+                row.append('@'.join(str(result[entity][projection]) for entity, projection in VALID_PROJECTIONS[key]))
+        table.append(row)
+
+    echo.echo(tabulate.tabulate(table, headers=headers, tablefmt=table_format))
+
+    if not raw:
+        echo.echo_report('\nUse `verdi code show IDENTIFIER` to see details for a code', prefix=False)

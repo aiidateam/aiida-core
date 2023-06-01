@@ -9,6 +9,8 @@
 ###########################################################################
 # pylint: disable=no-self-use
 """Test for the Group ORM class."""
+import uuid
+
 import pytest
 
 from aiida import orm
@@ -16,7 +18,6 @@ from aiida.common import exceptions
 from aiida.tools.graph.deletions import delete_nodes
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestGroups:
     """Test backend entities and their collections"""
 
@@ -26,7 +27,7 @@ class TestGroups:
         node_01 = orm.Data().store()
         nodes = [node_00, node_01]
 
-        group = orm.Group(label='label', description='description').store()
+        group = orm.Group(label=uuid.uuid4().hex, description='description').store()
         group.add_nodes(nodes)
 
         assert group.count() == len(nodes)
@@ -36,7 +37,7 @@ class TestGroups:
         node = orm.Data()
         stored_node = orm.Data().store()
 
-        group = orm.Group(label='testgroup')
+        group = orm.Group(label=uuid.uuid4().hex)
 
         with pytest.raises(exceptions.ModificationNotAllowed):
             # group unstored
@@ -66,7 +67,7 @@ class TestGroups:
         node_03 = orm.Data().store()
         nodes = [node_00, node_01, node_02, node_03]
 
-        group = orm.Group(label='label', description='description').store()
+        group = orm.Group(label=uuid.uuid4().hex, description='description').store()
         group.add_nodes(nodes)
 
         # Indexing
@@ -81,14 +82,29 @@ class TestGroups:
         assert all(isinstance(node, orm.Data) for node in nodes_sliced)
         assert all(node.uuid in set(node.uuid for node in nodes) for node in nodes_sliced)
 
+    def test_entry_point(self):
+        """Test the :meth:`aiida.orm.groups.Group.entry_point` property."""
+        from aiida.plugins.entry_point import get_entry_point_from_string
+
+        group = orm.Group('label')
+        assert group.entry_point == get_entry_point_from_string('aiida.groups:core')
+        assert orm.Group.entry_point == get_entry_point_from_string('aiida.groups:core')
+
+        class Custom(orm.Group):
+            pass
+
+        group = Custom('label')
+        assert group.entry_point is None
+        assert Custom.entry_point is None
+
     def test_description(self):
         """Test the update of the description both for stored and unstored groups."""
         node = orm.Data().store()
 
-        group_01 = orm.Group(label='testgroupdescription1', description='group_01').store()
+        group_01 = orm.Group(label=uuid.uuid4().hex, description='group_01').store()
         group_01.add_nodes(node)
 
-        group_02 = orm.Group(label='testgroupdescription2', description='group_02')
+        group_02 = orm.Group(label=uuid.uuid4().hex, description='group_02')
 
         # Preliminary checks
         assert group_01.is_stored
@@ -139,7 +155,7 @@ class TestGroups:
         node_03 = orm.Data().store()
         node_04 = orm.Data().store()
         nodes = [node_01, node_02, node_03]
-        group = orm.Group(label='test_remove_nodes').store()
+        group = orm.Group(label=uuid.uuid4().hex).store()
 
         # Add initial nodes
         group.add_nodes(nodes)
@@ -166,7 +182,7 @@ class TestGroups:
         node_02 = orm.Data().store()
         node_03 = orm.Data().store()
         nodes = [node_01, node_02, node_03]
-        group = orm.Group(label='test_clear_nodes').store()
+        group = orm.Group(label=uuid.uuid4().hex).store()
 
         # Add initial nodes
         group.add_nodes(nodes)
@@ -268,11 +284,11 @@ class TestGroups:
         # Search for the UUID of the stored group
         builder = orm.QueryBuilder()
         builder.append(orm.Group, project=['uuid'], filters={'label': {'==': 'test_group'}})
-        uuid = builder.first(flat=True)
+        group_uuid = builder.first(flat=True)
 
         # Look the node with the previously returned UUID
         builder = orm.QueryBuilder()
-        builder.append(orm.Group, project=['id'], filters={'uuid': {'==': uuid}})
+        builder.append(orm.Group, project=['id'], filters={'uuid': {'==': group_uuid}})
 
         # Check that the query doesn't fail
         builder.all()
@@ -282,7 +298,6 @@ class TestGroups:
         assert builder.first(flat=True) == group.pk
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestGroupsSubclasses:
     """Test rules around creating `Group` subclasses."""
 
@@ -321,7 +336,7 @@ class TestGroupsSubclasses:
         assert SubGroup._type_string is None  # pylint: disable=protected-access
 
         # Creating an instance is allowed
-        instance = SubGroup(label='subgroup')
+        instance = SubGroup(label=uuid.uuid4().hex)
         assert instance._type_string is None  # pylint: disable=protected-access
 
         # Storing the instance, however, is forbidden and should raise
@@ -335,7 +350,7 @@ class TestGroupsSubclasses:
         Storing instances of unregistered subclasses is not allowed so we have to create one sneakily by instantiating
         a normal group and manipulating the type string directly on the database model.
         """
-        group = orm.Group(label='group')
+        group = orm.Group(label=uuid.uuid4().hex)
         group.backend_entity.bare_model.type_string = 'unregistered.subclass'
         group.store()
 
@@ -350,13 +365,14 @@ class TestGroupsSubclasses:
         orm.Group.collection.delete(pk=group_pk)
 
     @staticmethod
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_querying():
         """Test querying for groups with and without subclassing."""
-        orm.Group(label='group').store()
-        orm.AutoGroup(label='auto-group').store()
+        orm.Group(label=uuid.uuid4().hex).store()
+        orm.AutoGroup(label=uuid.uuid4().hex).store()
 
         # Fake a subclass by manually setting the type string
-        group = orm.Group(label='custom-group')
+        group = orm.Group(label=uuid.uuid4().hex)
         group.backend_entity.bare_model.type_string = 'custom.group'
         group.store()
 
@@ -374,7 +390,7 @@ class TestGroupsSubclasses:
     @staticmethod
     def test_querying_node_subclasses():
         """Test querying for groups with multiple types for nodes it contains."""
-        group = orm.Group(label='group').store()
+        group = orm.Group(label=uuid.uuid4().hex).store()
         data_int = orm.Int().store()
         data_str = orm.Str().store()
         data_bool = orm.Bool().store()
@@ -393,7 +409,7 @@ class TestGroupsSubclasses:
     @staticmethod
     def test_query_with_group():
         """Test that querying a data node in a group works."""
-        group = orm.Group(label='group').store()
+        group = orm.Group(label=uuid.uuid4().hex).store()
         data = orm.Data().store()
 
         group.add_nodes([data])
@@ -411,10 +427,10 @@ class TestGroupExtras:
     """Test the property and methods of group extras."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+    def init_profile(self):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
-        self.group = orm.Group('test_extras')
+        self.group = orm.Group(uuid.uuid4().hex)
 
     def test_extras(self):
         """Test the `Group.base.extras.all` property."""

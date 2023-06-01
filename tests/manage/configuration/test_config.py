@@ -24,6 +24,7 @@ from aiida.manage.configuration.options import get_option
 def cache_aiida_path_variable():
     """Fixture that will store the ``AIIDA_PATH`` environment variable and restore it after the yield."""
     aiida_path_original = os.environ.get(settings.DEFAULT_AIIDA_PATH_VARIABLE, None)
+
     try:
         yield
     finally:
@@ -35,17 +36,21 @@ def cache_aiida_path_variable():
             except KeyError:
                 pass
 
+    # Make sure to reset the global variables set by the following call that are dependent on the environment variable
+    # ``DEFAULT_AIIDA_PATH_VARIABLE``. It may have been changed by a test using this fixture.
+    settings.set_configuration_directory()
+
 
 @pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
 @pytest.mark.usefixtures('cache_aiida_path_variable')
-def test_environment_variable_not_set(tmp_path):
+def test_environment_variable_not_set(tmp_path, monkeypatch):
     """Check that if the environment variable is not set, config folder will be created in `DEFAULT_AIIDA_PATH`.
 
     To make sure we do not mess with the actual default `.aiida` folder, which often lives in the home folder
     we create a temporary directory and set the `DEFAULT_AIIDA_PATH` to it.
     """
     # Change the default configuration folder path to temp folder instead of probably `~`.
-    settings.DEFAULT_AIIDA_PATH = tmp_path
+    monkeypatch.setattr(settings, 'DEFAULT_AIIDA_PATH', tmp_path)
 
     # Make sure that the environment variable is not set
     try:
@@ -374,6 +379,16 @@ def test_set_option_override(config_with_profile):
     # If we set override to False, it should not override, big surprise
     config.set_option(option_name, option_value_one, override=False)
     assert config.get_option(option_name, scope=None, default=False) == option_value_two
+
+
+def test_option_empty_config(empty_config):
+    """Test setting an option on a config without any profiles."""
+    config = empty_config
+    option_name = 'autofill.user.email'
+    option_value = 'first@email.com'
+
+    config.set_option(option_name, option_value)
+    assert config.get_option(option_name, scope=None, default=False) == option_value
 
 
 def test_store(config_with_profile):

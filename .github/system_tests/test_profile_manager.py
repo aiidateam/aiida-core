@@ -64,7 +64,7 @@ class TemporaryProfileManagerTestCase(unittest.TestCase):
         self.assertTrue(self.profile_manager.config_dir_ok, msg=output)
         self.assertTrue(self.profile_manager.repo_ok, msg=output)
         from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
-        self.assertEqual(AIIDA_CONFIG_FOLDER, self.profile_manager.config_dir, msg=output)
+        self.assertEqual(str(AIIDA_CONFIG_FOLDER), self.profile_manager.config_dir, msg=output)
 
         from aiida.orm import load_node
         from aiida.plugins import DataFactory

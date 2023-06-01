@@ -10,6 +10,7 @@
 # pylint: disable=no-name-in-module
 """Tests to run with a running daemon."""
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -33,7 +34,7 @@ from aiida.common import StashMode, exceptions
 from aiida.engine import run, submit
 from aiida.engine.daemon.client import get_daemon_client
 from aiida.engine.persistence import ObjectLoader
-from aiida.engine.processes import Process
+from aiida.engine.processes import CalcJob, Process
 from aiida.manage.caching import enable_caching
 from aiida.orm import CalcJobNode, Dict, Int, List, Str, load_code, load_node
 from aiida.plugins import CalculationFactory, WorkflowFactory
@@ -133,6 +134,12 @@ def validate_calculations(expected_results):
             actual_dict['retrieved_temporary_files'] = dict(actual_dict['retrieved_temporary_files'])
         except KeyError:
             # If the retrieval fails we simply pass as the following check of the actual value will fail anyway
+            pass
+
+        # Convert the parsed stdout content (which should be the integer followed by a newline `10\n`) to an integer
+        try:
+            actual_dict['value'] = int(actual_dict['value'].strip())
+        except (KeyError, ValueError):
             pass
 
         if actual_dict != expected_dict:
@@ -286,29 +293,27 @@ def create_calculation_process(code, inputval):
     Create the process and inputs for a submitting / running a calculation.
     """
     TemplatereplacerCalculation = CalculationFactory('core.templatereplacer')
-    parameters = Dict(dict={'value': inputval})
-    template = Dict(
-        dict={
-            # The following line adds a significant sleep time.
-            # I set it to 1 second to speed up tests
-            # I keep it to a non-zero value because I want
-            # To test the case when AiiDA finds some calcs
-            # in a queued state
-            # 'cmdline_params': ["{}".format(counter % 3)], # Sleep time
-            'cmdline_params': ['1'],
-            'input_file_template': '{value}',  # File just contains the value to double
-            'input_file_name': 'value_to_double.txt',
-            'output_file_name': 'output.txt',
-            'retrieve_temporary_files': ['triple_value.tmp']
-        }
-    )
+    parameters = Dict({'value': inputval})
+    template = Dict({
+        # The following line adds a significant sleep time.
+        # I set it to 1 second to speed up tests
+        # I keep it to a non-zero value because I want
+        # To test the case when AiiDA finds some calcs
+        # in a queued state
+        # 'cmdline_params': ["{}".format(counter % 3)], # Sleep time
+        'cmdline_params': ['1'],
+        'input_file_template': '{value}',  # File just contains the value to double
+        'input_file_name': 'value_to_double.txt',
+        'output_file_name': 'output.txt',
+        'retrieve_temporary_files': ['triple_value.tmp']
+    })
     options = {
         'resources': {
             'num_machines': 1
         },
         'max_wallclock_seconds': 5 * 60,
         'withmpi': False,
-        'parser_name': 'core.templatereplacer.doubler',
+        'parser_name': 'core.templatereplacer',
     }
 
     expected_result = {'value': 2 * inputval, 'retrieved_temporary_files': {'triple_value.tmp': str(inputval * 3)}}
@@ -377,7 +382,7 @@ def run_base_restart_workchain():
 
     # Check that overriding default handler enabled status works
     inputs['add']['y'] = Int(1)
-    inputs['handler_overrides'] = Dict(dict={'disabled_handler': True})
+    inputs['handler_overrides'] = Dict({'disabled_handler': True})
     results, node = run.get_node(ArithmeticAddBaseWorkChain, **inputs)
     assert not node.is_finished_ok, node.process_state
     assert node.exit_status == ArithmeticAddBaseWorkChain.exit_codes.ERROR_ENABLED_DOOM.status, node.exit_status  # pylint: disable=no-member
@@ -404,6 +409,20 @@ def run_multiply_add_workchain():
     assert results['result'].value == 5
 
 
+def run_monitored_calculation():
+    """Run a monitored calculation."""
+    builder = load_code(CODENAME_ADD).get_builder()
+    builder.x = Int(1)
+    builder.y = Int(2)
+    builder.metadata.options.sleep = 2  # Add a sleep to the calculation to ensure monitor has time to get called
+    builder.monitors = {'always_kill': Dict({'entry_point': 'core.always_kill'})}
+
+    _, node = run.get_node(builder)
+    assert node.is_terminated
+    assert node.exit_status == CalcJob.exit_codes.STOPPED_BY_MONITOR.status
+    assert node.exit_message == 'Detected a non-empty submission script', node.exit_message
+
+
 def launch_all():
     """Launch a bunch of calculation jobs and workchains.
 
@@ -428,13 +447,14 @@ def launch_all():
     run_multiply_add_workchain()
 
     # Testing the stashing functionality
+    print('Testing the stashing functionality')
     process, inputs, expected_result = create_calculation_process(code=code_doubler, inputval=1)
     with tempfile.TemporaryDirectory() as tmpdir:
 
         # Delete the temporary directory to test that the stashing functionality will create it if necessary
         shutil.rmtree(tmpdir, ignore_errors=True)
 
-        source_list = ['output.txt', 'triple_value.tmp']
+        source_list = ['output.txt', 'triple_value.*']
         inputs['metadata']['options']['stash'] = {'target_base': tmpdir, 'source_list': source_list}
         _, node = run.get_node(process, **inputs)
         assert node.is_finished_ok
@@ -443,7 +463,17 @@ def launch_all():
         assert remote_stash.stash_mode == StashMode.COPY
         assert remote_stash.target_basepath.startswith(tmpdir)
         assert sorted(remote_stash.source_list) == sorted(source_list)
-        assert sorted(p for p in os.listdir(remote_stash.target_basepath)) == sorted(source_list)
+
+        stashed_filenames = os.listdir(remote_stash.target_basepath)
+        for filename in source_list:
+            if '*' in filename:
+                assert any(re.match(filename, stashed_file) is not None for stashed_file in stashed_filenames)
+            else:
+                assert filename in stashed_filenames
+
+    # Testing the monitoring functionality
+    print('Testing the monitoring functionality')
+    run_monitored_calculation()
 
     # Submitting the calcfunction through the launchers
     print('Submitting calcfunction to the daemon')

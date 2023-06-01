@@ -29,6 +29,7 @@ __all__ = (
     'ParserFactory',
     'PluginVersionProvider',
     'SchedulerFactory',
+    'StorageFactory',
     'TransportFactory',
     'WorkflowFactory',
     'get_entry_points',

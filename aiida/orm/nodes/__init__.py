@@ -21,6 +21,7 @@ from .process import *
 from .repository import *
 
 __all__ = (
+    'AbstractCode',
     'ArrayData',
     'BandsData',
     'BaseType',
@@ -30,11 +31,13 @@ __all__ = (
     'CalculationNode',
     'CifData',
     'Code',
+    'ContainerizedCode',
     'Data',
     'Dict',
     'EnumData',
     'Float',
     'FolderData',
+    'InstalledCode',
     'Int',
     'JsonableData',
     'Kind',
@@ -45,6 +48,7 @@ __all__ = (
     'NodeRepository',
     'NumericType',
     'OrbitalData',
+    'PortableCode',
     'ProcessNode',
     'ProjectionData',
     'RemoteData',

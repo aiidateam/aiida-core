@@ -37,7 +37,7 @@ def get_manager() -> 'Manager':
     return MANAGER
 
 
-class Manager:
+class Manager:  # pylint: disable=too-many-public-methods
     """Manager singleton for globally loaded resources.
 
     AiiDA can have the following global resources loaded:
@@ -65,6 +65,7 @@ class Manager:
     """
 
     def __init__(self) -> None:
+        """Construct a new instance."""
         # note: the config currently references the global variables
         self._profile: Optional['Profile'] = None
         self._profile_storage: Optional['StorageBackend'] = None
@@ -143,17 +144,33 @@ class Manager:
 
     def reset_profile(self) -> None:
         """Close and reset any associated resources for the current profile."""
+        self.reset_profile_storage()
+        self.reset_communicator()
+        self.reset_runner()
+
+        self._daemon_client = None
+        self._persister = None
+
+    def reset_profile_storage(self) -> None:
+        """Reset the profile storage.
+
+        This will close any connections to the services used by the storage, such as database connections.
+        """
         if self._profile_storage is not None:
             self._profile_storage.close()
+        self._profile_storage = None
+
+    def reset_communicator(self) -> None:
+        """Reset the communicator."""
         if self._communicator is not None:
             self._communicator.close()
-        if self._runner is not None:
-            self._runner.stop()
-        self._profile_storage = None
         self._communicator = None
-        self._daemon_client = None
         self._process_controller = None
-        self._persister = None
+
+    def reset_runner(self) -> None:
+        """Reset the process runner."""
+        if self._runner is not None:
+            self._runner.close()
         self._runner = None
 
     def unload_profile(self) -> None:
@@ -322,10 +339,16 @@ class Manager:
         :raises aiida.common.MissingConfigurationError: if the configuration file cannot be found
         :raises aiida.common.ProfileConfigurationError: if the given profile does not exist
         """
+        from aiida.common import ConfigurationError
         from aiida.engine.daemon.client import DaemonClient
 
         if self._daemon_client is None:
-            self._daemon_client = DaemonClient(self.get_profile())
+            profile = self.get_profile()
+            if profile is None:
+                raise ConfigurationError(
+                    'Could not determine the current profile. Consider loading a profile using `aiida.load_profile()`.'
+                )
+            self._daemon_client = DaemonClient(profile)
 
         return self._daemon_client
 
@@ -425,18 +448,13 @@ class Manager:
         return runner
 
     def check_rabbitmq_version(self, communicator: 'RmqThreadCommunicator'):
-        """Check the version of RabbitMQ that is being connected to and emit warning if the version is not compatible.
-
-        Versions 3.8.15 and above are not compatible with AiiDA with default configuration.
-        """
-        from packaging.version import parse
-
+        """Check the version of RabbitMQ that is being connected to and emit warning if it is not compatible."""
         from aiida.cmdline.utils import echo
 
         show_warning = self.get_option('warnings.rabbitmq_version')
         version = get_rabbitmq_version(communicator)
 
-        if show_warning and version >= parse('3.8.15'):
+        if show_warning and not is_rabbitmq_version_supported(communicator):
             echo.echo_warning(f'RabbitMQ v{version} is not supported and will cause unexpected problems!')
             echo.echo_warning('It can cause long-running workflows to crash and jobs to be submitted multiple times.')
             echo.echo_warning('See https://github.com/aiidateam/aiida-core/wiki/RabbitMQ-version-to-use for details.')
@@ -471,12 +489,14 @@ class Manager:
 def is_rabbitmq_version_supported(communicator: 'RmqThreadCommunicator') -> bool:
     """Return whether the version of RabbitMQ configured for the current profile is supported.
 
-    Versions 3.8.15 and above are not compatible with AiiDA with default configuration.
+    Versions 3.5 and below are not supported at all, whereas versions 3.8.15 and above are not compatible with a default
+    configuration of the RabbitMQ server.
 
     :return: boolean whether the current RabbitMQ version is supported.
     """
     from packaging.version import parse
-    return get_rabbitmq_version(communicator) < parse('3.8.15')
+    version = get_rabbitmq_version(communicator)
+    return parse('3.6.0') <= version < parse('3.8.15')
 
 
 def get_rabbitmq_version(communicator: 'RmqThreadCommunicator'):

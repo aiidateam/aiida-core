@@ -1,0 +1,12 @@
+{
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "aiida",
+    "workspaceFolder": "/home/aiida/aiida-core",
+    "postCreateCommand": "bash ./.devcontainer/post_create.sh",
+    "waitFor": "postCreateCommand",
+	"customizations": {
+        "vscode": {
+            "extensions": ["ms-python.python", "eamodio.gitlens"]
+        }
+    }
+}

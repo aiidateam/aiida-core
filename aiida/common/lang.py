@@ -11,7 +11,7 @@
 import functools
 import inspect
 import keyword
-from typing import Any, Callable, Generic, Type, TypeVar
+from typing import Any, Callable, Generic, TypeVar
 
 
 def isidentifier(identifier):
@@ -45,10 +45,13 @@ def type_check(what, of_type, msg=None, allow_none=False):
     return what
 
 
-def override_decorator(check=False):
+MethodType = TypeVar('MethodType', bound=Callable[..., Any])
+
+
+def override_decorator(check=False) -> Callable[[MethodType], MethodType]:
     """Decorator to signal that a method from a base class is being overridden completely."""
 
-    def wrap(func):  # pylint: disable=missing-docstring
+    def wrap(func: MethodType) -> MethodType:  # pylint: disable=missing-docstring
         if isinstance(func, property):
             raise RuntimeError('Override must go after @property decorator')
 
@@ -69,7 +72,7 @@ def override_decorator(check=False):
         else:
             wrapped_fn = func
 
-        return wrapped_fn
+        return wrapped_fn  # type: ignore
 
     return wrap
 
@@ -89,8 +92,8 @@ class classproperty(Generic[ReturnType]):  # pylint: disable=invalid-name
     instance as its first argument).
     """
 
-    def __init__(self, getter: Callable[[Type[SelfType]], ReturnType]) -> None:
+    def __init__(self, getter: Callable[[SelfType], ReturnType]) -> None:
         self.getter = getter
 
-    def __get__(self, instance: Any, owner: Type[SelfType]) -> ReturnType:
+    def __get__(self, instance: Any, owner: SelfType) -> ReturnType:
         return self.getter(owner)

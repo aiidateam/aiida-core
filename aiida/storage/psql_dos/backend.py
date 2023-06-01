@@ -11,18 +11,19 @@
 # pylint: disable=missing-function-docstring
 from contextlib import contextmanager, nullcontext
 import functools
+import gc
+import pathlib
 from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence, Set, Union
 
 from disk_objectstore import Container
-from sqlalchemy import table
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
-from aiida.common.exceptions import ClosedStorage, IntegrityError
+from aiida.common.exceptions import ClosedStorage, ConfigurationError, IntegrityError
 from aiida.manage.configuration.profile import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import BackendEntity, StorageBackend
 from aiida.storage.log import STORAGE_LOGGER
-from aiida.storage.psql_dos.migrator import REPOSITORY_UUID_KEY, PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import REPOSITORY_UUID_KEY, PsqlDosMigrator
 from aiida.storage.psql_dos.models import base
 
 from .orm import authinfos, comments, computers, convert, groups, logs, nodes, querybuilder, users
@@ -40,6 +41,28 @@ CONTAINER_DEFAULTS: dict = {
 }
 
 
+def get_filepath_container(profile: Profile) -> pathlib.Path:
+    """Return the filepath of the disk-object store container."""
+    from urllib.parse import urlparse
+
+    try:
+        parts = urlparse(profile.storage_config['repository_uri'])
+    except KeyError:
+        raise KeyError(f'invalid profile {profile.name}: `repository_uri` not defined in `storage.config`.')
+
+    if parts.scheme != 'file':
+        raise ConfigurationError(
+            f'invalid profile {profile.name}: `storage.config.repository_uri` does not start with `file://`.'
+        )
+
+    filepath = pathlib.Path(parts.path)
+
+    if not filepath.is_absolute():
+        raise ConfigurationError(f'invalid profile {profile.name}: `storage.config.repository_uri` is not absolute')
+
+    return filepath.expanduser() / 'container'
+
+
 class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
     """An AiiDA storage backend that stores data in a PostgreSQL database and disk-objectstore repository.
 
@@ -47,7 +70,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
     The `django` backend was removed, to consolidate access to this storage.
     """
 
-    migrator = PsqlDostoreMigrator
+    migrator = PsqlDosMigrator
 
     @classmethod
     def version_head(cls) -> str:
@@ -55,17 +78,34 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
 
     @classmethod
     def version_profile(cls, profile: Profile) -> Optional[str]:
-        return cls.migrator(profile).get_schema_version_profile(check_legacy=True)
+        with cls.migrator_context(profile) as migrator:
+            return migrator.get_schema_version_profile(check_legacy=True)
+
+    @classmethod
+    def initialise(cls, profile: Profile, reset: bool = False) -> bool:
+        with cls.migrator_context(profile) as migrator:
+            return migrator.initialise(reset=reset)
 
     @classmethod
     def migrate(cls, profile: Profile) -> None:
-        cls.migrator(profile).migrate()
+        with cls.migrator_context(profile) as migrator:
+            migrator.migrate()
+
+    @classmethod
+    @contextmanager
+    def migrator_context(cls, profile: Profile):
+        migrator = cls.migrator(profile)
+        try:
+            yield migrator
+        finally:
+            migrator.close()
 
     def __init__(self, profile: Profile) -> None:
         super().__init__(profile)
 
         # check that the storage is reachable and at the correct version
-        self.migrator(profile).validate_storage()
+        with self.migrator_context(profile) as migrator:
+            migrator.validate_storage()
 
         self._session_factory: Optional[scoped_session] = None
         self._initialise_session()
@@ -85,9 +125,8 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         return self._session_factory is None
 
     def __str__(self) -> str:
-        repo_uri = self.profile.storage_config['repository_uri']
         state = 'closed' if self.is_closed else 'open'
-        return f'Storage for {self.profile.name!r} [{state}] @ {self._db_url!r} / {repo_uri}'
+        return f'Storage for {self.profile.name!r} [{state}] @ {self._db_url!r} / {self.get_repository()}'
 
     def _initialise_session(self):
         """Initialise the SQLAlchemy session factory.
@@ -100,7 +139,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         Although, in the future, we may want to move the multi-thread handling to higher in the AiiDA stack.
         """
         from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
-        engine = create_sqlalchemy_engine(self._profile.storage_config)
+        engine = create_sqlalchemy_engine(self._profile.storage_config)  # type: ignore
         self._session_factory = scoped_session(sessionmaker(bind=engine, future=True, expire_on_commit=True))
 
     def get_session(self) -> Session:
@@ -121,52 +160,43 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         self._session_factory.close()
         self._session_factory = None
 
-    def _clear(self, recreate_user: bool = True) -> None:
+        # Without this, sqlalchemy keeps a weakref to a session
+        # in sqlalchemy.orm.session._sessions
+        gc.collect()
+
+    def _clear(self) -> None:
         from aiida.storage.psql_dos.models.settings import DbSetting
-        from aiida.storage.psql_dos.models.user import DbUser
 
-        super()._clear(recreate_user)
+        super()._clear()
 
-        session = self.get_session()
+        with self.migrator_context(self._profile) as migrator:
 
-        # clear the database
-        with self.transaction():
+            # First clear the contents of the database
+            with self.transaction() as session:
 
-            # save the default user
-            default_user_kwargs = None
-            if recreate_user and self.default_user is not None:
-                default_user_kwargs = {
-                    'email': self.default_user.email,
-                    'first_name': self.default_user.first_name,
-                    'last_name': self.default_user.last_name,
-                    'institution': self.default_user.institution,
-                }
+                # Close the session otherwise the ``delete_tables`` call will hang as there will be an open connection
+                # to the PostgreSQL server and it will block the deletion and the command will hang.
+                self.get_session().close()
+                exclude_tables = [migrator.alembic_version_tbl_name, 'db_dbsetting']
+                migrator.delete_all_tables(exclude_tables=exclude_tables)
 
-            # now clear the database
-            for table_name in (
-                'db_dbgroup_dbnodes', 'db_dbgroup', 'db_dblink', 'db_dbnode', 'db_dblog', 'db_dbauthinfo', 'db_dbuser',
-                'db_dbcomputer'
-            ):
-                session.execute(table(table_name).delete())
-            session.expunge_all()
+                # Clear out all references to database model instances which are now invalid.
+                session.expunge_all()
 
-            # restore the default user
-            if recreate_user and default_user_kwargs:
-                session.add(DbUser(**default_user_kwargs))
+            # Now reset and reinitialise the repository
+            migrator.reset_repository()
+            migrator.initialise_repository()
+            repository_uuid = migrator.get_repository_uuid()
 
-        # Clear the repository and reset the repository UUID
-        container = Container(self.profile.repository_path / 'container')
-        container.init_container(clear=True, **CONTAINER_DEFAULTS)
-        container_id = container.container_id
-        with self.transaction():
-            session.execute(
-                DbSetting.__table__.update().where(DbSetting.key == REPOSITORY_UUID_KEY).values(val=container_id)
-            )
+            with self.transaction():
+                session.execute(
+                    DbSetting.__table__.update().where(DbSetting.key == REPOSITORY_UUID_KEY
+                                                       ).values(val=repository_uuid)
+                )
 
     def get_repository(self) -> 'DiskObjectStoreRepositoryBackend':
         from aiida.repository.backend import DiskObjectStoreRepositoryBackend
-
-        container = Container(self.profile.repository_path / 'container')
+        container = Container(str(get_filepath_container(self.profile)))
         return DiskObjectStoreRepositoryBackend(container=container)
 
     @property
@@ -349,7 +379,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         if full:
             maintenance_context = ProfileAccessManager(self._profile).lock
         else:
-            maintenance_context = nullcontext
+            maintenance_context = nullcontext  # type: ignore
 
         with maintenance_context():
             unreferenced_objects = self.get_unreferenced_keyset()

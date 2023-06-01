@@ -36,17 +36,20 @@ from .structure import *
 from .upf import *
 
 __all__ = (
+    'AbstractCode',
     'ArrayData',
     'BandsData',
     'BaseType',
     'Bool',
     'CifData',
     'Code',
+    'ContainerizedCode',
     'Data',
     'Dict',
     'EnumData',
     'Float',
     'FolderData',
+    'InstalledCode',
     'Int',
     'JsonableData',
     'Kind',
@@ -54,6 +57,7 @@ __all__ = (
     'List',
     'NumericType',
     'OrbitalData',
+    'PortableCode',
     'ProjectionData',
     'RemoteData',
     'RemoteStashData',

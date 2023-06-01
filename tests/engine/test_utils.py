@@ -15,7 +15,13 @@ import pytest
 
 from aiida import orm
 from aiida.engine import calcfunction, workfunction
-from aiida.engine.utils import InterruptableFuture, exponential_backoff_retry, interruptable_task, is_process_function
+from aiida.engine.utils import (
+    InterruptableFuture,
+    exponential_backoff_retry,
+    instantiate_process,
+    interruptable_task,
+    is_process_function,
+)
 
 ITERATION = 0
 MAX_ITERATIONS = 3
@@ -25,7 +31,7 @@ class TestExponentialBackoffRetry:
     """Tests for the exponential backoff retry coroutine."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
@@ -66,6 +72,12 @@ class TestExponentialBackoffRetry:
             loop.run_until_complete(exponential_backoff_retry(coro, initial_interval=0.1, max_attempts=max_attempts))
 
 
+def test_instantiate_process_invalid(manager):
+    """Test the :func:`aiida.engine.utils.instantiate_process` function for invalid ``process`` argument."""
+    with pytest.raises(ValueError, match=r'invalid process <class \'bool\'>, needs to be Process or ProcessBuilder'):
+        instantiate_process(manager.get_runner(), True)
+
+
 def test_is_process_function():
     """Test the `is_process_function` utility."""
 
@@ -85,7 +97,6 @@ def test_is_process_function():
     assert is_process_function(work_function) is True
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestInterruptable:
     """ Tests for InterruptableFuture and interruptable_task."""
 

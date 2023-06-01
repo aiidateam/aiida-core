@@ -1,9 +1,8 @@
 ---
 label: doubler
 description: doubler
-input_plugin: core.templatereplacer
-on_computer: true
+default_calc_job_plugin: core.templatereplacer
 computer: localhost
-remote_abs_path: PLACEHOLDER_REMOTE_ABS_PATH_DOUBLER
+filepath_executable: PLACEHOLDER_REMOTE_ABS_PATH_DOUBLER
 prepend_text: ' '
 append_text: ' '

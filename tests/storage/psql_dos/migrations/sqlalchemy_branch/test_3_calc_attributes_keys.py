@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests migration of the keys of certain attribute for ProcessNodes and CalcJobNodes: e72ad251bcdb -> 7ca08c391c49"""
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 KEY_RESOURCES_OLD = 'jobresource_params'
 KEY_RESOURCES_NEW = 'resources'
@@ -22,7 +22,7 @@ PARSER_NAME = 'aiida.parsers:parser'
 PROCESS_LABEL = 'TestLabel'
 
 
-def test_calc_attributes_keys(perform_migrations: PsqlDostoreMigrator):
+def test_calc_attributes_keys(perform_migrations: PsqlDosMigrator):
     """Test the migration of the keys of certain attribute for ProcessNodes and CalcJobNodes."""
     # starting revision
     perform_migrations.migrate_up('sqlalchemy@e72ad251bcdb')  # e72ad251bcdb_dbgroup_class_change_type_string_values
@@ -32,7 +32,7 @@ def test_calc_attributes_keys(perform_migrations: PsqlDostoreMigrator):
     DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name
 
     resources = {'number_machines': 1}
-    environment_variables = {}
+    environment_variables: dict = {}
 
     with perform_migrations.session() as session:
         user = DbUser(email='user@aiida.net', is_superuser=True)

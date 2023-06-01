@@ -28,6 +28,7 @@ from .utils import *
 
 __all__ = (
     'ASCENDING',
+    'AbstractCode',
     'AbstractNodeMeta',
     'ArrayData',
     'AttributeManager',
@@ -48,6 +49,7 @@ __all__ = (
     'Comment',
     'Computer',
     'ComputerEntityLoader',
+    'ContainerizedCode',
     'DESCENDING',
     'Data',
     'Dict',
@@ -60,6 +62,7 @@ __all__ = (
     'Group',
     'GroupEntityLoader',
     'ImportGroup',
+    'InstalledCode',
     'Int',
     'JsonableData',
     'Kind',
@@ -78,6 +81,7 @@ __all__ = (
     'OrbitalData',
     'OrderSpecifier',
     'OrmEntityLoader',
+    'PortableCode',
     'ProcessNode',
     'ProjectionData',
     'QueryBuilder',

@@ -19,28 +19,24 @@ def dictionary():
     return {'value': 1, 'nested': {'dict': 'ionary'}}
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_keys(dictionary):
     """Test the ``keys`` method."""
     node = Dict(dictionary)
     assert sorted(node.keys()) == sorted(dictionary.keys())
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_items(dictionary):
     """Test the ``items`` method."""
     node = Dict(dictionary)
     assert sorted(node.items()) == sorted(dictionary.items())
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_get_dict(dictionary):
     """Test the ``get_dict`` method."""
     node = Dict(dictionary)
     assert node.get_dict() == dictionary
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_dict_property(dictionary):
     """Test the ``dict`` property."""
     node = Dict(dictionary)
@@ -48,7 +44,6 @@ def test_dict_property(dictionary):
     assert node.dict.nested == dictionary['nested']
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_get_item(dictionary):
     """Test the ``__getitem__`` method."""
     node = Dict(dictionary)
@@ -56,7 +51,6 @@ def test_get_item(dictionary):
     assert node['nested'] == dictionary['nested']
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_set_item(dictionary):
     """Test the methods for setting the item.
 
@@ -72,7 +66,6 @@ def test_set_item(dictionary):
     assert node['value'] == 3
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('key, expected', (('value', True), ('non-existing', False)))
 def test_contains(dictionary, key, expected):
     """Test the ``__contains__`` implementation."""
@@ -84,7 +77,6 @@ def test_contains(dictionary, key, expected):
     assert (key in node) is expected
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_correct_raises(dictionary):
     """Test that the methods for accessing the item raise the correct error.
 
@@ -100,7 +92,6 @@ def test_correct_raises(dictionary):
         _ = node.dict.inexistent_key
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_equality(dictionary):
     """Test the equality comparison for the ``Dict`` type.
 
@@ -129,7 +120,6 @@ def test_equality(dictionary):
     assert node != different_node
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_initialise_with_dict_kwarg(dictionary):
     """Test that the ``Dict`` node can be initialized with the ``dict`` keyword argument for backwards compatibility."""
     node = Dict(dict=dictionary)

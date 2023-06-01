@@ -10,8 +10,8 @@ Writing workflows
 A workflow in AiiDA is a :ref:`process <topics:processes:concepts>` that calls other workflows and calculations and optionally *returns* data and as such can encode the logic of a typical scientific workflow.
 Currently, there are two ways of implementing a workflow process:
 
- * :ref:`work functions<topics:workflows:concepts:workfunctions>`
- * :ref:`work chains<topics:workflows:concepts:workchains>`
+* :ref:`work functions<topics:workflows:concepts:workfunctions>`
+* :ref:`work chains<topics:workflows:concepts:workchains>`
 
 Here we present a brief introduction on how to write both workflow types.
 
@@ -198,6 +198,12 @@ Calling :meth:`~plumpy.ProcessSpec.expose_inputs` for a particular ``Process`` c
             cls.is_even,
         )
         spec.output('is_even', valid_type=Bool)
+
+.. note::
+
+    The exposing functionality is not just limited to ``WorkChain`` implementations but works for all process classes, such as ``CalcJob`` plugins for example.
+    It even works for process functions (i.e., ``calcfunctions`` and ``workfunctions``) since under the hood an actual ``Process`` class is generated for them on-the-fly.
+    For process functions, the ``valid_type`` and ``help`` attributes of the exposed inputs are even preserved if they could be inferred from provided function type hints and docstrings (see :ref:`type validation<topics:processes:functions:type-validation>` and :ref:`docstring parsing<topics:processes:functions:docstring-parsing>` for details).
 
 Be aware that any inputs that already exist in the namespace will be overridden.
 To prevent this, the method accepts the ``namespace`` argument, which will cause the inputs to be copied into that namespace instead of the top-level namespace.

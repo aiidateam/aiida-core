@@ -41,8 +41,7 @@ def test_constructor_kwargs(file_object: File):
     name = 'relative'
     file_type = FileType.FILE
     key = 'abcdef'
-    objects = None
-    file_object = File(name, file_type, key, objects)
+    file_object = File(name, file_type, key, None)
 
     assert file_object.name == name
     assert file_object.file_type == file_type

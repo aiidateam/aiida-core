@@ -7,13 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""`verdi data array` command."""
+"""`verdi data core.array` command."""
 
 from aiida.cmdline.commands.cmd_data import verdi_data
 from aiida.cmdline.params import arguments, options, types
 
 
-@verdi_data.group('array')
+@verdi_data.group('core.array')
 def array():
     """Manipulate ArrayData objects (numpy arrays)."""
 

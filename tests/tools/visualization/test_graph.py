@@ -22,7 +22,7 @@ class TestVisGraph:
     """Tests for verdi graph"""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         self.computer = aiida_localhost
@@ -196,10 +196,12 @@ class TestVisGraph:
 
         expected_diff = """\
         +State: running" color=lightgray fillcolor=white penwidth=2 shape=rectangle style=filled]
-        +@localhost-test" color=lightgray fillcolor=white penwidth=2 shape=ellipse style=filled]
+        +@localhost" color=lightgray fillcolor=white penwidth=2 shape=ellipse style=filled]
         +Exit Code: 200" color=lightgray fillcolor=white penwidth=2 shape=rectangle style=filled]
         +\tN{fd1} [label="FolderData ({fd1})" color=lightgray fillcolor=white penwidth=2 shape=ellipse style=filled]
-        +++""".format(**{k: v.pk for k, v in nodes.items()})
+        +++""".format(**{
+            k: v.pk for k, v in nodes.items()
+        })
 
         assert sorted([l.strip() for l in got_diff.splitlines()]
                       ) == sorted([l.strip() for l in expected_diff.splitlines()])
@@ -250,7 +252,7 @@ class TestVisGraph:
                     State: running" fillcolor="#e38851ff" penwidth=0 shape=rectangle style=filled]
                 N{pd0} -> N{wc1} [color="#000000" style=dashed]
                 N{rd1} [label="RemoteData ({rd1})
-                    @localhost-test" fillcolor="#8cd499ff" penwidth=0 shape=ellipse style=filled]
+                    @localhost" fillcolor="#8cd499ff" penwidth=0 shape=ellipse style=filled]
                 N{calc1} -> N{rd1} [color="#000000" style=solid]
                 N{fd1} [label="FolderData ({fd1})" fillcolor="#8cd499ff" penwidth=0 shape=ellipse style=filled]
                 N{wc1} -> N{fd1} [color="#000000" style=dashed]
@@ -264,7 +266,9 @@ class TestVisGraph:
                 N{rd1} -> N{calcf1} [color="#000000" style=solid]
                 N{calcf1} -> N{fd1} [color="#000000" style=solid]
                 N{calcf1} -> N{pd3} [color="#000000" style=solid]
-        }}""".format(**{k: v.pk for k, v in nodes.items()})
+        }}""".format(**{
+            k: v.pk for k, v in nodes.items()
+        })
 
         # dedent before comparison
         assert sorted([l.strip() for l in graph.graphviz.source.splitlines()]) == \
@@ -292,7 +296,7 @@ class TestVisGraph:
                     State: running" fillcolor="#e38851ff" penwidth=0 shape=polygon sides=6 style=filled]
                 N{pd0} -> N{wc1} [color="#000000" style=dashed]
                 N{rd1} [label="RemoteData ({rd1})
-                    @localhost-test" pencolor=black shape=rectangle]
+                    @localhost" pencolor=black shape=rectangle]
                 N{calc1} -> N{rd1} [color="#000000" style=solid]
                 N{fd1} [label="FolderData ({fd1})" pencolor=black shape=rectangle]
                 N{wc1} -> N{fd1} [color="#000000" style=dashed]
@@ -306,7 +310,9 @@ class TestVisGraph:
                 N{rd1} -> N{calcf1} [color="#000000" style=solid]
                 N{calcf1} -> N{fd1} [color="#000000" style=solid]
                 N{calcf1} -> N{pd3} [color="#000000" style=solid]
-        }}""".format(**{k: v.pk for k, v in nodes.items()})
+        }}""".format(**{
+            k: v.pk for k, v in nodes.items()
+        })
 
         # dedent before comparison
         assert sorted([l.strip() for l in graph.graphviz.source.splitlines()]) == \

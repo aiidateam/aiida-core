@@ -88,6 +88,11 @@ class JobResource(DefaultFieldsAttributeDict, metaclass=abc.ABCMeta):
     def accepts_default_mpiprocs_per_machine(cls):
         """Return True if this subclass accepts a `default_mpiprocs_per_machine` key, False otherwise."""
 
+    @classmethod
+    def accepts_default_memory_per_machine(cls):
+        """Return True if this subclass accepts a `default_memory_per_machine` key, False otherwise."""
+        return True
+
     @abc.abstractmethod
     def get_tot_num_mpiprocs(self):
         """Return the total number of cpus of this job resource."""
@@ -256,7 +261,7 @@ class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-insta
         before the execution of the code.
       * ``environment_variables_double_quotes``: if set to True, use double quotes
         instead of single quotes to escape the environment variables specified
-        in ``environment_variables``.
+        in ``job_environment``.
       * ``working_directory``: the working directory for this job. During
         submission, the transport will first do a 'chdir' to this directory,
         and then possibly set a scheduler parameter, if this is supported
@@ -374,6 +379,10 @@ class JobTemplateCodeInfo:
     :param cmdline_params: list of unescaped command line parameters.
     :param use_double_quotes: list of two booleans. If true, use double quotes to escape command line arguments. The
         first value applies to `prepend_cmdline_params` and the second to `cmdline_params`.
+    :param wrap_cmdline_params: Boolean, by default ``False``. If set to ``True``, all the command line arguments,
+        which includes the ``cmdline_params`` but also all file descriptor redirections (stdin, stderr and stdoout),
+        should be wrapped in double quotes, turning it into a single command line argument. This is necessary to enable
+        support for certain containerization technologies such as Docker.
     :param stdin_name: filename of the the stdin file descriptor.
     :param stdout_name: filename of the the `stdout` file descriptor.
     :param stderr_name: filename of the the `stderr` file descriptor.
@@ -382,6 +391,7 @@ class JobTemplateCodeInfo:
     prepend_cmdline_params: list[str] = field(default_factory=list)
     cmdline_params: list[str] = field(default_factory=list)
     use_double_quotes: list[bool] = field(default_factory=lambda: [False, False])
+    wrap_cmdline_params: bool = False
     stdin_name: None | str = None
     stdout_name: None | str = None
     stderr_name: None | str = None

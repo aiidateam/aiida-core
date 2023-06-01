@@ -22,7 +22,7 @@ from ..caching import NodeCaching
 from ..node import Node, NodeLinks
 
 if TYPE_CHECKING:
-    from aiida.engine.processes import Process
+    from aiida.engine.processes import ExitCode, Process
     from aiida.engine.processes.builder import ProcessBuilder
 
 __all__ = ('ProcessNode',)
@@ -65,7 +65,7 @@ class ProcessNodeCaching(NodeCaching):
 
         :param valid: whether the node is valid or invalid for use in caching.
         """
-        super().is_valid_cache = valid  # type: ignore[misc]
+        super(ProcessNodeCaching, self.__class__).is_valid_cache.fset(self, valid)
 
     def _get_objects_to_hash(self) -> List[Any]:
         """
@@ -143,6 +143,7 @@ class ProcessNode(Sealable, Node):
     PROCESS_LABEL_KEY = 'process_label'
     PROCESS_STATE_KEY = 'process_state'
     PROCESS_STATUS_KEY = 'process_status'
+    METADATA_INPUTS_KEY: str = 'metadata_inputs'
 
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
@@ -167,6 +168,14 @@ class ProcessNode(Sealable, Node):
             cls.PROCESS_STATUS_KEY,
         )
 
+    def set_metadata_inputs(self, value: Dict[str, Any]) -> None:
+        """Set the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""
+        return self.base.attributes.set(self.METADATA_INPUTS_KEY, value)
+
+    def get_metadata_inputs(self) -> Optional[Dict[str, Any]]:
+        """Return the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""
+        return self.base.attributes.get(self.METADATA_INPUTS_KEY, None)
+
     @property
     def logger(self):
         """
@@ -188,6 +197,7 @@ class ProcessNode(Sealable, Node):
         """
         builder = self.process_class.get_builder()
         builder._update(self.base.links.get_incoming(link_type=(LinkType.INPUT_CALC, LinkType.INPUT_WORK)).nested())  # pylint: disable=protected-access
+        builder._merge(self.get_metadata_inputs() or {})  # pylint: disable=protected-access
 
         return builder
 
@@ -209,17 +219,28 @@ class ProcessNode(Sealable, Node):
         except exceptions.EntryPointError as exception:
             raise ValueError(
                 f'could not load process class for entry point `{self.process_type}` for Node<{self.pk}>: {exception}'
-            )
-        except ValueError:
-            try:
-                import importlib
-                module_name, class_name = self.process_type.rsplit('.', 1)
-                module = importlib.import_module(module_name)
-                process_class = getattr(module, class_name)
-            except (AttributeError, ValueError, ImportError) as exception:
+            ) from exception
+        except ValueError as exception:
+            import importlib
+
+            def str_rsplit_iter(string, sep='.'):
+                components = string.split(sep)
+                for idx in range(1, len(components)):
+                    yield sep.join(components[:-idx]), components[-idx:]
+
+            for module_name, class_names in str_rsplit_iter(self.process_type):
+                try:
+                    module = importlib.import_module(module_name)
+                    process_class = module
+                    for objname in class_names:
+                        process_class = getattr(process_class, objname)
+                    break
+                except (AttributeError, ValueError, ImportError):
+                    pass
+            else:
                 raise ValueError(
-                    f'could not load process class from `{self.process_type}` for Node<{self.pk}>: {exception}'
-                )
+                    f'could not load process class from `{self.process_type}` for Node<{self.pk}>'
+                ) from exception
 
         return process_class
 
@@ -262,7 +283,7 @@ class ProcessNode(Sealable, Node):
 
         return ProcessState(state)
 
-    def set_process_state(self, state: Union[str, ProcessState]):
+    def set_process_state(self, state: Union[str, ProcessState, None]):
         """
         Set the process state
 
@@ -378,6 +399,24 @@ class ProcessNode(Sealable, Node):
         return self.is_finished and self.exit_status != 0
 
     @property
+    def exit_code(self) -> Optional['ExitCode']:
+        """Return the exit code of the process.
+
+        It is reconstituted from the ``exit_status`` and ``exit_message`` attributes if both of those are defined.
+
+        :returns: The exit code if defined, or ``None``.
+        """
+        from aiida.engine.processes.exit_code import ExitCode
+
+        exit_status = self.exit_status
+        exit_message = self.exit_message
+
+        if exit_status is None or exit_message is None:
+            return None
+
+        return ExitCode(exit_status, exit_message)
+
+    @property
     def exit_status(self) -> Optional[int]:
         """
         Return the exit status of the process
@@ -452,7 +491,7 @@ class ProcessNode(Sealable, Node):
         return self.base.attributes.set(self.EXCEPTION_KEY, exception)
 
     @property
-    def checkpoint(self) -> Optional[Dict[str, Any]]:
+    def checkpoint(self) -> Optional[str]:
         """
         Return the checkpoint bundle set for the process
 
@@ -460,7 +499,7 @@ class ProcessNode(Sealable, Node):
         """
         return self.base.attributes.get(self.CHECKPOINT_KEY, None)
 
-    def set_checkpoint(self, checkpoint: Dict[str, Any]) -> None:
+    def set_checkpoint(self, checkpoint: str) -> None:
         """
         Set the checkpoint bundle set for the process
 

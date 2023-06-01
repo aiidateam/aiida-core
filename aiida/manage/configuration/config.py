@@ -10,7 +10,13 @@
 """Module that defines the configuration file of an AiiDA instance and functions to create and load it."""
 import codecs
 from functools import lru_cache
-from importlib import resources
+
+try:
+    # Python <= 3.8
+    from importlib_resources import files
+except ImportError:
+    from importlib.resources import files
+
 import json
 import os
 import shutil
@@ -27,13 +33,13 @@ from .profile import Profile
 
 __all__ = ('Config', 'config_schema', 'ConfigValidationError')
 
-SCHEMA_FILE = 'config-v8.schema.json'
+SCHEMA_FILE = 'config-v9.schema.json'
 
 
 @lru_cache(1)
 def config_schema() -> Dict[str, Any]:
     """Return the configuration schema."""
-    return json.loads(resources.read_text(schema_module, SCHEMA_FILE, encoding='utf8'))
+    return json.loads(files(schema_module).joinpath(SCHEMA_FILE).read_text(encoding='utf8'))
 
 
 class ConfigValidationError(ConfigurationError):
@@ -351,7 +357,12 @@ class Config:  # pylint: disable=too-many-public-methods
         profile = self.get_profile(name)
 
         if include_repository:
-            folder = profile.repository_path
+            # Note, this is currently being hardcoded, but really this `delete_profile` should get the storage backend
+            # for the given profile and call `StorageBackend.erase` method. Currently this is leaking details
+            # of the implementation of the PsqlDosBackend into a generic function which would fail for profiles that
+            # use a different storage backend implementation.
+            from aiida.storage.psql_dos.backend import get_filepath_container
+            folder = get_filepath_container(profile).parent
             if folder.exists():
                 shutil.rmtree(folder)
 

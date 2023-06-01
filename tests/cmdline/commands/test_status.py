@@ -17,6 +17,7 @@ from aiida.storage.psql_dos import migrator
 
 
 @pytest.mark.requires_rmq
+@pytest.mark.usefixtures('stopped_daemon_client')
 def test_status(run_cli_command):
     """Test `verdi status`."""
     options = []
@@ -36,7 +37,7 @@ def test_status(run_cli_command):
 def test_status_no_profile(run_cli_command):
     """Test `verdi status` when there is no profile."""
     options = []
-    result = run_cli_command(cmd_status.verdi_status, options)
+    result = run_cli_command(cmd_status.verdi_status, options, use_subprocess=False)
     assert 'no profile configured yet' in result.output
 
 
@@ -61,7 +62,7 @@ def test_storage_unable_to_connect(run_cli_command):
     profile._attributes['storage']['config']['database_port'] = 123
 
     try:
-        result = run_cli_command(cmd_status.verdi_status, raises=True)
+        result = run_cli_command(cmd_status.verdi_status, raises=True, use_subprocess=False)
         assert 'Unable to connect to profile\'s storage' in result.output
         assert result.exit_code is ExitCode.CRITICAL
     finally:
@@ -75,9 +76,9 @@ def test_storage_incompatible(run_cli_command, monkeypatch):
         from aiida.common.exceptions import IncompatibleStorageSchema
         raise IncompatibleStorageSchema()
 
-    monkeypatch.setattr(migrator.PsqlDostoreMigrator, 'validate_storage', storage_cls)
+    monkeypatch.setattr(migrator.PsqlDosMigrator, 'validate_storage', storage_cls)
 
-    result = run_cli_command(cmd_status.verdi_status, raises=True)
+    result = run_cli_command(cmd_status.verdi_status, raises=True, use_subprocess=False)
     assert 'verdi storage migrate' in result.output
     assert result.exit_code is ExitCode.CRITICAL
 
@@ -89,8 +90,8 @@ def test_storage_corrupted(run_cli_command, monkeypatch):
         from aiida.common.exceptions import CorruptStorage
         raise CorruptStorage()
 
-    monkeypatch.setattr(migrator.PsqlDostoreMigrator, 'validate_storage', storage_cls)
+    monkeypatch.setattr(migrator.PsqlDosMigrator, 'validate_storage', storage_cls)
 
-    result = run_cli_command(cmd_status.verdi_status, raises=True)
+    result = run_cli_command(cmd_status.verdi_status, raises=True, use_subprocess=False)
     assert 'Storage is corrupted' in result.output
     assert result.exit_code is ExitCode.CRITICAL

@@ -15,21 +15,12 @@ from aiida.manage import get_manager
 from aiida.orm import User
 
 
-@pytest.fixture(scope='function')
-def clear_storage_before_test(aiida_profile_clean):  # pylint: disable=unused-argument
-    """Clears the storage before a test."""
-    repository = get_manager().get_profile_storage().get_repository()
-    object_keys = list(repository.list_objects())
-    repository.delete_objects(object_keys)
-    repository.maintain(live=False)
-
-
-@pytest.mark.usefixtures('clear_storage_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_default_user():
     assert isinstance(get_manager().get_profile_storage().default_user, User)
 
 
-@pytest.mark.usefixtures('clear_storage_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_get_unreferenced_keyset():
     """Test the ``get_unreferenced_keyset`` method."""
     # NOTE: This tests needs to use the database because there is a call inside
@@ -93,7 +84,7 @@ def test_get_unreferenced_keyset():
     ),
 ))
 # yapf: enable
-@pytest.mark.usefixtures('clear_storage_before_test')
+@pytest.mark.usefixtures('aiida_profile_clean', 'stopped_daemon_client')
 def test_maintain(caplog, monkeypatch, kwargs, logged_texts):
     """Test the ``maintain`` method."""
     import logging
@@ -149,3 +140,23 @@ def test_get_info(monkeypatch):
     assert 'extra_value' in repository_info_out
     assert repository_info_out['value'] == 42
     assert repository_info_out['extra_value'] == 0
+
+
+def test_unload_profile():
+    """Test that unloading the profile closes all sqla sessions.
+
+    This is a regression test for #5506.
+    """
+    from sqlalchemy.orm.session import _sessions  # pylint: disable=import-outside-toplevel
+
+    # Just running the test suite itself should have opened at least one session
+    assert len(_sessions) != 0, str(_sessions)
+
+    manager = get_manager()
+    profile_name = manager.get_profile().name
+
+    try:
+        manager.unload_profile()
+        assert len(_sessions) == 0, str(_sessions)
+    finally:
+        manager.load_profile(profile_name)

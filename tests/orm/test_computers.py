@@ -9,6 +9,8 @@
 ###########################################################################
 # pylint: disable=no-self-use
 """Tests for the `Computer` ORM class."""
+import uuid
+
 import pytest
 
 from aiida.common import exceptions
@@ -16,7 +18,6 @@ from aiida.orm import AuthInfo, Computer, User
 from aiida.plugins import TransportFactory
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 class TestComputer:
     """Tests for the `Computer` ORM class."""
 
@@ -89,7 +90,7 @@ class TestComputerConfigure:
     """Tests for the configuring of instance of the `Computer` ORM class."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+    def init_profile(self):  # pylint: disable=unused-argument
         """Prepare current user and computer builder with common properties."""
         # pylint: disable=attribute-defined-outside-init
         from aiida.orm.utils.builders.computer import ComputerBuilder
@@ -106,9 +107,18 @@ class TestComputerConfigure:
         self.comp_builder.shebang = '#!xonsh'
         self.user = User.collection.get_default()
 
+    def test_is_configured(self):
+        """Test the :meth:`aiida.orm.computers.Computer.is_configured`."""
+        self.comp_builder.label = str(uuid.uuid4())
+        self.comp_builder.transport = 'core.local'
+        comp = self.comp_builder.new()
+        comp.store()
+        comp.configure()
+        assert comp.is_configured
+
     def test_configure_local(self):
         """Configure a computer for local transport and check it is configured."""
-        self.comp_builder.label = 'test_configure_local'
+        self.comp_builder.label = str(uuid.uuid4())
         self.comp_builder.transport = 'core.local'
         comp = self.comp_builder.new()
         comp.store()
@@ -118,7 +128,7 @@ class TestComputerConfigure:
 
     def test_configure_ssh(self):
         """Configure a computer for ssh transport and check it is configured."""
-        self.comp_builder.label = 'test_configure_ssh'
+        self.comp_builder.label = str(uuid.uuid4())
         self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
@@ -128,7 +138,7 @@ class TestComputerConfigure:
 
     def test_configure_ssh_invalid(self):
         """Try to configure computer with invalid auth params and check it fails."""
-        self.comp_builder.label = 'test_configure_ssh_invalid'
+        self.comp_builder.label = str(uuid.uuid4())
         self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
@@ -138,7 +148,7 @@ class TestComputerConfigure:
 
     def test_non_configure_error(self):
         """Configure a computer for local transport and check it is configured."""
-        self.comp_builder.label = 'test_non_configure_error'
+        self.comp_builder.label = str(uuid.uuid4())
         self.comp_builder.transport = 'core.local'
         comp = self.comp_builder.new()
         comp.store()

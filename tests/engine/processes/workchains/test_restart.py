@@ -33,6 +33,10 @@ class SomeWorkChain(engine.BaseRestartWorkChain):
     def handler_b(self, _):
         return
 
+    @engine.process_handler(priority=0, enabled=False)
+    def handler_c(self, _):
+        return
+
     def not_a_handler(self, _):
         pass
 
@@ -44,13 +48,37 @@ def test_is_process_handler():
     assert not SomeWorkChain.is_process_handler('unexisting_method')
 
 
-def test_get_process_handler():
+def test_get_process_handlers():
     """Test the `BaseRestartWorkChain.get_process_handlers` class method."""
-    assert [handler.__name__ for handler in SomeWorkChain.get_process_handlers()] == ['handler_a', 'handler_b']
+    assert [handler.__name__ for handler in SomeWorkChain.get_process_handlers()
+            ] == ['handler_a', 'handler_b', 'handler_c']
+
+
+# yapf: disable
+@pytest.mark.parametrize('inputs, priorities', (
+    ({}, [100, 200]),
+    ({'handler_overrides': {'handler_c': {'enabled': True}}}, [0, 100, 200]),
+    ({'handler_overrides': {'handler_a': {'priority': 50}}}, [50, 100]),
+    ({'handler_overrides': {'handler_a': {'enabled': False}}}, [100]),
+    ({'handler_overrides': {'handler_a': False}}, [100]),  # This notation is deprecated
+))
+# yapf: enable
+def test_get_process_handlers_by_priority(generate_work_chain, inputs, priorities):
+    """Test the `BaseRestartWorkChain.get_process_handlers_by_priority` method."""
+    process = generate_work_chain(SomeWorkChain, inputs)
+    process.setup()
+    assert sorted([priority for priority, handler in process.get_process_handlers_by_priority()]) == priorities
+
+    # Verify the actual handlers on the class haven't been modified
+    assert getattr(SomeWorkChain, 'handler_a').priority == 200
+    assert getattr(SomeWorkChain, 'handler_b').priority == 100
+    assert getattr(SomeWorkChain, 'handler_c').priority == 0
+    assert getattr(SomeWorkChain, 'handler_a').enabled
+    assert getattr(SomeWorkChain, 'handler_b').enabled
+    assert not getattr(SomeWorkChain, 'handler_c').enabled
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_excepted_process(generate_work_chain, generate_calculation_node):
     """Test that the workchain aborts if the sub process was excepted."""
     process = generate_work_chain(SomeWorkChain, {})
@@ -60,7 +88,6 @@ def test_excepted_process(generate_work_chain, generate_calculation_node):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_killed_process(generate_work_chain, generate_calculation_node):
     """Test that the workchain aborts if the sub process was killed."""
     process = generate_work_chain(SomeWorkChain, {})
@@ -70,7 +97,6 @@ def test_killed_process(generate_work_chain, generate_calculation_node):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_unhandled_failure(generate_work_chain, generate_calculation_node):
     """Test the unhandled failure mechanism.
 
@@ -89,7 +115,6 @@ def test_unhandled_failure(generate_work_chain, generate_calculation_node):
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_unhandled_reset_after_success(generate_work_chain, generate_calculation_node):
     """Test `ctx.unhandled_failure` is reset to `False` in `inspect_process` after a successful process."""
     process = generate_work_chain(SomeWorkChain, {})
@@ -104,7 +129,6 @@ def test_unhandled_reset_after_success(generate_work_chain, generate_calculation
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_unhandled_reset_after_handled(generate_work_chain, generate_calculation_node):
     """Test `ctx.unhandled_failure` is reset to `False` in `inspect_process` after a handled failed process."""
     process = generate_work_chain(SomeWorkChain, {})
@@ -126,7 +150,6 @@ def test_unhandled_reset_after_handled(generate_work_chain, generate_calculation
 
 
 @pytest.mark.requires_rmq
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_run_process(generate_work_chain, generate_calculation_node, monkeypatch):
     """Test the `run_process` method."""
 
@@ -154,6 +177,7 @@ class OutputNamespaceWorkChain(engine.WorkChain):
     @classmethod
     def define(cls, spec):
         super().define(spec)
+        spec.input('parameters', required=False, valid_type=orm.Dict)
         spec.output_namespace('sub', valid_type=orm.Int, dynamic=True)
         spec.outline(cls.finalize)
 
@@ -161,7 +185,7 @@ class OutputNamespaceWorkChain(engine.WorkChain):
         self.out('sub.result', orm.Int(1).store())
 
 
-class CustomBRWorkChain(engine.BaseRestartWorkChain):
+class CustomBaseRestartWorkChain(engine.BaseRestartWorkChain):
     """`BaseRestartWorkChain` of `OutputNamespaceWorkChain`"""
 
     _process_class = OutputNamespaceWorkChain
@@ -169,6 +193,7 @@ class CustomBRWorkChain(engine.BaseRestartWorkChain):
     @classmethod
     def define(cls, spec):
         super().define(spec)
+        spec.expose_inputs(cls._process_class, namespace='sub')
         spec.expose_outputs(cls._process_class)
         spec.output('extra', valid_type=orm.Int)
 
@@ -182,12 +207,30 @@ class CustomBRWorkChain(engine.BaseRestartWorkChain):
         )
 
     def setup(self):
+        """Unwrap the ``parameters`` input if specified.
+
+        This serves to test that the ``BaseRestartWorkChain._wrap_bare_dict_inputs`` method works properly.
+        """
         super().setup()
-        self.ctx.inputs = {}
+        self.ctx.inputs = self.exposed_inputs(self._process_class, namespace='sub')
+        if 'parameters' in self.ctx.inputs:
+            self.ctx.inputs.parameters = self.ctx.inputs.parameters.get_dict()
 
 
 @pytest.mark.requires_rmq
 def test_results():
-    res, node = engine.launch.run_get_node(CustomBRWorkChain)
-    assert res['sub'].result.value == 1
+    results, node = engine.launch.run_get_node(CustomBaseRestartWorkChain)
+    assert results['sub'].result.value == 1
     assert node.exit_status == 11
+
+
+@pytest.mark.requires_rmq
+def test_wrap_bare_dict_inputs():
+    """Test that ``BaseRestartWorkChain._wrap_bare_dict_inputs`` method works properly.
+
+    This is called in ``BaseRestartWorkChain.run_process`` which will automatically wrap any inputs that are plain
+    dictionaries that should be ``Dict`` nodes. This is useful if the implementation unwraps ``Dict`` inputs in the
+    preparation phase so they can be updated if needed, and they don't have to manually rewrap in a ``Dict`` node.
+    """
+    _, node = engine.launch.run_get_node(CustomBaseRestartWorkChain, **{'sub': {'parameters': orm.Dict({'a': 1})}})
+    assert node.is_finished

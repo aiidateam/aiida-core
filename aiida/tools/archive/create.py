@@ -281,8 +281,9 @@ def create_archive(
             writer.update_metadata({
                 'ctime': datetime.now().isoformat(),
                 'creation_parameters': {
-                    'entities_starting_set': None if entities is None else
-                    {etype.value: list(unique) for etype, unique in starting_uuids.items() if unique},
+                    'entities_starting_set': None if entities is None else {
+                        etype.value: list(unique) for etype, unique in starting_uuids.items() if unique
+                    },
                     'include_authinfos': include_authinfos,
                     'include_comments': include_comments,
                     'include_logs': include_logs,
@@ -354,7 +355,7 @@ def create_archive(
 def _collect_all_entities(
     querybuilder: QbType, entity_ids: Dict[EntityTypes, Set[int]], include_authinfos: bool, include_comments: bool,
     include_logs: bool, batch_size: int
-) -> Tuple[List[list], Set[LinkQuadruple]]:
+) -> Tuple[List[Tuple[int, int]], Set[LinkQuadruple]]:
     """Collect all entities.
 
     :returns: (group_id_to_node_id, link_data) and updates entity_ids
@@ -364,7 +365,7 @@ def _collect_all_entities(
 
         progress.set_description_str(progress_str('Nodes'))
         entity_ids[EntityTypes.NODE].update(
-            querybuilder().append(orm.Node, project='id').all(batch_size=batch_size, flat=True)
+            querybuilder().append(orm.Node, project='id').all(batch_size=batch_size, flat=True)  # type: ignore
         )
         progress.update()
 
@@ -378,45 +379,45 @@ def _collect_all_entities(
         progress.set_description_str(progress_str('Groups'))
         progress.update()
         entity_ids[EntityTypes.GROUP].update(
-            querybuilder().append(orm.Group, project='id').all(batch_size=batch_size, flat=True)
+            querybuilder().append(orm.Group, project='id').all(batch_size=batch_size, flat=True)  # type: ignore
         )
         progress.set_description_str(progress_str('Nodes-Groups'))
         progress.update()
         qbuilder = querybuilder().append(orm.Group, project='id',
                                          tag='group').append(orm.Node, with_group='group', project='id').distinct()
-        group_nodes = qbuilder.all(batch_size=batch_size)
+        group_nodes: List[Tuple[int, int]] = qbuilder.all(batch_size=batch_size)  # type: ignore
 
         progress.set_description_str(progress_str('Computers'))
         progress.update()
         entity_ids[EntityTypes.COMPUTER].update(
-            querybuilder().append(orm.Computer, project='id').all(batch_size=batch_size, flat=True)
+            querybuilder().append(orm.Computer, project='id').all(batch_size=batch_size, flat=True)  # type: ignore
         )
 
         progress.set_description_str(progress_str('AuthInfos'))
         progress.update()
         if include_authinfos:
             entity_ids[EntityTypes.AUTHINFO].update(
-                querybuilder().append(orm.AuthInfo, project='id').all(batch_size=batch_size, flat=True)
+                querybuilder().append(orm.AuthInfo, project='id').all(batch_size=batch_size, flat=True)  # type: ignore
             )
 
         progress.set_description_str(progress_str('Logs'))
         progress.update()
         if include_logs:
             entity_ids[EntityTypes.LOG].update(
-                querybuilder().append(orm.Log, project='id').all(batch_size=batch_size, flat=True)
+                querybuilder().append(orm.Log, project='id').all(batch_size=batch_size, flat=True)  # type: ignore
             )
 
         progress.set_description_str(progress_str('Comments'))
         progress.update()
         if include_comments:
             entity_ids[EntityTypes.COMMENT].update(
-                querybuilder().append(orm.Comment, project='id').all(batch_size=batch_size, flat=True)
+                querybuilder().append(orm.Comment, project='id').all(batch_size=batch_size, flat=True)  # type: ignore
             )
 
         progress.set_description_str(progress_str('Users'))
         progress.update()
         entity_ids[EntityTypes.USER].update(
-            querybuilder().append(orm.User, project='id').all(batch_size=batch_size, flat=True)
+            querybuilder().append(orm.User, project='id').all(batch_size=batch_size, flat=True)  # type: ignore
         )
 
     return group_nodes, link_data
@@ -425,7 +426,7 @@ def _collect_all_entities(
 def _collect_required_entities(
     querybuilder: QbType, entity_ids: Dict[EntityTypes, Set[int]], traversal_rules: Dict[str, bool],
     include_authinfos: bool, include_comments: bool, include_logs: bool, backend: StorageBackend, batch_size: int
-) -> Tuple[List[list], Set[LinkQuadruple]]:
+) -> Tuple[List[Tuple[int, int]], Set[LinkQuadruple]]:
     """Collect required entities, given a set of starting entities and provenance graph traversal rules.
 
     :returns: (group_id_to_node_id, link_data) and updates entity_ids
@@ -435,7 +436,7 @@ def _collect_required_entities(
 
         # get all nodes from groups
         progress.set_description_str(progress_str('Nodes (groups)'))
-        group_nodes = []
+        group_nodes: List[Tuple[int, int]] = []
         if entity_ids[EntityTypes.GROUP]:
             qbuilder = querybuilder()
             qbuilder.append(
@@ -445,7 +446,7 @@ def _collect_required_entities(
             )
             qbuilder.append(orm.Node, with_group='group', project='id')
             qbuilder.distinct()
-            group_nodes = qbuilder.all(batch_size=batch_size)
+            group_nodes = qbuilder.all(batch_size=batch_size)  # type: ignore
             entity_ids[EntityTypes.NODE].update(nid for _, nid in group_nodes)
 
         # get full set of nodes & links, following traversal rules
@@ -580,7 +581,7 @@ def _stream_repo_files(
             f'Backend repository key format incompatible: {repository.key_format!r} != {key_format!r}'
         )
     with get_progress_reporter()(desc='Archiving files: ', total=len(keys)) as progress:
-        for key, stream in repository.iter_object_streams(keys):
+        for key, stream in repository.iter_object_streams(keys):  # type: ignore
             # to-do should we use assume the key here is correct, or always re-compute and check?
             writer.put_object(stream, key=key)
             progress.update()

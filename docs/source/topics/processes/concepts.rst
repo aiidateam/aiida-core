@@ -25,8 +25,8 @@ Process types
 
 Processes in AiiDA come in two flavors:
 
- * Calculation-like
- * Workflow-like
+* Calculation-like
+* Workflow-like
 
 The calculation-like processes have the capability to *create* data, whereas the workflow-like processes orchestrate other processes and have the ability to *return* data produced by calculations.
 Again, this is a distinction that plays a big role in AiiDA and is crucial to understand.

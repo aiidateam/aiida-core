@@ -51,22 +51,17 @@ class Transport(abc.ABC):
     # See the ssh or local plugin to see the format
     _valid_auth_params = None
     _MAGIC_CHECK = re.compile('[*?[]')
-    _valid_auth_options = []
+    _valid_auth_options: list = []
     _common_auth_options = [
         (
             'use_login_shell', {
-                'default':
-                True,
-                'switch':
-                True,
-                'prompt':
-                'Use login shell when executing command',
-                'help':
-                ' Not using a login shell can help suppress potential'
+                'default': True,
+                'switch': True,
+                'prompt': 'Use login shell when executing command',
+                'help': ' Not using a login shell can help suppress potential'
                 ' spurious text output that can prevent AiiDA from parsing the output of commands,'
                 ' but may result in some startup files (.profile) not being sourced.',
-                'non_interactive_default':
-                True
+                'non_interactive_default': True
             }
         ),
         (

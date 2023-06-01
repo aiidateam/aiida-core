@@ -14,14 +14,25 @@ but redefines the SQLAlchemy models to the SQLite compatible ones.
 """
 from functools import singledispatch
 import json
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, Union
 
 from sqlalchemy import JSON, case, func
+from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy.sql import ColumnElement
 
 from aiida.common.lang import type_check
 from aiida.storage.psql_dos.orm import authinfos, comments, computers, entities, groups, logs, nodes, users, utils
-from aiida.storage.psql_dos.orm.querybuilder.main import SqlaQueryBuilder
+from aiida.storage.psql_dos.orm.querybuilder.main import (
+    BinaryExpression,
+    Cast,
+    ColumnClause,
+    InstrumentedAttribute,
+    Label,
+    QueryableAttribute,
+    SqlaQueryBuilder,
+    String,
+    get_column,
+)
 
 from . import models
 from .utils import ReadOnlyError
@@ -179,12 +190,18 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
     def table_groups_nodes(self):
         return models.DbGroupNodes.__table__  # type: ignore[attr-defined] # pylint: disable=no-member
 
-    def get_projectable_attribute(
-        self, alias, column_name: str, attrpath: List[str], cast: Optional[str] = None
-    ) -> ColumnElement:
-        """Return an attribute store in a JSON field of the give column"""
-        # pylint: disable=unused-argument
-        entity = self.get_column(column_name, alias)[attrpath]
+    @staticmethod
+    def _get_projectable_entity(
+        alias: AliasedClass,
+        column_name: str,
+        attrpath: List[str],
+        cast: Optional[str] = None,
+    ) -> Union[ColumnElement, InstrumentedAttribute]:
+
+        if not (attrpath or column_name in ('attributes', 'extras')):
+            return get_column(column_name, alias)
+
+        entity = get_column(column_name, alias)[attrpath]
         if cast is None:
             pass
         elif cast == 'f':
@@ -203,15 +220,16 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
             raise ValueError(f'Unknown casting key {cast}')
         return entity
 
+    @staticmethod
     def get_filter_expr_from_jsonb(  # pylint: disable=too-many-return-statements,too-many-branches
-        self, operator: str, value, attr_key: List[str], column=None, column_name=None, alias=None
+        operator: str, value, attr_key: List[str], column=None, column_name=None, alias=None
     ):
         """Return a filter expression.
 
         See: https://www.sqlite.org/json1.html
         """
         if column is None:
-            column = self.get_column(column_name, alias)
+            column = get_column(column_name, alias)
 
         query_str = f'{alias or ""}.{column_name or ""}.{attr_key} {operator} {value}'
 
@@ -274,10 +292,10 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
 
         if operator == 'like':
             type_filter, casted_entity = _cast_json_type(database_entity, value)
-            return case((type_filter, casted_entity.like(value)), else_=False)
+            return case((type_filter, casted_entity.like(value, escape='\\')), else_=False)
         if operator == 'ilike':
             type_filter, casted_entity = _cast_json_type(database_entity, value)
-            return case((type_filter, casted_entity.ilike(value)), else_=False)
+            return case((type_filter, casted_entity.ilike(value, escape='\\')), else_=False)
 
         # if operator == 'contains':
         # to-do, see: https://github.com/sqlalchemy/sqlalchemy/discussions/7836
@@ -313,6 +331,35 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
                         else_=False)
 
         raise ValueError(f'SQLite does not support JSON query: {query_str}')
+
+    @staticmethod
+    def get_filter_expr_from_column(operator: str, value: Any, column) -> BinaryExpression:
+        # Label is used because it is what is returned for the
+        # 'state' column by the hybrid_column construct
+        if not isinstance(column, (Cast, InstrumentedAttribute, QueryableAttribute, Label, ColumnClause)):
+            raise TypeError(f'column ({type(column)}) {column} is not a valid column')
+        database_entity = column
+        if operator == '==':
+            expr = database_entity == value
+        elif operator == '>':
+            expr = database_entity > value
+        elif operator == '<':
+            expr = database_entity < value
+        elif operator == '>=':
+            expr = database_entity >= value
+        elif operator == '<=':
+            expr = database_entity <= value
+        elif operator == 'like':
+            # the like operator expects a string, so we cast to avoid problems
+            # with fields like UUID, which don't support the like operator
+            expr = database_entity.cast(String).like(value, escape='\\')
+        elif operator == 'ilike':
+            expr = database_entity.ilike(value, escape='\\')
+        elif operator == 'in':
+            expr = database_entity.in_(value)
+        else:
+            raise ValueError(f'Unknown operator {operator} for filters on columns')
+        return expr
 
 
 @singledispatch

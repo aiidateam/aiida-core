@@ -30,13 +30,7 @@ OutputPort = ports.OutputPort  # pylint: disable=invalid-name
 
 
 class WithNonDb:
-    """
-    A mixin that adds support to a port to flag that it should not be stored
-    in the database using the non_db=True flag.
-
-    The mixins have to go before the main port class in the superclass order
-    to make sure the mixin has the chance to strip out the non_db keyword.
-    """
+    """A mixin that adds support to a port to flag it should not be stored in the database using the ``non_db`` flag."""
 
     def __init__(self, *args, **kwargs) -> None:
         self._non_db_explicitly_set: bool = bool('non_db' in kwargs)
@@ -46,26 +40,64 @@ class WithNonDb:
 
     @property
     def non_db_explicitly_set(self) -> bool:
-        """Return whether the a value for `non_db` was explicitly passed in the construction of the `Port`.
+        """Return whether the ``non_db`` keyword was explicitly passed in the construction of the ``InputPort``.
 
-        :return: boolean, True if `non_db` was explicitly defined during construction, False otherwise
+        :return: ``True`` if ``non_db`` was explicitly defined during construction, ``False`` otherwise
         """
         return self._non_db_explicitly_set
 
     @property
     def non_db(self) -> bool:
-        """Return whether the value of this `Port` should be stored as a `Node` in the database.
+        """Return whether the value of this ``InputPort`` should be stored in the database.
 
-        :return: boolean, True if it should be storable as a `Node`, False otherwise
+        :return: ``True`` if it should be stored, ``False`` otherwise
         """
         return self._non_db
 
     @non_db.setter
     def non_db(self, non_db: bool) -> None:
-        """Set whether the value of this `Port` should be stored as a `Node` in the database.
-        """
+        """Set whether the value of this ``InputPort`` should be stored as a ``Data`` in the database."""
         self._non_db_explicitly_set = True
         self._non_db = non_db
+
+
+class WithMetadata:
+    """A mixin that allows an input port to be marked as metadata through the keyword ``is_metadata``.
+
+    A metadata input differs from a normal input as in that it is not linked to the ``ProcessNode`` as a ``Data`` node
+    but rather is stored on the ``ProcessNode`` itself (as an attribute, for example).
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        self._explicitly_set: bool = bool('is_metadata' in kwargs)
+        is_metadata = kwargs.pop('is_metadata', False)
+        super().__init__(*args, **kwargs)
+        self._is_metadata: bool = is_metadata
+
+    @property
+    def is_metadata_explicitly_set(self) -> bool:
+        """Return whether the ``is_metadata`` keyword was explicitly passed in the construction of the ``InputPort``.
+
+        :return: ``True`` if ``is_metadata`` was explicitly defined during construction, ``False`` otherwise
+        """
+        return self._explicitly_set
+
+    @property
+    def is_metadata(self) -> bool:
+        """Return whether the value of this ``InputPort`` should be stored as a ``Node`` in the database.
+
+        :return: ``True`` if it should be storable as a ``Node``, ``False`` otherwise
+        """
+        return self._is_metadata
+
+    @is_metadata.setter
+    def is_metadata(self, is_metadata: bool) -> None:
+        """Set whether the value of this ``InputPort`` should be stored as a ``Node`` in the database.
+
+        :param is_metadata: ``False`` if the port value should be linked as a ``Node``, ``True`` otherwise.
+        """
+        self._explicitly_set = True
+        self._is_metadata = is_metadata
 
 
 class WithSerialize:
@@ -80,21 +112,24 @@ class WithSerialize:
         self._serializer: Callable[[Any], 'Data'] = serializer
 
     def serialize(self, value: Any) -> 'Data':
-        """Serialize the given value if it is not already a Data type and a serializer function is defined
+        """Serialize the given value, unless it is ``None``, already a Data type, or no serializer function is defined.
 
         :param value: the value to be serialized
         :returns: a serialized version of the value or the unchanged value
         """
-        if self._serializer is None or isinstance(value, Data):
+        if self._serializer is None or value is None or isinstance(value, Data):
             return value
 
         return self._serializer(value)
 
 
-class InputPort(WithSerialize, WithNonDb, ports.InputPort):
+class InputPort(WithMetadata, WithSerialize, WithNonDb, ports.InputPort):
     """
     Sub class of plumpy.InputPort which mixes in the WithSerialize and WithNonDb mixins to support automatic
     value serialization to database storable types and support non database storable input types as well.
+
+    The mixins have to go before the main port class in the superclass order to make sure they have the chance to
+    process their specific keywords.
     """
 
     def __init__(self, *args, **kwargs) -> None:
@@ -109,15 +144,24 @@ class InputPort(WithSerialize, WithNonDb, ports.InputPort):
                     ' It is advised to use a lambda instead, e.g.: `default=lambda: orm.Int(5)`.'.format(args[0])
                 warnings.warn(UserWarning(message))  # pylint: disable=no-member
 
+        # If the port is not required and defines ``valid_type``, automatically add ``None`` as a valid type
+        valid_type = kwargs.get('valid_type', ())
+
+        if not isinstance(valid_type, (tuple, list)):
+            valid_type = [valid_type]
+
+        if not kwargs.get('required', True) and valid_type:
+            kwargs['valid_type'] = tuple(valid_type) + (type(None),)
+
         super().__init__(*args, **kwargs)
 
     def get_description(self) -> Dict[str, str]:
-        """
-        Return a description of the InputPort, which will be a dictionary of its attributes
+        """Return a description of the InputPort, which will be a dictionary of its attributes
 
         :returns: a dictionary of the stringified InputPort attributes
         """
         description = super().get_description()
+        description['is_metadata'] = f'{self.is_metadata}'
         description['non_db'] = f'{self.non_db}'
 
         return description
@@ -136,7 +180,7 @@ class CalcJobOutputPort(ports.OutputPort):
         return self._pass_to_parser
 
 
-class PortNamespace(WithNonDb, ports.PortNamespace):
+class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
     """
     Sub class of plumpy.PortNamespace which implements the serialize method to support automatic recursive
     serialization of a given mapping onto the ports of the PortNamespace.
@@ -155,6 +199,11 @@ class PortNamespace(WithNonDb, ports.PortNamespace):
             raise TypeError('port needs to be an instance of Port')
 
         self.validate_port_name(key)
+
+        if hasattr(
+            port, 'is_metadata_explicitly_set'
+        ) and not port.is_metadata_explicitly_set:  # type: ignore[attr-defined]
+            port.is_metadata = self.is_metadata  # type: ignore[attr-defined]
 
         if hasattr(port, 'non_db_explicitly_set') and not port.non_db_explicitly_set:  # type: ignore[attr-defined]
             port.non_db = self.non_db  # type: ignore[attr-defined]

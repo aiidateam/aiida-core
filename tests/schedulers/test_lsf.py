@@ -14,6 +14,7 @@ import uuid
 
 import pytest
 
+from aiida.common.exceptions import ConfigurationError
 from aiida.schedulers.datastructures import JobState
 from aiida.schedulers.plugins.lsf import LsfScheduler
 from aiida.schedulers.scheduler import SchedulerError
@@ -165,32 +166,30 @@ def test_submit_script_rerunnable():
     assert '#BSUB -rn' in submit_script_text
 
 
-def test_create_job_resource():
+# yapf: disable
+@pytest.mark.parametrize('kwargs, exception, message', (
+    ({'tot_num_mpiprocs': 'Not-a-Number'}, TypeError, ''),
+    ({'parallel_env': 0}, TypeError, 'parallel_env` must be a string'),
+    ({'num_machines': 1}, ConfigurationError, '`num_machines` cannot be set unless `use_num_machines` is `True`.'),
+    ({'use_num_machines': True}, ConfigurationError, 'must set `num_machines` when `use_num_machines` is `True`.'),
+    ({'num_machines': 'string', 'use_num_machines': True}, TypeError, '`num_machines` must be an integer'),
+    ({}, TypeError, '`tot_num_mpiprocs` must be specified and must be an integer'),
+    ({'tot_num_mpiprocs': 'string'}, TypeError, '`tot_num_mpiprocs` must be specified and must be an integer'),
+    ({'tot_num_mpiprocs': 0}, ValueError, 'tot_num_mpiprocs must be >= 1'),
+    ({'default_mpiprocs_per_machine': 1}, ConfigurationError, '`default_mpiprocs_per_machine` cannot be set.'),
+))
+# yapf: enable
+def test_create_job_resource(kwargs, exception, message):
     """
     Test to verify that script fails in the following cases:
         * if we specify only num_machines
         * if tot_num_mpiprocs is not an int (and can't be casted to one)
         * if parallel_env is not a str
     """
-    from aiida.schedulers.datastructures import JobTemplate
-
     scheduler = LsfScheduler()
-    job_tmpl = JobTemplate()
 
-    with pytest.raises(TypeError):
-        job_tmpl.job_resource = scheduler.create_job_resource(tot_num_mpiprocs='Not-a-Number')
-
-    with pytest.raises(TypeError):
-        job_tmpl.job_resource = scheduler.create_job_resource(
-            num_machines=1,
-            num_mpiprocs_per_machine=1,
-        )
-
-    with pytest.raises(TypeError):
-        job_tmpl.job_resource = scheduler.create_job_resource(
-            tot_num_mpiprocs=2,
-            parallel_env=0,
-        )
+    with pytest.raises(exception, match=message):
+        scheduler.create_job_resource(**kwargs)
 
 
 def test_submit_output():

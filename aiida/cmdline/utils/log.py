@@ -43,8 +43,7 @@ class CliHandler(logging.Handler):
 class CliFormatter(logging.Formatter):
     """Formatter that automatically prefixes log messages with a colored version of the log level."""
 
-    @staticmethod
-    def format(record):
+    def format(self, record):
         """Format the record using the style required for the command line interface."""
         try:
             fg = COLORS[record.levelname.lower()]
@@ -56,10 +55,9 @@ class CliFormatter(logging.Formatter):
         except AttributeError:
             prefix = None
 
+        formatted = super().format(record)
+
         if prefix:
-            return f'{click.style(record.levelname.capitalize(), fg=fg, bold=True)}: {record.msg % record.args}'
+            return f'{click.style(record.levelname.capitalize(), fg=fg, bold=True)}: {formatted}'
 
-        if record.args:
-            return f'{record.msg % record.args}'
-
-        return record.msg
+        return formatted

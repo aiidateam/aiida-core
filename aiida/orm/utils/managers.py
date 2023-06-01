@@ -101,7 +101,8 @@ class NodeLinksManager:
                 warn_deprecation(
                     'dereferencing nodes with links containing double underscores is deprecated, simply replace '
                     'the double underscores with a single dot instead. For example: \n'
-                    '`self.inputs.some__label` can be written as `self.inputs.some.label` instead.\n',
+                    '`node.inputs.some__label` can be written as `node.inputs.some.label` instead.\n',
+                    stacklevel=4,
                     version=3
                 )  # pylint: disable=no-member
                 namespaces = label.split(self._namespace_separator)

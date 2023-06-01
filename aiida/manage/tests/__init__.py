@@ -25,7 +25,6 @@ __all__ = (
     'TestManagerError',
     'get_test_backend_name',
     'get_test_profile_name',
-    'get_user_dict',
     'test_manager',
 )
 

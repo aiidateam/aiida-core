@@ -10,10 +10,10 @@
 """Test the node hash reset."""
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_reset_hash(perform_migrations: PsqlDostoreMigrator):
+def test_reset_hash(perform_migrations: PsqlDosMigrator):
     """Test the node hash reset."""
     # starting revision
     perform_migrations.migrate_up('django@django_0038')

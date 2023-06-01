@@ -7,7 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=too-many-lines
 """Implementation of the CalcJob process."""
+from __future__ import annotations
+
 import dataclasses
 import io
 import json
@@ -30,6 +33,7 @@ from ..ports import PortNamespace
 from ..process import Process, ProcessState
 from ..process_spec import CalcJobProcessSpec
 from .importer import CalcJobImporter
+from .monitors import CalcJobMonitor
 from .tasks import UPLOAD_COMMAND, Waiting
 
 __all__ = ('CalcJob',)
@@ -136,7 +140,17 @@ def validate_stash_options(stash_options: Any, _: Any) -> Optional[str]:
     return None
 
 
-def validate_parser(parser_name: Any, _: Any) -> Optional[str]:
+def validate_monitors(monitors: Any, _: PortNamespace) -> Optional[str]:
+    """Validate the ``monitors`` input namespace."""
+    for key, monitor_node in monitors.items():
+        try:
+            CalcJobMonitor(**monitor_node.get_dict())
+        except (exceptions.EntryPointError, TypeError, ValueError) as exception:
+            return f'`monitors.{key}` is invalid: {exception}'
+    return None
+
+
+def validate_parser(parser_name: Any, _: PortNamespace) -> Optional[str]:
     """Validate the parser.
 
     :return: string with error message in case the inputs are invalid
@@ -191,106 +205,260 @@ class CalcJob(Process):
 
         :param spec: the calculation job process spec to define.
         """
-        # yapf: disable
         super().define(spec)
         spec.inputs.validator = validate_calc_job  # type: ignore[assignment]  # takes only PortNamespace not Port
-        spec.input('code', valid_type=orm.Code, required=False,
+        spec.input(
+            'code',
+            valid_type=orm.AbstractCode,
+            required=False,
             help='The `Code` to use for this job. This input is required, unless the `remote_folder` input is '
-                 'specified, which means an existing job is being imported and no code will actually be run.')
-        spec.input('remote_folder', valid_type=orm.RemoteData, required=False,
+            'specified, which means an existing job is being imported and no code will actually be run.'
+        )
+        spec.input_namespace(
+            'monitors',
+            valid_type=orm.Dict,
+            required=False,
+            validator=validate_monitors,
+            help='Add monitoring functions that can inspect output files while the job is running and decide to '
+            'prematurely terminate the job.'
+        )
+        spec.input(
+            'remote_folder',
+            valid_type=orm.RemoteData,
+            required=False,
             help='Remote directory containing the results of an already completed calculation job without AiiDA. The '
-                 'inputs should be passed to the `CalcJob` as normal but instead of launching the actual job, the '
-                 'engine will recreate the input files and then proceed straight to the retrieve step where the files '
-                 'of this `RemoteData` will be retrieved as if it had been actually launched through AiiDA. If a '
-                 'parser is defined in the inputs, the results are parsed and attached as output nodes as usual.')
-        spec.input('metadata.dry_run', valid_type=bool, default=False,
-            help='When set to `True` will prepare the calculation job for submission but not actually launch it.')
-        spec.input('metadata.computer', valid_type=orm.Computer, required=False,
-            help='When using a "local" code, set the computer on which the calculation should be run.')
+            'inputs should be passed to the `CalcJob` as normal but instead of launching the actual job, the '
+            'engine will recreate the input files and then proceed straight to the retrieve step where the files '
+            'of this `RemoteData` will be retrieved as if it had been actually launched through AiiDA. If a '
+            'parser is defined in the inputs, the results are parsed and attached as output nodes as usual.'
+        )
+        spec.input(
+            'metadata.dry_run',
+            valid_type=bool,
+            default=False,
+            help='When set to `True` will prepare the calculation job for submission but not actually launch it.'
+        )
+        spec.input(
+            'metadata.computer',
+            valid_type=orm.Computer,
+            required=False,
+            help='When using a "local" code, set the computer on which the calculation should be run.'
+        )
         spec.input_namespace(f'{spec.metadata_key}.{spec.options_key}', required=False)
-        spec.input('metadata.options.input_filename', valid_type=str, required=False,
-            help='Filename to which the input for the code that is to be run is written.')
-        spec.input('metadata.options.output_filename', valid_type=str, required=False,
-            help='Filename to which the content of stdout of the code that is to be run is written.')
-        spec.input('metadata.options.submit_script_filename', valid_type=str, default='_aiidasubmit.sh',
-            help='Filename to which the job submission script is written.')
-        spec.input('metadata.options.scheduler_stdout', valid_type=str, default='_scheduler-stdout.txt',
-            help='Filename to which the content of stdout of the scheduler is written.')
-        spec.input('metadata.options.scheduler_stderr', valid_type=str, default='_scheduler-stderr.txt',
-            help='Filename to which the content of stderr of the scheduler is written.')
-        spec.input('metadata.options.resources', valid_type=dict, required=True,
+        spec.input(
+            'metadata.options.input_filename',
+            valid_type=str,
+            required=False,
+            help='Filename to which the input for the code that is to be run is written.'
+        )
+        spec.input(
+            'metadata.options.output_filename',
+            valid_type=str,
+            required=False,
+            help='Filename to which the content of stdout of the code that is to be run is written.'
+        )
+        spec.input(
+            'metadata.options.submit_script_filename',
+            valid_type=str,
+            default='_aiidasubmit.sh',
+            help='Filename to which the job submission script is written.'
+        )
+        spec.input(
+            'metadata.options.scheduler_stdout',
+            valid_type=str,
+            default='_scheduler-stdout.txt',
+            help='Filename to which the content of stdout of the scheduler is written.'
+        )
+        spec.input(
+            'metadata.options.scheduler_stderr',
+            valid_type=str,
+            default='_scheduler-stderr.txt',
+            help='Filename to which the content of stderr of the scheduler is written.'
+        )
+        spec.input(
+            'metadata.options.resources',
+            valid_type=dict,
+            required=True,
             help='Set the dictionary of resources to be used by the scheduler plugin, like the number of nodes, '
-                 'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the '
-                 'scheduler for more details.')
-        spec.input('metadata.options.max_wallclock_seconds', valid_type=int, required=False,
-            help='Set the wallclock in seconds asked to the scheduler')
-        spec.input('metadata.options.custom_scheduler_commands', valid_type=str, default='',
+            'cpus etc. This dictionary is scheduler-plugin dependent. Look at the documentation of the '
+            'scheduler for more details.'
+        )
+        spec.input(
+            'metadata.options.max_wallclock_seconds',
+            valid_type=int,
+            required=False,
+            help='Set the wallclock in seconds asked to the scheduler'
+        )
+        spec.input(
+            'metadata.options.custom_scheduler_commands',
+            valid_type=str,
+            default='',
             help='Set a (possibly multiline) string with the commands that the user wants to manually set for the '
-                 'scheduler. The difference of this option with respect to the `prepend_text` is the position in '
-                 'the scheduler submission file where such text is inserted: with this option, the string is '
-                 'inserted before any non-scheduler command')
-        spec.input('metadata.options.queue_name', valid_type=str, required=False,
-            help='Set the name of the queue on the remote computer')
-        spec.input('metadata.options.rerunnable', valid_type=bool, required=False,
-            help='Determines if the calculation can be requeued / rerun.')
-        spec.input('metadata.options.account', valid_type=str, required=False,
-            help='Set the account to use in for the queue on the remote computer')
-        spec.input('metadata.options.qos', valid_type=str, required=False,
-            help='Set the quality of service to use in for the queue on the remote computer')
-        spec.input('metadata.options.withmpi', valid_type=bool, default=False,
-            help='Set the calculation to use mpi',)
-        spec.input('metadata.options.mpirun_extra_params', valid_type=(list, tuple), default=lambda: [],
+            'scheduler. The difference of this option with respect to the `prepend_text` is the position in '
+            'the scheduler submission file where such text is inserted: with this option, the string is '
+            'inserted before any non-scheduler command'
+        )
+        spec.input(
+            'metadata.options.queue_name',
+            valid_type=str,
+            required=False,
+            help='Set the name of the queue on the remote computer'
+        )
+        spec.input(
+            'metadata.options.rerunnable',
+            valid_type=bool,
+            required=False,
+            help='Determines if the calculation can be requeued / rerun.'
+        )
+        spec.input(
+            'metadata.options.account',
+            valid_type=str,
+            required=False,
+            help='Set the account to use in for the queue on the remote computer'
+        )
+        spec.input(
+            'metadata.options.qos',
+            valid_type=str,
+            required=False,
+            help='Set the quality of service to use in for the queue on the remote computer'
+        )
+        spec.input(
+            'metadata.options.withmpi',
+            valid_type=bool,
+            required=False,
+            help='Set the calculation to use mpi',
+        )
+        spec.input(
+            'metadata.options.mpirun_extra_params',
+            valid_type=(list, tuple),
+            default=lambda: [],
             help='Set the extra params to pass to the mpirun (or equivalent) command after the one provided in '
-                 'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x',)
-        spec.input('metadata.options.import_sys_environment', valid_type=bool, default=True,
-            help='If set to true, the submission script will load the system environment variables',)
-        spec.input('metadata.options.environment_variables', valid_type=dict, default=lambda: {},
-            help='Set a dictionary of custom environment variables for this calculation',)
-        spec.input('metadata.options.environment_variables_double_quotes', valid_type=bool, default=False,
+            'computer.mpirun_command. Example: mpirun -np 8 extra_params[0] extra_params[1] ... exec.x',
+        )
+        spec.input(
+            'metadata.options.import_sys_environment',
+            valid_type=bool,
+            default=True,
+            help='If set to true, the submission script will load the system environment variables',
+        )
+        spec.input(
+            'metadata.options.environment_variables',
+            valid_type=dict,
+            default=lambda: {},
+            help='Set a dictionary of custom environment variables for this calculation',
+        )
+        spec.input(
+            'metadata.options.environment_variables_double_quotes',
+            valid_type=bool,
+            default=False,
             help='If set to True, use double quotes instead of single quotes to escape the environment variables '
-                 'specified in ``environment_variables``.',)
-        spec.input('metadata.options.priority', valid_type=str, required=False,
-            help='Set the priority of the job to be queued')
-        spec.input('metadata.options.max_memory_kb', valid_type=int, required=False,
-            help='Set the maximum memory (in KiloBytes) to be asked to the scheduler')
-        spec.input('metadata.options.prepend_text', valid_type=str, default='',
+            'specified in ``environment_variables``.',
+        )
+        spec.input(
+            'metadata.options.priority',
+            valid_type=str,
+            required=False,
+            help='Set the priority of the job to be queued'
+        )
+        spec.input(
+            'metadata.options.max_memory_kb',
+            valid_type=int,
+            required=False,
+            help='Set the maximum memory (in KiloBytes) to be asked to the scheduler'
+        )
+        spec.input(
+            'metadata.options.prepend_text',
+            valid_type=str,
+            default='',
             help='Set the calculation-specific prepend text, which is going to be prepended in the scheduler-job '
-                 'script, just before the code execution',)
-        spec.input('metadata.options.append_text', valid_type=str, default='',
+            'script, just before the code execution',
+        )
+        spec.input(
+            'metadata.options.append_text',
+            valid_type=str,
+            default='',
             help='Set the calculation-specific append text, which is going to be appended in the scheduler-job '
-                 'script, just after the code execution',)
-        spec.input('metadata.options.parser_name', valid_type=str, required=False, validator=validate_parser,
-            help='Set a string for the output parser. Can be None if no output plugin is available or needed')
-        spec.input('metadata.options.additional_retrieve_list', required=False,
-            valid_type=(list, tuple), validator=validate_additional_retrieve_list,
-            help='List of relative file paths that should be retrieved in addition to what the plugin specifies.')
-        spec.input_namespace('metadata.options.stash', required=False, populate_defaults=False,
+            'script, just after the code execution',
+        )
+        spec.input(
+            'metadata.options.parser_name',
+            valid_type=str,
+            required=False,
+            validator=validate_parser,
+            help='Set a string for the output parser. Can be None if no output plugin is available or needed'
+        )
+        spec.input(
+            'metadata.options.additional_retrieve_list',
+            required=False,
+            valid_type=(list, tuple),
+            validator=validate_additional_retrieve_list,
+            help='List of relative file paths that should be retrieved in addition to what the plugin specifies.'
+        )
+        spec.input_namespace(
+            'metadata.options.stash',
+            required=False,
+            populate_defaults=False,
             validator=validate_stash_options,
-            help='Optional directives to stash files after the calculation job has completed.')
-        spec.input('metadata.options.stash.target_base', valid_type=str, required=False,
+            help='Optional directives to stash files after the calculation job has completed.'
+        )
+        spec.input(
+            'metadata.options.stash.target_base',
+            valid_type=str,
+            required=False,
             help='The base location to where the files should be stashd. For example, for the `copy` stash mode, this '
-            'should be an absolute filepath on the remote computer.')
-        spec.input('metadata.options.stash.source_list', valid_type=(tuple, list), required=False,
-            help='Sequence of relative filepaths representing files in the remote directory that should be stashed.')
-        spec.input('metadata.options.stash.stash_mode', valid_type=str, required=False,
-            help='Mode with which to perform the stashing, should be value of `aiida.common.datastructures.StashMode.')
+            'should be an absolute filepath on the remote computer.'
+        )
+        spec.input(
+            'metadata.options.stash.source_list',
+            valid_type=(tuple, list),
+            required=False,
+            help='Sequence of relative filepaths representing files in the remote directory that should be stashed.'
+        )
+        spec.input(
+            'metadata.options.stash.stash_mode',
+            valid_type=str,
+            required=False,
+            help='Mode with which to perform the stashing, should be value of `aiida.common.datastructures.StashMode`.'
+        )
 
-        spec.output('remote_folder', valid_type=orm.RemoteData,
-            help='Input files necessary to run the process will be stored in this folder node.')
-        spec.output('remote_stash', valid_type=orm.RemoteStashData, required=False,
-            help='Contents of the `stash.source_list` option are stored in this remote folder after job completion.')
-        spec.output(cls.link_label_retrieved, valid_type=orm.FolderData, pass_to_parser=True,
+        spec.output(
+            'remote_folder',
+            valid_type=orm.RemoteData,
+            help='Input files necessary to run the process will be stored in this folder node.'
+        )
+        spec.output(
+            'remote_stash',
+            valid_type=orm.RemoteStashData,
+            required=False,
+            help='Contents of the `stash.source_list` option are stored in this remote folder after job completion.'
+        )
+        spec.output(
+            cls.link_label_retrieved,
+            valid_type=orm.FolderData,
+            pass_to_parser=True,
             help='Files that are retrieved by the daemon will be stored in this node. By default the stdout and stderr '
-                 'of the scheduler will be added, but one can add more by specifying them in `CalcInfo.retrieve_list`.')
+            'of the scheduler will be added, but one can add more by specifying them in `CalcInfo.retrieve_list`.'
+        )
 
-        # Errors caused or returned by the scheduler
-        spec.exit_code(100, 'ERROR_NO_RETRIEVED_FOLDER',
-            message='The process did not have the required `retrieved` output.')
-        spec.exit_code(110, 'ERROR_SCHEDULER_OUT_OF_MEMORY',
-            message='The job ran out of memory.')
-        spec.exit_code(120, 'ERROR_SCHEDULER_OUT_OF_WALLTIME',
-            message='The job ran out of walltime.')
-        # yapf: enable
+        spec.exit_code(
+            100,
+            'ERROR_NO_RETRIEVED_FOLDER',
+            invalidates_cache=True,
+            message='The process did not have the required `retrieved` output.'
+        )
+        spec.exit_code(
+            110, 'ERROR_SCHEDULER_OUT_OF_MEMORY', invalidates_cache=True, message='The job ran out of memory.'
+        )
+        spec.exit_code(
+            120, 'ERROR_SCHEDULER_OUT_OF_WALLTIME', invalidates_cache=True, message='The job ran out of walltime.'
+        )
+        spec.exit_code(
+            131, 'ERROR_SCHEDULER_INVALID_ACCOUNT', invalidates_cache=True, message='The specified account is invalid.'
+        )
+        spec.exit_code(
+            140, 'ERROR_SCHEDULER_NODE_FAILURE', invalidates_cache=True, message='The node running the job failed.'
+        )
+        spec.exit_code(150, 'STOPPED_BY_MONITOR', invalidates_cache=True, message='{message}')
 
     @classproperty
     def spec_options(cls):  # pylint: disable=no-self-argument
@@ -302,7 +470,7 @@ class CalcJob(Process):
         return cls.spec_metadata['options']  # pylint: disable=unsubscriptable-object
 
     @classmethod
-    def get_importer(cls, entry_point_name: str = None) -> CalcJobImporter:
+    def get_importer(cls, entry_point_name: str | None = None) -> CalcJobImporter:
         """Load the `CalcJobImporter` associated with this `CalcJob` if it exists.
 
         By default an importer with the same entry point as the ``CalcJob`` will be loaded, however, this can be
@@ -318,7 +486,9 @@ class CalcJob(Process):
         if entry_point_name is None:
             _, entry_point = get_entry_point_from_class(cls.__module__, cls.__name__)
             if entry_point is not None:
-                entry_point_name = entry_point.name  # type: ignore[attr-defined]
+                entry_point_name = entry_point.name
+
+        assert entry_point_name is not None
 
         return CalcJobImporterFactory(entry_point_name)()
 
@@ -345,6 +515,10 @@ class CalcJob(Process):
         states_map[ProcessState.WAITING] = Waiting
         return states_map
 
+    @property
+    def node(self) -> orm.CalcJobNode:
+        return super().node  # type: ignore
+
     @override
     def on_terminated(self) -> None:
         """Cleanup the node by deleting the calulation job state.
@@ -365,11 +539,11 @@ class CalcJob(Process):
             `Wait` command if the calcjob is to be uploaded
 
         """
-        if self.inputs.metadata.dry_run:  # type: ignore[union-attr]
+        if self.inputs.metadata.dry_run:
             self._perform_dry_run()
             return plumpy.process_states.Stop(None, True)
 
-        if 'remote_folder' in self.inputs:  # type: ignore[operator]
+        if 'remote_folder' in self.inputs:
             exit_code = self._perform_import()
             return exit_code
 
@@ -378,6 +552,11 @@ class CalcJob(Process):
         # been overridden by the engine to `Running` so we cannot check that, but if the `exit_status` is anything other
         # than `None`, it should mean this node was taken from the cache, so the process should not be rerun.
         if self.node.exit_status is not None:
+            # Normally the outputs will be attached to the process by a ``Parser``, if defined in the inputs. But in
+            # this case, the parser will not be called. The outputs will already have been added to the process node
+            # though, so all that needs to be done here is just also assign them to the process instance. This such that
+            # when the process returns its results, it returns the actual outputs and not an empty dictionary.
+            self._outputs = self.node.get_outgoing(link_type=LinkType.CREATE).nested()  # pylint: disable=attribute-defined-outside-init
             return self.node.exit_status
 
         # Launch the upload operation
@@ -395,6 +574,29 @@ class CalcJob(Process):
         :returns: the `CalcInfo` instance
         """
         raise NotImplementedError()
+
+    def _setup_metadata(self, metadata: dict) -> None:
+        """Store the metadata on the ProcessNode."""
+        computer = metadata.pop('computer', None)
+        if computer is not None:
+            self.node.computer = computer
+
+        options = metadata.pop('options', {})
+        for option_name, option_value in options.items():
+            self.node.set_option(option_name, option_value)
+
+        super()._setup_metadata(metadata)
+
+    def _setup_inputs(self) -> None:
+        """Create the links between the input nodes and the ProcessNode that represents this process."""
+        super()._setup_inputs()
+
+        # If a computer has not yet been set, which should have been done in ``_setup_metadata`` if it was specified
+        # in the ``metadata`` inputs, set the computer associated with the ``code`` input. Note that not all ``code``s
+        # will have an associated computer, but in that case the ``computer`` property should return ``None`` and
+        # nothing would change anyway.
+        if not self.node.computer:
+            self.node.computer = self.inputs.code.computer
 
     def _perform_dry_run(self):
         """Perform a dry run.
@@ -414,7 +616,7 @@ class CalcJob(Process):
                 calc_info = self.presubmit(folder)
                 transport.chdir(folder.abspath)
                 upload_calculation(self.node, transport, calc_info, folder, inputs=self.inputs, dry_run=True)
-                self.node.dry_run_info = {
+                self.node.dry_run_info = {  # type: ignore
                     'folder': folder.abspath,
                     'script_filename': self.node.get_option('submit_script_filename')
                 }
@@ -429,21 +631,24 @@ class CalcJob(Process):
         from aiida.common.datastructures import CalcJobState
         from aiida.common.folders import SandboxFolder
         from aiida.engine.daemon.execmanager import retrieve_calculation
+        from aiida.manage import get_config_option
         from aiida.transports.plugins.local import LocalTransport
 
+        filepath_sandbox = get_config_option('storage.sandbox') or None
+
         with LocalTransport() as transport:
-            with SandboxFolder() as folder:
-                with SandboxFolder() as retrieved_temporary_folder:
+            with SandboxFolder(filepath_sandbox) as folder:
+                with SandboxFolder(filepath_sandbox) as retrieved_temporary_folder:
                     self.presubmit(folder)
-                    self.node.set_remote_workdir(
-                        self.inputs.remote_folder.get_remote_path()  # type: ignore[union-attr]
-                    )
+                    self.node.set_remote_workdir(self.inputs.remote_folder.get_remote_path())
                     retrieve_calculation(self.node, transport, retrieved_temporary_folder.abspath)
                     self.node.set_state(CalcJobState.PARSING)
                     self.node.base.attributes.set(orm.CalcJobNode.IMMIGRATED_KEY, True)
                     return self.parse(retrieved_temporary_folder.abspath)
 
-    def parse(self, retrieved_temporary_folder: Optional[str] = None) -> ExitCode:
+    def parse(
+        self, retrieved_temporary_folder: Optional[str] = None, existing_exit_code: ExitCode | None = None
+    ) -> ExitCode:
         """Parse a retrieved job calculation.
 
         This is called once it's finished waiting for the calculation to be finished and the data has been retrieved.
@@ -490,7 +695,23 @@ class CalcJob(Process):
         for entry in self.node.base.links.get_outgoing():
             self.out(entry.link_label, entry.node)
 
+        if existing_exit_code is not None:
+            return existing_exit_code
+
         return exit_code or ExitCode(0)
+
+    @staticmethod
+    def terminate(exit_code: ExitCode) -> ExitCode:
+        """Terminate the process immediately and return the given exit code.
+
+        This method is called by :meth:`aiida.engine.processes.calcjobs.tasks.Waiting.execute` if a monitor triggered
+        the job to be terminated and specified the parsing to be skipped. It will construct the running state and tell
+        this method to be run, which returns the given exit code which will cause the process to be terminated.
+
+        :param exit_code: The exit code to return.
+        :returns: The provided exit code.
+        """
+        return exit_code
 
     def parse_scheduler_output(self, retrieved: orm.Node) -> Optional[ExitCode]:
         """Parse the output of the scheduler if that functionality has been implemented for the plugin."""
@@ -519,7 +740,7 @@ class CalcJob(Process):
             self.logger.warning('could not determine `stderr` filename because `scheduler_stderr` option was not set.')
         else:
             try:
-                scheduler_stderr = retrieved.base.repository.get_object_content(filename_stderr)
+                scheduler_stderr = retrieved.base.repository.get_object_content(filename_stderr, mode='r')
             except FileNotFoundError:
                 scheduler_stderr = None
                 self.logger.warning(f'could not parse scheduler output: the `{filename_stderr}` file is missing')
@@ -528,13 +749,17 @@ class CalcJob(Process):
             self.logger.warning('could not determine `stdout` filename because `scheduler_stdout` option was not set.')
         else:
             try:
-                scheduler_stdout = retrieved.base.repository.get_object_content(filename_stdout)
+                scheduler_stdout = retrieved.base.repository.get_object_content(filename_stdout, mode='r')
             except FileNotFoundError:
                 scheduler_stdout = None
                 self.logger.warning(f'could not parse scheduler output: the `{filename_stdout}` file is missing')
 
         try:
-            exit_code = scheduler.parse_output(detailed_job_info, scheduler_stdout, scheduler_stderr)
+            exit_code = scheduler.parse_output(
+                detailed_job_info,
+                scheduler_stdout or '',  # type: ignore[arg-type]
+                scheduler_stderr or '',  # type: ignore[arg-type]
+            )
         except exceptions.FeatureNotAvailable:
             self.logger.info(f'`{scheduler.__class__.__name__}` does not implement scheduler output parsing')
             return None
@@ -589,29 +814,27 @@ class CalcJob(Process):
         from aiida.common.datastructures import CodeInfo, CodeRunMode
         from aiida.common.exceptions import InputValidationError, InvalidOperation, PluginInternalError, ValidationError
         from aiida.common.utils import validate_list_of_string_tuples
-        from aiida.orm import Code, Computer, load_node
+        from aiida.orm import AbstractCode, Computer, load_code
         from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
         inputs = self.node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
 
-        if not self.inputs.metadata.dry_run and not self.node.is_stored:  # type: ignore[union-attr]
+        if not self.inputs.metadata.dry_run and not self.node.is_stored:
             raise InvalidOperation('calculation node is not stored.')
 
         computer = self.node.computer
-        codes = [_ for _ in inputs.all_nodes() if isinstance(_, Code)]
+        assert computer is not None
+        codes = [_ for _ in inputs.all_nodes() if isinstance(_, AbstractCode)]
 
         for code in codes:
-            if not code.can_run_on(computer):
+            if not code.can_run_on_computer(computer):
                 raise InputValidationError(
                     'The selected code {} for calculation {} cannot run on computer {}'.format(
                         code.pk, self.node.pk, computer.label
                     )
                 )
 
-            if code.is_local() and code.get_local_executable() in folder.get_content_list():
-                raise PluginInternalError(
-                    f'The plugin created a file {code.get_local_executable()} that is also the executable name!'
-                )
+            code.validate_working_directory(folder)
 
         calc_info = self.prepare_for_submission(folder)
         calc_info.uuid = str(self.node.uuid)
@@ -620,7 +843,6 @@ class CalcJob(Process):
         job_tmpl = JobTemplate()
         job_tmpl.submit_as_hold = False
         job_tmpl.rerunnable = self.options.get('rerunnable', False)
-        job_tmpl.job_environment = {}
         # 'email', 'email_on_started', 'email_on_terminated',
         job_tmpl.job_name = f'aiida-{self.node.pk}'
         job_tmpl.sched_output_path = self.options.scheduler_stdout
@@ -648,7 +870,7 @@ class CalcJob(Process):
 
         # If the inputs contain a ``remote_folder`` input node, we are in an import scenario and can skip the rest
         if 'remote_folder' in inputs.all_link_labels():
-            return
+            return calc_info
 
         # The remaining code is only necessary for actual runs, for example, creating the submission script
         scheduler = computer.get_scheduler()
@@ -660,19 +882,19 @@ class CalcJob(Process):
         #   would return None, in which case the join method would raise
         #   an exception
         prepend_texts = [computer.get_prepend_text()] + \
-            [code.get_prepend_text() for code in codes] + \
+            [code.prepend_text for code in codes] + \
             [calc_info.prepend_text, self.node.get_option('prepend_text')]
         job_tmpl.prepend_text = '\n\n'.join(prepend_text for prepend_text in prepend_texts if prepend_text)
 
         append_texts = [self.node.get_option('append_text'), calc_info.append_text] + \
-            [code.get_append_text() for code in codes] + \
+            [code.append_text for code in codes] + \
             [computer.get_append_text()]
         job_tmpl.append_text = '\n\n'.join(append_text for append_text in append_texts if append_text)
 
         # Set resources, also with get_default_mpiprocs_per_machine
         resources = self.node.get_option('resources')
-        scheduler.preprocess_resources(resources, computer.get_default_mpiprocs_per_machine())
-        job_tmpl.job_resource = scheduler.create_job_resource(**resources)
+        scheduler.preprocess_resources(resources or {}, computer.get_default_mpiprocs_per_machine())
+        job_tmpl.job_resource = scheduler.create_job_resource(**resources)  # type: ignore
 
         subst_dict = {'tot_num_mpiprocs': job_tmpl.job_resource.get_tot_num_mpiprocs()}
 
@@ -693,31 +915,52 @@ class CalcJob(Process):
 
             if code_info.code_uuid is None:
                 raise PluginInternalError('CalcInfo should have the information of the code to be launched')
-            this_code = load_node(code_info.code_uuid, sub_classes=(Code,))
 
-            # To determine whether this code should be run with MPI enabled, we get the value that was set in the inputs
-            # of the entire process, which can then be overwritten by the value from the `CodeInfo`. This allows plugins
-            # to force certain codes to run without MPI, even if the user wants to run all codes with MPI whenever
-            # possible. This use case is typically useful for `CalcJob`s that consist of multiple codes where one or
-            # multiple codes always have to be executed without MPI.
+            code = load_code(code_info.code_uuid)
 
-            this_withmpi = self.node.get_option('withmpi')
+            # Here are the three values that will determine whether the code is to be run with MPI _if_ they are not
+            # ``None``. If any of them are explicitly defined but are not equivalent, an exception is raised. We use the
+            # ``self._raw_inputs`` to determine the actual value passed for ``metadata.options.withmpi`` and
+            # distinghuish it from the default.
+            raw_inputs = self._raw_inputs or {}  # type: ignore[var-annotated]
+            with_mpi_option = raw_inputs.get('metadata', {}).get('options', {}).get('withmpi', None)
+            with_mpi_plugin = code_info.withmpi
+            with_mpi_code = code.with_mpi
 
-            # Override the value of `withmpi` with that of the `CodeInfo` if and only if it is set
-            if code_info.withmpi is not None:
-                this_withmpi = code_info.withmpi
+            with_mpi_values = [with_mpi_option, with_mpi_plugin, with_mpi_code]
+            with_mpi_values_defined = [value for value in with_mpi_values if value is not None]
+            with_mpi_values_set = set(with_mpi_values_defined)
 
-            if this_withmpi:
-                prepend_cmdline_params = mpi_args + extra_mpirun_params
+            # If more than one value is defined, they have to be identical, or we raise that a conflict is encountered
+            if len(with_mpi_values_set) > 1:
+                error = f'Inconsistent requirements as to whether code `{code}` should be run with or without MPI.'
+                if with_mpi_option is not None:
+                    error += f'\nThe `metadata.options.withmpi` input was set to `{with_mpi_option}`.'
+                if with_mpi_plugin is not None:
+                    error += f'\nThe plugin require `{with_mpi_plugin}`.'
+                if with_mpi_code is not None:
+                    error += f'\nThe code `{code}` required `{with_mpi_code}`.'
+                raise RuntimeError(error)
+
+            # At this point we know that the three explicit values agree if they are defined, so we simply set the value
+            if with_mpi_values_set:
+                with_mpi = with_mpi_values_set.pop()
             else:
-                prepend_cmdline_params = []
+                # Fall back to the default, which is to not use MPI
+                with_mpi = False
 
-            cmdline_params = [this_code.get_execname()] + (code_info.cmdline_params or [])
+            if with_mpi:
+                prepend_cmdline_params = code.get_prepend_cmdline_params(mpi_args, extra_mpirun_params)
+            else:
+                prepend_cmdline_params = code.get_prepend_cmdline_params()
+
+            cmdline_params = code.get_executable_cmdline_params(code_info.cmdline_params)
 
             tmpl_code_info = JobTemplateCodeInfo()
             tmpl_code_info.prepend_cmdline_params = prepend_cmdline_params
             tmpl_code_info.cmdline_params = cmdline_params
-            tmpl_code_info.use_double_quotes = [computer.get_use_double_quotes(), this_code.get_use_double_quotes()]
+            tmpl_code_info.use_double_quotes = [computer.get_use_double_quotes(), code.use_double_quotes]
+            tmpl_code_info.wrap_cmdline_params = code.wrap_cmdline_params
             tmpl_code_info.stdin_name = code_info.stdin_name
             tmpl_code_info.stdout_name = code_info.stdout_name
             tmpl_code_info.stderr_name = code_info.stderr_name

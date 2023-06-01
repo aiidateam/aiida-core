@@ -12,6 +12,7 @@
 from collections.abc import Iterator, Mapping, Sized
 from functools import singledispatch
 
+from aiida.orm.entities import from_backend_entity
 from aiida.orm.implementation import (
     BackendAuthInfo,
     BackendComment,
@@ -72,44 +73,44 @@ def _(backend_entity):
 def _(backend_entity):
     from .groups import load_group_class
     group_class = load_group_class(backend_entity.type_string)
-    return group_class.from_backend_entity(backend_entity)
+    return from_backend_entity(group_class, backend_entity)
 
 
 @get_orm_entity.register(BackendComputer)
 def _(backend_entity):
     from . import computers
-    return computers.Computer.from_backend_entity(backend_entity)
+    return from_backend_entity(computers.Computer, backend_entity)
 
 
 @get_orm_entity.register(BackendUser)
 def _(backend_entity):
     from . import users
-    return users.User.from_backend_entity(backend_entity)
+    return from_backend_entity(users.User, backend_entity)
 
 
 @get_orm_entity.register(BackendAuthInfo)
 def _(backend_entity):
     from . import authinfos
-    return authinfos.AuthInfo.from_backend_entity(backend_entity)
+    return from_backend_entity(authinfos.AuthInfo, backend_entity)
 
 
 @get_orm_entity.register(BackendLog)
 def _(backend_entity):
     from . import logs
-    return logs.Log.from_backend_entity(backend_entity)
+    return from_backend_entity(logs.Log, backend_entity)
 
 
 @get_orm_entity.register(BackendComment)
 def _(backend_entity):
     from . import comments
-    return comments.Comment.from_backend_entity(backend_entity)
+    return from_backend_entity(comments.Comment, backend_entity)
 
 
 @get_orm_entity.register(BackendNode)
 def _(backend_entity):
     from .utils.node import load_node_class  # pylint: disable=import-error,no-name-in-module
     node_class = load_node_class(backend_entity.node_type)
-    return node_class.from_backend_entity(backend_entity)
+    return from_backend_entity(node_class, backend_entity)
 
 
 class ConvertIterator(Iterator, Sized):

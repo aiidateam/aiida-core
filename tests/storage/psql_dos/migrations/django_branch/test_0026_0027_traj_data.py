@@ -13,17 +13,18 @@ import pytest
 
 from aiida.common import timezone
 from aiida.common.utils import get_new_uuid
+from aiida.storage.psql_dos.backend import get_filepath_container
 from aiida.storage.psql_dos.migrations.utils import utils
 from aiida.storage.psql_dos.migrations.utils.create_dbattribute import create_rows
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_traj_data(perform_migrations: PsqlDostoreMigrator):
+def test_traj_data(perform_migrations: PsqlDosMigrator):
     """Test `TrajectoryData` nodes migration, moving symbol lists from repository array to attributes."""
     # starting revision
     perform_migrations.migrate_up('django@django_0025')
 
-    repo_path = perform_migrations.profile.repository_path
+    repo_path = get_filepath_container(perform_migrations.profile).parent
 
     # setup the database
     user_model = perform_migrations.get_current_table('db_dbuser')

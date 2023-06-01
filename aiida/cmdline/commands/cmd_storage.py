@@ -110,17 +110,19 @@ def storage_info(detailed):
     help='Perform all maintenance tasks, including the ones that should not be executed while the profile is in use.'
 )
 @click.option(
+    '--no-repack', is_flag=True, help='Disable the repacking of the storage when running a `full maintenance`.'
+)
+@options.FORCE()
+@click.option(
     '--dry-run',
     is_flag=True,
     help=
     'Run the maintenance in dry-run mode which will print actions that would be taken without actually executing them.'
 )
-@click.option(
-    '--compress', default=False, help='Use compression if possible when carrying out maintenance tasks.'
-)
+@click.option('--compress', default=False, help='Use compression if possible when carrying out maintenance tasks.')
 @decorators.with_dbenv()
 @click.pass_context
-def storage_maintain(ctx, full, dry_run, compress):
+def storage_maintain(ctx, full, no_repack, force, dry_run, compress):
     """Performs maintenance tasks on the repository."""
     from aiida.common.exceptions import LockingProfileError
     from aiida.manage.manager import get_manager
@@ -147,16 +149,18 @@ def storage_maintain(ctx, full, dry_run, compress):
             'executed while still running AiiDA. '
             'However, not all operations that are required to fully optimize disk usage and future performance '
             'can be done in this way.\n'
-            'Whenever you find the time or opportunity, please consider running `verdi repository maintenance '
-            '--full` for a more complete optimization.\n'
+            'Whenever you find the time or opportunity, please consider running `verdi storage maintain --full` '
+            'for a more complete optimization.\n'
         )
 
-    if not dry_run:
-        if not click.confirm('Are you sure you want continue in this mode?'):
-            return
+    if not dry_run and not force and not click.confirm('Are you sure you want continue in this mode?'):
+        return
 
     try:
-        storage.maintain(full=full, dry_run=dry_run, compress=compress)
+        if full and no_repack:
+            storage.maintain(full=full, dry_run=dry_run, do_repack=False, compress=compress)
+        else:
+            storage.maintain(full=full, dry_run=dry_run, compress=compress)
     except LockingProfileError as exception:
         echo.echo_critical(str(exception))
     echo.echo_success('Requested maintenance procedures finished.')

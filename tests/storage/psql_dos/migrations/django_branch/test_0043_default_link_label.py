@@ -11,10 +11,10 @@
 from uuid import uuid4
 
 from aiida.common import timezone
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_legacy_jobcalc_attrs(perform_migrations: PsqlDostoreMigrator):
+def test_legacy_jobcalc_attrs(perform_migrations: PsqlDosMigrator):
     """Test update of link labels."""
     # starting revision
     perform_migrations.migrate_up('django@django_0042')

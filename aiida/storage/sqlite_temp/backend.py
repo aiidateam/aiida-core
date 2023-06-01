@@ -12,15 +12,12 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from functools import cached_property
-import os
-from pathlib import Path
 from typing import Any, Iterator, Sequence
 
 from sqlalchemy.orm import Session
 
 from aiida.common.exceptions import ClosedStorage
-from aiida.manage import Profile
-from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
+from aiida.manage import Profile, get_config_option
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import BackendEntity, StorageBackend
 from aiida.repository.backend.sandbox import SandboxRepositoryBackend
@@ -44,22 +41,17 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
     def create_profile(
         name: str = 'temp',
         default_user_email='user@email.com',
-        sandbox_path: str | Path | None = None,
         options: dict | None = None,
         debug: bool = False
     ) -> Profile:
         """Create a new profile instance for this backend, from the path to the zip file."""
-        sandbox_path = sandbox_path or os.path.join(AIIDA_CONFIG_FOLDER, 'repository', name)
         return Profile(
-            name,
-            {
+            name, {
                 'default_user_email': default_user_email,
                 'storage': {
-                    'backend': 'sqlite_temp',
+                    'backend': 'core.sqlite_temp',
                     'config': {
                         'debug': debug,
-                        # Note this is currently required, see https://github.com/aiidateam/aiida-core/issues/5451
-                        'repository_uri': f'file://{os.path.abspath(sandbox_path)}',
                     }
                 },
                 'process_control': {
@@ -79,6 +71,10 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
         return get_schema_version_head()
 
     @classmethod
+    def initialise(cls, profile: 'Profile', reset: bool = False) -> bool:  # pylint: disable=unused-argument
+        return False
+
+    @classmethod
     def migrate(cls, profile: Profile):
         pass
 
@@ -92,7 +88,7 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
 
     def __str__(self) -> str:
         state = 'closed' if self.is_closed else 'open'
-        return f'SqliteTemp storage [{state}], sandbox: {self.profile.repository_path}'
+        return f'SqliteTemp storage [{state}], sandbox: {self._repo}'
 
     @property
     def is_closed(self) -> bool:
@@ -133,7 +129,7 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
             raise ClosedStorage(str(self))
         if self._repo is None:
             # to-do this does not seem to be removing the folder on garbage collection?
-            self._repo = SandboxRepositoryBackend(sandbox_in_repo=True)
+            self._repo = SandboxRepositoryBackend(filepath=get_config_option('storage.sandbox') or None)
         return self._repo
 
     @property
@@ -157,7 +153,7 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
                 with session.begin_nested():
                     yield session
 
-    def _clear(self, recreate_user: bool = True) -> None:
+    def _clear(self) -> None:
         raise NotImplementedError
 
     def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:

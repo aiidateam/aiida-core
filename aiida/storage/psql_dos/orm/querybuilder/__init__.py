@@ -8,5 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Implementation of QueryBuilder backend."""
-
 from .main import SqlaQueryBuilder
+
+__all__ = ('SqlaQueryBuilder',)

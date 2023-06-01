@@ -6,7 +6,7 @@ from aiida.orm import Int
 @calcfunction
 def divide(x, y):
     if y == 0:
-        return ExitCode(100, 'cannot divide by 0')
+        return ExitCode(300, 'cannot divide by 0')
 
     return x / y
 

@@ -8,8 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Extras tests for the export and import routines"""
-import pytest
-
 from aiida import orm
 from aiida.tools.archive import create_archive, get_format, import_archive
 
@@ -39,7 +37,6 @@ def test_import_of_attributes(tmp_path, aiida_profile):
     assert imported_node.base.attributes.get('c') == 3
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 def test_strip_checkpoints(tmp_path):
     """Test that `ProcessNode` checkpoints are stripped.
 

@@ -278,7 +278,7 @@ def load_documentation_profile():
         profile_name = 'readthedocs'
         profile_config = {
             'storage': {
-                'backend': 'psql_dos',
+                'backend': 'core.psql_dos',
                 'config': {
                     'database_engine': 'postgresql_psycopg2',
                     'database_port': 5432,

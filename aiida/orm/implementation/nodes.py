@@ -55,7 +55,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
         :return: the node type
         """
 
-    @property  # type: ignore[misc]
+    @property
     @abc.abstractmethod
     def process_type(self) -> Optional[str]:
         """Return the node process type.
@@ -63,7 +63,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
         :return: the process type
         """
 
-    @process_type.setter  # type: ignore[misc]
+    @process_type.setter
     @abc.abstractmethod
     def process_type(self, value: Optional[str]) -> None:
         """Set the process type.
@@ -71,7 +71,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
         :param value: the new value to set
         """
 
-    @property  # type: ignore[misc]
+    @property
     @abc.abstractmethod
     def label(self) -> str:
         """Return the node label.
@@ -79,7 +79,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
         :return: the label
         """
 
-    @label.setter  # type: ignore[misc]
+    @label.setter
     @abc.abstractmethod
     def label(self, value: str) -> None:
         """Set the label.
@@ -87,7 +87,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
         :param value: the new value to set
         """
 
-    @property  # type: ignore[misc]
+    @property
     @abc.abstractmethod
     def description(self) -> str:
         """Return the node description.
@@ -95,7 +95,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
         :return: the description
         """
 
-    @description.setter  # type: ignore[misc]
+    @description.setter
     @abc.abstractmethod
     def description(self, value: str) -> None:
         """Set the description.
@@ -103,7 +103,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
         :param value: the new value to set
         """
 
-    @property  # type: ignore[misc]
+    @property
     @abc.abstractmethod
     def repository_metadata(self) -> Dict[str, Any]:
         """Return the node repository metadata.
@@ -111,7 +111,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
         :return: the repository metadata
         """
 
-    @repository_metadata.setter  # type: ignore[misc]
+    @repository_metadata.setter
     @abc.abstractmethod
     def repository_metadata(self, value: Dict[str, Any]) -> None:
         """Set the repository metadata.
@@ -119,7 +119,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
         :param value: the new value to set
         """
 
-    @property  # type: ignore[misc]
+    @property
     @abc.abstractmethod
     def computer(self) -> Optional['BackendComputer']:
         """Return the computer of this node.
@@ -127,7 +127,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
         :return: the computer or None
         """
 
-    @computer.setter  # type: ignore[misc]
+    @computer.setter
     @abc.abstractmethod
     def computer(self, computer: Optional['BackendComputer']) -> None:
         """Set the computer of this node.
@@ -135,7 +135,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
         :param computer: a `BackendComputer`
         """
 
-    @property  # type: ignore[misc]
+    @property
     @abc.abstractmethod
     def user(self) -> 'BackendUser':
         """Return the user of this node.
@@ -143,7 +143,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
         :return: the user
         """
 
-    @user.setter  # type: ignore[misc]
+    @user.setter
     @abc.abstractmethod
     def user(self, user: 'BackendUser') -> None:
         """Set the user of this node.

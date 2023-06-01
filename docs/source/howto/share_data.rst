@@ -183,6 +183,11 @@ The AiiDA REST API allows to query your AiiDA database over HTTP(S) and returns 
     As of October 2020, the AiiDA REST API only supports ``GET`` methods (reading); in particular, it does *not* yet support workflow management.
     This feature is, however, part of the `AiiDA roadmap <https://github.com/aiidateam/aiida-core/wiki/AiiDA-release-roadmap>`_.
 
+
+.. note::
+    To ensure that when serving ``orm.ArrayData`` one always obtains a valid JSON compliant with the `ECMA-262 standard <https://www.ecma-international.org/publications-and-standards/standards/ecma-262/>`_, any ``np.nan``, ``np.inf`` and/or ``-np.inf`` entries will be replaced by ``None`` which will be rendered as ``null`` when getting the array via the API call.
+
+
 .. _how-to:share:serve:launch:
 
 Launching the REST API
@@ -213,13 +218,9 @@ Like all ``verdi`` commands, you can select a different AiiDA profile via the ``
 
     REST API version history:
 
-
-Version history
----------------
-
-     * ``aiida-core`` >= 1.0.0b6: ``v4``. Simplified endpoints; only ``/nodes``, ``/processes``, ``/calcjobs``, ``/groups``, ``/computers`` and ``/servers`` remain.
-     * ``aiida-core`` >= 1.0.0b3, <1.0.0b6: ``v3``. Development version, never shipped with a stable release.
-     * ``aiida-core`` <1.0.0b3: ``v2``. First API version, with new endpoints added step by step.
+    * ``aiida-core`` >= 1.0.0b6: ``v4``. Simplified endpoints; only ``/nodes``, ``/processes``, ``/calcjobs``, ``/groups``, ``/computers`` and ``/servers`` remain.
+    * ``aiida-core`` >= 1.0.0b3, <1.0.0b6: ``v3``. Development version, never shipped with a stable release.
+    * ``aiida-core`` <1.0.0b3: ``v2``. First API version, with new endpoints added step by step.
 
 
 .. _how-to:share:serve:query:
@@ -231,7 +232,7 @@ A URL to query the REST API consists of:
 
 1. The *base URL*, by default:
 
-    http://127.0.0.1:5000/api/v4
+   http://127.0.0.1:5000/api/v4
 
    Querying the base URL returns a list of all available endpoints.
 
@@ -277,6 +278,29 @@ Here are some examples to try::
 
 For an extensive user documentation of the endpoints, the query string as well as the format of the responses, see the :ref:`AiiDA REST API reference <reference:rest-api>`.
 
+.. versionadded:: 2.1.0
+
+It is possible to allow a request to declare a specific profile for which to run the profile.
+This makes it possible to use a single REST API to serve the content of all configured profiles.
+The profile switching functionality is disabled by default but can be enabled through the config:
+
+.. code-block:: console
+
+    verdi config set rest_api.profile_switching True
+
+After the REST API is restarted, it will now accept the `profile` query parameter, for example:
+
+.. code-block:: console
+
+    http://127.0.0.1:5000/api/v4/computers?profile=some-profile-name
+
+If the specified is already loaded, the REST API functions exactly as without profile switching enabled.
+If another profile is specified, the REST API will first switch profiles before executing the request.
+
+.. note::
+
+    If the profile parameter is specified in a request and the REST API does not have profile switching enabled, a 400 response is returned.
+
 .. _how-to:share:serve:deploy:
 
 Deploying a REST API server
@@ -296,21 +320,21 @@ A ``myprofile-rest.wsgi`` script for an AiiDA profile ``myprofile`` would look l
 
 In the following, we explain how to run this wsgi application using Apache on Ubuntu.
 
-    #. Install and enable the ``mod_wsgi`` `WSGI module <https://modwsgi.readthedocs.io/>`_ module:
+#. Install and enable the ``mod_wsgi`` `WSGI module <https://modwsgi.readthedocs.io/>`_ module:
 
-    .. code-block:: console
+.. code-block:: console
 
-           $ sudo apt install libapache2-mod-wsgi-py3
-           $ sudo a2enmod wsgi
+       $ sudo apt install libapache2-mod-wsgi-py3
+       $ sudo a2enmod wsgi
 
-    #. Place the WSGI script in a folder on your server, for example ``/home/ubuntu/wsgi/myprofile-rest.wsgi``.
+#. Place the WSGI script in a folder on your server, for example ``/home/ubuntu/wsgi/myprofile-rest.wsgi``.
 
-    #. Configure apache to run the WSGI application using a virtual host configuration similar to:
+#. Configure apache to run the WSGI application using a virtual host configuration similar to:
 
-       .. literalinclude:: include/snippets/aiida-rest.conf
+   .. literalinclude:: include/snippets/aiida-rest.conf
 
-       Place this ``aiida-rest.conf`` file in ``/etc/apache2/sites-enabled``
+   Place this ``aiida-rest.conf`` file in ``/etc/apache2/sites-enabled``
 
-    #. Restart apache: ``sudo service apache2 restart``.
+#. Restart apache: ``sudo service apache2 restart``.
 
 You should now be able to reach your REST API at ``localhost/myprofile/api/v4`` (Port 80).

@@ -8,20 +8,22 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=redefined-outer-name
-"""Tests for :class:`aiida.orm.nodes.data.code.Code` class."""
+"""Tests for :class:`aiida.orm.nodes.data.code.legacy.Code` class."""
+import uuid
+
 import pytest
 
 from aiida.common.exceptions import ValidationError
 from aiida.orm import Code, Computer
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.usefixtures('suppress_internal_deprecations')
 def test_validate_remote_exec_path():
     """Test ``Code.validate_remote_exec_path``."""
     computer = Computer(
-        label='test-code-computer', transport_type='core.local', hostname='localhost', scheduler_type='core.slurm'
+        label=uuid.uuid4().hex, transport_type='core.local', hostname='localhost', scheduler_type='core.slurm'
     ).store()
-    code = Code(remote_computer_exec=[computer, '/bin/invalid'])
+    code = Code(remote_computer_exec=(computer, '/bin/invalid'))
 
     with pytest.raises(ValidationError, match=r'Could not connect to the configured computer.*'):
         code.validate_remote_exec_path()
@@ -31,5 +33,16 @@ def test_validate_remote_exec_path():
     with pytest.raises(ValidationError, match=r'the provided remote absolute path `.*` does not exist.*'):
         code.validate_remote_exec_path()
 
-    code = Code(remote_computer_exec=[computer, '/bin/bash'])
+    code = Code(remote_computer_exec=(computer, '/bin/bash'))
     code.validate_remote_exec_path()
+
+
+@pytest.mark.usefixtures('suppress_internal_deprecations')
+def test_get_execname():
+    """Test ``Code.get_execname``."""
+    computer = Computer(
+        label=uuid.uuid4().hex, transport_type='core.local', hostname='localhost', scheduler_type='core.slurm'
+    ).store()
+    code = Code(remote_computer_exec=(computer, '/bin/invalid'))
+
+    assert code.get_execname() == '/bin/invalid'

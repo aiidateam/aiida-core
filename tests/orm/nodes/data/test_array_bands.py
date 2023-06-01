@@ -10,6 +10,7 @@
 # pylint: disable=redefined-outer-name
 """Tests for the :mod:`aiida.orm.nodes.data.array.bands` module."""
 from argparse import Namespace
+import uuid
 
 import pytest
 
@@ -45,7 +46,6 @@ class TestGetBandsAndParentsStructure:
         return args
 
     @pytest.mark.parametrize('all_users, expected', ((True, [True, True]), (False, [True, False])))
-    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_all_users(self, alternate_user, all_users, expected):
         """Test the behavior for the ``all_users`` argument."""
         bands_default_user = BandsData().store()
@@ -60,12 +60,11 @@ class TestGetBandsAndParentsStructure:
         assert [node.pk in node_pks for node in bands] == expected
 
     @pytest.mark.parametrize('argument, attribute', (('group_name', 'label'), ('group_pk', 'pk')))
-    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_identifier(self, argument, attribute):
         """Test the behavior for the ``group_name`` and ``group_pk`` arguments."""
         bands_data_grouped = BandsData().store()
         _ = BandsData().store()
-        bands_group = Group('some_bands_data').store()
+        bands_group = Group(uuid.uuid4().hex).store()
         bands_group.add_nodes(bands_data_grouped)
 
         args = self._get_default_ns()

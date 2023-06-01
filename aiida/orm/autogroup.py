@@ -176,7 +176,7 @@ class AutogroupManager:
         # If we are here, exclude is not None
         # include *only* in *none* of the filters match (that is, exclude as
         # soon as any of the filters matches)
-        return not any(self._matches(entry_point_string, filter_string) for filter_string in exclude)
+        return not any(self._matches(entry_point_string, filter_string) for filter_string in (exclude or []))
 
     def get_or_create_group(self) -> AutoGroup:
         """Return the current `AutoGroup`, or create one if None has been set yet.

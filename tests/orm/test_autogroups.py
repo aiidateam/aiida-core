@@ -8,10 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the Autogroup functionality."""
+import pytest
+
 from aiida.orm import AutoGroup, QueryBuilder
 from aiida.orm.autogroup import AutogroupManager
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_get_or_create(backend):
     """Test the ``get_or_create_group`` method of ``Autogroup``."""
     label_prefix = 'test_prefix_TestAutogroup'

@@ -21,9 +21,9 @@ Writing to the repository
 
 To write files to a node, you can use one of the following three methods:
 
- * :meth:`~aiida.orm.nodes.repository.NodeRepository.put_object_from_file`
- * :meth:`~aiida.orm.nodes.repository.NodeRepository.put_object_from_filelike`
- * :meth:`~aiida.orm.nodes.repository.NodeRepository.put_object_from_tree`
+* :meth:`~aiida.orm.nodes.repository.NodeRepository.put_object_from_file`
+* :meth:`~aiida.orm.nodes.repository.NodeRepository.put_object_from_filelike`
+* :meth:`~aiida.orm.nodes.repository.NodeRepository.put_object_from_tree`
 
 Let's assume that you have a file on your local file system called `/some/path/file.txt` that you want to copy to a node.
 The most straightforward solution is the following:
@@ -83,9 +83,9 @@ Listing repository content
 
 To determine the contents of a node's repository, you can use the following methods:
 
- * :meth:`~aiida.orm.nodes.repository.NodeRepository.list_object_names`
- * :meth:`~aiida.orm.nodes.repository.NodeRepository.list_objects`
- * :meth:`~aiida.orm.nodes.repository.NodeRepository.walk`
+* :meth:`~aiida.orm.nodes.repository.NodeRepository.list_object_names`
+* :meth:`~aiida.orm.nodes.repository.NodeRepository.list_objects`
+* :meth:`~aiida.orm.nodes.repository.NodeRepository.walk`
 
 The first method will return a list of file objects contained within the node's repository, where an object can be either a directory or a file:
 
@@ -143,8 +143,8 @@ Reading from the repository
 
 To retrieve the content of files stored in a node's repository, you can use the following methods:
 
- * :meth:`~aiida.orm.nodes.repository.NodeRepository.open`
- * :meth:`~aiida.orm.nodes.repository.NodeRepository.get_object_content`
+* :meth:`~aiida.orm.nodes.repository.NodeRepository.open`
+* :meth:`~aiida.orm.nodes.repository.NodeRepository.get_object_content`
 
 The first method functions exactly as Python's ``open`` built-in function:
 

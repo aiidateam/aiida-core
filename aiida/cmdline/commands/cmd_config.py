@@ -40,7 +40,7 @@ def verdi_config_list(ctx, prefix, description: bool):
     from aiida.manage.configuration import Config, Profile
 
     config: Config = ctx.obj.config
-    profile: Profile = ctx.obj.profile
+    profile: Profile = ctx.obj.get('profile', None)
 
     if not profile:
         echo.echo_warning('no profiles configured: run `verdi setup` to create one')
@@ -197,7 +197,7 @@ def verdi_config_caching(disabled):
 
 
 @verdi_config.command('downgrade')
-@click.argument('version', type=click.Choice({str(m.down_revision) for m in MIGRATIONS}))
+@click.argument('version', type=click.Choice(list({str(m.down_revision) for m in MIGRATIONS})))
 def verdi_config_downgrade(version):
     """Print a configuration, downgraded to a specific version."""
     path = Path(get_config_path())

@@ -30,7 +30,8 @@ Installation issues
 RabbitMQ incompatibility
 ........................
 
-AiiDA is currently not compatible with RabbitMQ v3.8.15 and up with default configuration.
+RabbitMQ v3.5 and older are `end-of-life <https://www.rabbitmq.com/versions.html>`_ and are not supported in any way.
+For RabbitMQ v3.8.15 and up, AiiDA is not compatible with the default configuration of the server.
 When AiiDA is run with an incompatible version of RabbitMQ, the following warning will be displayed:
 
 .. code-block:: console
@@ -354,7 +355,7 @@ Improvements for dependencies
 Activating the ASE visualizer
 ..............................
 
-Within a virtual environment, attempt to visualize a structure with ``ase`` (either from the shell, or using the command ``verdi data structure show --format=ase <PK>``), might end up with the following error message::
+Within a virtual environment, attempt to visualize a structure with ``ase`` (either from the shell, or using the command ``verdi data core.structure show --format=ase <PK>``), might end up with the following error message::
 
    ImportError: No module named pygtk
 
@@ -389,7 +390,7 @@ Create several symbolic links from this folder, pointing to a number of files in
    $ ln -s /usr/lib/python2.7/dist-packages/pygtk.py pygtk.py
    $ ln -s /usr/lib/python2.7/dist-packages/cairo cairo
 
-After that, ``verdi data structure show --format=ase <PK>`` should work.
+After that, ``verdi data core.structure show --format=ase <PK>`` should work.
 
 Use in ipython/jupyter
 ----------------------

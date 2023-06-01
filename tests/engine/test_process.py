@@ -40,7 +40,7 @@ class TestProcessNamespace:
     """Test process namespace"""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+    def init_profile(self):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         assert Process.current() is None
@@ -98,7 +98,7 @@ class TestProcess:
     """Test AiiDA process."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         assert Process.current() is None
@@ -238,12 +238,9 @@ class TestProcess:
 
     def test_process_type_with_entry_point(self):
         """For a process with a registered entry point, the process_type will be its formatted entry point string."""
-        from aiida.orm import Code
+        from aiida.orm import InstalledCode
 
-        code = Code()
-        code.set_remote_computer_exec((self.computer, '/bin/true'))
-        code.store()
-
+        code = InstalledCode(computer=self.computer, filepath_executable='/bin/true').store()
         parameters = orm.Dict(dict={})
         template = orm.Dict(dict={})
         options = {
@@ -436,3 +433,110 @@ class TestProcess:
         # If the ``namespace`` does not exist, for example because it is slightly misspelled, a ``KeyError`` is raised
         with pytest.raises(KeyError):
             process.exposed_outputs(node_child, ChildProcess, namespace='cildh')
+
+    def test_build_process_label(self):
+        """Test the :meth:`~aiida.engine.processes.process.Process.build_process_label` method."""
+        custom_process_label = 'custom_process_label'
+
+        class CustomLabelProcess(Process):
+            """Class that provides custom process label."""
+
+            _node_class = orm.WorkflowNode
+
+            def _build_process_label(self):
+                return custom_process_label
+
+        _, node = run_get_node(CustomLabelProcess)
+        assert node.process_label == custom_process_label
+
+
+class TestValidateDynamicNamespaceProcess(Process):
+    """Simple process with dynamic input namespace."""
+
+    _node_class = orm.WorkflowNode
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.inputs.dynamic = True
+
+
+def test_input_validation_storable_nodes():
+    """Test that validation catches non-storable inputs even if nested in dictionary for dynamic namespace.
+
+    Regression test for #5128.
+    """
+    with pytest.raises(ValueError):
+        run(TestValidateDynamicNamespaceProcess, **{'namespace': {'a': 1}})
+
+
+class TestNotRequiredNoneProcess(Process):
+    """Process with an optional input port that should therefore also accept ``None``."""
+
+    _node_class = orm.WorkflowNode
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('valid_type', valid_type=orm.Int, required=False)
+        spec.input('any_type', required=False)
+
+
+@pytest.mark.usefixtures('clear_database_before_test')
+def test_not_required_accepts_none():
+    """Test that a port that is not required, accepts ``None``."""
+    from aiida.engine.utils import instantiate_process
+    from aiida.manage import get_manager
+
+    runner = get_manager().get_runner()
+
+    process = instantiate_process(runner, TestNotRequiredNoneProcess, valid_type=None, any_type=None)
+    assert process.inputs.valid_type is None
+    assert process.inputs.any_type is None
+
+    process = instantiate_process(runner, TestNotRequiredNoneProcess, valid_type=orm.Int(1), any_type=orm.Bool(True))
+    assert process.inputs.valid_type == orm.Int(1)
+    assert process.inputs.any_type == orm.Bool(True)
+
+
+class TestMetadataInputsProcess(Process):
+    """Process with various ports that are ``is_metadata=True``."""
+
+    _node_class = orm.WorkflowNode
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('metadata_port', is_metadata=True)
+        spec.input('metadata_port_non_serializable', is_metadata=True)
+        spec.input_namespace('metadata_portnamespace', is_metadata=True)
+        spec.input('metadata_portnamespace.with_default', default='default-value', is_metadata=True)
+        spec.input('metadata_portnamespace.without_default', is_metadata=True)
+
+
+def test_metadata_inputs():
+    """Test that explicitly passed ``is_metadata`` inputs are stored in the attributes.
+
+    This is essential to make it possible to recreate a builder for the process with the original inputs.
+    """
+    from aiida.manage import get_manager
+
+    runner = get_manager().get_runner()
+
+    inputs = {
+        'metadata_port': 'value',
+        'metadata_port_non_serializable': orm.Data().store(),
+        'metadata_portnamespace': {
+            'without_default': 100
+        }
+    }
+    process = TestMetadataInputsProcess(runner=runner, inputs=inputs)
+
+    # The ``is_metadata`` inputs should only have stored the "raw" inputs (so not including any defaults) and any inputs
+    # that are not JSON-serializable should also have been filtered out.
+    assert process.node.get_metadata_inputs() == {
+        'metadata_port': 'value',
+        'metadata_portnamespace': {
+            'without_default': 100
+        }
+    }

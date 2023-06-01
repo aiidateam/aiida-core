@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""`verdi data trajectory` command."""
+"""`verdi data core.trajectory` command."""
 
 import click
 
@@ -23,7 +23,7 @@ EXPORT_FORMATS = ['cif', 'xsf']
 VISUALIZATION_FORMATS = ['jmol', 'xcrysden', 'mpl_heatmap', 'mpl_pos']
 
 
-@verdi_data.group('trajectory')
+@verdi_data.group('core.trajectory')
 def trajectory():
     """Manipulate TrajectoryData objects (molecular trajectories)."""
 

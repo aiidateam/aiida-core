@@ -10,7 +10,6 @@
 """
 AiiDA class to deal with crystal structure trajectories.
 """
-
 import collections.abc
 
 from .array import ArrayData
@@ -319,14 +318,14 @@ class TrajectoryData(ArrayData):
             raise ValueError(f'{stepid} not among the stepids')
 
     def get_step_data(self, index):
-        r"""
-        Return a tuple with all information concerning
-        the stepid with given index (0 is the first step, 1 the second step
-        and so on). If you know only the step value, use the
-        :py:meth:`.get_index_from_stepid`  method to get the
-        corresponding index.
+        """
+        Return a tuple with all information concerning the stepid with given
+        index (0 is the first step, 1 the second step and so on). If you know
+        only the step value, use the :py:meth:`.get_index_from_stepid` method
+        to get the corresponding index.
 
-        If no velocities were specified, None is returned as the last element.
+        If no velocities, cells, or times were specified, None is returned as
+        the corresponding element.
 
         :return: A tuple in the format
           ``(stepid, time, cell, symbols, positions, velocities)``,
@@ -352,6 +351,8 @@ class TrajectoryData(ArrayData):
         cells = self.get_cells()
         if cells is not None:
             cell = cells[index, :, :]
+        else:
+            cell = None
         return (self.get_stepids()[index], time, cell, self.symbols, self.get_positions()[index, :, :], vel)
 
     def get_step_structure(self, index, custom_kinds=None):
@@ -376,6 +377,8 @@ class TrajectoryData(ArrayData):
           :py:class:`aiida.orm.nodes.data.structure.StructureData` nodes is used,
           meaning that the strings in the ``symbols`` array must be valid
           chemical symbols.
+
+        :return: :py:class:`aiida.orm.nodes.data.structure.StructureData` node.
         """
         from aiida.orm.nodes.data.structure import Kind, Site, StructureData
 
@@ -477,15 +480,29 @@ class TrajectoryData(ArrayData):
         .. versionadded:: 1.0
             Renamed from _get_aiida_structure
 
-        :param converter: specify the converter. Default 'ase'.
         :param store: If True, intermediate calculation gets stored in the
             AiiDA database for record. Default False.
+        :param index: The index of the step that you want to retrieve, from
+           0 to ``self.numsteps- 1``.
+        :param custom_kinds: (Optional) If passed must be a list of
+          :py:class:`aiida.orm.nodes.data.structure.Kind` objects. There must be one
+          kind object for each different string in the ``symbols`` array, with
+          ``kind.name`` set to this string.
+          If this parameter is omitted, the automatic kind generation of AiiDA
+          :py:class:`aiida.orm.nodes.data.structure.StructureData` nodes is used,
+          meaning that the strings in the ``symbols`` array must be valid
+          chemical symbols.
+        :param custom_cell: (Optional) The cell matrix of the structure.
+          If omitted, the cell will be read from the trajectory, if present,
+          otherwise the default cell of
+          :py:class:`aiida.orm.nodes.data.structure.StructureData` will be used.
+
         :return: :py:class:`aiida.orm.nodes.data.structure.StructureData` node.
         """
         from aiida.orm.nodes.data.dict import Dict
         from aiida.tools.data.array.trajectory import _get_aiida_structure_inline
 
-        param = Dict(dict=kwargs)
+        param = Dict(kwargs)
 
         ret_dict = _get_aiida_structure_inline(trajectory=self, parameters=param, metadata={'store_provenance': store})  # pylint: disable=unexpected-keyword-arg
         return ret_dict['structure']

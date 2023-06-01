@@ -1008,7 +1008,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue('#PBS -r n' in submit_script_text)
         self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
 
-        self.assertTrue('#PBS -l select=1:mpiprocs=1:ppn=24' in submit_script_text)
+        self.assertTrue('#PBS -l select=1:mpiprocs=1:ncpus=24' in submit_script_text)
         # Note: here 'num_cores_per_machine' should NOT override the mpiprocs
 
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text)
@@ -1042,7 +1042,7 @@ class TestSubmitScript(unittest.TestCase):
 
         self.assertTrue('#PBS -r n' in submit_script_text)
         self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
-        self.assertTrue('#PBS -l select=1:mpiprocs=1:ppn=24' in submit_script_text)
+        self.assertTrue('#PBS -l select=1:mpiprocs=1:ncpus=24' in submit_script_text)
         # Note: here 'num_cores_per_machine' should NOT override the mpiprocs
 
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text)

@@ -9,10 +9,10 @@
 ###########################################################################
 """Test the renaming of `name` to `label` for `db_dbcomputer`."""
 from aiida.common.utils import get_new_uuid
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_computer_name_to_label(perform_migrations: PsqlDostoreMigrator):
+def test_computer_name_to_label(perform_migrations: PsqlDosMigrator):
     """Test the renaming of `name` to `label` for `db_dbcomputer`.
 
     Verify that the column was successfully renamed.

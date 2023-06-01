@@ -23,6 +23,7 @@ from . import convert, entities, extras, users
 if TYPE_CHECKING:
     from aiida.orm import Node, User
     from aiida.orm.implementation import BackendGroup, StorageBackend
+    from aiida.plugins.entry_point import EntryPoint  # type: ignore
 
 __all__ = ('Group', 'AutoGroup', 'ImportGroup', 'UpfFamily')
 
@@ -67,7 +68,7 @@ class GroupMeta(ABCMeta):
             warnings.warn(message)  # pylint: disable=no-member
         else:
             assert entry_point is not None
-            newcls._type_string = cast(str, entry_point.name)  # type: ignore[attr-defined]  # pylint: disable=protected-access
+            newcls._type_string = entry_point.name  # type: ignore[attr-defined]  # pylint: disable=protected-access
 
         return newcls
 
@@ -124,7 +125,7 @@ class GroupBase:
         return extras.EntityExtras(self._group)
 
 
-class Group(entities.Entity['BackendGroup'], metaclass=GroupMeta):
+class Group(entities.Entity['BackendGroup', GroupCollection], metaclass=GroupMeta):
     """An AiiDA ORM implementation of group of nodes."""
 
     # added by metaclass
@@ -155,7 +156,7 @@ class Group(entities.Entity['BackendGroup'], metaclass=GroupMeta):
             raise ValueError('Group label must be provided')
 
         backend = backend or get_manager().get_profile_storage()
-        user = user or backend.default_user
+        user = cast(users.User, user or backend.default_user)
         type_check(user, users.User)
         type_string = self._type_string
 
@@ -184,6 +185,16 @@ class Group(entities.Entity['BackendGroup'], metaclass=GroupMeta):
             raise exceptions.StoringNotAllowed('`type_string` is `None` so the group cannot be stored.')
 
         return super().store()
+
+    @classproperty
+    def entry_point(cls) -> Optional['EntryPoint']:
+        """Return the entry point associated this group type.
+
+        :return: the associated entry point or ``None`` if it isn't known.
+        """
+        # pylint: disable=no-self-use
+        from aiida.plugins.entry_point import get_entry_point_from_class
+        return get_entry_point_from_class(cls.__module__, cls.__name__)[1]
 
     @property
     def uuid(self) -> str:
@@ -221,7 +232,7 @@ class Group(entities.Entity['BackendGroup'], metaclass=GroupMeta):
         """
         :return: the description of the group as a string
         """
-        return self._backend_entity.description
+        return self._backend_entity.description or ''
 
     @description.setter
     def description(self, description: str) -> None:
@@ -242,7 +253,7 @@ class Group(entities.Entity['BackendGroup'], metaclass=GroupMeta):
         """
         :return: the user associated with this group
         """
-        return users.User.from_backend_entity(self._backend_entity.user)
+        return entities.from_backend_entity(users.User, self._backend_entity.user)
 
     @user.setter
     def user(self, user: 'User') -> None:
@@ -300,7 +311,7 @@ class Group(entities.Entity['BackendGroup'], metaclass=GroupMeta):
 
         # Cannot use `collections.Iterable` here, because that would also match iterable `Node` sub classes like `List`
         if not isinstance(nodes, (list, tuple)):
-            nodes = [nodes]
+            nodes = [nodes]  # type: ignore
 
         for node in nodes:
             type_check(node, Node)
@@ -321,7 +332,7 @@ class Group(entities.Entity['BackendGroup'], metaclass=GroupMeta):
 
         # Cannot use `collections.Iterable` here, because that would also match iterable `Node` sub classes like `List`
         if not isinstance(nodes, (list, tuple)):
-            nodes = [nodes]
+            nodes = [nodes]  # type: ignore
 
         for node in nodes:
             type_check(node, Node)

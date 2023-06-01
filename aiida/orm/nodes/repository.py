@@ -8,6 +8,7 @@ import tempfile
 from typing import TYPE_CHECKING, Any, BinaryIO, Dict, Iterable, Iterator, List, Optional, TextIO, Tuple, Union
 
 from aiida.common import exceptions
+from aiida.manage import get_config_option
 from aiida.repository import File, Repository
 from aiida.repository.backend import SandboxRepositoryBackend
 
@@ -80,7 +81,8 @@ class NodeRepository:
                 backend = self._node.backend.get_repository()
                 self._repository_instance = Repository.from_serialized(backend=backend, serialized=self.metadata)
             else:
-                self._repository_instance = Repository(backend=SandboxRepositoryBackend())
+                filepath = get_config_option('storage.sandbox') or None
+                self._repository_instance = Repository(backend=SandboxRepositoryBackend(filepath))
 
         return self._repository_instance
 
@@ -139,7 +141,7 @@ class NodeRepository:
         """
         return self._repository.hash()
 
-    def list_objects(self, path: str = None) -> List[File]:
+    def list_objects(self, path: Optional[str] = None) -> List[File]:
         """Return a list of the objects contained in this repository sorted by name, optionally in given sub directory.
 
         :param path: the relative path where to store the object in the repository.
@@ -150,7 +152,7 @@ class NodeRepository:
         """
         return self._repository.list_objects(path)
 
-    def list_object_names(self, path: str = None) -> List[str]:
+    def list_object_names(self, path: Optional[str] = None) -> List[str]:
         """Return a sorted list of the object names contained in this repository, optionally in the given sub directory.
 
         :param path: the relative path where to store the object in the repository.
@@ -184,7 +186,7 @@ class NodeRepository:
             else:
                 yield handle
 
-    def get_object(self, path: FilePath = None) -> File:
+    def get_object(self, path: Optional[FilePath] = None) -> File:
         """Return the object at the given path.
 
         :param path: the relative path where to store the object in the repository.
@@ -257,7 +259,7 @@ class NodeRepository:
         self._repository.put_object_from_file(filepath, path)
         self._update_repository_metadata()
 
-    def put_object_from_tree(self, filepath: str, path: str = None):
+    def put_object_from_tree(self, filepath: str, path: Optional[str] = None):
         """Store the entire contents of `filepath` on the local file system in the repository with under given `path`.
 
         :param filepath: absolute path of the directory whose contents to copy to the repository.
@@ -269,7 +271,7 @@ class NodeRepository:
         self._repository.put_object_from_tree(filepath, path)
         self._update_repository_metadata()
 
-    def walk(self, path: FilePath = None) -> Iterable[Tuple[pathlib.PurePosixPath, List[str], List[str]]]:
+    def walk(self, path: Optional[FilePath] = None) -> Iterable[Tuple[pathlib.PurePosixPath, List[str], List[str]]]:
         """Walk over the directories and files contained within this repository.
 
         .. note:: the order of the dirname and filename lists that are returned is not necessarily sorted. This is in
@@ -290,7 +292,7 @@ class NodeRepository:
             for filename in filenames:
                 yield dirpath / filename
 
-    def copy_tree(self, target: Union[str, pathlib.Path], path: FilePath = None) -> None:
+    def copy_tree(self, target: Union[str, pathlib.Path], path: Optional[FilePath] = None) -> None:
         """Copy the contents of the entire node repository to another location on the local file system.
 
         :param target: absolute path of the directory where to copy the contents to.

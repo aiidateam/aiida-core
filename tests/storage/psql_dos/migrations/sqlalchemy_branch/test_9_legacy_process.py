@@ -8,10 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for legacy process migrations: 07fac78e6209 -> 118349c10896"""
-from aiida.storage.psql_dos.migrator import PsqlDostoreMigrator
+from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_legacy_jobcalcstate_data(perform_migrations: PsqlDostoreMigrator):
+def test_legacy_jobcalcstate_data(perform_migrations: PsqlDosMigrator):
     """Test the migration that performs a data migration of legacy `JobCalcState`.
 
     Verify that the `process_state`, `process_status` and `exit_status` are set correctly.
@@ -59,7 +59,7 @@ def test_legacy_jobcalcstate_data(perform_migrations: PsqlDostoreMigrator):
                 assert isinstance(exit_status, int)
 
 
-def test_reset_hash(perform_migrations: PsqlDostoreMigrator):
+def test_reset_hash(perform_migrations: PsqlDosMigrator):
     """Test the migration that resets the node hash.
 
     Verify that only the _aiida_hash extra has been removed.
@@ -100,7 +100,7 @@ def test_reset_hash(perform_migrations: PsqlDostoreMigrator):
         assert '_aiida_hash' not in extras  # The hash extra should have been removed
 
 
-def test_legacy_process_attribute(perform_migrations: PsqlDostoreMigrator):
+def test_legacy_process_attribute(perform_migrations: PsqlDosMigrator):
     """Test the migration that performs a data migration of legacy process attributes.
 
     Verify that the attributes for process node have been deleted and `_sealed` has been changed to `sealed`.
@@ -189,7 +189,7 @@ def test_legacy_process_attribute(perform_migrations: PsqlDostoreMigrator):
             assert key in node_data.attributes
 
 
-def test_seal_unsealed_processes(perform_migrations: PsqlDostoreMigrator):
+def test_seal_unsealed_processes(perform_migrations: PsqlDosMigrator):
     """Test the migration that performs a data migration of legacy process attributes.
 
     Verify that the attributes for process node have been deleted and `_sealed` has been changed to `sealed`.
@@ -263,7 +263,7 @@ def test_seal_unsealed_processes(perform_migrations: PsqlDostoreMigrator):
         assert 'sealed' not in node_data.attributes
 
 
-def test_default_link_label(perform_migrations: PsqlDostoreMigrator):
+def test_default_link_label(perform_migrations: PsqlDosMigrator):
     """Test the migration that performs a data migration of legacy default link labels.
 
     Verify that the attributes for process node have been deleted and `_sealed` has been changed to `sealed`.

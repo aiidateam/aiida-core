@@ -68,8 +68,8 @@ def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **k
     :returns: Flask RESTful API
     :rtype: :py:class:`flask_restful.Api`
     """
-
     # Unpack parameters
+    profile = kwargs.pop('profile', None)
     config = kwargs.pop('config', CLI_DEFAULTS['CONFIG_DIR'])
     catch_internal_server = kwargs.pop('catch_internal_server', CLI_DEFAULTS['CATCH_INTERNAL_SERVER'])
     wsgi_profile = kwargs.pop('wsgi_profile', CLI_DEFAULTS['WSGI_PROFILE'])
@@ -95,8 +95,8 @@ def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **k
 
     # Configure the serializer
     if config_module.SERIALIZER_CONFIG:
-        from aiida.restapi.common.utils import CustomJSONEncoder
-        app.json_encoder = CustomJSONEncoder
+        from aiida.restapi.common.utils import CustomJSONProvider
+        app.json = CustomJSONProvider(app)
 
     # Set up WSGI profiler if requested
     if wsgi_profile:
@@ -106,4 +106,4 @@ def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **k
         app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
 
     # Instantiate and return a Flask RESTful API by associating its app
-    return flask_api(app, posting=posting, **config_module.API_CONFIG)
+    return flask_api(app, posting=posting, **config_module.API_CONFIG, profile=profile)

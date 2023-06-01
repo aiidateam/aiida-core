@@ -72,7 +72,7 @@ class TestLaunchers:
     """Class to test process launchers."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean):  # pylint: disable=unused-argument
+    def init_profile(self):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         assert Process.current() is None
@@ -152,7 +152,7 @@ class TestLaunchersDryRun:
     """Test the launchers when performing a dry-run."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
         from aiida.common.folders import CALC_JOB_DRY_RUN_BASE_PATH
@@ -173,8 +173,9 @@ class TestLaunchersDryRun:
 
         ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 
-        code = orm.Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[self.computer,
-                                                                                       '/bin/true']).store()
+        code = orm.InstalledCode(
+            default_calc_job_plugin='core.arithmetic.add', computer=self.computer, filepath_executable='/bin/true'
+        ).store()
 
         inputs = {
             'code': code,
@@ -214,8 +215,9 @@ class TestLaunchersDryRun:
 
         ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # pylint: disable=invalid-name
 
-        code = orm.Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[self.computer,
-                                                                                       '/bin/true']).store()
+        code = orm.InstalledCode(
+            default_calc_job_plugin='core.arithmetic.add', computer=self.computer, filepath_executable='/bin/true'
+        ).store()
 
         inputs = {
             'code': code,
@@ -262,8 +264,9 @@ class TestLaunchersDryRun:
         """
         import tempfile
 
-        code = orm.Code(input_plugin_name='core.arithmetic.add', remote_computer_exec=[self.computer,
-                                                                                       '/bin/true']).store()
+        code = orm.InstalledCode(
+            default_calc_job_plugin='core.arithmetic.add', computer=self.computer, filepath_executable='/bin/true'
+        ).store()
 
         with tempfile.NamedTemporaryFile('w+') as handle:
             handle.write('dummy_content')

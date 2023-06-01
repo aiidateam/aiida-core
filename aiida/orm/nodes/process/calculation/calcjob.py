@@ -66,6 +66,7 @@ class CalcJobNode(CalculationNode):
     """ORM class for all nodes representing the execution of a CalcJob."""
 
     # pylint: disable=too-many-public-methods
+    _CLS_NODE_CACHING = CalcJobNodeCaching
 
     CALC_JOB_STATE_KEY = 'state'
     IMMIGRATED_KEY = 'imported'
@@ -102,16 +103,12 @@ class CalcJobNode(CalculationNode):
                 entry_point = get_entry_point_from_string(entry_point_string)
 
                 try:
-                    tools_class = load_entry_point(
-                        'aiida.tools.calculations',
-                        entry_point.name  # type: ignore[attr-defined]
-                    )
+                    tools_class = load_entry_point('aiida.tools.calculations', entry_point.name)
                     self._tools = tools_class(self)
                 except exceptions.EntryPointError as exception:
                     self._tools = CalculationTools(self)
-                    entry_point_name = entry_point.name  # type: ignore[attr-defined]
                     self.logger.warning(
-                        f'could not load the calculation tools entry point {entry_point_name}: {exception}'
+                        f'could not load the calculation tools entry point {entry_point.name}: {exception}'
                     )
 
         return self._tools
@@ -141,21 +138,6 @@ class CalcJobNode(CalculationNode):
             'max_wallclock_seconds',
             'max_memory_kb',
         )
-
-    def get_builder_restart(self) -> 'ProcessBuilder':
-        """Return a `ProcessBuilder` that is ready to relaunch the same `CalcJob` that created this node.
-
-        The process class will be set based on the `process_type` of this node and the inputs of the builder will be
-        prepopulated with the inputs registered for this node. This functionality is very useful if a process has
-        completed and you want to relaunch it with slightly different inputs.
-
-        In addition to prepopulating the input nodes, which is implemented by the base `ProcessNode` class, here we
-        also add the `options` that were passed in the `metadata` input of the `CalcJob` process.
-
-        """
-        builder = super().get_builder_restart()
-        builder.metadata.options = self.get_options()  # type: ignore[attr-defined]
-        return builder
 
     @property
     def is_imported(self) -> bool:

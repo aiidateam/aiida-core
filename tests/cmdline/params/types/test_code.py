@@ -9,11 +9,13 @@
 ###########################################################################
 # pylint: disable=redefined-outer-name,unused-variable,unused-argument
 """Tests for the `CodeParamType`."""
+import uuid
+
 import click
 import pytest
 
 from aiida.cmdline.params.types import CodeParamType
-from aiida.orm import Code
+from aiida.orm import InstalledCode
 from aiida.orm.utils.loaders import OrmEntityLoader
 
 
@@ -24,20 +26,22 @@ def parameter_type():
 
 
 @pytest.fixture
-def setup_codes(aiida_profile_clean, aiida_localhost):
+def setup_codes(aiida_localhost):
     """Create some `Code` instances to test the `CodeParamType` parameter type for the command line infrastructure.
 
     We create an initial code with a random name and then on purpose create two code with a name that matches exactly
     the ID and UUID, respectively, of the first one. This allows us to test the rules implemented to solve ambiguities
     that arise when determing the identifier type.
     """
-    entity_01 = Code(remote_computer_exec=(aiida_localhost, '/bin/true')).store()
-    entity_02 = Code(remote_computer_exec=(aiida_localhost, '/bin/true'),
-                     input_plugin_name='core.arithmetic.add').store()
-    entity_03 = Code(remote_computer_exec=(aiida_localhost, '/bin/true'),
-                     input_plugin_name='core.templatereplacer').store()
+    entity_01 = InstalledCode(computer=aiida_localhost, filepath_executable='/bin/true').store()
+    entity_02 = InstalledCode(
+        computer=aiida_localhost, filepath_executable='/bin/true', default_calc_job_plugin='core.arithmetic.add'
+    ).store()
+    entity_03 = InstalledCode(
+        computer=aiida_localhost, filepath_executable='/bin/true', default_calc_job_plugin='core.templatereplacer'
+    ).store()
 
-    entity_01.label = 'computer_01'
+    entity_01.label = f'computer-{uuid.uuid4().hex}'
     entity_02.label = str(entity_01.pk)
     entity_03.label = str(entity_01.uuid)
 
@@ -121,10 +125,11 @@ def test_entry_point_validation(setup_codes):
         result = parameter_type.convert(identifier, None, None)
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_shell_complete(setup_codes, parameter_type, aiida_localhost):
     """Test the `shell_complete` method that provides auto-complete functionality."""
     entity_01, entity_02, entity_03 = setup_codes
-    entity_04 = Code(label='xavier', remote_computer_exec=(aiida_localhost, '/bin/true')).store()
+    entity_04 = InstalledCode(label='xavier', computer=aiida_localhost, filepath_executable='/bin/true').store()
 
     options = [item.value for item in parameter_type.shell_complete(None, None, '')]
     assert sorted(options) == sorted([entity_01.label, entity_02.label, entity_03.label, entity_04.label])

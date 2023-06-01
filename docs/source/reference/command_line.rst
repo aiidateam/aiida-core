@@ -53,6 +53,7 @@ Below is a list with all available subcommands.
       inputls       Show the list of the generated calcjob input files.
       outputcat     Show the contents of one of the calcjob retrieved outputs.
       outputls      Show the list of the retrieved calcjob output files.
+      remotecat     Show the contents of a file in the remote working directory.
       res           Print data from the result output Dict node of a calcjob.
 
 
@@ -71,8 +72,10 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
+      create     Create a new code.
       delete     Delete a code.
       duplicate  Duplicate a code allowing to change some parameters.
+      export     Export code to a yaml file.
       hide       Hide one or more codes from `verdi code list`.
       list       List the available codes.
       relabel    Relabel a code.
@@ -155,6 +158,7 @@ Below is a list with all available subcommands.
       start    Start the daemon with NUMBER workers.
       status   Print the status of the current daemon or all daemons.
       stop     Stop the daemon.
+      worker   Run a single daemon worker in the current interpreter.
 
 
 .. _reference:command-line:verdi-data:
@@ -214,8 +218,9 @@ Below is a list with all available subcommands.
     Commands:
       check-load-time          Check for common indicators that slowdown `verdi`.
       check-undesired-imports  Check that verdi does not import python modules it shouldn't.
+      launch-add               Launch an ``ArithmeticAddCalculation``.
+      rabbitmq                 Commands to interact with RabbitMQ.
       run-sql                  Run a raw SQL command on the profile database (only...
-      run_daemon               Run a daemon instance in the current interpreter.
       validate-plugins         Validate all plugins by checking they can be loaded.
 
 
@@ -377,7 +382,7 @@ Below is a list with all available subcommands.
       --institution NONEMPTYSTRING    Institution of the user.  [required]
       --db-engine [postgresql_psycopg2]
                                       Engine to use to connect to the database.
-      --db-backend [psql_dos]         Database backend to use.
+      --db-backend [core.psql_dos]    Database backend to use.
       --db-host HOSTNAME              Database server host. Leave empty for "peer"
                                       authentication.
       --db-port INTEGER               Database server port.
@@ -481,7 +486,7 @@ Below is a list with all available subcommands.
       --institution NONEMPTYSTRING    Institution of the user.  [required]
       --db-engine [postgresql_psycopg2]
                                       Engine to use to connect to the database.
-      --db-backend [psql_dos]         Database backend to use.
+      --db-backend [core.psql_dos]    Database backend to use.
       --db-host HOSTNAME              Database server host. Leave empty for "peer"
                                       authentication.
       --db-port INTEGER               Database server port.

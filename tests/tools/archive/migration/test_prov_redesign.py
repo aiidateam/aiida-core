@@ -133,14 +133,13 @@ def test_node_process_type(aiida_profile, tmp_path):
     assert node.process_type == node_process_type
 
 
-def test_code_type_change(aiida_profile_clean, tmp_path, aiida_localhost):
+@pytest.mark.usefixtures('suppress_internal_deprecations')
+def test_code_type_change(aiida_profile, tmp_path, aiida_localhost):
     """ Code type string changed
     Change: “code.Bool.” → “data.code.Code.”
     """
     # Create Code instance
-    code = orm.Code()
-    code.set_remote_computer_exec((aiida_localhost, '/bin/true'))
-    code.store()
+    code = orm.Code((aiida_localhost, '/bin/true')).store()
 
     # Save uuid and type
     code_uuid = str(code.uuid)
@@ -154,7 +153,7 @@ def test_code_type_change(aiida_profile_clean, tmp_path, aiida_localhost):
     create_archive([code], filename=filename)
 
     # Clean the database and reimport
-    aiida_profile_clean.clear_profile()
+    aiida_profile.clear_profile()
     import_archive(filename)
 
     # Retrieve Code node and make sure exactly 1 is retrieved

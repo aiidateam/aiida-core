@@ -250,7 +250,7 @@ def test_get_info(populated_repository):
         {'unpacked': 0, 'packed': 4}
     ),
     (
-        {'live': False, 'compress': False},
+        {'live': False, 'compress': True},
         {'unpacked': 0, 'packed': 4}
     ),
     (

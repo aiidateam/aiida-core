@@ -149,7 +149,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         do_repack: bool = None,
         clean_storage: bool = None,
         do_vacuum: bool = None,
-        compress: bool = None,
+        compress: bool = False,
     ) -> dict:
         """Performs maintenance operations.
 
@@ -158,6 +158,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         :param do_repack:flag for forcing the re-packing of already packed files.
         :param clean_storage:flag for forcing the cleaning of soft-deleted files from the repository.
         :param do_vacuum:flag for forcing the vacuuming of the internal database when cleaning the repository.
+        :param compress:flag for compressing the data when packing loose files.
         :return:a dictionary with information on the operations performed.
         """
         if live and (do_repack or clean_storage or do_vacuum):
@@ -166,7 +167,6 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
             raise ValueError(f'The following overrides were enabled but cannot be if `live=True`: {keys}')
 
         pack_loose = True if pack_loose is None else pack_loose
-        compress = True if compress is None else compress
 
         if live:
             do_repack = False

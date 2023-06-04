@@ -93,7 +93,7 @@ def play_processes(
     :raises ``ProcessTimeoutException``: If the processes do not respond within the timeout.
     """
     if not get_daemon_client().is_daemon_running:
-        raise DaemonException('The daemon is not running.')
+        LOGGER.warning('The daemon is not running, so processes submitted to the daemon are not reachable.')
 
     if processes and all_entries:
         raise ValueError('cannot specify processes when `all_entries = True`.')
@@ -128,7 +128,7 @@ def pause_processes(
     :raises ``ProcessTimeoutException``: If the processes do not respond within the timeout.
     """
     if not get_daemon_client().is_daemon_running:
-        raise DaemonException('The daemon is not running.')
+        LOGGER.warning('The daemon is not running, so processes submitted to the daemon are not reachable.')
 
     if processes and all_entries:
         raise ValueError('cannot specify processes when `all_entries = True`.')
@@ -163,7 +163,7 @@ def kill_processes(
     :raises ``ProcessTimeoutException``: If the processes do not respond within the timeout.
     """
     if not get_daemon_client().is_daemon_running:
-        raise DaemonException('The daemon is not running.')
+        LOGGER.warning('The daemon is not running, so processes submitted to the daemon are not reachable.')
 
     if processes and all_entries:
         raise ValueError('cannot specify processes when `all_entries = True`.')

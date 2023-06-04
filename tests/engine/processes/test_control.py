@@ -4,7 +4,6 @@ from plumpy.process_comms import RemoteProcessThreadController
 import pytest
 
 from aiida.engine import ProcessState
-from aiida.engine.daemon.client import DaemonException
 from aiida.engine.launch import submit
 from aiida.engine.processes import control
 from aiida.orm import Int
@@ -24,10 +23,10 @@ def test_processes_all_exclusivity(submit_and_await, action):
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'stopped_daemon_client')
 @pytest.mark.parametrize('action', (control.pause_processes, control.play_processes, control.kill_processes))
-def test_daemon_not_running(action):
-    """Test that control methods raise if the daemon is not running."""
-    with pytest.raises(DaemonException, match='The daemon is not running.'):
-        action(all_entries=True)
+def test_daemon_not_running(action, aiida_caplog):
+    """Test that control methods warns if the daemon is not running."""
+    action(all_entries=True)
+    assert 'The daemon is not running' in aiida_caplog.records[0].message
 
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')

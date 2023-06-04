@@ -216,7 +216,6 @@ def process_status(max_depth, processes):
 @options.TIMEOUT()
 @options.WAIT()
 @decorators.with_dbenv()
-@decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_kill(processes, timeout, wait):
     """Kill running processes."""
     from aiida.engine.processes import control
@@ -234,7 +233,6 @@ def process_kill(processes, timeout, wait):
 @options.TIMEOUT()
 @options.WAIT()
 @decorators.with_dbenv()
-@decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_pause(processes, all_entries, timeout, wait):
     """Pause running processes."""
     from aiida.engine.processes import control
@@ -255,7 +253,6 @@ def process_pause(processes, all_entries, timeout, wait):
 @options.TIMEOUT()
 @options.WAIT()
 @decorators.with_dbenv()
-@decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_play(processes, all_entries, timeout, wait):
     """Play (unpause) paused processes."""
     from aiida.engine.processes import control

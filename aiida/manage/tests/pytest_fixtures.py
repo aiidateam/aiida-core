@@ -95,6 +95,7 @@ def postgres_cluster(
         'database_password': database_password or 'guest',
     }
 
+    cluster = None
     try:
         cluster = PGTest()
 
@@ -107,7 +108,8 @@ def postgres_cluster(
 
         yield postgres_config
     finally:
-        cluster.close()
+        if cluster is not None:
+            cluster.close()
 
 
 @pytest.fixture(scope='session')

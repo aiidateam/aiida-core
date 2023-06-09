@@ -340,7 +340,7 @@ class TestCommand(unittest.TestCase):
         self.assertTrue('export WIENROOT="$HOME:/WIEN2k"' in submit_script_text)
         self.assertFalse('#$ -r yes' in submit_script_text)
 
-    def test_submit_script_rerunnable(self):  # pylint: disable=no-self-use
+    def test_submit_script_rerunnable(self):
         """Test the `rerunnable` option of the submit script."""
         from aiida.schedulers.datastructures import JobTemplate
 

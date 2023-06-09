@@ -28,7 +28,7 @@ class ReflectMigrations:
     to know what to drop.
     """
 
-    def __init__(self, op: alembic.op) -> None:
+    def __init__(self, op: alembic.op) -> None:  # pylint: disable=invalid-name
         self.op = op  # pylint: disable=invalid-name
         # note, we only want to instatiate the inspector once, since it caches reflection calls to the database
         self.inspector = inspect(op.get_bind())

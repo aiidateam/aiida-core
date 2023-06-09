@@ -374,7 +374,7 @@ def _import_authinfos(
         to_user_id_comp_id = [(user_ids_archive_backend[_user_id], computer_ids_archive_backend[_comp_id])
                               for _, _user_id, _comp_id in input_id_user_comp]
     except KeyError as exception:
-        ImportValidationError(f'Archive AuthInfo has unknown User/Computer: {exception}')
+        raise ImportValidationError(f'Archive AuthInfo has unknown User/Computer: {exception}')
 
     # retrieve existing user_id / computer_id
     backend_id_user_comp = []
@@ -485,6 +485,7 @@ class NodeTransform:
         self, user_ids_archive_backend: Dict[int, int], computer_ids_archive_backend: Dict[int, int],
         import_new_extras: bool
     ):
+        """Construct a new instance."""
         self.user_ids_archive_backend = user_ids_archive_backend
         self.computer_ids_archive_backend = computer_ids_archive_backend
         self.import_new_extras = import_new_extras
@@ -697,6 +698,7 @@ class CommentTransform:
         user_ids_archive_backend: Dict[int, int],
         node_ids_archive_backend: Dict[int, int],
     ):
+        """Construct a new instance."""
         self.user_ids_archive_backend = user_ids_archive_backend
         self.node_ids_archive_backend = node_ids_archive_backend
 

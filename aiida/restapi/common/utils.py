@@ -219,7 +219,7 @@ class Utils:
     def validate_request(
         self, limit=None, offset=None, perpage=None, page=None, query_type=None, is_querystring_defined=False
     ):
-        # pylint: disable=fixme,no-self-use,too-many-arguments,too-many-branches
+        # pylint: disable=fixme,too-many-arguments,too-many-branches
         """
         Performs various checks on the consistency of the request.
         Add here all the checks that you want to do, except validity of the page
@@ -306,7 +306,7 @@ class Utils:
         if page < last_page:
             next_page = page + 1
 
-        rel_pages = dict(prev=prev_page, next=next_page, first=first_page, last=last_page)
+        rel_pages = {'prev': prev_page, 'next': next_page, 'first': first_page, 'last': last_page}
 
         return (limit, offset, rel_pages)
 
@@ -442,7 +442,7 @@ class Utils:
         """
 
         if not isinstance(dtobj, DatetimePrecision):
-            TypeError('dtobj argument has to be a DatetimePrecision object')
+            raise TypeError('dtobj argument has to be a DatetimePrecision object')
 
         reference_datetime = dtobj.dtobj
         precision = dtobj.precision
@@ -653,7 +653,7 @@ class Utils:
                 # Here I treat the AND clause
                 if field_counts[field_key] > 1:
 
-                    if field_key not in filters.keys():
+                    if field_key not in filters:
                         filters.update({field_key: {'and': [filter_value]}})
                     else:
                         filters[field_key]['and'].append(filter_value)
@@ -770,7 +770,7 @@ class Utils:
         value_datetime.setParseAction(validate_time)
 
         # More General types
-        value = (value_string | value_bool | value_datetime | value_num | value_orderby)
+        value = value_string | value_bool | value_datetime | value_num | value_orderby
         # List of values (I do not check the homogeneity of the types of values,
         # query builder will do it somehow)
         value_list = Group(value + OneOrMore(Suppress(',') + value) + Optional(Suppress(',')))
@@ -779,7 +779,7 @@ class Utils:
         single_field = Group(key + operator + value)
         list_field = Group(key + (Literal('=in=') | Literal('=notin=')) + value_list)
         orderby_field = Group(key + Literal('=') + value_list)
-        field = (list_field | orderby_field | single_field)
+        field = list_field | orderby_field | single_field
 
         # Fields separator
         separator = Suppress(Literal('&'))

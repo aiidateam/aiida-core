@@ -16,7 +16,7 @@ from aiida.storage.psql_dos.models.base import Base
 from . import utils
 
 ModelType = TypeVar('ModelType')  # pylint: disable=invalid-name
-SelfType = TypeVar('SelfType', bound='SqlaModelEntity')
+SelfType = TypeVar('SelfType', bound='SqlaModelEntity')  # pylint: disable=invalid-name
 
 
 class SqlaModelEntity(Generic[ModelType]):

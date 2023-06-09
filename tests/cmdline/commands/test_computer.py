@@ -355,7 +355,7 @@ class TestVerdiComputerConfigure:
         assert 'core.ssh' in result.output
         assert 'core.local' in result.output
 
-    def test_reachable(self):  # pylint: disable=no-self-use
+    def test_reachable(self):
         """Test reachability of top level and sub commands."""
         import subprocess as sp
         sp.check_output(['verdi', 'computer', 'configure', '--help'])

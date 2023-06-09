@@ -72,7 +72,7 @@ class ArithmeticAddBaseWorkChain(BaseRestartWorkChain):
         return ProcessHandlerReport(True, self.exit_codes.ERROR_ENABLED_DOOM)  # pylint: disable=no-member
 
     @process_handler(priority=450, exit_codes=ExitCode(1000, 'Unicorn encountered'))
-    def a_magic_unicorn_appeared(self, node):  # pylint: disable=no-self-argument,no-self-use
+    def a_magic_unicorn_appeared(self, node):  # pylint: disable=no-self-argument
         """As we all know unicorns do not exist so we should never have to deal with it."""
         raise RuntimeError('this handler should never even have been called')
 

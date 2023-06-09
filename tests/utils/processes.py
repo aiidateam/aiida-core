@@ -66,7 +66,7 @@ class ExceptionProcess(Process):
 
     _node_class = WorkflowNode
 
-    def run(self):  # pylint: disable=no-self-use
+    def run(self):
         raise RuntimeError('CRASH')
 
 

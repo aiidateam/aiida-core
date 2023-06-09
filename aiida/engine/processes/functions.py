@@ -59,7 +59,7 @@ __all__ = ('calcfunction', 'workfunction', 'FunctionProcess')
 
 LOGGER = logging.getLogger(__name__)
 
-FunctionType = t.TypeVar('FunctionType', bound=t.Callable[..., t.Any])
+FunctionType = t.TypeVar('FunctionType', bound=t.Callable[..., t.Any])  # pylint: disable=invalid-name
 
 
 def calcfunction(function: FunctionType) -> FunctionType:
@@ -360,7 +360,7 @@ class FunctionProcess(Process):
                     default is not None and default != UNSPECIFIED and not isinstance(default, Data) and
                     not callable(default)
                 ):
-                    indirect_default = lambda value=default: to_aiida_type(value)
+                    indirect_default = lambda value=default: to_aiida_type(value)  # pylint: disable=unnecessary-lambda-assignment
                 else:
                     indirect_default = default
 

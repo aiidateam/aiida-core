@@ -635,7 +635,7 @@ class Process(plumpy.processes.Process):
         return UUID(self.node.uuid)
 
     @override
-    def encode_input_args(self, inputs: Dict[str, Any]) -> str:  # pylint: disable=no-self-use
+    def encode_input_args(self, inputs: Dict[str, Any]) -> str:
         """
         Encode input arguments such that they may be saved in a Bundle
 
@@ -645,7 +645,7 @@ class Process(plumpy.processes.Process):
         return serialize.serialize(inputs)
 
     @override
-    def decode_input_args(self, encoded: str) -> Dict[str, Any]:  # pylint: disable=no-self-use
+    def decode_input_args(self, encoded: str) -> Dict[str, Any]:
         """
         Decode saved input arguments as they came from the saved instance state Bundle
 
@@ -809,8 +809,7 @@ class Process(plumpy.processes.Process):
                 clean_value(port_value)
             except exceptions.ValidationError:
                 return None
-            else:
-                return port_value
+            return port_value
 
         result = {}
 

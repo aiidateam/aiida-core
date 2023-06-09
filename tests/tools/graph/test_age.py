@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-locals,too-many-statements,no-self-use
+# pylint: disable=too-many-locals,too-many-statements
 """AGE tests"""
 import numpy as np
 import pytest
@@ -28,7 +28,7 @@ def create_tree(max_depth=3, branching=3, starting_cls=orm.Data):
     depth_dict = {}  # saves the descendants, by depth (depth is the key).
     depth_dict[0] = set([parent.pk])
 
-    number_of_nodes = sum([branching**d for d in range(max_depth)])
+    number_of_nodes = sum(branching**d for d in range(max_depth))
     adjacency = np.zeros((number_of_nodes, number_of_nodes), dtype=int)
     all_instances = np.zeros(number_of_nodes, dtype=int)
     all_instances[0] = parent.pk  # saves all the instances EVER created

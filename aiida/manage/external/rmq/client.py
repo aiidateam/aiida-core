@@ -71,7 +71,7 @@ class RabbitmqManagementClient:
         """
         url = self.format_url(url, url_params)
         try:
-            return requests.request(method, url, auth=self._authentication, params=params or {})
+            return requests.request(method, url, auth=self._authentication, params=params or {}, timeout=5)
         except requests.exceptions.ConnectionError as exception:
             raise ManagementApiConnectionError(
                 'Could not connect to the management API. Make sure RabbitMQ is running and the management plugin is '
@@ -90,5 +90,4 @@ class RabbitmqManagementClient:
             self.request('cluster-name')
         except ManagementApiConnectionError:
             return False
-        else:
-            return True
+        return True

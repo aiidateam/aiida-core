@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-self-use
 """"Implementation of `DbImporter` for the OQMD database."""
 from aiida.tools.dbimporters.baseclasses import CifEntry, DbImporter, DbSearchResults
 

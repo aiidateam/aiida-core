@@ -65,7 +65,7 @@ class AiiDALoaderMagics(magic.Magics):
 
     @magic.needs_local_scope
     @magic.line_magic
-    def verdi(self, line='', local_ns=None):  # pylint: disable=no-self-use,unused-argument
+    def verdi(self, line='', local_ns=None):  # pylint: disable=unused-argument
         """Run the AiiDA command line tool, using the currently loaded configuration and profile.
 
         Invoking ``verdi`` normally through the command line follows a different code path, compared to calling it

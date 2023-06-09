@@ -1179,7 +1179,7 @@ class TestPutGetTree(unittest.TestCase):
             transport.rmdir(directory)
 
     @run_for_all_plugins
-    def test_gettree_nested_directory(self, custom_transport):  # pylint: disable=no-self-use
+    def test_gettree_nested_directory(self, custom_transport):
         """Test `gettree` for a nested directory."""
         with tempfile.TemporaryDirectory() as dir_remote, tempfile.TemporaryDirectory() as dir_local:
             content = b'dummy\ncontent'
@@ -1332,7 +1332,7 @@ class TestExecuteCommandWait(unittest.TestCase):
 
         # I create a large content of the file (as a string)
         file_line_binary = file_line.encode('utf8')
-        line_repetitions = (min_file_size_bytes // len(file_line_binary) + 1)
+        line_repetitions = min_file_size_bytes // len(file_line_binary) + 1
         fcontent = (file_line_binary * line_repetitions).decode('utf8')
 
         with custom_transport as trans:

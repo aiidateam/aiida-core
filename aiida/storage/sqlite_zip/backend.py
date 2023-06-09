@@ -218,7 +218,7 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
     def query(self) -> orm.SqliteQueryBuilder:
         return orm.SqliteQueryBuilder(self)
 
-    def get_backend_entity(self, model):  # pylint: disable=no-self-use
+    def get_backend_entity(self, model):
         """Return the backend entity that corresponds to the given Model instance."""
         return orm.get_backend_entity(model, self)
 

@@ -103,7 +103,7 @@ def tests_storage_migrate_raises(run_cli_command, raise_type, call_kwargs, monke
     from aiida.manage import get_manager
     manager = get_manager()
 
-    def mocked_migrate(self):  # pylint: disable=no-self-use
+    def mocked_migrate(self):
         raise raise_type('passed error message')
 
     monkeypatch.setattr(manager.get_profile_storage().__class__, 'migrate', mocked_migrate)

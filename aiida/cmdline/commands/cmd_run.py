@@ -22,19 +22,19 @@ from aiida.cmdline.utils import decorators
 @contextlib.contextmanager
 def update_environment(argv):
     """Context manager that temporarily replaces `sys.argv` with `argv` and adds current working dir to the path."""
-    try:
-        # Store a copy of the current path and argv as a backup variable so it can be restored later
-        _path = sys.path[:]
-        _argv = sys.argv[:]
+    # Store a copy of the current path and argv as a backup variable so it can be restored later
+    _path = sys.path[:]
+    _argv = sys.argv[:]
 
+    try:
         # Add the current working directory to the path, such that local modules can be imported
         sys.path.append(str(pathlib.Path.cwd().resolve()))
         sys.argv = argv[:]
         yield
     finally:
         # Restore old parameters when exiting from the context manager
-        sys.argv = _argv
-        sys.path = _path
+        sys.argv = _argv  # pylint
+        sys.path = _path  # pylint
 
 
 def validate_entry_point_strings(_, __, value):

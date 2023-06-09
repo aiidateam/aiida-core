@@ -92,7 +92,7 @@ class PbsJobResource(NodeNumberJobResource):
                 raise ValueError('num_cores_per_mpiproc must be greater than or equal to one.')
 
             # In this plugin we never used num_cores_per_mpiproc so if it is not defined it is OK.
-            resources.num_cores_per_machine = (resources.num_cores_per_mpiproc * resources.num_mpiprocs_per_machine)
+            resources.num_cores_per_machine = resources.num_cores_per_mpiproc * resources.num_mpiprocs_per_machine
 
         return resources
 
@@ -563,14 +563,14 @@ class PbsBaseClass(Scheduler):
                 _LOGGER.debug(f"No 'queue' field for job id {this_job.job_id}")
 
             try:
-                this_job.requested_wallclock_time = (self._convert_time(raw_data['resource_list.walltime']))  # pylint: disable=invalid-name
+                this_job.requested_wallclock_time = self._convert_time(raw_data['resource_list.walltime'])
             except KeyError:
                 _LOGGER.debug(f"No 'resource_list.walltime' field for job id {this_job.job_id}")
             except ValueError:
                 _LOGGER.warning(f"Error parsing 'resource_list.walltime' for job id {this_job.job_id}")
 
             try:
-                this_job.wallclock_time_seconds = (self._convert_time(raw_data['resources_used.walltime']))
+                this_job.wallclock_time_seconds = self._convert_time(raw_data['resources_used.walltime'])
             except KeyError:
                 # May not have started yet
                 pass
@@ -578,7 +578,7 @@ class PbsBaseClass(Scheduler):
                 _LOGGER.warning(f"Error parsing 'resources_used.walltime' for job id {this_job.job_id}")
 
             try:
-                this_job.cpu_time = (self._convert_time(raw_data['resources_used.cput']))
+                this_job.cpu_time = self._convert_time(raw_data['resources_used.cput'])
             except KeyError:
                 # May not have started yet
                 pass

@@ -91,7 +91,7 @@ class LogCollection(entities.Collection['Log']):
         from . import nodes
 
         if not isinstance(entity, nodes.Node):
-            raise Exception('Only node logs are stored')
+            raise Exception('Only node logs are stored')  # pylint: disable=broad-exception-raised
 
         return self.find({'dbnode_id': entity.pk}, order_by=order_by)
 

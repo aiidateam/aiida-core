@@ -1389,6 +1389,7 @@ class _QueryTagMap:
     """Cache of tag mappings for a query."""
 
     def __init__(self):
+        """Construct a new instance."""
         self._tag_to_type: Dict[str, Union[None, EntityTypes]] = {}
         # A dictionary for classes passed to the tag given to them
         # Everything is specified with unique tags, which are strings.

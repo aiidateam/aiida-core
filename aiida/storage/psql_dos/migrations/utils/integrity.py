@@ -200,8 +200,6 @@ def drop_hashes(conn, hash_extra_key: str, entry_point_string: str | None = None
         value should be a complete entry point string, e.g., ``aiida.node:process.calculation.calcjob`` to drop the hash
         of all ``CalcJobNode`` rows.
     """
-    # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
-    # pylint: disable=no-name-in-module,import-error
     from sqlalchemy.sql import text
 
     from aiida.orm.utils.node import get_type_string_from_class

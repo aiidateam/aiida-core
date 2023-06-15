@@ -513,6 +513,29 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
         'finish_time'
     )
 
+    if TYPE_CHECKING:
+        job_id: str
+        title: str
+        exit_status: int
+        terminating_signal: int
+        annotation: str
+        job_state: JobState
+        job_substate: str
+        allocated_machines: list[MachineInfo]
+        job_owner: str
+        num_mpiprocs: int
+        num_cpus: int
+        num_machines: int
+        queue_name: str
+        account: str
+        qos: str
+        wallclock_time_seconds: int
+        requested_wallclock_time_seconds: int
+        cpu_time: int
+        submission_time: datetime
+        dispatch_time: datetime
+        finish_time: datetime
+
     # If some fields require special serializers, specify them here.
     # You then need to define also the respective _serialize_FIELDTYPE and
     # _deserialize_FIELDTYPE methods

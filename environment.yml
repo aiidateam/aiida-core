@@ -5,7 +5,7 @@ channels:
 - conda-forge
 - defaults
 dependencies:
-- python~=3.8
+- python~=3.9
 - alembic~=1.2
 - archive-path~=0.4.2
 - aio-pika~=6.6
@@ -16,13 +16,12 @@ dependencies:
 - docstring_parser
 - get-annotations~=0.1
 - python-graphviz~=0.19
-- ipython<8.13,>=7
+- ipython>=7
 - jinja2~=3.0
 - jsonschema~=3.0
 - kiwipy[rmq]~=0.7.7
 - importlib-metadata~=4.13
-- importlib-resources~=5.0
-- numpy~=1.19
+- numpy~=1.21
 - paramiko>=2.7.2,~=2.7
 - plumpy~=0.21.6
 - pgsu~=0.2.1

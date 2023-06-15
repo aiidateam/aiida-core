@@ -142,7 +142,7 @@ def generate_environment_yml():
     # python version cannot be overriden from outside environment.yml
     # (even if it is not specified at all in environment.yml)
     # https://github.com/conda/conda/issues/9506
-    conda_requires = ['python~=3.8']
+    conda_requires = ['python~=3.9']
     for req in install_requirements:
         if req.name == 'python' or any(re.match(ignore, str(req)) for ignore in CONDA_IGNORE):
             continue

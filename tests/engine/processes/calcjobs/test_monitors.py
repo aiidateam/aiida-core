@@ -91,7 +91,7 @@ def test_calc_job_monitor_constructor_valid():
     entry_point = 'core.always_kill'
     monitor = CalcJobMonitor(entry_point)
     assert monitor.entry_point == entry_point
-    assert monitor.kwargs == {}
+    assert not monitor.kwargs
     assert monitor.priority == 0
     assert monitor.minimum_poll_interval is None
     assert monitor.call_timestamp is None

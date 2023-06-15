@@ -101,9 +101,7 @@ class TransportQueue:
             # passed around to many places, including outside aiida-core (e.g. paramiko). Anyone keeping a reference
             # to this handle would otherwise keep the Process context (and thus the process itself) in memory.
             # See https://github.com/aiidateam/aiida-core/issues/4698
-            open_callback_handle = self._loop.call_later(
-                safe_open_interval, do_open, context=contextvars.Context()
-            )  #  type: ignore[call-arg]
+            open_callback_handle = self._loop.call_later(safe_open_interval, do_open, context=contextvars.Context())
 
         try:
             transport_request.count += 1

@@ -272,7 +272,7 @@ class ArchiveAppenderSqlZip(ArchiveWriterSqlZip):
         self._deleted_paths = set()
         # now move it to the original location
         self._path.unlink()
-        shutil.move(self._work_dir / 'archive.zip', self._path)  # type: ignore[arg-type]
+        shutil.move(self._work_dir / 'archive.zip', self._path)
         if self._init_work_dir is None:
             shutil.rmtree(self._work_dir, ignore_errors=True)
         self._zip_path = self._work_dir = self._conn = None

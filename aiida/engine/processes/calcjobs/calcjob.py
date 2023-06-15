@@ -964,7 +964,7 @@ class CalcJob(Process):
             tmpl_code_info.stdin_name = code_info.stdin_name
             tmpl_code_info.stdout_name = code_info.stdout_name
             tmpl_code_info.stderr_name = code_info.stderr_name
-            tmpl_code_info.join_files = code_info.join_files
+            tmpl_code_info.join_files = code_info.join_files or False
 
             tmpl_codes_info.append(tmpl_code_info)
         job_tmpl.codes_info = tmpl_codes_info

@@ -48,6 +48,7 @@ __all__ = (
     'EntityType',
     'StorageBackend',
     'clean_value',
+    'validate_attribute_extra_dict_value',
     'validate_attribute_extra_key',
 )
 

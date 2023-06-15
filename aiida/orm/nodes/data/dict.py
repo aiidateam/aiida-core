@@ -8,7 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`Data` sub class to represent a dictionary."""
+from __future__ import annotations
+
 import copy
+from typing import Any, Iterator
 
 from aiida.common import exceptions
 
@@ -46,7 +49,7 @@ class Dict(Data):
     Finally, all dictionary mutations will be forbidden once the node is stored.
     """
 
-    def __init__(self, value=None, **kwargs):
+    def __init__(self, value: None | dict | Dict = None, **kwargs) -> None:
         """Initialise a ``Dict`` node instance.
 
         Usual rules for attribute names apply, in particular, keys cannot start with an underscore, or a ``ValueError``
@@ -61,16 +64,16 @@ class Dict(Data):
         if dictionary:
             self.set_dict(dictionary)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> None:
         try:
             return self.base.attributes.get(key)
         except AttributeError as exc:
             raise KeyError from exc
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: Any) -> None:
         self.base.attributes.set(key, value)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, Dict):
             return self.get_dict() == other.get_dict()
         return self.get_dict() == other
@@ -79,7 +82,7 @@ class Dict(Data):
         """Return whether the node contains a key."""
         return key in self.base.attributes
 
-    def set_dict(self, dictionary):
+    def set_dict(self, dictionary: dict | Dict) -> None:
         """Replace the current dictionary with another one.
 
         :param dictionary: dictionary to set
@@ -99,7 +102,7 @@ class Dict(Data):
             self.update_dict(dictionary_backup)
             raise
 
-    def update_dict(self, dictionary):
+    def update_dict(self, dictionary: dict | Dict) -> None:
         """Update the current dictionary with the keys provided in the dictionary.
 
         .. note:: works exactly as `dict.update()` where new keys are simply added and existing keys are overwritten.
@@ -109,14 +112,14 @@ class Dict(Data):
         for key, value in dictionary.items():
             self.base.attributes.set(key, value)
 
-    def get_dict(self):
+    def get_dict(self) -> dict:
         """Return a dictionary with the parameters currently set.
 
         :return: dictionary
         """
         return dict(self.base.attributes.all)
 
-    def keys(self):
+    def keys(self) -> Iterator[str]:
         """Iterator of valid keys stored in the Dict object.
 
         :return: iterator over the keys of the current dictionary
@@ -124,7 +127,7 @@ class Dict(Data):
         for key in self.base.attributes.keys():
             yield key
 
-    def items(self):
+    def items(self) -> Iterator[tuple[str, Any]]:
         """Iterator of all items stored in the Dict node."""
         for key, value in self.base.attributes.items():
             yield key, value

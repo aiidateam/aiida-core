@@ -11,7 +11,9 @@
 """Tests for :class:`aiida.orm.nodes.data.dict.Dict` class."""
 import pytest
 
+from aiida.common.exceptions import ValidationError
 from aiida.orm import Dict
+from aiida.orm.implementation.utils import FIELD_SEPARATOR
 
 
 @pytest.fixture
@@ -124,3 +126,11 @@ def test_initialise_with_dict_kwarg(dictionary):
     """Test that the ``Dict`` node can be initialized with the ``dict`` keyword argument for backwards compatibility."""
     node = Dict(dict=dictionary)
     assert sorted(node.keys()) == sorted(dictionary.keys())
+
+
+@pytest.mark.parametrize('invalid_dict', ({'a': {5: 'b'}}, {'a': {f'invalid{FIELD_SEPARATOR}key': 'b'}}))
+def test_validate_nested_keys(invalid_dict):
+    """Test that using invalid nested keys in a ``Dict`` node raises when trying to store the node."""
+
+    with pytest.raises(ValidationError):
+        Dict(invalid_dict).store()

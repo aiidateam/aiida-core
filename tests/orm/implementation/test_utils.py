@@ -20,24 +20,32 @@ from aiida.orm.implementation.utils import FIELD_SEPARATOR, clean_value, validat
 class TestOrmImplementationUtils:
     """Test the utility methods in aiida.orm.implementation.utils"""
 
-    def test_invalid_attribute_extra_key(self):
+    @pytest.mark.parametrize(
+        'invalid_key',
+        (
+            5,
+            f'invalid{FIELD_SEPARATOR}key',  # Top-level keys
+            {
+                'a': {
+                    5: 'b'
+                }
+            },
+            {
+                'a': {
+                    f'invalid{FIELD_SEPARATOR}key': 'b'
+                }
+            }  # Nested keys
+        )
+    )
+    def test_invalid_attribute_extra_key(self, invalid_key):
         """Test supplying an invalid key to the `validate_attribute_extra_key` method."""
-        non_string_key = 5
-        field_separator_key = f'invalid{FIELD_SEPARATOR}key'
 
         with pytest.raises(exceptions.ValidationError):
-            validate_attribute_extra_key(non_string_key)
+            validate_attribute_extra_key(invalid_key)
 
-        with pytest.raises(exceptions.ValidationError):
-            validate_attribute_extra_key(field_separator_key)
-
-    def test_invalid_value(self):
+    @pytest.mark.parametrize('invalid_value', (math.nan, math.inf))
+    def test_invalid_value(self, invalid_value):
         """Test supplying nan and inf values to the `clean_value` method."""
-        nan_value = math.nan
-        inf_value = math.inf
 
         with pytest.raises(exceptions.ValidationError):
-            clean_value(nan_value)
-
-        with pytest.raises(exceptions.ValidationError):
-            clean_value(inf_value)
+            clean_value(invalid_value)

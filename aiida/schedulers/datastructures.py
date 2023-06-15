@@ -405,6 +405,7 @@ class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-insta
         codes_run_mode: CodeRunMode
         codes_info: list[JobTemplateCodeInfo]
 
+
 @dataclass
 class JobTemplateCodeInfo:
     """

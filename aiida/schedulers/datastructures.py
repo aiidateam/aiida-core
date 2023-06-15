@@ -21,8 +21,9 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import enum
 import json
+from typing import TYPE_CHECKING
 
-from aiida.common import AIIDA_LOGGER
+from aiida.common import AIIDA_LOGGER, CodeRunMode
 from aiida.common.extendeddicts import AttributeDict, DefaultFieldsAttributeDict
 from aiida.common.timezone import make_aware, timezone_from_name
 
@@ -108,6 +109,12 @@ class NodeNumberJobResource(JobResource):
         'num_cores_per_mpiproc',
     )
 
+    if TYPE_CHECKING:
+        num_machines: int
+        num_mpiprocs_per_machine: int
+        num_cores_per_machine: int
+        num_cores_per_mpiproc: int
+
     @classmethod
     def validate_resources(cls, **kwargs):
         """Validate the resources against the job resource class of this scheduler.
@@ -192,6 +199,10 @@ class ParEnvJobResource(JobResource):
         'parallel_env',
         'tot_num_mpiprocs',
     )
+
+    if TYPE_CHECKING:
+        parallel_env: str
+        tot_num_mpiprocs: int
 
     @classmethod
     def validate_resources(cls, **kwargs):
@@ -366,6 +377,33 @@ class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-insta
         'codes_info',
     )
 
+    if TYPE_CHECKING:
+        shebang: str
+        submit_as_hold: bool
+        rerunnable: bool
+        job_environment: dict[str, str] | None
+        environment_variables_double_quotes: bool | None
+        working_directory: str
+        email: str
+        email_on_started: bool
+        email_on_terminated: bool
+        job_name: str
+        sched_output_path: str
+        sched_error_path: str
+        sched_join_files: bool
+        queue_name: str
+        account: str
+        qos: str
+        job_resource: JobResource
+        priority: str
+        max_memory_kb: int | None
+        max_wallclock_seconds: int
+        custom_scheduler_commands: str
+        prepend_text: str
+        append_text: str
+        import_sys_environment: bool | None
+        codes_run_mode: CodeRunMode
+        codes_info: list[JobTemplateCodeInfo]
 
 @dataclass
 class JobTemplateCodeInfo:

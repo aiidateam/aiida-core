@@ -10,13 +10,7 @@
 """Module that defines the configuration file of an AiiDA instance and functions to create and load it."""
 import codecs
 from functools import lru_cache
-
-try:
-    # Python <= 3.8
-    from importlib_resources import files
-except ImportError:
-    from importlib.resources import files
-
+from importlib.resources import files
 import json
 import os
 import shutil

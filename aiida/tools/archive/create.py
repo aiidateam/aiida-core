@@ -345,7 +345,7 @@ def create_archive(
 
         if filename.exists():
             filename.unlink()
-        shutil.move(tmp_filename, filename)  # type: ignore[arg-type]
+        shutil.move(tmp_filename, filename)
 
     EXPORT_LOGGER.report('Archive created successfully')
 

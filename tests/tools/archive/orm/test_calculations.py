@@ -30,7 +30,7 @@ def test_calcfunction(tmp_path, aiida_profile):
 
     def max_(**kwargs):
         """select the max value"""
-        max_val = max([(v.value, v) for v in kwargs.values()])
+        max_val = max((v.value, v) for v in kwargs.values())
         return {'res': max_val[1]}
 
     # I'm creating a bunch of numbers

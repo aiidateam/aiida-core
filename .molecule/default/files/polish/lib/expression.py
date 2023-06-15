@@ -87,7 +87,7 @@ def validate(expression):
         except ValueError:
             return False, f'the operand {operand} is not a valid integer'
 
-        if operator not in OPERATORS.keys():
+        if operator not in OPERATORS:
             return False, f'the operator {operator} is not supported'
 
         if OPERATORS[operator] is operators.pow and operand < 0:
@@ -119,7 +119,7 @@ def evaluate(expression, modulo=None):
     result = 0
 
     for part in expression.split():
-        if part not in OPERATORS.keys():
+        if part not in OPERATORS:
             stack.appendleft(part)
         else:
             operator = OPERATORS[part]

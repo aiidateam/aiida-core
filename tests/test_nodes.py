@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=too-many-lines,invalid-name,protected-access,missing-docstring,too-many-locals,too-many-statements
-# pylint: disable=too-many-public-methods,no-member,no-self-use
+# pylint: disable=too-many-public-methods,no-member
 import copy
 import io
 import tempfile

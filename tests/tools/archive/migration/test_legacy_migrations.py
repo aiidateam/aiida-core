@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test archive file migration from old export versions to the newest"""
-# pylint: disable=no-self-use
+
 import pytest
 
 from aiida import orm

@@ -189,7 +189,7 @@ def create(
     }
 
     if AIIDA_LOGGER.level <= logging.REPORT:  # pylint: disable=no-member
-        set_progress_bar_tqdm(leave=(AIIDA_LOGGER.level <= logging.INFO))
+        set_progress_bar_tqdm(leave=AIIDA_LOGGER.level <= logging.INFO)
     else:
         set_progress_reporter(None)
 
@@ -232,7 +232,7 @@ def migrate(input_file, output_file, force, in_place, version):
         )
 
     if AIIDA_LOGGER.level <= logging.REPORT:  # pylint: disable=no-member
-        set_progress_bar_tqdm(leave=(AIIDA_LOGGER.level <= logging.INFO))
+        set_progress_bar_tqdm(leave=AIIDA_LOGGER.level <= logging.INFO)
     else:
         set_progress_reporter(None)
 
@@ -344,7 +344,7 @@ def import_archive(
     from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
 
     if AIIDA_LOGGER.level <= logging.REPORT:  # pylint: disable=no-member
-        set_progress_bar_tqdm(leave=(AIIDA_LOGGER.level <= logging.INFO))
+        set_progress_bar_tqdm(leave=AIIDA_LOGGER.level <= logging.INFO)
     else:
         set_progress_reporter(None)
 

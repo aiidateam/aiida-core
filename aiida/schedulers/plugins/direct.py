@@ -83,7 +83,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
     """
     Support for the direct execution bypassing schedulers.
     """
-    _logger = aiida.schedulers.Scheduler._logger.getChild('direct')
+    _logger = aiida.schedulers.Scheduler._logger.getChild('direct')  # pylint: disable=protected-access
 
     # Query only by list of jobs and not by user
     _features = {

@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-member,too-many-public-methods,no-self-use
+# pylint: disable=no-member,too-many-public-methods
 """Module to test AiiDA processes."""
 import threading
 

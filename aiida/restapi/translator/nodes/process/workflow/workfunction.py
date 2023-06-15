@@ -30,7 +30,7 @@ class WorkFunctionTranslator(ProcessTranslator):
     _result_type = __label__
 
     @staticmethod
-    def get_derived_properties(node):
+    def get_derived_properties(node):  # pylint: disable=arguments-differ
         """
         Generic function extended for workfunction. Currently
         it is not implemented.

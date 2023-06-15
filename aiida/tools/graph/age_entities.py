@@ -424,7 +424,7 @@ class Basket():
         return self
 
     def __len__(self):
-        return sum([len(s) for s in self.sets])
+        return sum(len(s) for s in self.sets)
 
     def __eq__(self, other):
         for key in self._dict:
@@ -436,6 +436,7 @@ class Basket():
         return not self == other
 
     def __repr__(self):
+        """Return string representation."""
         ret_str = ''
         for key, val in self._dict.items():
             ret_str += f'  {key}: '

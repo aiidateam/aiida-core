@@ -286,7 +286,7 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force, exit
         echo.echo_critical('no calcjobs found with the given criteria')
 
     if not force:
-        path_count = sum([len(paths) for computer, paths in path_mapping.items()])
+        path_count = sum(len(paths) for paths in path_mapping.values())
         warning = f'Are you sure you want to clean the work directory of {path_count} calcjobs?'
         click.confirm(warning, abort=True)
 

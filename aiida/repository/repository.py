@@ -66,7 +66,7 @@ class Repository:
         :param backend: instance of repository backend to use to actually store the file objects.
         """
         instance = cls.__new__(cls)
-        instance.__init__(backend)  # type: ignore[misc]
+        instance.__init__(backend)  # type: ignore[misc]  # pylint: disable=unnecessary-dunder-call
 
         if serialized:
             for name, obj in serialized['o'].items():
@@ -376,8 +376,7 @@ class Repository:
             self.get_object(path)
         except FileNotFoundError:
             return False
-        else:
-            return True
+        return True
 
     @contextlib.contextmanager
     def open(self, path: FilePath) -> Iterator[BinaryIO]:

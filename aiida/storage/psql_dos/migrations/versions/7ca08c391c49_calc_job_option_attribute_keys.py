@@ -15,9 +15,6 @@ Revises: e72ad251bcdb
 Create Date: 2019-01-15 15:03:43.876133
 
 """
-
-# Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
-# pylint: disable=no-name-in-module,import-error
 from alembic import op
 from sqlalchemy.sql import text
 

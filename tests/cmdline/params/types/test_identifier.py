@@ -18,8 +18,6 @@ from aiida.orm import Bool, Float, Int
 class TestIdentifierParamType:
     """Tests for the `IdentifierParamType`."""
 
-    # pylint: disable=no-self-use
-
     def test_base_class(self):
         """
         The base class is abstract and should not be constructable

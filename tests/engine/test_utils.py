@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=global-statement,no-self-use
+# pylint: disable=global-statement
 """Test engine utilities such as the exponential backoff mechanism."""
 import asyncio
 

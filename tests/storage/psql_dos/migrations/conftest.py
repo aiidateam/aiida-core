@@ -37,8 +37,7 @@ def pytest_collection_modifyitems(config, items):  # pylint: disable=unused-argu
             path.relative_to(other)
         except ValueError:
             return False
-        else:
-            return True
+        return True
 
     for item in items:
 

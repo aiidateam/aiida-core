@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-self-use
 """Implementation of `DbImporter` for the ICSD database.
 
 Note: The implementation in this file is not compatible with the recent versions
@@ -81,7 +80,7 @@ class IcsdDbImporter(DbImporter):
     pressure_precision = 1
 
     def __init__(self, **kwargs):
-
+        """Construct a new instance."""
         self.db_parameters = {
             'server': '',
             'urladd': 'index.php?',

@@ -581,5 +581,4 @@ class ProcessNode(Sealable, Node):
             caller = self.base.links.get_incoming(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).one().node
         except ValueError:
             return None
-        else:
-            return caller
+        return caller

@@ -214,7 +214,7 @@ class PluginParamType(EntryPointType):
             group = matching_groups.pop()
 
         else:
-            ValueError(f'invalid entry point string format: {entry_point_string}')
+            raise ValueError(f'invalid entry point string format: {entry_point_string}')
 
         # If there is a factory for the entry point group, use that, otherwise use ``get_entry_point``
         try:

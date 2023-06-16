@@ -206,13 +206,13 @@ class ProcessBuilderNamespace(MutableMapping):
                 if isinstance(value, Mapping):
                     self[key].update(value)
                 else:
-                    self.__setattr__(key, value)
+                    self.__setattr__(key, value)  # pylint: disable=unnecessary-dunder-call
 
         for key, value in kwds.items():
             if isinstance(value, Mapping):
                 self[key].update(value)
             else:
-                self.__setattr__(key, value)
+                self.__setattr__(key, value)  # pylint: disable=unnecessary-dunder-call
 
     def _inputs(self, prune: bool = False) -> dict:
         """Return the entire mapping of inputs specified for this builder.

@@ -157,8 +157,8 @@ def get_query_type_from_type_string(type_string):
 class AbstractNodeMeta(ABCMeta):
     """Some python black magic to set correctly the logger also in subclasses."""
 
-    def __new__(cls, name, bases, namespace, **kwargs):
-        newcls = ABCMeta.__new__(cls, name, bases, namespace, **kwargs)  # pylint: disable=too-many-function-args
+    def __new__(mcs, name, bases, namespace, **kwargs):
+        newcls = ABCMeta.__new__(mcs, name, bases, namespace, **kwargs)  # pylint: disable=too-many-function-args
         newcls._logger = logging.getLogger(f"{namespace['__module__']}.{name}")
 
         # Set the plugin type string and query type string based on the plugin type string

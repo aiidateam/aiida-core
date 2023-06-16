@@ -412,7 +412,7 @@ def identify_outdated(extras, pre_releases):
         to_install.update(Requirement.parse(r) for r in pyproject['project']['optional-dependencies'][key])
 
     def get_package_data(name):
-        req = requests.get(f'https://pypi.python.org/pypi/{name}/json')
+        req = requests.get(f'https://pypi.python.org/pypi/{name}/json', timeout=5)
         req.raise_for_status()
         return req.json()
 

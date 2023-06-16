@@ -28,7 +28,7 @@ class TrajectoryData(ArrayData):
         if structurelist is not None:
             self.set_structurelist(structurelist)
 
-    def _internal_validate(self, stepids, cells, symbols, positions, times, velocities):  # pylint: disable=too-many-arguments,too-many-locals,no-self-use,too-many-branches
+    def _internal_validate(self, stepids, cells, symbols, positions, times, velocities):  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches
         """
         Internal function to validate the type and shape of the arrays. See
         the documentation of py:meth:`.set_trajectory` for a description of the

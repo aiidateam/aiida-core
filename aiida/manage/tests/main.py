@@ -194,7 +194,7 @@ class ProfileManager:
     def has_profile_open(self):
         return self._profile is not None
 
-    def destroy_all(self):  # pylint: disable=no-self-use
+    def destroy_all(self):
         manager = get_manager()
         manager.reset_profile()
 

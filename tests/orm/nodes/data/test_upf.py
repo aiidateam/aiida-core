@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=unspecified-encoding,no-self-use
+# pylint: disable=unspecified-encoding
 """
 This module contains tests for UpfData and UpfData related functions.
 """

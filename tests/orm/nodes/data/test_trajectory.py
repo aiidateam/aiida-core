@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=no-self-use,redefined-outer-name
+# pylint: disable=redefined-outer-name
 """Tests for the `TrajectoryData` class."""
 import numpy as np
 import pytest

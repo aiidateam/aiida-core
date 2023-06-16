@@ -231,7 +231,7 @@ class MpdsDbImporter(DbImporter):
         :param kwargs: parameters for the GET request
         """
         kwargs['fmt'] = fmt.value
-        return requests.get(url=self.url, params=kwargs, headers={'Key': self.api_key})
+        return requests.get(url=self.url, params=kwargs, headers={'Key': self.api_key}, timeout=10)
 
     @staticmethod
     def get_response_content(response, fmt=DEFAULT_API_FORMAT):

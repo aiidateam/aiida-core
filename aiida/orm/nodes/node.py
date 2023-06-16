@@ -41,7 +41,7 @@ if TYPE_CHECKING:
 
 __all__ = ('Node',)
 
-NodeType = TypeVar('NodeType', bound='Node')
+NodeType = TypeVar('NodeType', bound='Node')  # pylint: disable=invalid-name
 
 
 class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
@@ -246,7 +246,6 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         Therefore, use :py:meth:`~aiida.orm.nodes.attributes.NodeAttributes.get()` and similar methods that
         automatically read either from the DB or from the internal attribute cache.
         """
-        # pylint: disable=no-self-use
         return True
 
     def _validate_storability(self) -> None:
@@ -542,7 +541,6 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
 
         :return: a description string
         """
-        # pylint: disable=no-self-use
         return ''
 
     @property
@@ -653,7 +651,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
     }
 
     @classproperty
-    def Collection(cls):  # pylint: disable=invalid-name,no-self-use
+    def Collection(cls):  # pylint: disable=invalid-name
         """Return the collection type for this class.
 
         This used to be a class argument with the value ``NodeCollection``. The argument is deprecated and this property

@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-self-use
 """Tests for the classes in `aiida.engine.processes.calcjobs.manager`."""
 import asyncio
 import time

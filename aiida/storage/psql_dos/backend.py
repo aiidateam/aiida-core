@@ -305,7 +305,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
             session.bulk_insert_mappings(mapper, rows, render_nulls=True, return_defaults=True)
         return [row['id'] for row in rows]
 
-    def bulk_update(self, entity_type: EntityTypes, rows: List[dict]) -> None:  # pylint: disable=no-self-use
+    def bulk_update(self, entity_type: EntityTypes, rows: List[dict]) -> None:
         mapper, keys = self._get_mapper_from_entity(entity_type, True)
         if not rows:
             return None
@@ -318,7 +318,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         with (nullcontext() if self.in_transaction else self.transaction()):
             session.bulk_update_mappings(mapper, rows)
 
-    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]) -> None:  # pylint: disable=no-self-use
+    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]) -> None:
         # pylint: disable=no-value-for-parameter
         from aiida.storage.psql_dos.models.group import DbGroupNode
         from aiida.storage.psql_dos.models.node import DbLink, DbNode

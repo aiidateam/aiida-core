@@ -151,7 +151,7 @@ class NodeTranslator(BaseTranslator):
             })
             self._query_help['project'][edge_tag] = [{'label': {}}, {'type': {}}]
 
-    def set_query(
+    def set_query(  # pylint: disable=arguments-renamed
         self,
         filters=None,
         orders=None,
@@ -359,7 +359,7 @@ class NodeTranslator(BaseTranslator):
                 # re-implementation of deprecated `imp.load_package`
                 if os.path.isdir(full_path_base):
                     #Adds an extension to check for __init__ file in the package directory
-                    extensions = (importlib.machinery.SOURCE_SUFFIXES[:] + importlib.machinery.BYTECODE_SUFFIXES[:])
+                    extensions = importlib.machinery.SOURCE_SUFFIXES[:] + importlib.machinery.BYTECODE_SUFFIXES[:]
                     for extension in extensions:
                         init_path = os.path.join(full_path_base, '__init__' + extension)
                         if os.path.exists(init_path):
@@ -762,7 +762,7 @@ class NodeTranslator(BaseTranslator):
 
         return {'nodes': nodes, 'metadata': metadata}
 
-    def get_projectable_properties(self):
+    def get_projectable_properties(self):  # pylint: disable=arguments-differ
         """
         Get projectable properties specific for Node
         :return: dict of projectable properties and column_order list

@@ -32,7 +32,7 @@ class UserTranslator(BaseTranslator):
 
     _default_projections = ['id', 'first_name', 'last_name', 'institution']
 
-    def get_projectable_properties(self):
+    def get_projectable_properties(self):  # pylint: disable=arguments-differ
         """
         Get projectable properties specific for User
         :return: dict of projectable properties and column_order list

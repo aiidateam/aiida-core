@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines,invalid-name,no-member,too-many-public-methods,no-self-use
+# pylint: disable=too-many-lines,invalid-name,no-member,too-many-public-methods
 """Tests for specific subclasses of Data."""
 import os
 import tempfile
@@ -1930,7 +1930,7 @@ class TestStructureDataFromAse:
         assert round(abs(c[1].mass - 110.2), 7) == 0
 
     @skip_ase
-    def test_ase_molecule(self):  # pylint: disable=no-self-use
+    def test_ase_molecule(self):
         """Tests that importing a molecule from ASE works."""
         from ase.build import molecule
         s = StructureData(ase=molecule('H2O'))

@@ -188,7 +188,7 @@ class MockProcess():
         self._process = None
         self._profile = profile
 
-    def _write_codefile(self, temppath_codefile, temppath_checkfile, runtime_secs=60):  # pylint: disable=no-self-use
+    def _write_codefile(self, temppath_codefile, temppath_checkfile, runtime_secs=60):
         """Auxiliary function to write the code for the process."""
         # pylint: disable=f-string-without-interpolation
         with temppath_codefile.open('w', encoding='utf-8') as fileobj:
@@ -198,7 +198,7 @@ class MockProcess():
             fileobj.write(f'logger_file.touch()\n')
             fileobj.write(f'time.sleep({runtime_secs})\n')
 
-    def _wait_for_checkfile(self, temppath_checkfile):  # pylint: disable=no-self-use
+    def _wait_for_checkfile(self, temppath_checkfile):
         """Auxiliary function that waits for the checkfile to be written."""
         import time
         check_count = 0
@@ -229,7 +229,7 @@ class MockProcess():
 
             else:
                 self._wait_for_checkfile(temppath_checkfile)
-                return_vals = (self._process.pid)
+                return_vals = self._process.pid
 
         finally:
             temppath_codefile.unlink(missing_ok=True)

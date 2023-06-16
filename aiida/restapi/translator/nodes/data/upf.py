@@ -30,7 +30,7 @@ class UpfDataTranslator(DataTranslator):
     _result_type = __label__
 
     @staticmethod
-    def get_derived_properties(node):
+    def get_derived_properties(node):  # pylint: disable=arguments-differ
         """
         :param node: node object
         :returns: empty dict

@@ -164,7 +164,7 @@ def test_attr():
     assert isinstance(group_path.browse.a.c.d, GroupAttr)
     assert isinstance(group_path.browse.a.c.d(), GroupPath)
     assert group_path.browse.a.c.d().path == 'a/c/d'
-    assert not set(group_path.browse.__dir__()).intersection(['bad space', 'bad@char', '_badstart'])
+    assert not set(dir(group_path.browse)).intersection(['bad space', 'bad@char', '_badstart'])
     with pytest.raises(AttributeError):
         group_path.browse.a.c.x  # pylint: disable=pointless-statement
 

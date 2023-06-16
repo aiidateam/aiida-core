@@ -668,7 +668,7 @@ class LocalTransport(Transport):
             aiida_attr[key] = getattr(os_attr, key)
         return aiida_attr
 
-    def _local_listdir(self, path, pattern=None):  # pylint: disable=no-self-use
+    def _local_listdir(self, path, pattern=None):
         """Act on the local folder, for the rest, same as listdir."""
         import re
 

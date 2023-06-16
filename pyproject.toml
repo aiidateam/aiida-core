@@ -105,7 +105,7 @@ pre-commit = [
     "mypy==0.991",
     "packaging==20.3",
     "pre-commit~=2.2",
-    "pylint~=2.11.1",
+    "pylint~=2.17.4",
     "pylint-aiida~=0.1.1",
     "sqlalchemy[mypy]~=1.4.29",
     "tomli",
@@ -272,7 +272,6 @@ max-line-length = 120
 
 [tool.pylint.messages_control]
 disable = [
-    "bad-continuation",
     "consider-using-f-string",
     "cyclic-import",
     "duplicate-code",
@@ -288,6 +287,9 @@ disable = [
     "too-many-instance-attributes",
     # this can be removed when https://github.com/PyCQA/astroid/issues/1015 is fixed
     "not-context-manager",
+    "unnecessary-lambda-assignment",
+    "use-dict-literal",
+    "unnecessary-dunder-call",
 ]
 
 [tool.pylint.basic]
@@ -306,7 +308,15 @@ good-names = [
     "nl",
     "TemplatereplacerCalculation",
     "ArithmeticAddCalculation",
-    "MultiplyAddWorkChain"
+    "MultiplyAddWorkChain",
+    "SelfType",
+    "EntityType",
+    "MethodType",
+    "ReturnType",
+    "BackendNodeType",
+    "EnumType",
+    "CollectionType",
+    "BackendEntityType",
 ]
 no-docstring-rgx = "^_,setUp,tearDown"
 docstring-min-length = 5

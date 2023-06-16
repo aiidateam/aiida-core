@@ -57,7 +57,7 @@ class MaterialsProjectImporter(DbImporter):
         Verify the supplied API key by issuing a request to Materials Project.
         """
         response = requests.get(
-            'https://www.materialsproject.org/rest/v1/api_check', headers={'X-API-KEY': self._api_key}
+            'https://www.materialsproject.org/rest/v1/api_check', headers={'X-API-KEY': self._api_key}, timeout=5
         )
         response_content = response.json()  # a dict
         if 'error' in response_content:
@@ -131,7 +131,7 @@ class MaterialsProjectImporter(DbImporter):
 
         :param query: a dictionary with the query parameters
         """
-        for entry in self._mpr.query(criteria=query, properties=properties):
+        for entry in self._mpr.query(criteria=query, properties=properties):  # pylint: disable=no-member
             yield entry
 
 

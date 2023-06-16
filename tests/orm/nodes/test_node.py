@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=attribute-defined-outside-init,no-member,no-self-use,too-many-public-methods,too-many-lines
+# pylint: disable=attribute-defined-outside-init,no-member,too-many-public-methods,too-many-lines
 """Tests for the Node ORM class."""
 from decimal import Decimal
 from io import BytesIO
@@ -839,7 +839,7 @@ class TestNodeLinks:
 class TestNodeDelete:
     """Tests for deleting nodes."""
 
-    # pylint: disable=no-member,no-self-use
+    # pylint: disable=no-member
 
     def test_delete_through_backend(self):
         """Test deletion works correctly through the backend."""

@@ -18,8 +18,6 @@ from aiida.plugins.entry_point import get_entry_point_from_string
 class TestPluginParamType:
     """Tests for the `PluginParamType`."""
 
-    # pylint: disable=no-self-use
-
     def test_group_definition(self):
         """
         Test the various accepted syntaxes of defining supported entry point groups. Both single
@@ -172,7 +170,7 @@ class TestPluginParamType:
         means there should never be ambiguity and specifying a full entry point string is not necessary, however,
         when the user decides to user either a FULL or PARTIAL string anyway, the completion should match that syntax
         """
-        param = PluginParamType(group=('transports'))
+        param = PluginParamType(group='transports')
         entry_point_minimal = 'core.ssh'
         entry_point_partial = 'transports:core.ssh'
         entry_point_full = 'aiida.transports:core.ssh'

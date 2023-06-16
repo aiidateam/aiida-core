@@ -149,6 +149,7 @@ class CalcJobMonitors:
     """
 
     def __init__(self, monitors: dict[str, Dict]):
+        """Construct a new instance."""
         type_check(monitors, dict)
 
         if any(not isinstance(monitor, Dict) for monitor in monitors.values()):

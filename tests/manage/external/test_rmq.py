@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name,no-self-use
+# pylint: disable=redefined-outer-name
 """Tests for the `aiida.manage.external.rmq` module."""
 import pathlib
 import uuid
@@ -112,7 +112,7 @@ def test_duplicate_subscriber_identifier(aiida_local_code_factory, started_daemo
 
     # Verify that the receiving of the duplicate task was logged by the daemon
     daemon_log = pathlib.Path(started_daemon_client.daemon_log_file).read_text(encoding='utf-8')
-    assert f'Error: A subscriber with the process id<{node.pk}> already exists' in daemon_log
+    assert f'A subscriber with the process id<{node.pk}> already exists' in daemon_log
 
 
 @pytest.fixture

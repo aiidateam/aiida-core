@@ -212,7 +212,7 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
 
     # If the ``CLI_ACTIVE`` is set, a ``verdi`` command is being executed, so we replace the ``console`` handler with
     # the ``cli`` one for all loggers.
-    if CLI_ACTIVE is True:
+    if CLI_ACTIVE is True and not daemon:
         for logger in config['loggers'].values():
             handlers = logger['handlers']
             if 'console' in handlers:

@@ -103,7 +103,7 @@ def test_sandbox_filepath_not_existing(tmp_path):
 
     Ensure that a non-existing ``filepath`` is created automatically, including parent directories.
     """
-    filepath = (tmp_path / 'some' / 'sub' / 'folder')
+    filepath = tmp_path / 'some' / 'sub' / 'folder'
     assert not filepath.exists()
     sandbox = SandboxFolder(filepath=filepath)
     assert pathlib.Path(sandbox.abspath).relative_to(filepath)

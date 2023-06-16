@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines,missing-function-docstring,invalid-name,missing-class-docstring,no-self-use
+# pylint: disable=too-many-lines,missing-function-docstring,invalid-name,missing-class-docstring
 """Tests for the `WorkChain` class."""
 import asyncio
 import inspect
@@ -1579,21 +1579,21 @@ class TestWorkChainExpose:
     def test_nested_expose(self):
         res = launch.run(
             GrandParentExposeWorkChain,
-            sub=dict(
-                sub=dict(
-                    a=Int(1),
-                    sub_1={
+            sub={
+                'sub': {
+                    'a': Int(1),
+                    'sub_1': {
                         'b': Float(2.3),
                         'c': Bool(True)
                     },
-                    sub_2={
+                    'sub_2': {
                         'b': Float(1.2),
                         'sub_3': {
                             'c': Bool(False)
                         }
                     },
-                )
-            )
+                }
+            }
         )
         assert res == {
             'sub': {

@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-member,too-many-lines,no-self-use
+# pylint: disable=no-member,too-many-lines
 """Test data-related verdi commands."""
 import asyncio
 import io
@@ -57,7 +57,7 @@ class DummyVerdiDataExportable:
         }
 
         if datatype is None or datatype not in datatype_mapping:
-            raise Exception(f'The listing of the objects {datatype} is not supported')
+            raise RuntimeError(f'The listing of the objects {datatype} is not supported')
 
         export_cmd = datatype_mapping[datatype]
 
@@ -117,7 +117,7 @@ class DummyVerdiDataListable:
         }
 
         if datatype is None or datatype not in datatype_mapping:
-            raise Exception(f'The listing of the objects {datatype} is not supported')
+            raise RuntimeError(f'The listing of the objects {datatype} is not supported')
 
         listing_cmd = datatype_mapping[datatype]
 

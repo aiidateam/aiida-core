@@ -165,7 +165,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
     _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore
 
     @classproperty
-    def objects(cls: EntityType) -> CollectionType:  # pylint: disable=no-self-argument,no-self-use
+    def objects(cls: EntityType) -> CollectionType:  # pylint: disable=no-self-argument
         """Get a collection for objects of this type, with the default backend.
 
         .. deprecated:: This will be removed in v3, use ``collection`` instead.
@@ -176,7 +176,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         return cls.collection
 
     @classproperty
-    def collection(cls) -> CollectionType:  # pylint: disable=no-self-argument,no-self-use
+    def collection(cls) -> CollectionType:  # pylint: disable=no-self-argument
         """Get a collection for objects of this type, with the default backend.
 
         :return: an object that can be used to access entities of this type

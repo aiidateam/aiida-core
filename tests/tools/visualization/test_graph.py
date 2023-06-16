@@ -103,7 +103,7 @@ class TestVisGraph:
 
     def test_graph_init(self):
         """ test initialisation of Graph"""
-        # pylint: disable=no-self-use
+
         graph_mod.Graph()
 
     def test_graph_add_node(self):

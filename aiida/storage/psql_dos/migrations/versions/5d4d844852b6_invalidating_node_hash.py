@@ -16,8 +16,6 @@ Create Date: 2018-10-26 17:14:33.566670
 
 """
 from alembic import op
-# Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
-# pylint: disable=no-name-in-module,import-error
 from sqlalchemy.sql import text
 
 # revision identifiers, used by Alembic.

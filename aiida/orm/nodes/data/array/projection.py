@@ -238,8 +238,7 @@ class ProjectionData(OrbitalData, ArrayData):
 
         # verifies and sets the orbital dicts
         list_of_orbital_dicts = []
-        for i, _ in enumerate(list_of_orbitals):
-            this_orbital = list_of_orbitals[i]
+        for i, this_orbital in enumerate(list_of_orbitals):
             orbital_dict = this_orbital.get_orbital_dict()
             try:
                 orbital_type = orbital_dict.pop('_orbital_type')

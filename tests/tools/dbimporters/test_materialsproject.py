@@ -25,7 +25,7 @@ class TestMaterialsProject:
     functions.
     """
 
-    def test_invalid_api_key(self):  # pylint: disable=no-self-use
+    def test_invalid_api_key(self):
         """
         Test if Materials Project rejects an invalid API key and that we catch the error.
         Please enable the test in the profile configurator.

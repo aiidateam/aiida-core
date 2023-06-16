@@ -68,11 +68,15 @@ def test_get_unreferenced_keyset():
     ),
     ((
         {},
-        [' > live: True', ' > dry_run: False']
+        [' > live: True', ' > dry_run: False', ' > compress: False']
     ),
     (
         {'full': True, 'dry_run': True},
-        [' > live: False', ' > dry_run: True']
+        [' > live: False', ' > dry_run: True', ' > compress: False']
+    ),
+    (
+        {'full': True, 'dry_run': True, 'compress': True},
+        [' > live: False', ' > dry_run: True', ' > compress: True']
     ),
     (
         {'extra_kwarg': 'molly'},
@@ -87,10 +91,11 @@ def test_maintain(caplog, monkeypatch, kwargs, logged_texts):
 
     storage_backend = get_manager().get_profile_storage()
 
-    def mock_maintain(self, live=True, dry_run=False, **kwargs):  # pylint: disable=unused-argument
+    def mock_maintain(self, live=True, dry_run=False, compress=False, **kwargs):  # pylint: disable=unused-argument
         logmsg = 'keywords provided:\n'
         logmsg += f' > live: {live}\n'
         logmsg += f' > dry_run: {dry_run}\n'
+        logmsg += f' > compress: {compress}\n'
         for key, val in kwargs.items():
             logmsg += f' > {key}: {val}\n'
         logging.info(logmsg)

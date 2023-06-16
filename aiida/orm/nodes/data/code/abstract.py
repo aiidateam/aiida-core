@@ -98,10 +98,8 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """
         return [str(self.get_executable())] + (cmdline_params or [])
 
-    def get_prepend_cmdline_params( # pylint: disable=no-self-use
-        self,
-        mpi_args: list[str] | None = None,
-        extra_mpirun_params: list[str] | None = None
+    def get_prepend_cmdline_params(
+        self, mpi_args: list[str] | None = None, extra_mpirun_params: list[str] | None = None
     ) -> list[str]:
         """Return List of command line parameters to be prepended to the executable in submission line.
         These command line parameters are typically parameters related to MPI invocations.

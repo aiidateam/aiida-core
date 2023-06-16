@@ -232,7 +232,6 @@ class TestRestApi:
             self._dummy_data[label] = data
 
     def split_path(self, url):
-        # pylint: disable=no-self-use
         """
         Split the url with "?" to get url path and it's parameters
         :param url: Web url

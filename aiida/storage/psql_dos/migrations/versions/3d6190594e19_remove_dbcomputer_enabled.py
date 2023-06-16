@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name,no-member
 """Remove `db_dbcomputer.enabled`
 
 This is similar to migration django_0031
@@ -17,9 +17,6 @@ Revises: 5a49629f0d45
 Create Date: 2019-04-03 14:38:50.585639
 
 """
-
-# Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
-# pylint: disable=no-member,no-name-in-module,import-error
 from alembic import op
 import sqlalchemy as sa
 

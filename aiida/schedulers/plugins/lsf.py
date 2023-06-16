@@ -178,7 +178,7 @@ class LsfScheduler(aiida.schedulers.Scheduler):
     Support for the IBM LSF scheduler
     'https://www-01.ibm.com/support/knowledgecenter/SSETD4_9.1.2/lsf_welcome.html'
     """
-    _logger = aiida.schedulers.Scheduler._logger.getChild('lsf')
+    _logger = aiida.schedulers.Scheduler._logger.getChild('lsf')  # pylint: disable=protected-access
 
     # Query only by list of jobs and not by user
     _features = {

@@ -45,7 +45,7 @@ class UserParamType(click.ParamType):
         return results[0]
 
     @with_dbenv()
-    def shell_complete(self, ctx, param, incomplete):  # pylint: disable=unused-argument,no-self-use
+    def shell_complete(self, ctx, param, incomplete):  # pylint: disable=unused-argument
         """
         Return possible completions based on an incomplete value
 

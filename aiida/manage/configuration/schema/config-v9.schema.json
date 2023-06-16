@@ -32,6 +32,7 @@
         },
         "daemon.recursion_limit": {
           "type": "integer",
+          "default": 3000,
           "maximum": 100000,
           "minimum": 1,
           "description": "Maximum recursion depth for the daemon workers"

@@ -30,6 +30,13 @@
           "minimum": 1,
           "description": "Maximum number of concurrent process tasks that each daemon worker can handle"
         },
+        "daemon.recursion_limit": {
+          "type": "integer",
+          "default": 3000,
+          "maximum": 100000,
+          "minimum": 1,
+          "description": "Maximum recursion depth for the daemon workers"
+        },
         "db.batch_size": {
           "type": "integer",
           "default": 100000,

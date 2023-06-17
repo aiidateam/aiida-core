@@ -42,6 +42,8 @@ from typing import (
 )
 import warnings
 
+from aiida.common.log import AIIDA_LOGGER
+from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.querybuilder import (
@@ -66,6 +68,8 @@ EntityClsType = Type[Union[entities.Entity, 'Process']]  # pylint: disable=inval
 ProjectType = Union[str, dict, Sequence[Union[str, dict]]]  # pylint: disable=invalid-name
 FilterType = Dict[str, Any]  # pylint: disable=invalid-name
 OrderByType = Union[dict, List[dict], Tuple[dict, ...]]
+
+LOGGER = AIIDA_LOGGER.getChild('querybuilder')
 
 
 class Classifier(NamedTuple):
@@ -100,7 +104,7 @@ class QueryBuilder:
         self,
         backend: Optional['StorageBackend'] = None,
         *,
-        debug: bool = False,
+        debug: bool | None = None,
         path: Optional[Sequence[Union[str, Dict[str, Any], EntityClsType]]] = (),
         filters: Optional[Dict[str, FilterType]] = None,
         project: Optional[Dict[str, ProjectType]] = None,
@@ -160,7 +164,16 @@ class QueryBuilder:
         self._tags = _QueryTagMap()
 
         # Set the debug level
-        self.set_debug(debug)
+        if debug is not None:
+            warn_deprecation(
+                'The `debug` argument is deprecated. Configure the log level of the AiiDA logger instead.', version=3
+            )
+        else:
+            debug = False
+
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            self.set_debug(debug)
 
         # Validate & add the query path
         if not isinstance(path, (list, tuple)):
@@ -216,7 +229,6 @@ class QueryBuilder:
     @property
     def queryhelp(self) -> 'QueryDictType':
         """"Legacy name for ``as_dict`` method."""
-        from aiida.common.warnings import warn_deprecation
         warn_deprecation('`QueryBuilder.queryhelp` is deprecated, use `QueryBuilder.as_dict()` instead', version=3)
         return self.as_dict()
 
@@ -406,7 +418,7 @@ class QueryBuilder:
         try:
             self._tags.add(tag, ormclass, cls)
         except Exception as exception:
-            self.debug('Exception caught in append, cleaning up: %s', exception)
+            LOGGER.debug('Exception caught in append, cleaning up: %s', exception)
             self._tags.remove(tag)
             raise
 
@@ -429,7 +441,7 @@ class QueryBuilder:
             if filters is not None:
                 self.add_filter(tag, filters)
         except Exception as exception:
-            self.debug('Exception caught in append, cleaning up: %s', exception)
+            LOGGER.debug('Exception caught in append, cleaning up: %s', exception)
             self._tags.remove(tag)
             self._filters.pop(tag)
             raise
@@ -440,7 +452,7 @@ class QueryBuilder:
             if project is not None:
                 self.add_projection(tag, project)
         except Exception as exception:
-            self.debug('Exception caught in append, cleaning up: %s', exception)
+            LOGGER.debug('Exception caught in append, cleaning up: %s', exception)
             self._tags.remove(tag)
             self._filters.pop(tag)
             self._projections.pop(tag)
@@ -495,7 +507,7 @@ class QueryBuilder:
                 joining_value = self._path[-1]['tag']
 
         except Exception as exception:
-            self.debug('Exception caught in append (part filters), cleaning up: %s', exception)
+            LOGGER.debug('Exception caught in append (part filters), cleaning up: %s', exception)
             self._tags.remove(tag)
             self._filters.pop(tag)
             self._projections.pop(tag)
@@ -512,7 +524,7 @@ class QueryBuilder:
                 else:
                     if edge_tag in self._tags:
                         raise ValueError(f'The tag {edge_tag} is already in use')
-                self.debug('edge_tag chosen: %s', edge_tag)
+                LOGGER.debug('edge_tag chosen: %s', edge_tag)
 
                 # edge tags do not have an ormclass
                 self._tags.add(edge_tag)
@@ -529,7 +541,7 @@ class QueryBuilder:
                 if edge_project is not None:
                     self.add_projection(edge_tag, edge_project)
             except Exception as exception:
-                self.debug('Exception caught in append (part joining), cleaning up %s', exception)
+                LOGGER.debug('Exception caught in append (part joining), cleaning up %s', exception)
                 self._tags.remove(tag)
                 self._filters.pop(tag)
                 self._projections.pop(tag)
@@ -816,7 +828,7 @@ class QueryBuilder:
         """
         tag = self._tags.get(tag_spec)
         _projections = []
-        self.debug('Adding projection of %s: %s', tag_spec, projection_spec)
+        LOGGER.debug('Adding projection of %s: %s', tag_spec, projection_spec)
         if not isinstance(projection_spec, (list, tuple)):
             projection_spec = [projection_spec]  # type: ignore
         for projection in projection_spec:
@@ -838,7 +850,7 @@ class QueryBuilder:
                     if not isinstance(val, str):
                         raise TypeError(f'{val} has to be a string')
             _projections.append(_thisprojection)
-        self.debug('projections have become: %s', _projections)
+        LOGGER.debug('projections have become: %s', _projections)
         self._projections[tag] = _projections
 
     def set_debug(self, debug: bool) -> 'QueryBuilder':
@@ -848,6 +860,9 @@ class QueryBuilder:
 
         :param debug: Turn debug on or off
         """
+        warn_deprecation(
+            '`QueryBuilder.set_debug` is deprecated. Configure the log level of the AiiDA logger instead.', version=3
+        )
         if not isinstance(debug, bool):
             return TypeError('I expect a boolean')
         self._debug = debug
@@ -859,6 +874,7 @@ class QueryBuilder:
 
         objects will passed to the format string, e.g. ``msg % objects``
         """
+        warn_deprecation('`QueryBuilder.debug` is deprecated.', version=3)
         if self._debug:
             print(f'DEBUG: {msg}' % objects)
 

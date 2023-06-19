@@ -9,6 +9,7 @@
 ###########################################################################
 """Tests for `verdi process`."""
 import functools
+import re
 import time
 import typing as t
 import uuid
@@ -272,6 +273,29 @@ class TestVerdiProcess:
         result = run_cli_command(cmd_process.process_status, options)
         assert result.exception is None, result.output
         assert len(result.output_lines) == 0
+
+    def test_process_status_call_link_label(self, run_cli_command):
+        """Test ``verdi process status --call-link-label``."""
+        node = WorkflowNode().store()
+        node.set_process_state(ProcessState.RUNNING)
+
+        # Create subprocess with specific call link label.
+        child1 = CalcJobNode()
+        child1.set_process_state(ProcessState.FINISHED)
+        child1.base.links.add_incoming(node, link_type=LinkType.CALL_CALC, link_label='call_label')
+        child1.store()
+
+        # Create subprocess with default call link label, which should not show up.
+        child2 = CalcJobNode()
+        child2.set_process_state(ProcessState.FINISHED)
+        child2.base.links.add_incoming(node, link_type=LinkType.CALL_CALC, link_label='CALL')
+        child2.store()
+
+        result = run_cli_command(cmd_process.process_status, [str(node.pk), '--call-link-label'])
+        assert result.exception is None, result.output
+        assert re.match(
+            r'None<.*> Running\n    ├── None<.* | call_label> Finished\n    └── None<.*> Finished\n', result.output
+        )
 
     def test_report(self, run_cli_command):
         """Test the report command."""

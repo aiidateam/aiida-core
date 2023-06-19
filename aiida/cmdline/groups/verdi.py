@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """Subclass of :class:`click.Group` for the ``verdi`` CLI."""
+from __future__ import annotations
+
 import base64
 import difflib
 import gzip
@@ -57,7 +59,7 @@ class VerdiCommandGroup(click.Group):
     context_class = VerdiContext
 
     @staticmethod
-    def add_verbosity_option(cmd):
+    def add_verbosity_option(cmd: click.Command):
         """Apply the ``verbosity`` option to the command, which is common to all ``verdi`` commands."""
         # Only apply the option if it hasn't been already added in a previous call.
         if cmd is not None and 'verbosity' not in [param.name for param in cmd.params]:
@@ -65,7 +67,7 @@ class VerdiCommandGroup(click.Group):
 
         return cmd
 
-    def fail_with_suggestions(self, ctx, cmd_name):
+    def fail_with_suggestions(self, ctx: click.Context, cmd_name: str):
         """Fail the command while trying to suggest commands to resemble the requested ``cmd_name``."""
         # We might get better results with the Levenshtein distance or more advanced methods implemented in FuzzyWuzzy
         # or similar libs, but this is an easy win for now.
@@ -81,7 +83,7 @@ class VerdiCommandGroup(click.Group):
         else:
             ctx.fail(f'`{cmd_name}` is not a {self.name} command.\n\nNo similar commands found.')
 
-    def get_command(self, ctx, cmd_name):
+    def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
         """Return the command that corresponds to the requested ``cmd_name``.
 
         This method is overridden from the base class in order to two functionalities:
@@ -111,11 +113,13 @@ class VerdiCommandGroup(click.Group):
         # bet though to detect a tab-complete event. When `resilient_parsing` is switched on, we assume a tab-complete
         # and do nothing in case the command name does not match an actual command.
         if ctx.resilient_parsing:
-            return
+            return None
 
         self.fail_with_suggestions(ctx, cmd_name)
 
-    def group(self, *args, **kwargs):
+        return None
+
+    def group(self, *args, **kwargs) -> click.Group:
         """Ensure that sub command groups use the same class but do not override an explicitly set value."""
         kwargs.setdefault('cls', self.__class__)
         return super().group(*args, **kwargs)

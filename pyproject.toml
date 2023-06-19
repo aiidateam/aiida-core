@@ -95,7 +95,7 @@ atomic_tools = [
     "spglib>=1.14,<3.0"
 ]
 notebook = [
-    "jupyter-client~=6.1,<6.1.13",
+    "jupyter-client~=8.0",
     "jupyter~=1.0",
     "notebook~=6.1,>=6.1.5"
 ]

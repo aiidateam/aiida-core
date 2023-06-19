@@ -111,6 +111,9 @@ class AiiDALoaderMagics(magic.Magics):
         context = Context(verdi)
         command = verdi.get_command(context, command_name)
 
+        if command is None:
+            raise RuntimeError(f'command `{command_name}` not found.')
+
         return command(  # pylint: disable=too-many-function-args,unexpected-keyword-arg
             cmdline_arguments[1:],
             prog_name='%verdi',

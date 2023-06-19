@@ -22,7 +22,7 @@ from functools import partial
 import inspect
 from typing import Any, Protocol, Type, overload
 
-from plumpy import Bundle, get_object_loader  # type: ignore[attr-defined]
+from plumpy import Bundle, get_object_loader
 from plumpy.utils import AttributesFrozendict
 import yaml
 

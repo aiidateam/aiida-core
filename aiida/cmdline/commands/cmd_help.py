@@ -30,7 +30,7 @@ def verdi_help(ctx, command):
             # we should never end up here since verdi.get_command(...) gives
             # suggestions if the command could not be found and calls click.fail
             echo.echo_critical(f"command '{command}' not found")
-
-        cmdctx = click.Context(cmd, info_name=cmd.name, parent=ctx.parent)
+        else:
+            cmdctx = click.Context(cmd, info_name=cmd.name, parent=ctx.parent)
 
     echo.echo(cmdctx.get_help())

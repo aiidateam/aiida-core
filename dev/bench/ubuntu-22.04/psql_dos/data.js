@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687202197810,
+  "lastUpdate": 1687251373523,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -8054,6 +8054,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.0025008",
             "group": "node",
             "extra": "mean: 21.687 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "2.60",
+          "cores": 2,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.10.12",
+          "metadata": "postgres:12.14, rabbitmq:3.8.14-management"
+        },
+        "commit": {
+          "id": "f797b476622d9b2724d1460bbe55ef989166f57d",
+          "message": "Engine: Dynamically update maximum stack size close to overflow (#6052)\n\nThe Python interpreter maintains a stack of frames when executing code\r\nwhich has a limit. As soon as a frame is added to the stack that were to\r\nexceed this limit a `RecursionError` is raised. Note that, unlike the\r\nname suggests, the cause doesn't need to involve recursion necessarily\r\nalthough that is a common cause for the problem. Simply creating a deep\r\nbut non-recursive call stack will have the same effect.\r\n\r\nThis `RecursionError` was routinely hit when submitting large numbers of\r\nworkflows to the daemon that call one or more process functions. This is\r\ndue to the process function being called synchronously in an async\r\ncontext, namely the workchain, which is being executed as a task on the\r\nevent loop of the `Runner` in the daemon worker. To make this possible,\r\nthe event loop has to be made reentrant, but this is not supported by\r\nvanilla `asyncio`. This blockade is circumvented in `plumpy` through the\r\nuse of `nest-asyncio` which makes a running event loop reentrant.\r\n\r\nThe problem is that when the event loop is reentered, instead of\r\ncreating a separate stack for that task, it reuses the current one.\r\nConsequently, each process function adds frames to the current stack\r\nthat are not resolved and removed until after the execution finished. If\r\nmany process functions are started before they are finished, these\r\nframes accumulate and can ultimately hit the stack limit. Since the task\r\nqueue of the event loop uses a FIFO, it would very often lead to this\r\nsituation because all process function tasks would be created first,\r\nbefore being finalized.\r\n\r\nSince an actual solution for this problem is not trivial and this is\r\ncausing a lot problems, a temporary workaround is implemented. Each time\r\nwhen a process function is executed, the current stack size is compared\r\nto the current stack limit. If the stack is more than 80% filled, the\r\nlimit is increased by a 1000 and a warning message is logged. This\r\nshould give some more leeway for the created process function tasks to\r\nbe resolved.\r\n\r\nNote that the workaround will keep increasing the limit if necessary\r\nwhich can and will eventually lead to an actual stack overflow in the\r\ninterpreter. When this happens will be machine dependent so it is\r\ndifficult to put an absolute limit.\r\n\r\nThe function to get the stack size is using a custom implementation\r\ninstead of the naive `len(inspect.stack())`. This is because the\r\nperformance is three order of magnitudes better and it scales well for\r\ndeep stacks, which is typically the case for AiiDA daemon workers. See\r\nhttps://stackoverflow.com/questions/34115298 for a discussion on the\r\nimplementation and its performance.",
+          "timestamp": "2023-06-20T10:45:16+02:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/f797b476622d9b2724d1460bbe55ef989166f57d",
+          "distinct": true,
+          "tree_id": "2ca938663890812e3b2a5b2cc94340ff3a8c4648"
+        },
+        "date": 1687251366120,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 2.8529387808201925,
+            "unit": "iter/sec",
+            "range": "stddev: 0.063142",
+            "group": "import-export",
+            "extra": "mean: 350.52 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 2.7474118210133973,
+            "unit": "iter/sec",
+            "range": "stddev: 0.069376",
+            "group": "import-export",
+            "extra": "mean: 363.98 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 3.7212359531500288,
+            "unit": "iter/sec",
+            "range": "stddev: 0.078112",
+            "group": "import-export",
+            "extra": "mean: 268.73 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 3.5514307849415507,
+            "unit": "iter/sec",
+            "range": "stddev: 0.076864",
+            "group": "import-export",
+            "extra": "mean: 281.58 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 2.601738898730718,
+            "unit": "iter/sec",
+            "range": "stddev: 0.079571",
+            "group": "engine",
+            "extra": "mean: 384.36 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.6188001058739476,
+            "unit": "iter/sec",
+            "range": "stddev: 0.022531",
+            "group": "engine",
+            "extra": "mean: 1.6160 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.7931849163642617,
+            "unit": "iter/sec",
+            "range": "stddev: 0.026714",
+            "group": "engine",
+            "extra": "mean: 1.2607 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.1643901761829805,
+            "unit": "iter/sec",
+            "range": "stddev: 0.26144",
+            "group": "engine",
+            "extra": "mean: 6.0831 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.19683821416967062,
+            "unit": "iter/sec",
+            "range": "stddev: 0.13451",
+            "group": "engine",
+            "extra": "mean: 5.0803 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.402103950003525,
+            "unit": "iter/sec",
+            "range": "stddev: 0.030659",
+            "group": "engine",
+            "extra": "mean: 416.30 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.5497540014258012,
+            "unit": "iter/sec",
+            "range": "stddev: 0.074638",
+            "group": "engine",
+            "extra": "mean: 1.8190 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.6013921332773329,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11433",
+            "group": "engine",
+            "extra": "mean: 1.6628 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.14781162933357925,
+            "unit": "iter/sec",
+            "range": "stddev: 0.18356",
+            "group": "engine",
+            "extra": "mean: 6.7654 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.16614528144045237,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11189",
+            "group": "engine",
+            "extra": "mean: 6.0188 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 291.64704001349696,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00087918",
+            "group": "node",
+            "extra": "mean: 3.4288 msec\nrounds: 216"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 113.2281886380171,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00061704",
+            "group": "node",
+            "extra": "mean: 8.8317 msec\nrounds: 105"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 68.11961676640938,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0010908",
+            "group": "node",
+            "extra": "mean: 14.680 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 192.23577912042495,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00041408",
+            "group": "node",
+            "extra": "mean: 5.2019 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 48.74016352218945,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0022487",
+            "group": "node",
+            "extra": "mean: 20.517 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 44.11193127478747,
+            "unit": "iter/sec",
+            "range": "stddev: 0.025537",
+            "group": "node",
+            "extra": "mean: 22.670 msec\nrounds: 100"
           }
         ]
       }

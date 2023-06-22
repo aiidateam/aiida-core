@@ -1203,6 +1203,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             raise ValueError('Pathname patterns are not allowed in the destination')
 
         if self.has_magic(remotesource):
+
             to_copy_list = self.glob(remotesource)
 
             if len(to_copy_list) > 1:
@@ -1213,6 +1214,9 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
                 self._exec_cp(cp_exe, cp_flags, file, remotedestination)
 
         else:
+            if not self.path_exists(remotesource):
+                raise FileNotFoundError('Source not found')
+
             self._exec_cp(cp_exe, cp_flags, remotesource, remotedestination)
 
     def _exec_cp(self, cp_exe, cp_flags, src, dst):

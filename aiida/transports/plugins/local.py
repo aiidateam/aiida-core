@@ -557,7 +557,7 @@ class LocalTransport(Transport):
             raise ValueError('Input remotedestination to copy must be a non empty object')
         if not self.has_magic(remotesource):
             if not os.path.exists(os.path.join(self.curdir, remotesource)):
-                raise OSError('Source not found')
+                raise FileNotFoundError('Source not found')
         if self.normalize(remotesource) == self.normalize(remotedestination):
             raise ValueError('Cannot copy from itself to itself')
 

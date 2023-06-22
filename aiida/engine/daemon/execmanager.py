@@ -252,6 +252,11 @@ def upload_calculation(
                 )
                 try:
                     transport.copy(remote_abs_path, dest_rel_path)
+                except FileNotFoundError:
+                    logger.warning(
+                        f'[submission of calculation {node.pk}] Unable to copy remote '
+                        f'resource from {remote_abs_path} to {dest_rel_path}! NOT Stopping but just ignoring!.'
+                    )
                 except (IOError, OSError):
                     logger.warning(
                         f'[submission of calculation {node.pk}] Unable to copy remote '

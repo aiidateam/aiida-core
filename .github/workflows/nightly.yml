@@ -13,6 +13,12 @@ on:
         - 'tests/storage/psql_dos/migrations/**'
     workflow_dispatch:
 
+# https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+    # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
 jobs:
 
     tests:

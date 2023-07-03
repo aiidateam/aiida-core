@@ -11,10 +11,6 @@ variable "PGSQL_VERSION" {
 variable "AIIDA_VERSION" {
 }
 
-variable "PIP_VERSION" {
-  default = "22.0.4"
-}
-
 variable "BASE_IMAGE" {
   default = "mambaorg/micromamba:jammy"
 }
@@ -41,6 +37,7 @@ function "tags" {
     "${REGISTRY}${ORGANIZATION}/${image}:${VERSION}",
     "${REGISTRY}${ORGANIZATION}/${image}:python-${PYTHON_VERSION}",
     "${REGISTRY}${ORGANIZATION}/${image}:postgresql-${PGSQL_VERSION}",
+    "${REGISTRY}${ORGANIZATION}/${image}:aiida-${AIIDA_VERSION}",
   ]
 }
 
@@ -52,23 +49,22 @@ target "base-meta" {
   tags = tags("base")
 }
 target "base-with-services-meta" {
-  tags = tags("base-with-services")
+  tags = tags("aiida-core")
 }
 
 target "base" {
   inherits = ["base-meta"]
-  context = "stack/base"
+  context = "base"
   platforms = "${PLATFORMS}"
   args = {
     "BASE" = "${BASE_IMAGE}"
     "PYTHON_VERSION" = "${PYTHON_VERSION}"
-    "PIP_VERSION" = "${PIP_VERSION}"
     "AIIDA_VERSION" = "${AIIDA_VERSION}"
   }
 }
 target "base-with-services" {
   inherits = ["base-with-services-meta"]
-  context = "stack/base-with-services"
+  context = "base-with-services"
   contexts = {
     base = "target:base"
   }

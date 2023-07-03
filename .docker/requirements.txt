@@ -1,0 +1,10 @@
+docker
+pre-commit
+pytest
+pytest-xdist
+requests
+tabulate
+pytest-docker
+docker-compose
+doit
+dunamai

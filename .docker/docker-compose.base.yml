@@ -24,7 +24,7 @@ services:
             - aiida-rmq-data:/var/lib/rabbitmq/
 
     aiida:
-        image: ${REGISTRY:-}${BASE_IMAGE:-aiidateam/base}${VERSION:-}
+        image: ${REGISTRY:-}${BASE_IMAGE:-aiidateam/base}:${VERSION:-latest}
         environment:
             RMQHOST: messaging
             TZ: Europe/Zurich

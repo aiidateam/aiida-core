@@ -45,7 +45,10 @@ target "base-with-services-meta" {
 
 target "base" {
   inherits = ["base-meta"]
-  context = "../stacks/base"
+  context = "base"
+  contexts = {
+    src = ".."
+  }
   platforms = "${PLATFORMS}"
   args = {
     "PYTHON_VERSION" = "${PYTHON_VERSION}"
@@ -53,7 +56,7 @@ target "base" {
 }
 target "base-with-services" {
   inherits = ["base-with-services-meta"]
-  context = "../stacks/base-with-services"
+  context = "base-with-services"
   contexts = {
     base = "target:base"
   }

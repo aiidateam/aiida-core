@@ -148,10 +148,10 @@ class AiiDALoaderMagics(magic.Magics):
                     'runner.poll.interval': 1
                 }, debug=False
             )
-            profile = load_profile(profile.name, allow_switch=True)
             config = get_config()
             config.add_profile(profile)
             config.set_default_profile(profile.name)
+            profile = load_profile(profile.name, allow_switch=True)
         elif lcontent:
             profile = load_profile(lcontent)
         else:

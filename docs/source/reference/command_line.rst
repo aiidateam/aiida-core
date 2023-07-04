@@ -525,6 +525,7 @@ Below is a list with all available subcommands.
 
     Options:
       --plain                         Use a plain Python shell.
+      --light                         Use the services-free light option.
       --no-startup                    When using plain Python, ignore the PYTHONSTARTUP
                                       environment variable and ~/.pythonrc.py script.
       -i, --interface [ipython|bpython]

@@ -21,6 +21,7 @@ from aiida.cmdline.utils.shell import AVAILABLE_SHELLS, run_shell
 @verdi.command('shell')
 @decorators.with_dbenv()
 @click.option('--plain', is_flag=True, help='Use a plain Python shell.')
+@click.option('--light', is_flag=True, help='Use the services-free light option.')
 @click.option(
     '--no-startup',
     is_flag=True,
@@ -32,13 +33,25 @@ from aiida.cmdline.utils.shell import AVAILABLE_SHELLS, run_shell
     type=click.Choice(AVAILABLE_SHELLS.keys()),
     help='Specify an interactive interpreter interface.'
 )
-def shell(plain, no_startup, interface):
+def shell(plain, light, no_startup, interface):
     """Start a python shell with preloaded AiiDA environment."""
-
     try:
         if plain:
             # Don't bother loading IPython, because the user wants plain Python.
             raise ImportError
+
+        if light:
+            from aiida import get_profile, load_profile, manage
+            from aiida.storage.sqlite_temp import SqliteTempBackend
+            profile = get_profile()
+            if not profile or profile.name != 'light':
+                profile = SqliteTempBackend.create_profile(
+                    'light',
+                    options={'runner.poll.interval': 1},
+                )
+                load_profile(profile, allow_switch=True)
+                config = manage.get_config()
+                config.add_profile(profile)
 
         # If a non-plain python interpreter is requested, check that there is at least one type of shell available
         if not AVAILABLE_SHELLS:

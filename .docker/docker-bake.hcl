@@ -8,13 +8,6 @@ variable "PYTHON_VERSION" {
 variable "PGSQL_VERSION" {
 }
 
-variable "AIIDA_VERSION" {
-}
-
-variable "BASE_IMAGE" {
-  default = "mambaorg/micromamba:jammy"
-}
-
 variable "ORGANIZATION" {
   default = "aiidateam"
 }
@@ -24,7 +17,7 @@ variable "REGISTRY" {
 }
 
 variable "PLATFORMS" {
-  default = ["linux/amd64", "linux/arm64"]
+  default = ["linux/amd64"]
 }
 
 variable "TARGETS" {
@@ -34,10 +27,8 @@ variable "TARGETS" {
 function "tags" {
   params = [image]
   result = [
-    "${REGISTRY}${ORGANIZATION}/${image}:${VERSION}",
-    "${REGISTRY}${ORGANIZATION}/${image}:python-${PYTHON_VERSION}",
-    "${REGISTRY}${ORGANIZATION}/${image}:postgresql-${PGSQL_VERSION}",
-    "${REGISTRY}${ORGANIZATION}/${image}:aiida-${AIIDA_VERSION}",
+    "${REGISTRY}${ORGANIZATION}/${image}:latest",
+    "${REGISTRY}${ORGANIZATION}/${image}:newly-build"
   ]
 }
 
@@ -54,17 +45,15 @@ target "base-with-services-meta" {
 
 target "base" {
   inherits = ["base-meta"]
-  context = "base"
+  context = "../stacks/base"
   platforms = "${PLATFORMS}"
   args = {
-    "BASE" = "${BASE_IMAGE}"
     "PYTHON_VERSION" = "${PYTHON_VERSION}"
-    "AIIDA_VERSION" = "${AIIDA_VERSION}"
   }
 }
 target "base-with-services" {
   inherits = ["base-with-services-meta"]
-  context = "base-with-services"
+  context = "../stacks/base-with-services"
   contexts = {
     base = "target:base"
   }

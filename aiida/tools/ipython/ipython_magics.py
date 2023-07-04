@@ -36,7 +36,7 @@ Usage
 import json
 import shlex
 
-from IPython import get_ipython, version_info  # type: ignore[attr-defined]
+from IPython import get_ipython, version_info
 from IPython.core import magic
 
 
@@ -136,11 +136,23 @@ class AiiDALoaderMagics(magic.Magics):
         """
         # pylint: disable=unused-argument,attribute-defined-outside-init
         from aiida.cmdline.utils.shell import get_start_namespace
-        from aiida.manage.configuration import load_profile
+        from aiida.manage.configuration import get_config, load_profile
+        from aiida.storage.sqlite_temp import SqliteTempBackend
 
         self.is_warning = False
         lcontent = line.strip()
-        if lcontent:
+        if lcontent == 'standalone':
+            profile = SqliteTempBackend.create_profile(
+                'standalone', options={
+                    'warnings.development_version': False,
+                    'runner.poll.interval': 1
+                }, debug=False
+            )
+            profile = load_profile(profile.name, allow_switch=True)
+            config = get_config()
+            config.add_profile(profile)
+            config.set_default_profile(profile.name)
+        elif lcontent:
             profile = load_profile(lcontent)
         else:
             profile = load_profile()

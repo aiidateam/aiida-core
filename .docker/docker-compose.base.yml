@@ -11,6 +11,7 @@ services:
         volumes:
             - aiida-postgres-db:/var/lib/postgresql/data
         healthcheck:
+            test: [ "CMD-SHELL", "pg_isready"]
             interval: 5s
             timeout: 5s
             retries: 10
@@ -22,6 +23,11 @@ services:
             RABBITMQ_DEFAULT_PASS: guest
         volumes:
             - aiida-rmq-data:/var/lib/rabbitmq/
+        healthcheck:
+            test: rabbitmq-diagnostics check_port_connectivity
+            interval: 30s
+            timeout: 30s
+            retries: 10
 
     aiida:
         image: ${REGISTRY:-}${BASE_IMAGE:-aiidateam/base}:${VERSION:-latest}
@@ -33,9 +39,9 @@ services:
             - aiida-home-folder:/home/aiida
         depends_on:
             database:
-                condition: service_started
+                condition: service_healthy
             messaging:
-                condition: service_started
+                condition: service_healthy
         command: tail -f /dev/null
 
 volumes:

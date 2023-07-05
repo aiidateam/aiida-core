@@ -5,7 +5,10 @@
       },
       "PGSQL_VERSION": {
         "default": "15"
+      },
+      "RMQ_VERSION": {
+        "default": "3.10.18"
       }
     }
   }
-  
+

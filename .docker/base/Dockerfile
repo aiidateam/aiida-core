@@ -20,7 +20,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 USER root
 
-
+ENV SYSTEM_USER="${SYSTEM_USER}"
 
 # Install all OS dependencies for notebook server that starts but lacks all
 # features (e.g., download as all possible file formats)
@@ -138,7 +138,7 @@ RUN set -x && \
 
 # Switch to root to install AiiDA and set AiiDA as service
 USER root
-COPY --from=src . /tmp/aiida-core
+# COPY --from=src . /tmp/aiida-core
 # RUN pip install /tmp/aiida-core --no-cache-dir && \
 #     rm -rf /tmp/aiida-core
 RUN pip install aiida-core==2.4.0
@@ -155,7 +155,7 @@ COPY s6-assets/s6-rc.d /etc/s6-overlay/s6-rc.d
 COPY s6-assets/init /etc/init
 
 # Switch back to USER aiida to avoid accidental container runs as root
-USER ${SYSTEM_UID}
+# USER ${SYSTEM_UID}
 
 ENTRYPOINT ["/init"]
 

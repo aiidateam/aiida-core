@@ -63,5 +63,6 @@ target "base-with-services" {
   platforms = "${PLATFORMS}"
   args = {
     "PGSQL_VERSION" = "${PGSQL_VERSION}"
+    "RMQ_VERSION" = "${RMQ_VERSION}"
   }
 }

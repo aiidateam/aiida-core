@@ -197,19 +197,18 @@ def test_configuration(configure_caching, config_dict, enabled_for, disabled_for
             assert not get_use_cache(identifier=identifier)
 
 
-@pytest.mark.parametrize(
-    ['config_dict', 'valid_identifiers', 'invalid_identifiers'],
-    [({
+@pytest.mark.parametrize(['config_dict', 'valid_identifiers', 'invalid_identifiers'], [
+    ({
         'default_enabled': False,
         'enabled_for': ['aiida.calculations:*thmetic.add'],
         'disabled_for': ['aiida.calculations:arith*ic.add']
     }, ['some_identifier', 'aiida.calculations:core.templatereplacer'], ['aiida.calculations:arithmetic.add']),
-     ({
-         'default_enabled': False,
-         'enabled_for': ['aiida.calculations:arithmetic.add'],
-         'disabled_for': ['aiida.calculations:arithmetic.add']
-     }, ['some_identifier', 'aiida.calculations:core.templatereplacer'], ['aiida.calculations:arithmetic.add'])]
-)
+    ({
+        'default_enabled': False,
+        'enabled_for': ['aiida.calculations:arithmetic.add'],
+        'disabled_for': ['aiida.calculations:arithmetic.add']
+    }, ['some_identifier', 'aiida.calculations:core.templatereplacer'], ['aiida.calculations:arithmetic.add'])
+])
 def test_ambiguous_configuration(configure_caching, config_dict, valid_identifiers, invalid_identifiers):
     """
     Check that calling 'get_use_cache' on identifiers for which the

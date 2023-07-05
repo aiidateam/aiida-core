@@ -9,6 +9,7 @@
 ###########################################################################
 """The main `verdi` click group."""
 import click
+from trogon import tui
 
 from aiida import __version__
 
@@ -17,6 +18,7 @@ from ..params import options, types
 
 
 # Pass the version explicitly to ``version_option`` otherwise editable installs can show the wrong version number
+@tui()
 @click.group(cls=VerdiCommandGroup, context_settings={'help_option_names': ['--help', '-h']})
 @options.PROFILE(type=types.ProfileParamType(load_profile=True), expose_value=False)
 @options.VERBOSITY()

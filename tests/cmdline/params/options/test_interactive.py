@@ -7,13 +7,22 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=redefined-outer-name
 """Unit tests for the InteractiveOption."""
+import functools
+
 import click
 import pytest
 
 from aiida.cmdline.params.options import NON_INTERACTIVE
 from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.params.types.plugin import PluginParamType
+
+
+@pytest.fixture
+def run_cli_command(run_cli_command):
+    """Override the ``run_cli_command`` fixture to always run with ``use_subprocess=False`` for tests in this module."""
+    return functools.partial(run_cli_command, use_subprocess=False)
 
 
 class Only42IntParamType(click.types.IntParamType):

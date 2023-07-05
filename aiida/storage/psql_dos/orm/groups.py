@@ -15,10 +15,9 @@ from aiida.common.lang import type_check
 from aiida.orm.implementation.groups import BackendGroup, BackendGroupCollection
 from aiida.storage.psql_dos.models.group import DbGroup, DbGroupNode
 
-from . import entities, users
+from . import entities, users, utils
 from .extras_mixin import ExtrasMixin
 from .nodes import SqlaNode
-from .utils import ModelWrapper
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -47,7 +46,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
         super().__init__(backend)
 
         dbgroup = self.MODEL_CLASS(label=label, description=description, user=user.bare_model, type_string=type_string)
-        self._model = ModelWrapper(dbgroup, backend)
+        self._model = utils.ModelWrapper(dbgroup, backend)
 
     @property
     def label(self):
@@ -116,9 +115,8 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
         return self.pk is not None
 
     def store(self):
-        with self.backend.transaction():
-            self.model.save()
-            return self
+        self.model.save()
+        return self
 
     def count(self):
         """Return the number of entities in this group.
@@ -130,9 +128,10 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
 
     def clear(self):
         """Remove all the nodes from this group."""
-        with self.backend.transaction():
-            # Note we have to call `bare_model` to circumvent flushing data to the database
-            self.bare_model.dbnodes = []
+        session = self.backend.get_session()
+        # Note we have to call `bare_model` to circumvent flushing data to the database
+        self.bare_model.dbnodes = []
+        session.commit()
 
     @property
     def nodes(self):
@@ -193,7 +192,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
             if not given_node.is_stored:
                 raise ValueError('At least one of the provided nodes is unstored, stopping...')
 
-        with self.backend.transaction() as session:
+        with utils.disable_expire_on_commit(self.backend.get_session()) as session:
             if not skip_orm:
                 # Get dbnodes here ONCE, otherwise each call to dbnodes will re-read the current value in the database
                 dbnodes = self.model.dbnodes
@@ -219,6 +218,9 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
                 table = self.GROUP_NODE_CLASS.__table__
                 ins = insert(table).values(ins_dict)
                 session.execute(ins.on_conflict_do_nothing(index_elements=['dbnode_id', 'dbgroup_id']))
+
+            # Commit everything as up till now we've just flushed
+            session.commit()
 
     def remove_nodes(self, nodes, **kwargs):
         """Remove a node or a set of nodes from the group.
@@ -247,7 +249,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
 
         list_nodes = []
 
-        with self.backend.transaction() as session:
+        with utils.disable_expire_on_commit(self.backend.get_session()) as session:
             if not skip_orm:
                 for node in nodes:
                     check_node(node)
@@ -266,6 +268,8 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
                     statement = table.delete().where(clause)
                     session.execute(statement)
 
+            session.commit()
+
 
 class SqlaGroupCollection(BackendGroupCollection):
     """The SLQA collection of groups"""
@@ -273,6 +277,8 @@ class SqlaGroupCollection(BackendGroupCollection):
     ENTITY_CLASS = SqlaGroup
 
     def delete(self, id):  # pylint: disable=redefined-builtin
-        with self.backend.transaction() as session:
-            row = session.get(self.ENTITY_CLASS.MODEL_CLASS, id)
-            session.delete(row)
+        session = self.backend.get_session()
+
+        row = session.get(self.ENTITY_CLASS.MODEL_CLASS, id)
+        session.delete(row)
+        session.commit()

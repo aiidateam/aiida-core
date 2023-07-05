@@ -250,9 +250,10 @@ The type of code is specified as the first argument and the rest of the informat
 
     .. tab-item:: Installed
 
+        The following example shows how to create an installed code for the ``bash`` binary on the ``localhost`` computer:
+
         .. code-block:: console
 
-            The following example shows how to create an installed code for the ``bash`` binary on the ``localhost`` computer:
 
             verdi code create core.code.installed \
                 --label installed-code \
@@ -309,7 +310,7 @@ At the end, you receive a confirmation, with the *PK* and the *UUID* of your new
 .. tip::
 
     The ``verdi code create`` command performs minimal checks in order to keep it performant and not rely on an internet connection.
-    If you want additional checks to verify the code is properly configured and usable, run the `verdi code test` command.
+    If you want additional checks to verify the code is properly configured and usable, run the ``verdi code test`` command.
     For installed codes for example, this will check whether the associated computer can be connected to and whether the specified executable exists.
     Look at the command help to see what other checks may be run.
 
@@ -345,6 +346,35 @@ At the end, you receive a confirmation, with the *PK* and the *UUID* of your new
         $ verdi code create core.code.installed --help
 
     Note: remove the ``--`` prefix and replace dashes (``-``) within the keys with an underscore ( ``_`` ).
+
+
+.. note::
+
+    It is possible to run codes that are provided by a `Conda environment <https://docs.conda.io/en/latest/>`_.
+    The code configuration YAML would look something like the following:
+
+    .. code-block:: yaml
+
+        filepath_executable: 'executable-name'
+        prepend_text: conda activate environment-name
+
+    Note that the configuration is not complete but only shows the relevant lines.
+    For the ``conda activate`` statement to work, it needs to be properly initialized in the shell in which the job is executed.
+
+    This can be achieved by configuring the ``shebang`` property of the ``Computer`` to ``#!/bin/bash -l``.
+    This ensures that the submission script uses a login shell which initializes conda properly.
+
+    If the submission script should not use a login shell (e.g. because that sources other dotfiles that are unnecessary), the following ``prepend_text`` can be used instead:
+
+    .. code-block:: yaml
+
+        filepath_executable: 'executable-name'
+        prepend_text: |
+            eval "$(conda shell.bash hook)"
+            conda activate environment-name
+
+    For further details, please refer to the `Conda documentation <https://docs.conda.io/projects/conda/en/latest/dev-guide/deep-dives/activation.html#conda-initialization>`_.
+
 
 Managing codes
 --------------
@@ -430,6 +460,10 @@ After :ref:`setting up your computer <how-to:run-codes:computer>` and :ref:`sett
         print(submit(builder))
 
     Of course, the code label and builder inputs need to be adapted to your code and calculation.
+
+    .. note::
+
+       See also the :ref:`complete list of metadata<topics:calculations:usage:calcjobs:options>` you can pass to a calculation.
 
 *   Submit your calculation to the AiiDA daemon:
 

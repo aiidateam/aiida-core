@@ -16,33 +16,32 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS :: MacOS X",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering"
 ]
 keywords = ["aiida", "workflows"]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = [
     "alembic~=1.2",
     "archive-path~=0.4.2",
     "aio-pika~=6.6",
     "circus~=0.18.0",
-    "click-config-file~=0.6.0",
     "click-spinner~=0.1.8",
     "click~=8.1",
     "disk-objectstore~=0.6.0",
-    "graphviz~=0.13",
-    "ipython~=7.20",
+    "docstring-parser",
+    "get-annotations~=0.1;python_version<'3.10'",
+    "graphviz~=0.19",
+    "ipython>=7",
     "jinja2~=3.0",
     "jsonschema~=3.0",
     "kiwipy[rmq]~=0.7.7",
-    "importlib-metadata~=4.3",
-    "importlib-resources~=5.0;python_version<'3.9'",
-    "numpy~=1.19",
+    "importlib-metadata~=4.13",
+    "numpy~=1.21",
     "paramiko~=2.7,>=2.7.2",
-    "plumpy~=0.21.3",
+    "plumpy~=0.21.6",
     "pgsu~=0.2.1",
     "psutil~=5.6",
     "psycopg2-binary~=2.8",
@@ -53,7 +52,6 @@ dependencies = [
     "tabulate~=0.8.5",
     "tqdm~=4.45",
     "upf_to_json~=0.9.2",
-    "werkzeug<2.2",
     "wrapt~=1.11"
 ]
 
@@ -70,7 +68,7 @@ ssh_kerberos = [
 rest = [
     "flask-cors~=3.0",
     "flask-restful~=0.3.7",
-    "flask~=2.0",
+    "flask~=2.2",
     "pyparsing~=2.4",
     "python-memcached~=1.59",
     "seekpath~=1.9,>=1.9.3"
@@ -84,7 +82,7 @@ docs = [
     "sphinx-notfound-page~=0.5",
     "sphinxext-rediraffe~=0.2.4",
     "sphinx-sqlalchemy~=0.1.1",
-    "sphinx-intl[transifex]~=2.0.1",
+    "sphinx-intl~=2.1.0",
     "myst-nb~=0.17.0",
 ]
 atomic_tools = [
@@ -97,7 +95,7 @@ atomic_tools = [
     "spglib>=1.14,<3.0"
 ]
 notebook = [
-    "jupyter-client~=6.1,<6.1.13",
+    "jupyter-client~=8.0",
     "jupyter~=1.0",
     "notebook~=6.1,>=6.1.5"
 ]
@@ -105,7 +103,7 @@ pre-commit = [
     "mypy==0.991",
     "packaging==20.3",
     "pre-commit~=2.2",
-    "pylint~=2.11.1",
+    "pylint~=2.17.4",
     "pylint-aiida~=0.1.1",
     "sqlalchemy[mypy]~=1.4.29",
     "tomli",
@@ -272,7 +270,6 @@ max-line-length = 120
 
 [tool.pylint.messages_control]
 disable = [
-    "bad-continuation",
     "consider-using-f-string",
     "cyclic-import",
     "duplicate-code",
@@ -288,6 +285,9 @@ disable = [
     "too-many-instance-attributes",
     # this can be removed when https://github.com/PyCQA/astroid/issues/1015 is fixed
     "not-context-manager",
+    "unnecessary-lambda-assignment",
+    "use-dict-literal",
+    "unnecessary-dunder-call",
 ]
 
 [tool.pylint.basic]
@@ -306,7 +306,15 @@ good-names = [
     "nl",
     "TemplatereplacerCalculation",
     "ArithmeticAddCalculation",
-    "MultiplyAddWorkChain"
+    "MultiplyAddWorkChain",
+    "SelfType",
+    "EntityType",
+    "MethodType",
+    "ReturnType",
+    "BackendNodeType",
+    "EnumType",
+    "CollectionType",
+    "BackendEntityType",
 ]
 no-docstring-rgx = "^_,setUp,tearDown"
 docstring-min-length = 5
@@ -352,6 +360,7 @@ coalesce_brackets = true
 align_closing_bracket_with_visual_indent = true
 split_arguments_when_comma_terminated = true
 indent_dictionary_value = false
+allow_split_before_dict_value = false
 
 [tool.mypy]
 show_error_codes = true
@@ -393,6 +402,7 @@ module = [
     'docutils.*',
     'flask_cors.*',
     'flask_restful.*',
+    'get_annotations.*',
     'graphviz.*',
     'importlib._bootstrap.*',
     'IPython.*',
@@ -439,11 +449,11 @@ envlist = py38
 [testenv]
 usedevelop=True
 deps =
-    py38: -rrequirements/requirements-py-3.8.txt
     py39: -rrequirements/requirements-py-3.9.txt
     py310: -rrequirements/requirements-py-3.10.txt
+    py311: -rrequirements/requirements-py-3.11.txt
 
-[testenv:py{38,39,310}]
+[testenv:py{39,310,311}]
 passenv =
     PYTHONASYNCIODEBUG
 setenv =
@@ -451,14 +461,14 @@ setenv =
     SQLALCHEMY_WARN_20 = 1
 commands = pytest {posargs}
 
-[testenv:py{38,39,310}-verdi]
+[testenv:py{39,310,311}-verdi]
 passenv =
     AIIDA_TEST_BACKEND
 setenv =
     AIIDA_PATH = {toxinidir}/.tox/.aiida
 commands = verdi {posargs}
 
-[testenv:py{38,39,310}-docs-{clean,update}]
+[testenv:py{39,310,311}-docs-{clean,update}]
 description =
     clean: Build the documentation (remove any existing build)
     update: Build the documentation (modify any existing build)
@@ -475,9 +485,9 @@ commands =
 # tip: remove apidocs before using this feature (`cd docs; make clean`)
 description = Build the documentation and launch browser (with live updates)
 deps =
-    py38: -rrequirements/requirements-py-3.8.txt
     py39: -rrequirements/requirements-py-3.9.txt
     py310: -rrequirements/requirements-py-3.10.txt
+    py311: -rrequirements/requirements-py-3.11.txt
     sphinx-autobuild
 setenv =
     RUN_APIDOC = False
@@ -487,7 +497,7 @@ commands =
         --port 0 --open-browser \
         -n -b {posargs:html} docs/source/ docs/build/{posargs:html}
 
-[testenv:py{38,39,310}-pre-commit]
+[testenv:py{39,310,311}-pre-commit]
 description = Run the pre-commit checks
 extras = pre-commit
 commands = pre-commit run {posargs}

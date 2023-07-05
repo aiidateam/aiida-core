@@ -11,11 +11,12 @@
 import asyncio
 import logging
 import signal
+import sys
 
 from aiida.common.log import configure_logging
 from aiida.engine.daemon.client import get_daemon_client
 from aiida.engine.runners import Runner
-from aiida.manage import get_manager
+from aiida.manage import get_config_option, get_manager
 
 LOGGER = logging.getLogger(__name__)
 
@@ -48,6 +49,10 @@ def start_daemon_worker() -> None:
     except Exception:
         LOGGER.exception('daemon worker failed to start')
         raise
+
+    if isinstance(rlimit := get_config_option('daemon.recursion_limit'), int):
+        LOGGER.info('Setting maximum recursion limit of daemon worker to %s', rlimit)
+        sys.setrecursionlimit(rlimit)
 
     signals = (signal.SIGTERM, signal.SIGINT)
     for s in signals:  # pylint: disable=invalid-name

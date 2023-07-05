@@ -183,6 +183,8 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         self.model.user = user.bare_model
 
     def add_incoming(self, source, link_type, link_label):
+        session = self.backend.get_session()
+
         type_check(source, self.__class__)
 
         if not self.is_stored:
@@ -192,33 +194,43 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
             raise exceptions.ModificationNotAllowed('source node has to be stored when adding a link from it')
 
         self._add_link(source, link_type, link_label)
+        session.commit()
 
     def _add_link(self, source, link_type, link_label):
         """Add a single link"""
-        with self.backend.transaction() as session:
-            try:
+        session = self.backend.get_session()
+
+        try:
+            with session.begin_nested():
                 link = self.LINK_CLASS(input_id=source.pk, output_id=self.pk, label=link_label, type=link_type.value)
                 session.add(link)
-            except SQLAlchemyError as exception:
-                raise exceptions.UniquenessError(f'failed to create the link: {exception}') from exception
+        except SQLAlchemyError as exception:
+            raise exceptions.UniquenessError(f'failed to create the link: {exception}') from exception
 
     def clean_values(self):
         self.model.attributes = clean_value(self.model.attributes)
         self.model.extras = clean_value(self.model.extras)
 
-    def store(self, links=None, with_transaction=True, clean=True):  # pylint: disable=arguments-differ,unused-argument
-        with self.backend.transaction():
+    def store(self, links=None, with_transaction=True, clean=True):  # pylint: disable=arguments-differ
+        session = self.backend.get_session()
 
-            if clean:
-                self.clean_values()
+        if clean:
+            self.clean_values()
 
-            self.model.save()
+        session.add(self.model)
 
-            if links:
-                for link_triple in links:
-                    self._add_link(*link_triple)
+        if links:
+            for link_triple in links:
+                self._add_link(*link_triple)
 
-            return self
+        if with_transaction:
+            try:
+                session.commit()
+            except SQLAlchemyError:
+                session.rollback()
+                raise
+
+        return self
 
     @property
     def attributes(self):
@@ -301,6 +313,7 @@ class SqlaNodeCollection(BackendNodeCollection):
 
     def get(self, pk):
         session = self.backend.get_session()
+
         try:
             return self.ENTITY_CLASS.from_dbmodel(
                 session.query(self.ENTITY_CLASS.MODEL_CLASS).filter_by(id=pk).one(), self.backend
@@ -309,9 +322,11 @@ class SqlaNodeCollection(BackendNodeCollection):
             raise exceptions.NotExistent(f"Node with pk '{pk}' not found") from NoResultFound
 
     def delete(self, pk):
-        with self.backend.transaction() as session:
-            try:
-                row = session.query(self.ENTITY_CLASS.MODEL_CLASS).filter_by(id=pk).one()
-                session.delete(row)
-            except NoResultFound:
-                raise exceptions.NotExistent(f"Node with pk '{pk}' not found") from NoResultFound
+        session = self.backend.get_session()
+
+        try:
+            row = session.query(self.ENTITY_CLASS.MODEL_CLASS).filter_by(id=pk).one()
+            session.delete(row)
+            session.commit()
+        except NoResultFound:
+            raise exceptions.NotExistent(f"Node with pk '{pk}' not found") from NoResultFound

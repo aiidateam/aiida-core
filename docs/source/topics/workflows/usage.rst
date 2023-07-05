@@ -9,8 +9,8 @@ Usage
 A workflow in AiiDA is a process (see the :ref:`process section<topics:processes:concepts>` for details) that calls other workflows and calculations and optionally *returns* data and as such can encode the logic of a typical scientific workflow.
 Currently, there are two ways of implementing a workflow process:
 
- * :ref:`work function<topics:workflows:usage:workfunctions>`
- * :ref:`work chain<topics:workflows:usage:workchains>`
+* :ref:`work function<topics:workflows:usage:workfunctions>`
+* :ref:`work chain<topics:workflows:usage:workchains>`
 
 This section will provide detailed information and best practices on how to implement these two workflow types.
 
@@ -22,8 +22,8 @@ Work functions
 
 The concept of work functions and the basic rules of implementation are documented in detail elsewhere:
 
-  * :ref:`concept of work functions<topics:workflows:concepts:workfunctions>`
-  * :ref:`implementation of process functions<topics:processes:functions>`
+* :ref:`concept of work functions<topics:workflows:concepts:workfunctions>`
+* :ref:`implementation of process functions<topics:processes:functions>`
 
 Since work functions are a sub type of process functions, just like calculation functions, their implementation rules are as good as identical.
 However, their intended aim and heuristics are very different.
@@ -199,9 +199,9 @@ However, the outline also supports various logical constructs, such as while-loo
 As usual, the best way to illustrate these constructs is by example.
 The currently available logical constructs for the work chain outline are:
 
-    * ``if``, ``elif``, ``else``
-    * ``while``
-    * ``return``
+* ``if``, ``elif``, ``else``
+* ``while``
+* ``return``
 
 To distinguish these constructs from the python builtins, they are suffixed with an underscore, like so ``while_``.
 To use these in your work chain design, you will have to import them:
@@ -534,7 +534,8 @@ At the lowest level, each workflow should perform exactly one task.
 These workflows can then be wrapped together by a "parent" workflow to create a larger logical unit.
 
 In order to make this approach manageable, it needs to be as simple as possible to glue together multiple workflows in a larger parent workflow.
-One of the tools that AiiDA provides to simplify this is the ability to *expose* the ports of another work chain.
+One of the tools that AiiDA provides to simplify this is the ability to *expose* the ports of another process class.
+This can be another ``WorkChain`` implementation, a ``CalcJob`` or even a process function (a ``calcfunction`` or ``workfunction``).
 
 .. _topics:workflows:usage:workchains:expose_inputs_outputs:
 

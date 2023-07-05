@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""`verdi data upf` command."""
+"""`verdi data core.upf` command."""
 
 import os
 
@@ -19,7 +19,7 @@ from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 
 
-@verdi_data.group('upf')
+@verdi_data.group('core.upf')
 def upf():
     """Manipulate UpfData objects (UPF-format pseudopotentials)."""
 

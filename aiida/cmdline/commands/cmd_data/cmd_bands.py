@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""`verdi data bands` command."""
+"""`verdi data core.bands` command."""
 
 import click
 
@@ -26,7 +26,7 @@ EXPORT_FORMATS = [
 VISUALIZATION_FORMATS = ['xmgrace']
 
 
-@verdi_data.group('bands')
+@verdi_data.group('core.bands')
 def bands():
     """Manipulate BandsData objects (band structures)."""
 

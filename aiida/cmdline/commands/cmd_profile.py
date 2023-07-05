@@ -40,8 +40,8 @@ def profile_list():
     if not config.profiles:
         echo.echo_warning('no profiles configured: run `verdi setup` to create one')
     else:
-        sort = lambda profile: profile.name
-        highlight = lambda profile: profile.name == config.default_profile_name
+        sort = lambda profile: profile.name  # pylint: disable=unnecessary-lambda-assignment
+        highlight = lambda profile: profile.name == config.default_profile_name  # pylint: disable=unnecessary-lambda-assignment
         echo.echo_formatted_list(config.profiles, ['name'], sort=sort, highlight=highlight)
 
 

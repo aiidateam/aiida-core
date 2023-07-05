@@ -9,6 +9,12 @@
 ###########################################################################
 # pylint: disable=invalid-name
 """Methods to validate the database integrity and fix violations."""
+from __future__ import annotations
+
+from aiida.common.log import AIIDA_LOGGER
+
+LOGGER = AIIDA_LOGGER.getChild(__file__)
+
 WARNING_BORDER = '*' * 120
 
 # These are all the entry points from the `aiida.calculations` category as registered with the AiiDA registry
@@ -160,7 +166,6 @@ def write_database_integrity_violation(results, headers, reason_message, action_
 
     from tabulate import tabulate
 
-    from aiida.cmdline.utils import echo
     from aiida.manage import configuration
 
     global_profile = configuration.get_profile()
@@ -171,8 +176,7 @@ def write_database_integrity_violation(results, headers, reason_message, action_
         action_message = 'nothing'
 
     with NamedTemporaryFile(prefix='migration-', suffix='.log', dir='.', delete=False, mode='w+') as handle:
-        echo.echo('')
-        echo.echo_warning(
+        LOGGER.warning(
             '\n{}\nFound one or multiple records that violate the integrity of the database\nViolation reason: {}\n'
             'Performed action: {}\nViolators written to: {}\n{}\n'.format(
                 WARNING_BORDER, reason_message, action_message, handle.name, WARNING_BORDER
@@ -186,23 +190,43 @@ def write_database_integrity_violation(results, headers, reason_message, action_
         handle.write(tabulate(results, headers))
 
 
-# Currently valid hash key
-_HASH_EXTRA_KEY = '_aiida_hash'
-
-
-def drop_hashes(conn):
+def drop_hashes(conn, hash_extra_key: str, entry_point_string: str | None = None) -> None:
     """Drop hashes of nodes.
 
     Print warning only if the DB actually contains nodes.
+
+    :param hash_extra_key: The key in the extras used to store the hash at the time of this migration.
+    :param entry_point_string: Optional entry point string of a node type to narrow the subset of nodes to reset. The
+        value should be a complete entry point string, e.g., ``aiida.node:process.calculation.calcjob`` to drop the hash
+        of all ``CalcJobNode`` rows.
     """
-    # Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
-    # pylint: disable=no-name-in-module,import-error
     from sqlalchemy.sql import text
 
-    from aiida.cmdline.utils import echo
-    n_nodes = conn.execute(text("""SELECT count(*) FROM db_dbnode;""")).fetchall()[0][0]
-    if n_nodes > 0:
-        echo.echo_warning('Invalidating the hashes of all nodes. Please run "verdi rehash".', bold=True)
+    from aiida.orm.utils.node import get_type_string_from_class
+    from aiida.plugins import load_entry_point_from_string
 
-    statement = text(f"UPDATE db_dbnode SET extras = extras #- '{{{_HASH_EXTRA_KEY}}}'::text[];")
-    conn.execute(statement)
+    if entry_point_string is not None:
+        entry_point = load_entry_point_from_string(entry_point_string)
+        node_type = get_type_string_from_class(entry_point.__module__, entry_point.__name__)
+    else:
+        node_type = None
+
+    if node_type:
+        statement_count = text(f"SELECT count(*) FROM db_dbnode WHERE node_type = '{node_type}';")
+        statement_update = text(
+            f"UPDATE db_dbnode SET extras = extras #- '{{{hash_extra_key}}}'::text[]  WHERE node_type = '{node_type}';"
+        )
+    else:
+        statement_count = text('SELECT count(*) FROM db_dbnode;')
+        statement_update = text(f"UPDATE db_dbnode SET extras = extras #- '{{{hash_extra_key}}}'::text[];")
+
+    node_count = conn.execute(statement_count).fetchall()[0][0]
+
+    if node_count > 0:
+        if entry_point_string:
+            msg = f'Invalidating the hashes of certain nodes. Please run `verdi node rehash -e {entry_point_string}`.'
+        else:
+            msg = 'Invalidating the hashes of all nodes. Please run `verdi node rehash`.'
+        LOGGER.warning(msg)
+
+    conn.execute(statement_update)

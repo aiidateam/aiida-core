@@ -13,7 +13,7 @@
     pip:
       chdir: "{{ aiida_core_dir }}"
       # TODO dynamically change for python version
-      requirements: requirements/requirements-py-3.8.txt
+      requirements: requirements/requirements-py-3.9.txt
       executable: "{{ venv_bin }}/pip"
       extra_args: --cache-dir {{ aiida_pip_cache }}
     register: pip_install_deps

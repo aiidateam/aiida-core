@@ -32,9 +32,6 @@ Revises: e797afa09270
 Create Date: 2019-07-04 18:23:56.127994
 
 """
-
-# Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
-# pylint: disable=no-name-in-module,import-error
 from alembic import op
 from sqlalchemy.sql import text
 

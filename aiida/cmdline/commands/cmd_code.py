@@ -13,6 +13,7 @@ from functools import partial
 
 import click
 import tabulate
+import yaml
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
@@ -28,7 +29,7 @@ def verdi_code():
     """Setup and manage codes."""
 
 
-def create_code(cls, non_interactive, **kwargs):  # pylint: disable=unused-argument
+def create_code(ctx: click.Context, cls, non_interactive: bool, **kwargs):  # pylint: disable=unused-argument
     """Create a new `Code` instance."""
     try:
         instance = cls(**kwargs)
@@ -223,16 +224,39 @@ def show(code):
     table = []
     table.append(['PK', code.pk])
     table.append(['UUID', code.uuid])
-    table.append(['Label', code.label])
-    table.append(['Description', code.description])
-    table.append(['Default plugin', code.default_calc_job_plugin])
-    table.append(['Prepend text', code.prepend_text])
-    table.append(['Append text', code.append_text])
-
+    table.append(['Type', code.entry_point.name])
+    for key in code.get_cli_options().keys():
+        try:
+            table.append([key.capitalize().replace('_', ' '), getattr(code, key)])
+        except AttributeError:
+            continue
     if is_verbose():
         table.append(['Calculations', len(code.base.links.get_outgoing().all())])
 
     echo.echo(tabulate.tabulate(table))
+
+
+@verdi_code.command()
+@arguments.CODE()
+@arguments.OUTPUT_FILE(type=click.Path(exists=False))
+@with_dbenv()
+def export(code, output_file):
+    """Export code to a yaml file."""
+    code_data = {}
+
+    for key in code.get_cli_options().keys():
+        if key == 'computer':
+            value = getattr(code, key).label
+        else:
+            value = getattr(code, key)
+
+        # If the attribute is not set, for example ``with_mpi`` do not export it, because the YAML won't be valid for
+        # use in ``verdi code create`` since ``None`` is not a valid value on the CLI.
+        if value is not None:
+            code_data[key] = str(value)
+
+    with open(output_file, 'w', encoding='utf-8') as yfhandle:
+        yaml.dump(code_data, yfhandle)
 
 
 @verdi_code.command()

@@ -325,7 +325,7 @@ class CalcJob(Process):
         spec.input(
             'metadata.options.withmpi',
             valid_type=bool,
-            default=False,
+            required=False,
             help='Set the calculation to use mpi',
         )
         spec.input(
@@ -452,6 +452,12 @@ class CalcJob(Process):
         spec.exit_code(
             120, 'ERROR_SCHEDULER_OUT_OF_WALLTIME', invalidates_cache=True, message='The job ran out of walltime.'
         )
+        spec.exit_code(
+            131, 'ERROR_SCHEDULER_INVALID_ACCOUNT', invalidates_cache=True, message='The specified account is invalid.'
+        )
+        spec.exit_code(
+            140, 'ERROR_SCHEDULER_NODE_FAILURE', invalidates_cache=True, message='The node running the job failed.'
+        )
         spec.exit_code(150, 'STOPPED_BY_MONITOR', invalidates_cache=True, message='{message}')
 
     @classproperty
@@ -480,7 +486,7 @@ class CalcJob(Process):
         if entry_point_name is None:
             _, entry_point = get_entry_point_from_class(cls.__module__, cls.__name__)
             if entry_point is not None:
-                entry_point_name = entry_point.name  # type: ignore
+                entry_point_name = entry_point.name
 
         assert entry_point_name is not None
 
@@ -533,11 +539,11 @@ class CalcJob(Process):
             `Wait` command if the calcjob is to be uploaded
 
         """
-        if self.inputs.metadata.dry_run:  # type: ignore[union-attr]
+        if self.inputs.metadata.dry_run:
             self._perform_dry_run()
             return plumpy.process_states.Stop(None, True)
 
-        if 'remote_folder' in self.inputs:  # type: ignore[operator]
+        if 'remote_folder' in self.inputs:
             exit_code = self._perform_import()
             return exit_code
 
@@ -546,6 +552,11 @@ class CalcJob(Process):
         # been overridden by the engine to `Running` so we cannot check that, but if the `exit_status` is anything other
         # than `None`, it should mean this node was taken from the cache, so the process should not be rerun.
         if self.node.exit_status is not None:
+            # Normally the outputs will be attached to the process by a ``Parser``, if defined in the inputs. But in
+            # this case, the parser will not be called. The outputs will already have been added to the process node
+            # though, so all that needs to be done here is just also assign them to the process instance. This such that
+            # when the process returns its results, it returns the actual outputs and not an empty dictionary.
+            self._outputs = self.node.get_outgoing(link_type=LinkType.CREATE).nested()  # pylint: disable=attribute-defined-outside-init
             return self.node.exit_status
 
         # Launch the upload operation
@@ -585,7 +596,7 @@ class CalcJob(Process):
         # will have an associated computer, but in that case the ``computer`` property should return ``None`` and
         # nothing would change anyway.
         if not self.node.computer:
-            self.node.computer = self.inputs.code.computer  # type: ignore[union-attr]
+            self.node.computer = self.inputs.code.computer
 
     def _perform_dry_run(self):
         """Perform a dry run.
@@ -629,9 +640,7 @@ class CalcJob(Process):
             with SandboxFolder(filepath_sandbox) as folder:
                 with SandboxFolder(filepath_sandbox) as retrieved_temporary_folder:
                     self.presubmit(folder)
-                    self.node.set_remote_workdir(
-                        self.inputs.remote_folder.get_remote_path()  # type: ignore[union-attr]
-                    )
+                    self.node.set_remote_workdir(self.inputs.remote_folder.get_remote_path())
                     retrieve_calculation(self.node, transport, retrieved_temporary_folder.abspath)
                     self.node.set_state(CalcJobState.PARSING)
                     self.node.base.attributes.set(orm.CalcJobNode.IMMIGRATED_KEY, True)
@@ -731,7 +740,7 @@ class CalcJob(Process):
             self.logger.warning('could not determine `stderr` filename because `scheduler_stderr` option was not set.')
         else:
             try:
-                scheduler_stderr = retrieved.base.repository.get_object_content(filename_stderr)
+                scheduler_stderr = retrieved.base.repository.get_object_content(filename_stderr, mode='r')
             except FileNotFoundError:
                 scheduler_stderr = None
                 self.logger.warning(f'could not parse scheduler output: the `{filename_stderr}` file is missing')
@@ -740,13 +749,17 @@ class CalcJob(Process):
             self.logger.warning('could not determine `stdout` filename because `scheduler_stdout` option was not set.')
         else:
             try:
-                scheduler_stdout = retrieved.base.repository.get_object_content(filename_stdout)
+                scheduler_stdout = retrieved.base.repository.get_object_content(filename_stdout, mode='r')
             except FileNotFoundError:
                 scheduler_stdout = None
                 self.logger.warning(f'could not parse scheduler output: the `{filename_stdout}` file is missing')
 
         try:
-            exit_code = scheduler.parse_output(detailed_job_info, scheduler_stdout, scheduler_stderr)
+            exit_code = scheduler.parse_output(
+                detailed_job_info,
+                scheduler_stdout or '',  # type: ignore[arg-type]
+                scheduler_stderr or '',  # type: ignore[arg-type]
+            )
         except exceptions.FeatureNotAvailable:
             self.logger.info(f'`{scheduler.__class__.__name__}` does not implement scheduler output parsing')
             return None
@@ -806,7 +819,7 @@ class CalcJob(Process):
 
         inputs = self.node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
 
-        if not self.inputs.metadata.dry_run and not self.node.is_stored:  # type: ignore[union-attr]
+        if not self.inputs.metadata.dry_run and not self.node.is_stored:
             raise InvalidOperation('calculation node is not stored.')
 
         computer = self.node.computer
@@ -830,7 +843,6 @@ class CalcJob(Process):
         job_tmpl = JobTemplate()
         job_tmpl.submit_as_hold = False
         job_tmpl.rerunnable = self.options.get('rerunnable', False)
-        job_tmpl.job_environment = {}
         # 'email', 'email_on_started', 'email_on_terminated',
         job_tmpl.job_name = f'aiida-{self.node.pk}'
         job_tmpl.sched_output_path = self.options.scheduler_stdout
@@ -881,7 +893,7 @@ class CalcJob(Process):
 
         # Set resources, also with get_default_mpiprocs_per_machine
         resources = self.node.get_option('resources')
-        scheduler.preprocess_resources(resources, computer.get_default_mpiprocs_per_machine())
+        scheduler.preprocess_resources(resources or {}, computer.get_default_mpiprocs_per_machine())
         job_tmpl.job_resource = scheduler.create_job_resource(**resources)  # type: ignore
 
         subst_dict = {'tot_num_mpiprocs': job_tmpl.job_resource.get_tot_num_mpiprocs()}
@@ -903,35 +915,56 @@ class CalcJob(Process):
 
             if code_info.code_uuid is None:
                 raise PluginInternalError('CalcInfo should have the information of the code to be launched')
-            this_code = load_code(code_info.code_uuid)
 
-            # To determine whether this code should be run with MPI enabled, we get the value that was set in the inputs
-            # of the entire process, which can then be overwritten by the value from the `CodeInfo`. This allows plugins
-            # to force certain codes to run without MPI, even if the user wants to run all codes with MPI whenever
-            # possible. This use case is typically useful for `CalcJob`s that consist of multiple codes where one or
-            # multiple codes always have to be executed without MPI.
+            code = load_code(code_info.code_uuid)
 
-            this_withmpi = self.node.get_option('withmpi')
+            # Here are the three values that will determine whether the code is to be run with MPI _if_ they are not
+            # ``None``. If any of them are explicitly defined but are not equivalent, an exception is raised. We use the
+            # ``self._raw_inputs`` to determine the actual value passed for ``metadata.options.withmpi`` and
+            # distinghuish it from the default.
+            raw_inputs = self._raw_inputs or {}  # type: ignore[var-annotated]
+            with_mpi_option = raw_inputs.get('metadata', {}).get('options', {}).get('withmpi', None)
+            with_mpi_plugin = code_info.withmpi
+            with_mpi_code = code.with_mpi
 
-            # Override the value of `withmpi` with that of the `CodeInfo` if and only if it is set
-            if code_info.withmpi is not None:
-                this_withmpi = code_info.withmpi
+            with_mpi_values = [with_mpi_option, with_mpi_plugin, with_mpi_code]
+            with_mpi_values_defined = [value for value in with_mpi_values if value is not None]
+            with_mpi_values_set = set(with_mpi_values_defined)
 
-            if this_withmpi:
-                prepend_cmdline_params = this_code.get_prepend_cmdline_params(mpi_args, extra_mpirun_params)
+            # If more than one value is defined, they have to be identical, or we raise that a conflict is encountered
+            if len(with_mpi_values_set) > 1:
+                error = f'Inconsistent requirements as to whether code `{code}` should be run with or without MPI.'
+                if with_mpi_option is not None:
+                    error += f'\nThe `metadata.options.withmpi` input was set to `{with_mpi_option}`.'
+                if with_mpi_plugin is not None:
+                    error += f'\nThe plugin require `{with_mpi_plugin}`.'
+                if with_mpi_code is not None:
+                    error += f'\nThe code `{code}` required `{with_mpi_code}`.'
+                raise RuntimeError(error)
+
+            # At this point we know that the three explicit values agree if they are defined, so we simply set the value
+            if with_mpi_values_set:
+                with_mpi = with_mpi_values_set.pop()
             else:
-                prepend_cmdline_params = this_code.get_prepend_cmdline_params()
+                # Fall back to the default, which is to not use MPI
+                with_mpi = False
 
-            cmdline_params = this_code.get_executable_cmdline_params(code_info.cmdline_params)
+            if with_mpi:
+                prepend_cmdline_params = code.get_prepend_cmdline_params(mpi_args, extra_mpirun_params)
+            else:
+                prepend_cmdline_params = code.get_prepend_cmdline_params()
+
+            cmdline_params = code.get_executable_cmdline_params(code_info.cmdline_params)
 
             tmpl_code_info = JobTemplateCodeInfo()
             tmpl_code_info.prepend_cmdline_params = prepend_cmdline_params
             tmpl_code_info.cmdline_params = cmdline_params
-            tmpl_code_info.use_double_quotes = [computer.get_use_double_quotes(), this_code.use_double_quotes]
+            tmpl_code_info.use_double_quotes = [computer.get_use_double_quotes(), code.use_double_quotes]
+            tmpl_code_info.wrap_cmdline_params = code.wrap_cmdline_params
             tmpl_code_info.stdin_name = code_info.stdin_name
             tmpl_code_info.stdout_name = code_info.stdout_name
             tmpl_code_info.stderr_name = code_info.stderr_name
-            tmpl_code_info.join_files = code_info.join_files
+            tmpl_code_info.join_files = code_info.join_files or False
 
             tmpl_codes_info.append(tmpl_code_info)
         job_tmpl.codes_info = tmpl_codes_info

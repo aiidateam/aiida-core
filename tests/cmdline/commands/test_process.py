@@ -7,8 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-self-use
 """Tests for `verdi process`."""
+import functools
+import re
 import time
 import typing as t
 import uuid
@@ -19,7 +20,7 @@ from aiida import get_profile
 from aiida.cmdline.commands import cmd_process
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
-from aiida.engine import ProcessState
+from aiida.engine import Process, ProcessState
 from aiida.orm import CalcJobNode, Group, WorkChainNode, WorkflowNode, WorkFunctionNode
 from tests.utils.processes import WaitProcess
 
@@ -73,7 +74,9 @@ class TestVerdiProcess:
 
             # Set the WorkChainNode as failed
             if state == ProcessState.FINISHED:
-                calc.set_exit_status(1)
+                exit_code = Process.exit_codes.ERROR_UNSPECIFIED
+                calc.set_exit_status(exit_code.status)
+                calc.set_exit_message(exit_code.message)
 
             # Set the waiting work chain as paused as well
             if state == ProcessState.WAITING:
@@ -84,6 +87,8 @@ class TestVerdiProcess:
 
         group = Group(str(uuid.uuid4())).store()
         group.add_nodes(calcs[0])
+
+        run_cli_command = functools.partial(run_cli_command, suppress_warnings=True)
 
         # Default behavior should yield all active states (CREATED, RUNNING and WAITING) so six in total
         result = run_cli_command(cmd_process.process_list, ['-r'])
@@ -173,6 +178,11 @@ class TestVerdiProcess:
             result = run_cli_command(cmd_process.process_list, ['-r', flag])
 
             assert len(result.output_lines) == 1
+
+        # There should be a failed WorkChain with exit status 1
+        for flag in ['-P', '--project']:
+            result = run_cli_command(cmd_process.process_list, ['-r', '-X', flag, 'exit_message'])
+            assert Process.exit_codes.ERROR_UNSPECIFIED.message in result.output
 
     def test_process_show(self, run_cli_command):
         """Test verdi process show"""
@@ -264,6 +274,29 @@ class TestVerdiProcess:
         assert result.exception is None, result.output
         assert len(result.output_lines) == 0
 
+    def test_process_status_call_link_label(self, run_cli_command):
+        """Test ``verdi process status --call-link-label``."""
+        node = WorkflowNode().store()
+        node.set_process_state(ProcessState.RUNNING)
+
+        # Create subprocess with specific call link label.
+        child1 = CalcJobNode()
+        child1.set_process_state(ProcessState.FINISHED)
+        child1.base.links.add_incoming(node, link_type=LinkType.CALL_CALC, link_label='call_label')
+        child1.store()
+
+        # Create subprocess with default call link label, which should not show up.
+        child2 = CalcJobNode()
+        child2.set_process_state(ProcessState.FINISHED)
+        child2.base.links.add_incoming(node, link_type=LinkType.CALL_CALC, link_label='CALL')
+        child2.store()
+
+        result = run_cli_command(cmd_process.process_status, [str(node.pk), '--call-link-label'])
+        assert result.exception is None, result.output
+        assert re.match(
+            r'None<.*> Running\n    ├── None<.* | call_label> Finished\n    └── None<.*> Finished\n', result.output
+        )
+
     def test_report(self, run_cli_command):
         """Test the report command."""
         grandparent = WorkChainNode().store()
@@ -312,11 +345,10 @@ def test_list_worker_slot_warning(run_cli_command, monkeypatch):
     Test that the if the number of used worker process slots exceeds a threshold,
     that the warning message is displayed to the user when running `verdi process list`
     """
-    from aiida.cmdline.utils import common
     from aiida.engine import DaemonClient
     from aiida.manage.configuration import get_config
 
-    monkeypatch.setattr(common, 'get_num_workers', lambda: 1)
+    monkeypatch.setattr(DaemonClient, 'get_numprocesses', lambda _: {'numprocesses': 1})
     monkeypatch.setattr(DaemonClient, 'is_daemon_running', lambda: True)
 
     # Get the number of allowed processes per worker:
@@ -331,7 +363,7 @@ def test_list_worker_slot_warning(run_cli_command, monkeypatch):
         calc.store()
 
     # Default cmd should not throw the warning as we are below the limit
-    result = run_cli_command(cmd_process.process_list)
+    result = run_cli_command(cmd_process.process_list, use_subprocess=False)
     warning_phrase = 'of the available daemon worker slots have been used!'
     assert all(warning_phrase not in line for line in result.output_lines), result.output
 
@@ -341,7 +373,7 @@ def test_list_worker_slot_warning(run_cli_command, monkeypatch):
     calc.store()
 
     # Now the warning should fire
-    result = run_cli_command(cmd_process.process_list)
+    result = run_cli_command(cmd_process.process_list, use_subprocess=False)
     warning_phrase = '% of the available daemon worker slots have been used!'
     assert any(warning_phrase in line for line in result.output_lines)
 

@@ -179,8 +179,8 @@ def _json_to_sqlite(  # pylint: disable=too-many-branches,too-many-locals
     with engine.begin() as connection:
 
         # get mapping of node IDs to node UUIDs
-        node_uuid_map = {
-            uuid: pk for uuid, pk in connection.execute(select(v1_schema.DbNode.uuid, v1_schema.DbNode.id))  # pylint: disable=unnecessary-comprehension
+        node_uuid_map = {  # pylint: disable=unnecessary-comprehension
+            uuid: pk for uuid, pk in connection.execute(select(v1_schema.DbNode.uuid, v1_schema.DbNode.id))
         }
 
         # links
@@ -210,8 +210,8 @@ def _json_to_sqlite(  # pylint: disable=too-many-branches,too-many-locals
         # groups to nodes
         if data['groups_uuid']:
             # get mapping of node IDs to node UUIDs
-            group_uuid_map = {
-                uuid: pk for uuid, pk in connection.execute(select(v1_schema.DbGroup.uuid, v1_schema.DbGroup.id))  # pylint: disable=unnecessary-comprehension
+            group_uuid_map = {  # pylint: disable=unnecessary-comprehension
+                uuid: pk for uuid, pk in connection.execute(select(v1_schema.DbGroup.uuid, v1_schema.DbGroup.id))
             }
             length = sum(len(uuids) for uuids in data['groups_uuid'].values())
             unknown_nodes: Dict[str, set] = {}
@@ -255,7 +255,9 @@ def _iter_entity_fields(
             uuid = all_fields['uuid']
             repository_metadata = _create_repo_metadata(node_repos[uuid]) if uuid in node_repos else {}
             yield {
-                **{keys.get(key, key): _convert_datetime(key, val) for key, val in all_fields.items()},
+                **{
+                    keys.get(key, key): _convert_datetime(key, val) for key, val in all_fields.items()
+                },
                 **{
                     'id': pk,
                     'attributes': attributes[pk],

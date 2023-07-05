@@ -27,7 +27,7 @@ def tests_storage_info(aiida_localhost, run_cli_command):
     from aiida import orm
     node = orm.Dict().store()
 
-    result = run_cli_command(cmd_storage.storage_info, options=['--detailed'])
+    result = run_cli_command(cmd_storage.storage_info, parameters=['--detailed'])
 
     assert aiida_localhost.label in result.output
     assert node.node_type in result.output
@@ -36,7 +36,7 @@ def tests_storage_info(aiida_localhost, run_cli_command):
 @pytest.mark.usefixtures('stopped_daemon_client')
 def tests_storage_migrate_force(run_cli_command):
     """Test the ``verdi storage migrate`` command (with force option)."""
-    result = run_cli_command(cmd_storage.storage_migrate, options=['--force'])
+    result = run_cli_command(cmd_storage.storage_migrate, parameters=['--force'])
     assert 'Migrating to the head of the main branch' in result.output
 
 
@@ -69,7 +69,7 @@ def tests_storage_migrate_cancel_prompt(run_cli_command, monkeypatch):
     import click
 
     monkeypatch.setattr(click, 'prompt', lambda text, **kwargs: exec('import click\nraise click.Abort()'))  # pylint: disable=exec-used
-    result = run_cli_command(cmd_storage.storage_migrate, raises=True)
+    result = run_cli_command(cmd_storage.storage_migrate, raises=True, use_subprocess=False)
 
     assert 'aborted' in result.output.lower()
 
@@ -86,7 +86,7 @@ def tests_storage_migrate_cancel_prompt(run_cli_command, monkeypatch):
         },
         {
             'raises': True,
-            'options': ['--force']
+            'parameters': ['--force']
         },
     ]
 )
@@ -103,21 +103,20 @@ def tests_storage_migrate_raises(run_cli_command, raise_type, call_kwargs, monke
     from aiida.manage import get_manager
     manager = get_manager()
 
-    def mocked_migrate(self):  # pylint: disable=no-self-use
+    def mocked_migrate(self):
         raise raise_type('passed error message')
 
     monkeypatch.setattr(manager.get_profile_storage().__class__, 'migrate', mocked_migrate)
-    result = run_cli_command(cmd_storage.storage_migrate, **call_kwargs)
+    result = run_cli_command(cmd_storage.storage_migrate, **call_kwargs, use_subprocess=False)
 
     assert result.exc_info[0] is SystemExit
     assert 'Critical:' in result.output
     assert 'passed error message' in result.output
 
 
-def tests_storage_maintain_logging(run_cli_command, monkeypatch, caplog):
+def tests_storage_maintain_logging(run_cli_command, monkeypatch):
     """Test all the information and cases of the storage maintain command."""
-    import logging
-
+    from aiida.common.log import AIIDA_LOGGER
     from aiida.manage import get_manager
     storage = get_manager().get_profile_storage()
 
@@ -133,27 +132,47 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch, caplog):
         for key, val in kwargs.items():
             log_message += f' > {key}: {val}\n'
 
-        logging.info(log_message)
+        AIIDA_LOGGER.report(log_message)
 
     monkeypatch.setattr(storage, 'maintain', mock_maintain)
 
-    with caplog.at_level(logging.INFO):
-        _ = run_cli_command(cmd_storage.storage_maintain, user_input='Y')
+    # Not passing user input should cause the command to exit without executing `storage.mantain` and so the last
+    # message should be the prompt to continue or not.
+    result = run_cli_command(cmd_storage.storage_maintain, use_subprocess=False)
+    message_list = result.output_lines
+    assert message_list[-1] == 'Are you sure you want continue in this mode? [y/N]: '
 
-    message_list = caplog.records[0].msg.splitlines()
+    # Test `storage.mantain` with `--force`
+    result = run_cli_command(cmd_storage.storage_maintain, parameters=['--force', '--compress'], use_subprocess=False)
+    message_list = result.output_lines
     assert ' > full: False' in message_list
     assert ' > dry_run: False' in message_list
+    assert ' > compress: True' in message_list
 
-    with caplog.at_level(logging.INFO):
-        _ = run_cli_command(cmd_storage.storage_maintain, options=['--dry-run'])
+    # Test `storage.mantain` with user input Y
+    result = run_cli_command(cmd_storage.storage_maintain, user_input='Y', use_subprocess=False)
+    message_list = result.output_lines
+    assert ' > full: False' in message_list
+    assert ' > dry_run: False' in message_list
+    assert ' > compress: False' in message_list
 
-    message_list = caplog.records[1].msg.splitlines()
+    # Test `storage.mantain` with `--dry-run`
+    result = run_cli_command(cmd_storage.storage_maintain, parameters=['--dry-run'], use_subprocess=False)
+    message_list = result.output_lines
     assert ' > full: False' in message_list
     assert ' > dry_run: True' in message_list
 
-    with caplog.at_level(logging.INFO):
-        run_cli_command(cmd_storage.storage_maintain, options=['--full'], user_input='Y')
-
-    message_list = caplog.records[2].msg.splitlines()
+    # Test `storage.mantain` with `--full`
+    result = run_cli_command(cmd_storage.storage_maintain, parameters=['--full'], user_input='Y', use_subprocess=False)
+    message_list = result.output_lines
     assert ' > full: True' in message_list
+    assert ' > dry_run: False' in message_list
+
+    # Test `storage.mantain` with `--full` and `--no-repack`
+    result = run_cli_command(
+        cmd_storage.storage_maintain, parameters=['--full', '--no-repack'], user_input='Y', use_subprocess=False
+    )
+    message_list = result.output_lines
+    assert ' > full: True' in message_list
+    assert ' > do_repack: False' in message_list
     assert ' > dry_run: False' in message_list

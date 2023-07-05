@@ -22,7 +22,7 @@ from ..caching import NodeCaching
 from ..node import Node, NodeLinks
 
 if TYPE_CHECKING:
-    from aiida.engine.processes import Process
+    from aiida.engine.processes import ExitCode, Process
     from aiida.engine.processes.builder import ProcessBuilder
 
 __all__ = ('ProcessNode',)
@@ -219,17 +219,28 @@ class ProcessNode(Sealable, Node):
         except exceptions.EntryPointError as exception:
             raise ValueError(
                 f'could not load process class for entry point `{self.process_type}` for Node<{self.pk}>: {exception}'
-            )
-        except ValueError:
-            try:
-                import importlib
-                module_name, class_name = self.process_type.rsplit('.', 1)
-                module = importlib.import_module(module_name)
-                process_class = getattr(module, class_name)
-            except (AttributeError, ValueError, ImportError) as exception:
+            ) from exception
+        except ValueError as exception:
+            import importlib
+
+            def str_rsplit_iter(string, sep='.'):
+                components = string.split(sep)
+                for idx in range(1, len(components)):
+                    yield sep.join(components[:-idx]), components[-idx:]
+
+            for module_name, class_names in str_rsplit_iter(self.process_type):
+                try:
+                    module = importlib.import_module(module_name)
+                    process_class = module
+                    for objname in class_names:
+                        process_class = getattr(process_class, objname)
+                    break
+                except (AttributeError, ValueError, ImportError):
+                    pass
+            else:
                 raise ValueError(
-                    f'could not load process class from `{self.process_type}` for Node<{self.pk}>: {exception}'
-                )
+                    f'could not load process class from `{self.process_type}` for Node<{self.pk}>'
+                ) from exception
 
         return process_class
 
@@ -386,6 +397,24 @@ class ProcessNode(Sealable, Node):
         :rtype: bool
         """
         return self.is_finished and self.exit_status != 0
+
+    @property
+    def exit_code(self) -> Optional['ExitCode']:
+        """Return the exit code of the process.
+
+        It is reconstituted from the ``exit_status`` and ``exit_message`` attributes if both of those are defined.
+
+        :returns: The exit code if defined, or ``None``.
+        """
+        from aiida.engine.processes.exit_code import ExitCode
+
+        exit_status = self.exit_status
+        exit_message = self.exit_message
+
+        if exit_status is None or exit_message is None:
+            return None
+
+        return ExitCode(exit_status, exit_message)
 
     @property
     def exit_status(self) -> Optional[int]:
@@ -552,5 +581,4 @@ class ProcessNode(Sealable, Node):
             caller = self.base.links.get_incoming(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).one().node
         except ValueError:
             return None
-        else:
-            return caller
+        return caller

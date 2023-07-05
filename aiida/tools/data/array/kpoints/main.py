@@ -43,7 +43,7 @@ def get_kpoints_path(structure, method='seekpath', **kwargs):
     :param kwargs: optional keyword arguments that depend on the selected method
     :returns: dictionary as described above in the docstring
     """
-    if method not in _GET_KPOINTS_PATH_METHODS.keys():
+    if method not in _GET_KPOINTS_PATH_METHODS:
         raise ValueError(f"the method '{method}' is not implemented")
 
     method = _GET_KPOINTS_PATH_METHODS[method]
@@ -79,7 +79,7 @@ def get_explicit_kpoints_path(structure, method='seekpath', **kwargs):
     :param kwargs: optional keyword arguments that depend on the selected method
     :returns: dictionary as described above in the docstring
     """
-    if method not in _GET_EXPLICIT_KPOINTS_PATH_METHODS.keys():
+    if method not in _GET_EXPLICIT_KPOINTS_PATH_METHODS:
         raise ValueError(f"the method '{method}' is not implemented")
 
     method = _GET_EXPLICIT_KPOINTS_PATH_METHODS[method]
@@ -188,7 +188,7 @@ def _legacy_get_kpoints_path(structure, **kwargs):
         'path': path,
     }
 
-    return {'parameters': Dict(dict=parameters)}
+    return {'parameters': Dict(parameters)}
 
 
 def _legacy_get_explicit_kpoints_path(structure, **kwargs):
@@ -227,7 +227,7 @@ def _legacy_get_explicit_kpoints_path(structure, **kwargs):
         'path': path,
     }
 
-    return {'parameters': Dict(dict=parameters), 'explicit_kpoints': kpoints}
+    return {'parameters': Dict(parameters), 'explicit_kpoints': kpoints}
 
 
 _GET_KPOINTS_PATH_METHODS = {

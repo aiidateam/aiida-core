@@ -178,7 +178,7 @@ class LsfScheduler(aiida.schedulers.Scheduler):
     Support for the IBM LSF scheduler
     'https://www-01.ibm.com/support/knowledgecenter/SSETD4_9.1.2/lsf_welcome.html'
     """
-    _logger = aiida.schedulers.Scheduler._logger.getChild('lsf')
+    _logger = aiida.schedulers.Scheduler._logger.getChild('lsf')  # pylint: disable=protected-access
 
     # Query only by list of jobs and not by user
     _features = {
@@ -438,9 +438,6 @@ class LsfScheduler(aiida.schedulers.Scheduler):
 
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)
-
-        if job_tmpl.job_environment:
-            lines.append(self._get_submit_script_environment_variables(job_tmpl))
 
         # The following seems to be the only way to copy the input files
         # to the node where the computation are actually launched (the

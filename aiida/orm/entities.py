@@ -165,18 +165,18 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
     _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore
 
     @classproperty
-    def objects(cls: EntityType) -> CollectionType:  # pylint: disable=no-self-argument,no-self-use
+    def objects(cls: EntityType) -> CollectionType:  # pylint: disable=no-self-argument
         """Get a collection for objects of this type, with the default backend.
 
         .. deprecated:: This will be removed in v3, use ``collection`` instead.
 
         :return: an object that can be used to access entities of this type
         """
-        warn_deprecation('This property is deprecated, use `.collection` instead.', version=3, stacklevel=2)
+        warn_deprecation('`objects` property is deprecated, use `collection` instead.', version=3, stacklevel=4)
         return cls.collection
 
     @classproperty
-    def collection(cls) -> CollectionType:  # pylint: disable=no-self-argument,no-self-use
+    def collection(cls) -> CollectionType:  # pylint: disable=no-self-argument
         """Get a collection for objects of this type, with the default backend.
 
         :return: an object that can be used to access entities of this type
@@ -191,7 +191,9 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
 
         """
         warn_deprecation(
-            f'This method is deprecated, use `{cls.__name__}.collection.get` instead.', version=3, stacklevel=2
+            f'`{cls.__name__}.get` method is deprecated, use `{cls.__name__}.collection.get` instead.',
+            version=3,
+            stacklevel=2
         )
         return cls.collection.get(**kwargs)  # pylint: disable=no-member
 
@@ -223,7 +225,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
 
         :return: the entity's id
         """
-        warn_deprecation('This method is deprecated, use `pk` instead.', version=3, stacklevel=2)
+        warn_deprecation('`id` property is deprecated, use `pk` instead.', version=3, stacklevel=2)
         return self._backend_entity.id
 
     @property

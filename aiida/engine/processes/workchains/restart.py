@@ -178,7 +178,7 @@ class BaseRestartWorkChain(WorkChain):
         This is the case as long as the last process has not finished successfully and the maximum number of restarts
         has not yet been exceeded.
         """
-        max_iterations = self.inputs.max_iterations.value  # type: ignore[union-attr]
+        max_iterations = self.inputs.max_iterations.value
         return not self.ctx.is_finished and self.ctx.iteration < max_iterations
 
     def run_process(self) -> ToContext:
@@ -311,7 +311,7 @@ class BaseRestartWorkChain(WorkChain):
         # We check the `is_finished` attribute of the work chain and not the successfulness of the last process
         # because the error handlers in the last iteration can have qualified a "failed" process as satisfactory
         # for the outcome of the work chain and so have marked it as `is_finished=True`.
-        max_iterations = self.inputs.max_iterations.value  # type: ignore[union-attr]
+        max_iterations = self.inputs.max_iterations.value
         if not self.ctx.is_finished and self.ctx.iteration >= max_iterations:
             self.report(
                 f'reached the maximum number of iterations {max_iterations}: '
@@ -392,7 +392,7 @@ class BaseRestartWorkChain(WorkChain):
         """Clean the working directories of all child calculation jobs if `clean_workdir=True` in the inputs."""
         super().on_terminated()
 
-        if self.inputs.clean_workdir.value is False:  # type: ignore[union-attr]
+        if self.inputs.clean_workdir.value is False:
             self.report('remote folders will not be cleaned')
             return
 

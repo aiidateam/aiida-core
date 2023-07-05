@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-self-use,unused-argument,unused-variable,function-redefined,missing-class-docstring,missing-function-docstring
+# pylint: disable=unused-argument,unused-variable,function-redefined,missing-class-docstring,missing-function-docstring
 """Tests for `aiida.engine.processes.workchains.utils` module."""
 import pytest
 

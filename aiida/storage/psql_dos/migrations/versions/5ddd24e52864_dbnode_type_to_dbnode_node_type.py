@@ -17,9 +17,6 @@ Revises: d254fdfed416
 Create Date: 2019-02-22 17:09:57.715114
 
 """
-
-# Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
-# pylint: disable=no-name-in-module,import-error
 from alembic import op
 
 # revision identifiers, used by Alembic.

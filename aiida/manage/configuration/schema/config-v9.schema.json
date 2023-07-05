@@ -20,15 +20,22 @@
         },
         "daemon.timeout": {
           "type": "integer",
-          "default": 20,
+          "default": 2,
           "minimum": 0,
-          "description": "Timeout in seconds for calls to the circus client"
+          "description": "Used to set default timeout in the :class:`aiida.engine.daemon.client.DaemonClient` for calls to the daemon"
         },
         "daemon.worker_process_slots": {
           "type": "integer",
           "default": 200,
           "minimum": 1,
           "description": "Maximum number of concurrent process tasks that each daemon worker can handle"
+        },
+        "daemon.recursion_limit": {
+          "type": "integer",
+          "default": 3000,
+          "maximum": 100000,
+          "minimum": 1,
+          "description": "Maximum recursion depth for the daemon workers"
         },
         "db.batch_size": {
           "type": "integer",
@@ -46,6 +53,12 @@
           "enum": ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"],
           "default": "REPORT",
           "description": "Minimum level to log to daemon log and the `DbLog` table for the `aiida` logger"
+        },
+        "logging.verdi_loglevel": {
+          "type": "string",
+          "enum": ["CRITICAL", "ERROR", "WARNING", "REPORT", "INFO", "DEBUG"],
+          "default": "REPORT",
+          "description": "Minimum level to log to console when running a `verdi` command"
         },
         "logging.db_loglevel": {
           "type": "string",

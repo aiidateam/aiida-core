@@ -13,6 +13,8 @@ results. These are general and contain only the main logic; where appropriate,
 the routines make reference to the suitable plugins for all
 plugin-specific operations.
 """
+from __future__ import annotations
+
 from collections.abc import Mapping
 from logging import LoggerAdapter
 import os
@@ -27,6 +29,7 @@ from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcInfo
 from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
+from aiida.engine.processes.exit_code import ExitCode
 from aiida.manage.configuration import get_config_option
 from aiida.orm import CalcJobNode, Code, FolderData, Node, PortableCode, RemoteData, load_node
 from aiida.orm.utils.log import get_dblogger_extra
@@ -107,9 +110,8 @@ def upload_calculation(
         remote_working_directory = computer.get_workdir().format(username=remote_user)
         if not remote_working_directory.strip():
             raise exceptions.ConfigurationError(
-                "[submission of calculation {}] No remote_working_directory configured for computer '{}'".format(
-                    node.pk, computer.label
-                )
+                f'[submission of calculation {node.pk}] No remote_working_directory '
+                f"configured for computer '{computer.label}'"
             )
 
         # If it already exists, no exception is raised
@@ -117,18 +119,17 @@ def upload_calculation(
             transport.chdir(remote_working_directory)
         except IOError:
             logger.debug(
-                '[submission of calculation {}] Unable to chdir in {}, trying to create it'.format(
-                    node.pk, remote_working_directory
-                )
+                f'[submission of calculation {node.pk}] Unable to '
+                f'chdir in {remote_working_directory}, trying to create it'
             )
             try:
                 transport.makedirs(remote_working_directory)
                 transport.chdir(remote_working_directory)
             except EnvironmentError as exc:
                 raise exceptions.ConfigurationError(
-                    '[submission of calculation {}] '
-                    'Unable to create the remote directory {} on '
-                    "computer '{}': {}".format(node.pk, remote_working_directory, computer.label, exc)
+                    f'[submission of calculation {node.pk}] '
+                    f'Unable to create the remote directory {remote_working_directory} on '
+                    f"computer '{computer.label}': {exc}"
                 )
         # Store remotely with sharding (here is where we choose
         # the folder structure of remote jobs; then I store this
@@ -246,37 +247,40 @@ def upload_calculation(
         for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_copy_list:
             if remote_computer_uuid == computer.uuid:
                 logger.debug(
-                    '[submission of calculation {}] copying {} remotely, directly on the machine {}'.format(
-                        node.pk, dest_rel_path, computer.label
-                    )
+                    f'[submission of calculation {node.pk}] copying {dest_rel_path} '
+                    f'remotely, directly on the machine {computer.label}'
                 )
                 try:
                     transport.copy(remote_abs_path, dest_rel_path)
+                except FileNotFoundError:
+                    logger.warning(
+                        f'[submission of calculation {node.pk}] Unable to copy remote '
+                        f'resource from {remote_abs_path} to {dest_rel_path}! NOT Stopping but just ignoring!.'
+                    )
                 except (IOError, OSError):
                     logger.warning(
-                        '[submission of calculation {}] Unable to copy remote resource from {} to {}! '
-                        'Stopping.'.format(node.pk, remote_abs_path, dest_rel_path)
+                        f'[submission of calculation {node.pk}] Unable to copy remote '
+                        f'resource from {remote_abs_path} to {dest_rel_path}! Stopping.'
                     )
                     raise
             else:
                 raise NotImplementedError(
-                    '[submission of calculation {}] Remote copy between two different machines is '
-                    'not implemented yet'.format(node.pk)
+                    f'[submission of calculation {node.pk}] Remote copy between two different machines is '
+                    'not implemented yet'
                 )
 
         for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_symlink_list:
             if remote_computer_uuid == computer.uuid:
                 logger.debug(
-                    '[submission of calculation {}] copying {} remotely, directly on the machine {}'.format(
-                        node.pk, dest_rel_path, computer.label
-                    )
+                    f'[submission of calculation {node.pk}] copying {dest_rel_path} remotely, '
+                    f'directly on the machine {computer.label}'
                 )
                 try:
                     transport.symlink(remote_abs_path, dest_rel_path)
                 except (IOError, OSError):
                     logger.warning(
-                        '[submission of calculation {}] Unable to create remote symlink from {} to {}! '
-                        'Stopping.'.format(node.pk, remote_abs_path, dest_rel_path)
+                        f'[submission of calculation {node.pk}] Unable to create remote symlink '
+                        f'from {remote_abs_path} to {dest_rel_path}! Stopping.'
                     )
                     raise
             else:
@@ -290,9 +294,8 @@ def upload_calculation(
             with open(filepath, 'w', encoding='utf-8') as handle:  # type: ignore[assignment]
                 for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_copy_list:
                     handle.write(
-                        'would have copied {} to {} in working directory on remote {}'.format(
-                            remote_abs_path, dest_rel_path, computer.label
-                        )
+                        f'would have copied {remote_abs_path} to {dest_rel_path} in working '
+                        f'directory on remote {computer.label}'
                     )
 
         if remote_symlink_list:
@@ -300,9 +303,8 @@ def upload_calculation(
             with open(filepath, 'w', encoding='utf-8') as handle:  # type: ignore[assignment]
                 for remote_computer_uuid, remote_abs_path, dest_rel_path in remote_symlink_list:
                     handle.write(
-                        'would have created symlinks from {} to {} in working directory on remote {}'.format(
-                            remote_abs_path, dest_rel_path, computer.label
-                        )
+                        f'would have created symlinks from {remote_abs_path} to {dest_rel_path} in working'
+                        f'directory on remote {computer.label}'
                     )
 
     # Loop recursively over content of the sandbox folder copying all that are not in `provenance_exclude_list`. Note
@@ -351,7 +353,7 @@ def upload_calculation(
         remotedata.store()
 
 
-def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str:
+def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | ExitCode:
     """Submit a previously uploaded `CalcJob` to the scheduler.
 
     :param calculation: the instance of CalcJobNode to submit.
@@ -373,10 +375,12 @@ def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str:
 
     submit_script_filename = calculation.get_option('submit_script_filename')
     workdir = calculation.get_remote_workdir()
-    job_id = scheduler.submit_from_script(workdir, submit_script_filename)
-    calculation.set_job_id(job_id)
+    result = scheduler.submit_from_script(workdir, submit_script_filename)
 
-    return job_id
+    if isinstance(result, str):
+        calculation.set_job_id(result)
+
+    return result
 
 
 def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:

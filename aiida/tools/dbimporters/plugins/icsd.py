@@ -7,8 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-self-use
-""""Implementation of `DbImporter` for the CISD database."""
+"""Implementation of `DbImporter` for the ICSD database.
+
+Note: The implementation in this file is not compatible with the recent versions
+of ICSD, which are built with Apache Lucene and Tomcat. Older ICSD versions are
+supported, which included a MySQL database and a php-based web interface. The
+last confirmed compatible version was released in 2020.
+"""
 import io
 
 from aiida.tools.dbimporters.baseclasses import CifEntry, DbImporter, DbSearchResults
@@ -75,7 +80,7 @@ class IcsdDbImporter(DbImporter):
     pressure_precision = 1
 
     def __init__(self, **kwargs):
-
+        """Construct a new instance."""
         self.db_parameters = {
             'server': '',
             'urladd': 'index.php?',
@@ -468,12 +473,11 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
         self.number_of_results = None
         self._results = []
         self.cif_numbers = []
+        self.is_theoretical = []
         self.entries = {}
         self.page = 1
         self.position = 0
         self.db_version = None
-        self.sql_select_query = 'SELECT SQL_CALC_FOUND_ROWS icsd.IDNUM, icsd.COLL_CODE, icsd.STRUCT_FORM '
-        self.sql_from_query = 'FROM icsd '
 
         if self.db_parameters['querydb']:
             self.query_db_version()
@@ -516,7 +520,10 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
                     db_name=self.db_name,
                     id=self.cif_numbers[position],
                     version=self.db_version,
-                    extras={'idnum': self._results[position]}
+                    extras={
+                        'idnum': self._results[position],
+                        'is_theoretical': self.is_theoretical[position]
+                    }
                 )
             else:
                 self.entries[position] = IcsdEntry(
@@ -559,21 +566,36 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
         Query the mysql or web page database, depending on the db_parameters.
         Store the number_of_results, cif file number and the corresponding icsd number.
 
+        Additionally, for the mysql case, determine if the origin of the structure is theoretical.
+        This information is stored in the `icsd_remarks` mysql table. If the crystal has either "THE"
+        or "ZTHE" tags, then it's classified as theoretical.
+
         :note: Icsd uses its own number system, different from the CIF
                 file numbers.
         """
         if self.db_parameters['querydb']:
 
-            self._connect_db()
-            query_statement = '{}{}{} LIMIT {}, 100'.format(
-                self.sql_select_query, self.sql_from_query, self.query, (self.page - 1) * 100
+            # Build the "THEORY" column based on the icsd_remarks table
+            sql_theory_column_query = (
+                "SELECT IDNUM, count(case when STD_REM_CODE IN ('THE', 'ZTHE') then 1 end) >= 1 AS THEORY " +
+                'FROM icsd_remarks GROUP BY IDNUM'
             )
+
+            # call it `tt` and join it with the main table based on IDNUM
+            sql_from_query = f'FROM icsd INNER JOIN ({sql_theory_column_query}) AS tt ON icsd.IDNUM=tt.IDNUM '
+
+            # Select the following columns
+            sql_select_query = 'SELECT SQL_CALC_FOUND_ROWS icsd.IDNUM, icsd.COLL_CODE, icsd.STRUCT_FORM, tt.THEORY '
+
+            self._connect_db()
+            query_statement = f'{sql_select_query}{sql_from_query}{self.query} LIMIT {(self.page - 1) * 100}, 100'
             self.cursor.execute(query_statement)
             self.db.commit()
 
             for row in self.cursor.fetchall():
                 self._results.append(str(row[0]))
                 self.cif_numbers.append(str(row[1]))
+                self.is_theoretical.append(bool(row[3]))
 
             if self.number_of_results is None:
                 self.cursor.execute('SELECT FOUND_ROWS()')
@@ -647,6 +669,7 @@ class IcsdEntry(CifEntry):  # pylint: disable=abstract-method
         Create an instance of IcsdEntry, related to the supplied URI.
         """
         super().__init__(**kwargs)
+        _extras = kwargs.get('extras', {})
         self.source = {
             'db_name': kwargs.get('db_name', 'Icsd'),
             'db_uri': None,
@@ -654,7 +677,8 @@ class IcsdEntry(CifEntry):  # pylint: disable=abstract-method
             'version': kwargs.get('version', None),
             'uri': uri,
             'extras': {
-                'idnum': kwargs.get('extras', {}).get('idnum', None)
+                'idnum': _extras.get('idnum', None),
+                'is_theoretical': _extras.get('is_theoretical', None)
             },
             'license': self._license,
         }

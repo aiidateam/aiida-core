@@ -16,7 +16,6 @@ import pathlib
 from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence, Set, Union
 
 from disk_objectstore import Container
-from sqlalchemy.exc import IntegrityError as SqlaIntegrityError
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from aiida.common.exceptions import ClosedStorage, ConfigurationError, IntegrityError
@@ -233,23 +232,20 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
 
     @contextmanager
     def transaction(self) -> Iterator[Session]:
-        """Open a transaction and yield the current session.
+        """Open a transaction to be used as a context manager.
 
         If there is an exception within the context then the changes will be rolled back and the state will be as before
-        entering, otherwise the changes will be commited and the transaction closed. Transactions can be nested.
+        entering. Transactions can be nested.
         """
         session = self.get_session()
-
-        try:
-            if session.in_transaction():
+        if session.in_transaction():
+            with session.begin_nested():
+                yield session
+            session.commit()
+        else:
+            with session.begin():
                 with session.begin_nested():
                     yield session
-            else:
-                with session.begin():
-                    with session.begin_nested():
-                        yield session
-        except SqlaIntegrityError as exception:
-            raise IntegrityError(str(exception)) from exception
 
     @property
     def in_transaction(self) -> bool:
@@ -309,7 +305,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
             session.bulk_insert_mappings(mapper, rows, render_nulls=True, return_defaults=True)
         return [row['id'] for row in rows]
 
-    def bulk_update(self, entity_type: EntityTypes, rows: List[dict]) -> None:  # pylint: disable=no-self-use
+    def bulk_update(self, entity_type: EntityTypes, rows: List[dict]) -> None:
         mapper, keys = self._get_mapper_from_entity(entity_type, True)
         if not rows:
             return None
@@ -322,21 +318,24 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         with (nullcontext() if self.in_transaction else self.transaction()):
             session.bulk_update_mappings(mapper, rows)
 
-    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]) -> None:  # pylint: disable=no-self-use
+    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]) -> None:
         # pylint: disable=no-value-for-parameter
         from aiida.storage.psql_dos.models.group import DbGroupNode
         from aiida.storage.psql_dos.models.node import DbLink, DbNode
 
-        with self.transaction() as session:
-            # Delete the membership of these nodes to groups.
-            session.query(DbGroupNode).filter(DbGroupNode.dbnode_id.in_(list(pks_to_delete))
-                                              ).delete(synchronize_session='fetch')
-            # Delete the links coming out of the nodes marked for deletion.
-            session.query(DbLink).filter(DbLink.input_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
-            # Delete the links pointing to the nodes marked for deletion.
-            session.query(DbLink).filter(DbLink.output_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
-            # Delete the actual nodes
-            session.query(DbNode).filter(DbNode.id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        if not self.in_transaction:
+            raise AssertionError('Cannot delete nodes and links outside a transaction')
+
+        session = self.get_session()
+        # Delete the membership of these nodes to groups.
+        session.query(DbGroupNode).filter(DbGroupNode.dbnode_id.in_(list(pks_to_delete))
+                                          ).delete(synchronize_session='fetch')
+        # Delete the links coming out of the nodes marked for deletion.
+        session.query(DbLink).filter(DbLink.input_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        # Delete the links pointing to the nodes marked for deletion.
+        session.query(DbLink).filter(DbLink.output_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        # Delete the actual nodes
+        session.query(DbNode).filter(DbNode.id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
 
     def get_backend_entity(self, model: base.Base) -> BackendEntity:
         """

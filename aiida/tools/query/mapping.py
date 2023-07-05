@@ -27,6 +27,7 @@ class ProjectionMapper:
     _valid_projections = []
 
     def __init__(self, projection_labels=None, projection_attributes=None, projection_formatters=None):
+        """Construct new instance."""
         if not self._valid_projections:
             raise NotImplementedError('no valid projections were specified by the sub class')
 
@@ -91,6 +92,7 @@ class CalculationProjectionMapper(ProjectionMapper):
         process_state_key = f'attributes.{ProcessNode.PROCESS_STATE_KEY}'
         process_status_key = f'attributes.{ProcessNode.PROCESS_STATUS_KEY}'
         exit_status_key = f'attributes.{ProcessNode.EXIT_STATUS_KEY}'
+        exit_message_key = f'attributes.{ProcessNode.EXIT_MESSAGE_KEY}'
         exception_key = f'attributes.{ProcessNode.EXCEPTION_KEY}'
 
         default_labels = {'pk': 'PK', 'uuid': 'UUID', 'ctime': 'Created', 'mtime': 'Modified', 'state': 'Process State'}
@@ -105,21 +107,17 @@ class CalculationProjectionMapper(ProjectionMapper):
             'process_state': process_state_key,
             'process_status': process_status_key,
             'exit_status': exit_status_key,
+            'exit_message': exit_message_key,
             'exception': exception_key,
         }
 
         default_formatters = {
-            'ctime':
-            lambda value: formatting.format_relative_time(value['ctime']),
-            'mtime':
-            lambda value: formatting.format_relative_time(value['mtime']),
-            'state':
-            lambda value: formatting.
+            'ctime': lambda value: formatting.format_relative_time(value['ctime']),
+            'mtime': lambda value: formatting.format_relative_time(value['mtime']),
+            'state': lambda value: formatting.
             format_state(value[process_state_key], value[process_paused_key], value[exit_status_key]),
-            'process_state':
-            lambda value: formatting.format_process_state(value[process_state_key]),
-            'sealed':
-            lambda value: formatting.format_sealed(value[sealed_key]),
+            'process_state': lambda value: formatting.format_process_state(value[process_state_key]),
+            'sealed': lambda value: formatting.format_sealed(value[sealed_key]),
         }
 
         if projection_labels is not None:

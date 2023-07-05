@@ -384,6 +384,7 @@ class PsqlDosMigrator:
         # finally migrate to the main head revision
         MIGRATE_LOGGER.report('Migrating to the head of the main branch')
         self.migrate_up('main@head')
+        self.connection.commit()
 
     def migrate_up(self, version: str) -> None:
         """Migrate the database up to a specific version.

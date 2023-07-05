@@ -41,7 +41,7 @@ def run_migrations_online():
 
 try:
     if context.is_offline_mode():  # pylint: disable=no-member
-        NotImplementedError('This feature is not currently supported.')
+        raise NotImplementedError('This feature is not currently supported.')
 
     run_migrations_online()
 except NameError:

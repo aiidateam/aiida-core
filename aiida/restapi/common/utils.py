@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 import urllib.parse
 
 from flask import jsonify
-from flask.json import JSONEncoder
+from flask.json.provider import DefaultJSONProvider
 from wrapt import decorator
 
 from aiida.common.exceptions import InputValidationError, ValidationError
@@ -27,43 +27,43 @@ UUID_REF = 'd55082b6-76dc-426b-af89-0e08b59524d2'
 
 
 ########################## Classes #####################
-class CustomJSONEncoder(JSONEncoder):
+class CustomJSONProvider(DefaultJSONProvider):
     """
     Custom json encoder for serialization.
     This has to be provided to the Flask app in order to replace the default
     encoder.
     """
 
-    def default(self, o):
-        # pylint: disable=method-hidden
+    def default(self, obj, **kwargs):
         """
-        Override default method from JSONEncoder to change serializer
-        :param o: Object e.g. dict, list that will be serialized
-        :return: serialized object
+        Override serialization of ``DefaultJSONProvider`` for ``datetime`` and ``bytes`` objects.
+
+        :param obj: Object e.g. dict, list that will be serialized.
+        :return: Serialized object as a string.
         """
 
         from aiida.restapi.common.config import SERIALIZER_CONFIG
 
         # Treat the datetime objects
-        if isinstance(o, datetime):
+        if isinstance(obj, datetime):
             if 'datetime_format' in SERIALIZER_CONFIG and SERIALIZER_CONFIG['datetime_format'] != 'default':
                 if SERIALIZER_CONFIG['datetime_format'] == 'asinput':
-                    if o.utcoffset() is not None:
-                        o = o - o.utcoffset()
-                        return '-'.join([str(o.year), str(o.month).zfill(2),
-                                         str(o.day).zfill(2)]) + 'T' + \
+                    if obj.utcoffset() is not None:
+                        obj = obj - obj.utcoffset()
+                        return '-'.join([str(obj.year), str(obj.month).zfill(2),
+                                         str(obj.day).zfill(2)]) + 'T' + \
                                ':'.join([str(
-                                   o.hour).zfill(2), str(o.minute).zfill(2),
-                                         str(o.second).zfill(2)])
+                                   obj.hour).zfill(2), str(obj.minute).zfill(2),
+                                         str(obj.second).zfill(2)])
 
         # To support bytes objects, try to decode to a string
         try:
-            return o.decode('utf-8')
+            return obj.decode('utf-8')
         except (UnicodeDecodeError, AttributeError):
             pass
 
         # If not returned yet, do it in the default way
-        return JSONEncoder.default(self, o)
+        return super().default(obj, **kwargs)
 
 
 class Utils:
@@ -219,7 +219,7 @@ class Utils:
     def validate_request(
         self, limit=None, offset=None, perpage=None, page=None, query_type=None, is_querystring_defined=False
     ):
-        # pylint: disable=fixme,no-self-use,too-many-arguments,too-many-branches
+        # pylint: disable=fixme,too-many-arguments,too-many-branches
         """
         Performs various checks on the consistency of the request.
         Add here all the checks that you want to do, except validity of the page
@@ -306,7 +306,7 @@ class Utils:
         if page < last_page:
             next_page = page + 1
 
-        rel_pages = dict(prev=prev_page, next=next_page, first=first_page, last=last_page)
+        rel_pages = {'prev': prev_page, 'next': next_page, 'first': first_page, 'last': last_page}
 
         return (limit, offset, rel_pages)
 
@@ -442,7 +442,7 @@ class Utils:
         """
 
         if not isinstance(dtobj, DatetimePrecision):
-            TypeError('dtobj argument has to be a DatetimePrecision object')
+            raise TypeError('dtobj argument has to be a DatetimePrecision object')
 
         reference_datetime = dtobj.dtobj
         precision = dtobj.precision
@@ -653,7 +653,7 @@ class Utils:
                 # Here I treat the AND clause
                 if field_counts[field_key] > 1:
 
-                    if field_key not in filters.keys():
+                    if field_key not in filters:
                         filters.update({field_key: {'and': [filter_value]}})
                     else:
                         filters[field_key]['and'].append(filter_value)
@@ -770,7 +770,7 @@ class Utils:
         value_datetime.setParseAction(validate_time)
 
         # More General types
-        value = (value_string | value_bool | value_datetime | value_num | value_orderby)
+        value = value_string | value_bool | value_datetime | value_num | value_orderby
         # List of values (I do not check the homogeneity of the types of values,
         # query builder will do it somehow)
         value_list = Group(value + OneOrMore(Suppress(',') + value) + Optional(Suppress(',')))
@@ -779,7 +779,7 @@ class Utils:
         single_field = Group(key + operator + value)
         list_field = Group(key + (Literal('=in=') | Literal('=notin=')) + value_list)
         orderby_field = Group(key + Literal('=') + value_list)
-        field = (list_field | orderby_field | single_field)
+        field = list_field | orderby_field | single_field
 
         # Fields separator
         separator = Suppress(Literal('&'))

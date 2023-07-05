@@ -51,6 +51,7 @@ class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
         return spec
 
     def __init__(self, **kwargs):
+        """Construct a new instance."""
         self._computer_spec = {}
         self._err_acc = ErrorAccumulator(self.ComputerValidationError)
 
@@ -154,7 +155,7 @@ class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
         :param used: should be a set of keys that you want to track.
            ``key`` will be added to this set if the value exists in the spec and can be retrieved.
         """
-        retval = self.__getattr__(key)
+        retval = self.__getattr__(key)  # pylint: disable=unnecessary-dunder-call
         # I first get a retval, so if I get an exception, I don't add it to the 'used' set
         used.add(key)
         return retval

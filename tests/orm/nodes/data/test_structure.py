@@ -9,7 +9,9 @@
 ###########################################################################
 """Tests for StructureData-related functions."""
 
-from aiida.orm.nodes.data.structure import get_formula
+import pytest
+
+from aiida.orm.nodes.data.structure import StructureData, get_formula
 
 
 def test_get_formula_hill():
@@ -23,3 +25,33 @@ def test_get_formula_hill():
     for symbol_list, expected_result in symbol_lists:
         assert get_formula(symbol_list, mode='hill', separator=' ') == expected_result
         assert get_formula(symbol_list, mode='hill_compact', separator=' ') == expected_result
+
+
+@pytest.mark.parametrize(
+    'mode, expected', (
+        ('full', {
+            'Ba': 2,
+            'Zr': 2,
+            'O': 6
+        }),
+        ('reduced', {
+            'Ba': 1,
+            'Zr': 1,
+            'O': 3
+        }),
+        ('fractional', {
+            'Ba': 0.2,
+            'Zr': 0.2,
+            'O': 0.6
+        }),
+    )
+)
+def test_get_composition(mode, expected):
+    """Test the ``mode`` argument of ``StructureData.get_composition``."""
+    symbols = ['Ba', 'Ba', 'Zr', 'Zr', 'O', 'O', 'O', 'O', 'O', 'O']
+    structure = StructureData()
+
+    for symbol in symbols:
+        structure.append_atom(name=symbol, symbols=[symbol], position=[0, 0, 0])
+
+    assert structure.get_composition(mode=mode) == expected

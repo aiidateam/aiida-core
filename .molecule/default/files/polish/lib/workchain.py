@@ -83,7 +83,7 @@ def generate_outlines(expression):
 
     for part in expression.split():
 
-        if part not in OPERATORS.keys():
+        if part not in OPERATORS:
             stack.appendleft(part)
             values.append(part)
         else:
@@ -222,7 +222,7 @@ def write_workchain(outlines, directory=None) -> Path:
 
         outline_string = ''
         for subline in outline.split('\n'):
-            outline_string += f'\t\t\t{subline}\n'
+            outline_string += f'\t\t\t{subline}\n'  # pylint: disable=consider-using-join
 
         if counter == len(outlines) - 1:
             child_class = None

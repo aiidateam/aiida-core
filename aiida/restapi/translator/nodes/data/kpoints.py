@@ -31,7 +31,7 @@ class KpointsDataTranslator(DataTranslator):
 
     @staticmethod
     def get_derived_properties(node):
-        # pylint: disable=too-many-locals,too-many-statements,too-many-branches
+        # pylint: disable=too-many-locals,too-many-statements,too-many-branches,arguments-differ
         """
 
         Returns: data in a format required by dr.js to visualize a 2D plot

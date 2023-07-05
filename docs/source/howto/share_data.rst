@@ -218,13 +218,9 @@ Like all ``verdi`` commands, you can select a different AiiDA profile via the ``
 
     REST API version history:
 
-
-Version history
----------------
-
-     * ``aiida-core`` >= 1.0.0b6: ``v4``. Simplified endpoints; only ``/nodes``, ``/processes``, ``/calcjobs``, ``/groups``, ``/computers`` and ``/servers`` remain.
-     * ``aiida-core`` >= 1.0.0b3, <1.0.0b6: ``v3``. Development version, never shipped with a stable release.
-     * ``aiida-core`` <1.0.0b3: ``v2``. First API version, with new endpoints added step by step.
+    * ``aiida-core`` >= 1.0.0b6: ``v4``. Simplified endpoints; only ``/nodes``, ``/processes``, ``/calcjobs``, ``/groups``, ``/computers`` and ``/servers`` remain.
+    * ``aiida-core`` >= 1.0.0b3, <1.0.0b6: ``v3``. Development version, never shipped with a stable release.
+    * ``aiida-core`` <1.0.0b3: ``v2``. First API version, with new endpoints added step by step.
 
 
 .. _how-to:share:serve:query:
@@ -236,7 +232,7 @@ A URL to query the REST API consists of:
 
 1. The *base URL*, by default:
 
-    http://127.0.0.1:5000/api/v4
+   http://127.0.0.1:5000/api/v4
 
    Querying the base URL returns a list of all available endpoints.
 
@@ -324,21 +320,21 @@ A ``myprofile-rest.wsgi`` script for an AiiDA profile ``myprofile`` would look l
 
 In the following, we explain how to run this wsgi application using Apache on Ubuntu.
 
-    #. Install and enable the ``mod_wsgi`` `WSGI module <https://modwsgi.readthedocs.io/>`_ module:
+#. Install and enable the ``mod_wsgi`` `WSGI module <https://modwsgi.readthedocs.io/>`_ module:
 
-    .. code-block:: console
+.. code-block:: console
 
-           $ sudo apt install libapache2-mod-wsgi-py3
-           $ sudo a2enmod wsgi
+       $ sudo apt install libapache2-mod-wsgi-py3
+       $ sudo a2enmod wsgi
 
-    #. Place the WSGI script in a folder on your server, for example ``/home/ubuntu/wsgi/myprofile-rest.wsgi``.
+#. Place the WSGI script in a folder on your server, for example ``/home/ubuntu/wsgi/myprofile-rest.wsgi``.
 
-    #. Configure apache to run the WSGI application using a virtual host configuration similar to:
+#. Configure apache to run the WSGI application using a virtual host configuration similar to:
 
-       .. literalinclude:: include/snippets/aiida-rest.conf
+   .. literalinclude:: include/snippets/aiida-rest.conf
 
-       Place this ``aiida-rest.conf`` file in ``/etc/apache2/sites-enabled``
+   Place this ``aiida-rest.conf`` file in ``/etc/apache2/sites-enabled``
 
-    #. Restart apache: ``sudo service apache2 restart``.
+#. Restart apache: ``sudo service apache2 restart``.
 
 You should now be able to reach your REST API at ``localhost/myprofile/api/v4`` (Port 80).

@@ -5,6 +5,12 @@ on:
     branches: [main]
     paths-ignore: ['docs/**']
 
+# https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+    # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
 jobs:
 
   run-and-upload:
@@ -15,9 +21,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-18.04]
-        postgres: ['12.3']
-        rabbitmq: ['3.8.3']
+        os: [ubuntu-22.04]
+        postgres: ['12.14']
+        rabbitmq: ['3.8.14-management']
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
@@ -42,11 +48,11 @@ jobs:
           - 5672:5672
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
-        python-version: '3.8'
+        python-version: '3.10'
 
     - name: Upgrade pip
       run: |
@@ -55,7 +61,7 @@ jobs:
 
     - name: Install python dependencies
       run: |
-        pip install -r requirements/requirements-py-3.8.txt
+        pip install -r requirements/requirements-py-3.10.txt
         pip install --no-deps -e .
         pip freeze
 

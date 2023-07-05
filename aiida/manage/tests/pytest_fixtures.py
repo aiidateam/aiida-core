@@ -43,7 +43,7 @@ from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.warnings import warn_deprecation
 from aiida.engine import Process, ProcessBuilder, submit
-from aiida.engine.daemon.client import DaemonClient
+from aiida.engine.daemon.client import DaemonClient, DaemonNotRunningException, DaemonTimeoutException
 from aiida.manage import Config, Profile, get_manager, get_profile
 from aiida.manage.manager import Manager
 from aiida.orm import Computer, ProcessNode, User
@@ -95,6 +95,7 @@ def postgres_cluster(
         'database_password': database_password or 'guest',
     }
 
+    cluster = None
     try:
         cluster = PGTest()
 
@@ -107,7 +108,8 @@ def postgres_cluster(
 
         yield postgres_config
     finally:
-        cluster.close()
+        if cluster is not None:
+            cluster.close()
 
 
 @pytest.fixture(scope='session')
@@ -132,7 +134,7 @@ def aiida_manager() -> Manager:
 
 @pytest.fixture(scope='session')
 def aiida_instance(
-    tmp_path_factory: pytest.TempPathFactory,
+    tmp_path_factory: pytest.tmpdir.TempPathFactory,
     aiida_manager: Manager,
     aiida_test_profile: str | None,
 ) -> t.Generator[Config, None, None]:
@@ -185,7 +187,7 @@ def aiida_instance(
 
 @pytest.fixture(scope='session')
 def config_psql_dos(
-    tmp_path_factory: pytest.TempPathFactory,
+    tmp_path_factory: pytest.tmpdir.TempPathFactory,
     postgres_cluster: dict[str, str],
 ) -> t.Callable[[dict[str, t.Any] | None], dict[str, t.Any]]:
     """Return a profile configuration for the :class:`~aiida.storage.psql_dos.backend.PsqlDosBackend`."""
@@ -428,7 +430,7 @@ def aiida_local_code_factory(aiida_localhost):
     :rtype: object
     """
 
-    def get_code(entry_point, executable, computer=aiida_localhost, label=None, prepend_text=None, append_text=None):
+    def get_code(entry_point, executable, computer=aiida_localhost, label=None, **kwargs):
         """Get local code.
 
         Sets up code for given entry point on given computer.
@@ -436,8 +438,9 @@ def aiida_local_code_factory(aiida_localhost):
         :param entry_point: Entry point of calculation plugin
         :param executable: name of executable; will be searched for in local system PATH.
         :param computer: (local) AiiDA computer
-        :param prepend_text: a string of code that will be put in the scheduler script before the execution of the code.
-        :param append_text: a string of code that will be put in the scheduler script after the execution of the code.
+        :param label: Define the label of the code. By default the ``executable`` is taken. This can be useful if
+            multiple codes need to be created in a test which require unique labels.
+        :param kwargs: Additional keyword arguments that are passed to the code's constructor.
         :return: the `Code` either retrieved from the database or created if it did not yet exist.
         :rtype: :py:class:`~aiida.orm.Code`
         """
@@ -471,14 +474,9 @@ def aiida_local_code_factory(aiida_localhost):
             description=label,
             default_calc_job_plugin=entry_point,
             computer=computer,
-            filepath_executable=executable_path
+            filepath_executable=executable_path,
+            **kwargs
         )
-
-        if prepend_text is not None:
-            code.prepend_text = prepend_text
-
-        if append_text is not None:
-            code.append_text = append_text
 
         return code.store()
 
@@ -662,8 +660,17 @@ def daemon_client(aiida_profile):
     try:
         yield daemon_client
     finally:
-        daemon_client.stop_daemon(wait=True)
-        assert not daemon_client.is_daemon_running
+        try:
+            daemon_client.stop_daemon(wait=True)
+        except DaemonNotRunningException:
+            pass
+        # Give an additional grace period by manually waiting for the daemon to be stopped. In certain unit test
+        # scenarios, the built in wait time in ``daemon_client.stop_daemon`` is not sufficient and even though the
+        # daemon is stopped, ``daemon_client.is_daemon_running`` will return false for a little bit longer.
+        daemon_client._await_condition(  # pylint: disable=protected-access
+            lambda: not daemon_client.is_daemon_running,
+            DaemonTimeoutException('The daemon failed to stop.'),
+        )
 
 
 @pytest.fixture()
@@ -681,7 +688,13 @@ def stopped_daemon_client(daemon_client):
     """Ensure that the daemon is not running for the test profile and return the associated client."""
     if daemon_client.is_daemon_running:
         daemon_client.stop_daemon(wait=True)
-        assert not daemon_client.is_daemon_running
+        # Give an additional grace period by manually waiting for the daemon to be stopped. In certain unit test
+        # scenarios, the built in wait time in ``daemon_client.stop_daemon`` is not sufficient and even though the
+        # daemon is stopped, ``daemon_client.is_daemon_running`` will return false for a little bit longer.
+        daemon_client._await_condition(  # pylint: disable=protected-access
+            lambda: not daemon_client.is_daemon_running,
+            DaemonTimeoutException('The daemon failed to stop.'),
+        )
 
     yield daemon_client
 

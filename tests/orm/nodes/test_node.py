@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=attribute-defined-outside-init,no-member,no-self-use,too-many-public-methods,too-many-lines
+# pylint: disable=attribute-defined-outside-init,no-member,too-many-public-methods,too-many-lines
 """Tests for the Node ORM class."""
 from decimal import Decimal
 from io import BytesIO
@@ -839,7 +839,7 @@ class TestNodeLinks:
 class TestNodeDelete:
     """Tests for deleting nodes."""
 
-    # pylint: disable=no-member,no-self-use
+    # pylint: disable=no-member
 
     def test_delete_through_backend(self):
         """Test deletion works correctly through the backend."""
@@ -860,7 +860,8 @@ class TestNodeDelete:
         assert len(Log.collection.get_logs_for(data_two)) == 1
         assert Log.collection.get_logs_for(data_two)[0].pk == log_two.pk
 
-        backend.delete_nodes_and_connections([data_two.pk])
+        with backend.transaction():
+            backend.delete_nodes_and_connections([data_two.pk])
 
         assert len(Log.collection.get_logs_for(data_one)) == 1
         assert Log.collection.get_logs_for(data_one)[0].pk == log_one.pk

@@ -8,7 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 # pylint: disable=too-many-lines,invalid-name,protected-access,missing-docstring,too-many-locals,too-many-statements
-# pylint: disable=too-many-public-methods,no-member,no-self-use
+# pylint: disable=too-many-public-methods,no-member
 import copy
 import io
 import tempfile
@@ -272,14 +272,14 @@ class TestNodeBasic:
         """
         A uniqueness constraint on the UUID column of the Node model should prevent multiple nodes with identical UUID
         """
-        from aiida.common.exceptions import IntegrityError
+        from sqlalchemy.exc import IntegrityError as SqlaIntegrityError
 
         a = orm.Data()
         b = orm.Data()
         b.backend_entity.bare_model.uuid = a.uuid
         a.store()
 
-        with pytest.raises(IntegrityError):
+        with pytest.raises(SqlaIntegrityError):
             b.store()
 
     def test_attribute_mutability(self):

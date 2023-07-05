@@ -188,8 +188,8 @@ def xyz_parser_iterator(xyz_string):
         to extract the required fields directly from the match object
         """
 
-        def __init__(self, it, natoms):
-            self._it = it
+        def __init__(self, iterator, natoms):
+            self._it = iterator
             self._natoms = natoms
             self._catom = 0
 

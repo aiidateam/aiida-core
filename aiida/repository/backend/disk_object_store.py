@@ -149,6 +149,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         do_repack: bool = None,
         clean_storage: bool = None,
         do_vacuum: bool = None,
+        compress: bool = False,
     ) -> dict:
         """Performs maintenance operations.
 
@@ -157,11 +158,12 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         :param do_repack:flag for forcing the re-packing of already packed files.
         :param clean_storage:flag for forcing the cleaning of soft-deleted files from the repository.
         :param do_vacuum:flag for forcing the vacuuming of the internal database when cleaning the repository.
+        :param compress:flag for compressing the data when packing loose files.
         :return:a dictionary with information on the operations performed.
         """
         if live and (do_repack or clean_storage or do_vacuum):
             overrides = {'do_repack': do_repack, 'clean_storage': clean_storage, 'do_vacuum': do_vacuum}
-            keys = ', '.join([key for key, override in overrides if override is True])  # type: ignore
+            keys = ', '.join([key for key, override in overrides.items() if override is True])  # type: ignore
             raise ValueError(f'The following overrides were enabled but cannot be if `live=True`: {keys}')
 
         pack_loose = True if pack_loose is None else pack_loose
@@ -181,7 +183,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                 files_size = container.get_total_size()['total_size_loose'] * BYTES_TO_MB
                 logger.report(f'Packing all loose files ({files_numb} files occupying {files_size} MB) ...')
                 if not dry_run:
-                    container.pack_all_loose()
+                    container.pack_all_loose(compress=compress)
 
             if do_repack:
                 files_numb = container.count_objects()['packed']

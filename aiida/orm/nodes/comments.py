@@ -56,7 +56,7 @@ class NodeComments:
         comment = Comment.collection(self._node.backend).get(dbnode_id=self._node.pk, id=identifier)
         comment.set_content(content)
 
-    def remove(self, identifier: int) -> None:  # pylint: disable=no-self-use
+    def remove(self, identifier: int) -> None:
         """Delete an existing comment.
 
         :param identifier: the comment pk

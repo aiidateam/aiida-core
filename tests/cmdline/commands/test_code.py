@@ -123,7 +123,7 @@ def test_relabel_code_full_bad(run_cli_command, code):
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_code_delete_one_force(run_cli_command, code):
     """Test force code deletion."""
-    run_cli_command(cmd_code.delete, [str(code.pk), '--force'])
+    run_cli_command(cmd_code.delete, [str(code.pk), '--force'], use_subprocess=True)
 
     with pytest.raises(NotExistent):
         load_code('code')
@@ -180,7 +180,7 @@ def test_noninteractive_upload(run_cli_command, non_interactive_editor):
 def test_interactive_remote(run_cli_command, aiida_localhost, non_interactive_editor):
     """Test interactive remote code setup."""
     label = 'interactive_remote'
-    user_input = '\n'.join(['yes', aiida_localhost.label, label, 'desc', 'core.arithmetic.add', '/remote/abs/path'])
+    user_input = '\n'.join(['yes', aiida_localhost.label, label, 'desc', 'core.arithmetic.add', '/remote/path', 'y'])
     run_cli_command(cmd_code.setup_code, user_input=user_input)
     assert isinstance(load_code(label), InstalledCode)
 
@@ -191,7 +191,7 @@ def test_interactive_upload(run_cli_command, non_interactive_editor):
     label = 'interactive_upload'
     dirname = os.path.dirname(__file__)
     basename = os.path.basename(__file__)
-    user_input = '\n'.join(['no', label, 'description', 'core.arithmetic.add', dirname, basename])
+    user_input = '\n'.join(['no', label, 'description', 'core.arithmetic.add', dirname, basename, 'y'])
     run_cli_command(cmd_code.setup_code, user_input=user_input)
     assert isinstance(load_code(label), PortableCode)
 
@@ -200,8 +200,8 @@ def test_interactive_upload(run_cli_command, non_interactive_editor):
 def test_mixed(run_cli_command, aiida_localhost, non_interactive_editor):
     """Test mixed (interactive/from config) code setup."""
     label = 'mixed_remote'
-    options = ['--description=description', '--on-computer', '--remote-abs-path=/remote/abs/path']
-    user_input = '\n'.join([aiida_localhost.label, label, 'core.arithmetic.add'])
+    options = ['--description=description', '--on-computer', '--remote-abs-path=/remote/path']
+    user_input = '\n'.join([aiida_localhost.label, label, 'core.arithmetic.add', 'y'])
     run_cli_command(cmd_code.setup_code, options, user_input=user_input)
     assert isinstance(load_code(label), InstalledCode)
 
@@ -234,6 +234,31 @@ def test_code_duplicate_ignore(run_cli_command, aiida_local_code_factory, non_in
 
     duplicate = load_code(label)
     assert duplicate.description == ''
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_code_export(run_cli_command, aiida_local_code_factory, tmp_path, file_regression):
+    """Test export the code setup to str."""
+    prepend_text = 'module load something\n    some command'
+    code = aiida_local_code_factory('core.arithmetic.add', '/bin/cat', label='code', prepend_text=prepend_text)
+    filepath = tmp_path / 'code.yml'
+    options = [str(code.pk), str(filepath)]
+    run_cli_command(cmd_code.export, options)
+
+    # file regression check
+    with open(filepath, 'r', encoding='utf-8') as fhandle:
+        content = fhandle.read()
+    file_regression.check(content, extension='.yml')
+
+    # round trip test by create code from the config file
+    # we pass the new label to override since cannot have two code with same labels
+    new_label = 'code0'
+    run_cli_command(
+        cmd_code.code_create, ['core.code.installed', '--non-interactive', '--config', filepath, '--label', new_label]
+    )
+    new_code = load_code(new_label)
+    assert code.base.attributes.all == new_code.base.attributes.all
+    assert isinstance(new_code, InstalledCode)
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
@@ -277,7 +302,7 @@ def test_from_config_url(non_interactive_editor, run_cli_command, aiida_localhos
 
     label = 'noninteractive_config_url'
     fake_url = 'https://my.url.com'
-    run_cli_command(cmd_code.setup_code, ['--non-interactive', '--config', fake_url])
+    run_cli_command(cmd_code.setup_code, ['--non-interactive', '--config', fake_url], use_subprocess=False)
     assert isinstance(load_code(label), InstalledCode)
 
 
@@ -291,7 +316,9 @@ def test_code_setup_remote_duplicate_full_label_interactive(
     assert isinstance(load_code(label), InstalledCode)
 
     label_unique = 'label-unique'
-    user_input = '\n'.join(['yes', aiida_localhost.label, label, label_unique, 'd', 'core.arithmetic.add', '/bin/bash'])
+    user_input = '\n'.join([
+        'yes', aiida_localhost.label, label, label_unique, 'd', 'core.arithmetic.add', '/bin/bash', 'y'
+    ])
     run_cli_command(cmd_code.setup_code, user_input=user_input)
     assert isinstance(load_code(label_unique), InstalledCode)
 
@@ -332,7 +359,7 @@ def test_code_setup_local_duplicate_full_label_interactive(
     assert isinstance(load_code(label), PortableCode)
 
     label_unique = 'label-unique'
-    user_input = '\n'.join(['no', label, label_unique, 'd', 'core.arithmetic.add', str(tmp_path), filepath.name])
+    user_input = '\n'.join(['no', label, label_unique, 'd', 'core.arithmetic.add', str(tmp_path), filepath.name, 'y'])
     run_cli_command(cmd_code.setup_code, user_input=user_input)
     assert isinstance(load_code(label_unique), PortableCode)
 

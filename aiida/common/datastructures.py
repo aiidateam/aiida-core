@@ -8,7 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to define commonly used data structures."""
+from __future__ import annotations
+
 from enum import Enum, IntEnum
+from typing import TYPE_CHECKING
 
 from .extendeddicts import DefaultFieldsAttributeDict
 
@@ -93,6 +96,31 @@ class CalcInfo(DefaultFieldsAttributeDict):
         'provenance_exclude_list', 'codes_info', 'codes_run_mode', 'skip_submit'
     )
 
+    if TYPE_CHECKING:
+
+        job_environment: None | dict[str, str]
+        email: None | str
+        email_on_started: bool
+        email_on_terminated: bool
+        uuid: None | str
+        prepend_text: None | str
+        append_text: None | str
+        num_machines: None | int
+        num_mpiprocs_per_machine: None | int
+        priority: None | int
+        max_wallclock_seconds: None | int
+        max_memory_kb: None | int
+        rerunnable: bool
+        retrieve_list: None | list[str | tuple[str, str, str]]
+        retrieve_temporary_list: None | list[str | tuple[str, str, str]]
+        local_copy_list: None | list[tuple[str, str, str]]
+        remote_copy_list: None | list[tuple[str, str, str]]
+        remote_symlink_list: None | list[tuple[str, str, str]]
+        provenance_exclude_list: None | list[str]
+        codes_info: None | list[CodeInfo]
+        codes_run_mode: None | CodeRunMode
+        skip_submit: None | bool
+
 
 class CodeInfo(DefaultFieldsAttributeDict):
     """
@@ -147,6 +175,16 @@ class CodeInfo(DefaultFieldsAttributeDict):
         'withmpi',
         'code_uuid'
     )
+
+    if TYPE_CHECKING:
+
+        cmdline_params: None | list[str]
+        stdin_name: None | str
+        stdout_name: None | str
+        stderr_name: None | str
+        join_files: None | bool
+        withmpi: None | bool
+        code_uuid: None | str
 
 
 class CodeRunMode(IntEnum):

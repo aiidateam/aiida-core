@@ -150,7 +150,12 @@ In case you want all calculation jobs with state ``finished`` or ``excepted``, y
         },
     )
 
-You can negate a filter by adding an exclamation mark in front of the operator.
+.. _how-to:query:filters:operator-negations:
+
+Operator negations
+------------------
+
+A filter can be turned into its associated **negation** by adding an exclamation mark, ``!``, in front of the operator.
 So, to query for all calculation jobs that are not a ``finished`` or ``excepted`` state:
 
 .. code-block:: python
@@ -310,9 +315,9 @@ Note that the :class:`~aiida.orm.utils.links.LinkManager` provides many convenie
 
 The :meth:`~aiida.orm.nodes.links.NodeLinks.get_incoming` and :meth:`~aiida.orm.nodes.links.NodeLinks.get_outgoing` methods accept various arguments that allow one to filter what neighboring nodes should be matched:
 
- * ``node_class``: accepts a subclass of :class:`~aiida.orm.nodes.node.Node`, only neighboring nodes with a class that matches this will be returned
- * ``link_type``: accepts a value of :class:`~aiida.common.links.LinkType`, only neighboring nodes that are linked with this link type will be returned
- * ``link_label_filter``: accepts a string  expression (with optional wildcards using the syntax of SQL ``LIKE`` patterns, see below), only neighboring nodes that are linked with a link label that matches the pattern will be returned
+* ``node_class``: accepts a subclass of :class:`~aiida.orm.nodes.node.Node`, only neighboring nodes with a class that matches this will be returned
+* ``link_type``: accepts a value of :class:`~aiida.common.links.LinkType`, only neighboring nodes that are linked with this link type will be returned
+* ``link_label_filter``: accepts a string  expression (with optional wildcards using the syntax of SQL ``LIKE`` patterns, see below), only neighboring nodes that are linked with a link label that matches the pattern will be returned
 
 As an example:
 
@@ -369,12 +374,12 @@ Creator, caller and called
 
 Similar to the ``inputs`` and ``outputs`` properties of process nodes, there are some more properties that make exploring the provenance graph easier:
 
-    * :meth:`~aiida.orm.nodes.process.process.ProcessNode.called`: defined for :class:`~aiida.orm.nodes.process.process.ProcessNode`'s and returns the list of process nodes called by this node.
-      If this process node did not call any other processes, this property returns an empty list.
-    * :meth:`~aiida.orm.nodes.process.process.ProcessNode.caller`: defined for :class:`~aiida.orm.nodes.process.process.ProcessNode`'s and returns the process node that called this node.
-      If this node was not called by a process, this property returns ``None``.
-    * :meth:`~aiida.orm.Data.creator`: defined for :class:`~aiida.orm.Data` nodes and returns the process node that created it.
-      If the node was not created by a process, this property returns ``None``.
+* :meth:`~aiida.orm.nodes.process.process.ProcessNode.called`: defined for :class:`~aiida.orm.nodes.process.process.ProcessNode`'s and returns the list of process nodes called by this node.
+  If this process node did not call any other processes, this property returns an empty list.
+* :meth:`~aiida.orm.nodes.process.process.ProcessNode.caller`: defined for :class:`~aiida.orm.nodes.process.process.ProcessNode`'s and returns the process node that called this node.
+  If this node was not called by a process, this property returns ``None``.
+* :meth:`~aiida.orm.Data.creator`: defined for :class:`~aiida.orm.Data` nodes and returns the process node that created it.
+  If the node was not created by a process, this property returns ``None``.
 
 .. note::
 

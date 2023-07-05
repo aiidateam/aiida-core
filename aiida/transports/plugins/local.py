@@ -557,7 +557,7 @@ class LocalTransport(Transport):
             raise ValueError('Input remotedestination to copy must be a non empty object')
         if not self.has_magic(remotesource):
             if not os.path.exists(os.path.join(self.curdir, remotesource)):
-                raise OSError('Source not found')
+                raise FileNotFoundError('Source not found')
         if self.normalize(remotesource) == self.normalize(remotedestination):
             raise ValueError('Cannot copy from itself to itself')
 
@@ -668,7 +668,7 @@ class LocalTransport(Transport):
             aiida_attr[key] = getattr(os_attr, key)
         return aiida_attr
 
-    def _local_listdir(self, path, pattern=None):  # pylint: disable=no-self-use
+    def _local_listdir(self, path, pattern=None):
         """Act on the local folder, for the rest, same as listdir."""
         import re
 

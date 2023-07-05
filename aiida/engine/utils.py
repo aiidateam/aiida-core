@@ -12,6 +12,7 @@
 import asyncio
 import contextlib
 from datetime import datetime
+import inspect
 import logging
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterator, List, Optional, Tuple, Type, Union
 
@@ -55,7 +56,7 @@ def instantiate_process(
         inputs.update(**builder._inputs(prune=True))  # pylint: disable=protected-access
     elif is_process_function(process):
         process_class = process.process_class  # type: ignore[attr-defined]
-    elif issubclass(process, Process):
+    elif inspect.isclass(process) and issubclass(process, Process):
         process_class = process
     else:
         raise ValueError(f'invalid process {type(process)}, needs to be Process or ProcessBuilder')

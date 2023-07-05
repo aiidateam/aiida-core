@@ -43,6 +43,7 @@ This tutorial can be downloaded and run as a Jupyter Notebook: {nb-download}`tut
 :tags: ["hide-cell"]
 
 from aiida import load_profile, engine, orm, plugins
+from aiida.manage.configuration import get_config
 from aiida.storage.sqlite_temp import SqliteTempBackend
 
 %load_ext aiida
@@ -58,6 +59,9 @@ profile = load_profile(
     ),
     allow_switch=True
 )
+config = get_config()
+config.add_profile(profile)
+config.set_default_profile(profile.name)
 profile
 ```
 

@@ -21,8 +21,9 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import enum
 import json
+from typing import TYPE_CHECKING
 
-from aiida.common import AIIDA_LOGGER
+from aiida.common import AIIDA_LOGGER, CodeRunMode
 from aiida.common.extendeddicts import AttributeDict, DefaultFieldsAttributeDict
 from aiida.common.timezone import make_aware, timezone_from_name
 
@@ -107,6 +108,12 @@ class NodeNumberJobResource(JobResource):
         'num_cores_per_machine',
         'num_cores_per_mpiproc',
     )
+
+    if TYPE_CHECKING:
+        num_machines: int
+        num_mpiprocs_per_machine: int
+        num_cores_per_machine: int
+        num_cores_per_mpiproc: int
 
     @classmethod
     def validate_resources(cls, **kwargs):
@@ -193,6 +200,10 @@ class ParEnvJobResource(JobResource):
         'tot_num_mpiprocs',
     )
 
+    if TYPE_CHECKING:
+        parallel_env: str
+        tot_num_mpiprocs: int
+
     @classmethod
     def validate_resources(cls, **kwargs):
         """Validate the resources against the job resource class of this scheduler.
@@ -261,7 +272,7 @@ class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-insta
         before the execution of the code.
       * ``environment_variables_double_quotes``: if set to True, use double quotes
         instead of single quotes to escape the environment variables specified
-        in ``environment_variables``.
+        in ``job_environment``.
       * ``working_directory``: the working directory for this job. During
         submission, the transport will first do a 'chdir' to this directory,
         and then possibly set a scheduler parameter, if this is supported
@@ -366,6 +377,34 @@ class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-insta
         'codes_info',
     )
 
+    if TYPE_CHECKING:
+        shebang: str
+        submit_as_hold: bool
+        rerunnable: bool
+        job_environment: dict[str, str] | None
+        environment_variables_double_quotes: bool | None
+        working_directory: str
+        email: str
+        email_on_started: bool
+        email_on_terminated: bool
+        job_name: str
+        sched_output_path: str
+        sched_error_path: str
+        sched_join_files: bool
+        queue_name: str
+        account: str
+        qos: str
+        job_resource: JobResource
+        priority: str
+        max_memory_kb: int | None
+        max_wallclock_seconds: int
+        custom_scheduler_commands: str
+        prepend_text: str
+        append_text: str
+        import_sys_environment: bool | None
+        codes_run_mode: CodeRunMode
+        codes_info: list[JobTemplateCodeInfo]
+
 
 @dataclass
 class JobTemplateCodeInfo:
@@ -379,6 +418,10 @@ class JobTemplateCodeInfo:
     :param cmdline_params: list of unescaped command line parameters.
     :param use_double_quotes: list of two booleans. If true, use double quotes to escape command line arguments. The
         first value applies to `prepend_cmdline_params` and the second to `cmdline_params`.
+    :param wrap_cmdline_params: Boolean, by default ``False``. If set to ``True``, all the command line arguments,
+        which includes the ``cmdline_params`` but also all file descriptor redirections (stdin, stderr and stdoout),
+        should be wrapped in double quotes, turning it into a single command line argument. This is necessary to enable
+        support for certain containerization technologies such as Docker.
     :param stdin_name: filename of the the stdin file descriptor.
     :param stdout_name: filename of the the `stdout` file descriptor.
     :param stderr_name: filename of the the `stderr` file descriptor.
@@ -387,6 +430,7 @@ class JobTemplateCodeInfo:
     prepend_cmdline_params: list[str] = field(default_factory=list)
     cmdline_params: list[str] = field(default_factory=list)
     use_double_quotes: list[bool] = field(default_factory=lambda: [False, False])
+    wrap_cmdline_params: bool = False
     stdin_name: None | str = None
     stdout_name: None | str = None
     stderr_name: None | str = None
@@ -468,6 +512,29 @@ class JobInfo(DefaultFieldsAttributeDict):  # pylint: disable=too-many-instance-
         'wallclock_time_seconds', 'requested_wallclock_time_seconds', 'cpu_time', 'submission_time', 'dispatch_time',
         'finish_time'
     )
+
+    if TYPE_CHECKING:
+        job_id: str
+        title: str
+        exit_status: int
+        terminating_signal: int
+        annotation: str
+        job_state: JobState
+        job_substate: str
+        allocated_machines: list[MachineInfo]
+        job_owner: str
+        num_mpiprocs: int
+        num_cpus: int
+        num_machines: int
+        queue_name: str
+        account: str
+        qos: str
+        wallclock_time_seconds: int
+        requested_wallclock_time_seconds: int
+        cpu_time: int
+        submission_time: datetime
+        dispatch_time: datetime
+        finish_time: datetime
 
     # If some fields require special serializers, specify them here.
     # You then need to define also the respective _serialize_FIELDTYPE and

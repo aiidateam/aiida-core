@@ -66,6 +66,7 @@ class CalcJobNode(CalculationNode):
     """ORM class for all nodes representing the execution of a CalcJob."""
 
     # pylint: disable=too-many-public-methods
+    _CLS_NODE_CACHING = CalcJobNodeCaching
 
     CALC_JOB_STATE_KEY = 'state'
     IMMIGRATED_KEY = 'imported'
@@ -102,16 +103,12 @@ class CalcJobNode(CalculationNode):
                 entry_point = get_entry_point_from_string(entry_point_string)
 
                 try:
-                    tools_class = load_entry_point(
-                        'aiida.tools.calculations',
-                        entry_point.name  # type: ignore[attr-defined]
-                    )
+                    tools_class = load_entry_point('aiida.tools.calculations', entry_point.name)
                     self._tools = tools_class(self)
                 except exceptions.EntryPointError as exception:
                     self._tools = CalculationTools(self)
-                    entry_point_name = entry_point.name  # type: ignore[attr-defined]
                     self.logger.warning(
-                        f'could not load the calculation tools entry point {entry_point_name}: {exception}'
+                        f'could not load the calculation tools entry point {entry_point.name}: {exception}'
                     )
 
         return self._tools

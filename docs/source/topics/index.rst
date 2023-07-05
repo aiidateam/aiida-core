@@ -10,6 +10,7 @@ Topics
    calculations/index
    workflows/index
    provenance/index
+   daemon
    data_types
    database
    repository
@@ -17,7 +18,3 @@ Topics
    schedulers
    transport
    performance
-
-.. todo::
-
-    daemon  // after provenance

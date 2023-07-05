@@ -1008,7 +1008,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue('#PBS -r n' in submit_script_text)
         self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
 
-        self.assertTrue('#PBS -l select=1:mpiprocs=1:ppn=24' in submit_script_text)
+        self.assertTrue('#PBS -l select=1:mpiprocs=1:ncpus=24' in submit_script_text)
         # Note: here 'num_cores_per_machine' should NOT override the mpiprocs
 
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text)
@@ -1042,7 +1042,7 @@ class TestSubmitScript(unittest.TestCase):
 
         self.assertTrue('#PBS -r n' in submit_script_text)
         self.assertTrue(submit_script_text.startswith('#!/bin/bash'))
-        self.assertTrue('#PBS -l select=1:mpiprocs=1:ppn=24' in submit_script_text)
+        self.assertTrue('#PBS -l select=1:mpiprocs=1:ncpus=24' in submit_script_text)
         # Note: here 'num_cores_per_machine' should NOT override the mpiprocs
 
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text)
@@ -1064,7 +1064,7 @@ class TestSubmitScript(unittest.TestCase):
                 num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24, num_cores_per_mpiproc=23
             )
 
-    def test_submit_script_rerunnable(self):  # pylint: disable=no-self-use
+    def test_submit_script_rerunnable(self):
         """Test the `rerunnable` option of the submit script."""
         from aiida.common.datastructures import CodeRunMode
         from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo

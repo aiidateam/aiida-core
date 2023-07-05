@@ -60,7 +60,7 @@ class CalcJobTranslator(ProcessTranslator):
         return NodeTranslator.get_repo_list(retrieved_folder_node, filename)
 
     @staticmethod
-    def get_derived_properties(node):
+    def get_derived_properties(node):  # pylint: disable=arguments-differ
         """
         Generic function extended for calcjob. Currently
         it is not implemented.

@@ -11,15 +11,14 @@
 import collections
 import enum
 import json
+import logging
 import sys
 from typing import Any, Optional
 
 import click
 import yaml
 
-from aiida.common.log import AIIDA_LOGGER
-
-CMDLINE_LOGGER = AIIDA_LOGGER.getChild('cmdline')
+CMDLINE_LOGGER = logging.getLogger('verdi')
 
 __all__ = ('echo_report', 'echo_info', 'echo_success', 'echo_warning', 'echo_error', 'echo_critical', 'echo_dictionary')
 
@@ -57,7 +56,7 @@ def echo(message: Any, fg: Optional[str] = None, bold: bool = False, nl: bool = 
     :param err: whether to log to stderr.
     """
     message = click.style(message, fg=fg, bold=bold)
-    CMDLINE_LOGGER.report(message, extra=dict(nl=nl, err=err, prefix=False))
+    CMDLINE_LOGGER.report(message, extra={'nl': nl, 'err': err, 'prefix': False})
 
 
 def echo_debug(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:
@@ -70,7 +69,7 @@ def echo_debug(message: str, bold: bool = False, nl: bool = True, err: bool = Fa
     :param prefix: whether the message should be prefixed with a colored version of the log level.
     """
     message = click.style(message, bold=bold)
-    CMDLINE_LOGGER.debug(message, extra=dict(nl=nl, err=err, prefix=prefix))
+    CMDLINE_LOGGER.debug(message, extra={'nl': nl, 'err': err, 'prefix': prefix})
 
 
 def echo_info(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:
@@ -83,7 +82,7 @@ def echo_info(message: str, bold: bool = False, nl: bool = True, err: bool = Fal
     :param prefix: whether the message should be prefixed with a colored version of the log level.
     """
     message = click.style(message, bold=bold)
-    CMDLINE_LOGGER.info(message, extra=dict(nl=nl, err=err, prefix=prefix))
+    CMDLINE_LOGGER.info(message, extra={'nl': nl, 'err': err, 'prefix': prefix})
 
 
 def echo_report(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:
@@ -96,7 +95,7 @@ def echo_report(message: str, bold: bool = False, nl: bool = True, err: bool = F
     :param prefix: whether the message should be prefixed with a colored version of the log level.
     """
     message = click.style(message, bold=bold)
-    CMDLINE_LOGGER.report(message, extra=dict(nl=nl, err=err, prefix=prefix))
+    CMDLINE_LOGGER.report(message, extra={'nl': nl, 'err': err, 'prefix': prefix})
 
 
 def echo_success(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:
@@ -115,7 +114,7 @@ def echo_success(message: str, bold: bool = False, nl: bool = True, err: bool = 
     if prefix:
         message = click.style('Success: ', bold=True, fg=COLORS['success']) + message
 
-    CMDLINE_LOGGER.report(message, extra=dict(nl=nl, err=err, prefix=False))
+    CMDLINE_LOGGER.report(message, extra={'nl': nl, 'err': err, 'prefix': False})
 
 
 def echo_warning(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:
@@ -128,7 +127,7 @@ def echo_warning(message: str, bold: bool = False, nl: bool = True, err: bool = 
     :param prefix: whether the message should be prefixed with a colored version of the log level.
     """
     message = click.style(message, bold=bold)
-    CMDLINE_LOGGER.warning(message, extra=dict(nl=nl, err=err, prefix=prefix))
+    CMDLINE_LOGGER.warning(message, extra={'nl': nl, 'err': err, 'prefix': prefix})
 
 
 def echo_error(message: str, bold: bool = False, nl: bool = True, err: bool = True, prefix: bool = True) -> None:
@@ -141,7 +140,7 @@ def echo_error(message: str, bold: bool = False, nl: bool = True, err: bool = Tr
     :param prefix: whether the message should be prefixed with a colored version of the log level.
     """
     message = click.style(message, bold=bold)
-    CMDLINE_LOGGER.error(message, extra=dict(nl=nl, err=err, prefix=prefix))
+    CMDLINE_LOGGER.error(message, extra={'nl': nl, 'err': err, 'prefix': prefix})
 
 
 def echo_critical(message: str, bold: bool = False, nl: bool = True, err: bool = True, prefix: bool = True) -> None:
@@ -157,7 +156,7 @@ def echo_critical(message: str, bold: bool = False, nl: bool = True, err: bool =
     :param prefix: whether the message should be prefixed with a colored version of the log level.
     """
     message = click.style(message, bold=bold)
-    CMDLINE_LOGGER.critical(message, extra=dict(nl=nl, err=err, prefix=prefix))
+    CMDLINE_LOGGER.critical(message, extra={'nl': nl, 'err': err, 'prefix': prefix})
     sys.exit(ExitCode.CRITICAL)
 
 

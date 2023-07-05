@@ -69,9 +69,14 @@ class InstalledCode(Code):
         is intentionally not called in ``_validate`` as to allow the creation of ``Code`` instances whose computers can
         not yet be connected to and as to not require the overhead of opening transports in storing a new code.
 
+        .. note:: If the ``filepath_executable`` is not an absolute path, the check is skipped.
+
         :raises `~aiida.common.exceptions.ValidationError`: if no transport could be opened or if the defined executable
             does not exist on the remote computer.
         """
+        if not self.filepath_executable.is_absolute():
+            return
+
         try:
             with override_log_level():  # Temporarily suppress noisy logging
                 with self.computer.get_transport() as transport:
@@ -146,10 +151,6 @@ class InstalledCode(Code):
         :param value: The absolute filepath of the executable.
         """
         type_check(value, str)
-
-        if not pathlib.PurePosixPath(value).is_absolute():
-            raise ValueError('the `filepath_executable` should be absolute.')
-
         self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, value)
 
     @staticmethod

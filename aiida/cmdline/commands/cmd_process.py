@@ -55,9 +55,10 @@ def verdi_process():
 @options.PAST_DAYS()
 @options.LIMIT()
 @options.RAW()
+@click.pass_context
 @decorators.with_dbenv()
 def process_list(
-    all_entries, group, process_state, process_label, paused, exit_status, failed, past_days, limit, project, raw,
+    ctx, all_entries, group, process_state, process_label, paused, exit_status, failed, past_days, limit, project, raw,
     order_by, order_dir
 ):
     """Show a list of running or terminated processes.
@@ -67,8 +68,10 @@ def process_list(
     # pylint: disable=too-many-locals
     from tabulate import tabulate
 
-    from aiida.cmdline.utils.common import check_worker_load, print_last_process_state_change
+    from aiida.cmdline.commands.cmd_daemon import execute_client_command
+    from aiida.cmdline.utils.common import print_last_process_state_change
     from aiida.engine.daemon.client import get_daemon_client
+    from aiida.orm import ProcessNode, QueryBuilder
     from aiida.tools.query.calculation import CalculationQueryBuilder
 
     relationships = {}
@@ -82,30 +85,51 @@ def process_list(
         relationships=relationships, filters=filters, order_by={order_by: order_dir}, past_days=past_days, limit=limit
     )
     projected = builder.get_projected(query_set, projections=project)
-
     headers = projected.pop(0)
 
     if raw:
         tabulated = tabulate(projected, tablefmt='plain')
         echo.echo(tabulated)
-    else:
-        tabulated = tabulate(projected, headers=headers)
-        echo.echo(tabulated)
-        echo.echo(f'\nTotal results: {len(projected)}\n')
-        print_last_process_state_change()
+        return
 
-        if not get_daemon_client().is_daemon_running:
-            echo.echo_warning('the daemon is not running', bold=True)
+    tabulated = tabulate(projected, headers=headers)
+    echo.echo(tabulated)
+    echo.echo(f'\nTotal results: {len(projected)}\n')
+    print_last_process_state_change()
+
+    if not get_daemon_client().is_daemon_running:
+        echo.echo_warning('The daemon is not running', bold=True)
+        return
+
+    echo.echo_report('Checking daemon load... ', nl=False)
+    response = execute_client_command('get_numprocesses')
+
+    if not response:
+        # Daemon could not be reached
+        return
+
+    try:
+        active_workers = response['numprocesses']
+    except KeyError:
+        echo.echo_report('No active daemon workers.')
+    else:
+        # Second query to get active process count. Currently this is slow but will be fixed with issue #2770. It is
+        # placed at the end of the command so that the user can Ctrl+C after getting the process table.
+        slots_per_worker = ctx.obj.config.get_option('daemon.worker_process_slots', scope=ctx.obj.profile.name)
+        active_processes = QueryBuilder().append(
+            ProcessNode, filters={
+                'attributes.process_state': {
+                    'in': ('created', 'waiting', 'running')
+                }
+            }
+        ).count()
+        available_slots = active_workers * slots_per_worker
+        percent_load = active_processes / available_slots
+        if percent_load > 0.9:  # 90%
+            echo.echo_warning(f'{percent_load * 100:.0f}% of the available daemon worker slots have been used!')
+            echo.echo_warning('Increase the number of workers with `verdi daemon incr`.')
         else:
-            # Second query to get active process count
-            # Currently this is slow but will be fixed with issue #2770
-            # We place it at the end so that the user can Ctrl+C after getting the process table.
-            builder = CalculationQueryBuilder()
-            filters = builder.get_filters(process_state=('created', 'waiting', 'running'))
-            query_set = builder.get_query_set(filters=filters)
-            projected = builder.get_projected(query_set, projections=['pk'])
-            worker_slot_use = len(projected) - 1
-            check_worker_load(worker_slot_use)
+            echo.echo_report(f'Using {percent_load * 100:.0f}% of the available daemon worker slots.')
 
 
 @verdi_process.command('show')
@@ -174,16 +198,17 @@ def process_report(processes, levelname, indent_size, max_depth):
 
 
 @verdi_process.command('status')
+@click.option('-c', '--call-link-label', 'call_link_label', is_flag=True, help='Include the call link label if set.')
 @click.option(
     '-m', '--max-depth', 'max_depth', type=int, default=None, help='Limit the number of levels to be printed.'
 )
 @arguments.PROCESSES()
-def process_status(max_depth, processes):
+def process_status(call_link_label, max_depth, processes):
     """Print the status of one or multiple processes."""
     from aiida.cmdline.utils.ascii_vis import format_call_graph
 
     for process in processes:
-        graph = format_call_graph(process, max_depth=max_depth)
+        graph = format_call_graph(process, max_depth=max_depth, call_link_label=call_link_label)
         echo.echo(graph)
 
 
@@ -192,7 +217,6 @@ def process_status(max_depth, processes):
 @options.TIMEOUT()
 @options.WAIT()
 @decorators.with_dbenv()
-@decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_kill(processes, timeout, wait):
     """Kill running processes."""
     from aiida.engine.processes import control
@@ -210,7 +234,6 @@ def process_kill(processes, timeout, wait):
 @options.TIMEOUT()
 @options.WAIT()
 @decorators.with_dbenv()
-@decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_pause(processes, all_entries, timeout, wait):
     """Pause running processes."""
     from aiida.engine.processes import control
@@ -231,7 +254,6 @@ def process_pause(processes, all_entries, timeout, wait):
 @options.TIMEOUT()
 @options.WAIT()
 @decorators.with_dbenv()
-@decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_play(processes, all_entries, timeout, wait):
     """Play (unpause) paused processes."""
     from aiida.engine.processes import control

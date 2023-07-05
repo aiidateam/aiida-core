@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-self-use
 """Tests for verdi node"""
 import errno
 import gzip
@@ -71,7 +70,7 @@ class TestVerdiNode:
         node = orm.Data().store()
         node.label = 'SOMELABEL'
         options = [str(node.pk)]
-        result = run_cli_command(cmd_node.node_show, options)
+        result = run_cli_command(cmd_node.node_show, options, use_subprocess=True)
 
         # Let's check some content in the output. At least the UUID and the label should be in there
         assert node.label in result.output
@@ -79,7 +78,7 @@ class TestVerdiNode:
 
         # Let's now test the '--print-groups' option
         options.append('--print-groups')
-        result = run_cli_command(cmd_node.node_show, options)
+        result = run_cli_command(cmd_node.node_show, options, use_subprocess=True)
         # I don't check the list of groups - it might be in an autogroup
 
         # Let's create a group and put the node in there
@@ -87,7 +86,7 @@ class TestVerdiNode:
         group = orm.Group(group_name).store()
         group.add_nodes(node)
 
-        result = run_cli_command(cmd_node.node_show, options)
+        result = run_cli_command(cmd_node.node_show, options, use_subprocess=True)
 
         # Now the group should be in there
         assert group_name in result.output
@@ -95,7 +94,7 @@ class TestVerdiNode:
     def test_node_attributes(self, run_cli_command):
         """Test verdi node attributes"""
         options = [str(self.node.uuid)]
-        result = run_cli_command(cmd_node.attributes, options)
+        result = run_cli_command(cmd_node.attributes, options, suppress_warnings=True)
         assert self.ATTR_KEY_ONE in result.output
         assert self.ATTR_VAL_ONE in result.output
         assert self.ATTR_KEY_TWO in result.output
@@ -103,7 +102,7 @@ class TestVerdiNode:
 
         for flag in ['-k', '--keys']:
             options = [flag, self.ATTR_KEY_ONE, '--', str(self.node.uuid)]
-            result = run_cli_command(cmd_node.attributes, options)
+            result = run_cli_command(cmd_node.attributes, options, suppress_warnings=True)
             assert self.ATTR_KEY_ONE in result.output
             assert self.ATTR_VAL_ONE in result.output
             assert self.ATTR_KEY_TWO not in result.output
@@ -111,22 +110,22 @@ class TestVerdiNode:
 
         for flag in ['-r', '--raw']:
             options = [flag, str(self.node.uuid)]
-            run_cli_command(cmd_node.attributes, options)
+            run_cli_command(cmd_node.attributes, options, suppress_warnings=True)
 
         for flag in ['-f', '--format']:
             for fmt in ['json+date', 'yaml', 'yaml_expanded']:
                 options = [flag, fmt, str(self.node.uuid)]
-                run_cli_command(cmd_node.attributes, options)
+                run_cli_command(cmd_node.attributes, options, suppress_warnings=True)
 
         for flag in ['-i', '--identifier']:
             for fmt in ['pk', 'uuid']:
                 options = [flag, fmt, str(self.node.uuid)]
-                run_cli_command(cmd_node.attributes, options)
+                run_cli_command(cmd_node.attributes, options, suppress_warnings=True)
 
     def test_node_extras(self, run_cli_command):
         """Test verdi node extras"""
         options = [str(self.node.uuid)]
-        result = run_cli_command(cmd_node.extras, options)
+        result = run_cli_command(cmd_node.extras, options, suppress_warnings=True)
         assert self.EXTRA_KEY_ONE in result.output
         assert self.EXTRA_VAL_ONE in result.output
         assert self.EXTRA_KEY_TWO in result.output
@@ -134,7 +133,7 @@ class TestVerdiNode:
 
         for flag in ['-k', '--keys']:
             options = [flag, self.EXTRA_KEY_ONE, '--', str(self.node.uuid)]
-            result = run_cli_command(cmd_node.extras, options)
+            result = run_cli_command(cmd_node.extras, options, suppress_warnings=True)
             assert self.EXTRA_KEY_ONE in result.output
             assert self.EXTRA_VAL_ONE in result.output
             assert self.EXTRA_KEY_TWO not in result.output
@@ -142,29 +141,29 @@ class TestVerdiNode:
 
         for flag in ['-r', '--raw']:
             options = [flag, str(self.node.uuid)]
-            result = run_cli_command(cmd_node.extras, options)
+            result = run_cli_command(cmd_node.extras, options, suppress_warnings=True)
 
         for flag in ['-f', '--format']:
             for fmt in ['json+date', 'yaml', 'yaml_expanded']:
                 options = [flag, fmt, str(self.node.uuid)]
-                run_cli_command(cmd_node.extras, options)
+                run_cli_command(cmd_node.extras, options, suppress_warnings=True)
 
         for flag in ['-i', '--identifier']:
             for fmt in ['pk', 'uuid']:
                 options = [flag, fmt, str(self.node.uuid)]
-                run_cli_command(cmd_node.extras, options)
+                run_cli_command(cmd_node.extras, options, suppress_warnings=True)
 
     def test_node_repo_ls(self, run_cli_command):
         """Test 'verdi node repo ls' command."""
         folder_node = self.get_unstored_folder_node().store()
 
         options = [str(folder_node.pk), 'some/nested/folder']
-        result = run_cli_command(cmd_node.repo_ls, options, catch_exceptions=False)
+        result = run_cli_command(cmd_node.repo_ls, options)
 
         assert 'filename.txt' in result.output
 
         options = [str(folder_node.pk), 'some/non-existing-folder']
-        result = run_cli_command(cmd_node.repo_ls, options, catch_exceptions=False, raises=True)
+        result = run_cli_command(cmd_node.repo_ls, options, raises=True)
         assert 'does not exist for the given node' in result.output
 
     def test_node_repo_cat(self, run_cli_command):
@@ -194,7 +193,7 @@ class TestVerdiNode:
         folder_node = self.get_unstored_folder_node().store()
         out_path = tmp_path / 'out_dir'
         options = [str(folder_node.uuid), str(out_path)]
-        res = run_cli_command(cmd_node.repo_dump, options, catch_exceptions=False)
+        res = run_cli_command(cmd_node.repo_dump, options)
         assert not res.stdout
 
         for file_key, content in [(self.key_file1, self.content_file1), (self.key_file2, self.content_file2)]:
@@ -210,7 +209,7 @@ class TestVerdiNode:
         folder_node = self.get_unstored_folder_node().store()
         out_path = tmp_path / 'out_dir' / 'nested' / 'path'
         options = [str(folder_node.uuid), str(out_path)]
-        res = run_cli_command(cmd_node.repo_dump, options, catch_exceptions=False)
+        res = run_cli_command(cmd_node.repo_dump, options)
         assert not res.stdout
 
         for file_key, content in [(self.key_file1, self.content_file1), (self.key_file2, self.content_file2)]:
@@ -232,9 +231,8 @@ class TestVerdiNode:
         with some_file.open('w') as file_handle:
             file_handle.write(some_file_content)
         options = [str(folder_node.uuid), str(out_path)]
-        res = run_cli_command(cmd_node.repo_dump, options, catch_exceptions=False)
-        assert 'exists' in res.stdout
-        assert 'Critical:' in res.stdout
+        res = run_cli_command(cmd_node.repo_dump, options, raises=True)
+        assert 'exists' in res.stderr
 
         # Make sure the directory content is still there
         with some_file.open('r') as file_handle:
@@ -329,22 +327,19 @@ class TestVerdiGraph:
             delete_temporary_file(filename)
 
     def test_check_recursion_flags(self, run_cli_command):
-        """
-        Test the ancestor-depth and descendent-depth options.
-        Test that they don't fail and that, if specified, they only accept
-        positive ints
+        """Test the ancestor-depth and descendent-depth options.
+
+        Test that they don't fail if not specified and that, if specified, they only accept positive ints
         """
         root_node = str(self.node.pk)
         filename = f'{root_node}.dot.pdf'
 
-        # Test that the options don't fail
-        for opt in ['-a', '--ancestor-depth', '-d', '--descendant-depth']:
-            options = [opt, None, root_node]
-            try:
-                run_cli_command(cmd_node.graph_generate, options)
-                assert os.path.isfile(filename)
-            finally:
-                delete_temporary_file(filename)
+        # Test that not specifying them works
+        try:
+            run_cli_command(cmd_node.graph_generate, [root_node])
+            assert os.path.isfile(filename)
+        finally:
+            delete_temporary_file(filename)
 
         # Test that the options accept zero or a positive int
         for opt in ['-a', '--ancestor-depth', '-d', '--descendant-depth']:
@@ -417,6 +412,15 @@ class TestVerdiGraph:
             finally:
                 delete_temporary_file(filename)
 
+    @pytest.mark.parametrize('output_file', ('without_extension', 'without_extension.pdf'))
+    def test_output_file(self, run_cli_command, output_file):
+        """Test that the output file can be specified through an argument."""
+        try:
+            run_cli_command(cmd_node.graph_generate, [str(self.node.pk), output_file])
+            assert os.path.isfile(output_file)
+        finally:
+            delete_temporary_file(output_file)
+
 
 COMMENT = 'Well I never...'
 
@@ -432,7 +436,7 @@ class TestVerdiUserCommand:
 
     def test_comment_show_simple(self, run_cli_command):
         """Test simply calling the show command (without data to show)."""
-        result = run_cli_command(cmd_node.comment_show, [], catch_exceptions=False)
+        result = run_cli_command(cmd_node.comment_show, [], suppress_warnings=True)
         assert result.output == ''
         assert result.exit_code == 0
 
@@ -441,14 +445,14 @@ class TestVerdiUserCommand:
         self.node.base.comments.add(COMMENT)
 
         options = [str(self.node.pk)]
-        result = run_cli_command(cmd_node.comment_show, options, catch_exceptions=False)
+        result = run_cli_command(cmd_node.comment_show, options)
         assert result.output.find(COMMENT) != -1
         assert result.exit_code == 0
 
     def test_comment_add(self, run_cli_command):
         """Test adding a comment."""
         options = ['-N', str(self.node.pk), '--', f'{COMMENT}']
-        result = run_cli_command(cmd_node.comment_add, options, catch_exceptions=False)
+        result = run_cli_command(cmd_node.comment_add, options)
         assert result.exit_code == 0
 
         comment = self.node.base.comments.all()
@@ -462,7 +466,7 @@ class TestVerdiUserCommand:
         assert len(self.node.base.comments.all()) == 1
 
         options = [str(comment.pk), '--force']
-        result = run_cli_command(cmd_node.comment_remove, options, catch_exceptions=False)
+        result = run_cli_command(cmd_node.comment_remove, options)
         assert result.exit_code == 0, result.output
         assert len(self.node.base.comments.all()) == 0
 
@@ -493,7 +497,6 @@ class TestVerdiRehash:
         """Passing no options and answering 'N' to the command will abort the command."""
         options = []  # no option, will ask in the prompt
         result = run_cli_command(cmd_node.rehash, options, user_input='n', raises=True)
-        assert isinstance(result.exception, SystemExit)
         assert result.exit_code == ExitCode.CRITICAL
 
     def test_rehash(self, run_cli_command):
@@ -587,10 +590,10 @@ def test_node_delete_basics(run_cli_command, options):
     node = orm.Data().store()
     pk = node.pk
 
-    run_cli_command(cmd_node.node_delete, options + [str(pk), '--dry-run'])
+    run_cli_command(cmd_node.node_delete, options + [str(pk), '--dry-run'], use_subprocess=True)
 
     # To delete the created node
-    run_cli_command(cmd_node.node_delete, [str(pk), '--force'])
+    run_cli_command(cmd_node.node_delete, [str(pk), '--force'], use_subprocess=True)
 
     with pytest.raises(NotExistent):
         orm.load_node(pk)

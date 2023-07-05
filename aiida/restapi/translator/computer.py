@@ -31,7 +31,7 @@ class ComputerTranslator(BaseTranslator):
 
     _result_type = __label__
 
-    def get_projectable_properties(self):
+    def get_projectable_properties(self):  # pylint: disable=arguments-differ
         """
         Get projectable properties specific for Computer
         :return: dict of projectable properties and column_order list

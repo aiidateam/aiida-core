@@ -15,8 +15,12 @@ TREE_MIDDLE_ENTRY = '\u251C\u2500\u2500 '
 TREE_FIRST_ENTRY = TREE_MIDDLE_ENTRY
 
 
-def calc_info(node) -> str:
-    """Return a string with the summary of the state of a CalculationNode."""
+def calc_info(node, call_link_label: bool = False) -> str:
+    """Return a string with the summary of the state of a CalculationNode.
+
+    :param calc_node: The calculation node
+    :param call_link_label: Include the call link label if other from the default ``CALL``.
+    """
     from aiida.orm import ProcessNode, WorkChainNode
 
     if not isinstance(node, ProcessNode):
@@ -26,10 +30,23 @@ def calc_info(node) -> str:
     process_state = node.process_state.value.capitalize()
     exit_status = node.exit_status
 
-    if exit_status is not None:
-        string = f'{process_label}<{node.pk}> {process_state} [{exit_status}]'
+    if call_link_label and (caller := node.caller):
+        from aiida.common.links import LinkType
+        call_link = [
+            triple.link_label
+            for triple in caller.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
+            if triple.node.pk == node.pk
+        ][0]
+    else:
+        call_link = None
+
+    if call_link and call_link != 'CALL':
+        string = f'{process_label}<{node.pk} | {call_link}> {process_state}'
     else:
         string = f'{process_label}<{node.pk}> {process_state}'
+
+    if exit_status is not None:
+        string += f' [{exit_status}]'
 
     if isinstance(node, WorkChainNode) and node.stepper_state_info:
         string += f' [{node.stepper_state_info}]'
@@ -37,26 +54,27 @@ def calc_info(node) -> str:
     return string
 
 
-def format_call_graph(calc_node, max_depth: int = None, info_fn=calc_info):
-    """
-    Print a tree like the POSIX tree command for the calculation call graph
+def format_call_graph(calc_node, max_depth: int = None, call_link_label: bool = False, info_fn=calc_info):
+    """Print a tree like the POSIX tree command for the calculation call graph.
 
     :param calc_node: The calculation node
     :param max_depth: Maximum depth of the call graph to print
-    :param info_fn: An optional function that takes the node and returns a string
-        of information to be displayed for each node.
+    :param call_link_label: Include the call link label if other from the default ``CALL``.
+    :param info_fn: An optional function that takes the node and returns a string of information to be displayed for
+        each node.
     """
-    call_tree = build_call_graph(calc_node, max_depth=max_depth, info_fn=info_fn)
+    call_tree = build_call_graph(calc_node, max_depth=max_depth, call_link_label=call_link_label, info_fn=info_fn)
     return format_tree_descending(call_tree)
 
 
-def build_call_graph(calc_node, max_depth: int = None, info_fn=calc_info) -> str:
+def build_call_graph(calc_node, max_depth: int = None, call_link_label: bool = False, info_fn=calc_info) -> str:
     """Build the call graph of a given node.
 
     :param calc_node: The calculation node
     :param max_depth: Maximum depth of the call graph to build. Use `None` for unlimited.
-    :param info_fn: An optional function that takes the node and returns a string
-        of information to be displayed for each node.
+    :param call_link_label: Include the call link label if other from the default ``CALL``.
+    :param info_fn: An optional function that takes the node and returns a string of information to be displayed for
+        each node.
     """
     if max_depth is not None:
         if max_depth < 0:
@@ -64,13 +82,15 @@ def build_call_graph(calc_node, max_depth: int = None, info_fn=calc_info) -> str
         if max_depth == 0:
             return ''
 
-    info_string = info_fn(calc_node)
+    info_string = info_fn(calc_node, call_link_label)
     called = calc_node.called
     called.sort(key=lambda x: x.ctime)
     if called and max_depth != 1:
         if max_depth is not None:
             max_depth -= 1
-        return info_string, [build_call_graph(child, max_depth=max_depth, info_fn=info_fn) for child in called]
+        return info_string, [
+            build_call_graph(c, max_depth=max_depth, call_link_label=call_link_label, info_fn=info_fn) for c in called
+        ]
 
     return info_string
 

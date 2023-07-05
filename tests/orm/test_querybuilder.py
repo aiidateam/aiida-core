@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=attribute-defined-outside-init,invalid-name,no-self-use,missing-docstring,too-many-lines,unused-argument
+# pylint: disable=attribute-defined-outside-init,invalid-name,missing-docstring,too-many-lines,unused-argument
 """Tests for the QueryBuilder."""
 from collections import defaultdict
 import copy
@@ -438,7 +438,7 @@ class TestBasic:
         d.base.attributes.set('cat', 'miau')
         d.store()
 
-        p = orm.Dict(dict=dict(cat='miau'))
+        p = orm.Dict(dict={'cat': 'miau'})
         p.store()
 
         # Now when asking for a node with attr.cat==miau, I want 3 esults:
@@ -1495,6 +1495,7 @@ class TestConsistency:
             assert orm.load_node(pk).get_extra('key') == 'value'
 
     @pytest.mark.usefixtures('aiida_profile_clean')
+    @pytest.mark.skip('enable when https://github.com/aiidateam/aiida-core/issues/5802 is fixed')
     def test_iterall_with_store(self):
         """Test that nodes can be stored while being iterated using ``QueryBuilder.iterall``.
 

@@ -189,14 +189,18 @@ class Namespace(MutableMapping):
     # This is a hard-coded mapping to generate the correct full types for process node namespaces of external
     # plugins. The `node_type` in that case is fixed and the `process_type` should start with the entry point group
     # followed by the plugin name and the wildcard.
+    # yapf: disable
     process_full_type_mapping = {
-        'process.calculation.calcjob.': 'process.calculation.calcjob.CalcJobNode.|aiida.calculations:{plugin_name}.%',
+        'process.calculation.calcjob.':
+        'process.calculation.calcjob.CalcJobNode.|aiida.calculations:{plugin_name}.%',
         'process.calculation.calcfunction.':
         'process.calculation.calcfunction.CalcFunctionNode.|aiida.calculations:{plugin_name}.%',
         'process.workflow.workfunction.':
         'process.workflow.workfunction.WorkFunctionNode.|aiida.workflows:{plugin_name}.%',
-        'process.workflow.workchain.': 'process.workflow.workchain.WorkChainNode.|aiida.workflows:{plugin_name}.%',
+        'process.workflow.workchain.':
+        'process.workflow.workchain.WorkChainNode.|aiida.workflows:{plugin_name}.%',
     }
+    # yapf: enable
 
     process_full_type_mapping_unplugged = {
         'process.calculation.calcjob.': 'process.calculation.calcjob.CalcJobNode.|{plugin_name}.%',

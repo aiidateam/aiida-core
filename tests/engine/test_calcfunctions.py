@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-self-use
 """Tests for the calcfunction decorator and CalcFunctionNode."""
 import pytest
 
@@ -100,23 +99,27 @@ class TestCalcFunction:
             assert cached.base.links.get_incoming().one().node.uuid == input_node.uuid
 
     def test_calcfunction_caching_change_code(self):
-        """Verify that changing the source codde of a calcfunction invalidates any existing cached nodes."""
-        result_original = self.test_calcfunction(self.default_int)
+        """Verify that changing the source code of a calcfunction invalidates any existing cached nodes.
 
-        # Intentionally using the same name, to check that caching anyway
-        # distinguishes between the calcfunctions.
-        @calcfunction
-        def add_calcfunction(data):  # pylint: disable=redefined-outer-name
-            """This calcfunction has a different source code from the one created at the module level."""
-            return Int(data.value + 2)
+        The ``add_calcfunction`` of the ``calcfunctions`` module uses the exact same name as the one defined in this
+        test module, however, it has a slightly different implementation. Note that we have to define the duplicate in
+        a different module, because we cannot define it in the same module (as the name clashes, on purpose) and we
+        cannot inline the calcfunction in this test, since inlined process functions are not valid cache sources.
+        """
+        from .calcfunctions import add_calcfunction  # pylint: disable=redefined-outer-name
+
+        result_original = self.test_calcfunction(self.default_int)
 
         with enable_caching(identifier='*.add_calcfunction'):
             result_cached, cached = add_calcfunction.run_get_node(self.default_int)
             assert result_original != result_cached
             assert not cached.base.caching.is_created_from_cache
+            assert cached.is_valid_cache
+
             # Test that the locally-created calcfunction can be cached in principle
             result2_cached, cached2 = add_calcfunction.run_get_node(self.default_int)
-            assert result_original != result2_cached
+            assert result2_cached != result_original
+            assert result2_cached == result_cached
             assert cached2.base.caching.is_created_from_cache
 
     def test_calcfunction_do_not_store_provenance(self):

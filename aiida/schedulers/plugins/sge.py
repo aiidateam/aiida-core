@@ -93,7 +93,7 @@ class SgeScheduler(aiida.schedulers.Scheduler):
     """
     Support for the Sun Grid Engine scheduler and its variants/forks (Son of Grid Engine, Oracle Grid Engine, ...)
     """
-    _logger = aiida.schedulers.Scheduler._logger.getChild('sge')
+    _logger = aiida.schedulers.Scheduler._logger.getChild('sge')  # pylint: disable=protected-access
 
     # For SGE, we can have a good qstat xml output by querying by
     # user, but not by job id
@@ -264,9 +264,6 @@ class SgeScheduler(aiida.schedulers.Scheduler):
 
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)
-
-        if job_tmpl.job_environment:
-            lines.append(self._get_submit_script_environment_variables(job_tmpl))
 
         return '\n'.join(lines)
 

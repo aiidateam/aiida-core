@@ -130,7 +130,7 @@ class SlurmJobResource(NodeNumberJobResource):
             if resources.num_cores_per_machine < 1:
                 raise ValueError('num_cores_per_machine must be greater than or equal to one.')
 
-            resources.num_cores_per_mpiproc = (resources.num_cores_per_machine / resources.num_mpiprocs_per_machine)
+            resources.num_cores_per_mpiproc = resources.num_cores_per_machine / resources.num_mpiprocs_per_machine
             if int(resources.num_cores_per_mpiproc) != resources.num_cores_per_mpiproc:
                 raise ValueError(
                     '`num_cores_per_machine` must be equal to `num_cores_per_mpiproc * num_mpiprocs_per_machine` and in'
@@ -393,9 +393,6 @@ class SlurmScheduler(Scheduler):
         if job_tmpl.custom_scheduler_commands:
             lines.append(job_tmpl.custom_scheduler_commands)
 
-        if job_tmpl.job_environment:
-            lines.append(self._get_submit_script_environment_variables(job_tmpl))
-
         return '\n'.join(lines)
 
     def _get_submit_command(self, submit_script):
@@ -422,8 +419,14 @@ class SlurmScheduler(Scheduler):
 
         Return a string with the JobID.
         """
+        from aiida.engine import CalcJob
+
         if retval != 0:
             self.logger.error(f'Error in _parse_submit_output: retval={retval}; stdout={stdout}; stderr={stderr}')
+
+            if 'Invalid account' in stderr:
+                return CalcJob.exit_codes.ERROR_SCHEDULER_INVALID_ACCOUNT
+
             raise SchedulerError(f'Error during submission, retval={retval}\nstdout={stdout}\nstderr={stderr}')
 
         try:
@@ -582,7 +585,7 @@ stderr='{stderr.strip()}'"""
             this_job.queue_name = thisjob_dict['partition']
 
             try:
-                walltime = (self._convert_time(thisjob_dict['time_limit']))
+                walltime = self._convert_time(thisjob_dict['time_limit'])
                 this_job.requested_wallclock_time_seconds = walltime  # pylint: disable=invalid-name
             except ValueError:
                 self.logger.warning(f'Error parsing the time limit for job id {this_job.job_id}')
@@ -591,7 +594,7 @@ stderr='{stderr.strip()}'"""
             # and may be not set (in my test, it is set to zero)
             if this_job.job_state == JobState.RUNNING:
                 try:
-                    this_job.wallclock_time_seconds = (self._convert_time(thisjob_dict['time_used']))
+                    this_job.wallclock_time_seconds = self._convert_time(thisjob_dict['time_used'])
                 except ValueError:
                     self.logger.warning(f'Error parsing time_used for job id {this_job.job_id}')
 
@@ -760,6 +763,9 @@ stderr='{stderr.strip()}'"""
 
             if data['State'] == 'TIMEOUT':
                 return CalcJob.exit_codes.ERROR_SCHEDULER_OUT_OF_WALLTIME
+
+            if data['State'] == 'NODE_FAIL':
+                return CalcJob.exit_codes.ERROR_SCHEDULER_NODE_FAILURE
 
         # Alternatively, if the ``detailed_job_info`` is not defined or hasn't already determined an error, try to match
         # known error messages from the output written to the ``stderr`` descriptor.

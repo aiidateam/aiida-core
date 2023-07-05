@@ -21,6 +21,7 @@ class MultipleValueParamType(click.ParamType):
     """
 
     def __init__(self, param_type):
+        """Construct a new instance."""
         super().__init__()
         self._param_type = param_type
 

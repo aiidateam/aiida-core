@@ -28,9 +28,9 @@ depends_on = None
 
 def upgrade():
     """Migrations for the upgrade."""
-    drop_hashes(op.get_bind())  # pylint: disable=no-member
+    drop_hashes(op.get_bind(), hash_extra_key='_aiida_hash')  # pylint: disable=no-member
 
 
 def downgrade():
     """Migrations for the downgrade."""
-    drop_hashes(op.get_bind())  # pylint: disable=no-member
+    drop_hashes(op.get_bind(), hash_extra_key='_aiida_hash')  # pylint: disable=no-member

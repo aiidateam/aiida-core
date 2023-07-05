@@ -16,8 +16,12 @@ relating to the transformation of the wrapped function into a ``FunctionProcess`
 fly, but then anytime inputs or outputs would be attached to it in the tests, the ``validate_link`` function would
 complain as the dummy node class is not recognized as a valid process node.
 """
+from __future__ import annotations
+
 import enum
 import re
+import sys
+import typing as t
 
 import pytest
 
@@ -117,6 +121,11 @@ def function_excepts(exception):
 @workfunction
 def function_out_unstored():
     return orm.Int(DEFAULT_INT)
+
+
+@workfunction
+def function_return_nested():
+    return {'nested.output': orm.Int(DEFAULT_INT).store()}
 
 
 def test_properties():
@@ -440,6 +449,13 @@ def test_function_out_unstored():
         function_out_unstored()
 
 
+def test_function_return_nested():
+    """Test that a process function can returned outputs in nested namespaces."""
+    results, node = function_return_nested.run_get_node()
+    assert results['nested']['output'] == DEFAULT_INT
+    assert node.outputs.nested.output == DEFAULT_INT
+
+
 def test_simple_workflow():
     """Test construction of simple workflow by chaining process functions."""
 
@@ -616,3 +632,132 @@ def test_nested_namespace():
     }
     with pytest.raises(ValueError):
         function.run_get_node(**inputs)
+
+
+def test_type_hinting_spec_inference():
+    """Test the parsing of type hinting to define the valid types of the dynamically generated input ports."""
+
+    @calcfunction  # type: ignore[misc]
+    def function(
+        a,
+        b: str,
+        c: bool,
+        d: orm.Str,
+        e: t.Union[orm.Str, orm.Int],
+        f: t.Union[str, int],
+        g: t.Optional[t.Dict] = None,
+    ):
+        # pylint: disable=invalid-name,unused-argument
+        pass
+
+    input_namespace = function.spec().inputs
+
+    expected = (
+        ('a', (orm.Data,)),
+        ('b', (orm.Str,)),
+        ('c', (orm.Bool,)),
+        ('d', (orm.Str,)),
+        ('e', (orm.Str, orm.Int)),
+        ('f', (orm.Str, orm.Int)),
+        ('g', (orm.Dict, type(None))),
+    )
+
+    for key, valid_types in expected:
+        assert key in input_namespace
+        assert input_namespace[key].valid_type == valid_types, key
+
+
+def test_type_hinting_spec_inference_pep_604(aiida_caplog):
+    """Test the parsing of type hinting that uses union typing of PEP 604 which is only available to Python 3.10 and up.
+
+    Even though adding ``from __future__ import annotations`` should backport this functionality to Python 3.9 and older
+    the ``get_annotations`` method (which was also added to the ``inspect`` package in Python 3.10) as provided by the
+    ``get-annotations`` backport package fails for this new syntax when called with ``eval_str=True``. Therefore type
+    inference using this syntax only works on Python 3.10 and up.
+
+    See https://peps.python.org/pep-0604
+    """
+
+    @calcfunction  # type: ignore[misc]
+    def function(
+        a: str | int,
+        b: orm.Str | orm.Int,
+        c: dict | None = None,
+    ):
+        # pylint: disable=invalid-name,unused-argument
+        pass
+
+    input_namespace = function.spec().inputs
+
+    # Since the PEP 604 union syntax is only available starting from Python 3.10 the type inference will not be
+    # available for older versions, and so the valid type will be the default ``(orm.Data,)``.
+    if sys.version_info[:2] >= (3, 10):
+        expected = (
+            ('a', (orm.Str, orm.Int)),
+            ('b', (orm.Str, orm.Int)),
+            ('c', (orm.Dict, type(None))),
+        )
+    else:
+        assert 'function `function` has invalid type hints: unsupported operand type' in aiida_caplog.records[0].message
+        expected = (
+            ('a', (orm.Data,)),
+            ('b', (orm.Data,)),
+            ('c', (orm.Data, type(None))),
+        )
+
+    for key, valid_types in expected:
+        assert key in input_namespace
+        assert input_namespace[key].valid_type == valid_types, key
+
+
+def test_type_hinting_validation():
+    """Test that type hints are converted to automatic type checking through the process specification."""
+
+    @calcfunction  # type: ignore[misc]
+    def function_type_hinting(a: t.Union[int, float]):
+        # pylint: disable=invalid-name
+        return a + 1
+
+    with pytest.raises(ValueError, match=r'.*value \'a\' is not of the right type.*'):
+        function_type_hinting('string')
+
+    assert function_type_hinting(1) == 2
+    assert function_type_hinting(orm.Int(1)) == 2
+    assert function_type_hinting(1.0) == 2.0
+    assert function_type_hinting(orm.Float(1)) == 2.0
+
+
+def test_help_text_spec_inference():
+    """Test the parsing of docstrings to define the ``help`` message of the dynamically generated input ports."""
+
+    @calcfunction
+    def function(param_a, param_b, param_c):  # pylint: disable=unused-argument
+        """Some documentation.
+
+        :param param_a: Some description.
+        :param param_b: Fantastic docstring.
+        """
+
+    input_namespace = function.spec().inputs
+
+    assert input_namespace['param_a'].help == 'Some description.'
+    assert input_namespace['param_b'].help == 'Fantastic docstring.'
+    assert input_namespace['param_c'].help is None
+
+
+def test_help_text_spec_inference_invalid_docstring(aiida_caplog, monkeypatch):
+    """Test the parsing of docstrings does not except for invalid docstrings, but simply logs a warning."""
+    import docstring_parser
+
+    def raise_exception():
+        raise RuntimeError()
+
+    monkeypatch.setattr(docstring_parser, 'parse', lambda _: raise_exception())
+
+    @calcfunction
+    def function():
+        """Docstring."""
+
+    # Now call the spec to have it parse the docstring.
+    function.spec()  # pylint: disable=expression-not-assigned
+    assert 'function `function` has a docstring that could not be parsed' in aiida_caplog.records[0].message

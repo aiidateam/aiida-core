@@ -122,27 +122,21 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         ),
         (
             'proxy_jump', {
-                'prompt':
-                'SSH proxy jump',
-                'help':
-                'SSH proxy jump for tunneling through other SSH hosts.'
+                'prompt': 'SSH proxy jump',
+                'help': 'SSH proxy jump for tunneling through other SSH hosts.'
                 ' Use a comma-separated list of hosts of the form [user@]host[:port].'
                 ' If user or port are not specified for a host, the user & port values from the target host are used.'
                 ' This option must be provided explicitly and is not parsed from the SSH config file when left empty.',
-                'non_interactive_default':
-                True
+                'non_interactive_default': True
             }
         ),  # Managed 'manually' in connect
         (
             'proxy_command', {
-                'prompt':
-                'SSH proxy command',
-                'help':
-                'SSH proxy command for tunneling through a proxy server.'
+                'prompt': 'SSH proxy command',
+                'help': 'SSH proxy command for tunneling through a proxy server.'
                 ' For tunneling through another SSH host, consider using the "SSH proxy jump" option instead!'
                 ' Leave empty to parse the proxy command from the SSH config file.',
-                'non_interactive_default':
-                True
+                'non_interactive_default': True
             }
         ),  # Managed 'manually' in connect
         (
@@ -1209,6 +1203,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             raise ValueError('Pathname patterns are not allowed in the destination')
 
         if self.has_magic(remotesource):
+
             to_copy_list = self.glob(remotesource)
 
             if len(to_copy_list) > 1:
@@ -1219,6 +1214,9 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
                 self._exec_cp(cp_exe, cp_flags, file, remotedestination)
 
         else:
+            if not self.path_exists(remotesource):
+                raise FileNotFoundError('Source not found')
+
             self._exec_cp(cp_exe, cp_flags, remotesource, remotedestination)
 
     def _exec_cp(self, cp_exe, cp_flags, src, dst):
@@ -1356,7 +1354,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         if self.getcwd() is not None:
             escaped_folder = escape_for_bash(self.getcwd())
-            command_to_execute = (f'cd {escaped_folder} && ( {command} )')
+            command_to_execute = f'cd {escaped_folder} && ( {command} )'
         else:
             command_to_execute = command
 

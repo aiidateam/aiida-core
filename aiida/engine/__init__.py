@@ -61,6 +61,7 @@ __all__ = (
     'assign_',
     'calcfunction',
     'construct_awaitable',
+    'get_daemon_client',
     'get_object_loader',
     'if_',
     'interruptable_task',

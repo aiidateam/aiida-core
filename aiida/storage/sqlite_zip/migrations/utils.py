@@ -108,7 +108,7 @@ def copy_zip_to_zip(
                         progress.update()
         if overwrite and outpath.exists() and outpath.is_file():
             outpath.unlink()
-        shutil.move(temp_archive, outpath)  # type: ignore[arg-type]
+        shutil.move(temp_archive, outpath)
 
 
 def copy_tar_to_zip(
@@ -169,4 +169,4 @@ def copy_tar_to_zip(
 
         if overwrite and outpath.exists() and outpath.is_file():
             outpath.unlink()
-        shutil.move(temp_archive, outpath)  # type: ignore[arg-type]
+        shutil.move(temp_archive, outpath)

@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines,missing-function-docstring,invalid-name,missing-class-docstring,no-self-use
+# pylint: disable=too-many-lines,missing-function-docstring,invalid-name,missing-class-docstring
 """Tests for the `WorkChain` class."""
 import asyncio
 import inspect
@@ -21,7 +21,7 @@ from aiida.common.links import LinkType
 from aiida.common.utils import Capturing
 from aiida.engine import ExitCode, Process, ToContext, WorkChain, append_, calcfunction, if_, launch, return_, while_
 from aiida.engine.persistence import ObjectLoader
-from aiida.manage import get_manager
+from aiida.manage import enable_caching, get_manager
 from aiida.orm import Bool, Float, Int, Str, load_node
 
 
@@ -144,6 +144,36 @@ class Wf(WorkChain):
 
     def _set_finished(self, function_name):
         self.finished_steps[function_name] = True
+
+
+class CalcFunctionWorkChain(WorkChain):
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input('a')
+        spec.input('b')
+        spec.output('out_member')
+        spec.output('out_static')
+        spec.outline(
+            cls.run_add_member,
+            cls.run_add_static,
+        )
+
+    @calcfunction
+    def add_member(a, b):  # pylint: disable=no-self-argument
+        return a + b
+
+    @staticmethod
+    @calcfunction
+    def add_static(a, b):
+        return a + b
+
+    def run_add_member(self):
+        self.out('out_member', CalcFunctionWorkChain.add_member(self.inputs.a, self.inputs.b))
+
+    def run_add_static(self):
+        self.out('out_static', self.add_static(self.inputs.a, self.inputs.b))
 
 
 class PotentialFailureWorkChain(WorkChain):
@@ -483,6 +513,47 @@ class TestWorkchain:
 
     def test_str(self):
         assert isinstance(str(Wf.spec()), str)
+
+    def test_invalid_if_predicate(self, recwarn):
+        """Test that workchain raises if the predicate of an ``if_`` condition does not return a boolean."""
+
+        class TestWorkChain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(if_(cls.predicate)(cls.run_step))
+
+            def predicate(self):
+                """Invalid predicate whose return value is not a boolean."""
+                return 'true'
+
+            def run_step(self):
+                pass
+
+        launch.run(TestWorkChain)
+        assert len(recwarn) == 1
+
+    def test_invalid_while_predicate(self, recwarn):
+        """Test that workchain raises if the predicate of an ``while_`` condition does not return a boolean."""
+
+        class TestWorkChain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(while_(cls.predicate)(cls.run_step))
+
+            def predicate(self):
+                """Invalid predicate whose return value is not a boolean."""
+                return 'true'
+
+            def run_step(self):
+                # Need to return an exit code to abort the workchain, otherwise we would be stuck in an infinite loop
+                return ExitCode(1)
+
+        launch.run(TestWorkChain)
+        assert len(recwarn) == 1
 
     def test_malformed_outline(self):
         """
@@ -1031,6 +1102,47 @@ class TestWorkchain:
         proc = run_and_check_success(wf_class, **inputs)
         return proc.finished_steps
 
+    def test_member_calcfunction(self):
+        """Test defining a calcfunction as a ``WorkChain`` member method."""
+        results, node = launch.run.get_node(CalcFunctionWorkChain, a=Int(1), b=Int(2))
+        assert node.is_finished_ok
+        assert results['out_member'] == 3
+        assert results['out_static'] == 3
+
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_member_calcfunction_caching(self):
+        """Test defining a calcfunction as a ``WorkChain`` member method with caching enabled."""
+        results, node = launch.run.get_node(CalcFunctionWorkChain, a=Int(1), b=Int(2))
+        assert node.is_finished_ok
+        assert results['out_member'] == 3
+        assert results['out_static'] == 3
+
+        with enable_caching():
+            results, cached_node = launch.run.get_node(CalcFunctionWorkChain, a=Int(1), b=Int(2))
+            assert cached_node.is_finished_ok
+            assert results['out_member'] == 3
+            assert results['out_static'] == 3
+
+            # Check that the calcfunctions called by the workchain have been cached
+            for called in cached_node.called:
+                assert called.base.caching.is_created_from_cache
+                assert called.base.caching.get_cache_source() in [n.uuid for n in node.called]
+
+    def test_member_calcfunction_daemon(self, entry_points, daemon_client, submit_and_await):
+        """Test defining a calcfunction as a ``WorkChain`` member method submitted to the daemon."""
+        entry_points.add(CalcFunctionWorkChain, 'aiida.workflows:testing.calcfunction.workchain')
+
+        daemon_client.start_daemon()
+
+        builder = CalcFunctionWorkChain.get_builder()
+        builder.a = Int(1)
+        builder.b = Int(2)
+
+        node = submit_and_await(builder)
+        assert node.is_finished_ok
+        assert node.outputs.out_member == 3
+        assert node.outputs.out_static == 3
+
 
 @pytest.mark.requires_rmq
 class TestWorkChainAbort:
@@ -1467,21 +1579,21 @@ class TestWorkChainExpose:
     def test_nested_expose(self):
         res = launch.run(
             GrandParentExposeWorkChain,
-            sub=dict(
-                sub=dict(
-                    a=Int(1),
-                    sub_1={
+            sub={
+                'sub': {
+                    'a': Int(1),
+                    'sub_1': {
                         'b': Float(2.3),
                         'c': Bool(True)
                     },
-                    sub_2={
+                    'sub_2': {
                         'b': Float(1.2),
                         'sub_3': {
                             'c': Bool(False)
                         }
                     },
-                )
-            )
+                }
+            }
         )
         assert res == {
             'sub': {
@@ -1534,6 +1646,32 @@ class TestWorkChainExpose:
                 pass
 
         launch.run(Child)
+
+    def test_expose_process_function(self):
+        """Test that process functions can be exposed and the port attributes are preserved."""
+
+        @calcfunction  # type: ignore[misc]
+        def test_function(a: str, b: int):  # pylint: disable=unused-argument
+            """Some calcfunction.
+
+            :param a: A string argument.
+            :param b: An integer argument.
+            """
+
+        class ExposeProcessFunctionWorkChain(WorkChain):
+
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.expose_inputs(test_function)
+
+        input_namespace = ExposeProcessFunctionWorkChain.spec().inputs
+        assert 'a' in input_namespace
+        assert 'b' in input_namespace
+        assert input_namespace['a'].valid_type == (orm.Str,)
+        assert input_namespace['a'].help == 'A string argument.'
+        assert input_namespace['b'].valid_type == (orm.Int,)
+        assert input_namespace['b'].help == 'An integer argument.'
 
 
 @pytest.mark.requires_rmq

@@ -29,7 +29,7 @@ def test_verdi_with_empty_profile_list(run_cli_command):
 
     # Run verdi command with updated CONFIG featuring an empty profile list
     CONFIG.dictionary[CONFIG.KEY_PROFILES] = {}
-    run_cli_command(cmd_verdi.verdi, [])
+    run_cli_command(cmd_verdi.verdi, [], use_subprocess=False)
 
 
 @pytest.mark.usefixtures('config_with_profile')

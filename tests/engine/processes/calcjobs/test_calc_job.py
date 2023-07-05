@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-public-methods,redefined-outer-name,no-self-use, too-many-lines
+# pylint: disable=too-many-public-methods,redefined-outer-name,too-many-lines
 """Test for the `CalcJob` process sub class."""
 from copy import deepcopy
 from functools import partial
@@ -17,6 +17,7 @@ import os
 import pathlib
 import tempfile
 from unittest.mock import patch
+import uuid
 
 import pytest
 
@@ -120,32 +121,114 @@ class FileCalcJob(CalcJob):
 class MultiCodesCalcJob(CalcJob):
     """`MultiCodesCalcJob` implementation to test the calcinfo with multiple codes set.
 
-    The codes are run in parallel. The codeinfo1 is set to run without mpi, and codeinfo2
-    is set to run with mpi.
+    The codes are run in parallel and each code enforces a different value for ``withmpi`` on the ``CodeInfo``.
     """
 
     @classmethod
     def define(cls, spec):
         super().define(spec)
-        spec.input('parallel_run', valid_type=orm.Bool)
+        spec.input('code_info_with_mpi_none', valid_type=orm.AbstractCode, required=False)
+        spec.input('code_info_with_mpi_true', valid_type=orm.AbstractCode, required=False)
+        spec.input('code_info_with_mpi_false', valid_type=orm.AbstractCode, required=False)
+        spec.input('parallel_run', valid_type=orm.Bool, default=lambda: orm.Bool(True))
 
     def prepare_for_submission(self, folder):
         from aiida.common.datastructures import CalcInfo, CodeInfo, CodeRunMode
 
-        codeinfo1 = CodeInfo()
-        codeinfo1.code_uuid = self.inputs.code.uuid
-        codeinfo1.withmpi = False
+        calc_info = CalcInfo()
+        calc_info.codes_info = []
 
-        codeinfo2 = CodeInfo()
-        codeinfo2.code_uuid = self.inputs.code.uuid
+        for key, with_mpi in [
+            ('code_info_with_mpi_none', None),
+            ('code_info_with_mpi_true', True),
+            ('code_info_with_mpi_false', False),
+        ]:
+            if key in self.inputs:
+                code_info = CodeInfo()
+                code_info.code_uuid = self.inputs[key].uuid
+                if with_mpi is not None:
+                    code_info.withmpi = with_mpi
+                calc_info.codes_info.append(code_info)
 
-        calcinfo = CalcInfo()
-        calcinfo.codes_info = [codeinfo1, codeinfo2]
         if self.inputs.parallel_run:
-            calcinfo.codes_run_mode = CodeRunMode.PARALLEL
+            calc_info.codes_run_mode = CodeRunMode.PARALLEL
         else:
-            calcinfo.codes_run_mode = CodeRunMode.SERIAL
-        return calcinfo
+            calc_info.codes_run_mode = CodeRunMode.SERIAL
+
+        return calc_info
+
+
+@pytest.mark.parametrize(
+    'code_key, with_mpi_code, with_mpi_option, expected', (
+        ('code_info_with_mpi_none', None, True, 3),
+        ('code_info_with_mpi_none', None, False, 0),
+        ('code_info_with_mpi_none', None, None, 0),
+        ('code_info_with_mpi_none', True, True, 3),
+        ('code_info_with_mpi_none', True, False, None),
+        ('code_info_with_mpi_none', False, True, None),
+        ('code_info_with_mpi_none', False, False, 0),
+        ('code_info_with_mpi_true', None, True, 3),
+        ('code_info_with_mpi_true', None, False, None),
+        ('code_info_with_mpi_true', None, None, 3),
+        ('code_info_with_mpi_true', True, True, 3),
+        ('code_info_with_mpi_true', True, False, None),
+        ('code_info_with_mpi_true', False, True, None),
+        ('code_info_with_mpi_true', False, False, None),
+        ('code_info_with_mpi_false', None, True, None),
+        ('code_info_with_mpi_false', None, False, 0),
+        ('code_info_with_mpi_false', None, None, 0),
+        ('code_info_with_mpi_false', True, True, None),
+        ('code_info_with_mpi_false', True, False, None),
+        ('code_info_with_mpi_false', False, True, None),
+        ('code_info_with_mpi_false', False, False, 0),
+    )
+)
+def test_multi_codes_with_mpi(
+    aiida_local_code_factory, fixture_sandbox, manager, code_key, with_mpi_code, with_mpi_option, expected
+):
+    """Test the functionality that controls whether the calculation is to be run with MPI.
+
+    The value specified by the ``metadata.options.withmpi`` input is the default. This value can be overidden by either
+    the plugin (through the ``CodeInfo.withmpi`` attribute) or the code input (through the ``AbstractCode.with_mpi``
+    property). If both of these are explicitly defined, i.e. are not ``None``, they have to be equivalent or an
+    exception is raised. The parametrization represents the matrix of all possible combinations. If the final value for
+    ``with_mpi`` is ``True`` we can check that this is correctly propagated by checking the length of the
+    ``prepend_cmdline_params`` list in the ``codes_info`` which should not be empty. Since the ``presubmit`` method does
+    not return this value directly but writes it to a file in the sandbox, we have to read and deserialize it first.
+    """
+    from aiida.engine.utils import instantiate_process
+
+    inputs = {
+        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
+        code_key: aiida_local_code_factory(
+            'core.arithmetic.add', '/bin/bash', label=str(uuid.uuid4()), with_mpi=with_mpi_code
+        ),
+        'metadata': {
+            'options': {
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
+                },
+            }
+        }
+    }
+
+    if with_mpi_option is not None:
+        inputs['metadata']['options']['withmpi'] = with_mpi_option
+
+    process = instantiate_process(manager.get_runner(), MultiCodesCalcJob, **inputs)
+
+    if expected is None:
+        with pytest.raises(RuntimeError, match=r'Inconsistent requirements as to whether'):
+            process.presubmit(fixture_sandbox)
+        return
+
+    process.presubmit(fixture_sandbox)
+
+    with fixture_sandbox.get_subfolder('.aiida').open('job_tmpl.json') as handle:
+        job_tmpl = json.load(handle)
+
+    assert len(job_tmpl['codes_info'][0]['prepend_cmdline_params']) == expected
 
 
 @pytest.mark.requires_rmq
@@ -153,9 +236,14 @@ class MultiCodesCalcJob(CalcJob):
 @pytest.mark.parametrize('parallel_run', [True, False])
 def test_multi_codes_run_parallel(aiida_local_code_factory, file_regression, parallel_run):
     """test codes_run_mode set in CalcJob"""
-
     inputs = {
         'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash'),
+        'code_info_with_mpi_none': aiida_local_code_factory(
+            'core.arithmetic.add', '/bin/bash', label=str(uuid.uuid4())
+        ),
+        'code_info_with_mpi_false': aiida_local_code_factory(
+            'core.arithmetic.add', '/bin/bash', label=str(uuid.uuid4()), with_mpi=False
+        ),
         'parallel_run': orm.Bool(parallel_run),
         'metadata': {
             'dry_run': True,
@@ -269,7 +357,44 @@ def test_containerized_code(file_regression, aiida_localhost):
     _, node = launch.run_get_node(DummyCalcJob, **inputs)
     folder_name = node.dry_run_info['folder']
     submit_script_filename = node.get_option('submit_script_filename')
-    content = (pathlib.Path(folder_name) / submit_script_filename).read_bytes().decode('utf-8')
+    content = (pathlib.Path(folder_name) / submit_script_filename).read_text()
+
+    file_regression.check(content, extension='.sh')
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('chdir_tmp_path')
+def test_containerized_code_wrap_cmdline_params(file_regression, aiida_localhost):
+    """Test :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode` with ``wrap_cmdline_params = True``."""
+    aiida_localhost.set_use_double_quotes(False)
+    engine_command = """docker run -i -v $PWD:/workdir:rw -w /workdir {image_name} sh -c"""
+    containerized_code = orm.ContainerizedCode(
+        default_calc_job_plugin='core.arithmetic.add',
+        filepath_executable='/bin/bash',
+        engine_command=engine_command,
+        image_name='ubuntu',
+        computer=aiida_localhost,
+        wrap_cmdline_params=True,
+    ).store()
+
+    inputs = {
+        'code': containerized_code,
+        'metadata': {
+            'dry_run': True,
+            'options': {
+                'resources': {
+                    'num_machines': 1,
+                    'num_mpiprocs_per_machine': 1
+                },
+                'withmpi': False,
+            }
+        }
+    }
+
+    _, node = launch.run_get_node(DummyCalcJob, **inputs)
+    folder_name = node.dry_run_info['folder']
+    submit_script_filename = node.get_option('submit_script_filename')
+    content = (pathlib.Path(folder_name) / submit_script_filename).read_text()
 
     file_regression.check(content, extension='.sh')
 
@@ -305,39 +430,7 @@ def test_containerized_code_withmpi_true(file_regression, aiida_localhost):
     _, node = launch.run_get_node(DummyCalcJob, **inputs)
     folder_name = node.dry_run_info['folder']
     submit_script_filename = node.get_option('submit_script_filename')
-    content = (pathlib.Path(folder_name) / submit_script_filename).read_bytes().decode('utf-8')
-
-    file_regression.check(content, extension='.sh')
-
-
-@pytest.mark.requires_rmq
-@pytest.mark.usefixtures('chdir_tmp_path')
-@pytest.mark.parametrize('calcjob_withmpi', [True, False])
-def test_multi_codes_run_withmpi(aiida_computer, aiida_local_code_factory, file_regression, calcjob_withmpi):
-    """test withmpi set in CalcJob only take effect for codes which have codeinfo.withmpi not set"""
-    computer = aiida_computer()
-    computer.set_use_double_quotes(False)
-
-    inputs = {
-        'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash', computer),
-        'parallel_run': orm.Bool(False),
-        'metadata': {
-            'dry_run': True,
-            'options': {
-                'resources': {
-                    'num_machines': 1,
-                    'num_mpiprocs_per_machine': 1
-                },
-                'withmpi': calcjob_withmpi,
-            }
-        }
-    }
-
-    _, node = launch.run_get_node(MultiCodesCalcJob, **inputs)
-    folder_name = node.dry_run_info['folder']
-    submit_script_filename = node.get_option('submit_script_filename')
-    with open(os.path.join(folder_name, submit_script_filename), encoding='utf8') as handle:
-        content = handle.read()
+    content = (pathlib.Path(folder_name) / submit_script_filename).read_text()
 
     file_regression.check(content, extension='.sh')
 
@@ -379,9 +472,9 @@ def test_portable_code(tmp_path, aiida_localhost):
     for filename in code.base.repository.list_object_names():
         assert filename in uploaded_files
 
-    content = (pathlib.Path(folder_name) / code.filepath_executable).read_bytes().decode('utf-8')
-    subcontent = (pathlib.Path(folder_name) / 'sub' / 'dummy').read_bytes().decode('utf-8')
-    subsubcontent = (pathlib.Path(folder_name) / 'sub' / 'sub' / 'sub-dummy').read_bytes().decode('utf-8')
+    content = (pathlib.Path(folder_name) / code.filepath_executable).read_text()
+    subcontent = (pathlib.Path(folder_name) / 'sub' / 'dummy').read_text()
+    subsubcontent = (pathlib.Path(folder_name) / 'sub' / 'sub' / 'sub-dummy').read_text()
 
     assert content == 'bash implementation'
     assert subcontent == 'dummy'
@@ -422,6 +515,12 @@ class TestCalcJob:
         process.node.set_state(state)
 
         return process
+
+    def test_get_hash(self, get_calcjob_builder):
+        """Test that :meth:`aiida.orm.CalcJobNode.get_hash` returns the same hash as what is stored in the extras."""
+        builder = get_calcjob_builder()
+        _, node = launch.run_get_node(builder)
+        assert node.base.extras.get(node.base.caching._HASH_EXTRA_KEY) == node.get_hash()  # pylint: disable=protected-access
 
     def test_process_status(self):
         """Test that the process status is properly reset if calculation ends successfully."""
@@ -1170,6 +1269,61 @@ def test_monitor_result_action_disable_self(get_calcjob_builder, entry_points, c
     _, node = launch.run_get_node(builder)
     assert node.is_finished_ok
     assert len([record for record in caplog.records if 'Disable self.' in record.message]) == 1
+
+
+def test_submit_return_exit_code(get_calcjob_builder, monkeypatch):
+    """Test that a job is terminated if ``Scheduler.submit_from_script`` returns an exit code.
+
+    To simulate this situation we monkeypatch ``DirectScheduler._parse_submit_output`` because that is the method that
+    is called internally by ``Scheduler.submit_from_script`` and it returns its result, and the ``DirectScheduler`` is
+    the plugin that is used by the localhost computer used in the inputs for this calcjob.
+    """
+    from aiida.schedulers.plugins.direct import DirectScheduler
+
+    def _parse_submit_output(self, *args):  # pylint: disable=unused-argument
+        return ExitCode(418)
+
+    monkeypatch.setattr(DirectScheduler, '_parse_submit_output', _parse_submit_output)
+
+    builder = get_calcjob_builder()
+    _, node = launch.run_get_node(builder)
+    assert node.is_failed, (node.process_state, node.exit_status)
+    assert node.exit_status == 418
+
+
+def test_restart_after_daemon_reset(get_calcjob_builder, daemon_client, submit_and_await):
+    """Test that a job can be restarted when it is launched and the daemon is restarted.
+
+    This is a regression test for https://github.com/aiidateam/aiida-core/issues/5882.
+    """
+    import time
+
+    import plumpy
+
+    daemon_client.start_daemon()
+
+    # Launch a job with a one second sleep to ensure it doesn't finish before we get the chance to restart the daemon.
+    # A monitor is added to ensure that those are properly reinitialized in the ``Waiting`` state of the process.
+    builder = get_calcjob_builder()
+    builder.metadata.options.sleep = 1
+    builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.always_kill', 'disabled': True})}
+    node = submit_and_await(builder, plumpy.ProcessState.WAITING)
+
+    daemon_client.restart_daemon(wait=True)
+
+    start_time = time.time()
+    timeout = 10
+
+    while node.process_state not in [plumpy.ProcessState.FINISHED, plumpy.ProcessState.EXCEPTED]:
+
+        if node.is_excepted:
+            raise AssertionError(f'The process excepted: {node.exception}')
+
+        if time.time() - start_time >= timeout:
+            raise AssertionError(f'process failed to terminate within timeout, current state: {node.process_state}')
+
+    assert node.is_finished, node.process_state
+    assert node.is_finished_ok, node.exit_status
 
 
 class TestImport:

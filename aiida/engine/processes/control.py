@@ -93,7 +93,7 @@ def play_processes(
     :raises ``ProcessTimeoutException``: If the processes do not respond within the timeout.
     """
     if not get_daemon_client().is_daemon_running:
-        raise DaemonException('The daemon is not running.')
+        LOGGER.warning('The daemon is not running, so processes submitted to the daemon are not reachable.')
 
     if processes and all_entries:
         raise ValueError('cannot specify processes when `all_entries = True`.')
@@ -106,7 +106,7 @@ def play_processes(
         return
 
     controller = get_manager().get_process_controller()
-    _perform_actions(processes, controller.play_process, 'play', 'playing', 'played', timeout, wait)
+    _perform_actions(processes, controller.play_process, 'play', 'playing', timeout, wait)
 
 
 def pause_processes(
@@ -128,7 +128,7 @@ def pause_processes(
     :raises ``ProcessTimeoutException``: If the processes do not respond within the timeout.
     """
     if not get_daemon_client().is_daemon_running:
-        raise DaemonException('The daemon is not running.')
+        LOGGER.warning('The daemon is not running, so processes submitted to the daemon are not reachable.')
 
     if processes and all_entries:
         raise ValueError('cannot specify processes when `all_entries = True`.')
@@ -141,7 +141,7 @@ def pause_processes(
         return
 
     controller = get_manager().get_process_controller()
-    _perform_actions(processes, controller.pause_process, 'pause', 'pausing', 'paused', timeout, wait, msg=message)
+    _perform_actions(processes, controller.pause_process, 'pause', 'pausing', timeout, wait, msg=message)
 
 
 def kill_processes(
@@ -163,7 +163,7 @@ def kill_processes(
     :raises ``ProcessTimeoutException``: If the processes do not respond within the timeout.
     """
     if not get_daemon_client().is_daemon_running:
-        raise DaemonException('The daemon is not running.')
+        LOGGER.warning('The daemon is not running, so processes submitted to the daemon are not reachable.')
 
     if processes and all_entries:
         raise ValueError('cannot specify processes when `all_entries = True`.')
@@ -176,7 +176,7 @@ def kill_processes(
         return
 
     controller = get_manager().get_process_controller()
-    _perform_actions(processes, controller.kill_process, 'kill', 'killing', 'killed', timeout, wait, msg=message)
+    _perform_actions(processes, controller.kill_process, 'kill', 'killing', timeout, wait, msg=message)
 
 
 def _perform_actions(
@@ -184,7 +184,6 @@ def _perform_actions(
     action: t.Callable,
     infinitive: str,
     present: str,
-    past: str,
     timeout: float = None,
     wait: bool = False,
     **kwargs: t.Any
@@ -216,14 +215,13 @@ def _perform_actions(
         else:
             futures[future] = process
 
-    _resolve_futures(futures, infinitive, present, past, wait, timeout)
+    _resolve_futures(futures, infinitive, present, wait, timeout)
 
 
 def _resolve_futures(
     futures: dict[concurrent.futures.Future, ProcessNode],
     infinitive: str,
     present: str,
-    past: str,
     wait: bool = False,
     timeout: float = None
 ) -> None:
@@ -236,7 +234,6 @@ def _resolve_futures(
     :param futures: The map of action futures and the corresponding processes.
     :param infinitive: The infinitive form of the action verb.
     :param present: The present tense form of the action verb.
-    :param past: The past tense form of the action verb.
     :param wait: Set to ``True`` to wait for process response, for ``False`` the action is fire-and-forget.
     :param timeout: Raise a ``ProcessTimeoutException`` if the process does not respond within this amount of seconds.
     """
@@ -244,7 +241,7 @@ def _resolve_futures(
 
     def handle_result(result):
         if result is True:
-            LOGGER.report(f'{past} Process<{process.pk}>')
+            LOGGER.report(f'request to {infinitive} Process<{process.pk}> sent')
         elif result is False:
             LOGGER.error(f'problem {present} Process<{process.pk}>')
         elif isinstance(result, kiwipy.Future):
@@ -262,7 +259,7 @@ def _resolve_futures(
                 # unwrap is need here since LoopCommunicator will also wrap a future
                 future = unwrap_kiwi_future(future)
                 result = future.result()
-            except communications.CommunicationTimeout:
+            except communications.TimeoutError:
                 LOGGER.error(f'call to {infinitive} Process<{process.pk}> timed out')
             except Exception as exception:  # pylint: disable=broad-except
                 LOGGER.error(f'failed to {infinitive} Process<{process.pk}>: {exception}')

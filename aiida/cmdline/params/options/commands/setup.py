@@ -47,14 +47,14 @@ def get_profile_attribute_default(attribute_tuple, ctx):
         validate_profile_parameter(ctx)
     except click.BadParameter:
         return default
-    else:
-        try:
-            data = ctx.params['profile'].dictionary
-            for part in parts:
-                data = data[part]
-            return data
-        except KeyError:
-            return default
+
+    try:
+        data = ctx.params['profile'].dictionary
+        for part in parts:
+            data = data[part]
+        return data
+    except KeyError:
+        return default
 
 
 def get_repository_uri_default(ctx):

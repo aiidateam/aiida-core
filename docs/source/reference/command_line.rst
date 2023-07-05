@@ -525,7 +525,8 @@ Below is a list with all available subcommands.
 
     Options:
       --plain                         Use a plain Python shell.
-      --standalone                    Use the services-free standalone option.
+      --temp                          Setup a temporary profile that uses a in-memory sqlite
+                                      and no rabbitmq.
       --no-startup                    When using plain Python, ignore the PYTHONSTARTUP
                                       environment variable and ~/.pythonrc.py script.
       -i, --interface [ipython|bpython]

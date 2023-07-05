@@ -141,9 +141,9 @@ class AiiDALoaderMagics(magic.Magics):
 
         self.is_warning = False
         lcontent = line.strip()
-        if lcontent == 'standalone':
+        if lcontent == 'temp':
             profile = SqliteTempBackend.create_profile(
-                'standalone', options={
+                'temp', options={
                     'warnings.development_version': False,
                     'runner.poll.interval': 1
                 }, debug=False

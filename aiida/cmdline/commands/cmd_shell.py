@@ -12,16 +12,18 @@
 import os
 
 import click
+from click_spinner import spinner
 
+from aiida import get_profile, load_profile
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.shell import AVAILABLE_SHELLS, run_shell
+from aiida.manage import get_config, get_manager
 
 
 @verdi.command('shell')
-# @decorators.with_dbenv()
 @click.option('--plain', is_flag=True, help='Use a plain Python shell.')
-@click.option('--standalone', is_flag=True, help='Use the services-free standalone option.')
+@click.option('--temp', is_flag=True, help='Setup a temporary profile that uses a in-memory sqlite and no rabbitmq.')
 @click.option(
     '--no-startup',
     is_flag=True,
@@ -33,25 +35,32 @@ from aiida.cmdline.utils.shell import AVAILABLE_SHELLS, run_shell
     type=click.Choice(AVAILABLE_SHELLS.keys()),
     help='Specify an interactive interpreter interface.'
 )
-def shell(plain, standalone, no_startup, interface):
+def shell(plain, temp, no_startup, interface):  # pylint: disable=too-many-branches
     """Start a python shell with preloaded AiiDA environment."""
     try:
         if plain:
             # Don't bother loading IPython, because the user wants plain Python.
             raise ImportError
 
-        if standalone:
-            from aiida import get_profile, load_profile, manage
+        if temp:
             from aiida.storage.sqlite_temp import SqliteTempBackend
             profile = get_profile()
-            if not profile or profile.name != 'standalone':
+            if not profile or profile.name != 'temp':
                 profile = SqliteTempBackend.create_profile(
-                    'standalone',
+                    'temp',
                     options={'runner.poll.interval': 1},
                 )
                 load_profile(profile, allow_switch=True)
-                config = manage.get_config()
+                config = get_config()
                 config.add_profile(profile)
+        else:
+            # copy the code of @decorators.with_dbenv() here.
+            manager = get_manager()
+            if manager.get_profile() is None or not manager.profile_storage_loaded:
+                with spinner():
+                    manager.load_profile()  # This will load the default profile if no profile has already been loaded
+                    manager.get_profile_storage(
+                    )  # This will load the backend of the loaded profile, if not already loaded
 
         # If a non-plain python interpreter is requested, check that there is at least one type of shell available
         if not AVAILABLE_SHELLS:

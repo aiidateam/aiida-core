@@ -14,12 +14,12 @@ import os
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.shell import AVAILABLE_SHELLS, run_shell
 
 
 @verdi.command('shell')
-@decorators.with_dbenv()
+# @decorators.with_dbenv()
 @click.option('--plain', is_flag=True, help='Use a plain Python shell.')
 @click.option('--standalone', is_flag=True, help='Use the services-free standalone option.')
 @click.option(

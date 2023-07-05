@@ -165,3 +165,40 @@ def profile_delete(force, delete_data, profiles):
 
         get_config().delete_profile(profile.name, delete_storage=delete_data)
         echo.echo_success(f'Profile `{profile.name}` was deleted.')
+
+
+@verdi_profile.command('dbdump')
+@options.PROFILE(default=defaults.get_default_profile)
+@click.option('--output_file', type=click.Path(), help='Specify the output file path.')
+def profile_dbdump(profile, output_file):
+    """Dump the PostgreSQL database into a file."""
+
+    import os
+    import pathlib
+    import subprocess
+
+    if not output_file:
+        output_file = f'{profile.name}.psql'
+
+    output_file = pathlib.Path(output_file)
+
+    db_config = profile.dictionary['storage']['config']
+
+    cmd = [
+        'pg_dump', f'--host={db_config["database_hostname"]}', f'--port={db_config["database_port"]}',
+        f'--dbname={db_config["database_name"]}', f'--username={db_config["database_username"]}', '--no-password',
+        '--format=p', f'--file={output_file}'
+    ]
+
+    env = os.environ.copy()
+    env['PGPASSWORD'] = db_config['database_password']
+
+    pg_dump_output = subprocess.check_output(cmd, env=env).decode('utf-8')
+
+    if len(pg_dump_output) > 0:
+        echo.echo_warning(f'Output from pg_dump: {pg_dump_output}')
+
+    if output_file.is_file():
+        echo.echo_success(f'Output written to `{output_file}`')
+    else:
+        echo.echo_error(f'Something went wrong, `{output_file}` not written.')

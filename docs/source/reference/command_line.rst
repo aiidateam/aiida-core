@@ -355,6 +355,7 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
+      dbdump      Dump the PostgreSQL database into a file.
       delete      Delete one or more profiles.
       list        Display a list of all available profiles.
       setdefault  Set a profile as the default one.

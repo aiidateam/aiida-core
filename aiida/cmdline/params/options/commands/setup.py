@@ -206,6 +206,19 @@ SETUP_USER_INSTITUTION = options.USER_INSTITUTION.clone(
     cls=options.interactive.InteractiveOption
 )
 
+QUICKSETUP_CREATE_DATABASE = options.OverridableOption(
+    '--create-db/--reuse-db',
+    'create_new_db',
+    default=True,
+    show_default=True,
+    help=(
+        'Determines if the setup should look for an existing database '
+        '(needs to be provided with the `--db-name` option) or if it '
+        'always creates a new one (using a default or creating names '
+        'on the fly if the provided `--db-name` already exists).'
+    ),
+)
+
 QUICKSETUP_DATABASE_ENGINE = options.DB_ENGINE
 
 QUICKSETUP_DATABASE_BACKEND = options.DB_BACKEND

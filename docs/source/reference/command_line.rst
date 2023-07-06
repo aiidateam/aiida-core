@@ -380,6 +380,11 @@ Below is a list with all available subcommands.
       --first-name NONEMPTYSTRING     First name of the user.  [required]
       --last-name NONEMPTYSTRING      Last name of the user.  [required]
       --institution NONEMPTYSTRING    Institution of the user.  [required]
+      --create-db / --reuse-db        Determines if the setup should look for an existing
+                                      database (needs to be provided with the `--db-name`
+                                      option) or if it always creates a new one (using a
+                                      default or creating names on the fly if the provided
+                                      `--db-name` already exists).  [default: create-db]
       --db-engine [postgresql_psycopg2]
                                       Engine to use to connect to the database.
       --db-backend [core.psql_dos]    Database backend to use.

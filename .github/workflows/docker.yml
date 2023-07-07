@@ -1,0 +1,115 @@
+---
+name: Build, test and push Docker Images
+
+on:
+    pull_request:
+    push:
+        branches:
+            - main
+    workflow_dispatch:
+
+# https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+    # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    amd64-build:
+        uses: ./.github/workflows/docker-build-test-upload.yml
+        with:
+            architecture: amd64
+            runsOn: ubuntu-latest
+
+    arm64-build:
+        uses: ./.github/workflows/docker-build-test-upload.yml
+        with:
+            architecture: arm64
+            runsOn: buildjet-2vcpu-ubuntu-2204-arm
+
+    #amd64-push-ghcr:
+    #    uses: ./.github/workflows/docker-push.yml
+    #    strategy:
+    #        matrix:
+    #            image: ["base", "aiida-core"]
+    #    with:
+    #        architecture: amd64
+    #        image: ${{ matrix.image }}
+    #        registry: ghcr.io
+    #    secrets:
+    #        REGISTRY_USERNAME: ${{ github.actor }}
+    #        REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    #    needs: [amd64-build]
+
+    #arm64-push-ghcr:
+    #    uses: ./.github/workflows/docker-push.yml
+    #    strategy:
+    #        matrix:
+    #            image: ["base", "aiida-core"]
+    #    with:
+    #        architecture: arm64
+    #        image: ${{ matrix.image }}
+    #        registry: ghcr.io
+    #    secrets:
+    #        REGISTRY_USERNAME: ${{ github.actor }}
+    #        REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    #    needs: [arm64-build]
+
+    #merge-tags-ghcr:
+    #    uses: ./.github/workflows/docker-merge-tags.yml
+    #    strategy:
+    #        matrix:
+    #            image: ["base", "aiida-core"]
+    #    with:
+    #        image: ${{ matrix.image }}
+    #        registry: ghcr.io
+    #    secrets:
+    #        REGISTRY_USERNAME: ${{ github.actor }}
+    #        REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    #    needs: [amd64-push-ghcr, arm64-push-ghcr]
+
+    #amd64-push-dockerhub:
+    #    if: github.repository == 'aiidateam/aiida-core' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    #    uses: ./.github/workflows/docker-push.yml
+    #    strategy:
+    #        matrix:
+    #            image: ["base", "aiida-core"]
+    #    with:
+    #        architecture: amd64
+    #        image: ${{ matrix.image }}
+    #        registry: docker.io
+    #    secrets:
+    #        REGISTRY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+    #        REGISTRY_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    #    needs: [amd64-build]
+
+    #arm64-push-dockerhub:
+    #    if: github.repository == 'aiidateam/aiida-core' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    #    uses: ./.github/workflows/docker-push.yml
+    #    strategy:
+    #        matrix:
+    #            image: ["base", "aiida-core"]
+    #    with:
+    #        architecture: arm64
+    #        image: ${{ matrix.image }}
+    #        registry: docker.io
+    #    secrets:
+    #        REGISTRY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+    #        REGISTRY_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    #    needs: [arm64-build]
+
+    #merge-tags-dockerhub:
+    #    if: github.repository == 'aiidateam/aiida-core' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    #    uses: ./.github/workflows/docker-merge-tags.yml
+    #    strategy:
+    #        matrix:
+    #            image: ["base", "aiida-core"]
+    #    with:
+    #        image: ${{ matrix.image }}
+    #        registry: docker.io
+    #    secrets:
+    #        REGISTRY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+    #        REGISTRY_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    #    needs: [amd64-push-dockerhub, arm64-push-dockerhub]
+
+    

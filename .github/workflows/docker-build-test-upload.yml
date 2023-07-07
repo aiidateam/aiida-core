@@ -1,0 +1,54 @@
+---
+name: Build image and then upload the image, tags and manifests to GitHub artifacts
+
+env:
+    OWNER: ${{ github.repository_owner }}
+
+on:
+    workflow_call:
+        inputs:
+            architecture:
+                description: Image architecture, e.g. amd64, arm64
+                required: true
+                type: string
+            runsOn:
+                description: GitHub Actions Runner image
+                required: true
+                type: string
+
+jobs:
+    build-test-upload:
+        runs-on: ${{ inputs.runsOn }}
+        strategy:
+          matrix:
+              image: ["base", "aiida-core"]
+
+        steps:
+            - name: Checkout Repo ⚡️
+              uses: actions/checkout@v3
+            - name: Create dev environment 📦
+              uses: ./.github/actions/create-dev-env
+              with:
+                  architecture: ${{ inputs.architecture }}
+
+            - name: Build image 🛠
+              run: doit build --target ${{ matrix.image }} --arch ${{ inputs.architecture }} --organization ${{ env.OWNER }}
+              env:
+                  # Full logs for CI build
+                  BUILDKIT_PROGRESS: plain
+              shell: bash
+
+            - name: Run tests ✅
+              run: VERSION=newly-build pytest -s tests/test-common.py tests/test-${{ matrix.image }}.py --variant ${{ matrix.image }}
+              shell: bash
+
+            - name: Save image as a tar for later use 💾
+              run: docker save ${{ env.OWNER }}/${{ matrix.image }} -o /tmp/${{ matrix.image }}-${{ inputs.architecture }}.tar
+              shell: bash
+
+            - name: Upload image as artifact 💾
+              uses: actions/upload-artifact@v3
+              with:
+                  name: ${{ matrix.image }}-${{ inputs.architecture }}
+                  path: /tmp/${{ matrix.image }}-${{ inputs.architecture }}.tar
+                  retention-days: 3

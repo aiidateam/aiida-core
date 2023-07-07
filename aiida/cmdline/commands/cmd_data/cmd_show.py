@@ -21,9 +21,7 @@ def has_executable(exec_name):
     :return: True if executable can be found in PATH, False otherwise.
     """
     import shutil
-    if shutil.which(exec_name) is None:
-        return False
-    return True
+    return shutil.which(exec_name) is not None
 
 
 def _show_jmol(exec_name, trajectory_list, **_kwargs):

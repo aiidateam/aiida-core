@@ -519,13 +519,16 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
         self.data_export_test(TrajectoryData, self.pks, new_supported_formats, output_flag, tmp_path)
 
     @pytest.mark.parametrize('fmt', cmd_trajectory.VISUALIZATION_FORMATS)
-    def test_trajectoryshow(self, fmt):
+    def test_trajectoryshow(self, fmt, monkeypatch, run_cli_command):
         """Test showing the trajectory data in different formats"""
-        if fmt in ['xcrysden', 'jmol'] and not cmd_show.has_executable(fmt):
-            pytest.skip()
-        options = ['--format', fmt, str(self.ids[DummyVerdiDataListable.NODE_ID_STR])]
-        res = self.cli_runner(cmd_trajectory.trajectory_show, options, catch_exceptions=False)
-        assert res.exit_code == 0
+
+        def mock_show(exec_name, trajectory_list, **_kwargs):
+            assert exec_name == fmt
+            assert all(isinstance(node, TrajectoryData) for node in trajectory_list)
+
+        monkeypatch.setattr(cmd_show, f'_show_{fmt}', mock_show)
+        options = ['--format', fmt, str(self.pks[DummyVerdiDataListable.NODE_ID_STR])]
+        run_cli_command(cmd_trajectory.trajectory_show, options, use_subprocess=False)
 
 
 class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):

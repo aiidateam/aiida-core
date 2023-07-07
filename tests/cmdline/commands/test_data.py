@@ -523,6 +523,8 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
 @pytest.mark.parametrize('fmt', cmd_trajectory.VISUALIZATION_FORMATS)
 def test_trajectoryshow(fmt, monkeypatch, run_cli_command):
     """Test showing the trajectory data in different formats"""
+    import gc
+
     from matplotlib import pyplot
 
     if fmt == 'mpl_heatmap':
@@ -544,14 +546,18 @@ def test_trajectoryshow(fmt, monkeypatch, run_cli_command):
     trajectory_pk = TestVerdiDataTrajectory.create_trajectory_data()[DummyVerdiDataListable.NODE_ID_STR]
     options = ['--format', fmt, str(trajectory_pk), '--dont-block']
 
-    # This will be called by ``_show_mpl_pos`` which will actually open a window, causing the tests to hang.
-    # This is called by the ``_show_jmol`` and ``_show_xcrysden`` implementations. We want to test just the function
-    # but not the actual commands through a sub process. Since it concerns a stdlib module, the patching is doing inside
-    # a context to prevent other parts of the test
     with monkeypatch.context() as ctx:
+        # This will be called by ``_show_mpl_pos`` which will actually open a window, causing the tests to hang.
         ctx.setattr(pyplot, 'show', mock_pyplot_show)
+
+        # This is called by the ``_show_jmol`` and ``_show_xcrysden`` implementations. We want to test just the function
+        # but not the actual commands through a sub process. Since it concerns a stdlib module, the patching is doing
+        # inside a context to prevent other parts of the test.
         ctx.setattr(sp, 'check_output', mock_check_output)
+
         run_cli_command(cmd_trajectory.trajectory_show, options, use_subprocess=False)
+
+    gc.collect()
 
 
 class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):

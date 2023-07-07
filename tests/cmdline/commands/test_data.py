@@ -521,12 +521,28 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
     @pytest.mark.parametrize('fmt', cmd_trajectory.VISUALIZATION_FORMATS)
     def test_trajectoryshow(self, fmt, monkeypatch, run_cli_command):
         """Test showing the trajectory data in different formats"""
+        from matplotlib import pyplot
 
-        def mock_show(exec_name, trajectory_list, **_kwargs):
-            assert exec_name == fmt
-            assert all(isinstance(node, TrajectoryData) for node in trajectory_list)
+        if fmt == 'mpl_heatmap':
+            try:
+                import mayavi  # pylint: disable=unused-import
+            except ImportError:
+                pytest.skip('`mayavi` not importable')
 
-        monkeypatch.setattr(cmd_show, f'_show_{fmt}', mock_show)
+        if fmt in ['jmol', 'xcrysden'] and not cmd_show.has_executable(fmt):
+            pytest.skip(f'Executable `{fmt}` not found on the system.')
+
+        def mock_check_output(options):
+            assert isinstance(options, list)
+            assert options[0] == fmt
+
+        # This is called by the ``_show_jmol`` and ``_show_xcrysden`` implementations. We want to test just the function
+        # but not the actual commands through a sub process.
+        monkeypatch.setattr(sp, 'check_output', mock_check_output)
+
+        # This will be called by ``_show_mpl_pos`` which will actually open a window, causing the tests to hang.
+        monkeypatch.setattr(pyplot, 'show', lambda *args, **kwargs: None)
+
         options = ['--format', fmt, str(self.pks[DummyVerdiDataListable.NODE_ID_STR])]
         run_cli_command(cmd_trajectory.trajectory_show, options, use_subprocess=False)
 

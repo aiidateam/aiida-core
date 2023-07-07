@@ -15,6 +15,7 @@ import gc
 import pathlib
 from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence, Set, Union
 
+from pydantic import BaseModel, Field
 from sqlalchemy import column, insert, update
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
@@ -72,6 +73,30 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
     The `django` backend was removed, to consolidate access to this storage.
     """
 
+    class Configuration(BaseModel):
+        """Model describing required information to configure an instance of the storage."""
+
+        database_engine: str = Field(
+            title='PostgreSQL engine',
+            description='The engine to use to connect to the database.',
+            default='postgresql_psycopg2'
+        )
+        database_hostname: str = Field(
+            title='PostgreSQL hostname', description='The hostname of the PostgreSQL server.', default='localhost'
+        )
+        database_port: int = Field(
+            title='PostgreSQL port', description='The port of the PostgreSQL server.', default=5432
+        )
+        database_username: str = Field(
+            title='PostgreSQL username', description='The username with which to connect to the PostgreSQL server.'
+        )
+        database_password: str = Field(
+            title='PostgreSQL password', description='The password with which to connect to the PostgreSQL server.'
+        )
+        database_name: Union[str, None] = Field(
+            title='PostgreSQL database name', description='The name of the database in the PostgreSQL server.'
+        )
+
     migrator = PsqlDosMigrator
 
     @classmethod
@@ -101,56 +126,6 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
             yield migrator
         finally:
             migrator.close()
-
-    @classmethod
-    def create_config(cls, **kwargs):
-        """Create a configuration dictionary based on the CLI options that can be used to initialize an instance."""
-        return {key: kwargs[key] for key in cls._get_cli_options()}
-
-    @classmethod
-    def _get_cli_options(cls) -> dict:
-        """Return the CLI options that would allow to create an instance of this class."""
-        return {
-            'database_engine': {
-                'required': True,
-                'type': str,
-                'prompt': 'Postgresql engine',
-                'default': 'postgresql_psycopg2',
-                'help': 'The engine to use to connect to the database.',
-            },
-            'database_hostname': {
-                'required': True,
-                'type': str,
-                'prompt': 'Postgresql hostname',
-                'default': 'localhost',
-                'help': 'The hostname of the PostgreSQL server.',
-            },
-            'database_port': {
-                'required': True,
-                'type': int,
-                'prompt': 'Postgresql port',
-                'default': '5432',
-                'help': 'The port of the PostgreSQL server.',
-            },
-            'database_username': {
-                'required': True,
-                'type': str,
-                'prompt': 'Postgresql username',
-                'help': 'The username with which to connect to the PostgreSQL server.',
-            },
-            'database_password': {
-                'required': True,
-                'type': str,
-                'prompt': 'Postgresql password',
-                'help': 'The password with which to connect to the PostgreSQL server.',
-            },
-            'database_name': {
-                'required': True,
-                'type': str,
-                'prompt': 'Postgresql database name',
-                'help': 'The name of the database in the PostgreSQL server.',
-            }
-        }
 
     def __init__(self, profile: Profile) -> None:
         super().__init__(profile)

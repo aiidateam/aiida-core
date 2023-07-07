@@ -19,6 +19,7 @@ import shutil
 from tempfile import mkdtemp
 from typing import Any, BinaryIO, Iterator, Sequence
 
+from pydantic import BaseModel, Field
 from sqlalchemy import column, insert, update
 from sqlalchemy.orm import Session
 
@@ -41,6 +42,15 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
     Whenever it is instantiated, it creates a fresh storage backend,
     and destroys it when it is garbage collected.
     """
+
+    class Configuration(BaseModel):
+
+        filepath: str = Field(
+            title='Temporary directory',
+            description='Temporary directory in which to store data for this backend.',
+            default_factory=mkdtemp
+        )
+
     _read_only = False
 
     @staticmethod
@@ -69,23 +79,6 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
                 'options': options or {},
             }
         )
-
-    @classmethod
-    def create_config(cls, filepath: str | None = None):
-        """Create a configuration dictionary based on the CLI options that can be used to initialize an instance."""
-        return {'filepath': filepath or mkdtemp()}
-
-    @classmethod
-    def _get_cli_options(cls) -> dict:
-        """Return the CLI options that would allow to create an instance of this class."""
-        return {
-            'filepath': {
-                'required': False,
-                'type': str,
-                'prompt': 'Temporary directory',
-                'help': 'Temporary directory in which to store data for this backend.',
-            }
-        }
 
     @classmethod
     def version_head(cls) -> str:

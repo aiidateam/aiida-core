@@ -21,6 +21,7 @@ from typing import BinaryIO, Iterable, Iterator, Optional, Sequence, Tuple, cast
 from zipfile import ZipFile, is_zipfile
 
 from archive_path import ZipPath, extract_file_in_zip
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from aiida import __version__
@@ -63,6 +64,14 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
             ...
 
     """
+
+    class Configuration(BaseModel):
+
+        filepath: str = Field(
+            title='Filepath of the archive',
+            description='Filepath of the archive in which to store data for this backend.'
+        )
+
     _read_only = True
 
     @classmethod
@@ -88,23 +97,6 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
                 'options': options or {},
             }
         )
-
-    @classmethod
-    def create_config(cls, filepath: str):
-        """Create a configuration dictionary based on the CLI options that can be used to initialize an instance."""
-        return {'path': filepath}
-
-    @classmethod
-    def _get_cli_options(cls) -> dict:
-        """Return the CLI options that would allow to create an instance of this class."""
-        return {
-            'filepath': {
-                'required': True,
-                'type': str,
-                'prompt': 'Filepath of the archive',
-                'help': 'Filepath of the archive in which to store data for this backend.',
-            }
-        }
 
     @classmethod
     def version_profile(cls, profile: Profile) -> Optional[str]:

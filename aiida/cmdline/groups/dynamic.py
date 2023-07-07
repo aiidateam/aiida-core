@@ -121,10 +121,30 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
         :param entry_point: The entry point.
         """
-        return [
-            self.create_option(*item)
-            for item in self.factory(entry_point).get_cli_options().items()  # type: ignore[union-attr]
-        ]
+        cls = self.factory(entry_point)
+
+        if not hasattr(cls, 'Configuration'):
+            from aiida.common.warnings import warn_deprecation
+            warn_deprecation(
+                'Relying on `_get_cli_options` is deprecated. The options should be defined through a '
+                '`pydantic.BaseModel` that should be assigned to the `Config` class attribute.',
+                version=3
+            )
+            options_spec = self.factory(entry_point).get_cli_options()  # type: ignore[union-attr]
+        else:
+
+            options_spec = {}
+
+            for key, field_info in cls.Configuration.model_fields.items():
+                options_spec[key] = {
+                    'required': field_info.is_required(),
+                    'type': field_info.annotation,
+                    'prompt': field_info.title,
+                    'default': field_info.default if field_info.default is not None else None,
+                    'help': field_info.description,
+                }
+
+        return [self.create_option(*item) for item in options_spec.items()]
 
     @staticmethod
     def create_option(name, spec: dict) -> t.Callable[[t.Any], t.Any]:
@@ -136,6 +156,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         name_dashed = name.replace('_', '-')
         option_name = f'--{name_dashed}/--no-{name_dashed}' if is_flag else f'--{name_dashed}'
         option_short_name = spec.pop('short_name', None)
+        option_names = (option_short_name, option_name) if option_short_name else (option_name,)
 
         kwargs = {'cls': spec.pop('cls', InteractiveOption), 'show_default': True, 'is_flag': is_flag, **spec}
 
@@ -144,9 +165,4 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         if kwargs['cls'] is InteractiveOption and is_flag and default is None:
             kwargs['cls'] = functools.partial(InteractiveOption, prompt_fn=lambda ctx: False)
 
-        if option_short_name:
-            option = click.option(option_short_name, option_name, **kwargs)
-        else:
-            option = click.option(option_name, **kwargs)
-
-        return option
+        return click.option(*(option_names), **kwargs)

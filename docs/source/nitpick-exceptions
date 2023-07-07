@@ -99,6 +99,9 @@ py:obj aiida.storage.psql_dos.orm.ModelType
 py:obj aiida.storage.psql_dos.orm.SelfType
 py:obj aiida.storage.psql_dos.orm.entities.ModelType
 py:obj aiida.storage.psql_dos.orm.entities.SelfType
+py:class aiida.storage.psql_dos.backend.Configuration
+py:class aiida.storage.sqlite_temp.backend.Configuration
+py:class aiida.storage.sqlite_zip.backend.Configuration
 py:obj aiida.tools.archive.SelfType
 py:obj aiida.tools.archive.EntityType
 py:func QueryBuilder._get_ormclass
@@ -131,6 +134,8 @@ py:class click.types.StringParamType
 py:func click.shell_completion._start_of_option
 py:meth click.Option.get_default
 py:meth fail
+
+py:class pydantic.main.BaseModel
 
 py:class requests.models.Response
 py:class requests.Response

@@ -291,6 +291,7 @@ disable = [
     "use-dict-literal",
     "unnecessary-dunder-call",
 ]
+extension-pkg-whitelist = "pydantic"
 
 [tool.pylint.basic]
 good-names = [

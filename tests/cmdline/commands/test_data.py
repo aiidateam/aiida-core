@@ -542,7 +542,7 @@ def test_trajectoryshow(fmt, monkeypatch, run_cli_command):
         pass
 
     trajectory_pk = TestVerdiDataTrajectory.create_trajectory_data()[DummyVerdiDataListable.NODE_ID_STR]
-    options = ['--format', fmt, str(trajectory_pk)]
+    options = ['--format', fmt, str(trajectory_pk), '--dont-block']
 
     # This will be called by ``_show_mpl_pos`` which will actually open a window, causing the tests to hang.
     # This is called by the ``_show_jmol`` and ``_show_xcrysden`` implementations. We want to test just the function

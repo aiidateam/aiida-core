@@ -214,16 +214,23 @@ def process_status(call_link_label, max_depth, processes):
 
 @verdi_process.command('kill')
 @arguments.PROCESSES()
+@options.ALL(help='Kill all processes if no specific processes are specified.')
 @options.TIMEOUT()
 @options.WAIT()
 @decorators.with_dbenv()
-def process_kill(processes, timeout, wait):
+def process_kill(processes, all_entries, timeout, wait):
     """Kill running processes."""
     from aiida.engine.processes import control
 
+    if processes and all_entries:
+        raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
+    
+    if all_entries:
+        click.confirm('Are you sure you want to kill all processes?', abort=True)
+
     try:
         message = 'Killed through `verdi process kill`'
-        control.kill_processes(processes, timeout=timeout, wait=wait, message=message)
+        control.kill_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait, message=message)
     except control.ProcessTimeoutException as exception:
         echo.echo_critical(str(exception) + '\nFrom the CLI you can call `verdi devel revive <PID>`.')
 

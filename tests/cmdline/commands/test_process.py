@@ -478,3 +478,18 @@ def test_process_kill(submit_and_await, run_cli_command):
     run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
     await_condition(lambda: node.is_killed)
     assert node.process_status == 'Killed through `verdi process kill`'
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('started_daemon_client')
+def test_process_kill_all(submit_and_await, run_cli_command):
+    """Test the ``verdi process kill`` command."""
+    node = submit_and_await(WaitProcess, ProcessState.WAITING)
+
+    # run_cli_command(cmd_process.process_pause, [str(node.pk), '--wait'])
+    # await_condition(lambda: node.paused)
+    # assert node.process_status == 'Paused through `verdi process pause`'
+
+    run_cli_command(cmd_process.process_kill, ['--all', '--wait'])
+    await_condition(lambda: node.is_killed)
+    assert node.process_status == 'Killed through `verdi process kill`'

@@ -20,7 +20,11 @@ from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
-from aiida.orm.utils.node import AbstractNodeMeta
+from aiida.orm.utils.node import (  # pylint: disable=unused-import
+    AbstractNodeMeta,
+    get_query_type_from_type_string,
+    get_type_string_from_class,
+)
 
 from ..computers import Computer
 from ..entities import Collection as EntityCollection
@@ -149,9 +153,22 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
     _CLS_NODE_LINKS = NodeLinks
     _CLS_NODE_CACHING = NodeCaching
 
-    # added by metaclass
-    _plugin_type_string: ClassVar[str]
-    _query_type_string: ClassVar[str]
+    __plugin_type_string: ClassVar[str]
+    __query_type_string: ClassVar[str]
+
+    @classproperty
+    def _plugin_type_string(cls) -> str:
+        """Return the plugin type string of this node class."""
+        if not hasattr(cls, '__plugin_type_string'):
+            cls.__plugin_type_string = get_type_string_from_class(cls.__module__, cls.__name__)  # type: ignore[misc]
+        return cls.__plugin_type_string
+
+    @classproperty
+    def _query_type_string(cls) -> str:
+        """Return the query type string of this node class."""
+        if not hasattr(cls, '__query_type_string'):
+            cls.__query_type_string = get_query_type_from_type_string(cls._plugin_type_string)  # type: ignore[misc]
+        return cls.__query_type_string
 
     # This will be set by the metaclass call
     _logger: Optional[Logger] = None

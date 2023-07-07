@@ -224,7 +224,7 @@ def process_kill(processes, all_entries, timeout, wait):
 
     if processes and all_entries:
         raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
-    
+
     if all_entries:
         click.confirm('Are you sure you want to kill all processes?', abort=True)
 

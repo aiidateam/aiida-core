@@ -536,12 +536,15 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
             assert isinstance(options, list)
             assert options[0] == fmt
 
+        def mock_pyplot_show(*_args, **_kwargs):
+            pass
+
         # This is called by the ``_show_jmol`` and ``_show_xcrysden`` implementations. We want to test just the function
         # but not the actual commands through a sub process.
         monkeypatch.setattr(sp, 'check_output', mock_check_output)
 
         # This will be called by ``_show_mpl_pos`` which will actually open a window, causing the tests to hang.
-        monkeypatch.setattr(pyplot, 'show', lambda *args, **kwargs: None)
+        monkeypatch.setattr(pyplot, 'show', mock_pyplot_show)
 
         options = ['--format', fmt, str(self.pks[DummyVerdiDataListable.NODE_ID_STR])]
         run_cli_command(cmd_trajectory.trajectory_show, options, use_subprocess=False)

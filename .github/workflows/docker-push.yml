@@ -76,7 +76,7 @@ jobs:
                   declare -a arr=(${{ steps.meta.outputs.tags }})
                   for tag in "${arr[@]}"; do
                       arch_tag=$(echo ${tag} | sed "s/:/:${{ inputs.architecture }}-/")
-                      docker tag aiidalab/${{ matrix.image }}:newly-build ${arch_tag}
+                      docker tag ${{ env.OWNER }}/${{ matrix.image }}:newly-build ${arch_tag}
                       docker push ${arch_tag}
 
                       # write tag to file

@@ -19,9 +19,10 @@ on:
 jobs:
     build-test-upload:
         runs-on: ${{ inputs.runsOn }}
-        strategy:
-          matrix:
-              image: ["base", "aiida-core"]
+        defaults:
+            run:
+              shell: bash
+              working-directory: .docker
 
         steps:
             - name: Checkout Repo ⚡️
@@ -31,24 +32,30 @@ jobs:
               with:
                   architecture: ${{ inputs.architecture }}
 
-            - name: Build image 🛠
-              run: doit build --target ${{ matrix.image }} --arch ${{ inputs.architecture }} --organization ${{ env.OWNER }}
+            - name: Build image base and base-with-services (output image name aiida-coer §) 🛠
+              run: doit build --target base --target base-with-services --arch ${{ inputs.architecture }} --organization ${{ env.OWNER }}
               env:
                   # Full logs for CI build
                   BUILDKIT_PROGRESS: plain
-              shell: bash
 
             - name: Run tests ✅
-              run: VERSION=newly-build pytest -s tests/test-common.py tests/test-${{ matrix.image }}.py --variant ${{ matrix.image }}
-              shell: bash
+              run: VERSION=newly-build python -m pytest -s tests
 
             - name: Save image as a tar for later use 💾
-              run: docker save ${{ env.OWNER }}/${{ matrix.image }} -o /tmp/${{ matrix.image }}-${{ inputs.architecture }}.tar
-              shell: bash
+              run: |
+                docker save ${{ env.OWNER }}/base -o /tmp/base-${{ inputs.architecture }}.tar
+                docker save ${{ env.OWNER }}/aiida-core -o /tmp/aiida-core-${{ inputs.architecture }}.tar
 
-            - name: Upload image as artifact 💾
+            - name: Upload base image as artifact 💾
               uses: actions/upload-artifact@v3
               with:
-                  name: ${{ matrix.image }}-${{ inputs.architecture }}
-                  path: /tmp/${{ matrix.image }}-${{ inputs.architecture }}.tar
+                  name: base-${{ inputs.architecture }}
+                  path: /tmp/base-${{ inputs.architecture }}.tar
+                  retention-days: 3
+
+            - name: Upload aiida-core image as artifact 💾
+              uses: actions/upload-artifact@v3
+              with:
+                  name: aiida-core-${{ inputs.architecture }}
+                  path: /tmp/aiida-core-${{ inputs.architecture }}.tar
                   retention-days: 3

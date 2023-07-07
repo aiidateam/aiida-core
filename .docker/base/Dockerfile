@@ -137,11 +137,11 @@ RUN set -x && \
     fix-permissions "/home/${SYSTEM_USER}"
 
 # Switch to root to install AiiDA and set AiiDA as service
+# Install AiiDA from source code
 USER root
-# COPY --from=src . /tmp/aiida-core
-# RUN pip install /tmp/aiida-core --no-cache-dir && \
-#     rm -rf /tmp/aiida-core
-RUN pip install aiida-core==2.4.0
+COPY --from=src . /tmp/aiida-core
+RUN pip install /tmp/aiida-core --no-cache-dir && \
+    rm -rf /tmp/aiida-core
 
 # Enable verdi autocompletion.
 RUN mkdir -p "${CONDA_DIR}/etc/conda/activate.d" && \
@@ -154,8 +154,12 @@ COPY --chown="${SYSTEM_UID}:${SYSTEM_GID}" s6-assets/config-quick-setup.yaml "/a
 COPY s6-assets/s6-rc.d /etc/s6-overlay/s6-rc.d
 COPY s6-assets/init /etc/init
 
+# Otherwise will stuck on oneshot services
+# https://github.com/just-containers/s6-overlay/issues/467
+ENV S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0
+
 # Switch back to USER aiida to avoid accidental container runs as root
-# USER ${SYSTEM_UID}
+USER ${SYSTEM_UID}
 
 ENTRYPOINT ["/init"]
 

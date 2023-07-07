@@ -8,8 +8,8 @@ services:
         environment:
             POSTGRES_USER: postgres
             POSTGRES_PASSWORD: password
-        volumes:
-            - aiida-postgres-db:/var/lib/postgresql/data
+        # volumes:
+        #     - aiida-postgres-db:/var/lib/postgresql/data
         healthcheck:
             test: [ "CMD-SHELL", "pg_isready"]
             interval: 5s
@@ -21,8 +21,8 @@ services:
         environment:
             RABBITMQ_DEFAULT_USER: guest
             RABBITMQ_DEFAULT_PASS: guest
-        volumes:
-            - aiida-rmq-data:/var/lib/rabbitmq/
+        # volumes:
+        #     - aiida-rmq-data:/var/lib/rabbitmq/
         healthcheck:
             test: rabbitmq-diagnostics check_port_connectivity
             interval: 30s
@@ -35,16 +35,15 @@ services:
             RMQHOST: messaging
             TZ: Europe/Zurich
             SETUP_DEFAULT_AIIDA_PROFILE: 'true'
-        volumes:
-            - aiida-home-folder:/home/aiida
+        # volumes:
+        #     - aiida-home-folder:/home/aiida
         depends_on:
             database:
                 condition: service_healthy
-            messaging:
-                condition: service_healthy
-        command: tail -f /dev/null
+            #messaging:
+            #    condition: service_healthy
 
-volumes:
-    aiida-postgres-db:
-    aiida-rmq-data:
-    aiida-home-folder:
+#volumes:
+#    aiida-postgres-db:
+#    aiida-rmq-data:
+#    aiida-home-folder:

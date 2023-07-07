@@ -38,10 +38,6 @@ COPY --chown="${SYSTEM_UID}:${SYSTEM_GID}" s6-assets/config-quick-setup.yaml "/a
 COPY s6-assets/s6-rc.d /etc/s6-overlay/s6-rc.d
 COPY s6-assets/init /etc/init
 
-# Otherwise will stuck on oneshot services
-# https://github.com/just-containers/s6-overlay/issues/467
-ENV S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0
-
 USER ${SYSTEM_UID}
 
 WORKDIR "/home/${SYSTEM_USER}"

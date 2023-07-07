@@ -27,46 +27,34 @@ jobs:
             architecture: arm64
             runsOn: buildjet-2vcpu-ubuntu-2204-arm
 
-    #amd64-push-ghcr:
-    #    uses: ./.github/workflows/docker-push.yml
-    #    strategy:
-    #        matrix:
-    #            image: ["base", "aiida-core"]
-    #    with:
-    #        architecture: amd64
-    #        image: ${{ matrix.image }}
-    #        registry: ghcr.io
-    #    secrets:
-    #        REGISTRY_USERNAME: ${{ github.actor }}
-    #        REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    #    needs: [amd64-build]
+    amd64-push-ghcr:
+        uses: ./.github/workflows/docker-push.yml
+        with:
+            architecture: amd64
+            registry: ghcr.io
+        secrets:
+            REGISTRY_USERNAME: ${{ github.actor }}
+            REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        needs: [amd64-build]
 
-    #arm64-push-ghcr:
-    #    uses: ./.github/workflows/docker-push.yml
-    #    strategy:
-    #        matrix:
-    #            image: ["base", "aiida-core"]
-    #    with:
-    #        architecture: arm64
-    #        image: ${{ matrix.image }}
-    #        registry: ghcr.io
-    #    secrets:
-    #        REGISTRY_USERNAME: ${{ github.actor }}
-    #        REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    #    needs: [arm64-build]
+    arm64-push-ghcr:
+        uses: ./.github/workflows/docker-push.yml
+        with:
+            architecture: arm64
+            registry: ghcr.io
+        secrets:
+            REGISTRY_USERNAME: ${{ github.actor }}
+            REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        needs: [arm64-build]
 
-    #merge-tags-ghcr:
-    #    uses: ./.github/workflows/docker-merge-tags.yml
-    #    strategy:
-    #        matrix:
-    #            image: ["base", "aiida-core"]
-    #    with:
-    #        image: ${{ matrix.image }}
-    #        registry: ghcr.io
-    #    secrets:
-    #        REGISTRY_USERNAME: ${{ github.actor }}
-    #        REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    #    needs: [amd64-push-ghcr, arm64-push-ghcr]
+    merge-tags-ghcr:
+        uses: ./.github/workflows/docker-merge-tags.yml
+        with:
+            registry: ghcr.io
+        secrets:
+            REGISTRY_USERNAME: ${{ github.actor }}
+            REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        needs: [amd64-push-ghcr, arm64-push-ghcr]
 
     #amd64-push-dockerhub:
     #    if: github.repository == 'aiidateam/aiida-core' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
@@ -111,5 +99,3 @@ jobs:
     #        REGISTRY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
     #        REGISTRY_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     #    needs: [amd64-push-dockerhub, arm64-push-dockerhub]
-
-    

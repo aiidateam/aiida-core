@@ -208,7 +208,7 @@ def create_profile(
     """
     from aiida.orm import User
 
-    storage_config = {key: kwargs[key] for key in storage_cls.get_cli_options().keys() if key in kwargs}
+    storage_config = storage_cls.Configuration(**{k: v for k, v in kwargs.items() if v is not None}).dict()
     profile: Profile = config.create_profile(name=name, storage_cls=storage_cls, storage_config=storage_config)
 
     with profile_context(profile.name, allow_switch=True):

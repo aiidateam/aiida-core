@@ -20,7 +20,7 @@ import contextlib
 import io
 import json
 import os
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type
 import uuid
 
 from pydantic import (  # pylint: disable=no-name-in-module
@@ -32,11 +32,8 @@ from pydantic import (  # pylint: disable=no-name-in-module
     field_validator,
 )
 
-from aiida.common.exceptions import ConfigurationError
-from aiida.common.log import LogLevels
-
 from aiida.common.exceptions import ConfigurationError, EntryPointError, StorageMigrationError
-from aiida.common.log import AIIDA_LOGGER
+from aiida.common.log import AIIDA_LOGGER, LogLevels
 
 from .options import Option, get_option, get_option_names, parse_option
 from .profile import Profile

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import pathlib
 import shutil
 import typing as t
 import uuid
@@ -65,7 +66,7 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
     def sandbox(self):
         """Return the sandbox instance of this repository."""
         if self._sandbox is None:
-            self._sandbox = SandboxFolder(filepath=self._filepath)
+            self._sandbox = SandboxFolder(filepath=pathlib.Path(self._filepath) if self._filepath is not None else None)
 
         return self._sandbox
 

@@ -444,7 +444,7 @@ ignore_errors = true
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py38
+envlist = py39
 
 [testenv]
 usedevelop=True
@@ -481,7 +481,7 @@ commands =
     clean: make clean
     make debug
 
-[testenv:py{38,39,310}-docs-live]
+[testenv:py{39,310,311}-docs-live]
 # tip: remove apidocs before using this feature (`cd docs; make clean`)
 description = Build the documentation and launch browser (with live updates)
 deps =

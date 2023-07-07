@@ -41,6 +41,7 @@ from aiida.orm import (
 from aiida.orm.utils.mixins import FunctionCalculationMixin
 
 from .process import Process
+from .process_spec import ProcessSpec
 
 try:
     UnionType = types.UnionType
@@ -87,7 +88,38 @@ def get_stack_size(size: int = 2) -> int:  # type: ignore[return]
         return size - 1
 
 
-def calcfunction(function: FunctionType) -> FunctionType:
+P = t.ParamSpec('P')
+R = t.TypeVar('R', covariant=True)
+N = t.TypeVar('N', bound=ProcessNode)
+
+
+class ProcessFunctionType(t.Protocol, t.Generic[P, R, N]):
+    """Protocol for a decorated process function."""
+
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
+        ...
+
+    def run(self, *args: P.args, **kwargs: P.kwargs) -> R:
+        ...
+
+    def run_get_pk(self, *args: P.args, **kwargs: P.kwargs) -> tuple[dict[str, t.Any] | None, int]:
+        ...
+
+    def run_get_node(self, *args: P.args, **kwargs: P.kwargs) -> tuple[dict[str, t.Any] | None, N]:
+        ...
+
+    is_process_function: bool
+
+    node_class: t.Type[N]
+
+    process_class: t.Type[Process]
+
+    recreate_from: t.Callable[[N], Process]
+
+    spec: t.Callable[[], ProcessSpec]
+
+
+def calcfunction(function: t.Callable[P, R]) -> ProcessFunctionType[P, R, CalcFunctionNode]:
     """
     A decorator to turn a standard python function into a calcfunction.
     Example usage:
@@ -114,7 +146,7 @@ def calcfunction(function: FunctionType) -> FunctionType:
     return process_function(node_class=CalcFunctionNode)(function)
 
 
-def workfunction(function: FunctionType) -> FunctionType:
+def workfunction(function: t.Callable[P, R]) -> ProcessFunctionType[P, R, WorkFunctionNode]:
     """
     A decorator to turn a standard python function into a workfunction.
     Example usage:

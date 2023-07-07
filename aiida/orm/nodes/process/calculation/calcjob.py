@@ -264,8 +264,8 @@ class CalcJobNode(CalculationNode):
             if not isinstance(directive[1], str):
                 raise ValueError('invalid directive, second element has to be a string representing local path')
 
-            if not isinstance(directive[2], int):
-                raise ValueError('invalid directive, three element has to be an integer representing the depth')
+            if not isinstance(directive[2], (int, type(None))):
+                raise ValueError('invalid directive, third element has to be an integer representing the depth')
 
     def set_retrieve_list(self, retrieve_list: Sequence[Union[str, Tuple[str, str, str]]]) -> None:
         """Set the retrieve list.

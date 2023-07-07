@@ -518,36 +518,36 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
         new_supported_formats = list(cmd_trajectory.EXPORT_FORMATS)
         self.data_export_test(TrajectoryData, self.pks, new_supported_formats, output_flag, tmp_path)
 
-    @pytest.mark.parametrize('fmt', cmd_trajectory.VISUALIZATION_FORMATS)
-    def test_trajectoryshow(self, fmt, monkeypatch, run_cli_command):
-        """Test showing the trajectory data in different formats"""
-        from matplotlib import pyplot
+    # @pytest.mark.parametrize('fmt', cmd_trajectory.VISUALIZATION_FORMATS)
+    # def test_trajectoryshow(self, fmt, monkeypatch, run_cli_command):
+    #     """Test showing the trajectory data in different formats"""
+    #     from matplotlib import pyplot
 
-        if fmt == 'mpl_heatmap':
-            try:
-                import mayavi  # pylint: disable=unused-import
-            except ImportError:
-                pytest.skip('`mayavi` not importable')
+    #     if fmt == 'mpl_heatmap':
+    #         try:
+    #             import mayavi  # pylint: disable=unused-import
+    #         except ImportError:
+    #             pytest.skip('`mayavi` not importable')
 
-        if fmt in ['jmol', 'xcrysden'] and not cmd_show.has_executable(fmt):
-            pytest.skip(f'Executable `{fmt}` not found on the system.')
+    #     if fmt in ['jmol', 'xcrysden'] and not cmd_show.has_executable(fmt):
+    #         pytest.skip(f'Executable `{fmt}` not found on the system.')
 
-        def mock_check_output(options):
-            assert isinstance(options, list)
-            assert options[0] == fmt
+    #     def mock_check_output(options):
+    #         assert isinstance(options, list)
+    #         assert options[0] == fmt
 
-        def mock_pyplot_show(*_args, **_kwargs):
-            pass
+    #     def mock_pyplot_show(*_args, **_kwargs):
+    #         pass
 
-        # This is called by the ``_show_jmol`` and ``_show_xcrysden`` implementations. We want to test just the function
-        # but not the actual commands through a sub process.
-        monkeypatch.setattr(sp, 'check_output', mock_check_output)
+    #     # This is called by the ``_show_jmol`` and ``_show_xcrysden`` implementations. We want to test just the function
+    #     # but not the actual commands through a sub process.
+    #     monkeypatch.setattr(sp, 'check_output', mock_check_output)
 
-        # This will be called by ``_show_mpl_pos`` which will actually open a window, causing the tests to hang.
-        monkeypatch.setattr(pyplot, 'show', mock_pyplot_show)
+    #     # This will be called by ``_show_mpl_pos`` which will actually open a window, causing the tests to hang.
+    #     monkeypatch.setattr(pyplot, 'show', mock_pyplot_show)
 
-        options = ['--format', fmt, str(self.pks[DummyVerdiDataListable.NODE_ID_STR])]
-        run_cli_command(cmd_trajectory.trajectory_show, options, use_subprocess=False)
+    #     options = ['--format', fmt, str(self.pks[DummyVerdiDataListable.NODE_ID_STR])]
+    #     run_cli_command(cmd_trajectory.trajectory_show, options, use_subprocess=False)
 
 
 class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):

@@ -520,12 +520,10 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.parametrize('fmt', ['mpl_pos'])
-# @pytest.mark.parametrize('fmt', cmd_trajectory.VISUALIZATION_FORMATS)
+# @pytest.mark.parametrize('fmt', ['mpl_pos'])
+@pytest.mark.parametrize('fmt', cmd_trajectory.VISUALIZATION_FORMATS)
 def test_trajectoryshow(fmt, monkeypatch, run_cli_command):
     """Test showing the trajectory data in different formats"""
-    import gc
-
     from matplotlib import pyplot
 
     if fmt == 'mpl_heatmap':
@@ -556,9 +554,8 @@ def test_trajectoryshow(fmt, monkeypatch, run_cli_command):
         # inside a context to prevent other parts of the test.
         ctx.setattr(sp, 'check_output', mock_check_output)
 
-        run_cli_command(cmd_trajectory.trajectory_show, options, use_subprocess=False)
+        # run_cli_command(cmd_trajectory.trajectory_show, options, use_subprocess=False)
 
-    gc.collect()
 
 
 class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):

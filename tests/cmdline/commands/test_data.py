@@ -543,6 +543,7 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
     )
     def test_trajectoryshow(self, fmt, monkeypatch, run_cli_command):
         """Test showing the trajectory data in different formats"""
+        from matplotlib import pyplot
         trajectory_pk = self.pks[DummyVerdiDataListable.NODE_ID_STR]
         options = ['--format', fmt, str(trajectory_pk), '--dont-block']
 

@@ -17,7 +17,9 @@ RUN mamba create -p /opt/conda/envs/aiida-core-services --yes \
      postgresql=${PGSQL_VERSION} && \
      mamba clean --all -f -y && \
      fix-permissions "${CONDA_DIR}" && \
-     fix-permissions "/home/${NB_USER}"
+     fix-permissions "/home/${SYSTEM_USER}"
+
+ENV MAMBA_RUN="mamba run -n aiida-core-services"
 
 # Install erlang.
 RUN apt-get update --yes && \

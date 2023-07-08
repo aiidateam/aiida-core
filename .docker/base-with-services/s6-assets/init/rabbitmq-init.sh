@@ -1,7 +1,4 @@
 #!/bin/bash
-RMQ_VERSION="3.10.18"
-SYSTEM_USER="aiida"
-
 RABBITMQ_DATA_DIR="/home/${SYSTEM_USER}/.rabbitmq"
 
 mkdir -p "${RABBITMQ_DATA_DIR}"

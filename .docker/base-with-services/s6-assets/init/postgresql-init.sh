@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# -w waits until server is up
-MAMBA_RUN="mamba run -n aiida-core-services"
-SYSTEM_USER="aiida"
-
 # make DB directory, if not existent
 if [ ! -d /home/${SYSTEM_USER}/.postgresql ]; then
    mkdir /home/${SYSTEM_USER}/.postgresql

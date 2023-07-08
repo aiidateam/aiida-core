@@ -39,8 +39,9 @@ from tests.static import STATIC_DIR
 
 
 def has_mayavi() -> bool:
+    """Return whether the ``mayavi`` module can be imported."""
     try:
-        import mayavi
+        import mayavi  # pylint: disable=unused-import
     except ImportError:
         return False
     return True
@@ -523,13 +524,13 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
     @pytest.mark.parametrize('output_flag', ['-o', '--output'])
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_export(self, output_flag, tmp_path):
+        """Test the export functionality."""
         pks = self.create_trajectory_data()
         new_supported_formats = list(cmd_trajectory.EXPORT_FORMATS)
         self.data_export_test(TrajectoryData, pks, new_supported_formats, output_flag, tmp_path)
 
     @pytest.mark.parametrize(
-        'fmt',
-        (
+        'fmt', (
             pytest.param(
                 'jmol', marks=pytest.mark.skipif(not cmd_show.has_executable('jmol'), reason='No jmol executable.')
             ),
@@ -539,8 +540,7 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
             ),
             pytest.param(
                 'mpl_heatmap', marks=pytest.mark.skipif(not has_mayavi(), reason='Package `mayavi` not installed.')
-            ),
-            pytest.param('mpl_pos')
+            ), pytest.param('mpl_pos')
         )
     )
     @pytest.mark.usefixtures('aiida_profile_clean')
@@ -561,45 +561,11 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
             # patching is doing inside a context to prevent other parts of the test.
             ctx.setattr(sp, 'check_output', mock_check_output)
 
+            # This will be called by ``_show_mpl_pos`` which will actually open a window, causing the tests to hang.
+            import matplotlib.pyplot
+            ctx.setattr(matplotlib.pyplot, 'show', lambda *args, **kwargs: None)
+
             run_cli_command(cmd_trajectory.trajectory_show, options, use_subprocess=False)
-
-
-# @pytest.mark.usefixtures('aiida_profile_clean')
-# # @pytest.mark.parametrize('fmt', ['mpl_pos'])
-# @pytest.mark.parametrize('fmt', cmd_trajectory.VISUALIZATION_FORMATS)
-# def test_trajectoryshow(fmt, monkeypatch, run_cli_command):
-#     """Test showing the trajectory data in different formats"""
-#     from matplotlib import pyplot
-
-#     if fmt == 'mpl_heatmap':
-#         try:
-#             import mayavi  # pylint: disable=unused-import
-#         except ImportError:
-#             pytest.skip('`mayavi` not importable')
-
-#     if fmt in ['jmol', 'xcrysden'] and not cmd_show.has_executable(fmt):
-#         pytest.skip(f'Executable `{fmt}` not found on the system.')
-
-#     def mock_check_output(options):
-#         assert isinstance(options, list)
-#         assert options[0] == fmt
-
-#     def mock_pyplot_show(*_args, **_kwargs):
-#         pass
-
-#     # trajectory_pk = TestVerdiDataTrajectory.create_trajectory_data()[DummyVerdiDataListable.NODE_ID_STR]
-#     # options = ['--format', fmt, str(trajectory_pk), '--dont-block']
-
-#     # with monkeypatch.context() as ctx:
-#     #     # This will be called by ``_show_mpl_pos`` which will actually open a window, causing the tests to hang.
-#     #     ctx.setattr(pyplot, 'show', mock_pyplot_show)
-
-#     #     # This is called by the ``_show_jmol`` and ``_show_xcrysden`` implementations. We want to test just the function
-#     #     # but not the actual commands through a sub process. Since it concerns a stdlib module, the patching is doing
-#     #     # inside a context to prevent other parts of the test.
-#     #     ctx.setattr(sp, 'check_output', mock_check_output)
-
-#     #     # run_cli_command(cmd_trajectory.trajectory_show, options, use_subprocess=False)
 
 
 class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):

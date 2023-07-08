@@ -546,7 +546,6 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_trajectoryshow(self, fmt, monkeypatch, run_cli_command):
         """Test showing the trajectory data in different formats"""
-        # from matplotlib import pyplot
         trajectory_pk = self.create_trajectory_data()[DummyVerdiDataListable.NODE_ID_STR]
         options = ['--format', fmt, str(trajectory_pk), '--dont-block']
 
@@ -554,18 +553,18 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
             assert isinstance(options, list)
             assert options[0] == fmt
 
-        with monkeypatch.context() as ctx:
-
+        if fmt in ['jmol', 'xcrysden']:
             # This is called by the ``_show_jmol`` and ``_show_xcrysden`` implementations. We want to test just the
-            # function but not the actual commands through a sub process. Since it concerns a stdlib module, the
-            # patching is doing inside a context to prevent other parts of the test.
-            ctx.setattr(sp, 'check_output', mock_check_output)
+            # function but not the actual commands through a sub process. Note that this mock needs to happen only for
+            # these specific formats, because ``matplotlib`` used in the others _also_ calls ``subprocess.check_output``
+            monkeypatch.setattr(sp, 'check_output', mock_check_output)
 
+        if fmt in ['mpl_pos', 'mpl_heatmap']:
             # This will be called by ``_show_mpl_pos`` which will actually open a window, causing the tests to hang.
             import matplotlib.pyplot
-            ctx.setattr(matplotlib.pyplot, 'show', lambda *args, **kwargs: None)
+            monkeypatch.setattr(matplotlib.pyplot, 'show', lambda *args, **kwargs: None)
 
-            run_cli_command(cmd_trajectory.trajectory_show, options, use_subprocess=False)
+        run_cli_command(cmd_trajectory.trajectory_show, options, use_subprocess=False)
 
 
 class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):

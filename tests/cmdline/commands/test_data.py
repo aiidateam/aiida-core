@@ -38,6 +38,14 @@ from aiida.orm.nodes.data.cif import has_pycifrw
 from tests.static import STATIC_DIR
 
 
+def has_mayavi() -> bool:
+    try:
+        import mayavi
+    except ImportError:
+        return False
+    return True
+
+
 class DummyVerdiDataExportable:
     """Test exportable data objects."""
 
@@ -518,19 +526,16 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
         new_supported_formats = list(cmd_trajectory.EXPORT_FORMATS)
         self.data_export_test(TrajectoryData, self.pks, new_supported_formats, output_flag, tmp_path)
 
-    @pytest.mark.parametrize('fmt', cmd_trajectory.VISUALIZATION_FORMATS)
+    @pytest.mark.parametrize('fmt', (
+        pytest.param('jmol', marks=pytest.mark.skipif(not cmd_show.has_executable('jmol'), reason='No jmol executable.')),
+        pytest.param('xcrysden', marks=pytest.mark.skipif(not cmd_show.has_executable('xcrysden'), reason='No xcrysden executable.')),
+        pytest.param('mpl_heatmap', marks=pytest.mark.skipif(not has_mayavi(), reason='Package `mayavi` not installed.')),
+        pytest.param('mpl_pos')
+    ))
     def test_trajectoryshow(self, fmt, monkeypatch):
         """Test showing the trajectory data in different formats"""
         from matplotlib import pyplot
 
-        if fmt == 'mpl_heatmap':
-            try:
-                import mayavi  # pylint: disable=unused-import
-            except ImportError:
-                pytest.skip('`mayavi` not importable')
-
-        if fmt in ['jmol', 'xcrysden'] and not cmd_show.has_executable(fmt):
-            pytest.skip(f'Executable `{fmt}` not found on the system.')
 
 
 # @pytest.mark.usefixtures('aiida_profile_clean')

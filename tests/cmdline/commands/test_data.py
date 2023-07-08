@@ -537,16 +537,31 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
                 'xcrysden',
                 marks=pytest.mark.skipif(not cmd_show.has_executable('xcrysden'), reason='No xcrysden executable.')
             ),
-            # pytest.param(
-            #     'mpl_heatmap', marks=pytest.mark.skipif(not has_mayavi(), reason='Package `mayavi` not installed.')
-            # ),
-            pytest.param('mpl_pos')
+            pytest.param(
+                'mpl_heatmap', marks=pytest.mark.skipif(not has_mayavi(), reason='Package `mayavi` not installed.')
+            ),
+            # pytest.param('mpl_pos')
         )
     )
     @pytest.mark.usefixtures('aiida_profile_clean')
-    def test_trajectoryshow(self, fmt, monkeypatch):
+    def test_trajectoryshow(self, fmt, monkeypatch, run_cli_command):
         """Test showing the trajectory data in different formats"""
-        from matplotlib import pyplot
+        # from matplotlib import pyplot
+        trajectory_pk = self.create_trajectory_data()[DummyVerdiDataListable.NODE_ID_STR]
+        options = ['--format', fmt, str(trajectory_pk), '--dont-block']
+
+        def mock_check_output(options):
+            assert isinstance(options, list)
+            assert options[0] == fmt
+
+        with monkeypatch.context() as ctx:
+
+            # This is called by the ``_show_jmol`` and ``_show_xcrysden`` implementations. We want to test just the
+            # function but not the actual commands through a sub process. Since it concerns a stdlib module, the
+            # patching is doing inside a context to prevent other parts of the test.
+            ctx.setattr(sp, 'check_output', mock_check_output)
+
+            run_cli_command(cmd_trajectory.trajectory_show, options, use_subprocess=False)
 
 
 # @pytest.mark.usefixtures('aiida_profile_clean')

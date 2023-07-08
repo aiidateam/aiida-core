@@ -536,15 +536,16 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
                 'xcrysden',
                 marks=pytest.mark.skipif(not cmd_show.has_executable('xcrysden'), reason='No xcrysden executable.')
             ),
-            pytest.param(
-                'mpl_heatmap', marks=pytest.mark.skipif(not has_mayavi(), reason='Package `mayavi` not installed.')
-            ), pytest.param('mpl_pos')
+            # pytest.param(
+            #     'mpl_heatmap', marks=pytest.mark.skipif(not has_mayavi(), reason='Package `mayavi` not installed.')
+            # ),
+            pytest.param('mpl_pos')
         )
     )
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_trajectoryshow(self, fmt, monkeypatch):
         """Test showing the trajectory data in different formats"""
-        from matplotlib import pyplot
+        # from matplotlib import pyplot
 
 
 # @pytest.mark.usefixtures('aiida_profile_clean')

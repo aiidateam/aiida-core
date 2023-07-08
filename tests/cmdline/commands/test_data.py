@@ -543,7 +543,6 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
     )
     def test_trajectoryshow(self, fmt, monkeypatch, run_cli_command):
         """Test showing the trajectory data in different formats"""
-        from matplotlib import pyplot
         trajectory_pk = self.pks[DummyVerdiDataListable.NODE_ID_STR]
         options = ['--format', fmt, str(trajectory_pk), '--dont-block']
 
@@ -558,6 +557,13 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
             monkeypatch.setattr(sp, 'check_output', mock_check_output)
 
         if fmt in ['mpl_pos']:
+            # This has to be mocked because ``plot_positions_xyz`` imports ``matplotlib.pyplot`` and for some completely
+            # unknown reason, causes ``tests/storage/psql_dos/test_backend.py::test_unload_profile`` to fail. For some
+            # reason, merely importing ``matplotlib`` (even here directly in the test) will cause that test to claim
+            # that there still is something holding on to a reference of an sqlalchemy session that it keeps track of
+            # in the ``sqlalchemy.orm.session._sessions`` weak ref dictionary. Since it is impossible to figure out why
+            # the hell importing matplotlib would interact with sqlalchemy sessions, the function that does the import
+            # is simply mocked out for now.
             from aiida.orm.nodes.data.array import trajectory
             monkeypatch.setattr(trajectory, 'plot_positions_XYZ', lambda *args, **kwargs: None)
 

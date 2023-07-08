@@ -4,12 +4,13 @@ import contextlib
 import shutil
 import typing as t
 
-from disk_objectstore import Container
-
 from aiida.common.lang import type_check
 from aiida.storage.log import STORAGE_LOGGER
 
 from .abstract import AbstractRepositoryBackend
+
+if t.TYPE_CHECKING:
+    from disk_objectstore import Container  # pylint: disable=unused-import
 
 __all__ = ('DiskObjectStoreRepositoryBackend',)
 
@@ -30,7 +31,9 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
 
     """
 
-    def __init__(self, container: Container):
+    def __init__(self, container: 'Container'):
+        if not t.TYPE_CHECKING:
+            from disk_objectstore import Container  # pylint: disable=redefined-outer-name
         type_check(container, Container)
         self._container = container
 

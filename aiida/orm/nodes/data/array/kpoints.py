@@ -12,8 +12,6 @@ Module of the KpointsData class, defining the AiiDA data type for storing
 lists and meshes of k-points (i.e., points in the reciprocal space of a
 periodic crystal structure).
 """
-import numpy
-
 from .array import ArrayData
 
 __all__ = ('KpointsData',)
@@ -59,6 +57,7 @@ class KpointsData(ArrayData):
         The crystal unit cell. Rows are the crystal vectors in Angstroms.
         :return: a 3x3 numpy.array
         """
+        import numpy
         return numpy.array(self.base.attributes.get('cell'))
 
     @cell.setter
@@ -164,6 +163,7 @@ class KpointsData(ArrayData):
         :param kpoints: a list of (3) point coordinates
         :return kpoints: a list of (3) point coordinates in the new reference
         """
+        import numpy
         if not isinstance(kpoints, numpy.ndarray):
             raise ValueError('kpoints must be a numpy.array for method change_reference()')
 
@@ -224,6 +224,7 @@ class KpointsData(ArrayData):
         :returns: reciprocal cell in units of 1/Angstrom with cell vectors stored as rows.
             Use e.g. reciprocal_cell[0] to access the first reciprocal cell vector.
         """
+        import numpy
         the_cell = numpy.array(self.cell)
         reciprocal_cell = 2. * numpy.pi * numpy.linalg.inv(the_cell).transpose()
         return reciprocal_cell
@@ -282,6 +283,7 @@ class KpointsData(ArrayData):
         :return kpoints: (if print_list = True) an explicit list of kpoints coordinates,
                 similar to what returned by get_kpoints()
         """
+        import numpy
         mesh = self.base.attributes.get('mesh')
         offset = self.base.attributes.get('offset')
 
@@ -315,6 +317,7 @@ class KpointsData(ArrayData):
         :note: a cell should be defined first.
         :note: the number of kpoints along non-periodic axes is always 1.
         """
+        import numpy
         if offset is None:
             offset = [0., 0., 0.]
 
@@ -352,6 +355,7 @@ class KpointsData(ArrayData):
         Kpoints and weights must be convertible respectively to an array of
         N x dimension and N floats
         """
+        import numpy
         kpoints = numpy.array(kpoints)
 
         # I cannot just use `if not kpoints` because it's a numpy array and
@@ -425,6 +429,8 @@ class KpointsData(ArrayData):
             non-periodic dimensions (indicated by False in self.pbc), or list of
             values for each of the non-periodic dimensions.
         """
+        import numpy
+
         from aiida.common.exceptions import ModificationNotAllowed
 
         # check that it is a 'dim'x #kpoints dimensional array
@@ -486,6 +492,7 @@ class KpointsData(ArrayData):
         :param cartesian: if True, returns points in cartesian coordinates,
             otherwise, returns in crystal coordinates. Default = False.
         """
+        import numpy
         try:
             kpoints = numpy.array(self.get_array('kpoints'))
         except KeyError:

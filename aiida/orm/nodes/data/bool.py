@@ -9,7 +9,7 @@
 ###########################################################################
 """`Data` sub class to represent a boolean value."""
 
-import numpy
+#import numpy
 
 from .base import BaseType, to_aiida_type
 
@@ -29,7 +29,7 @@ class Bool(BaseType):
 
 
 @to_aiida_type.register(bool)
-@to_aiida_type.register(numpy.bool_)
+#@to_aiida_type.register(numpy.bool_)
 def _(value):
     return Bool(value)
 

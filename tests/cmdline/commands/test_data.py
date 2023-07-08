@@ -540,7 +540,7 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
             pytest.param(
                 'mpl_heatmap', marks=pytest.mark.skipif(not has_mayavi(), reason='Package `mayavi` not installed.')
             ),
-            # pytest.param('mpl_pos')
+            pytest.param('mpl_pos')
         )
     )
     @pytest.mark.usefixtures('aiida_profile_clean')

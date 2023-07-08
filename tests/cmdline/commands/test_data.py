@@ -559,10 +559,9 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
             # these specific formats, because ``matplotlib`` used in the others _also_ calls ``subprocess.check_output``
             monkeypatch.setattr(sp, 'check_output', mock_check_output)
 
-        # if fmt in ['mpl_pos', 'mpl_heatmap']:
-        #     # This will be called by ``_show_mpl_pos`` which will actually open a window, causing the tests to hang.
-        #     import matplotlib.pyplot
-        #     monkeypatch.setattr(matplotlib.pyplot, 'show', lambda *args, **kwargs: None)
+        if fmt in ['mpl_pos']:
+            from aiida.orm.nodes.data.array import trajectory
+            monkeypatch.setattr(trajectory, 'plot_positions_XYZ', lambda *args, **kwargs: None)
 
         run_cli_command(cmd_trajectory.trajectory_show, options, use_subprocess=False)
 

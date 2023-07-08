@@ -518,6 +518,10 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
         new_supported_formats = list(cmd_trajectory.EXPORT_FORMATS)
         self.data_export_test(TrajectoryData, self.pks, new_supported_formats, output_flag, tmp_path)
 
+    @pytest.mark.parametrize('fmt', cmd_trajectory.VISUALIZATION_FORMATS)
+    def test_trajectoryshow(self, fmt, monkeypatch):
+        """Test showing the trajectory data in different formats"""
+        print(fmt)
 
 # @pytest.mark.usefixtures('aiida_profile_clean')
 # # @pytest.mark.parametrize('fmt', ['mpl_pos'])

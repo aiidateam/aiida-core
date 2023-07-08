@@ -521,7 +521,17 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
     @pytest.mark.parametrize('fmt', cmd_trajectory.VISUALIZATION_FORMATS)
     def test_trajectoryshow(self, fmt, monkeypatch):
         """Test showing the trajectory data in different formats"""
-        print(fmt)
+        from matplotlib import pyplot
+
+        if fmt == 'mpl_heatmap':
+            try:
+                import mayavi  # pylint: disable=unused-import
+            except ImportError:
+                pytest.skip('`mayavi` not importable')
+
+        if fmt in ['jmol', 'xcrysden'] and not cmd_show.has_executable(fmt):
+            pytest.skip(f'Executable `{fmt}` not found on the system.')
+
 
 # @pytest.mark.usefixtures('aiida_profile_clean')
 # # @pytest.mark.parametrize('fmt', ['mpl_pos'])

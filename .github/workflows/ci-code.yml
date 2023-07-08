@@ -90,7 +90,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install system dependencies
-      run: sudo apt update && sudo apt install postgresql graphviz jmol xcrysden
+      run: sudo apt update && sudo apt install postgresql graphviz
 
     - name: Upgrade pip and setuptools
       # Install specific version of setuptools, because 65.6.0 breaks a number of packages, such as numpy

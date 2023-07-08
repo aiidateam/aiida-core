@@ -528,7 +528,8 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
         self.data_export_test(TrajectoryData, pks, new_supported_formats, output_flag, tmp_path)
 
     @pytest.mark.parametrize(
-        'fmt', (
+        'fmt',
+        (
             pytest.param(
                 'jmol', marks=pytest.mark.skipif(not cmd_show.has_executable('jmol'), reason='No jmol executable.')
             ),
@@ -545,7 +546,7 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_trajectoryshow(self, fmt, monkeypatch):
         """Test showing the trajectory data in different formats"""
-        # from matplotlib import pyplot
+        from matplotlib import pyplot
 
 
 # @pytest.mark.usefixtures('aiida_profile_clean')

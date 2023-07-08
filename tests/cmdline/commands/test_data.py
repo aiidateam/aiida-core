@@ -443,9 +443,13 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
     """Test verdi data core.trajectory."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, run_cli_command):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile_clean, aiida_localhost, run_cli_command):  # pylint: disable=unused-argument
         """Initialize the profile."""
         # pylint: disable=attribute-defined-outside-init
+        self.comp = aiida_localhost
+        self.this_folder = os.path.dirname(__file__)
+        self.this_file = os.path.basename(__file__)
+        self.pks = self.create_trajectory_data()
         self.cli_runner = run_cli_command
 
     @staticmethod
@@ -509,25 +513,19 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
             DummyVerdiDataListable.EMPTY_GROUP_ID_STR: g_e.pk
         }
 
-    @pytest.mark.usefixtures('aiida_profile')
-    def test_showhelp(self, run_cli_command):
-        res = run_cli_command(cmd_trajectory.trajectory_show, ['--help'])
+    def test_showhelp(self):
+        res = self.cli_runner(cmd_trajectory.trajectory_show, ['--help'])
         assert b'Usage:' in res.stdout_bytes, 'The string "Usage: " was not found in the output' \
-            ' of verdi data trajectory show --help'
+            ' of verdi data trajecotry show --help'
 
-    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_list(self):
-        pks = self.create_trajectory_data()
-        self.data_listing_test(TrajectoryData, str(pks[DummyVerdiDataListable.NODE_ID_STR]), pks)
+        self.data_listing_test(TrajectoryData, str(self.pks[DummyVerdiDataListable.NODE_ID_STR]), self.pks)
 
     @pytest.mark.skipif(not has_pycifrw(), reason='Unable to import PyCifRW')
     @pytest.mark.parametrize('output_flag', ['-o', '--output'])
-    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_export(self, output_flag, tmp_path):
-        """Test the export functionality."""
-        pks = self.create_trajectory_data()
         new_supported_formats = list(cmd_trajectory.EXPORT_FORMATS)
-        self.data_export_test(TrajectoryData, pks, new_supported_formats, output_flag, tmp_path)
+        self.data_export_test(TrajectoryData, self.pks, new_supported_formats, output_flag, tmp_path)
 
     @pytest.mark.parametrize(
         'fmt', (
@@ -543,10 +541,9 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
             ), pytest.param('mpl_pos')
         )
     )
-    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_trajectoryshow(self, fmt, monkeypatch, run_cli_command):
         """Test showing the trajectory data in different formats"""
-        trajectory_pk = self.create_trajectory_data()[DummyVerdiDataListable.NODE_ID_STR]
+        trajectory_pk = self.pks[DummyVerdiDataListable.NODE_ID_STR]
         options = ['--format', fmt, str(trajectory_pk), '--dont-block']
 
         def mock_check_output(options):

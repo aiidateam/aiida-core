@@ -1,0 +1,10 @@
+#!/command/execlineb -P
+
+# Supress rabbitmq version warning
+# it is built using RMQ version > 3.8.15 which has the issue as described in
+# https://github.com/aiidateam/aiida-core/wiki/RabbitMQ-version-to-use
+# We explicitly set consumer_timeout to 100 hours in /etc/rabbitmq/rabbitmq.conf
+verdi config set warnings.rabbitmq_version False
+
+# Supress verdi version warning
+verdi config set warnings.development_version False

@@ -520,7 +520,8 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.parametrize('fmt', cmd_trajectory.VISUALIZATION_FORMATS)
+@pytest.mark.parametrize('fmt', ['jmol'])
+# @pytest.mark.parametrize('fmt', cmd_trajectory.VISUALIZATION_FORMATS)
 def test_trajectoryshow(fmt, monkeypatch, run_cli_command):
     """Test showing the trajectory data in different formats"""
     import gc

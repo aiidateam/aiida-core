@@ -95,3 +95,29 @@ class TestCalcJobNode:
                 # It should return `None` if no scheduler output is there (file not there, or option not set),
                 # while it should return the content if both are set
                 assert node.get_scheduler_stderr() == (stderr if with_file and with_option else None)
+
+    @pytest.mark.parametrize(
+        'retrieve_list, exception, match', (
+            ([], None, None),
+            (['directive'], None, None),
+            ([['path', '.', None]], None, None),
+            ([['path', '.', 1]], None, None),
+            ([['path', '.', 1], 'directive'], None, None),
+            (1, TypeError, 'file retrieval directives has to be a list or tuple'),
+            ([1], ValueError, r'invalid directive, not a list or tuple of length three: .*'),
+            ([['str', 'str']], ValueError, r'invalid directive, not a list or tuple of length three: .*'),
+            ([[1, 'str', 0]], ValueError, r'.*, first element has to be a string representing remote path'),
+            ([['str', 1, 0]], ValueError, r'.*, second element has to be a string representing local path'),
+            ([['s', 's', '0']], ValueError, r'.*, third element has to be an integer representing the depth'),
+        )
+    )
+    def test_set_retrieve_list(self, retrieve_list, exception, match):
+        """Test the :meth:`aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.set_retrieve_list`."""
+        node = CalcJobNode()
+
+        if exception:
+            with pytest.raises(exception, match=match):
+                node.set_retrieve_list(retrieve_list)
+        else:
+            node.set_retrieve_list(retrieve_list)
+            assert node.get_retrieve_list() == retrieve_list

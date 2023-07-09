@@ -10,8 +10,6 @@
 """Definition of known configuration options and methods to parse and get option values."""
 from typing import Any, Dict, List, Tuple
 
-import jsonschema
-
 from aiida.common.exceptions import ConfigurationError
 
 __all__ = ('get_option', 'get_option_names', 'parse_option', 'Option')
@@ -64,6 +62,8 @@ class Option:
 
         """
         # pylint: disable=too-many-branches
+        import jsonschema
+
         from aiida.manage.caching import _validate_identifier_pattern
 
         from .config import ConfigValidationError

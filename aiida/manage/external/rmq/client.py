@@ -5,9 +5,10 @@ from __future__ import annotations
 import typing as t
 from urllib.parse import quote
 
-import requests
-
 from aiida.common.exceptions import AiidaException
+
+if t.TYPE_CHECKING:
+    import requests
 
 __all__ = ('RabbitmqManagementClient', 'ManagementApiConnectionError')
 
@@ -31,6 +32,7 @@ class RabbitmqManagementClient:
         :param hostname: The hostname of the RabbitMQ server.
         :param virtual_host: The virtual host.
         """
+        import requests
         self._username = username
         self._password = password
         self._hostname = hostname
@@ -58,7 +60,7 @@ class RabbitmqManagementClient:
         url_params: dict[str, str] | None = None,
         method: str = 'GET',
         params: dict[str, t.Any] | None = None,
-    ) -> requests.Response:
+    ) -> 'requests.Response':
         """Make a request.
 
         :param url: The resource path with placeholders, e.g., ``queues/{virtual_host}/{queue}``.
@@ -69,6 +71,7 @@ class RabbitmqManagementClient:
         :returns: The response of the request.
         :raises `ManagementApiConnectionError`: If connection to the API cannot be made.
         """
+        import requests
         url = self.format_url(url, url_params)
         try:
             return requests.request(method, url, auth=self._authentication, params=params or {}, timeout=5)

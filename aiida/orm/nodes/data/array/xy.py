@@ -82,7 +82,7 @@ class XyData(ArrayData):
         :param y_names: A list of strings giving the names of the y_arrays
         :param y_units: A list of strings giving the units of the y_arrays
         """
-        import numpy as np
+        import numpy
 
         # for the case of single name, array, tag input converts to a list
         y_arrays = check_convert_single_to_tuple(y_arrays)

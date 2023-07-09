@@ -16,7 +16,6 @@ import sys
 from typing import Any, Optional
 
 import click
-import yaml
 
 CMDLINE_LOGGER = logging.getLogger('verdi')
 
@@ -225,11 +224,15 @@ def _format_dictionary_json_date(dictionary, sort_keys=True):
 
 def _format_yaml(dictionary, sort_keys=True):
     """Return a dictionary formatted as a string using the YAML format."""
+    import yaml
+
     return yaml.dump(dictionary, sort_keys=sort_keys)
 
 
 def _format_yaml_expanded(dictionary, sort_keys=True):
     """Return a dictionary formatted as a string using the expanded YAML format."""
+    import yaml
+
     return yaml.dump(dictionary, sort_keys=sort_keys, default_flow_style=False)
 
 

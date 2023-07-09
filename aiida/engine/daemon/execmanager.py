@@ -62,7 +62,7 @@ def _find_data_node(inputs: MappingType[str, Any], uuid: str) -> Optional[Node]:
     return data_node
 
 
-def upload_calculation(
+async def upload_calculation(
     node: CalcJobNode,
     transport: Transport,
     calc_info: CalcInfo,
@@ -242,7 +242,7 @@ def upload_calculation(
     if not dry_run:
         for filename in folder.get_content_list():
             logger.debug(f'[submission of calculation {node.pk}] copying file/folder {filename}...')
-            transport.put(folder.get_abs_path(filename), filename)
+            await transport.put_async(folder.get_abs_path(filename), filename)
 
         for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_copy_list:
             if remote_computer_uuid == computer.uuid:
@@ -449,7 +449,7 @@ def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     remote_stash.base.links.add_incoming(calculation, link_type=LinkType.CREATE, link_label='remote_stash')
 
 
-def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retrieved_temporary_folder: str) -> None:
+async def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retrieved_temporary_folder: str) -> None:
     """Retrieve all the files of a completed job calculation using the given transport.
 
     If the job defined anything in the `retrieve_temporary_list`, those entries will be stored in the
@@ -488,14 +488,14 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
         retrieve_temporary_list = calculation.get_retrieve_temporary_list()
 
         with SandboxFolder(filepath_sandbox) as folder:
-            retrieve_files_from_list(calculation, transport, folder.abspath, retrieve_list)
+            await retrieve_files_from_list(calculation, transport, folder.abspath, retrieve_list)
             # Here I retrieved everything; now I store them inside the calculation
             retrieved_files.base.repository.put_object_from_tree(folder.abspath)
 
         # Retrieve the temporary files in the retrieved_temporary_folder if any files were
         # specified in the 'retrieve_temporary_list' key
         if retrieve_temporary_list:
-            retrieve_files_from_list(calculation, transport, retrieved_temporary_folder, retrieve_temporary_list)
+            await retrieve_files_from_list(calculation, transport, retrieved_temporary_folder, retrieve_temporary_list)
 
             # Log the files that were retrieved in the temporary folder
             for filename in os.listdir(retrieved_temporary_folder):
@@ -553,7 +553,7 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
             )
 
 
-def retrieve_files_from_list(
+async def retrieve_files_from_list(
     calculation: CalcJobNode, transport: Transport, folder: str, retrieve_list: List[Union[str, Tuple[str, str, int],
                                                                                            list]]
 ) -> None:
@@ -613,4 +613,4 @@ def retrieve_files_from_list(
 
         for rem, loc in zip(remote_names, local_names):
             transport.logger.debug(f"[retrieval of calc {calculation.pk}] Trying to retrieve remote item '{rem}'")
-            transport.get(rem, os.path.join(folder, loc), ignore_nonexisting=True)
+            await transport.get_async(rem, os.path.join(folder, loc), ignore_nonexisting=True)

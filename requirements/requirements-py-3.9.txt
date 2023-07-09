@@ -122,7 +122,7 @@ pillow==9.5.0
 platformdirs==3.6.0
 plotly==5.15.0
 pluggy==1.0.0
-plumpy==0.21.8
+plumpy@git+https://github.com/aiidateam/plumpy.git@async-run#egg=plumpy
 prometheus-client==0.17.0
 prompt-toolkit==3.0.38
 psutil==5.9.5

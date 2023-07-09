@@ -76,7 +76,7 @@ class ProcessStackTest(Process):
     _node_class = orm.WorkflowNode
 
     @override
-    def run(self):
+    async def run(self):
         pass
 
     @override
@@ -298,7 +298,7 @@ class TestProcess:
                 spec.input_namespace('namespace', valid_type=orm.Int, dynamic=True)
                 spec.output_namespace('namespace', valid_type=orm.Int, dynamic=True)
 
-            def run(self):
+            async def run(self):
                 self.out('namespace', self.inputs.namespace)
 
         results, node = run_get_node(TestProcess1, namespace={'alpha': orm.Int(1), 'beta': orm.Int(2)})
@@ -322,7 +322,7 @@ class TestProcess:
                 spec.output_namespace('integer.namespace', valid_type=orm.Int, dynamic=True)
                 spec.output('required_string', valid_type=orm.Str, required=True)
 
-            def run(self):
+            async def run(self):
                 if self.inputs.add_outputs:
                     self.out('required_string', orm.Str('testing').store())
                     self.out('integer.namespace.two', orm.Int(2).store())

@@ -552,7 +552,7 @@ class FunctionProcess(Process):
         self.node.store_source_info(self._func)
 
     @override
-    def run(self) -> 'ExitCode' | None:
+    async def run(self) -> 'ExitCode' | None:
         """Run the process."""
         from .exit_code import ExitCode
 

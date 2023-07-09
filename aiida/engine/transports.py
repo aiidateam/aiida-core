@@ -13,10 +13,12 @@ import contextlib
 import contextvars
 import logging
 import traceback
-from typing import Awaitable, Dict, Hashable, Iterator, Optional
+from typing import TYPE_CHECKING, Awaitable, Dict, Hashable, Iterator, Optional
 
 from aiida.orm import AuthInfo
-from aiida.transports import Transport
+
+if TYPE_CHECKING:
+    from aiida.transports import Transport
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -55,7 +57,7 @@ class TransportQueue:
         return self._loop
 
     @contextlib.contextmanager
-    def request_transport(self, authinfo: AuthInfo) -> Iterator[Awaitable[Transport]]:
+    def request_transport(self, authinfo: AuthInfo) -> Iterator[Awaitable['Transport']]:
         """
         Request a transport from an authinfo.  Because the client is not allowed to
         request a transport immediately they will instead be given back a future

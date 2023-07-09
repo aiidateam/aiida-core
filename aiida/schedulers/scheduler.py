@@ -19,7 +19,9 @@ from aiida.common.escaping import escape_for_bash
 from aiida.common.lang import classproperty
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.schedulers.datastructures import JobInfo, JobResource, JobTemplate, JobTemplateCodeInfo
-from aiida.transports import Transport
+
+if t.TYPE_CHECKING:
+    from aiida.transports import Transport
 
 __all__ = ('Scheduler', 'SchedulerError', 'SchedulerParsingError')
 
@@ -375,7 +377,7 @@ class Scheduler(metaclass=abc.ABCMeta):
 
         return self._transport
 
-    def set_transport(self, transport: Transport):
+    def set_transport(self, transport: 'Transport'):
         """Set the transport to be used to query the machine or to submit scripts.
 
         This class assumes that the transport is open and active.

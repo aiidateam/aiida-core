@@ -60,8 +60,7 @@ class GroupMeta(ABCMeta):
         newcls = ABCMeta.__new__(mcs, name, bases, namespace, **kwargs)  # pylint: disable=too-many-function-args
 
         mod = namespace['__module__']
-        #entry_point_group, entry_point = get_entry_point_from_class(mod, name)
-        entry_point_group = None
+        entry_point_group, entry_point = get_entry_point_from_class(mod, name)
 
         if entry_point_group is None or entry_point_group != 'aiida.groups':
             newcls._type_string = None  # type: ignore[attr-defined]

@@ -52,7 +52,7 @@ jobs:
                   name: base-${{ inputs.architecture }}
                   path: /tmp/base-${{ inputs.architecture }}.tar
                   retention-days: 3
-              if: github.repository == 'aiidateam/aiida-core'
+              if: ${{ !github.event.pull_request.head.repo.fork }}
 
             - name: Upload aiida-core image as artifact 💾
               uses: actions/upload-artifact@v3
@@ -60,4 +60,4 @@ jobs:
                   name: aiida-core-${{ inputs.architecture }}
                   path: /tmp/aiida-core-${{ inputs.architecture }}.tar
                   retention-days: 3
-              if: github.repository == 'aiidateam/aiida-core'
+              if: ${{ !github.event.pull_request.head.repo.fork }}

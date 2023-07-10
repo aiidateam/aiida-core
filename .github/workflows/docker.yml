@@ -28,6 +28,7 @@ jobs:
             runsOn: buildjet-2vcpu-ubuntu-2204-arm
 
     amd64-push-ghcr:
+        if: github.repository == 'aiidateam/aiida-core'
         uses: ./.github/workflows/docker-push.yml
         with:
             architecture: amd64
@@ -38,6 +39,7 @@ jobs:
         needs: [amd64-build]
 
     arm64-push-ghcr:
+        if: github.repository == 'aiidateam/aiida-core'
         uses: ./.github/workflows/docker-push.yml
         with:
             architecture: arm64
@@ -48,6 +50,7 @@ jobs:
         needs: [arm64-build]
 
     merge-tags-ghcr:
+        if: github.repository == 'aiidateam/aiida-core'
         uses: ./.github/workflows/docker-merge-tags.yml
         with:
             registry: ghcr.io
@@ -56,46 +59,46 @@ jobs:
             REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         needs: [amd64-push-ghcr, arm64-push-ghcr]
 
-    #amd64-push-dockerhub:
-    #    if: github.repository == 'aiidateam/aiida-core' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
-    #    uses: ./.github/workflows/docker-push.yml
-    #    strategy:
-    #        matrix:
-    #            image: ["base", "aiida-core"]
-    #    with:
-    #        architecture: amd64
-    #        image: ${{ matrix.image }}
-    #        registry: docker.io
-    #    secrets:
-    #        REGISTRY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-    #        REGISTRY_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-    #    needs: [amd64-build]
+    amd64-push-dockerhub:
+        if: github.repository == 'aiidateam/aiida-core' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+        uses: ./.github/workflows/docker-push.yml
+        strategy:
+            matrix:
+                image: ["base", "aiida-core"]
+        with:
+            architecture: amd64
+            image: ${{ matrix.image }}
+            registry: docker.io
+        secrets:
+            REGISTRY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+            REGISTRY_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        needs: [amd64-build]
 
-    #arm64-push-dockerhub:
-    #    if: github.repository == 'aiidateam/aiida-core' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
-    #    uses: ./.github/workflows/docker-push.yml
-    #    strategy:
-    #        matrix:
-    #            image: ["base", "aiida-core"]
-    #    with:
-    #        architecture: arm64
-    #        image: ${{ matrix.image }}
-    #        registry: docker.io
-    #    secrets:
-    #        REGISTRY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-    #        REGISTRY_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-    #    needs: [arm64-build]
+    arm64-push-dockerhub:
+        if: github.repository == 'aiidateam/aiida-core' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+        uses: ./.github/workflows/docker-push.yml
+        strategy:
+            matrix:
+                image: ["base", "aiida-core"]
+        with:
+            architecture: arm64
+            image: ${{ matrix.image }}
+            registry: docker.io
+        secrets:
+            REGISTRY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+            REGISTRY_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        needs: [arm64-build]
 
-    #merge-tags-dockerhub:
-    #    if: github.repository == 'aiidateam/aiida-core' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
-    #    uses: ./.github/workflows/docker-merge-tags.yml
-    #    strategy:
-    #        matrix:
-    #            image: ["base", "aiida-core"]
-    #    with:
-    #        image: ${{ matrix.image }}
-    #        registry: docker.io
-    #    secrets:
-    #        REGISTRY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-    #        REGISTRY_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-    #    needs: [amd64-push-dockerhub, arm64-push-dockerhub]
+    merge-tags-dockerhub:
+        if: github.repository == 'aiidateam/aiida-core' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+        uses: ./.github/workflows/docker-merge-tags.yml
+        strategy:
+            matrix:
+                image: ["base", "aiida-core"]
+        with:
+            image: ${{ matrix.image }}
+            registry: docker.io
+        secrets:
+            REGISTRY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+            REGISTRY_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        needs: [amd64-push-dockerhub, arm64-push-dockerhub]

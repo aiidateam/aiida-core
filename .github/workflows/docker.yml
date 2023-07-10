@@ -3,9 +3,13 @@ name: Build, test and push Docker Images
 
 on:
     pull_request:
+        paths:
+            - .docker/**
+            - .github/workflows/docker-*.yml
     push:
-        branches:
-            - main
+        paths:
+            - .docker/**
+            - .github/workflows/docker-*.yml
     workflow_dispatch:
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
@@ -22,8 +26,6 @@ jobs:
             runsOn: ubuntu-latest
 
     arm64-build:
-        # This cost the runner minutes, so only run on PRs not from forks
-        if: github.repository == 'aiidateam/aiida-core'
         uses: ./.github/workflows/docker-build-test-upload.yml
         with:
             architecture: arm64

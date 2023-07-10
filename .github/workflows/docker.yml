@@ -22,6 +22,8 @@ jobs:
             runsOn: ubuntu-latest
 
     arm64-build:
+        # This cost the runner minutes, so only run on PRs not from forks
+        if: github.repository == 'aiidateam/aiida-core'
         uses: ./.github/workflows/docker-build-test-upload.yml
         with:
             architecture: arm64
@@ -62,12 +64,8 @@ jobs:
     amd64-push-dockerhub:
         if: github.repository == 'aiidateam/aiida-core' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
         uses: ./.github/workflows/docker-push.yml
-        strategy:
-            matrix:
-                image: ["base", "aiida-core"]
         with:
             architecture: amd64
-            image: ${{ matrix.image }}
             registry: docker.io
         secrets:
             REGISTRY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -77,12 +75,8 @@ jobs:
     arm64-push-dockerhub:
         if: github.repository == 'aiidateam/aiida-core' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
         uses: ./.github/workflows/docker-push.yml
-        strategy:
-            matrix:
-                image: ["base", "aiida-core"]
         with:
             architecture: arm64
-            image: ${{ matrix.image }}
             registry: docker.io
         secrets:
             REGISTRY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -92,11 +86,7 @@ jobs:
     merge-tags-dockerhub:
         if: github.repository == 'aiidateam/aiida-core' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
         uses: ./.github/workflows/docker-merge-tags.yml
-        strategy:
-            matrix:
-                image: ["base", "aiida-core"]
         with:
-            image: ${{ matrix.image }}
             registry: docker.io
         secrets:
             REGISTRY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}

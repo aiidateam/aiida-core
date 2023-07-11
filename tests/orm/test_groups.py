@@ -332,7 +332,7 @@ class TestGroupsSubclasses:
             class SubGroup(orm.Group):
                 pass
 
-        assert SubGroup._type_string is None  # pylint: disable=protected-access
+            assert SubGroup._type_string is None  # pylint: disable=protected-access
 
         # Creating an instance is allowed
         instance = SubGroup(label=uuid.uuid4().hex)

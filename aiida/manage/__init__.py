@@ -42,7 +42,6 @@ __all__ = (
     'Option',
     'Postgres',
     'PostgresConnectionMode',
-    'ProcessLauncher',
     'Profile',
     'RabbitmqManagementClient',
     'check_and_migrate_config',

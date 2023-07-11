@@ -7,25 +7,17 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module with utilities to interact with RabbitMQ."""
+"""Module with RabbitMQ launcher. We use a separate module to avoid import plumpy."""
 
 # AUTO-GENERATED
 
 # yapf: disable
 # pylint: disable=wildcard-import
 
-from .client import *
-from .defaults import *
-from .utils import *
+from .launcher import *
 
 __all__ = (
-    'BROKER_DEFAULTS',
-    'ManagementApiConnectionError',
-    'RabbitmqManagementClient',
-    'get_launch_queue_name',
-    'get_message_exchange_name',
-    'get_rmq_url',
-    'get_task_exchange_name',
+    'ProcessLauncher',
 )
 
 # yapf: enable

@@ -10,8 +10,6 @@
 """Click parameter types for paths."""
 import os
 from socket import timeout
-import urllib.error
-import urllib.request
 
 import click
 
@@ -88,6 +86,9 @@ class PathOrUrl(click.Path):
 
     def checks_url(self, url, param, ctx):
         """Check whether URL is reachable within timeout."""
+        import urllib.error
+        import urllib.request
+
         try:
             with urllib.request.urlopen(url, timeout=self.timeout_seconds):
                 pass
@@ -123,6 +124,9 @@ class FileOrUrl(click.File):
 
     def get_url(self, url, param, ctx):
         """Retrieve file from URL."""
+        import urllib.error
+        import urllib.request
+
         try:
             return urllib.request.urlopen(url, timeout=self.timeout_seconds)  # pylint: disable=consider-using-with
         except (urllib.error.URLError, urllib.error.HTTPError, timeout):

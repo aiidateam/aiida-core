@@ -17,7 +17,6 @@ from typing import TYPE_CHECKING
 
 import click
 
-from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
 from aiida.common import exceptions
 from aiida.common.folders import Folder
 from aiida.common.lang import type_check
@@ -331,6 +330,8 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     @classmethod
     def _get_cli_options(cls) -> dict:
         """Return the CLI options that would allow to create an instance of this class."""
+        from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
+
         return {
             'label': {
                 'short_name': '-L',

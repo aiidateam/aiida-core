@@ -20,7 +20,6 @@ import pathlib
 
 import click
 
-from aiida.cmdline.params.types import ComputerParamType
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.common.log import override_log_level
@@ -179,6 +178,8 @@ class InstalledCode(Code):
     @classmethod
     def _get_cli_options(cls) -> dict:
         """Return the CLI options that would allow to create an instance of this class."""
+        from aiida.cmdline.params.types import ComputerParamType
+
         options = {
             'computer': {
                 'short_name': '-Y',

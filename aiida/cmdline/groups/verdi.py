@@ -12,8 +12,6 @@ from aiida.common.exceptions import ConfigurationError
 from aiida.common.extendeddicts import AttributeDict
 from aiida.manage.configuration import get_config
 
-from ..params import options
-
 __all__ = ('VerdiCommandGroup',)
 
 GIU = (
@@ -61,6 +59,8 @@ class VerdiCommandGroup(click.Group):
     @staticmethod
     def add_verbosity_option(cmd: click.Command):
         """Apply the ``verbosity`` option to the command, which is common to all ``verdi`` commands."""
+        from ..params import options
+
         # Only apply the option if it hasn't been already added in a previous call.
         if cmd is not None and 'verbosity' not in [param.name for param in cmd.params]:
             cmd = options.VERBOSITY()(cmd)

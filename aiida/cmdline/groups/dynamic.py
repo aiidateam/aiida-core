@@ -11,8 +11,6 @@ import click
 from aiida.common import exceptions
 from aiida.plugins.entry_point import ENTRY_POINT_GROUP_FACTORY_MAPPING, get_entry_point_names
 
-from ..params import options
-from ..params.options.interactive import InteractiveOption
 from .verdi import VerdiCommandGroup
 
 __all__ = ('DynamicEntryPointCommandGroup',)
@@ -93,6 +91,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
         :param entry_point: The entry point.
         """
+        from ..params import options
 
         def apply_options(func):
             """Decorate the command function with the appropriate options for the given entry point."""
@@ -125,6 +124,8 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
     @staticmethod
     def create_option(name, spec):
         """Create a click option from a name and a specification."""
+        from ..params.options.interactive import InteractiveOption
+
         spec = copy.deepcopy(spec)
 
         is_flag = spec.pop('is_flag', False)

@@ -30,7 +30,7 @@ ENTRY_POINT_GROUP_PREFIX = 'aiida.'
 ENTRY_POINT_STRING_SEPARATOR = ':'
 
 
-@functools.lru_cache(maxsize=1)
+@functools.cache
 def eps():
     from importlib_metadata import entry_points
     return entry_points()

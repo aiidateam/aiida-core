@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """Utilites for RabbitMQ."""
-from urllib.parse import urlencode, urlunparse
 
 from . import defaults
 
@@ -25,6 +24,8 @@ def get_rmq_url(protocol=None, username=None, password=None, host=None, port=Non
     :param kwargs: remaining keyword arguments that will be encoded as query parameters.
     :returns: the connection URL string.
     """
+    from urllib.parse import urlencode, urlunparse
+
     if 'heartbeat' not in kwargs:
         kwargs['heartbeat'] = defaults.BROKER_DEFAULTS.heartbeat
 

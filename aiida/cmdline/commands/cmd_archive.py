@@ -14,7 +14,6 @@ import logging
 from pathlib import Path
 import traceback
 from typing import List, Tuple
-import urllib.request
 
 import click
 from click_spinner import spinner
@@ -432,6 +431,8 @@ def _import_archive_and_migrate(
     :param try_migration: whether to try a migration if the import raises `IncompatibleStorageSchema`
 
     """
+    import urllib.request
+
     from aiida.common.folders import SandboxFolder
     from aiida.tools.archive.abstract import get_format
     from aiida.tools.archive.imports import import_archive as _import_archive

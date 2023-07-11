@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA Group entites"""
-from abc import ABCMeta
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
 import warnings
@@ -49,28 +48,6 @@ def load_group_class(type_string: str) -> Type['Group']:
         group_class = Group
 
     return group_class
-
-
-class GroupMeta(ABCMeta):
-    """Meta class for `aiida.orm.groups.Group` to automatically set the `type_string` attribute."""
-
-    def __new__(mcs, name, bases, namespace, **kwargs):
-        from aiida.plugins.entry_point import get_entry_point_from_class
-
-        newcls = ABCMeta.__new__(mcs, name, bases, namespace, **kwargs)  # pylint: disable=too-many-function-args
-
-        mod = namespace['__module__']
-        entry_point_group, entry_point = get_entry_point_from_class(mod, name)
-
-        if entry_point_group is None or entry_point_group != 'aiida.groups':
-            newcls._type_string = None  # type: ignore[attr-defined]
-            message = f'no registered entry point for `{mod}:{name}` so its instances will not be storable.'
-            warnings.warn(message)  # pylint: disable=no-member
-        else:
-            assert entry_point is not None
-            newcls._type_string = entry_point.name  # type: ignore[attr-defined]  # pylint: disable=protected-access
-
-        return newcls
 
 
 class GroupCollection(entities.Collection['Group']):
@@ -125,11 +102,10 @@ class GroupBase:
         return extras.EntityExtras(self._group)
 
 
-class Group(entities.Entity['BackendGroup', GroupCollection], metaclass=GroupMeta):
+class Group(entities.Entity['BackendGroup', GroupCollection]):
     """An AiiDA ORM implementation of group of nodes."""
 
-    # added by metaclass
-    _type_string: ClassVar[Optional[str]]
+    __type_string: ClassVar[Optional[str]]
 
     _CLS_COLLECTION = GroupCollection
 
@@ -165,6 +141,25 @@ class Group(entities.Entity['BackendGroup', GroupCollection], metaclass=GroupMet
         )
         super().__init__(model)
 
+    @classproperty
+    def _type_string(cls) -> Optional[str]:
+        from aiida.plugins.entry_point import get_entry_point_from_class
+
+        if hasattr(cls, '__type_string'):
+            return cls.__type_string
+
+        mod, name = cls.__module__, cls.__name__
+        entry_point_group, entry_point = get_entry_point_from_class(mod, name)
+
+        if entry_point_group is None or entry_point_group != 'aiida.groups':
+            cls.__type_string = None  # type: ignore[misc]  # pylint: disable=protected-access
+            message = f'no registered entry point for `{mod}:{name}` so its instances will not be storable.'
+            warnings.warn(message)  # pylint: disable=no-member
+        else:
+            assert entry_point is not None
+            cls.__type_string = entry_point.name  # type: ignore[misc]  # pylint: disable=protected-access
+        return cls.__type_string
+
     @cached_property
     def base(self) -> GroupBase:
         """Return the group base namespace."""
@@ -193,6 +188,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection], metaclass=GroupMet
         :return: the associated entry point or ``None`` if it isn't known.
         """
         from aiida.plugins.entry_point import get_entry_point_from_class
+
         return get_entry_point_from_class(cls.__module__, cls.__name__)[1]
 
     @property

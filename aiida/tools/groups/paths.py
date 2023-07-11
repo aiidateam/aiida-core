@@ -60,7 +60,7 @@ class GroupPath:
     See tests for usage examples.
     """
 
-    def __init__(self, path: str = '', cls: orm.groups.GroupMeta = orm.Group, warn_invalid_child: bool = True) -> None:
+    def __init__(self, path: str = '', cls: orm.groups.Group = orm.Group, warn_invalid_child: bool = True) -> None:
         """Instantiate the class.
 
         :param path: The initial path of the group.
@@ -126,7 +126,7 @@ class GroupPath:
         return self._delimiter
 
     @property
-    def cls(self) -> orm.groups.GroupMeta:
+    def cls(self) -> orm.groups.Group:
         """Return the cls used to query for and instantiate a ``Group`` with."""
         return self._cls
 

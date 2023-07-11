@@ -26,7 +26,7 @@ class DummyProcess(Process):
         spec.inputs.valid_type = Data
         spec.outputs.valid_type = Data
 
-    def run(self):
+    async def run(self):
         pass
 
 
@@ -42,7 +42,7 @@ class AddProcess(Process):
         spec.input('b', required=True)
         spec.output('result', required=True)
 
-    def run(self):
+    async def run(self):
         summed = self.inputs.a + self.inputs.b
         self.out(summed.store())
 
@@ -57,7 +57,7 @@ class BadOutput(Process):
         super().define(spec)
         spec.outputs.valid_type = Data
 
-    def run(self):
+    async def run(self):
         self.out('bad_output', 5)
 
 
@@ -66,7 +66,7 @@ class ExceptionProcess(Process):
 
     _node_class = WorkflowNode
 
-    def run(self):
+    async def run(self):
         raise RuntimeError('CRASH')
 
 
@@ -75,7 +75,7 @@ class WaitProcess(Process):
 
     _node_class = WorkflowNode
 
-    def run(self):
+    async def run(self):
         return plumpy.Wait(self.next_step)
 
     def next_step(self):
@@ -95,7 +95,7 @@ class InvalidateCaching(Process):
             123, 'GENERIC_EXIT_CODE', message='This process should not be used as cache.', invalidates_cache=True
         )
 
-    def run(self):
+    async def run(self):
         if self.inputs.return_exit_code:
             return self.exit_codes.GENERIC_EXIT_CODE  # pylint: disable=no-member
 
@@ -110,7 +110,7 @@ class IsValidCacheHook(Process):
         super().define(spec)
         spec.input('not_valid_cache', valid_type=Bool, default=lambda: Bool(False))
 
-    def run(self):
+    async def run(self):
         pass
 
     @classmethod

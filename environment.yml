@@ -23,7 +23,7 @@ dependencies:
 - importlib-metadata~=4.13
 - numpy~=1.21
 - paramiko>=2.7.2,~=2.7
-- plumpy~=0.21.6
+- plumpy@ git+https://github.com/aiidateam/plumpy.git@async-run#egg=plumpy
 - pgsu~=0.2.1
 - psutil~=5.6
 - psycopg2-binary~=2.8

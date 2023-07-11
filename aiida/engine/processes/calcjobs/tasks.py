@@ -92,7 +92,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
                 except Exception as exception:  # pylint: disable=broad-except
                     raise PreSubmitException('exception occurred in presubmit call') from exception
                 else:
-                    execmanager.upload_calculation(node, transport, calc_info, folder)
+                    await execmanager.upload_calculation(node, transport, calc_info, folder)
                     skip_submit = calc_info.skip_submit or False
 
             return skip_submit
@@ -310,7 +310,7 @@ async def task_retrieve_job(
 
             if node.get_job_id() is None:
                 logger.warning(f'there is no job id for CalcJobNoe<{node.pk}>: skipping `get_detailed_job_info`')
-                return execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder)
+                return await execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder)
 
             try:
                 detailed_job_info = scheduler.get_detailed_job_info(node.get_job_id())
@@ -320,7 +320,7 @@ async def task_retrieve_job(
             else:
                 node.set_detailed_job_info(detailed_job_info)
 
-            return execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder)
+            return await execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder)
 
     try:
         logger.info(f'scheduled request to retrieve CalcJob<{node.pk}>')

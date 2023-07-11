@@ -148,7 +148,8 @@ def test_hierarchy_utility(file_hierarchy, tmp_path):
     (['file_a.txt', 'file_u.txt', 'path/file_u.txt', ('path/sub/file_u.txt', '.', 3)], {'file_a.txt': 'file_a'}),
 ))
 # yapf: enable
-def test_retrieve_files_from_list(
+@pytest.mark.asyncio
+async def test_retrieve_files_from_list(
     tmp_path_factory, generate_calculation_node, file_hierarchy, retrieve_list, expected_hierarchy
 ):
     """Test the `retrieve_files_from_list` function."""
@@ -160,7 +161,7 @@ def test_retrieve_files_from_list(
     with LocalTransport() as transport:
         node = generate_calculation_node()
         transport.chdir(source)
-        execmanager.retrieve_files_from_list(node, transport, target, retrieve_list)
+        await execmanager.retrieve_files_from_list(node, transport, target, retrieve_list)
 
     assert serialize_file_hierarchy(target) == expected_hierarchy
 
@@ -178,7 +179,8 @@ def test_retrieve_files_from_list(
     (['sub', 'target'], {'target': {'b': 'file_b'}}),
 ))
 # yapf: enable
-def test_upload_local_copy_list(
+@pytest.mark.asyncio
+async def test_upload_local_copy_list(
     fixture_sandbox, node_and_calc_info, file_hierarchy_simple, tmp_path, local_copy_list, expected_hierarchy
 ):
     """Test the ``local_copy_list`` functionality in ``upload_calculation``."""
@@ -191,7 +193,7 @@ def test_upload_local_copy_list(
     calc_info.local_copy_list = [[folder.uuid] + local_copy_list]
 
     with LocalTransport() as transport:
-        execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+        await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
 
     # Check that none of the files were written to the repository of the calculation node, since they were communicated
     # through the ``local_copy_list``.
@@ -202,7 +204,8 @@ def test_upload_local_copy_list(
     assert written_hierarchy == expected_hierarchy
 
 
-def test_upload_local_copy_list_files_folders(fixture_sandbox, node_and_calc_info, file_hierarchy, tmp_path):
+@pytest.mark.asyncio
+async def test_upload_local_copy_list_files_folders(fixture_sandbox, node_and_calc_info, file_hierarchy, tmp_path):
     """Test the ``local_copy_list`` functionality in ``upload_calculation``.
 
     Specifically, verify that files in the ``local_copy_list`` do not end up in the repository of the node.
@@ -226,7 +229,7 @@ def test_upload_local_copy_list_files_folders(fixture_sandbox, node_and_calc_inf
     ]
 
     with LocalTransport() as transport:
-        execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+        await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
 
     # Check that none of the files were written to the repository of the calculation node, since they were communicated
     # through the ``local_copy_list``.

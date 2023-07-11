@@ -449,6 +449,16 @@ class Transport(abc.ABC):
         :param localpath: (str) local_folder_path
         """
 
+    async def get_async(self, remotepath, localpath, *args, **kwargs):
+        """
+        Retrieve a file or folder from remote source to local destination
+        dst must be an absolute path (src not necessarily)
+
+        :param remotepath: (str) remote_folder_path
+        :param localpath: (str) local_folder_path
+        """
+        return self.get(remotepath, localpath, *args, **kwargs)
+
     @abc.abstractmethod
     def getfile(self, remotepath, localpath, *args, **kwargs):
         """
@@ -621,6 +631,17 @@ class Transport(abc.ABC):
         :param str localpath: absolute path to local source
         :param str remotepath: path to remote destination
         """
+
+    async def put_async(self, localpath, remotepath, *args, **kwargs):
+        """
+        Put a file or a directory from local src to remote dst.
+        src must be an absolute path (dst not necessarily))
+        Redirects to putfile and puttree.
+
+        :param str localpath: absolute path to local source
+        :param str remotepath: path to remote destination
+        """
+        return self.put(localpath, remotepath, *args, **kwargs)
 
     @abc.abstractmethod
     def putfile(self, localpath, remotepath, *args, **kwargs):

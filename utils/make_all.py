@@ -154,8 +154,6 @@ if __name__ == '__main__':
         'cmdline/params': ['arguments', 'options'],
         # skipped since this is for testing only not general use
         'manage': ['tests'],
-        # skip since we want to lazy load plumpy
-        'manage/external/rmq': ['launcher'],
         # skipped since we don't want to expose the implementation at the top-level
         'storage': ['psql_dos', 'sqlite_zip', 'sqlite_temp'],
         'orm': ['implementation'],

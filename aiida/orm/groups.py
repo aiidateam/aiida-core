@@ -142,7 +142,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         super().__init__(model)
 
     @classproperty
-    def _type_string(cls) -> str:
+    def _type_string(cls) -> Optional[str]:
         from aiida.plugins.entry_point import get_entry_point_from_class
 
         if hasattr(cls, '__type_string'):
@@ -152,12 +152,12 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         entry_point_group, entry_point = get_entry_point_from_class(mod, name)
 
         if entry_point_group is None or entry_point_group != 'aiida.groups':
-            cls.__type_string = None  # type: ignore[attr-defined]
+            cls.__type_string = None  # type: ignore[misc]  # pylint: disable=protected-access
             message = f'no registered entry point for `{mod}:{name}` so its instances will not be storable.'
             warnings.warn(message)  # pylint: disable=no-member
         else:
             assert entry_point is not None
-            cls.__type_string = entry_point.name  # type: ignore[attr-defined]  # pylint: disable=protected-access
+            cls.__type_string = entry_point.name  # type: ignore[misc]  # pylint: disable=protected-access
         return cls.__type_string
 
     @cached_property

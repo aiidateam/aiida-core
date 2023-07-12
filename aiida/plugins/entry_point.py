@@ -38,7 +38,7 @@ def eps():
 
 @functools.lru_cache(maxsize=100)
 def eps_select(group, name=None):
-    return eps().select(group=group, name=name)
+    return eps().select(group=group, name=name)  # type: ignore[attr-defined]
 
 
 class EntryPointFormat(enum.Enum):

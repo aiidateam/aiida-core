@@ -441,6 +441,10 @@ ignore_missing_imports = true
 module = 'plumpy'
 ignore_errors = true
 
+[[tool.mypy.overrides]]
+module = 'aiida.manage.configuration.schema.fastjsonschema_validate_v9'
+ignore_errors = true
+
 [tool.tox]
 legacy_tox_ini = """
 [tox]

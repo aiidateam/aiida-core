@@ -9,13 +9,14 @@
 ###########################################################################
 # pylint: disable=redefined-outer-name
 """Tests for the :mod:`~aiida.plugins.entry_point` module."""
+from importlib_metadata import EntryPoint as EP
+from importlib_metadata import EntryPoints
 import pytest
 
 from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.plugins import entry_point
-from aiida.plugins.entry_point import EntryPoint as EP  # type: ignore
-from aiida.plugins.entry_point import EntryPoints, get_entry_point, validate_registered_entry_points  # type: ignore
+from aiida.plugins.entry_point import get_entry_point, validate_registered_entry_points
 
 
 def test_validate_registered_entry_points():

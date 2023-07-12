@@ -92,7 +92,7 @@ class Option:
         try:
             fastjsonschema.validate(data=value, definition=self.schema)
         except fastjsonschema.JsonSchemaException as exc:
-            raise ConfigValidationError(message=exc.message, keypath=[self.name, *(exc.path or [])], schema=self.schema)
+            raise ConfigValidationError(message=exc.message, keypath=[self.name, *(exc.path or [])], schema=self.schema)  # pylint: disable=no-member
 
         # special caching validation
         if self.name in ('caching.enabled_for', 'caching.disabled_for'):

@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=W,C,R
+# pylint: disable=too-many-lines
 # Generated as:
 # python3 -m fastjsonschema < config-v9.schema.json > fastjsonschema_validate_v9.py
 # WARNING: Must be regenerated up each schema version update!

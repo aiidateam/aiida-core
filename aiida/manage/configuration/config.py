@@ -9,7 +9,7 @@
 ###########################################################################
 """Module that defines the configuration file of an AiiDA instance and functions to create and load it."""
 import codecs
-from functools import lru_cache
+import functools
 from importlib.resources import files
 import json
 import os
@@ -28,7 +28,7 @@ __all__ = ('Config', 'config_schema', 'ConfigValidationError')
 SCHEMA_FILE = 'config-v9.schema.json'
 
 
-@lru_cache(1)
+@functools.cache
 def config_schema() -> Dict[str, Any]:
     """Return the configuration schema."""
     return json.loads(files(schema_module).joinpath(SCHEMA_FILE).read_text(encoding='utf8'))
@@ -124,13 +124,12 @@ class Config:  # pylint: disable=too-many-public-methods
     @staticmethod
     def validate(config: dict, filepath: Optional[str] = None):
         """Validate a configuration dictionary."""
-        import jsonschema
+        from .schema.fastjsonschema_validate_v9 import JsonSchemaValueException, validate
+
         try:
-            jsonschema.validate(instance=config, schema=config_schema())
-        except jsonschema.ValidationError as error:
-            raise ConfigValidationError(
-                message=error.message, keypath=error.path, schema=error.schema, filepath=filepath
-            )
+            validate(data=config)
+        except JsonSchemaValueException as error:
+            raise ConfigValidationError(message=error.message, keypath=error.path, schema=None, filepath=filepath)
 
     def __init__(self, filepath: str, config: dict, validate: bool = True):
         """Instantiate a configuration object from a configuration dictionary and its filepath.

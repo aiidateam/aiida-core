@@ -62,11 +62,11 @@ class Option:
 
         """
         # pylint: disable=too-many-branches
-        import jsonschema
 
         from aiida.manage.caching import _validate_identifier_pattern
 
         from .config import ConfigValidationError
+        from .schema.fastjsonschema_validate_v9 import JsonSchemaValueException, validate
 
         if cast:
             try:
@@ -90,9 +90,11 @@ class Option:
                 pass
 
         try:
-            jsonschema.validate(instance=value, schema=self.schema)
-        except jsonschema.ValidationError as exc:
-            raise ConfigValidationError(message=exc.message, keypath=[self.name, *(exc.path or [])], schema=exc.schema)
+            validate(data=value)
+        except JsonSchemaValueException as error:
+            raise ConfigValidationError(
+                message=error.message, keypath=[self.name, *(error.path or [])], schema=None, filepath=filepath
+            )
 
         # special caching validation
         if self.name in ('caching.enabled_for', 'caching.disabled_for'):

@@ -11,7 +11,7 @@
 import enum
 import functools
 import traceback
-from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Set, Tuple
+from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Set, Tuple, Union
 
 from aiida.common.exceptions import LoadingEntryPointError, MissingEntryPointError, MultipleEntryPointError
 from aiida.common.warnings import warn_deprecation
@@ -31,7 +31,7 @@ ENTRY_POINT_STRING_SEPARATOR = ':'
 
 
 @functools.cache
-def eps() -> 'SelectableGroups':
+def eps() -> 'Union[EntryPoints, SelectableGroups]':
     from importlib_metadata import entry_points
     return entry_points()
 

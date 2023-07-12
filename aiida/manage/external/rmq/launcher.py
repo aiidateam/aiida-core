@@ -9,8 +9,6 @@ import plumpy
 
 LOGGER = logging.getLogger(__name__)
 
-__all__ = ('ProcessLauncher',)
-
 
 class ProcessLauncher(plumpy.ProcessLauncher):
     """A sub class of :class:`plumpy.ProcessLauncher` to launch a ``Process``.

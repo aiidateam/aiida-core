@@ -22,7 +22,7 @@ from . import factories
 # but was then updated in python 3.10 to use an improved API.
 # So for now we use the backport importlib_metadata package.
 if TYPE_CHECKING:
-    from importlib_metadata import EntryPoint, EntryPoints
+    from importlib_metadata import EntryPoint, EntryPoints, SelectableGroups
 
 __all__ = ('load_entry_point', 'load_entry_point_from_string', 'parse_entry_point', 'get_entry_points')
 
@@ -31,14 +31,14 @@ ENTRY_POINT_STRING_SEPARATOR = ':'
 
 
 @functools.cache
-def eps():
+def eps() -> 'SelectableGroups':
     from importlib_metadata import entry_points
     return entry_points()
 
 
 @functools.lru_cache(maxsize=100)
-def eps_select(group, name=None):
-    return eps().select(group=group, name=name)  # type: ignore[attr-defined]
+def eps_select(group, name=None) -> 'EntryPoints':
+    return eps().select(group=group, name=name)
 
 
 class EntryPointFormat(enum.Enum):
@@ -260,7 +260,7 @@ def get_entry_point_groups() -> Set[str]:
 
 def get_entry_point_names(group: str, sort: bool = True) -> List[str]:
     """Return the entry points within a group."""
-    group_names = list(eps_select.select(group=group).names)
+    group_names = list(eps_select(group=group).names)
     if sort:
         return sorted(group_names)
     return group_names

@@ -13,16 +13,16 @@ import functools
 import traceback
 from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Set, Tuple
 
+from aiida.common.exceptions import LoadingEntryPointError, MissingEntryPointError, MultipleEntryPointError
+from aiida.common.warnings import warn_deprecation
+
+from . import factories
+
 # importlib.metadata was introduced into the standard library in python 3.8,
 # but was then updated in python 3.10 to use an improved API.
 # So for now we use the backport importlib_metadata package.
 if TYPE_CHECKING:
     from importlib_metadata import EntryPoint, EntryPoints
-
-from aiida.common.exceptions import LoadingEntryPointError, MissingEntryPointError, MultipleEntryPointError
-from aiida.common.warnings import warn_deprecation
-
-from . import factories
 
 __all__ = ('load_entry_point', 'load_entry_point_from_string', 'parse_entry_point', 'get_entry_points')
 
@@ -34,6 +34,11 @@ ENTRY_POINT_STRING_SEPARATOR = ':'
 def eps():
     from importlib_metadata import entry_points
     return entry_points()
+
+
+@functools.lru_cache(maxsize=100)
+def eps_select(group, name=None):
+    return eps().select(group=group, name=name)
 
 
 class EntryPointFormat(enum.Enum):
@@ -255,8 +260,7 @@ def get_entry_point_groups() -> Set[str]:
 
 def get_entry_point_names(group: str, sort: bool = True) -> List[str]:
     """Return the entry points within a group."""
-    all_eps = eps()
-    group_names = list(all_eps.select(group=group).names)
+    group_names = list(eps_select.select(group=group).names)
     if sort:
         return sorted(group_names)
     return group_names
@@ -269,7 +273,7 @@ def get_entry_points(group: str) -> 'EntryPoints':
     :param group: the entry point group
     :return: a list of entry points
     """
-    return eps().select(group=group)
+    return eps_select(group=group)
 
 
 def get_entry_point(group: str, name: str) -> 'EntryPoint':
@@ -284,7 +288,7 @@ def get_entry_point(group: str, name: str) -> 'EntryPoint':
     """
     # The next line should be removed for ``aiida-core==3.0`` when the old deprecated entry points are fully removed.
     name = convert_potentially_deprecated_entry_point(group, name)
-    found = eps().select(group=group, name=name)
+    found = eps_select(group=group, name=name)
     if name not in found.names:
         raise MissingEntryPointError(f"Entry point '{name}' not found in group '{group}'")
     # If multiple entry points are found and they have different values we raise, otherwise if they all

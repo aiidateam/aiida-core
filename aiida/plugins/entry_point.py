@@ -38,6 +38,8 @@ def eps() -> 'Union[EntryPoints, SelectableGroups]':
 
 @functools.lru_cache(maxsize=100)
 def eps_select(group, name=None) -> 'EntryPoints':
+    if name is None:
+        return eps().select(group=group)
     return eps().select(group=group, name=name)
 
 
@@ -260,7 +262,7 @@ def get_entry_point_groups() -> Set[str]:
 
 def get_entry_point_names(group: str, sort: bool = True) -> List[str]:
     """Return the entry points within a group."""
-    group_names = list(eps_select(group=group).names)
+    group_names = list(get_entry_points(group).names)
     if sort:
         return sorted(group_names)
     return group_names

@@ -22,7 +22,9 @@ from . import factories
 # but was then updated in python 3.10 to use an improved API.
 # So for now we use the backport importlib_metadata package.
 if TYPE_CHECKING:
-    from importlib_metadata import EntryPoint, EntryPoints, SelectableGroups
+    from importlib_metadata import EntryPoints, SelectableGroups
+# DH: Temporarily import EntryPoint to resolve test issues
+from importlib_metadata import EntryPoint
 
 __all__ = ('load_entry_point', 'load_entry_point_from_string', 'parse_entry_point', 'get_entry_points')
 
@@ -115,8 +117,6 @@ ENTRY_POINT_GROUP_FACTORY_MAPPING = {
 
 def parse_entry_point(group: str, spec: str) -> 'EntryPoint':
     """Return an entry point, given its group and spec (as formatted in the setup)"""
-    from importlib_metadata import EntryPoint
-
     name, value = spec.split('=', maxsplit=1)
     return EntryPoint(group=group, name=name.strip(), value=value.strip())
 

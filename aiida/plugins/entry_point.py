@@ -13,6 +13,9 @@ import functools
 import traceback
 from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Set, Tuple, Union
 
+# DH: Temporarily import EntryPoint to resolve test issues
+from importlib_metadata import EntryPoint
+
 from aiida.common.exceptions import LoadingEntryPointError, MissingEntryPointError, MultipleEntryPointError
 from aiida.common.warnings import warn_deprecation
 
@@ -23,8 +26,6 @@ from . import factories
 # So for now we use the backport importlib_metadata package.
 if TYPE_CHECKING:
     from importlib_metadata import EntryPoints, SelectableGroups
-# DH: Temporarily import EntryPoint to resolve test issues
-from importlib_metadata import EntryPoint
 
 __all__ = ('load_entry_point', 'load_entry_point_from_string', 'parse_entry_point', 'get_entry_points')
 
@@ -38,7 +39,7 @@ def eps() -> 'Union[EntryPoints, SelectableGroups]':
     return entry_points()
 
 
-@functools.lru_cache(maxsize=100)
+#@functools.lru_cache(maxsize=100)
 def eps_select(group, name=None) -> 'EntryPoints':
     if name is None:
         return eps().select(group=group)

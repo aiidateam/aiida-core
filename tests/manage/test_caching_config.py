@@ -267,7 +267,7 @@ def test_disable_caching_global(configure_caching):
 @pytest.mark.parametrize(
     'identifier', [
         'aiida.spam:Ni', 'aiida.calculations:With:second_separator', 'aiida.sp*:Ni', 'aiida.sp*!bar',
-        'startswith.number.2bad', 'some.thing.in.this.is.a.keyword'
+        'startswith.number.2bad', 'some.thing.in.this.is.a.keyword', 'invalid_module.AClass'
     ]
 )
 def test_enable_disable_invalid(identifier):

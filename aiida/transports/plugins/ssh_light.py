@@ -1,13 +1,19 @@
 # -*- coding: utf-8 -*-
+"""SSH tranport plugin that requires very little setup."""
+import os
 from pathlib import Path
+import re
 import stat
 
 import fabric
 
+from aiida import transports
+
 from .. import transport
 
 
-class SshLightTransport(transport.Transport):
+class SshLightTransport(transport.Transport):  # pylint: disable=too-many-public-methods
+    """Lightweight, easy to setup SSH transport plugin."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -20,7 +26,7 @@ class SshLightTransport(transport.Transport):
         self.connection.run(command, hide=True, warn=True, **kwargs)
 
     def chdir(self, path):
-        raise NotImplementedError
+        self.sftp.chdir(path)
 
     def chmod(self, path, mode):
         """Change permissions to path."""
@@ -28,7 +34,7 @@ class SshLightTransport(transport.Transport):
 
     def chown(self, path, uid, gid):
         """Change owner permissions of a file."""
-        raise NotImplementedError
+        raise self.sftp.chown(path=path, uid=uid, gid=gid)
 
     def close(self):
         """Close the SSH connection."""
@@ -37,10 +43,10 @@ class SshLightTransport(transport.Transport):
             self.connection.close()
 
     def copyfile(self, remotesource, remotedestination, dereference=False):
-        raise NotImplementedError
+        return self.copy(remotesource, remotedestination, dereference)
 
     def copytree(self, remotesource, remotedestination, dereference=False):
-        raise NotImplementedError
+        return self.copy(remotesource, remotedestination, dereference, recursive=True)
 
     def copy(self, remotesource, remotedestination, dereference=False, recursive=True):
         raise NotImplementedError
@@ -69,7 +75,11 @@ class SshLightTransport(transport.Transport):
 
     def get_attribute(self, path):
         """Returns the object Fileattribute, specified in aiida.transports."""
-        raise NotImplementedError
+        paramiko_attr = self.sftp.lstat(path)
+        aiida_attr = transports.util.FileAttribute()
+        for key in aiida_attr._valid_fields:  # pylint: disable=protected-access
+            aiida_attr[key] = getattr(paramiko_attr, key)
+        return aiida_attr
 
     def getcwd(self):
         """Return the current working directory for this SFTP session, as emulated by paramiko."""
@@ -107,7 +117,7 @@ class SshLightTransport(transport.Transport):
         raise NotImplementedError
 
     def gotocomputer_command(self, remotedir):
-        raise NotImplementedError
+        return f'ssh -t {self.hostname} {self._gotocomputer_string(remotedir)}'
 
     def isdir(self, path):
         """Check if the given path is a directory."""
@@ -127,10 +137,20 @@ class SshLightTransport(transport.Transport):
             raise
 
     def listdir(self, path='.', pattern=None):
-        raise NotImplementedError
+        if not pattern:
+            return self.sftp.listdir(path)
+        if path.startswith('/'):
+            base_dir = path
+        else:
+            base_dir = os.path.join(self.getcwd(), path)
+
+        filtered_list = self.glob(os.path.join(base_dir, pattern))
+        if not base_dir.endswith('/'):
+            base_dir += '/'
+        return [re.sub(base_dir, '', i) for i in filtered_list]
 
     def makedirs(self, path, ignore_existing=False):
-        raise NotImplementedError
+        return self._run(f'mkdir -p {path}')
 
     def mkdir(self, path, ignore_existing=False):
         """Attempts to create folder located at path, returns False in case of a failure."""
@@ -138,7 +158,7 @@ class SshLightTransport(transport.Transport):
             return True
         try:
             self.sftp.mkdir(path)
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             return False
         return True
 
@@ -149,10 +169,11 @@ class SshLightTransport(transport.Transport):
     def open(self):
         if not self.connection.is_connected:
             self.sftp = self.connection.sftp()  # It opens the self.connection as well
+            self.sftp.chdir('.')  # Needed to make sure sftp.getcwd() returns a valid path
 
     def path_exists(self, path):
         """Check if path exists."""
-        return True if self.stat(path) else False
+        return bool(self.stat(path))
 
     def put(self, localpath, remotepath, *args, **kwargs):
         if not Path(localpath).is_absolute():

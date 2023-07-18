@@ -23,7 +23,7 @@ class SshLightTransport(transport.Transport):  # pylint: disable=too-many-public
         self.sftp = None
 
     def _run(self, command, **kwargs):
-        self.connection.run(command, hide=True, warn=True, **kwargs)
+        return self.connection.run(command, hide=True, warn=True, **kwargs)
 
     def chdir(self, path):
         self.sftp.chdir(path)
@@ -49,7 +49,23 @@ class SshLightTransport(transport.Transport):  # pylint: disable=too-many-public
         return self.copy(remotesource, remotedestination, dereference, recursive=True)
 
     def copy(self, remotesource, remotedestination, dereference=False, recursive=True):
-        raise NotImplementedError
+        """Copy a file or a directory from remote source to remote destination."""
+
+        # Deal with copy parameters
+        cp_flags = '-f'
+        if recursive:
+            cp_flags += ' -r'
+        if dereference:
+            cp_flags += ' -L'
+
+        # Make sure the source and the destination are provided
+        if not (remotesource and remotedestination):
+            raise ValueError(
+                'The `remotesource` and `remotedestination` arguments of the `copy` method should not be empty.'
+                f'Got: `remotesource`: {remotesource}, `remotedestination`: {remotedestination}'
+            )
+
+        return self._run(f'cp {cp_flags} {remotesource} {remotedestination}')
 
     def _exec_command_internal(self, command, **kwargs):
 

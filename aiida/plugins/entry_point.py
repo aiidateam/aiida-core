@@ -13,9 +13,6 @@ import functools
 import traceback
 from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Set, Tuple, Union
 
-# DH: Temporarily import EntryPoint to resolve test issues
-from importlib_metadata import EntryPoint
-
 from aiida.common.exceptions import LoadingEntryPointError, MissingEntryPointError, MultipleEntryPointError
 from aiida.common.warnings import warn_deprecation
 

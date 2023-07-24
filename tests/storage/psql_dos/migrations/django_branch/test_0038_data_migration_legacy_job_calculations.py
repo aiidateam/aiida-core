@@ -57,7 +57,7 @@ def test_legacy_jobcalcstate(perform_migrations: PsqlDosMigrator):
     node_model = perform_migrations.get_current_table('db_dbnode')
     with perform_migrations.session() as session:
         for node_id, mapping in nodes.items():
-            attributes = session.get(node_model, node_id).attributes  # type: ignore
+            attributes = session.get(node_model, node_id).attributes  # type: ignore[union-attr]
             assert attributes.get('process_state', None) == mapping.process_state
             assert attributes.get('process_status', None) == mapping.process_status
             assert attributes.get('exit_status', None) == mapping.exit_status

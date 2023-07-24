@@ -108,7 +108,7 @@ class TestVerdiCalculation:
         # Get the imported ArithmeticAddCalculation node
         ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
         calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()[0]
-        self.arithmetic_job: orm.CalcJobNode = calculations[0]  # type: ignore
+        self.arithmetic_job: orm.CalcJobNode = calculations[0]  # type: ignore[annotation-unchecked]
 
         self.cli_runner = CliRunner()
 

@@ -507,7 +507,7 @@ class Graph:
                 LinkType.CALL_WORK
             ]
         elif isinstance(link_types, (str, LinkType)):
-            link_types_list = [link_types]  # type: ignore
+            link_types_list = [link_types]  # type: ignore[assignment]
         else:
             link_types_list = link_types
         return tuple(getattr(LinkType, l.upper()) if isinstance(l, str) else l for l in link_types_list)

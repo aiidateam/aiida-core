@@ -200,7 +200,7 @@ class NodeLinks:
 
             if only_uuid:
                 link_triple = LinkTriple(
-                    link_triple.node.uuid,  # type: ignore
+                    link_triple.node.uuid,  # type: ignore[arg-type]
                     link_triple.link_type,
                     link_triple.link_label,
                 )

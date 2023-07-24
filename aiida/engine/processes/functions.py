@@ -519,7 +519,7 @@ class FunctionProcess(Process):
     def __init__(self, *args, **kwargs) -> None:
         if kwargs.get('enable_persistence', False):
             raise RuntimeError('Cannot persist a function process')
-        super().__init__(enable_persistence=False, *args, **kwargs)  # type: ignore
+        super().__init__(enable_persistence=False, *args, **kwargs)  # type: ignore[misc]
 
     @property
     def process_class(self) -> t.Callable[..., t.Any]:

@@ -14,8 +14,12 @@ import pytest
 from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.plugins import entry_point
-from aiida.plugins.entry_point import EntryPoint as EP  # type: ignore
-from aiida.plugins.entry_point import EntryPoints, get_entry_point, validate_registered_entry_points  # type: ignore
+from aiida.plugins.entry_point import (  # type: ignore[attr-defined]
+    EntryPoints,
+    get_entry_point,
+    validate_registered_entry_points,
+)
+from aiida.plugins.entry_point import EntryPoint as EP  # type: ignore[attr-defined]
 
 
 def test_validate_registered_entry_points():

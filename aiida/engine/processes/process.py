@@ -321,7 +321,7 @@ class Process(plumpy.processes.Process):
         super().load_instance_state(saved_state, load_context)
 
         if self.SaveKeys.CALC_ID.value in saved_state:
-            self._node = orm.load_node(saved_state[self.SaveKeys.CALC_ID.value])  # type: ignore
+            self._node = orm.load_node(saved_state[self.SaveKeys.CALC_ID.value])  # type: ignore[assignment]
             self._pid = self.node.pk  # pylint: disable=attribute-defined-outside-init
         else:
             self._pid = self._create_and_setup_db_record()  # pylint: disable=attribute-defined-outside-init
@@ -429,7 +429,7 @@ class Process(plumpy.processes.Process):
         except ValueError:  # pylint: disable=try-except-raise
             raise
         finally:
-            self.node.set_process_state(self._state.LABEL)  # type: ignore
+            self.node.set_process_state(self._state.LABEL)  # type: ignore[arg-type]
 
         self._save_checkpoint()
         set_process_state_change_timestamp(self)
@@ -559,7 +559,7 @@ class Process(plumpy.processes.Process):
         if self._parent_pid is None:
             return None
 
-        return orm.load_node(pk=self._parent_pid)  # type: ignore
+        return orm.load_node(pk=self._parent_pid)  # type: ignore[return-value]
 
     @classmethod
     def build_process_type(cls) -> str:

@@ -39,7 +39,7 @@ from .links import NodeLinks
 from .repository import NodeRepository
 
 if TYPE_CHECKING:
-    from aiida.plugins.entry_point import EntryPoint  # type: ignore
+    from aiida.plugins.entry_point import EntryPoint  # type: ignore[attr-defined]
 
     from ..implementation import BackendNode, StorageBackend
 
@@ -52,7 +52,7 @@ class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
     """The collection of nodes."""
 
     @staticmethod
-    def _entity_base_cls() -> Type['Node']:  # type: ignore
+    def _entity_base_cls() -> Type['Node']:  # type: ignore[override]
         return Node
 
     def delete(self, pk: int) -> None:

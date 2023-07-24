@@ -79,7 +79,7 @@ class Collection(abc.ABC, Generic[EntityType]):
         """Get or create a cached collection using a new backend."""
         if backend is self._backend:
             return self
-        return self.get_cached(self.entity_type, backend=backend)  # type: ignore
+        return self.get_cached(self.entity_type, backend=backend)  # type: ignore[arg-type]
 
     @property
     def entity_type(self) -> Type[EntityType]:
@@ -162,7 +162,7 @@ class Collection(abc.ABC, Generic[EntityType]):
 class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
     """An AiiDA entity"""
 
-    _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore
+    _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore[assignment]
 
     @classproperty
     def objects(cls: EntityType) -> CollectionType:  # pylint: disable=no-self-argument

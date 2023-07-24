@@ -22,7 +22,7 @@ from . import convert, entities, extras, users
 if TYPE_CHECKING:
     from aiida.orm import Node, User
     from aiida.orm.implementation import BackendGroup, StorageBackend
-    from aiida.plugins.entry_point import EntryPoint  # type: ignore
+    from aiida.plugins.entry_point import EntryPoint  # type: ignore[attr-defined]
 
 __all__ = ('Group', 'AutoGroup', 'ImportGroup', 'UpfFamily')
 
@@ -305,7 +305,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
 
         # Cannot use `collections.Iterable` here, because that would also match iterable `Node` sub classes like `List`
         if not isinstance(nodes, (list, tuple)):
-            nodes = [nodes]  # type: ignore
+            nodes = [nodes]  # type: ignore[list-item]
 
         for node in nodes:
             type_check(node, Node)
@@ -326,7 +326,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
 
         # Cannot use `collections.Iterable` here, because that would also match iterable `Node` sub classes like `List`
         if not isinstance(nodes, (list, tuple)):
-            nodes = [nodes]  # type: ignore
+            nodes = [nodes]  # type: ignore[list-item]
 
         for node in nodes:
             type_check(node, Node)

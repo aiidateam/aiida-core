@@ -8,6 +8,8 @@ VERSION = '2.17.1'
 from decimal import Decimal
 import re
 
+SPLIT_RE = re.compile(r'[\.\[\]]+')
+
 
 class JsonSchemaException(ValueError):
     """
@@ -54,6 +56,7 @@ class JsonSchemaDefinitionException(JsonSchemaException):
     """
     Exception raised by generator of validation function.
     """
+
 
 REGEX_PATTERNS = {'.+': re.compile('.+'), '\\d+': re.compile('\\d+')}
 

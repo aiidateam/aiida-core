@@ -378,7 +378,7 @@ class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-insta
     )
 
     if TYPE_CHECKING:
-        shebang: str
+        shebang: str | None
         submit_as_hold: bool
         rerunnable: bool
         job_environment: dict[str, str] | None
@@ -388,8 +388,8 @@ class JobTemplate(DefaultFieldsAttributeDict):  # pylint: disable=too-many-insta
         email_on_started: bool
         email_on_terminated: bool
         job_name: str
-        sched_output_path: str
-        sched_error_path: str
+        sched_output_path: str | None
+        sched_error_path: str | None
         sched_join_files: bool
         queue_name: str
         account: str

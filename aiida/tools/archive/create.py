@@ -220,6 +220,9 @@ def create_archive(
         )
     else:
         for entry in entities:
+            if entry.pk is None or entry.uuid is None:
+                continue
+
             if isinstance(entry, orm.Group):
                 starting_uuids[EntityTypes.GROUP].add(entry.uuid)
                 entity_ids[EntityTypes.GROUP].add(entry.pk)

@@ -159,7 +159,7 @@ def validate_link(
             f'source and target nodes must be stored in the same backend, but got {source.backend} and {target.backend}'
         )
 
-    if source.uuid is None or target.uuid is None:
+    if source.uuid is None or target.uuid is None:  # type: ignore[redundant-expr]
         raise ValueError('source or target node does not have a UUID')
 
     if source.uuid == target.uuid:

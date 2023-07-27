@@ -1097,7 +1097,7 @@ def _make_import_group(
         IMPORT_LOGGER.report(f'Created new import Group: PK={group_id}, label={label}')
         group_node_ids = set()
     else:
-        group_id = group.pk
+        group_id = group.pk  # type: ignore[assignment]
         IMPORT_LOGGER.report(f'Using existing import Group: PK={group_id}, label={group.label}')
         group_node_ids = {
             pk for pk, in orm.QueryBuilder(backend=backend_to).append(orm.Group, filters={

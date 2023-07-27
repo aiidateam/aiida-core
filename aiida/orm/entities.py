@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for all common top level AiiDA entity classes and methods"""
+from __future__ import annotations
+
 import abc
 from enum import Enum
 from functools import lru_cache
@@ -216,7 +218,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         """
 
     @property
-    def id(self) -> int:  # pylint: disable=invalid-name
+    def id(self) -> int | None:  # pylint: disable=invalid-name
         """Return the id for this entity.
 
         This identifier is guaranteed to be unique amongst entities of the same type for a single backend instance.
@@ -229,7 +231,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         return self._backend_entity.id
 
     @property
-    def pk(self) -> int:
+    def pk(self) -> int | None:
         """Return the primary key for this entity.
 
         This identifier is guaranteed to be unique amongst entities of the same type for a single backend instance.

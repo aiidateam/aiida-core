@@ -9,6 +9,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Simple wrapper around the alembic command line tool that first loads an AiiDA profile."""
+from __future__ import annotations
+
 import alembic
 import click
 from sqlalchemy.util.compat import nullcontext
@@ -16,6 +18,7 @@ from sqlalchemy.util.compat import nullcontext
 from aiida.cmdline import is_verbose
 from aiida.cmdline.groups.verdi import VerdiCommandGroup
 from aiida.cmdline.params import options
+from aiida.manage.configuration import Profile
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
@@ -23,7 +26,7 @@ class AlembicRunner:
     """Wrapper around the alembic command line tool that first loads an AiiDA profile."""
 
     def __init__(self) -> None:
-        self.profile = None
+        self.profile: Profile | None = None
 
     def execute_alembic_command(self, command_name, connect=True, **kwargs):
         """Execute an Alembic CLI command.
@@ -36,7 +39,7 @@ class AlembicRunner:
         migrator = PsqlDosMigrator(self.profile)
 
         context = migrator._alembic_connect() if connect else nullcontext(migrator._alembic_config())  # pylint: disable=protected-access
-        with context as config:
+        with context as config:  # type: ignore[attr-defined]
             command = getattr(alembic.command, command_name)
             config.stdout = click.get_text_stream('stdout')
             command(config, **kwargs)

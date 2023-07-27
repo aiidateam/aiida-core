@@ -864,7 +864,7 @@ class QueryBuilder:
             '`QueryBuilder.set_debug` is deprecated. Configure the log level of the AiiDA logger instead.', version=3
         )
         if not isinstance(debug, bool):
-            return TypeError('I expect a boolean')
+            raise TypeError('I expect a boolean')
         self._debug = debug
 
         return self
@@ -1199,7 +1199,7 @@ def _get_ormclass(
     else:
         raise ValueError('Neither cls nor entity_type specified')
 
-    if isinstance(input_info, str) or not isinstance(input_info, Sequence):
+    if isinstance(input_info, str) or not isinstance(input_info, Sequence):  # type: ignore[redundant-expr]
         input_info = (input_info,)
 
     ormclass = EntityTypes.NODE

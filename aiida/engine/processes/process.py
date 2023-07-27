@@ -251,7 +251,6 @@ class Process(plumpy.processes.Process):
 
         """
         try:
-            assert self.inputs is not None
             return self.inputs.metadata
         except (AssertionError, AttributeError):
             return AttributeDict()
@@ -297,7 +296,6 @@ class Process(plumpy.processes.Process):
 
         :rtype: filter
         """
-        assert self.inputs is not None
         return filter(lambda kv: not kv[0].startswith('_'), self.inputs.items())
 
     @override
@@ -464,7 +462,7 @@ class Process(plumpy.processes.Process):
         self.report(''.join(traceback.format_exception(*exc_info)))
 
     @override
-    def on_finish(self, result: Union[int, ExitCode], successful: bool) -> None:
+    def on_finish(self, result: Union[int, ExitCode, None], successful: bool) -> None:
         """ Set the finish status on the process node.
 
         :param result: result of the process
@@ -702,7 +700,6 @@ class Process(plumpy.processes.Process):
         In addition, the parent calculation will be setup with a CALL link if applicable and all inputs will be
         linked up as well.
         """
-        assert self.inputs is not None
         assert not self.node.is_sealed, 'process node cannot be sealed when setting up the database record'
 
         # Store important process attributes in the node proxy
@@ -730,9 +727,6 @@ class Process(plumpy.processes.Process):
     def _setup_version_info(self) -> None:
         """Store relevant plugin version information."""
         from aiida.plugins.entry_point import format_entry_point_string
-
-        if self.inputs is None:
-            return
 
         version_info = self.runner.plugin_version_provider.get_version_info(self.__class__)
 
@@ -836,7 +830,6 @@ class Process(plumpy.processes.Process):
         :return: flat dictionary of parsed inputs
 
         """
-        assert self.inputs is not None
         inputs = {key: value for key, value in self.inputs.items() if key != self.spec().metadata_key}
         return dict(self._flatten_inputs(self.spec().inputs, inputs))
 
@@ -890,7 +883,9 @@ class Process(plumpy.processes.Process):
                 items.extend(sub_items)
             return items
 
-        assert (port is None) or (isinstance(port, InputPort) and (port.is_metadata or port.non_db))
+        assert (port is None) or (
+            isinstance(port, InputPort) and (port.is_metadata or port.non_db)  # type: ignore[redundant-expr]
+        )
         return []
 
     def _flatten_outputs(

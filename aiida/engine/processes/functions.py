@@ -81,7 +81,7 @@ def get_stack_size(size: int = 2) -> int:  # type: ignore[return]
         for size in itertools.count(size, 8):  # pylint: disable=redefined-argument-from-local
             frame = frame.f_back.f_back.f_back.f_back.f_back.f_back.f_back.f_back  # type: ignore[assignment,union-attr]
     except AttributeError:
-        while frame:
+        while frame:  # type: ignore[truthy-bool]
             frame = frame.f_back  # type: ignore[assignment]
             size += 1
         return size - 1
@@ -234,6 +234,7 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
 
             """
             result, node = run_get_node(*args, **kwargs)
+            assert node.pk is not None
             return result, node.pk
 
         @functools.wraps(function)
@@ -323,10 +324,13 @@ class FunctionProcess(Process):
 
         """
         # pylint: disable=too-many-statements
-        if not issubclass(node_class, ProcessNode) or not issubclass(node_class, FunctionCalculationMixin):
+        if (
+            not issubclass(node_class, ProcessNode) or  # type: ignore[redundant-expr]
+            not issubclass(node_class, FunctionCalculationMixin)  # type: ignore[unreachable]
+        ):
             raise TypeError('the node_class should be a sub class of `ProcessNode` and `FunctionCalculationMixin`')
 
-        signature = inspect.signature(func)
+        signature = inspect.signature(func)  # type: ignore[unreachable]
 
         args: list[str] = []
         varargs: str | None = None
@@ -586,11 +590,11 @@ class FunctionProcess(Process):
 
         result = self._func(*args, **kwargs)
 
-        if result is None or isinstance(result, ExitCode):
-            return result
+        if result is None or isinstance(result, ExitCode):  # type: ignore[redundant-expr]
+            return result  # type: ignore[unreachable]
 
-        if isinstance(result, Data):
-            self.out(self.SINGLE_OUTPUT_LINKNAME, result)
+        if isinstance(result, Data):  # type: ignore[unreachable]
+            self.out(self.SINGLE_OUTPUT_LINKNAME, result)  # type: ignore[unreachable]
         elif isinstance(result, collections.abc.Mapping):
             for name, value in result.items():
                 self.out(name, value)

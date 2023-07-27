@@ -713,8 +713,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         pidfile.create(os.getpid())
 
         # Configure the logger
-        loggerconfig = None
-        loggerconfig = loggerconfig or arbiter.loggerconfig or None
+        loggerconfig = arbiter.loggerconfig or None
         configure_logger(circus_logger, loglevel, logoutput, loggerconfig)
 
         # Main loop

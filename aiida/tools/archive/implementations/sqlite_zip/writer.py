@@ -108,7 +108,7 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
         if self._zip_path:
             self._zip_path.close()
             self._central_dir = {}
-        if self._work_dir is not None and self._init_work_dir is None:
+        if self._init_work_dir is None:
             shutil.rmtree(self._work_dir, ignore_errors=True)
         self._zip_path = self._work_dir = self._conn = None
         self._in_context = False

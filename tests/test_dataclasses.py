@@ -2173,6 +2173,16 @@ class TestStructureDataFromPymatgen:
         dict1 = pymatgen_struct.as_dict()
         dict2 = pymatgen_struct_roundtrip.as_dict()
 
+        # In pymatgen v2023.7.14 the CIF parsing was updated to include the parsing to atomic site labels. However, this
+        # information is not stored in the ``StructureData`` and so the structure after the roundtrip uses the default
+        # which is the specie name. The latter is correct in that it reflects the partial occupancies, but it differs
+        # from the labels parsed from the CIF which is simply parsed as ``Se1`` causing the test to fail. Since the
+        # site label information is not stored in the ``StructureData`` it is not possible to preserve it in the
+        # roundtrip and so it is excluded from the check.
+        for dictionary in [dict1, dict2]:
+            for site in dictionary['sites']:
+                site.pop('label', None)
+
         for i in dict1['sites']:
             i['abc'] = [round(j, 2) for j in i['abc']]
         for i in dict2['sites']:
@@ -2192,7 +2202,7 @@ class TestStructureDataFromPymatgen:
             elif isinstance(left, float):
                 testing.assert_almost_equal(left, right)
             else:
-                assert left == right, f'{value} is not {right}'
+                assert left == right, f'{left} is not {right}'
 
         recursively_compare_values(dict1, dict2)
 

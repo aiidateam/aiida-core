@@ -428,11 +428,7 @@ class TestVerdiComputerConfigure:
         # I just pass the first four arguments:
         # the username, the port, look_for_keys, and the key_filename
         # This testing also checks that an empty key_filename is ok
-        command_input = ('{remote_username}\n{port}\n{look_for_keys}\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n').format(
-            remote_username=remote_username,
-            port=port,
-            look_for_keys='yes' if look_for_keys else 'no',
-        )
+        command_input = f"{remote_username}\n{port}\n{'yes' if look_for_keys else 'no'}\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
 
         result = self.cli_runner(computer_configure, ['core.ssh', comp.label], user_input=command_input)
         assert comp.is_configured, result.output

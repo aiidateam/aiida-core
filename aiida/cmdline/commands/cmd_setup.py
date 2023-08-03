@@ -14,6 +14,7 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.params.options.commands import setup as options_setup
 from aiida.cmdline.utils import echo
+from aiida.cmdline.utils.defaults import get_default_database_name
 from aiida.manage.configuration import Profile, load_profile
 
 
@@ -172,6 +173,14 @@ def quicksetup(
 
         if not postgres.is_connected:
             echo.echo_critical('failed to determine the PostgreSQL setup')
+
+        default_dbname = get_default_database_name(profile)
+        if db_name == default_dbname:
+            echo.echo_report(f'Using default database name {db_name} (if it already exists, {db_name}_N)')
+        else:
+            db_exists = postgres.db_exists(db_name)
+            if db_exists:
+                echo.echo_error('Database name provided already exists, please choose a different name')
 
         try:
             db_username, db_name = postgres.create_dbuser_db_safe(

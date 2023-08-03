@@ -8,10 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Default values and lazy default get methods for command line options."""
+import getpass
+import hashlib
 
 from aiida.cmdline.utils import echo
 from aiida.common import exceptions
-from aiida.manage.configuration import get_config
+from aiida.manage.configuration import Profile, get_config
 
 
 def get_default_profile():  # pylint: disable=unused-argument
@@ -35,3 +37,11 @@ def get_default_profile():  # pylint: disable=unused-argument
         default_profile = None
 
     return default_profile
+
+
+def get_default_database_name(profile: 'Profile'):
+    """Get the default name for the database for a given profile."""
+    profile = profile.name
+    username = getpass.getuser()
+    config_hash = hashlib.md5(get_config().dirpath.encode('utf-8')).hexdigest()
+    return f'{profile}_{username}_{config_hash}'

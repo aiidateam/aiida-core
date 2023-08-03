@@ -382,9 +382,12 @@ Below is a list with all available subcommands.
       --institution NONEMPTYSTRING    Institution of the user.  [required]
       --create-db / --reuse-db        Determines if the setup should look for an existing
                                       database (needs to be provided with the `--db-name`
-                                      option) or if it always creates a new one (using a
-                                      default or creating names on the fly if the provided
-                                      `--db-name` already exists).  [default: create-db]
+                                      option) or if it needs to create a new one (if a `--db-
+                                      name` is provided, it will except if the database
+                                      exists, otherwise it will create names on the fly if the
+                                      default is used). If an already existing database is
+                                      provided, it needs to be empty (no tables)  [default:
+                                      create-db]
       --db-engine [postgresql_psycopg2]
                                       Engine to use to connect to the database.
       --db-backend [core.psql_dos]    Database backend to use.

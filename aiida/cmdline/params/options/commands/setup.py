@@ -15,6 +15,7 @@ import hashlib
 import click
 
 from aiida.cmdline.params import options, types
+from aiida.cmdline.utils.defaults import get_default_database_name
 from aiida.manage.configuration import Profile, get_config, get_config_option
 from aiida.manage.external.postgres import DEFAULT_DBINFO
 from aiida.manage.external.rmq import BROKER_DEFAULTS
@@ -97,12 +98,8 @@ def get_quicksetup_database_name(ctx, param, value):  # pylint: disable=unused-a
     if value is not None:
         return value
 
-    config = get_config()
-    profile = ctx.params['profile'].name
-    config_hash = hashlib.md5(config.dirpath.encode('utf-8')).hexdigest()
-    database_name = f'{profile}_{getpass.getuser()}_{config_hash}'
-
-    return database_name
+    profile = ctx.params['profile']
+    return get_default_database_name(profile)
 
 
 def get_quicksetup_username(ctx, param, value):  # pylint: disable=unused-argument
@@ -214,9 +211,11 @@ QUICKSETUP_CREATE_DATABASE = options.OverridableOption(
     help=(
         'Determines if the setup should look for an existing database '
         '(needs to be provided with the `--db-name` option) or if it '
-        'always creates a new one (using a default or creating names '
-        'on the fly if the provided `--db-name` already exists).'
-    ),
+        'needs to create a new one (if a `--db-name` is provided, it '
+        'will except if the database exists, otherwise it will create '
+        'names on the fly if the default is used). If an already existing '
+        'database is provided, it needs to be empty (no tables)'
+    )
 )
 
 QUICKSETUP_DATABASE_ENGINE = options.DB_ENGINE

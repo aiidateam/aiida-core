@@ -164,3 +164,28 @@ def storage_maintain(ctx, full, no_repack, force, dry_run, compress):
     except LockingProfileError as exception:
         echo.echo_critical(str(exception))
     echo.echo_success('Requested maintenance procedures finished.')
+
+
+@verdi_storage.command('backup')
+@click.option('--path', type=click.Path(), required=True, help='Specify the backup location.')
+@click.option(
+    '--remote',
+    type=click.STRING,
+    default=None,
+    help='Specify remote host for backup location. If set, path needs to be absolute.'
+)
+@click.option(
+    '--pg_dump_exec', type=click.STRING, default='pg_dump', help="Specify the 'pg_dump' executable, if needed."
+)
+@click.option('--rsync_exec', type=click.STRING, default='rsync', help="Specify the 'rsync' executable, if needed.")
+@decorators.with_dbenv()
+def storage_backup(path, remote, pg_dump_exec, rsync_exec):
+    """Create a backup of the profile data."""
+    import pathlib
+
+    from aiida.manage.manager import get_manager
+
+    manager = get_manager()
+    storage = manager.get_profile_storage()
+
+    storage.backup_auto(pathlib.Path(path), remote=remote, pg_dump_exec=pg_dump_exec, rsync_exec=rsync_exec)

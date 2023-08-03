@@ -180,7 +180,7 @@ def quicksetup(
         else:
             db_exists = postgres.db_exists(db_name)
             if db_exists:
-                echo.echo_error('Database name provided already exists, please choose a different name')
+                echo.echo_critical(f'Database name provided {db_name} already exists, please choose a different name')
 
         try:
             db_username, db_name = postgres.create_dbuser_db_safe(

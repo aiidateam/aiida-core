@@ -143,6 +143,172 @@ email: 123@234.de"""
 
         self.cli_runner(cmd_setup.quicksetup, options, raises=True, use_subprocess=False)
 
+    def test_quicksetup_reuse_notexists(self):
+        """Test `verdi quicksetup`: asking to reuse a database that does not exist."""
+        profile_name = 'testing'
+        user_email = 'some@email.com'
+        user_first_name = 'John'
+        user_last_name = 'Smith'
+        user_institution = 'ECMA'
+
+        db_name = 'test_quicksetup_reuse_notexists'
+        db_user = 'test_quicksetup_reuse_notexists'
+        db_pass = 'test_quicksetup_reuse_notexists'
+
+        options = [
+            '--non-interactive',
+            '--profile',
+            profile_name,
+            '--email',
+            user_email,
+            '--first-name',
+            user_first_name,
+            '--last-name',
+            user_last_name,
+            '--institution',
+            user_institution,
+            '--db-port',
+            self.pg_test.dsn['port'],
+            '--db-backend',
+            self.storage_backend_name,
+            '--db-name',
+            db_name,
+            '--db-username',
+            db_user,
+            '--db-password',
+            db_pass,
+            '--reuse-db',
+        ]
+
+        self.cli_runner(cmd_setup.quicksetup, options, raises=True, use_subprocess=False)
+
+    def test_quicksetup_reuse_existing(self):
+        """Test `verdi quicksetup`: asking to reuse a database that exists."""
+        profile_name = 'testing'
+        user_email = 'some@email.com'
+        user_first_name = 'John'
+        user_last_name = 'Smith'
+        user_institution = 'ECMA'
+
+        db_name = 'test_quicksetup_reuse'
+        db_user = 'test_quicksetup_reuse'
+        db_pass = 'test_quicksetup_reuse'
+        postgres = Postgres(interactive=False, quiet=True, dbinfo=self.pg_test.dsn)
+        postgres.determine_setup()
+        postgres.create_dbuser(db_user, db_pass)
+        postgres.create_db(db_user, db_name)
+
+        options = [
+            '--non-interactive',
+            '--profile',
+            profile_name,
+            '--email',
+            user_email,
+            '--first-name',
+            user_first_name,
+            '--last-name',
+            user_last_name,
+            '--institution',
+            user_institution,
+            '--db-port',
+            self.pg_test.dsn['port'],
+            '--db-backend',
+            self.storage_backend_name,
+            '--db-name',
+            db_name,
+            '--db-username',
+            db_user,
+            '--db-password',
+            db_pass,
+            '--reuse-db',
+        ]
+
+        self.cli_runner(cmd_setup.quicksetup, options, use_subprocess=False)
+        config = configuration.get_config()
+        profile = config.get_profile(profile_name)
+        assert profile.storage_config['database_name'] == db_name
+
+    def test_quicksetup_name_exists(self):
+        """Test `verdi quicksetup`: create a database that exist (error)."""
+        profile_name = 'testing'
+        user_email = 'some@email.com'
+        user_first_name = 'John'
+        user_last_name = 'Smith'
+        user_institution = 'ECMA'
+
+        db_name = 'test_quicksetup_exists'
+        db_user = 'test_quicksetup_exists'
+        db_pass = 'test_quicksetup_exists'
+        postgres = Postgres(interactive=False, quiet=True, dbinfo=self.pg_test.dsn)
+        postgres.determine_setup()
+        postgres.create_dbuser(db_user, db_pass)
+        postgres.create_db(db_user, db_name)
+
+        options = [
+            '--non-interactive',
+            '--profile',
+            profile_name,
+            '--email',
+            user_email,
+            '--first-name',
+            user_first_name,
+            '--last-name',
+            user_last_name,
+            '--institution',
+            user_institution,
+            '--db-port',
+            self.pg_test.dsn['port'],
+            '--db-backend',
+            self.storage_backend_name,
+            '--db-name',
+            db_name,
+        ]
+
+        self.cli_runner(cmd_setup.quicksetup, options, raises=True, use_subprocess=False)
+
+    def test_quicksetup_default_name_exists(self, monkeypatch):
+        """Test `verdi quicksetup`: create a database that exist with default name (fine)."""
+        profile_name = 'testing'
+        user_email = 'some@email.com'
+        user_first_name = 'John'
+        user_last_name = 'Smith'
+        user_institution = 'ECMA'
+
+        db_name = 'test_quicksetup_default_exists'
+        db_user = 'test_quicksetup_default_exists'
+        db_pass = 'test_quicksetup_default_exists'
+        postgres = Postgres(interactive=False, quiet=True, dbinfo=self.pg_test.dsn)
+        postgres.determine_setup()
+        postgres.create_dbuser(db_user, db_pass)
+        postgres.create_db(db_user, db_name)
+
+        options = [
+            '--non-interactive',
+            '--profile',
+            profile_name,
+            '--email',
+            user_email,
+            '--first-name',
+            user_first_name,
+            '--last-name',
+            user_last_name,
+            '--institution',
+            user_institution,
+            '--db-port',
+            self.pg_test.dsn['port'],
+            '--db-backend',
+            self.storage_backend_name,
+            '--db-name',
+            db_name,
+        ]
+
+        monkeypatch.setattr('aiida.cmdline.commands.cmd_setup.get_default_database_name', lambda x: db_name)
+        self.cli_runner(cmd_setup.quicksetup, options, use_subprocess=False)
+
+        config = configuration.get_config()
+        profile = config.get_profile(profile_name)
+        assert profile.storage_config['database_name'] == db_name + '_1'
+
     def test_setup(self):
         """Test `verdi setup` (non-interactive)."""
         postgres = Postgres(interactive=False, quiet=True, dbinfo=self.pg_test.dsn)

@@ -513,7 +513,14 @@ from aiida import plugins
 MultiplyAddWorkChain = plugins.WorkflowFactory('core.arithmetic.multiply_add')
 ```
 
-The `WorkflowFactory` is a useful and robust tool for loading workflows based on their *entry point*, e.g. `'core.arithmetic.multiply_add'` in this case.
+The `WorkflowFactory` is a useful and robust tool for loading workflows based on their [*entry point*](https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/plugins.html#topics-plugins-entrypoints), e.g. `'core.arithmetic.multiply_add'` in this case.
+
+:::{note}
+In AiiDA, an [entry point](https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/plugins.html#topics-plugins-entrypoints) is a way to specify and register a plugin or code so that it can be discovered and used by the AiiDA framework.
+A plugin can extend the functionality of AiiDA. Check out [How to install plugins](https://aiida.readthedocs.io/projects/aiida-core/en/latest/howto/plugins_install.html)
+Further reading [How to write a plugin for an external code](https://aiida.readthedocs.io/projects/aiida-core/en/latest/howto/plugin_codes.html#).
+:::
+
 Similar to a `CalcJob`, the `WorkChain` input can be set up using a builder:
 
 ```{code-cell} ipython3

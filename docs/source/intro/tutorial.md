@@ -501,11 +501,21 @@ class MultiplyAddWorkChain(WorkChain):
 ```
 
 :::{note}
-Besides WorkChain's, workflows can also be implemented as *work functions*.
+Besides WorkChain's, workflows can also be implemented as [*work functions*](https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/workflows/concepts.html).
 These are ideal for workflows that are not very computationally intensive and can be easily implemented in a Python function.
 :::
 
 Let's run the `WorkChain` above!
+
+:::{note}
+To simplify the basic tutorial, we have left out the steps to register the `MultiplyAddWorkChain` as a plugin. This allows us to access it through the [*entry point*](https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/plugins.html#topics-plugins-entrypoints) named `core.arithmetic.multiply_add`.
+
+```console
+$ verdi plugin list
+```
+to show the available pulgins and their entry points.
+:::
+
 Start up the `verdi shell` and load the `MultiplyAddWorkChain` using the `WorkflowFactory`:
 
 ```{code-cell} ipython3
@@ -517,7 +527,9 @@ The `WorkflowFactory` is a useful and robust tool for loading workflows based on
 
 :::{note}
 In AiiDA, an [entry point](https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/plugins.html#topics-plugins-entrypoints) is a way to specify and register a plugin or code so that it can be discovered and used by the AiiDA framework.
+
 A plugin can extend the functionality of AiiDA. Check out [How to install plugins](https://aiida.readthedocs.io/projects/aiida-core/en/latest/howto/plugins_install.html)
+
 Further reading [How to write a plugin for an external code](https://aiida.readthedocs.io/projects/aiida-core/en/latest/howto/plugin_codes.html#).
 :::
 

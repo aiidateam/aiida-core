@@ -245,6 +245,37 @@ class TestVerdiCalculation:
         retrieved.base.repository._repository.put_object_from_filelike(io.BytesIO(b'5\n'), 'aiida.out')
         retrieved.base.repository._update_repository_metadata()
 
+    def test_calcjob_caching(self):
+        """Test verdi calcjob caching command"""
+
+        # Specifying no filtering options and no explicit calcjobs should exit with non-zero status
+        options = []
+        result = self.cli_runner.invoke(command.calcjob_caching, options)
+        assert result.exception is not None
+
+        # Without the --enable/--disable flags it should fail
+        options = [str(self.result_job.uuid)]
+        result = self.cli_runner.invoke(command.calcjob_caching, options)
+        assert result.exception is not None
+
+        # Do --enable on a enabled calcjob should fail as the calcjob has been cleaned
+        options = ['--enable', str(self.result_job.uuid)]
+        result = self.cli_runner.invoke(command.calcjob_caching, options)
+        assert result.exception is not None, result.output
+
+        # With --disable flag we should set one calcjob
+        options = ['--disable', str(self.result_job.uuid)]
+        result = self.cli_runner.invoke(command.calcjob_caching, options)
+        assert result.exception is None, result.output
+
+        # Do --disable again should fail as the calcjob has been cleaned
+        options = ['--disable', str(self.result_job.uuid)]
+        result = self.cli_runner.invoke(command.calcjob_caching, options)
+        assert result.exception is not None, result.output
+
+        # The flag should have been set
+        assert self.result_job.base.extras.get('_aiida_valid_cache') is False
+        
     def test_calcjob_cleanworkdir(self):
         """Test verdi calcjob cleanworkdir"""
 

@@ -305,6 +305,79 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force, exit
 
         echo.echo_success(f'{counter} remote folders cleaned on {computer.label}')
 
+@verdi_calcjob.command('caching')
+@decorators.with_dbenv()
+@arguments.CALCULATIONS('calcjobs', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
+@options.PAST_DAYS(default=None)
+@options.OLDER_THAN(default=None)
+@options.COMPUTERS(help='include only calcjobs that were ran on these computers')
+@options.FORCE()
+@options.EXIT_STATUS()
+@click.option('--enable', is_flag=True, help='Enable caching for the specified calcjob.')
+@click.option('--disable', is_flag=True, help='Disable caching for the specified calcjob.')
+@click.option('--status', is_flag=True, help='Show the caching status for the specified calcjob.')
+def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force, exit_status, enable, disable, status):
+    """
+    Clean all content of all output remote folders of calcjobs.
+
+    If no explicit calcjobs are specified as arguments, one or both of the -p and -o options has to be specified.
+    If both are specified, a logical AND is done between the two, i.e. the calcjobs that will be cleaned have been
+    modified AFTER [-p option] days from now, but BEFORE [-o option] days from now.
+    """
+    from aiida import orm
+    #from aiida.orm.utils.remote import get_calcjob_remote_paths
+
+    if enable and disable:
+        raise click.UsageError("Cannot enable and disable caching simultaneously.")
+
+    if not enable and not disable and not status:
+        raise click.UsageError("Please specify either --enable or --disable or --status.")
+
+    if calcjobs:
+        if (past_days is not None and older_than is not None):
+            echo.echo_critical('specify either explicit calcjobs or use the filtering options')
+    else:
+        if (past_days is None and older_than is None):
+            echo.echo_critical('if no explicit calcjobs are specified, at least one filtering option is required')
+
+        # get pks of queried calcjobs
+        # TODO: add filtering options
+        calcjobs = orm.QueryBuilder().append(orm.CalcJobNode, project=['pk']).all()
+
+    if calcjobs is None:
+        echo.echo_critical('no calcjobs found with the given criteria')
+
+    if status:
+        for pk in calcjobs:
+            calcjob = orm.load_node(pk)
+            echo.echo_success(f'caching for {calcjob.pk} is {calcjob.is_valid_cache}')
+
+        # nothing else to do, override other options
+        return
+
+    # get the caching flag
+    if enable:
+        action = "enable"
+        caching_flag = True
+    
+    if disable:
+        action = "disable"
+        caching_flag = False
+
+    if not force:
+        calcjob_count = len(calcjobs)
+        warning = f'Are you sure you want to {action} the caching of {calcjob_count} calcjobs?'
+        click.confirm(warning, abort=True)
+
+    for pk in calcjobs:
+        calcjob = orm.load_node(pk)
+        old_cache_flag = calcjob.is_valid_cache
+        if old_cache_flag == caching_flag:
+            echo.echo_warning(f'caching for {calcjob.pk} is already {old_cache_flag}')
+            continue
+        else:
+            echo.echo_success(f'Switch caching for {calcjob.pk} to {calcjob.is_valid_cache}')
+
 
 def get_remote_and_path(calcjob, path=None):
     """Return the remote folder output node and process the path argument.

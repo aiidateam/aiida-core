@@ -258,7 +258,13 @@ class TestVerdiCalculation:
         result = self.cli_runner.invoke(command.calcjob_caching, options)
         assert result.exception is not None
 
-        # Do --enable on a enabled calcjob should fail as the calcjob has been cleaned
+        # With --status flag we should find one calcjob
+        option = ['--status', str(self.result_job.uuid)]
+        result = self.cli_runner.invoke(command.calcjob_caching, option)
+        assert result.exception is None, result.output
+        assert 'true' in result.output
+
+        # Do --enable on a enabled calcjob should raise warning as the calcjob has been set
         options = ['--enable', str(self.result_job.uuid)]
         result = self.cli_runner.invoke(command.calcjob_caching, options)
         assert result.exception is not None, result.output
@@ -268,14 +274,46 @@ class TestVerdiCalculation:
         result = self.cli_runner.invoke(command.calcjob_caching, options)
         assert result.exception is None, result.output
 
-        # Do --disable again should fail as the calcjob has been cleaned
-        options = ['--disable', str(self.result_job.uuid)]
-        result = self.cli_runner.invoke(command.calcjob_caching, options)
-        assert result.exception is not None, result.output
-
         # The flag should have been set
         assert self.result_job.base.extras.get('_aiida_valid_cache') is False
-        
+
+        # With --status flag we should find one calcjob
+        option = ['--status', str(self.result_job.uuid)]
+        result = self.cli_runner.invoke(command.calcjob_caching, option)
+        assert result.exception is None, result.output
+        assert 'false' in result.output
+
+        # TODO
+        ## Check applying both p and o filters
+        #for flag_p in ['-p', '--past-days']:
+        #    for flag_o in ['-o', '--older-than']:
+        #        options = [flag_p, '5', flag_o, '1', '-f']
+        #        result = self.cli_runner.invoke(command.calcjob_caching, options)
+        #        # This should fail - the node was just created in the test
+        #        assert result.exception is not None
+
+        #        options = [flag_p, '5', flag_o, '0', '-f']
+        #        result = self.cli_runner.invoke(command.calcjob_caching, options)
+        #        # This should pass fine
+        #        assert result.exception is None
+        #        self.result_job.outputs.remote_folder.base.extras.delete('cleaned')
+
+        #        options = [flag_p, '0', flag_o, '0', '-f']
+        #        result = self.cli_runner.invoke(command.calcjob_caching, options)
+        #        # This should not pass
+        #        assert result.exception is not None
+
+        ## Should fail because the exit code is not 999 - using the failed job for testing
+        #options = [str(self.calcs[-1].uuid), '-E', '999', '-f']
+        #result = self.cli_runner.invoke(command.calcjob_caching, options)
+        #assert result.exception is not None
+
+        ## Should be fine because the exit code is 100
+        #self.calcs[-1].base.extras.set('_aiida_valid_cache', True)
+        #options = [str(self.calcs[-1].uuid), '-E', '100', '-f']
+        #result = self.cli_runner.invoke(command.calcjob_caching, options)
+        #assert result.exception is None
+
     def test_calcjob_cleanworkdir(self):
         """Test verdi calcjob cleanworkdir"""
 

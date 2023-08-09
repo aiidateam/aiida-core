@@ -305,6 +305,7 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force, exit
 
         echo.echo_success(f'{counter} remote folders cleaned on {computer.label}')
 
+
 @verdi_calcjob.command('caching')
 @decorators.with_dbenv()
 @arguments.CALCULATIONS('calcjobs', type=CalculationParamType(sub_classes=('aiida.node:process.calculation.calcjob',)))
@@ -325,13 +326,14 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force, exit
     modified AFTER [-p option] days from now, but BEFORE [-o option] days from now.
     """
     from aiida import orm
+
     #from aiida.orm.utils.remote import get_calcjob_remote_paths
 
     if enable and disable:
-        raise click.UsageError("Cannot enable and disable caching simultaneously.")
+        raise click.UsageError('Cannot enable and disable caching simultaneously.')
 
     if not enable and not disable and not status:
-        raise click.UsageError("Please specify either --enable or --disable or --status.")
+        raise click.UsageError('Please specify either --enable or --disable or --status.')
 
     if calcjobs:
         if (past_days is not None and older_than is not None):
@@ -357,11 +359,11 @@ def calcjob_cleanworkdir(calcjobs, past_days, older_than, computers, force, exit
 
     # get the caching flag
     if enable:
-        action = "enable"
+        action = 'enable'
         caching_flag = True
-    
+
     if disable:
-        action = "disable"
+        action = 'disable'
         caching_flag = False
 
     if not force:

@@ -536,6 +536,7 @@ Further reading [How to write a plugin for an external code](https://aiida.readt
 Similar to a `CalcJob`, the `WorkChain` input can be set up using a builder:
 
 ```{code-cell} ipython3
+from aiida import orm
 builder = MultiplyAddWorkChain.get_builder()
 builder.code = orm.load_code(label='add')
 builder.x = orm.Int(2)
@@ -547,6 +548,7 @@ builder
 Once the `WorkChain` input has been set up, we run it with the AiiDA engine:
 
 ```{code-cell} ipython3
+from aiida import engine
 engine.run(builder)
 ```
 

@@ -130,13 +130,27 @@ class ArrayData(Data):
         for name in self.get_arraynames():
             yield (name, self.get_array(name))
 
-    def get_array(self, name: str) -> 'ndarray':
+    def get_array(self, name: str | None = None) -> 'ndarray':
         """
         Return an array stored in the node
 
-        :param name: The name of the array to return.
+        :param name: The name of the array to return. The name can be omitted in case the node contains only a single
+            array, which will be returned in that case. If ``name`` is ``None`` and the node contains multiple arrays or
+            no arrays at all a ``ValueError`` is raised.
+        :raises ValueError: If ``name`` is ``None`` and the node contains more than one arrays or no arrays at all.
         """
         import numpy
+
+        if name is None:
+            names = self.get_arraynames()
+            narrays = len(names)
+
+            if narrays == 0:
+                raise ValueError('`name` not specified but the node contains no arrays.')
+            if narrays > 1:
+                raise ValueError('`name` not specified but the node contains multiple arrays.')
+
+            name = names[0]
 
         def get_array_from_file(self, name: str) -> 'ndarray':
             """Return the array stored in a .npy file"""

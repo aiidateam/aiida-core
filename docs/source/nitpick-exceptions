@@ -130,6 +130,7 @@ py:class disk_objectstore.utils.LazyOpener
 py:class frozenset
 
 py:class numpy.bool_
+py:class ndarray
 
 py:class paramiko.proxy.ProxyCommand
 

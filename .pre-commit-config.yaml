@@ -123,7 +123,6 @@ repos:
                 aiida/orm/implementation/storage_backend.py|
                 aiida/orm/nodes/caching.py|
                 aiida/orm/nodes/comments.py|
-                aiida/orm/nodes/data/array/array.py|
                 aiida/orm/nodes/data/array/bands.py|
                 aiida/orm/nodes/data/array/trajectory.py|
                 aiida/orm/nodes/data/cif.py|

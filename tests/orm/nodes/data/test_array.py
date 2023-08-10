@@ -26,3 +26,20 @@ def test_read_stored():
 
     loaded = load_node(node.uuid)
     assert numpy.array_equal(loaded.get_array('array'), array)
+
+
+def test_constructor():
+    """Test the various construction options."""
+    node = ArrayData()
+    assert node.get_arraynames() == []
+
+    arrays = numpy.array([1, 2])
+    node = ArrayData(arrays)
+    assert node.get_arraynames() == [ArrayData.default_array_name]
+    assert (node.get_array(ArrayData.default_array_name) == arrays).all()
+
+    arrays = {'a': numpy.array([1, 2]), 'b': numpy.array([3, 4])}
+    node = ArrayData(arrays)
+    assert sorted(node.get_arraynames()) == ['a', 'b']
+    assert (node.get_array('a') == arrays['a']).all()
+    assert (node.get_array('b') == arrays['b']).all()

@@ -39,14 +39,31 @@ class ArrayData(Data):
       cache with the :py:meth:`.clear_internal_cache` method.
     """
     array_prefix = 'array|'
+    default_array_name = 'default'
 
-    def __init__(self, **kwargs):
+    def __init__(self, arrays: 'ndarray' | dict[str, 'ndarray'] | None = None, **kwargs):
         """Construct a new instance and set one or multiple numpy arrays.
 
-        :param arrays: A single numpy array, or a dictionary of numpy arrays to store.
+        :param arrays: An optional single numpy array, or dictionary of numpy arrays to store.
         """
+        import numpy
+
         super().__init__(**kwargs)
         self._cached_arrays: dict[str, 'ndarray'] = {}
+
+        arrays = arrays if arrays is not None else {}
+
+        if isinstance(arrays, numpy.ndarray):
+            arrays = {self.default_array_name: arrays}
+
+        if (
+            not isinstance(arrays, dict)  # type: ignore[redundant-expr]
+            or any(not isinstance(a, numpy.ndarray) for a in arrays.values())
+        ):
+            raise TypeError(f'`arrays` should be a single numpy array or dictionary of numpy arrays but got: {arrays}')
+
+        for key, value in arrays.items():
+            self.set_array(key, value)
 
     def initialize(self):
         super().initialize()

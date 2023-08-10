@@ -92,12 +92,13 @@ class SinglefileData(Data):
         with self.base.repository.open(path, mode=mode) as handle:
             yield handle
 
-    def get_content(self) -> str:
+    def get_content(self, mode: str = 'r') -> str | bytes:
         """Return the content of the single file stored for this data node.
 
-        :return: the content of the file as a string
+        :param mode: the mode with which to open the file handle (default: read mode)
+        :return: the content of the file as a string or bytes, depending on ``mode``.
         """
-        with self.open(mode='r') as handle:  # type: ignore[call-overload]
+        with self.open(mode=mode) as handle:  # type: ignore[call-overload]
             return handle.read()
 
     def set_file(self, file: str | t.IO, filename: str | pathlib.Path | None = None) -> None:

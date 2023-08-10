@@ -198,3 +198,11 @@ def test_from_string():
     node = SinglefileData.from_string(content, filename).store()
     assert node.get_content() == content
     assert node.filename == filename
+
+
+def test_get_content():
+    """Test the :meth:`aiida.orm.nodes.data.singlefile.SinglefileData.get_content` method."""
+    content = b'some\ncontent'
+    node = SinglefileData.from_string(content.decode('utf-8')).store()
+    assert node.get_content() == content.decode('utf-8')
+    assert node.get_content('rb') == content

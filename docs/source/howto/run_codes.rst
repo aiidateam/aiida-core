@@ -575,7 +575,7 @@ The following implementation would accomplish that:
             output = handle.read()
 
         if 'WARNING' in output:
-            return 'Detected the string `WARNIGN` in the output file.'
+            return 'Detected the string `WARNING` in the output file.'
 
 The content of the stdout stream, which should be written to the ``node.options.output_filename`` file, is retrieved using ``transport.getfile`` and is written to a temporary file on the local file system.
 The content is then read from the file and if the target string is detected, an error message is returned.

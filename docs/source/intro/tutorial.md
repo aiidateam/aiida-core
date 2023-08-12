@@ -501,14 +501,14 @@ class MultiplyAddWorkChain(WorkChain):
 ```
 
 :::{note}
-Besides WorkChain's, workflows can also be implemented as [*work functions*](https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/workflows/concepts.html).
+Besides WorkChain's, workflows can also be implemented as [*work functions*](https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/workflows/concepts.html#topics-workflows-concepts-workfunctions).
 These are ideal for workflows that are not very computationally intensive and can be easily implemented in a Python function.
 :::
 
 Let's run the `WorkChain` above!
 
 :::{note}
-To simplify the basic tutorial, we have left out the steps to register the `MultiplyAddWorkChain` as a plugin. This allows us to access it through the [*entry point*](https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/plugins.html#topics-plugins-entrypoints) named `core.arithmetic.multiply_add`.
+To simplify the basic tutorial, we have left out the steps to register the `MultiplyAddWorkChain` as a plugin which allows us to access the class through the [*entry point*](https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/plugins.html#topics-plugins-entrypoints) named `core.arithmetic.multiply_add`.
 
 ```console
 $ verdi plugin list
@@ -523,10 +523,8 @@ from aiida import plugins
 MultiplyAddWorkChain = plugins.WorkflowFactory('core.arithmetic.multiply_add')
 ```
 
-The `WorkflowFactory` is a useful and robust tool for loading workflows based on their [*entry point*](https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/plugins.html#topics-plugins-entrypoints), e.g. `'core.arithmetic.multiply_add'` in this case.
-
-:::{note}
-In AiiDA, an [entry point](https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/plugins.html#topics-plugins-entrypoints) is a way to specify and register a plugin or code so that it can be discovered and used by the AiiDA framework.
+The `WorkflowFactory` loads workflows based on their [*entry point*](https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/plugins.html#topics-plugins-entrypoints), e.g. `'core.arithmetic.multiply_add'` in this case.
+The entry point mechanism allows AiiDA to automatically discover workflows provided not by  `aiida-core` and installed [*plugins*](https://aiida.readthedocs.io/projects/aiida-core/en/latest/howto/plugins_install.html)) and display them to the user, e.g. via `verdi plugin list aiida.workflows`.
 
 A plugin can extend the functionality of AiiDA. Check out [How to install plugins](https://aiida.readthedocs.io/projects/aiida-core/en/latest/howto/plugins_install.html)
 

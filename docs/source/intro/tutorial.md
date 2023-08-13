@@ -501,7 +501,7 @@ class MultiplyAddWorkChain(WorkChain):
 ```
 
 :::{note}
-Besides WorkChain's, workflows can also be implemented as [*work functions*](https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/workflows/concepts.html#topics-workflows-concepts-workfunctions).
+Besides WorkChain's, workflows can also be implemented as {ref}`*work functions* <topics:workflows:concepts#topics-workflows-concepts-workfunctions>`.
 These are ideal for workflows that are not very computationally intensive and can be easily implemented in a Python function.
 :::
 
@@ -514,8 +514,8 @@ from aiida import plugins
 MultiplyAddWorkChain = plugins.WorkflowFactory('core.arithmetic.multiply_add')
 ```
 
-The `WorkflowFactory` loads workflows based on their [*entry point*](https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/plugins.html#topics-plugins-entrypoints), e.g. `'core.arithmetic.multiply_add'` in this case.
-The entry point mechanism allows AiiDA to automatically discover workflows provided by  `aiida-core` and [*AiiDA plugins*](https://aiida.readthedocs.io/projects/aiida-core/en/latest/howto/plugins_install.html), and display them to the user, e.g. via `verdi plugin list aiida.workflows`. Pass the entry point as an argument to display detailed information, e.g. via `verdi plugin list aiida.workflows core.arithmetic.multiply_add`.
+The `WorkflowFactory` loads workflows based on their {ref}`*entry point* <topics:plugins#topics-plugins-entrypoints>`, e.g. `'core.arithmetic.multiply_add'` in this case.
+The entry point mechanism allows AiiDA to automatically discover workflows provided by  `aiida-core` and {ref}`*AiiDA plugins* <howto:plugins_install>`, and display them to the user, e.g. via `verdi plugin list aiida.workflows`. Pass the entry point as an argument to display detailed information, e.g. via `verdi plugin list aiida.workflows core.arithmetic.multiply_add`.
 
 Similar to a `CalcJob`, the `WorkChain` input can be set up using a builder:
 

@@ -507,15 +507,6 @@ These are ideal for workflows that are not very computationally intensive and ca
 
 Let's run the `WorkChain` above!
 
-:::{note}
-To simplify the basic tutorial, we have left out the steps to register the `MultiplyAddWorkChain` as a plugin which allows us to access the class through the [*entry point*](https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/plugins.html#topics-plugins-entrypoints) named `core.arithmetic.multiply_add`.
-
-```console
-$ verdi plugin list
-```
-to show the available pulgins and their entry points.
-:::
-
 Start up the `verdi shell` and load the `MultiplyAddWorkChain` using the `WorkflowFactory`:
 
 ```{code-cell} ipython3

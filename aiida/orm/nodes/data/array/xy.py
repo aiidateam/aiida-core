@@ -50,6 +50,34 @@ class XyData(ArrayData):
     Y arrays, which can be considered functions of X.
     """
 
+    def __init__(
+        self,
+        x_array: 'ndarray' | None = None,
+        y_arrays: 'ndarray' | list['ndarray'] | None = None,
+        *,
+        x_name: str | None = None,
+        x_units: str | None = None,
+        y_names: str | list[str] | None = None,
+        y_units: str | list[str] | None = None,
+        **kwargs
+    ):
+        """Construct a new instance, optionally setting the x and y arrays.
+
+        .. note:: If the ``x_array`` is specified, all other keywords need to be specified as well.
+
+        :param x_array: The x array.
+        :param y_arrays: The y arrays.
+        :param x_name: The name of the x array.
+        :param x_units: The unit of the x array.
+        :param y_names: The names of the y arrays.
+        :param y_units: The units of the y arrays.
+        """
+        super().__init__(**kwargs)
+
+        if x_array is not None:
+            self.set_x(x_array, x_name, x_units)  # type: ignore[arg-type]
+            self.set_y(y_arrays, y_names, y_units)  # type: ignore[arg-type]
+
     @staticmethod
     def _arrayandname_validator(array: 'ndarray', name: str, units: str) -> None:
         """

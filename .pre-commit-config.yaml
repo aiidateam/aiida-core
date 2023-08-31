@@ -28,7 +28,7 @@ repos:
     - id: isort
 
 -   repo: https://github.com/ikamensh/flynt/
-    rev: '0.78'
+    rev: '1.0.1'
     hooks:
     -   id: flynt
         args: [

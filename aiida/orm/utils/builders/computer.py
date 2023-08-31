@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Manage computer objects with lazy loading of the db env"""
-from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import ValidationError
 from aiida.common.utils import ErrorAccumulator
 
@@ -62,11 +61,13 @@ class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
         """Validate the computer options."""
         return self._err_acc.result(raise_error=self.ComputerValidationError if raise_error else False)
 
-    @with_dbenv()
     def new(self):
         """Build and return a new computer instance (not stored)"""
+        from aiida.manage import get_manager
         from aiida.orm import Computer
 
+        # Load the profile backend if not already the case.
+        get_manager().get_profile_storage()
         self.validate()
 
         # Will be used at the end to check if all keys are known

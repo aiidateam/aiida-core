@@ -215,6 +215,7 @@ class Postgres(PGSU):
         :returns: (dbuser, dbname)
         """
         from aiida.cmdline.utils import echo
+
         if not self.dbuser_exists(dbuser):
             self.create_dbuser(dbuser=dbuser, dbpass=dbpass)
         elif not self.can_user_authenticate(dbuser, dbpass):

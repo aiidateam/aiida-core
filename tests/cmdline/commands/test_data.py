@@ -26,6 +26,7 @@ from aiida.cmdline.commands.cmd_data import (
     cmd_cif,
     cmd_dict,
     cmd_remote,
+    cmd_show,
     cmd_singlefile,
     cmd_structure,
     cmd_trajectory,
@@ -35,6 +36,15 @@ from aiida.engine import calcfunction
 from aiida.orm import ArrayData, BandsData, CifData, Dict, Group, KpointsData, RemoteData, StructureData, TrajectoryData
 from aiida.orm.nodes.data.cif import has_pycifrw
 from tests.static import STATIC_DIR
+
+
+def has_mayavi() -> bool:
+    """Return whether the ``mayavi`` module can be imported."""
+    try:
+        import mayavi  # pylint: disable=unused-import
+    except ImportError:
+        return False
+    return True
 
 
 class DummyVerdiDataExportable:
@@ -516,6 +526,48 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
     def test_export(self, output_flag, tmp_path):
         new_supported_formats = list(cmd_trajectory.EXPORT_FORMATS)
         self.data_export_test(TrajectoryData, self.pks, new_supported_formats, output_flag, tmp_path)
+
+    @pytest.mark.parametrize(
+        'fmt', (
+            pytest.param(
+                'jmol', marks=pytest.mark.skipif(not cmd_show.has_executable('jmol'), reason='No jmol executable.')
+            ),
+            pytest.param(
+                'xcrysden',
+                marks=pytest.mark.skipif(not cmd_show.has_executable('xcrysden'), reason='No xcrysden executable.')
+            ),
+            pytest.param(
+                'mpl_heatmap', marks=pytest.mark.skipif(not has_mayavi(), reason='Package `mayavi` not installed.')
+            ), pytest.param('mpl_pos')
+        )
+    )
+    def test_trajectoryshow(self, fmt, monkeypatch, run_cli_command):
+        """Test showing the trajectory data in different formats"""
+        trajectory_pk = self.pks[DummyVerdiDataListable.NODE_ID_STR]
+        options = ['--format', fmt, str(trajectory_pk), '--dont-block']
+
+        def mock_check_output(options):
+            assert isinstance(options, list)
+            assert options[0] == fmt
+
+        if fmt in ['jmol', 'xcrysden']:
+            # This is called by the ``_show_jmol`` and ``_show_xcrysden`` implementations. We want to test just the
+            # function but not the actual commands through a sub process. Note that this mock needs to happen only for
+            # these specific formats, because ``matplotlib`` used in the others _also_ calls ``subprocess.check_output``
+            monkeypatch.setattr(sp, 'check_output', mock_check_output)
+
+        if fmt in ['mpl_pos']:
+            # This has to be mocked because ``plot_positions_xyz`` imports ``matplotlib.pyplot`` and for some completely
+            # unknown reason, causes ``tests/storage/psql_dos/test_backend.py::test_unload_profile`` to fail. For some
+            # reason, merely importing ``matplotlib`` (even here directly in the test) will cause that test to claim
+            # that there still is something holding on to a reference of an sqlalchemy session that it keeps track of
+            # in the ``sqlalchemy.orm.session._sessions`` weak ref dictionary. Since it is impossible to figure out why
+            # the hell importing matplotlib would interact with sqlalchemy sessions, the function that does the import
+            # is simply mocked out for now.
+            from aiida.orm.nodes.data.array import trajectory
+            monkeypatch.setattr(trajectory, 'plot_positions_XYZ', lambda *args, **kwargs: None)
+
+        run_cli_command(cmd_trajectory.trajectory_show, options, use_subprocess=False)
 
 
 class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):

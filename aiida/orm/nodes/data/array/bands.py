@@ -1800,9 +1800,14 @@ def get_bands_and_parents_structure(args, backend=None):
     from aiida import orm
     from aiida.common import timezone
 
+    if backend:
+        user = orm.User.get_collection(backend).get_default()
+    else:
+        user = orm.User.collection.get_default()
+
     q_build = orm.QueryBuilder(backend=backend)
     if args.all_users is False:
-        q_build.append(orm.User, tag='creator', filters={'email': orm.User.collection.get_default().email})
+        q_build.append(orm.User, tag='creator', filters={'email': user.email})
     else:
         q_build.append(orm.User, tag='creator')
 

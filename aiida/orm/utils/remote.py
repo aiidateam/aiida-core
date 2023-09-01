@@ -63,6 +63,7 @@ def get_calcjob_remote_paths(  # pylint: disable=too-many-locals
     :param only_not_cleaned: only include calcjobs whose workdir have not been cleaned
     :return: mapping of computer uuid and list of remote folder
     """
+    # pylint: disable=too-many-branches
     from datetime import timedelta
 
     from aiida import orm
@@ -74,7 +75,10 @@ def get_calcjob_remote_paths(  # pylint: disable=too-many-locals
     filters_remote = {}
 
     if user is None:
-        user = orm.User.collection.get_default()
+        if backend:
+            user = orm.User.get_collection(backend).get_default()
+        else:
+            user = orm.User.collection.get_default()
 
     if computers is not None:
         filters_computer['id'] = {'in': [computer.pk for computer in computers]}

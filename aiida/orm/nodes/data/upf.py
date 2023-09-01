@@ -80,7 +80,7 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
     :param stop_if_existing: if True, check for the md5 of the files and, if the file already exists in the DB, raises a
         MultipleObjectsError. If False, simply adds the existing UPFData node to the group.
     """
-    # pylint: disable=too-many-locals,too-many-branches
+    # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     import os
 
     from aiida import orm
@@ -101,10 +101,14 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
 
     nfiles = len(filenames)
 
-    automatic_user = orm.User.collection.get_default()
-    group, group_created = orm.UpfFamily.collection.get_or_create(label=group_label, user=automatic_user)
+    if backend:
+        default_user = orm.User.get_collection(backend).get_default()
+        group, group_created = orm.UpfFamily.get_collection(backend).get_or_create(label=group_label, user=default_user)
+    else:
+        default_user = orm.User.collection.get_default()
+        group, group_created = orm.UpfFamily.collection.get_or_create(label=group_label, user=default_user)
 
-    if group.user.email != automatic_user.email:
+    if group.user.email != default_user.email:
         raise UniquenessError(
             'There is already a UpfFamily group with label {}'
             ', but it belongs to user {}, therefore you '

@@ -413,7 +413,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         repository = self.get_repository()
 
         keyset_repository = set(repository.list_objects())
-        keyset_database = set(orm.Node.collection(self).iter_repo_keys())
+        keyset_database = set(orm.Node.get_collection(self).iter_repo_keys())
 
         if check_consistency:
             keyset_missing = keyset_database - keyset_repository

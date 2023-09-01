@@ -262,7 +262,7 @@ def create_archive(
     if test_run:
         EXPORT_LOGGER.report('Test Run: Stopping before archive creation')
         keys = set(
-            orm.Node.collection(backend).iter_repo_keys(
+            orm.Node.get_collection(backend).iter_repo_keys(
                 filters={'id': {
                     'in': list(entity_ids[EntityTypes.NODE])
                 }}, batch_size=batch_size
@@ -593,7 +593,7 @@ def _stream_repo_files(
 ) -> None:
     """Collect all repository object keys from the nodes, then stream the files to the archive."""
     keys = set(
-        orm.Node.collection(backend).iter_repo_keys(filters={'id': {
+        orm.Node.get_collection(backend).iter_repo_keys(filters={'id': {
             'in': list(node_ids)
         }}, batch_size=batch_size)
     )

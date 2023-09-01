@@ -23,7 +23,6 @@ __all__ = (
     'ManagementApiConnectionError',
     'Postgres',
     'PostgresConnectionMode',
-    'ProcessLauncher',
     'RabbitmqManagementClient',
     'get_launch_queue_name',
     'get_message_exchange_name',

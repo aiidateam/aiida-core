@@ -3,7 +3,7 @@
 import pytest
 
 from aiida.common.exceptions import MissingEntryPointError
-from aiida.plugins.entry_point import EntryPoint, get_entry_point, load_entry_point  # type: ignore
+from aiida.plugins.entry_point import EntryPoint, get_entry_point, load_entry_point  # type: ignore[attr-defined]
 
 ENTRY_POINT_GROUP = 'aiida.calculations.importers'
 

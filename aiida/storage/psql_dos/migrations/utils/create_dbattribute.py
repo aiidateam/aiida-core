@@ -87,7 +87,7 @@ def create_rows(key: str, value, node_id: int) -> list[dict]:  # pylint: disable
         columns['ival'] = len(value)
 
         for subk, subv in value.items():
-            if not isinstance(key, str) or not key:
+            if not isinstance(key, str) or not key:  # type: ignore[redundant-expr]
                 raise ValidationError('The key must be a non-empty string.')
             if '.' in key:
                 raise ValidationError(

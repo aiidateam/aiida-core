@@ -110,7 +110,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         self._session_factory: Optional[scoped_session] = None
         self._initialise_session()
         # save the URL of the database, for use in the __str__ method
-        self._db_url = self.get_session().get_bind().url  # type: ignore
+        self._db_url = self.get_session().get_bind().url  # type: ignore[union-attr]
 
         self._authinfos = authinfos.SqlaAuthInfoCollection(self)
         self._comments = comments.SqlaCommentCollection(self)
@@ -139,7 +139,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         Although, in the future, we may want to move the multi-thread handling to higher in the AiiDA stack.
         """
         from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
-        engine = create_sqlalchemy_engine(self._profile.storage_config)  # type: ignore
+        engine = create_sqlalchemy_engine(self._profile.storage_config)  # type: ignore[arg-type]
         self._session_factory = scoped_session(sessionmaker(bind=engine, future=True, expire_on_commit=True))
 
     def get_session(self) -> Session:
@@ -155,7 +155,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         # pylint: disable=no-member
         engine = self._session_factory.bind
         if engine is not None:
-            engine.dispose()  # type: ignore
+            engine.dispose()  # type: ignore[union-attr]
         self._session_factory.expunge_all()
         self._session_factory.close()
         self._session_factory = None
@@ -379,7 +379,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         if full:
             maintenance_context = ProfileAccessManager(self._profile).lock
         else:
-            maintenance_context = nullcontext  # type: ignore
+            maintenance_context = nullcontext  # type: ignore[assignment]
 
         with maintenance_context():
             unreferenced_objects = self.get_unreferenced_keyset()

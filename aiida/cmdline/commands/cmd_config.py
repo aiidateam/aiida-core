@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi config` command."""
+from __future__ import annotations
+
 import json
 from pathlib import Path
 import textwrap
@@ -40,7 +42,7 @@ def verdi_config_list(ctx, prefix, description: bool):
     from aiida.manage.configuration import Config, Profile
 
     config: Config = ctx.obj.config
-    profile: Profile = ctx.obj.get('profile', None)
+    profile: Profile | None = ctx.obj.get('profile', None)
 
     if not profile:
         echo.echo_warning('no profiles configured: run `verdi setup` to create one')
@@ -78,7 +80,7 @@ def verdi_config_show(ctx, option):
     from aiida.manage.configuration.options import NO_DEFAULT
 
     config: Config = ctx.obj.config
-    profile: Profile = ctx.obj.profile
+    profile: Profile | None = ctx.obj.profile
 
     dct = {
         'schema': option.schema,
@@ -124,7 +126,7 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
         echo.echo_critical('Cannot flag both append and remove')
 
     config: Config = ctx.obj.config
-    profile: Profile = ctx.obj.profile
+    profile: Profile | None = ctx.obj.profile
 
     if option.global_only:
         globally = True
@@ -164,7 +166,7 @@ def verdi_config_unset(ctx, option, globally):
     from aiida.manage.configuration import Config, Profile
 
     config: Config = ctx.obj.config
-    profile: Profile = ctx.obj.profile
+    profile: Profile | None = ctx.obj.profile
 
     if option.global_only:
         globally = True

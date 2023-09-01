@@ -9,6 +9,8 @@
 ###########################################################################
 # pylint: disable=global-statement
 """Runners that can run and submit processes."""
+from __future__ import annotations
+
 import asyncio
 import functools
 import logging
@@ -43,7 +45,7 @@ class ResultAndNode(NamedTuple):
 
 class ResultAndPk(NamedTuple):
     result: Dict[str, Any]
-    pk: int
+    pk: int | None
 
 
 TYPE_RUN_PROCESS = Union[Process, Type[Process], ProcessBuilder]  # pylint: disable=invalid-name

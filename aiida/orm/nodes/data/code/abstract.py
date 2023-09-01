@@ -301,7 +301,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         except exceptions.EntryPointError:
             raise exceptions.EntryPointError(f'The calculation entry point `{entry_point}` could not be loaded')
 
-        builder = process_class.get_builder()  # type: ignore
+        builder = process_class.get_builder()  # type: ignore[union-attr]
         builder.code = self
 
         return builder

@@ -572,7 +572,7 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
 
 class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):
     """Test verdi data core.structure."""
-    from aiida.orm.nodes.data.structure import has_ase  # type: ignore
+    from aiida.orm.nodes.data.structure import has_ase  # type: ignore[misc]
 
     @pytest.fixture(autouse=True)
     def init_profile(self, aiida_profile_clean, aiida_localhost, run_cli_command):  # pylint: disable=unused-argument

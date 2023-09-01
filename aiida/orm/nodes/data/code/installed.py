@@ -53,7 +53,7 @@ class InstalledCode(Code):
         """
         super(Code, self)._validate()  # Change to ``super()._validate()`` once deprecated ``Code`` class is removed.  # pylint: disable=bad-super-call
 
-        if not self.computer:
+        if not self.computer:  # type: ignore[truthy-bool]
             raise exceptions.ValidationError('The `computer` is undefined.')
 
         try:

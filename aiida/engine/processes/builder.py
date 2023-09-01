@@ -79,7 +79,7 @@ class ProcessBuilderNamespace(MutableMapping):
                     return self._data.get(name)
             elif port.has_default():
 
-                def fgetter(self, name=name, default=port.default):  # type: ignore # pylint: disable=cell-var-from-loop
+                def fgetter(self, name=name, default=port.default):  # type: ignore[misc] # pylint: disable=cell-var-from-loop
                     return self._data.get(name, default)
             else:
 

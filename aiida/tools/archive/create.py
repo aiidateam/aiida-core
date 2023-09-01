@@ -220,6 +220,9 @@ def create_archive(
         )
     else:
         for entry in entities:
+            if entry.pk is None or entry.uuid is None:
+                continue
+
             if isinstance(entry, orm.Group):
                 starting_uuids[EntityTypes.GROUP].add(entry.uuid)
                 entity_ids[EntityTypes.GROUP].add(entry.pk)
@@ -365,7 +368,10 @@ def _collect_all_entities(
 
         progress.set_description_str(progress_str('Nodes'))
         entity_ids[EntityTypes.NODE].update(
-            querybuilder().append(orm.Node, project='id').all(batch_size=batch_size, flat=True)  # type: ignore
+            querybuilder().append(orm.Node,
+                                  project='id').all(  # type: ignore[arg-type]
+                                      batch_size=batch_size, flat=True
+                                  )
         )
         progress.update()
 
@@ -379,45 +385,63 @@ def _collect_all_entities(
         progress.set_description_str(progress_str('Groups'))
         progress.update()
         entity_ids[EntityTypes.GROUP].update(
-            querybuilder().append(orm.Group, project='id').all(batch_size=batch_size, flat=True)  # type: ignore
+            querybuilder().append(
+                orm.Group,
+                project='id'  # type: ignore[arg-type]
+            ).all(batch_size=batch_size, flat=True)
         )
         progress.set_description_str(progress_str('Nodes-Groups'))
         progress.update()
         qbuilder = querybuilder().append(orm.Group, project='id',
                                          tag='group').append(orm.Node, with_group='group', project='id').distinct()
-        group_nodes: List[Tuple[int, int]] = qbuilder.all(batch_size=batch_size)  # type: ignore
+        group_nodes: List[Tuple[int, int]] = qbuilder.all(batch_size=batch_size)  # type: ignore[assignment]
 
         progress.set_description_str(progress_str('Computers'))
         progress.update()
         entity_ids[EntityTypes.COMPUTER].update(
-            querybuilder().append(orm.Computer, project='id').all(batch_size=batch_size, flat=True)  # type: ignore
+            querybuilder().append(
+                orm.Computer,
+                project='id'  # type: ignore[arg-type]
+            ).all(batch_size=batch_size, flat=True)
         )
 
         progress.set_description_str(progress_str('AuthInfos'))
         progress.update()
         if include_authinfos:
             entity_ids[EntityTypes.AUTHINFO].update(
-                querybuilder().append(orm.AuthInfo, project='id').all(batch_size=batch_size, flat=True)  # type: ignore
+                querybuilder().append(
+                    orm.AuthInfo,
+                    project='id'  # type: ignore[arg-type]
+                ).all(batch_size=batch_size, flat=True)
             )
 
         progress.set_description_str(progress_str('Logs'))
         progress.update()
         if include_logs:
             entity_ids[EntityTypes.LOG].update(
-                querybuilder().append(orm.Log, project='id').all(batch_size=batch_size, flat=True)  # type: ignore
+                querybuilder().append(
+                    orm.Log,
+                    project='id'  # type: ignore[arg-type]
+                ).all(batch_size=batch_size, flat=True)
             )
 
         progress.set_description_str(progress_str('Comments'))
         progress.update()
         if include_comments:
             entity_ids[EntityTypes.COMMENT].update(
-                querybuilder().append(orm.Comment, project='id').all(batch_size=batch_size, flat=True)  # type: ignore
+                querybuilder().append(
+                    orm.Comment,
+                    project='id'  # type: ignore[arg-type]
+                ).all(batch_size=batch_size, flat=True)
             )
 
         progress.set_description_str(progress_str('Users'))
         progress.update()
         entity_ids[EntityTypes.USER].update(
-            querybuilder().append(orm.User, project='id').all(batch_size=batch_size, flat=True)  # type: ignore
+            querybuilder().append(
+                orm.User,
+                project='id'  # type: ignore[arg-type]
+            ).all(batch_size=batch_size, flat=True)
         )
 
     return group_nodes, link_data
@@ -446,7 +470,7 @@ def _collect_required_entities(
             )
             qbuilder.append(orm.Node, with_group='group', project='id')
             qbuilder.distinct()
-            group_nodes = qbuilder.all(batch_size=batch_size)  # type: ignore
+            group_nodes = qbuilder.all(batch_size=batch_size)  # type: ignore[assignment]
             entity_ids[EntityTypes.NODE].update(nid for _, nid in group_nodes)
 
         # get full set of nodes & links, following traversal rules
@@ -581,7 +605,7 @@ def _stream_repo_files(
             f'Backend repository key format incompatible: {repository.key_format!r} != {key_format!r}'
         )
     with get_progress_reporter()(desc='Archiving files: ', total=len(keys)) as progress:
-        for key, stream in repository.iter_object_streams(keys):  # type: ignore
+        for key, stream in repository.iter_object_streams(keys):  # type: ignore[arg-type]
             # to-do should we use assume the key here is correct, or always re-compute and check?
             writer.put_object(stream, key=key)
             progress.update()
@@ -624,13 +648,13 @@ def _check_node_licenses(
 
         def _check_allowed(name):
             try:
-                return allowed_licenses(name)  # type: ignore
+                return allowed_licenses(name)  # type: ignore[misc, operator]
             except Exception as exc:
                 raise LicensingException('allowed_licenses function error') from exc
 
         check_allowed = _check_allowed
     elif isinstance(allowed_licenses, Sequence):
-        check_allowed = lambda l: l in allowed_licenses  # type: ignore
+        check_allowed = lambda l: l in allowed_licenses  # type: ignore[operator]
     else:
         raise TypeError('allowed_licenses not a list or function')
 
@@ -641,13 +665,13 @@ def _check_node_licenses(
 
         def _check_forbidden(name):
             try:
-                return forbidden_licenses(name)  # type: ignore
+                return forbidden_licenses(name)  # type: ignore[misc, operator]
             except Exception as exc:
                 raise LicensingException('forbidden_licenses function error') from exc
 
         check_forbidden = _check_forbidden
     elif isinstance(forbidden_licenses, Sequence):
-        check_forbidden = lambda l: l in forbidden_licenses  # type: ignore
+        check_forbidden = lambda l: l in forbidden_licenses  # type: ignore[operator]
     else:
         raise TypeError('forbidden_licenses not a list or function')
 

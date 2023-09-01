@@ -67,7 +67,7 @@ class Parser(ABC):
     @property
     def retrieved(self) -> 'FolderData':
         return self.node.base.links.get_outgoing().get_node_by_label(
-            self.node.process_class.link_label_retrieved  # type: ignore
+            self.node.process_class.link_label_retrieved  # type: ignore[attr-defined, return-value]
         )
 
     @property
@@ -159,7 +159,7 @@ class Parser(ABC):
                 # `parse_from_node` method will get an empty dictionary as a result, despite the `Parser.parse` method
                 # having registered outputs.
                 process = Process.current()
-                process.out_many(outputs)  # type: ignore
+                process.out_many(outputs)  # type: ignore[union-attr]
                 return exit_code
 
             return dict(outputs)
@@ -167,7 +167,7 @@ class Parser(ABC):
         inputs = {'metadata': {'store_provenance': store_provenance}}
         inputs.update(parser.get_outputs_for_parsing())
 
-        return parse_calcfunction.run_get_node(**inputs)  # type: ignore
+        return parse_calcfunction.run_get_node(**inputs)  # type: ignore[attr-defined]
 
     @abstractmethod
     def parse(self, **kwargs) -> Optional[ExitCode]:

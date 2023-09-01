@@ -29,7 +29,7 @@ def await_condition(condition: t.Callable, timeout: int = 1):
     """Wait for the ``condition`` to evaluate to ``True`` within the ``timeout`` or raise."""
     start_time = time.time()
 
-    while not condition:  # type: ignore
+    while not condition():
         if time.time() - start_time > timeout:
             raise RuntimeError(f'waiting for {condition} to evaluate to `True` timed out after {timeout} seconds.')
 

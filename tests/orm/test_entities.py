@@ -19,6 +19,12 @@ from aiida.common.exceptions import InvalidOperation
 class TestBackendEntitiesAndCollections:
     """Test backend entities and their collections"""
 
+    def test_get_collection(self, backend):
+        """Test :meth:`aiida.orm.entities.Entity.get_collection`."""
+        user_collection = orm.User.get_collection(backend)
+        assert user_collection is orm.User.collection
+        assert user_collection.backend is backend
+
     def test_collections_cache(self):
         """Make sure that we're not recreating collections each time .collection is called"""
         # Check directly

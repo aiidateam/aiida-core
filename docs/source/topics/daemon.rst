@@ -29,7 +29,28 @@ Client
 ======
 
 The Python API provides the :class:`~aiida.engine.daemon.client.DaemonClient` class to interact with the daemon.
-It can either be constructed directly for a given profile, or the :func:`aiida.engine.daemon.client.get_daemon_client` function can be used to construct it for the current default profile.
+It can either be constructed directly for a given profile, or the :func:`aiida.engine.get_daemon_client` utility function can be used to construct it.
+In order to control the daemon for the current default profile:
+
+.. code-block:: python
+
+    from aiida.engine import get_daemon_client
+    client = get_daemon_client()
+
+It is also possible to explicitly specify a profile:
+
+.. code-block:: python
+
+    client = get_daemon_client(profile='some-profile')
+
+The daemon can be started and stopped through the client:
+
+.. code-block:: python
+
+    client.start_daemon()
+    assert client.is_daemon_running
+    client.stop_daemon(wait=True)
+
 The main methods of interest for interacting with the daemon are:
 
 * :meth:`~aiida.engine.daemon.client.DaemonClient.start_daemon`

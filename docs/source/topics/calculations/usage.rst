@@ -661,6 +661,7 @@ The ``Code``
 
 When creating a code, you can tell AiiDA that it should be run as an MPI program, by setting the ``with_mpi`` attribute to ``True`` or ``False``.
 From AiiDA 2.3 onward, this is the **recommended** way of controlling MPI behavior.
+The attribute can be set from the Python API as ``AbstractCode(with_mpi=with_mpi)`` or through the ``--with-mpi`` / ``--no-with-mpi`` option of the ``verdi code create`` CLI command.
 If the code can be run with or without MPI, setting the ``with_mpi`` attribute can be skipped.
 It will default to ``None``, leaving the question of whether to run with or without MPI up to the ``CalcJob`` plugin or user input.
 

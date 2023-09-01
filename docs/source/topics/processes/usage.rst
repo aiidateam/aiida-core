@@ -704,3 +704,28 @@ If you know that your daemon runners may be experiencing a heavy load, you can a
 .. rubric:: Footnotes
 
 .. [#f1] Note that the :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation` process class also takes a ``code`` as input, but that has been omitted for the purposes of the example.
+
+
+.. _topics:processes:usage:processes_api:
+
+The processes API
+-----------------
+
+The functionality of ``verdi process`` to ``play``, ``pause`` and ``kill`` is now made available through the :meth:`aiida.engine.processes.control` module.
+Processes can be played, paused or killed through the :meth:`~aiida.engine.processes.control.play_processes`, :meth:`~aiida.engine.processes.control.pause_processes`, and :meth:`~aiida.engine.processes.control.kill_processes`, respectively:
+
+.. code-block:: python
+
+    from aiida.engine.processes import control
+
+    processes = [load_node(<PK1>), load_node(<PK2>)]
+
+    pause_processes(processes)  # Pause the processes
+    play_processes(processes)  # Play them again
+    kill_processes(processes)  # Kill the processes
+
+Instead of specifying an explicit list of processes, the functions also take the ``all_entries`` keyword argument:
+
+.. code-block:: python
+
+    pause_processes(all_entries=True)  # Pause all running processes

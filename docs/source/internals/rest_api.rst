@@ -232,3 +232,26 @@ Moreover, we recommend to consult the documentation of `mod_wsgi <https://modwsg
 .. note::
     Optionally, create a click option for the variable ``catch_internal_server`` to be ``False`` in order to let exceptions (including python tracebacks) bubble up to the apache error log.
     This can be particularly useful when the ``app`` is still under heavy development.
+
+
+.. _internal_architecture:restapi:multiple_profiles:
+
+Serving multiple profiles
+=========================
+
+A single REST API instance can serve data from all profiles of an AiiDA instance.
+To maintain backwards compatibility, the new functionality needs to be explicitly enabled through the configuration:
+
+.. code-block:: bash
+
+    verdi config set rest_api.profile_switching true
+
+After the REST API is restarted, it will now accept the profile query parameter, for example:
+
+.. code-block:: console
+
+    http://127.0.0.1:5000/api/v4/computers?profile=some-profile-name
+
+If the specified profile is already loaded, the REST API functions exactly as without profile switching enabled.
+If another profile is specified, the REST API will first switch profiles before executing the request.
+If the profile parameter is specified in a request and the REST API does not have profile switching enabled, a 400 response is returned.

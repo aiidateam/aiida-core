@@ -1,6 +1,7 @@
 ### python builtins
 py:class _io.BufferedReader
 py:class AliasedClass
+py:class asyncio.AbstractEventLoop
 py:class AbstractContextManager
 py:obj typing.AbstractContextManager
 py:class callable

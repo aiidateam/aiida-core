@@ -13,7 +13,7 @@ import functools
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 if TYPE_CHECKING:
-    from asyncio import AbstractEventLoop
+    import asyncio
 
     from kiwipy.rmq import RmqThreadCommunicator
     from plumpy.process_comms import RemoteProcessThreadController
@@ -417,7 +417,7 @@ class Manager:  # pylint: disable=too-many-public-methods
 
         return runners.Runner(**settings)
 
-    def create_daemon_runner(self, loop: Optional['AbstractEventLoop'] = None) -> 'Runner':
+    def create_daemon_runner(self, loop: Optional['asyncio.AbstractEventLoop'] = None) -> 'Runner':
         """Create and return a new daemon runner.
 
         This is used by workers when the daemon is running and in testing.

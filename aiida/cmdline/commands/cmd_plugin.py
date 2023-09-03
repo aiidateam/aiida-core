@@ -13,7 +13,7 @@ import inspect
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
-from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils import echo
 from aiida.plugins.entry_point import ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP
 
 
@@ -25,7 +25,6 @@ def verdi_plugin():
 @verdi_plugin.command('list')
 @click.argument('entry_point_group', type=click.Choice(list(ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP)), required=False)
 @click.argument('entry_point', type=click.STRING, required=False)
-@decorators.with_dbenv()
 def plugin_list(entry_point_group, entry_point):
     """Display a list of all available plugins."""
     from aiida.cmdline.utils.common import print_process_info

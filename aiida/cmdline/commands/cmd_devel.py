@@ -65,7 +65,10 @@ def devel_check_undesired_imports():
     """
     loaded_modules = 0
 
-    for modulename in ['asyncio', 'requests', 'plumpy', 'disk_objectstore', 'paramiko', 'seekpath', 'CifFile', 'ase', 'pymatgen', 'spglib', 'pymysql']:
+    for modulename in [
+        'asyncio', 'requests', 'plumpy', 'disk_objectstore', 'paramiko', 'seekpath', 'CifFile', 'ase', 'pymatgen',
+        'spglib', 'pymysql'
+    ]:
         if modulename in sys.modules:
             echo.echo_warning(f'Detected loaded module "{modulename}"')
             loaded_modules += 1

@@ -130,7 +130,7 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
 
         if existing_upf is None:
             # return the upfdata instances, not stored
-            pseudo, created = UpfData.get_or_create(filename, use_first=True, store_upf=False)
+            pseudo, created = UpfData.get_or_create(filename, use_first=True, store_upf=False, backend=backend)
             # to check whether only one upf per element exists
             # NOTE: actually, created has the meaning of "to_be_created"
             pseudo_and_created.append((pseudo, created))
@@ -257,7 +257,7 @@ class UpfData(SinglefileData):
     """`Data` sub class to represent a pseudopotential single file in UPF format."""
 
     @classmethod
-    def get_or_create(cls, filepath, use_first=False, store_upf=True):
+    def get_or_create(cls, filepath, use_first=False, store_upf=True, backend=None):
         """Get the `UpfData` with the same md5 of the given file, or create it if it does not yet exist.
 
         :param filepath: an absolute filepath on disk
@@ -273,10 +273,10 @@ class UpfData(SinglefileData):
         if not os.path.isabs(filepath):
             raise ValueError('filepath must be an absolute path')
 
-        pseudos = cls.from_md5(md5_file(filepath))
+        pseudos = cls.from_md5(md5_file(filepath), backend=backend)
 
         if not pseudos:
-            instance = cls(file=filepath)
+            instance = cls(file=filepath, backend=backend)
             if store_upf:
                 instance.store()
             return (instance, True)

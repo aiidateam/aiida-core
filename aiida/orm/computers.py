@@ -680,7 +680,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         try:
             authinfo = self.get_authinfo(user)
         except exceptions.NotExistent:
-            authinfo = authinfos.AuthInfo(self, user)
+            authinfo = authinfos.AuthInfo(self, user, backend=self.backend)
 
         auth_params = authinfo.get_auth_params()
 

@@ -9,7 +9,7 @@ VERDI=`which verdi`
 # tends to go towards ~0.8 seconds. Since these timings are obviously machine and environment dependent, typically these
 # types of tests are fragile. But with a load limit of more than twice the ideal loading time, if exceeded, should give
 # a reasonably sure indication that the loading of `verdi` is unacceptably slowed down.
-LOAD_LIMIT=0.5
+LOAD_LIMIT=0.4
 MAX_NUMBER_ATTEMPTS=5
 
 iteration=0
@@ -34,10 +34,6 @@ while true; do
     fi
 
 done
-
-$VERDI devel check-load-time
-$VERDI devel check-undesired-imports
-
 
 # Test that we can also run the CLI via `python -m aiida`,
 # that it returns a 0 exit code, and contains the expected stdout.

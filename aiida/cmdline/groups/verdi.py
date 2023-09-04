@@ -62,7 +62,7 @@ class VerdiCommandGroup(click.Group):
         from ..params import options
 
         # Only apply the option if it hasn't been already added in a previous call.
-        if cmd is not None and 'verbosity' not in [param.name for param in cmd.params]:
+        if 'verbosity' not in [param.name for param in cmd.params]:
             cmd = options.VERBOSITY()(cmd)
 
         return cmd

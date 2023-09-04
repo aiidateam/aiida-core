@@ -17,6 +17,7 @@ from aiida.orm import ProcessNode
 from .processes.builder import ProcessBuilder
 from .processes.functions import FunctionProcess
 from .processes.process import Process
+from .runners import ResultAndPk
 from .utils import instantiate_process, is_process_scoped  # pylint: disable=no-name-in-module
 
 __all__ = ('run', 'run_get_pk', 'run_get_node', 'submit')
@@ -60,7 +61,7 @@ def run_get_node(process: TYPE_RUN_PROCESS, *args: Any, **inputs: Any) -> Tuple[
     return runner.run_get_node(process, *args, **inputs)
 
 
-def run_get_pk(process: TYPE_RUN_PROCESS, *args: Any, **inputs: Any) -> Tuple[Dict[str, Any], int]:
+def run_get_pk(process: TYPE_RUN_PROCESS, *args: Any, **inputs: Any) -> ResultAndPk:
     """Run the process with the supplied inputs in a local runner that will block until the process is completed.
 
     :param process: the process class, instance, builder or function to run

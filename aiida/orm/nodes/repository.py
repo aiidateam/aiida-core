@@ -235,11 +235,11 @@ class NodeRepository:
         """
         self._check_mutability()
 
-        if isinstance(handle, io.StringIO):
-            handle = io.BytesIO(handle.read().encode('utf-8'))
+        if isinstance(handle, io.StringIO):  # type: ignore[unreachable]
+            handle = io.BytesIO(handle.read().encode('utf-8'))  # type: ignore[unreachable]
 
-        if isinstance(handle, tempfile._TemporaryFileWrapper):  # pylint: disable=protected-access
-            if 'b' in handle.file.mode:
+        if isinstance(handle, tempfile._TemporaryFileWrapper):  # type: ignore[unreachable] # pylint: disable=protected-access
+            if 'b' in handle.file.mode:  # type: ignore[unreachable]
                 handle = io.BytesIO(handle.read())
             else:
                 handle = io.BytesIO(handle.read().encode('utf-8'))

@@ -70,7 +70,7 @@ def test_attr_extra_migration(perform_migrations: PsqlDosMigrator):
             'datatype': 'date',
             'dval': datetime.fromisoformat('2022-01-01')
         })):
-            kwargs['tval'] = 'test'  # type: ignore
+            kwargs['tval'] = 'test'  # type: ignore[index]
             attr = attr_model(dbnode_id=node.id, key=f'attr_{idx}', **kwargs)
             session.add(attr)
             session.commit()
@@ -107,7 +107,7 @@ def test_settings_migration(perform_migrations: PsqlDosMigrator):
     with perform_migrations.session() as session:
 
         kwargs: dict
-        for idx, kwargs in enumerate((  # type: ignore
+        for idx, kwargs in enumerate((  # type: ignore[assignment]
             {
                 'datatype': 'txt',
                 'tval': 'test'

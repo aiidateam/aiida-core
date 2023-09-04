@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Definition of caching mechanism and configuration for calculations."""
+from __future__ import annotations
+
 from collections import namedtuple
 from contextlib import contextmanager, suppress
 from enum import Enum
@@ -40,7 +42,7 @@ class _ContextCache:
 
     def clear(self):
         """Clear caching overrides."""
-        self.__init__()  # type: ignore
+        self.__init__()  # type: ignore[misc]
 
     def enable_all(self):
         self._default_all = 'enable'
@@ -48,18 +50,22 @@ class _ContextCache:
     def disable_all(self):
         self._default_all = 'disable'
 
-    def enable(self, identifier):
+    def enable(self, identifier: str):
         self._enable.append(identifier)
         with suppress(ValueError):
             self._disable.remove(identifier)
 
-    def disable(self, identifier):
+    def disable(self, identifier: str):
         self._disable.append(identifier)
         with suppress(ValueError):
             self._enable.remove(identifier)
 
-    def get_options(self):
-        """Return the options, applying any context overrides."""
+    def get_options(self, strict: bool = False):
+        """Return the options, applying any context overrides.
+
+        :param strict: When set to ``True``, the function will actually try to resolve the identifier by loading it and
+            if it fails, an exception is raised.
+        """
 
         if self._default_all == 'disable':
             return False, [], []
@@ -84,7 +90,7 @@ class _ContextCache:
         # Check validity of enabled and disabled entries
         try:
             for identifier in enabled + disabled:
-                _validate_identifier_pattern(identifier=identifier)
+                _validate_identifier_pattern(identifier=identifier, strict=strict)
         except ValueError as exc:
             raise exceptions.ConfigurationError('Invalid identifier pattern in enable or disable list.') from exc
 
@@ -95,13 +101,15 @@ _CONTEXT_CACHE = _ContextCache()
 
 
 @contextmanager
-def enable_caching(*, identifier=None):
+def enable_caching(*, identifier: str | None = None, strict: bool = False):
     """Context manager to enable caching, either for a specific node class, or globally.
 
     .. warning:: this does not affect the behavior of the daemon, only the local Python interpreter.
 
     :param identifier: Process type string of the node, or a pattern with '*' wildcard that matches it.
         If not provided, caching is enabled for all classes.
+    :param strict: When set to ``True``, the function will actually try to resolve the identifier by loading it and if
+        it fails, an exception is raised.
     :type identifier: str
     """
     type_check(identifier, str, allow_none=True)
@@ -109,20 +117,22 @@ def enable_caching(*, identifier=None):
     if identifier is None:
         _CONTEXT_CACHE.enable_all()
     else:
-        _validate_identifier_pattern(identifier=identifier)
+        _validate_identifier_pattern(identifier=identifier, strict=strict)
         _CONTEXT_CACHE.enable(identifier)
     yield
     _CONTEXT_CACHE.clear()
 
 
 @contextmanager
-def disable_caching(*, identifier=None):
+def disable_caching(*, identifier: str | None = None, strict: bool = False):
     """Context manager to disable caching, either for a specific node class, or globally.
 
     .. warning:: this does not affect the behavior of the daemon, only the local Python interpreter.
 
     :param identifier: Process type string of the node, or a pattern with '*' wildcard that matches it.
         If not provided, caching is disabled for all classes.
+    :param strict: When set to ``True``, the function will actually try to resolve the identifier by loading it and if
+        it fails, an exception is raised.
     :type identifier: str
     """
     type_check(identifier, str, allow_none=True)
@@ -130,24 +140,25 @@ def disable_caching(*, identifier=None):
     if identifier is None:
         _CONTEXT_CACHE.disable_all()
     else:
-        _validate_identifier_pattern(identifier=identifier)
+        _validate_identifier_pattern(identifier=identifier, strict=strict)
         _CONTEXT_CACHE.disable(identifier)
     yield
     _CONTEXT_CACHE.clear()
 
 
-def get_use_cache(*, identifier=None):
+def get_use_cache(*, identifier: str | None = None, strict: bool = False) -> bool:
     """Return whether the caching mechanism should be used for the given process type according to the configuration.
 
     :param identifier: Process type string of the node
-    :type identifier: str
+    :param strict: When set to ``True``, the function will actually try to resolve the identifier by loading it and if
+        it fails, an exception is raised.
     :return: boolean, True if caching is enabled, False otherwise
     :raises: `~aiida.common.exceptions.ConfigurationError` if the configuration is invalid, either due to a general
         configuration error, or by defining the class both enabled and disabled
     """
     type_check(identifier, str, allow_none=True)
 
-    default, enabled, disabled = _CONTEXT_CACHE.get_options()
+    default, enabled, disabled = _CONTEXT_CACHE.get_options(strict=strict)
 
     if identifier is not None:
         type_check(identifier, str)
@@ -175,14 +186,14 @@ def get_use_cache(*, identifier=None):
                     most_specific.append(PatternWithResult(pattern=specific_pattern, use_cache=False))
 
             if len(most_specific) > 1:
-                raise exceptions.ConfigurationError((
-                    'Invalid configuration: multiple matches for identifier {}'
-                    ', but the most specific identifier is not unique. Candidates: {}'
-                ).format(identifier, [match.pattern for match in most_specific]))
+                raise exceptions.ConfigurationError(
+                    f'Invalid configuration: multiple matches for identifier `{identifier}`, but the most specific '
+                    f'identifier is not unique. Candidates: {[match.pattern for match in most_specific]}'
+                )
             if not most_specific:
                 raise exceptions.ConfigurationError(
-                    'Invalid configuration: multiple matches for identifier {}, but none of them is most specific.'.
-                    format(identifier)
+                    f'Invalid configuration: multiple matches for identifier `{identifier}`, but none of them is most '
+                    'specific.'
                 )
             return most_specific[0].use_cache
         if enable_matches:
@@ -192,17 +203,20 @@ def get_use_cache(*, identifier=None):
     return default
 
 
-def _match_wildcard(*, string, pattern):
-    """
-    Helper function to check whether a given name matches a pattern
-    which can contain '*' wildcards.
+def _match_wildcard(*, string: str, pattern: str) -> bool:
+    """Return whether a given name matches a pattern which can contain '*' wildcards.
+
+    :param string: The string to check.
+    :param pattern: The patter to match for.
+    :returns: ``True`` if ``string`` matches the ``pattern``, ``False`` otherwise.
     """
     regexp = '.*'.join(re.escape(part) for part in pattern.split('*'))
     return re.fullmatch(pattern=regexp, string=string) is not None
 
 
-def _validate_identifier_pattern(*, identifier):
-    """
+def _validate_identifier_pattern(*, identifier: str, strict: bool = False):
+    """Validate an caching identifier pattern.
+
     The identifier (without wildcards) can have one of two forms:
 
     1.  <group_name><ENTRY_POINT_STRING_SEPARATOR><tail>
@@ -215,18 +229,27 @@ def _validate_identifier_pattern(*, identifier):
         this is a colon-separated string, where each part satisfies
         `part.isidentifier() and not keyword.iskeyword(part)`
 
-    This function checks if an identifier _with_ wildcards can possibly
-    match one of these two forms. If it can not, a `ValueError` is raised.
+    This function checks if an identifier _with_ wildcards can possibly match one of these two forms. If it can not,
+    a ``ValueError`` is raised.
 
     :param identifier: Process type string, or a pattern with '*' wildcard that matches it.
-    :type identifier: str
+    :param strict: When set to ``True``, the function will actually try to resolve the identifier by loading it and if
+        it fails, an exception is raised.
+    :raises ValueError: If the identifier is an invalid identifier.
+    :raises ValueError: If ``strict=True`` and the identifier cannot be successfully loaded.
     """
-    common_error_msg = f"Invalid identifier pattern '{identifier}': "
+    # pylint: disable=too-many-branches
+    import importlib
+
+    from aiida.common.exceptions import EntryPointError
+    from aiida.plugins.entry_point import load_entry_point_from_string
+
+    common_error_msg = f'Invalid identifier pattern `{identifier}`: '
     assert ENTRY_POINT_STRING_SEPARATOR not in '.*'  # The logic of this function depends on this
     # Check if it can be an entry point string
     if identifier.count(ENTRY_POINT_STRING_SEPARATOR) > 1:
         raise ValueError(
-            f"{common_error_msg}Can contain at most one entry point string separator '{ENTRY_POINT_STRING_SEPARATOR}'"
+            f'{common_error_msg}Can contain at most one entry point string separator `{ENTRY_POINT_STRING_SEPARATOR}`'
         )
     # If there is one separator, it must be an entry point string.
     # Check if the left hand side is a matching pattern
@@ -237,19 +260,28 @@ def _validate_identifier_pattern(*, identifier):
             for group_name in ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP
         ):
             raise ValueError(
-                common_error_msg + "Group name pattern '{}' does not match any of the AiiDA entry point group names.".
-                format(group_pattern)
+                common_error_msg +
+                f'Group name pattern `{group_pattern}` does not match any of the AiiDA entry point group names.'
             )
-        # The group name pattern matches, and there are no further
-        # entry point string separators in the identifier, hence it is
-        # a valid pattern.
+
+        # If strict mode is enabled and the identifier is explicit, i.e., doesn't contain a wildcard, try to load it.
+        if strict and '*' not in identifier:
+            try:
+                load_entry_point_from_string(identifier)
+            except EntryPointError as exception:
+                raise ValueError(common_error_msg + f'`{identifier}` cannot be loaded.') from exception
+
+        # The group name pattern matches, and there are no further entry point string separators in the identifier,
+        # hence it is a valid pattern.
         return
+
     # The separator might be swallowed in a wildcard, for example
     # aiida.* or aiida.calculations*
     if '*' in identifier:
         group_part, _ = identifier.split('*', 1)
         if any(group_name.startswith(group_part) for group_name in ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP):
             return
+
     # Finally, check if it could be a fully qualified Python name
     for identifier_part in identifier.split('.'):
         # If it contains a wildcard, we can not check for keywords.
@@ -260,10 +292,22 @@ def _validate_identifier_pattern(*, identifier):
             if not identifier_part.replace('*', 'a').isidentifier():
                 raise ValueError(
                     common_error_msg +
-                    f"Identifier part '{identifier_part}' can not match a fully qualified Python name."
+                    f'Identifier part `{identifier_part}` can not match a fully qualified Python name.'
                 )
         else:
             if not identifier_part.isidentifier():
-                raise ValueError(f"{common_error_msg}'{identifier_part}' is not a valid Python identifier.")
+                raise ValueError(f'{common_error_msg}`{identifier_part}` is not a valid Python identifier.')
             if keyword.iskeyword(identifier_part):
-                raise ValueError(f"{common_error_msg}'{identifier_part}' is a reserved Python keyword.")
+                raise ValueError(f'{common_error_msg}`{identifier_part}` is a reserved Python keyword.')
+
+    if not strict:
+        return
+
+    # If there is no separator, it must be a fully qualified Python name.
+    try:
+        module_name = '.'.join(identifier.split('.')[:-1])
+        class_name = identifier.split('.')[-1]
+        module = importlib.import_module(module_name)
+        getattr(module, class_name)
+    except (ModuleNotFoundError, AttributeError, IndexError) as exc:
+        raise ValueError(common_error_msg + f'`{identifier}` cannot be imported.') from exc

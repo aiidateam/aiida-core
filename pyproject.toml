@@ -324,7 +324,8 @@ max-locals = 20
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "--benchmark-skip --durations=50 --cov-report xml --cov-append "
+xfail_strict = true
+addopts = "--benchmark-skip --durations=50 --strict-config --strict-markers -ra --cov-report xml --cov-append "
 testpaths = [
     "tests",
 ]
@@ -363,6 +364,11 @@ indent_dictionary_value = false
 allow_split_before_dict_value = false
 
 [tool.mypy]
+enable_error_code = [
+    "ignore-without-code",
+    "redundant-expr",
+    "truthy-bool"
+]
 show_error_codes = true
 scripts_are_modules = true
 show_traceback = true
@@ -377,6 +383,7 @@ disallow_incomplete_defs = false
 warn_return_any = false
 disallow_any_generics = false
 disallow_subclassing_any = false
+warn_unreachable = true
 
 [[tool.mypy.overrides]]
 module = 'aiida'

@@ -156,7 +156,7 @@ def set_progress_reporter(reporter: Optional[Type[ProgressReporterAbstract]] = N
     if reporter is None:
         PROGRESS_REPORTER = ProgressReporterNull
     elif kwargs:
-        PROGRESS_REPORTER = partial(reporter, **kwargs)  # type: ignore
+        PROGRESS_REPORTER = partial(reporter, **kwargs)  # type: ignore[assignment]
     else:
         PROGRESS_REPORTER = reporter
 

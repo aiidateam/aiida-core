@@ -67,20 +67,22 @@ class EntryPointFormat(enum.Enum):
 
 ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP = {
     'aiida.calculations': 'aiida.orm.nodes.process.calculation.calcjob',
+    'aiida.calculations.importers': 'aiida.calculations.importers',
+    'aiida.calculations.monitors': 'aiida.calculations.monitors',
+    'aiida.cmdline.computer.configure': 'aiida.cmdline.computer.configure',
     'aiida.cmdline.data': 'aiida.cmdline.data',
     'aiida.cmdline.data.structure.import': 'aiida.cmdline.data.structure.import',
-    'aiida.cmdline.computer.configure': 'aiida.cmdline.computer.configure',
     'aiida.data': 'aiida.orm.nodes.data',
     'aiida.groups': 'aiida.orm.groups',
     'aiida.node': 'aiida.orm.nodes',
     'aiida.parsers': 'aiida.parsers.plugins',
     'aiida.schedulers': 'aiida.schedulers.plugins',
     'aiida.storage': 'aiida.storage',
+    'aiida.transports': 'aiida.transports.plugins',
     'aiida.tools.calculations': 'aiida.tools.calculations',
     'aiida.tools.data.orbitals': 'aiida.tools.data.orbitals',
     'aiida.tools.dbexporters': 'aiida.tools.dbexporters',
     'aiida.tools.dbimporters': 'aiida.tools.dbimporters.plugins',
-    'aiida.transports': 'aiida.transports.plugins',
     'aiida.workflows': 'aiida.workflows',
 }
 

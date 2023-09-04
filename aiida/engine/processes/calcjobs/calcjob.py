@@ -517,7 +517,7 @@ class CalcJob(Process):
 
     @property
     def node(self) -> orm.CalcJobNode:
-        return super().node  # type: ignore
+        return super().node  # type: ignore[return-value]
 
     @override
     def on_terminated(self) -> None:
@@ -616,7 +616,7 @@ class CalcJob(Process):
                 calc_info = self.presubmit(folder)
                 transport.chdir(folder.abspath)
                 upload_calculation(self.node, transport, calc_info, folder, inputs=self.inputs, dry_run=True)
-                self.node.dry_run_info = {  # type: ignore
+                self.node.dry_run_info = {  # type: ignore[attr-defined]
                     'folder': folder.abspath,
                     'script_filename': self.node.get_option('submit_script_filename')
                 }
@@ -768,7 +768,7 @@ class CalcJob(Process):
             return None
 
         if exit_code is not None and not isinstance(exit_code, ExitCode):
-            args = (scheduler.__class__.__name__, type(exit_code))
+            args = (scheduler.__class__.__name__, type(exit_code))  # type: ignore[unreachable]
             raise ValueError('`{}.parse_output` returned neither an `ExitCode` nor None, but: {}'.format(*args))
 
         return exit_code
@@ -797,7 +797,7 @@ class CalcJob(Process):
                 break
 
         if exit_code is not None and not isinstance(exit_code, ExitCode):
-            args = (parser_class.__name__, type(exit_code))
+            args = (parser_class.__name__, type(exit_code))  # type: ignore[unreachable]
             raise ValueError('`{}.parse` returned neither an `ExitCode` nor None, but: {}'.format(*args))
 
         return exit_code
@@ -894,7 +894,7 @@ class CalcJob(Process):
         # Set resources, also with get_default_mpiprocs_per_machine
         resources = self.node.get_option('resources')
         scheduler.preprocess_resources(resources or {}, computer.get_default_mpiprocs_per_machine())
-        job_tmpl.job_resource = scheduler.create_job_resource(**resources)  # type: ignore
+        job_tmpl.job_resource = scheduler.create_job_resource(**resources)  # type: ignore[arg-type]
 
         subst_dict = {'tot_num_mpiprocs': job_tmpl.job_resource.get_tot_num_mpiprocs()}
 

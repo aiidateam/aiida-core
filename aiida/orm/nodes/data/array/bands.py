@@ -15,6 +15,8 @@ in a Brillouin zone, and how to operate on them.
 import json
 from string import Template
 
+import numpy
+
 from aiida.common.exceptions import ValidationError
 from aiida.common.utils import join_labels, prettify_labels
 
@@ -72,7 +74,6 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
     """
 
     # pylint: disable=too-many-return-statements,too-many-branches,too-many-statements,no-else-return
-    import numpy
 
     def nint(num):
         """
@@ -258,7 +259,6 @@ class BandsData(KpointsData):
         correspond to the number of kpoints.
         """
         # pylint: disable=too-many-branches
-        import numpy
         try:
             kpoints = self.get_kpoints()
         except AttributeError:
@@ -392,7 +392,6 @@ class BandsData(KpointsData):
         :param also_occupations: if True, returns also the occupations array.
         Default = False
         """
-        import numpy
         try:
             bands = numpy.array(self.get_array('bands'))
         except KeyError:
@@ -441,7 +440,6 @@ class BandsData(KpointsData):
         """
         # pylint: disable=too-many-locals,too-many-branches,too-many-statements
         # load the x and y's of the graph
-        import numpy
         stored_bands = self.get_bands()
         if len(stored_bands.shape) == 2:
             bands = stored_bands
@@ -658,7 +656,6 @@ class BandsData(KpointsData):
         :param comments: if True, print comments (if it makes sense for the given
             format)
         """
-        import numpy
         plot_info = self._get_bandplot_data(cartesian=True, prettify_format=None, join_symbol='|')
 
         bands = plot_info['y']
@@ -717,7 +714,6 @@ class BandsData(KpointsData):
             accepted, see internal variable 'valid_additional_keywords
         """
         # pylint: disable=too-many-arguments,too-many-locals
-        import numpy
 
         # Only these keywords are accepted in kwargs, and then set into the json
         valid_additional_keywords = [
@@ -1131,8 +1127,6 @@ class BandsData(KpointsData):
         )
 
         import math
-
-        import numpy
 
         # load the x and y of every set
         if color_number > MAX_NUM_AGR_COLORS:

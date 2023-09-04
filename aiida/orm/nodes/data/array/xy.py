@@ -12,6 +12,8 @@ This module defines the classes related to Xy data. That is data that contains
 collections of y-arrays bound to a single x-array, and the methods to operate
 on them.
 """
+import numpy as np
+
 from aiida.common.exceptions import NotExistent
 
 from .array import ArrayData
@@ -47,11 +49,10 @@ class XyData(ArrayData):
         Validates that the array is an numpy.ndarray and that the name is
         of type str. Raises TypeError or ValueError if this not the case.
         """
-        import numpy
         if not isinstance(name, str):
             raise TypeError('The name must always be a str.')
 
-        if not isinstance(array, numpy.ndarray):
+        if not isinstance(array, np.ndarray):
             raise TypeError('The input array must always be a numpy array')
         try:
             array.astype(float)
@@ -82,8 +83,6 @@ class XyData(ArrayData):
         :param y_names: A list of strings giving the names of the y_arrays
         :param y_units: A list of strings giving the units of the y_arrays
         """
-        import numpy
-
         # for the case of single name, array, tag input converts to a list
         y_arrays = check_convert_single_to_tuple(y_arrays)
         y_names = check_convert_single_to_tuple(y_names)
@@ -103,7 +102,7 @@ class XyData(ArrayData):
         # validate each of the y_arrays
         for num, (y_array, y_name, y_unit) in enumerate(zip(y_arrays, y_names, y_units)):
             self._arrayandname_validator(y_array, y_name, y_unit)
-            if numpy.shape(y_array) != numpy.shape(x_array):
+            if np.shape(y_array) != np.shape(x_array):
                 raise ValueError(f'y_array {y_name} did not have the same shape has the x_array!')
             self.set_array(f'y_array_{num}', y_array)
 

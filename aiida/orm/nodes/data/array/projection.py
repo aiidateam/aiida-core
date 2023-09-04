@@ -10,6 +10,8 @@
 """Data plugin to represet arrays of projected wavefunction components."""
 import copy
 
+import numpy as np
+
 from aiida.common import exceptions
 from aiida.plugins import OrbitalFactory
 
@@ -41,14 +43,13 @@ class ProjectionData(OrbitalData, ArrayData):
         :raise: AttributeError if input_array is not of same shape as
                 dos_energy
         """
-        import numpy
         try:
-            shape_bands = numpy.shape(self.get_reference_bandsdata())
+            shape_bands = np.shape(self.get_reference_bandsdata())
         except AttributeError:
             raise exceptions.ValidationError('Bands must be set first, then projwfc')
         # The [0:2] is so that each array, and not collection of arrays
         # is used to make the comparison
-        if numpy.shape(projection_array) != shape_bands:
+        if np.shape(projection_array) != shape_bands:
             raise AttributeError('These arrays are not the same shape as the bands')
 
     def set_reference_bandsdata(self, value):
@@ -196,7 +197,6 @@ class ProjectionData(OrbitalData, ArrayData):
         """
 
         # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
-        import numpy
 
         def single_to_list(item):
             """
@@ -215,11 +215,11 @@ class ProjectionData(OrbitalData, ArrayData):
         def array_list_checker(array_list, array_name, orb_length):
             """
             Does basic checks over everything in the array_list. Makes sure that
-            all the arrays are numpy.ndarray floats, that the length is same as
+            all the arrays are np.ndarray floats, that the length is same as
             required_length, raises exception using array_name if there is
             a failure
             """
-            if not all(isinstance(_, numpy.ndarray) for _ in array_list):
+            if not all(isinstance(_, np.ndarray) for _ in array_list):
                 raise exceptions.ValidationError(f'{array_name} was not composed entirely of ndarrays')
             if len(array_list) != orb_length:
                 raise exceptions.ValidationError(f'{array_name} did not have the same length as the list of orbitals')

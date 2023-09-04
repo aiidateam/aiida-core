@@ -15,6 +15,7 @@ import textwrap
 from typing import TYPE_CHECKING
 
 from click import style
+from tabulate import tabulate
 
 from . import echo
 
@@ -101,7 +102,6 @@ def get_node_summary(node):
     :return: a string summary of the node
     """
     from plumpy import ProcessState
-    from tabulate import tabulate
 
     from aiida.orm import ProcessNode
 
@@ -154,8 +154,6 @@ def get_node_info(node, include_summary=True):
     :param include_summary: boolean, if True, also include a summary of node properties
     :return: a string summary of the node including a description of all its links and log messages
     """
-    from tabulate import tabulate
-
     from aiida import orm
     from aiida.common.links import LinkType
 
@@ -202,8 +200,6 @@ def format_flat_links(links, headers):
     :param headers: headers to use
     :return: formatted string
     """
-    from tabulate import tabulate
-
     table = []
 
     for link_triple in links:
@@ -248,7 +244,7 @@ def format_nested_links(links, headers):
     for depth, label, pk, class_name in format_recursive(links):
         table.append([f"{' ' * (depth * indent_size)}{label}", pk, class_name])
 
-    result = f'\n{tb.tabulate(table, headers=headers)}'
+    result = f'\n{tabulate(table, headers=headers)}'
     tb.PRESERVE_WHITESPACE = False
 
     return result
@@ -426,7 +422,6 @@ def print_process_spec(process_spec):
 
     :param process_spec: a `ProcessSpec` instance
     """
-    from tabulate import tabulate
 
     def build_entries(ports):
         """Build a list of entries to be printed for a `PortNamespace.

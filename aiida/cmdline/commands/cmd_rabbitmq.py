@@ -16,6 +16,7 @@ import sys
 import typing as t
 
 import click
+import tabulate
 import wrapt
 
 from aiida.cmdline.commands.cmd_devel import verdi_devel
@@ -165,7 +166,6 @@ def cmd_server_properties(manager):
 @with_client
 def cmd_queues_list(client, project, raw, filter_name):
     """List all queues."""
-    import tabulate
     response = client.request('queues')
 
     if not response.ok:

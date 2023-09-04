@@ -12,6 +12,7 @@ import pathlib
 import shutil
 
 import click
+import tabulate
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
@@ -134,7 +135,6 @@ def repo_dump(node, output_directory):
 @with_dbenv()
 def node_label(nodes, label, raw, force):
     """View or set the label of one or more nodes."""
-    import tabulate
     table = []
 
     if label is None:
@@ -169,7 +169,6 @@ def node_label(nodes, label, raw, force):
 @with_dbenv()
 def node_description(nodes, description, force, raw):
     """View or set the description of one or more nodes."""
-    import tabulate
     table = []
 
     if description is None:
@@ -202,8 +201,6 @@ def node_description(nodes, description, force, raw):
 @with_dbenv()
 def node_show(nodes, print_groups):
     """Show generic information on one or more nodes."""
-    import tabulate
-
     from aiida.cmdline.utils.common import get_node_info
 
     for node in nodes:

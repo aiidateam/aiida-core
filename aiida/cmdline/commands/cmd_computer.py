@@ -14,6 +14,7 @@ from functools import partial
 from math import isclose
 
 import click
+import tabulate
 
 from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup, verdi
 from aiida.cmdline.params import arguments, options
@@ -444,8 +445,6 @@ def computer_list(all_entries, raw):
 @with_dbenv()
 def computer_show(computer):
     """Show detailed information for a computer."""
-    import tabulate
-
     table = [
         ['Label', computer.label],
         ['PK', computer.pk],
@@ -658,8 +657,6 @@ def computer_configure():
 @arguments.COMPUTER()
 def computer_config_show(computer, user, defaults, as_option_string):
     """Show the current configuration for a computer."""
-    import tabulate
-
     from aiida.common.escaping import escape_for_bash
     from aiida.transports import cli as transport_cli
 

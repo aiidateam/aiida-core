@@ -12,6 +12,7 @@ from collections import defaultdict
 from functools import partial
 
 import click
+import tabulate
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
@@ -217,8 +218,6 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 @with_dbenv()
 def show(code):
     """Display detailed information for a code."""
-    import tabulate
-
     from aiida.cmdline import is_verbose
 
     table = []
@@ -352,8 +351,6 @@ VALID_PROJECTIONS = {
 def code_list(computer, default_calc_job_plugin, all_entries, all_users, raw, show_owner, project):
     # pylint: disable=too-many-branches,too-many-locals
     """List the available codes."""
-    import tabulate
-
     from aiida import orm
     from aiida.orm.utils.node import load_node_class
 

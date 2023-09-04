@@ -27,6 +27,7 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent  # repository root
 
 SETUPTOOLS_CONDA_MAPPINGS = {
+    'fastjsonschema': 'python-fastjsonschema',
     'graphviz': 'python-graphviz',
     'docstring-parser': 'docstring_parser',
 }

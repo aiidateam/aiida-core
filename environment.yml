@@ -14,7 +14,7 @@ dependencies:
 - click~=8.1
 - disk-objectstore~=0.6.0
 - docstring_parser
-- fastjsonschema~=2.17
+- python-fastjsonschema~=2.17
 - get-annotations~=0.1
 - python-graphviz~=0.19
 - ipython>=7

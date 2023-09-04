@@ -14,11 +14,11 @@ dependencies:
 - click~=8.1
 - disk-objectstore~=0.6.0
 - docstring_parser
+- fastjsonschema~=2.17
 - get-annotations~=0.1
 - python-graphviz~=0.19
 - ipython>=7
 - jinja2~=3.0
-- jsonschema~=3.0
 - kiwipy[rmq]~=0.7.7
 - importlib-metadata~=4.13
 - numpy~=1.21

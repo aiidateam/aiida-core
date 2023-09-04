@@ -32,11 +32,11 @@ dependencies = [
     "click~=8.1",
     "disk-objectstore~=0.6.0",
     "docstring-parser",
+    "fastjsonschema~=2.17",
     "get-annotations~=0.1;python_version<'3.10'",
     "graphviz~=0.19",
     "ipython>=7",
     "jinja2~=3.0",
-    "jsonschema~=3.0",
     "kiwipy[rmq]~=0.7.7",
     "importlib-metadata~=4.13",
     "numpy~=1.21",
@@ -407,13 +407,13 @@ module = [
     'click_config_file.*',
     'click_spinner.*',
     'docutils.*',
+    'fastjsonschema.*',
     'flask_cors.*',
     'flask_restful.*',
     'get_annotations.*',
     'graphviz.*',
     'importlib._bootstrap.*',
     'IPython.*',
-    'jsonschema.*',
     'kiwipy.*',
     'matplotlib.*',
     'mayavi.*',
@@ -446,6 +446,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = 'plumpy'
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = 'aiida.manage.configuration.schema.fastjsonschema_validate_v9'
 ignore_errors = true
 
 [tool.tox]

@@ -67,7 +67,6 @@ ipywidgets==8.0.6
 itsdangerous==2.1.2
 jedi==0.18.2
 jinja2==3.1.2
-jsonschema[format-nongpl]==3.2.0
 jupyter==1.0.0
 jupyter-cache==0.6.1
 jupyter-client==8.2.0

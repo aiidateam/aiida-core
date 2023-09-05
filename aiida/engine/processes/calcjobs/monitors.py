@@ -173,7 +173,7 @@ class CalcJobMonitors:
     def process(
         self,
         node: CalcJobNode,
-        transport: 'Transport',
+        transport: Transport,
     ) -> CalcJobMonitorResult | None:
         """Call all monitors in order and return the result as one returns anything other than ``None``.
 

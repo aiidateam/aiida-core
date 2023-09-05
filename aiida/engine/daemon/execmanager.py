@@ -66,7 +66,7 @@ def _find_data_node(inputs: MappingType[str, Any], uuid: str) -> Optional[Node]:
 
 def upload_calculation(
     node: CalcJobNode,
-    transport: 'Transport',
+    transport: Transport,
     calc_info: CalcInfo,
     folder: SandboxFolder,
     inputs: Optional[MappingType[str, Any]] = None,
@@ -357,7 +357,7 @@ def upload_calculation(
         remotedata.store()
 
 
-def submit_calculation(calculation: CalcJobNode, transport: 'Transport') -> str | ExitCode:
+def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | ExitCode:
     """Submit a previously uploaded `CalcJob` to the scheduler.
 
     :param calculation: the instance of CalcJobNode to submit.
@@ -387,7 +387,7 @@ def submit_calculation(calculation: CalcJobNode, transport: 'Transport') -> str 
     return result
 
 
-def stash_calculation(calculation: CalcJobNode, transport: 'Transport') -> None:
+def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     """Stash files from the working directory of a completed calculation to a permanent remote folder.
 
     After a calculation has been completed, optionally stash files from the work directory to a storage location on the
@@ -453,7 +453,7 @@ def stash_calculation(calculation: CalcJobNode, transport: 'Transport') -> None:
     remote_stash.base.links.add_incoming(calculation, link_type=LinkType.CREATE, link_label='remote_stash')
 
 
-def retrieve_calculation(calculation: CalcJobNode, transport: 'Transport', retrieved_temporary_folder: str) -> None:
+def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retrieved_temporary_folder: str) -> None:
     """Retrieve all the files of a completed job calculation using the given transport.
 
     If the job defined anything in the `retrieve_temporary_list`, those entries will be stored in the
@@ -522,7 +522,7 @@ def retrieve_calculation(calculation: CalcJobNode, transport: 'Transport', retri
     )
 
 
-def kill_calculation(calculation: CalcJobNode, transport: 'Transport') -> None:
+def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     """
     Kill the calculation through the scheduler
 
@@ -558,8 +558,8 @@ def kill_calculation(calculation: CalcJobNode, transport: 'Transport') -> None:
 
 
 def retrieve_files_from_list(
-    calculation: CalcJobNode, transport: 'Transport', folder: str, retrieve_list: List[Union[str, Tuple[str, str, int],
-                                                                                             list]]
+    calculation: CalcJobNode, transport: Transport, folder: str, retrieve_list: List[Union[str, Tuple[str, str, int],
+                                                                                           list]]
 ) -> None:
     """
     Retrieve all the files in the retrieve_list from the remote into the

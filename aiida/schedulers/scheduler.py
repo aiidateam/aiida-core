@@ -377,7 +377,7 @@ class Scheduler(metaclass=abc.ABCMeta):
 
         return self._transport
 
-    def set_transport(self, transport: 'Transport'):
+    def set_transport(self, transport: Transport):
         """Set the transport to be used to query the machine or to submit scripts.
 
         This class assumes that the transport is open and active.

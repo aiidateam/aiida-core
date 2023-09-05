@@ -147,16 +147,23 @@ def test_unload_profile():
 
     This is a regression test for #5506.
     """
+    import gc
+
     from sqlalchemy.orm.session import _sessions  # pylint: disable=import-outside-toplevel
 
+    # Run the garbage collector to ensure any lingering unrelated sessions do not cause the test to fail.
+    gc.collect()
+
     # Just running the test suite itself should have opened at least one session
-    assert len(_sessions) != 0, str(_sessions)
+    current_sessions = len(_sessions)
+    assert current_sessions != 0, str(_sessions)
 
     manager = get_manager()
     profile_name = manager.get_profile().name
 
     try:
         manager.unload_profile()
-        assert len(_sessions) == 0, str(_sessions)
+        # After unloading, the session should have been cleared, so we should have one less
+        assert len(_sessions) == current_sessions - 1, str(_sessions)
     finally:
         manager.load_profile(profile_name)

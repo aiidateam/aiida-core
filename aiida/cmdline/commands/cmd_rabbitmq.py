@@ -16,7 +16,6 @@ import sys
 import typing as t
 
 import click
-import requests
 import tabulate
 import wrapt
 import yaml
@@ -27,6 +26,7 @@ from aiida.cmdline.utils import decorators, echo
 
 if t.TYPE_CHECKING:
     import kiwipy.rmq
+    import requests
 
     from aiida.manage.configuration.profile import Profile
 
@@ -91,12 +91,13 @@ AVAILABLE_PROJECTORS = (
 )
 
 
-def echo_response(response: requests.Response, exit_on_error: bool = True) -> None:
+def echo_response(response: 'requests.Response', exit_on_error: bool = True) -> None:
     """Echo the response of a request.
 
     :param response: The response to the request.
     :param exit_on_error: Boolean, if ``True``, call ``sys.exit`` with the status code of the response.
     """
+    import requests
     try:
         response.raise_for_status()
     except requests.HTTPError:

@@ -17,8 +17,6 @@ import shutil
 import tempfile
 from typing import Any, Dict, Optional, Sequence, Tuple
 
-import jsonschema
-
 from aiida.common.exceptions import ConfigurationError
 
 from . import schema as schema_module
@@ -126,6 +124,7 @@ class Config:  # pylint: disable=too-many-public-methods
     @staticmethod
     def validate(config: dict, filepath: Optional[str] = None):
         """Validate a configuration dictionary."""
+        import jsonschema
         try:
             jsonschema.validate(instance=config, schema=config_schema())
         except jsonschema.ValidationError as error:

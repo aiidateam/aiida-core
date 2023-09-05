@@ -12,16 +12,23 @@ This module defines the classes related to Xy data. That is data that contains
 collections of y-arrays bound to a single x-array, and the methods to operate
 on them.
 """
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Sequence
+
 import numpy as np
 
 from aiida.common.exceptions import NotExistent
 
 from .array import ArrayData
 
+if TYPE_CHECKING:
+    from numpy import ndarray
+
 __all__ = ('XyData',)
 
 
-def check_convert_single_to_tuple(item):
+def check_convert_single_to_tuple(item: Any | Sequence[Any]) -> Sequence[Any]:
     """
     Checks if the item is a list or tuple, and converts it to a list if it is
     not already a list or tuple
@@ -43,8 +50,36 @@ class XyData(ArrayData):
     Y arrays, which can be considered functions of X.
     """
 
+    def __init__(
+        self,
+        x_array: 'ndarray' | None = None,
+        y_arrays: 'ndarray' | list['ndarray'] | None = None,
+        *,
+        x_name: str | None = None,
+        x_units: str | None = None,
+        y_names: str | list[str] | None = None,
+        y_units: str | list[str] | None = None,
+        **kwargs
+    ):
+        """Construct a new instance, optionally setting the x and y arrays.
+
+        .. note:: If the ``x_array`` is specified, all other keywords need to be specified as well.
+
+        :param x_array: The x array.
+        :param y_arrays: The y arrays.
+        :param x_name: The name of the x array.
+        :param x_units: The unit of the x array.
+        :param y_names: The names of the y arrays.
+        :param y_units: The units of the y arrays.
+        """
+        super().__init__(**kwargs)
+
+        if x_array is not None:
+            self.set_x(x_array, x_name, x_units)  # type: ignore[arg-type]
+            self.set_y(y_arrays, y_names, y_units)  # type: ignore[arg-type]
+
     @staticmethod
-    def _arrayandname_validator(array, name, units):
+    def _arrayandname_validator(array: 'ndarray', name: str, units: str) -> None:
         """
         Validates that the array is an numpy.ndarray and that the name is
         of type str. Raises TypeError or ValueError if this not the case.
@@ -61,7 +96,7 @@ class XyData(ArrayData):
         if not isinstance(units, str):
             raise TypeError('The units must always be a str.')
 
-    def set_x(self, x_array, x_name, x_units):
+    def set_x(self, x_array: 'ndarray', x_name: str, x_units: str) -> None:
         """
         Sets the array and the name for the x values.
 
@@ -74,7 +109,9 @@ class XyData(ArrayData):
         self.base.attributes.set('x_units', x_units)
         self.set_array('x_array', x_array)
 
-    def set_y(self, y_arrays, y_names, y_units):
+    def set_y(
+        self, y_arrays: 'ndarray' | Sequence['ndarray'], y_names: str | Sequence[str], y_units: str | Sequence[str]
+    ) -> None:
         """
         Set array(s) for the y part of the dataset. Also checks if the
         x_array has already been set, and that, the shape of the y_arrays
@@ -110,7 +147,7 @@ class XyData(ArrayData):
         self.base.attributes.set('y_names', y_names)
         self.base.attributes.set('y_units', y_units)
 
-    def get_x(self):
+    def get_x(self) -> tuple[str, 'ndarray', str]:
         """
         Tries to retrieve the x array and x name raises a NotExistent
         exception if no x array has been set yet.
@@ -126,7 +163,7 @@ class XyData(ArrayData):
             raise NotExistent('No x array has been set yet!')
         return x_name, x_array, x_units
 
-    def get_y(self):
+    def get_y(self) -> list[tuple[str, 'ndarray', str]]:
         """
         Tries to retrieve the y arrays and the y names, raises a
         NotExistent exception if they have not been set yet, or cannot be

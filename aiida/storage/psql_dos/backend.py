@@ -15,7 +15,6 @@ import gc
 import pathlib
 from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence, Set, Union
 
-from disk_objectstore import Container
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from aiida.common.exceptions import ClosedStorage, ConfigurationError, IntegrityError
@@ -29,6 +28,8 @@ from aiida.storage.psql_dos.models import base
 from .orm import authinfos, comments, computers, convert, groups, logs, nodes, querybuilder, users
 
 if TYPE_CHECKING:
+    from disk_objectstore import Container
+
     from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
 __all__ = ('PsqlDosBackend',)
@@ -195,7 +196,10 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
                 )
 
     def get_repository(self) -> 'DiskObjectStoreRepositoryBackend':
+        from disk_objectstore import Container
+
         from aiida.repository.backend import DiskObjectStoreRepositoryBackend
+
         container = Container(str(get_filepath_container(self.profile)))
         return DiskObjectStoreRepositoryBackend(container=container)
 
@@ -409,7 +413,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         repository = self.get_repository()
 
         keyset_repository = set(repository.list_objects())
-        keyset_database = set(orm.Node.collection(self).iter_repo_keys())
+        keyset_database = set(orm.Node.get_collection(self).iter_repo_keys())
 
         if check_consistency:
             keyset_missing = keyset_database - keyset_repository

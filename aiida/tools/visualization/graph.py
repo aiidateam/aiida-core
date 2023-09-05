@@ -433,9 +433,9 @@ class Graph:
         :param node: node or node pk/uuid
         """
         if isinstance(node, int):
-            return orm.Node.collection(self._backend).get(pk=node)
+            return orm.Node.get_collection(self._backend).get(pk=node)
         if isinstance(node, str):
-            return orm.Node.collection(self._backend).get(uuid=node)
+            return orm.Node.get_collection(self._backend).get(uuid=node)
         return node
 
     def add_node(

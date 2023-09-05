@@ -532,7 +532,7 @@ class TestWorkchain:
                 pass
 
         launch.run(TestWorkChain)
-        assert len(recwarn) == 1
+        assert any('The conditional predicate `predicate` returned `true`' in str(r.message) for r in recwarn)
 
     def test_invalid_while_predicate(self, recwarn):
         """Test that workchain raises if the predicate of an ``while_`` condition does not return a boolean."""
@@ -553,7 +553,7 @@ class TestWorkchain:
                 return ExitCode(1)
 
         launch.run(TestWorkChain)
-        assert len(recwarn) == 1
+        assert any('The conditional predicate `predicate` returned `true`' in str(r.message) for r in recwarn)
 
     def test_malformed_outline(self):
         """

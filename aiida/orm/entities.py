@@ -186,6 +186,18 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         return cls._CLS_COLLECTION.get_cached(cls, get_manager().get_profile_storage())
 
     @classmethod
+    def get_collection(cls, backend: 'StorageBackend'):
+        """Get a collection for objects of this type for a given backend.
+
+        .. note:: Use the ``collection`` class property instead if the currently loaded backend or backend of the
+            default profile should be used.
+
+        :param backend: The backend of the collection to use.
+        :return: A collection object that can be used to access entities of this type.
+        """
+        return cls._CLS_COLLECTION.get_cached(cls, backend)
+
+    @classmethod
     def get(cls, **kwargs):
         """Get an entity of the collection matching the given filters.
 

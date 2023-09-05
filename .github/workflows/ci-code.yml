@@ -148,4 +148,5 @@ jobs:
     - name: Run verdi
       run: |
         verdi devel check-load-time
+        verdi devel check-undesired-imports
         .github/workflows/verdi.sh

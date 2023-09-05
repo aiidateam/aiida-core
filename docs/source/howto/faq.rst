@@ -4,7 +4,8 @@
 Frequently Asked Questions
 ==========================
 
-If the problem you are facing is not addressed below, you can send an email to the `mailing list <http://www.aiida.net/mailing-list/>`_, or `open an issue on Github <https://github.com/aiidateam/aiida-core/issues/new/choose>`_ if you think it concerns a bug.
+If the problem you are facing is not addressed below, please refer to the `Discourse server <https://aiida.discourse.group/>`_.
+To file a bug report or open a feature request, please `open an issue on Github <https://github.com/aiidateam/aiida-core/issues/new/choose>`_.
 
 
 I have updated the version of AiiDA and now it is no longer working. What should I do?

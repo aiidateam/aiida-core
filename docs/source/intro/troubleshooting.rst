@@ -19,6 +19,7 @@ If you experience any problems, first check that all services are up and running
 
 In the example output, all service have a green check mark and so should be running as expected.
 If all services are up and running and you are still experiencing problems or if you have trouble with the installation of aiida-core and related services, consider the commonly encountered problems below.
+In case you are still experiencing problems, you can request support by opening a post on the `Discourse server <https://aiida.discourse.group/>`_.
 
 .. _intro:troubleshooting:installation:
 

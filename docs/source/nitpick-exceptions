@@ -148,6 +148,8 @@ py:class ndarray
 
 py:class paramiko.proxy.ProxyCommand
 
+py:class pydantic.main.BaseModel
+
 # These can be removed once they are properly included in the `__all__` in `plumpy`
 py:class plumpy.ports.PortNamespace
 py:class plumpy.utils.AttributesDict
@@ -217,8 +219,6 @@ py:class CircusClient
 
 py:class pgsu.PGSU
 py:meth  pgsu.PGSU.__init__
-
-py:class jsonschema.exceptions._Error
 
 py:class Session
 py:class Query

@@ -8,13 +8,19 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module that defines the configuration file of an AiiDA instance and functions to create and load it."""
+from __future__ import annotations
+
 import codecs
 from functools import cache
 import json
 import os
-from typing import Any, Dict, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
+import uuid
+
+from pydantic import BaseModel, Field, ValidationError, validator  # pylint: disable=no-name-in-module
 
 from aiida.common.exceptions import ConfigurationError
+from aiida.common.log import LogLevels
 
 from . import schema as schema_module
 from .options import Option, get_option, get_option_names, parse_option
@@ -50,6 +56,164 @@ class ConfigValidationError(ConfigurationError):
         path = '/' + '/'.join(str(k) for k in self._keypath) + ': ' if self._keypath else ''
         schema = f'\n  schema:\n  {self._schema}' if self._schema else ''
         return f'Validation Error: {prefix}{path}{self._message}{schema}'
+
+
+class ConfigVersionSchema(BaseModel):
+    """Schema for the version configuration of an AiiDA instance."""
+
+    CURRENT: int
+    OLDEST_COMPATIBLE: int
+
+
+class ProfileOptionsSchema(BaseModel):
+    """Schema for the options of an AiiDA profile."""
+
+    runner__poll__interval: int = Field(60, description='Polling interval in seconds to be used by process runners.')
+    daemon__default_workers: int = Field(
+        1, description='Default number of workers to be launched by `verdi daemon start`.'
+    )
+    daemon__timeout: int = Field(
+        2,
+        description=
+        'Used to set default timeout in the :class:`aiida.engine.daemon.client.DaemonClient` for calls to the daemon.'
+    )
+    daemon__worker_process_slots: int = Field(
+        200, description='Maximum number of concurrent process tasks that each daemon worker can handle.'
+    )
+    daemon__recursion_limit: int = Field(3000, description='Maximum recursion depth for the daemon workers.')
+    db__batch_size: int = Field(
+        100000,
+        description='Batch size for bulk CREATE operations in the database. Avoids hitting MaxAllocSize of PostgreSQL '
+        '(1GB) when creating large numbers of database records in one go.'
+    )
+    verdi__shell__auto_import: str = Field(
+        ':',
+        description='Additional modules/functions/classes to be automatically loaded in `verdi shell`, split by `:`.'
+    )
+    logging__aiida_loglevel: LogLevels = Field(
+        'REPORT', description='Minimum level to log to daemon log and the `DbLog` table for the `aiida` logger.'
+    )
+    logging__verdi_loglevel: LogLevels = Field(
+        'REPORT', description='Minimum level to log to console when running a `verdi` command.'
+    )
+    logging__db_loglevel: LogLevels = Field('REPORT', description='Minimum level to log to the DbLog table.')
+    logging__plumpy_loglevel: LogLevels = Field(
+        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `plumpy` logger.'
+    )
+    logging__kiwipy_loglevel: LogLevels = Field(
+        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `kiwipy` logger'
+    )
+    logging__paramiko_loglevel: LogLevels = Field(
+        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `paramiko` logger'
+    )
+    logging__alembic_loglevel: LogLevels = Field(
+        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `alembic` logger'
+    )
+    logging__sqlalchemy_loglevel: LogLevels = Field(
+        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `sqlalchemy` logger'
+    )
+    logging__circus_loglevel: LogLevels = Field(
+        'INFO', description='Minimum level to log to daemon log and the `DbLog` table for the `circus` logger'
+    )
+    logging__aiopika_loglevel: LogLevels = Field(
+        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `aiopika` logger'
+    )
+    warnings__showdeprecations: bool = Field(True, description='Whether to print AiiDA deprecation warnings.')
+    warnings__rabbitmq_version: bool = Field(
+        True, description='Whether to print a warning when an incompatible version of RabbitMQ is configured.'
+    )
+    transport__task_retry_initial_interval: int = Field(
+        20, description='Initial time interval for the exponential backoff mechanism.'
+    )
+    transport__task_maximum_attempts: int = Field(
+        5, description='Maximum number of transport task attempts before a Process is Paused.'
+    )
+    rmq__task_timeout: int = Field(10, description='Timeout in seconds for communications with RabbitMQ.')
+    storage__sandbox: Optional[str] = Field(description='Absolute path to the directory to store sandbox folders.')
+    caching__default_enabled: bool = Field(False, description='Enable calculation caching by default.')
+    caching__enabled_for: List[str] = Field([], description='Calculation entry points to enable caching on.')
+    caching__disabled_for: List[str] = Field([], description='Calculation entry points to disable caching on.')
+
+    class Config:
+        use_enum_values = True
+
+    @validator('caching__enabled_for', 'caching__disabled_for')
+    @classmethod
+    def validate_caching_identifier_pattern(cls, value: List[str]) -> List[str]:
+        """Validate the caching identifier patterns."""
+        from aiida.manage.caching import _validate_identifier_pattern
+        for identifier in value:
+            try:
+                _validate_identifier_pattern(identifier=identifier)
+            except ValueError as exception:
+                raise ValidationError(str(exception)) from exception
+
+        return value
+
+
+class GlobalOptionsSchema(ProfileOptionsSchema):
+    """Schema for the global options of an AiiDA instance."""
+    autofill__user__email: Optional[str] = Field(description='Default user email to use when creating new profiles.')
+    autofill__user__first_name: Optional[str] = Field(
+        description='Default user first name to use when creating new profiles.'
+    )
+    autofill__user__last_name: Optional[str] = Field(
+        description='Default user last name to use when creating new profiles.'
+    )
+    autofill__user__institution: Optional[str] = Field(
+        description='Default user institution to use when creating new profiles.'
+    )
+    rest_api__profile_switching: bool = Field(
+        False, description='Toggle whether the profile can be specified in requests submitted to the REST API.'
+    )
+    warnings__development_version: bool = Field(
+        True,
+        description='Whether to print a warning when a profile is loaded while a development version is installed.'
+    )
+
+
+class ProfileStorageConfig(BaseModel):
+    """Schema for the storage backend configuration of an AiiDA profile."""
+
+    backend: str
+    config: Dict[str, Any]
+
+
+class ProcessControlConfig(BaseModel):
+    """Schema for the process control configuration of an AiiDA profile."""
+
+    broker_protocol: str = Field('amqp', description='Protocol for connecting to the message broker.')
+    broker_username: str = Field('guest', description='Username for message broker authentication.')
+    broker_password: str = Field('guest', description='Password for message broker.')
+    broker_host: str = Field('127.0.0.1', description='Hostname of the message broker.')
+    broker_port: int = Field(5432, description='Port of the message broker.')
+    broker_virtual_host: str = Field('', description='Virtual host to use for the message broker.')
+    broker_parameters: dict[str, Any] = Field('guest', description='Arguments to be encoded as query parameters.')
+
+
+class ProfileSchema(BaseModel):
+    """Schema for the configuration of an AiiDA profile."""
+
+    uuid: str = Field(description='', default_factory=uuid.uuid4)
+    storage: ProfileStorageConfig
+    process_control: ProcessControlConfig
+    default_user_email: Optional[str] = None
+    test_profile: bool = False
+    options: Optional[ProfileOptionsSchema]
+
+    class Config:
+        json_encoders = {
+            uuid.UUID: lambda u: str(u),  # pylint: disable=unnecessary-lambda
+        }
+
+
+class ConfigSchema(BaseModel):
+    """Schema for the configuration of an AiiDA instance."""
+
+    CONFIG_VERSION: Optional[ConfigVersionSchema]
+    profiles: Optional[dict[str, ProfileSchema]]
+    options: Optional[GlobalOptionsSchema]
+    default_profile: Optional[str]
 
 
 class Config:  # pylint: disable=too-many-public-methods
@@ -125,13 +289,10 @@ class Config:  # pylint: disable=too-many-public-methods
     @staticmethod
     def validate(config: dict, filepath: Optional[str] = None):
         """Validate a configuration dictionary."""
-        import jsonschema
         try:
-            jsonschema.validate(instance=config, schema=config_schema())
-        except jsonschema.ValidationError as error:
-            raise ConfigValidationError(
-                message=error.message, keypath=error.path, schema=error.schema, filepath=filepath
-            )
+            ConfigSchema(**config)
+        except ValidationError as exception:
+            raise ConfigurationError(f'invalid config schema: {filepath}: {str(exception)}')
 
     def __init__(self, filepath: str, config: dict, validate: bool = True):
         """Instantiate a configuration object from a configuration dictionary and its filepath.
@@ -470,7 +631,7 @@ class Config:  # pylint: disable=too-many-public-methods
             elif name in self.options:
                 value = self.options.get(name)
                 source = 'global'
-            elif 'default' in option.schema:
+            elif option.default is not None:
                 value = option.default
                 source = 'default'
             else:

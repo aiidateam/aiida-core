@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import collections
 import contextlib
+import enum
 import logging
 import types
 from typing import cast
@@ -51,6 +52,8 @@ LOG_LEVELS = {
     logging.getLevelName(logging.ERROR): logging.ERROR,
     logging.getLevelName(logging.CRITICAL): logging.CRITICAL,
 }
+
+LogLevels = enum.Enum('LogLevels', {key: key for key in LOG_LEVELS})  # type: ignore[misc]
 
 AIIDA_LOGGER = cast(AiidaLoggerType, logging.getLogger('aiida'))
 

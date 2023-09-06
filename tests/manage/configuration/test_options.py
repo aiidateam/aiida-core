@@ -12,7 +12,7 @@ import pytest
 
 from aiida import get_profile
 from aiida.common.exceptions import ConfigurationError
-from aiida.manage.configuration import ConfigValidationError, config_schema, get_config, get_config_option
+from aiida.manage.configuration import config_schema, get_config, get_config_option
 from aiida.manage.configuration.options import Option, get_option, get_option_names, parse_option
 
 
@@ -38,10 +38,10 @@ class TestConfigurationOptions:
     def test_parse_option(self):
         """Test `parse_option` function."""
 
-        with pytest.raises(ConfigValidationError):
-            parse_option('logging.aiida_loglevel', 1)
+        with pytest.raises(ConfigurationError):
+            parse_option('logging.aiida_loglevel', {})
 
-        with pytest.raises(ConfigValidationError):
+        with pytest.raises(ConfigurationError):
             parse_option('logging.aiida_loglevel', 'INVALID_LOG_LEVEL')
 
     def test_options(self):

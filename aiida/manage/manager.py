@@ -214,6 +214,7 @@ class Manager:  # pylint: disable=too-many-public-methods
         else:
             if option_name in config.options:
                 return config.get_option(option_name)
+
         # try the defaults (will raise ConfigurationError if not present)
         option = get_option(option_name)
         return option.default

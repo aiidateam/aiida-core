@@ -89,7 +89,6 @@ def setup(
     config.add_profile(profile)
     config.set_default_profile(profile.name)
     load_profile(profile.name)
-    echo.echo_success(f'created new profile `{profile.name}`.')
 
     # Initialise the storage
     echo.echo_report('initialising the profile storage.')
@@ -114,6 +113,7 @@ def setup(
 
     # store the updated configuration
     config.store()
+    echo.echo_success(f'created new profile `{profile.name}`.')
 
 
 @verdi.command('quicksetup')

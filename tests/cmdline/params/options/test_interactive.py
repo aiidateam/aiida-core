@@ -497,7 +497,7 @@ def test_interactive_ignore_default_required_option(run_cli_command):
     """Test that if an option is required, ``!`` is translated to ``None`` and so is not accepted."""
     cmd = create_command(required=True)
     result = run_cli_command(cmd, user_input='!\nvalue\n')
-    expected = 'Opt: !\nError: Missing parameter: opt\nOpt: value\nvalue\n'
+    expected = 'Opt: !\nError: Opt has to be specified\nOpt: value\nvalue\n'
     assert expected in result.output
 
 

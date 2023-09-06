@@ -124,7 +124,10 @@ class InteractiveOption(ConditionalOption):
             return super().process_value(ctx, value)
         except click.BadParameter as exception:
             if source is click.core.ParameterSource.PROMPT and self.is_interactive(ctx):
-                click.echo(f'Error: {exception}')
+                if isinstance(exception, click.MissingParameter):
+                    click.echo(f'Error: {self._prompt} has to be specified')
+                else:
+                    click.echo(f'Error: {exception}')
                 return self.prompt_for_value(ctx)
             raise
 

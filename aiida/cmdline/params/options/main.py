@@ -285,17 +285,23 @@ USER_INSTITUTION = OverridableOption(
 
 DB_ENGINE = OverridableOption(
     '--db-engine',
+    required=True,
     help='Engine to use to connect to the database.',
     default='postgresql_psycopg2',
     type=click.Choice(['postgresql_psycopg2'])
 )
 
 DB_BACKEND = OverridableOption(
-    '--db-backend', type=click.Choice(['core.psql_dos']), default='core.psql_dos', help='Database backend to use.'
+    '--db-backend',
+    required=True,
+    type=click.Choice(['core.psql_dos']),
+    default='core.psql_dos',
+    help='Database backend to use.'
 )
 
 DB_HOST = OverridableOption(
     '--db-host',
+    required=True,
     type=types.HostnameType(),
     help='Database server host. Leave empty for "peer" authentication.',
     default='localhost'
@@ -303,6 +309,7 @@ DB_HOST = OverridableOption(
 
 DB_PORT = OverridableOption(
     '--db-port',
+    required=True,
     type=click.INT,
     help='Database server port.',
     default=DEFAULT_DBINFO['port'],
@@ -371,7 +378,7 @@ BROKER_VIRTUAL_HOST = OverridableOption(
 )
 
 REPOSITORY_PATH = OverridableOption(
-    '--repository', type=click.Path(file_okay=False), help='Absolute path to the file repository.'
+    '--repository', type=click.Path(file_okay=False), required=True, help='Absolute path to the file repository.'
 )
 
 PROFILE_ONLY_CONFIG = OverridableOption(

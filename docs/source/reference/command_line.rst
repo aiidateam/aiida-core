@@ -381,11 +381,11 @@ Below is a list with all available subcommands.
       --last-name NONEMPTYSTRING      Last name of the user.  [required]
       --institution NONEMPTYSTRING    Institution of the user.  [required]
       --db-engine [postgresql_psycopg2]
-                                      Engine to use to connect to the database.
-      --db-backend [core.psql_dos]    Database backend to use.
+                                      Engine to use to connect to the database.  [required]
+      --db-backend [core.psql_dos]    Database backend to use.  [required]
       --db-host HOSTNAME              Database server host. Leave empty for "peer"
-                                      authentication.
-      --db-port INTEGER               Database server port.
+                                      authentication.  [required]
+      --db-port INTEGER               Database server port.  [required]
       --db-name NONEMPTYSTRING        Name of the database to create.
       --db-username NONEMPTYSTRING    Name of the database user to create.
       --db-password TEXT              Password of the database user.
@@ -404,7 +404,7 @@ Below is a list with all available subcommands.
       --broker-port INTEGER           Port for the message broker.  [default: 5672]
       --broker-virtual-host TEXT      Name of the virtual host for the message broker without
                                       leading forward slash.
-      --repository DIRECTORY          Absolute path to the file repository.
+      --repository DIRECTORY          Absolute path to the file repository.  [required]
       --test-profile                  Designate the profile to be used for running the test
                                       suite only.
       --config FILEORURL              Load option values from configuration file in yaml
@@ -485,11 +485,11 @@ Below is a list with all available subcommands.
       --last-name NONEMPTYSTRING      Last name of the user.  [required]
       --institution NONEMPTYSTRING    Institution of the user.  [required]
       --db-engine [postgresql_psycopg2]
-                                      Engine to use to connect to the database.
-      --db-backend [core.psql_dos]    Database backend to use.
+                                      Engine to use to connect to the database.  [required]
+      --db-backend [core.psql_dos]    Database backend to use.  [required]
       --db-host HOSTNAME              Database server host. Leave empty for "peer"
-                                      authentication.
-      --db-port INTEGER               Database server port.
+                                      authentication.  [required]
+      --db-port INTEGER               Database server port.  [required]
       --db-name NONEMPTYSTRING        Name of the database to create.  [required]
       --db-username NONEMPTYSTRING    Name of the database user to create.  [required]
       --db-password TEXT              Password of the database user.  [required]
@@ -504,7 +504,7 @@ Below is a list with all available subcommands.
       --broker-port INTEGER           Port for the message broker.  [required]
       --broker-virtual-host TEXT      Name of the virtual host for the message broker without
                                       leading forward slash.  [required]
-      --repository DIRECTORY          Absolute path to the file repository.
+      --repository DIRECTORY          Absolute path to the file repository.  [required]
       --test-profile                  Designate the profile to be used for running the test
                                       suite only.
       --config FILEORURL              Load option values from configuration file in yaml

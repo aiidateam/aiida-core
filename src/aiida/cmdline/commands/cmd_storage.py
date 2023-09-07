@@ -167,20 +167,47 @@ def storage_maintain(ctx, full, no_repack, force, dry_run, compress):
 
 
 @verdi_storage.command('backup')
-@click.option('--path', type=click.Path(), required=True, help='Specify the backup location.')
+@click.option(
+    '--path',
+    type=click.Path(),
+    required=True,
+    help=(
+        "Path to where the backup will be created. If 'remote' is specified, must be an absolute path, "
+        'otherwise can be relative.'
+    )
+)
 @click.option(
     '--remote',
     type=click.STRING,
     default=None,
-    help='Specify remote host for backup location. If set, path needs to be absolute.'
+    help=(
+        "Remote host of the backup location. 'ssh' executable is called via subprocess and therefore remote"
+        'hosts configured for it are supported (e.g. via .ssh/config file).'
+    )
 )
 @click.option(
-    '--pg_dump_exec', type=click.STRING, default='pg_dump', help="Specify the 'pg_dump' executable, if needed."
+    '--prev_backup',
+    type=click.Path(),
+    default=None,
+    help=(
+        'Path to the previous backup. Rsync calls will be hard-linked to this path, making the backup'
+        'incremental and efficient. If this is specified, the automatic folder management is not used.'
+    )
 )
-@click.option('--rsync_exec', type=click.STRING, default='rsync', help="Specify the 'rsync' executable, if needed.")
+@click.option(
+    '--pg_dump_exec', type=click.STRING, default='pg_dump', help="Specify the 'pg_dump' executable, if not in PATH."
+)
+@click.option(
+    '--rsync_exec', type=click.STRING, default='rsync', help="Specify the 'rsync' executable, if not in PATH."
+)
 @decorators.with_dbenv()
-def storage_backup(path, remote, pg_dump_exec, rsync_exec):
-    """Create a backup of the profile data."""
+def storage_backup(path, remote, prev_backup, pg_dump_exec, rsync_exec):
+    """Create a backup of the profile data.
+
+    By default, automatically manages incremental/delta backup: creates a subfolder in the specified path
+    and if the subfolder already exists, creates an incremental backup from it. The 'prev_backup' argument
+    disables this automatic management.
+    """
     import pathlib
 
     from aiida.manage.manager import get_manager
@@ -188,4 +215,10 @@ def storage_backup(path, remote, pg_dump_exec, rsync_exec):
     manager = get_manager()
     storage = manager.get_profile_storage()
 
-    storage.backup_auto(pathlib.Path(path), remote=remote, pg_dump_exec=pg_dump_exec, rsync_exec=rsync_exec)
+    storage.backup(
+        pathlib.Path(path),
+        remote=remote,
+        prev_backup=pathlib.Path(prev_backup) if prev_backup else None,
+        pg_dump=pg_dump_exec,
+        rsync=rsync_exec
+    )

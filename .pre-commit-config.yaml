@@ -42,7 +42,7 @@ repos:
     -   id: yapf
         name: yapf
         types: [python]
-        exclude: &exclude_files >
+        exclude: |
             (?x)^(
                 docs/.*|
             )$
@@ -74,6 +74,7 @@ repos:
             (?x)^(
                 .github/.*|
                 .molecule/.*|
+                .docker/.*|
                 docs/.*|
                 utils/.*|
 
@@ -202,7 +203,11 @@ repos:
         entry: pylint
         types: [python]
         language: system
-        exclude: *exclude_files
+        exclude: |
+            (?x)^(
+                docs/.*|
+                .docker/.*|
+            )$
 
     -   id: dm-generate-all
         name: Update all requirements files

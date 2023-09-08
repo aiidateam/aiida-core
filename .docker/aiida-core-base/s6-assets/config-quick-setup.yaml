@@ -1,0 +1,15 @@
+---
+db_engine: postgresql_psycopg2
+db_backend: core.psql_dos
+db_host: database
+db_port: 5432
+su_db_username: postgres
+su_db_password: password
+su_db_name: template1
+db_name: aiida_db
+db_username: aiida
+db_password: password
+broker_host: messaging
+broker_port: 5672
+broker_username: guest
+broker_password: guest

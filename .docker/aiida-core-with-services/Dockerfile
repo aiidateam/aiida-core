@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM base
+FROM aiida-core-base
 
 LABEL maintainer="AiiDA Team <developers@aiida.net>"
 

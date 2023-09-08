@@ -57,7 +57,7 @@ target "aiida-core-with-services" {
   inherits = ["aiida-core-with-services-meta"]
   context = "aiida-core-with-services"
   contexts = {
-    base = "target:aiida-core-base"
+    aiida-core-base = "target:aiida-core-base"
   }
   platforms = "${PLATFORMS}"
   args = {

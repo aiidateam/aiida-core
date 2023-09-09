@@ -465,8 +465,8 @@ When the problem is solved, we suggest to reset the default logging level, with:
 
 .. code-block:: console
 
-    $ verdi config logging.circus_loglevel --unset
-    $ verdi config logging.aiida_loglevel --unset
+    $ verdi config unset logging.circus_loglevel
+    $ verdi config unset logging.aiida_loglevel
 
 to avoid too much noise in the logfiles.
 

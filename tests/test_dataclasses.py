@@ -2247,10 +2247,16 @@ class TestStructureDataFromPymatgen:
         from pymatgen.core.periodic_table import Specie
         from pymatgen.core.structure import Structure
 
-        Fe_spin_up = Specie('Fe', 0, properties={'spin': 1})
-        Mn_spin_up = Specie('Mn', 0, properties={'spin': 1})
-        Fe_spin_down = Specie('Fe', 0, properties={'spin': -1})
-        Mn_spin_down = Specie('Mn', 0, properties={'spin': -1})
+        try:
+            Fe_spin_up = Specie('Fe', 0, spin=1)  # pylint: disable=unexpected-keyword-arg
+            Mn_spin_up = Specie('Mn', 0, spin=1)  # pylint: disable=unexpected-keyword-arg
+            Fe_spin_down = Specie('Fe', 0, spin=-1)  # pylint: disable=unexpected-keyword-arg
+            Mn_spin_down = Specie('Mn', 0, spin=-1)  # pylint: disable=unexpected-keyword-arg
+        except TypeError:
+            Fe_spin_up = Specie('Fe', 0, properties={'spin': 1})  # pylint: disable=unexpected-keyword-arg
+            Mn_spin_up = Specie('Mn', 0, properties={'spin': 1})  # pylint: disable=unexpected-keyword-arg
+            Fe_spin_down = Specie('Fe', 0, properties={'spin': -1})  # pylint: disable=unexpected-keyword-arg
+            Mn_spin_down = Specie('Mn', 0, properties={'spin': -1})  # pylint: disable=unexpected-keyword-arg
         FeMn1 = Composition({Fe_spin_up: 0.5, Mn_spin_up: 0.5})
         FeMn2 = Composition({Fe_spin_down: 0.5, Mn_spin_down: 0.5})
         a = Structure(
@@ -2440,7 +2446,10 @@ class TestPymatgenFromStructureData:
 
         b = a.get_pymatgen(add_spin=True)
         # check the spins
-        assert [s.as_dict()['properties']['spin'] for s in b.species] == [-1, -1, -1, -1, 1, 1, 1, 1]
+        try:
+            assert [s.as_dict()['spin'] for s in b.species] == [-1, -1, -1, -1, 1, 1, 1, 1]
+        except KeyError:
+            assert [s.as_dict()['properties']['spin'] for s in b.species] == [-1, -1, -1, -1, 1, 1, 1, 1]
         # back to StructureData
         c = StructureData(pymatgen=b)
         assert c.get_site_kindnames() == ['Mn1', 'Mn1', 'Mn1', 'Mn1', 'Mn2', 'Mn2', 'Mn2', 'Mn2']

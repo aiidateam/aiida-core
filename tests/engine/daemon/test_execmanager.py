@@ -239,3 +239,26 @@ def test_upload_local_copy_list_files_folders(fixture_sandbox, node_and_calc_inf
     expected_hierarchy['files']['file_x'] = 'content_x'
     expected_hierarchy['files']['file_y'] = 'content_y'
     assert expected_hierarchy == written_hierarchy
+
+
+def test_upload_remote_symlink_list(fixture_sandbox, node_and_calc_info, file_hierarchy, tmp_path):
+    """Test the ``remote_symlink_list`` functionality in ``upload_calculation``.
+
+    Nested subdirectories in the target should be automatically created.
+    """
+    create_file_hierarchy(file_hierarchy, tmp_path)
+    node, calc_info = node_and_calc_info
+
+    calc_info.remote_symlink_list = [
+        (node.computer.uuid, str(tmp_path / 'path' / 'sub'), 'path/sub'),
+        (node.computer.uuid, str(tmp_path / 'file_a.txt'), 'file_a.txt'),
+    ]
+
+    with LocalTransport() as transport:
+        execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
+
+    filepath_workdir = pathlib.Path(node.get_remote_workdir())
+    assert (filepath_workdir / 'file_a.txt').is_symlink()
+    assert (filepath_workdir / 'path' / 'sub').is_symlink()
+    assert (filepath_workdir / 'file_a.txt').read_text() == 'file_a'
+    assert (filepath_workdir / 'path' / 'sub' / 'file_c.txt').read_text() == 'file_c'

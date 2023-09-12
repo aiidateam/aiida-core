@@ -277,7 +277,9 @@ def upload_calculation(
                     f'[submission of calculation {node.pk}] copying {dest_rel_path} remotely, '
                     f'directly on the machine {computer.label}'
                 )
+                remote_dirname = pathlib.Path(dest_rel_path).parent
                 try:
+                    transport.makedirs(remote_dirname, ignore_existing=True)
                     transport.symlink(remote_abs_path, dest_rel_path)
                 except (IOError, OSError):
                     logger.warning(

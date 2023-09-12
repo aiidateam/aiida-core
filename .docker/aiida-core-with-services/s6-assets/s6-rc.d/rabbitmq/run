@@ -1,0 +1,6 @@
+#!/command/execlineb -P
+
+with-contenv
+
+foreground { s6-echo "Calling /etc/init/rabbitmq.sh" }
+rabbitmq-server

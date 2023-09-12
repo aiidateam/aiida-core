@@ -1,0 +1,3 @@
+#!/command/execlineb -S0
+
+verdi daemon start

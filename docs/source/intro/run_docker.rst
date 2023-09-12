@@ -15,7 +15,15 @@ This image contains a fully pre-configured AiiDA environment which makes it part
 .. grid:: 1
    :gutter: 3
 
-   .. grid-item-card:: Start container
+   .. grid-item-card:: Install Docker on your warkstation or laptop
+
+      To install Docker, please refer to the `official documentation <https://docs.docker.com/get-docker/>`__.
+
+      .. note::
+
+         If you are using Linux, you need to have root privileges to do `post-installation steps for the Docker Engine <https://docs.docker.com/engine/install/linux-postinstall/>`__.
+
+   .. grid-item-card:: Start container and use AiiDA interactively
 
       First, pull the image:
 
@@ -27,23 +35,23 @@ This image contains a fully pre-configured AiiDA environment which makes it part
 
       .. parsed-literal::
 
-         $ docker run -d --name aiida-container aiidateam/aiida-core:latest
+         $ docker run -it aiidateam/aiida-core:latest bash
 
-      You can use the following command to block until all services have started up:
+      You can specify a name for the container with the ``--name`` option for easier reference later on:
 
-      .. code-block:: console
+      .. parsed-literal::
 
-         $ docker exec -t aiida-container wait-for-services
+         $ docker run -it --name aiida-container aiidateam/aiida-core:latest bash
 
    .. grid-item-card:: Check setup
 
-      The default profile is created under the ``aiida`` user, so to execute commands you must add the ``--user aiida`` option.
+      The prfile named ``default`` is created under the ``aiida`` user.
 
-      For example, to check the verdi status, execute:
+      For example, to check the verdi status, execute the following command inside the container:
 
       .. code-block:: console
 
-         $ docker exec -t --user aiida aiida-container /bin/bash -l -c 'verdi status'
+         $ verdi status
          ✓ config dir:  /home/aiida/.aiida
          ✓ profile:     On profile default
          ✓ repository:  /home/aiida/.aiida/repository/default
@@ -51,24 +59,13 @@ This image contains a fully pre-configured AiiDA environment which makes it part
          ✓ rabbitmq:    Connected as amqp://127.0.0.1?heartbeat=600
          ✓ daemon:      Daemon is running as PID 1795 since 2020-05-20 02:54:00
 
-   .. grid-item-card:: Use container interactively
-
-      To "enter" the container and run commands directly in the shell, use:
-
-      .. code-block:: console
-
-         $ docker exec -it --user aiida aiida-container /bin/bash
-
-      This will drop you into the shell within the container as the user "aiida".
-
    .. grid-item-card:: Persist data across different containers
 
-      If you stop the container and start it again, any data you created will persist.
+      If you stop the container (`docker stop` or simply `Ctrl+D` from container) and start it again, any data you created will persist.
 
       .. code-block:: console
 
-         $ docker stop aiida-container
-         $ docker start aiida-container
+         $ docker start -i aiida-container
 
       However, if you remove the container, **all data will be removed as well**.
 
@@ -78,19 +75,24 @@ This image contains a fully pre-configured AiiDA environment which makes it part
          $ docker rm aiida-container
 
       The preferred way to persistently store data is to `create a volume <https://docs.docker.com/storage/volumes/>`__.
+
       To create a simple volume, run:
 
       .. code-block:: console
 
-         $ docker volume create my-data
+         $ docker volume create container-home-data
 
       Then make sure to mount that volume when running the aiida container:
 
       .. parsed-literal::
 
-         $ docker run -d --name aiida-container --mount source=my-data,target=/tmp/my_data aiidateam/aiida-core:latest
+         $ docker run -it --name aiida-container -v container-home-data:/home/aiida aiidateam/aiida-core:latest
 
-      Starting the container with the above command, ensures that any data stored in the ``/tmp/my_data`` path within the container is stored in the ``my-data`` volume and therefore persists even if the container is removed.
+      Starting the container with the above command, ensures that any data stored in the ``/home/aiida`` path within the container is stored in the ``conatiner-home-data`` volume and therefore persists even if the container is removed.
+
+      To persistently store the python packages installed in the container, use `--user` flag when installing packages with pip, the packages will be installed in the ``/home/aiida/.local`` path which is mounted to the ``container-home-data`` volume.
+
+      You can also mount a local directory instead of a volume and to other container path, please refer to the `Docker documentation <https://docs.docker.com/storage/bind-mounts/>`__ for more information.
 
       .. button-ref:: intro:get_started:next
          :ref-type: ref

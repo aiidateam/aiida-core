@@ -37,7 +37,6 @@ jobs:
         if: ${{ !github.event.pull_request.head.repo.fork }}
 
     amd64-push-ghcr:
-        if: github.repository == 'aiidateam/aiida-core'
         uses: ./.github/workflows/docker-push.yml
         with:
             architecture: amd64
@@ -46,6 +45,7 @@ jobs:
             REGISTRY_USERNAME: ${{ github.actor }}
             REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         needs: [amd64-build]
+        if: ${{ !github.event.pull_request.head.repo.fork }}
 
     arm64-push-ghcr:
         uses: ./.github/workflows/docker-push.yml

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import typing as t
-from urllib.parse import quote
 
 from aiida.common.exceptions import AiidaException
 
@@ -49,6 +48,8 @@ class RabbitmqManagementClient:
             automatically inserted and should not be specified.
         :returns: The complete URL.
         """
+        from urllib.parse import quote
+
         url_params = url_params or {}
         url_params['virtual_host'] = self._virtual_host if self._virtual_host else '/'
         url_params = {key: quote(value, safe='') for key, value in url_params.items()}

@@ -1,0 +1,27 @@
+---
+name: Build environment
+description: Create build environment
+
+inputs:
+    architecture:
+        description: architecture to be run on
+        required: true
+        type: string
+
+runs:
+    using: composite
+    steps:
+    # actions/setup-python doesn't support Linux arm64 runners
+    # See: https://github.com/actions/setup-python/issues/108
+    # python3 is manually preinstalled in the arm64 VM self-hosted runner
+        - name: Set Up Python 🐍
+          uses: actions/setup-python@v4
+          with:
+              python-version: 3.x
+          if: ${{ inputs.architecture == 'amd64' }}
+
+        - name: Install Dev Dependencies 📦
+          run: |
+              pip install --upgrade pip
+              pip install --upgrade -r .docker/requirements.txt
+          shell: bash

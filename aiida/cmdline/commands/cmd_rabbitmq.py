@@ -18,7 +18,6 @@ import typing as t
 import click
 import tabulate
 import wrapt
-import yaml
 
 from aiida.cmdline.commands.cmd_devel import verdi_devel
 from aiida.cmdline.params import arguments, options
@@ -146,6 +145,8 @@ def with_manager(wrapped, _, args, kwargs):
 @with_manager
 def cmd_server_properties(manager):
     """List the server properties."""
+    import yaml
+
     data = {}
     for key, value in manager.get_communicator().server_properties.items():
         data[key] = value.decode('utf-8') if isinstance(value, bytes) else value

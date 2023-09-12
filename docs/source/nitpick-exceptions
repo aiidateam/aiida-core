@@ -8,6 +8,7 @@ py:class callable
 py:class function
 py:class traceback
 py:class NoneType
+py:class MappingType
 py:class AbstractContextManager
 py:class BinaryIO
 py:class IO

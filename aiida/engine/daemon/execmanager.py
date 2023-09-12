@@ -559,7 +559,7 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
 
 def retrieve_files_from_list(
     calculation: CalcJobNode, transport: Transport, folder: str, retrieve_list: List[Union[str, Tuple[str, str, int],
-                                                                                             list]]
+                                                                                           list]]
 ) -> None:
     """
     Retrieve all the files in the retrieve_list from the remote into the

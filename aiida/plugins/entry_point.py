@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to manage loading entrypoints."""
+from __future__ import annotations
+
 import enum
 import functools
 import traceback
@@ -31,13 +33,13 @@ ENTRY_POINT_STRING_SEPARATOR = ':'
 
 
 @functools.cache
-def eps() -> 'Union[EntryPoints, SelectableGroups]':
+def eps() -> Union[EntryPoints, SelectableGroups]:
     from importlib_metadata import entry_points
     return entry_points()
 
 
 #@functools.lru_cache(maxsize=100)
-def eps_select(group, name=None) -> 'EntryPoints':
+def eps_select(group, name=None) -> EntryPoints:
     if name is None:
         return eps().select(group=group)
     return eps().select(group=group, name=name)
@@ -115,7 +117,7 @@ ENTRY_POINT_GROUP_FACTORY_MAPPING = {
 }
 
 
-def parse_entry_point(group: str, spec: str) -> 'EntryPoint':
+def parse_entry_point(group: str, spec: str) -> EntryPoint:
     """Return an entry point, given its group and spec (as formatted in the setup)"""
     from importlib_metadata import EntryPoint
 
@@ -199,7 +201,7 @@ def get_entry_point_string_format(entry_point_string: str) -> EntryPointFormat:
     return EntryPointFormat.PARTIAL
 
 
-def get_entry_point_from_string(entry_point_string: str) -> 'EntryPoint':
+def get_entry_point_from_string(entry_point_string: str) -> EntryPoint:
     """
     Return an entry point for the given entry point string
 
@@ -270,7 +272,7 @@ def get_entry_point_names(group: str, sort: bool = True) -> List[str]:
     return group_names
 
 
-def get_entry_points(group: str) -> 'EntryPoints':
+def get_entry_points(group: str) -> EntryPoints:
     """
     Return a list of all the entry points within a specific group
 
@@ -280,7 +282,7 @@ def get_entry_points(group: str) -> 'EntryPoints':
     return eps_select(group=group)
 
 
-def get_entry_point(group: str, name: str) -> 'EntryPoint':
+def get_entry_point(group: str, name: str) -> EntryPoint:
     """
     Return an entry point with a given name within a specific group
 
@@ -327,7 +329,7 @@ def convert_potentially_deprecated_entry_point(group: str, name: str) -> str:
 
 
 @functools.lru_cache(maxsize=100)
-def get_entry_point_from_class(class_module: str, class_name: str) -> Tuple[Optional[str], Optional['EntryPoint']]:
+def get_entry_point_from_class(class_module: str, class_name: str) -> Tuple[Optional[str], Optional[EntryPoint]]:
     """
     Given the module and name of a class, attempt to obtain the corresponding entry point if it exists
 

@@ -13,7 +13,6 @@ from functools import partial
 
 import click
 import tabulate
-import yaml
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
@@ -242,6 +241,8 @@ def show(code):
 @with_dbenv()
 def export(code, output_file):
     """Export code to a yaml file."""
+    import yaml
+
     code_data = {}
 
     for key in code.get_cli_options().keys():

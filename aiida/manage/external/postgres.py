@@ -23,8 +23,6 @@ from pgsu import PGSU, PostgresConnectionMode
 if TYPE_CHECKING:
     from aiida.manage.configuration import Profile
 
-__all__ = ('Postgres', 'PostgresConnectionMode', 'DEFAULT_DBINFO')
-
 # The last placeholder is for adding privileges of the user
 _CREATE_USER_COMMAND = 'CREATE USER "{}" WITH PASSWORD \'{}\' {}'
 _DROP_USER_COMMAND = 'DROP USER "{}"'

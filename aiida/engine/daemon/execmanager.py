@@ -21,9 +21,9 @@ import os
 import pathlib
 import shutil
 from tempfile import NamedTemporaryFile
-from typing import Any, List
 from typing import Mapping as MappingType
 from typing import Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, List
 
 from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcInfo
@@ -35,7 +35,9 @@ from aiida.orm import CalcJobNode, Code, FolderData, Node, PortableCode, RemoteD
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.repository.common import FileType
 from aiida.schedulers.datastructures import JobState
-from aiida.transports import Transport
+
+if TYPE_CHECKING:
+    from aiida.transports import Transport
 
 REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 

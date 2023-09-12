@@ -7,66 +7,49 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module that defines the configuration file of an AiiDA instance and functions to create and load it."""
+"""Module that defines the configuration file of an AiiDA instance and functions to create and load it.
+
+Despite the import of the annotations backport below which enables postponed type annotation evaluation as implemented
+with PEP 563 (https://peps.python.org/pep-0563/), this is not compatible with ``pydantic`` for Python 3.9 and older (
+See https://github.com/pydantic/pydantic/issues/2678 for details).
+"""
 from __future__ import annotations
 
 import codecs
-from functools import cache
 import json
 import os
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import uuid
 
-from pydantic import BaseModel, Field, ValidationError, validator  # pylint: disable=no-name-in-module
+from pydantic import (  # pylint: disable=no-name-in-module
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_serializer,
+    field_validator,
+)
 
 from aiida.common.exceptions import ConfigurationError
 from aiida.common.log import LogLevels
 
-from . import schema as schema_module
 from .options import Option, get_option, get_option_names, parse_option
 from .profile import Profile
 
-__all__ = ('Config', 'config_schema', 'ConfigValidationError')
-
-SCHEMA_FILE = 'config-v9.schema.json'
+__all__ = ('Config',)
 
 
-@cache
-def config_schema() -> Dict[str, Any]:
-    """Return the configuration schema."""
-    from importlib.resources import files
-
-    return json.loads(files(schema_module).joinpath(SCHEMA_FILE).read_text(encoding='utf8'))
-
-
-class ConfigValidationError(ConfigurationError):
-    """Configuration error raised when the file contents fails validation."""
-
-    def __init__(
-        self, message: str, keypath: Sequence[Any] = (), schema: Optional[dict] = None, filepath: Optional[str] = None
-    ):
-        super().__init__(message)
-        self._message = message
-        self._keypath = keypath
-        self._filepath = filepath
-        self._schema = schema
-
-    def __str__(self) -> str:
-        prefix = f'{self._filepath}:' if self._filepath else ''
-        path = '/' + '/'.join(str(k) for k in self._keypath) + ': ' if self._keypath else ''
-        schema = f'\n  schema:\n  {self._schema}' if self._schema else ''
-        return f'Validation Error: {prefix}{path}{self._message}{schema}'
-
-
-class ConfigVersionSchema(BaseModel):
+class ConfigVersionSchema(BaseModel, defer_build=True):
     """Schema for the version configuration of an AiiDA instance."""
 
     CURRENT: int
     OLDEST_COMPATIBLE: int
 
 
-class ProfileOptionsSchema(BaseModel):
+class ProfileOptionsSchema(BaseModel, defer_build=True):
     """Schema for the options of an AiiDA profile."""
+
+    model_config = ConfigDict(use_enum_values=True)
 
     runner__poll__interval: int = Field(60, description='Polling interval in seconds to be used by process runners.')
     daemon__default_workers: int = Field(
@@ -129,39 +112,37 @@ class ProfileOptionsSchema(BaseModel):
         5, description='Maximum number of transport task attempts before a Process is Paused.'
     )
     rmq__task_timeout: int = Field(10, description='Timeout in seconds for communications with RabbitMQ.')
-    storage__sandbox: Optional[str] = Field(description='Absolute path to the directory to store sandbox folders.')
+    storage__sandbox: Optional[str] = Field(
+        None, description='Absolute path to the directory to store sandbox folders.'
+    )
     caching__default_enabled: bool = Field(False, description='Enable calculation caching by default.')
     caching__enabled_for: List[str] = Field([], description='Calculation entry points to enable caching on.')
     caching__disabled_for: List[str] = Field([], description='Calculation entry points to disable caching on.')
 
-    class Config:
-        use_enum_values = True
-
-    @validator('caching__enabled_for', 'caching__disabled_for')
+    @field_validator('caching__enabled_for', 'caching__disabled_for')
     @classmethod
     def validate_caching_identifier_pattern(cls, value: List[str]) -> List[str]:
         """Validate the caching identifier patterns."""
         from aiida.manage.caching import _validate_identifier_pattern
         for identifier in value:
-            try:
-                _validate_identifier_pattern(identifier=identifier)
-            except ValueError as exception:
-                raise ValidationError(str(exception)) from exception
+            _validate_identifier_pattern(identifier=identifier)
 
         return value
 
 
 class GlobalOptionsSchema(ProfileOptionsSchema):
     """Schema for the global options of an AiiDA instance."""
-    autofill__user__email: Optional[str] = Field(description='Default user email to use when creating new profiles.')
+    autofill__user__email: Optional[str] = Field(
+        None, description='Default user email to use when creating new profiles.'
+    )
     autofill__user__first_name: Optional[str] = Field(
-        description='Default user first name to use when creating new profiles.'
+        None, description='Default user first name to use when creating new profiles.'
     )
     autofill__user__last_name: Optional[str] = Field(
-        description='Default user last name to use when creating new profiles.'
+        None, description='Default user last name to use when creating new profiles.'
     )
     autofill__user__institution: Optional[str] = Field(
-        description='Default user institution to use when creating new profiles.'
+        None, description='Default user institution to use when creating new profiles.'
     )
     rest_api__profile_switching: bool = Field(
         False, description='Toggle whether the profile can be specified in requests submitted to the REST API.'
@@ -172,14 +153,14 @@ class GlobalOptionsSchema(ProfileOptionsSchema):
     )
 
 
-class ProfileStorageConfig(BaseModel):
+class ProfileStorageConfig(BaseModel, defer_build=True):
     """Schema for the storage backend configuration of an AiiDA profile."""
 
     backend: str
     config: Dict[str, Any]
 
 
-class ProcessControlConfig(BaseModel):
+class ProcessControlConfig(BaseModel, defer_build=True):
     """Schema for the process control configuration of an AiiDA profile."""
 
     broker_protocol: str = Field('amqp', description='Protocol for connecting to the message broker.')
@@ -191,7 +172,7 @@ class ProcessControlConfig(BaseModel):
     broker_parameters: dict[str, Any] = Field('guest', description='Arguments to be encoded as query parameters.')
 
 
-class ProfileSchema(BaseModel):
+class ProfileSchema(BaseModel, defer_build=True):
     """Schema for the configuration of an AiiDA profile."""
 
     uuid: str = Field(description='', default_factory=uuid.uuid4)
@@ -199,21 +180,20 @@ class ProfileSchema(BaseModel):
     process_control: ProcessControlConfig
     default_user_email: Optional[str] = None
     test_profile: bool = False
-    options: Optional[ProfileOptionsSchema]
+    options: Optional[ProfileOptionsSchema] = None
 
-    class Config:
-        json_encoders = {
-            uuid.UUID: lambda u: str(u),  # pylint: disable=unnecessary-lambda
-        }
+    @field_serializer('uuid')
+    def serialize_dt(self, value: uuid.UUID, _info):
+        return str(value)
 
 
-class ConfigSchema(BaseModel):
+class ConfigSchema(BaseModel, defer_build=True):
     """Schema for the configuration of an AiiDA instance."""
 
-    CONFIG_VERSION: Optional[ConfigVersionSchema]
-    profiles: Optional[dict[str, ProfileSchema]]
-    options: Optional[GlobalOptionsSchema]
-    default_profile: Optional[str]
+    CONFIG_VERSION: Optional[ConfigVersionSchema] = None
+    profiles: Optional[dict[str, ProfileSchema]] = None
+    options: Optional[GlobalOptionsSchema] = None
+    default_profile: Optional[str] = None
 
 
 class Config:  # pylint: disable=too-many-public-methods

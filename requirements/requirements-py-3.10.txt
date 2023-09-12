@@ -44,7 +44,6 @@ deprecation==2.1.0
 disk-objectstore==1.0.0
 docstring-parser==0.15
 docutils==0.16
-emmet-core==0.57.1
 exceptiongroup==1.1.1
 executing==1.2.0
 fastjsonschema==2.17.1
@@ -89,8 +88,7 @@ matplotlib-inline==0.1.6
 mdit-py-plugins==0.3.5
 mdurl==0.1.2
 mistune==3.0.1
-monty==2023.5.8
-mp-api==0.33.3
+monty==2023.9.25
 mpmath==1.3.0
 msgpack==1.0.5
 multidict==6.0.4
@@ -133,10 +131,10 @@ py-cpuinfo==9.0.0
 pybtex==0.24.0
 pycifrw==4.4.5
 pycparser==2.21
-pydantic==1.10.9
+pydantic==2.4.0
 pydata-sphinx-theme==0.13.3
 pygments==2.15.1
-pymatgen==2023.5.31
+pymatgen==2023.9.25
 pympler==0.9
 pymysql==0.9.3
 pynacl==1.5.0

@@ -119,7 +119,8 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
 
     List values are split by whitespace, e.g. "a b" becomes ["a", "b"].
     """
-    from aiida.manage.configuration import Config, ConfigValidationError, Profile
+    from aiida.common.exceptions import ConfigurationError
+    from aiida.manage.configuration import Config, Profile
 
     if append and remove:
         echo.echo_critical('Cannot flag both append and remove')
@@ -137,7 +138,7 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
     if append or remove:
         try:
             current = config.get_option(option.name, scope=scope)
-        except ConfigValidationError as error:
+        except ConfigurationError as error:
             echo.echo_critical(str(error))
         if not isinstance(current, list):
             echo.echo_critical(f'cannot append/remove to value: {current}')
@@ -149,7 +150,7 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
     # Set the specified option
     try:
         value = config.set_option(option.name, value, scope=scope)
-    except ConfigValidationError as error:
+    except ConfigurationError as error:
         echo.echo_critical(str(error))
 
     config.store()

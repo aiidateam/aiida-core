@@ -32,7 +32,7 @@ class Option:
 
     @property
     def valid_type(self) -> Any:
-        return self._field.type_
+        return self._field.annotation
 
     @property
     def schema(self) -> Dict[str, Any]:
@@ -44,45 +44,51 @@ class Option:
 
     @property
     def description(self) -> str:
-        return self._field.field_info.description
+        return self._field.description
 
     @property
     def global_only(self) -> bool:
         from .config import ProfileOptionsSchema
-        return self._name in ProfileOptionsSchema.__fields__
+        return self._name.replace('.', '__') not in ProfileOptionsSchema.model_fields
 
     def validate(self, value: Any) -> Any:
         """Validate a value
 
         :param value: The input value
-        :param cast: Attempt to cast the value to the required type
-
         :return: The output value
-        :raise: ConfigValidationError
-
+        :raise: ConfigurationError
         """
-        value, validation_error = self._field.validate(value, {}, loc=None)
+        from pydantic import ValidationError
 
-        if validation_error:
-            raise ConfigurationError(validation_error)
+        from .config import GlobalOptionsSchema
 
-        return value
+        attribute = self.name.replace('.', '__')
+
+        try:
+            result = GlobalOptionsSchema.__pydantic_validator__.validate_assignment(
+                GlobalOptionsSchema.model_construct(), attribute, value
+            )
+        except ValidationError as exception:
+            raise ConfigurationError(str(exception)) from exception
+
+        # Return the value from the constructed model as this will have casted the value to the right type
+        return getattr(result, attribute)
 
 
 def get_option_names() -> List[str]:
     """Return a list of available option names."""
     from .config import GlobalOptionsSchema
-    return [key.replace('__', '.') for key in GlobalOptionsSchema.__fields__]
+    return [key.replace('__', '.') for key in GlobalOptionsSchema.model_fields]
 
 
 def get_option(name: str) -> Option:
     """Return option."""
     from .config import GlobalOptionsSchema
-    options = GlobalOptionsSchema.__fields__
+    options = GlobalOptionsSchema.model_fields
     option_name = name.replace('.', '__')
     if option_name not in options:
         raise ConfigurationError(f'the option {name} does not exist')
-    return Option(name, GlobalOptionsSchema.schema()['properties'][option_name], options[option_name])
+    return Option(name, GlobalOptionsSchema.model_json_schema()['properties'][option_name], options[option_name])
 
 
 def parse_option(option_name: str, option_value: Any) -> Tuple[Option, Any]:

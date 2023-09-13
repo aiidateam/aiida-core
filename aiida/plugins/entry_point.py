@@ -290,7 +290,7 @@ def get_entry_point(group: str, name: str) -> EntryPoint:
     """
     # The next line should be removed for ``aiida-core==3.0`` when the old deprecated entry points are fully removed.
     name = convert_potentially_deprecated_entry_point(group, name)
-    found = eps().select(group=group, name=name)
+    found = eps_select(group=group, name=name)
     if name not in found.names:
         raise MissingEntryPointError(f"Entry point '{name}' not found in group '{group}'")
     # If multiple entry points are found and they have different values we raise, otherwise if they all

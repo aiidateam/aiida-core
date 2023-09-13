@@ -35,6 +35,13 @@ def eps():
     return _eps()
 
 
+@functools.lru_cache(maxsize=100)
+def eps_select(group, name=None) -> EntryPoints:
+    if name is None:
+        return eps().select(group=group)
+    return eps().select(group=group, name=name)
+
+
 class EntryPointFormat(enum.Enum):
     """
     Enum to distinguish between the various possible entry point string formats. An entry point string
@@ -268,7 +275,7 @@ def get_entry_points(group: str) -> EntryPoints:
     :param group: the entry point group
     :return: a list of entry points
     """
-    return eps().select(group=group)
+    return eps_select(group=group)
 
 
 def get_entry_point(group: str, name: str) -> EntryPoint:

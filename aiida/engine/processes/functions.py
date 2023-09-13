@@ -43,16 +43,16 @@ from aiida.orm.utils.mixins import FunctionCalculationMixin
 from .process import Process
 
 try:
-    UnionType = types.UnionType  # type: ignore[attr-defined]
+    UnionType = types.UnionType
 except AttributeError:
     # This type is not available for Python 3.9 and older
-    UnionType = None  # pylint: disable=invalid-name
+    UnionType = None  # type: ignore[assignment,misc]  # pylint: disable=invalid-name
 
 try:
-    get_annotations = inspect.get_annotations  # type: ignore[attr-defined]
+    get_annotations = inspect.get_annotations
 except AttributeError:
     # This is the backport for Python 3.9 and older
-    from get_annotations import get_annotations  # type: ignore[no-redef]
+    from get_annotations import get_annotations  # type: ignore[no-redef]  # pylint: disable=import-error
 
 if TYPE_CHECKING:
     from .exit_code import ExitCode

@@ -44,7 +44,7 @@ def get_strict_version():
     :returns: StrictVersion instance with the current version
     :rtype: :class:`!distutils.version.StrictVersion`
     """
-    from distutils.version import StrictVersion
+    from distutils.version import StrictVersion  # pylint: disable=deprecated-module
 
     from aiida.common.warnings import warn_deprecation
     warn_deprecation(

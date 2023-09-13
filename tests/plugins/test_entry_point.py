@@ -72,10 +72,10 @@ def eps(request):
 
 @pytest.mark.parametrize(
     'eps, name, exception', (
-        ((EP(name='ep', group='gr', value='x'),), None, None),
+        ((EP(name='ep', group='gr', value='x'),), 'ep', None),
         ((EP(name='ep', group='gr', value='x'),), 'non-existing', MissingEntryPointError),
-        ((EP(name='ep', group='gr', value='x'), EP(name='ep', group='gr', value='y')), None, MultipleEntryPointError),
-        ((EP(name='ep', group='gr', value='x'), EP(name='ep', group='gr', value='x')), None, None),
+        ((EP(name='ep', group='gr', value='x'), EP(name='ep', group='gr', value='y')), 'ep', MultipleEntryPointError),
+        ((EP(name='ep', group='gr', value='x'), EP(name='ep', group='gr', value='x')), 'ep', None),
     ),
     indirect=['eps']
 )
@@ -91,8 +91,7 @@ def test_get_entry_point(eps, name, exception, monkeypatch):
 
     """
     monkeypatch.setattr(entry_point, 'eps', eps)
-
-    name = name or 'ep'  # Try to load the entry point with name ``ep`` unless the fixture provides one
+    entry_point.eps_select.cache_clear()
 
     if exception:
         with pytest.raises(exception):

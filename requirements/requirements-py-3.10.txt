@@ -132,7 +132,7 @@ pybtex==0.24.0
 pycifrw==4.4.5
 pycparser==2.21
 pydantic==1.10.9
-pydata-sphinx-theme==0.8.1
+pydata-sphinx-theme==0.13.3
 pygments==2.15.1
 pymatgen==2023.5.31
 pympler==0.9

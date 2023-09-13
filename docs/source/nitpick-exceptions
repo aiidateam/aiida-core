@@ -103,6 +103,15 @@ py:class aiida.storage.sqlite_zip.models.DbGroupNode
 py:class aiida.engine.processes.workchains.context.ToContext
 py:func aiida.orm.implementation.BackendQueryBuilder
 
+### Typing aliases
+py:obj aiida.engine.processes.functions.P
+py:obj aiida.engine.processes.functions.N
+py:obj aiida.engine.processes.functions.R_co
+py:class P
+py:class N
+py:class aiida.engine.processes.functions.N
+py:class aiida.engine.processes.functions.R_co
+
 ### third-party packages
 # Note: These exceptions are needed if
 # * the objects are referenced e.g. as param/return types types in method docstrings (without intersphinx mapping)
@@ -117,7 +126,7 @@ py:class click.types.Path
 py:class click.types.File
 py:class click.types.StringParamType
 py:func click.shell_completion._start_of_option
-py:meth  click.Option.get_default
+py:meth click.Option.get_default
 py:meth fail
 
 py:class requests.models.Response

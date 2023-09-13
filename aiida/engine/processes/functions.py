@@ -50,6 +50,12 @@ except AttributeError:
     UnionType = None  # type: ignore[assignment,misc]  # pylint: disable=invalid-name
 
 try:
+    from typing import ParamSpec
+except ImportError:
+    # Fallback for Python 3.9 and older
+    from typing_extensions import ParamSpec  # type: ignore[assignment]
+
+try:
     get_annotations = inspect.get_annotations
 except AttributeError:
     # This is the backport for Python 3.9 and older
@@ -88,18 +94,18 @@ def get_stack_size(size: int = 2) -> int:  # type: ignore[return]
         return size - 1
 
 
-P = t.ParamSpec('P')
-R = t.TypeVar('R', covariant=True)
+P = ParamSpec('P')
+R_co = t.TypeVar('R_co', covariant=True)
 N = t.TypeVar('N', bound=ProcessNode)
 
 
-class ProcessFunctionType(t.Protocol, t.Generic[P, R, N]):
+class ProcessFunctionType(t.Protocol, t.Generic[P, R_co, N]):
     """Protocol for a decorated process function."""
 
-    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R_co:
         ...
 
-    def run(self, *args: P.args, **kwargs: P.kwargs) -> R:
+    def run(self, *args: P.args, **kwargs: P.kwargs) -> R_co:
         ...
 
     def run_get_pk(self, *args: P.args, **kwargs: P.kwargs) -> tuple[dict[str, t.Any] | None, int]:
@@ -119,7 +125,7 @@ class ProcessFunctionType(t.Protocol, t.Generic[P, R, N]):
     spec: t.Callable[[], ProcessSpec]
 
 
-def calcfunction(function: t.Callable[P, R]) -> ProcessFunctionType[P, R, CalcFunctionNode]:
+def calcfunction(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, CalcFunctionNode]:
     """
     A decorator to turn a standard python function into a calcfunction.
     Example usage:
@@ -143,10 +149,10 @@ def calcfunction(function: t.Callable[P, R]) -> ProcessFunctionType[P, R, CalcFu
     :param function: The function to decorate.
     :return: The decorated function.
     """
-    return process_function(node_class=CalcFunctionNode)(function)
+    return process_function(node_class=CalcFunctionNode)(function)  # type: ignore[arg-type]
 
 
-def workfunction(function: t.Callable[P, R]) -> ProcessFunctionType[P, R, WorkFunctionNode]:
+def workfunction(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, WorkFunctionNode]:
     """
     A decorator to turn a standard python function into a workfunction.
     Example usage:
@@ -170,7 +176,7 @@ def workfunction(function: t.Callable[P, R]) -> ProcessFunctionType[P, R, WorkFu
     :param function: The function to decorate.
     :return: The decorated function.
     """
-    return process_function(node_class=WorkFunctionNode)(function)
+    return process_function(node_class=WorkFunctionNode)(function)  # type: ignore[arg-type]
 
 
 def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionType], FunctionType]:

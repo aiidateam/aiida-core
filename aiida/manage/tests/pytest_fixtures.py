@@ -862,4 +862,5 @@ def entry_points(monkeypatch) -> EntryPointManager:
         warnings.filterwarnings('ignore', category=DeprecationWarning)
         eps_copy = copy.deepcopy(plugins.entry_point.eps())
     monkeypatch.setattr(plugins.entry_point, 'eps', lambda: eps_copy)
+    plugins.entry_point.eps_select.cache_clear()
     yield EntryPointManager()

@@ -167,7 +167,7 @@ class Parser(ABC):
         inputs = {'metadata': {'store_provenance': store_provenance}}
         inputs.update(parser.get_outputs_for_parsing())
 
-        return parse_calcfunction.run_get_node(**inputs)  # type: ignore[attr-defined]
+        return parse_calcfunction.run_get_node(**inputs)
 
     @abstractmethod
     def parse(self, **kwargs) -> Optional[ExitCode]:

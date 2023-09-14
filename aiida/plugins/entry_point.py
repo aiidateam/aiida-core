@@ -30,7 +30,7 @@ ENTRY_POINT_GROUP_PREFIX = 'aiida.'
 ENTRY_POINT_STRING_SEPARATOR = ':'
 
 
-@functools.lru_cache(maxsize=1)
+@functools.cache
 def eps():
     return _eps()
 
@@ -261,8 +261,7 @@ def get_entry_point_groups() -> Set[str]:
 
 def get_entry_point_names(group: str, sort: bool = True) -> List[str]:
     """Return the entry points within a group."""
-    all_eps = eps()
-    group_names = list(all_eps.select(group=group).names)
+    group_names = list(get_entry_points(group).names)
     if sort:
         return sorted(group_names)
     return group_names

@@ -9,7 +9,7 @@
 ###########################################################################
 """Module that defines the configuration file of an AiiDA instance and functions to create and load it."""
 import codecs
-from functools import lru_cache
+from functools import cache
 from importlib.resources import files
 import json
 import os
@@ -28,7 +28,7 @@ __all__ = ('Config', 'config_schema', 'ConfigValidationError')
 SCHEMA_FILE = 'config-v9.schema.json'
 
 
-@lru_cache(1)
+@cache
 def config_schema() -> Dict[str, Any]:
     """Return the configuration schema."""
     return json.loads(files(schema_module).joinpath(SCHEMA_FILE).read_text(encoding='utf8'))

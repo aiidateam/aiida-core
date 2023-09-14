@@ -51,7 +51,6 @@ dependencies = [
     "sqlalchemy~=1.4.22",
     "tabulate~=0.8.5",
     "tqdm~=4.45",
-    "trogon",
     "upf_to_json~=0.9.2",
     "wrapt~=1.11"
 ]
@@ -62,6 +61,9 @@ Documentation = "https://aiida.readthedocs.io"
 Source = "https://github.com/aiidateam/aiida-core"
 
 [project.optional-dependencies]
+tui = [
+    "trogon",
+]
 ssh_kerberos = [
     "gssapi~=1.6",
     "pyasn1~=0.4.8"
@@ -440,6 +442,7 @@ module = [
     'sqlalchemy_utils.*',
     'tabulate.*',
     'tqdm.*',
+    'trogon.*',
     'wrapt.*',
     'upf_to_json.*',
 ]

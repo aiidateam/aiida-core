@@ -7,6 +7,12 @@ Command line interface
 The command line interface utility for AiiDA is called ``verdi``.
 This section explains the basic concepts that apply to all ``verdi`` commands.
 
+.. tip::
+
+    The ``verdi`` command line interface can also be explored as a `text-based user interface <https://en.wikipedia.org/wiki/Text-based_user_interface>`_ (TUI).
+    It requires ``aiida-core`` to be installed with the ``tui`` extra (e.g. ``pip install aiida-core[tui]``).
+    The TUI can then be launched with ``verdi tui``.
+
 
 .. _topics:cli:parameters:
 

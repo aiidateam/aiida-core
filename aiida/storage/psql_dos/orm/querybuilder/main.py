@@ -760,10 +760,10 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         retdict: Dict[Any, Any] = {}
 
         total_query = session.query(self.Node)
-        types_query = session.query(self.Node.node_type.label('typestring'), sa_func.count(self.Node.id))  # pylint: disable=no-member
+        types_query = session.query(self.Node.node_type.label('typestring'), sa_func.count(self.Node.id))  # pylint: disable=no-member,not-callable
         stat_query = session.query(
             sa_func.date_trunc('day', self.Node.ctime).label('cday'),  # pylint: disable=no-member
-            sa_func.count(self.Node.id),  # pylint: disable=no-member
+            sa_func.count(self.Node.id),  # pylint: disable=no-member,not-callable
         )
 
         if user_pk is not None:
@@ -1088,11 +1088,11 @@ def _get_projection(
     if func is None:
         pass
     elif func == 'max':
-        entity_to_project = sa_func.max(entity_to_project)
+        entity_to_project = sa_func.max(entity_to_project)  # pylint: disable=not-callable
     elif func == 'min':
-        entity_to_project = sa_func.max(entity_to_project)
+        entity_to_project = sa_func.max(entity_to_project)  # pylint: disable=not-callable
     elif func == 'count':
-        entity_to_project = sa_func.count(entity_to_project)
+        entity_to_project = sa_func.count(entity_to_project)  # pylint: disable=not-callable
     else:
         raise ValueError(f'\nInvalid function specification {func}')
 

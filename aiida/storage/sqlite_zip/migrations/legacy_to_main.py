@@ -180,7 +180,7 @@ def _json_to_sqlite(  # pylint: disable=too-many-branches,too-many-locals
 
         # get mapping of node IDs to node UUIDs
         node_uuid_map = {  # pylint: disable=unnecessary-comprehension
-            uuid: pk for uuid, pk in connection.execute(select(v1_schema.DbNode.uuid, v1_schema.DbNode.id))
+            uuid: pk for uuid, pk in connection.execute(select(v1_schema.DbNode.uuid, v1_schema.DbNode.id))  # pylint: disable=not-an-iterable
         }
 
         # links
@@ -211,7 +211,7 @@ def _json_to_sqlite(  # pylint: disable=too-many-branches,too-many-locals
         if data['groups_uuid']:
             # get mapping of node IDs to node UUIDs
             group_uuid_map = {  # pylint: disable=unnecessary-comprehension
-                uuid: pk for uuid, pk in connection.execute(select(v1_schema.DbGroup.uuid, v1_schema.DbGroup.id))
+                uuid: pk for uuid, pk in connection.execute(select(v1_schema.DbGroup.uuid, v1_schema.DbGroup.id))  # pylint: disable=not-an-iterable
             }
             length = sum(len(uuids) for uuids in data['groups_uuid'].values())
             unknown_nodes: Dict[str, set] = {}

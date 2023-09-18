@@ -19,6 +19,7 @@ from pathlib import Path
 import shutil
 from typing import Any, BinaryIO, Iterator, Sequence
 
+from sqlalchemy import column, insert, update
 from sqlalchemy.orm import Session
 
 from aiida.common.exceptions import ClosedStorage, IntegrityError
@@ -260,8 +261,8 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
                     raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} != {keys}')
         session = self.get_session()
         with (nullcontext() if self.in_transaction else self.transaction()):
-            session.bulk_insert_mappings(mapper, rows, render_nulls=True, return_defaults=True)
-        return [row['id'] for row in rows]
+            result = session.execute(insert(mapper).returning(mapper, column('id')), rows).fetchall()
+        return [row.id for row in result]
 
     def bulk_update(self, entity_type: EntityTypes, rows: list[dict]) -> None:
         mapper, keys = self._get_mapper_from_entity(entity_type, True)
@@ -274,7 +275,7 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
                 raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
         session = self.get_session()
         with (nullcontext() if self.in_transaction else self.transaction()):
-            session.bulk_update_mappings(mapper, rows)
+            session.execute(update(mapper), rows)
 
     def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]):
         raise NotImplementedError

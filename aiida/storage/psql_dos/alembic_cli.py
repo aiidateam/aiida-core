@@ -11,9 +11,10 @@
 """Simple wrapper around the alembic command line tool that first loads an AiiDA profile."""
 from __future__ import annotations
 
+import contextlib
+
 import alembic
 import click
-from sqlalchemy.util.compat import nullcontext
 
 from aiida.cmdline import is_verbose
 from aiida.cmdline.groups.verdi import VerdiCommandGroup
@@ -38,8 +39,8 @@ class AlembicRunner:
             raise click.ClickException('No profile specified')
         migrator = PsqlDosMigrator(self.profile)
 
-        context = migrator._alembic_connect() if connect else nullcontext(migrator._alembic_config())  # pylint: disable=protected-access
-        with context as config:  # type: ignore[attr-defined]
+        context = migrator._alembic_connect() if connect else contextlib.nullcontext(migrator._alembic_config())  # pylint: disable=protected-access
+        with context as config:
             command = getattr(alembic.command, command_name)
             config.stdout = click.get_text_stream('stdout')
             command(config, **kwargs)

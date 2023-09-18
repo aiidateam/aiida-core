@@ -41,9 +41,9 @@ def export_workflow_data(connection, profile):
     DbWorkflowData = table('db_dbworkflowdata')
     DbWorkflowStep = table('db_dbworkflowstep')
 
-    count_workflow = connection.execute(select(func.count()).select_from(DbWorkflow)).scalar()
-    count_workflow_data = connection.execute(select(func.count()).select_from(DbWorkflowData)).scalar()
-    count_workflow_step = connection.execute(select(func.count()).select_from(DbWorkflowStep)).scalar()
+    count_workflow = connection.execute(select(func.count()).select_from(DbWorkflow)).scalar()  # pylint: disable=not-callable
+    count_workflow_data = connection.execute(select(func.count()).select_from(DbWorkflowData)).scalar()  # pylint: disable=not-callable
+    count_workflow_step = connection.execute(select(func.count()).select_from(DbWorkflowStep)).scalar()  # pylint: disable=not-callable
 
     # Nothing to do if all tables are empty
     if count_workflow == 0 and count_workflow_data == 0 and count_workflow_step == 0:

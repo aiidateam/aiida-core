@@ -33,7 +33,7 @@ def migrate_repository(connection, profile):
         column('repository_metadata', JSONB),
     )
 
-    node_count = connection.execute(select(func.count()).select_from(DbNode)).scalar()
+    node_count = connection.execute(select(func.count()).select_from(DbNode)).scalar()  # pylint: disable=not-callable
     missing_repo_folder = []
     shard_count = 256
 

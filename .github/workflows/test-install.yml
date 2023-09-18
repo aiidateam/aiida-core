@@ -111,7 +111,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        extras: [ '', '[atomic_tools,docs,notebook,rest,tests]' ]
+        extras: [ '', '[atomic_tools,docs,notebook,rest,tests,tui]' ]
 
     steps:
     - uses: actions/checkout@v2
@@ -242,7 +242,7 @@ jobs:
 
     - name: Install aiida-core
       run: |
-        pip install -e .[atomic_tools,docs,notebook,rest,tests]
+        pip install -e .[atomic_tools,docs,notebook,rest,tests,tui]
 
     - run: pip freeze
 

@@ -23,3 +23,13 @@ from ..params import options, types
 @click.version_option(__version__, package_name='aiida_core', message='AiiDA version %(version)s')
 def verdi():
     """The command line interface of AiiDA."""
+
+
+# Apply the ``tui`` interface if the dependency is installed. If the case, this will add the ``verdi tui`` command
+# that allows to explore the interface in a graphical manner in the terminal.
+try:
+    from trogon import tui
+except ImportError:
+    pass
+else:
+    tui()(verdi)

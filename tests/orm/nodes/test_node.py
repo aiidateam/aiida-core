@@ -980,7 +980,7 @@ class TestNodeCaching:
         data.store()
 
         clone = data.clone()
-        clone._store_from_cache(data, with_transaction=True)  # pylint: disable=protected-access
+        clone._store_from_cache(data)  # pylint: disable=protected-access
 
         assert clone.is_stored
         assert clone.base.caching.get_cache_source() == data.uuid

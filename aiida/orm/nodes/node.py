@@ -424,12 +424,10 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         """
         return self.backend_entity.mtime
 
-    def store_all(self, with_transaction: bool = True) -> 'Node':
+    def store_all(self) -> 'Node':
         """Store the node, together with all input links.
 
         Unstored nodes from cached incoming linkswill also be stored.
-
-        :parameter with_transaction: if False, do not use a transaction because the caller will already have opened one.
         """
         if self.is_stored:
             raise exceptions.ModificationNotAllowed(f'Node<{self.pk}> is already stored')
@@ -440,11 +438,11 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
 
         for link_triple in self.base.links.incoming_cache:
             if not link_triple.node.is_stored:
-                link_triple.node.store(with_transaction=with_transaction)
+                link_triple.node.store()
 
-        return self.store(with_transaction)
+        return self.store()
 
-    def store(self, with_transaction: bool = True) -> 'Node':  # pylint: disable=arguments-differ
+    def store(self) -> 'Node':  # pylint: disable=arguments-differ
         """Store the node in the database while saving its attributes and repository directory.
 
         After being called attributes cannot be changed anymore! Instead, extras can be changed only AFTER calling
@@ -452,8 +450,6 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
 
         :note: After successful storage, those links that are in the cache, and for which also the parent node is
             already stored, will be automatically stored. The others will remain unstored.
-
-        :parameter with_transaction: if False, do not use a transaction because the caller will already have opened one.
         """
         from aiida.manage.caching import get_use_cache
 
@@ -477,9 +473,9 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             same_node = self.base.caching._get_same_node() if use_cache else None  # pylint: disable=protected-access
 
             if same_node is not None:
-                self._store_from_cache(same_node, with_transaction=with_transaction)
+                self._store_from_cache(same_node)
             else:
-                self._store(with_transaction=with_transaction, clean=True)
+                self._store(clean=True)
 
             if self.backend.autogroup.is_to_be_grouped(self):
                 group = self.backend.autogroup.get_or_create_group()
@@ -487,16 +483,15 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
 
         return self
 
-    def _store(self, with_transaction: bool = True, clean: bool = True) -> 'Node':
+    def _store(self, clean: bool = True) -> 'Node':
         """Store the node in the database while saving its attributes and repository directory.
 
-        :param with_transaction: if False, do not use a transaction because the caller will already have opened one.
         :param clean: boolean, if True, will clean the attributes and extras before attempting to store
         """
         self.base.repository._store()  # pylint: disable=protected-access
 
         links = self.base.links.incoming_cache
-        self._backend_entity.store(links, with_transaction=with_transaction, clean=clean)
+        self._backend_entity.store(links, clean=clean)
 
         self.base.links.incoming_cache = []
         self.base.caching.rehash()
@@ -514,7 +509,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
                     f'Cannot store because source node of link triple {link_triple} is not stored'
                 )
 
-    def _store_from_cache(self, cache_node: 'Node', with_transaction: bool) -> None:
+    def _store_from_cache(self, cache_node: 'Node') -> None:
         """Store this node from an existing cache node.
 
         .. note::
@@ -542,7 +537,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             if key != Sealable.SEALED_KEY:
                 self.base.attributes.set(key, value)
 
-        self._store(with_transaction=with_transaction, clean=False)
+        self._store(clean=False)
         self._add_outputs_from_cache(cache_node)
         self.base.extras.set('_aiida_cached_from', cache_node.uuid)
 

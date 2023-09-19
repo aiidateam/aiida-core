@@ -74,12 +74,16 @@ There are several ways to obtain data from a query:
 
     all_results_l = qb.all()            # Returns a list of lists
 
-In case you are working with a large dataset, you can also return your query as a generator:
+.. tip::
+
+    If your query only has a single projection, you can use ``flat=True`` in the ``first`` and ``all`` methods.
+    This will return just the result value or a flat list, respectively, and no longer has the unnecessary internal list.
+
+You can also return your query as a generator:
 
 .. code-block:: python
 
     all_res_d_gen = qb.iterdict()       # Return a generator of dictionaries
-                                        # of all results
     all_res_l_gen = qb.iterall()        # Returns a generator of lists
 
 This will retrieve the data in batches, and you can start working with the data before the query has completely finished.
@@ -89,6 +93,14 @@ For example, you can iterate over the results of your query in a for loop:
 
     for entry in qb.iterall():
         # do something with a single entry in the query result
+
+.. important::
+
+    When the query result is expected to be large, do not use ``dict`` and ``all`` but use the generator variants ``iterdict`` and ``iterall``.
+    The ``dict`` and ``all`` methods load the entire query result in memory which can lead to out-of-memory errors.
+    It also makes updating the data very slow as each change results in a single database commit.
+    The ``iterdict`` and ``iterall`` generators open a database transaction, committing all changes only once at the end of the generator.
+
 
 .. _how-to:query:filters:
 

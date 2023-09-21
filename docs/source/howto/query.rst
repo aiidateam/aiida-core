@@ -96,10 +96,8 @@ For example, you can iterate over the results of your query in a for loop:
 
 .. important::
 
-    When the query result is expected to be large, do not use ``dict`` and ``all`` but use the generator variants ``iterdict`` and ``iterall``.
-    The ``dict`` and ``all`` methods load the entire query result in memory which can lead to out-of-memory errors.
-    It also makes updating the data very slow as each change results in a single database commit.
-    The ``iterdict`` and ``iterall`` generators open a database transaction, committing all changes only once at the end of the generator.
+    When looping over the result of a query, use the ``iterall`` (or ``iterdict``) generator instead of ``all`` (or ``dict``).
+    This avoids loading the entire query result into memory, and it also delays committing changes made to AiiDA objects inside the loop until the end of the loop is reached.
 
 
 .. _how-to:query:filters:

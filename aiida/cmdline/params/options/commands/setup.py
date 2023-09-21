@@ -365,6 +365,7 @@ SETUP_BROKER_VIRTUAL_HOST = QUICKSETUP_BROKER_VIRTUAL_HOST.clone(
 
 SETUP_REPOSITORY_URI = QUICKSETUP_REPOSITORY_URI.clone(
     prompt='Repository directory',
+    required=True,
     callback=None,  # Unset the `callback` to define the default, which is instead done by the `contextual_default`
     contextual_default=get_repository_uri_default,
     cls=options.interactive.InteractiveOption

@@ -378,7 +378,7 @@ BROKER_VIRTUAL_HOST = OverridableOption(
 )
 
 REPOSITORY_PATH = OverridableOption(
-    '--repository', type=click.Path(file_okay=False), required=True, help='Absolute path to the file repository.'
+    '--repository', type=click.Path(file_okay=False), help='Absolute path to the file repository.'
 )
 
 PROFILE_ONLY_CONFIG = OverridableOption(

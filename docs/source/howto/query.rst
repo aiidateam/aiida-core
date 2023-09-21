@@ -76,8 +76,7 @@ There are several ways to obtain data from a query:
 
 .. tip::
 
-    If your query only has a single projection, you can use ``flat=True`` in the ``first`` and ``all`` methods.
-    This will return just the result value or a flat list, respectively, and no longer has the unnecessary internal list.
+    If your query only has a single projection, use ``flat=True`` in the ``first`` and ``all`` methods to return a single value or a flat list, respectively.
 
 You can also return your query as a generator:
 

@@ -172,24 +172,21 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
 
         with self.migrator_context(self._profile) as migrator:
 
-            # First clear the contents of the database
-            with self.transaction() as session:
+            # Close the session otherwise the ``delete_tables`` call will hang as there will be an open connection
+            # to the PostgreSQL server and it will block the deletion and the command will hang.
+            self.get_session().close()
+            exclude_tables = [migrator.alembic_version_tbl_name, 'db_dbsetting']
+            migrator.delete_all_tables(exclude_tables=exclude_tables)
 
-                # Close the session otherwise the ``delete_tables`` call will hang as there will be an open connection
-                # to the PostgreSQL server and it will block the deletion and the command will hang.
-                self.get_session().close()
-                exclude_tables = [migrator.alembic_version_tbl_name, 'db_dbsetting']
-                migrator.delete_all_tables(exclude_tables=exclude_tables)
-
-                # Clear out all references to database model instances which are now invalid.
-                session.expunge_all()
+            # Clear out all references to database model instances which are now invalid.
+            self.get_session().expunge_all()
 
             # Now reset and reinitialise the repository
             migrator.reset_repository()
             migrator.initialise_repository()
             repository_uuid = migrator.get_repository_uuid()
 
-            with self.transaction():
+            with self.transaction() as session:
                 session.execute(
                     DbSetting.__table__.update().where(DbSetting.key == REPOSITORY_UUID_KEY
                                                        ).values(val=repository_uuid)
@@ -243,13 +240,15 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         """
         session = self.get_session()
         if session.in_transaction():
-            with session.begin_nested():
+            with session.begin_nested() as savepoint:
                 yield session
+                savepoint.commit()
             session.commit()
         else:
             with session.begin():
-                with session.begin_nested():
+                with session.begin_nested() as savepoint:
                     yield session
+                    savepoint.commit()
 
     @property
     def in_transaction(self) -> bool:

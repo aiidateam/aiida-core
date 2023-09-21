@@ -1567,6 +1567,38 @@ class TestConsistency:
         for pk, pk_clone in zip(pks, [e[1] for e in sorted(pks_clone)]):
             assert orm.load_node(pk) == orm.load_node(pk_clone)
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_iterall_persistence(self, manager):
+        """Test that mutations made during ``QueryBuilder.iterall`` context are automatically committed and persisted.
+
+        This is a regression test for https://github.com/aiidateam/aiida-core/issues/6133 .
+        """
+        count = 10
+
+        # Create number of nodes with specific extra
+        for _ in range(count):
+            node = orm.Data().store()
+            node.base.extras.set('testing', True)
+
+        query = orm.QueryBuilder().append(orm.Data, filters={'extras': {'has_key': 'testing'}})
+        assert query.count() == count
+
+        # Unload and reload the storage, which will reset the session and check that the nodes with extras still exist
+        manager.reset_profile_storage()
+        manager.get_profile_storage()
+        assert query.count() == count
+
+        # Delete the extras and check that the query now matches 0
+        for [node] in orm.QueryBuilder().append(orm.Data).iterall(batch_size=2):
+            node.base.extras.delete('testing')
+
+        assert query.count() == 0
+
+        # Finally, reset the storage again and verify the changes have been persisted
+        manager.reset_profile_storage()
+        manager.get_profile_storage()
+        assert query.count() == 0
+
 
 class TestManager:
 

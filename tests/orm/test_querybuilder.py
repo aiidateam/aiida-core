@@ -1495,9 +1495,30 @@ class TestConsistency:
             assert orm.load_node(pk).get_extra('key') == 'value'
 
     @pytest.mark.usefixtures('aiida_profile_clean')
-    @pytest.mark.skip('enable when https://github.com/aiidateam/aiida-core/issues/5802 is fixed')
     def test_iterall_with_store(self):
         """Test that nodes can be stored while being iterated using ``QueryBuilder.iterall``.
+
+        This is a regression test for https://github.com/aiidateam/aiida-core/issues/5802 .
+        """
+        count = 10
+        pks = []
+        pk_clones = []
+
+        for _ in range(count):
+            node = orm.Int().store()
+            pks.append(node.pk)
+
+        # Ensure that batch size is smaller than the total rows yielded
+        for [node] in orm.QueryBuilder().append(orm.Int).iterall(batch_size=2):
+            clone = orm.Int(node.value).store()
+            pk_clones.append(clone.pk)
+
+        for pk, pk_clone in zip(pks, sorted(pk_clones)):
+            assert orm.load_node(pk) == orm.load_node(pk_clone)
+
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_iterall_with_store_group(self):
+        """Test that nodes can be stored and added to groups while being iterated using ``QueryBuilder.iterall``.
 
         This is a regression test for https://github.com/aiidateam/aiida-core/issues/5802 .
         """
@@ -1510,7 +1531,7 @@ class TestConsistency:
             pks.append(node.pk)
 
         # Ensure that batch size is smaller than the total rows yielded
-        for [node] in orm.QueryBuilder().append(orm.Data).iterall(batch_size=2):
+        for [node] in orm.QueryBuilder().append(orm.Int).iterall(batch_size=2):
             clone = copy.deepcopy(node)
             clone.store()
             pks_clone.append((clone.value, clone.pk))

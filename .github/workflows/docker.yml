@@ -3,17 +3,17 @@ name: Build, test and push Docker Images
 
 on:
     pull_request:
-        paths:
-            - .docker/**
-            - .github/workflows/docker-*.yml
+        paths-ignore:
+            - "docs/**"
+            - "tests/**"
     push:
         branches:
             - main
         tags:
             - "v*"
-        paths:
-            - .docker/**
-            - .github/workflows/docker-*.yml
+        paths-ignore:
+            - "docs/**"
+            - "tests/**"
     workflow_dispatch:
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency

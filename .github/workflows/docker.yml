@@ -33,7 +33,7 @@ jobs:
         uses: ./.github/workflows/docker-build-test-upload.yml
         with:
             architecture: arm64
-            runsOn: buildjet-2vcpu-ubuntu-2204-arm
+            runsOn: ARM64
         if: ${{ !github.event.pull_request.head.repo.fork }}
 
     amd64-push-ghcr:

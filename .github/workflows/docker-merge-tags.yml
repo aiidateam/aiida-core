@@ -36,12 +36,12 @@ jobs:
               uses: actions/download-artifact@v3
               with:
                   name: ${{ inputs.registry }}-${{ matrix.image }}-amd64-tags
-                  path: /tmp/
+                  path: /tmp/aiida-core
             - name: Download arm64 tags file 📥
               uses: actions/download-artifact@v3
               with:
                   name: ${{ inputs.registry }}-${{ matrix.image }}-arm64-tags
-                  path: /tmp/
+                  path: /tmp/aiida-core
 
             - name: Login to Container Registry 🔑
               uses: docker/login-action@v2
@@ -52,13 +52,13 @@ jobs:
 
             - name: Merge tags for the images of different arch 🔀
               run: |
-                  for arch_tag in $(cat /tmp/${{ matrix.image }}-amd64-tags.txt); do
+                  for arch_tag in $(cat /tmp/aiida-core/${{ matrix.image }}-amd64-tags.txt); do
                     tag=$(echo $arch_tag | sed "s/:amd64-/:/")
                     docker manifest create $tag --amend $arch_tag
                     docker manifest push $tag
                   done
 
-                  for arch_tag in $(cat /tmp/${{ matrix.image }}-arm64-tags.txt); do
+                  for arch_tag in $(cat /tmp/aiida-core/${{ matrix.image }}-arm64-tags.txt); do
                     tag=$(echo $arch_tag | sed "s/:arm64-/:/")
                     docker manifest create $tag --amend $arch_tag
                     docker manifest push $tag

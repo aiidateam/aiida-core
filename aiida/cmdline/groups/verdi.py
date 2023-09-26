@@ -34,19 +34,40 @@ GIU = (
 )
 
 
+class LazyConfigAttributeDict(AttributeDict):
+    """We want to avoid needlesly loading user config on every verdi invocation"""
+
+    _LAZY_KEY = 'config'
+
+    def __init__(self, ctx, dictionary=None):
+        super().__init__(dictionary)
+        # We need click context so we can stop in case we fail to parse the config
+        self.ctx = ctx
+
+    def __getattr__(self, attr):
+        """Override of AttributeDict.__getattr__ for lazy loading the config key.
+
+        Stops if config file cannot be parsed.
+        :raises AttributeError: if the attribute does not correspond to an existing key.
+        """
+        if attr != self._LAZY_KEY:
+            return super().__getattr__(attr)
+
+        if self._LAZY_KEY not in self:
+            try:
+                self[self._LAZY_KEY] = get_config(create=True)
+            except ConfigurationError as exception:
+                self.ctx.fail(str(exception))
+        return self[self._LAZY_KEY]
+
+
 class VerdiContext(click.Context):
     """Custom context implementation that defines the ``obj`` user object and adds the ``Config`` instance."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         if self.obj is None:
-            self.obj = AttributeDict()
-
-        try:
-            self.obj.config = get_config(create=True)
-        except ConfigurationError as exception:
-            self.fail(str(exception))
+            self.obj = LazyConfigAttributeDict(self)
 
 
 class VerdiCommandGroup(click.Group):

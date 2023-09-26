@@ -205,11 +205,12 @@ repository: {tmp_path}"""
         postgres.create_db(db_user, db_name)
 
         profile_name = 'profile-copy'
+        user_email = 'some@email.com'
         profile_uuid = str(uuid.uuid4)
         options = [
             '--non-interactive', '--profile', profile_name, '--profile-uuid', profile_uuid, '--db-backend',
             self.storage_backend_name, '--db-name', db_name, '--db-username', db_user, '--db-password', db_pass,
-            '--db-port', self.pg_test.dsn['port']
+            '--db-port', self.pg_test.dsn['port'], '--email', user_email
         ]
 
         self.cli_runner(cmd_setup.setup, options, use_subprocess=False)

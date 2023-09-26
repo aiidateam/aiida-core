@@ -1475,6 +1475,31 @@ class TestConsistency:
             qb.append(orm.Data, with_incoming='parent')
             assert len(qb.all()) == qb.count()
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_iterall_except(self):
+        """Test ``QueryBuilder.iterall`` uses a transaction and if interrupted, changes are reverted.
+
+        In this test, 10 nodes are created which are then looped over and for each one, another node is stored, but
+        before the loop can finish, an exception is raised. At then, the number of nodes should still be ten as the new
+        ones that were being created in the transaction should have been reverted.
+        """
+        assert orm.QueryBuilder().append(orm.Data).count() == 0
+
+        count = 10
+
+        for _ in range(count):
+            orm.Data().store()
+
+        try:
+            for index, _ in enumerate(orm.QueryBuilder().append(orm.Data).iterall()):
+                orm.Data().store()
+                if index >= count - 2:
+                    raise RuntimeError('some error')
+        except RuntimeError:
+            pass
+
+        assert orm.QueryBuilder().append(orm.Data).count() == count
+
     def test_iterall_with_mutation(self):
         """Test that nodes can be mutated while being iterated using ``QueryBuilder.iterall``.
 

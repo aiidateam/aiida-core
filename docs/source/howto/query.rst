@@ -97,6 +97,7 @@ For example, you can iterate over the results of your query in a for loop:
 
     When looping over the result of a query, use the ``iterall`` (or ``iterdict``) generator instead of ``all`` (or ``dict``).
     This avoids loading the entire query result into memory, and it also delays committing changes made to AiiDA objects inside the loop until the end of the loop is reached.
+    If an exception is raised before the loop ends, all changes are reverted.
 
 
 .. _how-to:query:filters:

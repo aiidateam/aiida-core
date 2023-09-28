@@ -27,7 +27,7 @@ services:
             retries: 10
 
     daemon:
-        image: aiidateam/aiida-core-base:edge
+        image: ghcr.io/aiidateam/aiida-core-base:edge
         user: aiida
         entrypoint: tail -f /dev/null
         environment:

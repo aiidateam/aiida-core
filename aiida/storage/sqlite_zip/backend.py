@@ -253,8 +253,19 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
     def _clear(self) -> None:
         raise ReadOnlyError()
 
+    @contextmanager
     def transaction(self):
-        raise ReadOnlyError()
+        session = self.get_session()
+        if session.in_transaction():
+            with session.begin_nested() as savepoint:
+                yield session
+                savepoint.commit()
+            session.commit()
+        else:
+            with session.begin():
+                with session.begin_nested() as savepoint:
+                    yield session
+                    savepoint.commit()
 
     @property
     def in_transaction(self) -> bool:

@@ -85,12 +85,13 @@ jobs:
                       docker push ${arch_tag}
 
                       # write tag to file
-                      echo ${arch_tag} >> /tmp/${{ matrix.image }}-${{ inputs.architecture }}-tags.txt
+                      mkdir -p /tmp/aiida-core
+                      echo ${arch_tag} >> /tmp/aiida-core/${{ matrix.image }}-${{ inputs.architecture }}-tags.txt
                   done
 
             - name: Upload tags file 📤
               uses: actions/upload-artifact@v3
               with:
                   name: ${{ inputs.registry }}-${{ matrix.image }}-${{ inputs.architecture }}-tags
-                  path: /tmp/${{ matrix.image }}-${{ inputs.architecture }}-tags.txt
+                  path: /tmp/aiida-core/${{ matrix.image }}-${{ inputs.architecture }}-tags.txt
                   retention-days: 3

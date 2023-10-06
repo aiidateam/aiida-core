@@ -31,7 +31,7 @@ ENTRY_POINT_STRING_SEPARATOR = ':'
 
 
 @functools.cache
-def eps():
+def eps() -> EntryPoints:
     return _eps()
 
 

@@ -5,12 +5,12 @@
 Run AiiDA via a Docker image
 ****************************
 
-The AiiDA team maintains a `Docker <https://www.docker.com/>`__ image on `Docker Hub <https://hub.docker.com/r/aiidateam/aiida-core>`__.
+The AiiDA team maintains a `Docker <https://www.docker.com/>`__ image on `Docker Hub <https://hub.docker.com/r/aiidateam/aiida-core-with-services>`__.
 This image contains a fully pre-configured AiiDA environment which makes it particularly useful for learning and testing purposes.
 
 .. caution::
 
-    All data stored in a container will persist only over the lifetime of that particular container unless you use volumes (see instructions below).
+    All data stored in a container will persist only over the lifetime of that particular container (which means remove the container will also purge the data) unless you use volumes (see instructions below).
 
 .. grid:: 1
    :gutter: 3
@@ -19,29 +19,19 @@ This image contains a fully pre-configured AiiDA environment which makes it part
 
       To install Docker, please refer to the `official documentation <https://docs.docker.com/get-docker/>`__.
 
-      .. note::
-
-         If you are using Linux, you need to have root privileges to do `post-installation steps for the Docker Engine <https://docs.docker.com/engine/install/linux-postinstall/>`__.
-
    .. grid-item-card:: Start container and use AiiDA interactively
 
-      First, pull the image:
+      Start the container with (replace ``latest`` with the version you want to use, check the `Docker Hub <https://hub.docker.com/r/aiidateam/aiida-core-with-services/tags>`__ for available tags/versions):
 
       .. parsed-literal::
 
-         $ docker pull aiidateam/aiida-core:latest
-
-      Then start the container with:
-
-      .. parsed-literal::
-
-         $ docker run -it aiidateam/aiida-core:latest bash
+         $ docker run -it aiidateam/aiida-core-with-services:latest bash
 
       You can specify a name for the container with the ``--name`` option for easier reference later on:
 
       .. parsed-literal::
 
-         $ docker run -it --name aiida-container aiidateam/aiida-core:latest bash
+         $ docker run -it --name aiida-container aiidateam/aiida-core-with-services:latest bash
 
    .. grid-item-card:: Check setup
 
@@ -58,6 +48,16 @@ This image contains a fully pre-configured AiiDA environment which makes it part
          ✓ postgres:    Connected as aiida_qs_aiida_477d3dfc78a2042156110cb00ae3618f@localhost:5432
          ✓ rabbitmq:    Connected as amqp://127.0.0.1?heartbeat=600
          ✓ daemon:      Daemon is running as PID 1795 since 2020-05-20 02:54:00
+
+   .. grid-item-card:: Copy files from your computer to the container
+
+      To copy files from your computer to the container, use the ``docker cp`` command.
+
+      For example, to copy a file named ``test.txt`` from your current working directory to the ``/home/aiida`` path in the container, run:
+
+      .. code-block:: console
+
+         $ docker cp test.txt aiida-container:/home/aiida
 
    .. grid-item-card:: Persist data across different containers
 

@@ -851,10 +851,10 @@ class EntryPointManager:
 def entry_points(monkeypatch) -> EntryPointManager:
     """Return an instance of the ``EntryPointManager`` which allows to temporarily add or remove entry points.
 
-    This fixture monkey patches the entry point caches returned by the :func:`aiida.plugins.entry_point.eps` and
-    :func:`aiida.plugins.entry_point.eps_select` methods to a class methods of the EntryPointManager
-    so that we can dynamically add / remove entry points.
-    Note that we do not need a deepcopy here is eps() returns an immutable EntryPoints tuple type.
+    This fixture monkey patches the entry point caches returned by
+    the :func:`aiida.plugins.entry_point.eps` and :func:`aiida.plugins.entry_point.eps_select` functions
+    to class methods of the ``EntryPointManager`` so that we can dynamically add / remove entry points.
+    Note that we do not need a deepcopy here as ``eps()`` returns an immutable ``EntryPoints`` tuple type.
     """
     epm = EntryPointManager(plugins.entry_point.eps())
     monkeypatch.setattr(plugins.entry_point, 'eps', epm.eps)

@@ -36,7 +36,11 @@ def eps() -> EntryPoints:
 
 
 @functools.lru_cache(maxsize=100)
-def eps_select(group, name=None) -> EntryPoints:
+def eps_select(group: str, name: str | None = None) -> EntryPoints:
+    """
+    A thin wrapper around entry_points.select() calls, which are
+    expensive so we want to cache them.
+    """
     if name is None:
         return eps().select(group=group)
     return eps().select(group=group, name=name)

@@ -349,13 +349,8 @@ def get_entry_point_from_class(class_module: str, class_name: str) -> Tuple[Opti
     :return: a tuple of the corresponding group and entry point or None if not found
     """
     for entry_point in eps():
-
-        if entry_point.module != class_module:
-            continue
-
-        if entry_point.attr == class_name:
+        if entry_point.module == class_module and entry_point.attr == class_name:
             return entry_point.group, entry_point
-
     return None, None
 
 

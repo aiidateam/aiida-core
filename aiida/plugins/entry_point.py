@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to manage loading entrypoints."""
+from __future__ import annotations
+
 import enum
 import functools
 import traceback
@@ -32,7 +34,17 @@ ENTRY_POINT_STRING_SEPARATOR = ':'
 
 @functools.cache
 def eps() -> EntryPoints:
-    return _eps()
+    """Cache around entry_points()
+
+    This call takes around 50ms!
+    NOTE: For faster lookups, we sort the ``EntryPoints`` alphabetically
+    by the group name so that 'aiida.' groups come up first.
+    Unfortunately, this does not help with the entry_points.select() filter,
+    which will always iterate over all entry points since it looks for
+    possible duplicate entries.
+    """
+    entry_points = _eps()
+    return EntryPoints(sorted(entry_points, key=lambda x: x.group))
 
 
 @functools.lru_cache(maxsize=100)

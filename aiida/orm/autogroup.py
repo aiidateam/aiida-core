@@ -86,7 +86,7 @@ class AutogroupManager:
         """Validate the list of strings passed to set_include and set_exclude."""
         if strings is None:
             return
-        valid_prefixes = set(['aiida.node', 'aiida.calculations', 'aiida.workflows', 'aiida.data'])
+        valid_prefixes = {'aiida.node', 'aiida.calculations', 'aiida.workflows', 'aiida.data'}
         for string in strings:
             pieces = string.split(':')
             if len(pieces) != 2:

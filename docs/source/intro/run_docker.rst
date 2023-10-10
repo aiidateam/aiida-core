@@ -10,7 +10,7 @@ This image contains a fully pre-configured AiiDA environment which makes it part
 
 .. caution::
 
-    All data stored in a container will persist only over the lifetime of that particular container (which means remove the container will also purge the data) unless you use volumes (see instructions below).
+    All data stored in a container will persist only over the lifetime of that particular container (i.e., removing the container will also purge the data) unless you use volumes (see instructions below).
 
 .. grid:: 1
    :gutter: 3

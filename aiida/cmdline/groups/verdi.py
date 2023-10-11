@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import difflib
 import gzip
+import typing as t
 
 import click
 
@@ -35,20 +36,21 @@ GIU = (
 
 
 class LazyConfigAttributeDict(AttributeDict):
-    """We want to avoid needlesly loading user config on every verdi invocation"""
+    """Subclass of ``AttributeDict`` that lazily calls :meth:`aiida.manage.configuration.get_config`."""
 
     _LAZY_KEY = 'config'
 
-    def __init__(self, ctx, dictionary=None):
+    def __init__(self, ctx: click.Context, dictionary: dict[str, t.Any] | None = None):
         super().__init__(dictionary)
-        # We need click context so we can stop in case we fail to parse the config
         self.ctx = ctx
 
-    def __getattr__(self, attr):
-        """Override of AttributeDict.__getattr__ for lazy loading the config key.
+    def __getattr__(self, attr: str) -> t.Any:
+        """Override of ``AttributeDict.__getattr__`` for lazily loading the config key.
 
-        Stops if config file cannot be parsed.
-        :raises AttributeError: if the attribute does not correspond to an existing key.
+        :param attr: The attribute to return.
+        :returns: The value of the attribute.
+        :raises AttributeError: If the attribute does not correspond to an existing key.
+        :raises click.exceptions.UsageError: If loading of the configuration fails.
         """
         if attr != self._LAZY_KEY:
             return super().__getattr__(attr)
@@ -58,6 +60,7 @@ class LazyConfigAttributeDict(AttributeDict):
                 self[self._LAZY_KEY] = get_config(create=True)
             except ConfigurationError as exception:
                 self.ctx.fail(str(exception))
+
         return self[self._LAZY_KEY]
 
 

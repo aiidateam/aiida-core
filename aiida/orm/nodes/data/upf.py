@@ -13,9 +13,17 @@ import re
 
 from upf_to_json import upf_to_json
 
+from aiida.common.warnings import warn_deprecation
+
 from .singlefile import SinglefileData
 
 __all__ = ('UpfData',)
+
+warn_deprecation(
+    'This module is deprecated. See '
+    'https://aiida-pseudo.readthedocs.io/en/latest/howto.html#migrate-from-legacy-upfdata-from-aiida-core.',
+    version=3
+)
 
 REGEX_UPF_VERSION = re.compile(r"""
     \s*<UPF\s+version\s*="

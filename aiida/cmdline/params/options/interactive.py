@@ -158,7 +158,7 @@ class InteractiveOption(ConditionalOption):
         if self._contextual_default is not None:
             default = self._contextual_default(ctx)
         else:
-            default = super().get_default(ctx)
+            default = super().get_default(ctx, call=call)
 
         try:
             default = self.type.deconvert_default(default)

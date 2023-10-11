@@ -14,6 +14,7 @@
 # yapf: disable
 # pylint: disable=wildcard-import
 
+from .callable import *
 from .config import *
 from .main import *
 from .multivalue import *
@@ -39,6 +40,7 @@ __all__ = (
     'COMPUTER',
     'COMPUTERS',
     'CONFIG_FILE',
+    'CallableDefaultOption',
     'ConfigFileOption',
     'DATA',
     'DATUM',

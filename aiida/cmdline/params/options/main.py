@@ -16,6 +16,7 @@ from aiida.manage.external.rmq import BROKER_DEFAULTS
 
 from .. import types
 from ...utils import defaults, echo  # pylint: disable=no-name-in-module
+from .callable import CallableDefaultOption
 from .config import ConfigFileOption
 from .multivalue import MultipleValueOption
 from .overridable import OverridableOption
@@ -145,6 +146,7 @@ PROFILE = OverridableOption(
     'profile',
     type=types.ProfileParamType(),
     default=defaults.get_default_profile,
+    cls=CallableDefaultOption,
     help='Execute the command for this profile instead of the default profile.'
 )
 

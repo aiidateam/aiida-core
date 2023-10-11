@@ -14,8 +14,6 @@ from aiida.common.exceptions import ConfigurationError
 
 __all__ = ('get_option', 'get_option_names', 'parse_option', 'Option')
 
-NO_DEFAULT = ()
-
 
 class Option:
     """Represent a configuration option schema."""
@@ -41,7 +39,7 @@ class Option:
 
     @property
     def default(self) -> Any:
-        return self._schema.get('default', NO_DEFAULT)
+        return self._schema.get('default', None)
 
     @property
     def description(self) -> str:

@@ -26,6 +26,7 @@ dependencies = [
   'click~=8.1',
   'disk-objectstore~=1.0',
   'docstring-parser',
+  'fabric~=3.0',
   'get-annotations~=0.1;python_version<"3.10"',
   'graphviz~=0.19',
   'ipython>=7',
@@ -175,6 +176,7 @@ requires-python = '>=3.9'
 [project.entry-points.'aiida.transports']
 'core.local' = 'aiida.transports.plugins.local:LocalTransport'
 'core.ssh' = 'aiida.transports.plugins.ssh:SshTransport'
+'core.ssh_fabric' = 'aiida.transports.plugins.ssh_fabric:SshFabricTransport'
 
 [project.entry-points.'aiida.workflows']
 'core.arithmetic.add_multiply' = 'aiida.workflows.arithmetic.add_multiply:add_multiply'
@@ -310,6 +312,7 @@ module = [
   'circus.*',
   'click_spinner.*',
   'docutils.*',
+  'fabric.*',
   'flask_cors.*',
   'flask_restful.*',
   'get_annotations.*',

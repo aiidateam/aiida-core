@@ -38,6 +38,8 @@ def custom_transport(request) -> Transport:
     """Fixture that parametrizes over all the registered implementations of the ``CommonRelaxWorkChain``."""
     if request.param == 'core.ssh':
         kwargs = {'machine': 'localhost', 'timeout': 30, 'load_system_host_keys': True, 'key_policy': 'AutoAddPolicy'}
+    elif request.param == 'core.ssh_fabric':
+        kwargs = {'machine': 'localhost'}
     else:
         kwargs = {}
 

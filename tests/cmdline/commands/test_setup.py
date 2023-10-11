@@ -206,11 +206,15 @@ repository: {tmp_path}"""
 
         profile_name = 'profile-copy'
         user_email = 'some@email.com'
-        profile_uuid = str(uuid.uuid4)
+        user_first_name = 'John'
+        user_last_name = 'Smith'
+        user_institution = 'ECMA'
+        profile_uuid = str(uuid.uuid4())
         options = [
-            '--non-interactive', '--profile', profile_name, '--profile-uuid', profile_uuid, '--db-backend',
-            self.storage_backend_name, '--db-name', db_name, '--db-username', db_user, '--db-password', db_pass,
-            '--db-port', self.pg_test.dsn['port'], '--email', user_email
+            '--non-interactive', '--email', user_email, '--first-name', user_first_name, '--last-name', user_last_name,
+            '--institution', user_institution, '--db-name', db_name, '--db-username', db_user, '--db-password', db_pass,
+            '--db-port', self.pg_test.dsn['port'], '--db-backend', self.storage_backend_name, '--profile', profile_name,
+            '--profile-uuid', profile_uuid
         ]
 
         self.cli_runner(cmd_setup.setup, options, use_subprocess=False)
@@ -219,4 +223,4 @@ repository: {tmp_path}"""
         assert profile_name in config.profile_names
 
         profile = config.get_profile(profile_name)
-        profile.uuid = profile_uuid
+        assert profile.uuid == profile_uuid

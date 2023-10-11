@@ -536,8 +536,9 @@ def run_cli_command(reset_log_level, aiida_instance, aiida_profile):  # pylint: 
             assert result.exception is not None, result.output
             assert result.exit_code != 0, result.exit_code
         else:
-            assert result.exception is None, result.output
-            assert result.exit_code == 0, result.exit_code
+            import traceback
+            assert result.exception is None, ''.join(traceback.format_exception(*result.exc_info))
+            assert result.exit_code == 0, (result.exit_code, result.stderr)
 
         return result
 

@@ -20,7 +20,7 @@ from typing import Any, Dict, Optional, Sequence, Tuple
 from aiida.common.exceptions import ConfigurationError
 
 from . import schema as schema_module
-from .options import NO_DEFAULT, Option, get_option, get_option_names, parse_option
+from .options import Option, get_option, get_option_names, parse_option
 from .profile import Profile
 
 __all__ = ('Config', 'config_schema', 'ConfigValidationError')
@@ -407,7 +407,7 @@ class Config:  # pylint: disable=too-many-public-methods
 
         if parsed_value is not None:
             value = parsed_value
-        elif option.default is not NO_DEFAULT:
+        elif option.default is not None:
             value = option.default
         else:
             return
@@ -442,9 +442,7 @@ class Config:  # pylint: disable=too-many-public-methods
         :return: the option value or None if not set for the given scope
         """
         option = get_option(option_name)
-
-        # Default value is `None` unless `default=True` and the `option.default` is not `NO_DEFAULT`
-        default_value = option.default if default and option.default is not NO_DEFAULT else None
+        default_value = option.default if default else None
 
         if scope is not None:
             value = self.get_profile(scope).get_option(option.name, default_value)

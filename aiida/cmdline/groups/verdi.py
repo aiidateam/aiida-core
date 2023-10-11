@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import difflib
 import gzip
+import typing as t
 
 import click
 
@@ -34,19 +35,42 @@ GIU = (
 )
 
 
+class LazyConfigAttributeDict(AttributeDict):
+    """Subclass of ``AttributeDict`` that lazily calls :meth:`aiida.manage.configuration.get_config`."""
+
+    _LAZY_KEY = 'config'
+
+    def __init__(self, ctx: click.Context, dictionary: dict[str, t.Any] | None = None):
+        super().__init__(dictionary)
+        self.ctx = ctx
+
+    def __getattr__(self, attr: str) -> t.Any:
+        """Override of ``AttributeDict.__getattr__`` for lazily loading the config key.
+
+        :param attr: The attribute to return.
+        :returns: The value of the attribute.
+        :raises AttributeError: If the attribute does not correspond to an existing key.
+        :raises click.exceptions.UsageError: If loading of the configuration fails.
+        """
+        if attr != self._LAZY_KEY:
+            return super().__getattr__(attr)
+
+        if self._LAZY_KEY not in self:
+            try:
+                self[self._LAZY_KEY] = get_config(create=True)
+            except ConfigurationError as exception:
+                self.ctx.fail(str(exception))
+
+        return self[self._LAZY_KEY]
+
+
 class VerdiContext(click.Context):
     """Custom context implementation that defines the ``obj`` user object and adds the ``Config`` instance."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         if self.obj is None:
-            self.obj = AttributeDict()
-
-        try:
-            self.obj.config = get_config(create=True)
-        except ConfigurationError as exception:
-            self.fail(str(exception))
+            self.obj = LazyConfigAttributeDict(self)
 
 
 class VerdiCommandGroup(click.Group):

@@ -68,8 +68,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
             try:
                 self.model.save()
             except Exception:
-                raise UniquenessError(f'a group of the same type with the label {label} already exists') \
-                    from Exception
+                raise UniquenessError(f'a group of the same type with the label {label} already exists') from Exception
 
     @property
     def description(self):
@@ -103,12 +102,6 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
     @property
     def uuid(self):
         return str(self.model.uuid)
-
-    def __int__(self):
-        if not self.is_stored:
-            return None
-
-        return self._dbnode.id  # pylint: disable=no-member
 
     @property
     def is_stored(self):
@@ -220,7 +213,8 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
                 session.execute(ins.on_conflict_do_nothing(index_elements=['dbnode_id', 'dbgroup_id']))
 
             # Commit everything as up till now we've just flushed
-            session.commit()
+            if not session.in_nested_transaction():
+                session.commit()
 
     def remove_nodes(self, nodes, **kwargs):
         """Remove a node or a set of nodes from the group.
@@ -268,7 +262,8 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
                     statement = table.delete().where(clause)
                     session.execute(statement)
 
-            session.commit()
+            if not session.in_nested_transaction():
+                session.commit()
 
 
 class SqlaGroupCollection(BackendGroupCollection):

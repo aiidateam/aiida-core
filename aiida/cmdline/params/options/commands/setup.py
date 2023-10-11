@@ -176,28 +176,28 @@ SETUP_PROFILE = options.OverridableOption(
 
 SETUP_USER_EMAIL = options.USER_EMAIL.clone(
     prompt='Email Address (for sharing data)',
-    default=get_config_option('autofill.user.email'),
+    default=functools.partial(get_config_option, 'autofill.user.email'),
     required=True,
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_USER_FIRST_NAME = options.USER_FIRST_NAME.clone(
     prompt='First name',
-    default=get_config_option('autofill.user.first_name'),
+    default=functools.partial(get_config_option, 'autofill.user.first_name'),
     required=True,
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_USER_LAST_NAME = options.USER_LAST_NAME.clone(
     prompt='Last name',
-    default=get_config_option('autofill.user.last_name'),
+    default=functools.partial(get_config_option, 'autofill.user.last_name'),
     required=True,
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_USER_INSTITUTION = options.USER_INSTITUTION.clone(
     prompt='Institution',
-    default=get_config_option('autofill.user.institution'),
+    default=functools.partial(get_config_option, 'autofill.user.institution'),
     required=True,
     cls=options.interactive.InteractiveOption
 )
@@ -365,6 +365,7 @@ SETUP_BROKER_VIRTUAL_HOST = QUICKSETUP_BROKER_VIRTUAL_HOST.clone(
 
 SETUP_REPOSITORY_URI = QUICKSETUP_REPOSITORY_URI.clone(
     prompt='Repository directory',
+    required=True,
     callback=None,  # Unset the `callback` to define the default, which is instead done by the `contextual_default`
     contextual_default=get_repository_uri_default,
     cls=options.interactive.InteractiveOption

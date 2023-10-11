@@ -120,6 +120,8 @@ class ModelWrapper:
             self.session.add(self._model)
             if not self._in_transaction():
                 self.session.commit()
+            else:
+                self.session.flush()
         except IntegrityError as exception:
             self.session.rollback()
             raise exceptions.IntegrityError(str(exception))

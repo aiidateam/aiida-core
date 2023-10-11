@@ -211,7 +211,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         self.model.attributes = clean_value(self.model.attributes)
         self.model.extras = clean_value(self.model.extras)
 
-    def store(self, links=None, with_transaction=True, clean=True):  # pylint: disable=arguments-differ
+    def store(self, links=None, clean=True):  # pylint: disable=arguments-differ
         session = self.backend.get_session()
 
         if clean:
@@ -223,12 +223,15 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
             for link_triple in links:
                 self._add_link(*link_triple)
 
-        if with_transaction:
+        if not session.in_nested_transaction():
             try:
                 session.commit()
             except SQLAlchemyError:
                 session.rollback()
                 raise
+        else:
+            # Make sure the new addition is flushed to, e.g., populate automatic primary keys.
+            session.flush()
 
         return self
 

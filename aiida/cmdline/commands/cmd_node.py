@@ -369,10 +369,10 @@ def rehash(nodes, entry_point, force):
     else:
         builder = QueryBuilder()
         builder.append(classes, tag='node')
-        to_hash = builder.all()
+        to_hash = builder.iterall()
         num_nodes = builder.count()
 
-    if not to_hash:
+    if not num_nodes:
         echo.echo_critical('no matching nodes found')
 
     with click.progressbar(to_hash, label='Rehashing Nodes:') as iter_hash:

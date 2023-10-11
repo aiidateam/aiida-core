@@ -1,54 +1,38 @@
+---
 version: '3.4'
 
 services:
 
-  rabbitmq:
-    image: rabbitmq:3.8.3-management
-    environment:
-        RABBITMQ_DEFAULT_USER: guest
-        RABBITMQ_DEFAULT_PASS: guest
-    ports:
-      - '5672:5672'
-      - '15672:15672'
+    database:
+        image: postgres:15
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: password
+            POSTGRES_HOST_AUTH_METHOD: trust
+        healthcheck:
+            test: [ "CMD-SHELL", "pg_isready"]
+            interval: 5s
+            timeout: 5s
+            retries: 10
 
-    healthcheck:
-      test: rabbitmq-diagnostics -q ping
-      interval: 30s
-      timeout: 30s
-      retries: 5
-    networks:
-      - aiida
+    messaging:
+        image: rabbitmq:3.8.14-management
+        environment:
+            RABBITMQ_DEFAULT_USER: guest
+            RABBITMQ_DEFAULT_PASS: guest
+        healthcheck:
+            test: rabbitmq-diagnostics check_port_connectivity
+            interval: 30s
+            timeout: 30s
+            retries: 10
 
-  postgres:
-    image: postgres:12
-    ports:
-      - '5432:5432'
-    networks:
-      - aiida
-    environment:
-      POSTGRES_HOST_AUTH_METHOD: trust
-
-  aiida:
-    #image: "aiidateam/aiida-core:main"
-    image: "aiida-core-dev"
-    build:
-      # need to add the parent directory to context to copy over new configure-aiida.sh
-      context: ..
-      dockerfile: .devcontainer/Dockerfile
-    user: aiida
-    environment:
-      DB_HOST: postgres
-      BROKER_HOST: rabbitmq
-
-    # no need for /sbin/my_init
-    entrypoint: tail -f /dev/null
-    volumes:
-      - ..:/home/aiida/aiida-core:cached
-    networks:
-      - aiida
-    depends_on:
-      - rabbitmq
-      - postgres
-
-networks:
-  aiida:
+    daemon:
+        image: ghcr.io/aiidateam/aiida-core-base:edge
+        user: aiida
+        entrypoint: tail -f /dev/null
+        environment:
+          SETUP_DEFAULT_AIIDA_PROFILE: 'true'
+          TZ: 'Europe/Zurich'
+        depends_on:
+            database:
+                condition: service_healthy

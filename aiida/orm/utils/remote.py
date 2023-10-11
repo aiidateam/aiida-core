@@ -125,7 +125,7 @@ def get_calcjob_remote_paths(  # pylint: disable=too-many-locals
 
     path_mapping = {}
 
-    for remote_data, computer_uuid in query.all():
+    for remote_data, computer_uuid in query.iterall():
         path_mapping.setdefault(computer_uuid, []).append(remote_data)
 
     return path_mapping

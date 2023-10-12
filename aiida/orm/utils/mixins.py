@@ -192,10 +192,12 @@ class Sealable:
         """Returns whether the node is sealed, i.e. whether the sealed attribute has been set to True."""
         return self.base.attributes.get(self.SEALED_KEY, False)  # type: ignore[attr-defined]
 
-    def seal(self) -> None:
+    def seal(self) -> 'Sealable':
         """Seal the node by setting the sealed attribute to True."""
         if not self.is_sealed:
             self.base.attributes.set(self.SEALED_KEY, True)  # type: ignore[attr-defined]
+
+        return self
 
     @override
     def _check_mutability_attributes(self, keys: list[str] | None = None) -> None:  # pylint: disable=unused-argument

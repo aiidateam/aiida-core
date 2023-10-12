@@ -20,7 +20,7 @@ def cacheable_node():
     node = CalcJobNode(process_type='aiida.calculations:core.arithmetic.add')
     node.set_process_state(ProcessState.FINISHED)
     node.base.repository.put_object_from_bytes(b'content', 'relative/path')
-    node.store()
+    node.store().seal()
     assert node.base.caching.is_valid_cache
 
     return node

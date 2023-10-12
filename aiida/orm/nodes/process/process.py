@@ -40,7 +40,7 @@ class ProcessNodeCaching(NodeCaching):
 
         :returns: True if this process node is valid to be used for caching, False otherwise
         """
-        if not (super().is_valid_cache and self._node.is_finished):
+        if not (super().is_valid_cache and self._node.is_finished and self._node.is_sealed):
             return False
 
         try:

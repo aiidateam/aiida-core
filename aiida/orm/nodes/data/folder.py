@@ -88,6 +88,18 @@ class FolderData(Data):
         with self.base.repository.open(path, mode) as handle:
             yield handle
 
+    @contextlib.contextmanager
+    def as_path(self, path: FilePath | None = None) -> Iterator[pathlib.Path]:
+        """Make the contents of the repository available as a normal filepath on the local file system.
+
+        :param path: optional relative path of the object within the repository.
+        :return: the filepath of the content of the repository or object if ``path`` is specified.
+        :raises TypeError: if the path is not a string or ``Path``, or is an absolute path.
+        :raises FileNotFoundError: if no object exists for the given path.
+        """
+        with self.base.repository.as_path(path) as filepath:
+            yield filepath
+
     def get_object(self, path: FilePath | None = None) -> File:
         """Return the object at the given path.
 

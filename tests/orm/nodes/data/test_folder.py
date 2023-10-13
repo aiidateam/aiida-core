@@ -30,6 +30,7 @@ def test_constructor_tree(tmp_path):
         'list_objects',
         'list_object_names',
         'open',
+        'as_path',
         'get_object',
         'get_object_content',
         'put_object_from_bytes',

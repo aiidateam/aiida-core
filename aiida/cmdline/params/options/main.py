@@ -111,8 +111,10 @@ def set_log_level(_ctx, _param, value):
     log.CLI_ACTIVE = True
 
     # If the value is ``None``, it means the option was not specified, but we still configure logging for the CLI
+    # However, we skip this when we are in a tab-completion context.
     if value is None:
-        configure_logging()
+        if not _ctx.resilient_parsing:
+            configure_logging()
         return None
 
     try:

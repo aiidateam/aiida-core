@@ -68,6 +68,10 @@ class PluginParamType(EntryPointType):
         is not specified use the tuple of all recognized entry point groups.
         """
         # pylint: disable=keyword-arg-before-vararg
+        self.load = load
+        self._groups = None
+        # TODO: Implement the following logic lazily
+        return
         valid_entry_point_groups = get_entry_point_groups()
 
         if group is None:
@@ -105,11 +109,14 @@ class PluginParamType(EntryPointType):
         once in the constructor after setting self.groups because the groups should not be changed
         after instantiation
         """
+        # TODO: Optimize this
         self._entry_points = [(group, entry_point) for group in self.groups for entry_point in get_entry_points(group)]
         self._entry_point_names = [entry_point.name for group in self.groups for entry_point in get_entry_points(group)]
 
     @property
     def groups(self):
+        # TODO: Remove this
+        # raise ValueError("Whoops groups")
         return self._groups
 
     @property

@@ -9,10 +9,10 @@
 ###########################################################################
 # pylint: disable=invalid-name,cyclic-import
 """Definition of factories to load classes from the various plugin groups."""
+from __future__ import annotations
+
 from inspect import isclass
 from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, Tuple, Type, Union, overload
-
-from importlib_metadata import EntryPoint
 
 from aiida.common.exceptions import InvalidEntryPointTypeError
 
@@ -22,6 +22,7 @@ __all__ = (
 )
 
 if TYPE_CHECKING:
+    from importlib_metadata import EntryPoint
     from aiida.engine import CalcJob, CalcJobImporter, WorkChain
     from aiida.orm import Data, Group
     from aiida.orm.implementation import StorageBackend

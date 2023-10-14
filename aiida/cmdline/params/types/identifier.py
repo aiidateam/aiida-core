@@ -51,19 +51,21 @@ class IdentifierParamType(click.ParamType, ABC):
         self._sub_classes = None
         self._entry_points = []
 
-        if sub_classes is not None:
+        if sub_classes is None:
+            return
+        if not isinstance(sub_classes, tuple):
+            raise TypeError('sub_classes should be a tuple of entry point strings')
 
-            if not isinstance(sub_classes, tuple):
-                raise TypeError('sub_classes should be a tuple of entry point strings')
-
-            for entry_point_string in sub_classes:
-
-                try:
-                    entry_point = get_entry_point_from_string(entry_point_string)
-                except (ValueError, exceptions.EntryPointError) as exception:
-                    raise ValueError(f'{entry_point_string} is not a valid entry point string: {exception}')
-                else:
-                    self._entry_points.append(entry_point)
+        self.sub_classes = sub_classes
+        # TODO: Add a property that loads all this on demand
+        return
+        for entry_point_string in sub_classes:
+            try:
+                entry_point = get_entry_point_from_string(entry_point_string)
+            except (ValueError, exceptions.EntryPointError) as exception:
+                raise ValueError(f'{entry_point_string} is not a valid entry point string: {exception}')
+            else:
+                self._entry_points.append(entry_point)
 
     @property
     @abstractmethod
@@ -88,6 +90,9 @@ class IdentifierParamType(click.ParamType, ABC):
         """
         from aiida.common import exceptions
         from aiida.orm.utils.loaders import OrmEntityLoader
+
+        # TODO: Remove this
+        # raise ValueError("")
 
         value = super().convert(value, param, ctx)
 

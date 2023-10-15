@@ -16,6 +16,7 @@ from aiida.manage.external.rmq import BROKER_DEFAULTS
 
 from .. import types
 from ...utils import defaults, echo  # pylint: disable=no-name-in-module
+from .callable import CallableDefaultOption
 from .config import ConfigFileOption
 from .multivalue import MultipleValueOption
 from .overridable import OverridableOption
@@ -110,8 +111,10 @@ def set_log_level(_ctx, _param, value):
     log.CLI_ACTIVE = True
 
     # If the value is ``None``, it means the option was not specified, but we still configure logging for the CLI
+    # However, we skip this when we are in a tab-completion context.
     if value is None:
-        configure_logging()
+        if not _ctx.resilient_parsing:
+            configure_logging()
         return None
 
     try:
@@ -145,6 +148,7 @@ PROFILE = OverridableOption(
     'profile',
     type=types.ProfileParamType(),
     default=defaults.get_default_profile,
+    cls=CallableDefaultOption,
     help='Execute the command for this profile instead of the default profile.'
 )
 

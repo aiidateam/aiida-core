@@ -71,14 +71,14 @@ class PluginParamType(EntryPointType):
         self.load = load
         self._groups = None
         # TODO: Implement the following logic lazily
-        return
+        # return
         valid_entry_point_groups = get_entry_point_groups()
 
         if group is None:
             self._groups = tuple(valid_entry_point_groups)
         else:
             if isinstance(group, str):
-                invalidated_groups = tuple([group])
+                invalidated_groups = (group,)
             elif isinstance(group, tuple):
                 invalidated_groups = group
             else:

@@ -10,6 +10,8 @@
 """
 Module for custom click param type identifier
 """
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 
 import click
@@ -30,7 +32,7 @@ class IdentifierParamType(click.ParamType, ABC):
     which should be a subclass of `aiida.orm.utils.loaders.OrmEntityLoader` for the corresponding orm class.
     """
 
-    def __init__(self, sub_classes=None):
+    def __init__(self, sub_classes: tuple | None = None):
         """
         Construct the parameter type, optionally specifying a tuple of entry points that reference classes
         that should be a sub class of the base orm class of the orm class loader. The classes pointed to by
@@ -48,18 +50,17 @@ class IdentifierParamType(click.ParamType, ABC):
         """
         from aiida.common import exceptions
 
-        self._sub_classes = None
+        self._sub_classes = sub_classes
         self._entry_points = []
 
         if sub_classes is None:
             return
+
         if not isinstance(sub_classes, tuple):
             raise TypeError('sub_classes should be a tuple of entry point strings')
 
-        self.sub_classes = sub_classes
         # TODO: Add a property that loads all this on demand
-        self._entry_points = []
-        return
+        # return
         for entry_point_string in sub_classes:
             try:
                 entry_point = get_entry_point_from_string(entry_point_string)

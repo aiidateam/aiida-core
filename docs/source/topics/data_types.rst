@@ -314,13 +314,17 @@ The contents of the file in string format can be obtained using the :py:meth:`~a
   Out[3]: 'The file content'
 
 For large files, reading the entire content into memory using :py:meth:`~aiida.orm.nodes.repository.NodeRepository.get_object_content()` may not be desirable.
-Instead, a file-like handle can be opened to a file in the repository which can be used to read the content as a stream:
+Instead, a file-like handle can be opened to a file in the repository which can be used to read the content as a stream.
+This can be useful, for example, to copy a large file from the repository to a file on disk, without loading it entirely into memory:
 
 .. code-block:: ipython
 
-    In [4]: with single_file.open() as handle:
-            print(handle.read())
-    Out[4]: 'The file content'
+    In [4]: import shutil
+            with single_file.open(mode='rb') as source:
+                with open('copy.txt', mode='wb') as target:
+                    shutil.copyfileobj(source, target)
+
+.. note:: To guarantee the file is copied over identically (and there are no encoding issues), the files are opened in "binary" mode by including the ``b`` character in the ``mode`` argument.
 
 For efficiency reasons, the repository interface only provides access to object content through file-like objects or strings.
 However, for certain use-cases, the object content _needs_ to be made available as a file on the local file system.
@@ -329,11 +333,11 @@ In this case, the content of the file can be made available on the local file sy
 
 .. code-block:: ipython
 
-    In [5]: with single_file.as_path() as filepath.read_text()
-            print(filepath.read_text())
-    Out[5]: 'The file content'
+    In [5]: with single_file.as_path() as filepath:
+                numpy.loadtxt(filepath)
 
 The yielded value ``filepath`` is an instance of ``pathlib.Path`` that points to a location on the local file system containing the content of the file.
+The temporary copy on the local file system is automatically cleaned up once the context manager is exited.
 
 .. note::
 
@@ -409,13 +413,17 @@ The content can once again be shown using the :py:meth:`~aiida.orm.nodes.reposit
 Since the :py:class:`~aiida.orm.nodes.data.folder.FolderData` node is simply a collection of files, it simply stores these files in the repository.
 
 For large files, reading the entire content into memory using :py:meth:`~aiida.orm.nodes.repository.NodeRepository.get_object_content()` may not be desirable.
-Instead, a file-like handle can be opened to a file in the repository which can be used to read the content as a stream:
+Instead, a file-like handle can be opened to a file in the repository which can be used to read the content as a stream.
+This can be useful, for example, to copy a large file from the repository to a file on disk, without loading it entirely into memory:
 
 .. code-block:: ipython
 
-    In [9]: with folder.open('subdir/file3.txt') as handle:
-            print(handle.read())
-    Out[9]: 'File 3 content\n'
+    In [9]: import shutil
+            with folder.open('subdir/file3.txt', mode='rb') as source:
+                with open('copy.txt', mode='wb') as target:
+                    shutil.copyfileobj(source, target)
+
+.. note:: To guarantee the file is copied over identically (and there are no encoding issues), the files are opened in "binary" mode by including the ``b`` character in the ``mode`` argument.
 
 For efficiency reasons, the repository interface only provides access to object content through file-like objects or strings.
 However, for certain use-cases, the object content _needs_ to be made available as a file on the local file system.
@@ -424,11 +432,12 @@ In this case, the content of the node's repository can be made available on the 
 
 .. code-block:: ipython
 
-    In [10]: with folder.as_path() as dirpath:
-             print(list(dirpath.iterdir()))
+    In [10]: with folder.as_path() as filepath:
+                 print(list(filepath.iterdir()))
     Out[10]: ['subdir', 'file1.txt', 'file2.txt']
 
 The yielded value ``dirpath`` is an instance of ``pathlib.Path`` that points to a location on the local file system containing the complete content of the repository.
+The temporary copy on the local file system is automatically cleaned up once the context manager is exited.
 
 .. note::
 
@@ -439,9 +448,8 @@ Optionally, an explicit object can be specified:
 
 .. code-block:: ipython
 
-    In [11]: with folder.as_path('subdir/file3.txt') as filepath:
-             print(filepath.read_text())
-    Out[11]: 'File 3 content\n'
+    In [11]: with folder.as_path('some_data_file.dat') as filepath:
+                 numpy.loadtxt(filepath)
 
 If the object at ``path`` is a directory, the returned value points to a directory that contains its contents.
 If it is a file, the returned value points to a file with the content of the object.

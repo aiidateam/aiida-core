@@ -252,10 +252,13 @@ def test_as_path():
         assert sorted([p.name for p in dirpath.iterdir()]) == ['relative', 'some_file.txt']
         assert (dirpath / 'some_file.txt').read_bytes() == b'content_some_file'
         assert (dirpath / 'relative' / 'path.dat').read_bytes() == b'content_relative'
+    assert not dirpath.exists()
 
     with node.base.repository.as_path('relative') as dirpath:
         assert sorted([p.name for p in dirpath.iterdir()]) == ['path.dat']
         assert (dirpath / 'path.dat').read_bytes() == b'content_relative'
+    assert not dirpath.exists()
 
     with node.base.repository.as_path('relative/path.dat') as filepath:
         assert filepath.read_bytes() == b'content_relative'
+    assert not filepath.exists()

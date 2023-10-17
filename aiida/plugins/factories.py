@@ -23,6 +23,7 @@ __all__ = (
 
 if TYPE_CHECKING:
     from importlib_metadata import EntryPoint
+
     from aiida.engine import CalcJob, CalcJobImporter, WorkChain
     from aiida.orm import Data, Group
     from aiida.orm.implementation import StorageBackend

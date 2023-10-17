@@ -39,7 +39,7 @@ from .links import NodeLinks
 from .repository import NodeRepository
 
 if TYPE_CHECKING:
-    from aiida.plugins.entry_point import EntryPoint  # type: ignore[attr-defined]
+    from importlib_metadata import EntryPoint
 
     from ..implementation import BackendNode, StorageBackend
 

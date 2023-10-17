@@ -20,9 +20,10 @@ from aiida.manage import get_manager
 from . import convert, entities, extras, users
 
 if TYPE_CHECKING:
+    from importlib_metadata import EntryPoint
+
     from aiida.orm import Node, User
     from aiida.orm.implementation import BackendGroup, StorageBackend
-    from aiida.plugins.entry_point import EntryPoint  # type: ignore[attr-defined]
 
 __all__ = ('Group', 'AutoGroup', 'ImportGroup', 'UpfFamily')
 

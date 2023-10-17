@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1697369927011,
+  "lastUpdate": 1697528401971,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -17936,6 +17936,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.027533",
             "group": "node",
             "extra": "mean: 24.389 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "2.60",
+          "cores": 2,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.10.13",
+          "metadata": "postgres:12.14, rabbitmq:3.8.14-management"
+        },
+        "commit": {
+          "id": "3e1f87373e3cf2c40e8a3134ac848d4c16b9dbcf",
+          "message": "`FolderData`: Expose repository API on top-level namespace (#6150)\n\nIn 8293e453789d0bad9cf631ecfc08542dd9ad892d, the `Node` interface was\r\nrefactored to move the API of the repository to the `base.repository`\r\nnamespace. The original methods would be forwarded with a deprecation\r\nmessage being printed.\r\n\r\nAlthough this made sense for most node types, in an effort to clean up\r\nthe node interface which was overpopulated, for the `FolderData` the\r\nrepository interface is the main interface and it doesn't make sense to\r\nforce the users to go all the way down to the nested `base.repository`\r\nnamespace to access it. Therefore the public API of the repository is\r\nrestored on the top-level namespace of the `FolderData` class.",
+          "timestamp": "2023-10-17T09:29:27+02:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/3e1f87373e3cf2c40e8a3134ac848d4c16b9dbcf",
+          "distinct": true,
+          "tree_id": "cde8dc0445992aaa50dd4fed289a8838b1487297"
+        },
+        "date": 1697528394193,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 2.4590250398382136,
+            "unit": "iter/sec",
+            "range": "stddev: 0.062629",
+            "group": "import-export",
+            "extra": "mean: 406.67 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 2.4063253278775116,
+            "unit": "iter/sec",
+            "range": "stddev: 0.086460",
+            "group": "import-export",
+            "extra": "mean: 415.57 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 3.2724883688789435,
+            "unit": "iter/sec",
+            "range": "stddev: 0.082053",
+            "group": "import-export",
+            "extra": "mean: 305.58 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 3.1796008139634466,
+            "unit": "iter/sec",
+            "range": "stddev: 0.072530",
+            "group": "import-export",
+            "extra": "mean: 314.50 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 2.612867786528208,
+            "unit": "iter/sec",
+            "range": "stddev: 0.016113",
+            "group": "engine",
+            "extra": "mean: 382.72 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.5914084685289163,
+            "unit": "iter/sec",
+            "range": "stddev: 0.069642",
+            "group": "engine",
+            "extra": "mean: 1.6909 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.6651881572953388,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11253",
+            "group": "engine",
+            "extra": "mean: 1.5033 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.1559301908599606,
+            "unit": "iter/sec",
+            "range": "stddev: 0.19332",
+            "group": "engine",
+            "extra": "mean: 6.4131 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.1731389389749701,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11561",
+            "group": "engine",
+            "extra": "mean: 5.7757 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.258638437467428,
+            "unit": "iter/sec",
+            "range": "stddev: 0.025785",
+            "group": "engine",
+            "extra": "mean: 442.74 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.5137255744100002,
+            "unit": "iter/sec",
+            "range": "stddev: 0.040849",
+            "group": "engine",
+            "extra": "mean: 1.9466 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.579476829718082,
+            "unit": "iter/sec",
+            "range": "stddev: 0.057231",
+            "group": "engine",
+            "extra": "mean: 1.7257 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.14649205113054775,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11569",
+            "group": "engine",
+            "extra": "mean: 6.8263 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.16356840532617103,
+            "unit": "iter/sec",
+            "range": "stddev: 0.081943",
+            "group": "engine",
+            "extra": "mean: 6.1137 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 267.72967484676724,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00053518",
+            "group": "node",
+            "extra": "mean: 3.7351 msec\nrounds: 185"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 102.862747090004,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0011553",
+            "group": "node",
+            "extra": "mean: 9.7217 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 54.034570443883496,
+            "unit": "iter/sec",
+            "range": "stddev: 0.025274",
+            "group": "node",
+            "extra": "mean: 18.507 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 204.1317515805191,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00095168",
+            "group": "node",
+            "extra": "mean: 4.8988 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 41.42843994891241,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0025291",
+            "group": "node",
+            "extra": "mean: 24.138 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 40.104282282927905,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0030101",
+            "group": "node",
+            "extra": "mean: 24.935 msec\nrounds: 100"
           }
         ]
       }

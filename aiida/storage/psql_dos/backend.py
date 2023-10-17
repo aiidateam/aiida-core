@@ -197,7 +197,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
 
         from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
-        container = Container(str(get_filepath_container(self.profile)))
+        container = Container(get_filepath_container(self.profile))
         return DiskObjectStoreRepositoryBackend(container=container)
 
     @property

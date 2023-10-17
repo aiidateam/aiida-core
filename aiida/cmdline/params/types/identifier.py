@@ -58,6 +58,7 @@ class IdentifierParamType(click.ParamType, ABC):
 
         self.sub_classes = sub_classes
         # TODO: Add a property that loads all this on demand
+        self._entry_points = []
         return
         for entry_point_string in sub_classes:
             try:

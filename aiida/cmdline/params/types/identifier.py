@@ -60,7 +60,7 @@ class IdentifierParamType(click.ParamType, ABC):
             raise TypeError('sub_classes should be a tuple of entry point strings')
 
         # TODO: Add a property that loads all this on demand
-        # return
+        return
         for entry_point_string in sub_classes:
             try:
                 entry_point = get_entry_point_from_string(entry_point_string)

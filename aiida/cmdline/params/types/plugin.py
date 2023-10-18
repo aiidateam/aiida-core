@@ -11,7 +11,6 @@
 import functools
 
 import click
-from importlib_metadata import EntryPoint
 
 from aiida.common import exceptions
 from aiida.plugins import factories
@@ -71,7 +70,7 @@ class PluginParamType(EntryPointType):
         self.load = load
         self._groups = None
         # TODO: Implement the following logic lazily
-        # return
+        return
         valid_entry_point_groups = get_entry_point_groups()
 
         if group is None:
@@ -243,6 +242,7 @@ class PluginParamType(EntryPointType):
         Convert the string value to an entry point instance, if the value can be successfully parsed
         into an actual entry point. Will raise click.BadParameter if validation fails.
         """
+        from importlib_metadata import EntryPoint
         # If the value is already of the expected return type, simply return it. This behavior is new in `click==8.0`:
         # https://click.palletsprojects.com/en/8.0.x/parameters/#implementing-custom-types
         if isinstance(value, EntryPoint):

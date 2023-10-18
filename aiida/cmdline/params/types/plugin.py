@@ -68,57 +68,51 @@ class PluginParamType(EntryPointType):
         """
         # pylint: disable=keyword-arg-before-vararg
         self.load = load
-        self._groups = []
-        self._entry_points = []
-        self._entry_point_names = []
-        # TODO: Implement the following logic lazily
-        return
-        valid_entry_point_groups = get_entry_point_groups()
-
-        if group is None:
-            self._groups = tuple(valid_entry_point_groups)
-        else:
-            if isinstance(group, str):
-                invalidated_groups = (group,)
-            elif isinstance(group, tuple):
-                invalidated_groups = group
-            else:
-                raise ValueError('invalid type for group')
-
-            groups = []
-
-            for grp in invalidated_groups:
-
-                if not grp.startswith(ENTRY_POINT_GROUP_PREFIX):
-                    grp = ENTRY_POINT_GROUP_PREFIX + grp
-
-                if grp not in valid_entry_point_groups:
-                    raise ValueError(f'entry point group {grp} is not recognized')
-
-                groups.append(grp)
-
-            self._groups = tuple(groups)
-
-        self._init_entry_points()
-        self.load = load
+        self._input_group = group
 
         super().__init__(*args, **kwargs)
 
-    def _init_entry_points(self):
-        """
-        Populate entry point information that will be used later on.  This should only be called
-        once in the constructor after setting self.groups because the groups should not be changed
-        after instantiation
-        """
-        # TODO: Optimize this
-        self._entry_points = [(group, entry_point) for group in self.groups for entry_point in get_entry_points(group)]
-        self._entry_point_names = [entry_point.name for group in self.groups for entry_point in get_entry_points(group)]
+    def _get_valid_groups(self):
+        """Get allowed groups for this instance"""
 
-    @property
-    def groups(self):
-        # TODO: Remove this
-        # raise ValueError("Whoops groups")
-        return self._groups
+        group = self._input_group
+        valid_entry_point_groups = get_entry_point_groups()
+
+        if group is None:
+            return tuple(valid_entry_point_groups)
+
+        if isinstance(group, str):
+            unvalidated_groups = (group,)
+        elif isinstance(group, tuple):
+            unvalidated_groups = group
+        else:
+            raise ValueError('invalid type for group')
+
+        groups = []
+
+        for grp in unvalidated_groups:
+
+            if not grp.startswith(ENTRY_POINT_GROUP_PREFIX):
+                grp = ENTRY_POINT_GROUP_PREFIX + grp
+
+            if grp not in valid_entry_point_groups:
+                raise ValueError(f'entry point group {grp} is not recognized')
+
+            groups.append(grp)
+
+        return tuple(groups)
+
+    @functools.cached_property
+    def groups(self) -> tuple:
+        return self._get_valid_groups()
+
+    @functools.cached_property
+    def _entry_points(self) -> list[tuple]:
+        return [(group, entry_point) for group in self.groups for entry_point in get_entry_points(group)]
+
+    @functools.cached_property
+    def _entry_point_names(self) -> list[str]:
+        return [entry_point.name for group in self.groups for entry_point in get_entry_points(group)]
 
     @property
     def has_potential_ambiguity(self):

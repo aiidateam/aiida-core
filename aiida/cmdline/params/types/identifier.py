@@ -32,7 +32,7 @@ class IdentifierParamType(click.ParamType, ABC):
     which should be a subclass of `aiida.orm.utils.loaders.OrmEntityLoader` for the corresponding orm class.
     """
 
-    def __init__(self, sub_classes: tuple | None = None):
+    def __init__(self, sub_classes: tuple[str] | None = None):
         """
         Construct the parameter type, optionally specifying a tuple of entry points that reference classes
         that should be a sub class of the base orm class of the orm class loader. The classes pointed to by
@@ -50,7 +50,7 @@ class IdentifierParamType(click.ParamType, ABC):
         """
         from aiida.common import exceptions
 
-        self._sub_classes = sub_classes
+        self._sub_classes: tuple | None = None
         self._entry_points = []
 
         if sub_classes is None:

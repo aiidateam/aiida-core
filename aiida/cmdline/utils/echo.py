@@ -10,6 +10,7 @@
 """Convenience functions for logging output from ``verdi`` commands."""
 import collections
 import enum
+import json
 import logging
 import sys
 from typing import Any, Optional
@@ -209,7 +210,6 @@ def echo_formatted_list(collection, attributes, sort=None, highlight=None, hide=
 
 def _format_dictionary_json_date(dictionary, sort_keys=True):
     """Return a dictionary formatted as a string using the json format and converting dates to strings."""
-    import json
 
     def default_jsondump(data):
         """Function needed to decode datetimes, that would otherwise not be JSON-decodable."""

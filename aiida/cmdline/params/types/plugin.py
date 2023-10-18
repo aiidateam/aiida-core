@@ -68,7 +68,7 @@ class PluginParamType(EntryPointType):
         """
         # pylint: disable=keyword-arg-before-vararg
         self.load = load
-        self._groups = None
+        self._groups = []
         self._entry_points = []
         self._entry_point_names = []
         # TODO: Implement the following logic lazily

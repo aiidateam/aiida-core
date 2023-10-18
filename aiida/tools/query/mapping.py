@@ -80,6 +80,7 @@ class CalculationProjectionMapper(ProjectionMapper):
     def __init__(self, projections, projection_labels=None, projection_attributes=None, projection_formatters=None):
         # pylint: disable=too-many-locals
         from aiida.orm import ProcessNode
+        from aiida.orm.nodes.caching import NodeCaching
         from aiida.orm.utils.mixins import Sealable
 
         self._valid_projections = projections
@@ -94,8 +95,16 @@ class CalculationProjectionMapper(ProjectionMapper):
         exit_status_key = f'attributes.{ProcessNode.EXIT_STATUS_KEY}'
         exit_message_key = f'attributes.{ProcessNode.EXIT_MESSAGE_KEY}'
         exception_key = f'attributes.{ProcessNode.EXCEPTION_KEY}'
+        cached_from_key = f'extras.{NodeCaching.CACHED_FROM_KEY}'
 
-        default_labels = {'pk': 'PK', 'uuid': 'UUID', 'ctime': 'Created', 'mtime': 'Modified', 'state': 'Process State'}
+        default_labels = {
+            'pk': 'PK',
+            'uuid': 'UUID',
+            'ctime': 'Created',
+            'mtime': 'Modified',
+            'state': 'Process State',
+            'cached': '\u267B'
+        }
 
         default_attributes = {
             'pk': 'id',
@@ -109,15 +118,17 @@ class CalculationProjectionMapper(ProjectionMapper):
             'exit_status': exit_status_key,
             'exit_message': exit_message_key,
             'exception': exception_key,
+            'cached': cached_from_key,
+            'cached_from': cached_from_key,
         }
 
         default_formatters = {
             'ctime': lambda value: formatting.format_relative_time(value['ctime']),
             'mtime': lambda value: formatting.format_relative_time(value['mtime']),
-            'state': lambda value: formatting.
-            format_state(value[process_state_key], value[process_paused_key], value[exit_status_key]),
+            'state': lambda v: formatting.format_state(v[process_state_key], v[process_paused_key], v[exit_status_key]),
             'process_state': lambda value: formatting.format_process_state(value[process_state_key]),
             'sealed': lambda value: formatting.format_sealed(value[sealed_key]),
+            'cached': lambda value: '\u2714' if value[cached_from_key] else '',
         }
 
         if projection_labels is not None:

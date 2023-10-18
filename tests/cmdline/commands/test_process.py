@@ -45,7 +45,7 @@ class TestVerdiProcess:
         result = run_cli_command(cmd_process.process_list)
 
         assert 'Total results:' in result.output
-        assert 'last time an entry changed state' in result.output
+        assert 'Last time an entry changed state' in result.output
 
     def test_list(self, run_cli_command):
         """Test the list command."""

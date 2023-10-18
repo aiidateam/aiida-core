@@ -8,9 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Top level functions that can be used to launch a Process."""
-from typing import Any, Dict, Tuple, Type, Union
+from __future__ import annotations
+
+import time
+import typing as t
 
 from aiida.common import InvalidOperation
+from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import manager
 from aiida.orm import ProcessNode
 
@@ -22,19 +26,18 @@ from .utils import instantiate_process, is_process_scoped  # pylint: disable=no-
 
 __all__ = ('run', 'run_get_pk', 'run_get_node', 'submit')
 
-TYPE_RUN_PROCESS = Union[Process, Type[Process], ProcessBuilder]  # pylint: disable=invalid-name
+TYPE_RUN_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]  # pylint: disable=invalid-name
 # run can also be process function, but it is not clear what type this should be
-TYPE_SUBMIT_PROCESS = Union[Process, Type[Process], ProcessBuilder]  # pylint: disable=invalid-name
+TYPE_SUBMIT_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]  # pylint: disable=invalid-name
+LOGGER = AIIDA_LOGGER.getChild('engine.launch')
 
 
-def run(process: TYPE_RUN_PROCESS, *args: Any, **inputs: Any) -> Dict[str, Any]:
+def run(process: TYPE_RUN_PROCESS, *args: t.Any, **inputs: t.Any) -> dict[str, t.Any]:
     """Run the process with the supplied inputs in a local runner that will block until the process is completed.
 
     :param process: the process class or process function to run
     :param inputs: the inputs to be passed to the process
-
     :return: the outputs of the process
-
     """
     if isinstance(process, Process):
         runner = process.runner
@@ -44,14 +47,12 @@ def run(process: TYPE_RUN_PROCESS, *args: Any, **inputs: Any) -> Dict[str, Any]:
     return runner.run(process, *args, **inputs)
 
 
-def run_get_node(process: TYPE_RUN_PROCESS, *args: Any, **inputs: Any) -> Tuple[Dict[str, Any], ProcessNode]:
+def run_get_node(process: TYPE_RUN_PROCESS, *args: t.Any, **inputs: t.Any) -> tuple[dict[str, t.Any], ProcessNode]:
     """Run the process with the supplied inputs in a local runner that will block until the process is completed.
 
     :param process: the process class, instance, builder or function to run
     :param inputs: the inputs to be passed to the process
-
     :return: tuple of the outputs of the process and the process node
-
     """
     if isinstance(process, Process):
         runner = process.runner
@@ -61,14 +62,12 @@ def run_get_node(process: TYPE_RUN_PROCESS, *args: Any, **inputs: Any) -> Tuple[
     return runner.run_get_node(process, *args, **inputs)
 
 
-def run_get_pk(process: TYPE_RUN_PROCESS, *args: Any, **inputs: Any) -> ResultAndPk:
+def run_get_pk(process: TYPE_RUN_PROCESS, *args: t.Any, **inputs: t.Any) -> ResultAndPk:
     """Run the process with the supplied inputs in a local runner that will block until the process is completed.
 
     :param process: the process class, instance, builder or function to run
     :param inputs: the inputs to be passed to the process
-
     :return: tuple of the outputs of the process and process node pk
-
     """
     if isinstance(process, Process):
         runner = process.runner
@@ -78,22 +77,23 @@ def run_get_pk(process: TYPE_RUN_PROCESS, *args: Any, **inputs: Any) -> ResultAn
     return runner.run_get_pk(process, *args, **inputs)
 
 
-def submit(process: TYPE_SUBMIT_PROCESS, **inputs: Any) -> ProcessNode:
+def submit(process: TYPE_SUBMIT_PROCESS, wait: bool = False, wait_interval: int = 5, **inputs: t.Any) -> ProcessNode:
     """Submit the process with the supplied inputs to the daemon immediately returning control to the interpreter.
 
-    .. warning: this should not be used within another process. Instead, there one should use the `submit` method of
-        the wrapping process itself, i.e. use `self.submit`.
+    .. warning: this should not be used within another process. Instead, there one should use the ``submit`` method of
+        the wrapping process itself, i.e. use ``self.submit``.
 
-    .. warning: submission of processes requires `store_provenance=True`
+    .. warning: submission of processes requires ``store_provenance=True``.
 
     :param process: the process class, instance or builder to submit
     :param inputs: the inputs to be passed to the process
-
+    :param wait: when set to ``True``, the submission will be blocking and wait for the process to complete at which
+        point the function returns the calculation node.
+    :param wait_interval: the number of seconds to wait between checking the state of the process when ``wait=True``.
     :return: the calculation node of the process
-
     """
-    # Submitting from within another process requires `self.submit` unless it is a work function, in which case the
-    # current process in the scope should be an instance of `FunctionProcess`
+    # Submitting from within another process requires ``self.submit``` unless it is a work function, in which case the
+    # current process in the scope should be an instance of ``FunctionProcess``.
     if is_process_scoped() and not isinstance(Process.current(), FunctionProcess):
         raise InvalidOperation('Cannot use top-level `submit` from within another process, use `self.submit` instead')
 
@@ -118,8 +118,16 @@ def submit(process: TYPE_SUBMIT_PROCESS, **inputs: Any) -> ProcessNode:
 
     # Do not wait for the future's result, because in the case of a single worker this would cock-block itself
     runner.controller.continue_process(process_inited.pid, nowait=False, no_reply=True)
+    node = process_inited.node
 
-    return process_inited.node
+    if not wait:
+        return node
+
+    while not node.is_terminated:
+        time.sleep(wait_interval)
+        LOGGER.report(f'Process<{node.pk}> has not yet terminated, current state is `{node.process_state}`.')
+
+    return node
 
 
 # Allow one to also use run.get_node and run.get_pk as a shortcut, without having to import the functions themselves

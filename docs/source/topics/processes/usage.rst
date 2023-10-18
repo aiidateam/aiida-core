@@ -350,6 +350,12 @@ The function will submit the calculation to the daemon and immediately return co
 .. warning::
     For a process to be submittable, the class or function needs to be importable in the daemon environment by a) giving it an :ref:`associated entry point<how-to:plugin-codes:entry-points>` or b) :ref:`including its module path<how-to:faq:process-not-importable-daemon>` in the ``PYTHONPATH`` that the daemon workers will have.
 
+.. tip::
+    Use ``wait=True`` when calling ``submit`` to wait for the process to complete before returning the node.
+    This can be useful for tutorials and demos in interactive notebooks where the user should not continue before the process is done.
+    One could of course also use ``run`` (see below), but then the process would be lost if the interpreter gets accidentally shut down.
+    By using ``submit``, the process is run by the daemon which takes care of saving checkpoints so it can always be restarted in case of problems.
+
 The ``run`` function is called identically:
 
 .. include:: include/snippets/launch/launch_run.py

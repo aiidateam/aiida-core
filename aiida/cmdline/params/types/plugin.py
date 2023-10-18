@@ -243,6 +243,7 @@ class PluginParamType(EntryPointType):
         into an actual entry point. Will raise click.BadParameter if validation fails.
         """
         from importlib_metadata import EntryPoint
+
         # If the value is already of the expected return type, simply return it. This behavior is new in `click==8.0`:
         # https://click.palletsprojects.com/en/8.0.x/parameters/#implementing-custom-types
         if isinstance(value, EntryPoint):

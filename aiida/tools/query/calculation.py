@@ -19,11 +19,11 @@ class CalculationQueryBuilder:
     # This tuple serves to mark compound projections that cannot explicitly be projected in the QueryBuilder, but will
     # have to be manually projected from composing its individual projection constituents
     _compound_projections = ('state',)
-    _default_projections = ('pk', 'ctime', 'process_label', 'state', 'process_status')
+    _default_projections = ('pk', 'ctime', 'process_label', 'cached', 'state', 'process_status')
     _valid_projections = (
         'pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'process_status', 'exit_status', 'exit_message',
         'sealed', 'process_label', 'label', 'description', 'node_type', 'paused', 'process_type', 'job_state',
-        'scheduler_state', 'exception'
+        'scheduler_state', 'exception', 'cached', 'cached_from'
     )
 
     def __init__(self, mapper=None):
@@ -125,6 +125,7 @@ class CalculationQueryBuilder:
             for projection in self._valid_projections
             if projection not in self._compound_projections
         ]
+        unique_projections = list(set(projected_attributes))
 
         if filters is None:
             filters = {}
@@ -133,7 +134,7 @@ class CalculationQueryBuilder:
             filters['ctime'] = {'>': timezone.now() - datetime.timedelta(days=past_days)}
 
         builder = orm.QueryBuilder()
-        builder.append(cls=orm.ProcessNode, filters=filters, project=projected_attributes, tag='process')
+        builder.append(cls=orm.ProcessNode, filters=filters, project=unique_projections, tag='process')
 
         if relationships is not None:
             for tag, entity in relationships.items():

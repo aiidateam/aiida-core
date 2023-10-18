@@ -95,6 +95,11 @@ def process_list(
     tabulated = tabulate(projected, headers=headers)
     echo.echo(tabulated)
     echo.echo(f'\nTotal results: {len(projected)}\n')
+
+    if 'cached' in project:
+        echo.echo_report('\u267B Processes marked with check-mark were not run but taken from the cache.')
+        echo.echo_report('Add the option `-P pk cached_from` to the command to display cache source.')
+
     print_last_process_state_change()
 
     if not get_daemon_client().is_daemon_running:

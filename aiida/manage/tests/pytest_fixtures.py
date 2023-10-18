@@ -32,7 +32,7 @@ import typing as t
 import uuid
 import warnings
 
-from importlib_metadata import EntryPoints
+from importlib_metadata import EntryPoint, EntryPoints
 import plumpy
 import pytest
 import wrapt
@@ -822,7 +822,7 @@ class EntryPointManager:
             value = f'{value.__module__}:{value.__name__}'
 
         group, name = self._validate_entry_point(entry_point_string, group, name)
-        entry_point = plugins.entry_point.EntryPoint(name, value, group)
+        entry_point = EntryPoint(name, value, group)
         self.entry_points = EntryPoints(self.entry_points + (entry_point,))
 
     def remove(

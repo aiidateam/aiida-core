@@ -18,6 +18,7 @@ class NodeCaching:
     # The keys in the extras that are used to store the hash of the node and whether it should be used in caching.
     _HASH_EXTRA_KEY: str = '_aiida_hash'
     _VALID_CACHE_KEY: str = '_aiida_valid_cache'
+    CACHED_FROM_KEY: str = '_aiida_cached_from'
 
     def __init__(self, node: 'Node') -> None:
         """Initialize the caching interface."""
@@ -82,7 +83,7 @@ class NodeCaching:
 
         :return: source node UUID or None
         """
-        return self._node.base.extras.get('_aiida_cached_from', None)
+        return self._node.base.extras.get(self.CACHED_FROM_KEY, None)
 
     @property
     def is_created_from_cache(self) -> bool:

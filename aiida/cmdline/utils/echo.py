@@ -10,7 +10,6 @@
 """Convenience functions for logging output from ``verdi`` commands."""
 import collections
 import enum
-import json
 import logging
 import sys
 from typing import Any, Optional
@@ -19,7 +18,10 @@ import click
 
 CMDLINE_LOGGER = logging.getLogger('verdi')
 
-__all__ = ('echo_report', 'echo_info', 'echo_success', 'echo_warning', 'echo_error', 'echo_critical', 'echo_dictionary')
+__all__ = (
+    'echo_report', 'echo_info', 'echo_success', 'echo_warning', 'echo_error', 'echo_critical', 'echo_tabulate',
+    'echo_dictionary'
+)
 
 
 class ExitCode(enum.IntEnum):
@@ -207,6 +209,7 @@ def echo_formatted_list(collection, attributes, sort=None, highlight=None, hide=
 
 def _format_dictionary_json_date(dictionary, sort_keys=True):
     """Return a dictionary formatted as a string using the json format and converting dates to strings."""
+    import json
 
     def default_jsondump(data):
         """Function needed to decode datetimes, that would otherwise not be JSON-decodable."""
@@ -239,6 +242,11 @@ def _format_yaml_expanded(dictionary, sort_keys=True):
 VALID_DICT_FORMATS_MAPPING = collections.OrderedDict(
     (('json+date', _format_dictionary_json_date), ('yaml', _format_yaml), ('yaml_expanded', _format_yaml_expanded))
 )
+
+
+def echo_tabulate(table, **kwargs):
+    from tabulate import tabulate
+    echo(tabulate(table, **kwargs))
 
 
 def echo_dictionary(dictionary, fmt='json+date', sort_keys=True):

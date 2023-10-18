@@ -14,12 +14,11 @@ from functools import partial
 from math import isclose
 
 import click
-import tabulate
 
 from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup, verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import computer as options_computer
-from aiida.cmdline.utils import echo
+from aiida.cmdline.utils import echo, echo_tabulate
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import EntryPointError, ValidationError
 from aiida.plugins.entry_point import get_entry_point_names
@@ -461,7 +460,7 @@ def computer_show(computer):
         ['Prepend text', computer.get_prepend_text()],
         ['Append text', computer.get_append_text()],
     ]
-    echo.echo(tabulate.tabulate(table))
+    echo_tabulate(table)
 
 
 @verdi_computer.command('relabel')
@@ -697,4 +696,4 @@ def computer_config_show(computer, user, defaults, as_option_string):
                 table.append((f'* {name}', config[name]))
             else:
                 table.append((f'* {name}', '-'))
-        echo.echo(tabulate.tabulate(table, tablefmt='plain'))
+        echo_tabulate(table, tablefmt='plain')

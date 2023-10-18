@@ -16,12 +16,11 @@ import sys
 import typing as t
 
 import click
-import tabulate
 import wrapt
 
 from aiida.cmdline.commands.cmd_devel import verdi_devel
 from aiida.cmdline.params import arguments, options
-from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils import decorators, echo, echo_tabulate
 
 if t.TYPE_CHECKING:
     import kiwipy.rmq
@@ -192,7 +191,7 @@ def cmd_queues_list(client, project, raw, filter_name):
 
     headers = [name.capitalize() for name in project] if not raw else []
     tablefmt = None if not raw else 'plain'
-    echo.echo(tabulate.tabulate(output, headers=headers, tablefmt=tablefmt))
+    echo_tabulate(output, headers=headers, tablefmt=tablefmt)
 
 
 @cmd_queues.command('create')

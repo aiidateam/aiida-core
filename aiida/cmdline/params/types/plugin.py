@@ -69,6 +69,8 @@ class PluginParamType(EntryPointType):
         # pylint: disable=keyword-arg-before-vararg
         self.load = load
         self._groups = None
+        self._entry_points = []
+        self._entry_point_names = []
         # TODO: Implement the following logic lazily
         return
         valid_entry_point_groups = get_entry_point_groups()

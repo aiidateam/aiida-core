@@ -13,6 +13,7 @@ Module for custom click param type identifier
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from functools import cached_property
 
 import click
 
@@ -48,26 +49,29 @@ class IdentifierParamType(click.ParamType, ABC):
             will be mapped upon. These classes have to be strict sub classes of the base orm class defined
             by the orm class loader
         """
-        from aiida.common import exceptions
-
-        self._sub_classes: tuple | None = None
-        self._entry_points = []
-
-        if sub_classes is None:
-            return
-
-        if not isinstance(sub_classes, tuple):
+        if sub_classes is not None and not isinstance(sub_classes, tuple):
             raise TypeError('sub_classes should be a tuple of entry point strings')
 
-        # TODO: Add a property that loads all this on demand
-        return
-        for entry_point_string in sub_classes:
+        self._sub_classes: tuple | None = None
+        self._entry_point_strings = sub_classes
+
+    @cached_property
+    def _entry_points(self):
+        """Allowed entry points, loaded on demand"""
+        from aiida.common import exceptions
+
+        if self._entry_point_strings is None:
+            return None
+
+        entry_points = []
+        for entry_point_string in self._entry_point_strings:
             try:
                 entry_point = get_entry_point_from_string(entry_point_string)
             except (ValueError, exceptions.EntryPointError) as exception:
                 raise ValueError(f'{entry_point_string} is not a valid entry point string: {exception}')
             else:
-                self._entry_points.append(entry_point)
+                entry_points.append(entry_point)
+        return entry_points
 
     @property
     @abstractmethod
@@ -93,9 +97,6 @@ class IdentifierParamType(click.ParamType, ABC):
         from aiida.common import exceptions
         from aiida.orm.utils.loaders import OrmEntityLoader
 
-        # TODO: Remove this
-        # raise ValueError("")
-
         value = super().convert(value, param, ctx)
 
         if not value:
@@ -106,7 +107,7 @@ class IdentifierParamType(click.ParamType, ABC):
         if not issubclass(loader, OrmEntityLoader):
             raise RuntimeError('the orm class loader should be a subclass of OrmEntityLoader')
 
-        # If entry points where in the constructor, we load their corresponding classes, validate that they are valid
+        # If entry points were in the constructor, we load their corresponding classes, validate that they are valid
         # sub classes of the orm class loader and then pass it as the sub_class parameter to the load_entity call.
         # We store the loaded entry points in an instance variable, such that the loading only has to be done once.
         if self._entry_points and self._sub_classes is None:

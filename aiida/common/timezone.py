@@ -11,8 +11,6 @@
 from datetime import datetime, timedelta, timezone, tzinfo
 from typing import Optional
 
-import pytz
-
 utc = timezone.utc  # Simply forward this attribute from the :mod:`datetime.timezone` built in library
 
 
@@ -51,6 +49,8 @@ def timezone_from_name(name: str) -> tzinfo:
     :returns: The corresponding timezone object.
     :raises ValueError: if the timezone name is unknown.
     """
+    import pytz
+
     try:
         return pytz.timezone(name)
     except pytz.exceptions.UnknownTimeZoneError as exception:

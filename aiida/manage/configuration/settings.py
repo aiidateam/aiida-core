@@ -38,7 +38,7 @@ def create_instance_directories():
     """
     from aiida.common import ConfigurationError
 
-    directory_base = pathlib.Path(AIIDA_CONFIG_FOLDER).expanduser()
+    directory_base = AIIDA_CONFIG_FOLDER.expanduser()
     directory_daemon = directory_base / DAEMON_DIR
     directory_daemon_log = directory_base / DAEMON_LOG_DIR
     directory_access = directory_base / ACCESS_CONTROL_DIR

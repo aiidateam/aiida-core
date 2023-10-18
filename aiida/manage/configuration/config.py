@@ -10,11 +10,8 @@
 """Module that defines the configuration file of an AiiDA instance and functions to create and load it."""
 import codecs
 from functools import cache
-from importlib.resources import files
 import json
 import os
-import shutil
-import tempfile
 from typing import Any, Dict, Optional, Sequence, Tuple
 
 from aiida.common.exceptions import ConfigurationError
@@ -31,6 +28,8 @@ SCHEMA_FILE = 'config-v9.schema.json'
 @cache
 def config_schema() -> Dict[str, Any]:
     """Return the configuration schema."""
+    from importlib.resources import files
+
     return json.loads(files(schema_module).joinpath(SCHEMA_FILE).read_text(encoding='utf8'))
 
 
@@ -109,6 +108,8 @@ class Config:  # pylint: disable=too-many-public-methods
         :param filepath: absolute path to the configuration file to backup
         :return: the absolute path of the created backup
         """
+        import shutil
+
         from aiida.common import timezone
 
         filepath_backup = None
@@ -345,6 +346,8 @@ class Config:  # pylint: disable=too-many-public-methods
         :param include_database_user: also delete the database user configured for the profile.
         :param include_repository: also delete the repository configured for the profile.
         """
+        import shutil
+
         from aiida.manage.external.postgres import Postgres
 
         profile = self.get_profile(name)
@@ -483,6 +486,8 @@ class Config:  # pylint: disable=too-many-public-methods
 
         :return: self
         """
+        import tempfile
+
         from aiida.common.files import md5_file, md5_from_filelike
 
         from .settings import DEFAULT_CONFIG_INDENT_SIZE
@@ -515,6 +520,8 @@ class Config:  # pylint: disable=too-many-public-methods
 
         :param filepath: optional filepath to write the contents to, if not specified, the default filename is used.
         """
+        import tempfile
+
         from .settings import DEFAULT_CONFIG_INDENT_SIZE, DEFAULT_UMASK
 
         umask = os.umask(DEFAULT_UMASK)

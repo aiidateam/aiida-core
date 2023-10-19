@@ -12,14 +12,19 @@ AiiDA ORM data class storing (numpy) arrays
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import Any, Iterator
 
+from numpy import ndarray
+
+from ..base import to_aiida_type
 from ..data import Data
 
-if TYPE_CHECKING:
-    from numpy import ndarray
-
 __all__ = ('ArrayData',)
+
+
+@to_aiida_type.register(ndarray)
+def _(value):
+    return ArrayData(value)
 
 
 class ArrayData(Data):
@@ -41,7 +46,7 @@ class ArrayData(Data):
     array_prefix = 'array|'
     default_array_name = 'default'
 
-    def __init__(self, arrays: 'ndarray' | dict[str, 'ndarray'] | None = None, **kwargs):
+    def __init__(self, arrays: ndarray | dict[str, ndarray] | None = None, **kwargs):
         """Construct a new instance and set one or multiple numpy arrays.
 
         :param arrays: An optional single numpy array, or dictionary of numpy arrays to store.
@@ -49,7 +54,7 @@ class ArrayData(Data):
         import numpy
 
         super().__init__(**kwargs)
-        self._cached_arrays: dict[str, 'ndarray'] = {}
+        self._cached_arrays: dict[str, ndarray] = {}
 
         arrays = arrays if arrays is not None else {}
 
@@ -120,7 +125,7 @@ class ArrayData(Data):
         """
         return tuple(self.base.attributes.get(f'{self.array_prefix}{name}'))
 
-    def get_iterarrays(self) -> Iterator[tuple[str, 'ndarray']]:
+    def get_iterarrays(self) -> Iterator[tuple[str, ndarray]]:
         """
         Iterator that returns tuples (name, array) for each array stored in the node.
 
@@ -130,7 +135,7 @@ class ArrayData(Data):
         for name in self.get_arraynames():
             yield (name, self.get_array(name))
 
-    def get_array(self, name: str | None = None) -> 'ndarray':
+    def get_array(self, name: str | None = None) -> ndarray:
         """
         Return an array stored in the node
 
@@ -152,7 +157,7 @@ class ArrayData(Data):
 
             name = names[0]
 
-        def get_array_from_file(self, name: str) -> 'ndarray':
+        def get_array_from_file(self, name: str) -> ndarray:
             """Return the array stored in a .npy file"""
             filename = f'{name}.npy'
 
@@ -182,7 +187,7 @@ class ArrayData(Data):
         """
         self._cached_arrays = {}
 
-    def set_array(self, name: str, array: 'ndarray') -> None:
+    def set_array(self, name: str, array: ndarray) -> None:
         """
         Store a new numpy array inside the node. Possibly overwrite the array
         if it already existed.
@@ -271,7 +276,7 @@ class ArrayData(Data):
         return json.dumps(json_dict).encode('utf-8'), {}
 
 
-def clean_array(array: 'ndarray') -> list:
+def clean_array(array: ndarray) -> list:
     """
     Replacing np.nan and np.inf/-np.inf for Nones.
 

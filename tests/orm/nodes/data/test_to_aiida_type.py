@@ -8,6 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Test the :meth:`aiida.orm.data.base.to_aiida_type` serializer."""
+import numpy
 import pytest
 
 from aiida import orm
@@ -24,6 +25,7 @@ from aiida.common.links import LinkType
         (orm.List, [0, 1, 2]),
         (orm.Str, 'test-string'),
         (orm.EnumData, LinkType.RETURN),
+        (orm.ArrayData, numpy.array([[0, 0, 0], [1, 1, 1]])),
     )
 )
 # yapf: enable
@@ -31,4 +33,7 @@ def test_to_aiida_type(expected_type, value):
     """Test the ``to_aiida_type`` dispatch."""
     converted = orm.to_aiida_type(value)
     assert isinstance(converted, expected_type)
-    assert converted == value
+    if expected_type is orm.ArrayData:
+        assert converted.get_array().all() == value.all()
+    else:
+        assert converted == value

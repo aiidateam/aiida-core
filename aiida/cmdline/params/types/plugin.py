@@ -78,7 +78,7 @@ class PluginParamType(EntryPointType):
 
         super().__init__(*args, **kwargs)
 
-    def _get_valid_groups(self) -> tuple[str]:
+    def _get_valid_groups(self) -> tuple[str, ...]:
         """Get allowed groups for this instance"""
 
         group = self._input_group
@@ -109,7 +109,7 @@ class PluginParamType(EntryPointType):
         return tuple(groups)
 
     @functools.cached_property
-    def groups(self) -> tuple[str]:
+    def groups(self) -> tuple[str, ...]:
         return self._get_valid_groups()
 
     @functools.cached_property
@@ -168,7 +168,7 @@ class PluginParamType(EntryPointType):
         return possibilites
 
     def shell_complete(
-        self, ctx: click.Context, param: click.Parameter, incomplete: str
+        self, ctx: click.Context | None, param: click.Parameter | None, incomplete: str
     ) -> list[click.shell_completion.CompletionItem]:  # pylint: disable=unused-argument
         """
         Return possible completions based on an incomplete value
@@ -189,8 +189,6 @@ class PluginParamType(EntryPointType):
         :returns: the entry point if valid
         :raises: ValueError if the entry point string is invalid
         """
-        group = None
-        name = None
 
         entry_point_format = get_entry_point_string_format(entry_point_string)
 
@@ -226,14 +224,8 @@ class PluginParamType(EntryPointType):
         else:
             raise ValueError(f'invalid entry point string format: {entry_point_string}')
 
-        # If there is a factory for the entry point group, use that, otherwise use ``get_entry_point``
         try:
-            get_entry_point_partial = functools.partial(self._factory_mapping[group], load=False)
-        except KeyError:
-            get_entry_point_partial = functools.partial(get_entry_point, group)
-
-        try:
-            return get_entry_point_partial(name)
+            return get_entry_point(group, name)
         except exceptions.EntryPointError as exception:
             raise ValueError(exception)
 
@@ -241,7 +233,8 @@ class PluginParamType(EntryPointType):
         if group not in self.groups:
             raise ValueError(f'entry point group `{group}` is not supported by this parameter.')
 
-    def convert(self, value: t.Any, param: click.Parameter, ctx: click.Context) -> t.Any:
+    def convert(self, value: t.Any, param: click.Parameter | None,
+                ctx: click.Context | None) -> t.Union[EntryPoint, t.Any]:
         """
         Convert the string value to an entry point instance, if the value can be successfully parsed
         into an actual entry point. Will raise click.BadParameter if validation fails.

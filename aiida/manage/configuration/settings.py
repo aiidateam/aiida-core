@@ -10,7 +10,7 @@
 """Base settings required for the configuration of an AiiDA instance."""
 import os
 import pathlib
-import typing as t
+from typing import Optional
 import warnings
 
 DEFAULT_UMASK = 0o0077
@@ -24,10 +24,11 @@ DEFAULT_DAEMON_DIR_NAME = 'daemon'
 DEFAULT_DAEMON_LOG_DIR_NAME = 'log'
 DEFAULT_ACCESS_CONTROL_DIR_NAME = 'access'
 
-AIIDA_CONFIG_FOLDER: t.Optional[pathlib.Path] = None
-DAEMON_DIR: t.Optional[pathlib.Path] = None
-DAEMON_LOG_DIR: t.Optional[pathlib.Path] = None
-ACCESS_CONTROL_DIR: t.Optional[pathlib.Path] = None
+# Assign defaults which may be overriden in set_configuration_directory() below
+AIIDA_CONFIG_FOLDER: pathlib.Path = pathlib.Path(DEFAULT_AIIDA_PATH).expanduser() / DEFAULT_CONFIG_DIR_NAME
+DAEMON_DIR: pathlib.Path = AIIDA_CONFIG_FOLDER / DEFAULT_DAEMON_DIR_NAME
+DAEMON_LOG_DIR: pathlib.Path = DAEMON_DIR / DEFAULT_DAEMON_LOG_DIR_NAME
+ACCESS_CONTROL_DIR: pathlib.Path = AIIDA_CONFIG_FOLDER / DEFAULT_ACCESS_CONTROL_DIR_NAME
 
 
 def create_instance_directories() -> None:
@@ -66,7 +67,7 @@ def create_instance_directories() -> None:
         os.umask(umask)
 
 
-def set_configuration_directory(aiida_config_folder: t.Optional[pathlib.Path] = None) -> None:
+def set_configuration_directory(aiida_config_folder: Optional[pathlib.Path] = None) -> None:
     """Determine location of configuration directory, set related global variables and create instance directories.
 
     The location of the configuration folder will be determined and optionally created following these heuristics:
@@ -105,10 +106,7 @@ def set_configuration_directory(aiida_config_folder: t.Optional[pathlib.Path] = 
             # If the directory exists, we leave it set and break the loop
             if AIIDA_CONFIG_FOLDER.is_dir():
                 break
-
-    else:
-        # The `AIIDA_PATH` variable is not set so use the default path and try to create it if it does not exist
-        AIIDA_CONFIG_FOLDER = pathlib.Path(DEFAULT_AIIDA_PATH).expanduser() / DEFAULT_CONFIG_DIR_NAME
+    # else: we use the default path defined at the top of this module
 
     DAEMON_DIR = AIIDA_CONFIG_FOLDER / DEFAULT_DAEMON_DIR_NAME
     DAEMON_LOG_DIR = DAEMON_DIR / DEFAULT_DAEMON_LOG_DIR_NAME

@@ -10,13 +10,21 @@
 """
 Module for custom click param type identifier
 """
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from functools import cached_property
+import typing as t
 
 import click
 
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.plugins.entry_point import get_entry_point_from_string
+
+if t.TYPE_CHECKING:
+    from importlib_metadata import EntryPoint
+
+    from aiida.orm.utils.loaders import OrmEntityLoader
 
 __all__ = ('IdentifierParamType',)
 
@@ -31,7 +39,7 @@ class IdentifierParamType(click.ParamType, ABC):
     which should be a subclass of `aiida.orm.utils.loaders.OrmEntityLoader` for the corresponding orm class.
     """
 
-    def __init__(self, sub_classes=None):
+    def __init__(self, sub_classes: tuple[str, ...] | None = None):
         """
         Construct the parameter type, optionally specifying a tuple of entry points that reference classes
         that should be a sub class of the base orm class of the orm class loader. The classes pointed to by
@@ -49,11 +57,11 @@ class IdentifierParamType(click.ParamType, ABC):
         if sub_classes is not None and not isinstance(sub_classes, tuple):
             raise TypeError('sub_classes should be a tuple of entry point strings')
 
-        self._sub_classes = None
+        self._sub_classes: tuple | None = None
         self._entry_point_strings = sub_classes
 
     @cached_property
-    def _entry_points(self):
+    def _entry_points(self) -> list[EntryPoint]:
         """Allowed entry points, loaded on demand"""
         from aiida.common import exceptions
 
@@ -72,8 +80,8 @@ class IdentifierParamType(click.ParamType, ABC):
 
     @property
     @abstractmethod
-    @with_dbenv()
-    def orm_class_loader(self):
+    @with_dbenv()  # type: ignore[misc]
+    def orm_class_loader(self) -> OrmEntityLoader:
         """
         Return the orm entity loader class, which should be a subclass of OrmEntityLoader. This class is supposed
         to be used to load the entity for a given identifier
@@ -81,8 +89,8 @@ class IdentifierParamType(click.ParamType, ABC):
         :return: the orm entity loader class for this ParamType
         """
 
-    @with_dbenv()
-    def convert(self, value, param, ctx):
+    @with_dbenv()  # type: ignore[misc]
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context) -> t.Any:
         """
         Attempt to convert the given value to an instance of the orm class using the orm class loader.
 

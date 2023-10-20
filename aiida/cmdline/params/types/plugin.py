@@ -78,8 +78,9 @@ class PluginParamType(EntryPointType):
 
         super().__init__(*args, **kwargs)
 
-    def _get_valid_groups(self) -> tuple[str, ...]:
-        """Get allowed groups for this instance"""
+    @functools.cached_property
+    def groups(self) -> tuple[str, ...]:
+        """Returns a tuple of valid groups for this instance"""
 
         group = self._input_group
         valid_entry_point_groups = get_entry_point_groups()
@@ -107,10 +108,6 @@ class PluginParamType(EntryPointType):
             groups.append(grp)
 
         return tuple(groups)
-
-    @functools.cached_property
-    def groups(self) -> tuple[str, ...]:
-        return self._get_valid_groups()
 
     @functools.cached_property
     def _entry_points(self) -> list[tuple[str, EntryPoint]]:

@@ -43,7 +43,6 @@ def eps() -> EntryPoints:
     which will always iterate over all entry points since it looks for
     possible duplicate entries.
     """
-    # raise ValueError("eps!")
     from importlib_metadata import EntryPoints, entry_points
     all_eps = entry_points()
     return EntryPoints(sorted(all_eps, key=lambda x: x.group))
@@ -55,9 +54,6 @@ def eps_select(group: str, name: str | None = None) -> EntryPoints:
     A thin wrapper around entry_points.select() calls, which are
     expensive so we want to cache them.
     """
-    # msg = f"{group=} {name=}"
-    # print(msg)
-    # raise ValueError(msg)
     if name is None:
         return eps().select(group=group)
     return eps().select(group=group, name=name)

@@ -32,8 +32,7 @@ class TestIdentifierParamType:
         with pytest.raises(TypeError):
             NodeParamType(sub_classes='aiida.data:core.structure')
 
-        # NOTE: We load and validate entry points lazily so we need
-        # to access them to raise.
+        # NOTE: We load and validate entry points lazily so we need to access them to raise.
         with pytest.raises(TypeError):
             npt = NodeParamType(sub_classes=(None,))
             npt._entry_points  # pylint: disable=protected-access,pointless-statement
@@ -42,8 +41,7 @@ class TestIdentifierParamType:
         """
         The sub_classes keyword argument should expect a tuple of valid entry point strings
         """
-        # NOTE: We load and validate entry points lazily so we need
-        # to access them to raise.
+        # NOTE: We load and validate entry points lazily so we need to access them to raise.
         with pytest.raises(ValueError):
             npt = NodeParamType(sub_classes=('aiida.data.structure',))
             npt._entry_points  # pylint: disable=protected-access,pointless-statement

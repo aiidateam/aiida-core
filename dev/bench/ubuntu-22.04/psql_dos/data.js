@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1697726764236,
+  "lastUpdate": 1697783075514,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -18668,6 +18668,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.0029029",
             "group": "node",
             "extra": "mean: 27.575 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "2.60",
+          "cores": 2,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.10.13",
+          "metadata": "postgres:12.14, rabbitmq:3.8.14-management"
+        },
+        "commit": {
+          "id": "b0546e8ed12b0982617293ab4a03ba3ec2d8ea44",
+          "message": "Repository: Add the `as_path` context manager (#6151)\n\nThe node repository interface intentionally does not provide access to\r\nits file objects through filepaths on the file system. This is because,\r\nfor efficiency reasons, the content of a repository may not actually be\r\nstored as individual files on a file system, but for example are stored\r\nin an object store.\r\n\r\nTherefore, the contents of the repository can only be retrieved as a\r\nfile-like object or read as a string or list of bytes into memory.\r\nCertain use-cases require a file to be made available through a filepath.\r\nAn example is when it needs to be passed to an API that only accepts a\r\nfilepath, such as `numpy.loadfromtxt`.\r\n\r\nCurrently, the user will have to manually copy the content of the repo's\r\ncontent to a temporary file on disk, and pass the temporary filepath.\r\nThis results in clients having to often resport to the following snippet:\r\n\r\n    import pathlib\r\n    import shutil\r\n    import tempfile\r\n\r\n    with tempfile.TemporaryDirectory() as tmp_path:\r\n\r\n        # Copy the entire content to the temporary folder\r\n        dirpath = pathlib.Path(tmp_path)\r\n        node.base.repository.copy_tree(dirpath)\r\n\r\n        # Or copy the content of a file. Should use streaming\r\n        # to avoid reading everything into memory\r\n        filepath = (dirpath / 'some_file.txt')\r\n        with filepath.open('rb') as target:\r\n            with node.base.repository.open('rb') as source:\r\n                shutil.copyfileobj(source, target)\r\n\r\n        # Now use `filepath` to library call, e.g.\r\n        numpy.loadtxt(filepath)\r\n\r\nThis logic is now provided under the `as_path` context manager. This\r\nwill make it easy to access repository content as files on the local\r\nfile system. The snippet above is simplified to:\r\n\r\n    with node.base.repository.as_path() as filepath:\r\n        numpy.loadtxt(filepath)\r\n\r\nThe method is exposed directly in the interface of the `FolderData` and\r\n`SinglfileData` data types. A warning is added to the docs explaining\r\nthe inefficiency of the content having to be read and written to a\r\ntemporary directory first, encouraging it only to be used when the\r\nalternative is not an option.",
+          "timestamp": "2023-10-20T08:14:44+02:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/b0546e8ed12b0982617293ab4a03ba3ec2d8ea44",
+          "distinct": true,
+          "tree_id": "c3b60bd3533be2e19eec699ffd7b0bf7aad0cf35"
+        },
+        "date": 1697783068931,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 2.807325236556077,
+            "unit": "iter/sec",
+            "range": "stddev: 0.081710",
+            "group": "import-export",
+            "extra": "mean: 356.21 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 2.6570415507720555,
+            "unit": "iter/sec",
+            "range": "stddev: 0.094236",
+            "group": "import-export",
+            "extra": "mean: 376.36 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 3.7914427452558717,
+            "unit": "iter/sec",
+            "range": "stddev: 0.089152",
+            "group": "import-export",
+            "extra": "mean: 263.75 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 3.670296409767562,
+            "unit": "iter/sec",
+            "range": "stddev: 0.083684",
+            "group": "import-export",
+            "extra": "mean: 272.46 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 2.9701700343486976,
+            "unit": "iter/sec",
+            "range": "stddev: 0.013690",
+            "group": "engine",
+            "extra": "mean: 336.68 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.6288695155678866,
+            "unit": "iter/sec",
+            "range": "stddev: 0.039558",
+            "group": "engine",
+            "extra": "mean: 1.5902 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.747422618505352,
+            "unit": "iter/sec",
+            "range": "stddev: 0.052602",
+            "group": "engine",
+            "extra": "mean: 1.3379 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.1688653396894851,
+            "unit": "iter/sec",
+            "range": "stddev: 0.18459",
+            "group": "engine",
+            "extra": "mean: 5.9219 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.18786841286959852,
+            "unit": "iter/sec",
+            "range": "stddev: 0.12560",
+            "group": "engine",
+            "extra": "mean: 5.3229 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.4871892164704374,
+            "unit": "iter/sec",
+            "range": "stddev: 0.032504",
+            "group": "engine",
+            "extra": "mean: 402.06 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.5573160265983852,
+            "unit": "iter/sec",
+            "range": "stddev: 0.095487",
+            "group": "engine",
+            "extra": "mean: 1.7943 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.6385234320334202,
+            "unit": "iter/sec",
+            "range": "stddev: 0.066317",
+            "group": "engine",
+            "extra": "mean: 1.5661 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.15746508678981985,
+            "unit": "iter/sec",
+            "range": "stddev: 0.10726",
+            "group": "engine",
+            "extra": "mean: 6.3506 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.17665355657563914,
+            "unit": "iter/sec",
+            "range": "stddev: 0.098335",
+            "group": "engine",
+            "extra": "mean: 5.6608 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 304.397953812355,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00066278",
+            "group": "node",
+            "extra": "mean: 3.2852 msec\nrounds: 170"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 114.85766854039602,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0014174",
+            "group": "node",
+            "extra": "mean: 8.7064 msec\nrounds: 102"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 65.212399890547,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0030357",
+            "group": "node",
+            "extra": "mean: 15.335 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 202.30197720553417,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00070151",
+            "group": "node",
+            "extra": "mean: 4.9431 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 41.68241930393417,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0020874",
+            "group": "node",
+            "extra": "mean: 23.991 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 36.02242857987692,
+            "unit": "iter/sec",
+            "range": "stddev: 0.030698",
+            "group": "node",
+            "extra": "mean: 27.760 msec\nrounds: 100"
           }
         ]
       }

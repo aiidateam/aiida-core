@@ -8,7 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Click parameter type for AiiDA Plugins."""
+from __future__ import annotations
+
 import functools
+import typing as t
 
 import click
 
@@ -26,6 +29,9 @@ from aiida.plugins.entry_point import (
 )
 
 from .strings import EntryPointType
+
+if t.TYPE_CHECKING:
+    from importlib_metadata import EntryPoint
 
 __all__ = ('PluginParamType',)
 
@@ -61,10 +67,10 @@ class PluginParamType(EntryPointType):
         'aiida.workflows': factories.WorkflowFactory,
     }
 
-    def __init__(self, group=None, load=False, *args, **kwargs):
+    def __init__(self, group: str | tuple[str] | None = None, load: bool = False, *args, **kwargs):
         """
-        Validate that group is either a string or a tuple of valid entry point groups, or if it
-        is not specified use the tuple of all recognized entry point groups.
+        group should be either a string or a tuple of valid entry point groups.
+        If it is not specified we use the tuple of all recognized entry point groups.
         """
         # pylint: disable=keyword-arg-before-vararg
         self.load = load
@@ -72,7 +78,7 @@ class PluginParamType(EntryPointType):
 
         super().__init__(*args, **kwargs)
 
-    def _get_valid_groups(self):
+    def _get_valid_groups(self) -> tuple[str]:
         """Get allowed groups for this instance"""
 
         group = self._input_group
@@ -103,28 +109,28 @@ class PluginParamType(EntryPointType):
         return tuple(groups)
 
     @functools.cached_property
-    def groups(self) -> tuple:
+    def groups(self) -> tuple[str]:
         return self._get_valid_groups()
 
     @functools.cached_property
-    def _entry_points(self) -> list[tuple]:
+    def _entry_points(self) -> list[tuple[str, EntryPoint]]:
         return [(group, entry_point) for group in self.groups for entry_point in get_entry_points(group)]
 
     @functools.cached_property
     def _entry_point_names(self) -> list[str]:
-        return [entry_point.name for group in self.groups for entry_point in get_entry_points(group)]
+        return [entry_point.name for _, entry_point in self._entry_points]
 
     @property
-    def has_potential_ambiguity(self):
+    def has_potential_ambiguity(self) -> bool:
         """
         Returns whether the set of supported entry point groups can lead to ambiguity when only an entry point name
         is specified. This will happen if one ore more groups share an entry point with a common name
         """
         return len(self._entry_point_names) != len(set(self._entry_point_names))
 
-    def get_valid_arguments(self):
+    def get_valid_arguments(self) -> list[str]:
         """
-        Return a list of all available plugins for the groups configured for this PluginParamType instance.
+        Return a list of all available plugin names for the groups configured for this PluginParamType instance.
         If the entry point names are not unique, because there are multiple groups that contain an entry
         point that has an identical name, we need to prefix the names with the full group name
 
@@ -136,7 +142,7 @@ class PluginParamType(EntryPointType):
 
         return sorted(self._entry_point_names)
 
-    def get_possibilities(self, incomplete=''):
+    def get_possibilities(self, incomplete: str = '') -> list[str]:
         """
         Return a list of plugins starting with incomplete
         """
@@ -161,7 +167,9 @@ class PluginParamType(EntryPointType):
 
         return possibilites
 
-    def shell_complete(self, ctx, param, incomplete):  # pylint: disable=unused-argument
+    def shell_complete(
+        self, ctx: click.Context, param: click.Parameter, incomplete: str
+    ) -> list[click.shell_completion.CompletionItem]:  # pylint: disable=unused-argument
         """
         Return possible completions based on an incomplete value
 
@@ -169,10 +177,10 @@ class PluginParamType(EntryPointType):
         """
         return [click.shell_completion.CompletionItem(p) for p in self.get_possibilities(incomplete=incomplete)]
 
-    def get_missing_message(self, param):  # pylint: disable=unused-argument
+    def get_missing_message(self, param: click.Parameter) -> str:  # pylint: disable=unused-argument
         return 'Possible arguments are:\n\n' + '\n'.join(self.get_valid_arguments())
 
-    def get_entry_point_from_string(self, entry_point_string):
+    def get_entry_point_from_string(self, entry_point_string: str) -> EntryPoint:
         """
         Validate a given entry point string, which means that it should have a valid entry point string format
         and that the entry point unambiguously corresponds to an entry point in the groups configured for this
@@ -229,11 +237,11 @@ class PluginParamType(EntryPointType):
         except exceptions.EntryPointError as exception:
             raise ValueError(exception)
 
-    def validate_entry_point_group(self, group):
+    def validate_entry_point_group(self, group: str) -> None:
         if group not in self.groups:
             raise ValueError(f'entry point group `{group}` is not supported by this parameter.')
 
-    def convert(self, value, param, ctx):
+    def convert(self, value: t.Any, param: click.Parameter, ctx: click.Context) -> t.Any:
         """
         Convert the string value to an entry point instance, if the value can be successfully parsed
         into an actual entry point. Will raise click.BadParameter if validation fails.

@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import functools
 import re
+import typing as t
 
 import click
 
@@ -56,7 +57,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         self.factory = ENTRY_POINT_GROUP_FACTORY_MAPPING[entry_point_group]
         self.shared_options = shared_options
 
-    def list_commands(self, ctx) -> list[str]:
+    def list_commands(self, ctx: click.Context) -> list[str]:
         """Return the sorted list of subcommands for this group.
 
         :param ctx: The :class:`click.Context`.
@@ -68,7 +69,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         ])
         return sorted(commands)
 
-    def get_command(self, ctx, cmd_name):
+    def get_command(self, ctx: click.Context, cmd_name) -> t.Any:
         """Return the command with the given name.
 
         :param ctx: The :class:`click.Context`.
@@ -81,7 +82,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             command = super().get_command(ctx, cmd_name)
         return command
 
-    def create_command(self, ctx, entry_point):
+    def create_command(self, ctx: click.Context, entry_point: str) -> t.Any:
         """Create a subcommand for the given ``entry_point``."""
         cls = self.factory(entry_point)
         command = functools.partial(self.command, ctx, cls)

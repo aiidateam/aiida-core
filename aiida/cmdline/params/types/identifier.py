@@ -40,8 +40,7 @@ class IdentifierParamType(click.ParamType, ABC):
 
         To prevent having to load the database environment at import time, the actual loading of the entry points
         is deferred until the call to `convert` is made. This is to keep the command line autocompletion light
-        and responsive. The entry point strings will be validated, however, to see if the correspond to known
-        entry points.
+        and responsive. We also postpone the validation of entry point strings for the same reason.
 
         :param sub_classes: a tuple of entry point strings that can narrow the set of orm classes that values
             will be mapped upon. These classes have to be strict sub classes of the base orm class defined

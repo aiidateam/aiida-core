@@ -6,6 +6,7 @@ import contextlib
 import copy
 import io
 import pathlib
+import shutil
 import tempfile
 from typing import TYPE_CHECKING, Any, BinaryIO, Iterable, Iterator, TextIO, Union
 
@@ -164,7 +165,7 @@ class NodeRepository:
         return self._repository.list_object_names(path)
 
     @contextlib.contextmanager
-    def open(self, path: str, mode='r') -> Iterator[BinaryIO | TextIO]:
+    def open(self, path: FilePath, mode='r') -> Iterator[BinaryIO | TextIO]:
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
@@ -185,6 +186,32 @@ class NodeRepository:
                 yield io.StringIO(handle.read().decode('utf-8'))
             else:
                 yield handle
+
+    @contextlib.contextmanager
+    def as_path(self, path: FilePath | None = None) -> Iterator[pathlib.Path]:
+        """Make the contents of the repository available as a normal filepath on the local file system.
+
+        :param path: optional relative path of the object within the repository.
+        :return: the filepath of the content of the repository or object if ``path`` is specified.
+        :raises TypeError: if the path is not a string or ``Path``, or is an absolute path.
+        :raises FileNotFoundError: if no object exists for the given path.
+        """
+        obj = self.get_object(path)
+
+        with tempfile.TemporaryDirectory() as tmp_path:
+
+            dirpath = pathlib.Path(tmp_path)
+
+            if obj.is_dir():
+                self.copy_tree(dirpath, path)
+                yield dirpath
+            else:
+                filepath = dirpath / obj.name
+                assert path is not None
+                with self.open(path, mode='rb') as source:
+                    with filepath.open('wb') as target:
+                        shutil.copyfileobj(source, target)  # type: ignore[misc]
+                yield filepath
 
     def get_object(self, path: FilePath | None = None) -> File:
         """Return the object at the given path.

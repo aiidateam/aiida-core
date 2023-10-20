@@ -106,7 +106,9 @@ def set_configuration_directory(aiida_config_folder: Optional[pathlib.Path] = No
             # If the directory exists, we leave it set and break the loop
             if AIIDA_CONFIG_FOLDER.is_dir():
                 break
-    # else: we use the default path defined at the top of this module
+    else:
+        # The `AIIDA_PATH` variable is not set so use the default path and try to create it if it does not exist
+        AIIDA_CONFIG_FOLDER = pathlib.Path(DEFAULT_AIIDA_PATH).expanduser() / DEFAULT_CONFIG_DIR_NAME
 
     DAEMON_DIR = AIIDA_CONFIG_FOLDER / DEFAULT_DAEMON_DIR_NAME
     DAEMON_LOG_DIR = DAEMON_DIR / DEFAULT_DAEMON_LOG_DIR_NAME

@@ -51,9 +51,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         **kwargs
     ):
         super().__init__(**kwargs)
-        # NOTE: We should probably fix this properly, mypy complains:
-        # "error: Cannot assign to a method"
-        self.command = command  # type: ignore[assignment]
+        self._command = command
         self.entry_point_group = entry_point_group
         self.entry_point_name_filter = entry_point_name_filter
         self.factory = ENTRY_POINT_GROUP_FACTORY_MAPPING[entry_point_group]
@@ -87,7 +85,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
     def create_command(self, ctx: click.Context, entry_point: str) -> click.Command:
         """Create a subcommand for the given ``entry_point``."""
         cls = self.factory(entry_point)
-        command = functools.partial(self.command, ctx, cls)
+        command = functools.partial(self._command, ctx, cls)
         command.__doc__ = cls.__doc__
         return click.command(entry_point)(self.create_options(entry_point)(command))
 

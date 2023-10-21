@@ -83,7 +83,7 @@ class VerdiCommandGroup(click.Group):
     context_class = VerdiContext
 
     @staticmethod
-    def add_verbosity_option(cmd: click.Command):
+    def add_verbosity_option(cmd: click.Command) -> click.Command:
         """Apply the ``verbosity`` option to the command, which is common to all ``verdi`` commands."""
         # Only apply the option if it hasn't been already added in a previous call.
         if 'verbosity' not in [param.name for param in cmd.params]:
@@ -91,7 +91,7 @@ class VerdiCommandGroup(click.Group):
 
         return cmd
 
-    def fail_with_suggestions(self, ctx: click.Context, cmd_name: str):
+    def fail_with_suggestions(self, ctx: click.Context, cmd_name: str) -> None:
         """Fail the command while trying to suggest commands to resemble the requested ``cmd_name``."""
         # We might get better results with the Levenshtein distance or more advanced methods implemented in FuzzyWuzzy
         # or similar libs, but this is an easy win for now.

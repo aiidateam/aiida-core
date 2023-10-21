@@ -93,7 +93,6 @@ repos:
                 aiida/cmdline/commands/cmd_node.py|
                 aiida/cmdline/commands/cmd_shell.py|
                 aiida/cmdline/commands/cmd_storage.py|
-                aiida/cmdline/groups/dynamic.py|
                 aiida/cmdline/params/options/commands/setup.py|
                 aiida/cmdline/params/options/interactive.py|
                 aiida/cmdline/params/options/main.py|

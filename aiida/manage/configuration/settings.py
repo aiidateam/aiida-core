@@ -8,9 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Base settings required for the configuration of an AiiDA instance."""
+from __future__ import annotations
+
 import os
 import pathlib
-from typing import Optional
 import warnings
 
 DEFAULT_UMASK = 0o0077
@@ -67,7 +68,7 @@ def create_instance_directories() -> None:
         os.umask(umask)
 
 
-def set_configuration_directory(aiida_config_folder: Optional[pathlib.Path] = None) -> None:
+def set_configuration_directory(aiida_config_folder: pathlib.Path | None = None) -> None:
     """Determine location of configuration directory, set related global variables and create instance directories.
 
     The location of the configuration folder will be determined and optionally created following these heuristics:

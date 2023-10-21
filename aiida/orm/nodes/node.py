@@ -539,7 +539,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
 
         self._store(clean=False)
         self._add_outputs_from_cache(cache_node)
-        self.base.extras.set('_aiida_cached_from', cache_node.uuid)
+        self.base.extras.set(self.base.caching.CACHED_FROM_KEY, cache_node.uuid)
 
     def _add_outputs_from_cache(self, cache_node: 'Node') -> None:
         """Replicate the output links and nodes from the cached node onto this node."""

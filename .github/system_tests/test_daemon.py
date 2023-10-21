@@ -37,6 +37,7 @@ from aiida.engine.persistence import ObjectLoader
 from aiida.engine.processes import CalcJob, Process
 from aiida.manage.caching import enable_caching
 from aiida.orm import CalcJobNode, Dict, Int, List, Str, load_code, load_node
+from aiida.orm.nodes.caching import NodeCaching
 from aiida.plugins import CalculationFactory, WorkflowFactory
 from aiida.workflows.arithmetic.add_multiply import add, add_multiply
 from tests.utils.memory import get_instances  # pylint: disable=import-error
@@ -207,14 +208,14 @@ def validate_cached(cached_calcs):
             print_report(calc.pk)
             valid = False
 
-        if '_aiida_cached_from' not in calc.base.extras or calc.base.caching.get_hash(
+        if NodeCaching.CACHED_FROM_KEY not in calc.base.extras or calc.base.caching.get_hash(
         ) != calc.base.extras.get('_aiida_hash'):
             print(f'Cached calculation<{calc.pk}> has invalid hash')
             print_report(calc.pk)
             valid = False
 
         if isinstance(calc, CalcJobNode):
-            original_calc = load_node(calc.base.extras.get('_aiida_cached_from'))
+            original_calc = load_node(calc.base.extras.get(NodeCaching.CACHED_FROM_KEY))
             files_original = original_calc.base.repository.list_object_names()
             files_cached = calc.base.repository.list_object_names()
 

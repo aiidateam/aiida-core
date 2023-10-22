@@ -15,8 +15,6 @@ import collections
 import pathlib
 from typing import TYPE_CHECKING
 
-import click
-
 from aiida.common import exceptions
 from aiida.common.folders import Folder
 from aiida.common.lang import type_check
@@ -309,6 +307,8 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     @staticmethod
     def cli_validate_label_uniqueness(_, __, value):
         """Validate the uniqueness of the label of the code."""
+        import click
+
         from aiida.orm import load_code
 
         try:
@@ -330,6 +330,8 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     @classmethod
     def _get_cli_options(cls) -> dict:
         """Return the CLI options that would allow to create an instance of this class."""
+        import click
+
         from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
 
         return {

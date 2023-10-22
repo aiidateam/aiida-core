@@ -21,8 +21,6 @@ from __future__ import annotations
 
 import pathlib
 
-import click
-
 from aiida.common import exceptions
 from aiida.common.folders import Folder
 from aiida.common.lang import type_check
@@ -148,6 +146,8 @@ class PortableCode(Code):
     @classmethod
     def _get_cli_options(cls) -> dict:
         """Return the CLI options that would allow to create an instance of this class."""
+        import click
+
         options = {
             'filepath_executable': {
                 'short_name': '-X',

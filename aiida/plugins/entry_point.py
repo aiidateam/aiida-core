@@ -13,18 +13,18 @@ from __future__ import annotations
 import enum
 import functools
 import traceback
-from typing import Any, List, Optional, Sequence, Set, Tuple
-
-# importlib.metadata was introduced into the standard library in python 3.8,
-# but was then updated in python 3.10 to use an improved API.
-# So for now we use the backport importlib_metadata package.
-from importlib_metadata import EntryPoint, EntryPoints
-from importlib_metadata import entry_points as _eps
+from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Set, Tuple
 
 from aiida.common.exceptions import LoadingEntryPointError, MissingEntryPointError, MultipleEntryPointError
 from aiida.common.warnings import warn_deprecation
 
 from . import factories
+
+if TYPE_CHECKING:
+    # importlib.metadata was introduced into the standard library in python 3.8,
+    # but was then updated in python 3.10 to use an improved API.
+    # So for now we use the backport importlib_metadata package.
+    from importlib_metadata import EntryPoint, EntryPoints
 
 __all__ = ('load_entry_point', 'load_entry_point_from_string', 'parse_entry_point', 'get_entry_points')
 
@@ -43,8 +43,9 @@ def eps() -> EntryPoints:
     which will always iterate over all entry points since it looks for
     possible duplicate entries.
     """
-    entry_points = _eps()
-    return EntryPoints(sorted(entry_points, key=lambda x: x.group))
+    from importlib_metadata import EntryPoints, entry_points
+    all_eps = entry_points()
+    return EntryPoints(sorted(all_eps, key=lambda x: x.group))
 
 
 @functools.lru_cache(maxsize=100)
@@ -132,6 +133,7 @@ ENTRY_POINT_GROUP_FACTORY_MAPPING = {
 
 def parse_entry_point(group: str, spec: str) -> EntryPoint:
     """Return an entry point, given its group and spec (as formatted in the setup)"""
+    from importlib_metadata import EntryPoint
     name, value = spec.split('=', maxsplit=1)
     return EntryPoint(group=group, name=name.strip(), value=value.strip())
 

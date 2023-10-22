@@ -10,7 +10,6 @@
 """Reusable command line interface options for the setup commands."""
 import functools
 import getpass
-import hashlib
 
 import click
 
@@ -94,6 +93,8 @@ def get_quicksetup_database_name(ctx, param, value):  # pylint: disable=unused-a
     :param ctx: click context which should contain the contextual parameters
     :return: the database name
     """
+    import hashlib
+
     if value is not None:
         return value
 
@@ -114,6 +115,8 @@ def get_quicksetup_username(ctx, param, value):  # pylint: disable=unused-argume
     :param ctx: click context which should contain the contextual parameters
     :return: the username
     """
+    import hashlib
+
     if value is not None:
         return value
 

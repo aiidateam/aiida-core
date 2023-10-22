@@ -8,9 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Base settings required for the configuration of an AiiDA instance."""
+from __future__ import annotations
+
 import os
 import pathlib
-import typing
 import warnings
 
 DEFAULT_UMASK = 0o0077
@@ -24,13 +25,14 @@ DEFAULT_DAEMON_DIR_NAME = 'daemon'
 DEFAULT_DAEMON_LOG_DIR_NAME = 'log'
 DEFAULT_ACCESS_CONTROL_DIR_NAME = 'access'
 
-AIIDA_CONFIG_FOLDER: typing.Optional[pathlib.Path] = None
-DAEMON_DIR: typing.Optional[pathlib.Path] = None
-DAEMON_LOG_DIR: typing.Optional[pathlib.Path] = None
-ACCESS_CONTROL_DIR: typing.Optional[pathlib.Path] = None
+# Assign defaults which may be overriden in set_configuration_directory() below
+AIIDA_CONFIG_FOLDER: pathlib.Path = pathlib.Path(DEFAULT_AIIDA_PATH).expanduser() / DEFAULT_CONFIG_DIR_NAME
+DAEMON_DIR: pathlib.Path = AIIDA_CONFIG_FOLDER / DEFAULT_DAEMON_DIR_NAME
+DAEMON_LOG_DIR: pathlib.Path = DAEMON_DIR / DEFAULT_DAEMON_LOG_DIR_NAME
+ACCESS_CONTROL_DIR: pathlib.Path = AIIDA_CONFIG_FOLDER / DEFAULT_ACCESS_CONTROL_DIR_NAME
 
 
-def create_instance_directories():
+def create_instance_directories() -> None:
     """Create the base directories required for a new AiiDA instance.
 
     This will create the base AiiDA directory defined by the AIIDA_CONFIG_FOLDER variable, unless it already exists.
@@ -38,7 +40,7 @@ def create_instance_directories():
     """
     from aiida.common import ConfigurationError
 
-    directory_base = pathlib.Path(AIIDA_CONFIG_FOLDER).expanduser()
+    directory_base = AIIDA_CONFIG_FOLDER.expanduser()
     directory_daemon = directory_base / DAEMON_DIR
     directory_daemon_log = directory_base / DAEMON_LOG_DIR
     directory_access = directory_base / ACCESS_CONTROL_DIR
@@ -66,7 +68,7 @@ def create_instance_directories():
         os.umask(umask)
 
 
-def set_configuration_directory(aiida_config_folder: pathlib.Path = None):
+def set_configuration_directory(aiida_config_folder: pathlib.Path | None = None) -> None:
     """Determine location of configuration directory, set related global variables and create instance directories.
 
     The location of the configuration folder will be determined and optionally created following these heuristics:
@@ -86,11 +88,11 @@ def set_configuration_directory(aiida_config_folder: pathlib.Path = None):
     global DAEMON_LOG_DIR
     global ACCESS_CONTROL_DIR
 
-    environment_variable = os.environ.get(DEFAULT_AIIDA_PATH_VARIABLE, None)
-
     if aiida_config_folder is not None:
+
         AIIDA_CONFIG_FOLDER = aiida_config_folder
-    elif environment_variable:
+
+    elif environment_variable := os.environ.get(DEFAULT_AIIDA_PATH_VARIABLE):
 
         # Loop over all the paths in the `AIIDA_PATH` variable to see if any of them contain a configuration folder
         for base_dir_path in [path for path in environment_variable.split(':') if path]:
@@ -105,9 +107,8 @@ def set_configuration_directory(aiida_config_folder: pathlib.Path = None):
             # If the directory exists, we leave it set and break the loop
             if AIIDA_CONFIG_FOLDER.is_dir():
                 break
-
     else:
-        # The `AIIDA_PATH` variable is not set, so default to the default path and try to create it if it does not exist
+        # The `AIIDA_PATH` variable is not set so use the default path and try to create it if it does not exist
         AIIDA_CONFIG_FOLDER = pathlib.Path(DEFAULT_AIIDA_PATH).expanduser() / DEFAULT_CONFIG_DIR_NAME
 
     DAEMON_DIR = AIIDA_CONFIG_FOLDER / DEFAULT_DAEMON_DIR_NAME

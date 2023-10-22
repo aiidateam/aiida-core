@@ -23,18 +23,16 @@ from aiida.manage.configuration.options import get_option
 @pytest.fixture
 def cache_aiida_path_variable():
     """Fixture that will store the ``AIIDA_PATH`` environment variable and restore it after the yield."""
-    aiida_path_original = os.environ.get(settings.DEFAULT_AIIDA_PATH_VARIABLE, None)
+    aiida_path_original = os.environ.get(settings.DEFAULT_AIIDA_PATH_VARIABLE)
 
-    try:
-        yield
-    finally:
-        if aiida_path_original is not None:
-            os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = aiida_path_original
-        else:
-            try:
-                del os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE]
-            except KeyError:
-                pass
+    yield
+    if aiida_path_original is not None:
+        os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = aiida_path_original
+    else:
+        try:
+            del os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE]
+        except KeyError:
+            pass
 
     # Make sure to reset the global variables set by the following call that are dependent on the environment variable
     # ``DEFAULT_AIIDA_PATH_VARIABLE``. It may have been changed by a test using this fixture.

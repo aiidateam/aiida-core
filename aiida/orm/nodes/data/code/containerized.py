@@ -16,8 +16,6 @@ from __future__ import annotations
 
 import pathlib
 
-import click
-
 from aiida.common.lang import type_check
 
 from .installed import InstalledCode
@@ -108,6 +106,8 @@ class ContainerizedCode(InstalledCode):
     @classmethod
     def _get_cli_options(cls) -> dict:
         """Return the CLI options that would allow to create an instance of this class."""
+        import click
+
         options = {
             'engine_command': {
                 'short_name': '-E',

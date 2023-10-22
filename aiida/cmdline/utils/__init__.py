@@ -28,6 +28,7 @@ __all__ = (
     'echo_info',
     'echo_report',
     'echo_success',
+    'echo_tabulate',
     'echo_warning',
     'format_call_graph',
     'is_verbose',

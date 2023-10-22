@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Command for `verdi plugins`."""
-import inspect
 
 import click
 
@@ -27,6 +26,8 @@ def verdi_plugin():
 @click.argument('entry_point', type=click.STRING, required=False)
 def plugin_list(entry_point_group, entry_point):
     """Display a list of all available plugins."""
+    import inspect
+
     from aiida.cmdline.utils.common import print_process_info
     from aiida.common import EntryPointError
     from aiida.engine import Process

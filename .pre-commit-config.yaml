@@ -93,13 +93,11 @@ repos:
                 aiida/cmdline/commands/cmd_node.py|
                 aiida/cmdline/commands/cmd_shell.py|
                 aiida/cmdline/commands/cmd_storage.py|
-                aiida/cmdline/groups/dynamic.py|
                 aiida/cmdline/params/options/commands/setup.py|
                 aiida/cmdline/params/options/interactive.py|
                 aiida/cmdline/params/options/main.py|
                 aiida/cmdline/params/options/multivalue.py|
                 aiida/cmdline/params/types/group.py|
-                aiida/cmdline/params/types/plugin.py|
                 aiida/cmdline/utils/ascii_vis.py|
                 aiida/cmdline/utils/common.py|
                 aiida/cmdline/utils/echo.py|
@@ -115,7 +113,6 @@ repos:
                 aiida/manage/configuration/__init__.py|
                 aiida/manage/configuration/config.py|
                 aiida/manage/configuration/profile.py|
-                aiida/manage/configuration/settings.py|
                 aiida/manage/external/rmq/launcher.py|
                 aiida/manage/tests/main.py|
                 aiida/manage/tests/pytest_fixtures.py|

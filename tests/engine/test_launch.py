@@ -82,6 +82,35 @@ def test_submit_wait(aiida_local_code_factory):
     assert node.is_finished_ok, node.exit_code
 
 
+def test_await_processes_invalid():
+    """Test :func:`aiida.engine.launch.await_processes` for invalid inputs."""
+    with pytest.raises(TypeError):
+        launch.await_processes(None)
+
+    with pytest.raises(TypeError):
+        launch.await_processes([orm.Data()])
+
+    with pytest.raises(TypeError):
+        launch.await_processes(orm.ProcessNode())
+
+
+@pytest.mark.usefixtures('started_daemon_client')
+def test_await_processes(aiida_local_code_factory, caplog):
+    """Test :func:`aiida.engine.launch.await_processes`."""
+    builder = ArithmeticAddCalculation.get_builder()
+    builder.code = aiida_local_code_factory('core.arithmetic.add', '/bin/bash')
+    builder.x = orm.Int(1)
+    builder.y = orm.Int(2)
+    builder.metadata = {'options': {'resources': {'num_machines': 1}}}
+    node = launch.submit(builder)
+
+    assert not node.is_terminated
+    launch.await_processes([node])
+    assert node.is_terminated
+    assert len(caplog.records) > 0
+    assert 'out of 1 processes terminated.' in caplog.records[0].message
+
+
 @pytest.mark.requires_rmq
 class TestLaunchers:
     """Class to test process launchers."""

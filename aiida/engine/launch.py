@@ -14,6 +14,7 @@ import time
 import typing as t
 
 from aiida.common import InvalidOperation
+from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import manager
 from aiida.orm import ProcessNode
@@ -24,7 +25,7 @@ from .processes.process import Process
 from .runners import ResultAndPk
 from .utils import instantiate_process, is_process_scoped  # pylint: disable=no-name-in-module
 
-__all__ = ('run', 'run_get_pk', 'run_get_node', 'submit')
+__all__ = ('run', 'run_get_pk', 'run_get_node', 'submit', 'await_processes')
 
 TYPE_RUN_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]  # pylint: disable=invalid-name
 # run can also be process function, but it is not clear what type this should be
@@ -128,6 +129,28 @@ def submit(process: TYPE_SUBMIT_PROCESS, wait: bool = False, wait_interval: int 
         LOGGER.report(f'Process<{node.pk}> has not yet terminated, current state is `{node.process_state}`.')
 
     return node
+
+
+def await_processes(nodes: t.Sequence[ProcessNode], wait_interval: int = 1) -> None:
+    """Run a loop until all processes are terminated.
+
+    :param nodes: Sequence of nodes that represent the processes to await.
+    :param wait_interval: The interval between each iteration of checking the status of all processes.
+    """
+    type_check(nodes, (list, tuple))
+
+    if any(not isinstance(node, ProcessNode) for node in nodes):
+        raise TypeError(f'`nodes` should be a list of `ProcessNode`s but got: {nodes}')
+
+    start_time = time.time()
+    terminated = False
+
+    while not terminated:
+        running = [not node.is_terminated for node in nodes]
+        terminated = not any(running)
+        seconds_passed = time.time() - start_time
+        LOGGER.report(f'{running.count(False)} out of {len(nodes)} processes terminated. [{round(seconds_passed)} s]')
+        time.sleep(wait_interval)
 
 
 # Allow one to also use run.get_node and run.get_pk as a shortcut, without having to import the functions themselves

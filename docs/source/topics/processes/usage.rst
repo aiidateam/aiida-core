@@ -355,6 +355,23 @@ The function will submit the calculation to the daemon and immediately return co
     This can be useful for tutorials and demos in interactive notebooks where the user should not continue before the process is done.
     One could of course also use ``run`` (see below), but then the process would be lost if the interpreter gets accidentally shut down.
     By using ``submit``, the process is run by the daemon which takes care of saving checkpoints so it can always be restarted in case of problems.
+    If you need to launch multiple processes in parallel and want to wait for all of them to be finished, simply use ``submit`` with the default ``wait=False`` and collect the returned nodes in a list.
+    You can then pass them to :func:`aiida.engine.launch.await_processes` which will return once all processes have terminated:
+
+    .. code:: python
+
+        from aiida.engine import submit, await_processes
+
+        nodes = []
+
+        for i in range(5):
+            node = submit(...)
+            nodes.append(node)
+
+        await_processes(nodes, wait_interval=10)
+
+    The ``await_processes`` function will loop every ``wait_interval`` seconds and check whether all processes (represented by the ``ProcessNode`` in the ``nodes`` list) have terminated.
+
 
 The ``run`` function is called identically:
 

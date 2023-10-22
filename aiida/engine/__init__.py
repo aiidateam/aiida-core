@@ -59,6 +59,7 @@ __all__ = (
     'WorkChain',
     'append_',
     'assign_',
+    'await_processes',
     'calcfunction',
     'construct_awaitable',
     'get_daemon_client',

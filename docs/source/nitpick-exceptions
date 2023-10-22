@@ -11,6 +11,8 @@ py:class NoneType
 py:class MappingType
 py:class AbstractContextManager
 py:class BinaryIO
+py:class EntryPoint
+py:class EntryPoints
 py:class IO
 py:class Path
 py:class str | list[str]
@@ -190,6 +192,8 @@ py:class sphinx.ext.autodoc.ClassDocumenter
 py:class sphinx.util.docutils.SphinxDirective
 py:class ModuleAnalyzer
 py:class BuildEnvironment
+
+py:meth tabulate.tabulate
 
 py:class yaml.Dumper
 py:class yaml.Loader

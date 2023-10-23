@@ -20,7 +20,6 @@ from plumpy.ports import OutputPort
 from sphinx import addnodes
 from sphinx.ext.autodoc import ClassDocumenter
 from sphinx.util.docutils import SphinxDirective
-from sphinxcontrib.details.directive import details, summary
 
 from aiida.common.utils import get_object_from_string
 from aiida.engine import Process
@@ -156,12 +155,7 @@ class AiidaProcessDirective(SphinxDirective):
                 if port.help is not None:
                     item += nodes.Text(' -- ')
                     item.extend(publish_doctree(port.help)[0].children)
-                sub_doctree = self.build_portnamespace_doctree(port)
-                if sub_doctree:
-                    sub_item = details(opened=self.EXPAND_NAMESPACES_FLAG in self.options)
-                    sub_item += summary(text='Namespace Ports')
-                    sub_item += sub_doctree
-                    item += sub_item
+                item += self.build_portnamespace_doctree(port)
             else:
                 raise NotImplementedError
             result += item

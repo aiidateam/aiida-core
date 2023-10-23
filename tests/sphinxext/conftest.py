@@ -13,7 +13,6 @@ import shutil
 import sys
 
 import pytest
-from sphinx.testing.path import path as sphinx_path
 from sphinx.testing.util import SphinxTestApp
 
 SRC_DIR = pathlib.Path(__file__).parent / 'sources'
@@ -69,7 +68,7 @@ def sphinx_build_factory(make_app, tmp_path):
         filepath_source = SRC_DIR / src_folder
         filepath_target = tmp_path / src_folder
         shutil.copytree(filepath_source, filepath_target)
-        app = make_app(srcdir=sphinx_path(filepath_target.absolute()), **kwargs)
+        app = make_app(srcdir=filepath_target.absolute(), **kwargs)
         return SphinxBuild(app, filepath_target)
 
     yield _func

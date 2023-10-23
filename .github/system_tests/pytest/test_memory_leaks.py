@@ -8,6 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities for testing memory leakage."""
+import sys
+
+import pytest
+
 from aiida import orm
 from aiida.engine import processes, run_get_node
 from aiida.plugins import CalculationFactory
@@ -23,6 +27,7 @@ def run_finished_ok(*args, **kwargs):
     assert node.is_finished_ok, (node.exit_status, node.exit_message)
 
 
+@pytest.mark.skipif(sys.version_info >= (3, 12), reason='Garbage collecting hangs on Python 3.12')
 def test_leak_run_process():
     """Test whether running a dummy process leaks memory."""
     inputs = {'a': orm.Int(2), 'b': orm.Str('test')}
@@ -34,6 +39,7 @@ def test_leak_run_process():
     assert not process_instances, f'Memory leak: process instances remain in memory: {process_instances}'
 
 
+@pytest.mark.skipif(sys.version_info >= (3, 12), reason='Garbage collecting hangs on Python 3.12')
 def test_leak_local_calcjob(aiida_local_code_factory):
     """Test whether running a local CalcJob leaks memory."""
     inputs = {'x': orm.Int(1), 'y': orm.Int(2), 'code': aiida_local_code_factory('core.arithmetic.add', '/bin/bash')}
@@ -45,6 +51,7 @@ def test_leak_local_calcjob(aiida_local_code_factory):
     assert not process_instances, f'Memory leak: process instances remain in memory: {process_instances}'
 
 
+@pytest.mark.skipif(sys.version_info >= (3, 12), reason='Garbage collecting hangs on Python 3.12')
 def test_leak_ssh_calcjob():
     """Test whether running a CalcJob over SSH leaks memory.
 

@@ -23,10 +23,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Python 3.9
+    - name: Set up Python 3.12
       uses: actions/setup-python@v2
       with:
-        python-version: '3.9'
+        python-version: '3.12'
 
     - name: Install utils/ dependencies
       run: pip install -r utils/requirements.txt
@@ -55,7 +55,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.9', '3.11']
+        python-version: ['3.9', '3.12']
 
     services:
       postgres:
@@ -131,7 +131,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.9', '3.11']
+        python-version: ['3.9', '3.12']
 
     steps:
     - uses: actions/checkout@v2

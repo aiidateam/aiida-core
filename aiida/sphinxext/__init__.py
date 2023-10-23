@@ -16,7 +16,6 @@ def setup(app):
 
     from . import calcjob, process, workchain
 
-    app.setup_extension('sphinxcontrib.details.directive')
     process.setup_extension(app)
     workchain.setup_extension(app)
     calcjob.setup_extension(app)

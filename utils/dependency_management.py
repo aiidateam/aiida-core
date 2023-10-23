@@ -17,9 +17,10 @@ import subprocess
 import sys
 
 import click
+from packaging.requirements import Requirement
+from packaging.specifiers import Specifier
 from packaging.utils import canonicalize_name
 from packaging.version import parse
-from pkg_resources import Requirement, parse_requirements
 import requests
 import tomli
 import yaml
@@ -71,14 +72,14 @@ def _setuptools_to_conda(req):
 
     for pattern, replacement in SETUPTOOLS_CONDA_MAPPINGS.items():
         if re.match(pattern, str(req)):
-            req = Requirement.parse(re.sub(pattern, replacement, str(req)))
+            req = Requirement(re.sub(pattern, replacement, str(req)))
             break
 
     # markers are not supported by conda
     req.marker = None
 
     # We need to parse the modified required again, to ensure consistency.
-    return Requirement.parse(str(req))
+    return Requirement(str(req))
 
 
 def _find_linenos_of_requirements_in_pyproject(requirements):
@@ -101,22 +102,14 @@ def _find_linenos_of_requirements_in_pyproject(requirements):
     return linenos
 
 
-class _Entry:
-    """Helper class to check whether a given distribution fulfills a requirement."""
-
-    def __init__(self, requirement):
-        self._req = requirement
-
-    def fulfills(self, requirement):
-        """Returns True if this entry fullfills the requirement."""
-
-        return canonicalize_name(self._req.name) == canonicalize_name(requirement.name) \
-            and self._req.specs[0][1] in requirement.specifier
-
-
-def _parse_working_set(entries):
-    for req in parse_requirements(entries):
-        yield _Entry(req)
+def parse_requirements(requirements):
+    """Parse requirements from a file or list of strings."""
+    results = []
+    for requirement in requirements:
+        stripped = requirement.strip()
+        if stripped and not stripped.startswith('#'):
+            results.append(Requirement(stripped))
+    return results
 
 
 @click.group()
@@ -137,7 +130,7 @@ def generate_environment_yml():
 
     # Read the requirements from 'pyproject.toml'
     pyproject = _load_pyproject()
-    install_requirements = [Requirement.parse(r) for r in pyproject['project']['dependencies']]
+    install_requirements = [Requirement(r) for r in pyproject['project']['dependencies']]
 
     # python version cannot be overriden from outside environment.yml
     # (even if it is not specified at all in environment.yml)
@@ -174,8 +167,8 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
 
     # Read the requirements from 'pyproject.toml' and 'environment.yml'.
     pyproject = _load_pyproject()
-    install_requirements = [Requirement.parse(r) for r in pyproject['project']['dependencies']]
-    python_requires = Requirement.parse('python' + pyproject['project']['requires-python'])
+    install_requirements = [Requirement(r) for r in pyproject['project']['dependencies']]
+    python_requires = Requirement('python' + pyproject['project']['requires-python'])
 
     environment_yml = _load_environment_yml()
     try:
@@ -187,7 +180,7 @@ def validate_environment_yml():  # pylint: disable=too-many-branches
         raise DependencySpecificationError(f"Error in 'environment.yml': {error}")
 
     try:
-        conda_dependencies = {Requirement.parse(d) for d in environment_yml['dependencies']}
+        conda_dependencies = {Requirement(d) for d in environment_yml['dependencies']}
     except TypeError as error:
         raise DependencySpecificationError(f"Error while parsing requirements from 'environment_yml': {error}")
 
@@ -267,7 +260,7 @@ def validate_all(ctx):
     'as part of a GitHub actions workflow. Note: Requires environment '
     'variable GITHUB_ACTIONS=true .'
 )
-def check_requirements(extras, github_annotate):  # pylint disable: too-many-locals-too-many-branches
+def check_requirements(extras, github_annotate):  # pylint: disable=too-many-locals,too-many-branches
     """Check the 'requirements/*.txt' files.
 
     Checks that the environments specified in the requirements files
@@ -294,13 +287,23 @@ def check_requirements(extras, github_annotate):  # pylint disable: too-many-loc
         if not match:
             continue
         env = {'python_version': match.groups()[0]}
-        required = {r for r in install_requires if r.marker is None or r.marker.evaluate(env)}
+        requirements_abstract = {r for r in install_requires if r.marker is None or r.marker.evaluate(env)}
+        installed = []
 
         with open(fn_req, encoding='utf8') as req_file:
-            working_set = list(_parse_working_set(req_file))
-            installed = {req for req in required for entry in working_set if entry.fulfills(req)}
+            requirements_concrete = parse_requirements(req_file)
 
-        for dependency in required.difference(installed):
+        for requirement_abstract in requirements_abstract:
+            for requirement_concrete in requirements_concrete:
+                version = Specifier(str(requirement_concrete.specifier)).version
+                if (
+                    canonicalize_name(requirement_abstract.name) == canonicalize_name(requirement_concrete.name) and
+                    requirement_abstract.specifier.contains(version)
+                ):
+                    installed.append(requirement_abstract)
+                    break
+
+        for dependency in requirements_abstract.difference(set(installed)):
             not_installed[dependency].append(fn_req)
 
     if any(not_installed.values()):
@@ -352,9 +355,9 @@ def show_requirements(extras, fmt):
     if 'all' in extras:
         extras = list(pyproject['project']['optional-dependencies'])
 
-    to_install = {Requirement.parse(r) for r in pyproject['project']['dependencies']}
+    to_install = {Requirement(r) for r in pyproject['project']['dependencies']}
     for key in extras:
-        to_install.update(Requirement.parse(r) for r in pyproject['project']['optional-dependencies'][key])
+        to_install.update(Requirement(r) for r in pyproject['project']['optional-dependencies'][key])
 
     if fmt == 'pip':
         click.echo('\n'.join(sorted(map(str, to_install))))
@@ -381,7 +384,7 @@ def pip_install_extras(extras):
 
     to_install = set()
     for key in extras:
-        to_install.update(Requirement.parse(r) for r in pyproject['project']['optional-dependencies'][key])
+        to_install.update(Requirement(r) for r in pyproject['project']['optional-dependencies'][key])
 
     cmd = [sys.executable, '-m', 'pip', 'install'] + [str(r) for r in to_install]
     subprocess.run(cmd, check=True)
@@ -407,9 +410,9 @@ def identify_outdated(extras, pre_releases):
     # Read the requirements from 'pyproject.toml''
     pyproject = _load_pyproject()
 
-    to_install = {Requirement.parse(r) for r in pyproject['project']['dependencies']}
+    to_install = {Requirement(r) for r in pyproject['project']['dependencies']}
     for key in extras:
-        to_install.update(Requirement.parse(r) for r in pyproject['project']['optional-dependencies'][key])
+        to_install.update(Requirement(r) for r in pyproject['project']['optional-dependencies'][key])
 
     def get_package_data(name):
         req = requests.get(f'https://pypi.python.org/pypi/{name}/json', timeout=5)

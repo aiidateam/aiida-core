@@ -65,6 +65,8 @@ class Option:
         attribute = self.name.replace('.', '__')
 
         try:
+            # There is no straightforward way to validate a single field of a model in pydantic v2.0. The following
+            # approach is the current work around, see: https://github.com/pydantic/pydantic/discussions/7367
             result = GlobalOptionsSchema.__pydantic_validator__.validate_assignment(
                 GlobalOptionsSchema.model_construct(), attribute, value
             )

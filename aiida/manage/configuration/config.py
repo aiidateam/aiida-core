@@ -169,13 +169,14 @@ class ProcessControlConfig(BaseModel, defer_build=True):
     broker_host: str = Field('127.0.0.1', description='Hostname of the message broker.')
     broker_port: int = Field(5432, description='Port of the message broker.')
     broker_virtual_host: str = Field('', description='Virtual host to use for the message broker.')
-    broker_parameters: dict[str, Any] = Field('guest', description='Arguments to be encoded as query parameters.')
+    broker_parameters: dict[
+        str, Any] = Field(default_factory=dict, description='Arguments to be encoded as query parameters.')
 
 
 class ProfileSchema(BaseModel, defer_build=True):
     """Schema for the configuration of an AiiDA profile."""
 
-    uuid: str = Field(description='', default_factory=uuid.uuid4)
+    uuid: str = Field(description='A UUID that uniquely identifies the profile.', default_factory=uuid.uuid4)
     storage: ProfileStorageConfig
     process_control: ProcessControlConfig
     default_user_email: Optional[str] = None

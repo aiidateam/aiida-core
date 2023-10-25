@@ -27,7 +27,8 @@ def test_check_version_release(monkeypatch, capsys, isolated_config):
 
 
 @pytest.mark.parametrize('suppress_warning', (True, False))
-def test_check_version_development(monkeypatch, capsys, isolated_config, suppress_warning):
+@pytest.mark.usefixtures('isolated_config')
+def test_check_version_development(monkeypatch, capsys, suppress_warning, aiida_profile):
     """Test that ``Manager.check_version`` prints a warning for a post release development version.
 
     The warning can be suppressed by setting the option ``warnings.development_version`` to ``False``.
@@ -39,7 +40,7 @@ def test_check_version_development(monkeypatch, capsys, isolated_config, suppres
     version = '1.0.0.post0'
     monkeypatch.setattr(aiida, '__version__', version)
 
-    isolated_config.set_option('warnings.development_version', not suppress_warning)
+    aiida_profile.set_option('warnings.development_version', not suppress_warning)
 
     get_manager().check_version()
     captured = capsys.readouterr()

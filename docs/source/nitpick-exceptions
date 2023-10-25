@@ -148,6 +148,17 @@ py:class ndarray
 
 py:class paramiko.proxy.ProxyCommand
 
+py:class pydantic.main.BaseModel
+py:class ModelPrivateAttr
+py:class CoreSchema
+py:class _decorators.DecoratorInfos
+py:class _generics.PydanticGenericMetadata
+py:class SchemaSerializer
+py:class SchemaValidator
+py:class Signature
+py:class ConfigDict
+py:class FieldInfo
+
 # These can be removed once they are properly included in the `__all__` in `plumpy`
 py:class plumpy.ports.PortNamespace
 py:class plumpy.utils.AttributesDict
@@ -217,8 +228,6 @@ py:class CircusClient
 
 py:class pgsu.PGSU
 py:meth  pgsu.PGSU.__init__
-
-py:class jsonschema.exceptions._Error
 
 py:class Session
 py:class Query

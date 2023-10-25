@@ -142,7 +142,7 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
         if not isinstance(current, list):
             echo.echo_critical(f'cannot append/remove to value: {current}')
         if append:
-            value = current + [value]
+            value = list(set(current + [value]))
         else:
             value = [item for item in current if item != value]
 

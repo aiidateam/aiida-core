@@ -252,9 +252,10 @@ jobs:
 
     - name: Run test suite
       env:
+        AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
       run:
-        .github/workflows/tests.sh
+        pytest --cov aiida --verbose tests -m 'not nightly'
 
     - name: Freeze test environment
       run: pip freeze | sed '1d' | tee requirements-py-${{ matrix.python-version }}.txt

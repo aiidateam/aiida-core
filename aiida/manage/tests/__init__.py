@@ -10,22 +10,3 @@
 """
 Testing infrastructure for easy testing of AiiDA plugins.
 """
-
-# AUTO-GENERATED
-
-# yapf: disable
-# pylint: disable=wildcard-import
-
-from .main import *
-
-__all__ = (
-    'ProfileManager',
-    'TemporaryProfileManager',
-    'TestManager',
-    'TestManagerError',
-    'get_test_backend_name',
-    'get_test_profile_name',
-    'test_manager',
-)
-
-# yapf: enable

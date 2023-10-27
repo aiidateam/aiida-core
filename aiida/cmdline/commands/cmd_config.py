@@ -119,6 +119,8 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
 
     List values are split by whitespace, e.g. "a b" becomes ["a", "b"].
     """
+    import typing
+
     from aiida.common.exceptions import ConfigurationError
     from aiida.manage.configuration import Config, Profile
 
@@ -146,6 +148,8 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
             value = list(set(current + [value]))
         else:
             value = [item for item in current if item != value]
+    elif option.valid_type == typing.List[str]:
+        value = [value]
 
     # Set the specified option
     try:

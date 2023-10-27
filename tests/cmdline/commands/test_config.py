@@ -32,17 +32,21 @@ def test_config_set_option_no_profile(run_cli_command, empty_config):
     assert str(config.get_option(option_name, scope=None)) == option_value
 
 
-def test_config_set_option(run_cli_command, config_with_profile_factory):
+@pytest.mark.parametrize('option_name, is_list', (
+    ('storage.sandbox', False),
+    ('caching.enabled_for', True),
+))
+def test_config_set_option(run_cli_command, config_with_profile_factory, option_name, is_list):
     """Test the `verdi config set` command when setting an option."""
     config = config_with_profile_factory()
 
-    option_name = 'daemon.timeout'
-    option_values = [str(10), str(20)]
-
-    for option_value in option_values:
+    for option_value in ['value0', 'value1']:
         options = ['config', 'set', option_name, option_value]
         run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
-        assert str(config.get_option(option_name, scope=get_profile().name)) == option_value
+        if is_list:
+            assert config.get_option(option_name, scope=get_profile().name) == [option_value]
+        else:
+            assert str(config.get_option(option_name, scope=get_profile().name)) == option_value
 
 
 def test_config_append_option(run_cli_command, config_with_profile_factory):

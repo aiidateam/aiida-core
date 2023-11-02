@@ -130,7 +130,7 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         return value
 
 
-class GlobalOptionsSchema(ProfileOptionsSchema):
+class GlobalOptionsSchema(ProfileOptionsSchema, defer_build=True):
     """Schema for the global options of an AiiDA instance."""
     autofill__user__email: Optional[str] = Field(
         None, description='Default user email to use when creating new profiles.'

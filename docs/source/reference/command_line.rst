@@ -566,7 +566,7 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      backup     Create a backup of the profile data.
+      backup     Create a backup of the profile data to destination location DEST, in a...
       info       Summarise the contents of the storage.
       integrity  Checks for the integrity of the data storage.
       maintain   Performs maintenance tasks on the repository.

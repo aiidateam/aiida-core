@@ -13,6 +13,7 @@ import pathlib
 from contextlib import contextmanager, nullcontext
 from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence, Set, Union
 
+from disk_objectstore import Container, backup_utils
 from pydantic import BaseModel, Field
 from sqlalchemy import column, insert, update
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
@@ -23,7 +24,6 @@ from aiida.manage.configuration.profile import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import BackendEntity, StorageBackend
 from aiida.storage.log import STORAGE_LOGGER
-from aiida.storage.psql_dos import backup_utils
 from aiida.storage.psql_dos.migrator import REPOSITORY_UUID_KEY, PsqlDosMigrator
 from aiida.storage.psql_dos.models import base
 
@@ -217,8 +217,6 @@ class PsqlDosBackend(StorageBackend):
                 )
 
     def get_repository(self) -> 'DiskObjectStoreRepositoryBackend':
-        from disk_objectstore import Container
-
         from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
         container = Container(get_filepath_container(self.profile))
@@ -479,126 +477,27 @@ class PsqlDosBackend(StorageBackend):
         results['repository'] = self.get_repository().get_info(detailed)
         return results
 
-    def _backup_dos(
+
+    def backup( # pylint: disable=too-many-locals, too-many-return-statements, too-many-branches, too-many-statements
         self,
-        location: pathlib.Path,
-        rsync_args: list,
-        remote: Optional[str] = None,
-        prev_backup: Optional[pathlib.Path] = None
-    ) -> bool:
-        """Create a backup of the disk-objectstore container
-
-        It should be done in the following order:
-            1) loose files;
-            2) sqlite database;
-            3) packed files.
-
-        :return:
-            True is successful and False if unsuccessful.
-        """
-        import sqlite3
-        import tempfile
-
-        container_path = get_filepath_container(self._profile)
-
-        # step 1: loose files
-        loose_path = container_path / 'loose'
-        success = backup_utils.call_rsync(
-            rsync_args, loose_path, location, remote=remote, link_dest=prev_backup / 'loose' if prev_backup else None
-        )
-        if not success:
-            return False
-
-        # step 2: sqlite db
-
-        sqlite_path = container_path / 'packs.idx'
-
-        # make a temporary directory to dump sqlite db locally
-        with tempfile.TemporaryDirectory() as temp_dir_name:
-            sqlite_temp_loc = pathlib.Path(temp_dir_name) / 'packs.idx'
-
-            # Safe way to make a backup of the sqlite db, while it might potentially be accessed
-            # https://docs.python.org/3/library/sqlite3.html#sqlite3.Connection.backup
-            src = sqlite3.connect(str(sqlite_path))
-            dst = sqlite3.connect(str(sqlite_temp_loc))
-            with dst:
-                src.backup(dst)
-            dst.close()
-            src.close()
-
-            if sqlite_temp_loc.is_file():
-                STORAGE_LOGGER.info(f'Dumped the SQLite database to {str(sqlite_temp_loc)}')
-            else:
-                STORAGE_LOGGER.error(f"'{str(sqlite_temp_loc)}' was not created.")
-                return False
-
-            # step 3: transfer the SQLITE database file
-            success = backup_utils.call_rsync(
-                rsync_args, sqlite_temp_loc, location, remote=remote, link_dest=prev_backup
-            )
-            if not success:
-                return False
-
-        # step 4: transfer the packed files
-        packs_path = container_path / 'packs'
-        success = backup_utils.call_rsync(
-            rsync_args, packs_path, location, remote=remote, link_dest=prev_backup / 'packs' if prev_backup else None
-        )
-        if not success:
-            return False
-
-        # step 5: transfer anything else in the container folder
-        success = backup_utils.call_rsync(
-            rsync_args + [
-                '--exclude',
-                'loose',
-                '--exclude',
-                'packs.idx',
-                '--exclude',
-                'packs',
-            ],
-            container_path,
-            location,
-            link_dest=prev_backup,
-            remote=remote,
-            src_trailing_slash=True
-        )
-        if not success:
-            return False
-
-        return True
-
-    def _backup( # pylint: disable=too-many-locals, too-many-return-statements, too-many-branches, too-many-statements
-        self,
+        backup_utils_instance: backup_utils.BackupUtilities,
         path: pathlib.Path,
-        remote: Optional[str] = None,
         prev_backup: Optional[pathlib.Path] = None,
-        **kwargs
+        pg_dump_exe: str = 'pg_dump',
     ) -> bool:
         """Create a backup of the postgres database and disk-objectstore to the provided path.
 
         :param path:
-            Path to where the backup will be created. If 'remote' is specified, must be an absolute path,
-            otherwise can be relative.
-
-        :param remote:
-            Remote host of the backup location. 'ssh' executable is called via subprocess and therefore remote
-            hosts configured for it are supported (e.g. via .ssh/config file).
+            Path to where the backup will be created.
 
         :param prev_backup:
             Path to the previous backup. Rsync calls will be hard-linked to this path, making the backup
             incremental and efficient.
 
-        :param kwargs:
-            * Executable paths if not default: 'pg_dump', 'rsync'
-
         :return:
             True is successful and False if unsuccessful.
         """
-
-        from datetime import datetime
         import os
-        import shutil
         import subprocess
         import tempfile
 
@@ -607,40 +506,8 @@ class PsqlDosBackend(StorageBackend):
         from aiida.manage.configuration import get_config
         from aiida.manage.profile_access import ProfileAccessManager
 
-        if remote:
-            # check if accessible
-            success = backup_utils.run_cmd(['exit'], remote=remote)
-            if not success:
-                STORAGE_LOGGER.error(f"Remote '{remote}' is not accessible!")
-                return False
-            STORAGE_LOGGER.report(f"Remote '{remote}' is accessible!")
-
-        pg_dump_exec = kwargs.get('pg_dump', 'pg_dump')
-        rsync_exec = kwargs.get('rsync', 'rsync')
-
-        # check if the specified executables are found
-        for exe in [pg_dump_exec, rsync_exec]:
-            if shutil.which(exe) is None:
-                STORAGE_LOGGER.error(f"executable '{exe}' not found!")
-                return False
-
-        # subprocess arguments shared by all rsync calls:
-        rsync_args = [rsync_exec, '-azh', '-vv', '--no-whole-file']
-
         cfg = self._profile.storage_config
-
-        path_exists = backup_utils.check_path_exists(path, remote)
-
-        if path_exists:
-            if not backup_utils.check_path_is_empty_folder(path, remote):
-                STORAGE_LOGGER.error(f"The path '{str(path)}' exists and is not an empty folder!")
-                return False
-        else:
-            # path doesn't exist, check if it can be created
-            success = backup_utils.run_cmd(['mkdir', str(path)], remote=remote)
-            if not success:
-                STORAGE_LOGGER.error(f"Couldn't access/create '{str(path)}'!")
-                return False
+        container = Container(str(get_filepath_container(self.profile)))
 
         # check that the AiiDA profile is not locked and request access for the duration of this backup process
         # (locked means that possibly a maintenance operation is running that could interfere with the backup)
@@ -660,7 +527,7 @@ class PsqlDosBackend(StorageBackend):
             env = os.environ.copy()
             env['PGPASSWORD'] = cfg['database_password']
             cmd = [
-                pg_dump_exec, f'--host={cfg["database_hostname"]}', f'--port={cfg["database_port"]}',
+                pg_dump_exe, f'--host={cfg["database_hostname"]}', f'--port={cfg["database_port"]}',
                 f'--dbname={cfg["database_name"]}', f'--username={cfg["database_username"]}', '--no-password',
                 '--format=p', f'--file={str(psql_temp_loc)}'
             ]
@@ -677,126 +544,26 @@ class PsqlDosBackend(StorageBackend):
                 return False
 
             # step 3: transfer the PostgreSQL database file
-            success = backup_utils.call_rsync(
-                rsync_args, psql_temp_loc, path, link_dest=prev_backup, remote=remote, dest_trailing_slash=True
+            success = backup_utils_instance.call_rsync(
+                psql_temp_loc, path, link_dest=prev_backup, dest_trailing_slash=True
             )
             if not success:
                 return False
 
         # step 4: back up the disk-objectstore
-        success = self._backup_dos(
-            path / 'container',
-            rsync_args,
-            remote=remote,
-            prev_backup=prev_backup / 'container' if prev_backup else None
+        success = backup_utils_instance.backup_container(
+            container, path / 'container', prev_backup=prev_backup / 'container' if prev_backup else None
         )
         if not success:
             return False
 
-        # step 6: back up aiida config.json file
+        # step 5: back up aiida config.json file
         try:
             config = get_config()
-            success = backup_utils.call_rsync(rsync_args, pathlib.Path(config.filepath), path, remote=remote)
+            success = backup_utils_instance.call_rsync(pathlib.Path(config.filepath), path)
             if not success:
                 return False
         except (exceptions.MissingConfigurationError, exceptions.ConfigurationError):
             STORAGE_LOGGER.warning('aiida config.json not found!')
 
-        # step 5: write a file including date that signifies the backup completed successfully
-        success = backup_utils.run_cmd(['touch', str(path / f'COMPLETED_{datetime.today().isoformat()}')],
-                                       remote=remote)
-        if not success:
-            return False
-
-        STORAGE_LOGGER.report(f"Success! Backup completed to {f'{remote}:' if remote else ''}{str(path)}")
         return True
-
-    def _backup_auto_folders(self, path: pathlib.Path, remote: Optional[str] = None, **kwargs):
-        """Create a backup of the AiiDA profile data, managing live and previous backup folders automatically
-
-        The running backup is done to `<path>/live-backup`. When it completes, it is moved to
-        the final path: `<path>/last-backup`. This done so that the last backup wouldn't be
-        corrupted, in case the live one crashes or gets interrupted. Rsync `link-dest` is used between
-        the two folders to keep the backups incremental and performant.
-
-        :param path:
-            Path to where the backup will be created. If 'remote' is specified, must be an absolute path,
-            otherwise can be relative.
-
-        :param remote:
-            Remote host of the backup location. 'ssh' executable is called via subprocess and therefore remote
-            hosts configured for it are supported (e.g. via .ssh/config file).
-
-        :param kwargs:
-            * Executable paths if not default: 'pg_dump', 'rsync'
-
-        :return:
-            True is successful and False if unsuccessful.
-        """
-
-        live_folder = path / 'live_backup'
-        final_folder = path / 'last-backup'
-
-        # does previous backup exist?
-        prev_exists = backup_utils.check_path_exists(final_folder, remote)
-
-        success = self._backup(live_folder, remote=remote, prev_backup=final_folder if prev_exists else None, **kwargs)
-        if not success:
-            return False
-
-        # move live-backup -> last-backup in a safe manner
-        # (such that if the process stops at any point, that we wouldn't lose data)
-        # step 1: last-backup -> last-backup-old
-        if prev_exists:
-            success = backup_utils.run_cmd(['mv', str(final_folder), str(final_folder) + '-old'], remote=remote)
-            if not success:
-                return False
-        # step 2: live-backup -> last-backup
-        success = backup_utils.run_cmd(['mv', str(live_folder), str(final_folder)], remote=remote)
-        if not success:
-            return False
-        # step 3: remote last-backup-old
-        if prev_exists:
-            success = backup_utils.run_cmd(['rm', '-rf', str(final_folder) + '-old'], remote=remote)
-            if not success:
-                return False
-
-        STORAGE_LOGGER.report(f"Backup moved from '{str(live_folder)}' to '{str(final_folder)}'.")
-        return True
-
-    def backup( # pylint: disable=too-many-locals, too-many-return-statements, too-many-branches, too-many-statements
-        self,
-        path: pathlib.Path,
-        remote: Optional[str] = None,
-        prev_backup: Optional[pathlib.Path] = None,
-        **kwargs
-    ) -> bool:
-        """Create a backup of the postgres database and disk-objectstore.
-
-        By default, automatically manages incremental/delta backup: creates a subfolder in the specified path
-        and if the subfolder already exists, creates an incremental backup from it.
-
-        :param path:
-            Path to where the backup will be created. If 'remote' is specified, must be an absolute path,
-            otherwise can be relative.
-
-        :param remote:
-            Remote host of the backup location. 'ssh' executable is called via subprocess and therefore remote
-            hosts configured for it are supported (e.g. via .ssh/config file).
-
-        :param prev_backup:
-            Path to the previous backup. Rsync calls will be hard-linked to this path, making the backup
-            incremental and efficient. If this is specified, the automatic folder management is not used.
-
-        :param kwargs:
-            * Executable paths if not default: 'pg_dump', 'rsync'
-
-        :return:
-            True is successful and False if unsuccessful.
-        """
-
-        if prev_backup:
-            success = self._backup(path, remote=remote, prev_backup=prev_backup, **kwargs)
-        else:
-            success = self._backup_auto_folders(path, remote=remote, **kwargs)
-        return success

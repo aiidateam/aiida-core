@@ -13,6 +13,8 @@ import abc
 import pathlib
 from typing import TYPE_CHECKING, Any, ContextManager, List, Optional, Sequence, TypeVar, Union
 
+from disk_objectstore import backup_utils
+
 if TYPE_CHECKING:
     from aiida.manage.configuration.profile import Profile
     from aiida.orm.autogroup import AutogroupManager
@@ -308,30 +310,20 @@ class StorageBackend(abc.ABC):
     @abc.abstractmethod
     def backup(
         self,
+        backup_utils_instance: backup_utils.BackupUtilities,
         path: pathlib.Path,
-        remote: Optional[str] = None,
         prev_backup: Optional[pathlib.Path] = None,
-        **kwargs
+        pg_dump_exe: str = 'pg_dump',
     ) -> bool:
         """Create a backup of the storage contents.
-
-        By default, automatically manages incremental/delta backup: creates a subfolder in the specified path
-        and if the subfolder already exists, creates an incremental backup from it.
 
         :param path:
             Path to where the backup will be created. If 'remote' is specified, must be an absolute path,
             otherwise can be relative.
 
-        :param remote:
-            Remote host of the backup location. 'ssh' executable is called via subprocess and therefore remote
-            hosts configured for it are supported (e.g. via .ssh/config file).
-
         :param prev_backup:
             Path to the previous backup. Rsync calls will be hard-linked to this path, making the backup
             incremental and efficient. If this is specified, the automatic folder management is not used.
-
-        :param kwargs:
-            * Executable paths, if not default.
 
         :return:
             True is successful and False if unsuccessful.

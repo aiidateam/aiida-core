@@ -14,6 +14,7 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators, echo
 from aiida.common import exceptions
+from aiida.storage.log import STORAGE_LOGGER
 
 
 @verdi.group('storage')
@@ -167,58 +168,62 @@ def storage_maintain(ctx, full, no_repack, force, dry_run, compress):
 
 
 @verdi_storage.command('backup')
+@click.argument('dest', type=click.Path(), nargs=1)
 @click.option(
-    '--path',
-    type=click.Path(),
-    required=True,
-    help=(
-        "Path to where the backup will be created. If 'remote' is specified, must be an absolute path, "
-        'otherwise can be relative.'
-    )
+    '--keep',
+    default=1,
+    help='Number of previous backups to keep in the destination. (default: 1)',
 )
 @click.option(
-    '--remote',
+    '--pg_dump_exe', type=click.STRING, default='pg_dump', help="Specify the 'pg_dump' executable, if not in PATH."
+)
+@click.option(
+    '--rsync_exe',
     type=click.STRING,
-    default=None,
-    help=(
-        "Remote host of the backup location. 'ssh' executable is called via subprocess and therefore remote"
-        'hosts configured for it are supported (e.g. via .ssh/config file).'
-    )
-)
-@click.option(
-    '--prev_backup',
-    type=click.Path(),
-    default=None,
-    help=(
-        'Path to the previous backup. Rsync calls will be hard-linked to this path, making the backup'
-        'incremental and efficient. If this is specified, the automatic folder management is not used.'
-    )
-)
-@click.option(
-    '--pg_dump_exec', type=click.STRING, default='pg_dump', help="Specify the 'pg_dump' executable, if not in PATH."
-)
-@click.option(
-    '--rsync_exec', type=click.STRING, default='rsync', help="Specify the 'rsync' executable, if not in PATH."
+    default='rsync',
+    help="Specify the 'rsync' executable, if not in PATH. Used for both local and remote destinations"
 )
 @decorators.with_dbenv()
-def storage_backup(path, remote, prev_backup, pg_dump_exec, rsync_exec):
-    """Create a backup of the profile data.
+def storage_backup(dest: str, keep: int, pg_dump_exe: str, rsync_exe: str):
+    """Create a backup of the profile data to destination location DEST, in a subfolder
+    backup_<timestamp>_<randstr> and point a symlink called `last-backup` to it.
 
-    By default, automatically manages incremental/delta backup: creates a subfolder in the specified path
-    and if the subfolder already exists, creates an incremental backup from it. The 'prev_backup' argument
-    disables this automatic management.
+    NOTE: This is safe to run while the AiiDA profile is being used.
+
+    Destination (DEST) can either be a local path, or a remote destination (reachable via ssh).
+    In the latter case, remote destination needs to have the following syntax:
+       [<remote_user>@]<remote_host>:<path>
+    i.e., contain the remote host name and the remote path, separated by a colon (and optionally the
+    remote user separated by an @ symbol). You can tune SSH parameters using the standard options given
+    by OpenSSH, such as adding configuration options to ~/.ssh/config (e.g. to allow for passwordless
+    login - recommended, since this script might ask multiple times for the password).
+
+    NOTE: 'rsync' and other UNIX-specific commands are called, thus the command will not work on
+    non-UNIX environments.
     """
-    import pathlib
+    from disk_objectstore import backup_utils
 
     from aiida.manage.manager import get_manager
 
     manager = get_manager()
     storage = manager.get_profile_storage()
 
-    storage.backup(
-        pathlib.Path(path),
-        remote=remote,
-        prev_backup=pathlib.Path(prev_backup) if prev_backup else None,
-        pg_dump=pg_dump_exec,
-        rsync=rsync_exec
+    try:
+        backup_utils_instance = backup_utils.BackupUtilities(dest, keep, rsync_exe, STORAGE_LOGGER)
+    except ValueError as exc:
+        click.echo(f'Error: {exc}')
+        return
+
+    success = backup_utils_instance.validate_inputs(additional_exes=[pg_dump_exe])
+    if not success:
+        click.echo('Input validation failed.')
+        return
+
+    success = backup_utils_instance.backup_auto_folders(
+        lambda path, prev: storage.backup(backup_utils_instance, path, prev_backup=prev, pg_dump_exe=pg_dump_exe)
     )
+    if not success:
+        click.echo('Error: backup failed.')
+        return
+
+    click.echo(f'Success! Profile backed up to {dest}')

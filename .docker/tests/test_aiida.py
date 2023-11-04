@@ -34,5 +34,7 @@ def test_verdi_status(aiida_exec, container_user, timeout):
 
 def test_computer_setup_success(aiida_exec, container_user, timeout):
     time.sleep(timeout)
-    output = aiida_exec('verdi computer show localhost', user=container_user).decode().strip()
-    assert f'/home/{container_user}/aiida_run' in output
+    output = aiida_exec('verdi computer test localhost', user=container_user).decode().strip()
+
+    assert "Success" in output
+    assert "Failed" not in output

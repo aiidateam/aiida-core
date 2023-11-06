@@ -192,9 +192,8 @@ def process_call_root(processes):
 def process_report(processes, levelname, indent_size, max_depth, last):
     """Show the log report for one or multiple processes."""
     from aiida.cmdline.utils.common import get_calcjob_report, get_process_function_report, get_workchain_report
-    from aiida.orm import CalcFunctionNode, CalcJobNode, WorkChainNode, WorkFunctionNode
+    from aiida.orm import CalcFunctionNode, CalcJobNode, WorkChainNode, WorkFunctionNode, load_node
     from aiida.tools.query.calculation import CalculationQueryBuilder
-    from aiida.orm import load_node
 
     if last:
         # query all nodes, getting the last one available
@@ -206,13 +205,13 @@ def process_report(processes, levelname, indent_size, max_depth, last):
         # set process list to the singular final node
         processes = [node]
 
-        echo.echo(f"Reporting for final node (pk: {pk})")
+        echo.echo(f'Reporting for final node (pk: {pk})')
 
         try:
-            remote_dir = node.outputs.remote_folder.get_attribute("remote_path")
-            echo.echo(f"Remote Directory: {remote_dir}")
+            remote_dir = node.outputs.remote_folder.get_attribute('remote_path')
+            echo.echo(f'Remote Directory: {remote_dir}')
         except AttributeError:
-            echo.echo(f"No Remote Directory Found")
+            echo.echo(f'No Remote Directory Found')
 
     for process in processes:
         if isinstance(process, CalcJobNode):

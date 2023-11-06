@@ -30,7 +30,9 @@ class DemoWorkChain(WorkChain):  # pylint: disable=abstract-method
         spec.input_namespace('y.nested', help='A nested namespace.')
         spec.input('y.nested.a', valid_type=Int, help='An input in the nested namespace.')
         spec.input_namespace('nsp', help='A separate namespace, ``nsp``.')
-        spec.input_namespace('nsp2',)
+        spec.input_namespace(
+            'nsp2',
+        )
         spec.output('z', valid_type=Bool, help='Output of the demoworkchain.')
 
         spec.outline(  # yapf: disable

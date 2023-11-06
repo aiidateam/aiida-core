@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-public-methods,redefined-outer-name,no-self-use, too-many-lines
+# pylint: disable=too-many-public-methods,redefined-outer-name,too-many-lines
 """Test for the `CalcJob` process sub class."""
 from copy import deepcopy
 from functools import partial
@@ -515,6 +515,12 @@ class TestCalcJob:
         process.node.set_state(state)
 
         return process
+
+    def test_get_hash(self, get_calcjob_builder):
+        """Test that :meth:`aiida.orm.CalcJobNode.get_hash` returns the same hash as what is stored in the extras."""
+        builder = get_calcjob_builder()
+        _, node = launch.run_get_node(builder)
+        assert node.base.extras.get(node.base.caching._HASH_EXTRA_KEY) == node.get_hash()  # pylint: disable=protected-access
 
     def test_process_status(self):
         """Test that the process status is properly reset if calculation ends successfully."""

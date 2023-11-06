@@ -130,7 +130,7 @@ class SlurmJobResource(NodeNumberJobResource):
             if resources.num_cores_per_machine < 1:
                 raise ValueError('num_cores_per_machine must be greater than or equal to one.')
 
-            resources.num_cores_per_mpiproc = (resources.num_cores_per_machine / resources.num_mpiprocs_per_machine)
+            resources.num_cores_per_mpiproc = resources.num_cores_per_machine / resources.num_mpiprocs_per_machine
             if int(resources.num_cores_per_mpiproc) != resources.num_cores_per_mpiproc:
                 raise ValueError(
                     '`num_cores_per_machine` must be equal to `num_cores_per_mpiproc * num_mpiprocs_per_machine` and in'
@@ -585,7 +585,7 @@ stderr='{stderr.strip()}'"""
             this_job.queue_name = thisjob_dict['partition']
 
             try:
-                walltime = (self._convert_time(thisjob_dict['time_limit']))
+                walltime = self._convert_time(thisjob_dict['time_limit'])
                 this_job.requested_wallclock_time_seconds = walltime  # pylint: disable=invalid-name
             except ValueError:
                 self.logger.warning(f'Error parsing the time limit for job id {this_job.job_id}')
@@ -594,7 +594,7 @@ stderr='{stderr.strip()}'"""
             # and may be not set (in my test, it is set to zero)
             if this_job.job_state == JobState.RUNNING:
                 try:
-                    this_job.wallclock_time_seconds = (self._convert_time(thisjob_dict['time_used']))
+                    this_job.wallclock_time_seconds = self._convert_time(thisjob_dict['time_used'])
                 except ValueError:
                     self.logger.warning(f'Error parsing time_used for job id {this_job.job_id}')
 

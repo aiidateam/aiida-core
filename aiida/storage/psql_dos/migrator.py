@@ -19,14 +19,13 @@ from __future__ import annotations
 
 import contextlib
 import pathlib
-from typing import Any, Dict, Iterator, Optional
+from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional
 
 from alembic.command import downgrade, upgrade
 from alembic.config import Config
 from alembic.runtime.environment import EnvironmentContext
 from alembic.runtime.migration import MigrationContext, MigrationInfo
 from alembic.script import ScriptDirectory
-from disk_objectstore import Container
 from sqlalchemy import MetaData, String, column, desc, insert, inspect, select, table
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.ext.automap import automap_base
@@ -37,6 +36,9 @@ from aiida.manage.configuration.profile import Profile
 from aiida.storage.log import MIGRATE_LOGGER
 from aiida.storage.psql_dos.models.settings import DbSetting
 from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
+
+if TYPE_CHECKING:
+    from disk_objectstore import Container
 
 TEMPLATE_LEGACY_DJANGO_SCHEMA = """
 Database schema is using the legacy Django schema.
@@ -175,12 +177,15 @@ class PsqlDosMigrator:
                 f'but the disk-objectstore\'s is {repository_uuid}.'
             )
 
-    def get_container(self) -> Container:
+    def get_container(self) -> 'Container':
         """Return the disk-object store container.
 
         :returns: The disk-object store container configured for the repository path of the current profile.
         """
+        from disk_objectstore import Container
+
         from .backend import get_filepath_container
+
         return Container(get_filepath_container(self.profile))
 
     def get_repository_uuid(self) -> str:
@@ -384,6 +389,7 @@ class PsqlDosMigrator:
         # finally migrate to the main head revision
         MIGRATE_LOGGER.report('Migrating to the head of the main branch')
         self.migrate_up('main@head')
+        self.connection.commit()
 
     def migrate_up(self, version: str) -> None:
         """Migrate the database up to a specific version.

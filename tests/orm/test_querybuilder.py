@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=attribute-defined-outside-init,invalid-name,no-self-use,missing-docstring,too-many-lines,unused-argument
+# pylint: disable=attribute-defined-outside-init,invalid-name,missing-docstring,too-many-lines,unused-argument
 """Tests for the QueryBuilder."""
 from collections import defaultdict
 import copy
@@ -438,7 +438,7 @@ class TestBasic:
         d.base.attributes.set('cat', 'miau')
         d.store()
 
-        p = orm.Dict(dict=dict(cat='miau'))
+        p = orm.Dict(dict={'cat': 'miau'})
         p.store()
 
         # Now when asking for a node with attr.cat==miau, I want 3 esults:
@@ -1475,6 +1475,31 @@ class TestConsistency:
             qb.append(orm.Data, with_incoming='parent')
             assert len(qb.all()) == qb.count()
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_iterall_except(self):
+        """Test ``QueryBuilder.iterall`` uses a transaction and if interrupted, changes are reverted.
+
+        In this test, 10 nodes are created which are then looped over and for each one, another node is stored, but
+        before the loop can finish, an exception is raised. At then, the number of nodes should still be ten as the new
+        ones that were being created in the transaction should have been reverted.
+        """
+        assert orm.QueryBuilder().append(orm.Data).count() == 0
+
+        count = 10
+
+        for _ in range(count):
+            orm.Data().store()
+
+        try:
+            for index, _ in enumerate(orm.QueryBuilder().append(orm.Data).iterall()):
+                orm.Data().store()
+                if index >= count - 2:
+                    raise RuntimeError('some error')
+        except RuntimeError:
+            pass
+
+        assert orm.QueryBuilder().append(orm.Data).count() == count
+
     def test_iterall_with_mutation(self):
         """Test that nodes can be mutated while being iterated using ``QueryBuilder.iterall``.
 
@@ -1495,9 +1520,30 @@ class TestConsistency:
             assert orm.load_node(pk).get_extra('key') == 'value'
 
     @pytest.mark.usefixtures('aiida_profile_clean')
-    @pytest.mark.skip('enable when https://github.com/aiidateam/aiida-core/issues/5802 is fixed')
     def test_iterall_with_store(self):
         """Test that nodes can be stored while being iterated using ``QueryBuilder.iterall``.
+
+        This is a regression test for https://github.com/aiidateam/aiida-core/issues/5802 .
+        """
+        count = 10
+        pks = []
+        pk_clones = []
+
+        for _ in range(count):
+            node = orm.Int().store()
+            pks.append(node.pk)
+
+        # Ensure that batch size is smaller than the total rows yielded
+        for [node] in orm.QueryBuilder().append(orm.Int).iterall(batch_size=2):
+            clone = orm.Int(node.value).store()
+            pk_clones.append(clone.pk)
+
+        for pk, pk_clone in zip(pks, sorted(pk_clones)):
+            assert orm.load_node(pk) == orm.load_node(pk_clone)
+
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_iterall_with_store_group(self):
+        """Test that nodes can be stored and added to groups while being iterated using ``QueryBuilder.iterall``.
 
         This is a regression test for https://github.com/aiidateam/aiida-core/issues/5802 .
         """
@@ -1510,7 +1556,7 @@ class TestConsistency:
             pks.append(node.pk)
 
         # Ensure that batch size is smaller than the total rows yielded
-        for [node] in orm.QueryBuilder().append(orm.Data).iterall(batch_size=2):
+        for [node] in orm.QueryBuilder().append(orm.Int).iterall(batch_size=2):
             clone = copy.deepcopy(node)
             clone.store()
             pks_clone.append((clone.value, clone.pk))
@@ -1520,6 +1566,38 @@ class TestConsistency:
         # Need to sort the cloned pks based on the value, because the order of ``iterall`` is not guaranteed
         for pk, pk_clone in zip(pks, [e[1] for e in sorted(pks_clone)]):
             assert orm.load_node(pk) == orm.load_node(pk_clone)
+
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_iterall_persistence(self, manager):
+        """Test that mutations made during ``QueryBuilder.iterall`` context are automatically committed and persisted.
+
+        This is a regression test for https://github.com/aiidateam/aiida-core/issues/6133 .
+        """
+        count = 10
+
+        # Create number of nodes with specific extra
+        for _ in range(count):
+            node = orm.Data().store()
+            node.base.extras.set('testing', True)
+
+        query = orm.QueryBuilder().append(orm.Data, filters={'extras': {'has_key': 'testing'}})
+        assert query.count() == count
+
+        # Unload and reload the storage, which will reset the session and check that the nodes with extras still exist
+        manager.reset_profile_storage()
+        manager.get_profile_storage()
+        assert query.count() == count
+
+        # Delete the extras and check that the query now matches 0
+        for [node] in orm.QueryBuilder().append(orm.Data).iterall(batch_size=2):
+            node.base.extras.delete('testing')
+
+        assert query.count() == 0
+
+        # Finally, reset the storage again and verify the changes have been persisted
+        manager.reset_profile_storage()
+        manager.get_profile_storage()
+        assert query.count() == 0
 
 
 class TestManager:

@@ -1004,7 +1004,7 @@ class TestSubmitScript(unittest.TestCase):
                 num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24, num_cores_per_mpiproc=23
             )
 
-    def test_submit_script_rerunnable(self):  # pylint: disable=no-self-use
+    def test_submit_script_rerunnable(self):
         """Test the `rerunnable` option of the submit script."""
         from aiida.common.datastructures import CodeRunMode
         from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo

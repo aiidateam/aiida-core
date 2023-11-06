@@ -350,6 +350,29 @@ The function will submit the calculation to the daemon and immediately return co
 .. warning::
     For a process to be submittable, the class or function needs to be importable in the daemon environment by a) giving it an :ref:`associated entry point<how-to:plugin-codes:entry-points>` or b) :ref:`including its module path<how-to:faq:process-not-importable-daemon>` in the ``PYTHONPATH`` that the daemon workers will have.
 
+.. tip::
+    Use ``wait=True`` when calling ``submit`` to wait for the process to complete before returning the node.
+    This can be useful for tutorials and demos in interactive notebooks where the user should not continue before the process is done.
+    One could of course also use ``run`` (see below), but then the process would be lost if the interpreter gets accidentally shut down.
+    By using ``submit``, the process is run by the daemon which takes care of saving checkpoints so it can always be restarted in case of problems.
+    If you need to launch multiple processes in parallel and want to wait for all of them to be finished, simply use ``submit`` with the default ``wait=False`` and collect the returned nodes in a list.
+    You can then pass them to :func:`aiida.engine.launch.await_processes` which will return once all processes have terminated:
+
+    .. code:: python
+
+        from aiida.engine import submit, await_processes
+
+        nodes = []
+
+        for i in range(5):
+            node = submit(...)
+            nodes.append(node)
+
+        await_processes(nodes, wait_interval=10)
+
+    The ``await_processes`` function will loop every ``wait_interval`` seconds and check whether all processes (represented by the ``ProcessNode`` in the ``nodes`` list) have terminated.
+
+
 The ``run`` function is called identically:
 
 .. include:: include/snippets/launch/launch_run.py
@@ -704,3 +727,28 @@ If you know that your daemon runners may be experiencing a heavy load, you can a
 .. rubric:: Footnotes
 
 .. [#f1] Note that the :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation` process class also takes a ``code`` as input, but that has been omitted for the purposes of the example.
+
+
+.. _topics:processes:usage:processes_api:
+
+The processes API
+-----------------
+
+The functionality of ``verdi process`` to ``play``, ``pause`` and ``kill`` is now made available through the :meth:`aiida.engine.processes.control` module.
+Processes can be played, paused or killed through the :meth:`~aiida.engine.processes.control.play_processes`, :meth:`~aiida.engine.processes.control.pause_processes`, and :meth:`~aiida.engine.processes.control.kill_processes`, respectively:
+
+.. code-block:: python
+
+    from aiida.engine.processes import control
+
+    processes = [load_node(<PK1>), load_node(<PK2>)]
+
+    pause_processes(processes)  # Pause the processes
+    play_processes(processes)  # Play them again
+    kill_processes(processes)  # Kill the processes
+
+Instead of specifying an explicit list of processes, the functions also take the ``all_entries`` keyword argument:
+
+.. code-block:: python
+
+    pause_processes(all_entries=True)  # Pause all running processes

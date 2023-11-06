@@ -63,7 +63,7 @@ class TemplatereplacerParser(Parser):
                 # We always strip the content of the file from whitespace to simplify testing for expected output
                 output_dict['retrieved_temporary_files'].append((retrieved_file, parsed_value))
 
-        label = self.node.process_class.spec().default_output_node  # type: ignore
+        label = self.node.process_class.spec().default_output_node  # type: ignore[attr-defined]
         self.out(label, Dict(dict=output_dict))
 
         return

@@ -41,7 +41,7 @@ VERDI_BIN = shutil.which('verdi')
 # Recent versions of virtualenv create the environment variable VIRTUAL_ENV
 VIRTUALENV = os.environ.get('VIRTUAL_ENV', None)
 
-__all__ = ('DaemonClient',)
+__all__ = ('DaemonClient', 'get_daemon_client')
 
 
 class ControllerProtocol(enum.Enum):
@@ -95,7 +95,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         config = get_config()
         self._profile = profile
         self._socket_directory: str | None = None
-        self._daemon_timeout: int = config.get_option('daemon.timeout')
+        self._daemon_timeout: int = config.get_option('daemon.timeout', scope=profile.name)
 
     @property
     def profile(self) -> Profile:
@@ -380,23 +380,25 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         return endpoint
 
     @contextlib.contextmanager
-    def get_client(self) -> 'CircusClient':
+    def get_client(self, timeout: int | None = None) -> 'CircusClient':
         """Return an instance of the CircusClient.
 
         The endpoint is defined by the controller endpoint, which used the port that was written to the port file upon
         starting of the daemon.
 
+        :param timeout: Optional timeout to set for trying to reach the circus daemon. Default is set on the client upon
+            instantiation taken from the ``daemon.timeout`` config option.
         :return: CircusClient instance
         """
         from circus.client import CircusClient
 
         try:
-            client = CircusClient(endpoint=self.get_controller_endpoint(), timeout=self._daemon_timeout)
+            client = CircusClient(endpoint=self.get_controller_endpoint(), timeout=timeout or self._daemon_timeout)
             yield client
         finally:
             client.stop()
 
-    def call_client(self, command: dict[str, t.Any]) -> dict[str, t.Any]:
+    def call_client(self, command: dict[str, t.Any], timeout: int | None = None) -> dict[str, t.Any]:
         """Call the client with a specific command.
 
         Will check whether the daemon is running first by checking for the pid file. When the pid is found yet the call
@@ -404,6 +406,8 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         causing the pid file to not be cleaned up properly.
 
         :param command: Command to call the circus client with.
+        :param timeout: Optional timeout to set for trying to reach the circus daemon. Default is set on the client upon
+            instantiation taken from the ``daemon.timeout`` config option.
         :return: The result of the circus client call.
         :raises DaemonException: If the daemon is not running or cannot be reached.
         :raises DaemonTimeoutException: If the connection to the daemon timed out.
@@ -412,7 +416,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         from circus.exc import CallError
 
         try:
-            with self.get_client() as client:
+            with self.get_client(timeout=timeout) as client:
                 result = client.call(command)
         except CallError as exception:
             if self.get_daemon_pid() is None:
@@ -420,8 +424,8 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
 
             if self._is_pid_file_stale:
                 raise DaemonStalePidException(
-                    'The daemon could not be reached, seemingly because of a stale PID file. Try starting the daemon '
-                    'to remove it and restore the daemon.'
+                    'The daemon could not be reached, seemingly because of a stale PID file. Either stop or start the '
+                    'daemon to remove it and restore the daemon to a functional state.'
                 ) from exception
 
             if str(exception) == 'Timed out.':
@@ -431,117 +435,137 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
 
         return result
 
-    def get_status(self) -> dict[str, t.Any]:
+    def get_status(self, timeout: int | None = None) -> dict[str, t.Any]:
         """Return the status of the daemon.
 
-        :returns: Instance of ``DaemonStatus``.
+        :param timeout: Optional timeout to set for trying to reach the circus daemon. Default is set on the client upon
+            instantiation taken from the ``daemon.timeout`` config option.
+        :returns: The client call response. If successful, will contain 'pid' key.
         """
         command = {'command': 'status', 'properties': {'name': self.daemon_name}}
-        response = self.call_client(command)
+        response = self.call_client(command, timeout=timeout)
         response['pid'] = self.get_daemon_pid()
         return response
 
-    def get_numprocesses(self) -> dict[str, t.Any]:
+    def get_numprocesses(self, timeout: int | None = None) -> dict[str, t.Any]:
         """Get the number of running daemon processes.
 
+        :param timeout: Optional timeout to set for trying to reach the circus daemon. Default is set on the client upon
+            instantiation taken from the ``daemon.timeout`` config option.
         :return: The client call response. If successful, will contain 'numprocesses' key.
         """
         command = {'command': 'numprocesses', 'properties': {'name': self.daemon_name}}
-        return self.call_client(command)
+        return self.call_client(command, timeout=timeout)
 
-    def get_worker_info(self) -> dict[str, t.Any]:
+    def get_worker_info(self, timeout: int | None = None) -> dict[str, t.Any]:
         """Get workers statistics for this daemon.
 
+        :param timeout: Optional timeout to set for trying to reach the circus daemon. Default is set on the client upon
+            instantiation taken from the ``daemon.timeout`` config option.
         :return: The client call response. If successful, will contain 'info' key.
         """
         command = {'command': 'stats', 'properties': {'name': self.daemon_name}}
-        return self.call_client(command)
+        return self.call_client(command, timeout=timeout)
 
-    def get_daemon_info(self) -> dict[str, t.Any]:
+    def get_daemon_info(self, timeout: int | None = None) -> dict[str, t.Any]:
         """Get statistics about this daemon itself.
 
+        :param timeout: Optional timeout to set for trying to reach the circus daemon. Default is set on the client upon
+            instantiation taken from the ``daemon.timeout`` config option.
         :return: The client call response. If successful, will contain 'info' key.
         """
         command = {'command': 'dstats', 'properties': {}}
-        return self.call_client(command)
+        return self.call_client(command, timeout=timeout)
 
-    def increase_workers(self, number: int) -> dict[str, t.Any]:
+    def increase_workers(self, number: int, timeout: int | None = None) -> dict[str, t.Any]:
         """Increase the number of workers.
 
         :param number: The number of workers to add.
+        :param timeout: Optional timeout to set for trying to reach the circus daemon. Default is set on the client upon
+            instantiation taken from the ``daemon.timeout`` config option.
         :return: The client call response.
         """
         command = {'command': 'incr', 'properties': {'name': self.daemon_name, 'nb': number}}
-        return self.call_client(command)
+        return self.call_client(command, timeout=timeout)
 
-    def decrease_workers(self, number: int) -> dict[str, t.Any]:
+    def decrease_workers(self, number: int, timeout: int | None = None) -> dict[str, t.Any]:
         """Decrease the number of workers.
 
         :param number: The number of workers to remove.
+        :param timeout: Optional timeout to set for trying to reach the circus daemon. Default is set on the client upon
+            instantiation taken from the ``daemon.timeout`` config option.
         :return: The client call response.
         """
         command = {'command': 'decr', 'properties': {'name': self.daemon_name, 'nb': number}}
-        return self.call_client(command)
+        return self.call_client(command, timeout=timeout)
 
-    def stop_daemon(self, wait: bool = True, timeout: int = 5) -> dict[str, t.Any]:
-        """Stop the daemon.
-
-        :param wait: Boolean to indicate whether to wait for the result of the command.
-        :param timeout: Wait this number of seconds for the ``is_daemon_running`` to return ``False`` before raising.
-        :return: The client call response.
-        :raises DaemonException: If ``is_daemon_running`` returns ``True`` after the ``timeout`` has passed.
-        """
-        command = {'command': 'quit', 'properties': {'waiting': wait}}
-        response = self.call_client(command)
-
-        if self._ENDPOINT_PROTOCOL == ControllerProtocol.IPC:
-            self.delete_circus_socket_directory()
-
-        if not wait:
-            return response
-
-        self._await_condition(
-            lambda: not self.is_daemon_running,
-            DaemonException(f'The daemon failed to stop within {timeout} seconds.'),
-            timeout=timeout,
-        )
-
-        return response
-
-    def restart_daemon(self, wait: bool) -> dict[str, t.Any]:
-        """Restart the daemon.
-
-        :param wait: Boolean to indicate whether to wait for the result of the command.
-        :return: The client call response.
-        """
-        command = {'command': 'restart', 'properties': {'name': self.daemon_name, 'waiting': wait}}
-        return self.call_client(command)
-
-    def start_daemon(self, number_workers: int = 1, foreground: bool = False, timeout: int = 5) -> None:
+    def start_daemon(
+        self, number_workers: int = 1, foreground: bool = False, wait: bool = True, timeout: int | None = None
+    ) -> None:
         """Start the daemon in a sub process running in the background.
 
         :param number_workers: Number of daemon workers to start.
         :param foreground: Whether to launch the subprocess in the background or not.
-        :param timeout: Wait this number of seconds for the ``is_daemon_running`` to return ``True`` before raising.
-        :raises DaemonException: If the daemon fails to start.
-        :raises DaemonException: If the daemon starts but then is unresponsive or in an unexpected state.
-        :raises DaemonException: If ``is_daemon_running`` returns ``False`` after the ``timeout`` has passed.
+        :param wait: Boolean to indicate whether to wait for the result of the command.
+        :param timeout: Optional timeout to set for trying to reach the circus daemon after the subprocess has started.
+            Default is set on the client upon instantiation taken from the ``daemon.timeout`` config option.
+        :raises DaemonException: If the command to start the daemon subprocess excepts.
+        :raises DaemonTimeoutException: If the daemon starts but then is unresponsive or in an unexpected state.
         """
         self._clean_potentially_stale_pid_file()
 
         env = self.get_env()
         command = self.cmd_start_daemon(number_workers, foreground)
+        timeout = timeout or self._daemon_timeout
 
         try:
             subprocess.check_output(command, env=env, stderr=subprocess.STDOUT)  # pylint: disable=unexpected-keyword-arg
         except subprocess.CalledProcessError as exception:
             raise DaemonException('The daemon failed to start.') from exception
 
+        if not wait:
+            return
+
         self._await_condition(
             lambda: self.is_daemon_running,
-            DaemonException(f'The daemon failed to start within {timeout} seconds.'),
+            DaemonTimeoutException(f'The daemon failed to start or is unresponsive after {timeout} seconds.'),
             timeout=timeout,
         )
+
+    def restart_daemon(self, wait: bool = True, timeout: int | None = None) -> dict[str, t.Any]:
+        """Restart the daemon.
+
+        :param wait: Boolean to indicate whether to wait for the result of the command.
+        :param timeout: Optional timeout to set for trying to reach the circus daemon. Default is set on the client upon
+            instantiation taken from the ``daemon.timeout`` config option.
+        :returns: The client call response.
+        :raises DaemonException: If the daemon is not running or cannot be reached.
+        :raises DaemonTimeoutException: If the connection to the daemon timed out.
+        :raises DaemonException: If the connection to the daemon failed for any other reason.
+        """
+        command = {'command': 'restart', 'properties': {'name': self.daemon_name, 'waiting': wait}}
+        return self.call_client(command, timeout=timeout)
+
+    def stop_daemon(self, wait: bool = True, timeout: int | None = None) -> dict[str, t.Any]:
+        """Stop the daemon.
+
+        :param wait: Boolean to indicate whether to wait for the result of the command.
+        :param timeout: Optional timeout to set for trying to reach the circus daemon. Default is set on the client upon
+            instantiation taken from the ``daemon.timeout`` config option.
+        :returns: The client call response.
+        :raises DaemonException: If the daemon is not running or cannot be reached.
+        :raises DaemonTimeoutException: If the connection to the daemon timed out.
+        :raises DaemonException: If the connection to the daemon failed for any other reason.
+        """
+        self._clean_potentially_stale_pid_file()
+
+        command = {'command': 'quit', 'properties': {'waiting': wait}}
+        response = self.call_client(command, timeout=timeout)
+
+        if self._ENDPOINT_PROTOCOL == ControllerProtocol.IPC:
+            self.delete_circus_socket_directory()
+
+        return response
 
     def _clean_potentially_stale_pid_file(self) -> None:
         """Check the daemon PID file and delete it if it is likely to be stale."""
@@ -689,8 +713,7 @@ class DaemonClient:  # pylint: disable=too-many-public-methods
         pidfile.create(os.getpid())
 
         # Configure the logger
-        loggerconfig = None
-        loggerconfig = loggerconfig or arbiter.loggerconfig or None
+        loggerconfig = arbiter.loggerconfig or None
         configure_logger(circus_logger, loglevel, logoutput, loggerconfig)
 
         # Main loop

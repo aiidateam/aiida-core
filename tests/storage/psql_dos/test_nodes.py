@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=import-error,no-name-in-module,no-self-use
+# pylint: disable=import-error,no-name-in-module
 """Tests for nodes, attributes and links."""
 import pytest
 

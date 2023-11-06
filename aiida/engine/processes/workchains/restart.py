@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Tuple, Typ
 
 from aiida import orm
 from aiida.common import AttributeDict
+from aiida.common.links import LinkType
 from aiida.common.warnings import warn_deprecation
 
 from .context import ToContext, append_
@@ -178,7 +179,7 @@ class BaseRestartWorkChain(WorkChain):
         This is the case as long as the last process has not finished successfully and the maximum number of restarts
         has not yet been exceeded.
         """
-        max_iterations = self.inputs.max_iterations.value  # type: ignore[union-attr]
+        max_iterations = self.inputs.max_iterations.value
         return not self.ctx.is_finished and self.ctx.iteration < max_iterations
 
     def run_process(self) -> ToContext:
@@ -311,7 +312,7 @@ class BaseRestartWorkChain(WorkChain):
         # We check the `is_finished` attribute of the work chain and not the successfulness of the last process
         # because the error handlers in the last iteration can have qualified a "failed" process as satisfactory
         # for the outcome of the work chain and so have marked it as `is_finished=True`.
-        max_iterations = self.inputs.max_iterations.value  # type: ignore[union-attr]
+        max_iterations = self.inputs.max_iterations.value
         if not self.ctx.is_finished and self.ctx.iteration >= max_iterations:
             self.report(
                 f'reached the maximum number of iterations {max_iterations}: '
@@ -320,8 +321,17 @@ class BaseRestartWorkChain(WorkChain):
             return self.exit_codes.ERROR_MAXIMUM_ITERATIONS_EXCEEDED  # pylint: disable=no-member
 
         self.report(f'work chain completed after {self.ctx.iteration} iterations')
+        self._attach_outputs(node)
+        return None
 
+    def _attach_outputs(self, node) -> Mapping[str, orm.Node]:
+        """Attach the outputs of the given calculation job to the work chain.
+
+        :param node: The ``CalcJobNode`` whose outputs to attach.
+        :returns: The mapping of output nodes that were attached.
+        """
         outputs = self.get_outputs(node)
+        existing_outputs = self.node.base.links.get_outgoing(link_type=LinkType.RETURN).all_link_labels()
 
         for name, port in self.spec().outputs.items():
 
@@ -330,13 +340,16 @@ class BaseRestartWorkChain(WorkChain):
             except KeyError:
                 if port.required:
                     self.report(
-                        f'required output \'{name}\' was not an output of {self.ctx.process_name}<{node.pk}> '
+                        f'required output `{name}` was not an output of {self.ctx.process_name}<{node.pk}> '
                         f'(or an incorrect class/output is being exposed).'
                     )
             else:
-                self.out(name, output)
+                if name in existing_outputs:
+                    self.logger.info(f'output `{name}` was already attached, skipping.')
+                else:
+                    self.out(name, output)
 
-        return None
+        return outputs
 
     def __init__(self, *args, **kwargs) -> None:
         """Construct the instance."""
@@ -392,7 +405,7 @@ class BaseRestartWorkChain(WorkChain):
         """Clean the working directories of all child calculation jobs if `clean_workdir=True` in the inputs."""
         super().on_terminated()
 
-        if self.inputs.clean_workdir.value is False:  # type: ignore[union-attr]
+        if self.inputs.clean_workdir.value is False:
             self.report('remote folders will not be cleaned')
             return
 
@@ -427,7 +440,8 @@ class BaseRestartWorkChain(WorkChain):
                 continue
 
             port = port_namespace[key]
-            valid_types = port.valid_type if isinstance(port.valid_type, (list, tuple)) else (port.valid_type,)
+            valid_types = port.valid_type \
+                if isinstance(port.valid_type, (list, tuple)) else (port.valid_type,)  # type: ignore[redundant-expr]
 
             if isinstance(port, PortNamespace):
                 wrapped[key] = self._wrap_bare_dict_inputs(port, value)

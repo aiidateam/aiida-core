@@ -20,7 +20,11 @@ from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
-from aiida.orm.utils.node import AbstractNodeMeta
+from aiida.orm.utils.node import (  # pylint: disable=unused-import
+    AbstractNodeMeta,
+    get_query_type_from_type_string,
+    get_type_string_from_class,
+)
 
 from ..computers import Computer
 from ..entities import Collection as EntityCollection
@@ -35,20 +39,20 @@ from .links import NodeLinks
 from .repository import NodeRepository
 
 if TYPE_CHECKING:
-    from aiida.plugins.entry_point import EntryPoint  # type: ignore
+    from importlib_metadata import EntryPoint
 
     from ..implementation import BackendNode, StorageBackend
 
 __all__ = ('Node',)
 
-NodeType = TypeVar('NodeType', bound='Node')
+NodeType = TypeVar('NodeType', bound='Node')  # pylint: disable=invalid-name
 
 
 class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
     """The collection of nodes."""
 
     @staticmethod
-    def _entity_base_cls() -> Type['Node']:  # type: ignore
+    def _entity_base_cls() -> Type['Node']:  # type: ignore[override]
         return Node
 
     def delete(self, pk: int) -> None:
@@ -149,9 +153,22 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
     _CLS_NODE_LINKS = NodeLinks
     _CLS_NODE_CACHING = NodeCaching
 
-    # added by metaclass
-    _plugin_type_string: ClassVar[str]
-    _query_type_string: ClassVar[str]
+    __plugin_type_string: ClassVar[str]
+    __query_type_string: ClassVar[str]
+
+    @classproperty
+    def _plugin_type_string(cls) -> str:
+        """Return the plugin type string of this node class."""
+        if not hasattr(cls, '__plugin_type_string'):
+            cls.__plugin_type_string = get_type_string_from_class(cls.__module__, cls.__name__)  # type: ignore[misc]
+        return cls.__plugin_type_string
+
+    @classproperty
+    def _query_type_string(cls) -> str:
+        """Return the query type string of this node class."""
+        if not hasattr(cls, '__query_type_string'):
+            cls.__query_type_string = get_query_type_from_type_string(cls._plugin_type_string)  # type: ignore[misc]
+        return cls.__query_type_string
 
     # This will be set by the metaclass call
     _logger: Optional[Logger] = None
@@ -246,7 +263,6 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         Therefore, use :py:meth:`~aiida.orm.nodes.attributes.NodeAttributes.get()` and similar methods that
         automatically read either from the DB or from the internal attribute cache.
         """
-        # pylint: disable=no-self-use
         return True
 
     def _validate_storability(self) -> None:
@@ -408,12 +424,10 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         """
         return self.backend_entity.mtime
 
-    def store_all(self, with_transaction: bool = True) -> 'Node':
+    def store_all(self) -> 'Node':
         """Store the node, together with all input links.
 
         Unstored nodes from cached incoming linkswill also be stored.
-
-        :parameter with_transaction: if False, do not use a transaction because the caller will already have opened one.
         """
         if self.is_stored:
             raise exceptions.ModificationNotAllowed(f'Node<{self.pk}> is already stored')
@@ -424,11 +438,11 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
 
         for link_triple in self.base.links.incoming_cache:
             if not link_triple.node.is_stored:
-                link_triple.node.store(with_transaction=with_transaction)
+                link_triple.node.store()
 
-        return self.store(with_transaction)
+        return self.store()
 
-    def store(self, with_transaction: bool = True) -> 'Node':  # pylint: disable=arguments-differ
+    def store(self) -> 'Node':  # pylint: disable=arguments-differ
         """Store the node in the database while saving its attributes and repository directory.
 
         After being called attributes cannot be changed anymore! Instead, extras can be changed only AFTER calling
@@ -436,8 +450,6 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
 
         :note: After successful storage, those links that are in the cache, and for which also the parent node is
             already stored, will be automatically stored. The others will remain unstored.
-
-        :parameter with_transaction: if False, do not use a transaction because the caller will already have opened one.
         """
         from aiida.manage.caching import get_use_cache
 
@@ -461,9 +473,9 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             same_node = self.base.caching._get_same_node() if use_cache else None  # pylint: disable=protected-access
 
             if same_node is not None:
-                self._store_from_cache(same_node, with_transaction=with_transaction)
+                self._store_from_cache(same_node)
             else:
-                self._store(with_transaction=with_transaction, clean=True)
+                self._store(clean=True)
 
             if self.backend.autogroup.is_to_be_grouped(self):
                 group = self.backend.autogroup.get_or_create_group()
@@ -471,16 +483,15 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
 
         return self
 
-    def _store(self, with_transaction: bool = True, clean: bool = True) -> 'Node':
+    def _store(self, clean: bool = True) -> 'Node':
         """Store the node in the database while saving its attributes and repository directory.
 
-        :param with_transaction: if False, do not use a transaction because the caller will already have opened one.
         :param clean: boolean, if True, will clean the attributes and extras before attempting to store
         """
         self.base.repository._store()  # pylint: disable=protected-access
 
         links = self.base.links.incoming_cache
-        self._backend_entity.store(links, with_transaction=with_transaction, clean=clean)
+        self._backend_entity.store(links, clean=clean)
 
         self.base.links.incoming_cache = []
         self.base.caching.rehash()
@@ -498,7 +509,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
                     f'Cannot store because source node of link triple {link_triple} is not stored'
                 )
 
-    def _store_from_cache(self, cache_node: 'Node', with_transaction: bool) -> None:
+    def _store_from_cache(self, cache_node: 'Node') -> None:
         """Store this node from an existing cache node.
 
         .. note::
@@ -526,9 +537,9 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             if key != Sealable.SEALED_KEY:
                 self.base.attributes.set(key, value)
 
-        self._store(with_transaction=with_transaction, clean=False)
+        self._store(clean=False)
         self._add_outputs_from_cache(cache_node)
-        self.base.extras.set('_aiida_cached_from', cache_node.uuid)
+        self.base.extras.set(self.base.caching.CACHED_FROM_KEY, cache_node.uuid)
 
     def _add_outputs_from_cache(self, cache_node: 'Node') -> None:
         """Replicate the output links and nodes from the cached node onto this node."""
@@ -542,7 +553,6 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
 
         :return: a description string
         """
-        # pylint: disable=no-self-use
         return ''
 
     @property
@@ -653,7 +663,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
     }
 
     @classproperty
-    def Collection(cls):  # pylint: disable=invalid-name,no-self-use
+    def Collection(cls):  # pylint: disable=invalid-name
         """Return the collection type for this class.
 
         This used to be a class argument with the value ``NodeCollection``. The argument is deprecated and this property

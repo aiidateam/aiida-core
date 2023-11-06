@@ -9,7 +9,6 @@
 ###########################################################################
 """Common cli utilities for transport plugins."""
 from functools import partial
-import inspect
 
 import click
 
@@ -57,6 +56,8 @@ def common_params(command_func):
 
 def transport_option_default(name, computer):
     """Determine the default value for an auth_param key."""
+    import inspect
+
     transport_cls = computer.get_transport_class()
     suggester_name = f'_get_{name}_suggestion_string'
     members = dict(inspect.getmembers(transport_cls))

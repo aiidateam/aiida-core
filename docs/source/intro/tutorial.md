@@ -43,6 +43,7 @@ This tutorial can be downloaded and run as a Jupyter Notebook: {nb-download}`tut
 :tags: ["hide-cell"]
 
 from aiida import load_profile, engine, orm, plugins
+from aiida.manage.configuration import get_config
 from aiida.storage.sqlite_temp import SqliteTempBackend
 
 %load_ext aiida
@@ -58,6 +59,9 @@ profile = load_profile(
     ),
     allow_switch=True
 )
+config = get_config()
+config.add_profile(profile)
+config.set_default_profile(profile.name)
 profile
 ```
 
@@ -497,11 +501,12 @@ class MultiplyAddWorkChain(WorkChain):
 ```
 
 :::{note}
-Besides WorkChain's, workflows can also be implemented as *work functions*.
+Besides WorkChain's, workflows can also be implemented as {ref}`work functions <topics:workflows:concepts:workfunctions>`.
 These are ideal for workflows that are not very computationally intensive and can be easily implemented in a Python function.
 :::
 
 Let's run the `WorkChain` above!
+
 Start up the `verdi shell` and load the `MultiplyAddWorkChain` using the `WorkflowFactory`:
 
 ```{code-cell} ipython3
@@ -509,10 +514,13 @@ from aiida import plugins
 MultiplyAddWorkChain = plugins.WorkflowFactory('core.arithmetic.multiply_add')
 ```
 
-The `WorkflowFactory` is a useful and robust tool for loading workflows based on their *entry point*, e.g. `'core.arithmetic.multiply_add'` in this case.
+The `WorkflowFactory` loads workflows based on their {ref}`entry point <topics:plugins:entrypoints>`, e.g. `'core.arithmetic.multiply_add'` in this case.
+The entry point mechanism allows AiiDA to automatically discover workflows provided by  `aiida-core` and {ref}`AiiDA plugins <how-to:plugins-install>`, and display them to the user, e.g. via `verdi plugin list aiida.workflows`. Pass the entry point as an argument to display detailed information, e.g. via `verdi plugin list aiida.workflows core.arithmetic.multiply_add`.
+
 Similar to a `CalcJob`, the `WorkChain` input can be set up using a builder:
 
 ```{code-cell} ipython3
+from aiida import orm
 builder = MultiplyAddWorkChain.get_builder()
 builder.code = orm.load_code(label='add')
 builder.x = orm.Int(2)
@@ -524,6 +532,7 @@ builder
 Once the `WorkChain` input has been set up, we run it with the AiiDA engine:
 
 ```{code-cell} ipython3
+from aiida import engine
 engine.run(builder)
 ```
 

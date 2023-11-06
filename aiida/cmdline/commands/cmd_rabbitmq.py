@@ -16,17 +16,15 @@ import sys
 import typing as t
 
 import click
-import requests
-import tabulate
 import wrapt
-import yaml
 
 from aiida.cmdline.commands.cmd_devel import verdi_devel
 from aiida.cmdline.params import arguments, options
-from aiida.cmdline.utils import decorators, echo
+from aiida.cmdline.utils import decorators, echo, echo_tabulate
 
 if t.TYPE_CHECKING:
     import kiwipy.rmq
+    import requests
 
     from aiida.manage.configuration.profile import Profile
 
@@ -91,12 +89,13 @@ AVAILABLE_PROJECTORS = (
 )
 
 
-def echo_response(response: requests.Response, exit_on_error: bool = True) -> None:
+def echo_response(response: 'requests.Response', exit_on_error: bool = True) -> None:
     """Echo the response of a request.
 
     :param response: The response to the request.
     :param exit_on_error: Boolean, if ``True``, call ``sys.exit`` with the status code of the response.
     """
+    import requests
     try:
         response.raise_for_status()
     except requests.HTTPError:
@@ -145,6 +144,8 @@ def with_manager(wrapped, _, args, kwargs):
 @with_manager
 def cmd_server_properties(manager):
     """List the server properties."""
+    import yaml
+
     data = {}
     for key, value in manager.get_communicator().server_properties.items():
         data[key] = value.decode('utf-8') if isinstance(value, bytes) else value
@@ -190,7 +191,7 @@ def cmd_queues_list(client, project, raw, filter_name):
 
     headers = [name.capitalize() for name in project] if not raw else []
     tablefmt = None if not raw else 'plain'
-    echo.echo(tabulate.tabulate(output, headers=headers, tablefmt=tablefmt))
+    echo_tabulate(output, headers=headers, tablefmt=tablefmt)
 
 
 @cmd_queues.command('create')
@@ -372,11 +373,12 @@ def cmd_tasks_revive(processes, force):
         1. Does ``verdi status`` indicate that both daemon and RabbitMQ are running properly?
            If not, restart the daemon with ``verdi daemon restart --reset`` and restart RabbitMQ.
         2. Try ``verdi process play <PID>``.
-           If you receive a message that the process is no longer reachable, use ``verdi devel revive <PID>``.
+           If you receive a message that the process is no longer reachable,
+           use ``verdi devel rabbitmq tasks revive <PID>``.
 
     Details: When RabbitMQ loses the process task before the process has completed, the process is never picked up by
-    the daemon and will remain "stuck". ``verdi devel revive`` recreates the task, which can lead to multiple instances
-    of the task being executed and should thus be used with caution.
+    the daemon and will remain "stuck". ``verdi devel rabbitmq tasks revive`` recreates the task, which can lead to
+    multiple instances of the task being executed and should thus be used with caution.
     """
     from aiida.engine.processes.control import revive_processes
 

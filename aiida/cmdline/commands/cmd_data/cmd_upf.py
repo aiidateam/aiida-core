@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""`verdi data upf` command."""
+"""`verdi data core.upf` command."""
 
 import os
 
@@ -25,6 +25,9 @@ def upf():
 
 
 @upf.command('uploadfamily')
+@decorators.deprecated_command(
+    'See https://aiida-pseudo.readthedocs.io/en/latest/howto.html#migrate-from-legacy-upfdata-from-aiida-core'
+)
 @click.argument('folder', type=click.Path(exists=True, file_okay=False, resolve_path=True))
 @click.argument('group_label', type=click.STRING)
 @click.argument('group_description', type=click.STRING)
@@ -49,6 +52,9 @@ def upf_uploadfamily(folder, group_label, group_description, stop_if_existing):
 
 
 @upf.command('listfamilies')
+@decorators.deprecated_command(
+    'See https://aiida-pseudo.readthedocs.io/en/latest/howto.html#migrate-from-legacy-upfdata-from-aiida-core'
+)
 @click.option(
     '-d',
     '--with-description',
@@ -94,6 +100,9 @@ def upf_listfamilies(elements, with_description):
 
 
 @upf.command('exportfamily')
+@decorators.deprecated_command(
+    'See https://aiida-pseudo.readthedocs.io/en/latest/howto.html#migrate-from-legacy-upfdata-from-aiida-core'
+)
 @click.argument('folder', type=click.Path(exists=True, file_okay=False, resolve_path=True))
 @arguments.GROUP()
 @decorators.with_dbenv()
@@ -115,6 +124,9 @@ def upf_exportfamily(folder, group):
 
 
 @upf.command('import')
+@decorators.deprecated_command(
+    'See https://aiida-pseudo.readthedocs.io/en/latest/howto.html#migrate-from-legacy-upfdata-from-aiida-core'
+)
 @click.argument('filename', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
 @decorators.with_dbenv()
 def upf_import(filename):
@@ -128,6 +140,9 @@ def upf_import(filename):
 
 
 @upf.command('export')
+@decorators.deprecated_command(
+    'See https://aiida-pseudo.readthedocs.io/en/latest/howto.html#migrate-from-legacy-upfdata-from-aiida-core'
+)
 @arguments.DATUM(type=types.DataParamType(sub_classes=('aiida.data:core.upf',)))
 @options.EXPORT_FORMAT(
     type=click.Choice(['json']),

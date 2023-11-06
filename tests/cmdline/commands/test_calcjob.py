@@ -49,7 +49,7 @@ class TestVerdiCalculation:
         # Create 5 CalcJobNodes (one for each CalculationState)
         for index, calculation_state in enumerate(CalcJobState):
 
-            dirpath = (tmp_path / str(index))
+            dirpath = tmp_path / str(index)
             dirpath.mkdir()
 
             calc = orm.CalcJobNode(computer=self.computer, process_type=process_type)
@@ -87,7 +87,7 @@ class TestVerdiCalculation:
                 self.group.add_nodes([calc])
 
         # Create a single failed CalcJobNode
-        dirpath = (tmp_path / 'failed')
+        dirpath = tmp_path / 'failed'
         dirpath.mkdir()
         self.EXIT_STATUS = 100
         calc = orm.CalcJobNode(computer=self.computer)
@@ -108,7 +108,7 @@ class TestVerdiCalculation:
         # Get the imported ArithmeticAddCalculation node
         ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
         calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()[0]
-        self.arithmetic_job: orm.CalcJobNode = calculations[0]  # type: ignore
+        self.arithmetic_job: orm.CalcJobNode = calculations[0]  # type: ignore[annotation-unchecked]
 
         self.cli_runner = CliRunner()
 

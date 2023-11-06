@@ -13,7 +13,9 @@ from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
 from aiida.orm import CalcJobNode, Dict
 from aiida.plugins import BaseFactory
-from aiida.transports import Transport
+
+if t.TYPE_CHECKING:
+    from aiida.transports import Transport
 
 LOGGER = AIIDA_LOGGER.getChild(__name__)
 
@@ -149,6 +151,7 @@ class CalcJobMonitors:
     """
 
     def __init__(self, monitors: dict[str, Dict]):
+        """Construct a new instance."""
         type_check(monitors, dict)
 
         if any(not isinstance(monitor, Dict) for monitor in monitors.values()):

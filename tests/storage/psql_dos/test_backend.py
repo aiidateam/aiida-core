@@ -68,11 +68,15 @@ def test_get_unreferenced_keyset():
     ),
     ((
         {},
-        [' > live: True', ' > dry_run: False']
+        [' > live: True', ' > dry_run: False', ' > compress: False']
     ),
     (
         {'full': True, 'dry_run': True},
-        [' > live: False', ' > dry_run: True']
+        [' > live: False', ' > dry_run: True', ' > compress: False']
+    ),
+    (
+        {'full': True, 'dry_run': True, 'compress': True},
+        [' > live: False', ' > dry_run: True', ' > compress: True']
     ),
     (
         {'extra_kwarg': 'molly'},
@@ -87,10 +91,11 @@ def test_maintain(caplog, monkeypatch, kwargs, logged_texts):
 
     storage_backend = get_manager().get_profile_storage()
 
-    def mock_maintain(self, live=True, dry_run=False, **kwargs):  # pylint: disable=unused-argument
+    def mock_maintain(self, live=True, dry_run=False, compress=False, **kwargs):  # pylint: disable=unused-argument
         logmsg = 'keywords provided:\n'
         logmsg += f' > live: {live}\n'
         logmsg += f' > dry_run: {dry_run}\n'
+        logmsg += f' > compress: {compress}\n'
         for key, val in kwargs.items():
             logmsg += f' > {key}: {val}\n'
         logging.info(logmsg)
@@ -142,16 +147,23 @@ def test_unload_profile():
 
     This is a regression test for #5506.
     """
+    import gc
+
     from sqlalchemy.orm.session import _sessions  # pylint: disable=import-outside-toplevel
 
+    # Run the garbage collector to ensure any lingering unrelated sessions do not cause the test to fail.
+    gc.collect()
+
     # Just running the test suite itself should have opened at least one session
-    assert len(_sessions) != 0, str(_sessions)
+    current_sessions = len(_sessions)
+    assert current_sessions != 0, str(_sessions)
 
     manager = get_manager()
     profile_name = manager.get_profile().name
 
     try:
         manager.unload_profile()
-        assert len(_sessions) == 0, str(_sessions)
+        # After unloading, the session should have been cleared, so we should have one less
+        assert len(_sessions) == current_sessions - 1, str(_sessions)
     finally:
         manager.load_profile(profile_name)

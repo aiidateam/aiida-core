@@ -11,7 +11,6 @@
 from __future__ import annotations
 
 from importlib import import_module
-from inspect import isclass, isfunction
 from logging import Logger
 from types import FunctionType
 import typing as t
@@ -55,6 +54,8 @@ class PluginVersionProvider:
         :raises TypeError: If ``plugin`` (or the resource pointed to it in the case of an entry point) is not a class
             or a function.
         """
+        from inspect import isclass, isfunction
+
         from aiida import __version__ as version_core
 
         if isinstance(plugin, str):

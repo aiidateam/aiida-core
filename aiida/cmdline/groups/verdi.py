@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 """Subclass of :class:`click.Group` for the ``verdi`` CLI."""
+from __future__ import annotations
+
 import base64
 import difflib
 import gzip
+import typing as t
 
 import click
 
@@ -32,19 +35,42 @@ GIU = (
 )
 
 
+class LazyConfigAttributeDict(AttributeDict):
+    """Subclass of ``AttributeDict`` that lazily calls :meth:`aiida.manage.configuration.get_config`."""
+
+    _LAZY_KEY = 'config'
+
+    def __init__(self, ctx: click.Context, dictionary: dict[str, t.Any] | None = None):
+        super().__init__(dictionary)
+        self.ctx = ctx
+
+    def __getattr__(self, attr: str) -> t.Any:
+        """Override of ``AttributeDict.__getattr__`` for lazily loading the config key.
+
+        :param attr: The attribute to return.
+        :returns: The value of the attribute.
+        :raises AttributeError: If the attribute does not correspond to an existing key.
+        :raises click.exceptions.UsageError: If loading of the configuration fails.
+        """
+        if attr != self._LAZY_KEY:
+            return super().__getattr__(attr)
+
+        if self._LAZY_KEY not in self:
+            try:
+                self[self._LAZY_KEY] = get_config(create=True)
+            except ConfigurationError as exception:
+                self.ctx.fail(str(exception))
+
+        return self[self._LAZY_KEY]
+
+
 class VerdiContext(click.Context):
     """Custom context implementation that defines the ``obj`` user object and adds the ``Config`` instance."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         if self.obj is None:
-            self.obj = AttributeDict()
-
-        try:
-            self.obj.config = get_config(create=True)
-        except ConfigurationError as exception:
-            self.fail(str(exception))
+            self.obj = LazyConfigAttributeDict(self)
 
 
 class VerdiCommandGroup(click.Group):
@@ -57,15 +83,15 @@ class VerdiCommandGroup(click.Group):
     context_class = VerdiContext
 
     @staticmethod
-    def add_verbosity_option(cmd):
+    def add_verbosity_option(cmd: click.Command) -> click.Command:
         """Apply the ``verbosity`` option to the command, which is common to all ``verdi`` commands."""
         # Only apply the option if it hasn't been already added in a previous call.
-        if cmd is not None and 'verbosity' not in [param.name for param in cmd.params]:
+        if 'verbosity' not in [param.name for param in cmd.params]:
             cmd = options.VERBOSITY()(cmd)
 
         return cmd
 
-    def fail_with_suggestions(self, ctx, cmd_name):
+    def fail_with_suggestions(self, ctx: click.Context, cmd_name: str) -> None:
         """Fail the command while trying to suggest commands to resemble the requested ``cmd_name``."""
         # We might get better results with the Levenshtein distance or more advanced methods implemented in FuzzyWuzzy
         # or similar libs, but this is an easy win for now.
@@ -81,7 +107,7 @@ class VerdiCommandGroup(click.Group):
         else:
             ctx.fail(f'`{cmd_name}` is not a {self.name} command.\n\nNo similar commands found.')
 
-    def get_command(self, ctx, cmd_name):
+    def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
         """Return the command that corresponds to the requested ``cmd_name``.
 
         This method is overridden from the base class in order to two functionalities:
@@ -111,11 +137,13 @@ class VerdiCommandGroup(click.Group):
         # bet though to detect a tab-complete event. When `resilient_parsing` is switched on, we assume a tab-complete
         # and do nothing in case the command name does not match an actual command.
         if ctx.resilient_parsing:
-            return
+            return None
 
         self.fail_with_suggestions(ctx, cmd_name)
 
-    def group(self, *args, **kwargs):
+        return None
+
+    def group(self, *args, **kwargs) -> click.Group:
         """Ensure that sub command groups use the same class but do not override an explicitly set value."""
         kwargs.setdefault('cls', self.__class__)
         return super().group(*args, **kwargs)

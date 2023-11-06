@@ -171,9 +171,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             # on the session when a yielded row is mutated. This would reset the cursor invalidating it and causing an
             # exception to be raised in the next batch of rows in the iteration.
             # See https://github.com/python/mypy/issues/10109 for the reason of the type warning.
-            in_nested_transaction = session.in_nested_transaction()
-
-            with nullcontext() if in_nested_transaction else session.begin_nested():  # type: ignore[attr-defined]
+            with nullcontext() if session.in_nested_transaction() else self._backend.transaction(
+            ):  # type: ignore[attr-defined]
                 for resultrow in session.execute(stmt):
                     yield [self.to_backend(rowitem) for rowitem in resultrow]
 
@@ -188,9 +187,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             # on the session when a yielded row is mutated. This would reset the cursor invalidating it and causing an
             # exception to be raised in the next batch of rows in the iteration.
             # See https://github.com/python/mypy/issues/10109 for the reason of the type warning.
-            in_nested_transaction = session.in_nested_transaction()
-
-            with nullcontext() if in_nested_transaction else session.begin_nested():  # type: ignore[attr-defined]
+            with nullcontext() if session.in_nested_transaction() else self._backend.transaction(
+            ):  # type: ignore[attr-defined]
                 for row in self.get_session().execute(stmt):
                     # build the yield result
                     yield_result: Dict[str, Dict[str, Any]] = {}
@@ -997,7 +995,8 @@ def generate_projections(
 
     # check the consistency of projections
     projection_index_to_field = {
-        index_in_sql_result: attrkey for _, projected_entities_dict in tag_to_projected_fields.items()
+        index_in_sql_result: attrkey
+        for _, projected_entities_dict in tag_to_projected_fields.items()
         for attrkey, index_in_sql_result in projected_entities_dict.items()
     }
     if len(projections) > len(projection_index_to_field):

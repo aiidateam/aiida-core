@@ -8,8 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to manage the autogrouping functionality by ``verdi run``."""
+from __future__ import annotations
+
 import re
-from typing import List, Optional
 
 from aiida.common import exceptions, timezone
 from aiida.common.escaping import escape_for_sql_like, get_regex_pattern_from_sql
@@ -44,8 +45,8 @@ class AutogroupManager:
         self._backend = backend
 
         self._enabled = False
-        self._exclude: Optional[List[str]] = None
-        self._include: Optional[List[str]] = None
+        self._exclude: list[str] | None = None
+        self._include: list[str] | None = None
 
         self._group_label_prefix = f"Verdi autogroup on {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}"
         self._group_label = None  # Actual group label, set by `get_or_create_group`
@@ -63,13 +64,13 @@ class AutogroupManager:
         """Disable the auto-grouping."""
         self._enabled = False
 
-    def get_exclude(self) -> Optional[List[str]]:
+    def get_exclude(self) -> list[str] | None:
         """Return the list of classes to exclude from autogrouping.
 
         Returns ``None`` if no exclusion list has been set."""
         return self._exclude
 
-    def get_include(self) -> Optional[List[str]]:
+    def get_include(self) -> list[str] | None:
         """Return the list of classes to include in the autogrouping.
 
         Returns ``None`` if no inclusion list has been set."""
@@ -81,11 +82,11 @@ class AutogroupManager:
         return self._group_label_prefix
 
     @staticmethod
-    def validate(strings: Optional[List[str]]):
+    def validate(strings: list[str] | None):
         """Validate the list of strings passed to set_include and set_exclude."""
         if strings is None:
             return
-        valid_prefixes = set(['aiida.node', 'aiida.calculations', 'aiida.workflows', 'aiida.data'])
+        valid_prefixes = {'aiida.node', 'aiida.calculations', 'aiida.workflows', 'aiida.data'}
         for string in strings:
             pieces = string.split(':')
             if len(pieces) != 2:
@@ -97,7 +98,7 @@ class AutogroupManager:
                     f"'{string}' has an invalid prefix, must be among: {sorted(valid_prefixes)}"
                 )
 
-    def set_exclude(self, exclude: Optional[List[str]]) -> None:
+    def set_exclude(self, exclude: list[str] | str | None) -> None:
         """Set the list of classes to exclude in the autogrouping.
 
         :param exclude: a list of valid entry point strings (might contain '%' to be used as
@@ -112,7 +113,7 @@ class AutogroupManager:
             raise exceptions.ValidationError('Cannot both specify exclude and include')
         self._exclude = exclude
 
-    def set_include(self, include: Optional[List[str]]) -> None:
+    def set_include(self, include: list[str] | str | None) -> None:
         """Set the list of classes to include in the autogrouping.
 
         :param include: a list of valid entry point strings (might contain '%' to be used as
@@ -127,7 +128,7 @@ class AutogroupManager:
             raise exceptions.ValidationError('Cannot both specify exclude and include')
         self._include = include
 
-    def set_group_label_prefix(self, label_prefix: Optional[str]) -> None:
+    def set_group_label_prefix(self, label_prefix: str | None) -> None:
         """Set the label of the group to be created (or use a default)."""
         if label_prefix is None:
             label_prefix = f"Verdi autogroup on {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}"

@@ -182,7 +182,7 @@ class DbEntry:
     """
     _license: Optional[str] = None
 
-    def __init__(self, db_name=None, db_uri=None, id=None, version=None, extras=None, uri=None):  # pylint: disable=too-many-arguments,redefined-builtin
+    def __init__(self, db_name=None, db_uri=None, id=None, version=None, extras=None, uri=None):  # pylint: disable=too-many-arguments,redefined-builtin,invalid-name
         """
         Sets the basic parameters for the database entry:
 

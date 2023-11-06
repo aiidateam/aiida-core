@@ -123,6 +123,11 @@ def function_out_unstored():
     return orm.Int(DEFAULT_INT)
 
 
+@workfunction
+def function_return_nested():
+    return {'nested.output': orm.Int(DEFAULT_INT).store()}
+
+
 def test_properties():
     """Test that the `is_process_function` and `node_class` attributes are set."""
     assert function_return_input.is_process_function
@@ -444,6 +449,13 @@ def test_function_out_unstored():
         function_out_unstored()
 
 
+def test_function_return_nested():
+    """Test that a process function can returned outputs in nested namespaces."""
+    results, node = function_return_nested.run_get_node()
+    assert results['nested']['output'] == DEFAULT_INT
+    assert node.outputs.nested.output == DEFAULT_INT
+
+
 def test_simple_workflow():
     """Test construction of simple workflow by chaining process functions."""
 
@@ -558,7 +570,7 @@ def test_default_serialization(default, node_cls):
 def test_multiple_default_serialization():
     """Test that Python base type defaults are automatically serialized to the AiiDA node counterpart."""
 
-    @workfunction  # type: ignore
+    @workfunction  # type: ignore[misc]
     def function_with_multiple_defaults(integer: int = 10, string: str = 'default', boolean: bool = False):
         return {'integer': integer, 'string': string, 'boolean': boolean}
 

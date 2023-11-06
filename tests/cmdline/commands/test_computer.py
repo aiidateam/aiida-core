@@ -355,7 +355,7 @@ class TestVerdiComputerConfigure:
         assert 'core.ssh' in result.output
         assert 'core.local' in result.output
 
-    def test_reachable(self):  # pylint: disable=no-self-use
+    def test_reachable(self):
         """Test reachability of top level and sub commands."""
         import subprocess as sp
         sp.check_output(['verdi', 'computer', 'configure', '--help'])
@@ -428,11 +428,7 @@ class TestVerdiComputerConfigure:
         # I just pass the first four arguments:
         # the username, the port, look_for_keys, and the key_filename
         # This testing also checks that an empty key_filename is ok
-        command_input = ('{remote_username}\n{port}\n{look_for_keys}\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n').format(
-            remote_username=remote_username,
-            port=port,
-            look_for_keys='yes' if look_for_keys else 'no',
-        )
+        command_input = f"{remote_username}\n{port}\n{'yes' if look_for_keys else 'no'}\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
 
         result = self.cli_runner(computer_configure, ['core.ssh', comp.label], user_input=command_input)
         assert comp.is_configured, result.output
@@ -796,5 +792,5 @@ def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeyp
     monkeypatch.setattr(cmd_computer, 'time_use_login_shell', time_use_login_shell)
 
     result = run_cli_command(computer_test, [aiida_localhost.label], use_subprocess=False)
-    assert 'Warning: 1 out of 6 tests failed' in result.output
+    assert 'Success: all 6 tests succeeded' in result.output
     assert 'computer is configured to use a login shell, which is slower compared to a normal shell' in result.output

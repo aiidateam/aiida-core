@@ -28,7 +28,7 @@ repos:
     - id: isort
 
 -   repo: https://github.com/ikamensh/flynt/
-    rev: '0.77'
+    rev: '1.0.1'
     hooks:
     -   id: flynt
         args: [
@@ -37,12 +37,12 @@ repos:
         ]
 
 -   repo: https://github.com/google/yapf
-    rev: v0.32.0
+    rev: v0.40.0
     hooks:
     -   id: yapf
         name: yapf
         types: [python]
-        exclude: &exclude_files >
+        exclude: |
             (?x)^(
                 docs/.*|
             )$
@@ -74,6 +74,7 @@ repos:
             (?x)^(
                 .github/.*|
                 .molecule/.*|
+                .docker/.*|
                 docs/.*|
                 utils/.*|
 
@@ -92,13 +93,11 @@ repos:
                 aiida/cmdline/commands/cmd_node.py|
                 aiida/cmdline/commands/cmd_shell.py|
                 aiida/cmdline/commands/cmd_storage.py|
-                aiida/cmdline/groups/dynamic.py|
                 aiida/cmdline/params/options/commands/setup.py|
                 aiida/cmdline/params/options/interactive.py|
                 aiida/cmdline/params/options/main.py|
                 aiida/cmdline/params/options/multivalue.py|
                 aiida/cmdline/params/types/group.py|
-                aiida/cmdline/params/types/plugin.py|
                 aiida/cmdline/utils/ascii_vis.py|
                 aiida/cmdline/utils/common.py|
                 aiida/cmdline/utils/echo.py|
@@ -114,7 +113,6 @@ repos:
                 aiida/manage/configuration/__init__.py|
                 aiida/manage/configuration/config.py|
                 aiida/manage/configuration/profile.py|
-                aiida/manage/configuration/settings.py|
                 aiida/manage/external/rmq/launcher.py|
                 aiida/manage/tests/main.py|
                 aiida/manage/tests/pytest_fixtures.py|
@@ -123,7 +121,6 @@ repos:
                 aiida/orm/implementation/storage_backend.py|
                 aiida/orm/nodes/caching.py|
                 aiida/orm/nodes/comments.py|
-                aiida/orm/nodes/data/array/array.py|
                 aiida/orm/nodes/data/array/bands.py|
                 aiida/orm/nodes/data/array/trajectory.py|
                 aiida/orm/nodes/data/cif.py|
@@ -202,7 +199,11 @@ repos:
         entry: pylint
         types: [python]
         language: system
-        exclude: *exclude_files
+        exclude: |
+            (?x)^(
+                docs/.*|
+                .docker/.*|
+            )$
 
     -   id: dm-generate-all
         name: Update all requirements files

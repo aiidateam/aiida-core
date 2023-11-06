@@ -47,7 +47,6 @@ exclude_patterns = [
     'internals/global_design.rst',
     'internals/orm.rst',
     'scheduler/index.rst',
-    'topics/daemon.rst',
     'working_with_aiida/**',
 ]
 
@@ -102,13 +101,33 @@ nb_mime_priority_overrides = [
 # see: https://pydata-sphinx-theme.readthedocs.io/en/latest/user_guide/configuring.html
 html_theme = 'pydata_sphinx_theme'
 html_theme_options = {
-    'external_links': [{
-        'url': 'http://www.aiida.net/',
-        'name': 'AiiDA Home'
-    }],
-    'github_url': 'https://github.com/aiidateam/aiida-core',
-    'twitter_url': 'https://twitter.com/aiidateam',
     'use_edit_page_button': True,
+    'icon_links': [
+        {
+            'name': 'AiiDA',
+            'url': 'http://aiida.net',
+            'icon': '_static/logo-aiida-gray.svg',
+            'type': 'local',
+        },
+        {
+            'name': 'Discourse',
+            'url': 'https://aiida.discourse.group',
+            'icon': 'fa-brands fa-discourse',
+            'type': 'fontawesome',
+        },
+        {
+            'name': 'GitHub',
+            'url': 'https://www.github.com/aiidateam/aiida-core',
+            'icon': 'fa-brands fa-square-github',
+            'type': 'fontawesome',
+        },
+        {
+            'name': 'Twitter',
+            'url': 'https://www.twitter.com/aiidateam',
+            'icon': 'fa-brands fa-twitter-square',
+            'type': 'fontawesome',
+        },
+    ],
 }
 html_context = {
     'github_user': 'aiidateam',

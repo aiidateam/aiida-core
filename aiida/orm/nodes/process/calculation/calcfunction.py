@@ -47,7 +47,7 @@ class CalcFunctionNodeLinks(ProcessNodeLinks):
             )
 
 
-class CalcFunctionNode(FunctionCalculationMixin, CalculationNode):  # type: ignore
+class CalcFunctionNode(FunctionCalculationMixin, CalculationNode):  # type: ignore[misc]
     """ORM class for all nodes representing the execution of a calcfunction."""
 
     _CLS_NODE_LINKS = CalcFunctionNodeLinks

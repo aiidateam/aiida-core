@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-self-use
 """Tests for subclasses of DbImporter, DbSearchResults and DbEntry"""
 import pytest
 
@@ -16,7 +15,7 @@ from tests.static import STATIC_DIR
 
 class TestCodDbImporter:
     """Test the CodDbImporter class."""
-    from aiida.orm.nodes.data.cif import has_pycifrw  # type: ignore
+    from aiida.orm.nodes.data.cif import has_pycifrw  # type: ignore[misc]
 
     def test_query_construction_1(self):
         """Test query construction."""
@@ -93,11 +92,11 @@ class TestCodDbImporter:
         results = [[0, 4, 4, 0, 1, 1], [0, 0, 0, 0, 1, 1], [2, 0, 0, 0, 2, 2], [0, 0, 0, 0, 1, 1], [2, 0, 0, 0, 2, 2],
                    [0, 3, 3, 3, 0, 3]]
 
-        for i, _ in enumerate(methods):
-            for j, _ in enumerate(values):
+        for i, method in enumerate(methods):
+            for j, value in enumerate(values):
                 message = messages[0]
                 try:
-                    methods[i]('test', 'test', [values[j]])
+                    method('test', 'test', [value])
                 except ValueError as exc:
                     message = str(exc)
                 assert message == messages[results[i][j]]

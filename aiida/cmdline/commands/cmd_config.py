@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi config` command."""
+from __future__ import annotations
+
 import json
 from pathlib import Path
 import textwrap
@@ -40,7 +42,7 @@ def verdi_config_list(ctx, prefix, description: bool):
     from aiida.manage.configuration import Config, Profile
 
     config: Config = ctx.obj.config
-    profile: Profile = ctx.obj.get('profile', None)
+    profile: Profile | None = ctx.obj.get('profile', None)
 
     if not profile:
         echo.echo_warning('no profiles configured: run `verdi setup` to create one')
@@ -75,15 +77,14 @@ def verdi_config_list(ctx, prefix, description: bool):
 def verdi_config_show(ctx, option):
     """Show details of an AiiDA option for the current profile."""
     from aiida.manage.configuration import Config, Profile
-    from aiida.manage.configuration.options import NO_DEFAULT
 
     config: Config = ctx.obj.config
-    profile: Profile = ctx.obj.profile
+    profile: Profile | None = ctx.obj.profile
 
     dct = {
         'schema': option.schema,
         'values': {
-            'default': '<NOTSET>' if option.default is NO_DEFAULT else option.default,
+            'default': '<NOTSET>' if option.default is None else option.default,
             'global': config.options.get(option.name, '<NOTSET>'),
         }
     }
@@ -118,13 +119,16 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
 
     List values are split by whitespace, e.g. "a b" becomes ["a", "b"].
     """
-    from aiida.manage.configuration import Config, ConfigValidationError, Profile
+    import typing
+
+    from aiida.common.exceptions import ConfigurationError
+    from aiida.manage.configuration import Config, Profile
 
     if append and remove:
         echo.echo_critical('Cannot flag both append and remove')
 
     config: Config = ctx.obj.config
-    profile: Profile = ctx.obj.profile
+    profile: Profile | None = ctx.obj.profile
 
     if option.global_only:
         globally = True
@@ -136,19 +140,21 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
     if append or remove:
         try:
             current = config.get_option(option.name, scope=scope)
-        except ConfigValidationError as error:
+        except ConfigurationError as error:
             echo.echo_critical(str(error))
         if not isinstance(current, list):
             echo.echo_critical(f'cannot append/remove to value: {current}')
         if append:
-            value = current + [value]
+            value = list(set(current + [value]))
         else:
             value = [item for item in current if item != value]
+    elif option.valid_type == typing.List[str]:
+        value = [value]
 
     # Set the specified option
     try:
         value = config.set_option(option.name, value, scope=scope)
-    except ConfigValidationError as error:
+    except ConfigurationError as error:
         echo.echo_critical(str(error))
 
     config.store()
@@ -164,7 +170,7 @@ def verdi_config_unset(ctx, option, globally):
     from aiida.manage.configuration import Config, Profile
 
     config: Config = ctx.obj.config
-    profile: Profile = ctx.obj.profile
+    profile: Profile | None = ctx.obj.profile
 
     if option.global_only:
         globally = True

@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines,invalid-name,no-member,too-many-public-methods,no-self-use
+# pylint: disable=too-many-lines,invalid-name,no-member,too-many-public-methods
 """Tests for specific subclasses of Data."""
 import os
 import tempfile
@@ -1930,7 +1930,7 @@ class TestStructureDataFromAse:
         assert round(abs(c[1].mass - 110.2), 7) == 0
 
     @skip_ase
-    def test_ase_molecule(self):  # pylint: disable=no-self-use
+    def test_ase_molecule(self):
         """Tests that importing a molecule from ASE works."""
         from ase.build import molecule
         s = StructureData(ase=molecule('H2O'))
@@ -2173,6 +2173,16 @@ class TestStructureDataFromPymatgen:
         dict1 = pymatgen_struct.as_dict()
         dict2 = pymatgen_struct_roundtrip.as_dict()
 
+        # In pymatgen v2023.7.14 the CIF parsing was updated to include the parsing to atomic site labels. However, this
+        # information is not stored in the ``StructureData`` and so the structure after the roundtrip uses the default
+        # which is the specie name. The latter is correct in that it reflects the partial occupancies, but it differs
+        # from the labels parsed from the CIF which is simply parsed as ``Se1`` causing the test to fail. Since the
+        # site label information is not stored in the ``StructureData`` it is not possible to preserve it in the
+        # roundtrip and so it is excluded from the check.
+        for dictionary in [dict1, dict2]:
+            for site in dictionary['sites']:
+                site.pop('label', None)
+
         for i in dict1['sites']:
             i['abc'] = [round(j, 2) for j in i['abc']]
         for i in dict2['sites']:
@@ -2192,7 +2202,7 @@ class TestStructureDataFromPymatgen:
             elif isinstance(left, float):
                 testing.assert_almost_equal(left, right)
             else:
-                assert left == right, f'{value} is not {right}'
+                assert left == right, f'{left} is not {right}'
 
         recursively_compare_values(dict1, dict2)
 
@@ -2237,10 +2247,16 @@ class TestStructureDataFromPymatgen:
         from pymatgen.core.periodic_table import Specie
         from pymatgen.core.structure import Structure
 
-        Fe_spin_up = Specie('Fe', 0, properties={'spin': 1})
-        Mn_spin_up = Specie('Mn', 0, properties={'spin': 1})
-        Fe_spin_down = Specie('Fe', 0, properties={'spin': -1})
-        Mn_spin_down = Specie('Mn', 0, properties={'spin': -1})
+        try:
+            Fe_spin_up = Specie('Fe', 0, spin=1)  # pylint: disable=unexpected-keyword-arg
+            Mn_spin_up = Specie('Mn', 0, spin=1)  # pylint: disable=unexpected-keyword-arg
+            Fe_spin_down = Specie('Fe', 0, spin=-1)  # pylint: disable=unexpected-keyword-arg
+            Mn_spin_down = Specie('Mn', 0, spin=-1)  # pylint: disable=unexpected-keyword-arg
+        except TypeError:
+            Fe_spin_up = Specie('Fe', 0, properties={'spin': 1})  # pylint: disable=unexpected-keyword-arg
+            Mn_spin_up = Specie('Mn', 0, properties={'spin': 1})  # pylint: disable=unexpected-keyword-arg
+            Fe_spin_down = Specie('Fe', 0, properties={'spin': -1})  # pylint: disable=unexpected-keyword-arg
+            Mn_spin_down = Specie('Mn', 0, properties={'spin': -1})  # pylint: disable=unexpected-keyword-arg
         FeMn1 = Composition({Fe_spin_up: 0.5, Mn_spin_up: 0.5})
         FeMn2 = Composition({Fe_spin_down: 0.5, Mn_spin_down: 0.5})
         a = Structure(
@@ -2430,7 +2446,10 @@ class TestPymatgenFromStructureData:
 
         b = a.get_pymatgen(add_spin=True)
         # check the spins
-        assert [s.as_dict()['properties']['spin'] for s in b.species] == [-1, -1, -1, -1, 1, 1, 1, 1]
+        try:
+            assert [s.as_dict()['spin'] for s in b.species] == [-1, -1, -1, -1, 1, 1, 1, 1]
+        except KeyError:
+            assert [s.as_dict()['properties']['spin'] for s in b.species] == [-1, -1, -1, -1, 1, 1, 1, 1]
         # back to StructureData
         c = StructureData(pymatgen=b)
         assert c.get_site_kindnames() == ['Mn1', 'Mn1', 'Mn1', 'Mn1', 'Mn2', 'Mn2', 'Mn2', 'Mn2']

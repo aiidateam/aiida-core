@@ -12,14 +12,12 @@ from collections import defaultdict
 from functools import partial
 
 import click
-import tabulate
-import yaml
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.params.options.commands import code as options_code
-from aiida.cmdline.utils import echo
+from aiida.cmdline.utils import echo, echo_tabulate
 from aiida.cmdline.utils.decorators import deprecated_command, with_dbenv
 from aiida.common import exceptions
 
@@ -29,7 +27,7 @@ def verdi_code():
     """Setup and manage codes."""
 
 
-def create_code(cls, non_interactive, **kwargs):  # pylint: disable=unused-argument
+def create_code(ctx: click.Context, cls, non_interactive: bool, **kwargs):  # pylint: disable=unused-argument
     """Create a new `Code` instance."""
     try:
         instance = cls(**kwargs)
@@ -233,7 +231,7 @@ def show(code):
     if is_verbose():
         table.append(['Calculations', len(code.base.links.get_outgoing().all())])
 
-    echo.echo(tabulate.tabulate(table))
+    echo_tabulate(table)
 
 
 @verdi_code.command()
@@ -242,6 +240,8 @@ def show(code):
 @with_dbenv()
 def export(code, output_file):
     """Export code to a yaml file."""
+    import yaml
+
     code_data = {}
 
     for key in code.get_cli_options().keys():
@@ -418,7 +418,7 @@ def code_list(computer, default_calc_job_plugin, all_entries, all_users, raw, sh
                 row.append('@'.join(str(result[entity][projection]) for entity, projection in VALID_PROJECTIONS[key]))
         table.append(row)
 
-    echo.echo(tabulate.tabulate(table, headers=headers, tablefmt=table_format))
+    echo_tabulate(table, headers=headers, tablefmt=table_format)
 
     if not raw:
         echo.echo_report('\nUse `verdi code show IDENTIFIER` to see details for a code', prefix=False)

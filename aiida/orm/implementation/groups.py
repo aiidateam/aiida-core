@@ -25,19 +25,15 @@ class NodeIterator(Protocol):
 
     def __iter__(self) -> 'NodeIterator':  # pylint: disable=non-iterator-returned
         """Return an iterator over the nodes in the group."""
-        ...
 
     def __next__(self) -> BackendNode:
         """Return the next node in the group."""
-        ...
 
     def __getitem__(self, value: Union[int, slice]) -> Union[BackendNode, List[BackendNode]]:
         """Index node(s) from the group."""
-        ...
 
     def __len__(self) -> int:  # pylint: disable=invalid-length-returned
         """Return the number of nodes in the group."""
-        ...
 
 
 class BackendGroup(BackendEntity, BackendEntityExtrasMixin):

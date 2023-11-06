@@ -1,0 +1,101 @@
+---
+name: Build, test and push Docker Images
+
+on:
+    pull_request:
+        paths-ignore:
+            - "docs/**"
+            - "tests/**"
+    push:
+        branches:
+            - main
+        tags:
+            - "v*"
+        paths-ignore:
+            - "docs/**"
+            - "tests/**"
+    workflow_dispatch:
+
+# https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+    # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    amd64-build:
+        uses: ./.github/workflows/docker-build-test-upload.yml
+        with:
+            architecture: amd64
+            runsOn: ubuntu-latest
+
+    arm64-build:
+        uses: ./.github/workflows/docker-build-test-upload.yml
+        with:
+            architecture: arm64
+            runsOn: ARM64
+        if: ${{ !github.event.pull_request.head.repo.fork }}
+
+    amd64-push-ghcr:
+        uses: ./.github/workflows/docker-push.yml
+        with:
+            architecture: amd64
+            registry: ghcr.io
+        secrets:
+            REGISTRY_USERNAME: ${{ github.actor }}
+            REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        needs: [amd64-build]
+        if: ${{ !github.event.pull_request.head.repo.fork }}
+
+    arm64-push-ghcr:
+        uses: ./.github/workflows/docker-push.yml
+        with:
+            architecture: arm64
+            registry: ghcr.io
+        secrets:
+            REGISTRY_USERNAME: ${{ github.actor }}
+            REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        needs: [arm64-build]
+        if: ${{ !github.event.pull_request.head.repo.fork }}
+
+    merge-tags-ghcr:
+        uses: ./.github/workflows/docker-merge-tags.yml
+        with:
+            registry: ghcr.io
+        secrets:
+            REGISTRY_USERNAME: ${{ github.actor }}
+            REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        needs: [amd64-push-ghcr, arm64-push-ghcr]
+        if: ${{ !github.event.pull_request.head.repo.fork }}
+
+    amd64-push-dockerhub:
+        if: github.repository == 'aiidateam/aiida-core' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+        uses: ./.github/workflows/docker-push.yml
+        with:
+            architecture: amd64
+            registry: docker.io
+        secrets:
+            REGISTRY_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+            REGISTRY_TOKEN: ${{ secrets.DOCKER_TOKEN }}
+        needs: [amd64-build]
+
+    arm64-push-dockerhub:
+        if: github.repository == 'aiidateam/aiida-core' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+        uses: ./.github/workflows/docker-push.yml
+        with:
+            architecture: arm64
+            registry: docker.io
+        secrets:
+            REGISTRY_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+            REGISTRY_TOKEN: ${{ secrets.DOCKER_TOKEN }}
+        needs: [arm64-build]
+
+    merge-tags-dockerhub:
+        if: github.repository == 'aiidateam/aiida-core' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+        uses: ./.github/workflows/docker-merge-tags.yml
+        with:
+            registry: docker.io
+        secrets:
+            REGISTRY_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+            REGISTRY_TOKEN: ${{ secrets.DOCKER_TOKEN }}
+        needs: [amd64-push-dockerhub, arm64-push-dockerhub]

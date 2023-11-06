@@ -38,7 +38,7 @@ class DiffParser(Parser):
 
         # add output file
         self.logger.info(f"Parsing '{output_filename}'")
-        with self.retrieved.open(output_filename, 'rb') as handle:
+        with self.retrieved.open(output_filename, 'rb') as handle:  # type: ignore[arg-type]
             output_node = SinglefileData(file=handle)
         self.out('diff', output_node)
 
@@ -59,7 +59,7 @@ class DiffParserSimple(Parser):
 
         # add output file
         self.logger.info(f"Parsing '{output_filename}'")
-        with self.retrieved.open(output_filename, 'rb') as handle:
+        with self.retrieved.open(output_filename, 'rb') as handle:  # type: ignore[arg-type]
             output_node = SinglefileData(file=handle)
         self.out('diff', output_node)
 

@@ -575,7 +575,7 @@ The following implementation would accomplish that:
             output = handle.read()
 
         if 'WARNING' in output:
-            return 'Detected the string `WARNIGN` in the output file.'
+            return 'Detected the string `WARNING` in the output file.'
 
 The content of the stdout stream, which should be written to the ``node.options.output_filename`` file, is retrieved using ``transport.getfile`` and is written to a temporary file on the local file system.
 The content is then read from the file and if the target string is detected, an error message is returned.
@@ -915,6 +915,18 @@ Caching can be enabled or disabled on a case-by-case basis by using the :class:`
     This affects only the current Python interpreter and won't change the behavior of the daemon workers.
     This means that this technique is only useful when using :py:class:`~aiida.engine.run`, and **not** with :py:class:`~aiida.engine.submit`.
 
+By default, the ``enable_caching`` context manager will just validate that the identifier is syntactically valid.
+It *does not* validate that the identifier points to a class or entry point that actually exists and can be imported or loaded.
+To make sure that the specified identifier is known to AiiDA, pass the ``strict=True`` keyword argument:
+
+.. code-block:: python
+
+    from aiida.engine import run
+    from aiida.manage.caching import enable_caching
+    with enable_caching(identifier='aiida.calculations:core.templatereplacer', strict=True):
+        run(...)
+
+When ``strict`` is set to ``True``, the function will raise a ``ValueError`` if the specified class or entry point cannot be imported or loaded.
 
 Besides controlling which process classes are cached, it may be useful or necessary to control what already *stored* nodes are used as caching *sources*.
 Section :ref:`topics:provenance:caching:control-caching` provides details how AiiDA decides which stored nodes are equivalent to the node being stored and which are considered valid caching sources.

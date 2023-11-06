@@ -13,8 +13,6 @@ import json
 from typing import TYPE_CHECKING, Any, Type
 from uuid import uuid4
 
-import yaml
-
 from aiida.engine.processes.ports import PortNamespace
 from aiida.orm import Dict, Node
 from aiida.orm.nodes.data.base import BaseType
@@ -79,7 +77,7 @@ class ProcessBuilderNamespace(MutableMapping):
                     return self._data.get(name)
             elif port.has_default():
 
-                def fgetter(self, name=name, default=port.default):  # type: ignore # pylint: disable=cell-var-from-loop
+                def fgetter(self, name=name, default=port.default):  # type: ignore[misc] # pylint: disable=cell-var-from-loop
                     return self._data.get(name, default)
             else:
 
@@ -206,13 +204,13 @@ class ProcessBuilderNamespace(MutableMapping):
                 if isinstance(value, Mapping):
                     self[key].update(value)
                 else:
-                    self.__setattr__(key, value)
+                    self.__setattr__(key, value)  # pylint: disable=unnecessary-dunder-call
 
         for key, value in kwds.items():
             if isinstance(value, Mapping):
                 self[key].update(value)
             else:
-                self.__setattr__(key, value)
+                self.__setattr__(key, value)  # pylint: disable=unnecessary-dunder-call
 
     def _inputs(self, prune: bool = False) -> dict:
         """Return the entire mapping of inputs specified for this builder.
@@ -245,6 +243,8 @@ class ProcessBuilder(ProcessBuilderNamespace):  # pylint: disable=too-many-ances
 
     def _repr_pretty_(self, p, _) -> str:  # pylint: disable=invalid-name
         """Pretty representation for in the IPython console and notebooks."""
+        import yaml
+
         return p.text(
             f'Process class: {self._process_class.__name__}\n'
             f'Inputs:\n{yaml.safe_dump(json.JSONDecoder().decode(PrettyEncoder().encode(self)))}'

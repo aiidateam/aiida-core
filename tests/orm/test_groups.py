@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-self-use
 """Test for the Group ORM class."""
 import uuid
 
@@ -189,7 +188,7 @@ class TestGroups:
         assert set(_.pk for _ in nodes) == set(_.pk for _ in group.nodes)
 
         group.clear()
-        assert list(group.nodes) == []
+        assert not list(group.nodes)
 
     def test_name_desc(self):
         """Test Group description."""
@@ -333,7 +332,7 @@ class TestGroupsSubclasses:
             class SubGroup(orm.Group):
                 pass
 
-        assert SubGroup._type_string is None  # pylint: disable=protected-access
+            assert SubGroup._type_string is None  # pylint: disable=protected-access
 
         # Creating an instance is allowed
         instance = SubGroup(label=uuid.uuid4().hex)

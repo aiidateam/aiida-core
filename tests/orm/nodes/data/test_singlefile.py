@@ -32,7 +32,7 @@ def check_singlefile_content():
         with node.open(mode=open_mode) as handle:
             assert handle.read() == content_reference
 
-        assert node.base.repository.list_object_names() == [filename]
+        assert node.base.repository.list_object_names() == [str(filename)]
 
     return inner
 
@@ -145,16 +145,16 @@ def test_construct_with_path(check_singlefile_content_with_store):
     )
 
 
-def test_construct_with_filename(check_singlefile_content):
+@pytest.mark.parametrize('filename', ('myfile.txt', pathlib.Path('myfile.txt')))
+def test_construct_with_filename(check_singlefile_content_with_store, filename):
     """Test constructing an instance, providing a filename."""
     content_original = 'some testing text\nwith a newline'
-    filename = 'myfile.txt'
 
     # test creating from string
     with io.BytesIO(content_original.encode('utf-8')) as handle:
         node = SinglefileData(file=handle, filename=filename)
 
-    check_singlefile_content(node=node, content_reference=content_original, filename=filename)
+    check_singlefile_content_with_store(node=node, content_reference=content_original, filename=filename)
 
     # test creating from file
     with tempfile.NamedTemporaryFile(mode='wb+') as handle:
@@ -163,7 +163,7 @@ def test_construct_with_filename(check_singlefile_content):
         handle.seek(0)
         node = SinglefileData(file=handle, filename=filename)
 
-    check_singlefile_content(node=node, content_reference=content_original, filename=filename)
+    check_singlefile_content_with_store(node=node, content_reference=content_original, filename=filename)
 
 
 def test_binary_file(check_singlefile_content_with_store):
@@ -184,3 +184,25 @@ def test_binary_file(check_singlefile_content_with_store):
         filename=basename,
         open_mode='rb',
     )
+
+
+def test_from_string():
+    """Test the :meth:`aiida.orm.nodes.data.singlefile.SinglefileData.from_string` classmethod."""
+    content = 'some\ncontent'
+    node = SinglefileData.from_string(content).store()
+    assert node.get_content() == content
+    assert node.filename == SinglefileData.DEFAULT_FILENAME
+
+    content = 'some\ncontent'
+    filename = 'custom_filename.dat'
+    node = SinglefileData.from_string(content, filename).store()
+    assert node.get_content() == content
+    assert node.filename == filename
+
+
+def test_get_content():
+    """Test the :meth:`aiida.orm.nodes.data.singlefile.SinglefileData.get_content` method."""
+    content = b'some\ncontent'
+    node = SinglefileData.from_string(content.decode('utf-8')).store()
+    assert node.get_content() == content.decode('utf-8')
+    assert node.get_content('rb') == content

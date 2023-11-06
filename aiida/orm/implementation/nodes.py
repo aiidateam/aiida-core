@@ -184,13 +184,11 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
     def store(  # pylint: disable=arguments-differ
         self: BackendNodeType,
         links: Optional[Sequence['LinkTriple']] = None,
-        with_transaction: bool = True,
         clean: bool = True
     ) -> BackendNodeType:
         """Store the node in the database.
 
         :param links: optional links to add before storing
-        :param with_transaction: if False, do not use a transaction because the caller will already have opened one.
         :param clean: boolean, if True, will clean the attributes and extras before attempting to store
         """
 

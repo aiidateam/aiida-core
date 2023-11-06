@@ -60,11 +60,13 @@ def restrict_db_connections():  # pylint: disable=unused-argument
     current_profile = manager.get_profile()
     new_profile = current_profile.copy()
     new_profile.set_storage(
-        new_profile.storage_backend,
-        dict(engine_kwargs={
-            'pool_timeout': 1,
-            'max_overflow': 0
-        }, **new_profile.storage_config)
+        new_profile.storage_backend, {
+            'engine_kwargs': {
+                'pool_timeout': 1,
+                'max_overflow': 0
+            },
+            **new_profile.storage_config
+        }
     )
     # load the new profile and initialise the database connection
     manager.unload_profile()

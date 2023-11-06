@@ -126,7 +126,7 @@ MPI_PROCS_PER_MACHINE = OverridableOption(
     prompt='Default number of CPUs per machine',
     cls=InteractiveOption,
     prompt_fn=should_call_default_mpiprocs_per_machine,
-    required_fn=False,
+    required=False,
     type=click.INT,
     help='The default number of MPI processes that should be executed per machine (node), if not otherwise specified.'
     'Use 0 to specify no default value.',
@@ -137,7 +137,7 @@ DEFAULT_MEMORY_PER_MACHINE = OverridableOption(
     prompt='Default amount of memory per machine (kB).',
     cls=InteractiveOption,
     prompt_fn=should_call_default_memory_per_machine,
-    required_fn=False,
+    required=False,
     type=click.INT,
     help='The default amount of RAM (kB) that should be allocated per machine (node), if not otherwise specified.'
 )

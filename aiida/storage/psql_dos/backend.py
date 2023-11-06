@@ -15,7 +15,6 @@ import gc
 import pathlib
 from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence, Set, Union
 
-from disk_objectstore import Container
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from aiida.common.exceptions import ClosedStorage, ConfigurationError, IntegrityError
@@ -29,6 +28,8 @@ from aiida.storage.psql_dos.models import base
 from .orm import authinfos, comments, computers, convert, groups, logs, nodes, querybuilder, users
 
 if TYPE_CHECKING:
+    from disk_objectstore import Container
+
     from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
 __all__ = ('PsqlDosBackend',)
@@ -110,7 +111,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         self._session_factory: Optional[scoped_session] = None
         self._initialise_session()
         # save the URL of the database, for use in the __str__ method
-        self._db_url = self.get_session().get_bind().url  # type: ignore
+        self._db_url = self.get_session().get_bind().url  # type: ignore[union-attr]
 
         self._authinfos = authinfos.SqlaAuthInfoCollection(self)
         self._comments = comments.SqlaCommentCollection(self)
@@ -139,7 +140,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         Although, in the future, we may want to move the multi-thread handling to higher in the AiiDA stack.
         """
         from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
-        engine = create_sqlalchemy_engine(self._profile.storage_config)  # type: ignore
+        engine = create_sqlalchemy_engine(self._profile.storage_config)  # type: ignore[arg-type]
         self._session_factory = scoped_session(sessionmaker(bind=engine, future=True, expire_on_commit=True))
 
     def get_session(self) -> Session:
@@ -155,7 +156,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         # pylint: disable=no-member
         engine = self._session_factory.bind
         if engine is not None:
-            engine.dispose()  # type: ignore
+            engine.dispose()  # type: ignore[union-attr]
         self._session_factory.expunge_all()
         self._session_factory.close()
         self._session_factory = None
@@ -171,32 +172,32 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
 
         with self.migrator_context(self._profile) as migrator:
 
-            # First clear the contents of the database
-            with self.transaction() as session:
+            # Close the session otherwise the ``delete_tables`` call will hang as there will be an open connection
+            # to the PostgreSQL server and it will block the deletion and the command will hang.
+            self.get_session().close()
+            exclude_tables = [migrator.alembic_version_tbl_name, 'db_dbsetting']
+            migrator.delete_all_tables(exclude_tables=exclude_tables)
 
-                # Close the session otherwise the ``delete_tables`` call will hang as there will be an open connection
-                # to the PostgreSQL server and it will block the deletion and the command will hang.
-                self.get_session().close()
-                exclude_tables = [migrator.alembic_version_tbl_name, 'db_dbsetting']
-                migrator.delete_all_tables(exclude_tables=exclude_tables)
-
-                # Clear out all references to database model instances which are now invalid.
-                session.expunge_all()
+            # Clear out all references to database model instances which are now invalid.
+            self.get_session().expunge_all()
 
             # Now reset and reinitialise the repository
             migrator.reset_repository()
             migrator.initialise_repository()
             repository_uuid = migrator.get_repository_uuid()
 
-            with self.transaction():
+            with self.transaction() as session:
                 session.execute(
                     DbSetting.__table__.update().where(DbSetting.key == REPOSITORY_UUID_KEY
                                                        ).values(val=repository_uuid)
                 )
 
     def get_repository(self) -> 'DiskObjectStoreRepositoryBackend':
+        from disk_objectstore import Container
+
         from aiida.repository.backend import DiskObjectStoreRepositoryBackend
-        container = Container(str(get_filepath_container(self.profile)))
+
+        container = Container(get_filepath_container(self.profile))
         return DiskObjectStoreRepositoryBackend(container=container)
 
     @property
@@ -239,13 +240,15 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         """
         session = self.get_session()
         if session.in_transaction():
-            with session.begin_nested():
+            with session.begin_nested() as savepoint:
                 yield session
+                savepoint.commit()
             session.commit()
         else:
             with session.begin():
-                with session.begin_nested():
+                with session.begin_nested() as savepoint:
                     yield session
+                    savepoint.commit()
 
     @property
     def in_transaction(self) -> bool:
@@ -305,7 +308,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
             session.bulk_insert_mappings(mapper, rows, render_nulls=True, return_defaults=True)
         return [row['id'] for row in rows]
 
-    def bulk_update(self, entity_type: EntityTypes, rows: List[dict]) -> None:  # pylint: disable=no-self-use
+    def bulk_update(self, entity_type: EntityTypes, rows: List[dict]) -> None:
         mapper, keys = self._get_mapper_from_entity(entity_type, True)
         if not rows:
             return None
@@ -318,7 +321,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         with (nullcontext() if self.in_transaction else self.transaction()):
             session.bulk_update_mappings(mapper, rows)
 
-    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]) -> None:  # pylint: disable=no-self-use
+    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]) -> None:
         # pylint: disable=no-value-for-parameter
         from aiida.storage.psql_dos.models.group import DbGroupNode
         from aiida.storage.psql_dos.models.node import DbLink, DbNode
@@ -379,7 +382,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         if full:
             maintenance_context = ProfileAccessManager(self._profile).lock
         else:
-            maintenance_context = nullcontext  # type: ignore
+            maintenance_context = nullcontext  # type: ignore[assignment]
 
         with maintenance_context():
             unreferenced_objects = self.get_unreferenced_keyset()
@@ -409,7 +412,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         repository = self.get_repository()
 
         keyset_repository = set(repository.list_objects())
-        keyset_database = set(orm.Node.collection(self).iter_repo_keys())
+        keyset_database = set(orm.Node.get_collection(self).iter_repo_keys())
 
         if check_consistency:
             keyset_missing = keyset_database - keyset_repository

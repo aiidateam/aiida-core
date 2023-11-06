@@ -1,0 +1,75 @@
+---
+name: Build image and then upload the image, tags and manifests to GitHub artifacts
+
+env:
+    OWNER: ${{ github.repository_owner }}
+
+on:
+    workflow_call:
+        inputs:
+            architecture:
+                description: Image architecture, e.g. amd64, arm64
+                required: true
+                type: string
+            runsOn:
+                description: GitHub Actions Runner image
+                required: true
+                type: string
+
+jobs:
+    build-test-upload:
+        runs-on: ${{ inputs.runsOn }}
+        defaults:
+            run:
+              shell: bash
+              working-directory: .docker
+
+        steps:
+            - name: Checkout Repo ⚡️
+              uses: actions/checkout@v3
+            - name: Create dev environment 📦
+              uses: ./.github/actions/create-dev-env
+              with:
+                  architecture: ${{ inputs.architecture }}
+
+            # Self-hosted runners share a state (whole VM) between runs
+            # Also, they might have running or stopped containers,
+            # which are not cleaned up by `docker system prun`
+            - name: Reset docker state and cleanup artifacts 🗑️
+              if: ${{ inputs.platform != 'x86_64' }}
+              run: |
+                  docker kill $(docker ps --quiet) || true
+                  docker rm $(docker ps --all --quiet) || true
+                  docker system prune --all --force
+                  rm -rf /tmp/aiida-core/
+              shell: bash
+
+            - name: Build image base and base-with-services (output image name aiida-coer §) 🛠
+              # The order of the buildx bake files is important, as the second one will overwrite the first one
+              run: docker buildx bake -f docker-bake.hcl -f build.json --set *.platform=linux/${{ inputs.architecture }} --load
+              env:
+                  # Full logs for CI build
+                  BUILDKIT_PROGRESS: plain
+
+            - name: Run tests ✅
+              run: TAG=newly-baked python -m pytest -s tests
+
+            - name: Save image as a tar for later use 💾
+              run: |
+                mkdir -p /tmp/aiida-core
+                docker save ${{ env.OWNER }}/aiida-core-base -o /tmp/aiida-core/aiida-core-base-${{ inputs.architecture }}.tar
+                docker save ${{ env.OWNER }}/aiida-core-with-services -o /tmp/aiida-core/aiida-core-with-services-${{ inputs.architecture }}.tar
+
+            - name: Upload aiida-core-base image as artifact 💾
+              uses: actions/upload-artifact@v3
+              with:
+                  name: aiida-core-base-${{ inputs.architecture }}
+                  path: /tmp/aiida-core/aiida-core-base-${{ inputs.architecture }}.tar
+                  retention-days: 3
+
+            - name: Upload aiida-core-with-services image as artifact 💾
+              uses: actions/upload-artifact@v3
+              with:
+                  name: aiida-core-with-services-${{ inputs.architecture }}
+                  path: /tmp/aiida-core/aiida-core-with-services-${{ inputs.architecture }}.tar
+                  retention-days: 3

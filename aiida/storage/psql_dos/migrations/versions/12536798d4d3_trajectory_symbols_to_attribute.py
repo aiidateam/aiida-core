@@ -19,9 +19,6 @@ Create Date: 2019-01-21 10:15:02.451308
 """
 # pylint: disable=invalid-name
 
-# Remove when https://github.com/PyCQA/pylint/issues/1931 is fixed
-# pylint: disable=no-member,no-name-in-module,import-error
-
 from alembic import op
 from sqlalchemy import Integer, String, cast
 from sqlalchemy.dialects.postgresql import JSONB, UUID

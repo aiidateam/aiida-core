@@ -9,13 +9,14 @@
 ###########################################################################
 """Module with pre-defined reusable commandline options that can be used as `click` decorators."""
 import click
-from pgsu import DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-module
 
 from aiida.common.log import LOG_LEVELS, configure_logging
+from aiida.manage.external.postgres import DEFAULT_DBINFO
 from aiida.manage.external.rmq import BROKER_DEFAULTS
 
 from .. import types
 from ...utils import defaults, echo  # pylint: disable=no-name-in-module
+from .callable import CallableDefaultOption
 from .config import ConfigFileOption
 from .multivalue import MultipleValueOption
 from .overridable import OverridableOption
@@ -110,8 +111,10 @@ def set_log_level(_ctx, _param, value):
     log.CLI_ACTIVE = True
 
     # If the value is ``None``, it means the option was not specified, but we still configure logging for the CLI
+    # However, we skip this when we are in a tab-completion context.
     if value is None:
-        configure_logging()
+        if not _ctx.resilient_parsing:
+            configure_logging()
         return None
 
     try:
@@ -145,6 +148,7 @@ PROFILE = OverridableOption(
     'profile',
     type=types.ProfileParamType(),
     default=defaults.get_default_profile,
+    cls=CallableDefaultOption,
     help='Execute the command for this profile instead of the default profile.'
 )
 
@@ -285,17 +289,23 @@ USER_INSTITUTION = OverridableOption(
 
 DB_ENGINE = OverridableOption(
     '--db-engine',
+    required=True,
     help='Engine to use to connect to the database.',
     default='postgresql_psycopg2',
     type=click.Choice(['postgresql_psycopg2'])
 )
 
 DB_BACKEND = OverridableOption(
-    '--db-backend', type=click.Choice(['core.psql_dos']), default='core.psql_dos', help='Database backend to use.'
+    '--db-backend',
+    required=True,
+    type=click.Choice(['core.psql_dos']),
+    default='core.psql_dos',
+    help='Database backend to use.'
 )
 
 DB_HOST = OverridableOption(
     '--db-host',
+    required=True,
     type=types.HostnameType(),
     help='Database server host. Leave empty for "peer" authentication.',
     default='localhost'
@@ -303,6 +313,7 @@ DB_HOST = OverridableOption(
 
 DB_PORT = OverridableOption(
     '--db-port',
+    required=True,
     type=click.INT,
     help='Database server port.',
     default=DEFAULT_DBINFO['port'],

@@ -7,10 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=line-too-long
 """Tests for the SLURM scheduler plugin."""
 import datetime
 import logging
-#pylint: disable=no-self-use,line-too-long
 import unittest
 import uuid
 

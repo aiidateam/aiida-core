@@ -485,6 +485,22 @@ def test_not_required_interactive_default(run_cli_command):
     assert expected in result.output
 
 
+def test_interactive_ignore_default_not_required_option(run_cli_command):
+    """Test that if an option is not required ``!`` is accepted and is translated to ``None``."""
+    cmd = create_command(required=False)
+    result = run_cli_command(cmd, user_input='!\n')
+    expected = 'Opt: !\nNone\n'
+    assert expected in result.output
+
+
+def test_interactive_ignore_default_required_option(run_cli_command):
+    """Test that if an option is required, ``!`` is translated to ``None`` and so is not accepted."""
+    cmd = create_command(required=True)
+    result = run_cli_command(cmd, user_input='!\nvalue\n')
+    expected = 'Opt: !\nError: Opt has to be specified\nOpt: value\nvalue\n'
+    assert expected in result.output
+
+
 def test_get_help_message():
     """Test the :meth:`aiida.cmdline.params.options.interactive.InteractiveOption.get_help_message`."""
     option = InteractiveOption('-s', type=click.STRING)

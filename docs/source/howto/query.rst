@@ -74,12 +74,15 @@ There are several ways to obtain data from a query:
 
     all_results_l = qb.all()            # Returns a list of lists
 
-In case you are working with a large dataset, you can also return your query as a generator:
+.. tip::
+
+    If your query only has a single projection, use ``flat=True`` in the ``first`` and ``all`` methods to return a single value or a flat list, respectively.
+
+You can also return your query as a generator:
 
 .. code-block:: python
 
     all_res_d_gen = qb.iterdict()       # Return a generator of dictionaries
-                                        # of all results
     all_res_l_gen = qb.iterall()        # Returns a generator of lists
 
 This will retrieve the data in batches, and you can start working with the data before the query has completely finished.
@@ -89,6 +92,13 @@ For example, you can iterate over the results of your query in a for loop:
 
     for entry in qb.iterall():
         # do something with a single entry in the query result
+
+.. important::
+
+    When looping over the result of a query, use the ``iterall`` (or ``iterdict``) generator instead of ``all`` (or ``dict``).
+    This avoids loading the entire query result into memory, and it also delays committing changes made to AiiDA objects inside the loop until the end of the loop is reached.
+    If an exception is raised before the loop ends, all changes are reverted.
+
 
 .. _how-to:query:filters:
 
@@ -150,7 +160,12 @@ In case you want all calculation jobs with state ``finished`` or ``excepted``, y
         },
     )
 
-You can negate a filter by adding an exclamation mark in front of the operator.
+.. _how-to:query:filters:operator-negations:
+
+Operator negations
+------------------
+
+A filter can be turned into its associated **negation** by adding an exclamation mark, ``!``, in front of the operator.
 So, to query for all calculation jobs that are not a ``finished`` or ``excepted`` state:
 
 .. code-block:: python

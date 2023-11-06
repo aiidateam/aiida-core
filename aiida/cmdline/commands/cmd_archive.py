@@ -14,7 +14,6 @@ import logging
 from pathlib import Path
 import traceback
 from typing import List, Tuple
-import urllib.request
 
 import click
 from click_spinner import spinner
@@ -189,7 +188,7 @@ def create(
     }
 
     if AIIDA_LOGGER.level <= logging.REPORT:  # pylint: disable=no-member
-        set_progress_bar_tqdm(leave=(AIIDA_LOGGER.level <= logging.INFO))
+        set_progress_bar_tqdm(leave=AIIDA_LOGGER.level <= logging.INFO)
     else:
         set_progress_reporter(None)
 
@@ -232,7 +231,7 @@ def migrate(input_file, output_file, force, in_place, version):
         )
 
     if AIIDA_LOGGER.level <= logging.REPORT:  # pylint: disable=no-member
-        set_progress_bar_tqdm(leave=(AIIDA_LOGGER.level <= logging.INFO))
+        set_progress_bar_tqdm(leave=AIIDA_LOGGER.level <= logging.INFO)
     else:
         set_progress_reporter(None)
 
@@ -344,7 +343,7 @@ def import_archive(
     from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
 
     if AIIDA_LOGGER.level <= logging.REPORT:  # pylint: disable=no-member
-        set_progress_bar_tqdm(leave=(AIIDA_LOGGER.level <= logging.INFO))
+        set_progress_bar_tqdm(leave=AIIDA_LOGGER.level <= logging.INFO)
     else:
         set_progress_reporter(None)
 
@@ -432,6 +431,8 @@ def _import_archive_and_migrate(
     :param try_migration: whether to try a migration if the import raises `IncompatibleStorageSchema`
 
     """
+    import urllib.request
+
     from aiida.common.folders import SandboxFolder
     from aiida.tools.archive.abstract import get_format
     from aiida.tools.archive.imports import import_archive as _import_archive

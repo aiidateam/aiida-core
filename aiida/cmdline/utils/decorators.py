@@ -199,7 +199,7 @@ def check_circus_zmq_version(wrapped, _, args, kwargs):
     """
     import zmq
     try:
-        zmq_version = [int(part) for part in zmq.__version__.split('.')[:2]]  # type: ignore
+        zmq_version = [int(part) for part in zmq.__version__.split('.')[:2]]
         if len(zmq_version) < 2:
             raise ValueError()
     except (AttributeError, ValueError):

@@ -32,7 +32,7 @@ class GroupTranslator(BaseTranslator):
 
     _result_type = __label__
 
-    def get_projectable_properties(self):
+    def get_projectable_properties(self):  # pylint: disable=arguments-differ
         """
         Get projectable properties specific for Group
         :return: dict of projectable properties and column_order list

@@ -16,7 +16,6 @@ import re
 from stat import S_ISDIR, S_ISREG
 
 import click
-import paramiko
 
 from aiida.cmdline.params import options
 from aiida.cmdline.params.types.path import AbsolutePathOrEmptyParamType
@@ -36,6 +35,8 @@ def parse_sshconfig(computername):
 
     :param computername: the computer name for which we want the configuration.
     """
+    import paramiko
+
     config = paramiko.SSHConfig()
     try:
         with open(os.path.expanduser('~/.ssh/config'), encoding='utf8') as fhandle:
@@ -397,6 +398,8 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         function (as port, username, password, ...); taken from the
         accepted paramiko.SSHClient.connect() params.
         """
+        import paramiko
+
         super().__init__(*args, **kwargs)
 
         self._sftp = None
@@ -440,6 +443,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         :raise aiida.common.InvalidOperation: if the channel is already open
         """
+        import paramiko
         from paramiko.ssh_exception import SSHException
 
         from aiida.common.exceptions import InvalidOperation
@@ -1203,6 +1207,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             raise ValueError('Pathname patterns are not allowed in the destination')
 
         if self.has_magic(remotesource):
+
             to_copy_list = self.glob(remotesource)
 
             if len(to_copy_list) > 1:
@@ -1213,6 +1218,9 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
                 self._exec_cp(cp_exe, cp_flags, file, remotedestination)
 
         else:
+            if not self.path_exists(remotesource):
+                raise FileNotFoundError('Source not found')
+
             self._exec_cp(cp_exe, cp_flags, remotesource, remotedestination)
 
     def _exec_cp(self, cp_exe, cp_flags, src, dst):
@@ -1350,7 +1358,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         if self.getcwd() is not None:
             escaped_folder = escape_for_bash(self.getcwd())
-            command_to_execute = (f'cd {escaped_folder} && ( {command} )')
+            command_to_execute = f'cd {escaped_folder} && ( {command} )'
         else:
             command_to_execute = command
 

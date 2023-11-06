@@ -8,21 +8,23 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module to manage loading entrypoints."""
+from __future__ import annotations
+
 import enum
 import functools
 import traceback
-from typing import Any, List, Optional, Sequence, Set, Tuple
-
-# importlib.metadata was introduced into the standard library in python 3.8,
-# but was then updated in python 3.10 to use an improved API.
-# So for now we use the backport importlib_metadata package.
-from importlib_metadata import EntryPoint, EntryPoints
-from importlib_metadata import entry_points as _eps
+from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Set, Tuple
 
 from aiida.common.exceptions import LoadingEntryPointError, MissingEntryPointError, MultipleEntryPointError
 from aiida.common.warnings import warn_deprecation
 
 from . import factories
+
+if TYPE_CHECKING:
+    # importlib.metadata was introduced into the standard library in python 3.8,
+    # but was then updated in python 3.10 to use an improved API.
+    # So for now we use the backport importlib_metadata package.
+    from importlib_metadata import EntryPoint, EntryPoints
 
 __all__ = ('load_entry_point', 'load_entry_point_from_string', 'parse_entry_point', 'get_entry_points')
 
@@ -30,9 +32,31 @@ ENTRY_POINT_GROUP_PREFIX = 'aiida.'
 ENTRY_POINT_STRING_SEPARATOR = ':'
 
 
-@functools.lru_cache(maxsize=1)
-def eps():
-    return _eps()
+@functools.cache
+def eps() -> EntryPoints:
+    """Cache around entry_points()
+
+    This call takes around 50ms!
+    NOTE: For faster lookups, we sort the ``EntryPoints`` alphabetically
+    by the group name so that 'aiida.' groups come up first.
+    Unfortunately, this does not help with the entry_points.select() filter,
+    which will always iterate over all entry points since it looks for
+    possible duplicate entries.
+    """
+    from importlib_metadata import EntryPoints, entry_points
+    all_eps = entry_points()
+    return EntryPoints(sorted(all_eps, key=lambda x: x.group))
+
+
+@functools.lru_cache(maxsize=100)
+def eps_select(group: str, name: str | None = None) -> EntryPoints:
+    """
+    A thin wrapper around entry_points.select() calls, which are
+    expensive so we want to cache them.
+    """
+    if name is None:
+        return eps().select(group=group)
+    return eps().select(group=group, name=name)
 
 
 class EntryPointFormat(enum.Enum):
@@ -59,20 +83,22 @@ class EntryPointFormat(enum.Enum):
 
 ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP = {
     'aiida.calculations': 'aiida.orm.nodes.process.calculation.calcjob',
+    'aiida.calculations.importers': 'aiida.calculations.importers',
+    'aiida.calculations.monitors': 'aiida.calculations.monitors',
+    'aiida.cmdline.computer.configure': 'aiida.cmdline.computer.configure',
     'aiida.cmdline.data': 'aiida.cmdline.data',
     'aiida.cmdline.data.structure.import': 'aiida.cmdline.data.structure.import',
-    'aiida.cmdline.computer.configure': 'aiida.cmdline.computer.configure',
     'aiida.data': 'aiida.orm.nodes.data',
     'aiida.groups': 'aiida.orm.groups',
     'aiida.node': 'aiida.orm.nodes',
     'aiida.parsers': 'aiida.parsers.plugins',
     'aiida.schedulers': 'aiida.schedulers.plugins',
     'aiida.storage': 'aiida.storage',
+    'aiida.transports': 'aiida.transports.plugins',
     'aiida.tools.calculations': 'aiida.tools.calculations',
     'aiida.tools.data.orbitals': 'aiida.tools.data.orbitals',
     'aiida.tools.dbexporters': 'aiida.tools.dbexporters',
     'aiida.tools.dbimporters': 'aiida.tools.dbimporters.plugins',
-    'aiida.transports': 'aiida.transports.plugins',
     'aiida.workflows': 'aiida.workflows',
 }
 
@@ -107,6 +133,7 @@ ENTRY_POINT_GROUP_FACTORY_MAPPING = {
 
 def parse_entry_point(group: str, spec: str) -> EntryPoint:
     """Return an entry point, given its group and spec (as formatted in the setup)"""
+    from importlib_metadata import EntryPoint
     name, value = spec.split('=', maxsplit=1)
     return EntryPoint(group=group, name=name.strip(), value=value.strip())
 
@@ -180,10 +207,11 @@ def get_entry_point_string_format(entry_point_string: str) -> EntryPointFormat:
         group, _ = entry_point_string.split(ENTRY_POINT_STRING_SEPARATOR)
     except ValueError:
         return EntryPointFormat.MINIMAL
-    else:
-        if group.startswith(ENTRY_POINT_GROUP_PREFIX):
-            return EntryPointFormat.FULL
-        return EntryPointFormat.PARTIAL
+
+    if group.startswith(ENTRY_POINT_GROUP_PREFIX):
+        return EntryPointFormat.FULL
+
+    return EntryPointFormat.PARTIAL
 
 
 def get_entry_point_from_string(entry_point_string: str) -> EntryPoint:
@@ -251,8 +279,7 @@ def get_entry_point_groups() -> Set[str]:
 
 def get_entry_point_names(group: str, sort: bool = True) -> List[str]:
     """Return the entry points within a group."""
-    all_eps = eps()
-    group_names = list(all_eps.select(group=group).names)
+    group_names = list(get_entry_points(group).names)
     if sort:
         return sorted(group_names)
     return group_names
@@ -265,7 +292,7 @@ def get_entry_points(group: str) -> EntryPoints:
     :param group: the entry point group
     :return: a list of entry points
     """
-    return eps().select(group=group)
+    return eps_select(group=group)
 
 
 def get_entry_point(group: str, name: str) -> EntryPoint:
@@ -280,7 +307,7 @@ def get_entry_point(group: str, name: str) -> EntryPoint:
     """
     # The next line should be removed for ``aiida-core==3.0`` when the old deprecated entry points are fully removed.
     name = convert_potentially_deprecated_entry_point(group, name)
-    found = eps().select(group=group, name=name)
+    found = eps_select(group=group, name=name)
     if name not in found.names:
         raise MissingEntryPointError(f"Entry point '{name}' not found in group '{group}'")
     # If multiple entry points are found and they have different values we raise, otherwise if they all
@@ -306,14 +333,12 @@ def convert_potentially_deprecated_entry_point(group: str, name: str) -> str:
         deprecated_entry_points = DEPRECATED_ENTRY_POINTS_MAPPING[group]
     except KeyError:
         return name
-    else:
-        if name in deprecated_entry_points:
-            warn_deprecation(
-                f'The entry point `{name}` is deprecated. Please replace it with `core.{name}`.', version=3
-            )
-            name = f'core.{name}'
 
-        return name
+    if name in deprecated_entry_points:
+        warn_deprecation(f'The entry point `{name}` is deprecated. Please replace it with `core.{name}`.', version=3)
+        name = f'core.{name}'
+
+    return name
 
 
 @functools.lru_cache(maxsize=100)
@@ -325,15 +350,9 @@ def get_entry_point_from_class(class_module: str, class_name: str) -> Tuple[Opti
     :param class_name: name of the class
     :return: a tuple of the corresponding group and entry point or None if not found
     """
-    for group in get_entry_point_groups():
-        for entry_point in get_entry_points(group):
-
-            if entry_point.module != class_module:
-                continue
-
-            if entry_point.attr == class_name:
-                return group, entry_point
-
+    for entry_point in eps():
+        if entry_point.module == class_module and entry_point.attr == class_name:
+            return entry_point.group, entry_point
     return None, None
 
 
@@ -357,7 +376,7 @@ def get_entry_point_string_from_class(class_module: str, class_name: str) -> Opt
     group, entry_point = get_entry_point_from_class(class_module, class_name)
 
     if group and entry_point:
-        return ENTRY_POINT_STRING_SEPARATOR.join([group, entry_point.name])  # type: ignore[attr-defined]
+        return ENTRY_POINT_STRING_SEPARATOR.join([group, entry_point.name])
     return None
 
 

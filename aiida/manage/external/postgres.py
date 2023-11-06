@@ -20,12 +20,8 @@ from typing import TYPE_CHECKING
 from pgsu import DEFAULT_DSN as DEFAULT_DBINFO  # pylint: disable=no-name-in-module
 from pgsu import PGSU, PostgresConnectionMode
 
-from aiida.cmdline.utils import echo
-
 if TYPE_CHECKING:
     from aiida.manage.configuration import Profile
-
-__all__ = ('Postgres', 'PostgresConnectionMode', 'DEFAULT_DBINFO')
 
 # The last placeholder is for adding privileges of the user
 _CREATE_USER_COMMAND = 'CREATE USER "{}" WITH PASSWORD \'{}\' {}'
@@ -218,6 +214,8 @@ class Postgres(PGSU):
         :param str dbpass: Password the user should be given.
         :returns: (dbuser, dbname)
         """
+        from aiida.cmdline.utils import echo
+
         if not self.dbuser_exists(dbuser):
             self.create_dbuser(dbuser=dbuser, dbpass=dbpass)
         elif not self.can_user_authenticate(dbuser, dbpass):

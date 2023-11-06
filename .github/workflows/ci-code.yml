@@ -7,6 +7,12 @@ on:
     branches-ignore: [gh-pages]
     paths-ignore: ['docs/**']
 
+# https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+    # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
 jobs:
 
   check-requirements:
@@ -17,10 +23,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Python 3.8
+    - name: Set up Python 3.9
       uses: actions/setup-python@v2
       with:
-        python-version: '3.8'
+        python-version: '3.9'
 
     - name: Install utils/ dependencies
       run: pip install -r utils/requirements.txt
@@ -49,7 +55,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.8', '3.11']
+        python-version: ['3.9', '3.11']
 
     services:
       postgres:
@@ -111,10 +117,10 @@ jobs:
         .github/workflows/tests.sh
 
     - name: Upload coverage report
-      if: matrix.python-version == 3.8 && github.repository == 'aiidateam/aiida-core'
+      if: matrix.python-version == 3.9 && github.repository == 'aiidateam/aiida-core'
       uses: codecov/codecov-action@v1
       with:
-        name: aiida-pytests-py3.8
+        name: aiida-pytests-py3.9
         file: ./coverage.xml
         fail_ci_if_error: false  # don't fail job, if coverage upload fails
 
@@ -126,7 +132,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.8', '3.11']
+        python-version: ['3.9', '3.11']
 
     steps:
     - uses: actions/checkout@v2
@@ -142,4 +148,5 @@ jobs:
     - name: Run verdi
       run: |
         verdi devel check-load-time
+        verdi devel check-undesired-imports
         .github/workflows/verdi.sh

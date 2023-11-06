@@ -9,10 +9,9 @@
 ###########################################################################
 # pylint: disable=invalid-name,cyclic-import
 """Definition of factories to load classes from the various plugin groups."""
-from inspect import isclass
-from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, Tuple, Type, Union, overload
+from __future__ import annotations
 
-from importlib_metadata import EntryPoint
+from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, Tuple, Type, Union, overload
 
 from aiida.common.exceptions import InvalidEntryPointTypeError
 
@@ -22,6 +21,8 @@ __all__ = (
 )
 
 if TYPE_CHECKING:
+    from importlib_metadata import EntryPoint
+
     from aiida.engine import CalcJob, CalcJobImporter, WorkChain
     from aiida.orm import Data, Group
     from aiida.orm.implementation import StorageBackend
@@ -82,6 +83,8 @@ def CalculationFactory(entry_point_name: str, load: bool = True) -> Union[EntryP
     :return: sub class of :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`
     :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
+    from inspect import isclass
+
     from aiida.engine import CalcJob, calcfunction, is_process_function
     from aiida.orm import CalcFunctionNode
 
@@ -116,6 +119,8 @@ def CalcJobImporterFactory(entry_point_name: str, load: bool = True) -> Union[En
     :return: the loaded :class:`~aiida.engine.processes.calcjobs.importer.CalcJobImporter` plugin.
     :raises ``aiida.common.InvalidEntryPointTypeError``: if the type of the loaded entry point is invalid.
     """
+    from inspect import isclass
+
     from aiida.engine import CalcJobImporter
 
     entry_point_group = 'aiida.calculations.importers'
@@ -149,6 +154,8 @@ def DataFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, T
     :return: sub class of :py:class:`~aiida.orm.nodes.data.data.Data`
     :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
+    from inspect import isclass
+
     from aiida.orm import Data
 
     entry_point_group = 'aiida.data'
@@ -182,6 +189,8 @@ def DbImporterFactory(entry_point_name: str, load: bool = True) -> Union[EntryPo
     :return: sub class of :py:class:`~aiida.tools.dbimporters.baseclasses.DbImporter`
     :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
+    from inspect import isclass
+
     from aiida.tools.dbimporters import DbImporter
 
     entry_point_group = 'aiida.tools.dbimporters'
@@ -215,6 +224,8 @@ def GroupFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, 
     :return: sub class of :py:class:`~aiida.orm.groups.Group`
     :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
+    from inspect import isclass
+
     from aiida.orm import Group
 
     entry_point_group = 'aiida.groups'
@@ -248,6 +259,8 @@ def OrbitalFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint
     :return: sub class of :py:class:`~aiida.tools.data.orbital.orbital.Orbital`
     :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
+    from inspect import isclass
+
     from aiida.tools.data.orbital import Orbital
 
     entry_point_group = 'aiida.tools.data.orbitals'
@@ -281,6 +294,8 @@ def ParserFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint,
     :return: sub class of :py:class:`~aiida.parsers.parser.Parser`
     :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
+    from inspect import isclass
+
     from aiida.parsers import Parser
 
     entry_point_group = 'aiida.parsers'
@@ -314,6 +329,8 @@ def SchedulerFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoi
     :return: sub class of :py:class:`~aiida.schedulers.scheduler.Scheduler`
     :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
+    from inspect import isclass
+
     from aiida.schedulers import Scheduler
 
     entry_point_group = 'aiida.schedulers'
@@ -347,6 +364,8 @@ def StorageFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint
     :return: sub class of :py:class:`~aiida.orm.implementation.storage_backend.StorageBackend`.
     :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
+    from inspect import isclass
+
     from aiida.orm.implementation import StorageBackend
 
     entry_point_group = 'aiida.storage'
@@ -379,6 +398,8 @@ def TransportFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoi
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
     :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
+    from inspect import isclass
+
     from aiida.transports import Transport
 
     entry_point_group = 'aiida.transports'
@@ -412,6 +433,8 @@ def WorkflowFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoin
     :return: sub class of :py:class:`~aiida.engine.processes.workchains.workchain.WorkChain` or a `workfunction`
     :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
+    from inspect import isclass
+
     from aiida.engine import WorkChain, is_process_function, workfunction
     from aiida.orm import WorkFunctionNode
 

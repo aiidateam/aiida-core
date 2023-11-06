@@ -9,11 +9,12 @@
 ###########################################################################
 # pylint: disable=cyclic-import
 """AiiDA manager for global settings"""
-import asyncio
 import functools
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 if TYPE_CHECKING:
+    import asyncio
+
     from kiwipy.rmq import RmqThreadCommunicator
     from plumpy.process_comms import RemoteProcessThreadController
 
@@ -213,6 +214,7 @@ class Manager:  # pylint: disable=too-many-public-methods
         else:
             if option_name in config.options:
                 return config.get_option(option_name)
+
         # try the defaults (will raise ConfigurationError if not present)
         option = get_option(option_name)
         return option.default
@@ -416,7 +418,7 @@ class Manager:  # pylint: disable=too-many-public-methods
 
         return runners.Runner(**settings)
 
-    def create_daemon_runner(self, loop: Optional[asyncio.AbstractEventLoop] = None) -> 'Runner':
+    def create_daemon_runner(self, loop: Optional['asyncio.AbstractEventLoop'] = None) -> 'Runner':
         """Create and return a new daemon runner.
 
         This is used by workers when the daemon is running and in testing.
@@ -429,13 +431,13 @@ class Manager:  # pylint: disable=too-many-public-methods
         from plumpy.persistence import LoadSaveContext
 
         from aiida.engine import persistence
-        from aiida.manage.external import rmq
+        from aiida.manage.external.rmq.launcher import ProcessLauncher
 
         runner = self.create_runner(rmq_submit=True, loop=loop)
         runner_loop = runner.loop
 
         # Listen for incoming launch requests
-        task_receiver = rmq.ProcessLauncher(
+        task_receiver = ProcessLauncher(
             loop=runner_loop,
             persister=self.get_persister(),
             load_context=LoadSaveContext(runner=runner),

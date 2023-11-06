@@ -13,10 +13,12 @@ import contextlib
 import contextvars
 import logging
 import traceback
-from typing import Awaitable, Dict, Hashable, Iterator, Optional
+from typing import TYPE_CHECKING, Awaitable, Dict, Hashable, Iterator, Optional
 
 from aiida.orm import AuthInfo
-from aiida.transports import Transport
+
+if TYPE_CHECKING:
+    from aiida.transports import Transport
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -55,7 +57,7 @@ class TransportQueue:
         return self._loop
 
     @contextlib.contextmanager
-    def request_transport(self, authinfo: AuthInfo) -> Iterator[Awaitable[Transport]]:
+    def request_transport(self, authinfo: AuthInfo) -> Iterator[Awaitable['Transport']]:
         """
         Request a transport from an authinfo.  Because the client is not allowed to
         request a transport immediately they will instead be given back a future
@@ -101,9 +103,7 @@ class TransportQueue:
             # passed around to many places, including outside aiida-core (e.g. paramiko). Anyone keeping a reference
             # to this handle would otherwise keep the Process context (and thus the process itself) in memory.
             # See https://github.com/aiidateam/aiida-core/issues/4698
-            open_callback_handle = self._loop.call_later(
-                safe_open_interval, do_open, context=contextvars.Context()
-            )  #  type: ignore[call-arg]
+            open_callback_handle = self._loop.call_later(safe_open_interval, do_open, context=contextvars.Context())
 
         try:
             transport_request.count += 1

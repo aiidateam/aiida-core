@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA Group entites"""
-from abc import ABCMeta
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
 import warnings
@@ -21,9 +20,10 @@ from aiida.manage import get_manager
 from . import convert, entities, extras, users
 
 if TYPE_CHECKING:
+    from importlib_metadata import EntryPoint
+
     from aiida.orm import Node, User
     from aiida.orm.implementation import BackendGroup, StorageBackend
-    from aiida.plugins.entry_point import EntryPoint  # type: ignore
 
 __all__ = ('Group', 'AutoGroup', 'ImportGroup', 'UpfFamily')
 
@@ -49,28 +49,6 @@ def load_group_class(type_string: str) -> Type['Group']:
         group_class = Group
 
     return group_class
-
-
-class GroupMeta(ABCMeta):
-    """Meta class for `aiida.orm.groups.Group` to automatically set the `type_string` attribute."""
-
-    def __new__(cls, name, bases, namespace, **kwargs):
-        from aiida.plugins.entry_point import get_entry_point_from_class
-
-        newcls = ABCMeta.__new__(cls, name, bases, namespace, **kwargs)  # pylint: disable=too-many-function-args
-
-        mod = namespace['__module__']
-        entry_point_group, entry_point = get_entry_point_from_class(mod, name)
-
-        if entry_point_group is None or entry_point_group != 'aiida.groups':
-            newcls._type_string = None  # type: ignore[attr-defined]
-            message = f'no registered entry point for `{mod}:{name}` so its instances will not be storable.'
-            warnings.warn(message)  # pylint: disable=no-member
-        else:
-            assert entry_point is not None
-            newcls._type_string = cast(str, entry_point.name)  # type: ignore[attr-defined]  # pylint: disable=protected-access
-
-        return newcls
 
 
 class GroupCollection(entities.Collection['Group']):
@@ -125,11 +103,10 @@ class GroupBase:
         return extras.EntityExtras(self._group)
 
 
-class Group(entities.Entity['BackendGroup', GroupCollection], metaclass=GroupMeta):
+class Group(entities.Entity['BackendGroup', GroupCollection]):
     """An AiiDA ORM implementation of group of nodes."""
 
-    # added by metaclass
-    _type_string: ClassVar[Optional[str]]
+    __type_string: ClassVar[Optional[str]]
 
     _CLS_COLLECTION = GroupCollection
 
@@ -165,6 +142,25 @@ class Group(entities.Entity['BackendGroup', GroupCollection], metaclass=GroupMet
         )
         super().__init__(model)
 
+    @classproperty
+    def _type_string(cls) -> Optional[str]:
+        from aiida.plugins.entry_point import get_entry_point_from_class
+
+        if hasattr(cls, '__type_string'):
+            return cls.__type_string
+
+        mod, name = cls.__module__, cls.__name__
+        entry_point_group, entry_point = get_entry_point_from_class(mod, name)
+
+        if entry_point_group is None or entry_point_group != 'aiida.groups':
+            cls.__type_string = None  # type: ignore[misc]  # pylint: disable=protected-access
+            message = f'no registered entry point for `{mod}:{name}` so its instances will not be storable.'
+            warnings.warn(message)  # pylint: disable=no-member
+        else:
+            assert entry_point is not None
+            cls.__type_string = entry_point.name  # type: ignore[misc]  # pylint: disable=protected-access
+        return cls.__type_string
+
     @cached_property
     def base(self) -> GroupBase:
         """Return the group base namespace."""
@@ -192,8 +188,8 @@ class Group(entities.Entity['BackendGroup', GroupCollection], metaclass=GroupMet
 
         :return: the associated entry point or ``None`` if it isn't known.
         """
-        # pylint: disable=no-self-use
         from aiida.plugins.entry_point import get_entry_point_from_class
+
         return get_entry_point_from_class(cls.__module__, cls.__name__)[1]
 
     @property
@@ -290,8 +286,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection], metaclass=GroupMet
             self.nodes[0]
         except IndexError:
             return True
-        else:
-            return False
+        return False
 
     def clear(self) -> None:
         """Remove all the nodes from this group."""
@@ -311,7 +306,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection], metaclass=GroupMet
 
         # Cannot use `collections.Iterable` here, because that would also match iterable `Node` sub classes like `List`
         if not isinstance(nodes, (list, tuple)):
-            nodes = [nodes]  # type: ignore
+            nodes = [nodes]  # type: ignore[list-item]
 
         for node in nodes:
             type_check(node, Node)
@@ -332,7 +327,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection], metaclass=GroupMet
 
         # Cannot use `collections.Iterable` here, because that would also match iterable `Node` sub classes like `List`
         if not isinstance(nodes, (list, tuple)):
-            nodes = [nodes]  # type: ignore
+            nodes = [nodes]  # type: ignore[list-item]
 
         for node in nodes:
             type_check(node, Node)

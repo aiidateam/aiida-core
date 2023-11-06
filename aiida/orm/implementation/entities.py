@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Classes and methods for backend non-specific entities"""
+from __future__ import annotations
+
 import abc
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, Iterable, List, Tuple, Type, TypeVar
 
@@ -44,7 +46,7 @@ class BackendEntity(abc.ABC):
         """
 
     @property
-    def pk(self) -> int:
+    def pk(self) -> int | None:
         """Return the id for this entity.
 
         This is unique only amongst entities of this type for a particular backend.

@@ -178,6 +178,13 @@ List of all operators:
 | ``contains`` |    lists    | ``'attributes.some_key': {'contains': ['a', 'b']}``   | Filter for lists that should contain certain values.                         |
 +--------------+-------------+-------------------------------------------------------+------------------------------------------------------------------------------+
 
+As mentioned in the :ref:`section about operatior negations<how-to:query:filters:operator-negations>` all operators can be turned into their associated negation (``NOT`` operator) by adding a ``!`` in front of the operator.
+
+.. note::
+    The form of (negation) operators in the rendered SQL may differ from the ones specified in the ``QueryBuilder`` instance.
+    For example, the ``!==`` operator of the ``QueryBuilder`` will be rendered to ``!=`` in SQL.
+
+
 .. _topics:database:advancedquery:tables:relationships:
 
 List of all relationships:

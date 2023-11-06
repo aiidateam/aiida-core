@@ -148,4 +148,4 @@ class List(Data, MutableSequence):
 
 @to_aiida_type.register(list)
 def _(value):
-    return List(list=value)
+    return List(value)

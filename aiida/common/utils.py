@@ -131,7 +131,7 @@ def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero=False):  #
     if negative_to_zero:
         s_tot = max(s_tot, 0)
 
-    negative = (s_tot < 0)
+    negative = s_tot < 0
     s_tot = abs(s_tot)
 
     negative_string = ' in the future' if negative else ' ago'
@@ -519,6 +519,7 @@ class Capturing:
     # pylint: disable=attribute-defined-outside-init
 
     def __init__(self, capture_stderr=False):
+        """Construct a new instance."""
         self.stdout_lines = []
         super().__init__()
 

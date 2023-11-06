@@ -103,7 +103,7 @@ class TestVisGraph:
 
     def test_graph_init(self):
         """ test initialisation of Graph"""
-        # pylint: disable=no-self-use
+
         graph_mod.Graph()
 
     def test_graph_add_node(self):
@@ -199,7 +199,9 @@ class TestVisGraph:
         +@localhost" color=lightgray fillcolor=white penwidth=2 shape=ellipse style=filled]
         +Exit Code: 200" color=lightgray fillcolor=white penwidth=2 shape=rectangle style=filled]
         +\tN{fd1} [label="FolderData ({fd1})" color=lightgray fillcolor=white penwidth=2 shape=ellipse style=filled]
-        +++""".format(**{k: v.pk for k, v in nodes.items()})
+        +++""".format(**{
+            k: v.pk for k, v in nodes.items()
+        })
 
         assert sorted([l.strip() for l in got_diff.splitlines()]
                       ) == sorted([l.strip() for l in expected_diff.splitlines()])
@@ -264,7 +266,9 @@ class TestVisGraph:
                 N{rd1} -> N{calcf1} [color="#000000" style=solid]
                 N{calcf1} -> N{fd1} [color="#000000" style=solid]
                 N{calcf1} -> N{pd3} [color="#000000" style=solid]
-        }}""".format(**{k: v.pk for k, v in nodes.items()})
+        }}""".format(**{
+            k: v.pk for k, v in nodes.items()
+        })
 
         # dedent before comparison
         assert sorted([l.strip() for l in graph.graphviz.source.splitlines()]) == \
@@ -306,7 +310,9 @@ class TestVisGraph:
                 N{rd1} -> N{calcf1} [color="#000000" style=solid]
                 N{calcf1} -> N{fd1} [color="#000000" style=solid]
                 N{calcf1} -> N{pd3} [color="#000000" style=solid]
-        }}""".format(**{k: v.pk for k, v in nodes.items()})
+        }}""".format(**{
+            k: v.pk for k, v in nodes.items()
+        })
 
         # dedent before comparison
         assert sorted([l.strip() for l in graph.graphviz.source.splitlines()]) == \

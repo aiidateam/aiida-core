@@ -1,0 +1,97 @@
+---
+name: Download Docker image and its tags from GitHub artifacts, apply them and push the image to container registry
+
+env:
+    OWNER: ${{ github.repository_owner }}
+
+on:
+    workflow_call:
+        inputs:
+            architecture:
+                description: Image architecture
+                required: true
+                type: string
+            registry:
+                description: Docker registry
+                required: true
+                type: string
+        secrets:
+            REGISTRY_USERNAME:
+                required: true
+            REGISTRY_TOKEN:
+                required: true
+
+jobs:
+    tag-push:
+        runs-on: ubuntu-latest
+        strategy:
+          matrix:
+              image: ["aiida-core-base", "aiida-core-with-services"]
+        defaults:
+            run:
+                shell: bash
+                working-directory: .docker
+        permissions:
+            packages: write
+
+        steps:
+            - name: Checkout Repo ⚡️
+              uses: actions/checkout@v3
+            - name: Create dev environment 📦
+              uses: ./.github/actions/create-dev-env
+              with:
+                  architecture: ${{ inputs.architecture }}
+            - name: Load image to Docker 📥
+              uses: ./.github/actions/load-image
+              with:
+                  image: ${{ matrix.image }}
+                  architecture: ${{ inputs.architecture }}
+
+            - name: Read build variables
+              id: build_vars
+              run: |
+                  vars=$(cat build.json | jq -c '[.variable | to_entries[] | {"key": .key, "value": .value.default}] | from_entries')
+                  echo "vars=$vars" >> "${GITHUB_OUTPUT}"
+
+            - name: Docker meta 📝
+              id: meta
+              uses: docker/metadata-action@v4
+              env: ${{ fromJson(steps.build_vars.outputs.vars) }}
+              with:
+                  images: |
+                      name=${{ inputs.registry }}/${{ env.OWNER }}/${{ matrix.image }}
+                  tags: |
+                      type=edge,enable={{is_default_branch}}
+                      type=sha,enable=${{ github.ref_type != 'tag' }}
+                      type=ref,event=pr
+                      type=match,pattern=v(\d+\.\d+.\d+),group=1
+                      type=raw,value={{tag}},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+                      type=raw,value=python-${{ env.PYTHON_VERSION }},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+                      type=raw,value=postgresql-${{ env.PGSQL_VERSION }},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+
+            - name: Login to Container Registry 🔑
+              uses: docker/login-action@v2
+              with:
+                  registry: ${{ inputs.registry }}
+                  username: ${{ secrets.REGISTRY_USERNAME }}
+                  password: ${{ secrets.REGISTRY_TOKEN }}
+
+            - name: Set tags for image and push 🏷️📤💾
+              run: |
+                  declare -a arr=(${{ steps.meta.outputs.tags }})
+                  for tag in "${arr[@]}"; do
+                      arch_tag=$(echo ${tag} | sed "s/:/:${{ inputs.architecture }}-/")
+                      docker tag ${{ env.OWNER }}/${{ matrix.image }}:newly-baked ${arch_tag}
+                      docker push ${arch_tag}
+
+                      # write tag to file
+                      mkdir -p /tmp/aiida-core
+                      echo ${arch_tag} >> /tmp/aiida-core/${{ matrix.image }}-${{ inputs.architecture }}-tags.txt
+                  done
+
+            - name: Upload tags file 📤
+              uses: actions/upload-artifact@v3
+              with:
+                  name: ${{ inputs.registry }}-${{ matrix.image }}-${{ inputs.architecture }}-tags
+                  path: /tmp/aiida-core/${{ matrix.image }}-${{ inputs.architecture }}-tags.txt
+                  retention-days: 3

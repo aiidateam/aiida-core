@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import typing as t
-from urllib.parse import quote
-
-import requests
 
 from aiida.common.exceptions import AiidaException
+
+if t.TYPE_CHECKING:
+    import requests
 
 __all__ = ('RabbitmqManagementClient', 'ManagementApiConnectionError')
 
@@ -31,6 +31,7 @@ class RabbitmqManagementClient:
         :param hostname: The hostname of the RabbitMQ server.
         :param virtual_host: The virtual host.
         """
+        import requests
         self._username = username
         self._password = password
         self._hostname = hostname
@@ -47,6 +48,8 @@ class RabbitmqManagementClient:
             automatically inserted and should not be specified.
         :returns: The complete URL.
         """
+        from urllib.parse import quote
+
         url_params = url_params or {}
         url_params['virtual_host'] = self._virtual_host if self._virtual_host else '/'
         url_params = {key: quote(value, safe='') for key, value in url_params.items()}
@@ -58,7 +61,7 @@ class RabbitmqManagementClient:
         url_params: dict[str, str] | None = None,
         method: str = 'GET',
         params: dict[str, t.Any] | None = None,
-    ) -> requests.Response:
+    ) -> 'requests.Response':
         """Make a request.
 
         :param url: The resource path with placeholders, e.g., ``queues/{virtual_host}/{queue}``.
@@ -69,9 +72,10 @@ class RabbitmqManagementClient:
         :returns: The response of the request.
         :raises `ManagementApiConnectionError`: If connection to the API cannot be made.
         """
+        import requests
         url = self.format_url(url, url_params)
         try:
-            return requests.request(method, url, auth=self._authentication, params=params or {})
+            return requests.request(method, url, auth=self._authentication, params=params or {}, timeout=5)
         except requests.exceptions.ConnectionError as exception:
             raise ManagementApiConnectionError(
                 'Could not connect to the management API. Make sure RabbitMQ is running and the management plugin is '
@@ -90,5 +94,4 @@ class RabbitmqManagementClient:
             self.request('cluster-name')
         except ManagementApiConnectionError:
             return False
-        else:
-            return True
+        return True

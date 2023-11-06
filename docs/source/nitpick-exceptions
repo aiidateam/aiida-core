@@ -8,8 +8,11 @@ py:class callable
 py:class function
 py:class traceback
 py:class NoneType
+py:class MappingType
 py:class AbstractContextManager
 py:class BinaryIO
+py:class EntryPoint
+py:class EntryPoints
 py:class IO
 py:class Path
 py:class str | list[str]
@@ -20,6 +23,7 @@ py:class json.encoder.JSONEncoder
 py:class EXPOSED_TYPE
 py:class EVENT_CALLBACK_TYPE
 py:class datetime
+py:meth tempfile.TemporaryDirectory
 
 ### AiiDA
 py:class ReturnType
@@ -58,6 +62,7 @@ py:class aiida.orm.entitites.BackendEntityType
 py:class aiida.orm.groups.SelfType
 py:class aiida.orm.implementation.entitites.EntityType
 py:class aiida.engine.processes.functions.FunctionType
+py:class aiida.engine.processes.workchains.workchain.MethodType
 py:class aiida.orm.entities.EntityType
 py:class aiida.orm.entities.BackendEntityType
 py:class aiida.orm.entities.CollectionType
@@ -101,6 +106,15 @@ py:class aiida.storage.sqlite_zip.models.DbGroupNode
 py:class aiida.engine.processes.workchains.context.ToContext
 py:func aiida.orm.implementation.BackendQueryBuilder
 
+### Typing aliases
+py:obj aiida.engine.processes.functions.P
+py:obj aiida.engine.processes.functions.N
+py:obj aiida.engine.processes.functions.R_co
+py:class P
+py:class N
+py:class aiida.engine.processes.functions.N
+py:class aiida.engine.processes.functions.R_co
+
 ### third-party packages
 # Note: These exceptions are needed if
 # * the objects are referenced e.g. as param/return types types in method docstrings (without intersphinx mapping)
@@ -115,7 +129,7 @@ py:class click.types.Path
 py:class click.types.File
 py:class click.types.StringParamType
 py:func click.shell_completion._start_of_option
-py:meth  click.Option.get_default
+py:meth click.Option.get_default
 py:meth fail
 
 py:class requests.models.Response
@@ -129,12 +143,26 @@ py:class disk_objectstore.utils.LazyOpener
 py:class frozenset
 
 py:class numpy.bool_
+py:class numpy.ndarray
+py:class ndarray
 
 py:class paramiko.proxy.ProxyCommand
+
+py:class pydantic.main.BaseModel
+py:class ModelPrivateAttr
+py:class CoreSchema
+py:class _decorators.DecoratorInfos
+py:class _generics.PydanticGenericMetadata
+py:class SchemaSerializer
+py:class SchemaValidator
+py:class Signature
+py:class ConfigDict
+py:class FieldInfo
 
 # These can be removed once they are properly included in the `__all__` in `plumpy`
 py:class plumpy.ports.PortNamespace
 py:class plumpy.utils.AttributesDict
+py:class plumpy.utils.AttributesFrozendict
 py:class plumpy.process_states.State
 py:class plumpy.workchains._If
 py:class plumpy.workchains._While
@@ -159,9 +187,12 @@ py:class html.parser.HTMLParser
 
 py:class disk_objectstore.container.Container
 
+py:class flask_restful.Api
+py:class flask_restful.Resource
 py:class flask.app.Flask
+py:class Flask
 
-py:class pytest.TempPathFactory
+py:class pytest.tmpdir.TempPathFactory
 
 py:class sqlalchemy.orm.decl_api.SqliteModel
 py:class sqlalchemy.orm.decl_api.Base
@@ -172,6 +203,8 @@ py:class sphinx.ext.autodoc.ClassDocumenter
 py:class sphinx.util.docutils.SphinxDirective
 py:class ModuleAnalyzer
 py:class BuildEnvironment
+
+py:meth tabulate.tabulate
 
 py:class yaml.Dumper
 py:class yaml.Loader
@@ -195,8 +228,6 @@ py:class CircusClient
 
 py:class pgsu.PGSU
 py:meth  pgsu.PGSU.__init__
-
-py:class jsonschema.exceptions._Error
 
 py:class Session
 py:class Query

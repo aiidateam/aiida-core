@@ -803,11 +803,9 @@ class StructureData(Data):
             of earlier versions may cause errors).
         """
         box = [
-            max([x.coords.tolist()[0] for x in mol.sites]) - min([x.coords.tolist()[0] for x in mol.sites]) +
-            2 * margin,
-            max([x.coords.tolist()[1] for x in mol.sites]) - min([x.coords.tolist()[1] for x in mol.sites]) +
-            2 * margin,
-            max([x.coords.tolist()[2] for x in mol.sites]) - min([x.coords.tolist()[2] for x in mol.sites]) + 2 * margin
+            max(x.coords.tolist()[0] for x in mol.sites) - min(x.coords.tolist()[0] for x in mol.sites) + 2 * margin,
+            max(x.coords.tolist()[1] for x in mol.sites) - min(x.coords.tolist()[1] for x in mol.sites) + 2 * margin,
+            max(x.coords.tolist()[2] for x in mol.sites) - min(x.coords.tolist()[2] for x in mol.sites) + 2 * margin
         ]
         self.set_pymatgen_structure(mol.get_boxed_structure(*box))
         self.pbc = [False, False, False]
@@ -836,7 +834,17 @@ class StructureData(Data):
             species = list(species_and_occu.keys())
             occupations = list(species_and_occu.values())
 
-            has_spin = any(specie.as_dict().get('properties', {}).get('spin', 0) != 0 for specie in species)
+            # As of v2023.9.2, the ``properties`` argument is removed and the ``spin`` argument should be used.
+            # See: https://github.com/materialsproject/pymatgen/commit/118c245d6082fe0b13e19d348fc1db9c0d512019
+            # The ``spin`` argument was introduced in v2023.6.28.
+            # See: https://github.com/materialsproject/pymatgen/commit/9f2b3939af45d5129e0778d371d814811924aeb6
+            has_spin_attribute = hasattr(species[0], '_spin')
+
+            if has_spin_attribute:
+                has_spin = any(specie.spin != 0 for specie in species)
+            else:
+                has_spin = any(specie.as_dict().get('properties', {}).get('spin', 0) != 0 for specie in species)
+
             has_partial_occupancies = (len(occupations) != 1 or occupations[0] != 1.0)
 
             if has_partial_occupancies and has_spin:
@@ -849,7 +857,10 @@ class StructureData(Data):
 
                 # If there is spin, we can only have a single specie, otherwise we would have raised above
                 specie = species[0]
-                spin = specie.as_dict().get('properties', {}).get('spin', 0)
+                if has_spin_attribute:
+                    spin = specie.spin
+                else:
+                    spin = specie.as_dict().get('properties', {}).get('spin', 0)
 
                 if spin < 0:
                     kind_name += '1'
@@ -1751,7 +1762,7 @@ class StructureData(Data):
 
         from .dict import Dict
 
-        param = Dict(dict=kwargs)
+        param = Dict(kwargs)
         try:
             conv_f = getattr(structure_tools, f'_get_cif_{converter}_inline')
         except AttributeError:
@@ -1848,13 +1859,16 @@ class StructureData(Data):
                 kind = self.get_kind(site.kind_name)
                 if len(kind.symbols) != 1 or (len(kind.weights) != 1 or sum(kind.weights) < 1.):
                     raise ValueError('Cannot set partial occupancies and spins at the same time')
-                species.append(
-                    Specie(
-                        kind.symbols[0],
-                        oxidation_state,
-                        properties={'spin': -1 if kind.name.endswith('1') else 1 if kind.name.endswith('2') else 0}
-                    )
-                )
+                spin = -1 if kind.name.endswith('1') else 1 if kind.name.endswith('2') else 0
+                try:
+                    specie = Specie(kind.symbols[0], oxidation_state, properties={'spin': spin})  # pylint: disable=unexpected-keyword-arg
+                except TypeError:
+                    # As of v2023.9.2, the ``properties`` argument is removed and the ``spin`` argument should be used.
+                    # See: https://github.com/materialsproject/pymatgen/commit/118c245d6082fe0b13e19d348fc1db9c0d512019
+                    # The ``spin`` argument was introduced in v2023.6.28.
+                    # See: https://github.com/materialsproject/pymatgen/commit/9f2b3939af45d5129e0778d371d814811924aeb6
+                    specie = Specie(kind.symbols[0], oxidation_state, spin=spin)  # pylint: disable=unexpected-keyword-arg
+                species.append(specie)
         else:
             # case when no spin are defined
             for site in self.sites:

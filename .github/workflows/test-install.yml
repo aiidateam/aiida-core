@@ -12,6 +12,12 @@ on:
   schedule:
     - cron: '30 02 * * *'  # nightly build
 
+# https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+    # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
 jobs:
 
   validate-dependency-specification:
@@ -52,7 +58,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11']
+        python-version: ['3.9', '3.10', '3.11']
 
     steps:
     - uses: actions/checkout@v2
@@ -105,17 +111,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        extras: [ '', '[atomic_tools,docs,notebook,rest,tests]' ]
+        extras: [ '', '[atomic_tools,docs,notebook,rest,tests,tui]' ]
 
     steps:
     - uses: actions/checkout@v2
 
-      # Set to Python version 3.8, as the installation with 3.9 still takes
-      # significantly longer to install.
-    - name: Set up Python 3.8
+    - name: Set up Python 3.9
       uses: actions/setup-python@v2
       with:
-        python-version: '3.8'
+        python-version: '3.9'
 
     - name: Pip install
       id: pip_install
@@ -140,7 +144,7 @@ jobs:
       fail-fast: false
       matrix:
 
-        python-version: ['3.8', '3.9', '3.10', '3.11']
+        python-version: ['3.9', '3.10', '3.11']
 
         # Not being able to install with conda on a specific Python version is
         # not sufficient to fail the run, but something we want to be aware of.
@@ -191,7 +195,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11']
+        python-version: ['3.9', '3.10', '3.11']
 
     services:
       postgres:
@@ -238,7 +242,7 @@ jobs:
 
     - name: Install aiida-core
       run: |
-        pip install -e .[atomic_tools,docs,notebook,rest,tests]
+        pip install -e .[atomic_tools,docs,notebook,rest,tests,tui]
 
     - run: pip freeze
 

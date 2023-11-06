@@ -18,9 +18,6 @@ from __future__ import annotations
 
 import pathlib
 
-import click
-
-from aiida.cmdline.params.types import ComputerParamType
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.common.log import override_log_level
@@ -54,7 +51,7 @@ class InstalledCode(Code):
         """
         super(Code, self)._validate()  # Change to ``super()._validate()`` once deprecated ``Code`` class is removed.  # pylint: disable=bad-super-call
 
-        if not self.computer:
+        if not self.computer:  # type: ignore[truthy-bool]
             raise exceptions.ValidationError('The `computer` is undefined.')
 
         try:
@@ -156,6 +153,8 @@ class InstalledCode(Code):
     @staticmethod
     def cli_validate_label_uniqueness(ctx, _, value):
         """Validate the uniqueness of the label of the code."""
+        import click
+
         from aiida.orm import load_code
 
         computer = ctx.params.get('computer', None)
@@ -179,6 +178,10 @@ class InstalledCode(Code):
     @classmethod
     def _get_cli_options(cls) -> dict:
         """Return the CLI options that would allow to create an instance of this class."""
+        import click
+
+        from aiida.cmdline.params.types import ComputerParamType
+
         options = {
             'computer': {
                 'short_name': '-Y',

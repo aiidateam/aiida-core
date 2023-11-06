@@ -38,10 +38,18 @@ class RemoteData(Data):
         self.base.attributes.set('remote_path', val)
 
     @property
+    def is_cleaned(self):
+        """Return whether the remote folder has been cleaned."""
+        return self.base.extras.get(self.KEY_EXTRA_CLEANED, False)
+
+    @property
     def is_empty(self):
         """
         Check if remote folder is empty
         """
+        if self.is_cleaned:
+            return True
+
         authinfo = self.get_authinfo()
         transport = authinfo.get_transport()
 
@@ -193,4 +201,4 @@ class RemoteData(Data):
             raise ValidationError('Remote computer not set.')
 
     def get_authinfo(self):
-        return AuthInfo.collection(self.backend).get(dbcomputer=self.computer, aiidauser=self.user)
+        return AuthInfo.get_collection(self.backend).get(dbcomputer=self.computer, aiidauser=self.user)

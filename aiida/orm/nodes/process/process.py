@@ -22,7 +22,7 @@ from ..caching import NodeCaching
 from ..node import Node, NodeLinks
 
 if TYPE_CHECKING:
-    from aiida.engine.processes import Process
+    from aiida.engine.processes import ExitCode, Process
     from aiida.engine.processes.builder import ProcessBuilder
 
 __all__ = ('ProcessNode',)
@@ -40,7 +40,7 @@ class ProcessNodeCaching(NodeCaching):
 
         :returns: True if this process node is valid to be used for caching, False otherwise
         """
-        if not (super().is_valid_cache and self._node.is_finished):
+        if not (super().is_valid_cache and self._node.is_finished and self._node.is_sealed):
             return False
 
         try:
@@ -399,6 +399,24 @@ class ProcessNode(Sealable, Node):
         return self.is_finished and self.exit_status != 0
 
     @property
+    def exit_code(self) -> Optional['ExitCode']:
+        """Return the exit code of the process.
+
+        It is reconstituted from the ``exit_status`` and ``exit_message`` attributes if both of those are defined.
+
+        :returns: The exit code if defined, or ``None``.
+        """
+        from aiida.engine.processes.exit_code import ExitCode
+
+        exit_status = self.exit_status
+        exit_message = self.exit_message
+
+        if exit_status is None or exit_message is None:
+            return None
+
+        return ExitCode(exit_status, exit_message)
+
+    @property
     def exit_status(self) -> Optional[int]:
         """
         Return the exit status of the process
@@ -563,5 +581,4 @@ class ProcessNode(Sealable, Node):
             caller = self.base.links.get_incoming(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).one().node
         except ValueError:
             return None
-        else:
-            return caller
+        return caller

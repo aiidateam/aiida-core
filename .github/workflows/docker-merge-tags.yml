@@ -1,0 +1,66 @@
+---
+name: Download images tags from GitHub artifacts and create multi-platform manifests
+
+on:
+    workflow_call:
+        inputs:
+            registry:
+                description: Docker registry, e.g. ghcr.io, docker.io
+                required: true
+                type: string
+        secrets:
+            REGISTRY_USERNAME:
+                required: true
+            REGISTRY_TOKEN:
+                required: true
+
+
+jobs:
+    merge-tags:
+        runs-on: ubuntu-latest
+        strategy:
+          matrix:
+              image: ["aiida-core-base", "aiida-core-with-services"]
+        permissions:
+            packages: write
+
+        steps:
+            - name: Checkout Repo ⚡️
+              uses: actions/checkout@v3
+            - name: Create dev environment 📦
+              uses: ./.github/actions/create-dev-env
+              with:
+                  architecture: amd64
+
+            - name: Download amd64 tags file 📥
+              uses: actions/download-artifact@v3
+              with:
+                  name: ${{ inputs.registry }}-${{ matrix.image }}-amd64-tags
+                  path: /tmp/aiida-core
+            - name: Download arm64 tags file 📥
+              uses: actions/download-artifact@v3
+              with:
+                  name: ${{ inputs.registry }}-${{ matrix.image }}-arm64-tags
+                  path: /tmp/aiida-core
+
+            - name: Login to Container Registry 🔑
+              uses: docker/login-action@v2
+              with:
+                  registry: ${{ inputs.registry }}
+                  username: ${{ secrets.REGISTRY_USERNAME }}
+                  password: ${{ secrets.REGISTRY_TOKEN }}
+
+            - name: Merge tags for the images of different arch 🔀
+              run: |
+                  for arch_tag in $(cat /tmp/aiida-core/${{ matrix.image }}-amd64-tags.txt); do
+                    tag=$(echo $arch_tag | sed "s/:amd64-/:/")
+                    docker manifest create $tag --amend $arch_tag
+                    docker manifest push $tag
+                  done
+
+                  for arch_tag in $(cat /tmp/aiida-core/${{ matrix.image }}-arm64-tags.txt); do
+                    tag=$(echo $arch_tag | sed "s/:arm64-/:/")
+                    docker manifest create $tag --amend $arch_tag
+                    docker manifest push $tag
+                  done
+              shell: bash

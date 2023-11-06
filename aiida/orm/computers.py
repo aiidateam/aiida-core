@@ -571,7 +571,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         from . import authinfos
 
         try:
-            authinfo = authinfos.AuthInfo.collection(self.backend).get(dbcomputer_id=self.pk, aiidauser_id=user.pk)
+            authinfo = authinfos.AuthInfo.get_collection(self.backend).get(dbcomputer_id=self.pk, aiidauser_id=user.pk)
         except exceptions.NotExistent as exc:
             raise exceptions.NotExistent(
                 f'Computer `{self.label}` (ID={self.pk}) not configured for user `{user.get_short_name()}` '
@@ -586,7 +586,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
         :return: Boolean, ``True`` if the computer is configured for the current default user, ``False`` otherwise.
         """
-        return self.is_user_configured(users.User.collection(self.backend).get_default())
+        return self.is_user_configured(users.User.get_collection(self.backend).get_default())
 
     def is_user_configured(self, user: 'User') -> bool:
         """
@@ -636,8 +636,8 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         """
         from . import authinfos  # pylint: disable=cyclic-import
 
-        user = user or users.User.collection(self.backend).get_default()
-        authinfo = authinfos.AuthInfo.collection(self.backend).get(dbcomputer=self, aiidauser=user)
+        user = user or users.User.get_collection(self.backend).get_default()
+        authinfo = authinfos.AuthInfo.get_collection(self.backend).get(dbcomputer=self, aiidauser=user)
         return authinfo.get_transport()
 
     def get_transport_class(self) -> Type['Transport']:
@@ -670,7 +670,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         from . import authinfos
 
         transport_cls = self.get_transport_class()
-        user = user or users.User.collection(self.backend).get_default()
+        user = user or users.User.get_collection(self.backend).get_default()
         valid_keys = set(transport_cls.get_valid_auth_params())
 
         if not set(kwargs.keys()).issubset(valid_keys):
@@ -680,7 +680,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         try:
             authinfo = self.get_authinfo(user)
         except exceptions.NotExistent:
-            authinfo = authinfos.AuthInfo(self, user)
+            authinfo = authinfos.AuthInfo(self, user, backend=self.backend)
 
         auth_params = authinfo.get_auth_params()
 
@@ -696,7 +696,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
         :param user: the user to to get the configuration for, otherwise default user
         """
-        user = user or users.User.collection(self.backend).get_default()
+        user = user or users.User.get_collection(self.backend).get_default()
 
         try:
             authinfo = self.get_authinfo(user)

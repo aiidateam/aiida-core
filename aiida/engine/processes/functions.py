@@ -13,8 +13,10 @@ from __future__ import annotations
 import collections
 import functools
 import inspect
+import itertools
 import logging
 import signal
+import sys
 import types
 import typing as t
 from typing import TYPE_CHECKING
@@ -39,18 +41,25 @@ from aiida.orm import (
 from aiida.orm.utils.mixins import FunctionCalculationMixin
 
 from .process import Process
+from .process_spec import ProcessSpec
 
 try:
-    UnionType = types.UnionType  # type: ignore[attr-defined]
+    UnionType = types.UnionType
 except AttributeError:
     # This type is not available for Python 3.9 and older
-    UnionType = None  # pylint: disable=invalid-name
+    UnionType = None  # type: ignore[assignment,misc]  # pylint: disable=invalid-name
 
 try:
-    get_annotations = inspect.get_annotations  # type: ignore[attr-defined]
+    from typing import ParamSpec
+except ImportError:
+    # Fallback for Python 3.9 and older
+    from typing_extensions import ParamSpec  # type: ignore[assignment]
+
+try:
+    get_annotations = inspect.get_annotations
 except AttributeError:
     # This is the backport for Python 3.9 and older
-    from get_annotations import get_annotations  # type: ignore[no-redef]
+    from get_annotations import get_annotations  # type: ignore[no-redef]  # pylint: disable=import-error
 
 if TYPE_CHECKING:
     from .exit_code import ExitCode
@@ -59,10 +68,64 @@ __all__ = ('calcfunction', 'workfunction', 'FunctionProcess')
 
 LOGGER = logging.getLogger(__name__)
 
-FunctionType = t.TypeVar('FunctionType', bound=t.Callable[..., t.Any])
+FunctionType = t.TypeVar('FunctionType', bound=t.Callable[..., t.Any])  # pylint: disable=invalid-name
 
 
-def calcfunction(function: FunctionType) -> FunctionType:
+def get_stack_size(size: int = 2) -> int:  # type: ignore[return]
+    """Return the stack size for the caller's frame.
+
+    This solution is taken from https://stackoverflow.com/questions/34115298/ as a more performant alternative to the
+    naive ``len(inspect.stack())` solution. This implementation is about three orders of magnitude faster compared to
+    the naive solution and it scales especially well for larger stacks, which will be usually the case for the usage
+    of ``aiida-core``. However, it does use the internal ``_getframe`` of the ``sys`` standard library. It this ever
+    were to stop working, simply switch to using ``len(inspect.stack())``.
+
+    :param size: Hint for the expected stack size.
+    :returns: The stack size for caller's frame.
+    """
+    frame = sys._getframe(size)  # pylint: disable=protected-access
+    try:
+        for size in itertools.count(size, 8):  # pylint: disable=redefined-argument-from-local
+            frame = frame.f_back.f_back.f_back.f_back.f_back.f_back.f_back.f_back  # type: ignore[assignment,union-attr]
+    except AttributeError:
+        while frame:  # type: ignore[truthy-bool]
+            frame = frame.f_back  # type: ignore[assignment]
+            size += 1
+        return size - 1
+
+
+P = ParamSpec('P')
+R_co = t.TypeVar('R_co', covariant=True)
+N = t.TypeVar('N', bound=ProcessNode)
+
+
+class ProcessFunctionType(t.Protocol, t.Generic[P, R_co, N]):
+    """Protocol for a decorated process function."""
+
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R_co:
+        ...
+
+    def run(self, *args: P.args, **kwargs: P.kwargs) -> R_co:
+        ...
+
+    def run_get_pk(self, *args: P.args, **kwargs: P.kwargs) -> tuple[dict[str, t.Any] | None, int]:
+        ...
+
+    def run_get_node(self, *args: P.args, **kwargs: P.kwargs) -> tuple[dict[str, t.Any] | None, N]:
+        ...
+
+    is_process_function: bool
+
+    node_class: t.Type[N]
+
+    process_class: t.Type[Process]
+
+    recreate_from: t.Callable[[N], Process]
+
+    spec: t.Callable[[], ProcessSpec]
+
+
+def calcfunction(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, CalcFunctionNode]:
     """
     A decorator to turn a standard python function into a calcfunction.
     Example usage:
@@ -86,10 +149,10 @@ def calcfunction(function: FunctionType) -> FunctionType:
     :param function: The function to decorate.
     :return: The decorated function.
     """
-    return process_function(node_class=CalcFunctionNode)(function)
+    return process_function(node_class=CalcFunctionNode)(function)  # type: ignore[arg-type]
 
 
-def workfunction(function: FunctionType) -> FunctionType:
+def workfunction(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, WorkFunctionNode]:
     """
     A decorator to turn a standard python function into a workfunction.
     Example usage:
@@ -113,7 +176,7 @@ def workfunction(function: FunctionType) -> FunctionType:
     :param function: The function to decorate.
     :return: The decorated function.
     """
-    return process_function(node_class=WorkFunctionNode)(function)
+    return process_function(node_class=WorkFunctionNode)(function)  # type: ignore[arg-type]
 
 
 def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionType], FunctionType]:
@@ -139,8 +202,21 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
             :param args: input arguments to construct the FunctionProcess
             :param kwargs: input keyword arguments to construct the FunctionProcess
             :return: tuple of the outputs of the process and the process node
-
             """
+            frame_delta = 1000
+            frame_count = get_stack_size()
+            stack_limit = sys.getrecursionlimit()
+            LOGGER.info('Executing process function, current stack status: %d frames of %d', frame_count, stack_limit)
+
+            # If the current frame count is more than 80% of the stack limit, or comes within 200 frames, increase the
+            # stack limit by ``frame_delta``.
+            if frame_count > min(0.8 * stack_limit, stack_limit - 200):
+                LOGGER.warning(
+                    'Current stack contains %d frames which is close to the limit of %d. Increasing the limit by %d',
+                    frame_count, stack_limit, frame_delta
+                )
+                sys.setrecursionlimit(stack_limit + frame_delta)
+
             manager = get_manager()
             runner = manager.get_runner()
             inputs = process_class.create_inputs(*args, **kwargs)
@@ -196,6 +272,7 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
 
             """
             result, node = run_get_node(*args, **kwargs)
+            assert node.pk is not None
             return result, node.pk
 
         @functools.wraps(function)
@@ -285,10 +362,13 @@ class FunctionProcess(Process):
 
         """
         # pylint: disable=too-many-statements
-        if not issubclass(node_class, ProcessNode) or not issubclass(node_class, FunctionCalculationMixin):
+        if (
+            not issubclass(node_class, ProcessNode) or  # type: ignore[redundant-expr]
+            not issubclass(node_class, FunctionCalculationMixin)  # type: ignore[unreachable]
+        ):
             raise TypeError('the node_class should be a sub class of `ProcessNode` and `FunctionCalculationMixin`')
 
-        signature = inspect.signature(func)
+        signature = inspect.signature(func)  # type: ignore[unreachable]
 
         args: list[str] = []
         varargs: str | None = None
@@ -360,7 +440,7 @@ class FunctionProcess(Process):
                     default is not None and default != UNSPECIFIED and not isinstance(default, Data) and
                     not callable(default)
                 ):
-                    indirect_default = lambda value=default: to_aiida_type(value)
+                    indirect_default = lambda value=default: to_aiida_type(value)  # pylint: disable=unnecessary-lambda-assignment
                 else:
                     indirect_default = default
 
@@ -481,7 +561,7 @@ class FunctionProcess(Process):
     def __init__(self, *args, **kwargs) -> None:
         if kwargs.get('enable_persistence', False):
             raise RuntimeError('Cannot persist a function process')
-        super().__init__(enable_persistence=False, *args, **kwargs)  # type: ignore
+        super().__init__(enable_persistence=False, *args, **kwargs)  # type: ignore[misc]
 
     @property
     def process_class(self) -> t.Callable[..., t.Any]:
@@ -548,11 +628,11 @@ class FunctionProcess(Process):
 
         result = self._func(*args, **kwargs)
 
-        if result is None or isinstance(result, ExitCode):
-            return result
+        if result is None or isinstance(result, ExitCode):  # type: ignore[redundant-expr]
+            return result  # type: ignore[unreachable]
 
-        if isinstance(result, Data):
-            self.out(self.SINGLE_OUTPUT_LINKNAME, result)
+        if isinstance(result, Data):  # type: ignore[unreachable]
+            self.out(self.SINGLE_OUTPUT_LINKNAME, result)  # type: ignore[unreachable]
         elif isinstance(result, collections.abc.Mapping):
             for name, value in result.items():
                 self.out(name, value)

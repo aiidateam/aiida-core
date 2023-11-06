@@ -66,6 +66,7 @@ class CalcJobNode(CalculationNode):
     """ORM class for all nodes representing the execution of a CalcJob."""
 
     # pylint: disable=too-many-public-methods
+    _CLS_NODE_CACHING = CalcJobNodeCaching
 
     CALC_JOB_STATE_KEY = 'state'
     IMMIGRATED_KEY = 'imported'
@@ -102,16 +103,12 @@ class CalcJobNode(CalculationNode):
                 entry_point = get_entry_point_from_string(entry_point_string)
 
                 try:
-                    tools_class = load_entry_point(
-                        'aiida.tools.calculations',
-                        entry_point.name  # type: ignore[attr-defined]
-                    )
+                    tools_class = load_entry_point('aiida.tools.calculations', entry_point.name)
                     self._tools = tools_class(self)
                 except exceptions.EntryPointError as exception:
                     self._tools = CalculationTools(self)
-                    entry_point_name = entry_point.name  # type: ignore[attr-defined]
                     self.logger.warning(
-                        f'could not load the calculation tools entry point {entry_point_name}: {exception}'
+                        f'could not load the calculation tools entry point {entry_point.name}: {exception}'
                     )
 
         return self._tools
@@ -267,8 +264,8 @@ class CalcJobNode(CalculationNode):
             if not isinstance(directive[1], str):
                 raise ValueError('invalid directive, second element has to be a string representing local path')
 
-            if not isinstance(directive[2], int):
-                raise ValueError('invalid directive, three element has to be an integer representing the depth')
+            if not isinstance(directive[2], (int, type(None))):
+                raise ValueError('invalid directive, third element has to be an integer representing the depth')
 
     def set_retrieve_list(self, retrieve_list: Sequence[Union[str, Tuple[str, str, str]]]) -> None:
         """Set the retrieve list.

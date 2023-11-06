@@ -27,7 +27,8 @@ def remote_data(tmp_path, aiida_localhost):
 def test_clean(remote_data):
     """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData.clean` method."""
     assert not remote_data.is_empty
+    assert not remote_data.is_cleaned
 
     remote_data._clean()  #  pylint: disable=protected-access
     assert remote_data.is_empty
-    assert remote_data.base.attributes.get(RemoteData.KEY_EXTRA_CLEANED, True)
+    assert remote_data.is_cleaned

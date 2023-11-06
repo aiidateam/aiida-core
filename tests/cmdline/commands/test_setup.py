@@ -49,7 +49,7 @@ class TestVerdiSetup:
         self.cli_runner(cmd_setup.setup, ['--help'])
         self.cli_runner(cmd_setup.quicksetup, ['--help'])
 
-    def test_quicksetup(self):
+    def test_quicksetup(self, tmp_path):
         """Test `verdi quicksetup`."""
         profile_name = 'testing'
         user_email = 'some@email.com'
@@ -60,7 +60,8 @@ class TestVerdiSetup:
         options = [
             '--non-interactive', '--profile', profile_name, '--email', user_email, '--first-name', user_first_name,
             '--last-name', user_last_name, '--institution', user_institution, '--db-port', self.pg_test.dsn['port'],
-            '--db-backend', self.storage_backend_name
+            '--db-backend', self.storage_backend_name, '--repository',
+            str(tmp_path)
         ]
 
         self.cli_runner(cmd_setup.quicksetup, options, use_subprocess=False)
@@ -83,7 +84,7 @@ class TestVerdiSetup:
         backend = profile.storage_cls(profile)
         assert backend.get_global_variable('repository|uuid') == backend.get_repository().uuid
 
-    def test_quicksetup_from_config_file(self):
+    def test_quicksetup_from_config_file(self, tmp_path):
         """Test `verdi quicksetup` from configuration file."""
         with tempfile.NamedTemporaryFile('w') as handle:
             handle.write(
@@ -94,12 +95,13 @@ last_name: Talirz
 institution: EPFL
 db_backend: {self.storage_backend_name}
 db_port: {self.pg_test.dsn['port']}
-email: 123@234.de"""
+email: 123@234.de
+repository: {tmp_path}"""
             )
             handle.flush()
             self.cli_runner(cmd_setup.quicksetup, ['--config', os.path.realpath(handle.name)], use_subprocess=False)
 
-    def test_quicksetup_autofill_on_early_exit(self):
+    def test_quicksetup_autofill_on_early_exit(self, tmp_path):
         """Test `verdi quicksetup` stores user information even if command fails."""
         config = configuration.get_config()
         assert config.get_option('autofill.user.email', scope=None) is None
@@ -117,7 +119,8 @@ email: 123@234.de"""
         options = [
             '--non-interactive', '--profile', 'testing', '--email', user_email, '--first-name', user_first_name,
             '--last-name', user_last_name, '--institution', user_institution, '--db-port',
-            self.pg_test.dsn['port'] + 100
+            self.pg_test.dsn['port'] + 100, '--repository',
+            str(tmp_path)
         ]
 
         self.cli_runner(cmd_setup.quicksetup, options, raises=True, use_subprocess=False)
@@ -202,11 +205,16 @@ email: 123@234.de"""
         postgres.create_db(db_user, db_name)
 
         profile_name = 'profile-copy'
-        profile_uuid = str(uuid.uuid4)
+        user_email = 'some@email.com'
+        user_first_name = 'John'
+        user_last_name = 'Smith'
+        user_institution = 'ECMA'
+        profile_uuid = str(uuid.uuid4())
         options = [
-            '--non-interactive', '--profile', profile_name, '--profile-uuid', profile_uuid, '--db-backend',
-            self.storage_backend_name, '--db-name', db_name, '--db-username', db_user, '--db-password', db_pass,
-            '--db-port', self.pg_test.dsn['port']
+            '--non-interactive', '--email', user_email, '--first-name', user_first_name, '--last-name', user_last_name,
+            '--institution', user_institution, '--db-name', db_name, '--db-username', db_user, '--db-password', db_pass,
+            '--db-port', self.pg_test.dsn['port'], '--db-backend', self.storage_backend_name, '--profile', profile_name,
+            '--profile-uuid', profile_uuid
         ]
 
         self.cli_runner(cmd_setup.setup, options, use_subprocess=False)
@@ -215,4 +223,4 @@ email: 123@234.de"""
         assert profile_name in config.profile_names
 
         profile = config.get_profile(profile_name)
-        profile.uuid = profile_uuid
+        assert profile.uuid == profile_uuid

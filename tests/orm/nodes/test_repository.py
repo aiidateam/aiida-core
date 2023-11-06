@@ -20,7 +20,7 @@ def cacheable_node():
     node = CalcJobNode(process_type='aiida.calculations:core.arithmetic.add')
     node.set_process_state(ProcessState.FINISHED)
     node.base.repository.put_object_from_bytes(b'content', 'relative/path')
-    node.store()
+    node.store().seal()
     assert node.base.caching.is_valid_cache
 
     return node
@@ -216,7 +216,7 @@ def test_glob():
 
 
 def test_copy_tree(tmp_path):
-    """Test the ``Repository.copy_tree`` method."""
+    """Test the ``NodeRepository.copy_tree`` method."""
     node = Data()
     node.base.repository.put_object_from_bytes(b'content', 'relative/path')
 
@@ -236,3 +236,29 @@ def test_deprecated_methods(monkeypatch):
     for method in node._deprecated_repo_methods:
         with pytest.warns(AiidaDeprecationWarning):
             getattr(node, method)
+
+
+def test_as_path():
+    """Test the ``NodeRepository.as_path`` method."""
+    node = Data()
+    node.base.repository.put_object_from_bytes(b'content_some_file', 'some_file.txt')
+    node.base.repository.put_object_from_bytes(b'content_relative', 'relative/path.dat')
+
+    with pytest.raises(FileNotFoundError):
+        with node.base.repository.as_path('non_existent'):
+            pass
+
+    with node.base.repository.as_path() as dirpath:
+        assert sorted([p.name for p in dirpath.iterdir()]) == ['relative', 'some_file.txt']
+        assert (dirpath / 'some_file.txt').read_bytes() == b'content_some_file'
+        assert (dirpath / 'relative' / 'path.dat').read_bytes() == b'content_relative'
+    assert not dirpath.exists()
+
+    with node.base.repository.as_path('relative') as dirpath:
+        assert sorted([p.name for p in dirpath.iterdir()]) == ['path.dat']
+        assert (dirpath / 'path.dat').read_bytes() == b'content_relative'
+    assert not dirpath.exists()
+
+    with node.base.repository.as_path('relative/path.dat') as filepath:
+        assert filepath.read_bytes() == b'content_relative'
+    assert not filepath.exists()

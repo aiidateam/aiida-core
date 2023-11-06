@@ -9,15 +9,13 @@
 ###########################################################################
 """`verdi node` command."""
 import pathlib
-import shutil
 
 import click
-import tabulate
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.types.plugin import PluginParamType
-from aiida.cmdline.utils import decorators, echo, multi_line_input
+from aiida.cmdline.utils import decorators, echo, echo_tabulate, multi_line_input
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions, timezone
 from aiida.common.links import GraphTraversalRules
@@ -43,6 +41,7 @@ def repo_cat(node, relative_path):
     For ``SinglefileData`` nodes, the `RELATIVE_PATH` does not have to be specified as it is determined automatically.
     """
     import errno
+    import shutil
     import sys
 
     from aiida.orm import SinglefileData
@@ -92,6 +91,8 @@ def repo_dump(node, output_directory):
     The output directory should not exist. If it does, the command
     will abort.
     """
+    import shutil
+
     from aiida.repository import FileType
 
     output_directory = pathlib.Path(output_directory)
@@ -146,9 +147,9 @@ def node_label(nodes, label, raw, force):
                 table.append([node.pk, node.label])
 
         if raw:
-            echo.echo(tabulate.tabulate(table, tablefmt='plain'))
+            echo_tabulate(table, tablefmt='plain')
         else:
-            echo.echo(tabulate.tabulate(table, headers=['ID', 'Label']))
+            echo_tabulate(table, headers=['ID', 'Label'])
 
     else:
         if not force:
@@ -180,9 +181,9 @@ def node_description(nodes, description, force, raw):
                 table.append([node.pk, node.description])
 
         if raw:
-            echo.echo(tabulate.tabulate(table, tablefmt='plain'))
+            echo_tabulate(table, tablefmt='plain')
         else:
-            echo.echo(tabulate.tabulate(table, headers=['ID', 'Description']))
+            echo_tabulate(table, headers=['ID', 'Description'])
 
     else:
         if not force:
@@ -229,7 +230,7 @@ def node_show(nodes, print_groups):
                 table = [(gr['groups']['id'], gr['groups']['label'], gr['groups']['type_string']) for gr in res]
                 table.sort()
 
-                echo.echo(tabulate.tabulate(table, headers=['PK', 'Label', 'Group type']))
+                echo_tabulate(table, headers=['PK', 'Label', 'Group type'])
 
 
 def echo_node_dict(nodes, keys, fmt, identifier, raw, use_attrs=True):
@@ -329,7 +330,7 @@ def node_delete(identifier, dry_run, force, **traversal_rules):
 @click.option(
     '-e',
     '--entry-point',
-    type=PluginParamType(group=('aiida.calculations', 'aiida.data', 'aiida.workflows'), load=True),
+    type=PluginParamType(group=('aiida.calculations', 'aiida.data', 'aiida.node', 'aiida.workflows'), load=True),
     default=None,
     help='Only include nodes that are class or sub class of the class identified by this entry point.'
 )
@@ -342,8 +343,15 @@ def rehash(nodes, entry_point, force):
     """
     from aiida.orm import Data, ProcessNode, QueryBuilder
 
+    # If no explicit entry point is defined, rehash all nodes, which are either Data nodes or ProcessNodes
+    if entry_point is None:
+        classes = (Data, ProcessNode)
+    else:
+        classes = (entry_point,)
+
     if not force:
-        echo.echo_warning('This command will recompute and overwrite the hashes of all nodes.')
+        class_names = ', '.join([cls.__name__ for cls in classes])
+        echo.echo_warning(f'This command will recompute and overwrite the hashes of all {class_names} nodes.')
         echo.echo_warning('Note that this can take a lot of time for big databases.')
         echo.echo_warning('')
         echo.echo_warning('', nl=False)
@@ -356,20 +364,16 @@ def rehash(nodes, entry_point, force):
             echo.echo('\n')
             echo.echo_critical('Migration aborted, the data has not been affected.')
 
-    # If no explicit entry point is defined, rehash all nodes, which are either Data nodes or ProcessNodes
-    if entry_point is None:
-        entry_point = (Data, ProcessNode)
-
     if nodes:
-        to_hash = [(node,) for node in nodes if isinstance(node, entry_point)]
+        to_hash = [(node,) for node in nodes if isinstance(node, classes)]
         num_nodes = len(to_hash)
     else:
         builder = QueryBuilder()
-        builder.append(entry_point, tag='node')
-        to_hash = builder.all()
+        builder.append(classes, tag='node')
+        to_hash = builder.iterall()
         num_nodes = builder.count()
 
-    if not to_hash:
+    if not num_nodes:
         echo.echo_critical('no matching nodes found')
 
     with click.progressbar(to_hash, label='Rehashing Nodes:') as iter_hash:

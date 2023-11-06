@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-member,too-many-public-methods,no-self-use
+# pylint: disable=no-member,too-many-public-methods
 """Module to test AiiDA processes."""
 import threading
 
@@ -20,6 +20,7 @@ from aiida.common.lang import override
 from aiida.engine import ExitCode, ExitCodesNamespace, Process, run, run_get_node, run_get_pk
 from aiida.engine.processes.ports import PortNamespace
 from aiida.manage.caching import enable_caching
+from aiida.orm.nodes.caching import NodeCaching
 from aiida.plugins import CalculationFactory
 from tests.utils import processes as test_processes
 
@@ -210,13 +211,13 @@ class TestProcess:
             _, node1 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(False))
             _, node2 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(False))
             assert node1.base.extras.get('_aiida_hash') == node2.base.extras.get('_aiida_hash')
-            assert '_aiida_cached_from' in node2.base.extras
+            assert NodeCaching.CACHED_FROM_KEY in node2.base.extras
 
         with enable_caching():
             _, node3 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(True))
             _, node4 = run_get_node(test_processes.InvalidateCaching, return_exit_code=orm.Bool(True))
             assert node3.base.extras.get('_aiida_hash') == node4.base.extras.get('_aiida_hash')
-            assert '_aiida_cached_from' not in node4.base.extras
+            assert NodeCaching.CACHED_FROM_KEY not in node4.base.extras
 
     def test_valid_cache_hook(self):
         """
@@ -228,13 +229,13 @@ class TestProcess:
             _, node1 = run_get_node(test_processes.IsValidCacheHook)
             _, node2 = run_get_node(test_processes.IsValidCacheHook)
             assert node1.base.extras.get('_aiida_hash') == node2.base.extras.get('_aiida_hash')
-            assert '_aiida_cached_from' in node2.base.extras
+            assert NodeCaching.CACHED_FROM_KEY in node2.base.extras
 
         with enable_caching():
             _, node3 = run_get_node(test_processes.IsValidCacheHook, not_valid_cache=orm.Bool(True))
             _, node4 = run_get_node(test_processes.IsValidCacheHook, not_valid_cache=orm.Bool(True))
             assert node3.base.extras.get('_aiida_hash') == node4.base.extras.get('_aiida_hash')
-            assert '_aiida_cached_from' not in node4.base.extras
+            assert NodeCaching.CACHED_FROM_KEY not in node4.base.extras
 
     def test_process_type_with_entry_point(self):
         """For a process with a registered entry point, the process_type will be its formatted entry point string."""

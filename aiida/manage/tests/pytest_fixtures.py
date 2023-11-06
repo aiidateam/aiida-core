@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import copy
 import inspect
 import io
 import os
@@ -33,6 +32,7 @@ import typing as t
 import uuid
 import warnings
 
+from importlib_metadata import EntryPoint, EntryPoints
 import plumpy
 import pytest
 import wrapt
@@ -43,7 +43,7 @@ from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.warnings import warn_deprecation
 from aiida.engine import Process, ProcessBuilder, submit
-from aiida.engine.daemon.client import DaemonClient, DaemonNotRunningException
+from aiida.engine.daemon.client import DaemonClient, DaemonNotRunningException, DaemonTimeoutException
 from aiida.manage import Config, Profile, get_manager, get_profile
 from aiida.manage.manager import Manager
 from aiida.orm import Computer, ProcessNode, User
@@ -95,6 +95,7 @@ def postgres_cluster(
         'database_password': database_password or 'guest',
     }
 
+    cluster = None
     try:
         cluster = PGTest()
 
@@ -107,7 +108,8 @@ def postgres_cluster(
 
         yield postgres_config
     finally:
-        cluster.close()
+        if cluster is not None:
+            cluster.close()
 
 
 @pytest.fixture(scope='session')
@@ -132,7 +134,7 @@ def aiida_manager() -> Manager:
 
 @pytest.fixture(scope='session')
 def aiida_instance(
-    tmp_path_factory: pytest.TempPathFactory,
+    tmp_path_factory: pytest.tmpdir.TempPathFactory,
     aiida_manager: Manager,
     aiida_test_profile: str | None,
 ) -> t.Generator[Config, None, None]:
@@ -185,7 +187,7 @@ def aiida_instance(
 
 @pytest.fixture(scope='session')
 def config_psql_dos(
-    tmp_path_factory: pytest.TempPathFactory,
+    tmp_path_factory: pytest.tmpdir.TempPathFactory,
     postgres_cluster: dict[str, str],
 ) -> t.Callable[[dict[str, t.Any] | None], dict[str, t.Any]]:
     """Return a profile configuration for the :class:`~aiida.storage.psql_dos.backend.PsqlDosBackend`."""
@@ -662,7 +664,13 @@ def daemon_client(aiida_profile):
             daemon_client.stop_daemon(wait=True)
         except DaemonNotRunningException:
             pass
-        assert not daemon_client.is_daemon_running
+        # Give an additional grace period by manually waiting for the daemon to be stopped. In certain unit test
+        # scenarios, the built in wait time in ``daemon_client.stop_daemon`` is not sufficient and even though the
+        # daemon is stopped, ``daemon_client.is_daemon_running`` will return false for a little bit longer.
+        daemon_client._await_condition(  # pylint: disable=protected-access
+            lambda: not daemon_client.is_daemon_running,
+            DaemonTimeoutException('The daemon failed to stop.'),
+        )
 
 
 @pytest.fixture()
@@ -680,7 +688,13 @@ def stopped_daemon_client(daemon_client):
     """Ensure that the daemon is not running for the test profile and return the associated client."""
     if daemon_client.is_daemon_running:
         daemon_client.stop_daemon(wait=True)
-        assert not daemon_client.is_daemon_running
+        # Give an additional grace period by manually waiting for the daemon to be stopped. In certain unit test
+        # scenarios, the built in wait time in ``daemon_client.stop_daemon`` is not sufficient and even though the
+        # daemon is stopped, ``daemon_client.is_daemon_running`` will return false for a little bit longer.
+        daemon_client._await_condition(  # pylint: disable=protected-access
+            lambda: not daemon_client.is_daemon_running,
+            DaemonTimeoutException('The daemon failed to stop.'),
+        )
 
     yield daemon_client
 
@@ -745,9 +759,16 @@ def suppress_deprecations(wrapped, _, args, kwargs):
 class EntryPointManager:
     """Manager to temporarily add or remove entry points."""
 
-    @staticmethod
-    def eps():
-        return plugins.entry_point.eps()
+    def __init__(self, entry_points: EntryPoints):
+        self.entry_points = entry_points
+
+    def eps(self) -> EntryPoints:
+        return self.entry_points
+
+    def eps_select(self, group, name=None) -> EntryPoints:
+        if name is None:
+            return self.eps().select(group=group)
+        return self.eps().select(group=group, name=name)
 
     @staticmethod
     def _validate_entry_point(entry_point_string: str | None, group: str | None, name: str | None) -> tuple[str, str]:
@@ -777,7 +798,6 @@ class EntryPointManager:
 
         return group, name
 
-    @suppress_deprecations
     def add(
         self,
         value: type | str,
@@ -802,10 +822,9 @@ class EntryPointManager:
             value = f'{value.__module__}:{value.__name__}'
 
         group, name = self._validate_entry_point(entry_point_string, group, name)
-        entry_point = plugins.entry_point.EntryPoint(name, value, group)
-        self.eps()[group].append(entry_point)
+        entry_point = EntryPoint(name, value, group)
+        self.entry_points = EntryPoints(self.entry_points + (entry_point,))
 
-    @suppress_deprecations
     def remove(
         self, entry_point_string: str | None = None, *, name: str | None = None, group: str | None = None
     ) -> None:
@@ -821,31 +840,23 @@ class EntryPointManager:
         :raises ValueError: If `entry_point_string` is not a complete entry point string with group and name.
         """
         group, name = self._validate_entry_point(entry_point_string, group, name)
-
-        for entry_point in self.eps()[group]:
-            if entry_point.name == name:
-                self.eps()[group].remove(entry_point)
-                break
-        else:
+        try:
+            self.entry_points[name]
+        except KeyError:
             raise KeyError(f'entry point `{name}` does not exist in group `{group}`.')
+        self.entry_points = EntryPoints((ep for ep in self.entry_points if not (ep.name == name and ep.group == group)))
 
 
 @pytest.fixture
 def entry_points(monkeypatch) -> EntryPointManager:
     """Return an instance of the ``EntryPointManager`` which allows to temporarily add or remove entry points.
 
-    This fixture creates a deep copy of the entry point cache returned by the :func:`aiida.plugins.entry_point.eps`
-    method and then monkey patches that function to return the deepcopy. This ensures that the changes on the entry
-    point cache performed during the test through the manager are undone at the end of the function scope.
-
-    .. note:: This fixture does not use the ``suppress_deprecations`` decorator on purpose, but instead adds it manually
-        inside the fixture's body. The reason is that otherwise all deprecations would be suppressed for the entire
-        scope of the fixture, including those raised by the code run in the test using the fixture, which is not
-        desirable.
-
+    This fixture monkey patches the entry point caches returned by
+    the :func:`aiida.plugins.entry_point.eps` and :func:`aiida.plugins.entry_point.eps_select` functions
+    to class methods of the ``EntryPointManager`` so that we can dynamically add / remove entry points.
+    Note that we do not need a deepcopy here as ``eps()`` returns an immutable ``EntryPoints`` tuple type.
     """
-    with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', category=DeprecationWarning)
-        eps_copy = copy.deepcopy(plugins.entry_point.eps())
-    monkeypatch.setattr(plugins.entry_point, 'eps', lambda: eps_copy)
-    yield EntryPointManager()
+    epm = EntryPointManager(plugins.entry_point.eps())
+    monkeypatch.setattr(plugins.entry_point, 'eps', epm.eps)
+    monkeypatch.setattr(plugins.entry_point, 'eps_select', epm.eps_select)
+    yield epm

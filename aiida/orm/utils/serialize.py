@@ -22,7 +22,7 @@ from functools import partial
 import inspect
 from typing import Any, Protocol, Type, overload
 
-from plumpy import Bundle, get_object_loader  # type: ignore[attr-defined]
+from plumpy import Bundle, get_object_loader
 from plumpy.utils import AttributesFrozendict
 import yaml
 
@@ -210,6 +210,8 @@ def serialize(data: Any, encoding: str | None = None) -> str | bytes:
     :param encoding: optional encoding for the serialized string
     :return: string representation of the serialized data structure or byte array if specific encoding is specified
     """
+    serialized: bytes | str
+
     if encoding is not None:
         serialized = yaml.dump(data, encoding=encoding, Dumper=AiiDADumper)
     else:

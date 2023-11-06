@@ -37,6 +37,7 @@ from aiida.engine.persistence import ObjectLoader
 from aiida.engine.processes import CalcJob, Process
 from aiida.manage.caching import enable_caching
 from aiida.orm import CalcJobNode, Dict, Int, List, Str, load_code, load_node
+from aiida.orm.nodes.caching import NodeCaching
 from aiida.plugins import CalculationFactory, WorkflowFactory
 from aiida.workflows.arithmetic.add_multiply import add, add_multiply
 from tests.utils.memory import get_instances  # pylint: disable=import-error
@@ -207,14 +208,14 @@ def validate_cached(cached_calcs):
             print_report(calc.pk)
             valid = False
 
-        if '_aiida_cached_from' not in calc.base.extras or calc.base.caching.get_hash(
+        if NodeCaching.CACHED_FROM_KEY not in calc.base.extras or calc.base.caching.get_hash(
         ) != calc.base.extras.get('_aiida_hash'):
             print(f'Cached calculation<{calc.pk}> has invalid hash')
             print_report(calc.pk)
             valid = False
 
         if isinstance(calc, CalcJobNode):
-            original_calc = load_node(calc.base.extras.get('_aiida_cached_from'))
+            original_calc = load_node(calc.base.extras.get(NodeCaching.CACHED_FROM_KEY))
             files_original = original_calc.base.repository.list_object_names()
             files_cached = calc.base.repository.list_object_names()
 
@@ -293,22 +294,20 @@ def create_calculation_process(code, inputval):
     Create the process and inputs for a submitting / running a calculation.
     """
     TemplatereplacerCalculation = CalculationFactory('core.templatereplacer')
-    parameters = Dict(dict={'value': inputval})
-    template = Dict(
-        dict={
-            # The following line adds a significant sleep time.
-            # I set it to 1 second to speed up tests
-            # I keep it to a non-zero value because I want
-            # To test the case when AiiDA finds some calcs
-            # in a queued state
-            # 'cmdline_params': ["{}".format(counter % 3)], # Sleep time
-            'cmdline_params': ['1'],
-            'input_file_template': '{value}',  # File just contains the value to double
-            'input_file_name': 'value_to_double.txt',
-            'output_file_name': 'output.txt',
-            'retrieve_temporary_files': ['triple_value.tmp']
-        }
-    )
+    parameters = Dict({'value': inputval})
+    template = Dict({
+        # The following line adds a significant sleep time.
+        # I set it to 1 second to speed up tests
+        # I keep it to a non-zero value because I want
+        # To test the case when AiiDA finds some calcs
+        # in a queued state
+        # 'cmdline_params': ["{}".format(counter % 3)], # Sleep time
+        'cmdline_params': ['1'],
+        'input_file_template': '{value}',  # File just contains the value to double
+        'input_file_name': 'value_to_double.txt',
+        'output_file_name': 'output.txt',
+        'retrieve_temporary_files': ['triple_value.tmp']
+    })
     options = {
         'resources': {
             'num_machines': 1
@@ -384,7 +383,7 @@ def run_base_restart_workchain():
 
     # Check that overriding default handler enabled status works
     inputs['add']['y'] = Int(1)
-    inputs['handler_overrides'] = Dict(dict={'disabled_handler': True})
+    inputs['handler_overrides'] = Dict({'disabled_handler': True})
     results, node = run.get_node(ArithmeticAddBaseWorkChain, **inputs)
     assert not node.is_finished_ok, node.process_state
     assert node.exit_status == ArithmeticAddBaseWorkChain.exit_codes.ERROR_ENABLED_DOOM.status, node.exit_status  # pylint: disable=no-member

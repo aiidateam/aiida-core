@@ -325,7 +325,7 @@ class CalcJob(Process):
         spec.input(
             'metadata.options.withmpi',
             valid_type=bool,
-            default=False,
+            required=False,
             help='Set the calculation to use mpi',
         )
         spec.input(
@@ -486,7 +486,7 @@ class CalcJob(Process):
         if entry_point_name is None:
             _, entry_point = get_entry_point_from_class(cls.__module__, cls.__name__)
             if entry_point is not None:
-                entry_point_name = entry_point.name  # type: ignore
+                entry_point_name = entry_point.name
 
         assert entry_point_name is not None
 
@@ -517,7 +517,7 @@ class CalcJob(Process):
 
     @property
     def node(self) -> orm.CalcJobNode:
-        return super().node  # type: ignore
+        return super().node  # type: ignore[return-value]
 
     @override
     def on_terminated(self) -> None:
@@ -539,11 +539,11 @@ class CalcJob(Process):
             `Wait` command if the calcjob is to be uploaded
 
         """
-        if self.inputs.metadata.dry_run:  # type: ignore[union-attr]
+        if self.inputs.metadata.dry_run:
             self._perform_dry_run()
             return plumpy.process_states.Stop(None, True)
 
-        if 'remote_folder' in self.inputs:  # type: ignore[operator]
+        if 'remote_folder' in self.inputs:
             exit_code = self._perform_import()
             return exit_code
 
@@ -552,6 +552,11 @@ class CalcJob(Process):
         # been overridden by the engine to `Running` so we cannot check that, but if the `exit_status` is anything other
         # than `None`, it should mean this node was taken from the cache, so the process should not be rerun.
         if self.node.exit_status is not None:
+            # Normally the outputs will be attached to the process by a ``Parser``, if defined in the inputs. But in
+            # this case, the parser will not be called. The outputs will already have been added to the process node
+            # though, so all that needs to be done here is just also assign them to the process instance. This such that
+            # when the process returns its results, it returns the actual outputs and not an empty dictionary.
+            self._outputs = self.node.get_outgoing(link_type=LinkType.CREATE).nested()  # pylint: disable=attribute-defined-outside-init
             return self.node.exit_status
 
         # Launch the upload operation
@@ -591,7 +596,7 @@ class CalcJob(Process):
         # will have an associated computer, but in that case the ``computer`` property should return ``None`` and
         # nothing would change anyway.
         if not self.node.computer:
-            self.node.computer = self.inputs.code.computer  # type: ignore[union-attr]
+            self.node.computer = self.inputs.code.computer
 
     def _perform_dry_run(self):
         """Perform a dry run.
@@ -611,7 +616,7 @@ class CalcJob(Process):
                 calc_info = self.presubmit(folder)
                 transport.chdir(folder.abspath)
                 upload_calculation(self.node, transport, calc_info, folder, inputs=self.inputs, dry_run=True)
-                self.node.dry_run_info = {  # type: ignore
+                self.node.dry_run_info = {  # type: ignore[attr-defined]
                     'folder': folder.abspath,
                     'script_filename': self.node.get_option('submit_script_filename')
                 }
@@ -635,9 +640,7 @@ class CalcJob(Process):
             with SandboxFolder(filepath_sandbox) as folder:
                 with SandboxFolder(filepath_sandbox) as retrieved_temporary_folder:
                     self.presubmit(folder)
-                    self.node.set_remote_workdir(
-                        self.inputs.remote_folder.get_remote_path()  # type: ignore[union-attr]
-                    )
+                    self.node.set_remote_workdir(self.inputs.remote_folder.get_remote_path())
                     retrieve_calculation(self.node, transport, retrieved_temporary_folder.abspath)
                     self.node.set_state(CalcJobState.PARSING)
                     self.node.base.attributes.set(orm.CalcJobNode.IMMIGRATED_KEY, True)
@@ -765,7 +768,7 @@ class CalcJob(Process):
             return None
 
         if exit_code is not None and not isinstance(exit_code, ExitCode):
-            args = (scheduler.__class__.__name__, type(exit_code))
+            args = (scheduler.__class__.__name__, type(exit_code))  # type: ignore[unreachable]
             raise ValueError('`{}.parse_output` returned neither an `ExitCode` nor None, but: {}'.format(*args))
 
         return exit_code
@@ -794,7 +797,7 @@ class CalcJob(Process):
                 break
 
         if exit_code is not None and not isinstance(exit_code, ExitCode):
-            args = (parser_class.__name__, type(exit_code))
+            args = (parser_class.__name__, type(exit_code))  # type: ignore[unreachable]
             raise ValueError('`{}.parse` returned neither an `ExitCode` nor None, but: {}'.format(*args))
 
         return exit_code
@@ -816,7 +819,7 @@ class CalcJob(Process):
 
         inputs = self.node.base.links.get_incoming(link_type=LinkType.INPUT_CALC)
 
-        if not self.inputs.metadata.dry_run and not self.node.is_stored:  # type: ignore[union-attr]
+        if not self.inputs.metadata.dry_run and not self.node.is_stored:
             raise InvalidOperation('calculation node is not stored.')
 
         computer = self.node.computer
@@ -891,7 +894,7 @@ class CalcJob(Process):
         # Set resources, also with get_default_mpiprocs_per_machine
         resources = self.node.get_option('resources')
         scheduler.preprocess_resources(resources or {}, computer.get_default_mpiprocs_per_machine())
-        job_tmpl.job_resource = scheduler.create_job_resource(**resources)  # type: ignore
+        job_tmpl.job_resource = scheduler.create_job_resource(**resources)  # type: ignore[arg-type]
 
         subst_dict = {'tot_num_mpiprocs': job_tmpl.job_resource.get_tot_num_mpiprocs()}
 
@@ -943,8 +946,8 @@ class CalcJob(Process):
             if with_mpi_values_set:
                 with_mpi = with_mpi_values_set.pop()
             else:
-                # Fall back to the default of the ``metadata.options.withmpi`` of the ``Calcjob`` class
-                with_mpi = self.node.get_option('withmpi')
+                # Fall back to the default, which is to not use MPI
+                with_mpi = False
 
             if with_mpi:
                 prepend_cmdline_params = code.get_prepend_cmdline_params(mpi_args, extra_mpirun_params)
@@ -961,7 +964,7 @@ class CalcJob(Process):
             tmpl_code_info.stdin_name = code_info.stdin_name
             tmpl_code_info.stdout_name = code_info.stdout_name
             tmpl_code_info.stderr_name = code_info.stderr_name
-            tmpl_code_info.join_files = code_info.join_files
+            tmpl_code_info.join_files = code_info.join_files or False
 
             tmpl_codes_info.append(tmpl_code_info)
         job_tmpl.codes_info = tmpl_codes_info

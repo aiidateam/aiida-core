@@ -154,7 +154,12 @@ def validate_link(
     type_check(source, Node, f'source should be a `Node` but got: {type(source)}')
     type_check(target, Node, f'target should be a `Node` but got: {type(target)}')
 
-    if source.uuid is None or target.uuid is None:
+    if source.backend != target.backend:
+        raise ValueError(
+            f'source and target nodes must be stored in the same backend, but got {source.backend} and {target.backend}'
+        )
+
+    if source.uuid is None or target.uuid is None:  # type: ignore[redundant-expr]
         raise ValueError('source or target node does not have a UUID')
 
     if source.uuid == target.uuid:

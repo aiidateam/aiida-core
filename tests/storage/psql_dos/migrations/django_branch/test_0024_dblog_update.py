@@ -40,15 +40,15 @@ def test_dblog_update(perform_migrations: PsqlDosMigrator):  # pylint: disable=t
         )
         session.add(user)
         session.commit()
-        node_kwargs = dict(
-            user_id=user.id,
-            ctime=timezone.now(),
-            mtime=timezone.now(),
-            label='test',
-            description='',
-            nodeversion=1,
-            public=True,
-        )
+        node_kwargs = {
+            'user_id': user.id,
+            'ctime': timezone.now(),
+            'mtime': timezone.now(),
+            'label': 'test',
+            'description': '',
+            'nodeversion': 1,
+            'public': True,
+        }
         calc_1 = node_model(uuid=get_new_uuid(), type='node.process.calculation.CalculationNode.', **node_kwargs)
         calc_2 = node_model(uuid=get_new_uuid(), type='node.process.calculation.CalculationNode.', **node_kwargs)
         param = node_model(uuid=get_new_uuid(), type='data.core.dict.Dict.', **node_kwargs)

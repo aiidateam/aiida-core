@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# pylint: disable=unnecessary-lambda-assignment
 """A module containing the logic for creating joined queries."""
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional, Protocol, Type

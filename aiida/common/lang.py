@@ -9,7 +9,6 @@
 ###########################################################################
 """Utilities that extend the basic python language."""
 import functools
-import inspect
 import keyword
 from typing import Any, Callable, Generic, TypeVar
 
@@ -52,6 +51,8 @@ def override_decorator(check=False) -> Callable[[MethodType], MethodType]:
     """Decorator to signal that a method from a base class is being overridden completely."""
 
     def wrap(func: MethodType) -> MethodType:  # pylint: disable=missing-docstring
+        import inspect
+
         if isinstance(func, property):
             raise RuntimeError('Override must go after @property decorator')
 
@@ -72,7 +73,7 @@ def override_decorator(check=False) -> Callable[[MethodType], MethodType]:
         else:
             wrapped_fn = func
 
-        return wrapped_fn  # type: ignore
+        return wrapped_fn  # type: ignore[return-value]
 
     return wrap
 

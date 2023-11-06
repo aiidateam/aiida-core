@@ -16,13 +16,11 @@
 
 from .client import *
 from .defaults import *
-from .launcher import *
 from .utils import *
 
 __all__ = (
     'BROKER_DEFAULTS',
     'ManagementApiConnectionError',
-    'ProcessLauncher',
     'RabbitmqManagementClient',
     'get_launch_queue_name',
     'get_message_exchange_name',

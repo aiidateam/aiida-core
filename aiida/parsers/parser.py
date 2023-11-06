@@ -14,7 +14,7 @@ to allow the reading of the outputs of a calculation.
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
 
-from aiida.common import exceptions, extendeddicts
+from aiida.common import exceptions, extendeddicts, log
 from aiida.engine import ExitCode, ExitCodesNamespace, calcfunction
 from aiida.engine.processes.ports import CalcJobOutputPort
 
@@ -23,6 +23,8 @@ if TYPE_CHECKING:
     from aiida.orm import CalcJobNode, Data, FolderData
 
 __all__ = ('Parser',)
+
+LOGGER = log.AIIDA_LOGGER.getChild('parser')
 
 
 class Parser(ABC):
@@ -67,7 +69,7 @@ class Parser(ABC):
     @property
     def retrieved(self) -> 'FolderData':
         return self.node.base.links.get_outgoing().get_node_by_label(
-            self.node.process_class.link_label_retrieved  # type: ignore
+            self.node.process_class.link_label_retrieved  # type: ignore[attr-defined, return-value]
         )
 
     @property
@@ -147,6 +149,19 @@ class Parser(ABC):
             """
             from aiida.engine import Process
 
+            # Fetch the current process, which should be this calcfunction and update its outputs spec with that of the
+            # output spec of the process class that was used for the original ``CalcJobNode``. This ensures that when
+            # the outputs are attached, they are validated against the original output specification.
+            process = Process.current()
+
+            try:
+                process.spec()._ports['outputs'] = node.process_class.spec().outputs  # type: ignore[union-attr]  # pylint: disable=protected-access
+            except ValueError:
+                LOGGER.warning(
+                    f'Could not load the process class of node `{node}`. This means that the output specification of '
+                    'the original ``CalcJob`` plugin cannot be determined and so the outputs cannot be validated.'
+                )
+
             if retrieved_temporary_folder is not None:
                 kwargs['retrieved_temporary_folder'] = retrieved_temporary_folder
 
@@ -158,8 +173,7 @@ class Parser(ABC):
                 # process as well, which should represent this `CalcFunctionNode`. Otherwise the caller of the
                 # `parse_from_node` method will get an empty dictionary as a result, despite the `Parser.parse` method
                 # having registered outputs.
-                process = Process.current()
-                process.out_many(outputs)  # type: ignore
+                process.out_many(outputs)  # type: ignore[union-attr]
                 return exit_code
 
             return dict(outputs)
@@ -167,7 +181,7 @@ class Parser(ABC):
         inputs = {'metadata': {'store_provenance': store_provenance}}
         inputs.update(parser.get_outputs_for_parsing())
 
-        return parse_calcfunction.run_get_node(**inputs)  # type: ignore
+        return parse_calcfunction.run_get_node(**inputs)
 
     @abstractmethod
     def parse(self, **kwargs) -> Optional[ExitCode]:

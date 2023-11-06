@@ -25,26 +25,11 @@ def pytest_collection_modifyitems(config, items):  # pylint: disable=unused-argu
     filepath_django = Path(__file__).parent / 'django_branch'
     filepath_sqla = Path(__file__).parent / 'sqlalchemy_branch'
 
-    def is_relative_to(path: Path, other: Path) -> bool:
-        """Return whether ``path`` is relative to ``other``.
-
-        .. note:: If Python 3.8 is dropped, this function can be replaced with the built-in method
-            :meth:`pathlib.PurePath.is_relative_to`.
-
-        :return: True if ``path`` is relative to ``other``, False otherwise.
-        """
-        try:
-            path.relative_to(other)
-        except ValueError:
-            return False
-        else:
-            return True
-
     for item in items:
 
         filepath_item = Path(item.fspath)
 
-        if is_relative_to(filepath_item, filepath_django) or is_relative_to(filepath_item, filepath_sqla):
+        if filepath_item.is_relative_to(filepath_django) or filepath_item.is_relative_to(filepath_sqla):
             item.add_marker(getattr(pytest.mark, 'nightly'))
 
 

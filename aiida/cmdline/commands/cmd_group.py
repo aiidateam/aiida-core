@@ -371,7 +371,6 @@ def group_list(
         builder.append(orm.Node, filters={'id': {'==': node.pk}}, with_group='group')
 
     builder.order_by({orm.Group: {order_by: order_dir}})
-    result = builder.all()
 
     projection_lambdas = {
         'pk': lambda group: str(group.pk),
@@ -394,7 +393,7 @@ def group_list(
         projection_header.append('Node count')
         projection_fields.append('count')
 
-    for group in result:
+    for group in builder.iterall():
         table.append([projection_lambdas[field](group[0]) for field in projection_fields])
 
     if not all_entries:

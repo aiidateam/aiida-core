@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=no-self-use
 """Test for the `Parser` base class."""
 import io
 
@@ -36,6 +35,17 @@ class CustomCalcJob(CalcJob):
 
     def prepare_for_submission(self):  # pylint: disable=arguments-differ
         pass
+
+
+class BrokenArithmeticAddParser(Parser):
+    """Parser for an ``ArithmeticAddCalculation`` job that is intentionally broken.
+
+    It attaches an output that is not defined by the spec of the ``ArithmeticAddCalculation``.
+    """
+
+    def parse(self, **kwargs):
+        """Intentionally attach an output that is not defined in the output spec of the calculation."""
+        self.out('invalid_output', orm.Str('0'))
 
 
 class TestParser:
@@ -125,3 +135,27 @@ class TestParser:
 
         # Verify that the `retrieved_temporary_folder` keyword can be passed, there is no validation though
         result, calcfunction = ArithmeticAddParser.parse_from_node(node, retrieved_temporary_folder='/some/path')
+
+    @pytest.mark.requires_rmq
+    def test_parse_from_node_output_validation(self):
+        """Test that the ``parse_from_node`` properly validates attached outputs.
+
+        The calculation node represents the parsing process.
+        """
+        output_filename = 'aiida.out'
+
+        # Mock the `CalcJobNode` which should have the `retrieved` folder containing the sum in the outputfile file
+        # This is the value that should be parsed into the `sum` output node
+        node = orm.CalcJobNode(computer=self.computer, process_type=ArithmeticAddCalculation.build_process_type())
+        node.set_option('resources', {'num_machines': 1, 'num_mpiprocs_per_machine': 1})
+        node.set_option('max_wallclock_seconds', 1800)
+        node.set_option('output_filename', output_filename)
+        node.store()
+
+        retrieved = orm.FolderData()
+        retrieved.base.repository.put_object_from_filelike(io.StringIO('1'), output_filename)
+        retrieved.store()
+        retrieved.base.links.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
+
+        with pytest.raises(ValueError, match=r'Error validating output .* for port .*: Unexpected ports .*'):
+            BrokenArithmeticAddParser.parse_from_node(node)

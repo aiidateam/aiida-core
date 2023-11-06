@@ -11,7 +11,6 @@
 import enum
 import pathlib
 
-from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.utils import ErrorAccumulator
 from aiida.common.warnings import warn_deprecation
 from aiida.orm import InstalledCode, PortableCode
@@ -41,9 +40,13 @@ class CodeBuilder:
         self._err_acc.run(self.validate_installed)
         return self._err_acc.result(raise_error=self.CodeValidationError if raise_error else False)
 
-    @with_dbenv()
     def new(self):
         """Build and return a new code instance (not stored)"""
+        from aiida.manage import get_manager
+
+        # Load the profile backend if not already the case.
+        get_manager().get_profile_storage()
+
         self.validate()
 
         # Will be used at the end to check if all keys are known (those that are not None)

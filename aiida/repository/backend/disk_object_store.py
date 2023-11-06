@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 """Implementation of the ``AbstractRepositoryBackend`` using the ``disk-objectstore`` as the backend."""
 import contextlib
+import dataclasses
 import shutil
 import typing as t
-
-from disk_objectstore import Container
 
 from aiida.common.lang import type_check
 from aiida.storage.log import STORAGE_LOGGER
 
 from .abstract import AbstractRepositoryBackend
+
+if t.TYPE_CHECKING:
+    from disk_objectstore import Container  # pylint: disable=unused-import
 
 __all__ = ('DiskObjectStoreRepositoryBackend',)
 
@@ -30,7 +32,9 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
 
     """
 
-    def __init__(self, container: Container):
+    def __init__(self, container: 'Container'):
+        if not t.TYPE_CHECKING:
+            from disk_objectstore import Container  # pylint: disable=redefined-outer-name
         type_check(container, Container)
         self._container = container
 
@@ -149,16 +153,20 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         do_repack: bool = None,
         clean_storage: bool = None,
         do_vacuum: bool = None,
+        compress: bool = False,
     ) -> dict:
         """Performs maintenance operations.
 
-        :param live:if True, will only perform operations that are safe to do while the repository is in use.
-        :param pack_loose:flag for forcing the packing of loose files.
-        :param do_repack:flag for forcing the re-packing of already packed files.
-        :param clean_storage:flag for forcing the cleaning of soft-deleted files from the repository.
-        :param do_vacuum:flag for forcing the vacuuming of the internal database when cleaning the repository.
-        :return:a dictionary with information on the operations performed.
+        :param live: if True, will only perform operations that are safe to do while the repository is in use.
+        :param pack_loose: flag for forcing the packing of loose files.
+        :param do_repack: flag for forcing the re-packing of already packed files.
+        :param clean_storage: flag for forcing the cleaning of soft-deleted files from the repository.
+        :param do_vacuum: flag for forcing the vacuuming of the internal database when cleaning the repository.
+        :param compress: flag for compressing the data when packing loose files. Set to ``Compress.AUTO`` if ``True``.
+        :return: a dictionary with information on the operations performed.
         """
+        from disk_objectstore import CompressMode
+
         if live and (do_repack or clean_storage or do_vacuum):
             overrides = {'do_repack': do_repack, 'clean_storage': clean_storage, 'do_vacuum': do_vacuum}
             keys = ', '.join([key for key, override in overrides.items() if override is True])  # type: ignore
@@ -166,9 +174,12 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
 
         pack_loose = True if pack_loose is None else pack_loose
 
+        if compress is True:
+            compress = CompressMode.AUTO
+
         if live:
             do_repack = False
-            clean_storage = False
+            clean_storage = True if clean_storage is None else clean_storage
             do_vacuum = False
         else:
             do_repack = True if do_repack is None else do_repack
@@ -177,15 +188,15 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
 
         with self._container as container:
             if pack_loose:
-                files_numb = container.count_objects()['loose']
-                files_size = container.get_total_size()['total_size_loose'] * BYTES_TO_MB
+                files_numb = container.count_objects().loose
+                files_size = container.get_total_size().total_size_loose * BYTES_TO_MB
                 logger.report(f'Packing all loose files ({files_numb} files occupying {files_size} MB) ...')
                 if not dry_run:
-                    container.pack_all_loose()
+                    container.pack_all_loose(compress=compress)
 
             if do_repack:
-                files_numb = container.count_objects()['packed']
-                files_size = container.get_total_size()['total_size_packfiles_on_disk'] * BYTES_TO_MB
+                files_numb = container.count_objects().packed
+                files_size = container.get_total_size().total_size_packfiles_on_disk * BYTES_TO_MB
                 logger.report(f'Re-packing all pack files ({files_numb} files in packs, occupying {files_size} MB) ...')
                 if not dry_run:
                     container.repack()
@@ -206,24 +217,13 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         with self._container as container:
             output_info['SHA-hash algorithm'] = container.hash_type
             output_info['Compression algorithm'] = container.compression_algorithm
+            output_info['Objects'] = dataclasses.asdict(container.count_objects())
 
             if not detailed:
                 return output_info
 
-            files_data = container.count_objects()
-            size_data = container.get_total_size()
-
-            output_info['Packs'] = files_data['pack_files']
-
-            output_info['Objects'] = {
-                'unpacked': files_data['loose'],
-                'packed': files_data['packed'],
-            }
-
             output_info['Size (MB)'] = {
-                'unpacked': size_data['total_size_loose'] * BYTES_TO_MB,
-                'packed': size_data['total_size_packfiles_on_disk'] * BYTES_TO_MB,
-                'other': size_data['total_size_packindexes_on_disk'] * BYTES_TO_MB,
+                k: float(f'{v * BYTES_TO_MB:.2f}') for k, v in dataclasses.asdict(container.get_total_size()).items()
             }
 
         return output_info

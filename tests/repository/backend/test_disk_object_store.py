@@ -224,29 +224,31 @@ def test_get_info(populated_repository):
     assert repository_info['SHA-hash algorithm'] == 'sha256'
     assert repository_info['Compression algorithm'] == 'zlib+1'
 
-    assert 'Packs' in repository_info
-    assert repository_info['Packs'] == 1
-
     assert 'Objects' in repository_info
-    assert 'unpacked' in repository_info['Objects']
+    assert 'pack_files' in repository_info['Objects']
+    assert 'loose' in repository_info['Objects']
     assert 'packed' in repository_info['Objects']
-    assert repository_info['Objects']['unpacked'] == 2
+    assert repository_info['Objects']['pack_files'] == 1
+    assert repository_info['Objects']['loose'] == 1
     assert repository_info['Objects']['packed'] == 3
 
     assert 'Size (MB)' in repository_info
-    assert 'unpacked' in repository_info['Size (MB)']
-    assert 'packed' in repository_info['Size (MB)']
-    assert 'other' in repository_info['Size (MB)']
+    assert 'total_size_loose' in repository_info['Size (MB)']
+    assert 'total_size_packed' in repository_info['Size (MB)']
 
 
 #yapf: disable
 @pytest.mark.parametrize(('kwargs', 'output_info'), (
     (
         {'live': True},
-        {'unpacked': 2, 'packed': 4}
+        {'unpacked': 0, 'packed': 4}
     ),
     (
         {'live': False},
+        {'unpacked': 0, 'packed': 4}
+    ),
+    (
+        {'live': False, 'compress': True},
         {'unpacked': 0, 'packed': 4}
     ),
     (
@@ -261,7 +263,7 @@ def test_get_info(populated_repository):
             'clean_storage': False,
             'do_vacuum': False,
         },
-        {'unpacked': 2, 'packed': 3}
+        {'unpacked': 1, 'packed': 3}
     ),
 ))
 # yapf: enable
@@ -269,8 +271,8 @@ def test_maintain(populated_repository, kwargs, output_info):
     """Test the ``maintain`` method."""
     populated_repository.maintain(**kwargs)
     file_info = populated_repository._container.count_objects()  # pylint: disable=protected-access
-    assert file_info['loose'] == output_info['unpacked']
-    assert file_info['packed'] == output_info['packed']
+    assert file_info.loose == output_info['unpacked']
+    assert file_info.packed == output_info['packed']
 
 
 @pytest.mark.parametrize('do_vacuum', [True, False])

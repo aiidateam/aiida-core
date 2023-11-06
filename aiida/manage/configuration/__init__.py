@@ -22,14 +22,12 @@ from .profile import *
 __all__ = (
     'CURRENT_CONFIG_VERSION',
     'Config',
-    'ConfigValidationError',
     'MIGRATIONS',
     'OLDEST_COMPATIBLE_CONFIG_VERSION',
     'Option',
     'Profile',
     'check_and_migrate_config',
     'config_needs_migrating',
-    'config_schema',
     'downgrade_config',
     'get_current_version',
     'get_option',
@@ -50,7 +48,6 @@ __all__ += (
 
 from contextlib import contextmanager
 import os
-import shutil
 from typing import TYPE_CHECKING, Any, Optional
 import warnings
 
@@ -104,10 +101,16 @@ def load_config(create=False) -> 'Config':
 
 def _merge_deprecated_cache_yaml(config, filepath):
     """Merge the deprecated cache_config.yml into the config."""
-    from aiida.common import timezone
     cache_path = os.path.join(os.path.dirname(filepath), 'cache_config.yml')
     if not os.path.exists(cache_path):
         return
+
+    # Imports are here to avoid them when not needed
+    import shutil
+
+    import yaml
+
+    from aiida.common import timezone
 
     cache_path_backup = None
     # Keep generating a new backup filename based on the current time until it does not exist
@@ -119,7 +122,6 @@ def _merge_deprecated_cache_yaml(config, filepath):
         f'moving to: {cache_path_backup}',
         version=3
     )
-    import yaml
     with open(cache_path, 'r', encoding='utf8') as handle:
         cache_config = yaml.safe_load(handle)
     for profile_name, data in cache_config.items():

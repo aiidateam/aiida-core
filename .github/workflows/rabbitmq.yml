@@ -7,6 +7,12 @@ on:
         branches-ignore: [gh-pages]
         paths-ignore: ['docs/**']
 
+# https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+    # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
 jobs:
 
     tests:
@@ -17,7 +23,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                rabbitmq: ['3.6', '3.7', '3.8']
+                rabbitmq-version: ['3.6', '3.7', '3.8']
 
         services:
             postgres:
@@ -34,7 +40,7 @@ jobs:
                 ports:
                 -   5432:5432
             rabbitmq:
-                image: rabbitmq:${{ matrix.rabbitmq }}-management
+                image: rabbitmq:${{ matrix.rabbitmq-version }}-management
                 ports:
                 -   5672:5672
                 -   15672:15672
@@ -42,10 +48,10 @@ jobs:
         steps:
         -   uses: actions/checkout@v2
 
-        -   name: Set up Python 3.8
+        -   name: Set up Python 3.9
             uses: actions/setup-python@v2
             with:
-                python-version: '3.8'
+                python-version: '3.9'
 
         -   name: Install system dependencies
             run: sudo apt update && sudo apt install postgresql
@@ -57,7 +63,7 @@ jobs:
 
         -   name: Install aiida-core
             run: |
-                pip install -r requirements/requirements-py-3.8.txt
+                pip install -r requirements/requirements-py-3.9.txt
                 pip install --no-deps -e .
                 pip freeze
 

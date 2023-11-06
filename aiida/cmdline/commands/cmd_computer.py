@@ -11,14 +11,14 @@
 """`verdi computer` command."""
 from copy import deepcopy
 from functools import partial
+from math import isclose
 
 import click
-import tabulate
 
 from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup, verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import computer as options_computer
-from aiida.cmdline.utils import echo
+from aiida.cmdline.utils import echo, echo_tabulate
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import EntryPointError, ValidationError
 from aiida.plugins.entry_point import get_entry_point_names
@@ -46,7 +46,7 @@ def prompt_for_computer_configuration(computer):  # pylint: disable=unused-argum
     pass
 
 
-def _computer_test_get_jobs(transport, scheduler, authinfo):  # pylint: disable=unused-argument
+def _computer_test_get_jobs(transport, scheduler, authinfo, computer):  # pylint: disable=unused-argument
     """Internal test to check if it is possible to check the queue state.
 
     :param transport: an open transport
@@ -58,7 +58,7 @@ def _computer_test_get_jobs(transport, scheduler, authinfo):  # pylint: disable=
     return True, f'{len(found_jobs)} jobs found in the queue'
 
 
-def _computer_test_no_unexpected_output(transport, scheduler, authinfo):  # pylint: disable=unused-argument
+def _computer_test_no_unexpected_output(transport, scheduler, authinfo, computer):  # pylint: disable=unused-argument
     """Test that there is no unexpected output from the connection.
 
     This can happen if e.g. there is some spurious command in the
@@ -93,7 +93,7 @@ in this troubleshooting section of the online documentation: https://bit.ly/2FCR
     return True, None
 
 
-def _computer_get_remote_username(transport, scheduler, authinfo):  # pylint: disable=unused-argument
+def _computer_get_remote_username(transport, scheduler, authinfo, computer):  # pylint: disable=unused-argument
     """Internal test to check if it is possible to determine the username on the remote.
 
     :param transport: an open transport
@@ -105,7 +105,7 @@ def _computer_get_remote_username(transport, scheduler, authinfo):  # pylint: di
     return True, remote_user
 
 
-def _computer_create_temp_file(transport, scheduler, authinfo):  # pylint: disable=unused-argument
+def _computer_create_temp_file(transport, scheduler, authinfo, computer):  # pylint: disable=unused-argument
     """
     Internal test to check if it is possible to create a temporary file
     and then delete it in the work directory
@@ -187,7 +187,7 @@ def time_use_login_shell(authinfo, auth_params, use_login_shell: bool, iteration
     return sum(timings) / iterations
 
 
-def _computer_use_login_shell_performance(transport, scheduler, authinfo):  # pylint: disable=unused-argument
+def _computer_use_login_shell_performance(transport, scheduler, authinfo, computer):  # pylint: disable=unused-argument
     """Execute a command over the transport with and without the ``use_login_shell`` option enabled.
 
     By default, AiiDA uses a login shell when connecting to a computer in order to operate in the same environment as a
@@ -197,7 +197,8 @@ def _computer_use_login_shell_performance(transport, scheduler, authinfo):  # py
     by at least 100 ms. If the computer is already configured to avoid using a login shell, the test is skipped and the
     function returns a successful test result.
     """
-    tolerance = 0.1  # 100 ms
+    rel_tol = 0.5  # Factor of two
+    abs_tol = 0.1  # 100 ms
     iterations = 3
 
     auth_params = authinfo.get_auth_params()
@@ -216,13 +217,16 @@ def _computer_use_login_shell_performance(transport, scheduler, authinfo):  # py
 
     echo.echo_debug(f'Execution time: {timing_true} vs {timing_false} for login shell and normal, respectively')
 
-    if timing_true - timing_false > tolerance:
-        message = (
-            'computer is configured to use a login shell, which is slower compared to a normal shell (Command execution'
-            f' time of {timing_true} s versus {timing_false}, respectively).\nUnless this setting is really necessary, '
-            'consider disabling it with: verdi computer configure core.local COMPUTER_NAME -n --no-use-login-shell'
+    if not isclose(timing_true, timing_false, rel_tol=rel_tol, abs_tol=abs_tol):
+        return True, (
+            f"\n\n{click.style('Warning:', fg='yellow', bold=True)} "
+            'The computer is configured to use a login shell, which is slower compared to a normal shell.\n'
+            f'Command execution time of {timing_true:.3f} versus {timing_false:.3f} seconds, respectively).\n'
+            'Unless this setting is really necessary, consider disabling it with:\n'
+            f'\n    verdi computer configure {computer.transport_type} {computer.label} -n --no-use-login-shell\n\n'
+            'For details, please refer to the documentation: '
+            'https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/transport.html#login-shells\n'
         )
-        return False, message
 
     return True, None
 
@@ -456,7 +460,7 @@ def computer_show(computer):
         ['Prepend text', computer.get_prepend_text()],
         ['Append text', computer.get_append_text()],
     ]
-    echo.echo(tabulate.tabulate(table))
+    echo_tabulate(table)
 
 
 @verdi_computer.command('relabel')
@@ -551,7 +555,9 @@ def computer_test(user, print_traceback, computer):
                 echo.echo(f'* {test_label}... ', nl=False)
                 num_tests += 1
                 try:
-                    success, message = test(transport=transport, scheduler=scheduler, authinfo=authinfo)
+                    success, message = test(
+                        transport=transport, scheduler=scheduler, authinfo=authinfo, computer=computer
+                    )
                 except Exception as exception:  # pylint:disable=broad-except
                     success = False
                     message = f'{exception.__class__.__name__}: {str(exception)}'
@@ -690,4 +696,4 @@ def computer_config_show(computer, user, defaults, as_option_string):
                 table.append((f'* {name}', config[name]))
             else:
                 table.append((f'* {name}', '-'))
-        echo.echo(tabulate.tabulate(table, tablefmt='plain'))
+        echo_tabulate(table, tablefmt='plain')

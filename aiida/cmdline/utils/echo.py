@@ -16,11 +16,13 @@ import sys
 from typing import Any, Optional
 
 import click
-import yaml
 
 CMDLINE_LOGGER = logging.getLogger('verdi')
 
-__all__ = ('echo_report', 'echo_info', 'echo_success', 'echo_warning', 'echo_error', 'echo_critical', 'echo_dictionary')
+__all__ = (
+    'echo_report', 'echo_info', 'echo_success', 'echo_warning', 'echo_error', 'echo_critical', 'echo_tabulate',
+    'echo_dictionary'
+)
 
 
 class ExitCode(enum.IntEnum):
@@ -56,7 +58,7 @@ def echo(message: Any, fg: Optional[str] = None, bold: bool = False, nl: bool = 
     :param err: whether to log to stderr.
     """
     message = click.style(message, fg=fg, bold=bold)
-    CMDLINE_LOGGER.report(message, extra=dict(nl=nl, err=err, prefix=False))
+    CMDLINE_LOGGER.report(message, extra={'nl': nl, 'err': err, 'prefix': False})
 
 
 def echo_debug(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:
@@ -69,7 +71,7 @@ def echo_debug(message: str, bold: bool = False, nl: bool = True, err: bool = Fa
     :param prefix: whether the message should be prefixed with a colored version of the log level.
     """
     message = click.style(message, bold=bold)
-    CMDLINE_LOGGER.debug(message, extra=dict(nl=nl, err=err, prefix=prefix))
+    CMDLINE_LOGGER.debug(message, extra={'nl': nl, 'err': err, 'prefix': prefix})
 
 
 def echo_info(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:
@@ -82,7 +84,7 @@ def echo_info(message: str, bold: bool = False, nl: bool = True, err: bool = Fal
     :param prefix: whether the message should be prefixed with a colored version of the log level.
     """
     message = click.style(message, bold=bold)
-    CMDLINE_LOGGER.info(message, extra=dict(nl=nl, err=err, prefix=prefix))
+    CMDLINE_LOGGER.info(message, extra={'nl': nl, 'err': err, 'prefix': prefix})
 
 
 def echo_report(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:
@@ -95,7 +97,7 @@ def echo_report(message: str, bold: bool = False, nl: bool = True, err: bool = F
     :param prefix: whether the message should be prefixed with a colored version of the log level.
     """
     message = click.style(message, bold=bold)
-    CMDLINE_LOGGER.report(message, extra=dict(nl=nl, err=err, prefix=prefix))
+    CMDLINE_LOGGER.report(message, extra={'nl': nl, 'err': err, 'prefix': prefix})
 
 
 def echo_success(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:
@@ -114,7 +116,7 @@ def echo_success(message: str, bold: bool = False, nl: bool = True, err: bool = 
     if prefix:
         message = click.style('Success: ', bold=True, fg=COLORS['success']) + message
 
-    CMDLINE_LOGGER.report(message, extra=dict(nl=nl, err=err, prefix=False))
+    CMDLINE_LOGGER.report(message, extra={'nl': nl, 'err': err, 'prefix': False})
 
 
 def echo_warning(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:
@@ -127,7 +129,7 @@ def echo_warning(message: str, bold: bool = False, nl: bool = True, err: bool = 
     :param prefix: whether the message should be prefixed with a colored version of the log level.
     """
     message = click.style(message, bold=bold)
-    CMDLINE_LOGGER.warning(message, extra=dict(nl=nl, err=err, prefix=prefix))
+    CMDLINE_LOGGER.warning(message, extra={'nl': nl, 'err': err, 'prefix': prefix})
 
 
 def echo_error(message: str, bold: bool = False, nl: bool = True, err: bool = True, prefix: bool = True) -> None:
@@ -140,7 +142,7 @@ def echo_error(message: str, bold: bool = False, nl: bool = True, err: bool = Tr
     :param prefix: whether the message should be prefixed with a colored version of the log level.
     """
     message = click.style(message, bold=bold)
-    CMDLINE_LOGGER.error(message, extra=dict(nl=nl, err=err, prefix=prefix))
+    CMDLINE_LOGGER.error(message, extra={'nl': nl, 'err': err, 'prefix': prefix})
 
 
 def echo_critical(message: str, bold: bool = False, nl: bool = True, err: bool = True, prefix: bool = True) -> None:
@@ -156,7 +158,7 @@ def echo_critical(message: str, bold: bool = False, nl: bool = True, err: bool =
     :param prefix: whether the message should be prefixed with a colored version of the log level.
     """
     message = click.style(message, bold=bold)
-    CMDLINE_LOGGER.critical(message, extra=dict(nl=nl, err=err, prefix=prefix))
+    CMDLINE_LOGGER.critical(message, extra={'nl': nl, 'err': err, 'prefix': prefix})
     sys.exit(ExitCode.CRITICAL)
 
 
@@ -225,17 +227,34 @@ def _format_dictionary_json_date(dictionary, sort_keys=True):
 
 def _format_yaml(dictionary, sort_keys=True):
     """Return a dictionary formatted as a string using the YAML format."""
+    import yaml
+
     return yaml.dump(dictionary, sort_keys=sort_keys)
 
 
 def _format_yaml_expanded(dictionary, sort_keys=True):
     """Return a dictionary formatted as a string using the expanded YAML format."""
+    import yaml
+
     return yaml.dump(dictionary, sort_keys=sort_keys, default_flow_style=False)
 
 
 VALID_DICT_FORMATS_MAPPING = collections.OrderedDict(
     (('json+date', _format_dictionary_json_date), ('yaml', _format_yaml), ('yaml_expanded', _format_yaml_expanded))
 )
+
+
+def echo_tabulate(table, **kwargs):
+    """Echo the string generated by passing ``table`` to ``tabulate.tabulate``.
+
+    This wrapper is added in order to lazily import the ``tabulate`` package only when invoked. This helps keeping the
+    import time of the :mod:`aiida.cmdline` to a minimum, which is critical for keeping tab-completion snappy.
+
+    :param table: The table of data to echo.
+    :param kwargs: Additional arguments passed to :meth:`tabulate.tabulate`.
+    """
+    from tabulate import tabulate
+    echo(tabulate(table, **kwargs))
 
 
 def echo_dictionary(dictionary, fmt='json+date', sort_keys=True):

@@ -19,7 +19,7 @@ import pytest
 import yaml
 
 from aiida.common import exceptions
-from aiida.manage.caching import disable_caching, enable_caching, get_use_cache
+from aiida.manage.caching import _validate_identifier_pattern, disable_caching, enable_caching, get_use_cache
 
 
 @pytest.fixture
@@ -197,19 +197,18 @@ def test_configuration(configure_caching, config_dict, enabled_for, disabled_for
             assert not get_use_cache(identifier=identifier)
 
 
-@pytest.mark.parametrize(
-    ['config_dict', 'valid_identifiers', 'invalid_identifiers'],
-    [({
+@pytest.mark.parametrize(['config_dict', 'valid_identifiers', 'invalid_identifiers'], [
+    ({
         'default_enabled': False,
         'enabled_for': ['aiida.calculations:*thmetic.add'],
         'disabled_for': ['aiida.calculations:arith*ic.add']
     }, ['some_identifier', 'aiida.calculations:core.templatereplacer'], ['aiida.calculations:arithmetic.add']),
-     ({
-         'default_enabled': False,
-         'enabled_for': ['aiida.calculations:arithmetic.add'],
-         'disabled_for': ['aiida.calculations:arithmetic.add']
-     }, ['some_identifier', 'aiida.calculations:core.templatereplacer'], ['aiida.calculations:arithmetic.add'])]
-)
+    ({
+        'default_enabled': False,
+        'enabled_for': ['aiida.calculations:arithmetic.add'],
+        'disabled_for': ['aiida.calculations:arithmetic.add']
+    }, ['some_identifier', 'aiida.calculations:core.templatereplacer'], ['aiida.calculations:arithmetic.add'])
+])
 def test_ambiguous_configuration(configure_caching, config_dict, valid_identifiers, invalid_identifiers):
     """
     Check that calling 'get_use_cache' on identifiers for which the
@@ -282,3 +281,36 @@ def test_enable_disable_invalid(identifier):
     with pytest.raises(ValueError):
         with disable_caching(identifier=identifier):
             pass
+
+
+@pytest.mark.parametrize(
+    'strict, identifier, matches', (
+        (False, 'aiida.calculations:core.arithmetic.add', None),
+        (False, 'aiida.calculations.arithmetic.add.ArithmeticAddCalculation', None),
+        (False, 'aiida.calculations:core.non_existent', None),
+        (False, 'aiida.calculations.arithmetic.non_existent.ArithmeticAddCalculation', None),
+        (False, 'aiida.spam:Ni', r'does not match any of the AiiDA entry point group names\.'),
+        (False, 'aiida.calculations:With:second_separator', r'Can contain at most one entry point string separator.*'),
+        (False, 'aiida.sp*:Ni', r'does not match any of the AiiDA entry point group names\.'),
+        (False, 'aiida.sp*!bar', r'Identifier part `sp\*!bar` can not match a fully qualified Python name.'),
+        (False, 'startswith.number.2bad', r'is not a valid Python identifier\.'),
+        (False, 'some.thing.in.this.is.a.keyword', r'is a reserved Python keyword\.'),
+        (True, 'aiida.calculations:core.arithmetic.add', None),
+        (True, 'aiida.calculations.arithmetic.add.ArithmeticAddCalculation', None),
+        (True, 'aiida.calculations:core.non_existent', r'cannot be loaded\.'),
+        (True, 'aiida.calculations.arithmetic.non_existent.ArithmeticAddCalculation', r'cannot be imported\.'),
+        (True, 'aiida.spam:Ni', r'does not match any of the AiiDA entry point group names\.'),
+        (True, 'aiida.calculations:With:second_separator', r'Can contain at most one entry point string separator.*'),
+        (True, 'aiida.sp*:Ni', r'does not match any of the AiiDA entry point group names\.'),
+        (True, 'aiida.sp*!bar', r'Identifier part `sp\*!bar` can not match a fully qualified Python name.'),
+        (True, 'startswith.number.2bad', r'is not a valid Python identifier\.'),
+        (True, 'some.thing.in.this.is.a.keyword', r'is a reserved Python keyword\.'),
+    )
+)
+def test_validate_identifier_pattern(strict, identifier, matches):
+    """Test :func:`aiida.manage.caching._validate_identifier_pattern`."""
+    if matches:
+        with pytest.raises(ValueError, match=matches):
+            _validate_identifier_pattern(identifier=identifier, strict=strict)
+    else:
+        _validate_identifier_pattern(identifier=identifier, strict=strict)

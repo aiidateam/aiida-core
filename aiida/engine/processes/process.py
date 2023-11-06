@@ -41,6 +41,7 @@ import plumpy.futures
 import plumpy.persistence
 from plumpy.process_states import Finished, ProcessState
 import plumpy.processes
+from plumpy.utils import AttributesFrozendict
 
 from aiida import orm
 from aiida.common import exceptions
@@ -234,6 +235,15 @@ class Process(plumpy.processes.Process):
         return self.node.uuid
 
     @property
+    def inputs(self) -> AttributesFrozendict:
+        """Return the inputs attribute dictionary or an empty one.
+
+        This overrides the property of the base class because that can also return ``None``. This override ensures
+        calling functions that they will always get an instance of ``AttributesFrozenDict``.
+        """
+        return super().inputs or AttributesFrozendict()
+
+    @property
     def metadata(self) -> AttributeDict:
         """Return the metadata that were specified when this process instance was launched.
 
@@ -241,7 +251,6 @@ class Process(plumpy.processes.Process):
 
         """
         try:
-            assert self.inputs is not None
             return self.inputs.metadata
         except (AssertionError, AttributeError):
             return AttributeDict()
@@ -287,7 +296,6 @@ class Process(plumpy.processes.Process):
 
         :rtype: filter
         """
-        assert self.inputs is not None
         return filter(lambda kv: not kv[0].startswith('_'), self.inputs.items())
 
     @override
@@ -311,7 +319,7 @@ class Process(plumpy.processes.Process):
         super().load_instance_state(saved_state, load_context)
 
         if self.SaveKeys.CALC_ID.value in saved_state:
-            self._node = orm.load_node(saved_state[self.SaveKeys.CALC_ID.value])  # type: ignore
+            self._node = orm.load_node(saved_state[self.SaveKeys.CALC_ID.value])  # type: ignore[assignment]
             self._pid = self.node.pk  # pylint: disable=attribute-defined-outside-init
         else:
             self._pid = self._create_and_setup_db_record()  # pylint: disable=attribute-defined-outside-init
@@ -419,7 +427,7 @@ class Process(plumpy.processes.Process):
         except ValueError:  # pylint: disable=try-except-raise
             raise
         finally:
-            self.node.set_process_state(self._state.LABEL)  # type: ignore
+            self.node.set_process_state(self._state.LABEL)  # type: ignore[arg-type]
 
         self._save_checkpoint()
         set_process_state_change_timestamp(self)
@@ -454,7 +462,7 @@ class Process(plumpy.processes.Process):
         self.report(''.join(traceback.format_exception(*exc_info)))
 
     @override
-    def on_finish(self, result: Union[int, ExitCode], successful: bool) -> None:
+    def on_finish(self, result: Union[int, ExitCode, None], successful: bool) -> None:
         """ Set the finish status on the process node.
 
         :param result: result of the process
@@ -549,7 +557,7 @@ class Process(plumpy.processes.Process):
         if self._parent_pid is None:
             return None
 
-        return orm.load_node(pk=self._parent_pid)  # type: ignore
+        return orm.load_node(pk=self._parent_pid)  # type: ignore[return-value]
 
     @classmethod
     def build_process_type(cls) -> str:
@@ -625,7 +633,7 @@ class Process(plumpy.processes.Process):
         return UUID(self.node.uuid)
 
     @override
-    def encode_input_args(self, inputs: Dict[str, Any]) -> str:  # pylint: disable=no-self-use
+    def encode_input_args(self, inputs: Dict[str, Any]) -> str:
         """
         Encode input arguments such that they may be saved in a Bundle
 
@@ -635,7 +643,7 @@ class Process(plumpy.processes.Process):
         return serialize.serialize(inputs)
 
     @override
-    def decode_input_args(self, encoded: str) -> Dict[str, Any]:  # pylint: disable=no-self-use
+    def decode_input_args(self, encoded: str) -> Dict[str, Any]:
         """
         Decode saved input arguments as they came from the saved instance state Bundle
 
@@ -692,7 +700,6 @@ class Process(plumpy.processes.Process):
         In addition, the parent calculation will be setup with a CALL link if applicable and all inputs will be
         linked up as well.
         """
-        assert self.inputs is not None
         assert not self.node.is_sealed, 'process node cannot be sealed when setting up the database record'
 
         # Store important process attributes in the node proxy
@@ -720,9 +727,6 @@ class Process(plumpy.processes.Process):
     def _setup_version_info(self) -> None:
         """Store relevant plugin version information."""
         from aiida.plugins.entry_point import format_entry_point_string
-
-        if self.inputs is None:
-            return
 
         version_info = self.runner.plugin_version_provider.get_version_info(self.__class__)
 
@@ -799,8 +803,7 @@ class Process(plumpy.processes.Process):
                 clean_value(port_value)
             except exceptions.ValidationError:
                 return None
-            else:
-                return port_value
+            return port_value
 
         result = {}
 
@@ -827,7 +830,6 @@ class Process(plumpy.processes.Process):
         :return: flat dictionary of parsed inputs
 
         """
-        assert self.inputs is not None
         inputs = {key: value for key, value in self.inputs.items() if key != self.spec().metadata_key}
         return dict(self._flatten_inputs(self.spec().inputs, inputs))
 
@@ -881,7 +883,9 @@ class Process(plumpy.processes.Process):
                 items.extend(sub_items)
             return items
 
-        assert (port is None) or (isinstance(port, InputPort) and (port.is_metadata or port.non_db))
+        assert (port is None) or (
+            isinstance(port, InputPort) and (port.is_metadata or port.non_db)  # type: ignore[redundant-expr]
+        )
         return []
 
     def _flatten_outputs(
@@ -953,7 +957,7 @@ class Process(plumpy.processes.Process):
             else:
                 inputs = self.inputs
                 for part in sub_namespace.split('.'):
-                    inputs = inputs[part]  # type: ignore[index]
+                    inputs = inputs[part]
                 try:
                     port_namespace = self.spec().inputs.get_port(sub_namespace)  # type: ignore[assignment]
                 except KeyError:

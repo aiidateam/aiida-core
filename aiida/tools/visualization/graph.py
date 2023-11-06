@@ -433,9 +433,9 @@ class Graph:
         :param node: node or node pk/uuid
         """
         if isinstance(node, int):
-            return orm.Node.collection(self._backend).get(pk=node)
+            return orm.Node.get_collection(self._backend).get(pk=node)
         if isinstance(node, str):
-            return orm.Node.collection(self._backend).get(uuid=node)
+            return orm.Node.get_collection(self._backend).get(uuid=node)
         return node
 
     def add_node(
@@ -451,6 +451,7 @@ class Graph:
         style = {} if style_override is None else dict(style_override)
         style.update(self._global_node_style)
         if node.pk not in self._nodes or overwrite:
+            assert node.pk is not None
             _add_graphviz_node(
                 self._graph,
                 node,
@@ -507,7 +508,7 @@ class Graph:
                 LinkType.CALL_WORK
             ]
         elif isinstance(link_types, (str, LinkType)):
-            link_types_list = [link_types]  # type: ignore
+            link_types_list = [link_types]  # type: ignore[assignment]
         else:
             link_types_list = link_types
         return tuple(getattr(LinkType, l.upper()) if isinstance(l, str) else l for l in link_types_list)
@@ -534,6 +535,7 @@ class Graph:
 
         # incoming nodes are found traversing backwards
         node_pk = self._load_node(node).pk
+        assert node_pk is not None
         valid_link_types = self._convert_link_types(link_types)
         traversed_graph = traverse_graph(
             (node_pk,),
@@ -592,6 +594,7 @@ class Graph:
 
         # outgoing nodes are found traversing forwards
         node_pk = self._load_node(node).pk
+        assert node_pk is not None
         valid_link_types = self._convert_link_types(link_types)
         traversed_graph = traverse_graph(
             (node_pk,),
@@ -654,6 +657,7 @@ class Graph:
         # Get graph traversal rules where the given link types and direction are all set to True,
         # and all others are set to False
         origin_pk = self._load_node(origin).pk
+        assert origin_pk is not None
         valid_link_types = self._convert_link_types(link_types)
         traversed_graph = traverse_graph(
             (origin_pk,),
@@ -739,6 +743,7 @@ class Graph:
         # Get graph traversal rules where the given link types and direction are all set to True,
         # and all others are set to False
         origin_pk = self._load_node(origin).pk
+        assert origin_pk is not None
         valid_link_types = self._convert_link_types(link_types)
         traversed_graph = traverse_graph(
             (origin_pk,),

@@ -15,7 +15,6 @@ import textwrap
 from typing import TYPE_CHECKING
 
 from click import style
-from tabulate import tabulate
 
 from . import echo
 
@@ -23,6 +22,12 @@ if TYPE_CHECKING:
     from aiida.orm import WorkChainNode
 
 __all__ = ('is_verbose',)
+
+
+def tabulate(table, **kwargs):
+    """A dummy wrapper to hide the import cost of tabulate"""
+    import tabulate as tb
+    return tb.tabulate(table, **kwargs)
 
 
 def is_verbose():
@@ -87,12 +92,12 @@ def print_last_process_state_change(process_type=None):
     timestamp = get_process_state_change_timestamp(process_type)
 
     if timestamp is None:
-        echo_report('last time an entry changed state: never')
+        echo_report('Last time an entry changed state: never')
     else:
         timedelta = timezone.delta(timestamp)
         formatted = format_local_time(timestamp, format_str='at %H:%M:%S on %Y-%m-%d')
         relative = str_timedelta(timedelta, negative_to_zero=True, max_num_fields=1)
-        echo_report(f'last time an entry changed state: {relative} ({formatted})')
+        echo_report(f'Last time an entry changed state: {relative} ({formatted})')
 
 
 def get_node_summary(node):

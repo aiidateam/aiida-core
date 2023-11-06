@@ -91,7 +91,7 @@ class NodeLinks:
             if builder.count() > 0:
                 raise ValueError('the link you are attempting to create would generate a cycle in the graph')
 
-    def validate_outgoing(self, target: 'Node', link_type: LinkType, link_label: str) -> None:  # pylint: disable=unused-argument,no-self-use
+    def validate_outgoing(self, target: 'Node', link_type: LinkType, link_label: str) -> None:  # pylint: disable=unused-argument
         """Validate adding a link of the given type from ourself to a given node.
 
         The validity of the triple (source, link, target) should be validated in the `validate_incoming` call.
@@ -200,7 +200,7 @@ class NodeLinks:
 
             if only_uuid:
                 link_triple = LinkTriple(
-                    link_triple.node.uuid,  # type: ignore
+                    link_triple.node.uuid,  # type: ignore[arg-type]
                     link_triple.link_type,
                     link_triple.link_label,
                 )

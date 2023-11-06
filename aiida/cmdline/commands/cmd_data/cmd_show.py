@@ -12,56 +12,32 @@ This allows to manage showfunctionality to all data types.
 """
 import pathlib
 
-import click
-
-from aiida.cmdline.params import options
-from aiida.cmdline.params.options.multivalue import MultipleValueOption
 from aiida.cmdline.utils import echo
 from aiida.common.exceptions import MultipleObjectsError
 
-SHOW_OPTIONS = [
-    options.TRAJECTORY_INDEX(),
-    options.WITH_ELEMENTS(),
-    click.option('-c', '--contour', type=click.FLOAT, cls=MultipleValueOption, default=None, help='Isovalues to plot'),
-    click.option(
-        '--sampling-stepsize',
-        type=click.INT,
-        default=None,
-        help='Sample positions in plot every sampling_stepsize timestep'
-    ),
-    click.option(
-        '--stepsize',
-        type=click.INT,
-        default=None,
-        help='The stepsize for the trajectory, set it higher to reduce number of points'
-    ),
-    click.option('--mintime', type=click.INT, default=None, help='The time to plot from'),
-    click.option('--maxtime', type=click.INT, default=None, help='The time to plot to'),
-    click.option('--indices', type=click.INT, cls=MultipleValueOption, default=None, help='Show only these indices'),
-    click.option(
-        '--dont-block', 'block', is_flag=True, default=True, help="Don't block interpreter when showing plot."
-    ),
-]
+
+def has_executable(exec_name):
+    """
+    :return: True if executable can be found in PATH, False otherwise.
+    """
+    import shutil
+    return shutil.which(exec_name) is not None
 
 
-def show_options(func):
-    for option in reversed(SHOW_OPTIONS):
-        func = option(func)
-
-    return func
-
-
-def _show_jmol(exec_name, trajectory_list, **kwargs):
+def _show_jmol(exec_name, trajectory_list, **_kwargs):
     """
     Plugin for jmol
     """
     import subprocess
     import tempfile
 
+    if not has_executable(exec_name):
+        echo.echo_critical(f"No executable '{exec_name}' found. Add to the path, or try with an absolute path.")
+
     # pylint: disable=protected-access
     with tempfile.NamedTemporaryFile(mode='w+b') as handle:
         for trajectory in trajectory_list:
-            handle.write(trajectory._exportcontent('cif', **kwargs)[0])
+            handle.write(trajectory._exportcontent('cif')[0])
         handle.flush()
 
         try:
@@ -69,27 +45,26 @@ def _show_jmol(exec_name, trajectory_list, **kwargs):
         except subprocess.CalledProcessError:
             # The program died: just print a message
             echo.echo_error(f'the call to {exec_name} ended with an error.')
-        except OSError as err:
-            if err.errno == 2:
-                echo.echo_critical(f"No executable '{exec_name}' found. Add to the path, or try with an absolute path.")
-            else:
-                raise
 
 
-def _show_xcrysden(exec_name, object_list, **kwargs):
+def _show_xcrysden(exec_name, trajectory_list, **_kwargs):
     """
     Plugin for xcrysden
     """
     import subprocess
     import tempfile
 
-    if len(object_list) > 1:
+    if len(trajectory_list) > 1:
         raise MultipleObjectsError('Visualization of multiple trajectories is not implemented')
-    obj = object_list[0]
+    obj = trajectory_list[0]
+
+    if not has_executable(exec_name):
+        echo.echo_critical(f"No executable '{exec_name}' found.")
 
     # pylint: disable=protected-access
     with tempfile.NamedTemporaryFile(mode='w+b', suffix='.xsf') as tmpf:
-        tmpf.write(obj._exportcontent('xsf', **kwargs)[0])
+
+        tmpf.write(obj._exportcontent('xsf')[0])
         tmpf.flush()
 
         try:
@@ -97,11 +72,6 @@ def _show_xcrysden(exec_name, object_list, **kwargs):
         except subprocess.CalledProcessError:
             # The program died: just print a message
             echo.echo_error(f'the call to {exec_name} ended with an error.')
-        except OSError as err:
-            if err.errno == 2:
-                echo.echo_critical(f"No executable '{exec_name}' found. Add to the path, or try with an absolute path.")
-            else:
-                raise
 
 
 # pylint: disable=unused-argument

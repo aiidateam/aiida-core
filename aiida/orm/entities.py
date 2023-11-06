@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Module for all common top level AiiDA entity classes and methods"""
+from __future__ import annotations
+
 import abc
 from enum import Enum
 from functools import lru_cache
@@ -79,7 +81,7 @@ class Collection(abc.ABC, Generic[EntityType]):
         """Get or create a cached collection using a new backend."""
         if backend is self._backend:
             return self
-        return self.get_cached(self.entity_type, backend=backend)  # type: ignore
+        return self.get_cached(self.entity_type, backend=backend)  # type: ignore[arg-type]
 
     @property
     def entity_type(self) -> Type[EntityType]:
@@ -162,26 +164,38 @@ class Collection(abc.ABC, Generic[EntityType]):
 class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
     """An AiiDA entity"""
 
-    _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore
+    _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore[assignment]
 
     @classproperty
-    def objects(cls: EntityType) -> CollectionType:  # pylint: disable=no-self-argument,no-self-use
+    def objects(cls: EntityType) -> CollectionType:  # pylint: disable=no-self-argument
         """Get a collection for objects of this type, with the default backend.
 
         .. deprecated:: This will be removed in v3, use ``collection`` instead.
 
         :return: an object that can be used to access entities of this type
         """
-        warn_deprecation('This property is deprecated, use `.collection` instead.', version=3, stacklevel=2)
+        warn_deprecation('`objects` property is deprecated, use `collection` instead.', version=3, stacklevel=4)
         return cls.collection
 
     @classproperty
-    def collection(cls) -> CollectionType:  # pylint: disable=no-self-argument,no-self-use
+    def collection(cls) -> CollectionType:  # pylint: disable=no-self-argument
         """Get a collection for objects of this type, with the default backend.
 
         :return: an object that can be used to access entities of this type
         """
         return cls._CLS_COLLECTION.get_cached(cls, get_manager().get_profile_storage())
+
+    @classmethod
+    def get_collection(cls, backend: 'StorageBackend'):
+        """Get a collection for objects of this type for a given backend.
+
+        .. note:: Use the ``collection`` class property instead if the currently loaded backend or backend of the
+            default profile should be used.
+
+        :param backend: The backend of the collection to use.
+        :return: A collection object that can be used to access entities of this type.
+        """
+        return cls._CLS_COLLECTION.get_cached(cls, backend)
 
     @classmethod
     def get(cls, **kwargs):
@@ -191,7 +205,9 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
 
         """
         warn_deprecation(
-            f'This method is deprecated, use `{cls.__name__}.collection.get` instead.', version=3, stacklevel=2
+            f'`{cls.__name__}.get` method is deprecated, use `{cls.__name__}.collection.get` instead.',
+            version=3,
+            stacklevel=2
         )
         return cls.collection.get(**kwargs)  # pylint: disable=no-member
 
@@ -214,7 +230,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         """
 
     @property
-    def id(self) -> int:  # pylint: disable=invalid-name
+    def id(self) -> int | None:  # pylint: disable=invalid-name
         """Return the id for this entity.
 
         This identifier is guaranteed to be unique amongst entities of the same type for a single backend instance.
@@ -223,11 +239,11 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
 
         :return: the entity's id
         """
-        warn_deprecation('This method is deprecated, use `pk` instead.', version=3, stacklevel=2)
+        warn_deprecation('`id` property is deprecated, use `pk` instead.', version=3, stacklevel=2)
         return self._backend_entity.id
 
     @property
-    def pk(self) -> int:
+    def pk(self) -> int | None:
         """Return the primary key for this entity.
 
         This identifier is guaranteed to be unique amongst entities of the same type for a single backend instance.

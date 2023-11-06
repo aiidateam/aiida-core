@@ -95,6 +95,11 @@ def process_list(
     tabulated = tabulate(projected, headers=headers)
     echo.echo(tabulated)
     echo.echo(f'\nTotal results: {len(projected)}\n')
+
+    if 'cached' in project:
+        echo.echo_report('\u267B Processes marked with check-mark were not run but taken from the cache.')
+        echo.echo_report('Add the option `-P pk cached_from` to the command to display cache source.')
+
     print_last_process_state_change()
 
     if not get_daemon_client().is_daemon_running:
@@ -126,10 +131,10 @@ def process_list(
         available_slots = active_workers * slots_per_worker
         percent_load = active_processes / available_slots
         if percent_load > 0.9:  # 90%
-            echo.echo_warning(f'{percent_load * 100:.0f}%% of the available daemon worker slots have been used!')
+            echo.echo_warning(f'{percent_load * 100:.0f}% of the available daemon worker slots have been used!')
             echo.echo_warning('Increase the number of workers with `verdi daemon incr`.')
         else:
-            echo.echo_report(f'Using {percent_load * 100:.0f}%% of the available daemon worker slots.')
+            echo.echo_report(f'Using {percent_load * 100:.0f}% of the available daemon worker slots.')
 
 
 @verdi_process.command('show')
@@ -221,32 +226,39 @@ def process_report(processes, levelname, indent_size, max_depth, last):
 
 
 @verdi_process.command('status')
+@click.option('-c', '--call-link-label', 'call_link_label', is_flag=True, help='Include the call link label if set.')
 @click.option(
     '-m', '--max-depth', 'max_depth', type=int, default=None, help='Limit the number of levels to be printed.'
 )
 @arguments.PROCESSES()
-def process_status(max_depth, processes):
+def process_status(call_link_label, max_depth, processes):
     """Print the status of one or multiple processes."""
     from aiida.cmdline.utils.ascii_vis import format_call_graph
 
     for process in processes:
-        graph = format_call_graph(process, max_depth=max_depth)
+        graph = format_call_graph(process, max_depth=max_depth, call_link_label=call_link_label)
         echo.echo(graph)
 
 
 @verdi_process.command('kill')
 @arguments.PROCESSES()
+@options.ALL(help='Kill all processes if no specific processes are specified.')
 @options.TIMEOUT()
 @options.WAIT()
 @decorators.with_dbenv()
-@decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
-def process_kill(processes, timeout, wait):
+def process_kill(processes, all_entries, timeout, wait):
     """Kill running processes."""
     from aiida.engine.processes import control
 
+    if processes and all_entries:
+        raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
+
+    if all_entries:
+        click.confirm('Are you sure you want to kill all processes?', abort=True)
+
     try:
         message = 'Killed through `verdi process kill`'
-        control.kill_processes(processes, timeout=timeout, wait=wait, message=message)
+        control.kill_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait, message=message)
     except control.ProcessTimeoutException as exception:
         echo.echo_critical(str(exception) + '\nFrom the CLI you can call `verdi devel revive <PID>`.')
 
@@ -257,7 +269,6 @@ def process_kill(processes, timeout, wait):
 @options.TIMEOUT()
 @options.WAIT()
 @decorators.with_dbenv()
-@decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_pause(processes, all_entries, timeout, wait):
     """Pause running processes."""
     from aiida.engine.processes import control
@@ -278,7 +289,6 @@ def process_pause(processes, all_entries, timeout, wait):
 @options.TIMEOUT()
 @options.WAIT()
 @decorators.with_dbenv()
-@decorators.only_if_daemon_running(echo.echo_warning, 'daemon is not running, so process may not be reachable')
 def process_play(processes, all_entries, timeout, wait):
     """Play (unpause) paused processes."""
     from aiida.engine.processes import control

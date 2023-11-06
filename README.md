@@ -1,14 +1,14 @@
-# <img src="http://www.aiida.net/wp-content/uploads/2020/06/logo_aiida.png" alt="AiiDA" width="200"/>
+# <img src="https://raw.githubusercontent.com/aiidateam/aiida-core/main/docs/source/images/aiida-logo.svg" alt="AiiDA" width="200"/>
 
 AiiDA (www.aiida.net) is a workflow manager for computational science with a strong focus on provenance, performance and extensibility.
 
 |    | |
 |-----|----------------------------------------------------------------------------|
 |Latest release| [![PyPI version](https://badge.fury.io/py/aiida-core.svg)](https://badge.fury.io/py/aiida-core) [![conda-forge](https://img.shields.io/conda/vn/conda-forge/aiida-core.svg?style=flat)](https://anaconda.org/conda-forge/aiida-core) [![PyPI pyversions](https://img.shields.io/pypi/pyversions/aiida-core.svg)](https://pypi.python.org/pypi/aiida-core/) |
-|Getting help| [![Docs status](https://readthedocs.org/projects/aiida-core/badge)](http://aiida-core.readthedocs.io/) [![Google Group](https://img.shields.io/badge/-Google%20Group-lightgrey.svg)](https://groups.google.com/forum/#!forum/aiidausers)
-|Build status| [![Build Status](https://github.com/aiidateam/aiida-core/workflows/aiida-core/badge.svg)](https://github.com/aiidateam/aiida-core/actions) [![Coverage Status](https://codecov.io/gh/aiidateam/aiida-core/branch/main/graph/badge.svg)](https://codecov.io/gh/aiidateam/aiida-core) |
+|Getting help| [![Docs status](https://readthedocs.org/projects/aiida-core/badge)](http://aiida-core.readthedocs.io/) [![Discourse status](https://img.shields.io/discourse/status?server=https%3A%2F%2Faiida.discourse.group%2F)](https://aiida.discourse.group/)
+|Build status| [![Build Status](https://github.com/aiidateam/aiida-core/actions/workflows/ci-code.yml/badge.svg)](https://github.com/aiidateam/aiida-core/actions) [![Coverage Status](https://codecov.io/gh/aiidateam/aiida-core/branch/main/graph/badge.svg)](https://codecov.io/gh/aiidateam/aiida-core) [Benchmarks](https://aiidateam.github.io/aiida-core/dev/bench/ubuntu-22.04/psql_dos/) |
 |Activity| [![PyPI-downloads](https://img.shields.io/pypi/dm/aiida-core.svg?style=flat)](https://pypistats.org/packages/aiida-core) [![Commit Activity](https://img.shields.io/github/commit-activity/m/aiidateam/aiida-core.svg)](https://github.com/aiidateam/aiida-core/pulse)
-|Community| [![Affiliated with NumFOCUS](https://img.shields.io/badge/NumFOCUS-affiliated%20project-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://numfocus.org/sponsored-projects/affiliated-projects) [![Twitter](https://img.shields.io/twitter/follow/aiidateam.svg?style=social&label=Follow)](https://twitter.com/aiidateam)
+|Community|  [![Discourse](https://img.shields.io/discourse/topics?server=https%3A%2F%2Faiida.discourse.group%2F&logo=discourse)](https://aiida.discourse.group/) [![Affiliated with NumFOCUS](https://img.shields.io/badge/NumFOCUS-affiliated%20project-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://numfocus.org/sponsored-projects/affiliated-projects) [![Twitter](https://img.shields.io/twitter/follow/aiidateam.svg?style=social&label=Follow)](https://twitter.com/aiidateam)
 
 
 ## Features
@@ -48,6 +48,7 @@ Please see the [Contributor wiki](https://github.com/aiidateam/aiida-core/wiki) 
 ## Frequently Asked Questions
 
 If you are experiencing problems with your AiiDA installation, please refer to the [FAQ page of the documentation](https://aiida-core.readthedocs.io/en/latest/howto/faq.html).
+For any other questions, discussion and requests for support, please visit the [Discourse server](https://aiida.discourse.group/).
 
 ## How to cite
 

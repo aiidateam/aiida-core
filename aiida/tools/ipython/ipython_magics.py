@@ -65,15 +65,61 @@ class AiiDALoaderMagics(magic.Magics):
 
     @magic.needs_local_scope
     @magic.line_magic
-    def verdi(self, line='', local_ns=None):  # pylint: disable=no-self-use,unused-argument
-        """Run the AiiDA command line tool, using the currently loaded configuration and profile."""
+    def verdi(self, line='', local_ns=None):  # pylint: disable=unused-argument
+        """Run the AiiDA command line tool, using the currently loaded configuration and profile.
+
+        Invoking ``verdi`` normally through the command line follows a different code path, compared to calling it
+        directly from within an active Python interpreter. Some of those code paths we actually need here, and others
+        can actually cause problems:
+
+        * The ``VerdiCommandGroup`` group ensures that the context ``obj`` is set with the loaded ``Config`` and
+          ``Profile``, but this is not done in this manual call, so we have to built it ourselves and pass it in with
+          the ``obj`` keyword.
+        * We cannot call the ``aiida.cmdline.commands.cmd_verdi.verdi`` command directly, as that will invoke the
+          ``aiida.cmdline.parameters.types.profile.ProfileParamType`` parameter used for the ``-p/--profile`` option
+          that is defined on the ``verdi`` command. This will attempt to load the default profile, but here a profile
+          has actually already been loaded. In principle, reloading a profile should not be a problem, but this magic
+          is often used in demo notebooks where a temporary profile was created and loaded, which is not properly added
+          to the config file (since it is temporary) and so loading the profile would fail. The solution is to not call
+          the top-level ``verdi`` command, but the subcommand, which is the first parameter in the command line
+          arguments defined by the ``line`` argument.
+
+        """
+        from click import Context
+
         from aiida.cmdline.commands.cmd_verdi import verdi
         from aiida.common import AttributeDict
         from aiida.manage import get_config, get_profile
+
         config = get_config()
         profile = get_profile()
-        obj = AttributeDict({'config': config, 'profile': profile})
-        return verdi(shlex.split(line), prog_name='%verdi', obj=obj, standalone_mode=False)  # pylint: disable=too-many-function-args,unexpected-keyword-arg
+
+        # The ``line`` should be of the form ``process list -a -p1``, i.e., a ``verdi`` subcommand with some optional
+        # parameters. Validate that the first entry is indeed a subcommand and not the flag to specify the profile which
+        # is not supported in this magic method.
+        cmdline_arguments = shlex.split(line)
+        command_name = cmdline_arguments[0]
+
+        if command_name in ('-p', '--profile'):
+            raise ValueError(
+                'The `-p/--profile` option is not supported for the `%verdi` magic operator. It will use the currently '
+                f'loaded profile `{profile}`'
+            )
+
+        # Construct the subcommand that will be executed, thereby circumventing the profile option of ``verdi`` itself.
+        # If the caller specified a subcommand that doesn't exist, the following will raise an exception.
+        context = Context(verdi)
+        command = verdi.get_command(context, command_name)
+
+        if command is None:
+            raise RuntimeError(f'command `{command_name}` not found.')
+
+        return command(  # pylint: disable=too-many-function-args,unexpected-keyword-arg
+            cmdline_arguments[1:],
+            prog_name='%verdi',
+            obj=AttributeDict({'config': config, 'profile': profile}),
+            standalone_mode=False
+        )
 
     @magic.needs_local_scope
     @magic.line_magic

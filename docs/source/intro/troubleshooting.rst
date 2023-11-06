@@ -19,6 +19,7 @@ If you experience any problems, first check that all services are up and running
 
 In the example output, all service have a green check mark and so should be running as expected.
 If all services are up and running and you are still experiencing problems or if you have trouble with the installation of aiida-core and related services, consider the commonly encountered problems below.
+In case you are still experiencing problems, you can request support by opening a post on the `Discourse server <https://aiida.discourse.group/>`_.
 
 .. _intro:troubleshooting:installation:
 
@@ -355,7 +356,7 @@ Improvements for dependencies
 Activating the ASE visualizer
 ..............................
 
-Within a virtual environment, attempt to visualize a structure with ``ase`` (either from the shell, or using the command ``verdi data structure show --format=ase <PK>``), might end up with the following error message::
+Within a virtual environment, attempt to visualize a structure with ``ase`` (either from the shell, or using the command ``verdi data core.structure show --format=ase <PK>``), might end up with the following error message::
 
    ImportError: No module named pygtk
 
@@ -390,7 +391,7 @@ Create several symbolic links from this folder, pointing to a number of files in
    $ ln -s /usr/lib/python2.7/dist-packages/pygtk.py pygtk.py
    $ ln -s /usr/lib/python2.7/dist-packages/cairo cairo
 
-After that, ``verdi data structure show --format=ase <PK>`` should work.
+After that, ``verdi data core.structure show --format=ase <PK>`` should work.
 
 Use in ipython/jupyter
 ----------------------
@@ -464,8 +465,8 @@ When the problem is solved, we suggest to reset the default logging level, with:
 
 .. code-block:: console
 
-    $ verdi config logging.circus_loglevel --unset
-    $ verdi config logging.aiida_loglevel --unset
+    $ verdi config unset logging.circus_loglevel
+    $ verdi config unset logging.aiida_loglevel
 
 to avoid too much noise in the logfiles.
 

@@ -15,9 +15,6 @@ import collections
 import pathlib
 from typing import TYPE_CHECKING
 
-import click
-
-from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
 from aiida.common import exceptions
 from aiida.common.folders import Folder
 from aiida.common.lang import type_check
@@ -98,10 +95,8 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """
         return [str(self.get_executable())] + (cmdline_params or [])
 
-    def get_prepend_cmdline_params( # pylint: disable=no-self-use
-        self,
-        mpi_args: list[str] | None = None,
-        extra_mpirun_params: list[str] | None = None
+    def get_prepend_cmdline_params(
+        self, mpi_args: list[str] | None = None, extra_mpirun_params: list[str] | None = None
     ) -> list[str]:
         """Return List of command line parameters to be prepended to the executable in submission line.
         These command line parameters are typically parameters related to MPI invocations.
@@ -304,7 +299,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         except exceptions.EntryPointError:
             raise exceptions.EntryPointError(f'The calculation entry point `{entry_point}` could not be loaded')
 
-        builder = process_class.get_builder()  # type: ignore
+        builder = process_class.get_builder()  # type: ignore[union-attr]
         builder.code = self
 
         return builder
@@ -312,6 +307,8 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     @staticmethod
     def cli_validate_label_uniqueness(_, __, value):
         """Validate the uniqueness of the label of the code."""
+        import click
+
         from aiida.orm import load_code
 
         try:
@@ -333,6 +330,10 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     @classmethod
     def _get_cli_options(cls) -> dict:
         """Return the CLI options that would allow to create an instance of this class."""
+        import click
+
+        from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
+
         return {
             'label': {
                 'short_name': '-L',

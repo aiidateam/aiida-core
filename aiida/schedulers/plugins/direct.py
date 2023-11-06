@@ -55,6 +55,11 @@ _MAP_STATUS_PS = {
     'W': JobState.RUNNING,
     'X': JobState.DONE,
     'Z': JobState.DONE,
+    '?': JobState.UNDETERMINED,
+    # `ps` can sometimes return `?` for the state of a process on macOS. This corresponds to an "unknown" state, see:
+    #
+    # https://apple.stackexchange.com/q/460394/497071
+    #
     # Not sure about these three, I comment them out (they used to be in
     # here, but they don't appear neither on ubuntu nor on Mac)
     #    'F': JobState.DONE,
@@ -78,7 +83,7 @@ class DirectScheduler(aiida.schedulers.Scheduler):
     """
     Support for the direct execution bypassing schedulers.
     """
-    _logger = aiida.schedulers.Scheduler._logger.getChild('direct')
+    _logger = aiida.schedulers.Scheduler._logger.getChild('direct')  # pylint: disable=protected-access
 
     # Query only by list of jobs and not by user
     _features = {

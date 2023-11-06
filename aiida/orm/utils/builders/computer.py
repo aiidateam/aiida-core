@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Manage computer objects with lazy loading of the db env"""
-from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import ValidationError
 from aiida.common.utils import ErrorAccumulator
 
@@ -51,6 +50,7 @@ class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
         return spec
 
     def __init__(self, **kwargs):
+        """Construct a new instance."""
         self._computer_spec = {}
         self._err_acc = ErrorAccumulator(self.ComputerValidationError)
 
@@ -61,11 +61,13 @@ class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
         """Validate the computer options."""
         return self._err_acc.result(raise_error=self.ComputerValidationError if raise_error else False)
 
-    @with_dbenv()
     def new(self):
         """Build and return a new computer instance (not stored)"""
+        from aiida.manage import get_manager
         from aiida.orm import Computer
 
+        # Load the profile backend if not already the case.
+        get_manager().get_profile_storage()
         self.validate()
 
         # Will be used at the end to check if all keys are known
@@ -154,7 +156,7 @@ class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
         :param used: should be a set of keys that you want to track.
            ``key`` will be added to this set if the value exists in the spec and can be retrieved.
         """
-        retval = self.__getattr__(key)
+        retval = self.__getattr__(key)  # pylint: disable=unnecessary-dunder-call
         # I first get a retval, so if I get an exception, I don't add it to the 'used' set
         used.add(key)
         return retval

@@ -134,7 +134,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
                     ]
                 )
             ]
-            number_electrons = int(round(sum([sum(i) for i in occupations]) / num_kpoints))
+            number_electrons = int(round(sum(sum(i) for i in occupations) / num_kpoints))
 
             homo_indexes = [numpy.where(numpy.array([nint(_) for _ in x]) > 0)[0][-1] for x in occupations]
             if len(set(homo_indexes)) > 1:  # there must be intersections of valence and conduction bands
@@ -207,12 +207,12 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
             return False, 0.
 
         # insulating case, take the max of the band maxima below the fermi energy
-        homo = max([i[0] for i in max_mins if i[0] < fermi_energy])
+        homo = max(i[0] for i in max_mins if i[0] < fermi_energy)
         # take the min of the band minima above the fermi energy
-        lumo = min([i[1] for i in max_mins if i[1] > fermi_energy])
+        lumo = min(i[1] for i in max_mins if i[1] > fermi_energy)
         gap = lumo - homo
         if gap <= 0.:
-            raise Exception('Something wrong has been implemented. Revise the code!')
+            raise RuntimeError('Something wrong has been implemented. Revise the code!')
         return True, gap
 
 
@@ -1800,9 +1800,14 @@ def get_bands_and_parents_structure(args, backend=None):
     from aiida import orm
     from aiida.common import timezone
 
+    if backend:
+        user = orm.User.get_collection(backend).get_default()
+    else:
+        user = orm.User.collection.get_default()
+
     q_build = orm.QueryBuilder(backend=backend)
     if args.all_users is False:
-        q_build.append(orm.User, tag='creator', filters={'email': orm.User.collection.get_default().email})
+        q_build.append(orm.User, tag='creator', filters={'email': user.email})
     else:
         q_build.append(orm.User, tag='creator')
 

@@ -14,16 +14,11 @@
 # yapf: disable
 # pylint: disable=wildcard-import
 
-from .postgres import *
 from .rmq import *
 
 __all__ = (
     'BROKER_DEFAULTS',
-    'DEFAULT_DBINFO',
     'ManagementApiConnectionError',
-    'Postgres',
-    'PostgresConnectionMode',
-    'ProcessLauncher',
     'RabbitmqManagementClient',
     'get_launch_queue_name',
     'get_message_exchange_name',

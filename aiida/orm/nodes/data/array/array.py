@@ -10,9 +10,21 @@
 """
 AiiDA ORM data class storing (numpy) arrays
 """
+from __future__ import annotations
+
+from typing import Any, Iterator
+
+from numpy import ndarray
+
+from ..base import to_aiida_type
 from ..data import Data
 
 __all__ = ('ArrayData',)
+
+
+@to_aiida_type.register(ndarray)
+def _(value):
+    return ArrayData(value)
 
 
 class ArrayData(Data):
@@ -32,13 +44,37 @@ class ArrayData(Data):
       cache with the :py:meth:`.clear_internal_cache` method.
     """
     array_prefix = 'array|'
-    _cached_arrays = None
+    default_array_name = 'default'
+
+    def __init__(self, arrays: ndarray | dict[str, ndarray] | None = None, **kwargs):
+        """Construct a new instance and set one or multiple numpy arrays.
+
+        :param arrays: An optional single numpy array, or dictionary of numpy arrays to store.
+        """
+        import numpy
+
+        super().__init__(**kwargs)
+        self._cached_arrays: dict[str, ndarray] = {}
+
+        arrays = arrays if arrays is not None else {}
+
+        if isinstance(arrays, numpy.ndarray):
+            arrays = {self.default_array_name: arrays}
+
+        if (
+            not isinstance(arrays, dict)  # type: ignore[redundant-expr]
+            or any(not isinstance(a, numpy.ndarray) for a in arrays.values())
+        ):
+            raise TypeError(f'`arrays` should be a single numpy array or dictionary of numpy arrays but got: {arrays}')
+
+        for key, value in arrays.items():
+            self.set_array(key, value)
 
     def initialize(self):
         super().initialize()
         self._cached_arrays = {}
 
-    def delete_array(self, name):
+    def delete_array(self, name: str) -> None:
         """
         Delete an array from the node. Can only be called before storing.
 
@@ -56,7 +92,7 @@ class ArrayData(Data):
             # Should not happen, but do not crash if for some reason the property was not set.
             pass
 
-    def get_arraynames(self):
+    def get_arraynames(self) -> list[str]:
         """
         Return a list of all arrays stored in the node, listing the files (and
         not relying on the properties).
@@ -66,21 +102,21 @@ class ArrayData(Data):
         """
         return self._arraynames_from_properties()
 
-    def _arraynames_from_files(self):
+    def _arraynames_from_files(self) -> list[str]:
         """
         Return a list of all arrays stored in the node, listing the files (and
         not relying on the properties).
         """
         return [i[:-4] for i in self.base.repository.list_object_names() if i.endswith('.npy')]
 
-    def _arraynames_from_properties(self):
+    def _arraynames_from_properties(self) -> list[str]:
         """
         Return a list of all arrays stored in the node, listing the attributes
         starting with the correct prefix.
         """
         return [i[len(self.array_prefix):] for i in self.base.attributes.keys() if i.startswith(self.array_prefix)]
 
-    def get_shape(self, name):
+    def get_shape(self, name: str) -> tuple[int, ...]:
         """
         Return the shape of an array (read from the value cached in the
         properties for efficiency reasons).
@@ -89,7 +125,7 @@ class ArrayData(Data):
         """
         return tuple(self.base.attributes.get(f'{self.array_prefix}{name}'))
 
-    def get_iterarrays(self):
+    def get_iterarrays(self) -> Iterator[tuple[str, ndarray]]:
         """
         Iterator that returns tuples (name, array) for each array stored in the node.
 
@@ -99,15 +135,29 @@ class ArrayData(Data):
         for name in self.get_arraynames():
             yield (name, self.get_array(name))
 
-    def get_array(self, name):
+    def get_array(self, name: str | None = None) -> ndarray:
         """
         Return an array stored in the node
 
-        :param name: The name of the array to return.
+        :param name: The name of the array to return. The name can be omitted in case the node contains only a single
+            array, which will be returned in that case. If ``name`` is ``None`` and the node contains multiple arrays or
+            no arrays at all a ``ValueError`` is raised.
+        :raises ValueError: If ``name`` is ``None`` and the node contains more than one arrays or no arrays at all.
         """
         import numpy
 
-        def get_array_from_file(self, name):
+        if name is None:
+            names = self.get_arraynames()
+            narrays = len(names)
+
+            if narrays == 0:
+                raise ValueError('`name` not specified but the node contains no arrays.')
+            if narrays > 1:
+                raise ValueError('`name` not specified but the node contains multiple arrays.')
+
+            name = names[0]
+
+        def get_array_from_file(self, name: str) -> ndarray:
             """Return the array stored in a .npy file"""
             filename = f'{name}.npy'
 
@@ -127,7 +177,7 @@ class ArrayData(Data):
 
         return self._cached_arrays[name]
 
-    def clear_internal_cache(self):
+    def clear_internal_cache(self) -> None:
         """
         Clear the internal memory cache where the arrays are stored after being
         read from disk (used in order to reduce at minimum the readings from
@@ -137,7 +187,7 @@ class ArrayData(Data):
         """
         self._cached_arrays = {}
 
-    def set_array(self, name, array):
+    def set_array(self, name: str, array: ndarray) -> None:
         """
         Store a new numpy array inside the node. Possibly overwrite the array
         if it already existed.
@@ -171,12 +221,12 @@ class ArrayData(Data):
             handle.seek(0)
 
             # Write the numpy array to the repository, keeping the byte representation
-            self.base.repository.put_object_from_filelike(handle, f'{name}.npy')
+            self.base.repository.put_object_from_filelike(handle, f'{name}.npy')  # type: ignore[arg-type]
 
         # Store the array name and shape for querying purposes
         self.base.attributes.set(f'{self.array_prefix}{name}', list(array.shape))
 
-    def _validate(self):
+    def _validate(self) -> bool:
         """
         Check if the list of .npy files stored inside the node and the
         list of properties match. Just a name check, no check on the size
@@ -192,9 +242,9 @@ class ArrayData(Data):
             raise ValidationError(
                 f'Mismatch of files and properties for ArrayData node (pk= {self.pk}): {files} vs. {properties}'
             )
-        super()._validate()
+        return super()._validate()
 
-    def _get_array_entries(self):
+    def _get_array_entries(self) -> dict[str, Any]:
         """Return a dictionary with the different array entries.
 
         The idea is that this dictionary contains the array name as a key and
@@ -208,7 +258,7 @@ class ArrayData(Data):
             array_dict[key] = clean_array(val)
         return array_dict
 
-    def _prepare_json(self, main_file_name='', comments=True):  # pylint: disable=unused-argument
+    def _prepare_json(self, main_file_name='', comments=True) -> tuple[bytes, dict]:  # pylint: disable=unused-argument
         """Dump the content of the arrays stored in this node into JSON format.
 
         :param comments: if True, includes comments (if it makes sense for the given format)
@@ -226,7 +276,7 @@ class ArrayData(Data):
         return json.dumps(json_dict).encode('utf-8'), {}
 
 
-def clean_array(array):
+def clean_array(array: ndarray) -> list:
     """
     Replacing np.nan and np.inf/-np.inf for Nones.
 

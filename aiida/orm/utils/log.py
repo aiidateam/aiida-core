@@ -26,7 +26,7 @@ class DBLogHandler(logging.Handler):
         try:
             try:
                 backend = record.__dict__.pop('backend')
-                orm.Log.collection(backend).create_entry_from_record(record)
+                orm.Log.get_collection(backend).create_entry_from_record(record)
             except KeyError:
                 # The backend should be set. We silently absorb this error
                 pass

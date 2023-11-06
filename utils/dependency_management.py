@@ -142,7 +142,7 @@ def generate_environment_yml():
     # python version cannot be overriden from outside environment.yml
     # (even if it is not specified at all in environment.yml)
     # https://github.com/conda/conda/issues/9506
-    conda_requires = ['python~=3.8']
+    conda_requires = ['python~=3.9']
     for req in install_requirements:
         if req.name == 'python' or any(re.match(ignore, str(req)) for ignore in CONDA_IGNORE):
             continue
@@ -412,7 +412,7 @@ def identify_outdated(extras, pre_releases):
         to_install.update(Requirement.parse(r) for r in pyproject['project']['optional-dependencies'][key])
 
     def get_package_data(name):
-        req = requests.get(f'https://pypi.python.org/pypi/{name}/json')
+        req = requests.get(f'https://pypi.python.org/pypi/{name}/json', timeout=5)
         req.raise_for_status()
         return req.json()
 

@@ -115,3 +115,8 @@ div.highlight-bash div.highlight {
 div.highlight-console div.highlight {
     background-color: aliceblue;
 }
+
+/* This is a fix to prevent a scroll-bar from appearing in the left sidebar */
+.bd-sidebar-primary {
+    overflow-y: hidden;
+}

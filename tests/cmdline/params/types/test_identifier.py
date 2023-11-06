@@ -18,8 +18,6 @@ from aiida.orm import Bool, Float, Int
 class TestIdentifierParamType:
     """Tests for the `IdentifierParamType`."""
 
-    # pylint: disable=no-self-use
-
     def test_base_class(self):
         """
         The base class is abstract and should not be constructable
@@ -34,18 +32,23 @@ class TestIdentifierParamType:
         with pytest.raises(TypeError):
             NodeParamType(sub_classes='aiida.data:core.structure')
 
+        # NOTE: We load and validate entry points lazily so we need to access them to raise.
         with pytest.raises(TypeError):
-            NodeParamType(sub_classes=(None,))
+            npt = NodeParamType(sub_classes=(None,))
+            npt._entry_points  # pylint: disable=protected-access,pointless-statement
 
     def test_identifier_sub_invalid_entry_point(self):
         """
         The sub_classes keyword argument should expect a tuple of valid entry point strings
         """
+        # NOTE: We load and validate entry points lazily so we need to access them to raise.
         with pytest.raises(ValueError):
-            NodeParamType(sub_classes=('aiida.data.structure',))
+            npt = NodeParamType(sub_classes=('aiida.data.structure',))
+            npt._entry_points  # pylint: disable=protected-access,pointless-statement
 
         with pytest.raises(ValueError):
             NodeParamType(sub_classes=('aiida.data:not_existent',))
+            npt._entry_points  # pylint: disable=protected-access,pointless-statement
 
     def test_identifier_sub_classes(self):
         """

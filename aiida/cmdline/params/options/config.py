@@ -24,7 +24,6 @@ import os
 import typing as t
 
 import click
-import yaml
 
 from .overridable import OverridableOption
 
@@ -33,6 +32,8 @@ __all__ = ('ConfigFileOption',)
 
 def yaml_config_file_provider(handle, cmd_name):  # pylint: disable=unused-argument
     """Read yaml config file from file handle."""
+    import yaml
+
     return yaml.safe_load(handle)
 
 

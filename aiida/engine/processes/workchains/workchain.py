@@ -43,6 +43,9 @@ class WorkChainSpec(ProcessSpec, PlumpyWorkChainSpec):
     pass
 
 
+MethodType = t.TypeVar('MethodType')
+
+
 class Protect(ProcessStateMachineMeta):
     """Metaclass that allows protecting class methods from being overridden by subclasses.
 
@@ -59,39 +62,39 @@ class Protect(ProcessStateMachineMeta):
 
     __SENTINEL = object()
 
-    def __new__(cls, name, bases, namespace, **kwargs):
+    def __new__(mcs, name, bases, namespace, **kwargs):
         """Collect all methods that were marked as protected and raise if the subclass defines it.
 
         :raises RuntimeError: If the new class defines (i.e. overrides) a method that was decorated with ``final``.
         """
         private = {
-            key for base in bases for key, value in vars(base).items() if callable(value) and cls.__is_final(value)
+            key for base in bases for key, value in vars(base).items() if callable(value) and mcs.__is_final(value)
         }
         for key in namespace:
             if key in private:
                 raise RuntimeError(f'the method `{key}` is protected cannot be overridden.')
-        return super().__new__(cls, name, bases, namespace, **kwargs)
+        return super().__new__(mcs, name, bases, namespace, **kwargs)
 
     @classmethod
-    def __is_final(cls, method) -> bool:
+    def __is_final(mcs, method) -> bool:  # pylint: disable=unused-private-member
         """Return whether the method has been decorated by the ``final`` classmethod.
 
         :return: Boolean, ``True`` if the method is marked as final, ``False`` otherwise.
         """
         try:
-            return method.__final is cls.__SENTINEL  # pylint: disable=protected-access
+            return method.__final is mcs.__SENTINEL  # pylint: disable=protected-access
         except AttributeError:
             return False
 
     @classmethod
-    def final(cls, method: t.Any):
+    def final(mcs, method: MethodType) -> MethodType:
         """Decorate a method with this method to protect it from being overridden.
 
         Adds the ``__SENTINEL`` object as the ``__final`` private attribute to the given ``method`` and wraps it in
         the ``typing.final`` decorator. The latter indicates to typing systems that it cannot be overridden in
         subclasses.
         """
-        method.__final = cls.__SENTINEL  # pylint: disable=protected-access,unused-private-member
+        method.__final = mcs.__SENTINEL  # type: ignore[attr-defined] # pylint: disable=protected-access,unused-private-member
         return t.final(method)
 
 
@@ -136,7 +139,7 @@ class WorkChain(Process, metaclass=Protect):
 
     @property
     def node(self) -> WorkChainNode:
-        return super().node  # type: ignore
+        return super().node  # type: ignore[return-value]
 
     @property
     def ctx(self) -> AttributeDict:
@@ -365,7 +368,7 @@ class WorkChain(Process, metaclass=Protect):
             self.logger.exception('exception in _store_nodes called in on_exiting')
 
     @Protect.final
-    def on_wait(self, awaitables: t.Sequence[Awaitable]):
+    def on_wait(self, awaitables: t.Sequence[t.Awaitable]):
         """Entering the WAITING state."""
         super().on_wait(awaitables)
         if self._awaitables:
@@ -405,7 +408,7 @@ class WorkChain(Process, metaclass=Protect):
         if awaitable.outputs:
             value = {entry.link_label: entry.node for entry in node.base.links.get_outgoing()}
         else:
-            value = node  # type: ignore
+            value = node  # type: ignore[assignment]
 
         self._resolve_awaitable(awaitable, value)
 

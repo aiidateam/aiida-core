@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import functools
 import re
+import typing as t
 
 import click
 
@@ -41,14 +42,22 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
     """
 
-    def __init__(self, command, entry_point_group: str, entry_point_name_filter=r'.*', **kwargs):
+    def __init__(
+        self,
+        command: t.Callable,
+        entry_point_group: str,
+        entry_point_name_filter: str = r'.*',
+        shared_options: list[click.Option] | None = None,
+        **kwargs
+    ):
         super().__init__(**kwargs)
-        self.command = command
+        self._command = command
         self.entry_point_group = entry_point_group
         self.entry_point_name_filter = entry_point_name_filter
         self.factory = ENTRY_POINT_GROUP_FACTORY_MAPPING[entry_point_group]
+        self.shared_options = shared_options
 
-    def list_commands(self, ctx) -> list[str]:
+    def list_commands(self, ctx: click.Context) -> list[str]:
         """Return the sorted list of subcommands for this group.
 
         :param ctx: The :class:`click.Context`.
@@ -60,7 +69,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         ])
         return sorted(commands)
 
-    def get_command(self, ctx, cmd_name):
+    def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
         """Return the command with the given name.
 
         :param ctx: The :class:`click.Context`.
@@ -68,19 +77,19 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         :returns: The :class:`click.Command`.
         """
         try:
-            command = self.create_command(cmd_name)
+            command: click.Command | None = self.create_command(ctx, cmd_name)
         except exceptions.EntryPointError:
             command = super().get_command(ctx, cmd_name)
         return command
 
-    def create_command(self, entry_point):
+    def create_command(self, ctx: click.Context, entry_point: str) -> click.Command:
         """Create a subcommand for the given ``entry_point``."""
         cls = self.factory(entry_point)
-        command = functools.partial(self.command, cls)
+        command = functools.partial(self._command, ctx, cls)
         command.__doc__ = cls.__doc__
         return click.command(entry_point)(self.create_options(entry_point)(command))
 
-    def create_options(self, entry_point):
+    def create_options(self, entry_point: str) -> t.Callable:
         """Create the option decorators for the command function for the given entry point.
 
         :param entry_point: The entry point.
@@ -97,19 +106,28 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             for option in options_list:
                 func = option(func)
 
+            shared_options = self.shared_options or []
+            shared_options.reverse()
+
+            for option in shared_options:
+                func = option(func)
+
             return func
 
         return apply_options
 
-    def list_options(self, entry_point):
+    def list_options(self, entry_point: str) -> list:
         """Return the list of options that should be applied to the command for the given entry point.
 
         :param entry_point: The entry point.
         """
-        return [self.create_option(*item) for item in self.factory(entry_point).get_cli_options().items()]
+        return [
+            self.create_option(*item)
+            for item in self.factory(entry_point).get_cli_options().items()  # type: ignore[union-attr]
+        ]
 
     @staticmethod
-    def create_option(name, spec):
+    def create_option(name, spec: dict) -> t.Callable[[t.Any], t.Any]:
         """Create a click option from a name and a specification."""
         spec = copy.deepcopy(spec)
 

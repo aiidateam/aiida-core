@@ -186,7 +186,7 @@ def process_call_root(processes):
     '-m', '--max-depth', 'max_depth', type=int, default=None, help='Limit the number of levels to be printed.'
 )
 @click.option(
-    '-e', '--end', 'last', is_flag=True, default=False, help='report for the most recent node in verdi process list -a'
+    '-e', '--end', 'last', is_flag=True, default=False, help='Report for the most recent node in verdi process list -a'
 )
 @decorators.with_dbenv()
 def process_report(processes, levelname, indent_size, max_depth, last):

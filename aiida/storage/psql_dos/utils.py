@@ -45,14 +45,12 @@ def create_sqlalchemy_engine(config: PsqlConfig):
         password=config['database_password'],
         hostname=hostname,
         port=config['database_port'],
-        name=config['database_name']
+        name=config['database_name'],
     )
     return create_engine(
         engine_url,
         json_serializer=json.dumps,
         json_deserializer=json.loads,
-        future=True,
-        encoding='utf-8',
         **config.get('engine_kwargs', {}),
     )
 
@@ -60,7 +58,7 @@ def create_sqlalchemy_engine(config: PsqlConfig):
 def create_scoped_session_factory(engine, **kwargs):
     """Create scoped SQLAlchemy session factory"""
     from sqlalchemy.orm import scoped_session, sessionmaker
-    return scoped_session(sessionmaker(bind=engine, future=True, **kwargs))
+    return scoped_session(sessionmaker(bind=engine, **kwargs))
 
 
 def flag_modified(instance, key):

@@ -50,7 +50,7 @@ def upgrade():
         column('attributes', JSONB),
     )
 
-    nodes = connection.execute(
+    nodes = connection.execute(  # type: ignore[var-annotated]
         select(DbNode.c.id,
                DbNode.c.uuid).where(DbNode.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.'))
     ).fetchall()
@@ -58,7 +58,7 @@ def upgrade():
     for pk, uuid in nodes:
         symbols = load_numpy_array_from_repository(repo_path, uuid, 'symbols').tolist()
         connection.execute(
-            DbNode.update().where(DbNode.c.id == pk).values(
+            DbNode.update().where(DbNode.c.id == pk).values(  # type: ignore[attr-defined]
                 attributes=func.jsonb_set(DbNode.c.attributes, op.inline_literal('{"symbols"}'), cast(symbols, JSONB))
             )
         )

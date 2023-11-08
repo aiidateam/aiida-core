@@ -1840,14 +1840,14 @@ def get_bands_and_parents_structure(args, backend=None):
         tag='sdata',
         with_descendants='bdata',
         # We don't care about the creator of StructureData
-        project=['id', 'attributes.kinds', 'attributes.sites']
+        project=['id', 'attributes.kinds', 'attributes.sites', 'ctime']
     )
 
     q_build.order_by({orm.StructureData: {'ctime': 'desc'}})
 
     structure_dict = {}
     list_data = q_build.distinct().all()
-    for bid, _, _, _, akinds, asites in list_data:
+    for bid, _, _, _, akinds, asites, _ in list_data:
         structure_dict[bid] = (akinds, asites)
 
     entry_list = []

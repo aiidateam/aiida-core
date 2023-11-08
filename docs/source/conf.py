@@ -62,7 +62,7 @@ extensions = [
     'myst_nb', 'sphinx.ext.intersphinx', 'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.viewcode',
     'sphinx.ext.coverage', 'sphinx.ext.mathjax', 'sphinx.ext.ifconfig', 'sphinx.ext.todo',
     'IPython.sphinxext.ipython_console_highlighting', 'IPython.sphinxext.ipython_directive', 'aiida.sphinxext',
-    'sphinx_design', 'sphinx_copybutton', 'sphinxext.rediraffe', 'notfound.extension', 'sphinx_sqlalchemy'
+    'sphinx_design', 'sphinx_copybutton', 'sphinxext.rediraffe', 'notfound.extension'
 ]
 
 intersphinx_mapping = {

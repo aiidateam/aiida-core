@@ -112,7 +112,6 @@ jobs:
     - name: Run test suite
       env:
         AIIDA_WARN_v3: 1
-        SQLALCHEMY_WARN_20: 1
       run:
         .github/workflows/tests.sh
 

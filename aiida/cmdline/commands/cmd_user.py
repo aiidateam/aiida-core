@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi user` command."""
-
 from functools import partial
 
 import click
@@ -58,15 +57,22 @@ def user_list():
     """Show a list of all users."""
     from aiida.orm import User
 
-    default_user = User.collection.get_default()
+    table = []
 
-    if default_user is None:
-        echo.echo_warning('no default user has been configured')
+    for user in sorted(User.collection.all(), key=lambda user: user.email):
+        row = ['*' if user.is_default else '', user.email, user.first_name, user.last_name, user.institution]
+        if user.is_default:
+            table.append(list(map(echo.highlight_string, row)))
+        else:
+            table.append(row)
 
-    attributes = ['email', 'first_name', 'last_name']
-    sort = lambda user: user.email
-    highlight = lambda x: x.email == default_user.email if default_user else None
-    echo.echo_formatted_list(User.collection.all(), attributes, sort=sort, highlight=highlight)
+    echo.echo_tabulate(table, headers=['', 'Email', 'First name', 'Last name', 'Institution'])
+    echo.echo('')
+
+    if User.collection.get_default() is None:
+        echo.echo_warning('No default user has been configured')
+    else:
+        echo.echo_report('The user highlighted and marked with a * is the default user.')
 
 
 @verdi_user.command('configure')

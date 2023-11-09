@@ -46,6 +46,18 @@ COLORS = {
 }
 
 
+def highlight_string(string: str, color: str = 'highlight') -> str:
+    """Highlight a string with a certain color.
+
+    Uses ``click.style`` to highlight the string.
+
+    :param string: The string to highlight.
+    :param color: The color to use.
+    :returns: The highlighted string.
+    """
+    return click.style(string, fg=COLORS[color])
+
+
 def echo(message: Any, fg: Optional[str] = None, bold: bool = False, nl: bool = True, err: bool = False) -> None:
     """Log a message to the cmdline logger.
 

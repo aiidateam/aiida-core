@@ -116,8 +116,11 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
 
         :return: integer number of entities contained within the group
         """
+        from sqlalchemy.orm import aliased
+        group = aliased(self.MODEL_CLASS)
+        nodes = aliased(self.GROUP_NODE_CLASS)
         session = self.backend.get_session()
-        return session.query(self.MODEL_CLASS).join(self.MODEL_CLASS.dbnodes).filter(DbGroup.id == self.pk).count()
+        return session.query(group).join(nodes, nodes.dbgroup_id == group.id).filter(group.id == self.pk).count()
 
     def clear(self):
         """Remove all the nodes from this group."""

@@ -161,6 +161,8 @@ RUN mkdir -p "${CONDA_DIR}/etc/conda/activate.d" && \
 COPY --chown="${SYSTEM_UID}:${SYSTEM_GID}" s6-assets/config-quick-setup.yaml "/aiida/assets/config-quick-setup.yaml"
 COPY s6-assets/s6-rc.d /etc/s6-overlay/s6-rc.d
 COPY s6-assets/init /etc/init
+RUN mkdir /etc/init/run-before-daemon-start && \
+    mkdir /etc/init/run-after-daemon-start
 
 # Otherwise will stuck on oneshot services
 # https://github.com/just-containers/s6-overlay/issues/467

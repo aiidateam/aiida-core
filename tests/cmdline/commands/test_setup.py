@@ -84,6 +84,22 @@ class TestVerdiSetup:
         backend = profile.storage_cls(profile)
         assert backend.get_global_variable('repository|uuid') == backend.get_repository().uuid
 
+    def test_quicksetup_default_user(self, tmp_path):
+        """Test `verdi quicksetup` and ensure that user details (apart from the email) are optional."""
+        profile_name = 'testing-default-user-details'
+        user_email = 'some@email.com'
+
+        options = [
+            '--non-interactive', '--profile', profile_name, '--email', user_email, '--db-port',
+            self.pg_test.dsn['port'], '--db-backend', self.storage_backend_name, '--repository',
+            str(tmp_path)
+        ]
+
+        self.cli_runner(cmd_setup.quicksetup, options, use_subprocess=False)
+
+        config = configuration.get_config()
+        assert profile_name in config.profile_names
+
     def test_quicksetup_from_config_file(self, tmp_path):
         """Test `verdi quicksetup` from configuration file."""
         with tempfile.NamedTemporaryFile('w') as handle:

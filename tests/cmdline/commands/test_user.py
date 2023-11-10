@@ -83,5 +83,5 @@ def test_set_default(run_cli_command, create_user):
     assert orm.User.collection.get_default().email != new_user.email
 
     result = run_cli_command(cmd_user.user_set_default, [new_user.email])
-    assert f'set `{new_user.email}` as the new default user' in result.output
+    assert f'Set `{new_user.email}` as the default user' in result.output
     assert orm.User.collection.get_default().email == new_user.email

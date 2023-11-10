@@ -108,8 +108,7 @@ def setup(
     )
     if created:
         user.store()
-    profile.default_user_email = user.email
-    config.update_profile(profile)
+    config.set_default_user_email(profile, user.email)
 
     # store the updated configuration
     config.store()

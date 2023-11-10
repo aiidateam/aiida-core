@@ -274,6 +274,18 @@ def test_default_profile(empty_config, profile_factory):
     assert config.default_profile_name == alternative_profile_name
 
 
+def test_set_default_user_email(config_with_profile):
+    """Test the :meth:`aiida.manage.configuration.config.Config.set_default_user_email`."""
+    config = config_with_profile
+    profile = config.get_profile()
+    default_user_email = profile.default_user_email
+    default_user_email_new = uuid.uuid4().hex
+    assert default_user_email != default_user_email_new
+    config.set_default_user_email(profile, default_user_email_new)
+    assert profile.default_user_email == default_user_email_new
+    assert config.get_profile(profile.name).default_user_email == default_user_email_new
+
+
 def test_profiles(config_with_profile, profile_factory):
     """Test the properties related to retrieving, creating, updating and removing profiles."""
     config = config_with_profile

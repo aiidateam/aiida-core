@@ -17,19 +17,6 @@ from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 
 
-def set_default_user(profile, user):
-    """Set the user as the default user for the given profile.
-
-    :param profile: the profile
-    :param user: the user
-    """
-    from aiida.manage.configuration import get_config
-    config = get_config()
-    profile.default_user_email = user.email
-    config.update_profile(profile)
-    config.store()
-
-
 def get_user_attribute_default(attribute, ctx):
     """Return the default value for the given attribute of the user passed in the context.
 
@@ -146,5 +133,6 @@ def user_configure(ctx, user, first_name, last_name, institution, set_default):
 @decorators.with_dbenv()
 def user_set_default(ctx, user):
     """Set a user as the default user for the profile."""
-    set_default_user(ctx.obj.profile, user)
+    from aiida.manage import get_manager
+    get_manager().set_default_user_email(ctx.obj.profile, user.email)
     echo.echo_success(f'set `{user.email}` as the new default user for profile `{ctx.obj.profile.name}`')

@@ -600,6 +600,21 @@ class Config:  # pylint: disable=too-many-public-methods
         self._default_profile = name
         return self
 
+    def set_default_user_email(self, profile: Profile, user_email: str) -> None:
+        """Set the default user for the given profile.
+
+        .. warning::
+
+            This does not update the cached default user on the storage backend associated with the profile. To do so,
+            use :meth:`aiida.manage.manager.Manager.set_default_user_email` instead.
+
+        :param profile: The profile to update.
+        :param user_email: The email of the user to set as the default user.
+        """
+        profile.default_user_email = user_email
+        self.update_profile(profile)
+        self.store()
+
     @property
     def options(self):
         return self._options

@@ -186,21 +186,21 @@ SETUP_USER_EMAIL = options.USER_EMAIL.clone(
 
 SETUP_USER_FIRST_NAME = options.USER_FIRST_NAME.clone(
     prompt='First name',
-    default=functools.partial(get_config_option, 'autofill.user.first_name'),
+    default=lambda: get_config_option('autofill.user.first_name') or 'John',
     required=True,
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_USER_LAST_NAME = options.USER_LAST_NAME.clone(
     prompt='Last name',
-    default=functools.partial(get_config_option, 'autofill.user.last_name'),
+    default=lambda: get_config_option('autofill.user.last_name') or 'Doe',
     required=True,
     cls=options.interactive.InteractiveOption
 )
 
 SETUP_USER_INSTITUTION = options.USER_INSTITUTION.clone(
     prompt='Institution',
-    default=functools.partial(get_config_option, 'autofill.user.institution'),
+    default=lambda: get_config_option('autofill.user.institution') or 'Unknown',
     required=True,
     cls=options.interactive.InteractiveOption
 )

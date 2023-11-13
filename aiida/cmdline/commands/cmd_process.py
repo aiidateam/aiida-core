@@ -201,7 +201,7 @@ def process_report(processes, levelname, indent_size, max_depth, last):
     from aiida.tools.query.calculation import CalculationQueryBuilder
 
     if most_recent_node:
-        builder =  QueryBuilder().append(ProcessNode, tag='n').order_by({'n': {'ctime': 'desc'}})
+        builder = QueryBuilder().append(ProcessNode, tag='n').order_by({'n': {'ctime': 'desc'}})
         processes = builder.first(flat=True)
 
         echo.echo_info(f'Showing results for most recent node {node}')

@@ -186,7 +186,12 @@ def process_call_root(processes):
     '-m', '--max-depth', 'max_depth', type=int, default=None, help='Limit the number of levels to be printed.'
 )
 @click.option(
-    '-M', '--most-recent-node', 'most_recent_node', is_flag=True, default=False, help='Select the most recently created process node.'
+    '-M',
+    '--most-recent-node',
+    'most_recent_node',
+    is_flag=True,
+    default=False,
+    help='Select the most recently created process node.'
 )
 @decorators.with_dbenv()
 def process_report(processes, levelname, indent_size, max_depth, last):

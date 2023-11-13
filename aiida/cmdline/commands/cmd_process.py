@@ -205,7 +205,7 @@ def process_report(processes, levelname, indent_size, max_depth, last):
         # set process list to the singular final node
         processes = [node]
 
-        echo.echo(f'Reporting for final node (pk: {pk})')
+        echo.echo_info(f'Showing results for most recent node {node}')
 
         try:
             remote_dir = node.outputs.remote_folder.get_attribute('remote_path')

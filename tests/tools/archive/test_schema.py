@@ -60,7 +60,7 @@ def test_psql_sync_migrate(tmp_path):
             raise AssertionError(f'Schema is not in-sync with the psql backend:\n{yaml.safe_dump(diffs)}')
 
 
-def diff_schemas(psql_insp: Inspector, sqlite_insp: Inspector):  # pylint: disable=too-many-branches,too-many-statements
+def diff_schemas(psql_insp: Inspector, sqlite_insp: Inspector):  # pylint: disable=too-many-branches,too-many-statements,too-many-locals
     """Compare the reflected schemas of the two databases."""
     diffs: dict = {}
 
@@ -85,20 +85,25 @@ def diff_schemas(psql_insp: Inspector, sqlite_insp: Inspector):  # pylint: disab
             # check type
             psql_type = psql_columns[column_name]['type']
             sqlite_type = sqlite_columns[column_name]['type']
+
             # standardise types
+            # Since sqlalchemy v2.0 the ``UUID.as_generic()`` for PostgreSQL is converted to ``CHAR(32)`` which causes
+            # a discrepancy between the field for sqlite which is defined as ``VARCHAR(32)``. Therefore ``UUID`` is
+            # converted to string manually before calling ``.as_generic()``.
+            if isinstance(psql_type, UUID):
+                psql_type = String(length=32)
+
             with suppress(NotImplementedError):
                 psql_type = psql_type.as_generic()
             with suppress(NotImplementedError):
                 sqlite_type = sqlite_type.as_generic()
-            if isinstance(psql_type, UUID):
-                psql_type = String(length=32)
+
             if not isinstance(sqlite_type, type(psql_type)):
                 diffs.setdefault(table_name, {}).setdefault(column_name, {})['type'] = f'{sqlite_type} != {psql_type}'
             elif isinstance(psql_type, String):
-                if psql_type.length != sqlite_type.length:
-                    diffs.setdefault(table_name,
-                                     {}).setdefault(column_name,
-                                                    {})['length'] = f'{sqlite_type.length} != {psql_type.length}'
+                if psql_type.length != sqlite_type.length:  # type: ignore[attr-defined]
+                    string = f'{sqlite_type.length} != {psql_type.length}'  # type: ignore[attr-defined]
+                    diffs.setdefault(table_name, {}).setdefault(column_name, {})['length'] = string
             # check nullability
             psql_nullable = psql_columns[column_name]['nullable']
             sqlite_nullable = sqlite_columns[column_name]['nullable']
@@ -130,7 +135,7 @@ def diff_schemas(psql_insp: Inspector, sqlite_insp: Inspector):  # pylint: disab
         psql_indexes = [
             idx['name']
             for idx in psql_insp.get_indexes(table_name)
-            if not idx['unique'] and not idx['name'].startswith('ix_pat_')
+            if not idx['unique'] and not (idx['name'] is not None and idx['name'].startswith('ix_pat_'))
         ]
         sqlite_indexes = [idx['name'] for idx in sqlite_insp.get_indexes(table_name) if not idx['unique']]
         for index in psql_indexes:

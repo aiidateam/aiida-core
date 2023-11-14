@@ -11,6 +11,7 @@
 import json
 import os
 import pathlib
+import uuid
 
 import pytest
 
@@ -18,6 +19,8 @@ from aiida.common import exceptions
 from aiida.manage.configuration import Config, Profile, settings
 from aiida.manage.configuration.migrations import CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION
 from aiida.manage.configuration.options import get_option
+from aiida.orm.implementation.storage_backend import StorageBackend
+from aiida.storage.sqlite_temp import SqliteTempBackend
 
 
 @pytest.fixture
@@ -271,6 +274,18 @@ def test_default_profile(empty_config, profile_factory):
     assert config.default_profile_name == alternative_profile_name
 
 
+def test_set_default_user_email(config_with_profile):
+    """Test the :meth:`aiida.manage.configuration.config.Config.set_default_user_email`."""
+    config = config_with_profile
+    profile = config.get_profile()
+    default_user_email = profile.default_user_email
+    default_user_email_new = uuid.uuid4().hex
+    assert default_user_email != default_user_email_new
+    config.set_default_user_email(profile, default_user_email_new)
+    assert profile.default_user_email == default_user_email_new
+    assert config.get_profile(profile.name).default_user_email == default_user_email_new
+
+
 def test_profiles(config_with_profile, profile_factory):
     """Test the properties related to retrieving, creating, updating and removing profiles."""
     config = config_with_profile
@@ -418,3 +433,38 @@ def test_delete_profile(config_with_profile, profile_factory):
     # Now reload the config from disk to make sure the changes after deletion were persisted to disk
     config_on_disk = Config.from_file(config.filepath)
     assert profile_name not in config_on_disk.profile_names
+
+
+def test_create_profile_raises(config_with_profile, monkeypatch):
+    """Test the ``create_profile`` method when it raises."""
+    config = config_with_profile
+    profile_name = uuid.uuid4().hex
+
+    def raise_storage_migration_error(*args, **kwargs):
+        raise exceptions.StorageMigrationError()
+
+    monkeypatch.setattr(SqliteTempBackend, 'initialise', raise_storage_migration_error)
+
+    class UnregisteredStorageBackend(StorageBackend):
+        pass
+
+    with pytest.raises(ValueError, match=r'The profile `.*` already exists.'):
+        config.create_profile(config_with_profile.default_profile_name, SqliteTempBackend, {})
+
+    with pytest.raises(TypeError, match=r'The `storage_cls=.*` is not subclass of `.*`.'):
+        config.create_profile(profile_name, object, {})
+
+    with pytest.raises(exceptions.EntryPointError, match=r'.*does not have a registered entry point.'):
+        config.create_profile(profile_name, UnregisteredStorageBackend, {})
+
+    with pytest.raises(exceptions.StorageMigrationError, match='Storage backend initialisation failed.*'):
+        config.create_profile(profile_name, SqliteTempBackend, {})
+
+
+def test_create_profile(config_with_profile):
+    """Test the ``create_profile`` method."""
+    config = config_with_profile
+    profile_name = uuid.uuid4().hex
+
+    config.create_profile(profile_name, SqliteTempBackend, {})
+    assert profile_name in config.profile_names

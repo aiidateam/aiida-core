@@ -179,6 +179,16 @@ class Manager:  # pylint: disable=too-many-public-methods
         self.reset_profile()
         self._profile = None
 
+    def set_default_user_email(self, profile: 'Profile', user_email: str) -> None:
+        """Set the default user for the given profile.
+
+        :param profile: The profile to update.
+        :param user_email: The email of the user to set as the default user.
+        """
+        self.get_config().set_default_user_email(profile, user_email)
+        if self.profile_storage_loaded:
+            self.get_profile_storage().reset_default_user()
+
     @property
     def profile_storage_loaded(self) -> bool:
         """Return whether a storage backend has been loaded.

@@ -12,7 +12,7 @@ def test_basic(tmp_path):
     filename = Path(tmp_path / 'export.aiida')
 
     # generate a temporary backend
-    profile1 = SqliteTempBackend.create_profile(repo_path=str(tmp_path / 'repo1'))
+    profile1 = SqliteTempBackend.create_profile(filepath=str(tmp_path / 'repo1'))
     backend1 = SqliteTempBackend(profile1)
 
     # add simple node
@@ -30,7 +30,7 @@ def test_basic(tmp_path):
     create_archive(None, backend=backend1, filename=filename)
 
     # create a new temporary backend and import
-    profile2 = SqliteTempBackend.create_profile(repo_path=str(tmp_path / 'repo2'))
+    profile2 = SqliteTempBackend.create_profile(filepath=str(tmp_path / 'repo2'))
     backend2 = SqliteTempBackend(profile2)
     import_archive(filename, backend=backend2)
 

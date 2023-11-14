@@ -83,23 +83,15 @@ The only differences are in the handling of certain data types by SQLite versus 
 
 Also, `varchar_pattern_ops` indexes are not possible in SQLite.
 
-Tables
-......
-
-.. sqla-model:: ~aiida.storage.sqlite_zip.models.DbUser
-
-.. sqla-model:: ~aiida.storage.sqlite_zip.models.DbNode
-
-.. sqla-model:: ~aiida.storage.sqlite_zip.models.DbLink
-
-.. sqla-model:: ~aiida.storage.sqlite_zip.models.DbGroup
-
-.. sqla-model:: ~aiida.storage.sqlite_zip.models.DbGroupNodes
-
-.. sqla-model:: ~aiida.storage.sqlite_zip.models.DbComputer
-
-.. sqla-model:: ~aiida.storage.sqlite_zip.models.DbAuthInfo
-
-.. sqla-model:: ~aiida.storage.sqlite_zip.models.DbComment
-
-.. sqla-model:: ~aiida.storage.sqlite_zip.models.DbLog
+..
+    Tables
+    ......
+    .. sqla-model:: ~aiida.storage.sqlite_zip.models.DbUser
+    .. sqla-model:: ~aiida.storage.sqlite_zip.models.DbNode
+    .. sqla-model:: ~aiida.storage.sqlite_zip.models.DbLink
+    .. sqla-model:: ~aiida.storage.sqlite_zip.models.DbGroup
+    .. sqla-model:: ~aiida.storage.sqlite_zip.models.DbGroupNodes
+    .. sqla-model:: ~aiida.storage.sqlite_zip.models.DbComputer
+    .. sqla-model:: ~aiida.storage.sqlite_zip.models.DbAuthInfo
+    .. sqla-model:: ~aiida.storage.sqlite_zip.models.DbComment
+    .. sqla-model:: ~aiida.storage.sqlite_zip.models.DbLog

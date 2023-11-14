@@ -17,7 +17,6 @@ from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import NotExistent
-from aiida.manage import get_manager
 
 TRANSPORT_PARAMS = []
 
@@ -40,7 +39,7 @@ def configure_computer_main(computer, user, **kwargs):
     user = user or orm.User.collection.get_default()
 
     echo.echo_report(f'Configuring computer {computer.label} for user {user.email}.')
-    if user.email != get_manager().get_profile().default_user_email:
+    if not user.is_default:
         echo.echo_report('Configuring different user, defaults may not be appropriate.')
 
     computer.configure(user=user, **kwargs)

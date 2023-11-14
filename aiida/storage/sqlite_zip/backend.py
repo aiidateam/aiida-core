@@ -21,6 +21,7 @@ from typing import BinaryIO, Iterable, Iterator, Optional, Sequence, Tuple, cast
 from zipfile import ZipFile, is_zipfile
 
 from archive_path import ZipPath, extract_file_in_zip
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from aiida import __version__
@@ -63,6 +64,14 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
             ...
 
     """
+
+    class Configuration(BaseModel):
+
+        filepath: str = Field(
+            title='Filepath of the archive',
+            description='Filepath of the archive in which to store data for this backend.'
+        )
+
     _read_only = True
 
     @classmethod
@@ -427,5 +436,5 @@ class FolderBackendRepository(_RoBackendRepository):
     def open(self, key: str) -> Iterator[BinaryIO]:
         if not self._path.joinpath(key).is_file():
             raise FileNotFoundError(f'object with key `{key}` does not exist.')
-        with self._path.joinpath(key).open('rb') as handle:
+        with self._path.joinpath(key).open('rb', encoding='utf-8') as handle:
             yield handle

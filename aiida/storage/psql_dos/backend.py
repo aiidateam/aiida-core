@@ -15,6 +15,8 @@ import gc
 import pathlib
 from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence, Set, Union
 
+from pydantic import BaseModel, Field
+from sqlalchemy import column, insert, update
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from aiida.common.exceptions import ClosedStorage, ConfigurationError, IntegrityError
@@ -70,6 +72,30 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
     Note, there were originally two such backends, `sqlalchemy` and `django`.
     The `django` backend was removed, to consolidate access to this storage.
     """
+
+    class Configuration(BaseModel):
+        """Model describing required information to configure an instance of the storage."""
+
+        database_engine: str = Field(
+            title='PostgreSQL engine',
+            description='The engine to use to connect to the database.',
+            default='postgresql_psycopg2'
+        )
+        database_hostname: str = Field(
+            title='PostgreSQL hostname', description='The hostname of the PostgreSQL server.', default='localhost'
+        )
+        database_port: int = Field(
+            title='PostgreSQL port', description='The port of the PostgreSQL server.', default=5432
+        )
+        database_username: str = Field(
+            title='PostgreSQL username', description='The username with which to connect to the PostgreSQL server.'
+        )
+        database_password: str = Field(
+            title='PostgreSQL password', description='The password with which to connect to the PostgreSQL server.'
+        )
+        database_name: Union[str, None] = Field(
+            title='PostgreSQL database name', description='The name of the database in the PostgreSQL server.'
+        )
 
     migrator = PsqlDosMigrator
 
@@ -188,8 +214,9 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
 
             with self.transaction() as session:
                 session.execute(
-                    DbSetting.__table__.update().where(DbSetting.key == REPOSITORY_UUID_KEY
-                                                       ).values(val=repository_uuid)
+                    DbSetting.__table__.update().where(
+                        DbSetting.key == REPOSITORY_UUID_KEY  # type: ignore[attr-defined]
+                    ).values(val=repository_uuid)
                 )
 
     def get_repository(self) -> 'DiskObjectStoreRepositoryBackend':
@@ -305,8 +332,8 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         # by contrast, in sqlite, bulk_insert is faster: https://docs.sqlalchemy.org/en/14/faq/performance.html
         session = self.get_session()
         with (nullcontext() if self.in_transaction else self.transaction()):
-            session.bulk_insert_mappings(mapper, rows, render_nulls=True, return_defaults=True)
-        return [row['id'] for row in rows]
+            result = session.execute(insert(mapper).returning(mapper, column('id')), rows).fetchall()
+        return [row.id for row in result]
 
     def bulk_update(self, entity_type: EntityTypes, rows: List[dict]) -> None:
         mapper, keys = self._get_mapper_from_entity(entity_type, True)
@@ -319,7 +346,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
                 raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
         session = self.get_session()
         with (nullcontext() if self.in_transaction else self.transaction()):
-            session.bulk_update_mappings(mapper, rows)
+            session.execute(update(mapper), rows)
 
     def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]) -> None:
         # pylint: disable=no-value-for-parameter
@@ -331,14 +358,17 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
 
         session = self.get_session()
         # Delete the membership of these nodes to groups.
-        session.query(DbGroupNode).filter(DbGroupNode.dbnode_id.in_(list(pks_to_delete))
+        session.query(DbGroupNode).filter(DbGroupNode.dbnode_id.in_(list(pks_to_delete))  # type: ignore[attr-defined]
                                           ).delete(synchronize_session='fetch')
         # Delete the links coming out of the nodes marked for deletion.
-        session.query(DbLink).filter(DbLink.input_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        session.query(DbLink).filter(DbLink.input_id.in_(list(pks_to_delete))
+                                     ).delete(synchronize_session='fetch')  # type: ignore[attr-defined]
         # Delete the links pointing to the nodes marked for deletion.
-        session.query(DbLink).filter(DbLink.output_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        session.query(DbLink).filter(DbLink.output_id.in_(list(pks_to_delete))
+                                     ).delete(synchronize_session='fetch')  # type: ignore[attr-defined]
         # Delete the actual nodes
-        session.query(DbNode).filter(DbNode.id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        session.query(DbNode).filter(DbNode.id.in_(list(pks_to_delete))
+                                     ).delete(synchronize_session='fetch')  # type: ignore[attr-defined]
 
     def get_backend_entity(self, model: base.Base) -> BackendEntity:
         """
@@ -356,9 +386,10 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
 
         session = self.get_session()
         with (nullcontext() if self.in_transaction else self.transaction()):
-            if session.query(DbSetting).filter(DbSetting.key == key).count():
+            if session.query(DbSetting).filter(DbSetting.key == key).count():  # type: ignore[attr-defined]
                 if overwrite:
-                    session.query(DbSetting).filter(DbSetting.key == key).update(dict(val=value))
+                    session.query(DbSetting).filter(DbSetting.key == key
+                                                    ).update(dict(val=value))  # type: ignore[attr-defined]
                 else:
                     raise ValueError(f'The setting {key} already exists')
             else:
@@ -369,7 +400,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
 
         session = self.get_session()
         with (nullcontext() if self.in_transaction else self.transaction()):
-            setting = session.query(DbSetting).filter(DbSetting.key == key).one_or_none()
+            setting = session.query(DbSetting).filter(DbSetting.key == key).one_or_none()  # type: ignore[attr-defined]
             if setting is None:
                 raise KeyError(f'No setting found with key {key}')
             return setting.val

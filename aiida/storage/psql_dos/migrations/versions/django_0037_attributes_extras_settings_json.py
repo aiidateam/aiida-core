@@ -88,16 +88,22 @@ def upgrade():
     op.add_column('db_dbnode', sa.Column('extras', postgresql.JSONB(astext_type=sa.Text()), nullable=True))
 
     # transition attributes and extras to node
-    node_count = conn.execute(select(func.count()).select_from(node_tbl)).scalar()
+    node_count = conn.execute(select(func.count()).select_from(node_tbl)).scalar()  # pylint: disable=not-callable
     if node_count:
         with get_progress_reporter()(total=node_count, desc='Updating attributes and extras') as progress:
             for node in conn.execute(select(node_tbl)).all():
-                attr_list = conn.execute(select(attr_tbl).where(attr_tbl.c.dbnode_id == node.id)).all()
+                attr_list = conn.execute(  # type: ignore[var-annotated]
+                    select(attr_tbl).where(attr_tbl.c.dbnode_id == node.id)
+                ).all()
                 attributes, _ = attributes_to_dict(sorted(attr_list, key=lambda a: a.key))
-                extra_list = conn.execute(select(extra_tbl).where(extra_tbl.c.dbnode_id == node.id)).all()
+                extra_list = conn.execute(  # type: ignore[var-annotated]
+                    select(extra_tbl).where(extra_tbl.c.dbnode_id == node.id)
+                ).all()
                 extras, _ = attributes_to_dict(sorted(extra_list, key=lambda a: a.key))
                 conn.execute(
-                    node_tbl.update().where(node_tbl.c.id == node.id).values(attributes=attributes, extras=extras)
+                    node_tbl.update().where(  # type: ignore[attr-defined]
+                        node_tbl.c.id == node.id
+                    ).values(attributes=attributes, extras=extras)
                 )
                 progress.update()
 
@@ -107,7 +113,7 @@ def upgrade():
     op.add_column('db_dbsetting', sa.Column('val', postgresql.JSONB(astext_type=sa.Text()), nullable=True))
 
     # transition settings
-    setting_count = conn.execute(select(func.count()).select_from(setting_tbl)).scalar()
+    setting_count = conn.execute(select(func.count()).select_from(setting_tbl)).scalar()  # pylint: disable=not-callable
     if setting_count:
         with get_progress_reporter()(total=setting_count, desc='Updating settings') as progress:
             for setting in conn.execute(select(setting_tbl)).all():
@@ -129,8 +135,9 @@ def upgrade():
                     else:
                         val = setting.dval
                 conn.execute(
-                    setting_tbl.update().where(setting_tbl.c.id == setting.id
-                                               ).values(val=cast(val, postgresql.JSONB(astext_type=sa.Text())))
+                    setting_tbl.update().where(  # type: ignore[attr-defined]
+                        setting_tbl.c.id == setting.id
+                    ).values(val=cast(val, postgresql.JSONB(astext_type=sa.Text())))
                 )
                 progress.update()
 

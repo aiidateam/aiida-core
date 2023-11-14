@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Generic backend related objects"""
+from __future__ import annotations
+
 import abc
 from typing import TYPE_CHECKING, Any, ContextManager, List, Optional, Sequence, TypeVar, Union
 
@@ -139,7 +141,15 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
         .. warning:: This is a destructive operation, and should only be used for testing purposes.
         """
         from aiida.orm.autogroup import AutogroupManager
+        self.reset_default_user()
         self._autogroup = AutogroupManager(self)
+
+    def reset_default_user(self) -> None:
+        """Reset the default user.
+
+        This should be done when the default user of the storage backend is changed on the corresponding profile because
+        the old default user is cached on this instance.
+        """
         self._default_user = None
 
     @property

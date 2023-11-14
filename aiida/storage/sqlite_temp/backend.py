@@ -12,17 +12,19 @@ from __future__ import annotations
 
 from contextlib import contextmanager, nullcontext
 import functools
-from functools import cached_property
 import hashlib
 import os
 from pathlib import Path
 import shutil
+from tempfile import mkdtemp
 from typing import Any, BinaryIO, Iterator, Sequence
 
+from pydantic import BaseModel, Field
+from sqlalchemy import column, insert, update
 from sqlalchemy.orm import Session
 
 from aiida.common.exceptions import ClosedStorage, IntegrityError
-from aiida.manage import Profile
+from aiida.manage.configuration import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import BackendEntity, StorageBackend
 from aiida.repository.backend.sandbox import SandboxRepositoryBackend
@@ -40,6 +42,15 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
     Whenever it is instantiated, it creates a fresh storage backend,
     and destroys it when it is garbage collected.
     """
+
+    class Configuration(BaseModel):
+
+        filepath: str = Field(
+            title='Temporary directory',
+            description='Temporary directory in which to store data for this backend.',
+            default_factory=mkdtemp
+        )
+
     _read_only = False
 
     @staticmethod
@@ -48,7 +59,7 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
         default_user_email='user@email.com',
         options: dict | None = None,
         debug: bool = False,
-        repo_path: str | Path | None = None,
+        filepath: str | Path | None = None,
     ) -> Profile:
         """Create a new profile instance for this backend, from the path to the zip file."""
         return Profile(
@@ -57,8 +68,8 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
                 'storage': {
                     'backend': 'core.sqlite_temp',
                     'config': {
+                        'filepath': filepath,
                         'debug': debug,
-                        'repo_path': repo_path,
                     }
                 },
                 'process_control': {
@@ -88,7 +99,7 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
     def __init__(self, profile: Profile):
         super().__init__(profile)
         self._session: Session | None = None
-        self._repo: SandboxShaRepositoryBackend | None = None
+        self._repo: SandboxShaRepositoryBackend = SandboxShaRepositoryBackend(profile.storage_config['filepath'])
         self._globals: dict[str, tuple[Any, str | None]] = {}
         self._closed = False
         self.get_session()  # load the database on initialization
@@ -134,10 +145,6 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
     def get_repository(self) -> SandboxShaRepositoryBackend:
         if self._closed:
             raise ClosedStorage(str(self))
-        if self._repo is None:
-            # to-do this does not seem to be removing the folder on garbage collection?
-            repo_path = self.profile.storage_config.get('repo_path')
-            self._repo = SandboxShaRepositoryBackend(filepath=Path(repo_path) if repo_path else None)
         return self._repo
 
     @property
@@ -174,31 +181,31 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
         """Return the backend entity that corresponds to the given Model instance."""
         return orm.get_backend_entity(model, self)
 
-    @cached_property
+    @functools.cached_property
     def authinfos(self):
         return orm.SqliteAuthInfoCollection(self)
 
-    @cached_property
+    @functools.cached_property
     def comments(self):
         return orm.SqliteCommentCollection(self)
 
-    @cached_property
+    @functools.cached_property
     def computers(self):
         return orm.SqliteComputerCollection(self)
 
-    @cached_property
+    @functools.cached_property
     def groups(self):
         return orm.SqliteGroupCollection(self)
 
-    @cached_property
+    @functools.cached_property
     def logs(self):
         return orm.SqliteLogCollection(self)
 
-    @cached_property
+    @functools.cached_property
     def nodes(self):
         return orm.SqliteNodeCollection(self)
 
-    @cached_property
+    @functools.cached_property
     def users(self):
         return orm.SqliteUserCollection(self)
 
@@ -260,8 +267,8 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
                     raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} != {keys}')
         session = self.get_session()
         with (nullcontext() if self.in_transaction else self.transaction()):
-            session.bulk_insert_mappings(mapper, rows, render_nulls=True, return_defaults=True)
-        return [row['id'] for row in rows]
+            result = session.execute(insert(mapper).returning(mapper, column('id')), rows).fetchall()
+        return [row.id for row in result]
 
     def bulk_update(self, entity_type: EntityTypes, rows: list[dict]) -> None:
         mapper, keys = self._get_mapper_from_entity(entity_type, True)
@@ -274,7 +281,7 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
                 raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
         session = self.get_session()
         with (nullcontext() if self.in_transaction else self.transaction()):
-            session.bulk_update_mappings(mapper, rows)
+            session.execute(update(mapper), rows)
 
     def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]):
         raise NotImplementedError

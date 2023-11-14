@@ -141,7 +141,7 @@ def test_settings_migration(perform_migrations: PsqlDosMigrator):
 
     setting_model = perform_migrations.get_current_table('db_dbsetting')
     with perform_migrations.session() as session:
-        settings = {
+        settings = {  # type: ignore[var-annotated]
             row[0]: row[1]
             for row in session.execute(select(setting_model.key, setting_model.val).order_by(setting_model.key)).all()
         }

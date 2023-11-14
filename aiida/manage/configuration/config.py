@@ -16,9 +16,11 @@ See https://github.com/pydantic/pydantic/issues/2678 for details).
 from __future__ import annotations
 
 import codecs
+import contextlib
+import io
 import json
 import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type
 import uuid
 
 from pydantic import (  # pylint: disable=no-name-in-module
@@ -30,13 +32,18 @@ from pydantic import (  # pylint: disable=no-name-in-module
     field_validator,
 )
 
-from aiida.common.exceptions import ConfigurationError
-from aiida.common.log import LogLevels
+from aiida.common.exceptions import ConfigurationError, EntryPointError, StorageMigrationError
+from aiida.common.log import AIIDA_LOGGER, LogLevels
 
 from .options import Option, get_option, get_option_names, parse_option
 from .profile import Profile
 
 __all__ = ('Config',)
+
+if TYPE_CHECKING:
+    from aiida.orm.implementation.storage_backend import StorageBackend
+
+LOGGER = AIIDA_LOGGER.getChild(__file__)
 
 
 class ConfigVersionSchema(BaseModel, defer_build=True):
@@ -126,7 +133,6 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         from aiida.manage.caching import _validate_identifier_pattern
         for identifier in value:
             _validate_identifier_pattern(identifier=identifier)
-
         return value
 
 
@@ -446,6 +452,70 @@ class Config:  # pylint: disable=too-many-public-methods
 
         return self._profiles[name]
 
+    def create_profile(self, name: str, storage_cls: Type['StorageBackend'], storage_config: dict[str, str]) -> Profile:
+        """Create a new profile and initialise its storage.
+
+        :param name: The profile name.
+        :param storage_cls: The :class:`aiida.orm.implementation.storage_backend.StorageBackend` implementation to use.
+        :param storage_config: The configuration necessary to initialise and connect to the storage backend.
+        :returns: The created profile.
+        :raises ValueError: If the profile already exists.
+        :raises TypeError: If the ``storage_cls`` is not a subclass of
+            :class:`aiida.orm.implementation.storage_backend.StorageBackend`.
+        :raises EntryPointError: If the ``storage_cls`` does not have an associated entry point.
+        :raises StorageMigrationError: If the storage cannot be initialised.
+        """
+        from aiida.orm.implementation.storage_backend import StorageBackend
+        from aiida.plugins.entry_point import get_entry_point_from_class
+
+        if name in self.profile_names:
+            raise ValueError(f'The profile `{name}` already exists.')
+
+        if not issubclass(storage_cls, StorageBackend):
+            raise TypeError(
+                f'The `storage_cls={storage_cls}` is not subclass of `aiida.orm.implementationStorageBackend`.'
+            )
+
+        _, storage_entry_point = get_entry_point_from_class(storage_cls.__module__, storage_cls.__name__)
+
+        if storage_entry_point is None:
+            raise EntryPointError(f'`{storage_cls}` does not have a registered entry point.')
+
+        profile = Profile(
+            name, {
+                'storage': {
+                    'backend': storage_entry_point.name,
+                    'config': storage_config,
+                },
+                'process_control': {
+                    'backend': 'rabbitmq',
+                    'config': {
+                        'broker_protocol': 'amqp',
+                        'broker_username': 'guest',
+                        'broker_password': 'guest',
+                        'broker_host': '127.0.0.1',
+                        'broker_port': 5672,
+                        'broker_virtual_host': ''
+                    }
+                },
+            }
+        )
+
+        LOGGER.report('Initialising the storage backend.')
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                profile.storage_cls.initialise(profile)
+        except Exception as exception:  # pylint: disable=broad-except
+            raise StorageMigrationError(
+                f'Storage backend initialisation failed, probably because the configuration is incorrect:\n{exception}'
+            )
+        LOGGER.report('Storage initialisation completed.')
+
+        self.add_profile(profile)
+        self.store()
+
+        return profile
+
     def add_profile(self, profile):
         """Add a profile to the configuration.
 
@@ -529,6 +599,21 @@ class Config:  # pylint: disable=too-many-public-methods
         self.validate_profile(name)
         self._default_profile = name
         return self
+
+    def set_default_user_email(self, profile: Profile, user_email: str) -> None:
+        """Set the default user for the given profile.
+
+        .. warning::
+
+            This does not update the cached default user on the storage backend associated with the profile. To do so,
+            use :meth:`aiida.manage.manager.Manager.set_default_user_email` instead.
+
+        :param profile: The profile to update.
+        :param user_email: The email of the user to set as the default user.
+        """
+        profile.default_user_email = user_email
+        self.update_profile(profile)
+        self.store()
 
     @property
     def options(self):

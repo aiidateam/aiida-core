@@ -52,6 +52,14 @@ def query(datatype, project, past_days, group_pks, all_users):
         n_days_ago = now - datetime.timedelta(days=past_days)
         data_filters.update({'ctime': {'>=': n_days_ago}})
 
+    # Since the query results are sorted on ``ctime`` it has to be projected on. If it doesn't exist, append it to the
+    # projections, but make sure to pop it again from the final results since it wasn't part of the original projections
+    if 'ctime' in project:
+        pop_ctime = False
+    else:
+        project.append('ctime')
+        pop_ctime = True
+
     qbl.append(datatype, tag='data', with_user='creator', filters=data_filters, project=project)
 
     # If there is a group restriction
@@ -63,7 +71,12 @@ def query(datatype, project, past_days, group_pks, all_users):
     qbl.order_by({datatype: {'ctime': 'asc'}})
 
     object_list = qbl.distinct()
-    return object_list.all()
+    results = object_list.all()
+
+    if pop_ctime:
+        return [element[:-1] for element in results]
+
+    return results
 
 
 # pylint: disable=unused-argument,too-many-arguments

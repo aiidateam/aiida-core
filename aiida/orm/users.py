@@ -11,7 +11,6 @@
 from typing import TYPE_CHECKING, Optional, Tuple, Type
 
 from aiida.common import exceptions
-from aiida.common.lang import classproperty
 from aiida.manage import get_manager
 
 from . import entities
@@ -83,6 +82,15 @@ class User(entities.Entity['BackendUser', UserCollection]):
         else:
             email = '@'.join([email_name, domain_part.lower()])
         return email
+
+    @property
+    def is_default(self) -> bool:
+        """Return whether the user is the default user.
+
+        :returns: Boolean, ``True`` if the user is the default, ``False`` otherwise.
+        """
+        default_user = self.collection.get_default()
+        return default_user is not None and self.pk == default_user.pk
 
     @property
     def email(self) -> str:

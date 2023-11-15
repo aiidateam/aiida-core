@@ -36,17 +36,17 @@ This is a 32-position hexadecimal sequence that is stored as a string with some 
   - ``→`` indicate foreign keys
   - ``?`` indicate value types that are nullable.
 
-..
-    .. sqla-model:: ~aiida.storage.psql_dos.models.user.DbUser
-    .. sqla-model:: ~aiida.storage.psql_dos.models.node.DbNode
-    .. sqla-model:: ~aiida.storage.psql_dos.models.node.DbLink
-    .. sqla-model:: ~aiida.storage.psql_dos.models.group.DbGroup
-    .. sqla-model:: ~aiida.storage.psql_dos.models.group.DbGroupNode
-    .. sqla-model:: ~aiida.storage.psql_dos.models.computer.DbComputer
-    .. sqla-model:: ~aiida.storage.psql_dos.models.authinfo.DbAuthInfo
-    .. sqla-model:: ~aiida.storage.psql_dos.models.comment.DbComment
-    .. sqla-model:: ~aiida.storage.psql_dos.models.log.DbLog
-    .. sqla-model:: ~aiida.storage.psql_dos.models.settings.DbSetting
+
+    sqla-model:: ~aiida.storage.psql_dos.models.user.DbUser
+    sqla-model:: ~aiida.storage.psql_dos.models.node.DbNode
+    sqla-model:: ~aiida.storage.psql_dos.models.node.DbLink
+    sqla-model:: ~aiida.storage.psql_dos.models.group.DbGroup
+    sqla-model:: ~aiida.storage.psql_dos.models.group.DbGroupNode
+    sqla-model:: ~aiida.storage.psql_dos.models.computer.DbComputer
+    sqla-model:: ~aiida.storage.psql_dos.models.authinfo.DbAuthInfo
+    sqla-model:: ~aiida.storage.psql_dos.models.comment.DbComment
+    sqla-model:: ~aiida.storage.psql_dos.models.log.DbLog
+    sqla-model:: ~aiida.storage.psql_dos.models.settings.DbSetting
 
 The many-to-one relationship
 ----------------------------

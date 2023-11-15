@@ -84,7 +84,7 @@ docs = [
     "sphinx-design~=0.0.13",
     "sphinx-notfound-page~=0.5",
     "sphinxext-rediraffe~=0.2.4",
-  #  "sphinx-sqlalchemy~=0.1.1",
+    "sphinx-sqlalchemy~=0.2.0",
     "sphinx-intl~=2.1.0",
     "myst-nb~=0.17.0",
 ]

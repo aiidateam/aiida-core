@@ -10,13 +10,13 @@
 # pylint: disable=too-many-arguments
 """`verdi process` command."""
 import click
-from aiida.orm import QueryBuilder, ProcessNode
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
 from aiida.common.log import LOG_LEVELS
 from aiida.manage import get_manager
+from aiida.orm import ProcessNode, QueryBuilder
 
 
 def valid_projections():

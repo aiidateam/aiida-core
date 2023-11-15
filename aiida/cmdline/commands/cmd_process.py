@@ -10,6 +10,7 @@
 # pylint: disable=too-many-arguments
 """`verdi process` command."""
 import click
+from aiida.orm import QueryBuilder, ProcessNode
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options, types
@@ -194,7 +195,7 @@ def process_call_root(processes):
     help='Select the most recently created process node.'
 )
 @decorators.with_dbenv()
-def process_report(processes, levelname, indent_size, max_depth, last):
+def process_report(processes, levelname, indent_size, max_depth, most_recent_node):
     """Show the log report for one or multiple processes."""
     from aiida.cmdline.utils.common import get_calcjob_report, get_process_function_report, get_workchain_report
     from aiida.orm import CalcFunctionNode, CalcJobNode, WorkChainNode, WorkFunctionNode, load_node
@@ -202,15 +203,15 @@ def process_report(processes, levelname, indent_size, max_depth, last):
 
     if most_recent_node:
         builder = QueryBuilder().append(ProcessNode, tag='n').order_by({'n': {'ctime': 'desc'}})
-        processes = builder.first(flat=True)
+        processes = [builder.first(flat=True)]
 
-        echo.echo_info(f'Showing results for most recent node {node}')
+        echo.echo_info(f'Showing results for most recent node {processes[0]}')
 
-        try:
-            remote_dir = node.outputs.remote_folder.get_attribute('remote_path')
-            echo.echo(f'Remote Directory: {remote_dir}')
-        except AttributeError:
-            echo.echo(f'No Remote Directory Found')
+        # try:
+        #     remote_dir = node.outputs.remote_folder.get_attribute('remote_path')
+        #     echo.echo(f'Remote Directory: {remote_dir}')
+        # except AttributeError:
+        #     echo.echo(f'No Remote Directory Found')
 
     for process in processes:
         if isinstance(process, CalcJobNode):

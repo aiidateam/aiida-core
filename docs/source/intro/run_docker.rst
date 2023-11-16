@@ -15,7 +15,7 @@ This image contains a fully pre-configured AiiDA environment which makes it part
 .. grid:: 1
    :gutter: 3
 
-   .. grid-item-card:: Install Docker on your warkstation or laptop
+   .. grid-item-card:: Install Docker on your workstation or laptop
 
       To install Docker, please refer to the `official documentation <https://docs.docker.com/get-docker/>`__.
 
@@ -35,7 +35,7 @@ This image contains a fully pre-configured AiiDA environment which makes it part
 
    .. grid-item-card:: Check setup
 
-      The prfile named ``default`` is created under the ``aiida`` user.
+      The profile named ``default`` is created under the ``aiida`` user.
 
       For example, to check the verdi status, execute the following command inside the container:
 
@@ -61,7 +61,7 @@ This image contains a fully pre-configured AiiDA environment which makes it part
 
    .. grid-item-card:: Persist data across different containers
 
-      If you stop the container (`docker stop` or simply `Ctrl+D` from container) and start it again, any data you created will persist.
+      If you stop the container (`docker stop` or simply `Ctrl+D` from the container) and start it again, any data you created will persist.
 
       .. code-block:: console
 
@@ -90,9 +90,9 @@ This image contains a fully pre-configured AiiDA environment which makes it part
 
       Starting the container with the above command, ensures that any data stored in the ``/home/aiida`` path within the container is stored in the ``conatiner-home-data`` volume and therefore persists even if the container is removed.
 
-      To persistently store the python packages installed in the container, use `--user` flag when installing packages with pip, the packages will be installed in the ``/home/aiida/.local`` path which is mounted to the ``container-home-data`` volume.
+      To persistently store the Python packages installed in the container, use `--user` flag when installing packages with pip, the packages will be installed in the ``/home/aiida/.local`` path which is mounted to the ``container-home-data`` volume.
 
-      You can also mount a local directory instead of a volume and to other container path, please refer to the `Docker documentation <https://docs.docker.com/storage/bind-mounts/>`__ for more information.
+      You can also mount a local directory instead of a volume and to other container paths, please refer to the `Docker documentation <https://docs.docker.com/storage/bind-mounts/>`__ for more information.
 
       .. button-ref:: intro:get_started:next
          :ref-type: ref

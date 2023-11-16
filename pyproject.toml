@@ -281,6 +281,8 @@ disable = [
     "locally-disabled",
     "logging-fstring-interpolation",
     "no-else-raise",
+    "no-member",
+    "no-name-in-module",
     "raise-missing-from",
     "too-few-public-methods",
     "too-many-ancestors",

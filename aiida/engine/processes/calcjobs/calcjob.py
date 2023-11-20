@@ -757,8 +757,8 @@ class CalcJob(Process):
         try:
             exit_code = scheduler.parse_output(
                 detailed_job_info,
-                scheduler_stdout or '',  # type: ignore[arg-type]
-                scheduler_stderr or '',  # type: ignore[arg-type]
+                scheduler_stdout or '',
+                scheduler_stderr or '',
             )
         except exceptions.FeatureNotAvailable:
             self.logger.info(f'`{scheduler.__class__.__name__}` does not implement scheduler output parsing')

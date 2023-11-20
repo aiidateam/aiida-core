@@ -13,7 +13,7 @@ from __future__ import annotations
 import contextlib
 import io
 import pathlib
-from typing import BinaryIO, Iterable, Iterator, Optional, TextIO, Union
+import typing as t
 
 from aiida.repository import File
 
@@ -21,7 +21,7 @@ from .data import Data
 
 __all__ = ('FolderData',)
 
-FilePath = Union[str, pathlib.PurePosixPath]
+FilePath = t.Union[str, pathlib.PurePosixPath]
 
 
 class FolderData(Data):
@@ -72,7 +72,7 @@ class FolderData(Data):
         return self.base.repository.list_object_names(path)
 
     @contextlib.contextmanager
-    def open(self, path: str, mode='r') -> Iterator[BinaryIO | TextIO]:
+    def open(self, path: str, mode='r') -> t.Iterator[t.BinaryIO | t.TextIO]:
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
@@ -89,7 +89,7 @@ class FolderData(Data):
             yield handle
 
     @contextlib.contextmanager
-    def as_path(self, path: FilePath | None = None) -> Iterator[pathlib.Path]:
+    def as_path(self, path: FilePath | None = None) -> t.Iterator[pathlib.Path]:
         """Make the contents of the repository available as a normal filepath on the local file system.
 
         :param path: optional relative path of the object within the repository.
@@ -110,7 +110,15 @@ class FolderData(Data):
         """
         return self.base.repository.get_object(path)
 
-    def get_object_content(self, path: str, mode='r') -> str | bytes:
+    @t.overload
+    def get_object_content(self, path: str, mode: t.Literal['r']) -> str:
+        ...
+
+    @t.overload
+    def get_object_content(self, path: str, mode: t.Literal['rb']) -> bytes:
+        ...
+
+    def get_object_content(self, path: str, mode: t.Literal['r', 'rb'] = 'r') -> str | bytes:
         """Return the content of a object identified by key.
 
         :param path: the relative path of the object within the repository.
@@ -151,7 +159,7 @@ class FolderData(Data):
         """
         return self.base.repository.put_object_from_file(filepath, path)
 
-    def put_object_from_tree(self, filepath: str, path: Optional[str] = None) -> None:
+    def put_object_from_tree(self, filepath: str, path: str | None = None) -> None:
         """Store the entire contents of `filepath` on the local file system in the repository with under given `path`.
 
         :param filepath: absolute path of the directory whose contents to copy to the repository.
@@ -161,7 +169,7 @@ class FolderData(Data):
         """
         return self.base.repository.put_object_from_tree(filepath, path)
 
-    def walk(self, path: Optional[FilePath] = None) -> Iterable[tuple[pathlib.PurePosixPath, list[str], list[str]]]:
+    def walk(self, path: FilePath | None = None) -> t.Iterable[tuple[pathlib.PurePosixPath, list[str], list[str]]]:
         """Walk over the directories and files contained within this repository.
 
         .. note:: the order of the dirname and filename lists that are returned is not necessarily sorted. This is in
@@ -174,11 +182,11 @@ class FolderData(Data):
         """
         yield from self.base.repository.walk(path)
 
-    def glob(self) -> Iterable[pathlib.PurePosixPath]:
+    def glob(self) -> t.Iterable[pathlib.PurePosixPath]:
         """Yield a recursive list of all paths (files and directories)."""
         yield from self.base.repository.glob()
 
-    def copy_tree(self, target: str | pathlib.Path, path: Optional[FilePath] = None) -> None:
+    def copy_tree(self, target: str | pathlib.Path, path: FilePath | None = None) -> None:
         """Copy the contents of the entire node repository to another location on the local file system.
 
         :param target: absolute path of the directory where to copy the contents to.

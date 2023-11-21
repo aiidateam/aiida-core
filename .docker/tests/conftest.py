@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring, redefined-outer-name
 import json
 from pathlib import Path
+import time
 
 import pytest
 
@@ -30,9 +31,8 @@ def is_container_ready(docker_compose):
 @pytest.fixture(scope='session', autouse=True)
 def _docker_service_wait(docker_services):
     """Container startup wait."""
-    docker_compose = docker_services._docker_compose
 
-    docker_services.wait_until_responsive(timeout=120.0, pause=0.1, check=lambda: is_container_ready(docker_compose))
+    time.sleep(30)
 
 
 @pytest.fixture

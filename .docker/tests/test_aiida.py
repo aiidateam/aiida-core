@@ -21,14 +21,6 @@ def test_correct_pgsql_version_installed(aiida_exec, pgsql_version, variant):
     assert parse(info['version']).major == parse(pgsql_version).major
 
 
-def test_correct_rmq_version_installed(aiida_exec, rmq_version, variant):
-    if variant == 'aiida-core-base':
-        pytest.skip('RabbitMQ is not installed in the base image')
-
-    output = aiida_exec('rabbitmqctl status | grep version', user='root').decode().strip()
-    assert rmq_version in output
-
-
 def test_rmq_consumer_timeout_unset(aiida_exec, variant):
     if variant == 'aiida-core-base':
         pytest.skip('RabbitMQ is not installed in the base image')

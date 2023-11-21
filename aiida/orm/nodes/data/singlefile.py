@@ -22,6 +22,8 @@ from .data import Data
 
 __all__ = ('SinglefileData',)
 
+FilePath = t.Union[str, pathlib.PurePosixPath]
+
 
 class SinglefileData(Data):
     """Data class that can be used to store a single file in its repository."""
@@ -37,7 +39,9 @@ class SinglefileData(Data):
         """
         return cls(io.StringIO(content), filename, **kwargs)
 
-    def __init__(self, file: str | t.IO, filename: str | pathlib.Path | None = None, **kwargs: t.Any) -> None:
+    def __init__(
+        self, file: str | pathlib.Path | t.IO, filename: str | pathlib.Path | None = None, **kwargs: t.Any
+    ) -> None:
         """Construct a new instance and set the contents to that of the file.
 
         :param file: an absolute filepath or filelike object whose contents to copy.
@@ -60,26 +64,30 @@ class SinglefileData(Data):
 
     @t.overload
     @contextlib.contextmanager
-    def open(self, path: str, mode: t.Literal['r']) -> t.Iterator[t.TextIO]:
+    def open(self, path: FilePath, mode: t.Literal['r'] = ...) -> t.Iterator[t.TextIO]:
         ...
 
     @t.overload
     @contextlib.contextmanager
-    def open(self, path: None, mode: t.Literal['r']) -> t.Iterator[t.TextIO]:
+    def open(self, path: FilePath, mode: t.Literal['rb']) -> t.Iterator[t.BinaryIO]:
         ...
 
     @t.overload
     @contextlib.contextmanager
-    def open(self, path: str, mode: t.Literal['rb']) -> t.Iterator[t.BinaryIO]:
+    def open(  # type: ignore[overload-overlap]
+        self, path: None = None, mode: t.Literal['r'] = ...
+    ) -> t.Iterator[t.TextIO]:
         ...
 
     @t.overload
     @contextlib.contextmanager
-    def open(self, path: None, mode: t.Literal['rb']) -> t.Iterator[t.BinaryIO]:
+    def open(self, path: None = None, mode: t.Literal['rb'] = ...) -> t.Iterator[t.BinaryIO]:
         ...
 
     @contextlib.contextmanager
-    def open(self, path: str | None = None, mode: t.Literal['r', 'rb'] = 'r') -> t.Iterator[t.BinaryIO | t.TextIO]:
+    def open(self,
+             path: FilePath | None = None,
+             mode: t.Literal['r', 'rb'] = 'r') -> t.Iterator[t.BinaryIO] | t.Iterator[t.TextIO]:
         """Return an open file handle to the content of this data node.
 
         :param path: the relative path of the object within the repository.
@@ -113,7 +121,7 @@ class SinglefileData(Data):
         with self.open(mode=mode) as handle:  # type: ignore[call-overload]
             return handle.read()
 
-    def set_file(self, file: str | t.IO, filename: str | pathlib.Path | None = None) -> None:
+    def set_file(self, file: str | pathlib.Path | t.IO, filename: str | pathlib.Path | None = None) -> None:
         """Store the content of the file in the node's repository, deleting any other existing objects.
 
         :param file: an absolute filepath or filelike object whose contents to copy

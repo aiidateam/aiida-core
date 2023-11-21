@@ -4,6 +4,7 @@ Parsers for DiffCalculation of plugin tutorial.
 
 Register parsers via the "aiida.parsers" entry point in the pyproject.toml file.
 """
+# mypy: disable_error_code=call-overload
 # START PARSER HEAD
 from aiida.engine import ExitCode
 from aiida.orm import SinglefileData
@@ -38,7 +39,7 @@ class DiffParser(Parser):
 
         # add output file
         self.logger.info(f"Parsing '{output_filename}'")
-        with self.retrieved.open(output_filename, 'rb') as handle:  # type: ignore[arg-type]
+        with self.retrieved.open(output_filename, 'rb') as handle:
             output_node = SinglefileData(file=handle)
         self.out('diff', output_node)
 
@@ -59,7 +60,7 @@ class DiffParserSimple(Parser):
 
         # add output file
         self.logger.info(f"Parsing '{output_filename}'")
-        with self.retrieved.open(output_filename, 'rb') as handle:  # type: ignore[arg-type]
+        with self.retrieved.open(output_filename, 'rb') as handle:
             output_node = SinglefileData(file=handle)
         self.out('diff', output_node)
 

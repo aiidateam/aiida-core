@@ -66,3 +66,7 @@ def python_version(_build_config):
 @pytest.fixture(scope='session')
 def pgsql_version(_build_config):
     return _build_config['PGSQL_VERSION']['default']
+
+@pytest.fixture(scope='session')
+def rmq_version(_build_config):
+    return _build_config['RMQ_VERSION']['default']

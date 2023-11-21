@@ -48,6 +48,15 @@ class BrokenArithmeticAddParser(Parser):
         self.out('invalid_output', orm.Str('0'))
 
 
+class ReportArithmeticAddParser(Parser):
+    """Parser for an ``ArithmeticAddCalculation`` job that just logs a message at the ``REPORT`` level."""
+
+    def parse(self, **kwargs):
+        """Log a message at the ``REPORT`` level."""
+        self.logger.report('test the report method.')
+        self.out('sum', orm.Int(3))
+
+
 class TestParser:
     """Test backend entities and their collections"""
 
@@ -125,7 +134,7 @@ class TestParser:
         retrieved.store()
         retrieved.base.links.add_incoming(node, link_type=LinkType.CREATE, link_label='retrieved')
 
-        for cls in [ArithmeticAddParser, SimpleArithmeticAddParser]:
+        for cls in [ArithmeticAddParser, SimpleArithmeticAddParser, ReportArithmeticAddParser]:
             result, calcfunction = cls.parse_from_node(node)
 
             assert isinstance(result['sum'], orm.Int)

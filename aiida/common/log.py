@@ -41,6 +41,7 @@ class AiidaLoggerType(logging.Logger):
 
 setattr(logging, 'REPORT', LOG_LEVEL_REPORT)
 setattr(logging.Logger, 'report', report)
+setattr(logging.LoggerAdapter, 'report', report)
 
 # Convenience dictionary of available log level names and their log level integer
 LOG_LEVELS = {

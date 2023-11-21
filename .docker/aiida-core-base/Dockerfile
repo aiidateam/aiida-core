@@ -40,6 +40,8 @@ RUN apt-get update --yes && \
     # development tools
     git \
     openssh-client \
+    rsync \
+    graphviz \
     vim \
     # the gcc compiler need to build some python packages e.g. psutil and pymatgen
     build-essential \

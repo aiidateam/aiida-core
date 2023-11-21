@@ -36,6 +36,7 @@ dependencies = [
     "get-annotations~=0.1;python_version<'3.10'",
     "graphviz~=0.19",
     "ipython>=7",
+    "jedi<0.19",
     "jinja2~=3.0",
     "kiwipy[rmq]~=0.7.7",
     "importlib-metadata~=6.0",

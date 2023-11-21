@@ -164,8 +164,18 @@ class NodeRepository:
         """
         return self._repository.list_object_names(path)
 
+    @t.overload
     @contextlib.contextmanager
-    def open(self, path: FilePath, mode='r') -> t.Iterator[t.BinaryIO | t.TextIO]:
+    def open(self, path: FilePath, mode: t.Literal['r']) -> t.Iterator[t.TextIO]:
+        ...
+
+    @t.overload
+    @contextlib.contextmanager
+    def open(self, path: FilePath, mode: t.Literal['rb']) -> t.Iterator[t.BinaryIO]:
+        ...
+
+    @contextlib.contextmanager
+    def open(self, path: FilePath, mode: t.Literal['r', 'rb'] = 'r') -> t.Iterator[t.BinaryIO] | t.Iterator[t.TextIO]:
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
@@ -210,7 +220,7 @@ class NodeRepository:
                 assert path is not None
                 with self.open(path, mode='rb') as source:
                     with filepath.open('wb') as target:
-                        shutil.copyfileobj(source, target)  # type: ignore[misc]
+                        shutil.copyfileobj(source, target)
                 yield filepath
 
     def get_object(self, path: FilePath | None = None) -> File:

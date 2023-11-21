@@ -9,7 +9,7 @@
 ###########################################################################
 # Warning: this implementation is used directly in the documentation as a literal-include, which means that if any part
 # of this code is changed, the snippets in the file `docs/source/howto/codes.rst` have to be checked for consistency.
-# mypy: disable_error_code=arg-type
+# mypy: disable_error_code=call-overload
 """Parser for an `ArithmeticAddCalculation` job."""
 from aiida.parsers.parser import Parser
 

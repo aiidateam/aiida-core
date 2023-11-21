@@ -71,8 +71,18 @@ class FolderData(Data):
         """
         return self.base.repository.list_object_names(path)
 
+    @t.overload
     @contextlib.contextmanager
-    def open(self, path: str, mode='r') -> t.Iterator[t.BinaryIO | t.TextIO]:
+    def open(self, path: FilePath, mode: t.Literal['r']) -> t.Iterator[t.TextIO]:
+        ...
+
+    @t.overload
+    @contextlib.contextmanager
+    def open(self, path: FilePath, mode: t.Literal['rb']) -> t.Iterator[t.BinaryIO]:
+        ...
+
+    @contextlib.contextmanager
+    def open(self, path: FilePath, mode: t.Literal['r', 'rb'] = 'r') -> t.Iterator[t.BinaryIO] | t.Iterator[t.TextIO]:
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method

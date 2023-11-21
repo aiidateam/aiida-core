@@ -126,9 +126,8 @@ def migrate_infer_calculation_entry_point(alembic_op):
                 fallback_cases.append([uuid, type_string, entry_point_string])
 
         connection.execute(
-            DbNode.update().where(
-                DbNode.c.type == alembic_op.inline_literal(type_string)  # type: ignore[attr-defined]
-            ).values(process_type=alembic_op.inline_literal(entry_point_string))
+            DbNode.update().where(DbNode.c.type == alembic_op.inline_literal(type_string)
+                                  ).values(process_type=alembic_op.inline_literal(entry_point_string))
         )
 
     if fallback_cases:

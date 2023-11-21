@@ -42,7 +42,7 @@ def upgrade():
         sa.column('type', sa.String),
     )
 
-    nodes = connection.execute(  # type: ignore[var-annotated]
+    nodes = connection.execute(
         sa.select(node_model.c.id, node_model.c.uuid).where(
             node_model.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.')
         )

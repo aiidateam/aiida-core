@@ -214,9 +214,8 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
 
             with self.transaction() as session:
                 session.execute(
-                    DbSetting.__table__.update().where(
-                        DbSetting.key == REPOSITORY_UUID_KEY  # type: ignore[attr-defined]
-                    ).values(val=repository_uuid)
+                    DbSetting.__table__.update().where(DbSetting.key == REPOSITORY_UUID_KEY
+                                                       ).values(val=repository_uuid)
                 )
 
     def get_repository(self) -> 'DiskObjectStoreRepositoryBackend':
@@ -358,17 +357,14 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
 
         session = self.get_session()
         # Delete the membership of these nodes to groups.
-        session.query(DbGroupNode).filter(DbGroupNode.dbnode_id.in_(list(pks_to_delete))  # type: ignore[attr-defined]
+        session.query(DbGroupNode).filter(DbGroupNode.dbnode_id.in_(list(pks_to_delete))
                                           ).delete(synchronize_session='fetch')
         # Delete the links coming out of the nodes marked for deletion.
-        session.query(DbLink).filter(DbLink.input_id.in_(list(pks_to_delete))
-                                     ).delete(synchronize_session='fetch')  # type: ignore[attr-defined]
+        session.query(DbLink).filter(DbLink.input_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
         # Delete the links pointing to the nodes marked for deletion.
-        session.query(DbLink).filter(DbLink.output_id.in_(list(pks_to_delete))
-                                     ).delete(synchronize_session='fetch')  # type: ignore[attr-defined]
+        session.query(DbLink).filter(DbLink.output_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
         # Delete the actual nodes
-        session.query(DbNode).filter(DbNode.id.in_(list(pks_to_delete))
-                                     ).delete(synchronize_session='fetch')  # type: ignore[attr-defined]
+        session.query(DbNode).filter(DbNode.id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
 
     def get_backend_entity(self, model: base.Base) -> BackendEntity:
         """
@@ -386,10 +382,9 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
 
         session = self.get_session()
         with (nullcontext() if self.in_transaction else self.transaction()):
-            if session.query(DbSetting).filter(DbSetting.key == key).count():  # type: ignore[attr-defined]
+            if session.query(DbSetting).filter(DbSetting.key == key).count():
                 if overwrite:
-                    session.query(DbSetting).filter(DbSetting.key == key
-                                                    ).update(dict(val=value))  # type: ignore[attr-defined]
+                    session.query(DbSetting).filter(DbSetting.key == key).update(dict(val=value))
                 else:
                     raise ValueError(f'The setting {key} already exists')
             else:
@@ -400,7 +395,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
 
         session = self.get_session()
         with (nullcontext() if self.in_transaction else self.transaction()):
-            setting = session.query(DbSetting).filter(DbSetting.key == key).one_or_none()  # type: ignore[attr-defined]
+            setting = session.query(DbSetting).filter(DbSetting.key == key).one_or_none()
             if setting is None:
                 raise KeyError(f'No setting found with key {key}')
             return setting.val

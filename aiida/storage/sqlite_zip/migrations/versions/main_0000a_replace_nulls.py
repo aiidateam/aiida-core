@@ -43,24 +43,12 @@ def upgrade():  # pylint: disable=too-many-statements
     )
 
     # remove rows with null values, which may have previously resulted from deletion of a user or computer
-    op.execute(db_dbauthinfo.delete().where(db_dbauthinfo.c.aiidauser_id.is_(None)))
-    op.execute(db_dbauthinfo.delete().where(db_dbauthinfo.c.dbcomputer_id.is_(None)))
+    op.execute(db_dbauthinfo.delete().where(db_dbauthinfo.c.aiidauser_id.is_(None)))  # type: ignore[arg-type]
+    op.execute(db_dbauthinfo.delete().where(db_dbauthinfo.c.dbcomputer_id.is_(None)))  # type: ignore[arg-type]
 
-    op.execute(
-        db_dbauthinfo.update().where(  # type: ignore[attr-defined]
-            db_dbauthinfo.c.enabled.is_(None)
-        ).values(enabled=True)
-    )
-    op.execute(
-        db_dbauthinfo.update().where(  # type: ignore[attr-defined]
-            db_dbauthinfo.c.auth_params.is_(None)
-        ).values(auth_params={})
-    )
-    op.execute(
-        db_dbauthinfo.update().where(  # type: ignore[attr-defined]
-            db_dbauthinfo.c.metadata.is_(None)
-        ).values(metadata={})
-    )
+    op.execute(db_dbauthinfo.update().where(db_dbauthinfo.c.enabled.is_(None)).values(enabled=True))
+    op.execute(db_dbauthinfo.update().where(db_dbauthinfo.c.auth_params.is_(None)).values(auth_params={}))
+    op.execute(db_dbauthinfo.update().where(db_dbauthinfo.c.metadata.is_(None)).values(metadata={}))
 
     db_dbcomment = sa.sql.table(
         'db_dbcomment',
@@ -73,22 +61,12 @@ def upgrade():  # pylint: disable=too-many-statements
     )
 
     # remove rows with null values, which may have previously resulted from deletion of a node or user
-    op.execute(db_dbcomment.delete().where(db_dbcomment.c.dbnode_id.is_(None)))
-    op.execute(db_dbcomment.delete().where(db_dbcomment.c.user_id.is_(None)))
+    op.execute(db_dbcomment.delete().where(db_dbcomment.c.dbnode_id.is_(None)))  # type: ignore[arg-type]
+    op.execute(db_dbcomment.delete().where(db_dbcomment.c.user_id.is_(None)))  # type: ignore[arg-type]
 
-    op.execute(
-        db_dbcomment.update().where(db_dbcomment.c.content.is_(None)).values(content='')  # type: ignore[attr-defined]
-    )
-    op.execute(
-        db_dbcomment.update().where(  # type: ignore[attr-defined]
-            db_dbcomment.c.ctime.is_(None)
-        ).values(ctime=timezone.now())
-    )
-    op.execute(
-        db_dbcomment.update().where(  # type: ignore[attr-defined]
-            db_dbcomment.c.mtime.is_(None)
-        ).values(mtime=timezone.now())
-    )
+    op.execute(db_dbcomment.update().where(db_dbcomment.c.content.is_(None)).values(content=''))
+    op.execute(db_dbcomment.update().where(db_dbcomment.c.ctime.is_(None)).values(ctime=timezone.now()))
+    op.execute(db_dbcomment.update().where(db_dbcomment.c.mtime.is_(None)).values(mtime=timezone.now()))
 
     db_dbcomputer = sa.sql.table(
         'db_dbcomputer',
@@ -100,31 +78,11 @@ def upgrade():  # pylint: disable=too-many-statements
         sa.Column('uuid', sa.CHAR(32)),
     )
 
-    op.execute(
-        db_dbcomputer.update().where(  # type: ignore[attr-defined]
-            db_dbcomputer.c.description.is_(None)
-        ).values(description='')
-    )
-    op.execute(
-        db_dbcomputer.update().where(  # type: ignore[attr-defined]
-            db_dbcomputer.c.hostname.is_(None)
-        ).values(hostname='')
-    )
-    op.execute(
-        db_dbcomputer.update().where(  # type: ignore[attr-defined]
-            db_dbcomputer.c.metadata.is_(None)
-        ).values(metadata={})
-    )
-    op.execute(
-        db_dbcomputer.update().where(  # type: ignore[attr-defined]
-            db_dbcomputer.c.scheduler_type.is_(None)
-        ).values(scheduler_type='')
-    )
-    op.execute(
-        db_dbcomputer.update().where(  # type: ignore[attr-defined]
-            db_dbcomputer.c.transport_type.is_(None)
-        ).values(transport_type='')
-    )
+    op.execute(db_dbcomputer.update().where(db_dbcomputer.c.description.is_(None)).values(description=''))
+    op.execute(db_dbcomputer.update().where(db_dbcomputer.c.hostname.is_(None)).values(hostname=''))
+    op.execute(db_dbcomputer.update().where(db_dbcomputer.c.metadata.is_(None)).values(metadata={}))
+    op.execute(db_dbcomputer.update().where(db_dbcomputer.c.scheduler_type.is_(None)).values(scheduler_type=''))
+    op.execute(db_dbcomputer.update().where(db_dbcomputer.c.transport_type.is_(None)).values(transport_type=''))
 
     db_dbgroup = sa.sql.table(
         'db_dbgroup',
@@ -135,21 +93,9 @@ def upgrade():  # pylint: disable=too-many-statements
         sa.Column('uuid', sa.CHAR(32)),
     )
 
-    op.execute(
-        db_dbgroup.update().where(  # type: ignore[attr-defined]
-            db_dbgroup.c.description.is_(None)
-        ).values(description='')
-    )
-    op.execute(
-        db_dbgroup.update().where(  # type: ignore[attr-defined]
-            db_dbgroup.c.time.is_(None)
-        ).values(time=timezone.now())
-    )
-    op.execute(
-        db_dbgroup.update().where(  # type: ignore[attr-defined]
-            db_dbgroup.c.type_string.is_(None)
-        ).values(type_string='core')
-    )
+    op.execute(db_dbgroup.update().where(db_dbgroup.c.description.is_(None)).values(description=''))
+    op.execute(db_dbgroup.update().where(db_dbgroup.c.time.is_(None)).values(time=timezone.now()))
+    op.execute(db_dbgroup.update().where(db_dbgroup.c.type_string.is_(None)).values(type_string='core'))
 
     db_dblog = sa.sql.table(
         'db_dblog',
@@ -161,17 +107,11 @@ def upgrade():  # pylint: disable=too-many-statements
         sa.Column('uuid', sa.CHAR(32)),
     )
 
-    op.execute(
-        db_dblog.update().where(db_dblog.c.levelname.is_(None)).values(levelname='')  # type: ignore[attr-defined]
-    )
-    op.execute(
-        db_dblog.update().where(db_dblog.c.loggername.is_(None)).values(loggername='')  # type: ignore[attr-defined]
-    )
-    op.execute(db_dblog.update().where(db_dblog.c.message.is_(None)).values(message=''))  # type: ignore[attr-defined]
-    op.execute(db_dblog.update().where(db_dblog.c.metadata.is_(None)).values(metadata={}))  # type: ignore[attr-defined]
-    op.execute(
-        db_dblog.update().where(db_dblog.c.time.is_(None)).values(time=timezone.now())  # type: ignore[attr-defined]
-    )
+    op.execute(db_dblog.update().where(db_dblog.c.levelname.is_(None)).values(levelname=''))
+    op.execute(db_dblog.update().where(db_dblog.c.loggername.is_(None)).values(loggername=''))
+    op.execute(db_dblog.update().where(db_dblog.c.message.is_(None)).values(message=''))
+    op.execute(db_dblog.update().where(db_dblog.c.metadata.is_(None)).values(metadata={}))
+    op.execute(db_dblog.update().where(db_dblog.c.time.is_(None)).values(time=timezone.now()))
 
     db_dbnode = sa.sql.table(
         'db_dbnode',
@@ -183,16 +123,10 @@ def upgrade():  # pylint: disable=too-many-statements
         sa.Column('uuid', sa.CHAR(32)),
     )
 
-    op.execute(
-        db_dbnode.update().where(db_dbnode.c.ctime.is_(None)).values(ctime=timezone.now())  # type: ignore[attr-defined]
-    )
-    op.execute(
-        db_dbnode.update().where(db_dbnode.c.description.is_(None)).values(description='')  # type: ignore[attr-defined]
-    )
-    op.execute(db_dbnode.update().where(db_dbnode.c.label.is_(None)).values(label=''))  # type: ignore[attr-defined]
-    op.execute(
-        db_dbnode.update().where(db_dbnode.c.mtime.is_(None)).values(mtime=timezone.now())  # type: ignore[attr-defined]
-    )
+    op.execute(db_dbnode.update().where(db_dbnode.c.ctime.is_(None)).values(ctime=timezone.now()))
+    op.execute(db_dbnode.update().where(db_dbnode.c.description.is_(None)).values(description=''))
+    op.execute(db_dbnode.update().where(db_dbnode.c.label.is_(None)).values(label=''))
+    op.execute(db_dbnode.update().where(db_dbnode.c.mtime.is_(None)).values(mtime=timezone.now()))
 
     db_dbuser = sa.sql.table(
         'db_dbuser',
@@ -202,15 +136,9 @@ def upgrade():  # pylint: disable=too-many-statements
         sa.Column('institution', sa.String(254)),
     )
 
-    op.execute(
-        db_dbuser.update().where(db_dbuser.c.first_name.is_(None)).values(first_name='')  # type: ignore[attr-defined]
-    )
-    op.execute(
-        db_dbuser.update().where(db_dbuser.c.last_name.is_(None)).values(last_name='')  # type: ignore[attr-defined]
-    )
-    op.execute(
-        db_dbuser.update().where(db_dbuser.c.institution.is_(None)).values(institution='')  # type: ignore[attr-defined]
-    )
+    op.execute(db_dbuser.update().where(db_dbuser.c.first_name.is_(None)).values(first_name=''))
+    op.execute(db_dbuser.update().where(db_dbuser.c.last_name.is_(None)).values(last_name=''))
+    op.execute(db_dbuser.update().where(db_dbuser.c.institution.is_(None)).values(institution=''))
 
 
 def downgrade():

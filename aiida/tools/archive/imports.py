@@ -256,7 +256,7 @@ def _import_users(backend_from: StorageBackend, backend_to: StorageBackend,
     # get matching emails from the backend
     output_email_id: Dict[str, int] = {}
     if input_id_email:
-        output_email_id = dict(  # type: ignore[assignment]
+        output_email_id = dict(
             orm.QueryBuilder(
                 backend=backend_to
             ).append(orm.User, filters={
@@ -295,7 +295,7 @@ def _import_computers(backend_from: StorageBackend, backend_to: StorageBackend,
     # get matching uuids from the backend
     backend_uuid_id: Dict[str, int] = {}
     if input_id_uuid:
-        backend_uuid_id = dict(  # type: ignore[assignment]
+        backend_uuid_id = dict(
             orm.QueryBuilder(
                 backend=backend_to
             ).append(orm.Computer, filters={
@@ -452,7 +452,7 @@ def _import_nodes(
     # get matching uuids from the backend
     backend_uuid_id: Dict[str, int] = {}
     if input_id_uuid:
-        backend_uuid_id = dict(  # type: ignore[assignment]
+        backend_uuid_id = dict(
             orm.QueryBuilder(
                 backend=backend_to
             ).append(orm.Node, filters={
@@ -533,7 +533,7 @@ def _import_logs(
     # get matching uuids from the backend
     backend_uuid_id: Dict[str, int] = {}
     if input_id_uuid:
-        backend_uuid_id = dict(  # type: ignore[assignment]
+        backend_uuid_id = dict(
             orm.QueryBuilder(
                 backend=backend_to
             ).append(orm.Log, filters={
@@ -736,7 +736,7 @@ def _import_comments(
     # get matching uuids from the backend
     backend_uuid_id: Dict[str, int] = {}
     if input_id_uuid:
-        backend_uuid_id = dict(  # type: ignore[assignment]
+        backend_uuid_id = dict(
             orm.QueryBuilder(
                 backend=backend
             ).append(orm.Comment, filters={
@@ -991,7 +991,7 @@ def _import_groups(
     # get matching uuids from the backend
     backend_uuid_id: Dict[str, int] = {}
     if input_id_uuid:
-        backend_uuid_id = dict(  # type: ignore[assignment]
+        backend_uuid_id = dict(
             orm.QueryBuilder(
                 backend=backend_to
             ).append(orm.Group, filters={

@@ -112,9 +112,7 @@ def process_handler(
         # When the handler will be called by the `BaseRestartWorkChain` it will pass the node as the only argument
         node = args[0]
 
-        if exit_codes is not None and node.exit_status not in [
-            exit_code.status for exit_code in exit_codes  # type: ignore[union-attr]
-        ]:
+        if exit_codes is not None and node.exit_status not in [exit_code.status for exit_code in exit_codes]:
             result = None
         else:
             result = wrapped(*args, **kwargs)

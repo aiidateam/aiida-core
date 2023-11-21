@@ -648,13 +648,13 @@ def _check_node_licenses(
 
         def _check_allowed(name):
             try:
-                return allowed_licenses(name)  # type: ignore[misc, operator]
+                return allowed_licenses(name)
             except Exception as exc:
                 raise LicensingException('allowed_licenses function error') from exc
 
         check_allowed = _check_allowed
     elif isinstance(allowed_licenses, Sequence):
-        check_allowed = lambda l: l in allowed_licenses  # type: ignore[operator]
+        check_allowed = lambda l: l in allowed_licenses
     else:
         raise TypeError('allowed_licenses not a list or function')
 
@@ -665,13 +665,13 @@ def _check_node_licenses(
 
         def _check_forbidden(name):
             try:
-                return forbidden_licenses(name)  # type: ignore[misc, operator]
+                return forbidden_licenses(name)
             except Exception as exc:
                 raise LicensingException('forbidden_licenses function error') from exc
 
         check_forbidden = _check_forbidden
     elif isinstance(forbidden_licenses, Sequence):
-        check_forbidden = lambda l: l in forbidden_licenses  # type: ignore[operator]
+        check_forbidden = lambda l: l in forbidden_licenses
     else:
         raise TypeError('forbidden_licenses not a list or function')
 

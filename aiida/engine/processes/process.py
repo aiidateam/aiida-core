@@ -366,7 +366,7 @@ class Process(plumpy.processes.Process):
 
                 def done(done_future: plumpy.futures.Future):
                     is_all_killed = all(done_future.result())
-                    result.set_result(is_all_killed)  # type: ignore[union-attr]
+                    result.set_result(is_all_killed)
 
                 kill_future.add_done_callback(done)
 

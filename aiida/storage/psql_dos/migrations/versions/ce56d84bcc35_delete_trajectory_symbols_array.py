@@ -45,7 +45,7 @@ def upgrade():
         column('attributes', JSONB),
     )
 
-    nodes = connection.execute(  # type: ignore[var-annotated]
+    nodes = connection.execute(
         select(DbNode.c.id,
                DbNode.c.uuid).where(DbNode.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.'))
     ).fetchall()

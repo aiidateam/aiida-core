@@ -78,7 +78,7 @@ class SinglefileData(Data):
     def open(self, path: None, mode: t.Literal['rb']) -> t.Iterator[t.BinaryIO]:
         ...
 
-    @contextlib.contextmanager  # type: ignore[misc]
+    @contextlib.contextmanager
     def open(self, path: str | None = None, mode: t.Literal['r', 'rb'] = 'r') -> t.Iterator[t.BinaryIO | t.TextIO]:
         """Return an open file handle to the content of this data node.
 

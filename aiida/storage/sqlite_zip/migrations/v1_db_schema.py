@@ -56,8 +56,8 @@ class DbAuthInfo(ArchiveV1Base):
         nullable=True,
         index=True
     )
-    _metadata = Column('metadata', JSON, default=dict, nullable=True)  # type: ignore[var-annotated]
-    auth_params = Column(JSON, default=dict, nullable=True)  # type: ignore[misc]
+    _metadata = Column('metadata', JSON, default=dict, nullable=True)
+    auth_params = Column(JSON, default=dict, nullable=True)
     enabled = Column(Boolean, default=True, nullable=True)
 
 
@@ -96,7 +96,7 @@ class DbComputer(ArchiveV1Base):
     description = Column(Text, default='', nullable=True)
     scheduler_type = Column(String(255), default='', nullable=True)
     transport_type = Column(String(255), default='', nullable=True)
-    _metadata = Column('metadata', JSON, default=dict, nullable=True)  # type: ignore[var-annotated]
+    _metadata = Column('metadata', JSON, default=dict, nullable=True)
 
 
 class DbGroupNodes(ArchiveV1Base):
@@ -126,7 +126,7 @@ class DbGroup(ArchiveV1Base):
     type_string = Column(String(255), default='', nullable=True, index=True)
     time = Column(DateTime(timezone=True), default=timezone.now, nullable=True)
     description = Column(Text, default='', nullable=True)
-    extras = Column(JSON, default=dict, nullable=False)  # type: ignore[misc]
+    extras = Column(JSON, default=dict, nullable=False)
     user_id = Column(
         Integer,
         ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
@@ -152,7 +152,7 @@ class DbLog(ArchiveV1Base):
         index=True
     )
     message = Column(Text(), default='', nullable=True)
-    _metadata = Column('metadata', JSON, default=dict, nullable=True)  # type: ignore[var-annotated]
+    _metadata = Column('metadata', JSON, default=dict, nullable=True)
 
 
 class DbNode(ArchiveV1Base):
@@ -168,9 +168,9 @@ class DbNode(ArchiveV1Base):
     description = Column(Text(), default='', nullable=True)
     ctime = Column(DateTime(timezone=True), default=timezone.now, nullable=True, index=True)
     mtime = Column(DateTime(timezone=True), default=timezone.now, nullable=True, index=True)
-    attributes = Column(JSON)  # type: ignore[var-annotated]
-    extras = Column(JSON)  # type: ignore[var-annotated]
-    repository_metadata = Column(JSON, nullable=False, default=dict, server_default='{}')  # type: ignore[var-annotated]
+    attributes = Column(JSON)
+    extras = Column(JSON)
+    repository_metadata = Column(JSON, nullable=False, default=dict, server_default='{}')
     dbcomputer_id = Column(
         Integer,
         ForeignKey('db_dbcomputer.id', deferrable=True, initially='DEFERRED', ondelete='RESTRICT'),

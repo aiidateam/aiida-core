@@ -84,7 +84,7 @@ class TransportQueue:
 
             def do_open():
                 """ Actually open the transport """
-                if transport_request and transport_request.count > 0:
+                if transport_request.count > 0:
                     # The user still wants the transport so open it
                     _LOGGER.debug('Transport request opening transport for %s', authinfo)
                     try:

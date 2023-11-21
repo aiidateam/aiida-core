@@ -21,6 +21,12 @@ def test_correct_pgsql_version_installed(aiida_exec, pgsql_version, variant):
     assert info['name'] == 'postgresql'
     assert parse(info['version']).major == parse(pgsql_version).major
 
+def test_rmq_consumer_timeout_unset(aiida_exec, variant):
+    if variant == 'aiida-core-base':
+        pytest.skip('RabbitMQ is not installed in the base image')
+
+    output = aiida_exec('rabbitmqctl environment | grep consumer_timeout', user="root").decode().strip()
+    assert "undefined" in output
 
 def test_verdi_status(aiida_exec, container_user, timeout):
     time.sleep(timeout)

@@ -22,10 +22,17 @@ def docker_compose(docker_services):
     return docker_services._docker_compose
 
 
-@pytest.fixture
-def timeout():
-    """Container and service startup timeout"""
-    return 30
+def is_container_ready(docker_compose):
+    output = docker_compose.execute('exec -T aiida verdi status').decode().strip()
+    return 'Connected to RabbitMQ' in output and 'Daemon is running' in output
+
+
+@pytest.fixture(scope='session', autouse=True)
+def _docker_service_wait(docker_services):
+    """Container startup wait."""
+    docker_compose = docker_services._docker_compose
+
+    docker_services.wait_until_responsive(timeout=120.0, pause=0.1, check=lambda: is_container_ready(docker_compose))
 
 
 @pytest.fixture

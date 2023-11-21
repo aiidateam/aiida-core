@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=missing-docstring
 import json
-import time
 
 from packaging.version import parse
 import pytest
@@ -28,8 +27,7 @@ def test_rmq_consumer_timeout_unset(aiida_exec, variant):
     output = aiida_exec('rabbitmqctl environment | grep consumer_timeout', user="root").decode().strip()
     assert "undefined" in output
 
-def test_verdi_status(aiida_exec, container_user, timeout):
-    time.sleep(timeout)
+def test_verdi_status(aiida_exec, container_user):
     output = aiida_exec('verdi status', user=container_user).decode().strip()
     assert 'Connected to RabbitMQ' in output
     assert 'Daemon is running' in output
@@ -38,8 +36,7 @@ def test_verdi_status(aiida_exec, container_user, timeout):
     assert 'Warning' not in output
 
 
-def test_computer_setup_success(aiida_exec, container_user, timeout):
-    time.sleep(timeout)
+def test_computer_setup_success(aiida_exec, container_user):
     output = aiida_exec('verdi computer test localhost', user=container_user).decode().strip()
 
     assert 'Success' in output

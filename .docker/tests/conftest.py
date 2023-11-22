@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring, redefined-outer-name
 import json
 from pathlib import Path
+import time
 
 import pytest
 
@@ -22,10 +23,16 @@ def docker_compose(docker_services):
     return docker_services._docker_compose
 
 
-@pytest.fixture
-def timeout():
-    """Container and service startup timeout"""
-    return 30
+def is_container_ready(docker_compose):
+    output = docker_compose.execute('exec -T aiida verdi status').decode().strip()
+    return 'Connected to RabbitMQ' in output and 'Daemon is running' in output
+
+
+@pytest.fixture(scope='session', autouse=True)
+def _docker_service_wait(docker_services):
+    """Container startup wait."""
+
+    time.sleep(30)
 
 
 @pytest.fixture
@@ -59,3 +66,8 @@ def python_version(_build_config):
 @pytest.fixture(scope='session')
 def pgsql_version(_build_config):
     return _build_config['PGSQL_VERSION']['default']
+
+
+@pytest.fixture(scope='session')
+def rmq_version(_build_config):
+    return _build_config['RMQ_VERSION']['default']

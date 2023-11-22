@@ -95,7 +95,7 @@ class SqliteDosStorage(PsqlDosBackend):
 
     migrator = SqliteDosMigrator
 
-    class Configuration(BaseModel):
+    class Model(BaseModel):
         """Model describing required information to configure an instance of the storage."""
 
         filepath: str = Field(

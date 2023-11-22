@@ -1,10 +1,10 @@
 """Subclass of :class:`click.Group` that loads subcommands dynamically from entry points."""
 from __future__ import annotations
 
-import copy
 import functools
 import re
 import typing as t
+import warnings
 
 import click
 
@@ -88,10 +88,35 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             command = super().get_command(ctx, cmd_name)
         return command
 
+    def call_command(self, ctx, cls, **kwargs):
+        """Call the ``command`` after validating the provided inputs."""
+        from pydantic import ValidationError
+
+        if hasattr(cls, 'Model'):
+            # The plugin defines a pydantic model: use it to validate the provided arguments
+            try:
+                model = cls.Model(**kwargs)
+            except ValidationError as exception:
+                param_hint = [
+                    f'--{loc.replace("_", "-")}'  # type: ignore[union-attr]
+                    for loc in exception.errors()[0]['loc']
+                ]
+                message = '\n'.join([str(e['ctx']['error']) for e in exception.errors()])
+                raise click.BadParameter(
+                    message,
+                    param_hint=param_hint or 'multiple parameters',  # type: ignore[arg-type]
+                ) from exception
+
+            # Update the arguments with the dictionary representation of the model. This will include any type coercions
+            # that may have been applied with validators defined for the model.
+            kwargs.update(**model.model_dump())
+
+        return self._command(ctx, cls, **kwargs)
+
     def create_command(self, ctx: click.Context, entry_point: str) -> click.Command:
         """Create a subcommand for the given ``entry_point``."""
         cls = self.factory(entry_point)
-        command = functools.partial(self._command, ctx, cls)
+        command = functools.partial(self.call_command, ctx, cls)
         command.__doc__ = cls.__doc__
         return click.command(entry_point)(self.create_options(entry_point)(command))
 
@@ -131,61 +156,71 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
         cls = self.factory(entry_point)
 
-        if not hasattr(cls, 'Configuration'):
-            # This should be enabled once the ``Code`` classes are migrated to using pydantic to define their model.
-            # See https://github.com/aiidateam/aiida-core/pull/6190
-            # from aiida.common.warnings import warn_deprecation
-            # warn_deprecation(
-            #     'Relying on `_get_cli_options` is deprecated. The options should be defined through a '
-            #     '`pydantic.BaseModel` that should be assigned to the `Config` class attribute.',
-            #     version=3
-            # )
+        if not hasattr(cls, 'Model'):
             from aiida.common.warnings import warn_deprecation
 
             warn_deprecation(
                 'Relying on `_get_cli_options` is deprecated. The options should be defined through a '
-                '`pydantic.BaseModel` that should be assigned to the `Config` class attribute.',
+                '`pydantic.BaseModel` that should be assigned to the `Model` class attribute.',
                 version=3,
             )
             options_spec = self.factory(entry_point).get_cli_options()  # type: ignore[union-attr]
-        else:
-            options_spec = {}
+            return [self.create_option(*item) for item in options_spec]
 
-            for key, field_info in cls.Configuration.model_fields.items():
-                default = field_info.default_factory if field_info.default is PydanticUndefined else field_info.default
+        options_spec = {}
 
-                # The ``field_info.annotation`` property returns the annotation of the field. This can be a plain type
-                # or a type from ``typing``, e.g., ``Union[int, float]`` or ``Optional[str]``. In these cases, the type
-                # that needs to be passed to ``click`` is the arguments of the type, which can be obtained using the
-                # ``typing.get_args()`` method. If it is not a compound type, this returns an empty tuplem so in that
-                # case, the type is simply the ``field_info.annotation``.
-                options_spec[key] = {
-                    'required': field_info.is_required(),
-                    'type': t.get_args(field_info.annotation) or field_info.annotation,
-                    'prompt': field_info.title,
-                    'default': default,
-                    'help': field_info.description,
-                }
+        for key, field_info in cls.Model.model_fields.items():
+            default = field_info.default_factory if field_info.default is PydanticUndefined else field_info.default
 
-        return [self.create_option(*item) for item in options_spec.items()]
+            # If the annotation has the ``__args__`` attribute it is an instance of a type from ``typing`` and the real
+            # type can be gotten from the arguments. For example it could be ``typing.Union[str, None]`` calling
+            # ``typing.Union[str, None].__args__`` will return the tuple ``(str, NoneType)``. So to get the real type,
+            # we simply remove all ``NoneType`` and the remaining type should be the type of the option.
+            if hasattr(field_info.annotation, '__args__'):
+                args = list(filter(lambda e: e != type(None), field_info.annotation.__args__))
+                if len(args) > 1:
+                    warnings.warn(
+                        f'field `{key}` defines multiple types, but can take only one, taking the first: `{args[0]}`',
+                        UserWarning,
+                    )
+                field_type = args[0]
+            else:
+                field_type = field_info.annotation
+
+            options_spec[key] = {
+                'required': field_info.is_required(),
+                'type': field_type,
+                'is_flag': field_type is bool,
+                'prompt': field_info.title,
+                'default': default,
+                'help': field_info.description,
+            }
+            for metadata in field_info.metadata:
+                for metadata_key, metadata_value in metadata.items():
+                    options_spec[key][metadata_key] = metadata_value
+
+        options_ordered = []
+
+        for name, spec in sorted(options_spec.items(), key=lambda x: x[1].get('priority', 0), reverse=True):
+            spec.pop('priority', None)
+            options_ordered.append(self.create_option(name, spec))
+
+        return options_ordered
 
     @staticmethod
     def create_option(name, spec: dict) -> t.Callable[[t.Any], t.Any]:
         """Create a click option from a name and a specification."""
-        spec = copy.deepcopy(spec)
-
         is_flag = spec.pop('is_flag', False)
-        default = spec.get('default')
         name_dashed = name.replace('_', '-')
         option_name = f'--{name_dashed}/--no-{name_dashed}' if is_flag else f'--{name_dashed}'
         option_short_name = spec.pop('short_name', None)
         option_names = (option_short_name, option_name) if option_short_name else (option_name,)
 
-        kwargs = {'cls': spec.pop('cls', InteractiveOption), 'show_default': True, 'is_flag': is_flag, **spec}
+        kwargs = {'cls': spec.pop('option_cls', InteractiveOption), 'show_default': True, 'is_flag': is_flag, **spec}
 
         # If the option is a flag with no default, make sure it is not prompted for, as that will force the user to
         # specify it to be on or off, but cannot let it unspecified.
-        if kwargs['cls'] is InteractiveOption and is_flag and default is None:
+        if kwargs['cls'] is InteractiveOption and is_flag and spec.get('default') is None:
             kwargs['cls'] = functools.partial(InteractiveOption, prompt_fn=lambda ctx: False)
 
         return click.option(*(option_names), **kwargs)

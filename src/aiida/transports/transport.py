@@ -14,8 +14,11 @@ import re
 import sys
 from collections import OrderedDict
 
+from pydantic import BaseModel
+
 from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
+from aiida.common.pydantic import MetadataField
 
 __all__ = ('Transport',)
 
@@ -74,6 +77,21 @@ class Transport(abc.ABC):
             },
         ),
     ]
+
+    class Model(BaseModel):
+        """Model describing required information to create an instance."""
+
+        use_login_shell: bool = MetadataField(
+            True,
+            title='Use login shell when executing command',
+            description='Not using a login shell can help suppress potential spurious text output that can prevent '
+            'AiiDA from parsing the output of commands, but may result in some startup files not being sourced.',
+        )
+        safe_interval: float = MetadataField(
+            0.0,
+            title='Connection cooldown time (s)',
+            description='Minimum time interval in seconds between opening new connections.',
+        )
 
     def __init__(self, *args, **kwargs):
         """__init__ method of the Transport base class.

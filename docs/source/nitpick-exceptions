@@ -205,6 +205,7 @@ py:class sqlalchemy.orm.decl_api.SqliteModel
 py:class sqlalchemy.orm.decl_api.Base
 py:class sqlalchemy.sql.compiler.TypeCompiler
 py:class sqlalchemy.sql.elements.BooleanClauseList
+py:meth sqlalchemy.orm.unitofwork.UOWTransaction.register_object
 
 py:class sphinx.ext.autodoc.ClassDocumenter
 py:class sphinx.util.docutils.SphinxDirective

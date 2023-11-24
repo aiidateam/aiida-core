@@ -633,7 +633,10 @@ class CalcJob(Process):
                 with SandboxFolder(filepath_sandbox) as retrieved_temporary_folder:
                     self.presubmit(folder)
                     self.node.set_remote_workdir(self.inputs.remote_folder.get_remote_path())
-                    retrieve_calculation(self.node, transport, retrieved_temporary_folder.abspath)
+                    retrieved = retrieve_calculation(self.node, transport, retrieved_temporary_folder.abspath)
+                    if retrieved is not None:
+                        self.out(self.node.link_label_retrieved, retrieved)
+                        self.update_outputs()
                     self.node.set_state(CalcJobState.PARSING)
                     self.node.base.attributes.set(orm.CalcJobNode.IMMIGRATED_KEY, True)
                     return self.parse(retrieved_temporary_folder.abspath)
@@ -682,10 +685,6 @@ class CalcJob(Process):
             exit_code = exit_code_retrieved
         else:
             exit_code = exit_code_scheduler
-
-        # Finally link up the outputs and we're done
-        for entry in self.node.base.links.get_outgoing():
-            self.out(entry.link_label, entry.node)
 
         if existing_exit_code is not None:
             return existing_exit_code

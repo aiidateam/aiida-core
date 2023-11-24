@@ -91,7 +91,9 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
                 except Exception as exception:
                     raise PreSubmitException('exception occurred in presubmit call') from exception
                 else:
-                    execmanager.upload_calculation(node, transport, calc_info, folder)
+                    remote_folder = execmanager.upload_calculation(node, transport, calc_info, folder)
+                    if remote_folder is not None:
+                        process.out('remote_folder', remote_folder)
                     skip_submit = calc_info.skip_submit or False
 
             return skip_submit
@@ -270,7 +272,7 @@ async def task_monitor_job(
 
 
 async def task_retrieve_job(
-    node: CalcJobNode,
+    process: 'CalcJob',
     transport_queue: TransportQueue,
     retrieved_temporary_folder: str,
     cancellable: InterruptableFuture,
@@ -282,13 +284,15 @@ async def task_retrieve_job(
     retry after an interval that increases exponentially with the number of retries, for a maximum number of retries.
     If all retries fail, the task will raise a TransportTaskException
 
-    :param node: the node that represents the job calculation
+    :param process: the job calculation
     :param transport_queue: the TransportQueue from which to request a Transport
     :param retrieved_temporary_folder: the absolute path to a directory to store files
     :param cancellable: the cancelled flag that will be queried to determine whether the task was cancelled
 
     :raises: TransportTaskException if after the maximum number of retries the transport task still excepted
     """
+    node = process.node
+
     if node.get_state() == CalcJobState.PARSING:
         logger.warning(f'CalcJob<{node.pk}> already marked as PARSING, skipping task_retrieve_job')
         return
@@ -310,17 +314,22 @@ async def task_retrieve_job(
 
             if node.get_job_id() is None:
                 logger.warning(f'there is no job id for CalcJobNoe<{node.pk}>: skipping `get_detailed_job_info`')
-                return execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder)
-
-            try:
-                detailed_job_info = scheduler.get_detailed_job_info(node.get_job_id())
-            except FeatureNotAvailable:
-                logger.info(f'detailed job info not available for scheduler of CalcJob<{node.pk}>')
-                node.set_detailed_job_info(None)
+                retrieved = execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder)
             else:
-                node.set_detailed_job_info(detailed_job_info)
+                try:
+                    detailed_job_info = scheduler.get_detailed_job_info(node.get_job_id())
+                except FeatureNotAvailable:
+                    logger.info(f'detailed job info not available for scheduler of CalcJob<{node.pk}>')
+                    node.set_detailed_job_info(None)
+                else:
+                    node.set_detailed_job_info(detailed_job_info)
 
-            return execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder)
+                retrieved = execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder)
+
+            if retrieved is not None:
+                process.out(node.link_label_retrieved, retrieved)
+
+            return retrieved
 
     try:
         logger.info(f'scheduled request to retrieve CalcJob<{node.pk}>')
@@ -534,7 +543,7 @@ class Waiting(plumpy.process_states.Waiting):
 
             elif self._command == RETRIEVE_COMMAND:
                 temp_folder = tempfile.mkdtemp()
-                await self._launch_task(task_retrieve_job, node, transport_queue, temp_folder)
+                await self._launch_task(task_retrieve_job, self.process, transport_queue, temp_folder)
 
                 if not self._monitor_result:
                     result = self.parse(temp_folder)

@@ -68,13 +68,14 @@ def upload_calculation(
     folder: SandboxFolder,
     inputs: Optional[MappingType[str, Any]] = None,
     dry_run: bool = False,
-) -> None:
+) -> RemoteData | None:
     """Upload a `CalcJob` instance
 
     :param node: the `CalcJobNode`.
     :param transport: an already opened transport to use to submit the calculation.
     :param calc_info: the calculation info datastructure returned by `CalcJob.presubmit`
     :param folder: temporary local file system folder containing the inputs written by `CalcJob.prepare_for_submission`
+    :returns: The ``RemoteData`` representing the working directory on the remote if, or ``None`` if  ``dry_run=True``.
     """
     # If the calculation already has a `remote_folder`, simply return. The upload was apparently already completed
     # before, which can happen if the daemon is restarted and it shuts down after uploading but before getting the
@@ -340,14 +341,9 @@ def upload_calculation(
     node.base.repository._update_repository_metadata()
 
     if not dry_run:
-        # Make sure that attaching the `remote_folder` with a link is the last thing we do. This gives the biggest
-        # chance of making this method idempotent. That is to say, if a runner gets interrupted during this action, it
-        # will simply retry the upload, unless we got here and managed to link it up, in which case we move to the next
-        # task. Because in that case, the check for the existence of this link at the top of this function will exit
-        # early from this command.
-        remotedata = RemoteData(computer=computer, remote_path=workdir)
-        remotedata.base.links.add_incoming(node, link_type=LinkType.CREATE, link_label='remote_folder')
-        remotedata.store()
+        return RemoteData(computer=computer, remote_path=workdir)
+
+    return None
 
 
 def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | ExitCode:
@@ -445,7 +441,9 @@ def stash_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     remote_stash.base.links.add_incoming(calculation, link_type=LinkType.CREATE, link_label='remote_stash')
 
 
-def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retrieved_temporary_folder: str) -> None:
+def retrieve_calculation(
+    calculation: CalcJobNode, transport: Transport, retrieved_temporary_folder: str
+) -> FolderData | None:
     """Retrieve all the files of a completed job calculation using the given transport.
 
     If the job defined anything in the `retrieve_temporary_list`, those entries will be stored in the
@@ -454,7 +452,9 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
     :param calculation: the instance of CalcJobNode to update.
     :param transport: an already opened transport to use for the retrieval.
     :param retrieved_temporary_folder: the absolute path to a directory in which to store the files
-        listed, if any, in the `retrieved_temporary_folder` of the jobs CalcInfo
+        listed, if any, in the `retrieved_temporary_folder` of the jobs CalcInfo.
+    :returns: The ``FolderData`` into which the files have been retrieved, or ``None`` if the calculation already has
+        a retrieved output node attached.
     """
     logger_extra = get_dblogger_extra(calculation)
     workdir = calculation.get_remote_workdir()
@@ -506,12 +506,7 @@ def retrieve_calculation(calculation: CalcJobNode, transport: Transport, retriev
         )
         retrieved_files.store()
 
-    # Make sure that attaching the `retrieved` folder with a link is the last thing we do. This gives the biggest chance
-    # of making this method idempotent. That is to say, if a runner gets interrupted during this action, it will simply
-    # retry the retrieval, unless we got here and managed to link it up, in which case we move to the next task.
-    retrieved_files.base.links.add_incoming(
-        calculation, link_type=LinkType.CREATE, link_label=calculation.link_label_retrieved
-    )
+    return retrieved_files
 
 
 def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:

@@ -593,6 +593,11 @@ class Waiting(plumpy.process_states.Waiting):
 
         monitor_result = await self._launch_task(task_monitor_job, node, transport_queue, monitors=monitors)
 
+        if monitor_result and monitor_result.outputs:
+            for label, output in monitor_result.outputs.items():
+                self.process.out(label, output)
+            self.process.update_outputs()
+
         if monitor_result and monitor_result.action == CalcJobMonitorAction.DISABLE_SELF:
             monitors.monitors[monitor_result.key].disabled = True
 

@@ -1,7 +1,10 @@
 """Tests for the :mod:`aiida.engine.processes.calcjobs.monitors` module."""
+from __future__ import annotations
+
 import time
 
 import pytest
+from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida.calculations.monitors import base
 from aiida.common.exceptions import EntryPointError
 from aiida.engine import run_get_node
@@ -11,7 +14,33 @@ from aiida.engine.processes.calcjobs.monitors import (
     CalcJobMonitorResult,
     CalcJobMonitors,
 )
-from aiida.orm import Dict, Int
+from aiida.orm import Dict, Int, Str
+
+
+class StoreMessageCalculation(ArithmeticAddCalculation):
+    """Subclass of ``ArithmeticAddCalculation`` that just adds the ``messages`` output namespace."""
+
+    @classmethod
+    def define(cls, spec):
+        """Define the process specification, including its inputs, outputs and known exit codes.
+
+        :param spec: the calculation job process spec to define.
+        """
+        super().define(spec)
+        spec.output_namespace('messages', valid_type=Str)
+
+
+def monitor_store_message(node, transport, **kwargs):  # pylint: disable=unused-argument
+    """Test monitor that returns an output node."""
+    import datetime
+    import secrets
+
+    return CalcJobMonitorResult(
+        action=CalcJobMonitorAction.DISABLE_ALL,
+        outputs={
+            'messages': {'datetime_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S'): Str(secrets.token_hex(15))}
+        },
+    )
 
 
 def test_calc_job_monitor_result_constructor_invalid():
@@ -175,3 +204,24 @@ def test_calc_job_monitors_process_poll_interval_integrated(entry_points, aiida_
     # Check that the number of log messages emitted by the monitor is just 1 as it should have been called just once.
     logs = [rec.message for rec in aiida_caplog.records if rec.message == 'monitor_emit_warning monitor was called']
     assert len(logs) == 1
+
+
+def test_calc_job_monitors_outputs(entry_points, aiida_local_code_factory):
+    """Test a monitor that returns outputs to be attached to the node."""
+    entry_points.add(StoreMessageCalculation, 'aiida.calculations:core.store_message')
+    entry_points.add(monitor_store_message, 'aiida.calculations.monitors:core.store_message')
+
+    code = aiida_local_code_factory('core.store_message', '/bin/bash')
+    builder = code.get_builder()
+    builder.x = Int(1)
+    builder.y = Int(1)
+    builder.monitors = {'store_message': Dict({'entry_point': 'core.store_message', 'minimum_poll_interval': 1})}
+    builder.metadata = {'options': {'sleep': 3, 'resources': {'num_machines': 1}}}
+
+    _, node = run_get_node(builder)
+    assert node.is_finished_ok
+    assert 'messages' in node.outputs
+    assert len(node.outputs.messages)
+    for message in node.outputs.messages.values():
+        assert isinstance(message, Str)
+        assert len(message.value) == 30, message.value

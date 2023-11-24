@@ -49,6 +49,9 @@ class CalcJobMonitorResult:
     override_exit_code: bool = True
     """If set to ``False``, the engine will keep the exit code returned by the parser."""
 
+    outputs: dict[str, t.Any] | None = None
+    """Optional dictionary of output nodes to be attached to the process."""
+
     def __post_init__(self):
         """Validate the attributes."""
         self.validate()

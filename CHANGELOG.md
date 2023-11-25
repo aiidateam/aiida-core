@@ -1,5 +1,324 @@
 # Changelog
 
+## v2.5.0 - 2023-12-20
+
+This minor release comes with a number of features that are focused on user friendliness of the CLI and the API.
+It also reduces the import time of modules, which makes the CLI faster to load and so tab-completion should be snappier.
+The release adds support for Python 3.12 and a great number of bugs are fixed.
+
+- [Create profiles without a database server](#create-profiles-without-a-database-server)
+- [Changes in process launch functions](#changes-in-process-launch-functions)
+- [Improvements for built-in data types](#improvements-for-built-in-data-types)
+- [Repository interface improvements](#repository-interface-improvements)
+- [Full list of changes](#full-list-of-changes)
+    - [Features](#features)
+    - [Performance](#performance)
+    - [Changes](#changes)
+    - [Fixes](#fixes)
+    - [Deprecations](#deprecations)
+    - [Documentation](#documentation)
+    - [Dependencies](#dependencies)
+    - [Devops](#devops)
+
+
+### Create profiles without a database server
+
+A new storage backend plugin has been added that uses [`SQLite`](https://www.sqlite.org/index.html) instead of PostgreSQL.
+This makes it a lot easier to setup across all platforms.
+A new profile using this storage backend can be created in a single command:
+```shell
+verdi profile setup core.sqlite_dos -n --profile <PROFILE_NAME> --email <EMAIL>
+```
+Although easier to setup compared to the default storage backend that uses PostgreSQL, it is less performant.
+This makes this storage ideally suited for use-cases that want to test or demonstrate AiiDA, or to just play around a bit.
+The storage is compatible with most of AiiDA's functionality, except for automated database migrations and some very specific `QueryBuilder` functionality.
+Therefore, for production databases, the default `core.psql_dos` storage entry point remains the recommended storage.
+
+It is now also possible to create a profile using an export archive:
+```shell
+verdi profile setup core.sqlite_dos -n --profile <PROFILE_NAME> --filepath <ARCHIVE>
+```
+where `<ARCHIVE>` should point to an export archive on disk.
+You can now use this profile like any other profile to inspect the data of the export archive.
+Note that this profile is read-only, so you will not be able to use it to mutate existing data or add new data to the profile.
+See the [documentation for more details and a more in-depth example](https://aiida.readthedocs.io/projects/aiida-core/en/v2.5.0/howto/archive_profile.html).
+
+Finally, the original storage plugin `core.psql_dos`, which uses PostgreSQL for the database is also accessible through `verdi profile setup core.psql_dos`.
+Essentially this is the same as the `verdi setup` command, which is kept for now for backwards compatibility.
+
+See the [documentation on storage plugins](https://aiida.readthedocs.io/projects/aiida-core/en/v2.5.0/topics/storage.html) for more details on the differences between these storage plugins and when to use which.
+
+The `verdi profile delete` command can now also be used to delete a profile for any of these storage plugins.
+You will be prompted whether you also want to delete all the data, or you can specify this with the `--delete-data` or `--keep-data` flags.
+
+### Changes in process launch functions
+
+The `aiida.engine.submit` method now accepts the argument `wait`.
+When set to `True`, instead of returning the process node straight away, the function will wait for the process to terminate before returning.
+By default it is set to `False` so the current behavior remains unchanged.
+```python
+from aiida.engine import submit
+node = submit(Process, wait=True)  # This call will block until process is terminated
+assert node.is_terminated
+```
+
+This new feature is mostly useful for interactive demos and tutorials in notebooks.
+In these situations, it might be beneficial to use `aiida.engine.run` because the cell will be blocking until it is finished, indicating to the user that something is processing.
+When using `submit`, the cell returns immediately, but the results are not ready yet and typically the next cell cannot yet be executed.
+Instead, the demo should redirect the user to using something like `verdi process list` to query the status of the process.
+
+However, using `run` has downsides as well, most notably that the process will be lost if the notebook gets disconnected.
+For processes that are expected to run longer, this can be really problematic, and so `submit` will have to be used regardless.
+With the new `wait` argument, `submit` provides the best of both worlds.
+
+Although very useful, the introduction of this feature does break any processes that define `wait` or `wait_interval` as an input.
+Since the inputs to a process are defined as keyword arguments, these inputs would overlap with the arguments to the `submit` method.
+To solve this problem, inputs can now _also_ be passed as a dictionary, e.g., where one would do before:
+```python
+submit(SomeProcess, x=Int(1), y=Int(2), code=load_code('some-code'))
+# or alternatively
+inputs = {
+    'x': Int(1),
+    'y': Int(2),
+    'code': load_code('some-code'),
+}
+submit(SomeProcess, **inputs)
+```
+The new syntax allows the following:
+```python
+inputs = {
+    'x': Int(1),
+    'y': Int(2),
+    'code': load_code('some-code'),
+}
+submit(SomeProcess, inputs)
+```
+Passing inputs as keyword arguments is still supported because sometimes that notation is still more legible than defining an intermediate dictionary.
+However, if both an input dictionary and keyword arguments are define, an exception is raised.
+
+### Improvements for built-in data types
+
+The `XyData` and `ArrayData` data plugins now allow to directly pass the content in the constructor.
+This allows defining the complete node in a single line
+```python
+import numpy as np
+from aiida.orm import ArrayData, XyData
+
+xy = XyData(np.array([1, 2]), np.array([3, 4]), x_name='x', x_units='E', y_names='y', y_units='F')
+assert all(xy.get_x()[1] == np.array([1, 2]))
+
+array = ArrayData({'a': np.array([1, 2]), 'b': np.array([3, 4])})
+assert all(array.get_array('a') == np.array([1, 2]))
+```
+It is now also no longer required to specify the name in `ArrayData.get_array` as long as the node contains just a single array:
+```python
+import numpy as np
+from aiida.orm import ArrayData
+
+array = ArrayData(np.array([1, 2]))
+assert all(array.get_array() == np.array([1, 2]))
+```
+
+### Repository interface improvements
+
+As of `v2.0.0`, the repository interface of the `Node` class was moved to the `Node.base.repository` namespace.
+This was done to clean up the top-level namespace of the `Node` class which was getting very crowded, and in most use-cases, a user never needs to directly access these methods.
+It is up to the data plugin to provide specific methods to retrieve data that might be stored in the repository.
+For example, with the `ArrayData`, a user should now have to go to `ArrayData.base.repository.get_object_content` to retrieve an array from the repository, but the class provides `ArrayData.get_array` as a shortcut.
+
+A few data plugins that ship with `aiida-core` didn't respect this guideline, most notably the `FolderData` and `SinglefileData` plugins.
+This has been corrected in this release: for `FolderData`, all the repository methods are now once again directly available on the top-level namespace.
+The `SinglefileData` now makes it easier to get the content as bytes.
+Before, one had to do:
+```python
+from aiida.orm import SinglefileData
+node = SinglefileData.from_string('some content')
+with node.open(mode='rb') as handle:
+    byte_content = handle.read()
+```
+this can now be achieved with:
+```python
+from aiida.orm import SinglefileData
+node = SinglefileData.from_string('some content')
+byte_content = node.get_content(mode='rb')
+```
+
+As of v2.0, due to the repository redesign, it was no longer possible to access a file directly by a filepath on disk.
+The repository interface only interacts with file-like objects to stream the content.
+However, a lot of Python libraries expect filepaths on disk and do not support file-like objects.
+This would force an AiiDA user to write the file from the repository to a temporary file on disk, and pass that temporary filepath.
+For example, consider the `numpy.loadtxt` function which requires a filepath, the code would look something like:
+```python
+import pathlib
+import shutil
+import tempfile
+
+with tempfile.TemporaryDirectory() as tmp_path:
+
+    # Copy the entire content to the temporary folder
+    dirpath = pathlib.Path(tmp_path)
+    node.base.repository.copy_tree(dirpath)
+
+    # Or copy the content of a file. Should use streaming
+    # to avoid reading everything into memory
+    filepath = (dirpath / 'some_file.txt')
+    with filepath.open('rb') as target:
+        with node.base.repository.open('rb') as source:
+            shutil.copyfileobj(source, target)
+
+    # Now use `filepath` to library call, e.g.
+    numpy.loadtxt(filepath)
+```
+This burdensome boilerplate has now been made obsolete by the `as_path` method:
+```python
+with node.base.repository.as_path() as filepath:
+    numpy.loadtxt(filepath)
+```
+For the `FolderData` and `SinglefileData` plugins, the method can be accessed on the top-level namespace of course.
+
+### Full list of changes
+
+#### Features
+- Add the `SqliteDosStorage` storage backend [[702f88788]](https://github.com/aiidateam/aiida-core/commit/702f8878829b8e2a65d81623cc2238eb40791bc6)
+- `XyData`: Allow defining array(s) on construction [[f11598dc6]](https://github.com/aiidateam/aiida-core/commit/f11598dc68a80bbfa026db064158aae64ac0e802)
+- `ArrayData`: Make `name` optional in `get_array` [[7fbe67cb6]](https://github.com/aiidateam/aiida-core/commit/7fbe67cb6273cf2bae4256cdbda284aeb89a9372)
+- `ArrayData`: Allow defining array(s) on construction [[35e669fe8]](https://github.com/aiidateam/aiida-core/commit/35e669fe86ca467e656f4e500f11d533f7492107)
+- `FolderData`: Expose repository API on top-level namespace [[3e1f87373]](https://github.com/aiidateam/aiida-core/commit/3e1f87373e3cf2c40e8a3134ac848d4c16b9dbcf)
+- Repository: Add the `as_path` context manager [[b0546e8ed]](https://github.com/aiidateam/aiida-core/commit/b0546e8ed12b0982617293ab4a03ba3ec2d8ea44)
+- Caching: Add the `strict` argument configuration validation [[f272e197e]](https://github.com/aiidateam/aiida-core/commit/f272e197e2992f445b2b51608a6ffe17a2a8f4c1)
+- Caching: Try to import an identifier if it is a class path [[2c56fc234]](https://github.com/aiidateam/aiida-core/commit/2c56fc234139e624eb1da5ee016c1761b7b1a70a)
+- CLI: Add the command `verdi profile setup` [[351021164]](https://github.com/aiidateam/aiida-core/commit/351021164d00aa3a2a78b5b6e43e8a87a8553151)
+- CLI: Add `cached` and `cached_from` projections to `verdi process list` [[3b445c4f1]](https://github.com/aiidateam/aiida-core/commit/3b445c4f1c793ecc9b5c2efce863620748610d61)
+- CLI: Add `--all` flag to `verdi process kill` [[db1375949]](https://github.com/aiidateam/aiida-core/commit/db1375949b9ec133ee3b06bc3bfe2f8185eceeb6)
+- CLI: Lazily validate entry points in parameter types [[d3807d422]](https://github.com/aiidateam/aiida-core/commit/d3807d42229ffbad4e74752b6842a60f66bbafed)
+- CLI: Add repair hint to `verdi process play/pause/kill` [[8bc31bfd1]](https://github.com/aiidateam/aiida-core/commit/8bc31bfd1dae84a2240470a8163b3407eb27ae03)
+- CLI: Add the `verdi process repair` command [[3e3d9b9f7]](https://github.com/aiidateam/aiida-core/commit/3e3d9b9f70bb1ae2f7ae86db06469b73c5ebdfae)
+- CLI: Validate strict in `verdi config set caching.disabled_for` [[9cff59232]](https://github.com//commit/9cff5923263cd349da731b02d309120e754c0b95)
+- `DynamicEntryPointCommandGroup`: Allow entry points to be excluded [[9e30ec8ba]](https://github.com//commit/9e30ec8baeee74ae6d1c08459cb6eacd46d12e8a)
+- Add the `aiida.common.log.capture_logging` utility [[9006eef3a]](https://github.com/aiidateam/aiida-core/commit/9006eef3ac1bb7b47c8ced63766e2f5346d46e91)
+- `Config`: Add the `create_profile` method [[ae7abe8a6]](https://github.com/aiidateam/aiida-core/commit/ae7abe8a6bddcf8d59b6ac213a73deeb65d4c056)
+- Engine: Add the `await_processes` utility function [[45767f050]](https://github.com/aiidateam/aiida-core/commit/45767f0509513fecd287e334fb26299db2adf14b)
+- Engine: Add the `wait` argument to `submit` [[8f5e929d1]](https://github.com/aiidateam/aiida-core/commit/8f5e929d1660b663894bac52f385874011e47872)
+- ORM: Add the `User.is_default` property [[a43c4cd0f]](https://github.com/aiidateam/aiida-core/commit/a43c4cd0fcee252202f9a5a3016aef156a36ac29)
+- ORM: Add `NodeCaching.CACHED_FROM_KEY` for `_aiida_cached_from` constant [[35fc3ae57]](https://github.com/aiidateam/aiida-core/commit/35fc3ae5790023022d4d78cf2fe7274a72b590d2)
+- ORM: Add the `Entity.get_collection` classmethod [[305f1dbf4]](https://github.com/aiidateam/aiida-core/commit/305f1dbf4ccb3e0e2e79865aee8d248e5ad55b95)
+- ORM: Add the `Dict.get` method [[184fcd16e]](https://github.com//commit/184fcd16e9a88fbf9d4e754870416f4a56de55b5)
+- ORM: Register `numpy.ndarray` with the `to_aiida_type` to `ArrayData` [[d8dd776a6]](https://github.com/aiidateam/aiida-core/commit/d8dd776a68f438702aa07b58d754b35ab0745937)
+- Manager: Add the `set_default_user_email` [[8f8f55807]](https://github.com/aiidateam/aiida-core/commit/8f8f55807fd02872e7a345b7bd10eb68f65cbcda)
+- `CalcJob`: Add support for nested targets in `remote_symlink_list` [[0ec650c1a]](https://github.com/aiidateam/aiida-core/commit/0ec650c1ae31ac42f80940103ac81cb0eb53f06d)
+- `RemoteData`: Add the `is_cleaned` property [[2a2353d3d]](https://github.com/aiidateam/aiida-core/commit/2a2353d3dd2712afda8f1ebbcf749c7cc99f06fd)
+- `SqliteTempBackend`: Add support for reading from and writing to archives [[83fc5cf69]](https://github.com/aiidateam/aiida-core/commit/83fc5cf69e8fcecba1f4c47ccb6599e6d78ba9dc)
+- `StorageBackend`: Add the `read_only` class attribute [[8a4303ff5]](https://github.com//commit/8a4303ff53ec0b14fe43fbf1f4e01b69efc689df)
+- `SinglefileData`: Add `mode` keyword to `get_content` [[d082df7f1]](https://github.com/aiidateam/aiida-core/commit/d082df7f1b53057e15c8cbbc7e662ec808c27722)
+- `BaseRestartWorkChain`: Factor out attachment of outputs [[d6093d101]](https://github.com/aiidateam/aiida-core/commit/d6093d101ddcdaba74a14b44bdd91eea95628903)
+- Add support for `NodeLinksManager` to YAML serializer [[6905c134e]](https://github.com//commit/6905c134e737183a1f366d9f86d9f77dd4d74730)
+
+#### Performance
+- CLI: Make loading of config lazy for improved responsiveness [[d533b7a54]](https://github.com/aiidateam/aiida-core/commit/d533b7a540ab9d420acec1833bb7e23f50d8a7c1)
+- Cache the lookup of entry points [[12cc930db]](https://github.com/aiidateam/aiida-core/commit/12cc930dbf8f377527d89f6f39bc28a4638f8377)
+- Refactor: Delay import of heavy packages to speed up import time [[5dda6fd97]](https://github.com/aiidateam/aiida-core/commit/5dda6fd9749a886585cebf9afc288ebc46f00429)
+- Refactor: Delay import of heavy packages to speed up import time [[8e6e08dc7]](https://github.com/aiidateam/aiida-core/commit/8e6e08dc780152333e4a6b6966469a98e51fe061)
+- Do not import `aiida.cmdline` in `aiida.orm` [[0879a4e27]](https://github.com/aiidateam/aiida-core/commit/0879a4e27559ac368545afd18a1f061e9c29b8c7)
+- Lazily define `__type_string` in `orm.Group` [[ebf3101d9]](https://github.com/aiidateam/aiida-core/commit/ebf3101d9b2c6298070853bae6c7b06489a363ca)
+- Lazily define `_plugin_type_string` and `_query_type_string of `Node` [[3a61a7003]](https://github.com/aiidateam/aiida-core/commit/3a61a70032d6ace3d27f1a701be048f3f2026b43)
+
+#### Changes
+- CLI: `verdi profile delete` is now storage plugin agnostic [[5015f5fe1]](https://github.com//commit/5015f5fe12d93024ed0d7594d860f1f2cd977548)
+- CLI: Usability improvements for interactive `verdi setup` [[c53ea20a4]](https://github.com/aiidateam/aiida-core/commit/c53ea20a497f66bc88f68d0603cf9a32614fc4c2)
+- CLI: Do not load config in defaults and callbacks during tab-completion [[062058862]](https://github.com/aiidateam/aiida-core/commit/06205886204c142f771dab37f1a78f3bf0ba7251)
+- Engine: Make process inputs in launchers positional [[6d18ccb86]](https://github.com//commit/6d18ccb8680f16e8da80deffe40808cc2e669de0)
+- Remove `aiida.manage.configuration.load_documentation_profile` [[9941266ce]](https://github.com//commit/9941266ced93f31191152034606bf5b1e049cc79)
+- ORM: `Sealable.seal()` return `self` instead of `None` [[16e3bd3b5]](https://github.com/aiidateam/aiida-core/commit/16e3bd3b5087b95d31983df2147d4c14bb331077)
+- ORM: Move deprecation warnings from module level [[c4afdb9be]](https://github.com//commit/c4afdb9be5633b68d72121c36916dfc6791d8b29)
+- Config: Switch from `jsonschema` to `pydantic` [[4203f162d]](https://github.com/aiidateam/aiida-core/commit/4203f162df803946b2396ca820e6b6139a3ecc61)
+- `DynamicEntryPointCommandGroup`: Use `pydantic` to define config model [[1d8ea2a27]](https://github.com/aiidateam/aiida-core/commit/1d8ea2a27381feeabfe38f5a3647d22ac1b825e4)
+- Config: Remove use of `NO_DEFAULT` for `Option.default` [[275718cc8]](https://github.com/aiidateam/aiida-core/commit/275718cc8dae866a6fc847fa898a3290672e9d7a)
+
+#### Fixes
+- Add the `report` method to `logging.LoggerAdapter` [[7d6684ce1]](https://github.com/aiidateam/aiida-core/commit/7d6684ce1f46862e69c59e9b48da97ab63d9f786)
+- `CalcJob`: Fix MPI behavior if `withmpi` option default is True [[84737506e]](https://github.com//commit/84737506e99860beb3ecfa329c1d1e9d4636cd16)
+- `CalcJobNode`: Fix validation for `depth=None` in `retrieve_list` [[03c86d5c9]](https://github.com/aiidateam/aiida-core/commit/03c86d5c988d9d2e1f656ba28bd2b8292fc7b02d)
+- CLI: Fix bug in `verdi data core.trajectory show` for various formats [[fd4c1269b]](https://github.com/aiidateam/aiida-core/commit/fd4c1269bf913602660b13bdb49c3bc15360448a)
+- CLI: Add missing entry point groups for `verdi plugin list` [[ae637d8c4]](https://github.com/aiidateam/aiida-core/commit/ae637d8c474a0071031c6a9bf6f65d2a924f2e81)
+- CLI: Remove loading backend for `verdi plugin list` [[34e564ad0]](https://github.com/aiidateam/aiida-core/commit/34e564ad081143a4739c58a7aaa499e55d4e4651)
+- CLI: Fix `repository` being required for `verdi quicksetup` [[d4666009e]](https://github.com/aiidateam/aiida-core/commit/d4666009e82fc104a1fa7965b1f50934bec36f0f)
+- CLI: Fix `verdi config set` when setting list option [[314917801]](https://github.com/aiidateam/aiida-core/commit/314917801181d163f0760ca5788c543103d96bf5)
+- CLI: Keep list unique in `verdi config set --append` [[3844f86c6]](https://github.com/aiidateam/aiida-core/commit/3844f86c6bb7da1dfc40542210b450a70b8950c5)
+- CLI: Improve the formatting of `verdi user list` [[806d7e236]](https://github.com/aiidateam/aiida-core/commit/806d7e2366225bbe16ed982c320a708dbbf323f5)
+- CLI: Set defaults for user details in profile setup [[8b8887e55]](https://github.com/aiidateam/aiida-core/commit/8b8887e559e02eadac832a89f7012872040e1cbc)
+- CLI: Reuse options in `verdi user configure` from setup [[1c0b702ba]](https://github.com/aiidateam/aiida-core/commit/1c0b702bafb56c6452c975ad7020796303742405)
+- `InteractiveOption`: Fix validation being skipped if `!` provided [[c4b183bc6]](https://github.com/aiidateam/aiida-core/commit/c4b183bc6d6083dad0754e42de19e96a867ff8ed)
+- ORM: Fix problem with detached `DbAuthInfo` instances [[ec2c6a8fe]](https://github.com//commit/ec2c6a8fe3b397ab9f7314c556551114ea15c7df)
+- ORM: Check nodes are from same backend in `validate_link` [[7bd546ebe]](https://github.com/aiidateam/aiida-core/commit/7bd546ebe67845b47c0dc14567c1ef7a557c23ef)
+- ORM: `ProcessNode.is_valid_cache` is `False` for unsealed nodes [[a1f456d43]](https://github.com/aiidateam/aiida-core/commit/a1f456d436fee6a54327e4ba9b0841a980998f52)
+- ORM: Explicitly pass backend when constructing new entity [[96667c8c6]](https://github.com/aiidateam/aiida-core/commit/96667c8c63b0053e79c8a1531707890027f10e6a)
+- ORM: Replace `.collection(backend)` with `.get_collection(backend)` [[bac2152c4]](https://github.com/aiidateam/aiida-core/commit/bac2152c450a83cb6332516db315147cfc982265)
+- Make `warn_deprecation` respect the `warnings.showdeprecations` option [[6c28c63e9]](https://github.com//commit/6c28c63e95323a4e3ba8730ef720e1a708d91133)
+- `PsqlDosBackend`: Fix changes not persisted after `iterall` and `iterdict` [[2ea5087c0]](https://github.com/aiidateam/aiida-core/commit/2ea5087c079417d6d0b37cbc0502ed7cab173c11)
+- `PsqlDosBackend`: Fix `Node.store` excepting when inside a transaction [[624dcd9fc]](https://github.com/aiidateam/aiida-core/commit/624dcd9fcc1f0f9aadf54c59afa435fd78598ef7)
+- `Parser.parse_from_node`: Validate outputs against process spec [[d16792f3d]](https://github.com/aiidateam/aiida-core/commit/d16792f3d80fb1c497840ff1b0f6f1e114a262da)
+- Fix `QueryBuilder.count` for storage backends using sqlite [[5dc1555bc]](https://github.com/aiidateam/aiida-core/commit/5dc1555bc186a7b0205323801833037ae9a6bc36)
+- Process functions: Fix bug with variable arguments [[ca8bbc67f]](https://github.com//commit/ca8bbc67fcb40d6cec4e1cae32ce114495c0eb1d)
+- `SqliteZipBackend`: Return `self` in `store` [[6a43b3f15]](https://github.com/aiidateam/aiida-core/commit/6a43b3f15ca9cc2eab1a13f6670921f71809a956)
+- `SqliteZipBackend`: Ensure the `filepath` is absolute and exists [[5eac8b49d]](https://github.com//commit/5eac8b49df33287c3dc6cfbf46eae491c3196fc4)
+- Remove `with_dbenv` use in `aiida.orm` [[35c57b9eb]](https://github.com/aiidateam/aiida-core/commit/35c57b9eb63b42531111f27ac7cc76e129ccd14a)
+
+#### Deprecations
+- Deprecated `aiida.orm.nodes.data.upf` and `verdi data core.upf` [[6625fd245]](https://github.com/aiidateam/aiida-core/commit/6625fd2456f4ee13297d797d08925a359474e30e)
+
+#### Documentation
+- Add topic section on storage [[83dbe1ad9]](https://github.com//commit/83dbe1ad92be580fa26412e5db4d1f370ec91c7a)
+- Add important note on using `iterall` and `iterdict` [[0aea7e41b]](https://github.com/aiidateam/aiida-core/commit/0aea7e41b24fb479b2a1bbc71ab72f43e823f3a7)
+- Add links about "entry point" and "plugin" to tutorial [[517ffcb1c]](https://github.com/aiidateam/aiida-core/commit/517ffcb1c5ce32f281589432cde1d58588fa83e0)
+- Disable the `warnings.showdeprecations` option [[4adb06c0c]](https://github.com//commit/4adb06c0ce32335fffe5d970febfd36dcd85edd5)
+- Fix instructions for inspecting archive files [[0a9c2788e]](https://github.com//commit/0a9c2788ea54926a202c5c3393d9d34815bf4356)
+- Changes are reverted if exception during `iterall` [[17c5d8724]](https://github.com/aiidateam/aiida-core/commit/17c5d872495fbb1b6a80d985cb71088095083bb9)
+- Various minor fixes to `run_docker.rst` [[d3788adea]](https://github.com/aiidateam/aiida-core/commit/d3788adea220107bce3582d246bcc9674b5e1571)
+- Update `pydata-sphinx-theme` and add Discourse links [[13df42c14]](https://github.com/aiidateam/aiida-core/commit/13df42c14abc6145da3880616288a98b2d5ecc74)
+- Correct example of `verdi config unset` in troubleshooting [[d6143dbc8]](https://github.com/aiidateam/aiida-core/commit/d6143dbc87bbbb3b6d4758b3922a47741493897e)
+- Improvements to sections containing recently added functionality [[836419f66]](https://github.com/aiidateam/aiida-core/commit/836419f6694e9d4d8e580f1b6fd71ffa27f635ef)
+- Fix typo in `run_codes.rst` [[9bde86ec7]](https://github.com/aiidateam/aiida-core/commit/9bde86ec7700b3dd2df55c69fb8efb9887ed07d6)
+- Fixtures: Fix `suppress_warnings` of `run_cli_command` [[9807cede4]](https://github.com//commit/9807cede4601349a50ac2bff72a32173a0e3d702)
+- Update citation suggestions [[1dafdf2dd]](https://github.com/aiidateam/aiida-core/commit/1dafdf2ddb38c801d2075d9af9bbde9e0d26c8ca)
+
+#### Dependencies
+- Add support for Python 3.12 [[c39b4fda4]](https://github.com/aiidateam/aiida-core/commit/c39b4fda40c88737f1c56f5ad6f42cbed974478b)
+- Update to `sqlalchemy~=2.0` [[a216f5052]](https://github.com/aiidateam/aiida-core/commit/a216f5052c56bbbeffac296fcd59af177f703829)
+- Update to `disk-objectstore~=1.0` [[56f9f6ca0]](https://github.com/aiidateam/aiida-core/commit/56f9f6ca03c7b69766e725449fd955848577055a)
+- Add new extra `tui` that provides `verdi` as a TUI [[a42e09c02]](https://github.com/aiidateam/aiida-core/commit/a42e09c026e793e5670b88037d5f4863cc4097f0)
+- Add upper limit `jedi<0.19` [[fae2a9cfd]](https://github.com/aiidateam/aiida-core/commit/fae2a9cfda461a26e80b648795e45087ea8133fd)
+- Update requirement `mypy~=1.7` [[c2fcad4ab]](https://github.com/aiidateam/aiida-core/commit/c2fcad4ab3f6bc1899475af037e4b14f3497feec)
+- Add compatibility for `pymatgen>=v2023.9.2` [[4e0e7d8e9]](https://github.com/aiidateam/aiida-core/commit/4e0e7d8e9fd10c4adc3630cf24cebdf749f95351)
+- Bump `yapf` to `0.40.0` [[a8ae50853]](https://github.com/aiidateam/aiida-core/commit/a8ae508537d2b6e9ffa1de9beb140065282a30f8)
+- Update pre-commit requirement `flynt==1.0.1` [[e01ea4b97]](https://github.com/aiidateam/aiida-core/commit/e01ea4b97d094f0543b0f0c631fa0463c8baf2f5)
+- Docker: Pinning mamba version to 1.5.2 [[a6c2dbe1c]](https://github.com//commit/a6c2dbe1c434f0df7790e41632c5dc578edebb97)
+- Docker: Bump Python version to 3.10.13 [[b168f2e12]](https://github.com//commit/b168f2e12776136a8601b42dd85d7b2bb4746e30)
+
+#### Devops
+- CI: Use Python 3.10 for `pre-commit` in CI and CD workflows [[f41c8ac90]](https://github.com/aiidateam/aiida-core/commit/f41c8ac9061c379f72286631bfb1c486cc302dc8)
+- CI: Using concurrency for CI actions [[4db54b7f8]](https://github.com/aiidateam/aiida-core/commit/4db54b7f833096e2d5f3d439683c28749467b20d)
+- CI: Update tox to use Python 3.9 [[227390a52]](https://github.com/aiidateam/aiida-core/commit/227390a52a6dc77faa20cb1cc6372ec7f66e0409)
+- Docker: Bump `upload-artifact` action to v4 for Docker workflow [[bfdb2828a]](https://github.com//commit/bfdb2828a823052df52cb5cf61599cbc07b0bb4b)
+- Refactor: Replace `all` with `iterall` where beneficial [[8a2fece02]](https://github.com/aiidateam/aiida-core/commit/8a2fece02411c982eb16e8fed8991ffaf75fa76f)
+- Pre-commit: Disable `no-member` and `no-name-in-module` for `aiida.orm` [[15379bbee]](https://github.com/aiidateam/aiida-core/commit/15379bbee2cbf9889772d497e1a6b77e230aaa2f)
+- Tests: Move memory leak tests to main unit test suite [[561f93cef]](https://github.com/aiidateam/aiida-core/commit/561f93cef15355e08a3ec19173132deec031ed67)
+- Tests: Move ipython magic tests to main unit test suite [[ce9acc312]](https://github.com/aiidateam/aiida-core/commit/ce9acc312c0cfe351f188d399046de6a4248cb16)
+- Tests: Remove deprecated `aiida/manage/tests/main` module [[5b9da7d1e]](https://github.com/aiidateam/aiida-core/commit/5b9da7d1eeb3cb01474f2c95526148ba136c6f3c)
+- Tests: Refactor transport tests from `unittest` to `pytest` [[ec64780c2]](https://github.com/aiidateam/aiida-core/commit/ec64780c206cdb040eee740b17865e6f0ff81cd8)
+- Tests: Fix failing `tests/cmdline/commands/test_setup.py` [[b6f7ec188]](https://github.com/aiidateam/aiida-core/commit/b6f7ec18830d8495a76eefb3ef59e0069db49f99)
+- Tests: Print stack trace if CLI command excepts with `run_cli_command` [[08cba0f78]](https://github.com/aiidateam/aiida-core/commit/08cba0f78acbf3da760f8d9110426b80df20ab3a)
+- Tests: Make `PsqlDosStorage` profile unload test more robust [[1c72eac1f]](https://github.com/aiidateam/aiida-core/commit/1c72eac1f91e02bc464c66328ea74911762b94fd)
+- Tests: Fix flaky work chain tests using `recwarn` fixture [[207151784]](https://github.com/aiidateam/aiida-core/commit/2071517849820e218a28d3968e45d211e8cd6247)
+- Tests: Fix `StructureData` test breaking for recent `pymatgen` versions [[d1d64e800]](https://github.com/aiidateam/aiida-core/commit/d1d64e8004c31209488f71a160a4f4824d02c081)
+- Typing: Improve annotations of process functions [[a85af4f0c]](https://github.com/aiidateam/aiida-core/commit/a85af4f0c017b8c03426ef7927163a33add08004)
+- Typing: Add type hinting for `aiida.orm.nodes.data.array.xy` [[2eaa5449b]](https://github.com/aiidateam/aiida-core/commit/2eaa5449bca55ac87475900dd64ca086bddc0023)
+- Typing: Add type hinting for `aiida.orm.nodes.data.array.array` [[c19b1423a]](https://github.com/aiidateam/aiida-core/commit/c19b1423adfb0b8490cdfb899cabd8e88e03237f)
+- Typing: Add overload signatures for `open` [[0986f6b59]](https://github.com/aiidateam/aiida-core/commit/0986f6b59086e2e0947906654c1642cf264b462e)
+- Typing: Add overload signatures for `get_object_content` [[d18eedc8b]](https://github.com/aiidateam/aiida-core/commit/d18eedc8be565af12f36e48bd8392e9b29438c15)
+- Typing: Correct type annotation of `WorkChain.on_wait` [[923cc314c]](https://github.com/aiidateam/aiida-core/commit/923cc314c527a183e55819b96de8ae027c9f0612)
+- Typing: Improve type hinting for `aiida.orm.nodes.data.singlefile` [[b9d087dd4]](https://github.com/aiidateam/aiida-core/commit/b9d087dd47c2b09878d078fc6a64cede0e1ce5e1)
+
+
 ## v2.4.2 - 2023-11-30
 
 ### Docker

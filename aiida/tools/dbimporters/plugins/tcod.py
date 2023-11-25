@@ -12,9 +12,7 @@ from aiida.tools.dbimporters.plugins.cod import CodDbImporter, CodEntry, CodSear
 
 
 class TcodDbImporter(CodDbImporter):
-    """
-    Database importer for Theoretical Crystallography Open Database.
-    """
+    """Database importer for Theoretical Crystallography Open Database."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -22,8 +20,7 @@ class TcodDbImporter(CodDbImporter):
         self.setup_db(**kwargs)
 
     def query(self, **kwargs):
-        """
-        Performs a query on the TCOD database using ``keyword = value`` pairs,
+        """Performs a query on the TCOD database using ``keyword = value`` pairs,
         specified in ``kwargs``.
 
         :return: an instance of
@@ -44,11 +41,7 @@ class TcodDbImporter(CodDbImporter):
 
 
 class TcodSearchResults(CodSearchResults):
-    """
-    Results of the search, performed on TCOD.
-    """
-
-    # pylint: disable=abstract-method
+    """Results of the search, performed on TCOD."""
 
     _base_url = 'http://www.crystallography.net/tcod/'
 
@@ -58,11 +51,7 @@ class TcodSearchResults(CodSearchResults):
 
 
 class TcodEntry(CodEntry):
-    """
-    Represents an entry from TCOD.
-    """
-
-    # pylint: disable=abstract-method
+    """Represents an entry from TCOD."""
 
     _license = 'CC0'
 
@@ -71,10 +60,9 @@ class TcodEntry(CodEntry):
         uri,
         db_name='Theoretical Crystallography Open Database',
         db_uri='http://www.crystallography.net/tcod',
-        **kwargs
+        **kwargs,
     ):
-        """
-        Creates an instance of
+        """Creates an instance of
         :py:class:`aiida.tools.dbimporters.plugins.tcod.TcodEntry`, related
         to the supplied URI.
         """

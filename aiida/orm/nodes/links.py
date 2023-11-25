@@ -14,7 +14,7 @@ from ..querybuilder import QueryBuilder
 from ..utils.links import LinkManager, LinkTriple
 
 if t.TYPE_CHECKING:
-    from .node import Node  # pylint: disable=unused-import
+    from .node import Node
 
 
 class NodeLinks:
@@ -79,19 +79,21 @@ class NodeLinks:
         """
         from aiida.orm.utils.links import validate_link
 
-        from .node import Node  # pylint: disable=redefined-outer-name
+        from .node import Node
 
         validate_link(source, self._node, link_type, link_label, backend=self._node.backend)
 
         # Check if the proposed link would introduce a cycle in the graph following ancestor/descendant rules
         if link_type in [LinkType.CREATE, LinkType.INPUT_CALC, LinkType.INPUT_WORK]:
-            builder = QueryBuilder(backend=self._node.backend).append(
-                Node, filters={'id': self._node.pk}, tag='parent').append(
-                Node, filters={'id': source.pk}, tag='child', with_ancestors='parent')  # yapf:disable
+            builder = (
+                QueryBuilder(backend=self._node.backend)
+                .append(Node, filters={'id': self._node.pk}, tag='parent')
+                .append(Node, filters={'id': source.pk}, tag='child', with_ancestors='parent')
+            )
             if builder.count() > 0:
                 raise ValueError('the link you are attempting to create would generate a cycle in the graph')
 
-    def validate_outgoing(self, target: 'Node', link_type: LinkType, link_label: str) -> None:  # pylint: disable=unused-argument
+    def validate_outgoing(self, target: 'Node', link_type: LinkType, link_label: str) -> None:
         """Validate adding a link of the given type from ourself to a given node.
 
         The validity of the triple (source, link, target) should be validated in the `validate_incoming` call.
@@ -104,7 +106,8 @@ class NodeLinks:
         :raise TypeError: if `target` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid
         """
-        from .node import Node  # pylint: disable=redefined-outer-name
+        from .node import Node
+
         type_check(link_type, LinkType, f'link_type should be a LinkType enum but got: {type(link_type)}')
         type_check(target, Node, f'target should be a `Node` instance but got: {type(target)}')
 
@@ -114,7 +117,7 @@ class NodeLinks:
         link_type: t.Union[LinkType, t.Sequence[LinkType]] = (),
         link_label_filter: t.Optional[str] = None,
         link_direction: str = 'incoming',
-        only_uuid: bool = False
+        only_uuid: bool = False,
     ) -> list[LinkTriple]:
         """Return the list of stored link triples directly incoming to or outgoing of this node.
 
@@ -127,7 +130,7 @@ class NodeLinks:
         :param link_direction: `incoming` or `outgoing` to get the incoming or outgoing links, respectively.
         :param only_uuid: project only the node UUID instead of the instance onto the `NodeTriple.node` entries
         """
-        from .node import Node  # pylint: disable=redefined-outer-name
+        from .node import Node
 
         if not isinstance(link_type, (tuple, list)):
             link_type = cast(t.Sequence[LinkType], (link_type,))
@@ -155,7 +158,7 @@ class NodeLinks:
                 with_incoming='main',
                 project=node_project,
                 edge_project=['type', 'label'],
-                edge_filters=edge_filters
+                edge_filters=edge_filters,
             )
         else:
             builder.append(
@@ -163,7 +166,7 @@ class NodeLinks:
                 with_outgoing='main',
                 project=node_project,
                 edge_project=['type', 'label'],
-                edge_filters=edge_filters
+                edge_filters=edge_filters,
             )
 
         return [LinkTriple(entry[0], LinkType(entry[1]), entry[2]) for entry in builder.all()]
@@ -173,7 +176,7 @@ class NodeLinks:
         node_class: Optional[t.Type['Node']] = None,
         link_type: t.Union[LinkType, t.Sequence[LinkType]] = (),
         link_label_filter: t.Optional[str] = None,
-        only_uuid: bool = False
+        only_uuid: bool = False,
     ) -> LinkManager:
         """Return a list of link triples that are (directly) incoming into this node.
 
@@ -197,9 +200,8 @@ class NodeLinks:
 
         # Get all cached link triples
         for link_triple in self.incoming_cache:
-
             if only_uuid:
-                link_triple = LinkTriple(
+                link_triple = LinkTriple(  # noqa: PLW2901
                     link_triple.node.uuid,  # type: ignore[arg-type]
                     link_triple.link_type,
                     link_triple.link_label,
@@ -224,7 +226,7 @@ class NodeLinks:
         node_class: Optional[t.Type['Node']] = None,
         link_type: t.Union[LinkType, t.Sequence[LinkType]] = (),
         link_label_filter: t.Optional[str] = None,
-        only_uuid: bool = False
+        only_uuid: bool = False,
     ) -> LinkManager:
         """Return a list of link triples that are (directly) outgoing of this node.
 

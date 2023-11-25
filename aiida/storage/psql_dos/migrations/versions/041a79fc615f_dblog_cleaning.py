@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member,import-error,no-name-in-module,protected-access
 """This migration cleans the log records from non-Node entity records.
 
 It removes from the DbLog table the legacy workflow records and records
@@ -19,8 +18,8 @@ Revision ID: 041a79fc615f
 Revises: 7ca08c391c49
 Create Date: 2018-12-28 15:53:14.596810
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.sql import text
 
 from aiida.storage.psql_dos.migrations.utils.dblog_update import export_and_clean_workflow_logs
@@ -33,8 +32,7 @@ depends_on = None
 
 
 def upgrade():
-    """
-    Changing the log table columns to use uuid to reference remote objects and log entries.
+    """Changing the log table columns to use uuid to reference remote objects and log entries.
     Upgrade function.
     """
     connection = op.get_bind()
@@ -52,10 +50,12 @@ def upgrade():
     op.create_foreign_key(
         'db_dblog_dbnode_id_fkey',
         'db_dblog',
-        'db_dbnode', ['dbnode_id'], ['id'],
+        'db_dbnode',
+        ['dbnode_id'],
+        ['id'],
         ondelete='CASCADE',
         initially='DEFERRED',
-        deferrable=True
+        deferrable=True,
     )
 
     # Now that all the data have been migrated, make the column not nullable and not blank.
@@ -70,7 +70,5 @@ def upgrade():
 
 
 def downgrade():
-    """
-    Downgrade function to the previous schema.
-    """
+    """Downgrade function to the previous schema."""
     raise NotImplementedError('Downgrade of 041a79fc615f.')

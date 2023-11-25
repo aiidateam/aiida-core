@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Tools to operate on AiiDA ORM class instances
+"""Tools to operate on AiiDA ORM class instances
 
 What functionality should go directly in the ORM class in `aiida.orm` and what in `aiida.tools`?
 
@@ -22,8 +21,7 @@ What functionality should go directly in the ORM class in `aiida.orm` and what i
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .calculations import *
 from .data import *
@@ -54,4 +52,4 @@ __all__ = (
     'structure_to_spglib_tuple',
 )
 
-# yapf: enable
+# fmt: on

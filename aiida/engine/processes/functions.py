@@ -47,7 +47,7 @@ try:
     UnionType = types.UnionType
 except AttributeError:
     # This type is not available for Python 3.9 and older
-    UnionType = None  # type: ignore[assignment,misc]  # pylint: disable=invalid-name
+    UnionType = None  # type: ignore[assignment,misc]
 
 try:
     from typing import ParamSpec
@@ -59,7 +59,7 @@ try:
     get_annotations = inspect.get_annotations
 except AttributeError:
     # This is the backport for Python 3.9 and older
-    from get_annotations import get_annotations  # type: ignore[no-redef]  # pylint: disable=import-error
+    from get_annotations import get_annotations  # type: ignore[no-redef]
 
 if TYPE_CHECKING:
     from .exit_code import ExitCode
@@ -68,7 +68,7 @@ __all__ = ('calcfunction', 'workfunction', 'FunctionProcess')
 
 LOGGER = logging.getLogger(__name__)
 
-FunctionType = t.TypeVar('FunctionType', bound=t.Callable[..., t.Any])  # pylint: disable=invalid-name
+FunctionType = t.TypeVar('FunctionType', bound=t.Callable[..., t.Any])
 
 
 def get_stack_size(size: int = 2) -> int:  # type: ignore[return]
@@ -83,9 +83,9 @@ def get_stack_size(size: int = 2) -> int:  # type: ignore[return]
     :param size: Hint for the expected stack size.
     :returns: The stack size for caller's frame.
     """
-    frame = sys._getframe(size)  # pylint: disable=protected-access
+    frame = sys._getframe(size)
     try:
-        for size in itertools.count(size, 8):  # pylint: disable=redefined-argument-from-local
+        for size in itertools.count(size, 8):
             frame = frame.f_back.f_back.f_back.f_back.f_back.f_back.f_back.f_back  # type: ignore[assignment,union-attr]
     except AttributeError:
         while frame:  # type: ignore[truthy-bool]
@@ -126,8 +126,7 @@ class ProcessFunctionType(t.Protocol, t.Generic[P, R_co, N]):
 
 
 def calcfunction(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, CalcFunctionNode]:
-    """
-    A decorator to turn a standard python function into a calcfunction.
+    """A decorator to turn a standard python function into a calcfunction.
     Example usage:
 
     >>> from aiida.orm import Int
@@ -153,8 +152,7 @@ def calcfunction(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, 
 
 
 def workfunction(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, WorkFunctionNode]:
-    """
-    A decorator to turn a standard python function into a workfunction.
+    """A decorator to turn a standard python function into a workfunction.
     Example usage:
 
     >>> from aiida.orm import Int
@@ -180,15 +178,13 @@ def workfunction(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, 
 
 
 def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionType], FunctionType]:
-    """
-    The base function decorator to create a FunctionProcess out of a normal python function.
+    """The base function decorator to create a FunctionProcess out of a normal python function.
 
     :param node_class: the ORM class to be used as the Node record for the FunctionProcess
     """
 
     def decorator(function: FunctionType) -> FunctionType:
-        """
-        Turn the decorated function into a FunctionProcess.
+        """Turn the decorated function into a FunctionProcess.
 
         :param callable function: the actual decorated function that the FunctionProcess represents
         :return callable: The decorated function.
@@ -196,8 +192,7 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
         process_class = FunctionProcess.build(function, node_class=node_class)
 
         def run_get_node(*args, **kwargs) -> tuple[dict[str, t.Any] | None, 'ProcessNode']:
-            """
-            Run the FunctionProcess with the supplied inputs in a local runner.
+            """Run the FunctionProcess with the supplied inputs in a local runner.
 
             :param args: input arguments to construct the FunctionProcess
             :param kwargs: input keyword arguments to construct the FunctionProcess
@@ -213,7 +208,9 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
             if frame_count > min(0.8 * stack_limit, stack_limit - 200):
                 LOGGER.warning(
                     'Current stack contains %d frames which is close to the limit of %d. Increasing the limit by %d',
-                    frame_count, stack_limit, frame_delta
+                    frame_count,
+                    stack_limit,
+                    frame_delta,
                 )
                 sys.setrecursionlimit(stack_limit + frame_delta)
 
@@ -258,8 +255,8 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
 
             store_provenance = inputs.get('metadata', {}).get('store_provenance', True)
             if not store_provenance:
-                process.node._storable = False  # pylint: disable=protected-access
-                process.node._unstorable_message = 'cannot store node because it was run with `store_provenance=False`'  # pylint: disable=protected-access
+                process.node._storable = False
+                process.node._unstorable_message = 'cannot store node because it was run with `store_provenance=False`'
 
             return result, process.node
 
@@ -341,16 +338,14 @@ class FunctionProcess(Process):
 
     @staticmethod
     def _func(*_args, **_kwargs) -> dict:
-        """
-        This is used internally to store the actual function that is being
+        """This is used internally to store the actual function that is being
         wrapped and will be replaced by the build method.
         """
         return {}
 
     @staticmethod
     def build(func: FunctionType, node_class: t.Type['ProcessNode']) -> t.Type['FunctionProcess']:
-        """
-        Build a Process from the given function.
+        """Build a Process from the given function.
 
         All function arguments will be assigned as process inputs. If keyword arguments are specified then
         these will also become inputs.
@@ -362,10 +357,9 @@ class FunctionProcess(Process):
         :return: A Process class that represents the function
 
         """
-        # pylint: disable=too-many-statements
         if (
-            not issubclass(node_class, ProcessNode) or  # type: ignore[redundant-expr]
-            not issubclass(node_class, FunctionCalculationMixin)  # type: ignore[unreachable]
+            not issubclass(node_class, ProcessNode)  # type: ignore[redundant-expr]
+            or not issubclass(node_class, FunctionCalculationMixin)  # type: ignore[unreachable]
         ):
             raise TypeError('the node_class should be a sub class of `ProcessNode` and `FunctionCalculationMixin`')
 
@@ -377,7 +371,7 @@ class FunctionProcess(Process):
 
         try:
             annotations = get_annotations(func, eval_str=True)
-        except Exception as exception:  # pylint: disable=broad-except
+        except Exception as exception:
             # Since we are running with ``eval_str=True`` to unstringize the annotations, the call can except if the
             # annotations are incorrect. In this case we simply want to log a warning and continue with type inference.
             LOGGER.warning(f'function `{func.__name__}` has invalid type hints: {exception}')
@@ -385,7 +379,7 @@ class FunctionProcess(Process):
 
         try:
             parsed_docstring = docstring_parser.parse(func.__doc__)
-        except Exception as exception:  # pylint: disable=broad-except
+        except Exception as exception:
             LOGGER.warning(f'function `{func.__name__}` has a docstring that could not be parsed: {exception}')
             param_help_string = {}
             namespace_help_string = None
@@ -396,7 +390,6 @@ class FunctionProcess(Process):
                 namespace_help_string += f'\n\n{parsed_docstring.long_description}'
 
         for key, parameter in signature.parameters.items():
-
             if parameter.kind in [parameter.POSITIONAL_ONLY, parameter.POSITIONAL_OR_KEYWORD, parameter.KEYWORD_ONLY]:
                 args.append(key)
 
@@ -406,14 +399,13 @@ class FunctionProcess(Process):
             if parameter.kind is parameter.VAR_KEYWORD:
                 var_keyword = key
 
-        def define(cls, spec):  # pylint: disable=unused-argument
+        def define(cls, spec):
             """Define the spec dynamically"""
             from plumpy.ports import UNSPECIFIED
 
             super().define(spec)
 
             for parameter in signature.parameters.values():
-
                 if parameter.kind in [parameter.VAR_POSITIONAL, parameter.VAR_KEYWORD]:
                     continue
 
@@ -438,10 +430,14 @@ class FunctionProcess(Process):
                 # done lazily using a lambda, just as any port defaults should not define node instances directly as is
                 # also checked by the ``spec.input`` call.
                 if (
-                    default is not None and default != UNSPECIFIED and not isinstance(default, Data) and
-                    not callable(default)
+                    default is not None
+                    and default != UNSPECIFIED
+                    and not isinstance(default, Data)
+                    and not callable(default)
                 ):
-                    indirect_default = lambda value=default: to_aiida_type(value)  # pylint: disable=unnecessary-lambda-assignment
+
+                    def indirect_default(value=default):
+                        return to_aiida_type(value)
                 else:
                     indirect_default = default
 
@@ -470,7 +466,9 @@ class FunctionProcess(Process):
             spec.outputs.valid_type = (Data, dict)
 
         return type(
-            func.__qualname__, (FunctionProcess,), {
+            func.__qualname__,
+            (FunctionProcess,),
+            {
                 '__module__': func.__module__,
                 '__name__': func.__name__,
                 '__qualname__': func.__qualname__,
@@ -479,12 +477,12 @@ class FunctionProcess(Process):
                 '_func_args': args,
                 '_var_positional': var_positional,
                 '_var_keyword': var_keyword,
-                '_node_class': node_class
-            }
+                '_node_class': node_class,
+            },
         )
 
     @classmethod
-    def validate_inputs(cls, *args: t.Any, **kwargs: t.Any) -> None:  # pylint: disable=unused-argument
+    def validate_inputs(cls, *args: t.Any, **kwargs: t.Any) -> None:
         """Validate the positional and keyword arguments passed in the function call.
 
         :raises TypeError: if more positional arguments are passed than the function defines
@@ -545,8 +543,7 @@ class FunctionProcess(Process):
 
     @property
     def process_class(self) -> t.Callable[..., t.Any]:
-        """
-        Return the class that represents this Process, for the FunctionProcess this is the function itself.
+        """Return the class that represents this Process, for the FunctionProcess this is the function itself.
 
         For a standard Process or sub class of Process, this is the class itself. However, for legacy reasons,
         the Process class is a wrapper around another class. This function returns that original class, i.e. the

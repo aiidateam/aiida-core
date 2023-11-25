@@ -66,7 +66,8 @@ class Scheduler(metaclass=abc.ABCMeta):
         num_mpiprocs_per_machine: int | None = resources.get('num_mpiprocs_per_machine', None)
 
         if (
-            num_mpiprocs_per_machine is None and cls.job_resource_class.accepts_default_mpiprocs_per_machine()  # pylint: disable=no-member
+            num_mpiprocs_per_machine is None
+            and cls.job_resource_class.accepts_default_mpiprocs_per_machine()
             and (num_machines is None or tot_num_mpiprocs is None)
         ):
             resources['num_mpiprocs_per_machine'] = default_mpiprocs_per_machine
@@ -114,7 +115,7 @@ class Scheduler(metaclass=abc.ABCMeta):
             raise exceptions.InternalError('No self._logger configured for {}!')
 
     @classproperty
-    def job_resource_class(cls) -> t.Type[JobResource]:  # pylint: disable=no-self-argument
+    def job_resource_class(cls) -> t.Type[JobResource]:  # noqa: N805
         assert cls._job_resource_class is not None and issubclass(cls._job_resource_class, JobResource)
         return cls._job_resource_class
 
@@ -122,7 +123,7 @@ class Scheduler(metaclass=abc.ABCMeta):
     def create_job_resource(cls, **kwargs):
         """Create a suitable job resource from the kwargs specified."""
         assert cls._job_resource_class is not None and issubclass(cls._job_resource_class, JobResource)
-        return cls._job_resource_class(**kwargs)  # pylint: disable=not-callable
+        return cls._job_resource_class(**kwargs)
 
     def get_submit_script(self, job_tmpl: JobTemplate) -> str:
         """Return the submit script as a string.
@@ -166,7 +167,7 @@ class Scheduler(metaclass=abc.ABCMeta):
             warnings.warn_deprecation(
                 f'Environment variables added by `{self.__class__.__name__}._get_submit_script_environment_variables`, '
                 'however, this is no longer necessary and automatically done by the base `Scheduler` class.',
-                version=3
+                version=3,
             )
 
         if job_tmpl.job_environment:
@@ -223,7 +224,6 @@ class Scheduler(metaclass=abc.ABCMeta):
         :param job_tmpl: a `JobTemplate` instance with relevant parameters set.
         :return: string with the submission script footer.
         """
-        # pylint: disable=unused-argument
         return ''
 
     def _get_run_line(self, codes_info: list[JobTemplateCodeInfo], codes_run_mode: CodeRunMode) -> str:
@@ -237,7 +237,6 @@ class Scheduler(metaclass=abc.ABCMeta):
             to launch the multiple codes.
         :return: string with format: [executable] [args] {[ < stdin ]} {[ < stdout ]} {[2>&1 | 2> stderr]}
         """
-        # pylint: disable=too-many-locals
         list_of_runlines = []
 
         for code_info in codes_info:
@@ -310,7 +309,6 @@ class Scheduler(metaclass=abc.ABCMeta):
 
         :raises: :class:`aiida.common.exceptions.FeatureNotAvailable`
         """
-        # pylint: disable=not-callable,unused-argument
         raise exceptions.FeatureNotAvailable('Cannot get detailed job info')
 
     def get_detailed_job_info(self, job_id: str) -> dict[str, str | int]:
@@ -322,7 +320,7 @@ class Scheduler(metaclass=abc.ABCMeta):
         :param job_id: the job identifier
         :return: dictionary with `retval`, `stdout` and `stderr`.
         """
-        command = self._get_detailed_job_info_command(job_id)  # pylint: disable=assignment-from-no-return
+        command = self._get_detailed_job_info_command(job_id)
         with self.transport:
             retval, stdout, stderr = self.transport.exec_command_wait(command)
 
@@ -440,7 +438,7 @@ class Scheduler(metaclass=abc.ABCMeta):
         self,
         detailed_job_info: dict[str, str | int] | None = None,
         stdout: str | None = None,
-        stderr: str | None = None
+        stderr: str | None = None,
     ) -> ExitCode | None:
         """Parse the output of the scheduler.
 

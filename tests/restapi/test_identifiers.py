@@ -19,7 +19,6 @@ from aiida.restapi.common.identifiers import FULL_TYPE_CONCATENATOR, LIKE_OPERAT
 
 def test_get_full_type_filters():
     """Coverage test for the `get_full_type_filters` function."""
-
     # Equals on both
     filters = get_full_type_filters(f'node_type{FULL_TYPE_CONCATENATOR}process_type')
     assert filters['node_type'] == {'==': 'node_type'}
@@ -54,7 +53,6 @@ def test_get_full_type_filters():
 
 def test_get_filters_errors():
     """Test the `get_full_type_filters` function."""
-
     with pytest.raises(TypeError):
         get_full_type_filters(10)
 
@@ -70,9 +68,7 @@ def test_get_filters_errors():
 
     with pytest.raises(ValueError):
         get_full_type_filters(
-            'node_type{concat}too_many_{like}{like}'.format(
-                like=LIKE_OPERATOR_CHARACTER, concat=FULL_TYPE_CONCATENATOR
-            )
+            'node_type{concat}too_many_{like}{like}'.format(like=LIKE_OPERATOR_CHARACTER, concat=FULL_TYPE_CONCATENATOR)
         )
 
     with pytest.raises(ValueError):
@@ -94,7 +90,6 @@ def test_full_type_unregistered(process_class, restapi_server, server_url):
     must work correctly is the internal consistency of `full_type` as it is interpreted by the
     get_full_type_filters and the querybuilder.
     """
-    # pylint: disable=too-many-statements
     calc_unreg11 = process_class()
     calc_unreg11.set_process_type('unregistered_type1.process1')
     calc_unreg11.store()

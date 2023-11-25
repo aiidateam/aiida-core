@@ -8,7 +8,7 @@ from aiida.orm import CalcJobNode
 from aiida.transports import Transport
 
 
-def always_kill(node: CalcJobNode, transport: Transport) -> str | None:  # pylint: disable=unused-argument
+def always_kill(node: CalcJobNode, transport: Transport) -> str | None:
     """Retrieve and inspect files in working directory of job to determine whether the job should be killed.
 
     This particular implementation is just for demonstration purposes and will kill the job as long as there is a

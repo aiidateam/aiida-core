@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """"Invalidating node hashes
 
 Users should rehash nodes for caching
@@ -28,9 +27,9 @@ depends_on = None
 
 def upgrade():
     """Migrations for the upgrade."""
-    drop_hashes(op.get_bind(), hash_extra_key='_aiida_hash')  # pylint: disable=no-member
+    drop_hashes(op.get_bind(), hash_extra_key='_aiida_hash')
 
 
 def downgrade():
     """Migrations for the downgrade."""
-    drop_hashes(op.get_bind(), hash_extra_key='_aiida_hash')  # pylint: disable=no-member
+    drop_hashes(op.get_bind(), hash_extra_key='_aiida_hash')

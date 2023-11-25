@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# ruff: noqa: N806
 """Test for the `Orbital` class and subclasses."""
 import pytest
 
@@ -19,7 +20,7 @@ class TestOrbital:
     """Test the Orbital base class"""
 
     def test_orbital_str(self):
-        """"Test the output of __str__ method"""
+        """ "Test the output of __str__ method"""
         orbital = Orbital(position=(1, 2, 3))
         expected_output = 'Orbital @ 1.0000,2.0000,3.0000'
 
@@ -38,9 +39,9 @@ class TestOrbital:
             Orbital(position=(1, 2, 'a'))
 
         orbital = Orbital(position=(1, 2, 3))
-        assert round(abs(orbital.get_orbital_dict()['position'][0] - 1.), 7) == 0
-        assert round(abs(orbital.get_orbital_dict()['position'][1] - 2.), 7) == 0
-        assert round(abs(orbital.get_orbital_dict()['position'][2] - 3.), 7) == 0
+        assert round(abs(orbital.get_orbital_dict()['position'][0] - 1.0), 7) == 0
+        assert round(abs(orbital.get_orbital_dict()['position'][1] - 2.0), 7) == 0
+        assert round(abs(orbital.get_orbital_dict()['position'][2] - 3.0), 7) == 0
 
     def test_unknown_fields(self):
         """Verify that unkwown fields raise a validation error."""
@@ -55,74 +56,48 @@ class TestRealhydrogenOrbital:
 
     def test_required_fields(self):
         """Verify that required fields are validated."""
-        RealhydrogenOrbital = OrbitalFactory('core.realhydrogen')  # pylint: disable=invalid-name
+        RealhydrogenOrbital = OrbitalFactory('core.realhydrogen')
         # Check that the required fields of the base class are not enough
         with pytest.raises(ValidationError):
             RealhydrogenOrbital(position=(1, 2, 3))
 
         orbital = RealhydrogenOrbital(
-            **{
-                'position': (-1, -2, -3),
-                'angular_momentum': 1,
-                'magnetic_number': 0,
-                'radial_nodes': 2
-            }
+            **{'position': (-1, -2, -3), 'angular_momentum': 1, 'magnetic_number': 0, 'radial_nodes': 2}
         )
-        assert round(abs(orbital.get_orbital_dict()['position'][0] - -1.), 7) == 0
-        assert round(abs(orbital.get_orbital_dict()['position'][1] - -2.), 7) == 0
-        assert round(abs(orbital.get_orbital_dict()['position'][2] - -3.), 7) == 0
+        assert round(abs(orbital.get_orbital_dict()['position'][0] - -1.0), 7) == 0
+        assert round(abs(orbital.get_orbital_dict()['position'][1] - -2.0), 7) == 0
+        assert round(abs(orbital.get_orbital_dict()['position'][2] - -3.0), 7) == 0
         assert round(abs(orbital.get_orbital_dict()['angular_momentum'] - 1), 7) == 0
         assert round(abs(orbital.get_orbital_dict()['magnetic_number'] - 0), 7) == 0
         assert round(abs(orbital.get_orbital_dict()['radial_nodes'] - 2), 7) == 0
 
     def test_validation_for_fields(self):
         """Verify that the values are properly validated"""
-        RealhydrogenOrbital = OrbitalFactory('core.realhydrogen')  # pylint: disable=invalid-name
+        RealhydrogenOrbital = OrbitalFactory('core.realhydrogen')
 
         with pytest.raises(ValidationError, match='angular_momentum'):
             RealhydrogenOrbital(
-                **{
-                    'position': (-1, -2, -3),
-                    'angular_momentum': 100,
-                    'magnetic_number': 0,
-                    'radial_nodes': 2
-                }
+                **{'position': (-1, -2, -3), 'angular_momentum': 100, 'magnetic_number': 0, 'radial_nodes': 2}
             )
 
         with pytest.raises(ValidationError, match='magnetic number must be in the range'):
             RealhydrogenOrbital(
-                **{
-                    'position': (-1, -2, -3),
-                    'angular_momentum': 1,
-                    'magnetic_number': 3,
-                    'radial_nodes': 2
-                }
+                **{'position': (-1, -2, -3), 'angular_momentum': 1, 'magnetic_number': 3, 'radial_nodes': 2}
             )
 
         with pytest.raises(ValidationError, match='radial_nodes'):
             RealhydrogenOrbital(
-                **{
-                    'position': (-1, -2, -3),
-                    'angular_momentum': 1,
-                    'magnetic_number': 0,
-                    'radial_nodes': 100
-                }
+                **{'position': (-1, -2, -3), 'angular_momentum': 1, 'magnetic_number': 0, 'radial_nodes': 100}
             )
 
     def test_optional_fields(self):
-        """
-        Testing (some of) the optional parameters to check that the functionality works
+        """Testing (some of) the optional parameters to check that the functionality works
         (they are indeed optional but accepted if specified, they are validated, ...)
         """
-        RealhydrogenOrbital = OrbitalFactory('core.realhydrogen')  # pylint: disable=invalid-name
+        RealhydrogenOrbital = OrbitalFactory('core.realhydrogen')
 
         orbital = RealhydrogenOrbital(
-            **{
-                'position': (-1, -2, -3),
-                'angular_momentum': 1,
-                'magnetic_number': 0,
-                'radial_nodes': 2
-            }
+            **{'position': (-1, -2, -3), 'angular_momentum': 1, 'magnetic_number': 0, 'radial_nodes': 2}
         )
         # Check that the optional value is there and has its default value
         assert orbital.get_orbital_dict()['spin'] == 0
@@ -135,7 +110,7 @@ class TestRealhydrogenOrbital:
                 'magnetic_number': 0,
                 'radial_nodes': 2,
                 'spin': 1,
-                'diffusivity': 3.1
+                'diffusivity': 3.1,
             }
         )
         assert orbital.get_orbital_dict()['spin'] == 1
@@ -149,7 +124,7 @@ class TestRealhydrogenOrbital:
                     'magnetic_number': 0,
                     'radial_nodes': 2,
                     'spin': 1,
-                    'diffusivity': 'a'
+                    'diffusivity': 'a',
                 }
             )
 
@@ -161,13 +136,13 @@ class TestRealhydrogenOrbital:
                     'magnetic_number': 0,
                     'radial_nodes': 2,
                     'spin': 5,
-                    'diffusivity': 3.1
+                    'diffusivity': 3.1,
                 }
             )
 
     def test_unknown_fields(self):
         """Verify that unkwown fields raise a validation error."""
-        RealhydrogenOrbital = OrbitalFactory('core.realhydrogen')  # pylint: disable=invalid-name
+        RealhydrogenOrbital = OrbitalFactory('core.realhydrogen')
 
         with pytest.raises(ValidationError, match='some_strange_key'):
             RealhydrogenOrbital(
@@ -176,15 +151,13 @@ class TestRealhydrogenOrbital:
                     'angular_momentum': 1,
                     'magnetic_number': 0,
                     'radial_nodes': 2,
-                    'some_strange_key': 1
+                    'some_strange_key': 1,
                 }
             )
 
     def test_get_name_from_quantum_numbers(self):
-        """
-        Test if the function ``get_name_from_quantum_numbers`` works as expected
-        """
-        RealhydrogenOrbital = OrbitalFactory('core.realhydrogen')  # pylint: disable=invalid-name
+        """Test if the function ``get_name_from_quantum_numbers`` works as expected"""
+        RealhydrogenOrbital = OrbitalFactory('core.realhydrogen')
 
         name = RealhydrogenOrbital.get_name_from_quantum_numbers(angular_momentum=1)
         assert name == 'P'

@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Unit tests for the Comment ORM class."""
 import pytest
 
@@ -130,7 +129,6 @@ def test_comment_collection_delete_many(node, default_user):
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_comment_querybuilder(default_user):
-    # pylint: disable=too-many-locals
     """Test querying for comments by joining on nodes in the QueryBuilder."""
     user_one = default_user
     user_two = orm.User(email='commenting@user.s').store()

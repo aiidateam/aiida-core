@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Parity with Django backend (rev: 0048),
 part 3: Add PostgreSQL-specific indexes
 

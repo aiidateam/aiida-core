@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Plugin for PBS/Torque.
+"""Plugin for PBS/Torque.
 This has been tested on Torque v.2.4.16 (from Ubuntu).
 """
 import logging
@@ -30,8 +29,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class TorqueScheduler(PbsBaseClass):
-    """
-    Subclass to support the Torque scheduler..
+    """Subclass to support the Torque scheduler..
 
     I redefine only what needs to change from the base class
     """
@@ -46,8 +44,7 @@ class TorqueScheduler(PbsBaseClass):
     def _get_resource_lines(
         self, num_machines, num_mpiprocs_per_machine, num_cores_per_machine, max_memory_kb, max_wallclock_seconds
     ):
-        """
-        Return the lines for machines, memory and wallclock relative
+        """Return the lines for machines, memory and wallclock relative
         to pbspro.
         """
         return_lines = []
@@ -67,9 +64,9 @@ class TorqueScheduler(PbsBaseClass):
                     raise ValueError
             except ValueError:
                 raise ValueError(
-                    'max_wallclock_seconds must be '
-                    "a positive integer (in seconds)! It is instead '{}'"
-                    ''.format(max_wallclock_seconds)
+                    'max_wallclock_seconds must be ' "a positive integer (in seconds)! It is instead '{}'" ''.format(
+                        max_wallclock_seconds
+                    )
                 )
             hours = tot_secs // 3600
             tot_minutes = tot_secs % 3600

@@ -8,10 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Shared resources for the archive."""
-from html.parser import HTMLParser
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type
 import urllib.parse
 import urllib.request
+from html.parser import HTMLParser
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type
 
 from aiida.orm import AuthInfo, Comment, Computer, Entity, Group, Log, Node, User
 from aiida.orm.entities import EntityTypes
@@ -28,9 +28,9 @@ entity_type_to_orm: Dict[EntityTypes, Type[Entity]] = {
 }
 
 
-def batch_iter(iterable: Iterable[Any],
-               size: int,
-               transform: Optional[Callable[[Any], Any]] = None) -> Iterable[Tuple[int, List[Any]]]:
+def batch_iter(
+    iterable: Iterable[Any], size: int, transform: Optional[Callable[[Any], Any]] = None
+) -> Iterable[Tuple[int, List[Any]]]:
     """Yield an iterable in batches of a set number of items.
 
     Note, the final yield may be less than this size.
@@ -53,12 +53,9 @@ def batch_iter(iterable: Iterable[Any],
 
 
 class HTMLGetLinksParser(HTMLParser):
-    """
-    If a filter_extension is passed, only links with extension matching
+    """If a filter_extension is passed, only links with extension matching
     the given one will be returned.
     """
-
-    # pylint: disable=abstract-method
 
     def __init__(self, filter_extension=None):
         self.filter_extension = filter_extension
@@ -66,25 +63,20 @@ class HTMLGetLinksParser(HTMLParser):
         super().__init__()
 
     def handle_starttag(self, tag, attrs):
-        """
-        Store the urls encountered, if they match the request.
-        """
+        """Store the urls encountered, if they match the request."""
         if tag == 'a':
             for key, value in attrs:
                 if key == 'href':
-                    if (self.filter_extension is None or value.endswith(f'.{self.filter_extension}')):
+                    if self.filter_extension is None or value.endswith(f'.{self.filter_extension}'):
                         self.links.append(value)
 
     def get_links(self):
-        """
-        Return the links that were found during the parsing phase.
-        """
+        """Return the links that were found during the parsing phase."""
         return self.links
 
 
 def get_valid_import_links(url):
-    """
-    Open the given URL, parse the HTML and return a list of valid links where
+    """Open the given URL, parse the HTML and return a list of valid links where
     the link file has a .aiida extension.
     """
     with urllib.request.urlopen(url) as request:

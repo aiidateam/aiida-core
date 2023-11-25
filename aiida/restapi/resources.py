@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=use-dict-literal
-""" Resources for REST API """
+"""Resources for REST API"""
 from urllib.parse import unquote
 
 from flask import make_response, request
@@ -31,8 +30,7 @@ class ServerInfo(Resource):
         self.utils = Utils(**self.utils_confs)
 
     def get(self):
-        """
-        It returns the general info about the REST API
+        """It returns the general info about the REST API
         :return: returns current AiiDA version defined in aiida/__init__.py
         """
         path = unquote(request.path)
@@ -70,8 +68,8 @@ class ServerInfo(Resource):
             response['AiiDA_version'] = __version__
 
         elif resource_type == 'endpoints':
-
             from aiida.restapi.common.utils import list_routes
+
             response['available_endpoints'] = list_routes()
 
         headers = self.utils.build_headers(url=request.url, total_count=1)
@@ -84,17 +82,16 @@ class ServerInfo(Resource):
             path=path,
             query_string=query_string,
             resource_type='Info',
-            data=response
+            data=response,
         )
         return self.utils.build_response(status=200, headers=headers, data=data)
 
 
 class BaseResource(Resource):
-    # pylint: disable=fixme
-    """
-    Each derived class will instantiate a different type of translator.
+    """Each derived class will instantiate a different type of translator.
     This is the only difference in the classes.
     """
+
     from aiida.restapi.translator.base import BaseTranslator
 
     _translator_class = BaseTranslator
@@ -139,18 +136,17 @@ class BaseResource(Resource):
         return self.utils.parse_query_string(query_string)
 
     @classproperty
-    def parse_pk_uuid(cls):  # pylint: disable=no-self-argument
+    def parse_pk_uuid(cls):  # noqa: N805
         return cls._parse_pk_uuid
 
     def _load_and_verify(self, node_id=None):
         """Load node and verify it is of the required type"""
         from aiida.orm import load_node
+
         node = load_node(node_id)
 
-        if not isinstance(node, self.trans._aiida_class):  # pylint: disable=protected-access,isinstance-second-argument-not-valid-type
-            raise RestInputValidationError(
-                f'node {node_id} is not of the required type {self.trans._aiida_class}'  # pylint: disable=protected-access
-            )
+        if not isinstance(node, self.trans._aiida_class):
+            raise RestInputValidationError(f'node {node_id} is not of the required type {self.trans._aiida_class}')
 
         return node
 
@@ -167,10 +163,8 @@ class BaseResource(Resource):
 
         load_profile(profile or self.profile, allow_switch=True)
 
-    def get(self, id=None, page=None):  # pylint: disable=redefined-builtin,invalid-name,unused-argument
-        # pylint: disable=too-many-locals
-        """
-        Get method for the resource
+    def get(self, id=None, page=None):
+        """Get method for the resource
         :param id: node identifier
         :param page: page no, used for pagination
         :return: http response
@@ -198,10 +192,8 @@ class BaseResource(Resource):
                     'path': path,
                     'query_string': query_string,
                     'resource_type': self.__class__.__name__,
-                    'data': {
-                        'message': str(exception)
-                    },
-                }
+                    'data': {'message': str(exception)},
+                },
             )
 
         ## Validate request
@@ -211,12 +203,11 @@ class BaseResource(Resource):
             perpage=perpage,
             page=page,
             query_type=query_type,
-            is_querystring_defined=(bool(query_string))
+            is_querystring_defined=(bool(query_string)),
         )
 
         ## Treat the projectable_properties case which does not imply access to the DataBase
         if query_type == 'projectable_properties':
-
             ## Retrieve the projectable properties
             projectable_properties, ordering = self.trans.get_projectable_properties()
             results = dict(fields=projectable_properties, ordering=ordering)
@@ -224,7 +215,6 @@ class BaseResource(Resource):
             headers = self.utils.build_headers(url=request.url, total_count=1)
 
         else:
-
             ## Set the query, and initialize qb object
             self.trans.set_query(filters=filters, orders=orderby, node_id=node_id)
 
@@ -252,19 +242,19 @@ class BaseResource(Resource):
             id=node_id,
             query_string=query_string,
             resource_type=resource_type,
-            data=results
+            data=results,
         )
 
         return self.utils.build_response(status=200, headers=headers, data=data)
 
 
 class QueryBuilder(BaseResource):
-    """
-    Representation of a QueryBuilder REST API resource (instantiated with a serialised QueryBuilder instance).
+    """Representation of a QueryBuilder REST API resource (instantiated with a serialised QueryBuilder instance).
 
     It supports POST requests taking in JSON :py:func:`~aiida.orm.querybuilder.QueryBuilder.as_dict`
     objects and returning the :py:class:`~aiida.orm.querybuilder.QueryBuilder` result accordingly.
     """
+
     _translator_class = NodeTranslator
 
     GET_MESSAGE = (
@@ -282,7 +272,7 @@ class QueryBuilder(BaseResource):
         if 'get_decorators' in kwargs and isinstance(kwargs['get_decorators'], (tuple, list, set)):
             self.method_decorators.update({'post': list(kwargs['get_decorators'])})
 
-    def get(self):  # pylint: disable=arguments-differ
+    def get(self):
         """Static return to state information about this endpoint."""
         path, url, url_root, query_string = self.unquote_request()
         headers = self.utils.build_headers(url=request.url, total_count=1)
@@ -300,9 +290,8 @@ class QueryBuilder(BaseResource):
             },
         )
 
-    def post(self):  # pylint: disable=too-many-branches
-        """
-        POST method to pass query help JSON.
+    def post(self):
+        """POST method to pass query help JSON.
 
         If the posted JSON is not a valid QueryBuilder serialisation,
         the request will fail with an internal server error.
@@ -312,7 +301,6 @@ class QueryBuilder(BaseResource):
 
         :return: QueryBuilder result of AiiDA entities in "standard" REST API format.
         """
-        # pylint: disable=protected-access
         path, url, url_root, query_string = self.unquote_request()
         profile = self.parse_query_string(query_string)[-1]
 
@@ -329,10 +317,8 @@ class QueryBuilder(BaseResource):
                     'path': path,
                     'query_string': query_string,
                     'resource_type': self.__class__.__name__,
-                    'data': {
-                        'message': str(exception)
-                    },
-                }
+                    'data': {'message': str(exception)},
+                },
             )
 
         self.trans._query_help = request.get_json(force=True)
@@ -407,17 +393,15 @@ class QueryBuilder(BaseResource):
 
 
 class Node(BaseResource):
-    """
-    Differs from BaseResource in trans.set_query() mostly because it takes
+    """Differs from BaseResource in trans.set_query() mostly because it takes
     query_type as an input and the presence of additional result types like "tree"
     """
+
     _translator_class = NodeTranslator
     _parse_pk_uuid = 'uuid'  # Parse a uuid pattern in the URL path (not a pk)
 
-    def get(self, id=None, page=None):  # pylint: disable=redefined-builtin,invalid-name,unused-argument
-        # pylint: disable=too-many-locals,too-many-statements,too-many-branches,fixme,unused-variable
-        """
-        Get method for the Node resource.
+    def get(self, id=None, page=None):
+        """Get method for the Node resource.
 
         :param id: node identifier
         :param page: page no, used for pagination
@@ -426,8 +410,22 @@ class Node(BaseResource):
         path, url, url_root, query_string = self.unquote_request()
         (resource_type, page, node_id, query_type) = self.parse_path(path)
         (
-            limit, offset, perpage, orderby, filters, download_format, download, filename, tree_in_limit,
-            tree_out_limit, attributes, attributes_filter, extras, extras_filter, full_type, profile
+            limit,
+            offset,
+            perpage,
+            orderby,
+            filters,
+            download_format,
+            download,
+            filename,
+            tree_in_limit,
+            tree_out_limit,
+            attributes,
+            attributes_filter,
+            extras,
+            extras_filter,
+            full_type,
+            profile,
         ) = self.parse_query_string(query_string)
 
         try:
@@ -443,10 +441,8 @@ class Node(BaseResource):
                     'path': path,
                     'query_string': query_string,
                     'resource_type': self.__class__.__name__,
-                    'data': {
-                        'message': str(exception)
-                    },
-                }
+                    'data': {'message': str(exception)},
+                },
             )
 
         ## Validate request
@@ -456,12 +452,11 @@ class Node(BaseResource):
             perpage=perpage,
             page=page,
             query_type=query_type,
-            is_querystring_defined=(bool(query_string))
+            is_querystring_defined=(bool(query_string)),
         )
 
         ## Treat the projectable properties case which does not imply access to the DataBase
         if query_type == 'projectable_properties':
-
             ## Retrieve the projectable properties
             projectable_properties, ordering = self.trans.get_projectable_properties()
             results = dict(fields=projectable_properties, ordering=ordering)
@@ -513,7 +508,7 @@ class Node(BaseResource):
                 attributes_filter=attributes_filter,
                 extras=extras,
                 extras_filter=extras_filter,
-                full_type=full_type
+                full_type=full_type,
             )
 
             ## Count results
@@ -529,7 +524,6 @@ class Node(BaseResource):
 
                 headers = self.utils.build_headers(rel_pages=rel_pages, url=request.url, total_count=total_count)
             else:
-
                 self.trans.set_limit_offset(limit=limit, offset=offset)
                 ## Retrieve results
                 results = self.trans.get_results()
@@ -560,8 +554,8 @@ class Node(BaseResource):
                     if not isinstance(attributes_filter, list):
                         attributes_filter = [attributes_filter]
                     for attr in attributes_filter:
-                        node['attributes'][str(attr)] = node[f'attributes.{str(attr)}']
-                        del node[f'attributes.{str(attr)}']
+                        node['attributes'][str(attr)] = node[f'attributes.{attr!s}']
+                        del node[f'attributes.{attr!s}']
 
             if extras_filter is not None and extras:
                 for node in results['nodes']:
@@ -569,8 +563,8 @@ class Node(BaseResource):
                     if not isinstance(extras_filter, list):
                         extras_filter = [extras_filter]
                     for extra in extras_filter:
-                        node['extras'][str(extra)] = node[f'extras.{str(extra)}']
-                        del node[f'extras.{str(extra)}']
+                        node['extras'][str(extra)] = node[f'extras.{extra!s}']
+                        del node[f'extras.{extra!s}']
 
         ## Build response
         data = dict(
@@ -581,14 +575,15 @@ class Node(BaseResource):
             id=node_id,
             query_string=query_string,
             resource_type=resource_type,
-            data=results
+            data=results,
         )
 
         return self.utils.build_response(status=200, headers=headers, data=data)
 
 
 class Computer(BaseResource):
-    """ Resource for Computer """
+    """Resource for Computer"""
+
     from aiida.restapi.translator.computer import ComputerTranslator
 
     _translator_class = ComputerTranslator
@@ -596,7 +591,8 @@ class Computer(BaseResource):
 
 
 class Group(BaseResource):
-    """ Resource for Group """
+    """Resource for Group"""
+
     from aiida.restapi.translator.group import GroupTranslator
 
     _translator_class = GroupTranslator
@@ -604,7 +600,8 @@ class Group(BaseResource):
 
 
 class User(BaseResource):
-    """ Resource for User """
+    """Resource for User"""
+
     from aiida.restapi.translator.user import UserTranslator
 
     _translator_class = UserTranslator
@@ -612,14 +609,14 @@ class User(BaseResource):
 
 
 class ProcessNode(Node):
-    """ Resource for ProcessNode """
+    """Resource for ProcessNode"""
+
     from aiida.restapi.translator.nodes.process.process import ProcessTranslator
 
     _translator_class = ProcessTranslator
 
-    def get(self, id=None, page=None):  # pylint: disable=redefined-builtin
-        """
-        Get method for the Process resource.
+    def get(self, id=None, page=None):
+        """Get method for the Process resource.
 
         :param id: node identifier
         :return: http response
@@ -641,10 +638,8 @@ class ProcessNode(Node):
                     'path': path,
                     'query_string': query_string,
                     'resource_type': self.__class__.__name__,
-                    'data': {
-                        'message': str(exception)
-                    },
-                }
+                    'data': {'message': str(exception)},
+                },
             )
 
         headers = self.utils.build_headers(url=request.url, total_count=1)
@@ -669,21 +664,21 @@ class ProcessNode(Node):
             id=node_id,
             query_string=query_string,
             resource_type=resource_type,
-            data=results
+            data=results,
         )
 
         return self.utils.build_response(status=200, headers=headers, data=data)
 
 
 class CalcJobNode(ProcessNode):
-    """ Resource for CalcJobNode """
+    """Resource for CalcJobNode"""
+
     from aiida.restapi.translator.nodes.process.calculation.calcjob import CalcJobTranslator
 
     _translator_class = CalcJobTranslator
 
-    def get(self, id=None, page=None):  # pylint: disable=redefined-builtin
-        """
-        Get method for the Process resource.
+    def get(self, id=None, page=None):
+        """Get method for the Process resource.
 
         :param id: node identifier
         :return: http response
@@ -705,10 +700,8 @@ class CalcJobNode(ProcessNode):
                     'path': path,
                     'query_string': query_string,
                     'resource_type': self.__class__.__name__,
-                    'data': {
-                        'message': str(exception)
-                    },
-                }
+                    'data': {'message': str(exception)},
+                },
             )
 
         node = self._load_and_verify(node_id)
@@ -734,7 +727,7 @@ class CalcJobNode(ProcessNode):
             id=node_id,
             query_string=query_string,
             resource_type=resource_type,
-            data=results
+            data=results,
         )
 
         return self.utils.build_response(status=200, headers=headers, data=data)

@@ -22,9 +22,8 @@ class TestJobManager:
     """Test the `aiida.engine.processes.calcjobs.manager.JobManager` class."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.loop = asyncio.get_event_loop()
         self.transport_queue = TransportQueue(self.loop)
         self.user = User.collection.get_default()
@@ -50,9 +49,8 @@ class TestJobsList:
     """Test the `aiida.engine.processes.calcjobs.manager.JobsList` class."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_localhost):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_localhost):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.loop = asyncio.get_event_loop()
         self.transport_queue = TransportQueue(self.loop)
         self.user = User.collection.get_default()

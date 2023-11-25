@@ -26,6 +26,7 @@ def verdi_storage():
 def storage_version():
     """Print the current version of the storage schema."""
     from aiida import get_profile
+
     profile = get_profile()
     head_version = profile.storage_cls.version_head()
     profile_version = profile.storage_cls.version_profile(profile)
@@ -49,7 +50,6 @@ def storage_migrate(force):
     storage_cls = profile.storage_cls
 
     if not force:
-
         echo.echo_warning('Migrating your storage might take a while and is not reversible.')
         echo.echo_warning('Before continuing, make sure you have completed the following steps:')
         echo.echo_warning('')
@@ -107,7 +107,7 @@ def storage_info(detailed):
 @click.option(
     '--full',
     is_flag=True,
-    help='Perform all maintenance tasks, including the ones that should not be executed while the profile is in use.'
+    help='Perform all maintenance tasks, including the ones that should not be executed while the profile is in use.',
 )
 @click.option(
     '--no-repack', is_flag=True, help='Disable the repacking of the storage when running a `full maintenance`.'
@@ -116,8 +116,7 @@ def storage_info(detailed):
 @click.option(
     '--dry-run',
     is_flag=True,
-    help=
-    'Run the maintenance in dry-run mode which will print actions that would be taken without actually executing them.'
+    help='Run the maintenance in dry-run mode to print actions that would be taken without actually executing them.',
 )
 @click.option(
     '--compress', is_flag=True, default=False, help='Use compression if possible when carrying out maintenance tasks.'

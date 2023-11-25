@@ -12,9 +12,7 @@ from aiida.tools.dbimporters.plugins.cod import CodDbImporter, CodEntry, CodSear
 
 
 class PcodDbImporter(CodDbImporter):
-    """
-    Database importer for Predicted Crystallography Open Database.
-    """
+    """Database importer for Predicted Crystallography Open Database."""
 
     _keywords = {
         'id': ['file', CodDbImporter._int_clause],
@@ -29,7 +27,7 @@ class PcodDbImporter(CodDbImporter):
         'alpha': ['alpha', CodDbImporter._angle_clause],
         'beta': ['beta', CodDbImporter._angle_clause],
         'gamma': ['gamma', CodDbImporter._angle_clause],
-        'text': ['text', CodDbImporter._str_fuzzy_clause]
+        'text': ['text', CodDbImporter._str_fuzzy_clause],
     }
 
     def __init__(self, **kwargs):
@@ -38,8 +36,7 @@ class PcodDbImporter(CodDbImporter):
         self.setup_db(**kwargs)
 
     def query_sql(self, **kwargs):
-        """
-        Forms a SQL query for querying the PCOD database using
+        """Forms a SQL query for querying the PCOD database using
         ``keyword = value`` pairs, specified in ``kwargs``.
 
         :return: string containing a SQL statement.
@@ -57,8 +54,7 @@ class PcodDbImporter(CodDbImporter):
         return f"SELECT file FROM data WHERE {' AND '.join(sql_parts)}"
 
     def query(self, **kwargs):
-        """
-        Performs a query on the PCOD database using ``keyword = value`` pairs,
+        """Performs a query on the PCOD database using ``keyword = value`` pairs,
         specified in ``kwargs``.
 
         :return: an instance of
@@ -78,10 +74,9 @@ class PcodDbImporter(CodDbImporter):
         return PcodSearchResults(results)
 
 
-class PcodSearchResults(CodSearchResults):  # pylint: disable=abstract-method
-    """
-    Results of the search, performed on PCOD.
-    """
+class PcodSearchResults(CodSearchResults):
+    """Results of the search, performed on PCOD."""
+
     _base_url = 'http://www.crystallography.net/pcod/cif/'
 
     def __init__(self, results):
@@ -89,18 +84,16 @@ class PcodSearchResults(CodSearchResults):  # pylint: disable=abstract-method
         self._return_class = PcodEntry
 
     def _get_url(self, result_dict):
-        """
-        Returns an URL of an entry CIF file.
+        """Returns an URL of an entry CIF file.
 
         :param result_dict: dictionary, describing an entry in the results.
         """
         return f"{self._base_url + result_dict['id'][0]}/{result_dict['id'][0:3]}/{result_dict['id']}.cif"
 
 
-class PcodEntry(CodEntry):  # pylint: disable=abstract-method
-    """
-    Represents an entry from PCOD.
-    """
+class PcodEntry(CodEntry):
+    """Represents an entry from PCOD."""
+
     _license = 'CC0'
 
     def __init__(
@@ -108,10 +101,9 @@ class PcodEntry(CodEntry):  # pylint: disable=abstract-method
         uri,
         db_name='Predicted Crystallography Open Database',
         db_uri='http://www.crystallography.net/pcod',
-        **kwargs
+        **kwargs,
     ):
-        """
-        Creates an instance of
+        """Creates an instance of
         :py:class:`aiida.tools.dbimporters.plugins.pcod.PcodEntry`, related
         to the supplied URI.
         """

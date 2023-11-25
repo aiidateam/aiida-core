@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .rmq import *
 
@@ -26,4 +25,4 @@ __all__ = (
     'get_task_exchange_name',
 )
 
-# yapf: enable
+# fmt: on

@@ -23,10 +23,9 @@ The individual SQLAlchemy database migrations may be found at:
 
 Where id is a SQLA id and migration-name is the name of the particular migration.
 """
-# pylint: disable=invalid-name
 from typing import Union
 
-from ..utils import update_metadata, verify_metadata_version  # pylint: disable=no-name-in-module
+from ..utils import update_metadata, verify_metadata_version
 
 
 def migrate_deserialized_datetime(data, conversion):
@@ -50,19 +49,17 @@ def migrate_deserialized_datetime(data, conversion):
         else:
             for value in data:
                 ret_data.append(migrate_deserialized_datetime(value, None))
+    elif conversion is None:
+        ret_data = data
+    elif conversion == 'date':
+        # Node attributes that were datetime objects were converted to a string since datetimes cannot be stored
+        # in JSON. The function used to serialize was:
+        # `data.astimezone(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')
+        # Note that this first converted the datetime to UTC but then dropped the information from the string.
+        # Since we know that all strings will be UTC, here we are simply reattaching that information.
+        ret_data = f'{data}+00:00'
     else:
-        if conversion is None:
-            ret_data = data
-        else:
-            if conversion == 'date':
-                # Node attributes that were datetime objects were converted to a string since datetimes cannot be stored
-                # in JSON. The function used to serialize was:
-                # `data.astimezone(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')
-                # Note that this first converted the datetime to UTC but then dropped the information from the string.
-                # Since we know that all strings will be UTC, here we are simply reattaching that information.
-                ret_data = f'{data}+00:00'
-            else:
-                raise StorageMigrationError(f"Unknown convert_type '{conversion}'")
+        raise StorageMigrationError(f"Unknown convert_type '{conversion}'")
 
     return ret_data
 
@@ -105,7 +102,6 @@ def migration_migrate_legacy_job_calculation_data(data):
     calc_jobs = {pk for pk, values in node_data.items() if values['node_type'] == calc_job_node_type}
 
     for pk in data['node_attributes']:
-
         # Get a reference to the attributes, so later we update the attribute dictionary in place
         values = data['node_attributes'][pk]
 

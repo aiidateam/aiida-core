@@ -12,5 +12,6 @@ def add_multiply(x: int, y: int, z: int | None = None):
 
     return (x + y) * z
 
+
 result = add_multiply(1, 2)
 result = add_multiply(1, 2, 3)

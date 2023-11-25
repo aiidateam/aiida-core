@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Delete trajectory symbols array from the repository and the reference in the attributes
 
 Note, this is similar to the django migration django_0027
@@ -37,7 +36,7 @@ def upgrade():
     connection = op.get_bind()
     repo_path = get_filepath_container(op.get_context().opts['aiida_profile']).parent
 
-    DbNode = table(
+    DbNode = table(  # noqa: N806
         'db_dbnode',
         column('id', Integer),
         column('uuid', UUID),
@@ -46,8 +45,9 @@ def upgrade():
     )
 
     nodes = connection.execute(
-        select(DbNode.c.id,
-               DbNode.c.uuid).where(DbNode.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.'))
+        select(DbNode.c.id, DbNode.c.uuid).where(
+            DbNode.c.type == op.inline_literal('node.data.array.trajectory.TrajectoryData.')
+        )
     ).fetchall()
 
     for pk, uuid in nodes:

@@ -48,10 +48,10 @@ KILL_COMMAND = 'kill'
 RETRY_INTERVAL_OPTION = 'transport.task_retry_initial_interval'
 MAX_ATTEMPTS_OPTION = 'transport.task_maximum_attempts'
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)
 
 
-class PreSubmitException(Exception):
+class PreSubmitException(Exception):  # noqa: N818
     """Raise in the `do_upload` coroutine when an exception is raised in `CalcJob.presubmit`."""
 
 
@@ -89,7 +89,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
                 # Any exception thrown in `presubmit` call is not transient so we circumvent the exponential backoff
                 try:
                     calc_info = process.presubmit(folder)
-                except Exception as exception:  # pylint: disable=broad-except
+                except Exception as exception:
                     raise PreSubmitException('exception occurred in presubmit call') from exception
                 else:
                     execmanager.upload_calculation(node, transport, calc_info, folder)
@@ -105,7 +105,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
         )
     except PreSubmitException:
         raise
-    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):  # pylint: disable=try-except-raise
+    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
         raise
     except Exception as exception:
         logger.warning(f'uploading CalcJob<{node.pk}> failed')
@@ -151,7 +151,7 @@ async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, ca
         result = await exponential_backoff_retry(
             do_submit, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
-    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):  # pylint: disable=try-except-raise
+    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
         raise
     except Exception as exception:
         logger.warning(f'submitting CalcJob<{node.pk}> failed')
@@ -209,7 +209,7 @@ async def task_update_job(node: CalcJobNode, job_manager, cancellable: Interrupt
         job_done = await exponential_backoff_retry(
             do_update, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
-    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):  # pylint: disable=try-except-raise
+    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
         raise
     except Exception as exception:
         logger.warning(f'updating CalcJob<{node.pk}> failed')
@@ -249,7 +249,6 @@ async def task_monitor_job(
     authinfo = node.get_authinfo()
 
     async def do_monitor():
-
         with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
             transport.chdir(node.get_remote_workdir())
@@ -261,7 +260,7 @@ async def task_monitor_job(
         monitor_result = await exponential_backoff_retry(
             do_monitor, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
-    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):  # pylint: disable=try-except-raise
+    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
         raise
     except Exception as exception:
         logger.warning(f'monitoring CalcJob<{node.pk}> failed')
@@ -272,8 +271,10 @@ async def task_monitor_job(
 
 
 async def task_retrieve_job(
-    node: CalcJobNode, transport_queue: TransportQueue, retrieved_temporary_folder: str,
-    cancellable: InterruptableFuture
+    node: CalcJobNode,
+    transport_queue: TransportQueue,
+    retrieved_temporary_folder: str,
+    cancellable: InterruptableFuture,
 ):
     """Transport task that will attempt to retrieve all files of a completed job calculation.
 
@@ -328,7 +329,7 @@ async def task_retrieve_job(
         result = await exponential_backoff_retry(
             do_retrieve, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )
-    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):  # pylint: disable=try-except-raise
+    except (plumpy.futures.CancelledError, plumpy.process_states.Interruption):
         raise
     except Exception as exception:
         logger.warning(f'retrieving CalcJob<{node.pk}> failed')
@@ -375,7 +376,7 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
             initial_interval,
             max_attempts,
             logger=node.logger,
-            ignore_exceptions=plumpy.process_states.Interruption
+            ignore_exceptions=plumpy.process_states.Interruption,
         )
     except plumpy.process_states.Interruption:
         raise
@@ -439,11 +440,9 @@ class Waiting(plumpy.process_states.Waiting):
         process: 'CalcJob',
         done_callback: Optional[Callable[..., Any]],
         msg: Optional[str] = None,
-        data: Optional[Any] = None
+        data: Optional[Any] = None,
     ):
-        """
-        :param process: The process this state belongs to
-        """
+        """:param process: The process this state belongs to"""
         super().__init__(process, done_callback, msg, data)
         self._task: InterruptableFuture | None = None
         self._killing: plumpy.futures.Future | None = None
@@ -473,9 +472,7 @@ class Waiting(plumpy.process_states.Waiting):
 
     @property
     def process(self) -> 'CalcJob':
-        """
-        :return: The process
-        """
+        """:return: The process"""
         return self.state_machine  # type: ignore[return-value]
 
     def load_instance_state(self, saved_state, load_context):
@@ -483,9 +480,8 @@ class Waiting(plumpy.process_states.Waiting):
         self._task = None
         self._killing = None
 
-    async def execute(self) -> plumpy.process_states.State:  # type: ignore[override] # pylint: disable=invalid-overridden-method
+    async def execute(self) -> plumpy.process_states.State:  # type: ignore[override]
         """Override the execute coroutine of the base `Waiting` state."""
-        # pylint: disable=too-many-branches,too-many-statements,too-many-nested-blocks
         node = self.process.node
         transport_queue = self.process.runner.transport
         result: plumpy.process_states.State = self
@@ -494,7 +490,6 @@ class Waiting(plumpy.process_states.Waiting):
         node.set_process_status(process_status)
 
         try:
-
             if self._command == UPLOAD_COMMAND:
                 skip_submit = await self._launch_task(task_upload_job, self.process, transport_queue)
                 if skip_submit:
@@ -529,9 +524,7 @@ class Waiting(plumpy.process_states.Waiting):
 
                     if monitor_result and not monitor_result.retrieve:
                         exit_code = self.process.exit_codes.STOPPED_BY_MONITOR.format(message=monitor_result.message)
-                        return self.create_state(
-                            ProcessState.RUNNING, self.process.terminate, exit_code
-                        )  # type: ignore[return-value]
+                        return self.create_state(ProcessState.RUNNING, self.process.terminate, exit_code)  # type: ignore[return-value]
 
                 result = self.stash(monitor_result=monitor_result)
 

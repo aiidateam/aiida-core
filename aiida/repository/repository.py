@@ -29,8 +29,6 @@ class Repository:
     referenced by other instances.
     """
 
-    # pylint: disable=too-many-public-methods
-
     _file_cls = File
 
     def __init__(self, backend: Optional[AbstractRepositoryBackend] = None):
@@ -47,7 +45,7 @@ class Repository:
 
     def __str__(self) -> str:
         """Return the string representation of this repository."""
-        return f'Repository<{str(self.backend)}>'
+        return f'Repository<{self.backend!s}>'
 
     @property
     def uuid(self) -> Optional[str]:
@@ -66,7 +64,7 @@ class Repository:
         :param backend: instance of repository backend to use to actually store the file objects.
         """
         instance = cls.__new__(cls)
-        instance.__init__(backend)  # type: ignore[misc]  # pylint: disable=unnecessary-dunder-call
+        instance.__init__(backend)  # type: ignore[misc]
 
         if serialized:
             for name, obj in serialized['o'].items():
@@ -349,7 +347,6 @@ class Repository:
             self.create_directory(path)
 
         for root_str, dirnames, filenames in os.walk(filepath):
-
             root = pathlib.PurePosixPath(root_str)
 
             for dirname in dirnames:

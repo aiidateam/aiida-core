@@ -36,8 +36,7 @@ class CalcJobState(Enum):
 
 
 class CalcInfo(DefaultFieldsAttributeDict):
-    """
-    This object will store the data returned by the calculation plugin and to be
+    """This object will store the data returned by the calculation plugin and to be
     passed to the ExecManager.
 
     In the following descriptions all paths have to be considered relative
@@ -90,14 +89,31 @@ class CalcInfo(DefaultFieldsAttributeDict):
     """
 
     _default_fields = (
-        'job_environment', 'email', 'email_on_started', 'email_on_terminated', 'uuid', 'prepend_text', 'append_text',
-        'num_machines', 'num_mpiprocs_per_machine', 'priority', 'max_wallclock_seconds', 'max_memory_kb', 'rerunnable',
-        'retrieve_list', 'retrieve_temporary_list', 'local_copy_list', 'remote_copy_list', 'remote_symlink_list',
-        'provenance_exclude_list', 'codes_info', 'codes_run_mode', 'skip_submit'
+        'job_environment',
+        'email',
+        'email_on_started',
+        'email_on_terminated',
+        'uuid',
+        'prepend_text',
+        'append_text',
+        'num_machines',
+        'num_mpiprocs_per_machine',
+        'priority',
+        'max_wallclock_seconds',
+        'max_memory_kb',
+        'rerunnable',
+        'retrieve_list',
+        'retrieve_temporary_list',
+        'local_copy_list',
+        'remote_copy_list',
+        'remote_symlink_list',
+        'provenance_exclude_list',
+        'codes_info',
+        'codes_run_mode',
+        'skip_submit',
     )
 
     if TYPE_CHECKING:
-
         job_environment: None | dict[str, str]
         email: None | str
         email_on_started: bool
@@ -123,8 +139,7 @@ class CalcInfo(DefaultFieldsAttributeDict):
 
 
 class CodeInfo(DefaultFieldsAttributeDict):
-    """
-    This attribute-dictionary contains the information needed to execute a code.
+    """This attribute-dictionary contains the information needed to execute a code.
     Possible attributes are:
 
     * ``cmdline_params``: a list of strings, containing parameters to be written on
@@ -166,6 +181,7 @@ class CodeInfo(DefaultFieldsAttributeDict):
       on the remote computer)
     * ``code_uuid``: the uuid of the code associated to the CodeInfo
     """
+
     _default_fields = (
         'cmdline_params',  # as a list of strings
         'stdin_name',
@@ -173,11 +189,10 @@ class CodeInfo(DefaultFieldsAttributeDict):
         'stderr_name',
         'join_files',
         'withmpi',
-        'code_uuid'
+        'code_uuid',
     )
 
     if TYPE_CHECKING:
-
         cmdline_params: None | list[str]
         stdin_name: None | str
         stdout_name: None | str

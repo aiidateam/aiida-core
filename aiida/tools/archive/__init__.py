@@ -13,8 +13,7 @@ of subsets of the provenance graph, to a single file
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .abstract import *
 from .create import *
@@ -41,4 +40,4 @@ __all__ = (
     'import_archive',
 )
 
-# yapf: enable
+# fmt: on

@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Plugin for SLURM.
+"""Plugin for SLURM.
 This has been tested on SLURM 14.03.7 on the CSCS.ch machines.
 """
 import re
@@ -95,7 +94,8 @@ _TIME_REGEXP = re.compile(
                                  # 2 minutes
     \s*                          # any number of whitespaces
     $                            # end of line
-   """, re.VERBOSE
+   """,
+    re.VERBOSE,
 )
 
 # Separator between fields in the output of squeue
@@ -142,9 +142,8 @@ class SlurmJobResource(NodeNumberJobResource):
 
 
 class SlurmScheduler(Scheduler):
-    """
-    Support for the SLURM scheduler (http://slurm.schedmd.com/).
-    """
+    """Support for the SLURM scheduler (http://slurm.schedmd.com/)."""
+
     _logger = Scheduler._logger.getChild('slurm')
 
     # Query only by list of jobs and not by user
@@ -153,12 +152,56 @@ class SlurmScheduler(Scheduler):
     }
 
     _detailed_job_info_fields = [
-        'AllocCPUS', 'Account', 'AssocID', 'AveCPU', 'AvePages', 'AveRSS', 'AveVMSize', 'Cluster', 'Comment', 'CPUTime',
-        'CPUTimeRAW', 'DerivedExitCode', 'Elapsed', 'Eligible', 'End', 'ExitCode', 'GID', 'Group', 'JobID', 'JobName',
-        'MaxRSS', 'MaxRSSNode', 'MaxRSSTask', 'MaxVMSize', 'MaxVMSizeNode', 'MaxVMSizeTask', 'MinCPU', 'MinCPUNode',
-        'MinCPUTask', 'NCPUS', 'NNodes', 'NodeList', 'NTasks', 'Priority', 'Partition', 'QOSRAW', 'ReqCPUS', 'Reserved',
-        'ResvCPU', 'ResvCPURAW', 'Start', 'State', 'Submit', 'Suspended', 'SystemCPU', 'Timelimit', 'TotalCPU', 'UID',
-        'User', 'UserCPU'
+        'AllocCPUS',
+        'Account',
+        'AssocID',
+        'AveCPU',
+        'AvePages',
+        'AveRSS',
+        'AveVMSize',
+        'Cluster',
+        'Comment',
+        'CPUTime',
+        'CPUTimeRAW',
+        'DerivedExitCode',
+        'Elapsed',
+        'Eligible',
+        'End',
+        'ExitCode',
+        'GID',
+        'Group',
+        'JobID',
+        'JobName',
+        'MaxRSS',
+        'MaxRSSNode',
+        'MaxRSSTask',
+        'MaxVMSize',
+        'MaxVMSizeNode',
+        'MaxVMSizeTask',
+        'MinCPU',
+        'MinCPUNode',
+        'MinCPUTask',
+        'NCPUS',
+        'NNodes',
+        'NodeList',
+        'NTasks',
+        'Priority',
+        'Partition',
+        'QOSRAW',
+        'ReqCPUS',
+        'Reserved',
+        'ResvCPU',
+        'ResvCPURAW',
+        'Start',
+        'State',
+        'Submit',
+        'Suspended',
+        'SystemCPU',
+        'Timelimit',
+        'TotalCPU',
+        'UID',
+        'User',
+        'UserCPU',
     ]
 
     # The class to be used for the job resource.
@@ -181,13 +224,12 @@ class SlurmScheduler(Scheduler):
         ('%M', 'time_used'),  # Time used by the job in days-hours:minutes:seconds
         ('%S', 'dispatch_time'),  # actual or expected dispatch time (start time)
         ('%j', 'job_name'),  # job name (title)
-        ('%V', 'submission_time')  # This is probably new, it exists in version
+        ('%V', 'submission_time'),  # This is probably new, it exists in version
         # 14.03.7 and later
     ]
 
     def _get_joblist_command(self, jobs=None, user=None):
-        """
-        The command to report full information on existing jobs.
+        """The command to report full information on existing jobs.
 
         Separate the fields with the _field_separator string order:
         jobnum, state, walltime, queue[=partition], user, numnodes, numcores, title
@@ -197,8 +239,10 @@ class SlurmScheduler(Scheduler):
         # I add the environment variable SLURM_TIME_FORMAT in front to be
         # sure to get the times in 'standard' format
         command = [
-            "SLURM_TIME_FORMAT='standard'", 'squeue', '--noheader',
-            f"-o '{_FIELD_SEPARATOR.join(_[0] for _ in self.fields)}'"
+            "SLURM_TIME_FORMAT='standard'",
+            'squeue',
+            '--noheader',
+            f"-o '{_FIELD_SEPARATOR.join(_[0] for _ in self.fields)}'",
         ]
 
         if user and jobs:
@@ -238,8 +282,7 @@ class SlurmScheduler(Scheduler):
         return comm
 
     def _get_detailed_job_info_command(self, job_id):
-        """
-        Return the command to run to get the detailed information on a job,
+        """Return the command to run to get the detailed information on a job,
         even after the job has finished.
 
         The output text is just retrieved, and returned for logging purposes.
@@ -250,16 +293,15 @@ class SlurmScheduler(Scheduler):
         return f'sacct --format={fields} --parsable --jobs={job_id}'
 
     def _get_submit_script_header(self, job_tmpl):
-        """
-        Return the submit script header, using the parameters from the
+        """Return the submit script header, using the parameters from the
         job_tmpl.
 
         Args:
+        -----
            job_tmpl: an JobTemplate instance with relevant parameters set.
 
         TODO: truncate the title if too long
         """
-        # pylint: disable=too-many-statements,too-many-branches
         import string
 
         lines = []
@@ -310,7 +352,7 @@ class SlurmScheduler(Scheduler):
             lines.append(f'#SBATCH --output={job_tmpl.sched_output_path}')
 
         if job_tmpl.sched_join_files:
-            # TODO: manual says:  # pylint: disable=fixme
+            # TODO: manual says:
             # By  default both standard output and standard error are directed
             # to a file of the name "slurm-%j.out", where the "%j" is replaced
             # with  the  job  allocation  number.
@@ -321,12 +363,11 @@ class SlurmScheduler(Scheduler):
                     'sched_join_files is True, but sched_error_path is set in '
                     'SLURM script; ignoring sched_error_path'
                 )
+        elif job_tmpl.sched_error_path:
+            lines.append(f'#SBATCH --error={job_tmpl.sched_error_path}')
         else:
-            if job_tmpl.sched_error_path:
-                lines.append(f'#SBATCH --error={job_tmpl.sched_error_path}')
-            else:
-                # To avoid automatic join of files
-                lines.append('#SBATCH --error=slurm-%j.err')
+            # To avoid automatic join of files
+            lines.append('#SBATCH --error=slurm-%j.err')
 
         if job_tmpl.queue_name:
             lines.append(f'#SBATCH --partition={job_tmpl.queue_name}')
@@ -361,9 +402,9 @@ class SlurmScheduler(Scheduler):
                     raise ValueError
             except ValueError:
                 raise ValueError(
-                    'max_wallclock_seconds must be '
-                    "a positive integer (in seconds)! It is instead '{}'"
-                    ''.format((job_tmpl.max_wallclock_seconds))
+                    'max_wallclock_seconds must be ' "a positive integer (in seconds)! It is instead '{}'" ''.format(
+                        (job_tmpl.max_wallclock_seconds)
+                    )
                 )
             days = tot_secs // 86400
             tot_hours = tot_secs % 86400
@@ -396,10 +437,10 @@ class SlurmScheduler(Scheduler):
         return '\n'.join(lines)
 
     def _get_submit_command(self, submit_script):
-        """
-        Return the string to execute to submit a given script.
+        """Return the string to execute to submit a given script.
 
         Args:
+        -----
             submit_script: the path of the submit script relative to the working
                 directory.
                 IMPORTANT: submit_script should be already escaped.
@@ -411,8 +452,7 @@ class SlurmScheduler(Scheduler):
         return submit_command
 
     def _parse_submit_output(self, retval, stdout, stderr):
-        """
-        Parse the output of the submit command, as returned by executing the
+        """Parse the output of the submit command, as returned by executing the
         command returned by _get_submit_command command.
 
         To be implemented by the plugin.
@@ -447,13 +487,11 @@ class SlurmScheduler(Scheduler):
         # If I am here, no valid line could be found.
         self.logger.error(f'in _parse_submit_output{transport_string}: unable to find the job id: {stdout}')
         raise SchedulerError(
-            'Error during submission, could not retrieve the jobID from '
-            'sbatch output; see log for more info.'
+            'Error during submission, could not retrieve the jobID from ' 'sbatch output; see log for more info.'
         )
 
     def _parse_joblist_output(self, retval, stdout, stderr):
-        """
-        Parse the queue output string, as returned by executing the
+        """Parse the queue output string, as returned by executing the
         command returned by _get_joblist_command command,
         that is here implemented as a list of lines, one for each
         job, with _field_separator as separator. The order is described
@@ -468,7 +506,6 @@ class SlurmScheduler(Scheduler):
             in the qstat output; missing jobs (for whatever reason) simply
             will not appear here.
         """
-        # pylint: disable=too-many-branches,too-many-statements
         num_fields = len(self.fields)
 
         # See discussion in _get_joblist_command on how we ensure that AiiDA can expect exit code 0 here.
@@ -490,12 +527,13 @@ stderr='{stderr.strip()}'"""
         # the last field), I don't split the title.
         # This assumes that _field_separator never
         # appears in any previous field.
-        jobdata_raw = [l.split(_FIELD_SEPARATOR, num_fields) for l in stdout.splitlines() if _FIELD_SEPARATOR in l]
+        jobdata_raw = [
+            line.split(_FIELD_SEPARATOR, num_fields) for line in stdout.splitlines() if _FIELD_SEPARATOR in line
+        ]
 
         # Create dictionary and parse specific fields
         job_list = []
         for job in jobdata_raw:
-
             thisjob_dict = {k[1]: v for k, v in zip(self.fields, job)}
 
             this_job = JobInfo()
@@ -530,10 +568,12 @@ stderr='{stderr.strip()}'"""
             # There are actually a few others, like possible
             # failures, or partition-related reasons, but for the moment I
             # leave them in the QUEUED state.
-            if (
-                job_state_string == JobState.QUEUED and
-                this_job.annotation in ['Dependency', 'JobHeldUser', 'JobHeldAdmin', 'BeginTime']
-            ):
+            if job_state_string == JobState.QUEUED and this_job.annotation in [
+                'Dependency',
+                'JobHeldUser',
+                'JobHeldAdmin',
+                'BeginTime',
+            ]:
                 job_state_string = JobState.QUEUED_HELD
 
             this_job.job_state = job_state_string
@@ -553,7 +593,7 @@ stderr='{stderr.strip()}'"""
                 job_list.append(this_job)
                 continue
 
-            # TODO: store executing_host?  # pylint: disable=fixme
+            # TODO: store executing_host?
 
             this_job.job_owner = thisjob_dict['username']
 
@@ -561,16 +601,18 @@ stderr='{stderr.strip()}'"""
                 this_job.num_machines = int(thisjob_dict['number_nodes'])
             except ValueError:
                 self.logger.warning(
-                    'The number of allocated nodes is not '
-                    'an integer ({}) for job id {}!'.format(thisjob_dict['number_nodes'], this_job.job_id)
+                    'The number of allocated nodes is not ' 'an integer ({}) for job id {}!'.format(
+                        thisjob_dict['number_nodes'], this_job.job_id
+                    )
                 )
 
             try:
                 this_job.num_mpiprocs = int(thisjob_dict['number_cpus'])
             except ValueError:
                 self.logger.warning(
-                    'The number of allocated cores is not '
-                    'an integer ({}) for job id {}!'.format(thisjob_dict['number_cpus'], this_job.job_id)
+                    'The number of allocated cores is not ' 'an integer ({}) for job id {}!'.format(
+                        thisjob_dict['number_cpus'], this_job.job_id
+                    )
                 )
 
             # ALLOCATED NODES HERE
@@ -586,7 +628,7 @@ stderr='{stderr.strip()}'"""
 
             try:
                 walltime = self._convert_time(thisjob_dict['time_limit'])
-                this_job.requested_wallclock_time_seconds = walltime  # pylint: disable=invalid-name
+                this_job.requested_wallclock_time_seconds = walltime
             except ValueError:
                 self.logger.warning(f'Error parsing the time limit for job id {this_job.job_id}')
 
@@ -616,14 +658,12 @@ stderr='{stderr.strip()}'"""
             # Double check of redundant info
             # Not really useful now, allocated_machines in this
             # version of the plugin is never set
-            if (this_job.allocated_machines is not None and this_job.num_machines is not None):
+            if this_job.allocated_machines is not None and this_job.num_machines is not None:
                 if len(this_job.allocated_machines) != this_job.num_machines:
                     self.logger.error(
                         'The length of the list of allocated '
                         'nodes ({}) is different from the '
-                        'expected number of nodes ({})!'.format(
-                            len(this_job.allocated_machines), this_job.num_machines
-                        )
+                        'expected number of nodes ({})!'.format(len(this_job.allocated_machines), this_job.num_machines)
                     )
 
             # I append to the list of jobs to return
@@ -632,10 +672,7 @@ stderr='{stderr.strip()}'"""
         return job_list
 
     def _convert_time(self, string):
-        """
-        Convert a string in the format DD-HH:MM:SS to a number of seconds.
-        """
-
+        """Convert a string in the format DD-HH:MM:SS to a number of seconds."""
         if string == 'UNLIMITED':
             return 2147483647  # == 2**31 - 1, largest 32-bit signed integer (68 years)
 
@@ -657,8 +694,7 @@ stderr='{stderr.strip()}'"""
         return days * 86400 + hours * 3600 + mins * 60 + secs
 
     def _parse_time_string(self, string, fmt='%Y-%m-%dT%H:%M:%S'):
-        """
-        Parse a time string in the format returned from qstat -f and
+        """Parse a time string in the format returned from qstat -f and
         returns a datetime object.
         """
         import datetime
@@ -676,9 +712,7 @@ stderr='{stderr.strip()}'"""
         return datetime.datetime.fromtimestamp(time.mktime(time_struct))
 
     def _get_kill_command(self, jobid):
-        """
-        Return the command to kill the job with specified jobid.
-        """
+        """Return the command to kill the job with specified jobid."""
         submit_command = f'scancel {jobid}'
 
         self.logger.info(f'killing job {jobid}')
@@ -686,8 +720,7 @@ stderr='{stderr.strip()}'"""
         return submit_command
 
     def _parse_kill_output(self, retval, stdout, stderr):
-        """
-        Parse the output of the kill command.
+        """Parse the output of the kill command.
 
         To be implemented by the plugin.
 
@@ -724,7 +757,6 @@ stderr='{stderr.strip()}'"""
         from aiida.engine import CalcJob
 
         if detailed_job_info is not None:
-
             type_check(detailed_job_info, dict)
 
             try:
@@ -770,7 +802,6 @@ stderr='{stderr.strip()}'"""
         # Alternatively, if the ``detailed_job_info`` is not defined or hasn't already determined an error, try to match
         # known error messages from the output written to the ``stderr`` descriptor.
         if stderr is not None:
-
             type_check(stderr, str)
             stderr_lower = stderr.lower()
 

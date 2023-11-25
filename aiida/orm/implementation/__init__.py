@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .authinfos import *
 from .comments import *
@@ -51,4 +50,4 @@ __all__ = (
     'validate_attribute_extra_key',
 )
 
-# yapf: enable
+# fmt: on

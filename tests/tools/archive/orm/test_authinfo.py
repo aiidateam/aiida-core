@@ -54,10 +54,10 @@ def test_import_authinfo(aiida_profile, tmp_path, aiida_localhost):
         hostname='localhost-other',
         workdir=str(tmp_path),
         transport_type='core.local',
-        scheduler_type='core.direct'
+        scheduler_type='core.direct',
     )
     computer.store()
-    computer.set_minimum_job_poll_interval(0.)
+    computer.set_minimum_job_poll_interval(0.0)
     computer.configure()
     assert orm.AuthInfo.collection.count() == 1
     import_archive(filename1, include_authinfos=False)

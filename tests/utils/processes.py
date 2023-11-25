@@ -97,7 +97,7 @@ class InvalidateCaching(Process):
 
     def run(self):
         if self.inputs.return_exit_code:
-            return self.exit_codes.GENERIC_EXIT_CODE  # pylint: disable=no-member
+            return self.exit_codes.GENERIC_EXIT_CODE
 
 
 class IsValidCacheHook(Process):

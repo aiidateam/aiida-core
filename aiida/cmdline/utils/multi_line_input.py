@@ -24,6 +24,7 @@ def edit_multiline_template(template_name, comment_marker='#=', extension=None, 
         ``click.edit`` returned ``None``.
     """
     from aiida.cmdline.utils.templates import env
+
     template = env.get_template(template_name)
     rendered = template.render(**kwargs)
     content = click.edit(rendered, extension=extension)
@@ -36,10 +37,9 @@ def edit_multiline_template(template_name, comment_marker='#=', extension=None, 
 
 
 def edit_comment(old_cmt=''):
-    """
-    call up an editor to edit comments to nodes in the database
-    """
+    """Call up an editor to edit comments to nodes in the database"""
     from aiida.cmdline.utils.templates import env
+
     template = env.get_template('new_cmt.txt.tpl')
     content = template.render(old_comment=old_cmt)
     mlinput = click.edit(content, extension='.txt')

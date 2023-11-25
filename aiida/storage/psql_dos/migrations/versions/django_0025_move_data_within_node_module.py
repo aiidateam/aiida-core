@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Change type string for `Data` nodes, from `data.*` to `node.data.*`
 
 Note, this is identical to sqlalchemy migration 6a5c2ea1439d
@@ -16,8 +15,8 @@ Revision ID: django_0025
 Revises: django_0024
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = 'django_0025'
 down_revision = 'django_0024'

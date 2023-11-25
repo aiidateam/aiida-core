@@ -21,7 +21,7 @@ from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators, echo
 
 
-def validate_daemon_workers(ctx, param, value):  # pylint: disable=unused-argument,invalid-name
+def validate_daemon_workers(ctx, param, value):
     """Validate the value for the number of daemon workers to start with default set by config."""
     if value is None:
         value = ctx.obj.config.get_option('daemon.default_workers', ctx.obj.profile.name)
@@ -251,7 +251,8 @@ def start_circus(foreground, number):
     .. note:: this should not be called directly from the commandline!
     """
     from aiida.engine.daemon.client import get_daemon_client
-    get_daemon_client()._start_daemon(number_workers=number, foreground=foreground)  # pylint: disable=protected-access
+
+    get_daemon_client()._start_daemon(number_workers=number, foreground=foreground)
 
 
 @verdi_daemon.command('worker')
@@ -259,4 +260,5 @@ def start_circus(foreground, number):
 def worker():
     """Run a single daemon worker in the current interpreter."""
     from aiida.engine.daemon.worker import start_daemon_worker
+
     start_daemon_worker()

@@ -18,8 +18,7 @@ from aiida.common.warnings import warn_deprecation
 
 
 class FunctionCalculationMixin:
-    """
-    This mixin should be used for ProcessNode subclasses that are used to record the execution
+    """This mixin should be used for ProcessNode subclasses that are used to record the execution
     of a python function. For example the process nodes that are used for a function that
     was wrapped by the `workfunction` or `calcfunction` function decorators. The `store_source_info`
     method can then be called with the wrapped function to store information about that function
@@ -34,8 +33,7 @@ class FunctionCalculationMixin:
     FUNCTION_SOURCE_FILE_PATH = 'source_file'
 
     def store_source_info(self, func) -> None:
-        """
-        Retrieve source information about the wrapped function `func` through the inspect module,
+        """Retrieve source information about the wrapped function `func` through the inspect module,
         and store it in the attributes and repository of the node. The function name, namespace
         and the starting line number in the source file will be stored in the attributes. The
         source file itself will be copied into the repository
@@ -54,7 +52,7 @@ class FunctionCalculationMixin:
 
         try:
             self._set_function_namespace(func.__globals__['__name__'])
-        except Exception:  # pylint: disable=broad-except
+        except Exception:
             pass
 
         try:
@@ -174,17 +172,16 @@ class FunctionCalculationMixin:
         end_line = start_line + self.function_number_of_lines
 
         # Start at ``start_line - 1`` to include the decorator
-        return '\n'.join(content_list[start_line - 1:end_line])
+        return '\n'.join(content_list[start_line - 1 : end_line])
 
 
 class Sealable:
     """Mixin to mark a Node as `sealable`."""
-    # pylint: disable=no-member,unsupported-membership-test
 
     SEALED_KEY = 'sealed'
 
     @classproperty
-    def _updatable_attributes(cls) -> tuple[str, ...]:  # pylint: disable=no-self-argument
+    def _updatable_attributes(cls) -> tuple[str, ...]:  # noqa: N805
         return (cls.SEALED_KEY,)
 
     @property
@@ -200,7 +197,7 @@ class Sealable:
         return self
 
     @override
-    def _check_mutability_attributes(self, keys: list[str] | None = None) -> None:  # pylint: disable=unused-argument
+    def _check_mutability_attributes(self, keys: list[str] | None = None) -> None:
         """Check if the entity is mutable and raise an exception if not.
 
         This is called from `NodeAttributes` methods that modify the attributes.

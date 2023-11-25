@@ -12,14 +12,15 @@ from aiida.common.exceptions import ValidationError
 from aiida.common.utils import ErrorAccumulator
 
 
-class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
+class ComputerBuilder:
     """Build a computer with validation of attribute combinations"""
 
     @staticmethod
     def from_computer(computer):
         """Create ComputerBuilder from existing computer instance.
 
-        See also :py:func:`~ComputerBuilder.get_computer_spec`"""
+        See also :py:func:`~ComputerBuilder.get_computer_spec`
+        """
         spec = ComputerBuilder.get_computer_spec(computer)
         return ComputerBuilder(**spec)
 
@@ -31,7 +32,9 @@ class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
 
             spec = ComputerBuilder.get_computer_spec(old_computer)
             builder = ComputerBuilder(**spec)
-            new_computer = builder.new()"""
+            new_computer = builder.new()
+
+        """
         spec = {}
         spec['label'] = computer.label
         spec['description'] = computer.description
@@ -94,13 +97,11 @@ class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
                 mpiprocs_per_machine = int(mpiprocs_per_machine)
             except ValueError:
                 raise self.ComputerValidationError(
-                    'Invalid value provided for mpiprocs_per_machine, '
-                    'must be a valid integer'
+                    'Invalid value provided for mpiprocs_per_machine, ' 'must be a valid integer'
                 )
             if mpiprocs_per_machine <= 0:
                 raise self.ComputerValidationError(
-                    'Invalid value provided for mpiprocs_per_machine, '
-                    'must be positive'
+                    'Invalid value provided for mpiprocs_per_machine, ' 'must be positive'
                 )
             computer.set_default_mpiprocs_per_machine(mpiprocs_per_machine)
 
@@ -120,7 +121,7 @@ class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
         mpirun_command_internal = self._get_and_count('mpirun_command', used).strip().split(' ')
         if mpirun_command_internal == ['']:
             mpirun_command_internal = []
-        computer._mpirun_command_validator(mpirun_command_internal)  # pylint: disable=protected-access
+        computer._mpirun_command_validator(mpirun_command_internal)
         computer.set_mpirun_command(mpirun_command_internal)
 
         # Complain if there are keys that are passed but not used
@@ -141,22 +142,21 @@ class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
         return None
 
     def _get(self, key):
-        """
-        Return a spec, or None if not defined
+        """Return a spec, or None if not defined
 
-        :param key: name of a computer spec"""
+        :param key: name of a computer spec
+        """
         return self._computer_spec.get(key)
 
     def _get_and_count(self, key, used):
-        """
-        Return a spec, or raise if not defined.
+        """Return a spec, or raise if not defined.
         Moreover, add the key to the 'used' dict.
 
         :param key: name of a computer spec
         :param used: should be a set of keys that you want to track.
            ``key`` will be added to this set if the value exists in the spec and can be retrieved.
         """
-        retval = self.__getattr__(key)  # pylint: disable=unnecessary-dunder-call
+        retval = self.__getattr__(key)
         # I first get a retval, so if I get an exception, I don't add it to the 'used' set
         used.add(key)
         return retval
@@ -176,11 +176,11 @@ class ComputerBuilder:  # pylint: disable=too-many-instance-attributes
             self.validate()
 
     class ComputerValidationError(Exception):
-        """
-        A ComputerBuilder instance may raise this
+        """A ComputerBuilder instance may raise this.
 
-         * when asked to instanciate a code with missing or invalid computer attributes
-         * when asked for a computer attibute that has not been set yet."""
+        * when asked to instanciate a code with missing or invalid computer attributes
+        * when asked for a computer attibute that has not been set yet.
+        """
 
         def __init__(self, msg):
             super().__init__()

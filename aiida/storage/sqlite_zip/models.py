@@ -18,8 +18,8 @@ except for changes to the database specific types:
 
 Also, `varchar_pattern_ops` indexes are not possible in sqlite.
 """
-from datetime import datetime, timezone
 import functools
+from datetime import datetime, timezone
 from typing import Any, Optional, Set, Tuple
 
 import sqlalchemy as sa
@@ -29,6 +29,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.dialects.sqlite import JSON
 
 from aiida.orm.entities import EntityTypes
+
 # we need to import all models, to ensure they are loaded on the SQLA Metadata
 from aiida.storage.psql_dos.models import authinfo, base, comment, computer, group, log, node, user
 
@@ -39,7 +40,7 @@ class SqliteModel:
     def __repr__(self) -> str:
         """Return a representation of the row columns"""
         string = f'<{self.__class__.__name__}'
-        for col in self.__table__.columns:  # type: ignore[attr-defined] # pylint: disable=no-member
+        for col in self.__table__.columns:  # type: ignore[attr-defined]
             col_name = col.name
             if col_name == 'metadata':
                 col_name = '_metadata'
@@ -50,11 +51,12 @@ class SqliteModel:
         return string + '>'
 
 
-class TZDateTime(sa.TypeDecorator):  # pylint: disable=abstract-method
+class TZDateTime(sa.TypeDecorator):
     """A timezone naive UTC ``DateTime`` implementation for SQLite.
 
     see: https://docs.sqlalchemy.org/en/14/core/custom_types.html#store-timezone-aware-timestamps-as-timezone-naive-utc
     """
+
     impl = sa.DateTime
     cache_ok = True
 
@@ -147,11 +149,14 @@ DbLog.dbnode = sa_orm.relationship(  # type: ignore[attr-defined]
 DbNode.dbcomputer = sa_orm.relationship(  # type: ignore[attr-defined]
     'DbComputer', backref=sa_orm.backref('dbnodes', passive_deletes='all', cascade='merge')
 )
-DbNode.user = sa_orm.relationship('DbUser', backref=sa_orm.backref(  # type: ignore[attr-defined]
-    'dbnodes',
-    passive_deletes='all',
-    cascade='merge',
-))
+DbNode.user = sa_orm.relationship(
+    'DbUser',
+    backref=sa_orm.backref(  # type: ignore[attr-defined]
+        'dbnodes',
+        passive_deletes='all',
+        cascade='merge',
+    ),
+)
 
 
 @functools.lru_cache(maxsize=10)
@@ -166,7 +171,7 @@ def get_model_from_entity(entity_type: EntityTypes) -> Tuple[Any, Set[str]]:
         EntityTypes.COMPUTER: DbComputer,
         EntityTypes.LOG: DbLog,
         EntityTypes.LINK: DbLink,
-        EntityTypes.GROUP_NODE: DbGroupNodes
+        EntityTypes.GROUP_NODE: DbGroupNodes,
     }[entity_type]
     mapper = sa.inspect(model).mapper
     column_names = {col.name for col in mapper.c.values()}

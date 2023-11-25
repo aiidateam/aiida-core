@@ -42,11 +42,7 @@ class LinkQuadruple(NamedTuple):
 
 
 def link_triple_exists(
-    source: 'Node',
-    target: 'Node',
-    link_type: 'LinkType',
-    link_label: str,
-    backend: Optional['StorageBackend'] = None
+    source: 'Node', target: 'Node', link_type: 'LinkType', link_label: str, backend: Optional['StorageBackend'] = None
 ) -> bool:
     """Return whether a link with the given type and label exists between the given source and target node.
 
@@ -79,14 +75,9 @@ def link_triple_exists(
 
 
 def validate_link(
-    source: 'Node',
-    target: 'Node',
-    link_type: 'LinkType',
-    link_label: str,
-    backend: Optional['StorageBackend'] = None
+    source: 'Node', target: 'Node', link_type: 'LinkType', link_label: str, backend: Optional['StorageBackend'] = None
 ) -> None:
-    """
-    Validate adding a link of the given type and label from a given node to ourself.
+    """Validate adding a link of the given type and label from a given node to ourself.
 
     This function will first validate the class types of the inputs and will subsequently validate whether a link of
     the specified type is allowed at all between the nodes types of the source and target.
@@ -146,7 +137,6 @@ def validate_link(
     :raise TypeError: if `source` or `target` is not a Node instance, or `link_type` is not a `LinkType` enum
     :raise ValueError: if the proposed link is invalid
     """
-    # yapf: disable
     from aiida.common.links import LinkType, validate_link_label
     from aiida.orm import CalculationNode, Data, Node, WorkflowNode
 
@@ -199,33 +189,42 @@ def validate_link(
         raise ValueError(f'node<{source.uuid}> already has an outgoing {link_type} link')
 
     # If the outdegree is `unique_pair`, then the link labels for outgoing links of this type should be unique
-    elif outdegree == 'unique_pair' and source.base.links.get_outgoing(
-            link_type=link_type, only_uuid=True, link_label_filter=link_label).all():
+    elif (
+        outdegree == 'unique_pair'
+        and source.base.links.get_outgoing(link_type=link_type, only_uuid=True, link_label_filter=link_label).all()
+    ):
         raise ValueError(f'node<{source.uuid}> already has an outgoing {link_type} link with label "{link_label}"')
 
     # If the outdegree is `unique_triple`, then the link triples of link type, link label and target should be unique
     elif outdegree == 'unique_triple' and duplicate_link_triple:
-        raise ValueError('node<{}> already has an outgoing {} link with label "{}" from node<{}>'.format(
-            source.uuid, link_type, link_label, target.uuid))
+        raise ValueError(
+            'node<{}> already has an outgoing {} link with label "{}" from node<{}>'.format(
+                source.uuid, link_type, link_label, target.uuid
+            )
+        )
 
     # If the indegree is `unique` there cannot already be any other incoming links of that type
     if indegree == 'unique' and target.base.links.get_incoming(link_type=link_type, only_uuid=True).all():
         raise ValueError(f'node<{target.uuid}> already has an incoming {link_type} link')
 
     # If the indegree is `unique_pair`, then the link labels for incoming links of this type should be unique
-    elif indegree == 'unique_pair' and target.base.links.get_incoming(
-            link_type=link_type, link_label_filter=link_label, only_uuid=True).all():
+    elif (
+        indegree == 'unique_pair'
+        and target.base.links.get_incoming(link_type=link_type, link_label_filter=link_label, only_uuid=True).all()
+    ):
         raise ValueError(f'node<{target.uuid}> already has an incoming {link_type} link with label "{link_label}"')
 
     # If the indegree is `unique_triple`, then the link triples of link type, link label and source should be unique
     elif indegree == 'unique_triple' and duplicate_link_triple:
-        raise ValueError('node<{}> already has an incoming {} link with label "{}" from node<{}>'.format(
-            target.uuid, link_type, link_label, source.uuid))
+        raise ValueError(
+            'node<{}> already has an incoming {} link with label "{}" from node<{}>'.format(
+                target.uuid, link_type, link_label, source.uuid
+            )
+        )
 
 
 class LinkManager:
-    """
-    Class to convert a list of LinkTriple tuples into an iterator.
+    """Class to convert a list of LinkTriple tuples into an iterator.
 
     It defines convenience methods to retrieve certain subsets of LinkTriple while checking for consistency.
     For example::
@@ -331,9 +330,7 @@ class LinkManager:
                 if matching_entry is None:
                     matching_entry = entry.node
                 else:
-                    raise exceptions.MultipleObjectsError(
-                        f'more than one neighbor with the label {label} found'
-                    )
+                    raise exceptions.MultipleObjectsError(f'more than one neighbor with the label {label} found')
 
         if matching_entry is None:
             raise exceptions.NotExistent(f'no neighbor with the label {label} found')
@@ -355,7 +352,6 @@ class LinkManager:
         nested: dict = {}
 
         for entry in self.link_triples:
-
             current_namespace = nested
             breadcrumbs = entry.link_label.split(PORT_NAMESPACE_SEPARATOR)
 

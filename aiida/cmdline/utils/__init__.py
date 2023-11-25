@@ -12,8 +12,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .ascii_vis import *
 from .common import *
@@ -36,4 +35,4 @@ __all__ = (
     'with_dbenv',
 )
 
-# yapf: enable
+# fmt: on

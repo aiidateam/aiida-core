@@ -12,8 +12,8 @@
 Threaded mode is the default (and only) way to run the AiiDA REST API (see `aiida.restapi.run_api:run_api()`).
 This test file's layout is inspired by https://gist.github.com/prschmid/4643738
 """
-from threading import Thread
 import time
+from threading import Thread
 
 import pytest
 import requests
@@ -27,7 +27,6 @@ def test_run_threaded_server(restapi_server, server_url, aiida_localhost):
 
     This test will fail, if database connections are not being properly closed by the end-point calls.
     """
-
     server = restapi_server()
     computer_id = aiida_localhost.uuid
 
@@ -50,8 +49,8 @@ def test_run_threaded_server(restapi_server, server_url, aiida_localhost):
             else:
                 assert 'data' in response_json
 
-    except Exception as exc:  # pylint: disable=broad-except
-        pytest.fail(f'Something went terribly wrong! Exception: {repr(exc)}')
+    except Exception as exc:
+        pytest.fail(f'Something went terribly wrong! Exception: {exc!r}')
     finally:
         server.shutdown()
 
@@ -107,8 +106,8 @@ def test_run_without_close_session(restapi_server, server_url, aiida_localhost, 
 
     except (requests.exceptions.ConnectionError, OSError):
         pass
-    except Exception as exc:  # pylint: disable=broad-except
-        pytest.fail(f'Something went terribly wrong! Exception: {repr(exc)}')
+    except Exception as exc:
+        pytest.fail(f'Something went terribly wrong! Exception: {exc!r}')
     finally:
         server.shutdown()
 

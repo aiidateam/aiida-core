@@ -18,7 +18,7 @@ def run_migrations_online():
     """
     from aiida.storage.sqlite_zip.models import SqliteBase
 
-    config = context.config  # pylint: disable=no-member
+    config = context.config
 
     connection = config.attributes.get('connection', None)
     aiida_profile = config.attributes.get('aiida_profile', None)
@@ -26,21 +26,22 @@ def run_migrations_online():
 
     if connection is None:
         from aiida.common.exceptions import ConfigurationError
+
         raise ConfigurationError('An initialized connection is expected for the AiiDA online migrations.')
 
-    context.configure(  # pylint: disable=no-member
+    context.configure(
         connection=connection,
         target_metadata=SqliteBase.metadata,
         transaction_per_migration=True,
         aiida_profile=aiida_profile,
-        on_version_apply=on_version_apply
+        on_version_apply=on_version_apply,
     )
 
-    context.run_migrations()  # pylint: disable=no-member
+    context.run_migrations()
 
 
 try:
-    if context.is_offline_mode():  # pylint: disable=no-member
+    if context.is_offline_mode():
         raise NotImplementedError('This feature is not currently supported.')
 
     run_migrations_online()

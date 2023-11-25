@@ -12,14 +12,10 @@ from aiida.tools.dbimporters.baseclasses import CifEntry, DbImporter, DbSearchRe
 
 
 class MpodDbImporter(DbImporter):
-    """
-    Database importer for Material Properties Open Database.
-    """
+    """Database importer for Material Properties Open Database."""
 
     def _str_clause(self, key, alias, values):
-        """
-        Returns part of HTTP GET query for querying string fields.
-        """
+        """Returns part of HTTP GET query for querying string fields."""
         if not isinstance(values, str) and not isinstance(values, int):
             raise ValueError(f"incorrect value for keyword '{alias}' -- only strings and integers are accepted")
         return f'{key}={values}'
@@ -29,7 +25,7 @@ class MpodDbImporter(DbImporter):
         'formula': ['formula', _str_clause],
         'element': ['element', None],
         'cod_id': ['cod_code', _str_clause],
-        'authors': ['publ_author', _str_clause]
+        'authors': ['publ_author', _str_clause],
     }
 
     def __init__(self, **kwargs):
@@ -37,8 +33,7 @@ class MpodDbImporter(DbImporter):
         self.setup_db(**kwargs)
 
     def query_get(self, **kwargs):
-        """
-        Forms a HTTP GET query for querying the MPOD database.
+        """Forms a HTTP GET query for querying the MPOD database.
         May return more than one query in case an intersection is needed.
 
         :return: a list containing strings for HTTP GET statement.
@@ -71,8 +66,7 @@ class MpodDbImporter(DbImporter):
         return queries
 
     def query(self, **kwargs):
-        """
-        Performs a query on the MPOD database using ``keyword = value`` pairs,
+        """Performs a query on the MPOD database using ``keyword = value`` pairs,
         specified in ``kwargs``.
 
         :return: an instance of
@@ -94,10 +88,8 @@ class MpodDbImporter(DbImporter):
 
         return MpodSearchResults([{'id': x} for x in results])
 
-    def setup_db(self, query_url=None, **kwargs):  # pylint: disable=arguments-differ
-        """
-        Changes the database connection details.
-        """
+    def setup_db(self, query_url=None, **kwargs):
+        """Changes the database connection details."""
         if query_url:
             self._query_url = query_url
 
@@ -105,18 +97,16 @@ class MpodDbImporter(DbImporter):
             raise NotImplementedError(f"following keyword(s) are not implemented: {', '.join(kwargs.keys())}")
 
     def get_supported_keywords(self):
-        """
-        Returns the list of all supported query keywords.
+        """Returns the list of all supported query keywords.
 
         :return: list of strings
         """
         return self._keywords.keys()
 
 
-class MpodSearchResults(DbSearchResults):  # pylint: disable=abstract-method
-    """
-    Results of the search, performed on MPOD.
-    """
+class MpodSearchResults(DbSearchResults):
+    """Results of the search, performed on MPOD."""
+
     _base_url = 'http://mpod.cimav.edu.mx/datafiles/'
 
     def __init__(self, results):
@@ -127,8 +117,7 @@ class MpodSearchResults(DbSearchResults):  # pylint: disable=abstract-method
         return len(self._results)
 
     def _get_source_dict(self, result_dict):
-        """
-        Returns a dictionary, which is passed as kwargs to the created
+        """Returns a dictionary, which is passed as kwargs to the created
         DbEntry instance, describing the source of the entry.
 
         :param result_dict: dictionary, describing an entry in the results.
@@ -136,22 +125,18 @@ class MpodSearchResults(DbSearchResults):  # pylint: disable=abstract-method
         return {'id': result_dict['id']}
 
     def _get_url(self, result_dict):
-        """
-        Returns an URL of an entry CIF file.
+        """Returns an URL of an entry CIF file.
 
         :param result_dict: dictionary, describing an entry in the results.
         """
         return f"{self._base_url + result_dict['id']}.mpod"
 
 
-class MpodEntry(CifEntry):  # pylint: disable=abstract-method
-    """
-    Represents an entry from MPOD.
-    """
+class MpodEntry(CifEntry):
+    """Represents an entry from MPOD."""
 
     def __init__(self, uri, **kwargs):
-        """
-        Creates an instance of
+        """Creates an instance of
         :py:class:`aiida.tools.dbimporters.plugins.mpod.MpodEntry`, related
         to the supplied URI.
         """

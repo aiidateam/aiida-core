@@ -7,15 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Various utilities to deal with KpointsData instances or create new ones
+"""Various utilities to deal with KpointsData instances or create new ones
 (e.g. band paths, kpoints from a parsed input text file, ...)
 """
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .main import *
 
@@ -24,4 +22,4 @@ __all__ = (
     'get_kpoints_path',
 )
 
-# yapf: enable
+# fmt: on

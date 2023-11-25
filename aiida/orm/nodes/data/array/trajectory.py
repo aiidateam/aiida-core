@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-AiiDA class to deal with crystal structure trajectories.
+"""AiiDA class to deal with crystal structure trajectories.
 """
 import collections.abc
 
@@ -18,8 +17,7 @@ __all__ = ('TrajectoryData',)
 
 
 class TrajectoryData(ArrayData):
-    """
-    Stores a trajectory (a sequence of crystal structures with timestamps, and
+    """Stores a trajectory (a sequence of crystal structures with timestamps, and
     possibly with velocities).
     """
 
@@ -28,9 +26,8 @@ class TrajectoryData(ArrayData):
         if structurelist is not None:
             self.set_structurelist(structurelist)
 
-    def _internal_validate(self, stepids, cells, symbols, positions, times, velocities):  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches
-        """
-        Internal function to validate the type and shape of the arrays. See
+    def _internal_validate(self, stepids, cells, symbols, positions, times, velocities):
+        """Internal function to validate the type and shape of the arrays. See
         the documentation of py:meth:`.set_trajectory` for a description of the
         valid shape and type of the parameters.
         """
@@ -66,8 +63,7 @@ class TrajectoryData(ArrayData):
         numatoms = len(symbols)
         if positions.shape != (numsteps, numatoms, 3):
             raise ValueError(
-                'TrajectoryData.positions must have shape (s,n,3), '
-                'with s=number of steps and n=number of symbols'
+                'TrajectoryData.positions must have shape (s,n,3), ' 'with s=number of steps and n=number of symbols'
             )
         if times is not None:
             if times.shape != (numsteps,):
@@ -80,9 +76,8 @@ class TrajectoryData(ArrayData):
                     'with s=number of steps and n=number of symbols'
                 )
 
-    def set_trajectory(self, symbols, positions, stepids=None, cells=None, times=None, velocities=None):  # pylint: disable=too-many-arguments
-        r"""
-        Store the whole trajectory, after checking that types and dimensions
+    def set_trajectory(self, symbols, positions, stepids=None, cells=None, times=None, velocities=None):
+        r"""Store the whole trajectory, after checking that types and dimensions
         are correct.
 
         Parameters ``stepids``, ``cells`` and ``velocities`` are optional
@@ -132,7 +127,6 @@ class TrajectoryData(ArrayData):
 
         .. todo :: Choose suitable units for velocities
         """
-
         import numpy
 
         self._internal_validate(stepids, cells, symbols, positions, times, velocities)
@@ -169,8 +163,7 @@ class TrajectoryData(ArrayData):
                 pass
 
     def set_structurelist(self, structurelist):
-        """
-        Create trajectory from the list of
+        """Create trajectory from the list of
         :py:class:`aiida.orm.nodes.data.structure.StructureData` instances.
 
         :param structurelist: a list of
@@ -192,8 +185,7 @@ class TrajectoryData(ArrayData):
         self.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions)
 
     def _validate(self):
-        """
-        Verify that the required arrays are present and that their type and
+        """Verify that the required arrays are present and that their type and
         dimension are correct.
         """
         # check dimensions, types
@@ -201,8 +193,12 @@ class TrajectoryData(ArrayData):
 
         try:
             self._internal_validate(
-                self.get_stepids(), self.get_cells(), self.symbols, self.get_positions(), self.get_times(),
-                self.get_velocities()
+                self.get_stepids(),
+                self.get_cells(),
+                self.symbols,
+                self.get_positions(),
+                self.get_times(),
+                self.get_velocities(),
             )
         # Should catch TypeErrors, ValueErrors, and KeyErrors for missing arrays
         except Exception as exception:
@@ -212,9 +208,7 @@ class TrajectoryData(ArrayData):
 
     @property
     def numsteps(self):
-        """
-        Return the number of stored steps, or zero if nothing has been stored yet.
-        """
+        """Return the number of stored steps, or zero if nothing has been stored yet."""
         try:
             return self.get_shape('steps')[0]
         except (AttributeError, KeyError, IndexError):
@@ -222,17 +216,14 @@ class TrajectoryData(ArrayData):
 
     @property
     def numsites(self):
-        """
-        Return the number of stored sites, or zero if nothing has been stored yet.
-        """
+        """Return the number of stored sites, or zero if nothing has been stored yet."""
         try:
             return len(self.symbols)
         except (AttributeError, KeyError, IndexError):
             return 0
 
     def get_stepids(self):
-        """
-        Return the array of steps, if it has already been set.
+        """Return the array of steps, if it has already been set.
 
         .. versionadded:: 0.7
            Renamed from get_steps
@@ -242,8 +233,7 @@ class TrajectoryData(ArrayData):
         return self.get_array('steps')
 
     def get_times(self):
-        """
-        Return the array of times (in ps), if it has already been set.
+        """Return the array of times (in ps), if it has already been set.
 
         :raises KeyError: if the trajectory has not been set yet.
         """
@@ -253,8 +243,7 @@ class TrajectoryData(ArrayData):
             return None
 
     def get_cells(self):
-        """
-        Return the array of cells, if it has already been set.
+        """Return the array of cells, if it has already been set.
 
         :raises KeyError: if the trajectory has not been set yet.
         """
@@ -265,24 +254,21 @@ class TrajectoryData(ArrayData):
 
     @property
     def symbols(self):
-        """
-        Return the array of symbols, if it has already been set.
+        """Return the array of symbols, if it has already been set.
 
         :raises KeyError: if the trajectory has not been set yet.
         """
         return self.base.attributes.get('symbols')
 
     def get_positions(self):
-        """
-        Return the array of positions, if it has already been set.
+        """Return the array of positions, if it has already been set.
 
         :raises KeyError: if the trajectory has not been set yet.
         """
         return self.get_array('positions')
 
     def get_velocities(self):
-        """
-        Return the array of velocities, if it has already been set.
+        """Return the array of velocities, if it has already been set.
 
         .. note :: This function (differently from all other ``get_*``
           functions, will not raise an exception if the velocities are not
@@ -295,8 +281,7 @@ class TrajectoryData(ArrayData):
             return None
 
     def get_index_from_stepid(self, stepid):
-        """
-        Given a value for the stepid (i.e., a value among those of the ``steps``
+        """Given a value for the stepid (i.e., a value among those of the ``steps``
         array), return the array index of that stepid, that can be used in other
         methods such as :py:meth:`.get_step_data` or
         :py:meth:`.get_step_structure`.
@@ -318,8 +303,7 @@ class TrajectoryData(ArrayData):
             raise ValueError(f'{stepid} not among the stepids')
 
     def get_step_data(self, index):
-        """
-        Return a tuple with all information concerning the stepid with given
+        """Return a tuple with all information concerning the stepid with given
         index (0 is the first step, 1 the second step and so on). If you know
         only the step value, use the :py:meth:`.get_index_from_stepid` method
         to get the corresponding index.
@@ -356,8 +340,7 @@ class TrajectoryData(ArrayData):
         return (self.get_stepids()[index], time, cell, self.symbols, self.get_positions()[index, :, :], vel)
 
     def get_step_structure(self, index, custom_kinds=None):
-        """
-        Return an AiiDA :py:class:`aiida.orm.nodes.data.structure.StructureData` node
+        """Return an AiiDA :py:class:`aiida.orm.nodes.data.structure.StructureData` node
         (not stored yet!) with the coordinates of the given step, identified by
         its index. If you know only the step value, use the
         :py:meth:`.get_index_from_stepid` method to get the corresponding index.
@@ -390,8 +373,7 @@ class TrajectoryData(ArrayData):
             for k in custom_kinds:
                 if not isinstance(k, Kind):
                     raise TypeError(
-                        'Each element of the custom_kinds list must '
-                        'be a aiida.orm.nodes.data.structure.Kind object'
+                        'Each element of the custom_kinds list must ' 'be a aiida.orm.nodes.data.structure.Kind object'
                     )
                 kind_names.append(k.name)
             if len(kind_names) != len(set(kind_names)):
@@ -417,11 +399,10 @@ class TrajectoryData(ArrayData):
 
         return struc
 
-    def _prepare_xsf(self, index=None, main_file_name=''):  # pylint: disable=unused-argument
-        """
-        Write the given trajectory to a string of format XSF (for XCrySDen).
-        """
+    def _prepare_xsf(self, index=None, main_file_name=''):
+        """Write the given trajectory to a string of format XSF (for XCrySDen)."""
         from aiida.common.constants import elements
+
         _atomic_numbers = {data['symbol']: num for num, data in elements.items()}
 
         indices = list(range(self.numsteps))
@@ -455,10 +436,8 @@ class TrajectoryData(ArrayData):
                     raise
         return return_string.encode('utf-8'), {}
 
-    def _prepare_cif(self, trajectory_index=None, main_file_name=''):  # pylint: disable=unused-argument
-        """
-        Write the given trajectory to a string of format CIF.
-        """
+    def _prepare_cif(self, trajectory_index=None, main_file_name=''):
+        """Write the given trajectory to a string of format CIF."""
         from aiida.common.utils import Capturing
         from aiida.orm.nodes.data.cif import ase_loops, cif_from_ase, pycifrw_from_cif
 
@@ -474,8 +453,7 @@ class TrajectoryData(ArrayData):
         return cif.encode('utf-8'), {}
 
     def get_structure(self, store=False, **kwargs):
-        """
-        Creates :py:class:`aiida.orm.nodes.data.structure.StructureData`.
+        """Creates :py:class:`aiida.orm.nodes.data.structure.StructureData`.
 
         .. versionadded:: 1.0
             Renamed from _get_aiida_structure
@@ -504,12 +482,11 @@ class TrajectoryData(ArrayData):
 
         param = Dict(kwargs)
 
-        ret_dict = _get_aiida_structure_inline(trajectory=self, parameters=param, metadata={'store_provenance': store})  # pylint: disable=unexpected-keyword-arg
+        ret_dict = _get_aiida_structure_inline(trajectory=self, parameters=param, metadata={'store_provenance': store})
         return ret_dict['structure']
 
     def get_cif(self, index=None, **kwargs):
-        """
-        Creates :py:class:`aiida.orm.nodes.data.cif.CifData`
+        """Creates :py:class:`aiida.orm.nodes.data.cif.CifData`
 
         .. versionadded:: 1.0
            Renamed from _get_cif
@@ -519,8 +496,7 @@ class TrajectoryData(ArrayData):
         return cif
 
     def _parse_xyz_pos(self, inputstring):
-        """
-        Load positions from a XYZ file.
+        """Load positions from a XYZ file.
 
         .. note:: The steps and symbols must be set manually before calling this
             import function as a consistency measure. Even though the symbols
@@ -540,7 +516,6 @@ class TrajectoryData(ArrayData):
             t.set_array('symbols', array([site.kind for site in s.sites]))
             t.importfile('some-calc/AIIDA-PROJECT-pos-1.xyz', 'xyz_pos')
         """
-
         from numpy import array
 
         from aiida.common.exceptions import ValidationError
@@ -568,14 +543,12 @@ class TrajectoryData(ArrayData):
         self.set_array('positions', positions)
 
     def _parse_xyz_vel(self, inputstring):
-        """
-        Load velocities from a XYZ file.
+        """Load velocities from a XYZ file.
 
         .. note:: The steps and symbols must be set manually before calling this
             import function as a consistency measure. See also comment for
             :py:meth:`._parse_xyz_pos`
         """
-
         from numpy import array
 
         from aiida.common.exceptions import ValidationError
@@ -602,9 +575,8 @@ class TrajectoryData(ArrayData):
 
         self.set_array('velocities', velocities)
 
-    def show_mpl_pos(self, **kwargs):  # pylint: disable=too-many-locals
-        """
-        Shows the positions as a function of time, separate for XYZ coordinates
+    def show_mpl_pos(self, **kwargs):
+        """Shows the positions as a function of time, separate for XYZ coordinates
 
         :param int stepsize: The stepsize for the trajectory, set higher than 1 to
             reduce number of points
@@ -691,12 +663,11 @@ class TrajectoryData(ArrayData):
             maxtime,
         )
 
-    def show_mpl_heatmap(self, **kwargs):  # pylint: disable=invalid-name,too-many-arguments,too-many-locals,too-many-statements,too-many-branches
-        """
-        Show a heatmap of the trajectory with matplotlib.
-        """
+    def show_mpl_heatmap(self, **kwargs):
+        """Show a heatmap of the trajectory with matplotlib."""
         import numpy as np
         from scipy import stats
+
         try:
             from mayavi import mlab
         except ImportError:
@@ -707,19 +678,17 @@ class TrajectoryData(ArrayData):
         from ase.data import atomic_numbers
         from ase.data.colors import jmol_colors
 
-        # pylint: disable=invalid-name
-
         def collapse_into_unit_cell(point, cell):
-            """
-            Applies linear transformation to coordinate system based on crystal
+            """Applies linear transformation to coordinate system based on crystal
             lattice, vectors. The inverse of that inverse transformation matrix with the
             point given results in the point being given as a multiples of lattice vectors
             Than take the integer of the rows to find how many times you have to shift
-            the point back"""
-            invcell = np.matrix(cell).T.I  # pylint: disable=no-member
+            the point back
+            """
+            invcell = np.matrix(cell).T.I
             # point in crystal coordinates
             points_in_crystal = np.dot(invcell, point).tolist()[0]
-            #point collapsed into unit cell
+            # point collapsed into unit cell
             points_in_unit_cell = [i % 1 for i in points_in_crystal]
             return np.dot(cell.T, points_in_unit_cell).tolist()
 
@@ -792,16 +761,16 @@ class TrajectoryData(ArrayData):
             xmin, ymin, zmin = _x.min(), _y.min(), _z.min()
             xmax, ymax, zmax = _x.max(), _y.max(), _z.max()
 
-            _xi, _yi, _zi = np.mgrid[xmin:xmax:60j, ymin:ymax:30j, zmin:zmax:30j]  # pylint: disable=invalid-slice-index
+            _xi, _yi, _zi = np.mgrid[xmin:xmax:60j, ymin:ymax:30j, zmin:zmax:30j]
             coords = np.vstack([item.ravel() for item in [_xi, _yi, _zi]])
             density = kde(coords).reshape(_xi.shape)
 
             # Plot scatter with mayavi
-            #~ figure = mlab.figure('DensityPlot')
+            # ~ figure = mlab.figure('DensityPlot')
             grid = mlab.pipeline.scalar_field(_xi, _yi, _zi, density)
-            #~ min = density.min()
+            # ~ min = density.min()
             maxdens = density.max()
-            #~ mlab.pipeline.volume(grid, vmin=min, vmax=min + .5*(max-min))
+            # ~ mlab.pipeline.volume(grid, vmin=min, vmax=min + .5*(max-min))
             surf = mlab.pipeline.iso_surface(grid, opacity=0.5, colormap='cool', contours=(maxdens * contours).tolist())
             lut = surf.module_manager.scalar_lut_manager.lut.table.to_array()
 
@@ -823,27 +792,27 @@ class TrajectoryData(ArrayData):
                     color=tuple(jmol_colors[atomic_numbers[ele]].tolist()),
                     scale_mode='none',
                     scale_factor=0.3,
-                    opacity=0.3
+                    opacity=0.3,
                 )
 
         mlab.view(azimuth=155, elevation=70, distance='auto')
         mlab.show()
 
 
-def plot_positions_XYZ(  # pylint: disable=too-many-arguments,too-many-locals,invalid-name
-        times,
-        positions,
-        indices_to_show,
-        color_list,
-        label,
-        positions_unit='A',
-        times_unit='ps',
-        dont_block=False,
-        mintime=None,
-        maxtime=None,
-        n_labels=10):
-    """
-    Plot with matplotlib the positions of the coordinates of the atoms
+def plot_positions_XYZ(  # noqa: N802
+    times,
+    positions,
+    indices_to_show,
+    color_list,
+    label,
+    positions_unit='A',
+    times_unit='ps',
+    dont_block=False,
+    mintime=None,
+    maxtime=None,
+    n_labels=10,
+):
+    """Plot with matplotlib the positions of the coordinates of the atoms
     over time for a trajectory
 
     :param times: array of times
@@ -858,9 +827,9 @@ def plot_positions_XYZ(  # pylint: disable=too-many-arguments,too-many-locals,in
     :param maxtime: if specified, cut the time axis at the specified max value
     :param n_labels: how many labels (t, coord) to put
     """
+    import numpy as np
     from matplotlib import pyplot as plt
     from matplotlib.gridspec import GridSpec
-    import numpy as np
 
     tlim = [times[0], times[-1]]
     index_range = [0, len(times) - 1]

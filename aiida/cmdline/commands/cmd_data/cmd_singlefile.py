@@ -27,4 +27,4 @@ def singlefile_content(datum):
     try:
         echo.echo(datum.get_content())
     except (IOError, OSError) as exception:
-        echo.echo_critical(f'could not read the content for SinglefileData<{datum.pk}>: {str(exception)}')
+        echo.echo_critical(f'could not read the content for SinglefileData<{datum.pk}>: {exception!s}')

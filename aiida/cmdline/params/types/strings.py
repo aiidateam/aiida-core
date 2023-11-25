@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Module for various text-based string validation.
+"""Module for various text-based string validation.
 """
 
 import re
@@ -20,6 +19,7 @@ __all__ = ('EmailType', 'EntryPointType', 'HostnameType', 'NonEmptyStringParamTy
 
 class NonEmptyStringParamType(StringParamType):
     """Parameter whose values have to be string and non-empty."""
+
     name = 'nonemptystring'
 
     def convert(self, value, param, ctx):
@@ -45,6 +45,7 @@ class LabelStringType(NonEmptyStringParamType):
 
     [1] See https://docs.python.org/3/library/re.html
     """
+
     name = 'labelstring'
 
     ALPHABET = r'\w\.\-'
@@ -61,8 +62,10 @@ class LabelStringType(NonEmptyStringParamType):
         return 'LABELSTRING'
 
 
-HOSTNAME_REGEX = \
-r'^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$'
+HOSTNAME_REGEX = re.compile(
+    r'^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])'
+    r'(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$'
+)
 
 
 class HostnameType(StringParamType):
@@ -70,12 +73,13 @@ class HostnameType(StringParamType):
 
     Regex according to https://stackoverflow.com/a/3824105/1069467
     """
+
     name = 'hostname'
 
     def convert(self, value, param, ctx):
         newval = super().convert(value, param, ctx)
 
-        if newval and not re.match(HOSTNAME_REGEX, newval):
+        if newval and not HOSTNAME_REGEX.match(newval):
             self.fail('Please enter a valid hostname.')
 
         return newval
@@ -89,6 +93,7 @@ class EmailType(StringParamType):
 
     .. note:: For the moment, we do not require the domain suffix, i.e. 'aiida@localhost' is still valid.
     """
+
     name = 'email'
 
     def convert(self, value, param, ctx):
@@ -108,6 +113,7 @@ class EntryPointType(NonEmptyStringParamType):
 
     See https://packaging.python.org/en/latest/specifications/entry-points/
     """
+
     name = 'entrypoint'
 
     def convert(self, value, param, ctx):

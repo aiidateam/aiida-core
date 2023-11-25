@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .array import *
 from .orbital import *
@@ -27,4 +26,4 @@ __all__ = (
     'structure_to_spglib_tuple',
 )
 
-# yapf: enable
+# fmt: on

@@ -7,4 +7,5 @@ from aiida.orm import Int
 def maximum(x, y, z):
     return sorted([x, y, z])[-1]
 
+
 result = maximum(Int(1), Int(2), Int(3))

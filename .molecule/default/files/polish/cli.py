@@ -25,7 +25,7 @@ from aiida.cmdline.utils import decorators
 @options.CODE(
     type=types.CodeParamType(entry_point='core.arithmetic.add'),
     required=False,
-    help='Code to perform the add operations with. Required if -C flag is specified'
+    help='Code to perform the add operations with. Required if -C flag is specified',
 )
 @click.option(
     '-C',
@@ -33,7 +33,7 @@ from aiida.cmdline.utils import decorators
     is_flag=True,
     default=False,
     show_default=True,
-    help='Use job calculations to perform all additions'
+    help='Use job calculations to perform all additions',
 )
 @click.option(
     '-F',
@@ -41,7 +41,7 @@ from aiida.cmdline.utils import decorators
     is_flag=True,
     default=False,
     show_default=True,
-    help='Use calcfunctions to perform all substractions'
+    help='Use calcfunctions to perform all substractions',
 )
 @click.option(
     '-s',
@@ -49,7 +49,7 @@ from aiida.cmdline.utils import decorators
     type=click.INT,
     default=5,
     show_default=True,
-    help='When submitting to the daemon, the number of seconds to sleep between polling the workchain process state'
+    help='When submitting to the daemon, the number of seconds to sleep between polling the workchain process state',
 )
 @click.option(
     '-t',
@@ -57,7 +57,7 @@ from aiida.cmdline.utils import decorators
     type=click.INT,
     default=60,
     show_default=True,
-    help='When submitting to the daemon, the number of seconds to wait for a workchain to finish before timing out'
+    help='When submitting to the daemon, the number of seconds to wait for a workchain to finish before timing out',
 )
 @click.option(
     '-m',
@@ -65,19 +65,18 @@ from aiida.cmdline.utils import decorators
     type=click.INT,
     default=1000000,
     show_default=True,
-    help='Specify an integer to modulo all intermediate and the final result to avoid integer overflow'
+    help='Specify an integer to modulo all intermediate and the final result to avoid integer overflow',
 )
 @click.option(
     '-n',
     '--dry-run',
     is_flag=True,
     default=False,
-    help='Only evaluate the expression and generate the workchain but do not launch it'
+    help='Only evaluate the expression and generate the workchain but do not launch it',
 )
 @decorators.with_dbenv()
 def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout, modulo, dry_run, daemon):
-    """
-    Evaluate the expression in Reverse Polish Notation in both a normal way and by procedurally generating
+    """Evaluate the expression in Reverse Polish Notation in both a normal way and by procedurally generating
     a workchain that encodes the sequence of operators and gets the stack of operands as an input. Multiplications
     are modelled by a 'while_' construct and addition will be done performed by an addition or a subtraction,
     depending on the sign, branched by the 'if_' construct. Powers will be simulated by nested workchains.
@@ -98,7 +97,6 @@ def launch(expression, code, use_calculations, use_calcfunctions, sleep, timeout
 
     If no expression is specified, a random one will be generated that adheres to these rules
     """
-    # pylint: disable=too-many-arguments,too-many-locals,too-many-statements,too-many-branches
     from aiida.engine import run_get_node
     from aiida.orm import AbstractCode, Int, Str
 
@@ -199,4 +197,4 @@ def run_via_daemon(workchains, inputs, sleep, timeout):
 
 
 if __name__ == '__main__':
-    launch()  # pylint: disable=no-value-for-parameter
+    launch()

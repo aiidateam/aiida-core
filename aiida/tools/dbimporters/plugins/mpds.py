@@ -28,9 +28,7 @@ CIF_ENTRY_ID_TAG = '_pauling_file_entry'
 
 
 class MpdsDbImporter(DbImporter):
-    """
-    Database importer for the Materials Platform for Data Science (MPDS)
-    """
+    """Database importer for the Materials Platform for Data Science (MPDS)"""
 
     _url = 'https://api.mpds.io/v0/download/facet'
     _api_key = None
@@ -53,8 +51,7 @@ class MpdsDbImporter(DbImporter):
     ]
 
     def __init__(self, url=None, api_key=None):
-        """
-        Instantiate the MpdsDbImporter by setting up the API connection details
+        """Instantiate the MpdsDbImporter by setting up the API connection details
 
         :param url: the full base url of the REST API endpoint
         :param api_key: the API key to be used for HTTP requests
@@ -62,9 +59,8 @@ class MpdsDbImporter(DbImporter):
         self.setup_db(url=url, api_key=api_key)
         self._structures = StructuresCollection(self)
 
-    def setup_db(self, url=None, api_key=None, collection=None):  # pylint: disable=arguments-differ
-        """
-        Setup the required parameters for HTTP requests to the REST API
+    def setup_db(self, url=None, api_key=None, collection=None):
+        """Setup the required parameters for HTTP requests to the REST API
 
         :param url: the full base url of the REST API endpoint
         :param api_key: the API key to be used for HTTP requests
@@ -85,36 +81,27 @@ class MpdsDbImporter(DbImporter):
 
     @property
     def api_key(self):
-        """
-        Return the API key configured for the importer
-        """
+        """Return the API key configured for the importer"""
         return self._api_key
 
     @property
     def collection(self):
-        """
-        Return the collection that will be queried
-        """
+        """Return the collection that will be queried"""
         return self._collection
 
     @property
     def pagesize(self):
-        """
-        Return the pagesize set for the importer
-        """
+        """Return the pagesize set for the importer"""
         return self._pagesize
 
     @property
     def structures(self):
-        """
-        Access the structures collection in the MPDS
-        """
+        """Access the structures collection in the MPDS"""
         return self._structures
 
     @property
-    def get_supported_keywords(self):  # pylint: disable=invalid-overridden-method
-        """
-        Returns the list of all supported query keywords
+    def get_supported_keywords(self):
+        """Returns the list of all supported query keywords
 
         :return: list of strings
         """
@@ -122,14 +109,11 @@ class MpdsDbImporter(DbImporter):
 
     @property
     def url(self):
-        """
-        Return the base url configured for the importer
-        """
+        """Return the base url configured for the importer"""
         return self._url
 
-    def query(self, query, collection=None):  # pylint: disable=arguments-differ
-        """
-        Query the database with a given dictionary of query parameters for a given collection
+    def query(self, query, collection=None):
+        """Query the database with a given dictionary of query parameters for a given collection
 
         :param query: a dictionary with the query parameters
         :param collection: the collection to query
@@ -138,7 +122,6 @@ class MpdsDbImporter(DbImporter):
             collection = self.collection
 
         if collection == 'structures':
-
             results = []
             results_cif = {}
             results_json = []
@@ -151,7 +134,6 @@ class MpdsDbImporter(DbImporter):
                 results_cif[entry_id] = entry
 
             for entry in results_json:
-
                 entry_id = entry['entry']
 
                 try:
@@ -171,13 +153,10 @@ class MpdsDbImporter(DbImporter):
         return search_results
 
     def find(self, query, fmt=DEFAULT_API_FORMAT):
-        """
-        Query the database with a given dictionary of query parameters
+        """Query the database with a given dictionary of query parameters
 
         :param query: a dictionary with the query parameters
         """
-        # pylint: disable=too-many-branches
-
         if not isinstance(query, dict):
             raise TypeError('The query argument should be a dictionary')
 
@@ -189,12 +168,10 @@ class MpdsDbImporter(DbImporter):
         count = content['count']
 
         for page in range(content['npages']):
-
             response = self.get(q=json.dumps(query), fmt=fmt, pagesize=pagesize, page=page)
             content = self.get_response_content(response, fmt=fmt)
 
             if fmt == ApiFormat.JSON:
-
                 if (page + 1) * pagesize > count:
                     last = count - (page * pagesize)
                 else:
@@ -207,7 +184,6 @@ class MpdsDbImporter(DbImporter):
                     yield result
 
             elif fmt == ApiFormat.CIF:
-
                 cif = []
                 for line in content.splitlines():
                     if cif:
@@ -223,8 +199,7 @@ class MpdsDbImporter(DbImporter):
                     yield '\n'.join(cif)
 
     def get(self, fmt=DEFAULT_API_FORMAT, **kwargs):
-        """
-        Perform a GET request to the REST API using the kwargs as request parameters
+        """Perform a GET request to the REST API using the kwargs as request parameters
         The url and API key will be used that were set upon construction
 
         :param fmt: the format of the response, 'cif' or json' (default)
@@ -235,8 +210,7 @@ class MpdsDbImporter(DbImporter):
 
     @staticmethod
     def get_response_content(response, fmt=DEFAULT_API_FORMAT):
-        """
-        Analyze the response of an HTTP GET request, verify that the response code is OK
+        """Analyze the response of an HTTP GET request, verify that the response code is OK
         and return the json loaded response text
 
         :param response: HTTP response
@@ -259,8 +233,7 @@ class MpdsDbImporter(DbImporter):
 
     @staticmethod
     def get_id_from_cif(cif):
-        """
-        Extract the entry id from the string formatted cif response of the MPDS API
+        """Extract the entry id from the string formatted cif response of the MPDS API
 
         :param cif: string representation of the cif file
         :returns: entry id of the cif file or None if could not be found
@@ -283,19 +256,15 @@ class StructuresCollection:
 
     @property
     def engine(self):
-        """
-        Return the query engine
-        """
+        """Return the query engine"""
         return self._engine
 
     def find(self, query, fmt=DEFAULT_API_FORMAT):
-        """
-        Query the structures collection with a given dictionary of query parameters
+        """Query the structures collection with a given dictionary of query parameters
 
         :param query: a dictionary with the query parameters
         """
         for result in self.engine.find(query, fmt=fmt):
-
             if fmt != ApiFormat.CIF and ('object_type' not in result or result['object_type'] != 'S'):
                 continue
 
@@ -303,15 +272,11 @@ class StructuresCollection:
 
 
 class MpdsEntry(DbEntry):
-    """
-    Represents an MPDS database entry
-    """
+    """Represents an MPDS database entry"""
 
     def __init__(self, _, **kwargs):
-        """
-        Set the class license from the source dictionary
-        """
-        license = kwargs.pop('license', None)  # pylint: disable=redefined-builtin
+        """Set the class license from the source dictionary"""
+        license = kwargs.pop('license', None)
 
         if license is not None:
             self._license = license
@@ -319,15 +284,13 @@ class MpdsEntry(DbEntry):
         super().__init__(**kwargs)
 
 
-class MpdsCifEntry(CifEntry, MpdsEntry):  # pylint: disable=abstract-method
-    """
-    An extension of the MpdsEntry class with the CifEntry class, which will treat
+class MpdsCifEntry(CifEntry, MpdsEntry):
+    """An extension of the MpdsEntry class with the CifEntry class, which will treat
     the contents property through the URI as a cif file
     """
 
     def __init__(self, url, **kwargs):
-        """
-        The DbSearchResults base class instantiates a new DbEntry by explicitly passing the url
+        """The DbSearchResults base class instantiates a new DbEntry by explicitly passing the url
         of the entry as an argument. In this case it is the same as the 'uri' value that is
         already contained in the source dictionary so we just copy it
         """
@@ -339,7 +302,7 @@ class MpdsCifEntry(CifEntry, MpdsEntry):  # pylint: disable=abstract-method
             self.cif = cif
 
 
-class MpdsSearchResults(DbSearchResults):  # pylint: disable=abstract-method
+class MpdsSearchResults(DbSearchResults):
     """Collection of MpdsEntry query result entries."""
 
     _db_name = 'Materials Platform for Data Science'
@@ -352,8 +315,7 @@ class MpdsSearchResults(DbSearchResults):  # pylint: disable=abstract-method
         super().__init__(results)
 
     def _get_source_dict(self, result_dict):
-        """
-        Return the source information dictionary of an MPDS query result entry
+        """Return the source information dictionary of an MPDS query result entry
 
         :param result_dict: query result entry dictionary
         """
@@ -372,8 +334,7 @@ class MpdsSearchResults(DbSearchResults):  # pylint: disable=abstract-method
         return source_dict
 
     def _get_url(self, result_dict):
-        """
-        Return the permanent URI of the result entry
+        """Return the permanent URI of the result entry
 
         :param result_dict: query result entry dictionary
         """

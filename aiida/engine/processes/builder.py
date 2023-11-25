@@ -8,8 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Convenience classes to help building the input dictionaries for Processes."""
-from collections.abc import Mapping, MutableMapping
 import json
+from collections.abc import Mapping, MutableMapping
 from typing import TYPE_CHECKING, Any, Type
 from uuid import uuid4
 
@@ -28,7 +28,7 @@ __all__ = ('ProcessBuilder', 'ProcessBuilderNamespace')
 class PrettyEncoder(json.JSONEncoder):
     """JSON encoder for returning a pretty representation of an AiiDA ``ProcessBuilder``."""
 
-    def default(self, o):  # pylint: disable=arguments-differ
+    def default(self, o):
         if isinstance(o, (ProcessBuilder, ProcessBuilderNamespace)):
             return dict(o)
         if isinstance(o, Dict):
@@ -55,7 +55,6 @@ class ProcessBuilderNamespace(MutableMapping):
         :param port_namespace: the inputs PortNamespace for which to construct the builder
 
         """
-        # pylint: disable=super-init-not-called
         self._port_namespace = port_namespace
         self._valid_fields = []
         self._data = {}
@@ -67,7 +66,6 @@ class ProcessBuilderNamespace(MutableMapping):
         # saved. If they are used directly in the body, it will try to capture the value from
         # its enclosing scope at the time of being called.
         for name, port in port_namespace.items():
-
             self._valid_fields.append(name)
 
             if isinstance(port, PortNamespace):
@@ -77,7 +75,7 @@ class ProcessBuilderNamespace(MutableMapping):
                     return self._data.get(name)
             elif port.has_default():
 
-                def fgetter(self, name=name, default=port.default):  # type: ignore[misc] # pylint: disable=cell-var-from-loop
+                def fgetter(self, name=name, default=port.default):  # type: ignore[misc]
                     return self._data.get(name, default)
             else:
 
@@ -89,7 +87,7 @@ class ProcessBuilderNamespace(MutableMapping):
 
             fgetter.__doc__ = str(port)
             getter = property(fgetter)
-            getter.setter(fsetter)  # pylint: disable=too-many-function-args
+            getter.setter(fsetter)
             dynamic_properties[name] = getter
 
         # The dynamic property can only be attached to a class and not an instance, however, we cannot attach it to
@@ -204,13 +202,13 @@ class ProcessBuilderNamespace(MutableMapping):
                 if isinstance(value, Mapping):
                     self[key].update(value)
                 else:
-                    self.__setattr__(key, value)  # pylint: disable=unnecessary-dunder-call
+                    self.__setattr__(key, value)
 
         for key, value in kwds.items():
             if isinstance(value, Mapping):
                 self[key].update(value)
             else:
-                self.__setattr__(key, value)  # pylint: disable=unnecessary-dunder-call
+                self.__setattr__(key, value)
 
     def _inputs(self, prune: bool = False) -> dict:
         """Return the entire mapping of inputs specified for this builder.
@@ -224,7 +222,7 @@ class ProcessBuilderNamespace(MutableMapping):
         return dict(self)
 
 
-class ProcessBuilder(ProcessBuilderNamespace):  # pylint: disable=too-many-ancestors
+class ProcessBuilder(ProcessBuilderNamespace):
     """A process builder that helps setting up the inputs for creating a new process."""
 
     def __init__(self, process_class: Type['Process']):
@@ -241,7 +239,7 @@ class ProcessBuilder(ProcessBuilderNamespace):  # pylint: disable=too-many-ances
         """Return the process class for which this builder is constructed."""
         return self._process_class
 
-    def _repr_pretty_(self, p, _) -> str:  # pylint: disable=invalid-name
+    def _repr_pretty_(self, p, _) -> str:
         """Pretty representation for in the IPython console and notebooks."""
         import yaml
 

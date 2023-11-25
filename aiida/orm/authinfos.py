@@ -11,7 +11,6 @@
 from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from aiida.common import exceptions
-from aiida.common.lang import classproperty
 from aiida.manage import get_manager
 from aiida.plugins import TransportFactory
 
@@ -19,7 +18,8 @@ from . import entities, users
 
 if TYPE_CHECKING:
     from aiida.orm import Computer, User
-    from aiida.orm.implementation import BackendAuthInfo, StorageBackend
+    from aiida.orm.implementation import StorageBackend
+    from aiida.orm.implementation.authinfos import BackendAuthInfo  # noqa: F401
     from aiida.transports import Transport
 
 __all__ = ('AuthInfo',)
@@ -83,7 +83,8 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
     @property
     def computer(self) -> 'Computer':
         """Return the computer associated with this instance."""
-        from . import computers  # pylint: disable=cyclic-import
+        from . import computers
+
         return entities.from_backend_entity(computers.Computer, self._backend_entity.computer)
 
     @property

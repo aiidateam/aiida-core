@@ -74,13 +74,13 @@ def trajectory_list(raw, past_days, groups, all_users):
     '--sampling-stepsize',
     type=click.INT,
     default=None,
-    help='Sample positions in plot every sampling_stepsize timestep'
+    help='Sample positions in plot every sampling_stepsize timestep',
 )
 @click.option(
     '--stepsize',
     type=click.INT,
     default=None,
-    help='The stepsize for the trajectory, set it higher to reduce number of points'
+    help='The stepsize for the trajectory, set it higher to reduce number of points',
 )
 @click.option('--mintime', type=click.INT, default=None, help='The time to plot from')
 @click.option('--maxtime', type=click.INT, default=None, help='The time to plot to')

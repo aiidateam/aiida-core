@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines,too-many-arguments
 """Interface to the extras of a node instance."""
 import copy
 from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Tuple, Union

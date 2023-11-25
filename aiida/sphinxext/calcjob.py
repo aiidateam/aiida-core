@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Defines an rst directive to auto-document AiiDA calculation job.
+"""Defines an rst directive to auto-document AiiDA calculation job.
 """
 import inspect
 
@@ -24,6 +23,7 @@ def setup_extension(app):
 
 class AiidaCalcJobDocumenter(AiidaProcessDocumenter):
     """Sphinx Documenter for AiiDA CalcJobs."""
+
     directivetype = 'aiida-calcjob'
     objtype = 'calcjob'
     priority = 20

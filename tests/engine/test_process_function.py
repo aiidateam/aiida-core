@@ -36,7 +36,7 @@ DEFAULT_DESCRIPTION = 'Default description'
 CUSTOM_LABEL = 'Custom label'
 CUSTOM_DESCRIPTION = 'Custom description'
 
-pytest.mark.requires_rmq  # pylint: disable=pointless-statement
+pytest.mark.requires_rmq
 
 
 @workfunction
@@ -109,11 +109,8 @@ def function_args_and_default(data_a, data_b=lambda: orm.Int(DEFAULT_INT)):
 
 @workfunction
 def function_defaults(
-    data_a=lambda: orm.Int(DEFAULT_INT), metadata={
-        'label': DEFAULT_LABEL,
-        'description': DEFAULT_DESCRIPTION
-    }
-):  # pylint: disable=unused-argument,dangerous-default-value,missing-docstring
+    data_a=lambda: orm.Int(DEFAULT_INT), metadata={'label': DEFAULT_LABEL, 'description': DEFAULT_DESCRIPTION}
+):
     return data_a
 
 
@@ -230,7 +227,7 @@ def test_get_function_source_code():
     _, node = function_return_true.run_get_node()
 
     # Delete the source file by going down to the ``RepositoryBackend`` to circumvent the immutability check.
-    node.base.repository._repository.delete_object(FunctionCalculationMixin.FUNCTION_SOURCE_FILE_PATH)  # pylint: disable=protected-access
+    node.base.repository._repository.delete_object(FunctionCalculationMixin.FUNCTION_SOURCE_FILE_PATH)
 
     assert node.get_function_source_code() is None
 
@@ -272,7 +269,7 @@ def test_function_args():
     arg = 1
 
     with pytest.raises(ValueError):
-        result = function_args()  # pylint: disable=no-value-for-parameter
+        result = function_args()
 
     result = function_args(data_a=orm.Int(arg))
     assert isinstance(result, orm.Int)
@@ -379,7 +376,7 @@ def test_function_varargs_and_kwargs():
 def test_function_args_passing_kwargs():
     """Cannot pass kwargs if the function does not explicitly define it accepts kwargs."""
     with pytest.raises(ValueError):
-        function_args(data_a=orm.Int(1), data_b=orm.Int(1))  # pylint: disable=unexpected-keyword-arg
+        function_args(data_a=orm.Int(1), data_b=orm.Int(1))
 
 
 def test_function_set_label_description():
@@ -450,9 +447,7 @@ def test_launchers():
 
 
 def test_return_exit_code():
-    """
-    A process function that returns an ExitCode namedtuple should have its exit status and message set FINISHED
-    """
+    """A process function that returns an ExitCode namedtuple should have its exit status and message set FINISHED"""
     exit_status = 418
     exit_message = 'I am a teapot'
 
@@ -542,17 +537,18 @@ class DummyEnum(enum.Enum):
     VALUE = 'value'
 
 
-# yapf: disable
-@pytest.mark.parametrize('argument, node_cls', (
-    (True, orm.Bool),
-    ({'a': 1}, orm.Dict),
-    (1.0, orm.Float),
-    (1, orm.Int),
-    ('string', orm.Str),
-    ([1], orm.List),
-    (DummyEnum.VALUE, orm.EnumData),
-))
-# yapf: enable
+@pytest.mark.parametrize(
+    'argument, node_cls',
+    (
+        (True, orm.Bool),
+        ({'a': 1}, orm.Dict),
+        (1.0, orm.Float),
+        (1, orm.Int),
+        ('string', orm.Str),
+        ([1], orm.List),
+        (DummyEnum.VALUE, orm.EnumData),
+    ),
+)
 def test_input_serialization(argument, node_cls):
     """Test that Python base type inputs are automatically serialized to the AiiDA node counterpart."""
     result = function_args(argument)
@@ -568,17 +564,18 @@ def test_input_serialization(argument, node_cls):
         assert result.value == argument
 
 
-# yapf: disable
-@pytest.mark.parametrize('default, node_cls', (
-    (True, orm.Bool),
-    ({'a': 1}, orm.Dict),
-    (1.0, orm.Float),
-    (1, orm.Int),
-    ('string', orm.Str),
-    ([1], orm.List),
-    (DummyEnum.VALUE, orm.EnumData),
-))
-# yapf: enable
+@pytest.mark.parametrize(
+    'default, node_cls',
+    (
+        (True, orm.Bool),
+        ({'a': 1}, orm.Dict),
+        (1.0, orm.Float),
+        (1, orm.Int),
+        ('string', orm.Str),
+        ([1], orm.List),
+        (DummyEnum.VALUE, orm.EnumData),
+    ),
+)
 def test_default_serialization(default, node_cls):
     """Test that Python base type defaults are automatically serialized to the AiiDA node counterpart."""
 
@@ -679,7 +676,6 @@ def test_type_hinting_spec_inference():
         f: t.Union[str, int],
         g: t.Optional[t.Dict] = None,
     ):
-        # pylint: disable=invalid-name,unused-argument
         pass
 
     input_namespace = function.spec().inputs
@@ -716,7 +712,6 @@ def test_type_hinting_spec_inference_pep_604(aiida_caplog):
         b: orm.Str | orm.Int,
         c: dict | None = None,
     ):
-        # pylint: disable=invalid-name,unused-argument
         pass
 
     input_namespace = function.spec().inputs
@@ -747,7 +742,6 @@ def test_type_hinting_validation():
 
     @calcfunction  # type: ignore[misc]
     def function_type_hinting(a: t.Union[int, float]):
-        # pylint: disable=invalid-name
         return a + 1
 
     with pytest.raises(ValueError, match=r'.*value \'a\' is not of the right type.*'):
@@ -763,7 +757,7 @@ def test_help_text_spec_inference():
     """Test the parsing of docstrings to define the ``help`` message of the dynamically generated input ports."""
 
     @calcfunction
-    def function(param_a, param_b, param_c):  # pylint: disable=unused-argument
+    def function(param_a, param_b, param_c):
         """Some documentation.
 
         :param param_a: Some description.
@@ -791,5 +785,5 @@ def test_help_text_spec_inference_invalid_docstring(aiida_caplog, monkeypatch):
         """Docstring."""
 
     # Now call the spec to have it parse the docstring.
-    function.spec()  # pylint: disable=expression-not-assigned
+    function.spec()
     assert 'function `function` has a docstring that could not be parsed' in aiida_caplog.records[0].message

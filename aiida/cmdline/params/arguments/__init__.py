@@ -7,13 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# yapf: disable
-"""Module with pre-defined reusable commandline arguments that can be used as `click` decorators."""
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .main import *
 from .overridable import *
@@ -45,4 +42,4 @@ __all__ = (
     'WORKFLOWS',
 )
 
-# yapf: enable
+# fmt: on

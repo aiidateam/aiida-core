@@ -7,9 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-""" Util methods """
-from datetime import datetime, timedelta
+"""Util methods"""
 import urllib.parse
+from datetime import datetime, timedelta
 
 from flask import jsonify
 from flask.json.provider import DefaultJSONProvider
@@ -28,20 +28,17 @@ UUID_REF = 'd55082b6-76dc-426b-af89-0e08b59524d2'
 
 ########################## Classes #####################
 class CustomJSONProvider(DefaultJSONProvider):
-    """
-    Custom json encoder for serialization.
+    """Custom json encoder for serialization.
     This has to be provided to the Flask app in order to replace the default
     encoder.
     """
 
     def default(self, obj, **kwargs):
-        """
-        Override serialization of ``DefaultJSONProvider`` for ``datetime`` and ``bytes`` objects.
+        """Override serialization of ``DefaultJSONProvider`` for ``datetime`` and ``bytes`` objects.
 
         :param obj: Object e.g. dict, list that will be serialized.
         :return: Serialized object as a string.
         """
-
         from aiida.restapi.common.config import SERIALIZER_CONFIG
 
         # Treat the datetime objects
@@ -50,11 +47,11 @@ class CustomJSONProvider(DefaultJSONProvider):
                 if SERIALIZER_CONFIG['datetime_format'] == 'asinput':
                     if obj.utcoffset() is not None:
                         obj = obj - obj.utcoffset()
-                        return '-'.join([str(obj.year), str(obj.month).zfill(2),
-                                         str(obj.day).zfill(2)]) + 'T' + \
-                               ':'.join([str(
-                                   obj.hour).zfill(2), str(obj.minute).zfill(2),
-                                         str(obj.second).zfill(2)])
+                        return (
+                            '-'.join([str(obj.year), str(obj.month).zfill(2), str(obj.day).zfill(2)])
+                            + 'T'
+                            + ':'.join([str(obj.hour).zfill(2), str(obj.minute).zfill(2), str(obj.second).zfill(2)])
+                        )
 
         # To support bytes objects, try to decode to a string
         try:
@@ -67,8 +64,7 @@ class CustomJSONProvider(DefaultJSONProvider):
 
 
 class Utils:
-    """
-    A class that gathers all the utility functions for parsing URI,
+    """A class that gathers all the utility functions for parsing URI,
     validating request, pass it to the translator, and building HTTP response
 
     An istance of Utils has to be included in the api class so that the
@@ -90,21 +86,17 @@ class Utils:
         '>=': '>=',
         '<=': '<=',
         '=like=': 'like',
-        '=ilike=': 'ilike'
+        '=ilike=': 'ilike',
     }
 
     def __init__(self, **kwargs):
-        """
-        Sets internally the configuration parameters
-        """
-
+        """Sets internally the configuration parameters"""
         self.prefix = kwargs['PREFIX']
         self.perpage_default = kwargs['PERPAGE_DEFAULT']
         self.limit_default = kwargs['LIMIT_DEFAULT']
 
     def strip_api_prefix(self, path):
-        """
-        Removes the PREFIX from an URL path. PREFIX must be defined in the
+        """Removes the PREFIX from an URL path. PREFIX must be defined in the
         config.py file::
 
             PREFIX = "/api/v2"
@@ -115,22 +107,19 @@ class Utils:
         :return: the same URL without the prefix
         """
         if path.startswith(self.prefix):
-            return path[len(self.prefix):]
+            return path[len(self.prefix) :]
 
         raise ValidationError(f'path has to start with {self.prefix}')
 
     @staticmethod
     def split_path(path):
-        """
-        :param path: entire path contained in flask request
+        """:param path: entire path contained in flask request
         :return: list of each element separated by '/'
         """
         return [f for f in path.split('/') if f]
 
     def parse_path(self, path_string, parse_pk_uuid=None):
-        # pylint: disable=too-many-return-statements,too-many-branches, too-many-statements
-        """
-        Takes the path and parse it checking its validity. Does not parse "io",
+        """Takes the path and parse it checking its validity. Does not parse "io",
         "content" fields. I do not check the validity of the path, since I assume
         that this is done by the Flask routing methods.
 
@@ -141,7 +130,6 @@ class Utils:
             node_id (string: uuid starting pattern, int: pk)
             query_type (string))
         """
-
         ## Initialization
         page = None
         node_id = None
@@ -172,8 +160,9 @@ class Utils:
                 path.pop(0)
         elif parse_pk_uuid == 'uuid':
             import uuid
+
             raw_id = path[0]
-            maybe_uuid = raw_id + UUID_REF[len(raw_id):]
+            maybe_uuid = raw_id + UUID_REF[len(raw_id) :]
             try:
                 _ = uuid.UUID(maybe_uuid, version=4)
             except ValueError:
@@ -188,8 +177,16 @@ class Utils:
             return (resource_type, page, node_id, query_type)
 
         if path[0] in [
-            'projectable_properties', 'statistics', 'full_types', 'full_types_count', 'download', 'download_formats',
-            'report', 'status', 'input_files', 'output_files'
+            'projectable_properties',
+            'statistics',
+            'full_types',
+            'full_types_count',
+            'download',
+            'download_formats',
+            'report',
+            'status',
+            'input_files',
+            'output_files',
         ]:
             query_type = path.pop(0)
             if path:
@@ -219,14 +216,11 @@ class Utils:
     def validate_request(
         self, limit=None, offset=None, perpage=None, page=None, query_type=None, is_querystring_defined=False
     ):
-        # pylint: disable=fixme,too-many-arguments,too-many-branches
-        """
-        Performs various checks on the consistency of the request.
+        """Performs various checks on the consistency of the request.
         Add here all the checks that you want to do, except validity of the page
         number that is done in paginate().
         Future additional checks must be added here
         """
-
         # TODO Consider using **kwargs so to make easier to add more validations
         # 1. perpage incompatible with offset and limits
         if perpage is not None and (limit is not None or offset is not None):
@@ -237,17 +231,14 @@ class Utils:
         # 3. perpage requires that the path contains a page request
         if perpage is not None and page is None:
             raise RestValidationError(
-                'perpage key requires that a page is '
-                'requested (i.e. the path must contain '
-                '/page/)'
+                'perpage key requires that a page is ' 'requested (i.e. the path must contain ' '/page/)'
             )
         # 4. No querystring if query type = projectable_properties'
         if query_type in ('projectable_properties',) and is_querystring_defined:
             raise RestInputValidationError('projectable_properties requests do not allow specifying a query string')
 
     def paginate(self, page, perpage, total_count):
-        """
-        Calculates limit and offset for the reults of a query,
+        """Calculates limit and offset for the reults of a query,
         given the page and the number of restuls per page.
         Moreover, calculates the last available page and raises an exception
         if the
@@ -311,14 +302,12 @@ class Utils:
         return (limit, offset, rel_pages)
 
     def build_headers(self, rel_pages=None, url=None, total_count=None):
-        """
-        Construct the header dictionary for an HTTP response. It includes related
+        """Construct the header dictionary for an HTTP response. It includes related
         pages, total count of results (before pagination).
 
         :param rel_pages: a dictionary defining related pages (first, prev, next, last)
         :param url: (string) the full url, i.e. the url that the client uses to get Rest resources
         """
-
         ## Type validation
         # mandatory parameters
         try:
@@ -350,7 +339,7 @@ class Utils:
 
         ## Two auxiliary functions
         def split_url(url):
-            """ Split url into path and query string """
+            """Split url into path and query string"""
             if '?' in url:
                 [path, query_string] = url.split('?')
                 question_mark = '?'
@@ -372,7 +361,7 @@ class Utils:
 
             if path_elems.pop(-1) == 'page' or path_elems.pop(-1) == 'page':
                 links = []
-                for (rel, page) in rel_pages.items():
+                for rel, page in rel_pages.items():
                     if page is not None:
                         links.append(make_rel_url(rel, page))
                 headers['Link'] = ''.join(links)
@@ -387,8 +376,7 @@ class Utils:
 
     @staticmethod
     def build_response(status=200, headers=None, data=None):
-        """
-        Build the response
+        """Build the response
 
         :param status: status of the response, e.g. 200=OK, 400=bad request
         :param headers: dictionary for additional header k,v pairs,
@@ -397,7 +385,6 @@ class Utils:
 
         :return: a Flask response object
         """
-
         ## Type checks
         # mandatory parameters
         if not isinstance(data, dict):
@@ -425,8 +412,7 @@ class Utils:
 
     @staticmethod
     def build_datetime_filter(dtobj):
-        """
-        This function constructs a filter for a datetime object to be in a
+        """This function constructs a filter for a datetime object to be in a
         certain datetime interval according to the precision.
 
         The interval is [reference_datetime, reference_datetime + delta_time],
@@ -440,7 +426,6 @@ class Utils:
 
         :return: a suitable entry of the filter dictionary
         """
-
         if not isinstance(dtobj, DatetimePrecision):
             raise TypeError('dtobj argument has to be a DatetimePrecision object')
 
@@ -464,9 +449,7 @@ class Utils:
         return filters
 
     def build_translator_parameters(self, field_list):
-        # pylint: disable=too-many-locals,too-many-statements,too-many-branches
-        """
-        Takes a list of elements resulting from the parsing the query_string and
+        """Takes a list of elements resulting from the parsing the query_string and
         elaborates them in order to provide translator-compliant instructions
 
         :param field_list: a (nested) list of elements resulting from parsing the query_string
@@ -639,7 +622,6 @@ class Utils:
                     raise RestInputValidationError("only assignment operator '=' is permitted after 'extras_filter'")
 
             else:
-
                 ## Construct the filter entry.
                 field_key = field[0]
                 operator = field[1]
@@ -652,7 +634,6 @@ class Utils:
 
                 # Here I treat the AND clause
                 if field_counts[field_key] > 1:
-
                     if field_key not in filters:
                         filters.update({field_key: {'and': [filter_value]}})
                     else:
@@ -665,25 +646,50 @@ class Utils:
         #     limit = self.limit_default
 
         return (
-            limit, offset, perpage, orderby, filters, download_format, download, filename, tree_in_limit,
-            tree_out_limit, attributes, attributes_filter, extras, extras_filter, full_type, profile
+            limit,
+            offset,
+            perpage,
+            orderby,
+            filters,
+            download_format,
+            download,
+            filename,
+            tree_in_limit,
+            tree_out_limit,
+            attributes,
+            attributes_filter,
+            extras,
+            extras_filter,
+            full_type,
+            profile,
         )
 
     def parse_query_string(self, query_string):
-        # pylint: disable=too-many-locals
-        """
-        Function that parse the querystring, extracting infos for limit, offset,
+        """Function that parse the querystring, extracting infos for limit, offset,
         ordering, filters, attribute and extra projections.
         :param query_string (as obtained from request.query_string)
         :return: parsed values for the querykeys
         """
         from psycopg2.tz import FixedOffsetTimezone
-        from pyparsing import Combine, Group, Literal, OneOrMore, Optional, ParseException, QuotedString
-        from pyparsing import StringEnd as SE
-        from pyparsing import StringStart as SS
-        from pyparsing import Suppress, Word
-        from pyparsing import WordEnd as WE
-        from pyparsing import ZeroOrMore, alphanums, alphas, nums, printables
+        from pyparsing import (
+            Combine,
+            Group,
+            Literal,
+            OneOrMore,
+            Optional,
+            ParseException,
+            QuotedString,
+            Suppress,
+            Word,
+            ZeroOrMore,
+            alphanums,
+            alphas,
+            nums,
+            printables,
+        )
+        from pyparsing import StringEnd as SE  # noqa: N817
+        from pyparsing import StringStart as SS  # noqa: N817
+        from pyparsing import WordEnd as WE  # noqa: N817
         from pyparsing import pyparsing_common as ppc
 
         ## Define grammar
@@ -691,8 +697,16 @@ class Utils:
         key = Word(f'{alphas}_', f'{alphanums}_-')
         # operators
         operator = (
-            Literal('=like=') | Literal('=ilike=') | Literal('=in=') | Literal('=notin=') | Literal('=') |
-            Literal('!=') | Literal('>=') | Literal('>') | Literal('<=') | Literal('<')
+            Literal('=like=')
+            | Literal('=ilike=')
+            | Literal('=in=')
+            | Literal('=notin=')
+            | Literal('=')
+            | Literal('!=')
+            | Literal('>=')
+            | Literal('>')
+            | Literal('<=')
+            | Literal('<')
         )
         # Value types
         value_num = ppc.number
@@ -709,8 +723,10 @@ class Utils:
         )
         # Time
         value_time = Combine(
-            Literal('T') + Word(nums, exact=2) + Optional(Literal(':') + Word(nums, exact=2)) +
-            Optional(Literal(':') + Word(nums, exact=2))
+            Literal('T')
+            + Word(nums, exact=2)
+            + Optional(Literal(':') + Word(nums, exact=2))
+            + Optional(Literal(':') + Word(nums, exact=2))
         )
         # Shift
         value_shift = Combine(Word('+-', exact=1) + Word(nums, exact=2) + Optional(Literal(':') + Word(nums, exact=2)))
@@ -727,8 +743,7 @@ class Utils:
         ########################################################################
 
         def validate_time(toks):
-            """
-            Function to convert datetime string into datetime object. The format is
+            """Function to convert datetime string into datetime object. The format is
             compliant with ParseAction requirements
 
             :param toks: datetime string passed in tokens
@@ -785,9 +800,7 @@ class Utils:
         separator = Suppress(Literal('&'))
 
         # General query string
-        general_grammar = SS() + Optional(field) + ZeroOrMore(
-            separator + field) + \
-                          Optional(separator) + SE()
+        general_grammar = SS() + Optional(field) + ZeroOrMore(separator + field) + Optional(separator) + SE()
 
         ## Parse the query string
         try:
@@ -802,8 +815,8 @@ class Utils:
         except ParseException as err:
             raise RestInputValidationError(
                 'The query string format is invalid. '
-                "Parser returned this massage: \"{"
-                "}.\" Please notice that the column "
+                'Parser returned this massage: "{'
+                '}." Please notice that the column '
                 'number '
                 'is counted from '
                 'the first character of the query '

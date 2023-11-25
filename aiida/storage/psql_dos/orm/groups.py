@@ -24,7 +24,7 @@ _LOGGER = logging.getLogger(__name__)
 
 # Unfortunately the linter doesn't seem to be able to pick up on the fact that the abstract property 'id'
 # of BackendGroup is actually implemented in SqlaModelEntity so disable the abstract check
-class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  # pylint: disable=abstract-method
+class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
     """The SQLAlchemy Group object"""
 
     MODEL_CLASS = DbGroup
@@ -33,8 +33,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
     GROUP_NODE_CLASS = DbGroupNode
 
     def __init__(self, backend, label, user, description='', type_string=''):
-        """
-        Construct a new SQLA group
+        """Construct a new SQLA group
 
         :param backend: the backend to use
         :param label: the group label
@@ -54,8 +53,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
 
     @label.setter
     def label(self, label):
-        """
-        Attempt to change the label of the group instance. If the group is already stored
+        """Attempt to change the label of the group instance. If the group is already stored
         and the another group of the same type already exists with the desired label, a
         UniquenessError will be raised
 
@@ -117,6 +115,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
         :return: integer number of entities contained within the group
         """
         from sqlalchemy.orm import aliased
+
         group = aliased(self.MODEL_CLASS)
         nodes = aliased(self.GROUP_NODE_CLASS)
         session = self.backend.get_session()
@@ -174,14 +173,14 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):  
             to create a direct SQL INSERT statement to the group-node relationship
             table (to improve speed).
         """
-        from sqlalchemy.dialects.postgresql import insert  # pylint: disable=import-error, no-name-in-module
-        from sqlalchemy.exc import IntegrityError  # pylint: disable=import-error, no-name-in-module
+        from sqlalchemy.dialects.postgresql import insert
+        from sqlalchemy.exc import IntegrityError
 
         super().add_nodes(nodes)
         skip_orm = kwargs.get('skip_orm', False)
 
         def check_node(given_node):
-            """ Check if given node is of correct type and stored """
+            """Check if given node is of correct type and stored"""
             if not isinstance(given_node, self.NODE_CLASS):
                 raise TypeError(f'invalid type {type(given_node)}, has to be {self.NODE_CLASS}')
 
@@ -274,7 +273,7 @@ class SqlaGroupCollection(BackendGroupCollection):
 
     ENTITY_CLASS = SqlaGroup
 
-    def delete(self, id):  # pylint: disable=redefined-builtin
+    def delete(self, id):
         session = self.backend.get_session()
 
         row = session.get(self.ENTITY_CLASS.MODEL_CLASS, id)

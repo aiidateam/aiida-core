@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .entry_point import *
 from .factories import *
@@ -38,4 +37,4 @@ __all__ = (
     'parse_entry_point',
 )
 
-# yapf: enable
+# fmt: on

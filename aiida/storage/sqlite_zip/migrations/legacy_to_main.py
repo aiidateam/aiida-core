@@ -8,12 +8,12 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Migration from the "legacy" JSON format, to an sqlite database, and node uuid based repository to hash based."""
+import shutil
+import tarfile
 from contextlib import contextmanager
 from datetime import datetime
 from hashlib import sha256
 from pathlib import Path, PurePosixPath
-import shutil
-import tarfile
 from typing import Any, Callable, ContextManager, Dict, Iterator, List, Optional, Tuple, Union
 
 from archive_path import ZipPath
@@ -26,8 +26,8 @@ from aiida.common.progress_reporter import get_progress_reporter
 from aiida.repository.common import File, FileType
 from aiida.storage.log import MIGRATE_LOGGER
 
-from . import v1_db_schema as v1_schema
 from ..utils import DB_FILENAME, REPO_FOLDER, create_sqla_engine
+from . import v1_db_schema as v1_schema
 from .utils import update_metadata
 
 _NODE_ENTITY_NAME = 'Node'
@@ -38,21 +38,11 @@ _LOG_ENTITY_NAME = 'Log'
 _COMMENT_ENTITY_NAME = 'Comment'
 
 file_fields_to_model_fields: Dict[str, Dict[str, str]] = {
-    _NODE_ENTITY_NAME: {
-        'dbcomputer': 'dbcomputer_id',
-        'user': 'user_id'
-    },
-    _GROUP_ENTITY_NAME: {
-        'user': 'user_id'
-    },
+    _NODE_ENTITY_NAME: {'dbcomputer': 'dbcomputer_id', 'user': 'user_id'},
+    _GROUP_ENTITY_NAME: {'user': 'user_id'},
     _COMPUTER_ENTITY_NAME: {},
-    _LOG_ENTITY_NAME: {
-        'dbnode': 'dbnode_id'
-    },
-    _COMMENT_ENTITY_NAME: {
-        'dbnode': 'dbnode_id',
-        'user': 'user_id'
-    }
+    _LOG_ENTITY_NAME: {'dbnode': 'dbnode_id'},
+    _COMMENT_ENTITY_NAME: {'dbnode': 'dbnode_id', 'user': 'user_id'},
 }
 
 aiida_orm_to_backend = {
@@ -67,7 +57,7 @@ aiida_orm_to_backend = {
 LEGACY_TO_MAIN_REVISION = 'main_0000'
 
 
-def perform_v1_migration(  # pylint: disable=too-many-locals
+def perform_v1_migration(
     inpath: Path,
     working: Path,
     new_zip: ZipPath,
@@ -142,7 +132,7 @@ def perform_v1_migration(  # pylint: disable=too-many-locals
     return working / DB_FILENAME
 
 
-def _json_to_sqlite(  # pylint: disable=too-many-branches,too-many-locals
+def _json_to_sqlite(
     outpath: Path, data: dict, node_repos: Dict[str, List[Tuple[str, Optional[str]]]], batch_size: int = 100
 ) -> None:
     """Convert a JSON archive format to SQLite."""
@@ -156,8 +146,12 @@ def _json_to_sqlite(  # pylint: disable=too-many-branches,too-many-locals
     with engine.begin() as connection:
         # proceed in order of relationships
         for entity_type in (
-            _USER_ENTITY_NAME, _COMPUTER_ENTITY_NAME, _GROUP_ENTITY_NAME, _NODE_ENTITY_NAME, _LOG_ENTITY_NAME,
-            _COMMENT_ENTITY_NAME
+            _USER_ENTITY_NAME,
+            _COMPUTER_ENTITY_NAME,
+            _GROUP_ENTITY_NAME,
+            _NODE_ENTITY_NAME,
+            _LOG_ENTITY_NAME,
+            _COMMENT_ENTITY_NAME,
         ):
             if not data['export_data'].get(entity_type, {}):
                 continue
@@ -177,10 +171,9 @@ def _json_to_sqlite(  # pylint: disable=too-many-branches,too-many-locals
         return None
 
     with engine.begin() as connection:
-
         # get mapping of node IDs to node UUIDs
-        node_uuid_map = {  # pylint: disable=unnecessary-comprehension
-            uuid: pk for uuid, pk in connection.execute(select(v1_schema.DbNode.uuid, v1_schema.DbNode.id))  # pylint: disable=not-an-iterable
+        node_uuid_map = {
+            uuid: pk for uuid, pk in connection.execute(select(v1_schema.DbNode.uuid, v1_schema.DbNode.id))
         }
 
         # links
@@ -199,7 +192,7 @@ def _json_to_sqlite(  # pylint: disable=too-many-branches,too-many-locals
                     'input_id': input_id,
                     'output_id': output_id,
                     'label': link_row['label'],
-                    'type': link_row['type']
+                    'type': link_row['type'],
                 }
 
             with get_progress_reporter()(desc='Adding Links', total=len(data['links_uuid'])) as progress:
@@ -210,8 +203,8 @@ def _json_to_sqlite(  # pylint: disable=too-many-branches,too-many-locals
         # groups to nodes
         if data['groups_uuid']:
             # get mapping of node IDs to node UUIDs
-            group_uuid_map = {  # pylint: disable=unnecessary-comprehension
-                uuid: pk for uuid, pk in connection.execute(select(v1_schema.DbGroup.uuid, v1_schema.DbGroup.id))  # pylint: disable=not-an-iterable
+            group_uuid_map = {
+                uuid: pk for uuid, pk in connection.execute(select(v1_schema.DbGroup.uuid, v1_schema.DbGroup.id))
             }
             length = sum(len(uuids) for uuids in data['groups_uuid'].values())
             unknown_nodes: Dict[str, set] = {}
@@ -255,15 +248,13 @@ def _iter_entity_fields(
             uuid = all_fields['uuid']
             repository_metadata = _create_repo_metadata(node_repos[uuid]) if uuid in node_repos else {}
             yield {
-                **{
-                    keys.get(key, key): _convert_datetime(key, val) for key, val in all_fields.items()
-                },
+                **{keys.get(key, key): _convert_datetime(key, val) for key, val in all_fields.items()},
                 **{
                     'id': pk,
                     'attributes': attributes[pk],
                     'extras': extras[pk],
-                    'repository_metadata': repository_metadata
-                }
+                    'repository_metadata': repository_metadata,
+                },
             }
     else:
         for pk, all_fields in data['export_data'].get(name, {}).items():

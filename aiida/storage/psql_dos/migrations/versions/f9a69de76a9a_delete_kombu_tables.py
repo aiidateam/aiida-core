@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Delete the kombu tables that were used by the old Celery based daemon and the obsolete related timestamps
 
 Revision ID: f9a69de76a9a

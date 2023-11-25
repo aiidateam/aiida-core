@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Clean the log records from non-Node entity records (part b).
 
 We need to add the unique constraint on the `uuid` column in a new transaction.

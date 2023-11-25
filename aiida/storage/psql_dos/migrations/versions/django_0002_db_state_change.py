@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Fix calculation states.
 
 `UNDETERMINED` and `NOTFOUND` `dbcalcstate.state` values are replaced by `FAILED`.
@@ -28,11 +27,13 @@ def upgrade():
     """Migrations for the upgrade."""
     # Note in the original django migration, a warning log was actually added to the node,
     # but we forgo that here
-    op.execute("""
+    op.execute(
+        """
         UPDATE db_dbcalcstate
         SET state = 'FAILED'
         WHERE state = 'NOTFOUND'
-    """)
+    """
+    )
     op.execute(
         """
         UPDATE db_dbcalcstate

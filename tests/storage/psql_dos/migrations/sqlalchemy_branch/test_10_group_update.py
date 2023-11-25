@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# ruff: noqa: N806
 """Tests for group migrations: 118349c10896 -> 0edcdd5a30f0"""
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
@@ -20,8 +21,8 @@ def test_group_typestring(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@118349c10896')  # 118349c10896_default_link_label.py
 
     # setup the database
-    DbGroup = perform_migrations.get_current_table('db_dbgroup')  # pylint: disable=invalid-name
-    DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+    DbGroup = perform_migrations.get_current_table('db_dbgroup')
+    DbUser = perform_migrations.get_current_table('db_dbuser')
     with perform_migrations.session() as session:
         default_user = DbUser(email='user@aiida.net')
         session.add(default_user)
@@ -52,7 +53,7 @@ def test_group_typestring(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@bf591f31dd12')  # bf591f31dd12_dbgroup_type_string.py
 
     # perform some checks
-    DbGroup = perform_migrations.get_current_table('db_dbgroup')  # pylint: disable=invalid-name
+    DbGroup = perform_migrations.get_current_table('db_dbgroup')
     with perform_migrations.session() as session:
         group_user = session.query(DbGroup).filter(DbGroup.id == group_user_pk).one()
         assert group_user.type_string == 'core'
@@ -79,8 +80,8 @@ def test_group_extras(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@bf591f31dd12')  # bf591f31dd12_dbgroup_type_string.py
 
     # setup the database
-    DbGroup = perform_migrations.get_current_table('db_dbgroup')  # pylint: disable=invalid-name
-    DbUser = perform_migrations.get_current_table('db_dbuser')  # pylint: disable=invalid-name
+    DbGroup = perform_migrations.get_current_table('db_dbgroup')
+    DbUser = perform_migrations.get_current_table('db_dbuser')
     with perform_migrations.session() as session:
         default_user = DbUser(email='user@aiida.net')
         session.add(default_user)
@@ -96,7 +97,7 @@ def test_group_extras(perform_migrations: PsqlDosMigrator):
     perform_migrations.migrate_up('sqlalchemy@0edcdd5a30f0')  # 0edcdd5a30f0_dbgroup_extras.py
 
     # perform some checks
-    DbGroup = perform_migrations.get_current_table('db_dbgroup')  # pylint: disable=invalid-name
+    DbGroup = perform_migrations.get_current_table('db_dbgroup')
     with perform_migrations.session() as session:
         group = session.query(DbGroup).filter(DbGroup.id == group_pk).one()
         assert group.extras == {}

@@ -10,12 +10,12 @@
 """Definition of the ``SqliteTempBackend`` backend."""
 from __future__ import annotations
 
-from contextlib import contextmanager, nullcontext
 import functools
 import hashlib
 import os
-from pathlib import Path
 import shutil
+from contextlib import contextmanager, nullcontext
+from pathlib import Path
 from tempfile import mkdtemp
 from typing import Any, BinaryIO, Iterator, Sequence
 
@@ -35,7 +35,7 @@ from aiida.storage.sqlite_zip.utils import create_sqla_engine
 __all__ = ('SqliteTempBackend',)
 
 
-class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-methods
+class SqliteTempBackend(StorageBackend):
     """A temporary backend, using an in-memory sqlite database.
 
     This backend is intended for testing and demonstration purposes.
@@ -44,11 +44,10 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
     """
 
     class Configuration(BaseModel):
-
         filepath: str = Field(
             title='Temporary directory',
             description='Temporary directory in which to store data for this backend.',
-            default_factory=mkdtemp
+            default_factory=mkdtemp,
         )
 
     cli_exposed = False
@@ -64,21 +63,19 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
     ) -> Profile:
         """Create a new profile instance for this backend, from the path to the zip file."""
         return Profile(
-            name, {
+            name,
+            {
                 'default_user_email': default_user_email,
                 'storage': {
                     'backend': 'core.sqlite_temp',
                     'config': {
                         'filepath': filepath,
                         'debug': debug,
-                    }
+                    },
                 },
-                'process_control': {
-                    'backend': 'null',
-                    'config': {}
-                },
+                'process_control': {'backend': 'null', 'config': {}},
                 'options': options or {},
-            }
+            },
         )
 
     @classmethod
@@ -86,11 +83,11 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
         return get_schema_version_head()
 
     @classmethod
-    def version_profile(cls, profile: Profile) -> str | None:  # pylint: disable=unused-argument
+    def version_profile(cls, profile: Profile) -> str | None:
         return get_schema_version_head()
 
     @classmethod
-    def initialise(cls, profile: 'Profile', reset: bool = False) -> bool:  # pylint: disable=unused-argument
+    def initialise(cls, profile: 'Profile', reset: bool = False) -> bool:
         return False
 
     @classmethod
@@ -126,7 +123,7 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
     def get_global_variable(self, key: str):
         return self._globals[key][0]
 
-    def set_global_variable(self, key: str, value, description: str | None = None, overwrite=True) -> None:  # pylint: disable=unused-argument
+    def set_global_variable(self, key: str, value, description: str | None = None, overwrite=True) -> None:
         if not overwrite and key in self._globals:
             raise ValueError(f'global variable {key} already exists')
         self._globals[key] = (value, description)
@@ -267,7 +264,7 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
                 if set(row) != keys:
                     raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} != {keys}')
         session = self.get_session()
-        with (nullcontext() if self.in_transaction else self.transaction()):
+        with nullcontext() if self.in_transaction else self.transaction():
             result = session.execute(insert(mapper).returning(mapper, column('id')), rows).fetchall()
         return [row.id for row in result]
 
@@ -281,7 +278,7 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
             if not keys.issuperset(row):
                 raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
         session = self.get_session()
-        with (nullcontext() if self.in_transaction else self.transaction()):
+        with nullcontext() if self.in_transaction else self.transaction():
             session.execute(update(mapper), rows)
 
     def delete(self) -> None:

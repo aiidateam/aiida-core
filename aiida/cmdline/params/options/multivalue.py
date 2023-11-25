@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Module to define multi value options for click.
+"""Module to define multi value options for click.
 """
 
 import click
@@ -38,8 +37,7 @@ click.Command.collect_usage_pieces = collect_usage_pieces
 
 
 class MultipleValueOption(click.Option):
-    """
-    An option that can handle multiple values with a single flag. For example::
+    """An option that can handle multiple values with a single flag. For example::
 
         @click.option('-n', '--nodes', cls=MultipleValueOption)
 
@@ -62,22 +60,18 @@ class MultipleValueOption(click.Option):
         self._eat_all_parser = None
 
     def add_to_parser(self, parser, ctx):
-        """
-        Override built in click method that allows us to specify a custom parser
+        """Override built in click method that allows us to specify a custom parser
         to eat up parameters until the following flag or 'endopt' (i.e. --)
         """
-        # pylint: disable=protected-access
         super().add_to_parser(parser, ctx)
 
         def parser_process(value, state):
-            """
-            The actual function that parses the options
+            """The actual function that parses the options
 
             :param value: The value to parse
             :param state: The state of the parser
             """
-            # pylint: disable=invalid-name
-            ENDOPTS = '--'
+            ENDOPTS = '--'  # noqa: N806
             done = False
             value = [value]
 

@@ -8,8 +8,7 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Migration from v0.9 to v0.10, used by `verdi export migrate` command."""
-# pylint: disable=invalid-name,unused-argument
-from ..utils import update_metadata, verify_metadata_version  # pylint: disable=no-name-in-module
+from ..utils import update_metadata, verify_metadata_version
 
 
 def migrate_v9_to_v10(metadata: dict, data: dict) -> None:

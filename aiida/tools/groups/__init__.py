@@ -17,8 +17,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .paths import *
 
@@ -30,4 +29,4 @@ __all__ = (
     'NoGroupsInPathError',
 )
 
-# yapf: enable
+# fmt: on

@@ -10,7 +10,6 @@ __all__ = ('JsonableData',)
 
 
 class JsonSerializableProtocol(typing.Protocol):
-
     def as_dict(self) -> typing.MutableMapping[typing.Any, typing.Any]:
         ...
 

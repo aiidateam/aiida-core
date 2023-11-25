@@ -3,8 +3,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .abstract import *
 from .disk_object_store import *
@@ -16,4 +15,4 @@ __all__ = (
     'SandboxRepositoryBackend',
 )
 
-# yapf: enable
+# fmt: on

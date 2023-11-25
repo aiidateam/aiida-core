@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-arguments
 """`verdi process` command."""
 import click
 
@@ -32,6 +31,7 @@ def valid_projections():
     This indirection is necessary to prevent loading the imported module which slows down tab-completion.
     """
     from aiida.tools.query.calculation import CalculationQueryBuilder
+
     return CalculationQueryBuilder.valid_projections
 
 
@@ -41,6 +41,7 @@ def default_projections():
     This indirection is necessary to prevent loading the imported module which slows down tab-completion.
     """
     from aiida.tools.query.calculation import CalculationQueryBuilder
+
     return CalculationQueryBuilder.default_projections
 
 
@@ -50,7 +51,7 @@ def verdi_process():
 
 
 @verdi_process.command('list')
-@options.PROJECT(type=types.LazyChoice(valid_projections), default=lambda: default_projections())  # pylint: disable=unnecessary-lambda
+@options.PROJECT(type=types.LazyChoice(valid_projections), default=lambda: default_projections())
 @options.ORDER_BY()
 @options.ORDER_DIRECTION()
 @options.GROUP(help='Only include entries that are a member of this group.')
@@ -66,14 +67,25 @@ def verdi_process():
 @click.pass_context
 @decorators.with_dbenv()
 def process_list(
-    ctx, all_entries, group, process_state, process_label, paused, exit_status, failed, past_days, limit, project, raw,
-    order_by, order_dir
+    ctx,
+    all_entries,
+    group,
+    process_state,
+    process_label,
+    paused,
+    exit_status,
+    failed,
+    past_days,
+    limit,
+    project,
+    raw,
+    order_by,
+    order_dir,
 ):
     """Show a list of running or terminated processes.
 
     By default, only those that are still running are shown, but there are options to show also the finished ones.
     """
-    # pylint: disable=too-many-locals
     from tabulate import tabulate
 
     from aiida.cmdline.commands.cmd_daemon import execute_client_command
@@ -129,13 +141,11 @@ def process_list(
         # Second query to get active process count. Currently this is slow but will be fixed with issue #2770. It is
         # placed at the end of the command so that the user can Ctrl+C after getting the process table.
         slots_per_worker = ctx.obj.config.get_option('daemon.worker_process_slots', scope=ctx.obj.profile.name)
-        active_processes = QueryBuilder().append(
-            ProcessNode, filters={
-                'attributes.process_state': {
-                    'in': ('created', 'waiting', 'running')
-                }
-            }
-        ).count()
+        active_processes = (
+            QueryBuilder()
+            .append(ProcessNode, filters={'attributes.process_state': {'in': ('created', 'waiting', 'running')}})
+            .count()
+        )
         available_slots = active_workers * slots_per_worker
         percent_load = active_processes / available_slots
         if percent_load > 0.9:  # 90%
@@ -162,7 +172,6 @@ def process_show(processes):
 def process_call_root(processes):
     """Show root process of the call stack for the given processes."""
     for process in processes:
-
         caller = process.caller
 
         if caller is None:
@@ -188,7 +197,7 @@ def process_call_root(processes):
     '--levelname',
     type=click.Choice(list(LOG_LEVELS)),
     default='REPORT',
-    help='Filter the results by name of the log level.'
+    help='Filter the results by name of the log level.',
 )
 @click.option(
     '-m', '--max-depth', 'max_depth', type=int, default=None, help='Limit the number of levels to be printed.'
@@ -309,7 +318,7 @@ def process_watch(processes):
 
     from kiwipy import BroadcastFilter
 
-    def _print(communicator, body, sender, subject, correlation_id):  # pylint: disable=unused-argument
+    def _print(communicator, body, sender, subject, correlation_id):
         """Format the incoming broadcast data into a message and echo it to stdout."""
         if body is None:
             body = 'No message specified'
@@ -323,7 +332,6 @@ def process_watch(processes):
     echo.echo_report('watching for broadcasted messages, press CTRL+C to stop...')
 
     for process in processes:
-
         if process.is_terminated:
             echo.echo_error(f'Process<{process.pk}> is already terminated')
             continue

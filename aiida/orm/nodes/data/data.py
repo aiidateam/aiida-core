@@ -21,8 +21,7 @@ __all__ = ('Data',)
 
 
 class Data(Node):
-    """
-    The base class for all Data nodes.
+    """The base class for all Data nodes.
 
     AiiDA Data classes are subclasses of Node and must support multiple inheritance.
 
@@ -30,6 +29,7 @@ class Data(Node):
     Calculation plugins are responsible for converting raw output data from simulation codes to Data nodes.
     Nodes are responsible for validating their content (see _validate method).
     """
+
     _source_attributes = ['db_name', 'db_uri', 'uri', 'id', 'version', 'extras', 'source_md5', 'description', 'license']
 
     # Replace this with a dictionary in each subclass that, given a file
@@ -56,8 +56,7 @@ class Data(Node):
         raise exceptions.InvalidOperation('copying a Data node is not supported, use copy.deepcopy')
 
     def __deepcopy__(self, memo):
-        """
-        Create a clone of the Data node by piping through to the clone method and return the result.
+        """Create a clone of the Data node by piping through to the clone method and return the result.
 
         :returns: an unstored clone of this Data node
         """
@@ -73,14 +72,13 @@ class Data(Node):
         backend_clone = self.backend_entity.clone()
         clone = from_backend_entity(self.__class__, backend_clone)
         clone.base.attributes.reset(copy.deepcopy(self.base.attributes.all))
-        clone.base.repository._clone(self.base.repository)  # pylint: disable=protected-access
+        clone.base.repository._clone(self.base.repository)
 
         return clone
 
     @property
     def source(self):
-        """
-        Gets the dictionary describing the source of Data object. Possible fields:
+        """Gets the dictionary describing the source of Data object. Possible fields:
 
         * **db_name**: name of the source database.
         * **db_uri**: URI of the source database.
@@ -100,8 +98,7 @@ class Data(Node):
 
     @source.setter
     def source(self, source):
-        """
-        Sets the dictionary describing the source of Data object.
+        """Sets the dictionary describing the source of Data object.
 
         :raise KeyError: if dictionary contains unknown field.
         :raise ValueError: if supplied source description is not a dictionary.
@@ -115,9 +112,7 @@ class Data(Node):
         self.base.attributes.set('source', source)
 
     def set_source(self, source):
-        """
-        Sets the dictionary describing the source of Data object.
-        """
+        """Sets the dictionary describing the source of Data object."""
         self.source = source
 
     @property
@@ -135,8 +130,7 @@ class Data(Node):
 
     @override
     def _exportcontent(self, fileformat, main_file_name='', **kwargs):
-        """
-        Converts a Data node to one (or multiple) files.
+        """Converts a Data node to one (or multiple) files.
 
         Note: Export plugins should return utf8-encoded **bytes**, which can be
         directly dumped to file.
@@ -161,15 +155,15 @@ class Data(Node):
         except KeyError:
             if exporters.keys():
                 raise ValueError(
-                    'The format {} is not implemented for {}. '
-                    'Currently implemented are: {}.'.format(
+                    'The format {} is not implemented for {}. ' 'Currently implemented are: {}.'.format(
                         fileformat, self.__class__.__name__, ','.join(exporters.keys())
                     )
                 )
             else:
                 raise ValueError(
-                    'The format {} is not implemented for {}. '
-                    'No formats are implemented yet.'.format(fileformat, self.__class__.__name__)
+                    'The format {} is not implemented for {}. ' 'No formats are implemented yet.'.format(
+                        fileformat, self.__class__.__name__
+                    )
                 )
 
         string, dictionary = func(main_file_name=main_file_name, **kwargs)
@@ -179,8 +173,7 @@ class Data(Node):
 
     @override
     def export(self, path, fileformat=None, overwrite=False, **kwargs):
-        """
-        Save a Data object to a file.
+        """Save a Data object to a file.
 
         :param fname: string with file name. Can be an absolute or relative path.
         :param fileformat: kind of format to use for the export. If not present,
@@ -201,7 +194,7 @@ class Data(Node):
         if fileformat is None:
             extension = os.path.splitext(path)[1]
             if extension.startswith(os.path.extsep):
-                extension = extension[len(os.path.extsep):]
+                extension = extension[len(os.path.extsep) :]
             if not extension:
                 raise ValueError('Cannot recognized the fileformat from the extension')
 
@@ -233,8 +226,7 @@ class Data(Node):
         return retlist
 
     def _get_exporters(self):
-        """
-        Get all implemented export formats.
+        """Get all implemented export formats.
         The convention is to find all _prepare_... methods.
         Returns a dictionary of method_name: method_function
         """
@@ -247,21 +239,19 @@ class Data(Node):
 
     @classmethod
     def get_export_formats(cls):
-        """
-        Get the list of valid export format strings
+        """Get the list of valid export format strings
 
         :return: a list of valid formats
         """
         exporter_prefix = '_prepare_'
         method_names = dir(cls)  # get list of class methods names
         valid_format_names = [
-            i[len(exporter_prefix):] for i in method_names if i.startswith(exporter_prefix)
+            i[len(exporter_prefix) :] for i in method_names if i.startswith(exporter_prefix)
         ]  # filter them
         return sorted(valid_format_names)
 
     def importstring(self, inputstring, fileformat, **kwargs):
-        """
-        Converts a Data object to other text format.
+        """Converts a Data object to other text format.
 
         :param fileformat: a string (the extension) to describe the file format.
         :returns: a string with the structure description.
@@ -273,23 +263,22 @@ class Data(Node):
         except KeyError:
             if importers.keys():
                 raise ValueError(
-                    'The format {} is not implemented for {}. '
-                    'Currently implemented are: {}.'.format(
+                    'The format {} is not implemented for {}. ' 'Currently implemented are: {}.'.format(
                         fileformat, self.__class__.__name__, ','.join(importers.keys())
                     )
                 )
             else:
                 raise ValueError(
-                    'The format {} is not implemented for {}. '
-                    'No formats are implemented yet.'.format(fileformat, self.__class__.__name__)
+                    'The format {} is not implemented for {}. ' 'No formats are implemented yet.'.format(
+                        fileformat, self.__class__.__name__
+                    )
                 )
 
         # func is bound to self by getattr in _get_importers()
         func(inputstring, **kwargs)
 
     def importfile(self, fname, fileformat=None):
-        """
-        Populate a Data object from a file.
+        """Populate a Data object from a file.
 
         :param fname: string with file name. Can be an absolute or relative path.
         :param fileformat: kind of format to use for the export. If not present,
@@ -301,8 +290,7 @@ class Data(Node):
             self.importstring(fhandle.read(), fileformat)
 
     def _get_importers(self):
-        """
-        Get all implemented import formats.
+        """Get all implemented import formats.
         The convention is to find all _parse_... methods.
         Returns a list of strings.
         """
@@ -310,18 +298,15 @@ class Data(Node):
         # _parse_"" with the name of the new format
         importer_prefix = '_parse_'
         method_names = dir(self)  # get list of class methods names
-        valid_format_names = [i[len(importer_prefix):] for i in method_names if i.startswith(importer_prefix)]
+        valid_format_names = [i[len(importer_prefix) :] for i in method_names if i.startswith(importer_prefix)]
         valid_formats = {k: getattr(self, importer_prefix + k) for k in valid_format_names}
         return valid_formats
 
     def convert(self, object_format=None, *args):
-        """
-        Convert the AiiDA StructureData into another python object
+        """Convert the AiiDA StructureData into another python object
 
         :param object_format: Specify the output format
         """
-        # pylint: disable=keyword-arg-before-vararg
-
         if object_format is None:
             raise ValueError('object_format must be provided')
 
@@ -335,22 +320,21 @@ class Data(Node):
         except KeyError:
             if converters.keys():
                 raise ValueError(
-                    'The format {} is not implemented for {}. '
-                    'Currently implemented are: {}.'.format(
+                    'The format {} is not implemented for {}. ' 'Currently implemented are: {}.'.format(
                         object_format, self.__class__.__name__, ','.join(converters.keys())
                     )
                 )
             else:
                 raise ValueError(
-                    'The format {} is not implemented for {}. '
-                    'No formats are implemented yet.'.format(object_format, self.__class__.__name__)
+                    'The format {} is not implemented for {}. ' 'No formats are implemented yet.'.format(
+                        object_format, self.__class__.__name__
+                    )
                 )
 
         return func(*args)
 
     def _get_converters(self):
-        """
-        Get all implemented converter formats.
+        """Get all implemented converter formats.
         The convention is to find all _get_object_... methods.
         Returns a list of strings.
         """
@@ -358,6 +342,6 @@ class Data(Node):
         # _prepare_"" with the name of the new format
         exporter_prefix = '_get_object_'
         method_names = dir(self)  # get list of class methods names
-        valid_format_names = [i[len(exporter_prefix):] for i in method_names if i.startswith(exporter_prefix)]
+        valid_format_names = [i[len(exporter_prefix) :] for i in method_names if i.startswith(exporter_prefix)]
         valid_formats = {k: getattr(self, exporter_prefix + k) for k in valid_format_names}
         return valid_formats

@@ -20,7 +20,6 @@ from aiida.cmdline.utils import echo
 @click.argument('command', type=click.STRING, required=False)
 def verdi_help(ctx, command):
     """Show help for given command."""
-
     cmdctx = ctx.parent
 
     if command:

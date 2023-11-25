@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .callable import *
 from .config import *
@@ -115,4 +114,4 @@ __all__ = (
     'valid_process_states',
 )
 
-# yapf: enable
+# fmt: on

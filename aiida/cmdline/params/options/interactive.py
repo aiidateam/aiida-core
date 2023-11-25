@@ -7,11 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-.. module::interactive
-    :synopsis: Tools and an option class for interactive parameter entry with
-    additional features such as help lookup.
-"""
+"""Tools and an option class for interactive parameter entry with additional features such as help lookup."""
 import typing as t
 
 import click
@@ -22,9 +18,7 @@ from .conditional import ConditionalOption
 
 
 class InteractiveOption(ConditionalOption):
-    """
-    Prompts for input, intercepting certain keyword arguments to replace :mod:`click`'s prompting
-    behaviour with a more feature-rich one.
+    """Prompts for input, intercepting certain keyword arguments to provide more feature-rich behavior.
 
     .. note:: This class has a parameter ``required_fn`` that can be passed to its ``__init__`` (inherited
         from the superclass :py:class:`~aiida.cmdline.params.options.conditional.ConditionalOption`) and a
@@ -46,6 +40,7 @@ class InteractiveOption(ConditionalOption):
         @click.option('label', prompt='Label', cls=InteractiveOption)
         def foo(label):
             click.echo(f'Labeling with label: {label}')
+
     """
 
     PROMPT_COLOR = echo.COLORS['warning']
@@ -53,7 +48,8 @@ class InteractiveOption(ConditionalOption):
     CHARACTER_IGNORE_DEFAULT = '!'
 
     def __init__(self, param_decls=None, prompt_fn=None, contextual_default=None, **kwargs):
-        """
+        """Construct a new instance.
+
         :param param_decls: relayed to :class:`click.Option`
         :param prompt_fn: callable(ctx) -> Bool, returns True if the option should be prompted for in interactive mode.
         :param contextual_default: An optional callback function to get a default which is passed the click context.
@@ -151,7 +147,7 @@ class InteractiveOption(ConditionalOption):
         return message
 
     def get_default(self, ctx: click.Context, call: bool = True) -> t.Optional[t.Union[t.Any, t.Callable[[], t.Any]]]:
-        """provides the functionality of :meth:`click.Option.get_default`"""
+        """Provides the functionality of :meth:`click.Option.get_default`"""
         if ctx.resilient_parsing:
             return None
 

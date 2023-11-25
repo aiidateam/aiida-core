@@ -93,7 +93,6 @@ def revive_processes(processes: list[ProcessNode], *, wait: bool = False) -> Non
     process_controller = get_manager().get_process_controller()
 
     for process in processes:
-
         future = process_controller.continue_process(process.pk, nowait=not wait, no_reply=False)
 
         if future:
@@ -110,11 +109,7 @@ def revive_processes(processes: list[ProcessNode], *, wait: bool = False) -> Non
 
 
 def play_processes(
-    processes: list[ProcessNode] | None = None,
-    *,
-    all_entries: bool = False,
-    timeout: float = 5.0,
-    wait: bool = False
+    processes: list[ProcessNode] | None = None, *, all_entries: bool = False, timeout: float = 5.0, wait: bool = False
 ) -> None:
     """Play (unpause) paused processes.
 
@@ -149,7 +144,7 @@ def pause_processes(
     message: str = 'Paused through `aiida.engine.processes.control.pause_processes`',
     all_entries: bool = False,
     timeout: float = 5.0,
-    wait: bool = False
+    wait: bool = False,
 ) -> None:
     """Pause running processes.
 
@@ -184,7 +179,7 @@ def kill_processes(
     message: str = 'Killed through `aiida.engine.processes.control.kill_processes`',
     all_entries: bool = False,
     timeout: float = 5.0,
-    wait: bool = False
+    wait: bool = False,
 ) -> None:
     """Kill running processes.
 
@@ -218,9 +213,9 @@ def _perform_actions(
     action: t.Callable,
     infinitive: str,
     present: str,
-    timeout: float = None,
+    timeout: t.Optional[float] = None,
     wait: bool = False,
-    **kwargs: t.Any
+    **kwargs: t.Any,
 ) -> None:
     """Perform an action on a list of processes.
 
@@ -237,7 +232,6 @@ def _perform_actions(
     futures = {}
 
     for process in processes:
-
         if process.is_terminated:
             LOGGER.error(f'Process<{process.pk}> is already terminated.')
             continue
@@ -257,7 +251,7 @@ def _resolve_futures(
     infinitive: str,
     present: str,
     wait: bool = False,
-    timeout: float = None
+    timeout: t.Optional[float] = None,
 ) -> None:
     """Process a mapping of futures representing an action on an active process.
 
@@ -286,16 +280,15 @@ def _resolve_futures(
 
     try:
         for future in concurrent.futures.as_completed(futures.keys(), timeout=timeout):
-
             process = futures[future]
 
             try:
                 # unwrap is need here since LoopCommunicator will also wrap a future
-                future = unwrap_kiwi_future(future)
-                result = future.result()
+                unwrapped = unwrap_kiwi_future(future)
+                result = unwrapped.result()
             except communications.TimeoutError:
                 LOGGER.error(f'call to {infinitive} Process<{process.pk}> timed out')
-            except Exception as exception:  # pylint: disable=broad-except
+            except Exception as exception:
                 LOGGER.error(f'failed to {infinitive} Process<{process.pk}>: {exception}')
             else:
                 if isinstance(result, kiwipy.Future):
@@ -314,7 +307,7 @@ def _resolve_futures(
 
             try:
                 result = future.result()
-            except Exception as exception:  # pylint: disable=broad-except
+            except Exception as exception:
                 LOGGER.error(f'failed to {infinitive} Process<{process.pk}>: {exception}')
             else:
                 handle_result(result)

@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Adding indices on the `input_id`, `output_id` and `type` column of the `DbLink` table
 
 Revision ID: 5a49629f0d45
@@ -15,7 +14,6 @@ Revises: 5ddd24e52864
 Create Date: 2019-03-04 16:38:42.249231
 
 """
-# pylint: disable=invalid-name,no-member,import-error,no-name-in-module
 from alembic import op
 
 # revision identifiers, used by Alembic.

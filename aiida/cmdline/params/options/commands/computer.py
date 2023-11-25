@@ -16,9 +16,7 @@ from aiida.cmdline.params.options.overridable import OverridableOption
 
 
 def get_job_resource_cls(ctx):
-    """
-    Return job resource cls from ctx.
-    """
+    """Return job resource cls from ctx."""
     from aiida.common.exceptions import ValidationError
 
     scheduler_ep = ctx.params['scheduler']
@@ -35,9 +33,8 @@ def get_job_resource_cls(ctx):
     return scheduler_cls.job_resource_class
 
 
-def should_call_default_mpiprocs_per_machine(ctx):  # pylint: disable=invalid-name
-    """
-    Return whether the selected scheduler type accepts `default_mpiprocs_per_machine`.
+def should_call_default_mpiprocs_per_machine(ctx):
+    """Return whether the selected scheduler type accepts `default_mpiprocs_per_machine`.
 
     :return: `True` if the scheduler type accepts `default_mpiprocs_per_machine`, `False`
         otherwise. If the scheduler class could not be loaded `False` is returned by default.
@@ -51,9 +48,8 @@ def should_call_default_mpiprocs_per_machine(ctx):  # pylint: disable=invalid-na
     return job_resource_cls.accepts_default_mpiprocs_per_machine()
 
 
-def should_call_default_memory_per_machine(ctx):  # pylint: disable=invalid-name
-    """
-    Return whether the selected scheduler type accepts `default_memory_per_machine`.
+def should_call_default_memory_per_machine(ctx):
+    """Return whether the selected scheduler type accepts `default_memory_per_machine`.
 
     :return: `True` if the scheduler type accepts `default_memory_per_machine`, `False`
         otherwise. If the scheduler class could not be loaded `False` is returned by default.
@@ -71,7 +67,7 @@ LABEL = options.LABEL.clone(
     prompt='Computer label',
     cls=InteractiveOption,
     required=True,
-    help='Unique, human-readable label for this computer.'
+    help='Unique, human-readable label for this computer.',
 )
 
 HOSTNAME = options.HOSTNAME.clone(
@@ -96,7 +92,7 @@ SHEBANG = OverridableOption(
     default='#!/bin/bash',
     cls=InteractiveOption,
     help='Specify the first line of the submission script for this computer (only the bash shell is supported).',
-    type=types.ShebangParamType()
+    type=types.ShebangParamType(),
 )
 
 WORKDIR = OverridableOption(
@@ -107,7 +103,7 @@ WORKDIR = OverridableOption(
     cls=InteractiveOption,
     help='The absolute path of the directory on the computer where AiiDA will '
     'run the calculations (often a "scratch" directory).'
-    'The {username} string will be replaced by your username on the remote computer.'
+    'The {username} string will be replaced by your username on the remote computer.',
 )
 
 MPI_RUN_COMMAND = OverridableOption(
@@ -118,7 +114,7 @@ MPI_RUN_COMMAND = OverridableOption(
     cls=InteractiveOption,
     help='The mpirun command needed on the cluster to run parallel MPI programs. The {tot_num_mpiprocs} string will be '
     'replaced by the total number of cpus. See the scheduler docs for further scheduler-dependent template variables.',
-    type=types.MpirunCommandParamType()
+    type=types.MpirunCommandParamType(),
 )
 
 MPI_PROCS_PER_MACHINE = OverridableOption(
@@ -139,7 +135,7 @@ DEFAULT_MEMORY_PER_MACHINE = OverridableOption(
     prompt_fn=should_call_default_memory_per_machine,
     required=False,
     type=click.INT,
-    help='The default amount of RAM (kB) that should be allocated per machine (node), if not otherwise specified.'
+    help='The default amount of RAM (kB) that should be allocated per machine (node), if not otherwise specified.',
 )
 
 USE_DOUBLE_QUOTES = OverridableOption(
@@ -148,7 +144,7 @@ USE_DOUBLE_QUOTES = OverridableOption(
     cls=InteractiveOption,
     prompt='Escape CLI arguments in double quotes',
     help='Whether the command line arguments before and after the executable in the submission script should be '
-    'escaped with single or double quotes.'
+    'escaped with single or double quotes.',
 )
 
 PREPEND_TEXT = OverridableOption(
@@ -161,7 +157,7 @@ PREPEND_TEXT = OverridableOption(
     extension='.bash',
     header='PREPEND_TEXT: if there is any bash commands that should be prepended to the executable call in all '
     'submit scripts for this computer, type that between the equal signs below and save the file.',
-    footer='All lines that start with `#=` will be ignored.'
+    footer='All lines that start with `#=` will be ignored.',
 )
 
 APPEND_TEXT = OverridableOption(
@@ -174,5 +170,5 @@ APPEND_TEXT = OverridableOption(
     extension='.bash',
     header='APPEND_TEXT: if there is any bash commands that should be appended to the executable call in all '
     'submit scripts for this computer, type that between the equal signs below and save the file.',
-    footer='All lines that start with `#=` will be ignored.'
+    footer='All lines that start with `#=` will be ignored.',
 )

@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Initial django schema
 
 Revision ID: django_0001
@@ -15,8 +14,8 @@ Revises:
 Create Date: 2017-06-28 17:12:23.327195
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision = 'django_0001'
@@ -27,7 +26,6 @@ depends_on = None
 
 def upgrade():
     """Migrations for the upgrade."""
-
     # dummy django tables
     op.create_table(
         'auth_group',

@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-arguments
 """Package for node ORM classes."""
 import datetime
 from functools import cached_property
@@ -20,7 +19,7 @@ from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
-from aiida.orm.utils.node import (  # pylint: disable=unused-import
+from aiida.orm.utils.node import (
     AbstractNodeMeta,
     get_query_type_from_type_string,
     get_type_string_from_class,
@@ -41,11 +40,12 @@ from .repository import NodeRepository
 if TYPE_CHECKING:
     from importlib_metadata import EntryPoint
 
-    from ..implementation import BackendNode, StorageBackend
+    from ..implementation import StorageBackend
+    from ..implementation.nodes import BackendNode  # noqa: F401
 
 __all__ = ('Node',)
 
-NodeType = TypeVar('NodeType', bound='Node')  # pylint: disable=invalid-name
+NodeType = TypeVar('NodeType', bound='Node')
 
 
 class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
@@ -73,10 +73,9 @@ class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
 
         self._backend.nodes.delete(pk)
 
-    def iter_repo_keys(self,
-                       filters: Optional[dict] = None,
-                       subclassing: bool = True,
-                       batch_size: int = 100) -> Iterator[str]:
+    def iter_repo_keys(
+        self, filters: Optional[dict] = None, subclassing: bool = True, batch_size: int = 100
+    ) -> Iterator[str]:
         """Iterate over all repository object keys for this ``Node`` class
 
         .. note:: keys will not be deduplicated, wrap in a ``set`` to achieve this
@@ -86,9 +85,10 @@ class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
         :param batch_size: The number of nodes to fetch data for at once
         """
         from aiida.repository import Repository
+
         query = QueryBuilder(backend=self.backend)
         query.append(self.entity_type, subclassing=subclassing, filters=filters, project=['repository_metadata'])
-        for metadata, in query.iterall(batch_size=batch_size):
+        for (metadata,) in query.iterall(batch_size=batch_size):
             for key in Repository.flatten(metadata).values():
                 if key is not None:
                     yield key
@@ -109,7 +109,7 @@ class NodeBase:
     @cached_property
     def caching(self) -> 'NodeCaching':
         """Return an interface to interact with the caching of this node."""
-        return self._node._CLS_NODE_CACHING(self._node)  # pylint: disable=protected-access
+        return self._node._CLS_NODE_CACHING(self._node)
 
     @cached_property
     def comments(self) -> 'NodeComments':
@@ -129,12 +129,11 @@ class NodeBase:
     @cached_property
     def links(self) -> 'NodeLinks':
         """Return an interface to interact with the links of this node."""
-        return self._node._CLS_NODE_LINKS(self._node)  # pylint: disable=protected-access
+        return self._node._CLS_NODE_LINKS(self._node)
 
 
 class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
-    """
-    Base class for all nodes in AiiDA.
+    """Base class for all nodes in AiiDA.
 
     Stores attributes starting with an underscore.
 
@@ -147,7 +146,6 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
     In the plugin, also set the _plugin_type_string, to be set in the DB in
     the 'type' field.
     """
-    # pylint: disable=too-many-public-methods
 
     _CLS_COLLECTION = NodeCollection
     _CLS_NODE_LINKS = NodeLinks
@@ -157,14 +155,14 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
     __query_type_string: ClassVar[str]
 
     @classproperty
-    def _plugin_type_string(cls) -> str:
+    def _plugin_type_string(cls) -> str:  # noqa: N805
         """Return the plugin type string of this node class."""
         if not hasattr(cls, '__plugin_type_string'):
             cls.__plugin_type_string = get_type_string_from_class(cls.__module__, cls.__name__)  # type: ignore[misc]
         return cls.__plugin_type_string
 
     @classproperty
-    def _query_type_string(cls) -> str:
+    def _query_type_string(cls) -> str:  # noqa: N805
         """Return the query type string of this node class."""
         if not hasattr(cls, '__query_type_string'):
             cls.__query_type_string = get_query_type_from_type_string(cls._plugin_type_string)  # type: ignore[misc]
@@ -192,7 +190,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         backend: Optional['StorageBackend'] = None,
         user: Optional[User] = None,
         computer: Optional[Computer] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         backend = backend or get_manager().get_profile_storage()
 
@@ -215,7 +213,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         """Return the node base namespace."""
         return NodeBase(self)
 
-    def _check_mutability_attributes(self, keys: Optional[List[str]] = None) -> None:  # pylint: disable=unused-argument
+    def _check_mutability_attributes(self, keys: Optional[List[str]] = None) -> None:
         """Check if the entity is mutable and raise an exception if not.
 
         This is called from `NodeAttributes` methods that modify the attributes.
@@ -236,7 +234,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         return UUID(self.uuid).int
 
     def __repr__(self) -> str:
-        return f'<{self.__class__.__name__}: {str(self)}>'
+        return f'<{self.__class__.__name__}: {self!s}>'
 
     def __str__(self) -> str:
         if not self.is_stored:
@@ -283,19 +281,18 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             )
 
     @classproperty
-    def class_node_type(cls) -> str:
+    def class_node_type(cls) -> str:  # noqa: N805
         """Returns the node type of this node (sub) class."""
-        # pylint: disable=no-self-argument,no-member
         return cls._plugin_type_string
 
     @classproperty
-    def entry_point(cls) -> Optional['EntryPoint']:
+    def entry_point(cls) -> Optional['EntryPoint']:  # noqa: N805
         """Return the entry point associated this node class.
 
         :return: the associated entry point or ``None`` if it isn't known.
         """
-        # pylint: disable=no-self-argument
         from aiida.plugins.entry_point import get_entry_point_from_class
+
         return get_entry_point_from_class(cls.__module__, cls.__name__)[1]
 
     @property
@@ -434,7 +431,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
 
         # For each node of a cached incoming link, check that all its incoming links are stored
         for link_triple in self.base.links.incoming_cache:
-            link_triple.node._verify_are_parents_stored()  # pylint: disable=protected-access
+            link_triple.node._verify_are_parents_stored()
 
         for link_triple in self.base.links.incoming_cache:
             if not link_triple.node.is_stored:
@@ -442,7 +439,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
 
         return self.store()
 
-    def store(self) -> 'Node':  # pylint: disable=arguments-differ
+    def store(self) -> 'Node':
         """Store the node in the database while saving its attributes and repository directory.
 
         After being called attributes cannot be changed anymore! Instead, extras can be changed only AFTER calling
@@ -454,7 +451,6 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         from aiida.manage.caching import get_use_cache
 
         if not self.is_stored:
-
             # Call `_validate_storability` directly and not in `_validate` in case sub class forgets to call the super.
             self._validate_storability()
             self._validate()
@@ -470,7 +466,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             self._backend_entity.clean_values()
 
             # Retrieve the cached node.
-            same_node = self.base.caching._get_same_node() if use_cache else None  # pylint: disable=protected-access
+            same_node = self.base.caching._get_same_node() if use_cache else None
 
             if same_node is not None:
                 self._store_from_cache(same_node)
@@ -488,7 +484,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
 
         :param clean: boolean, if True, will clean the attributes and extras before attempting to store
         """
-        self.base.repository._store()  # pylint: disable=protected-access
+        self.base.repository._store()
 
         links = self.base.links.incoming_cache
         self._backend_entity.store(links, clean=clean)
@@ -521,6 +517,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
 
         """
         from aiida.orm.utils.mixins import Sealable
+
         assert self.node_type == cache_node.node_type
 
         # Make sure the node doesn't have any RETURN links
@@ -531,7 +528,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         self.description = cache_node.description
 
         # Make sure to reinitialize the repository instance of the clone to that of the source node.
-        self.base.repository._copy(cache_node.base.repository)  # pylint: disable=protected-access
+        self.base.repository._copy(cache_node.base.repository)
 
         for key, value in cache_node.base.attributes.all.items():
             if key != Sealable.SEALED_KEY:
@@ -567,7 +564,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         warn_deprecation(
             f'`{kls}.is_valid_cache` is deprecated, use `{kls}.base.caching.is_valid_cache` instead.',
             version=3,
-            stacklevel=2
+            stacklevel=2,
         )
         return self.base.caching.is_valid_cache
 
@@ -584,7 +581,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         warn_deprecation(
             f'`{kls}.is_valid_cache` is deprecated, use `{kls}.base.caching.is_valid_cache` instead.',
             version=3,
-            stacklevel=2
+            stacklevel=2,
         )
         self.base.caching.is_valid_cache = valid
 
@@ -663,7 +660,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
     }
 
     @classproperty
-    def Collection(cls):  # pylint: disable=invalid-name
+    def Collection(cls):  # noqa: N802, N805
         """Return the collection type for this class.
 
         This used to be a class argument with the value ``NodeCollection``. The argument is deprecated and this property
@@ -693,7 +690,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             warn_deprecation(
                 f'`{kls}.{name}` is deprecated, use `{kls}.base.attributes.{new_name}` instead.',
                 version=3,
-                stacklevel=3
+                stacklevel=3,
             )
             return getattr(self.base.attributes, new_name)
 
@@ -703,7 +700,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             warn_deprecation(
                 f'`{kls}.{name}` is deprecated, use `{kls}.base.repository.{new_name}` instead.',
                 version=3,
-                stacklevel=3
+                stacklevel=3,
             )
             return getattr(self.base.repository, new_name)
 

@@ -8,8 +8,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-It defines the method with all required parameters to run restapi locally.
+"""It defines the method with all required parameters to run restapi locally.
 """
 import importlib
 import os
@@ -23,8 +22,7 @@ __all__ = ('run_api', 'configure_api')
 
 
 def run_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **kwargs):
-    """
-    Takes a flask.Flask instance and runs it.
+    """Takes a flask.Flask instance and runs it.
 
     :param flask_app: Class inheriting from flask app class
     :type flask_app: :py:class:`flask.Flask`
@@ -52,8 +50,7 @@ def run_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **kwargs)
 
 
 def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **kwargs):
-    """
-    Configures a flask.Flask instance and returns it.
+    """Configures a flask.Flask instance and returns it.
 
     :param flask_app: Class inheriting from flask app class
     :type flask_app: :py:class:`flask.Flask`
@@ -96,6 +93,7 @@ def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **k
     # Configure the serializer
     if config_module.SERIALIZER_CONFIG:
         from aiida.restapi.common.utils import CustomJSONProvider
+
         app.json = CustomJSONProvider(app)
 
     # Set up WSGI profiler if requested

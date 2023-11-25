@@ -105,7 +105,7 @@ def test_get_member_module_not_importable():
     loaded = load_node(node.pk)
 
     with pytest.raises(ImportError):
-        loaded.get_member()  # pylint: disable=pointless-statement
+        loaded.get_member()
 
 
 def test_get_member_invalid_value(monkeypatch):
@@ -124,7 +124,7 @@ def test_get_member_invalid_value(monkeypatch):
     loaded = load_node(node.pk)
 
     with pytest.raises(ValueError, match=r'The stored value `return` is no longer a valid value for the enum `.*`'):
-        loaded.get_member()  # pylint: disable=pointless-statement
+        loaded.get_member()
 
 
 def test_eq():
@@ -134,7 +134,7 @@ def test_eq():
 
     assert node_a == DummyEnum.OPTION_A
     assert node_a != DummyEnum.OPTION_B
-    assert node_a == node_a  # pylint: disable=comparison-with-itself
+    assert node_a == node_a  # noqa: PLR0124
     assert node_a != node_b
     assert node_a != DummyEnum.OPTION_A.value
 

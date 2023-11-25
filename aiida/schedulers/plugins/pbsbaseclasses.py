@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Base classes for PBSPro and PBS/Torque plugins.
+"""Base classes for PBSPro and PBS/Torque plugins.
 """
 import logging
 
@@ -50,7 +49,7 @@ _MAP_STATUS_PBS_COMMON = {
     'E': JobState.RUNNING,  # If exiting, for our purposes it is still running
     'F': JobState.DONE,
     'H': JobState.QUEUED_HELD,
-    'M': JobState.UNDETERMINED,  # TODO: check if this is ok?  # pylint: disable=fixme
+    'M': JobState.UNDETERMINED,  # TODO: check if this is ok?
     'Q': JobState.QUEUED,
     'R': JobState.RUNNING,
     'S': JobState.SUSPENDED,
@@ -98,8 +97,7 @@ class PbsJobResource(NodeNumberJobResource):
 
 
 class PbsBaseClass(Scheduler):
-    """
-    Base class with support for the PBSPro scheduler
+    """Base class with support for the PBSPro scheduler
     (http://www.pbsworks.com/) and for PBS and Torque
     (http://www.adaptivecomputing.com/products/open-source/torque/).
 
@@ -120,8 +118,7 @@ class PbsBaseClass(Scheduler):
     def _get_resource_lines(
         self, num_machines, num_mpiprocs_per_machine, num_cores_per_machine, max_memory_kb, max_wallclock_seconds
     ):
-        """
-        Return a set a list of lines (possibly empty) with the header
+        """Return a set a list of lines (possibly empty) with the header
         lines relative to:
 
         * num_machines
@@ -136,8 +133,7 @@ class PbsBaseClass(Scheduler):
         raise NotImplementedError('Implement the _get_resource_lines in each subclass!')
 
     def _get_joblist_command(self, jobs=None, user=None):
-        """
-        The command to report full information on existing jobs.
+        """The command to report full information on existing jobs.
 
         TODO: in the case of job arrays, decide what to do (i.e., if we want
               to pass the -t options to list each subjob).
@@ -166,8 +162,7 @@ class PbsBaseClass(Scheduler):
         return comm
 
     def _get_detailed_job_info_command(self, job_id):
-        """
-        Return the command to run to get the detailed information on a job,
+        """Return the command to run to get the detailed information on a job,
         even after the job has finished.
 
         The output text is just retrieved, and returned for logging purposes.
@@ -175,16 +170,15 @@ class PbsBaseClass(Scheduler):
         return f'tracejob -v {escape_for_bash(job_id)}'
 
     def _get_submit_script_header(self, job_tmpl):
-        """
-        Return the submit script header, using the parameters from the
+        """Return the submit script header, using the parameters from the
         job_tmpl.
 
         Args:
+        -----
            job_tmpl: an JobTemplate instance with relevant parameters set.
 
         TODO: truncate the title if too long
         """
-        # pylint: disable=too-many-statements,too-many-branches
         import re
         import string
 
@@ -263,9 +257,8 @@ class PbsBaseClass(Scheduler):
                     'sched_join_files is True, but sched_error_path is set in '
                     'PBSPro script; ignoring sched_error_path'
                 )
-        else:
-            if job_tmpl.sched_error_path:
-                lines.append(f'#PBS -e {job_tmpl.sched_error_path}')
+        elif job_tmpl.sched_error_path:
+            lines.append(f'#PBS -e {job_tmpl.sched_error_path}')
 
         if job_tmpl.queue_name:
             lines.append(f'#PBS -q {job_tmpl.queue_name}')
@@ -277,7 +270,7 @@ class PbsBaseClass(Scheduler):
             # Priority of the job.  Format: host-dependent integer.  Default:
             # zero.   Range:  [-1024,  +1023] inclusive.  Sets job's Priority
             # attribute to priority.
-            # TODO: Here I expect that priority is passed in the correct PBSPro  # pylint: disable=fixme
+            # TODO: Here I expect that priority is passed in the correct PBSPro
             # format. To fix.
             lines.append(f'#PBS -p {job_tmpl.priority}')
 
@@ -289,7 +282,7 @@ class PbsBaseClass(Scheduler):
             num_mpiprocs_per_machine=job_tmpl.job_resource.num_mpiprocs_per_machine,
             num_cores_per_machine=job_tmpl.job_resource.num_cores_per_machine,
             max_memory_kb=job_tmpl.max_memory_kb,
-            max_wallclock_seconds=job_tmpl.max_wallclock_seconds
+            max_wallclock_seconds=job_tmpl.max_wallclock_seconds,
         )
 
         lines += resource_lines
@@ -305,10 +298,10 @@ class PbsBaseClass(Scheduler):
         return '\n'.join(lines)
 
     def _get_submit_command(self, submit_script):
-        """
-        Return the string to execute to submit a given script.
+        """Return the string to execute to submit a given script.
 
         Args:
+        -----
             submit_script: the path of the submit script relative to the working
                 directory.
                 IMPORTANT: submit_script should be already escaped.
@@ -320,8 +313,7 @@ class PbsBaseClass(Scheduler):
         return submit_command
 
     def _parse_joblist_output(self, retval, stdout, stderr):
-        """
-        Parse the queue output string, as returned by executing the
+        """Parse the queue output string, as returned by executing the
         command returned by _get_joblist_command command (qstat -f).
 
         Return a list of JobInfo objects, one of each job,
@@ -333,7 +325,6 @@ class PbsBaseClass(Scheduler):
             in the qstat output; missing jobs (for whatever reason) simply
             will not appear here.
         """
-        # pylint: disable=too-many-locals,too-many-statements,too-many-branches
         # I don't raise because if I pass a list of jobs, I get a non-zero status
         # if one of the job is not in the list anymore
 
@@ -350,7 +341,7 @@ class PbsBaseClass(Scheduler):
         # those schedulers configured to leave the job in the output
         # of qstat for some time after job completion.
         filtered_stderr = '\n'.join(
-            l for l in stderr.split('\n') if 'Unknown Job Id' not in l and 'Job has finished' not in l
+            line for line in stderr.split('\n') if 'Unknown Job Id' not in line and 'Job has finished' not in line
         )
         if filtered_stderr.strip():
             _LOGGER.warning(f"Warning in _parse_joblist_output, non-empty (filtered) stderr='{filtered_stderr}'")
@@ -359,48 +350,46 @@ class PbsBaseClass(Scheduler):
 
         jobdata_raw = []  # will contain raw data parsed from qstat output
         # Get raw data and split in lines
-        for line_num, line in enumerate(stdout.split('\n'), start=1):  # pylint: disable=too-many-nested-blocks
+        for line_num, line in enumerate(stdout.split('\n'), start=1):
             # Each new job stanza starts with the string 'Job Id:': I
             # create a new item in the jobdata_raw list
             if line.startswith('Job Id:'):
                 jobdata_raw.append({'id': line.split(':', 1)[1].strip(), 'lines': [], 'warning_lines_idx': []})
                 # warning_lines_idx: lines that do not start either with
                 # tab or space
-            else:
-                if line.strip():
-                    # This is a non-empty line, therefore it is an attribute
-                    # of the last job found
-                    if not jobdata_raw:
-                        # The list is still empty! (This means that I found a
-                        # non-empty line, before finding the first 'Job Id:'
-                        # string: it is an error. However this may happen
-                        # only before the first job.
-                        raise SchedulerParsingError('I did not find the header for the first job')
-                        # _LOGGER.warning("I found some text before the "
-                        # "first job: {}".format(l))
-                    else:
-                        if line.startswith(' '):
-                            # If it starts with a space, it is a new field
-                            jobdata_raw[-1]['lines'].append(line)
-                        elif line.startswith('\t'):
-                            # If a line starts with a TAB,
-                            # I append to the previous string
-                            # stripping the TAB
-                            if not jobdata_raw[-1]['lines']:
-                                raise SchedulerParsingError(
-                                    f'Line {line_num} is the first line of the job, but it starts with a TAB! ({line})'
-                                )
-                            jobdata_raw[-1]['lines'][-1] += line[1:]
-                        else:
-                            # raise SchedulerParsingError(
-                            #    "Wrong starting character at line {}! ({})"
-                            #    "".format(line_num, l))
-                            ## For some reasons, the output of 'comment' and
-                            ## 'Variable_List', for instance, can have
-                            ## newlines if they are included... # I do a
-                            ## workaround
-                            jobdata_raw[-1]['lines'][-1] += f'\n{line}'
-                            jobdata_raw[-1]['warning_lines_idx'].append(len(jobdata_raw[-1]['lines']) - 1)
+            elif line.strip():
+                # This is a non-empty line, therefore it is an attribute
+                # of the last job found
+                if not jobdata_raw:
+                    # The list is still empty! (This means that I found a
+                    # non-empty line, before finding the first 'Job Id:'
+                    # string: it is an error. However this may happen
+                    # only before the first job.
+                    raise SchedulerParsingError('I did not find the header for the first job')
+                    # _LOGGER.warning("I found some text before the "
+                    # "first job: {}".format(l))
+                elif line.startswith(' '):
+                    # If it starts with a space, it is a new field
+                    jobdata_raw[-1]['lines'].append(line)
+                elif line.startswith('\t'):
+                    # If a line starts with a TAB,
+                    # I append to the previous string
+                    # stripping the TAB
+                    if not jobdata_raw[-1]['lines']:
+                        raise SchedulerParsingError(
+                            f'Line {line_num} is the first line of the job, but it starts with a TAB! ({line})'
+                        )
+                    jobdata_raw[-1]['lines'][-1] += line[1:]
+                else:
+                    # raise SchedulerParsingError(
+                    #    "Wrong starting character at line {}! ({})"
+                    #    "".format(line_num, l))
+                    ## For some reasons, the output of 'comment' and
+                    ## 'Variable_List', for instance, can have
+                    ## newlines if they are included... # I do a
+                    ## workaround
+                    jobdata_raw[-1]['lines'][-1] += f'\n{line}'
+                    jobdata_raw[-1]['warning_lines_idx'].append(len(jobdata_raw[-1]['lines']) - 1)
 
         # Create dictionary and parse specific fields
         job_list = []
@@ -487,7 +476,6 @@ class PbsBaseClass(Scheduler):
                 # processors allocated from that host to this job.
                 # P does not appear if it is 1.
                 try:
-
                     exec_host_list = []
                     for exec_host in exec_hosts:
                         node = MachineInfo()
@@ -505,9 +493,9 @@ class PbsBaseClass(Scheduler):
                             )
                         exec_host_list.append(node)
                     this_job.allocated_machines = exec_host_list
-                except Exception as exc:  # pylint: disable=broad-except
+                except Exception as exc:
                     _LOGGER.debug(
-                        f'Problem parsing the node names, I got Exception {str(type(exc))} with message {exc}; '
+                        f'Problem parsing the node names, I got Exception {type(exc)!s} with message {exc}; '
                         f'exec_hosts was {exec_hosts}'
                     )
 
@@ -519,7 +507,7 @@ class PbsBaseClass(Scheduler):
 
             try:
                 this_job.num_cpus = int(raw_data['resource_list.ncpus'])
-                # TODO: understand if this is the correct field also for multithreaded (OpenMP) jobs.  # pylint: disable=fixme
+                # TODO: understand if this is the correct field also for multithreaded (OpenMP) jobs.
             except KeyError:
                 _LOGGER.debug(f"No 'resource_list.ncpus' field for job id {this_job.job_id}")
             except ValueError:
@@ -530,7 +518,7 @@ class PbsBaseClass(Scheduler):
 
             try:
                 this_job.num_mpiprocs = int(raw_data['resource_list.mpiprocs'])
-                # TODO: understand if this is the correct field also for multithreaded (OpenMP) jobs.  # pylint: disable=fixme
+                # TODO: understand if this is the correct field also for multithreaded (OpenMP) jobs.
             except KeyError:
                 _LOGGER.debug(f"No 'resource_list.mpiprocs' field for job id {this_job.job_id}")
             except ValueError:
@@ -550,7 +538,7 @@ class PbsBaseClass(Scheduler):
                 )
 
             # Double check of redundant info
-            if (this_job.allocated_machines is not None and this_job.num_machines is not None):
+            if this_job.allocated_machines is not None and this_job.num_machines is not None:
                 if len(set(machine.name for machine in this_job.allocated_machines)) != this_job.num_machines:
                     _LOGGER.error(
                         f'The length of the list of allocated nodes ({len(this_job.allocated_machines)}) is different '
@@ -609,7 +597,7 @@ class PbsBaseClass(Scheduler):
             except ValueError:
                 _LOGGER.warning(f"Error parsing 'stime' for job id {this_job.job_id}")
 
-            # TODO: see if we want to set also finish_time for finished jobs, if there are any  # pylint: disable=fixme
+            # TODO: see if we want to set also finish_time for finished jobs, if there are any
 
             # Everything goes here anyway for debugging purposes
             this_job.raw_data = raw_data
@@ -621,9 +609,7 @@ class PbsBaseClass(Scheduler):
 
     @staticmethod
     def _convert_time(string):
-        """
-        Convert a string in the format HH:MM:SS to a number of seconds.
-        """
+        """Convert a string in the format HH:MM:SS to a number of seconds."""
         pieces = string.split(':')
         if len(pieces) != 3:
             _LOGGER.warning(f'Wrong number of pieces (expected 3) for time string {string}')
@@ -657,8 +643,7 @@ class PbsBaseClass(Scheduler):
 
     @staticmethod
     def _parse_time_string(string, fmt='%a %b %d %H:%M:%S %Y'):
-        """
-        Parse a time string in the format returned from qstat -f and
+        """Parse a time string in the format returned from qstat -f and
         returns a datetime object.
         """
         import datetime
@@ -676,8 +661,7 @@ class PbsBaseClass(Scheduler):
         return datetime.datetime.fromtimestamp(time.mktime(time_struct))
 
     def _parse_submit_output(self, retval, stdout, stderr):
-        """
-        Parse the output of the submit command, as returned by executing the
+        """Parse the output of the submit command, as returned by executing the
         command returned by _get_submit_command command.
 
         To be implemented by the plugin.
@@ -694,9 +678,7 @@ class PbsBaseClass(Scheduler):
         return stdout.strip()
 
     def _get_kill_command(self, jobid):
-        """
-        Return the command to kill the job with specified jobid.
-        """
+        """Return the command to kill the job with specified jobid."""
         submit_command = f'qdel {jobid}'
 
         _LOGGER.info(f'killing job {jobid}')
@@ -704,8 +686,7 @@ class PbsBaseClass(Scheduler):
         return submit_command
 
     def _parse_kill_output(self, retval, stdout, stderr):
-        """
-        Parse the output of the kill command.
+        """Parse the output of the kill command.
 
         To be implemented by the plugin.
 

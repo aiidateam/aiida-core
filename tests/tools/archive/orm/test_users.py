@@ -13,8 +13,7 @@ from aiida.tools.archive import create_archive, import_archive
 
 
 def test_nodes_belonging_to_different_users(aiida_profile, tmp_path, aiida_localhost):
-    """
-    This test checks that nodes belonging to different users are correctly
+    """This test checks that nodes belonging to different users are correctly
     exported & imported.
     """
     from aiida.common.links import LinkType
@@ -79,9 +78,8 @@ def test_nodes_belonging_to_different_users(aiida_profile, tmp_path, aiida_local
         assert orm.load_node(uuid).user.email == manager.get_profile().default_user_email
 
 
-def test_non_default_user_nodes(aiida_profile_clean, tmp_path, aiida_localhost_factory):  # pylint: disable=too-many-statements
-    """
-    This test checks that nodes belonging to user A (which is not the
+def test_non_default_user_nodes(aiida_profile_clean, tmp_path, aiida_localhost_factory):
+    """This test checks that nodes belonging to user A (which is not the
     default user) can be correctly exported, imported, enriched with nodes
     from the default user, re-exported & re-imported and that in the end
     all the nodes that have been finally imported belonging to the right

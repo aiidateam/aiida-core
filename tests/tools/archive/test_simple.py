@@ -10,8 +10,8 @@
 """Simple tests for the export and import routines"""
 import json
 
-from archive_path import ZipPath
 import pytest
+from archive_path import ZipPath
 
 from aiida import orm
 from aiida.common.exceptions import IncompatibleStorageSchema, LicensingException

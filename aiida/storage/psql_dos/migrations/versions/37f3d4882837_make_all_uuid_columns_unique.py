@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Make all uuid columns unique
 
 Revision ID: 37f3d4882837
@@ -15,7 +14,6 @@ Revises: 6a5c2ea1439d
 Create Date: 2018-11-17 17:18:58.691209
 
 """
-# pylint: disable=invalid-name
 
 from alembic import op
 
@@ -31,6 +29,7 @@ tables = ['db_dbcomment', 'db_dbcomputer', 'db_dbgroup', 'db_dbworkflow']
 def upgrade():
     """Migrations for the upgrade."""
     from aiida.storage.psql_dos.migrations.utils.duplicate_uuids import verify_uuid_uniqueness
+
     for table in tables:
         verify_uuid_uniqueness(table, op.get_bind())
         op.create_unique_constraint(f'{table}_uuid_key', table, ['uuid'])

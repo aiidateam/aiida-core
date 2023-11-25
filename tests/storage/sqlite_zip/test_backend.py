@@ -2,8 +2,8 @@
 """Tests for :mod:`aiida.storage.sqlite_zip.backend`."""
 import pathlib
 
-from pydantic_core import ValidationError
 import pytest
+from pydantic_core import ValidationError
 
 from aiida.storage.sqlite_zip.backend import SqliteZipBackend
 from aiida.storage.sqlite_zip.migrator import validate_storage

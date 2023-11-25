@@ -23,7 +23,7 @@ __all__ = ('BackendGroup', 'BackendGroupCollection')
 class NodeIterator(Protocol):
     """Protocol for iterating over nodes in a group"""
 
-    def __iter__(self) -> 'NodeIterator':  # pylint: disable=non-iterator-returned
+    def __iter__(self) -> 'NodeIterator':
         """Return an iterator over the nodes in the group."""
 
     def __next__(self) -> BackendNode:
@@ -32,7 +32,7 @@ class NodeIterator(Protocol):
     def __getitem__(self, value: Union[int, slice]) -> Union[BackendNode, List[BackendNode]]:
         """Index node(s) from the group."""
 
-    def __len__(self) -> int:  # pylint: disable=invalid-length-returned
+    def __len__(self) -> int:
         """Return the number of nodes in the group."""
 
 
@@ -50,8 +50,7 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
     @label.setter
     @abc.abstractmethod
     def label(self, name: str) -> None:
-        """
-        Attempt to change the name of the group instance. If the group is already stored
+        """Attempt to change the name of the group instance. If the group is already stored
         and the another group of the same type already exists with the desired name, a
         UniquenessError will be raised
 
@@ -92,8 +91,7 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
     @property
     @abc.abstractmethod
     def nodes(self) -> NodeIterator:
-        """
-        Return a generator/iterator that iterates over all nodes and returns
+        """Return a generator/iterator that iterates over all nodes and returns
         the respective AiiDA subclasses of Node, and also allows to ask for
         the number of nodes in the group using len().
         """
@@ -109,7 +107,7 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
     def clear(self) -> None:
         """Remove all the nodes from this group."""
 
-    def add_nodes(self, nodes: Sequence[BackendNode], **kwargs):  # pylint: disable=unused-argument
+    def add_nodes(self, nodes: Sequence[BackendNode], **kwargs):
         """Add a set of nodes to the group.
 
         :note: all the nodes *and* the group itself have to be stored.
@@ -142,7 +140,7 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
             raise TypeError(f'nodes have to be of type {BackendNode}')
 
     def __repr__(self) -> str:
-        return f'<{self.__class__.__name__}: {str(self)}>'
+        return f'<{self.__class__.__name__}: {self!s}>'
 
     def __str__(self) -> str:
         if self.type_string:
@@ -157,9 +155,8 @@ class BackendGroupCollection(BackendCollection[BackendGroup]):
     ENTITY_CLASS = BackendGroup
 
     @abc.abstractmethod
-    def delete(self, id: int) -> None:  # pylint: disable=redefined-builtin, invalid-name
-        """
-        Delete a group with the given id
+    def delete(self, id: int) -> None:
+        """Delete a group with the given id
 
         :param id: the id of the group to delete
         """

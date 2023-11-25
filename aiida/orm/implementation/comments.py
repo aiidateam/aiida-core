@@ -76,10 +76,10 @@ class BackendCommentCollection(BackendCollection[BackendComment]):
     ENTITY_CLASS = BackendComment
 
     @abc.abstractmethod
-    def create(  # type: ignore[override]  # pylint: disable=arguments-differ
-        self, node: 'BackendNode', user: 'BackendUser', content: Optional[str] = None, **kwargs):
-        """
-        Create a Comment for a given node and user
+    def create(  # type: ignore[override]
+        self, node: 'BackendNode', user: 'BackendUser', content: Optional[str] = None, **kwargs
+    ):
+        """Create a Comment for a given node and user
 
         :param node: a Node instance
         :param user: a User instance
@@ -89,8 +89,7 @@ class BackendCommentCollection(BackendCollection[BackendComment]):
 
     @abc.abstractmethod
     def delete(self, comment_id: int) -> None:
-        """
-        Remove a Comment from the collection with the given id
+        """Remove a Comment from the collection with the given id
 
         :param comment_id: the id of the comment to delete
 
@@ -100,16 +99,14 @@ class BackendCommentCollection(BackendCollection[BackendComment]):
 
     @abc.abstractmethod
     def delete_all(self) -> None:
-        """
-        Delete all Comment entries.
+        """Delete all Comment entries.
 
         :raises `~aiida.common.exceptions.IntegrityError`: if all Comments could not be deleted
         """
 
     @abc.abstractmethod
     def delete_many(self, filters: dict) -> List[int]:
-        """
-        Delete Comments based on ``filters``
+        """Delete Comments based on ``filters``
 
         :param filters: similar to QueryBuilder filter
 

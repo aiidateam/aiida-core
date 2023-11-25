@@ -97,7 +97,6 @@ def test_legacy_jobcalc_attrs(perform_migrations: PsqlDosMigrator):
 
     node_model = perform_migrations.get_current_table('db_dbnode')
     with perform_migrations.session() as session:
-
         node_process = session.get(node_model, node_process_id)
         assert node_process.attributes['sealed'] is True
         for key in deleted_keys:

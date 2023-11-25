@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-This allows to hook-up the AiiDA built-in RESTful API.
+"""This allows to hook-up the AiiDA built-in RESTful API.
 Main advantage of doing this by means of a verdi command is that different
 profiles can be selected at hook-up (-p flag).
 """
@@ -28,14 +27,14 @@ from aiida.restapi.common import config
     '--config-dir',
     type=click.Path(exists=True),
     default=config.CLI_DEFAULTS['CONFIG_DIR'],
-    help='Path to the configuration directory'
+    help='Path to the configuration directory',
 )
 @DEBUG(default=config.APP_CONFIG['DEBUG'])
 @click.option(
     '--wsgi-profile',
     is_flag=True,
     default=config.CLI_DEFAULTS['WSGI_PROFILE'],
-    help='Whether to enable WSGI profiler middleware for finding bottlenecks'
+    help='Whether to enable WSGI profiler middleware for finding bottlenecks',
 )
 @click.option(
     '--posting/--no-posting',
@@ -47,8 +46,7 @@ from aiida.restapi.common import config
 )
 @click.pass_context
 def restapi(ctx, hostname, port, config_dir, debug, wsgi_profile, posting):
-    """
-    Run the AiiDA REST API server.
+    """Run the AiiDA REST API server.
 
     Example Usage:
 

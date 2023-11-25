@@ -7,15 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Update `db_dbuser.last_login` and `db_dbuser.email`
 
 Revision ID: django_0013
 Revises: django_0012
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 from aiida.storage.psql_dos.migrations.utils import ReflectMigrations
 

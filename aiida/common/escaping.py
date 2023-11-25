@@ -13,8 +13,7 @@ import re
 
 
 def escape_for_bash(str_to_escape, use_double_quotes=False):
-    """
-    This function takes any string and escapes it in a way that
+    """This function takes any string and escapes it in a way that
     bash will interpret it as a single string.
 
     Explanation:
@@ -77,8 +76,7 @@ def escape_for_sql_like(string):
 
 
 def get_regex_pattern_from_sql(sql_pattern):
-    r"""
-    Convert a string providing a pattern to match in SQL
+    r"""Convert a string providing a pattern to match in SQL
     syntax into a string performing the same match as a regex.
 
     SQL LIKE syntax summary:
@@ -100,8 +98,7 @@ def get_regex_pattern_from_sql(sql_pattern):
     """
 
     def tokenizer(string, tokens_to_apply):
-        """
-        Recursive function that tokenizes a string using the provided tokens
+        """Recursive function that tokenizes a string using the provided tokens
 
         :param string: the string to tokenize
         :param tokens_to_apply: the list of tokens still to process (in order: the first will be processed first)
@@ -122,8 +119,11 @@ def get_regex_pattern_from_sql(sql_pattern):
                 # with ALL tokens passed (there could be more occurrences of tokens_to_apply[0])
                 # Instead, for the first part, we know that we found the FIRST occurrence of tokens_to_apply[0]
                 # so I pass the list without the first element
-                return tokenizer(first, tokens_to_apply=tokens_to_apply[1:]
-                                 ) + dict(SQL_TO_REGEX_TOKENS)[sep] + tokenizer(rest, tokens_to_apply=tokens_to_apply)
+                return (
+                    tokenizer(first, tokens_to_apply=tokens_to_apply[1:])
+                    + dict(SQL_TO_REGEX_TOKENS)[sep]
+                    + tokenizer(rest, tokens_to_apply=tokens_to_apply)
+                )
             # Here sep is empty: it means also rest is empty, and we just
             # return (recursively) the tokenizer on the first part, avoiding
             # infinite loops
@@ -139,8 +139,7 @@ def get_regex_pattern_from_sql(sql_pattern):
 
 
 def sql_string_match(string, pattern):
-    """
-    Check if the string matches the provided pattern,
+    """Check if the string matches the provided pattern,
     specified using SQL syntax.
 
     See documentation of :py:func:`~aiida.common.escaping.get_regex_pattern_from_sql`

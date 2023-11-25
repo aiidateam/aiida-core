@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SQLA Log and LogCollection module"""
-# pylint: disable=import-error,no-name-in-module
 
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -25,7 +24,6 @@ class SqlaLog(entities.SqlaModelEntity[models.DbLog], BackendLog):
     MODEL_CLASS = models.DbLog
 
     def __init__(self, backend, time, loggername, levelname, dbnode_id, message='', metadata=None):
-        # pylint: disable=too-many-arguments
         super().__init__(backend)
         self._model = utils.ModelWrapper(
             self.MODEL_CLASS(
@@ -34,58 +32,45 @@ class SqlaLog(entities.SqlaModelEntity[models.DbLog], BackendLog):
                 levelname=levelname,
                 dbnode_id=dbnode_id,
                 message=message,
-                metadata=metadata
-            ), backend
+                metadata=metadata,
+            ),
+            backend,
         )
 
     @property
     def uuid(self):
-        """
-        Get the string representation of the UUID of the log entry
-        """
+        """Get the string representation of the UUID of the log entry"""
         return str(self.model.uuid)
 
     @property
     def time(self):
-        """
-        Get the time corresponding to the entry
-        """
+        """Get the time corresponding to the entry"""
         return self.model.time
 
     @property
     def loggername(self):
-        """
-        The name of the logger that created this entry
-        """
+        """The name of the logger that created this entry"""
         return self.model.loggername
 
     @property
     def levelname(self):
-        """
-        The name of the log level
-        """
+        """The name of the log level"""
         return self.model.levelname
 
     @property
     def dbnode_id(self):
-        """
-        Get the id of the object that created the log entry
-        """
+        """Get the id of the object that created the log entry"""
         return self.model.dbnode_id
 
     @property
     def message(self):
-        """
-        Get the message corresponding to the entry
-        """
+        """Get the message corresponding to the entry"""
         return self.model.message
 
     @property
     def metadata(self):
-        """
-        Get the metadata corresponding to the entry
-        """
-        return self.model._metadata  # pylint: disable=protected-access
+        """Get the metadata corresponding to the entry"""
+        return self.model._metadata
 
 
 class SqlaLogCollection(BackendLogCollection):
@@ -94,8 +79,7 @@ class SqlaLogCollection(BackendLogCollection):
     ENTITY_CLASS = SqlaLog
 
     def delete(self, log_id):
-        """
-        Remove a Log entry from the collection with the given id
+        """Remove a Log entry from the collection with the given id
 
         :param log_id: id of the Log to delete
         :type log_id: int
@@ -117,8 +101,7 @@ class SqlaLogCollection(BackendLogCollection):
             raise exceptions.NotExistent(f"Log with id '{log_id}' not found")
 
     def delete_all(self):
-        """
-        Delete all Log entries.
+        """Delete all Log entries.
 
         :raises `~aiida.common.exceptions.IntegrityError`: if all Logs could not be deleted
         """
@@ -132,8 +115,7 @@ class SqlaLogCollection(BackendLogCollection):
             raise exceptions.IntegrityError(f'Could not delete all Logs. Full exception: {exc}')
 
     def delete_many(self, filters):
-        """
-        Delete Logs based on ``filters``
+        """Delete Logs based on ``filters``
 
         :param filters: similar to QueryBuilder filter
         :type filters: dict

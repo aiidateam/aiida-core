@@ -11,7 +11,7 @@
 
 This migration is necessary after the `core.` prefix was added to entry points shipped with `aiida-core`.
 """
-from ..utils import update_metadata, verify_metadata_version  # pylint: disable=no-name-in-module
+from ..utils import update_metadata, verify_metadata_version
 
 MAPPING_DATA = {
     'data.array.ArrayData.': 'data.core.array.ArrayData.',
@@ -67,7 +67,6 @@ MAPPING_WORKFLOWS = {
 
 def migrate_v11_to_v12(metadata: dict, data: dict) -> None:
     """Migration of export files from v0.11 to v0.12."""
-    # pylint: disable=too-many-branches
     old_version = '0.11'
     new_version = '0.12'
 
@@ -84,8 +83,11 @@ def migrate_v11_to_v12(metadata: dict, data: dict) -> None:
             else:
                 values['node_type'] = new_node_type
 
-        if 'process_type' in values and values['process_type'] and values['process_type'
-                                                                          ].startswith('aiida.calculations:'):
+        if (
+            'process_type' in values
+            and values['process_type']
+            and values['process_type'].startswith('aiida.calculations:')
+        ):
             try:
                 new_process_type = MAPPING_CALCULATIONS[values['process_type']]
             except KeyError:
@@ -93,8 +95,11 @@ def migrate_v11_to_v12(metadata: dict, data: dict) -> None:
             else:
                 values['process_type'] = new_process_type
 
-        if 'process_type' in values and values['process_type'] and values['process_type'
-                                                                          ].startswith('aiida.workflows:'):
+        if (
+            'process_type' in values
+            and values['process_type']
+            and values['process_type'].startswith('aiida.workflows:')
+        ):
             try:
                 new_process_type = MAPPING_WORKFLOWS[values['process_type']]
             except KeyError:

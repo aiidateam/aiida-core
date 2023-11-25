@@ -10,10 +10,10 @@
 """Utilities dealing with plugins and entry points."""
 from __future__ import annotations
 
+import typing as t
 from importlib import import_module
 from logging import Logger
 from types import FunctionType
-import typing as t
 
 from aiida.common import AIIDA_LOGGER
 from aiida.common.exceptions import EntryPointError

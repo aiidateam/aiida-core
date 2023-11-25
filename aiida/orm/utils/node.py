@@ -8,9 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utilities to operate on `Node` classes."""
-from abc import ABCMeta
 import logging
 import warnings
+from abc import ABCMeta
 
 from aiida.common import exceptions
 from aiida.common.utils import strip_prefix
@@ -24,8 +24,7 @@ __all__ = (
 
 
 def load_node_class(type_string):
-    """
-    Return the `Node` sub class that corresponds to the given type string.
+    """Return the `Node` sub class that corresponds to the given type string.
 
     :param type_string: the `type` string of the node
     :return: a sub class of `Node`
@@ -70,14 +69,13 @@ def load_node_class(type_string):
     # node then would fail miserably. This is now no longer allowed, but we need a fallback for existing cases, which
     # should be rare. We fallback on `Data` and not `Node` because bare node instances are also not storable and so the
     # logic of the ORM is not well defined for a loaded instance of the base `Node` class.
-    warnings.warn(f'unknown type string `{type_string}`, falling back onto `Data` class')  # pylint: disable=no-member
+    warnings.warn(f'unknown type string `{type_string}`, falling back onto `Data` class')
 
     return Data
 
 
 def get_type_string_from_class(class_module, class_name):
-    """
-    Given the module and name of a class, determine the orm_class_type string, which codifies the
+    """Given the module and name of a class, determine the orm_class_type string, which codifies the
     orm class that is to be used. The returned string will always have a terminating period, which
     is required to query for the string in the database
 
@@ -113,8 +111,7 @@ def get_type_string_from_class(class_module, class_name):
 
 
 def is_valid_node_type_string(type_string, raise_on_false=False):
-    """
-    Checks whether type string of a Node is valid.
+    """Checks whether type string of a Node is valid.
 
     :param type_string: the plugin_type_string attribute of a Node
     :return: True if type string is valid, else false
@@ -135,8 +132,7 @@ def is_valid_node_type_string(type_string, raise_on_false=False):
 
 
 def get_query_type_from_type_string(type_string):
-    """
-    Take the type string of a Node and create the queryable type string
+    """Take the type string of a Node and create the queryable type string
 
     :param type_string: the plugin_type_string attribute of a Node
     :return: the type string that can be used to query for
@@ -157,7 +153,7 @@ def get_query_type_from_type_string(type_string):
 class AbstractNodeMeta(ABCMeta):
     """Some python black magic to set correctly the logger also in subclasses."""
 
-    def __new__(mcs, name, bases, namespace, **kwargs):
-        newcls = ABCMeta.__new__(mcs, name, bases, namespace, **kwargs)  # pylint: disable=too-many-function-args
+    def __new__(mcs, name, bases, namespace, **kwargs):  # noqa: N804
+        newcls = ABCMeta.__new__(mcs, name, bases, namespace, **kwargs)
         newcls._logger = logging.getLogger(f"{namespace['__module__']}.{name}")
         return newcls

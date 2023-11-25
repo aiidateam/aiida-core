@@ -23,13 +23,13 @@ from .processes.builder import ProcessBuilder
 from .processes.functions import FunctionProcess
 from .processes.process import Process
 from .runners import ResultAndPk
-from .utils import instantiate_process, is_process_scoped, prepare_inputs  # pylint: disable=no-name-in-module
+from .utils import instantiate_process, is_process_scoped, prepare_inputs
 
 __all__ = ('run', 'run_get_pk', 'run_get_node', 'submit', 'await_processes')
 
-TYPE_RUN_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]  # pylint: disable=invalid-name
+TYPE_RUN_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]
 # run can also be process function, but it is not clear what type this should be
-TYPE_SUBMIT_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]  # pylint: disable=invalid-name
+TYPE_SUBMIT_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]
 LOGGER = AIIDA_LOGGER.getChild('engine.launch')
 
 
@@ -48,9 +48,9 @@ def run(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwa
     return runner.run(process, inputs, **kwargs)
 
 
-def run_get_node(process: TYPE_RUN_PROCESS,
-                 inputs: dict[str, t.Any] | None = None,
-                 **kwargs: t.Any) -> tuple[dict[str, t.Any], ProcessNode]:
+def run_get_node(
+    process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any
+) -> tuple[dict[str, t.Any], ProcessNode]:
     """Run the process with the supplied inputs in a local runner that will block until the process is completed.
 
     :param process: the process class, instance, builder or function to run
@@ -86,7 +86,7 @@ def submit(
     *,
     wait: bool = False,
     wait_interval: int = 5,
-    **kwargs: t.Any
+    **kwargs: t.Any,
 ) -> ProcessNode:
     """Submit the process with the supplied inputs to the daemon immediately returning control to the interpreter.
 

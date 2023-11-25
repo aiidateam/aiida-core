@@ -20,7 +20,6 @@ class SqlaUser(entities.SqlaModelEntity[DbUser], BackendUser):
     MODEL_CLASS = DbUser
 
     def __init__(self, backend, email, first_name, last_name, institution):
-        # pylint: disable=too-many-arguments
         super().__init__(backend)
         self._model = utils.ModelWrapper(
             self.MODEL_CLASS(email=email, first_name=first_name, last_name=last_name, institution=institution), backend
@@ -64,6 +63,6 @@ class SqlaUserCollection(BackendUserCollection):
 
     ENTITY_CLASS = SqlaUser
 
-    def create(self, email, first_name='', last_name='', institution=''):  # pylint: disable=arguments-differ
-        """ Create a user with the provided email address"""
+    def create(self, email, first_name='', last_name='', institution=''):
+        """Create a user with the provided email address"""
         return self.ENTITY_CLASS(self.backend, email, first_name, last_name, institution)

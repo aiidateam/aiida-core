@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .calcjob import *
 from .links import *
@@ -46,4 +45,4 @@ __all__ = (
     'validate_link',
 )
 
-# yapf: enable
+# fmt: on

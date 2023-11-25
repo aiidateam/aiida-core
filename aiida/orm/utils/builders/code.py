@@ -56,12 +56,12 @@ class CodeBuilder:
         if self._get_and_count('code_type', used) == self.CodeType.STORE_AND_UPLOAD:
             code = PortableCode(
                 filepath_executable=self._get_and_count('code_rel_path', used),
-                filepath_files=pathlib.Path(self._get_and_count('code_folder', used))
+                filepath_files=pathlib.Path(self._get_and_count('code_folder', used)),
             )
         else:
             code = InstalledCode(
                 computer=self._get_and_count('computer', used),
-                filepath_executable=self._get_and_count('remote_abs_path', used)
+                filepath_executable=self._get_and_count('remote_abs_path', used),
             )
 
         code.label = self._get_and_count('label', used)
@@ -128,16 +128,14 @@ class CodeBuilder:
         return None
 
     def _get(self, key):
-        """
-        Return a spec, or None if not defined
+        """Return a spec, or None if not defined
 
         :param key: name of a code spec
         """
         return self._code_spec.get(key)
 
     def _get_and_count(self, key, used):
-        """
-        Return a spec, or raise if not defined.
+        """Return a spec, or raise if not defined.
         Moreover, add the key to the 'used' dict.
 
         :param key: name of a code spec
@@ -199,11 +197,10 @@ class CodeBuilder:
             raise self.CodeValidationError(f'{messages}')
 
     class CodeValidationError(ValueError):
-        """
-        A CodeBuilder instance may raise this
+        """A CodeBuilder instance may raise this
 
-         * when asked to instanciate a code with missing or invalid code attributes
-         * when asked for a code attibute that has not been set yet
+        * when asked to instanciate a code with missing or invalid code attributes
+        * when asked for a code attibute that has not been set yet
         """
 
         def __init__(self, msg):

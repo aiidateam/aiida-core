@@ -12,14 +12,10 @@ from aiida.tools.dbimporters.baseclasses import CifEntry, DbImporter, DbSearchRe
 
 
 class OqmdDbImporter(DbImporter):
-    """
-    Database importer for Open Quantum Materials Database.
-    """
+    """Database importer for Open Quantum Materials Database."""
 
     def _str_clause(self, key, alias, values):
-        """
-        Returns part of HTTP GET query for querying string fields.
-        """
+        """Returns part of HTTP GET query for querying string fields."""
         if not isinstance(values, str) and not isinstance(values, int):
             raise ValueError(f"incorrect value for keyword '{alias}' -- only strings and integers are accepted")
         return f'{key}={values}'
@@ -31,8 +27,7 @@ class OqmdDbImporter(DbImporter):
         self.setup_db(**kwargs)
 
     def query_get(self, **kwargs):
-        """
-        Forms a HTTP GET query for querying the OQMD database.
+        """Forms a HTTP GET query for querying the OQMD database.
 
         :return: a strings for HTTP GET statement.
         """
@@ -45,8 +40,7 @@ class OqmdDbImporter(DbImporter):
         return f"{self._query_url}/materials/composition/{''.join(elements)}"
 
     def query(self, **kwargs):
-        """
-        Performs a query on the OQMD database using ``keyword = value`` pairs,
+        """Performs a query on the OQMD database using ``keyword = value`` pairs,
         specified in ``kwargs``.
 
         :return: an instance of
@@ -70,10 +64,8 @@ class OqmdDbImporter(DbImporter):
 
         return OqmdSearchResults(results)
 
-    def setup_db(self, query_url=None, **kwargs):  # pylint: disable=arguments-differ
-        """
-        Changes the database connection details.
-        """
+    def setup_db(self, query_url=None, **kwargs):
+        """Changes the database connection details."""
         if query_url:
             self._query_url = query_url
 
@@ -81,18 +73,16 @@ class OqmdDbImporter(DbImporter):
             raise NotImplementedError(f"following keyword(s) are not implemented: {', '.join(kwargs.keys())}")
 
     def get_supported_keywords(self):
-        """
-        Returns the list of all supported query keywords.
+        """Returns the list of all supported query keywords.
 
         :return: list of strings
         """
         return self._keywords.keys()
 
 
-class OqmdSearchResults(DbSearchResults):  # pylint: disable=abstract-method
-    """
-    Results of the search, performed on OQMD.
-    """
+class OqmdSearchResults(DbSearchResults):
+    """Results of the search, performed on OQMD."""
+
     _base_url = 'http://oqmd.org/materials/export/conventional/cif/'
 
     def __init__(self, results):
@@ -103,8 +93,7 @@ class OqmdSearchResults(DbSearchResults):  # pylint: disable=abstract-method
         return len(self._results)
 
     def _get_source_dict(self, result_dict):
-        """
-        Returns a dictionary, which is passed as kwargs to the created
+        """Returns a dictionary, which is passed as kwargs to the created
         DbEntry instance, describing the source of the entry.
 
         :param result_dict: dictionary, describing an entry in the results.
@@ -112,22 +101,18 @@ class OqmdSearchResults(DbSearchResults):  # pylint: disable=abstract-method
         return {'id': result_dict['id']}
 
     def _get_url(self, result_dict):
-        """
-        Returns an URL of an entry CIF file.
+        """Returns an URL of an entry CIF file.
 
         :param result_dict: dictionary, describing an entry in the results.
         """
         return self._base_url + result_dict['id']
 
 
-class OqmdEntry(CifEntry):  # pylint: disable=abstract-method
-    """
-    Represents an entry from OQMD.
-    """
+class OqmdEntry(CifEntry):
+    """Represents an entry from OQMD."""
 
     def __init__(self, uri, **kwargs):
-        """
-        Creates an instance of
+        """Creates an instance of
         :py:class:`aiida.tools.dbimporters.plugins.oqmd.OqmdEntry`, related
         to the supplied URI.
         """

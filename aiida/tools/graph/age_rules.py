@@ -46,8 +46,7 @@ class Operation(metaclass=ABCMeta):
 
     @abstractmethod
     def run(self, operational_set):
-        """
-        Takes the operational_set and overwrites it with the set of nodes that results
+        """Takes the operational_set and overwrites it with the set of nodes that results
         from applying the rule (this might or not include the initial set of nodes as
         well depending on the rule).
 
@@ -81,10 +80,10 @@ class QueryRule(Operation, metaclass=ABCMeta):
             from aiida.orm.querybuilder import GROUP_ENTITY_TYPE_PREFIX
 
             if (
-                query_dict['path'][idx]['entity_type'].startswith('node') or
-                query_dict['path'][idx]['entity_type'].startswith('data') or
-                query_dict['path'][idx]['entity_type'].startswith('process') or
-                query_dict['path'][idx]['entity_type'] == ''
+                query_dict['path'][idx]['entity_type'].startswith('node')
+                or query_dict['path'][idx]['entity_type'].startswith('data')
+                or query_dict['path'][idx]['entity_type'].startswith('process')
+                or query_dict['path'][idx]['entity_type'] == ''
             ):
                 result = 'nodes'
             elif query_dict['path'][idx]['entity_type'].startswith(GROUP_ENTITY_TYPE_PREFIX):
@@ -124,8 +123,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
         self._accumulator_set = None
 
     def set_edge_keys(self, edge_keys):
-        """
-        Set the edge keys that are use to classify the edges during the run of this query.
+        """Set the edge keys that are use to classify the edges during the run of this query.
 
         :param edge_keys:
             a list of projections on the edge itself, or a tuple that specifies
@@ -225,16 +223,14 @@ class QueryRule(Operation, metaclass=ABCMeta):
 
         if primkeys:
             self._querybuilder.add_filter(
-                self._first_tag, {operational_set[self._entity_from].identifier: {
-                                      'in': primkeys
-                                  }}
+                self._first_tag, {operational_set[self._entity_from].identifier: {'in': primkeys}}
             )
             qres = self._querybuilder.dict()
 
             # These are the new results returned by the query
-            target_set[self._entity_to].add_entities([
-                item[self._last_tag][self._entity_to_identifier] for item in qres
-            ])
+            target_set[self._entity_to].add_entities(
+                [item[self._last_tag][self._entity_to_identifier] for item in qres]
+            )
 
             if self._track_edges:
                 # As in _init_run, I need the key for the edge_set
@@ -242,9 +238,9 @@ class QueryRule(Operation, metaclass=ABCMeta):
                 edge_set = operational_set.dict[edge_key]
                 namedtuple_ = edge_set.edge_namedtuple
 
-                target_set[edge_key].add_entities([
-                    namedtuple_(*(item[key1][key2] for (key1, key2) in self._edge_keys)) for item in qres
-                ])
+                target_set[edge_key].add_entities(
+                    [namedtuple_(*(item[key1][key2] for (key1, key2) in self._edge_keys)) for item in qres]
+                )
 
     def set_accumulator(self, accumulator_set):
         self._accumulator_set = accumulator_set
@@ -259,8 +255,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
 
 
 class UpdateRule(QueryRule):
-    """
-    The UpdateRule will accumulate every node visited and return it as a set of nodes
+    """The UpdateRule will accumulate every node visited and return it as a set of nodes
     (and thus, without duplication). It can be used requesting both a finite number
     of iterations or an infinite number of iterations (in which case it will stop once
     no new nodes are added to the accumulation set).
@@ -274,7 +269,7 @@ class UpdateRule(QueryRule):
         # The operational_set will be updated with the new_nodes that were not
         # already in the _acumulator_set, so that we are not querying from the
         # same nodes again and the cycle can end when no new nodes are found
-        while (operational_set and self._iterations_done < self._max_iterations):
+        while operational_set and self._iterations_done < self._max_iterations:
             self._iterations_done += 1
             self._load_results(new_results, operational_set)
             operational_set = new_results - self._accumulator_set
@@ -284,8 +279,7 @@ class UpdateRule(QueryRule):
 
 
 class ReplaceRule(QueryRule):
-    """
-    The ReplaceRule does not accumulate results, but just sets the operational_set to
+    """The ReplaceRule does not accumulate results, but just sets the operational_set to
     new results. Therefore it can only function using a finite number of iterations,
     since it does not keep track of which nodes where visited already (otherwise, if
     it was following a cycle, it would run indefinitely).
@@ -303,7 +297,7 @@ class ReplaceRule(QueryRule):
 
         # The operational_set will be replaced by the new_nodes, even if these
         # were already visited previously.
-        while (operational_set and self._iterations_done < self._max_iterations):
+        while operational_set and self._iterations_done < self._max_iterations:
             self._iterations_done += 1
             self._load_results(new_results, operational_set)
             operational_set = new_results
@@ -392,7 +386,7 @@ class RuleSequence(Operation):
 
         new_results = operational_set.get_template()
         self._iterations_done = 0
-        while (operational_set and self._iterations_done < self._max_iterations):
+        while operational_set and self._iterations_done < self._max_iterations:
             self._iterations_done += 1
             new_results.empty()
 

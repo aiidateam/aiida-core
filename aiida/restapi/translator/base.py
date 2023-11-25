@@ -16,11 +16,9 @@ from aiida.restapi.common.utils import PK_DBSYNONYM
 
 
 class BaseTranslator:
-    """
-    Generic class for translator. It contains the methods
+    """Generic class for translator. It contains the methods
     required to build a related QueryBuilder object
     """
-    # pylint: disable=too-many-instance-attributes,fixme
 
     # A label associated to the present class
     __label__ = None
@@ -41,8 +39,7 @@ class BaseTranslator:
     _total_count = None
 
     def __init__(self, **kwargs):
-        """
-        Initialise the parameters.
+        """Initialise the parameters.
         Create the basic query_help
 
         keyword Class (default None but becomes this class): is the class
@@ -57,13 +54,10 @@ class BaseTranslator:
 
         # basic query_help object
         self._query_help = {
-            'path': [{
-                'cls': self._aiida_class,
-                'tag': self.__label__
-            }],
+            'path': [{'cls': self._aiida_class, 'tag': self.__label__}],
             'filters': {},
             'project': {},
-            'order_by': {}
+            'order_by': {},
         }
         # query_builder object (No initialization)
         self.qbobj = QueryBuilder()
@@ -72,8 +66,7 @@ class BaseTranslator:
         self.schema = None
 
     def __repr__(self):
-        """
-        This function is required for the caching system to be able to compare
+        """This function is required for the caching system to be able to compare
         two NodeTranslator objects. Comparison is done on the value returned by __repr__
 
         :return: representation of NodeTranslator objects. Returns nothing
@@ -84,8 +77,7 @@ class BaseTranslator:
 
     @staticmethod
     def get_projectable_properties():
-        """
-        This method is extended in specific translators classes.
+        """This method is extended in specific translators classes.
         It returns a dict as follows:
         dict(fields=projectable_properties, ordering=ordering)
         where projectable_properties is a dict and ordering is a list
@@ -93,16 +85,12 @@ class BaseTranslator:
         return {}
 
     def init_qb(self):
-        """
-        Initialize query builder object by means of _query_help
-        """
+        """Initialize query builder object by means of _query_help"""
         self.qbobj.__init__(**self._query_help)
         self._is_qb_initialized = True
 
     def count(self):
-        """
-        Count the number of rows returned by the query and set total_count
-        """
+        """Count the number of rows returned by the query and set total_count"""
         if self._is_qb_initialized:
             self._total_count = self.qbobj.count()
         else:
@@ -122,8 +110,7 @@ class BaseTranslator:
             #    @cache.memoize(timeout=CACHING_TIMEOUTS[self.__label__])
 
     def get_total_count(self):
-        """
-        Returns the number of rows of the query.
+        """Returns the number of rows of the query.
 
         :return: total_count
         """
@@ -134,8 +121,7 @@ class BaseTranslator:
         return self._total_count
 
     def set_filters(self, filters=None):
-        """
-        Add filters in query_help.
+        """Add filters in query_help.
 
         :param filters: it is a dictionary where keys are the tag names
             given in the path in query_help and their values are the dictionary
@@ -152,16 +138,15 @@ class BaseTranslator:
         if filters is None:
             filters = {}
 
-        if isinstance(filters, dict):  # pylint: disable=too-many-nested-blocks
+        if isinstance(filters, dict):
             if filters:
                 for tag, tag_filters in filters.items():
                     if tag_filters and isinstance(tag_filters, dict):
                         self._query_help['filters'][tag] = {}
                         for filter_key, filter_value in tag_filters.items():
                             if filter_key == 'pk':
-                                filter_key = PK_DBSYNONYM
-                            self._query_help['filters'][tag][filter_key] \
-                                = filter_value
+                                filter_key = PK_DBSYNONYM  # noqa: PLW2901
+                            self._query_help['filters'][tag][filter_key] = filter_value
         else:
             raise InputValidationError(
                 'Pass data in dictionary format where '
@@ -172,15 +157,13 @@ class BaseTranslator:
             )
 
     def get_default_projections(self):
-        """
-        method to get default projections of the node
+        """Method to get default projections of the node
         :return: self._default_projections
         """
         return self._default_projections
 
     def set_default_projections(self):
-        """
-        It calls the set_projections() methods internally to add the
+        """It calls the set_projections() methods internally to add the
         default projections in query_help
 
         :return: None
@@ -188,8 +171,7 @@ class BaseTranslator:
         self.set_projections({self.__label__: self._default_projections})
 
     def set_projections(self, projections):
-        """
-        add the projections in query_help
+        """Add the projections in query_help
 
         :param projections: it is a dictionary where keys are the tag names
          given in the path in query_help and values are the list of the names
@@ -211,8 +193,7 @@ class BaseTranslator:
             )
 
     def set_order(self, orders):
-        """
-        Add order_by clause in query_help
+        """Add order_by clause in query_help
         :param orders: dictionary of orders you want to apply on final
         results
         :return: None or exception if any.
@@ -220,21 +201,19 @@ class BaseTranslator:
         ## Validate input
         if not isinstance(orders, dict):
             raise InputValidationError(
-                'orders has to be a dictionary'
-                "compatible with the 'order_by' section"
-                'of the query_help'
+                'orders has to be a dictionary' "compatible with the 'order_by' section" 'of the query_help'
             )
 
         ## Auxiliary_function to get the ordering cryterion
         def def_order(columns):
-            """
-            Takes a list of signed column names ex. ['id', '-ctime',
+            """Takes a list of signed column names ex. ['id', '-ctime',
             '+mtime']
             and transforms it in a order_by compatible dictionary
             :param columns: (list of strings)
             :return: a dictionary
             """
             from collections import OrderedDict
+
             order_dict = OrderedDict()
             for column in columns:
                 if column[0] == '-':
@@ -263,11 +242,9 @@ class BaseTranslator:
         attributes=None,
         attributes_filter=None,
         extras=None,
-        extras_filter=None
+        extras_filter=None,
     ):
-        # pylint: disable=too-many-arguments,unused-argument,too-many-locals,too-many-branches
-        """
-        Adds filters, default projections, order specs to the query_help,
+        """Adds filters, default projections, order specs to the query_help,
         and initializes the qb object
 
         :param filters: dictionary with the filters
@@ -282,7 +259,6 @@ class BaseTranslator:
         :param extras: flag to show attributes in nodes endpoint
         :param extras_filter: list of node extras to query
         """
-
         tagged_filters = {}
 
         ## Check if filters are well defined and construct an ad-hoc filter
@@ -321,7 +297,7 @@ class BaseTranslator:
                         if not isinstance(attributes_filter, list):
                             attributes_filter = [attributes_filter]
                         for attr in attributes_filter:
-                            default_projections.append(f'attributes.{str(attr)}')
+                            default_projections.append(f'attributes.{attr!s}')
                 elif attributes is not None and attributes is not False:
                     raise RestValidationError('The attributes filter is false by default and can only be set to true.')
 
@@ -333,7 +309,7 @@ class BaseTranslator:
                         if not isinstance(extras_filter, list):
                             extras_filter = [extras_filter]
                         for extra in extras_filter:
-                            default_projections.append(f'extras.{str(extra)}')
+                            default_projections.append(f'extras.{extra!s}')
                 elif extras is not None and extras is not False:
                     raise RestValidationError('The extras filter is false by default and can only be set to true.')
 
@@ -351,20 +327,16 @@ class BaseTranslator:
         self.init_qb()
 
     def get_query_help(self):
-        """
-        :return: return QB json dictionary
-        """
+        """:return: return QB json dictionary"""
         return self._query_help
 
     def set_limit_offset(self, limit=None, offset=None):
-        """
-        sets limits and offset directly to the query_builder object
+        """Sets limits and offset directly to the query_builder object
 
         :param limit:
         :param offset:
         :return:
         """
-
         ## mandatory params
         # none
 
@@ -398,15 +370,13 @@ class BaseTranslator:
             raise InvalidOperation('query builder object has not been initialized.')
 
     def get_formatted_result(self, label):
-        """
-        Runs the query and retrieves results tagged as "label".
+        """Runs the query and retrieves results tagged as "label".
 
         :param label: the tag of the results to be extracted out of
           the query rows.
         :type label: str
         :return: a list of the query results
         """
-
         if not self._is_qb_initialized:
             raise InvalidOperation('query builder object has not been initialized.')
 
@@ -433,12 +403,10 @@ class BaseTranslator:
         return result
 
     def get_results(self):
-        """
-        Returns either list of nodes or details of single node from database.
+        """Returns either list of nodes or details of single node from database.
 
         :return: either list of nodes or details of single node from database
         """
-
         ## Check whether the querybuilder object has been initialized
         if not self._is_qb_initialized:
             raise InvalidOperation('query builder object has not been initialized.')
@@ -453,8 +421,7 @@ class BaseTranslator:
         return data
 
     def _check_id_validity(self, node_id):
-        """
-        Checks whether id corresponds to an object of the expected type,
+        """Checks whether id corresponds to an object of the expected type,
         whenever type is a valid column of the database (ex. for nodes,
         but not for users)
 
@@ -472,7 +439,6 @@ class BaseTranslator:
         loader = get_loader(self._aiida_class)
 
         if self._has_uuid:
-
             # For consistency check that id is a string
             if not isinstance(node_id, str):
                 raise RestValidationError('parameter id has to be a string')
@@ -480,7 +446,6 @@ class BaseTranslator:
             identifier_type = IdentifierType.UUID
             qbobj, _ = loader.get_query_builder(node_id, identifier_type, sub_classes=(self._aiida_class,))
         else:
-
             # Similarly, check that id is an integer
             if not isinstance(node_id, int):
                 raise RestValidationError('parameter id has to be an integer')

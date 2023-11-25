@@ -36,10 +36,7 @@ def test_migration(perform_migrations: PsqlDosMigrator):
             process_type='aiida.calculations:core.arithmetic.add',
             attributes={'parser_name': 'core.arithmetic.add'},
             repository_metadata={},
-            extras={
-                '_aiida_hash': 'hash',
-                'other_extra': 'value'
-            }
+            extras={'_aiida_hash': 'hash', 'other_extra': 'value'},
         )
         workflow = node_model(
             uuid=get_new_uuid(),
@@ -51,10 +48,7 @@ def test_migration(perform_migrations: PsqlDosMigrator):
             node_type='process.workflow.workchain.WorkChainNode.',
             process_type='aiida.workflows:core.arithmetic.add_multiply',
             repository_metadata={},
-            extras={
-                '_aiida_hash': 'hash',
-                'other_extra': 'value'
-            }
+            extras={'_aiida_hash': 'hash', 'other_extra': 'value'},
         )
         session.add_all((calcjob, workflow))
         session.commit()

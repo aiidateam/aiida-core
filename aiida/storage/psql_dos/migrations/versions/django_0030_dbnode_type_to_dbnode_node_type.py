@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Rename `db_dbnode.type` to `db_dbnode.node_type`
 
 This is similar to migration 5ddd24e52864
@@ -26,7 +25,7 @@ depends_on = None
 
 def upgrade():
     """Migrations for the upgrade."""
-    op.alter_column('db_dbnode', 'type', new_column_name='node_type')  # pylint: disable=no-member
+    op.alter_column('db_dbnode', 'type', new_column_name='node_type')
     # note index names are (mistakenly) not changed here
 
 

@@ -11,31 +11,26 @@
 import datetime
 import os
 
-from pymatgen.ext.matproj import MPRester
 import requests
+from pymatgen.ext.matproj import MPRester
 
 from aiida.tools.dbimporters.baseclasses import CifEntry, DbImporter, DbSearchResults
 
 
 class MaterialsProjectImporter(DbImporter):
-    """
-    Database importer for the Materials Project.
-    """
+    """Database importer for the Materials Project."""
 
     _properties = 'structure'
     _supported_keywords = None
 
     def __init__(self, **kwargs):
-        """
-        Instantiate the MaterialsProjectImporter by setting up the Materials API (MAPI)
+        """Instantiate the MaterialsProjectImporter by setting up the Materials API (MAPI)
         connection details.
         """
         self.setup_db(**kwargs)
 
     def setup_db(self, **kwargs):
-        """
-        Setup the required parameters to the REST API
-        """
+        """Setup the required parameters to the REST API"""
         try:
             api_key = kwargs['api_key']
         except KeyError:
@@ -53,9 +48,7 @@ class MaterialsProjectImporter(DbImporter):
         self._mpr = MPRester(self._api_key)
 
     def _verify_api_key(self):
-        """
-        Verify the supplied API key by issuing a request to Materials Project.
-        """
+        """Verify the supplied API key by issuing a request to Materials Project."""
         response = requests.get(
             'https://www.materialsproject.org/rest/v1/api_check', headers={'X-API-KEY': self._api_key}, timeout=5
         )
@@ -69,29 +62,23 @@ class MaterialsProjectImporter(DbImporter):
 
     @property
     def api_key(self):
-        """
-        Return the API key configured for the importer
-        """
+        """Return the API key configured for the importer"""
         return self._api_key
 
     @property
     def properties(self):
-        """
-        Return the properties that will be queried
-        """
+        """Return the properties that will be queried"""
         return self._properties
 
     def get_supported_keywords(self):
-        """
-        Returns the list of all supported query keywords
+        """Returns the list of all supported query keywords
 
         :return: list of strings
         """
         return self._supported_keywords
 
     def query(self, **kwargs):
-        """
-        Query the database with a given dictionary of query parameters for a given properties
+        """Query the database with a given dictionary of query parameters for a given properties
 
         :param query: a dictionary with the query parameters
         :param properties: the properties to query
@@ -126,26 +113,21 @@ class MaterialsProjectImporter(DbImporter):
         return search_results
 
     def _find(self, query, properties):
-        """
-        Query the database with a given dictionary of query parameters
+        """Query the database with a given dictionary of query parameters
 
         :param query: a dictionary with the query parameters
         """
-        for entry in self._mpr.query(criteria=query, properties=properties):  # pylint: disable=no-member
+        for entry in self._mpr.query(criteria=query, properties=properties):
             yield entry
 
 
-class MaterialsProjectCifEntry(CifEntry):  # pylint: disable=abstract-method
-    """
-    A Materials Project entry class which extends the DbEntry class with a CifEntry class.
-
-    """
+class MaterialsProjectCifEntry(CifEntry):
+    """A Materials Project entry class which extends the DbEntry class with a CifEntry class."""
 
     _license = 'Materials Project'
 
     def __init__(self, url, **kwargs):
-        """
-        The DbSearchResults base class instantiates a new DbEntry by explicitly passing the url
+        """The DbSearchResults base class instantiates a new DbEntry by explicitly passing the url
         of the entry as an argument. In this case it is the same as the 'uri' value that is
         already contained in the source dictionary so we just copy it
         """
@@ -157,9 +139,8 @@ class MaterialsProjectCifEntry(CifEntry):  # pylint: disable=abstract-method
             self.cif = cif
 
 
-class MaterialsProjectSearchResults(DbSearchResults):  # pylint: disable=abstract-method
-    """
-    A collection of MaterialsProjectEntry query result entries.
+class MaterialsProjectSearchResults(DbSearchResults):
+    """A collection of MaterialsProjectEntry query result entries.
 
     :param results: query result entry dictionary
     :return_class: the class associated with each
@@ -175,8 +156,7 @@ class MaterialsProjectSearchResults(DbSearchResults):  # pylint: disable=abstrac
         super().__init__(results)
 
     def _get_source_dict(self, result_dict):
-        """
-        Return the source information dictionary of an Materials Project query result entry
+        """Return the source information dictionary of an Materials Project query result entry
 
         :param result_dict: query result entry dictionary
         """
@@ -194,8 +174,7 @@ class MaterialsProjectSearchResults(DbSearchResults):  # pylint: disable=abstrac
         return source_dict
 
     def _get_url(self, result_dict):
-        """
-        Return the permanent URI of the result entry
+        """Return the permanent URI of the result entry
 
         :param result_dict: query result entry dictionary
         """

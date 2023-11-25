@@ -18,8 +18,7 @@ __all__ = ('RemoteData',)
 
 
 class RemoteData(Data):
-    """
-    Store a link to a file or folder on a remote machine.
+    """Store a link to a file or folder on a remote machine.
 
     Remember to pass a computer!
     """
@@ -44,9 +43,7 @@ class RemoteData(Data):
 
     @property
     def is_empty(self):
-        """
-        Check if remote folder is empty
-        """
+        """Check if remote folder is empty"""
         if self.is_cleaned:
             return True
 
@@ -63,8 +60,7 @@ class RemoteData(Data):
             return not transport.listdir()
 
     def getfile(self, relpath, destpath):
-        """
-        Connects to the remote folder and retrieves the content of a file.
+        """Connects to the remote folder and retrieves the content of a file.
 
         :param relpath:  The relative path of the file on the remote to retrieve.
         :param destpath: The absolute path of where to store the file on the local machine.
@@ -79,15 +75,13 @@ class RemoteData(Data):
                 if exception.errno == 2:  # file does not exist
                     raise IOError(
                         'The required remote file {} on {} does not exist or has been deleted.'.format(
-                            full_path,
-                            self.computer.label  # pylint: disable=no-member
+                            full_path, self.computer.label
                         )
                     ) from exception
                 raise
 
     def listdir(self, relpath='.'):
-        """
-        Connects to the remote folder and lists the directory content.
+        """Connects to the remote folder and lists the directory content.
 
         :param relpath: If 'relpath' is specified, lists the content of the given subfolder.
         :return: a flat list of file/directory names (as strings).
@@ -101,8 +95,8 @@ class RemoteData(Data):
             except IOError as exception:
                 if exception.errno in (2, 20):  # directory not existing or not a directory
                     exc = IOError(
-                        'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.
-                        format(full_path, self.computer.label)  # pylint: disable=no-member
+                        f'The required remote folder {full_path} on {self.computer.label} does not exist, is not a '
+                        'directory or has been deleted.'
                     )
                     exc.errno = exception.errno
                     raise exc from exception
@@ -114,8 +108,8 @@ class RemoteData(Data):
             except IOError as exception:
                 if exception.errno in (2, 20):  # directory not existing or not a directory
                     exc = IOError(
-                        'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.
-                        format(full_path, self.computer.label)  # pylint: disable=no-member
+                        f'The required remote folder {full_path} on {self.computer.label} does not exist, is not a '
+                        'directory or has been deleted.'
                     )
                     exc.errno = exception.errno
                     raise exc from exception
@@ -123,8 +117,7 @@ class RemoteData(Data):
                     raise
 
     def listdir_withattributes(self, path='.'):
-        """
-        Connects to the remote folder and lists the directory content.
+        """Connects to the remote folder and lists the directory content.
 
         :param relpath: If 'relpath' is specified, lists the content of the given subfolder.
         :return: a list of dictionaries, where the documentation is in :py:class:Transport.listdir_withattributes.
@@ -138,8 +131,8 @@ class RemoteData(Data):
             except IOError as exception:
                 if exception.errno in (2, 20):  # directory not existing or not a directory
                     exc = IOError(
-                        'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.
-                        format(full_path, self.computer.label)  # pylint: disable=no-member
+                        f'The required remote folder {full_path} on {self.computer.label} does not exist, is not a '
+                        'directory or has been deleted.'
                     )
                     exc.errno = exception.errno
                     raise exc from exception
@@ -151,8 +144,8 @@ class RemoteData(Data):
             except IOError as exception:
                 if exception.errno in (2, 20):  # directory not existing or not a directory
                     exc = IOError(
-                        'The required remote folder {} on {} does not exist, is not a directory or has been deleted.'.
-                        format(full_path, self.computer.label)  # pylint: disable=no-member
+                        f'The required remote folder {full_path} on {self.computer.label} does not exist, is not a '
+                        'directory or has been deleted.'
                     )
                     exc.errno = exception.errno
                     raise exc from exception
@@ -175,7 +168,7 @@ class RemoteData(Data):
         remote_dir = self.get_remote_path()
 
         if transport is None:
-            with self.get_authinfo().get_transport() as transport:  # pylint: disable=redefined-argument-from-local
+            with self.get_authinfo().get_transport() as transport:
                 clean_remote(transport, remote_dir)
         else:
             if transport.hostname != self.computer.hostname:

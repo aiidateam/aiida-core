@@ -7,6 +7,7 @@ from aiida.orm import Int
 def add(x, y):
     return x + y
 
+
 x = Int(1)
 y = Int(2)
 

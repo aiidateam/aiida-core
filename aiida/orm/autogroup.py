@@ -67,18 +67,21 @@ class AutogroupManager:
     def get_exclude(self) -> list[str] | None:
         """Return the list of classes to exclude from autogrouping.
 
-        Returns ``None`` if no exclusion list has been set."""
+        Returns ``None`` if no exclusion list has been set.
+        """
         return self._exclude
 
     def get_include(self) -> list[str] | None:
         """Return the list of classes to include in the autogrouping.
 
-        Returns ``None`` if no inclusion list has been set."""
+        Returns ``None`` if no inclusion list has been set.
+        """
         return self._include
 
     def get_group_label_prefix(self) -> str:
         """Get the prefix of the label of the group.
-        If no group label prefix was set, it will set a default one by itself."""
+        If no group label prefix was set, it will set a default one by itself.
+        """
         return self._group_label_prefix
 
     @staticmethod
@@ -215,19 +218,14 @@ class AutogroupManager:
         queryb = QueryBuilder(self._backend).append(
             AutoGroup,
             filters={
-                'or': [{
-                    'label': {
-                        '==': label_prefix
-                    }
-                }, {
-                    'label': {
-                        'like': f"{escape_for_sql_like(f'{label_prefix}_')}%"
-                    }
-                }]
+                'or': [
+                    {'label': {'==': label_prefix}},
+                    {'label': {'like': f"{escape_for_sql_like(f'{label_prefix}_')}%"}},
+                ]
             },
-            project='label'
+            project='label',
         )
-        existing_group_labels = [res[0][len(label_prefix):] for res in queryb.all()]
+        existing_group_labels = [res[0][len(label_prefix) :] for res in queryb.all()]
         existing_group_ints = []
         for label in existing_group_labels:
             if label == '':

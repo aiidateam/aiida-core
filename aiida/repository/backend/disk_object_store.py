@@ -11,7 +11,7 @@ from aiida.storage.log import STORAGE_LOGGER
 from .abstract import AbstractRepositoryBackend
 
 if t.TYPE_CHECKING:
-    from disk_objectstore import Container  # pylint: disable=unused-import
+    from disk_objectstore import Container
 
 __all__ = ('DiskObjectStoreRepositoryBackend',)
 
@@ -34,7 +34,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
 
     def __init__(self, container: 'Container'):
         if not t.TYPE_CHECKING:
-            from disk_objectstore import Container  # pylint: disable=redefined-outer-name
+            from disk_objectstore import Container
         type_check(container, Container)
         self._container = container
 
@@ -145,14 +145,14 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                 return super().get_object_hash(key)
         return key
 
-    def maintain( # type: ignore[override] # pylint: disable=arguments-differ,too-many-branches
+    def maintain(  # type: ignore[override]
         self,
         dry_run: bool = False,
         live: bool = True,
-        pack_loose: bool = None,
-        do_repack: bool = None,
-        clean_storage: bool = None,
-        do_vacuum: bool = None,
+        pack_loose: t.Optional[bool] = None,
+        do_repack: t.Optional[bool] = None,
+        clean_storage: t.Optional[bool] = None,
+        do_vacuum: t.Optional[bool] = None,
         compress: bool = False,
     ) -> dict:
         """Performs maintenance operations.
@@ -206,8 +206,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                 if not dry_run:
                     container.clean_storage(vacuum=do_vacuum)
 
-
-    def get_info( # type: ignore[override] # pylint: disable=arguments-differ
+    def get_info(  # type: ignore[override]
         self,
         detailed=False,
     ) -> t.Dict[str, t.Union[int, str, t.Dict[str, int], t.Dict[str, float]]]:

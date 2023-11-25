@@ -12,4 +12,5 @@ import sys
 
 if __name__ == '__main__':
     from aiida.cmdline.commands.cmd_verdi import verdi
+
     sys.exit(verdi())

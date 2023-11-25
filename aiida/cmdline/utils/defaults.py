@@ -14,7 +14,7 @@ from aiida.common import exceptions
 from aiida.manage.configuration import get_config
 
 
-def get_default_profile():  # pylint: disable=unused-argument
+def get_default_profile():
     """Try to get the name of the default profile.
 
     This utility function should only be used for defaults or callbacks in command line interface parameters.

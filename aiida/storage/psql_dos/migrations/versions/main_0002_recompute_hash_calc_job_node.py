@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Drop the hashes for all ``CalcJobNode`` instances.
 
 The computed hash erroneously included the hash of the file repository. This was present as of v2.0 and so all nodes

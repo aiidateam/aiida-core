@@ -11,7 +11,6 @@
 import contextlib
 from typing import TYPE_CHECKING
 
-# pylint: disable=import-error,no-name-in-module
 from sqlalchemy import inspect
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -47,8 +46,6 @@ class ModelWrapper:
       we flush the change to the database.
 
     """
-
-    # pylint: disable=too-many-instance-attributes
 
     def __init__(self, model, backend: 'PsqlDosBackend'):
         """Construct the ModelWrapper.

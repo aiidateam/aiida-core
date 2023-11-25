@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .ssh import *
 
@@ -22,4 +21,4 @@ __all__ = (
     'parse_sshconfig',
 )
 
-# yapf: enable
+# fmt: on

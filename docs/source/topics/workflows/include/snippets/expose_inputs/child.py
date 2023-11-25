@@ -4,7 +4,6 @@ from aiida.orm import Bool, Float, Int
 
 
 class ChildWorkChain(WorkChain):
-
     @classmethod
     def define(cls, spec):
         super().define(spec)

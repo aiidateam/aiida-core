@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Plugin for transport over SSH (and SFTP for file transfer)."""
-# pylint: disable=too-many-lines
 import glob
 import io
 import os
@@ -27,8 +26,7 @@ __all__ = ('parse_sshconfig', 'convert_to_bool', 'SshTransport')
 
 
 def parse_sshconfig(computername):
-    """
-    Return the ssh configuration for a given computer name.
+    """Return the ssh configuration for a given computer name.
 
     This parses the ``.ssh/config`` file in the home directory and
     returns the part of configuration of the given computer name.
@@ -49,8 +47,7 @@ def parse_sshconfig(computername):
 
 
 def convert_to_bool(string):
-    """
-    Convert a string passed in the CLI to a valid bool.
+    """Convert a string passed in the CLI to a valid bool.
 
     :return: the parsed bool value.
     :raise ValueError: If the value is not parsable as a bool
@@ -64,20 +61,16 @@ def convert_to_bool(string):
     raise ValueError('Invalid boolean value provided')
 
 
-class SshTransport(Transport):  # pylint: disable=too-many-public-methods
-    """
-    Support connection, command execution and data transfer to remote computers via SSH+SFTP.
-    """
+class SshTransport(Transport):
+    """Support connection, command execution and data transfer to remote computers via SSH+SFTP."""
+
     # Valid keywords accepted by the connect method of paramiko.SSHClient
     # I disable 'password' and 'pkey' to avoid these data to get logged in the
     # aiida log file.
     _valid_connect_options = [
         (
-            'username', {
-                'prompt': 'User name',
-                'help': 'Login user name on the remote machine.',
-                'non_interactive_default': True
-            }
+            'username',
+            {'prompt': 'User name', 'help': 'Login user name on the remote machine.', 'non_interactive_default': True},
         ),
         (
             'port',
@@ -88,100 +81,111 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             },
         ),
         (
-            'look_for_keys', {
+            'look_for_keys',
+            {
                 'default': True,
                 'switch': True,
                 'prompt': 'Look for keys',
                 'help': 'Automatically look for private keys in the ~/.ssh folder.',
-                'non_interactive_default': True
-            }
+                'non_interactive_default': True,
+            },
         ),
         (
-            'key_filename', {
+            'key_filename',
+            {
                 'type': AbsolutePathOrEmptyParamType(dir_okay=False, exists=True),
                 'prompt': 'SSH key file',
                 'help': 'Absolute path to your private SSH key. Leave empty to use the path set in the SSH config.',
-                'non_interactive_default': True
-            }
+                'non_interactive_default': True,
+            },
         ),
         (
-            'timeout', {
+            'timeout',
+            {
                 'type': int,
                 'prompt': 'Connection timeout in s',
                 'help': 'Time in seconds to wait for connection before giving up. Leave empty to use default value.',
-                'non_interactive_default': True
-            }
+                'non_interactive_default': True,
+            },
         ),
         (
-            'allow_agent', {
+            'allow_agent',
+            {
                 'default': False,
                 'switch': True,
                 'prompt': 'Allow ssh agent',
                 'help': 'Switch to allow or disallow using an SSH agent.',
-                'non_interactive_default': True
-            }
+                'non_interactive_default': True,
+            },
         ),
         (
-            'proxy_jump', {
+            'proxy_jump',
+            {
                 'prompt': 'SSH proxy jump',
                 'help': 'SSH proxy jump for tunneling through other SSH hosts.'
                 ' Use a comma-separated list of hosts of the form [user@]host[:port].'
                 ' If user or port are not specified for a host, the user & port values from the target host are used.'
                 ' This option must be provided explicitly and is not parsed from the SSH config file when left empty.',
-                'non_interactive_default': True
-            }
+                'non_interactive_default': True,
+            },
         ),  # Managed 'manually' in connect
         (
-            'proxy_command', {
+            'proxy_command',
+            {
                 'prompt': 'SSH proxy command',
                 'help': 'SSH proxy command for tunneling through a proxy server.'
                 ' For tunneling through another SSH host, consider using the "SSH proxy jump" option instead!'
                 ' Leave empty to parse the proxy command from the SSH config file.',
-                'non_interactive_default': True
-            }
+                'non_interactive_default': True,
+            },
         ),  # Managed 'manually' in connect
         (
-            'compress', {
+            'compress',
+            {
                 'default': True,
                 'switch': True,
                 'prompt': 'Compress file transfers',
                 'help': 'Turn file transfer compression on or off.',
-                'non_interactive_default': True
-            }
+                'non_interactive_default': True,
+            },
         ),
         (
-            'gss_auth', {
+            'gss_auth',
+            {
                 'default': False,
                 'type': bool,
                 'prompt': 'GSS auth',
                 'help': 'Enable when using GSS kerberos token to connect.',
-                'non_interactive_default': True
-            }
+                'non_interactive_default': True,
+            },
         ),
         (
-            'gss_kex', {
+            'gss_kex',
+            {
                 'default': False,
                 'type': bool,
                 'prompt': 'GSS kex',
                 'help': 'GSS kex for kerberos, if not configured in SSH config file.',
-                'non_interactive_default': True
-            }
+                'non_interactive_default': True,
+            },
         ),
         (
-            'gss_deleg_creds', {
+            'gss_deleg_creds',
+            {
                 'default': False,
                 'type': bool,
                 'prompt': 'GSS deleg_creds',
                 'help': 'GSS deleg_creds for kerberos, if not configured in SSH config file.',
-                'non_interactive_default': True
-            }
+                'non_interactive_default': True,
+            },
         ),
         (
-            'gss_host', {
+            'gss_host',
+            {
                 'prompt': 'GSS host',
                 'help': 'GSS host for kerberos, if not configured in SSH config file.',
-                'non_interactive_default': True
-            }
+                'non_interactive_default': True,
+            },
         ),
         # for Kerberos support through python-gssapi
     ]
@@ -200,23 +204,25 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
     # instance
     _valid_auth_options = _valid_connect_options + [
         (
-            'load_system_host_keys', {
+            'load_system_host_keys',
+            {
                 'default': True,
                 'switch': True,
                 'prompt': 'Load system host keys',
                 'help': 'Load system host keys from default SSH location.',
-                'non_interactive_default': True
-            }
+                'non_interactive_default': True,
+            },
         ),
         (
-            'key_policy', {
+            'key_policy',
+            {
                 'default': 'RejectPolicy',
                 'type': click.Choice(['RejectPolicy', 'WarningPolicy', 'AutoAddPolicy']),
                 'prompt': 'Key policy',
                 'help': 'SSH key policy if host is not known.',
-                'non_interactive_default': True
-            }
-        )
+                'non_interactive_default': True,
+            },
+        ),
     ]
 
     # Max size of log message to print in _exec_command_internal.
@@ -226,9 +232,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
     @classmethod
     def _get_username_suggestion_string(cls, computer):
-        """
-        Return a suggestion for the specific field.
-        """
+        """Return a suggestion for the specific field."""
         import getpass
 
         config = parse_sshconfig(computer.hostname)
@@ -237,18 +241,14 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
     @classmethod
     def _get_port_suggestion_string(cls, computer):
-        """
-        Return a suggestion for the specific field.
-        """
+        """Return a suggestion for the specific field."""
         config = parse_sshconfig(computer.hostname)
         # Either the configured user in the .ssh/config, or the default SSH port
         return str(config.get('port', 22))
 
     @classmethod
     def _get_key_filename_suggestion_string(cls, computer):
-        """
-        Return a suggestion for the specific field.
-        """
+        """Return a suggestion for the specific field."""
         config = parse_sshconfig(computer.hostname)
 
         try:
@@ -276,8 +276,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
     @classmethod
     def _get_timeout_suggestion_string(cls, computer):
-        """
-        Return a suggestion for the specific field.
+        """Return a suggestion for the specific field.
 
         Provide 60s as a default timeout for connections.
         """
@@ -286,25 +285,19 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
     @classmethod
     def _get_allow_agent_suggestion_string(cls, computer):
-        """
-        Return a suggestion for the specific field.
-        """
+        """Return a suggestion for the specific field."""
         config = parse_sshconfig(computer.hostname)
         return convert_to_bool(str(config.get('allow_agent', 'yes')))
 
     @classmethod
     def _get_look_for_keys_suggestion_string(cls, computer):
-        """
-        Return a suggestion for the specific field.
-        """
+        """Return a suggestion for the specific field."""
         config = parse_sshconfig(computer.hostname)
         return convert_to_bool(str(config.get('look_for_keys', 'yes')))
 
     @classmethod
     def _get_proxy_command_suggestion_string(cls, computer):
-        """
-        Return a suggestion for the specific field.
-        """
+        """Return a suggestion for the specific field."""
         config = parse_sshconfig(computer.hostname)
         # Either the configured user in the .ssh/config, or the default SSH port
         raw_string = str(config.get('proxycommand', ''))
@@ -325,67 +318,50 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
     @classmethod
     def _get_proxy_jump_suggestion_string(cls, _):
-        """
-        Return an empty suggestion since Paramiko does not parse ProxyJump from the SSH config.
-        """
+        """Return an empty suggestion since Paramiko does not parse ProxyJump from the SSH config."""
         return ''
 
     @classmethod
-    def _get_compress_suggestion_string(cls, computer):  # pylint: disable=unused-argument
-        """
-        Return a suggestion for the specific field.
-        """
+    def _get_compress_suggestion_string(cls, computer):
+        """Return a suggestion for the specific field."""
         return 'True'
 
     @classmethod
-    def _get_load_system_host_keys_suggestion_string(cls, computer):  # pylint: disable=unused-argument
-        """
-        Return a suggestion for the specific field.
-        """
+    def _get_load_system_host_keys_suggestion_string(cls, computer):
+        """Return a suggestion for the specific field."""
         return 'True'
 
     @classmethod
-    def _get_key_policy_suggestion_string(cls, computer):  # pylint: disable=unused-argument
-        """
-        Return a suggestion for the specific field.
-        """
+    def _get_key_policy_suggestion_string(cls, computer):
+        """Return a suggestion for the specific field."""
         return 'RejectPolicy'
 
     @classmethod
     def _get_gss_auth_suggestion_string(cls, computer):
-        """
-        Return a suggestion for the specific field.
-        """
+        """Return a suggestion for the specific field."""
         config = parse_sshconfig(computer.hostname)
         return convert_to_bool(str(config.get('gssapiauthentication', 'no')))
 
     @classmethod
     def _get_gss_kex_suggestion_string(cls, computer):
-        """
-        Return a suggestion for the specific field.
-        """
+        """Return a suggestion for the specific field."""
         config = parse_sshconfig(computer.hostname)
         return convert_to_bool(str(config.get('gssapikeyexchange', 'no')))
 
     @classmethod
     def _get_gss_deleg_creds_suggestion_string(cls, computer):
-        """
-        Return a suggestion for the specific field.
-        """
+        """Return a suggestion for the specific field."""
         config = parse_sshconfig(computer.hostname)
         return convert_to_bool(str(config.get('gssapidelegatecredentials', 'no')))
 
     @classmethod
     def _get_gss_host_suggestion_string(cls, computer):
-        """
-        Return a suggestion for the specific field.
-        """
+        """Return a suggestion for the specific field."""
         config = parse_sshconfig(computer.hostname)
         return str(config.get('gssapihostname', computer.hostname))
 
     def __init__(self, *args, **kwargs):
-        """
-        Initialize the SshTransport class.
+        """Initialize the SshTransport class.
 
         :param machine: the machine to connect to
         :param load_system_host_keys: (optional, default False)
@@ -422,8 +398,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             self._client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         else:
             raise ValueError(
-                'Unknown value of the key policy, allowed values '
-                'are: RejectPolicy, WarningPolicy, AutoAddPolicy'
+                'Unknown value of the key policy, allowed values ' 'are: RejectPolicy, WarningPolicy, AutoAddPolicy'
             )
 
         self._connect_args = {}
@@ -433,9 +408,8 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             except KeyError:
                 pass
 
-    def open(self):  # pylint: disable=too-many-branches,too-many-statements
-        """
-        Open a SSHClient to the machine possibly using the parameters given
+    def open(self):
+        """Open a SSHClient to the machine possibly using the parameters given
         in the __init__.
 
         Also opens a sftp channel, ready to be used.
@@ -474,10 +448,14 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             # but when opening a forward channel on a connection, we have to give the next hop.
             # So we go through adjacent pairs and by adding the final target to the list we make it universal.
             for proxy, target in zip(
-                proxies, proxies[1:] + [{
-                    'host': self._machine,
-                    'port': connection_arguments.get('port', 22),
-                }]
+                proxies,
+                proxies[1:]
+                + [
+                    {
+                        'host': self._machine,
+                        'port': connection_arguments.get('port', 22),
+                    }
+                ],
             ):
                 proxy_connargs = connection_arguments.copy()
 
@@ -520,8 +498,9 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             self._client.connect(self._machine, **connection_arguments)
         except Exception as exc:
             self.logger.error(
-                f"Error connecting to '{self._machine}' through SSH: " + f'[{self.__class__.__name__}] {exc}, ' +
-                f'connect_args were: {self._connect_args}'
+                f"Error connecting to '{self._machine}' through SSH: "
+                + f'[{self.__class__.__name__}] {exc}, '
+                + f'connect_args were: {self._connect_args}'
             )
             self._close_proxies()
             raise
@@ -545,7 +524,6 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
     def _close_proxies(self):
         """Close all proxy connections (proxy_jump and proxy_command)"""
-
         # Paramiko only closes the channel when closing the main connection, but not the connection itself.
         while self._proxies:
             self._proxies.pop().close()
@@ -557,8 +535,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             self._proxy = None
 
     def close(self):
-        """
-        Close the SFTP channel, and the SSHClient.
+        """Close the SFTP channel, and the SSHClient.
 
         :todo: correctly manage exceptions
 
@@ -588,9 +565,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         return self._sftp
 
     def __str__(self):
-        """
-        Return a useful string.
-        """
+        """Return a useful string."""
         conn_info = self._machine
         try:
             conn_info = f"{self._connect_args['username']}@{conn_info}"
@@ -606,13 +581,13 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         return f"{'OPEN' if self._is_open else 'CLOSED'} [{conn_info}]"
 
     def chdir(self, path):
-        """
-        Change directory of the SFTP session. Emulated internally by paramiko.
+        """Change directory of the SFTP session. Emulated internally by paramiko.
 
         Differently from paramiko, if you pass None to chdir, nothing
         happens and the cwd is unchanged.
         """
         from paramiko.sftp import SFTPError
+
         old_path = self.sftp.getcwd()
         if path is not None:
             try:
@@ -640,14 +615,11 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             raise IOError(str(exc))
 
     def normalize(self, path='.'):
-        """
-        Returns the normalized path (removing double slashes, etc...)
-        """
+        """Returns the normalized path (removing double slashes, etc...)"""
         return self.sftp.normalize(path)
 
     def stat(self, path):
-        """
-        Retrieve information about a file on the remote system.  The return
+        """Retrieve information about a file on the remote system.  The return
         value is an object whose attributes correspond to the attributes of
         Python's ``stat`` structure as returned by ``os.stat``, except that it
         contains fewer fields.
@@ -662,8 +634,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         return self.sftp.stat(path)
 
     def lstat(self, path):
-        """
-        Retrieve information about a file on the remote system, without
+        """Retrieve information about a file on the remote system, without
         following symbolic links (shortcuts). This otherwise behaves exactly
         the same as `stat`.
 
@@ -675,8 +646,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         return self.sftp.lstat(path)
 
     def getcwd(self):
-        """
-        Return the current working directory for this SFTP session, as
+        """Return the current working directory for this SFTP session, as
         emulated by paramiko. If no directory has been set with chdir,
         this method will return None. But in __enter__ this is set explicitly,
         so this should never happen within this class.
@@ -684,8 +654,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         return self.sftp.getcwd()
 
     def makedirs(self, path, ignore_existing=False):
-        """
-        Super-mkdir; create a leaf directory and all intermediate ones.
+        """Super-mkdir; create a leaf directory and all intermediate ones.
         Works like mkdir, except that any intermediate path segment (not
         just the rightmost) will be created if it does not exist.
 
@@ -721,8 +690,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
                 self.mkdir(this_dir)
 
     def mkdir(self, path, ignore_existing=False):
-        """
-        Create a folder (directory) named path.
+        """Create a folder (directory) named path.
 
         :param path: name of the folder to create
         :param ignore_existing: if True, does not give any error if the directory
@@ -750,8 +718,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
                 )
 
     def rmtree(self, path):
-        """
-        Remove a file or a directory at path, recursively
+        """Remove a file or a directory at path, recursively
         Flags used: -r: recursive copy; -f: force, makes the command non interactive;
 
         :param path: remote path to delete
@@ -778,22 +745,18 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         raise IOError(f'Error while executing rm. Exit code: {retval}')
 
     def rmdir(self, path):
-        """
-        Remove the folder named 'path' if empty.
-        """
+        """Remove the folder named 'path' if empty."""
         self.sftp.rmdir(path)
 
     def chown(self, path, uid, gid):
-        """
-        Change owner permissions of a file.
+        """Change owner permissions of a file.
 
         For now, this is not implemented for the SSH transport.
         """
         raise NotImplementedError
 
     def isdir(self, path):
-        """
-        Return True if the given path is a directory, False otherwise.
+        """Return True if the given path is a directory, False otherwise.
         Return False also if the path does not exist.
         """
         # Return False on empty string (paramiko would map this to the local
@@ -809,8 +772,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             raise  # Typically if I don't have permissions (errno=13)
 
     def chmod(self, path, mode):
-        """
-        Change permissions to path
+        """Change permissions to path
 
         :param path: path to file
         :param mode: new permission bits (integer)
@@ -821,8 +783,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
     @staticmethod
     def _os_path_split_asunder(path):
-        """
-        Used by makedirs. Takes path (a str)
+        """Used by makedirs. Takes path (a str)
         and returns a list deconcatenating the path
         """
         parts = []
@@ -838,9 +799,8 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         parts.reverse()
         return parts
 
-    def put(self, localpath, remotepath, callback=None, dereference=True, overwrite=True, ignore_nonexisting=False):  # pylint: disable=too-many-arguments,too-many-branches,arguments-differ
-        """
-        Put a file or a folder from local to remote.
+    def put(self, localpath, remotepath, callback=None, dereference=True, overwrite=True, ignore_nonexisting=False):
+        """Put a file or a folder from local to remote.
         Redirects to putfile or puttree.
 
         :param localpath: an (absolute) local path
@@ -892,22 +852,19 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
                 else:
                     self.puttree(file, remotepath, callback, dereference, overwrite)
 
-        else:
-            if os.path.isdir(localpath):
-                self.puttree(localpath, remotepath, callback, dereference, overwrite)
-            elif os.path.isfile(localpath):
-                if self.isdir(remotepath):
-                    remote = os.path.join(remotepath, os.path.split(localpath)[1])
-                    self.putfile(localpath, remote, callback, dereference, overwrite)
-                else:
-                    self.putfile(localpath, remotepath, callback, dereference, overwrite)
+        elif os.path.isdir(localpath):
+            self.puttree(localpath, remotepath, callback, dereference, overwrite)
+        elif os.path.isfile(localpath):
+            if self.isdir(remotepath):
+                remote = os.path.join(remotepath, os.path.split(localpath)[1])
+                self.putfile(localpath, remote, callback, dereference, overwrite)
             else:
-                if not ignore_nonexisting:
-                    raise OSError(f'The local path {localpath} does not exist')
+                self.putfile(localpath, remotepath, callback, dereference, overwrite)
+        elif not ignore_nonexisting:
+            raise OSError(f'The local path {localpath} does not exist')
 
-    def putfile(self, localpath, remotepath, callback=None, dereference=True, overwrite=True):  # pylint: disable=arguments-differ
-        """
-        Put a file from local to remote.
+    def putfile(self, localpath, remotepath, callback=None, dereference=True, overwrite=True):
+        """Put a file from local to remote.
 
         :param localpath: an (absolute) local path
         :param remotepath: a remote path
@@ -929,9 +886,8 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         return self.sftp.put(localpath, remotepath, callback=callback)
 
-    def puttree(self, localpath, remotepath, callback=None, dereference=True, overwrite=True):  # pylint: disable=too-many-branches,arguments-differ,unused-argument
-        """
-        Put a folder recursively from local to remote.
+    def puttree(self, localpath, remotepath, callback=None, dereference=True, overwrite=True):
+        """Put a folder recursively from local to remote.
 
         By default, overwrite.
 
@@ -983,6 +939,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
                 self.stat(os.path.join(remotepath, this_basename))
             except IOError as exc:
                 import errno
+
                 if exc.errno == errno.ENOENT:  # Missing file
                     self.mkdir(os.path.join(remotepath, this_basename))
                 else:
@@ -993,9 +950,8 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
                 this_remote_file = os.path.join(remotepath, this_basename, this_file)
                 self.putfile(this_local_file, this_remote_file)
 
-    def get(self, remotepath, localpath, callback=None, dereference=True, overwrite=True, ignore_nonexisting=False):  # pylint: disable=too-many-branches,arguments-differ,too-many-arguments
-        """
-        Get a file or folder from remote to local.
+    def get(self, remotepath, localpath, callback=None, dereference=True, overwrite=True, ignore_nonexisting=False):
+        """Get a file or folder from remote to local.
         Redirects to getfile or gettree.
 
         :param remotepath: a remote path
@@ -1043,24 +999,21 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
                 else:
                     self.gettree(file, localpath, callback, dereference, overwrite)
 
-        else:
-            if self.isdir(remotepath):
-                self.gettree(remotepath, localpath, callback, dereference, overwrite)
-            elif self.isfile(remotepath):
-                if os.path.isdir(localpath):
-                    remote = os.path.join(localpath, os.path.split(remotepath)[1])
-                    self.getfile(remotepath, remote, callback, dereference, overwrite)
-                else:
-                    self.getfile(remotepath, localpath, callback, dereference, overwrite)
+        elif self.isdir(remotepath):
+            self.gettree(remotepath, localpath, callback, dereference, overwrite)
+        elif self.isfile(remotepath):
+            if os.path.isdir(localpath):
+                remote = os.path.join(localpath, os.path.split(remotepath)[1])
+                self.getfile(remotepath, remote, callback, dereference, overwrite)
             else:
-                if ignore_nonexisting:
-                    pass
-                else:
-                    raise IOError(f'The remote path {remotepath} does not exist')
+                self.getfile(remotepath, localpath, callback, dereference, overwrite)
+        elif ignore_nonexisting:
+            pass
+        else:
+            raise IOError(f'The remote path {remotepath} does not exist')
 
-    def getfile(self, remotepath, localpath, callback=None, dereference=True, overwrite=True):  # pylint: disable=arguments-differ
-        """
-        Get a file from remote to local.
+    def getfile(self, remotepath, localpath, callback=None, dereference=True, overwrite=True):
+        """Get a file from remote to local.
 
         :param remotepath: a remote path
         :param  localpath: an (absolute) local path
@@ -1089,9 +1042,8 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
                 pass
             raise
 
-    def gettree(self, remotepath, localpath, callback=None, dereference=True, overwrite=True):  # pylint: disable=arguments-differ,unused-argument
-        """
-        Get a folder recursively from remote to local.
+    def gettree(self, remotepath, localpath, callback=None, dereference=True, overwrite=True):
+        """Get a folder recursively from remote to local.
 
         :param remotepath: a remote path
         :param localpath: an (absolute) local path
@@ -1134,7 +1086,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         dest = str(localpath)
 
         for item in item_list:
-            item = str(item)
+            item = str(item)  # noqa: PLW2901
 
             if self.isdir(os.path.join(remotepath, item)):
                 self.gettree(os.path.join(remotepath, item), os.path.join(dest, item))
@@ -1142,8 +1094,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
                 self.getfile(os.path.join(remotepath, item), os.path.join(dest, item))
 
     def get_attribute(self, path):
-        """
-        Returns the object Fileattribute, specified in aiida.transports
+        """Returns the object Fileattribute, specified in aiida.transports
         Receives in input the path of a given file.
         """
         from aiida.transports.util import FileAttribute
@@ -1152,7 +1103,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         aiida_attr = FileAttribute()
         # map the paramiko class into the aiida one
         # note that paramiko object contains more informations than the aiida
-        for key in aiida_attr._valid_fields:  # pylint: disable=protected-access
+        for key in aiida_attr._valid_fields:
             aiida_attr[key] = getattr(paramiko_attr, key)
         return aiida_attr
 
@@ -1163,8 +1114,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         return self.copy(remotesource, remotedestination, dereference, recursive=True)
 
     def copy(self, remotesource, remotedestination, dereference=False, recursive=True):
-        """
-        Copy a file or a directory from remote source to remote destination.
+        """Copy a file or a directory from remote source to remote destination.
         Flags used: ``-r``: recursive copy; ``-f``: force, makes the command non interactive;
         ``-L`` follows symbolic links
 
@@ -1199,15 +1149,14 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         if not remotedestination:
             raise ValueError(
-                'Input to copy() must be a non empty string. ' +
-                f'Found instead {remotedestination} as remotedestination'
+                'Input to copy() must be a non empty string. '
+                + f'Found instead {remotedestination} as remotedestination'
             )
 
         if self.has_magic(remotedestination):
             raise ValueError('Pathname patterns are not allowed in the destination')
 
         if self.has_magic(remotesource):
-
             to_copy_list = self.glob(remotesource)
 
             if len(to_copy_list) > 1:
@@ -1235,20 +1184,19 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
                 self.logger.warning(f'There was nonempty stderr in the cp command: {stderr}')
         else:
             self.logger.error(
-                "Problem executing cp. Exit code: {}, stdout: '{}', "
-                "stderr: '{}', command: '{}'".format(retval, stdout, stderr, command)
+                "Problem executing cp. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
+                    retval, stdout, stderr, command
+                )
             )
             raise IOError(
-                'Error while executing cp. Exit code: {}, '
-                "stdout: '{}', stderr: '{}', "
-                "command: '{}'".format(retval, stdout, stderr, command)
+                'Error while executing cp. Exit code: {}, ' "stdout: '{}', stderr: '{}', " "command: '{}'".format(
+                    retval, stdout, stderr, command
+                )
             )
 
     @staticmethod
     def _local_listdir(path, pattern=None):
-        """
-        Acts on the local folder, for the rest, same as listdir
-        """
+        """Acts on the local folder, for the rest, same as listdir"""
         if not pattern:
             return os.listdir(path)
         if path.startswith('/'):  # always this is the case in the local case
@@ -1262,8 +1210,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         return [re.sub(base_dir, '', i) for i in filtered_list]
 
     def listdir(self, path='.', pattern=None):
-        """
-        Get the list of files at path.
+        """Get the list of files at path.
 
         :param path: default = '.'
         :param pattern: returns the list of files matching pattern.
@@ -1282,14 +1229,11 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         return [re.sub(base_dir, '', i) for i in filtered_list]
 
     def remove(self, path):
-        """
-        Remove a single file at 'path'
-        """
+        """Remove a single file at 'path'"""
         return self.sftp.remove(path)
 
     def rename(self, oldpath, newpath):
-        """
-        Rename a file or folder from oldpath to newpath.
+        """Rename a file or folder from oldpath to newpath.
 
         :param str oldpath: existing name of the file or folder
         :param str newpath: new name for the file or folder
@@ -1311,8 +1255,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         return self.sftp.rename(oldpath, newpath)
 
     def isfile(self, path):
-        """
-        Return True if the given path is a file, False otherwise.
+        """Return True if the given path is a file, False otherwise.
         Return False also if the path does not exist.
         """
         # This should not be needed for files, since an empty string should
@@ -1331,9 +1274,8 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
                 return False
             raise  # Typically if I don't have permissions (errno=13)
 
-    def _exec_command_internal(self, command, combine_stderr=False, bufsize=-1):  # pylint: disable=arguments-differ
-        """
-        Executes the specified command in bash login shell.
+    def _exec_command_internal(self, command, combine_stderr=False, bufsize=-1):
+        """Executes the specified command in bash login shell.
 
         Before the command is executed, changes directory to the current
         working directory as returned by self.getcwd().
@@ -1376,9 +1318,8 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
 
         return stdin, stdout, stderr, channel
 
-    def exec_command_wait_bytes(self, command, stdin=None, combine_stderr=False, bufsize=-1):  # pylint: disable=arguments-differ, too-many-branches
-        """
-        Executes the specified command and waits for it to finish.
+    def exec_command_wait_bytes(self, command, stdin=None, combine_stderr=False, bufsize=-1):
+        """Executes the specified command and waits for it to finish.
 
         :param command: the command to execute
         :param stdin: (optional,default=None) can be a string or a
@@ -1485,8 +1426,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         return (retval, b''.join(stdout_bytes), b''.join(stderr_bytes))
 
     def gotocomputer_command(self, remotedir):
-        """
-        Specific gotocomputer string to connect to a given remote computer via
+        """Specific gotocomputer string to connect to a given remote computer via
         ssh and directly go to the calculation folder.
         """
         further_params = []
@@ -1512,8 +1452,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         return cmd
 
     def _symlink(self, source, dest):
-        """
-        Wrap SFTP symlink call without breaking API
+        """Wrap SFTP symlink call without breaking API
 
         :param source: source of link
         :param dest: link to create
@@ -1521,8 +1460,7 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
         self.sftp.symlink(source, dest)
 
     def symlink(self, remotesource, remotedestination):
-        """
-        Create a symbolic link between the remote source and the remote
+        """Create a symbolic link between the remote source and the remote
         destination.
 
         :param remotesource: remote source. Can contain a pattern.
@@ -1546,10 +1484,9 @@ class SshTransport(Transport):  # pylint: disable=too-many-public-methods
             self._symlink(source, dest)
 
     def path_exists(self, path):
-        """
-        Check if path exists
-        """
+        """Check if path exists"""
         import errno
+
         try:
             self.stat(path)
         except IOError as exc:

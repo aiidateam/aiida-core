@@ -12,8 +12,8 @@ import os
 import tempfile
 import uuid
 
-from pgtest.pgtest import PGTest
 import pytest
+from pgtest.pgtest import PGTest
 
 from aiida import orm
 from aiida.cmdline.commands import cmd_setup
@@ -33,9 +33,8 @@ class TestVerdiSetup:
     """Tests for `verdi setup` and `verdi quicksetup`."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, pg_test_cluster, empty_config, run_cli_command):  # pylint: disable=redefined-outer-name,unused-argument
+    def init_profile(self, pg_test_cluster, empty_config, run_cli_command):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.storage_backend_name = 'core.psql_dos'
         self.pg_test = pg_test_cluster
         self.cli_runner = run_cli_command
@@ -58,10 +57,23 @@ class TestVerdiSetup:
         user_institution = 'ECMA'
 
         options = [
-            '--non-interactive', '--profile', profile_name, '--email', user_email, '--first-name', user_first_name,
-            '--last-name', user_last_name, '--institution', user_institution, '--db-port', self.pg_test.dsn['port'],
-            '--db-backend', self.storage_backend_name, '--repository',
-            str(tmp_path)
+            '--non-interactive',
+            '--profile',
+            profile_name,
+            '--email',
+            user_email,
+            '--first-name',
+            user_first_name,
+            '--last-name',
+            user_last_name,
+            '--institution',
+            user_institution,
+            '--db-port',
+            self.pg_test.dsn['port'],
+            '--db-backend',
+            self.storage_backend_name,
+            '--repository',
+            str(tmp_path),
         ]
 
         self.cli_runner(cmd_setup.quicksetup, options, use_subprocess=False)
@@ -90,9 +102,17 @@ class TestVerdiSetup:
         user_email = 'some@email.com'
 
         options = [
-            '--non-interactive', '--profile', profile_name, '--email', user_email, '--db-port',
-            self.pg_test.dsn['port'], '--db-backend', self.storage_backend_name, '--repository',
-            str(tmp_path)
+            '--non-interactive',
+            '--profile',
+            profile_name,
+            '--email',
+            user_email,
+            '--db-port',
+            self.pg_test.dsn['port'],
+            '--db-backend',
+            self.storage_backend_name,
+            '--repository',
+            str(tmp_path),
         ]
 
         self.cli_runner(cmd_setup.quicksetup, options, use_subprocess=False)
@@ -133,10 +153,21 @@ repository: {tmp_path}"""
         # The incorrect port will cause the command to fail, but the user information should have been stored on the
         # configuration such that the user won't have to retype it but can use the pre-stored defaults.
         options = [
-            '--non-interactive', '--profile', 'testing', '--email', user_email, '--first-name', user_first_name,
-            '--last-name', user_last_name, '--institution', user_institution, '--db-port',
-            self.pg_test.dsn['port'] + 100, '--repository',
-            str(tmp_path)
+            '--non-interactive',
+            '--profile',
+            'testing',
+            '--email',
+            user_email,
+            '--first-name',
+            user_first_name,
+            '--last-name',
+            user_last_name,
+            '--institution',
+            user_institution,
+            '--db-port',
+            self.pg_test.dsn['port'] + 100,
+            '--repository',
+            str(tmp_path),
         ]
 
         self.cli_runner(cmd_setup.quicksetup, options, raises=True, use_subprocess=False)
@@ -155,9 +186,19 @@ repository: {tmp_path}"""
         user_institution = 'ECMA'
 
         options = [
-            '--non-interactive', '--profile', profile_name, '--email', user_email, '--first-name', user_first_name,
-            '--last-name', user_last_name, '--institution', user_institution, '--db-port',
-            self.pg_test.dsn['port'] + 100
+            '--non-interactive',
+            '--profile',
+            profile_name,
+            '--email',
+            user_email,
+            '--first-name',
+            user_first_name,
+            '--last-name',
+            user_last_name,
+            '--institution',
+            user_institution,
+            '--db-port',
+            self.pg_test.dsn['port'] + 100,
         ]
 
         self.cli_runner(cmd_setup.quicksetup, options, raises=True, use_subprocess=False)
@@ -182,9 +223,27 @@ repository: {tmp_path}"""
         # defaults, callbacks and or contextual defaults that might depend on it, but should not fail if they are parsed
         # before the profile option is parsed.
         options = [
-            '--non-interactive', '--email', user_email, '--first-name', user_first_name, '--last-name', user_last_name,
-            '--institution', user_institution, '--db-name', db_name, '--db-username', db_user, '--db-password', db_pass,
-            '--db-port', self.pg_test.dsn['port'], '--db-backend', self.storage_backend_name, '--profile', profile_name
+            '--non-interactive',
+            '--email',
+            user_email,
+            '--first-name',
+            user_first_name,
+            '--last-name',
+            user_last_name,
+            '--institution',
+            user_institution,
+            '--db-name',
+            db_name,
+            '--db-username',
+            db_user,
+            '--db-password',
+            db_pass,
+            '--db-port',
+            self.pg_test.dsn['port'],
+            '--db-backend',
+            self.storage_backend_name,
+            '--profile',
+            profile_name,
         ]
 
         self.cli_runner(cmd_setup.setup, options, use_subprocess=False)
@@ -227,10 +286,29 @@ repository: {tmp_path}"""
         user_institution = 'ECMA'
         profile_uuid = str(uuid.uuid4())
         options = [
-            '--non-interactive', '--email', user_email, '--first-name', user_first_name, '--last-name', user_last_name,
-            '--institution', user_institution, '--db-name', db_name, '--db-username', db_user, '--db-password', db_pass,
-            '--db-port', self.pg_test.dsn['port'], '--db-backend', self.storage_backend_name, '--profile', profile_name,
-            '--profile-uuid', profile_uuid
+            '--non-interactive',
+            '--email',
+            user_email,
+            '--first-name',
+            user_first_name,
+            '--last-name',
+            user_last_name,
+            '--institution',
+            user_institution,
+            '--db-name',
+            db_name,
+            '--db-username',
+            db_user,
+            '--db-password',
+            db_pass,
+            '--db-port',
+            self.pg_test.dsn['port'],
+            '--db-backend',
+            self.storage_backend_name,
+            '--profile',
+            profile_name,
+            '--profile-uuid',
+            profile_uuid,
         ]
 
         self.cli_runner(cmd_setup.setup, options, use_subprocess=False)

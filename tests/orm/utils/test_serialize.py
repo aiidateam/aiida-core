@@ -8,9 +8,9 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the :mod:`aiida.orm.utils.serialize` module."""
-from dataclasses import dataclass
 import types
 import uuid
+from dataclasses import dataclass
 
 import numpy as np
 import pytest
@@ -21,8 +21,7 @@ from aiida.orm.utils import serialize
 
 
 def test_serialize_round_trip():
-    """
-    Test the serialization of a dictionary with Nodes in various data structure
+    """Test the serialization of a dictionary with Nodes in various data structure
     Also make sure that the serialized data is json-serializable
     """
     node_a = orm.Data().store()
@@ -43,8 +42,7 @@ def test_serialize_round_trip():
 
 
 def test_serialize_group():
-    """
-    Test that serialization and deserialization of Groups works.
+    """Test that serialization and deserialization of Groups works.
     Also make sure that the serialized data is json-serializable
     """
     group_a = orm.Group(label=uuid.uuid4().hex).store()
@@ -78,7 +76,6 @@ def test_serialize_computer_round_trip(aiida_localhost):
     """Test you can serialize and deserialize a computer"""
     deserialized = serialize.deserialize_unsafe(serialize.serialize(aiida_localhost))
 
-    # pylint: disable=no-member
     assert aiida_localhost.uuid == deserialized.uuid
     assert aiida_localhost.label == deserialized.label
 
@@ -168,6 +165,7 @@ def test_enum():
 @dataclass
 class DataClass:
     """A dataclass for testing."""
+
     my_value: int
 
 
@@ -184,10 +182,11 @@ def test_dataclass():
 def test_serialize_node_links_manager():
     """Test you can serialize and deserialize a NodeLinksManager"""
     from aiida.orm.utils.managers import NodeLinksManager
+
     node = orm.Data().store()
     node_links_manager = NodeLinksManager(node=node, link_type=LinkType.CREATE, incoming=False)
     deserialized = serialize.deserialize_unsafe(serialize.serialize(node_links_manager))
     assert isinstance(deserialized, NodeLinksManager)
-    assert deserialized._node.uuid == node.uuid  # pylint: disable=protected-access
-    assert deserialized._link_type == LinkType.CREATE  # pylint: disable=protected-access
-    assert deserialized._incoming is False  # pylint: disable=protected-access
+    assert deserialized._node.uuid == node.uuid
+    assert deserialized._link_type == LinkType.CREATE
+    assert deserialized._incoming is False

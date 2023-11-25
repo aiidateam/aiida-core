@@ -30,8 +30,6 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
     A node stores data input or output from a computation.
     """
 
-    # pylint: disable=too-many-public-methods
-
     @abc.abstractmethod
     def clone(self: BackendNodeType) -> BackendNodeType:
         """Return an unstored clone of ourselves.
@@ -181,10 +179,8 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
         """
 
     @abc.abstractmethod
-    def store(  # pylint: disable=arguments-differ
-        self: BackendNodeType,
-        links: Optional[Sequence['LinkTriple']] = None,
-        clean: bool = True
+    def store(
+        self: BackendNodeType, links: Optional[Sequence['LinkTriple']] = None, clean: bool = True
     ) -> BackendNodeType:
         """Store the node in the database.
 

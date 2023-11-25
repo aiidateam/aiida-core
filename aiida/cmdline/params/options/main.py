@@ -14,26 +14,102 @@ from aiida.common.log import LOG_LEVELS, configure_logging
 from aiida.manage.external.postgres import DEFAULT_DBINFO
 from aiida.manage.external.rmq import BROKER_DEFAULTS
 
+from ...utils import defaults, echo
 from .. import types
-from ...utils import defaults, echo  # pylint: disable=no-name-in-module
 from .callable import CallableDefaultOption
 from .config import ConfigFileOption
 from .multivalue import MultipleValueOption
 from .overridable import OverridableOption
 
 __all__ = (
-    'ALL', 'ALL_STATES', 'ALL_USERS', 'APPEND_TEXT', 'ARCHIVE_FORMAT', 'BROKER_HOST', 'BROKER_PASSWORD', 'BROKER_PORT',
-    'BROKER_PROTOCOL', 'BROKER_USERNAME', 'BROKER_VIRTUAL_HOST', 'CALCULATION', 'CALCULATIONS', 'CALC_JOB_STATE',
-    'CODE', 'CODES', 'COMPUTER', 'COMPUTERS', 'CONFIG_FILE', 'DATA', 'DATUM', 'DB_BACKEND', 'DB_ENGINE', 'DB_HOST',
-    'DB_NAME', 'DB_PASSWORD', 'DB_PORT', 'DB_USERNAME', 'DEBUG', 'DESCRIPTION', 'DICT_FORMAT', 'DICT_KEYS', 'DRY_RUN',
-    'EXIT_STATUS', 'EXPORT_FORMAT', 'FAILED', 'FORCE', 'FORMULA_MODE', 'FREQUENCY', 'GROUP', 'GROUPS', 'GROUP_CLEAR',
-    'HOSTNAME', 'IDENTIFIER', 'INPUT_FORMAT', 'INPUT_PLUGIN', 'LABEL', 'LIMIT', 'NODE', 'NODES', 'NON_INTERACTIVE',
-    'OLDER_THAN', 'ORDER_BY', 'ORDER_DIRECTION', 'PAST_DAYS', 'PAUSED', 'PORT', 'PREPEND_TEXT', 'PRINT_TRACEBACK',
-    'PROCESS_LABEL', 'PROCESS_STATE', 'PROFILE', 'PROFILE_ONLY_CONFIG', 'PROFILE_SET_DEFAULT', 'PROJECT', 'RAW',
-    'REPOSITORY_PATH', 'SCHEDULER', 'SILENT', 'TIMEOUT', 'TRAJECTORY_INDEX', 'TRANSPORT', 'TRAVERSAL_RULE_HELP_STRING',
-    'TYPE_STRING', 'USER', 'USER_EMAIL', 'USER_FIRST_NAME', 'USER_INSTITUTION', 'USER_LAST_NAME', 'VERBOSITY',
-    'VISUALIZATION_FORMAT', 'WAIT', 'WITH_ELEMENTS', 'WITH_ELEMENTS_EXCLUSIVE', 'active_process_states',
-    'graph_traversal_rules', 'valid_calc_job_states', 'valid_process_states'
+    'ALL',
+    'ALL_STATES',
+    'ALL_USERS',
+    'APPEND_TEXT',
+    'ARCHIVE_FORMAT',
+    'BROKER_HOST',
+    'BROKER_PASSWORD',
+    'BROKER_PORT',
+    'BROKER_PROTOCOL',
+    'BROKER_USERNAME',
+    'BROKER_VIRTUAL_HOST',
+    'CALCULATION',
+    'CALCULATIONS',
+    'CALC_JOB_STATE',
+    'CODE',
+    'CODES',
+    'COMPUTER',
+    'COMPUTERS',
+    'CONFIG_FILE',
+    'DATA',
+    'DATUM',
+    'DB_BACKEND',
+    'DB_ENGINE',
+    'DB_HOST',
+    'DB_NAME',
+    'DB_PASSWORD',
+    'DB_PORT',
+    'DB_USERNAME',
+    'DEBUG',
+    'DESCRIPTION',
+    'DICT_FORMAT',
+    'DICT_KEYS',
+    'DRY_RUN',
+    'EXIT_STATUS',
+    'EXPORT_FORMAT',
+    'FAILED',
+    'FORCE',
+    'FORMULA_MODE',
+    'FREQUENCY',
+    'GROUP',
+    'GROUPS',
+    'GROUP_CLEAR',
+    'HOSTNAME',
+    'IDENTIFIER',
+    'INPUT_FORMAT',
+    'INPUT_PLUGIN',
+    'LABEL',
+    'LIMIT',
+    'NODE',
+    'NODES',
+    'NON_INTERACTIVE',
+    'OLDER_THAN',
+    'ORDER_BY',
+    'ORDER_DIRECTION',
+    'PAST_DAYS',
+    'PAUSED',
+    'PORT',
+    'PREPEND_TEXT',
+    'PRINT_TRACEBACK',
+    'PROCESS_LABEL',
+    'PROCESS_STATE',
+    'PROFILE',
+    'PROFILE_ONLY_CONFIG',
+    'PROFILE_SET_DEFAULT',
+    'PROJECT',
+    'RAW',
+    'REPOSITORY_PATH',
+    'SCHEDULER',
+    'SILENT',
+    'TIMEOUT',
+    'TRAJECTORY_INDEX',
+    'TRANSPORT',
+    'TRAVERSAL_RULE_HELP_STRING',
+    'TYPE_STRING',
+    'USER',
+    'USER_EMAIL',
+    'USER_FIRST_NAME',
+    'USER_INSTITUTION',
+    'USER_LAST_NAME',
+    'VERBOSITY',
+    'VISUALIZATION_FORMAT',
+    'WAIT',
+    'WITH_ELEMENTS',
+    'WITH_ELEMENTS_EXCLUSIVE',
+    'active_process_states',
+    'graph_traversal_rules',
+    'valid_calc_job_states',
+    'valid_process_states',
 )
 
 TRAVERSAL_RULE_HELP_STRING = {
@@ -55,23 +131,26 @@ TRAVERSAL_RULE_HELP_STRING = {
 def valid_process_states():
     """Return a list of valid values for the ProcessState enum."""
     from plumpy import ProcessState
+
     return tuple(state.value for state in ProcessState)
 
 
 def valid_calc_job_states():
     """Return a list of valid values for the CalcState enum."""
     from aiida.common.datastructures import CalcJobState
+
     return tuple(state.value for state in CalcJobState)
 
 
 def active_process_states():
     """Return a list of process states that are considered active."""
     from plumpy import ProcessState
-    return ([
+
+    return [
         ProcessState.CREATED.value,
         ProcessState.WAITING.value,
         ProcessState.RUNNING.value,
-    ])
+    ]
 
 
 def graph_traversal_rules(rules):
@@ -139,7 +218,7 @@ VERBOSITY = OverridableOption(
     type=click.Choice(tuple(map(str.lower, LOG_LEVELS.keys())), case_sensitive=False),
     callback=set_log_level,
     expose_value=False,  # Ensures that the option is not actually passed to the command, because it doesn't need it
-    help='Set the verbosity of the output.'
+    help='Set the verbosity of the output.',
 )
 
 PROFILE = OverridableOption(
@@ -149,7 +228,7 @@ PROFILE = OverridableOption(
     type=types.ProfileParamType(),
     default=defaults.get_default_profile,
     cls=CallableDefaultOption,
-    help='Execute the command for this profile instead of the default profile.'
+    help='Execute the command for this profile instead of the default profile.',
 )
 
 CALCULATION = OverridableOption(
@@ -157,7 +236,7 @@ CALCULATION = OverridableOption(
     '--calculation',
     'calculation',
     type=types.CalculationParamType(),
-    help='A single calculation identified by its ID or UUID.'
+    help='A single calculation identified by its ID or UUID.',
 )
 
 CALCULATIONS = OverridableOption(
@@ -166,7 +245,7 @@ CALCULATIONS = OverridableOption(
     'calculations',
     type=types.CalculationParamType(),
     cls=MultipleValueOption,
-    help='One or multiple calculations identified by their ID or UUID.'
+    help='One or multiple calculations identified by their ID or UUID.',
 )
 
 CODE = OverridableOption(
@@ -179,7 +258,7 @@ CODES = OverridableOption(
     'codes',
     type=types.CodeParamType(),
     cls=MultipleValueOption,
-    help='One or multiple codes identified by their ID, UUID or label.'
+    help='One or multiple codes identified by their ID, UUID or label.',
 )
 
 COMPUTER = OverridableOption(
@@ -187,7 +266,7 @@ COMPUTER = OverridableOption(
     '--computer',
     'computer',
     type=types.ComputerParamType(),
-    help='A single computer identified by its ID, UUID or label.'
+    help='A single computer identified by its ID, UUID or label.',
 )
 
 COMPUTERS = OverridableOption(
@@ -196,7 +275,7 @@ COMPUTERS = OverridableOption(
     'computers',
     type=types.ComputerParamType(),
     cls=MultipleValueOption,
-    help='One or multiple computers identified by their ID, UUID or label.'
+    help='One or multiple computers identified by their ID, UUID or label.',
 )
 
 DATUM = OverridableOption(
@@ -209,7 +288,7 @@ DATA = OverridableOption(
     'data',
     type=types.DataParamType(),
     cls=MultipleValueOption,
-    help='One or multiple data identified by their ID, UUID or label.'
+    help='One or multiple data identified by their ID, UUID or label.',
 )
 
 GROUP = OverridableOption(
@@ -222,7 +301,7 @@ GROUPS = OverridableOption(
     'groups',
     type=types.GroupParamType(),
     cls=MultipleValueOption,
-    help='One or multiple groups identified by their ID, UUID or label.'
+    help='One or multiple groups identified by their ID, UUID or label.',
 )
 
 NODE = OverridableOption(
@@ -235,7 +314,7 @@ NODES = OverridableOption(
     'nodes',
     type=types.NodeParamType(),
     cls=MultipleValueOption,
-    help='One or multiple nodes identified by their ID or UUID.'
+    help='One or multiple nodes identified by their ID or UUID.',
 )
 
 FORCE = OverridableOption('-f', '--force', is_flag=True, default=False, help='Do not ask for confirmation.')
@@ -256,7 +335,7 @@ ARCHIVE_FORMAT = OverridableOption(
     type=click.Choice(['zip', 'zip-uncompressed', 'tar.gz']),
     default='zip',
     show_default=True,
-    help='The format of the archive file.'
+    help='The format of the archive file.',
 )
 
 NON_INTERACTIVE = OverridableOption(
@@ -264,7 +343,7 @@ NON_INTERACTIVE = OverridableOption(
     '--non-interactive',
     is_flag=True,
     is_eager=True,
-    help='In non-interactive mode, the CLI never prompts but simply uses default values for options that define one.'
+    help='In non-interactive mode, the CLI never prompts but simply uses default values for options that define one.',
 )
 
 DRY_RUN = OverridableOption('-n', '--dry-run', is_flag=True, help='Perform a dry run.')
@@ -274,7 +353,7 @@ USER_EMAIL = OverridableOption(
     'email',
     type=types.EmailType(),
     help='Email address associated with the data you generate. The email address is exported along with the data, '
-    'when sharing it.'
+    'when sharing it.',
 )
 
 USER_FIRST_NAME = OverridableOption(
@@ -292,7 +371,7 @@ DB_ENGINE = OverridableOption(
     required=True,
     help='Engine to use to connect to the database.',
     default='postgresql_psycopg2',
-    type=click.Choice(['postgresql_psycopg2'])
+    type=click.Choice(['postgresql_psycopg2']),
 )
 
 DB_BACKEND = OverridableOption(
@@ -300,7 +379,7 @@ DB_BACKEND = OverridableOption(
     required=True,
     type=click.Choice(['core.psql_dos']),
     default='core.psql_dos',
-    help='Database backend to use.'
+    help='Database backend to use.',
 )
 
 DB_HOST = OverridableOption(
@@ -308,7 +387,7 @@ DB_HOST = OverridableOption(
     required=True,
     type=types.HostnameType(),
     help='Database server host. Leave empty for "peer" authentication.',
-    default='localhost'
+    default='localhost',
 )
 
 DB_PORT = OverridableOption(
@@ -337,7 +416,7 @@ BROKER_PROTOCOL = OverridableOption(
     type=click.Choice(('amqp', 'amqps')),
     default=BROKER_DEFAULTS.protocol,
     show_default=True,
-    help='Protocol to use for the message broker.'
+    help='Protocol to use for the message broker.',
 )
 
 BROKER_USERNAME = OverridableOption(
@@ -345,7 +424,7 @@ BROKER_USERNAME = OverridableOption(
     type=types.NonEmptyStringParamType(),
     default=BROKER_DEFAULTS.username,
     show_default=True,
-    help='Username to use for authentication with the message broker.'
+    help='Username to use for authentication with the message broker.',
 )
 
 BROKER_PASSWORD = OverridableOption(
@@ -362,7 +441,7 @@ BROKER_HOST = OverridableOption(
     type=types.HostnameType(),
     default=BROKER_DEFAULTS.host,
     show_default=True,
-    help='Hostname for the message broker.'
+    help='Hostname for the message broker.',
 )
 
 BROKER_PORT = OverridableOption(
@@ -378,7 +457,7 @@ BROKER_VIRTUAL_HOST = OverridableOption(
     type=click.types.StringParamType(),
     default=BROKER_DEFAULTS.virtual_host,
     show_default=True,
-    help='Name of the virtual host for the message broker without leading forward slash.'
+    help='Name of the virtual host for the message broker without leading forward slash.',
 )
 
 REPOSITORY_PATH = OverridableOption(
@@ -410,14 +489,14 @@ DESCRIPTION = OverridableOption(
     metavar='DESCRIPTION',
     default='',
     required=False,
-    help='A detailed description.'
+    help='A detailed description.',
 )
 
 INPUT_PLUGIN = OverridableOption(
     '-P',
     '--input-plugin',
     type=types.PluginParamType(group='calculations', load=False),
-    help='Calculation input plugin string.'
+    help='Calculation input plugin string.',
 )
 
 CALC_JOB_STATE = OverridableOption(
@@ -426,7 +505,7 @@ CALC_JOB_STATE = OverridableOption(
     'calc_job_state',
     type=types.LazyChoice(valid_calc_job_states),
     cls=MultipleValueOption,
-    help='Only include entries with this calculation job state.'
+    help='Only include entries with this calculation job state.',
 )
 
 PROCESS_STATE = OverridableOption(
@@ -436,7 +515,7 @@ PROCESS_STATE = OverridableOption(
     type=types.LazyChoice(valid_process_states),
     cls=MultipleValueOption,
     default=active_process_states,
-    help='Only include entries with this process state.'
+    help='Only include entries with this process state.',
 )
 
 PAUSED = OverridableOption('--paused', 'paused', is_flag=True, help='Only include entries that are paused.')
@@ -447,7 +526,7 @@ PROCESS_LABEL = OverridableOption(
     'process_label',
     type=click.STRING,
     required=False,
-    help='Only include entries whose process label matches this filter.'
+    help='Only include entries whose process label matches this filter.',
 )
 
 TYPE_STRING = OverridableOption(
@@ -457,7 +536,7 @@ TYPE_STRING = OverridableOption(
     type=click.STRING,
     required=False,
     help='Only include entries whose type string matches this filter. Can include `_` to match a single arbitrary '
-    'character or `%` to match any number of characters.'
+    'character or `%` to match any number of characters.',
 )
 
 EXIT_STATUS = OverridableOption(
@@ -483,7 +562,7 @@ ORDER_BY = OverridableOption(
     type=click.Choice(['id', 'ctime']),
     default='ctime',
     show_default=True,
-    help='Order the entries by this attribute.'
+    help='Order the entries by this attribute.',
 )
 
 ORDER_DIRECTION = OverridableOption(
@@ -493,7 +572,7 @@ ORDER_DIRECTION = OverridableOption(
     type=click.Choice(['asc', 'desc']),
     default='asc',
     show_default=True,
-    help='List the entries in ascending or descending order'
+    help='List the entries in ascending or descending order',
 )
 
 PAST_DAYS = OverridableOption(
@@ -502,7 +581,7 @@ PAST_DAYS = OverridableOption(
     'past_days',
     type=click.INT,
     metavar='PAST_DAYS',
-    help='Only include entries created in the last PAST_DAYS number of days.'
+    help='Only include entries created in the last PAST_DAYS number of days.',
 )
 
 OLDER_THAN = OverridableOption(
@@ -511,7 +590,7 @@ OLDER_THAN = OverridableOption(
     'older_than',
     type=click.INT,
     metavar='OLDER_THAN',
-    help='Only include entries created before OLDER_THAN days ago.'
+    help='Only include entries created before OLDER_THAN days ago.',
 )
 
 ALL = OverridableOption(
@@ -520,7 +599,7 @@ ALL = OverridableOption(
     'all_entries',
     is_flag=True,
     default=False,
-    help='Include all entries, disregarding all other filter options and flags.'
+    help='Include all entries, disregarding all other filter options and flags.',
 )
 
 ALL_STATES = OverridableOption('-A', '--all-states', is_flag=True, help='Do not limit to items in running state.')
@@ -539,7 +618,7 @@ RAW = OverridableOption(
     'raw',
     is_flag=True,
     default=False,
-    help='Display only raw query results, without any headers or footers.'
+    help='Display only raw query results, without any headers or footers.',
 )
 
 HOSTNAME = OverridableOption('-H', '--hostname', type=types.HostnameType(), help='Hostname.')
@@ -549,7 +628,7 @@ TRANSPORT = OverridableOption(
     '--transport',
     type=types.PluginParamType(group='transports'),
     required=True,
-    help='A transport plugin (as listed in `verdi plugin list aiida.transports`).'
+    help='A transport plugin (as listed in `verdi plugin list aiida.transports`).',
 )
 
 SCHEDULER = OverridableOption(
@@ -557,7 +636,7 @@ SCHEDULER = OverridableOption(
     '--scheduler',
     type=types.PluginParamType(group='schedulers'),
     required=True,
-    help='A scheduler plugin (as listed in `verdi plugin list aiida.schedulers`).'
+    help='A scheduler plugin (as listed in `verdi plugin list aiida.schedulers`).',
 )
 
 USER = OverridableOption('-u', '--user', 'user', type=types.UserParamType(), help='Email address of the user.')
@@ -572,13 +651,13 @@ TIMEOUT = OverridableOption(
     type=click.FLOAT,
     default=5.0,
     show_default=True,
-    help='Time in seconds to wait for a response before timing out.'
+    help='Time in seconds to wait for a response before timing out.',
 )
 
 WAIT = OverridableOption(
     '--wait/--no-wait',
     default=False,
-    help='Wait for the action to be completed otherwise return as soon as it is scheduled.'
+    help='Wait for the action to be completed otherwise return as soon as it is scheduled.',
 )
 
 FORMULA_MODE = OverridableOption(
@@ -586,7 +665,7 @@ FORMULA_MODE = OverridableOption(
     '--formula-mode',
     type=click.Choice(['hill', 'hill_compact', 'reduce', 'group', 'count', 'count_compact']),
     default='hill',
-    help='Mode for printing the chemical formula.'
+    help='Mode for printing the chemical formula.',
 )
 
 TRAJECTORY_INDEX = OverridableOption(
@@ -595,7 +674,7 @@ TRAJECTORY_INDEX = OverridableOption(
     'trajectory_index',
     type=click.INT,
     default=None,
-    help='Specific step of the Trajectory to select.'
+    help='Specific step of the Trajectory to select.',
 )
 
 WITH_ELEMENTS = OverridableOption(
@@ -605,7 +684,7 @@ WITH_ELEMENTS = OverridableOption(
     type=click.STRING,
     cls=MultipleValueOption,
     default=None,
-    help='Only select objects containing these elements.'
+    help='Only select objects containing these elements.',
 )
 
 WITH_ELEMENTS_EXCLUSIVE = OverridableOption(
@@ -615,13 +694,13 @@ WITH_ELEMENTS_EXCLUSIVE = OverridableOption(
     type=click.STRING,
     cls=MultipleValueOption,
     default=None,
-    help='Only select objects containing only these and no other elements.'
+    help='Only select objects containing only these and no other elements.',
 )
 
 CONFIG_FILE = ConfigFileOption(
     '--config',
     type=types.FileOrUrl(),
-    help='Load option values from configuration file in yaml format (local path or URL).'
+    help='Load option values from configuration file in yaml format (local path or URL).',
 )
 
 IDENTIFIER = OverridableOption(
@@ -630,7 +709,7 @@ IDENTIFIER = OverridableOption(
     'identifier',
     help='The type of identifier used for specifying each node.',
     default='pk',
-    type=click.Choice(['pk', 'uuid'])
+    type=click.Choice(['pk', 'uuid']),
 )
 
 DICT_FORMAT = OverridableOption(
@@ -638,8 +717,8 @@ DICT_FORMAT = OverridableOption(
     '--format',
     'fmt',
     type=click.Choice(list(echo.VALID_DICT_FORMATS_MAPPING.keys())),
-    default=list(echo.VALID_DICT_FORMATS_MAPPING.keys())[0],
-    help='The format of the output data.'
+    default=next(iter(echo.VALID_DICT_FORMATS_MAPPING.keys())),
+    help='The format of the output data.',
 )
 
 DICT_KEYS = OverridableOption(

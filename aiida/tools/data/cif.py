@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name
 """Tools to operate on `CifData` nodes."""
 
 from aiida.engine import calcfunction
@@ -16,8 +15,7 @@ from aiida.orm.implementation.utils import clean_value
 
 
 class InvalidOccupationsError(Exception):
-    """
-    An exception that will be raised if pymatgen fails to parse the structure from a
+    """An exception that will be raised if pymatgen fails to parse the structure from a
     cif because some site occupancies exceed the occupancy tolerance. This often happens
     for structures that have attached species, such as hydrogen, and specify a placeholder
     position for it, leading to occupancies greater than one. Pymatgen only issues a
@@ -42,8 +40,7 @@ symmetry_tags = [
 
 
 def symop_string_from_symop_matrix_tr(matrix, tr=(0, 0, 0), eps=0):
-    """
-    Construct a CIF representation of symmetry operator plus translation.
+    """Construct a CIF representation of symmetry operator plus translation.
     See International Tables for Crystallography Vol. A. (2002) for
     definition.
 
@@ -53,6 +50,7 @@ def symop_string_from_symop_matrix_tr(matrix, tr=(0, 0, 0), eps=0):
     :return: CIF representation of symmetry operator
     """
     import re
+
     axes = ['x', 'y', 'z']
     parts = ['', '', '']
     for i in range(3):
@@ -75,8 +73,7 @@ def symop_string_from_symop_matrix_tr(matrix, tr=(0, 0, 0), eps=0):
 
 @calcfunction
 def _get_aiida_structure_ase_inline(cif, **kwargs):
-    """
-    Creates :py:class:`aiida.orm.nodes.data.structure.StructureData` using ASE.
+    """Creates :py:class:`aiida.orm.nodes.data.structure.StructureData` using ASE.
 
     .. note:: unable to correctly import structures of alloys.
     .. note:: requires ASE module.
@@ -98,8 +95,7 @@ def _get_aiida_structure_ase_inline(cif, **kwargs):
 
 @calcfunction
 def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
-    """
-    Creates :py:class:`aiida.orm.nodes.data.structure.StructureData` using pymatgen.
+    """Creates :py:class:`aiida.orm.nodes.data.structure.StructureData` using pymatgen.
 
     :param occupancy_tolerance: If total occupancy of a site is between 1 and occupancy_tolerance,
         the occupancies will be scaled down to 1.
@@ -133,10 +129,9 @@ def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
     try:
         structures = parser.get_structures(**parameters)
     except ValueError:
-
         # Verify whether the failure was due to wrong occupancy numbers
         try:
-            constructor_kwargs['occupancy_tolerance'] = 1E10
+            constructor_kwargs['occupancy_tolerance'] = 1e10
             with cif.open() as handle:
                 parser = CifParser(handle, **constructor_kwargs)
             structures = parser.get_structures(**parameters)
@@ -154,8 +149,7 @@ def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
 
 @calcfunction
 def refine_inline(node):
-    """
-    Refine (reduce) the cell of :py:class:`aiida.orm.nodes.data.cif.CifData`,
+    """Refine (reduce) the cell of :py:class:`aiida.orm.nodes.data.cif.CifData`,
     find and remove symmetrically equivalent atoms.
 
     :param node: a :py:class:`aiida.orm.nodes.data.cif.CifData` instance.
@@ -167,19 +161,15 @@ def refine_inline(node):
 
     if len(node.values.keys()) > 1:
         raise ValueError(
-            'CifData seems to contain more than one data '
-            'block -- multiblock CIF files are not '
-            'supported yet'
+            'CifData seems to contain more than one data ' 'block -- multiblock CIF files are not ' 'supported yet'
         )
 
-    name = list(node.values.keys())[0]
+    name = next(iter(node.values.keys()))
 
     original_atoms = node.get_ase(index=None)
     if len(original_atoms) > 1:
         raise ValueError(
-            'CifData seems to contain more than one crystal '
-            'structure -- such refinement is not supported '
-            'yet'
+            'CifData seems to contain more than one crystal ' 'structure -- such refinement is not supported ' 'yet'
         )
 
     original_atoms = original_atoms[0]
@@ -192,27 +182,27 @@ def refine_inline(node):
 
     # Remove all existing symmetry tags before overwriting:
     for tag in symmetry_tags:
-        cif.values[name].RemoveCifItem(tag)  # pylint: disable=unsubscriptable-object
+        cif.values[name].RemoveCifItem(tag)
 
-    cif.values[name]['_symmetry_space_group_name_H-M'] = symmetry['hm']  # pylint: disable=unsubscriptable-object
-    cif.values[name]['_symmetry_space_group_name_Hall'] = symmetry['hall']  # pylint: disable=unsubscriptable-object
-    cif.values[name]['_symmetry_Int_Tables_number'] = symmetry['tables']  # pylint: disable=unsubscriptable-object
-    cif.values[name]['_symmetry_equiv_pos_as_xyz'] = [  # pylint: disable=unsubscriptable-object
+    cif.values[name]['_symmetry_space_group_name_H-M'] = symmetry['hm']
+    cif.values[name]['_symmetry_space_group_name_Hall'] = symmetry['hall']
+    cif.values[name]['_symmetry_Int_Tables_number'] = symmetry['tables']
+    cif.values[name]['_symmetry_equiv_pos_as_xyz'] = [
         symop_string_from_symop_matrix_tr(symmetry['rotations'][i], symmetry['translations'][i])
         for i in range(len(symmetry['rotations']))
     ]
 
     # Summary formula has to be calculated from non-reduced set of atoms.
-    cif.values[name]['_chemical_formula_sum'] = (  # pylint: disable=unsubscriptable-object
-        StructureData(ase=original_atoms).get_formula(mode='hill', separator=' ')
+    cif.values[name]['_chemical_formula_sum'] = StructureData(ase=original_atoms).get_formula(
+        mode='hill', separator=' '
     )
 
     # If the number of reduced atoms multiplies the number of non-reduced
     # atoms, the new Z value can be calculated.
     if '_cell_formula_units_Z' in node.values[name].keys():
-        old_Z = node.values[name]['_cell_formula_units_Z']
+        old_Z = node.values[name]['_cell_formula_units_Z']  # noqa: N806
         if len(original_atoms) % len(refined_atoms):
-            new_Z = old_Z * len(original_atoms) // len(refined_atoms)
-            cif.values[name]['_cell_formula_units_Z'] = new_Z  # pylint: disable=unsubscriptable-object
+            new_Z = old_Z * len(original_atoms) // len(refined_atoms)  # noqa: N806
+            cif.values[name]['_cell_formula_units_Z'] = new_Z
 
     return {'cif': cif}

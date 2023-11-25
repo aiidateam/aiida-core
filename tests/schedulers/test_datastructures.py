@@ -128,7 +128,7 @@ def test_serialization():
         'job_id': '12723',
         'title': 'some title',
         'queue_name': 'some_queue',
-        'account': 'my_account'
+        'account': 'my_account',
     }
 
     to_serialize = {'job_state': (JobState.QUEUED, 'job_state'), 'submission_time': (datetime.now(), 'date')}

@@ -9,15 +9,15 @@
 ###########################################################################
 """Versioning and migration implementation for the sqlite_zip format."""
 import contextlib
-from datetime import datetime
 import json
 import os
-from pathlib import Path
 import shutil
 import tarfile
 import tempfile
-from typing import Any, Dict, Iterator, List, Optional, Union
 import zipfile
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, Iterator, List, Optional, Union
 
 from alembic.command import upgrade
 from alembic.config import Config
@@ -68,13 +68,8 @@ def validate_storage(inpath: Path) -> None:
         )
 
 
-def migrate(  # pylint: disable=too-many-branches,too-many-statements,too-many-locals
-    inpath: Union[str, Path],
-    outpath: Union[str, Path],
-    version: str,
-    *,
-    force: bool = False,
-    compression: int = 6
+def migrate(
+    inpath: Union[str, Path], outpath: Union[str, Path], version: str, *, force: bool = False, compression: int = 6
 ) -> None:
     """Migrate an `sqlite_zip` storage file to a specific version.
 
@@ -183,13 +178,12 @@ def migrate(  # pylint: disable=too-many-branches,too-many-statements,too-many-l
             overwrite=force,
             compression=compression,
             title='Writing migrated legacy archive',
-            info_order=('metadata.json', 'data.json')
+            info_order=('metadata.json', 'data.json'),
         )
         return
 
     # open the temporary directory, to perform further migrations
     with tempfile.TemporaryDirectory() as tmpdirname:
-
         # open the new zip file, within which to write the migrated content
         new_zip_path = Path(tmpdirname) / 'new.zip'
         central_dir: Dict[str, Any] = {}
@@ -200,9 +194,8 @@ def migrate(  # pylint: disable=too-many-branches,too-many-statements,too-many-l
             name_to_info=central_dir,
             # this ensures that the metadata and database files are written above the repository files,
             # in in the central directory, so that they can be accessed easily
-            info_order=(META_FILENAME, DB_FILENAME)
+            info_order=(META_FILENAME, DB_FILENAME),
         ) as new_zip:
-
             written_repo = False
             if current_version == FINAL_LEGACY_VERSION:
                 # migrate from the legacy format,
@@ -347,14 +340,14 @@ def _alembic_connect(db_path: Path, enforce_foreign_keys=True) -> Iterator[Confi
     """
     with create_sqla_engine(db_path, enforce_foreign_keys=enforce_foreign_keys).connect() as connection:
         config = _alembic_config()
-        config.attributes['connection'] = connection  # pylint: disable=unsupported-assignment-operation
+        config.attributes['connection'] = connection
 
-        def _callback(step: MigrationInfo, **kwargs):  # pylint: disable=unused-argument
+        def _callback(step: MigrationInfo, **kwargs):
             """Callback to be called after a migration step is executed."""
             from_rev = step.down_revision_ids[0] if step.down_revision_ids else '<base>'
             MIGRATE_LOGGER.report(f'- {from_rev} -> {step.up_revision_id}')
 
-        config.attributes['on_version_apply'] = _callback  # pylint: disable=unsupported-assignment-operation
+        config.attributes['on_version_apply'] = _callback
 
         yield config
 

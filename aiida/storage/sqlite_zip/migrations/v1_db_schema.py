@@ -43,18 +43,18 @@ class DbAuthInfo(ArchiveV1Base):
     __tablename__ = 'db_dbauthinfo'
     __table_args__ = (UniqueConstraint('aiidauser_id', 'dbcomputer_id'),)
 
-    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
+    id = Column(Integer, primary_key=True)
     aiidauser_id = Column(
         Integer,
         ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
         nullable=True,
-        index=True
+        index=True,
     )
     dbcomputer_id = Column(
         Integer,
         ForeignKey('db_dbcomputer.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
         nullable=True,
-        index=True
+        index=True,
     )
     _metadata = Column('metadata', JSON, default=dict, nullable=True)
     auth_params = Column(JSON, default=dict, nullable=True)
@@ -66,13 +66,13 @@ class DbComment(ArchiveV1Base):
 
     __tablename__ = 'db_dbcomment'
 
-    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
+    id = Column(Integer, primary_key=True)
     uuid = Column(CHAR(32), default=get_new_uuid, nullable=False, unique=True)
     dbnode_id = Column(
         Integer,
         ForeignKey('db_dbnode.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
         nullable=True,
-        index=True
+        index=True,
     )
     ctime = Column(DateTime(timezone=True), default=timezone.now, nullable=True)
     mtime = Column(DateTime(timezone=True), default=timezone.now, nullable=True)
@@ -80,16 +80,17 @@ class DbComment(ArchiveV1Base):
         Integer,
         ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
         nullable=True,
-        index=True
+        index=True,
     )
     content = Column(Text, default='', nullable=True)
 
 
 class DbComputer(ArchiveV1Base):
     """Class to store computers."""
+
     __tablename__ = 'db_dbcomputer'
 
-    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
+    id = Column(Integer, primary_key=True)
     uuid = Column(CHAR(32), default=get_new_uuid, nullable=False, unique=True)
     label = Column(String(255), unique=True, nullable=False)
     hostname = Column(String(255), default='', nullable=True)
@@ -105,7 +106,7 @@ class DbGroupNodes(ArchiveV1Base):
     __tablename__ = 'db_dbgroup_dbnodes'
     __table_args__ = (UniqueConstraint('dbgroup_id', 'dbnode_id'),)
 
-    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
+    id = Column(Integer, primary_key=True)
     dbnode_id = Column(
         Integer, ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED'), nullable=False, index=True
     )
@@ -120,7 +121,7 @@ class DbGroup(ArchiveV1Base):
     __tablename__ = 'db_dbgroup'
     __table_args__ = (UniqueConstraint('label', 'type_string'),)
 
-    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
+    id = Column(Integer, primary_key=True)
     uuid = Column(CHAR(32), default=get_new_uuid, nullable=False, unique=True)
     label = Column(String(255), nullable=False, index=True)
     type_string = Column(String(255), default='', nullable=True, index=True)
@@ -131,7 +132,7 @@ class DbGroup(ArchiveV1Base):
         Integer,
         ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
         nullable=False,
-        index=True
+        index=True,
     )
 
 
@@ -140,7 +141,7 @@ class DbLog(ArchiveV1Base):
 
     __tablename__ = 'db_dblog'
 
-    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
+    id = Column(Integer, primary_key=True)
     uuid = Column(CHAR(32), default=get_new_uuid, nullable=False, unique=True)
     time = Column(DateTime(timezone=True), default=timezone.now, nullable=True)
     loggername = Column(String(255), default='', nullable=True, index=True)
@@ -149,7 +150,7 @@ class DbLog(ArchiveV1Base):
         Integer,
         ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED', ondelete='CASCADE'),
         nullable=False,
-        index=True
+        index=True,
     )
     message = Column(Text(), default='', nullable=True)
     _metadata = Column('metadata', JSON, default=dict, nullable=True)
@@ -160,7 +161,7 @@ class DbNode(ArchiveV1Base):
 
     __tablename__ = 'db_dbnode'
 
-    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
+    id = Column(Integer, primary_key=True)
     uuid = Column(CHAR(32), default=get_new_uuid, nullable=False, unique=True)
     node_type = Column(String(255), default='', nullable=False, index=True)
     process_type = Column(String(255), index=True)
@@ -175,13 +176,13 @@ class DbNode(ArchiveV1Base):
         Integer,
         ForeignKey('db_dbcomputer.id', deferrable=True, initially='DEFERRED', ondelete='RESTRICT'),
         nullable=True,
-        index=True
+        index=True,
     )
     user_id = Column(
         Integer,
         ForeignKey('db_dbuser.id', deferrable=True, initially='DEFERRED', ondelete='restrict'),
         nullable=False,
-        index=True
+        index=True,
     )
 
 
@@ -190,7 +191,7 @@ class DbLink(ArchiveV1Base):
 
     __tablename__ = 'db_dblink'
 
-    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
+    id = Column(Integer, primary_key=True)
     input_id = Column(
         Integer, ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED'), nullable=False, index=True
     )
@@ -198,7 +199,7 @@ class DbLink(ArchiveV1Base):
         Integer,
         ForeignKey('db_dbnode.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
         nullable=False,
-        index=True
+        index=True,
     )
     label = Column(String(255), default='', nullable=False, index=True)
     type = Column(String(255), nullable=False, index=True)
@@ -209,7 +210,7 @@ class DbUser(ArchiveV1Base):
 
     __tablename__ = 'db_dbuser'
 
-    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
+    id = Column(Integer, primary_key=True)
     email = Column(String(254), nullable=False, unique=True)
     first_name = Column(String(254), default='', nullable=True)
     last_name = Column(String(254), default='', nullable=True)

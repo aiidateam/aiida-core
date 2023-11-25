@@ -20,8 +20,7 @@ OPERATORS = {
 
 
 def generate(min_operator_count=3, max_operator_count=5, min_operand_value=-5, max_operand_value=5):
-    """
-    Generate a random valid expression in Reverse Polish Notation. There are a few limitations:
+    """Generate a random valid expression in Reverse Polish Notation. There are a few limitations:
 
         * Only integers are supported
         * Only the addition, multiplication and power operators (+, * and ^, respectively) are supported
@@ -58,8 +57,7 @@ def generate(min_operator_count=3, max_operator_count=5, min_operand_value=-5, m
 
 
 def validate(expression):
-    """
-    Validate an expression in Reverse Polish Notation. In addition to normal rules, the following restrictions apply:
+    """Validate an expression in Reverse Polish Notation. In addition to normal rules, the following restrictions apply:
 
         * Only integers are supported
         * Only the addition, multiplication and power operators (+, * and ^, respectively) are supported
@@ -69,7 +67,6 @@ def validate(expression):
     :param expression: the expression in Reverse Polish Notation
     :return: tuple(Bool, list) indicating whether expression is valid and if not a list of error messages
     """
-    # pylint: disable=too-many-return-statements
     try:
         symbols = expression.split()
     except ValueError as exception:
@@ -106,8 +103,7 @@ def validate(expression):
 
 
 def evaluate(expression, modulo=None):
-    """
-    Evaluate an expression in Reverse Polish Notation. There are a few limitations:
+    """Evaluate an expression in Reverse Polish Notation. There are a few limitations:
 
         * Only integers are supported
         * Only the addition, multiplication and power operators (+, * and ^, respectively) are supported

@@ -7,9 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines
-"""
-This module defines the classes related to band structures or dispersions
+"""This module defines the classes related to band structures or dispersions
 in a Brillouin zone, and how to operate on them.
 """
 import json
@@ -44,8 +42,7 @@ def prepare_header_comment(uuid, plot_info, comment_char='#'):
 
 
 def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
-    """
-    Tries to guess whether the bandsdata represent an insulator.
+    """Tries to guess whether the bandsdata represent an insulator.
     This method is meant to be used only for electronic bands (not phonons)
     By default, it will try to use the occupations to guess the number of
     electrons and find the Fermi Energy, otherwise, it can be provided
@@ -73,15 +70,11 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
              equal to the lumo (e.g. in semi-metals).
     """
 
-    # pylint: disable=too-many-return-statements,too-many-branches,too-many-statements,no-else-return
-
     def nint(num):
-        """
-        Stable rounding function
-        """
+        """Stable rounding function"""
         if num > 0:
-            return int(num + .5)
-        return int(num - .5)
+            return int(num + 0.5)
+        return int(num - 0.5)
 
     if fermi_energy and number_electrons:
         raise ValueError('Specify either the number of electrons or the Fermi energy, but not both')
@@ -100,7 +93,6 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
 
     # analysis on occupations:
     if fermi_energy is None:
-
         num_kpoints = len(bands)
 
         if number_electrons is None:
@@ -125,9 +117,11 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
             # sort the bands by energy, and reorder the occupations accordingly
             # since after joining the two spins, I might have unsorted stuff
             bands, occupations = [
-                numpy.array(y) for y in zip(
+                numpy.array(y)
+                for y in zip(
                     *[
-                        list(zip(*j)) for j in [
+                        list(zip(*j))
+                        for j in [
                             sorted(zip(i[0].tolist(), i[1].tolist()), key=lambda x: x[0])
                             for i in zip(bands, occupations)
                         ]
@@ -145,8 +139,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
                 lumo = [_[0][_[1] + 1] for _ in zip(bands, homo_indexes)]
             except IndexError:
                 raise ValueError(
-                    'To understand if it is a metal or insulator, '
-                    'need more bands than n_band=number_electrons'
+                    'To understand if it is a metal or insulator, ' 'need more bands than n_band=number_electrons'
                 )
 
         else:
@@ -163,8 +156,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
                 lumo = [i[number_electrons // number_electrons_per_band] for i in bands]  # take the n+1th level
             except IndexError:
                 raise ValueError(
-                    'To understand if it is a metal or insulator, '
-                    'need more bands than n_band=number_electrons'
+                    'To understand if it is a metal or insulator, ' 'need more bands than n_band=number_electrons'
                 )
 
         if number_electrons % 2 == 1 and len(stored_bands.shape) == 2:
@@ -174,10 +166,10 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
 
         # if the nth band crosses the (n+1)th, it is an insulator
         gap = min(lumo) - max(homo)
-        if gap == 0.:
-            return False, 0.
+        if gap == 0.0:
+            return False, 0.0
 
-        if gap < 0.:
+        if gap < 0.0:
             return False, None
 
         return True, gap
@@ -198,32 +190,29 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
             raise ValueError("The Fermi energy is below all band energies, don't know what to do.")
 
         # one band is crossed by the fermi energy
-        if any(i[1] < fermi_energy and fermi_energy < i[0] for i in max_mins):  # pylint: disable=chained-comparison
+        if any(i[1] < fermi_energy and fermi_energy < i[0] for i in max_mins):
             return False, None
 
         # case of semimetals, fermi energy at the crossing of two bands
         # this will only work if the dirac point is computed!
-        if (any(i[0] == fermi_energy for i in max_mins) and any(i[1] == fermi_energy for i in max_mins)):
-            return False, 0.
+        if any(i[0] == fermi_energy for i in max_mins) and any(i[1] == fermi_energy for i in max_mins):
+            return False, 0.0
 
         # insulating case, take the max of the band maxima below the fermi energy
         homo = max(i[0] for i in max_mins if i[0] < fermi_energy)
         # take the min of the band minima above the fermi energy
         lumo = min(i[1] for i in max_mins if i[1] > fermi_energy)
         gap = lumo - homo
-        if gap <= 0.:
+        if gap <= 0.0:
             raise RuntimeError('Something wrong has been implemented. Revise the code!')
         return True, gap
 
 
 class BandsData(KpointsData):
-    """
-    Class to handle bands data
-    """
+    """Class to handle bands data"""
 
     def set_kpointsdata(self, kpointsdata):
-        """
-        Load the kpoints from a kpoint object.
+        """Load the kpoints from a kpoint object.
         :param kpointsdata: an instance of KpointsData class
         """
         if not isinstance(kpointsdata, KpointsData):
@@ -251,14 +240,12 @@ class BandsData(KpointsData):
             self.labels = []
 
     def _validate_bands_occupations(self, bands, occupations=None, labels=None):
-        """
-        Validate the list of bands and of occupations before storage.
+        """Validate the list of bands and of occupations before storage.
         Kpoints must be set in advance.
         Bands and occupations must be convertible into arrays of
         Nkpoints x Nbands floats or Nspins x Nkpoints x Nbands; Nkpoints must
         correspond to the number of kpoints.
         """
-        # pylint: disable=too-many-branches
         try:
             kpoints = self.get_kpoints()
         except AttributeError:
@@ -311,8 +298,9 @@ class BandsData(KpointsData):
                 the_labels = [str(_) for _ in labels]
             else:
                 raise ValidationError(
-                    'Band labels have an unrecognized type ({})'
-                    'but should be a string or a list of strings'.format(labels.__class__)
+                    'Band labels have an unrecognized type ({})' 'but should be a string or a list of strings'.format(
+                        labels.__class__
+                    )
                 )
 
             if len(the_bands.shape) == 2 and len(the_labels) != 1:
@@ -325,8 +313,7 @@ class BandsData(KpointsData):
         return the_bands, the_occupations, the_labels
 
     def set_bands(self, bands, units=None, occupations=None, labels=None):
-        """
-        Set an array of band energies of dimension (nkpoints x nbands).
+        """Set an array of band energies of dimension (nkpoints x nbands).
         Kpoints must be set in advance. Can contain floats or None.
         :param bands: a list of nkpoints lists of nbands bands, or a 2D array
         of shape (nkpoints x nbands), with band energies for each kpoint
@@ -349,32 +336,25 @@ class BandsData(KpointsData):
 
     @property
     def array_labels(self):
-        """
-        Get the labels associated with the band arrays
-        """
+        """Get the labels associated with the band arrays"""
         return self.base.attributes.get('array_labels', None)
 
     @property
     def units(self):
-        """
-        Units in which the data in bands were stored. A string
-        """
+        """Units in which the data in bands were stored. A string"""
         # return copy.deepcopy(self._pbc)
         return self.base.attributes.get('units')
 
     @units.setter
     def units(self, value):
-        """
-        Set the value of pbc, i.e. a tuple of three booleans, indicating if the
+        """Set the value of pbc, i.e. a tuple of three booleans, indicating if the
         cell is periodic in the 1,2,3 crystal direction
         """
         the_str = str(value)
         self.base.attributes.set('units', the_str)
 
     def _set_pbc(self, value):
-        """
-        validate the pbc, then store them
-        """
+        """Validate the pbc, then store them"""
         from aiida.common.exceptions import ModificationNotAllowed
         from aiida.orm.nodes.data.structure import get_valid_pbc
 
@@ -386,8 +366,7 @@ class BandsData(KpointsData):
         self.base.attributes.set('pbc3', the_pbc[2])
 
     def get_bands(self, also_occupations=False, also_labels=False):
-        """
-        Returns an array (nkpoints x num_bands or nspins x nkpoints x num_bands)
+        """Returns an array (nkpoints x num_bands or nspins x nkpoints x num_bands)
         of energies.
         :param also_occupations: if True, returns also the occupations array.
         Default = False
@@ -414,9 +393,8 @@ class BandsData(KpointsData):
 
         return to_return
 
-    def _get_bandplot_data(self, cartesian, prettify_format=None, join_symbol=None, get_segments=False, y_origin=0.):
-        """
-        Get data to plot a band structure
+    def _get_bandplot_data(self, cartesian, prettify_format=None, join_symbol=None, get_segments=False, y_origin=0.0):
+        """Get data to plot a band structure
 
         :param cartesian: if True, distances (for the x-axis) are computed in
                 cartesian coordinates, otherwise they are computed in reciprocal
@@ -438,7 +416,6 @@ class BandsData(KpointsData):
            depending on the type of spin; the length is always equalt to the total
            number of bands per kpoint).
         """
-        # pylint: disable=too-many-locals,too-many-branches,too-many-statements
         # load the x and y's of the graph
         stored_bands = self.get_bands()
         if len(stored_bands.shape) == 2:
@@ -475,8 +452,9 @@ class BandsData(KpointsData):
         # as a result, where there are discontinuities in the path,
         # I have two consecutive points with the same x coordinate
         distances = [
-            numpy.linalg.norm(kpoints[i] -
-                              kpoints[i - 1]) if not (i in labels_indices and i - 1 in labels_indices) else 0.
+            numpy.linalg.norm(kpoints[i] - kpoints[i - 1])
+            if not (i in labels_indices and i - 1 in labels_indices)
+            else 0.0
             for i in range(1, len(kpoints))
         ]
         x = [float(sum(distances[:i])) for i in range(len(distances) + 1)]
@@ -520,8 +498,8 @@ class BandsData(KpointsData):
                         'length': position_to - position_from,
                         'from': label_from,
                         'to': label_to,
-                        'values': bands[position_from:position_to + 1, :].transpose().tolist(),
-                        'x': x[position_from:position_to + 1],
+                        'values': bands[position_from : position_to + 1, :].transpose().tolist(),
+                        'x': x[position_from : position_to + 1],
                         'two_band_types': two_band_types,
                     }
                     plot_info['paths'].append(path_dict)
@@ -542,8 +520,7 @@ class BandsData(KpointsData):
         return plot_info
 
     def _prepare_agr_batch(self, main_file_name='', comments=True, prettify_format=None):
-        """
-        Prepare two files, data and batch, to be plot with xmgrace as:
+        """Prepare two files, data and batch, to be plot with xmgrace as:
         xmgrace -batch file.dat
 
         :param main_file_name: if the user asks to write the main content on a
@@ -555,7 +532,6 @@ class BandsData(KpointsData):
         :param prettify_format: if None, use the default prettify format. Otherwise
             specify a string with the prettifier to use.
         """
-        # pylint: disable=too-many-locals
         import os
 
         dat_filename = os.path.splitext(main_file_name)[0] + '_data.dat'
@@ -623,9 +599,8 @@ class BandsData(KpointsData):
 
         return batch_data.encode('utf-8'), extra_files
 
-    def _prepare_dat_multicolumn(self, main_file_name='', comments=True):  # pylint: disable=unused-argument
-        """
-        Write an N x M matrix. First column is the distance between kpoints,
+    def _prepare_dat_multicolumn(self, main_file_name='', comments=True):
+        """Write an N x M matrix. First column is the distance between kpoints,
         The other columns are the bands. Header contains number of kpoints and
         the number of bands (commented).
 
@@ -647,9 +622,8 @@ class BandsData(KpointsData):
 
         return ('\n'.join(return_text) + '\n').encode('utf-8'), {}
 
-    def _prepare_dat_blocks(self, main_file_name='', comments=True):  # pylint: disable=unused-argument
-        """
-        Format suitable for gnuplot using blocks.
+    def _prepare_dat_blocks(self, main_file_name='', comments=True):
+        """Format suitable for gnuplot using blocks.
         Columns with x and y (path and band energy). Several blocks, separated
         by two empty lines, one per energy band.
 
@@ -683,12 +657,11 @@ class BandsData(KpointsData):
         legend2=None,
         y_max_lim=None,
         y_min_lim=None,
-        y_origin=0.,
+        y_origin=0.0,
         prettify_format=None,
-        **kwargs
-    ):  # pylint: disable=unused-argument
-        """
-        Prepare the data to send to the python-matplotlib plotting script.
+        **kwargs,
+    ):
+        """Prepare the data to send to the python-matplotlib plotting script.
 
         :param comments: if True, print comments (if it makes sense for the given
             format)
@@ -713,8 +686,6 @@ class BandsData(KpointsData):
         :param kwargs: additional customization variables; only a subset is
             accepted, see internal variable 'valid_additional_keywords
         """
-        # pylint: disable=too-many-arguments,too-many-locals
-
         # Only these keywords are accepted in kwargs, and then set into the json
         valid_additional_keywords = [
             'bands_color',  # Color of band lines
@@ -759,7 +730,7 @@ class BandsData(KpointsData):
             prettify_format=prettify_format,
             join_symbol=join_symbol,
             get_segments=True,
-            y_origin=y_origin
+            y_origin=y_origin,
         )
 
         all_data = {}
@@ -806,8 +777,7 @@ class BandsData(KpointsData):
         return all_data
 
     def _prepare_mpl_singlefile(self, *args, **kwargs):
-        """
-        Prepare a python script using matplotlib to plot the bands
+        """Prepare a python script using matplotlib to plot the bands
 
         For the possible parameters, see documentation of
         :py:meth:`~aiida.orm.nodes.data.array.bands.BandsData._matplotlib_get_dict`
@@ -823,9 +793,8 @@ class BandsData(KpointsData):
 
         return string.encode('utf-8'), {}
 
-    def _prepare_mpl_withjson(self, main_file_name='', *args, **kwargs):  # pylint: disable=keyword-arg-before-vararg
-        """
-        Prepare a python script using matplotlib to plot the bands, with the JSON
+    def _prepare_mpl_withjson(self, main_file_name='', *args, **kwargs):
+        """Prepare a python script using matplotlib to plot the bands, with the JSON
         returned as an independent file.
 
         For the possible parameters, see documentation of
@@ -837,7 +806,7 @@ class BandsData(KpointsData):
 
         json_fname = os.path.splitext(main_file_name)[0] + '_data.json'
         # Escape double_quotes
-        json_fname = json_fname.replace('"', '\"')
+        json_fname = json_fname.replace('"', '"')
 
         ext_files = {json_fname: json.dumps(all_data, indent=2).encode('utf-8')}
 
@@ -850,9 +819,8 @@ class BandsData(KpointsData):
 
         return string.encode('utf-8'), ext_files
 
-    def _prepare_mpl_pdf(self, main_file_name='', *args, **kwargs):  # pylint: disable=keyword-arg-before-vararg,unused-argument
-        """
-        Prepare a python script using matplotlib to plot the bands, with the JSON
+    def _prepare_mpl_pdf(self, main_file_name='', *args, **kwargs):
+        """Prepare a python script using matplotlib to plot the bands, with the JSON
         returned as an independent file.
 
         For the possible parameters, see documentation of
@@ -875,7 +843,7 @@ class BandsData(KpointsData):
         os.close(handle)
         os.remove(filename)
 
-        escaped_fname = filename.replace('"', '\"')
+        escaped_fname = filename.replace('"', '"')
 
         s_footer = MATPLOTLIB_FOOTER_TEMPLATE_EXPORTFILE.substitute(fname=escaped_fname, format='pdf')
 
@@ -898,9 +866,8 @@ class BandsData(KpointsData):
 
         return imgdata, {}
 
-    def _prepare_mpl_png(self, main_file_name='', *args, **kwargs):  # pylint: disable=keyword-arg-before-vararg,unused-argument
-        """
-        Prepare a python script using matplotlib to plot the bands, with the JSON
+    def _prepare_mpl_png(self, main_file_name='', *args, **kwargs):
+        """Prepare a python script using matplotlib to plot the bands, with the JSON
         returned as an independent file.
 
         For the possible parameters, see documentation of
@@ -923,7 +890,7 @@ class BandsData(KpointsData):
         os.close(handle)
         os.remove(filename)
 
-        escaped_fname = filename.replace('"', '\"')
+        escaped_fname = filename.replace('"', '"')
 
         s_footer = MATPLOTLIB_FOOTER_TEMPLATE_EXPORTFILE_WITH_DPI.substitute(fname=escaped_fname, format='png', dpi=300)
 
@@ -948,9 +915,7 @@ class BandsData(KpointsData):
 
     @staticmethod
     def _get_mpl_body_template(paths):
-        """
-        :param paths: paths of k-points
-        """
+        """:param paths: paths of k-points"""
         if len(paths) == 1:
             s_body = MATPLOTLIB_BODY_TEMPLATE.substitute(plot_code=SINGLE_KP)
         else:
@@ -958,14 +923,13 @@ class BandsData(KpointsData):
         return s_body
 
     def show_mpl(self, **kwargs):
-        """
-        Call a show() command for the band structure using matplotlib.
+        """Call a show() command for the band structure using matplotlib.
         This uses internally the 'mpl_singlefile' format, with empty
         main_file_name.
 
         Other kwargs are passed to self._exportcontent.
         """
-        exec(*self._exportcontent(fileformat='mpl_singlefile', main_file_name='', **kwargs))  # pylint: disable=exec-used
+        exec(*self._exportcontent(fileformat='mpl_singlefile', main_file_name='', **kwargs))
 
     def _prepare_gnuplot(
         self,
@@ -975,10 +939,9 @@ class BandsData(KpointsData):
         prettify_format=None,
         y_max_lim=None,
         y_min_lim=None,
-        y_origin=0.
+        y_origin=0.0,
     ):
-        """
-        Prepare an gnuplot script to plot the bands, with the .dat file
+        """Prepare an gnuplot script to plot the bands, with the .dat file
         returned as an independent file.
 
         :param main_file_name: if the user asks to write the main content on a
@@ -991,7 +954,6 @@ class BandsData(KpointsData):
         :param prettify_format: if None, use the default prettify format. Otherwise
             specify a string with the prettifier to use.
         """
-        # pylint: disable=too-many-arguments,too-many-locals
         import os
 
         main_file_name = main_file_name or 'band.dat'
@@ -1053,21 +1015,21 @@ class BandsData(KpointsData):
         script.append(f'set xtics ({xtics_string})')
         script.append('unset key')
         script.append(f'set yrange [{y_min_lim}:{y_max_lim}]')
-        script.append(f"set ylabel \"Dispersion ({self.units})\"")
+        script.append(f'set ylabel "Dispersion ({self.units})"')
 
         if title:
-            script.append('set title "{}"'.format(title.replace('"', '\"')))
+            script.append('set title "{}"'.format(title.replace('"', '"')))
 
         # Plot, escaping filename
         if len(x) > 1:
             script.append(f'set xrange [{x_min_lim}:{x_max_lim}]')
             script.append('set grid xtics lt 1 lc rgb "#888888"')
-            script.append('plot "{}" with l lc rgb "#000000"'.format(os.path.basename(dat_filename).replace('"', '\"')))
+            script.append('plot "{}" with l lc rgb "#000000"'.format(os.path.basename(dat_filename).replace('"', '"')))
         else:
             script.append('set xrange [-1.0:1.0]')
             script.append(
                 'plot "{}" using ($1-0.25):($2):(0.5):(0) with vectors nohead lc rgb "#000000"'.format(
-                    os.path.basename(dat_filename).replace('"', '\"')
+                    os.path.basename(dat_filename).replace('"', '"')
                 )
             )
 
@@ -1087,11 +1049,10 @@ class BandsData(KpointsData):
         title='',
         y_max_lim=None,
         y_min_lim=None,
-        y_origin=0.,
-        prettify_format=None
+        y_origin=0.0,
+        prettify_format=None,
     ):
-        """
-        Prepare an xmgrace agr file.
+        """Prepare an xmgrace agr file.
 
         :param comments: if True, print comments
             (if it makes sense for the given format)
@@ -1117,7 +1078,6 @@ class BandsData(KpointsData):
         :param prettify_format: if None, use the default prettify format. Otherwise
             specify a string with the prettifier to use.
         """
-        # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,unused-argument
         if prettify_format is None:
             # Default. Specified like this to allow caller functions to pass 'None'
             prettify_format = 'agr_seekpath'
@@ -1147,7 +1107,7 @@ class BandsData(KpointsData):
             y_min_lim = the_bands.min()
         x_min_lim = min(x)  # this isn't a numpy array, but a list
         x_max_lim = max(x)
-        ytick_spacing = 10**int(math.log10((y_max_lim - y_min_lim)))
+        ytick_spacing = 10 ** int(math.log10((y_max_lim - y_min_lim)))
 
         # prepare xticks labels
         sx1 = ''
@@ -1182,7 +1142,7 @@ class BandsData(KpointsData):
                 set_number=i + setnumber_offset,
                 linewidth=width,
                 color_number=linecolor,
-                legend=legend if i == 0 else ''
+                legend=legend if i == 0 else '',
             )
 
         units = self.units
@@ -1223,9 +1183,8 @@ class BandsData(KpointsData):
 
         return out_dict
 
-    def _prepare_json(self, main_file_name='', comments=True):  # pylint: disable=unused-argument
-        """
-        Prepare a json file in a format compatible with the AiiDA band visualizer
+    def _prepare_json(self, main_file_name='', comments=True):
+        """Prepare a json file in a format compatible with the AiiDA band visualizer
 
         :param comments: if True, print comments (if it makes sense for the given
             format)
@@ -1372,10 +1331,12 @@ AGR_TEMPLATE = Template(
     """
 )
 
-AGR_XTICKS_TEMPLATE = Template("""
+AGR_XTICKS_TEMPLATE = Template(
+    """
     @    xaxis  tick spec $num_labels
     $single_xtick_templates
-    """)
+    """
+)
 
 AGR_SINGLE_XTICK_TEMPLATE = Template(
     """
@@ -1599,11 +1560,13 @@ AGR_SET_DESCRIPTION_TEMPLATE = Template(
     """
 )
 
-AGR_SINGLESET_TEMPLATE = Template("""
+AGR_SINGLESET_TEMPLATE = Template(
+    """
     @target G0.S$set_number
     @type xy
     $xydata
-    """)
+    """
+)
 
 MATPLOTLIB_HEADER_AGG_TEMPLATE = Template(
     """# -*- coding: utf-8 -*-
@@ -1650,8 +1613,10 @@ print_comment = False
 """
 )
 
-MATPLOTLIB_IMPORT_DATA_INLINE_TEMPLATE = Template('''all_data_str = r"""$all_data_json"""
-''')
+MATPLOTLIB_IMPORT_DATA_INLINE_TEMPLATE = Template(
+    '''all_data_str = r"""$all_data_json"""
+'''
+)
 
 MATPLOTLIB_IMPORT_DATA_FROMFILE_TEMPLATE = Template(
     """with open("$json_fname", encoding='utf8') as f:
@@ -1793,8 +1758,6 @@ def get_bands_and_parents_structure(args, backend=None):
         A list of sublists, each latter containing (in order):
             pk as string, formula as string, creation date, bandsdata-label
     """
-    # pylint: disable=too-many-locals,too-many-branches
-
     import datetime
 
     from aiida import orm
@@ -1840,7 +1803,7 @@ def get_bands_and_parents_structure(args, backend=None):
         tag='sdata',
         with_descendants='bdata',
         # We don't care about the creator of StructureData
-        project=['id', 'attributes.kinds', 'attributes.sites', 'ctime']
+        project=['id', 'attributes.kinds', 'attributes.sites', 'ctime'],
     )
 
     q_build.order_by({orm.StructureData: {'ctime': 'desc'}})
@@ -1854,7 +1817,6 @@ def get_bands_and_parents_structure(args, backend=None):
     already_visited_bdata = set()
 
     for [bid, blabel, bdate] in bands_list_data:
-
         # We process only one StructureData per BandsData.
         # We want to process the closest StructureData to
         # every BandsData.
@@ -1870,11 +1832,10 @@ def get_bands_and_parents_structure(args, backend=None):
         if strct is not None:
             akinds, asites = strct
             formula = _extract_formula(akinds, asites, args)
+        elif args.element is not None or args.element_only is not None:
+            formula = None
         else:
-            if args.element is not None or args.element_only is not None:
-                formula = None
-            else:
-                formula = '<<NOT FOUND>>'
+            formula = '<<NOT FOUND>>'
 
         if formula is None:
             continue
@@ -1884,8 +1845,7 @@ def get_bands_and_parents_structure(args, backend=None):
 
 
 def _extract_formula(akinds, asites, args):
-    """
-    Extract formula from the structure object.
+    """Extract formula from the structure object.
 
     :param akinds: list of kinds, e.g. [{'mass': 55.845, 'name': 'Fe', 'symbols': ['Fe'], 'weights': [1.0]},
                                         {'mass': 15.9994, 'name': 'O', 'symbols': ['O'], 'weights': [1.0]}]

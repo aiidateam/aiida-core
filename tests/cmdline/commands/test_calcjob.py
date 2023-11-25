@@ -7,12 +7,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=protected-access,too-many-locals,invalid-name,too-many-public-methods
 """Tests for `verdi calcjob`."""
 import io
 
-from click.testing import CliRunner
 import pytest
+from click.testing import CliRunner
 
 from aiida import orm
 from aiida.cmdline.commands import cmd_calcjob as command
@@ -33,10 +32,8 @@ class TestVerdiCalculation:
     """Tests for `verdi calcjob`."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_profile_clean, aiida_localhost, tmp_path):  # pylint: disable=unused-argument
+    def init_profile(self, aiida_profile_clean, aiida_localhost, tmp_path):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init,too-many-statements
-
         self.computer = aiida_localhost
         self.code = orm.InstalledCode(computer=self.computer, filepath_executable='/bin/true').store()
         self.group = orm.Group(label='test_group').store()
@@ -48,7 +45,6 @@ class TestVerdiCalculation:
 
         # Create 5 CalcJobNodes (one for each CalculationState)
         for index, calculation_state in enumerate(CalcJobState):
-
             dirpath = tmp_path / str(index)
             dirpath.mkdir()
 
@@ -73,10 +69,12 @@ class TestVerdiCalculation:
                 self.VAL_ONE = 'val_one'
                 self.VAL_TWO = 'val_two'
 
-                output_parameters = orm.Dict(dict={
-                    self.KEY_ONE: self.VAL_ONE,
-                    self.KEY_TWO: self.VAL_TWO,
-                }).store()
+                output_parameters = orm.Dict(
+                    dict={
+                        self.KEY_ONE: self.VAL_ONE,
+                        self.KEY_TWO: self.VAL_TWO,
+                    }
+                ).store()
 
                 output_parameters.base.links.add_incoming(calc, LinkType.CREATE, 'output_parameters')
 
@@ -106,7 +104,7 @@ class TestVerdiCalculation:
         import_test_archive('calcjob/arithmetic.add.aiida')
 
         # Get the imported ArithmeticAddCalculation node
-        ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
+        ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # noqa: N806
         calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()[0]
         self.arithmetic_job: orm.CalcJobNode = calculations[0]  # type: ignore[annotation-unchecked]
 
@@ -184,7 +182,6 @@ class TestVerdiCalculation:
 
     def test_calcjob_inputcat(self):
         """Test verdi calcjob inputcat"""
-
         options = []
         result = self.cli_runner.invoke(command.calcjob_inputcat, options)
         assert result.exception is not None, result.output
@@ -215,7 +212,6 @@ class TestVerdiCalculation:
 
     def test_calcjob_outputcat(self):
         """Test verdi calcjob outputcat"""
-
         options = []
         result = self.cli_runner.invoke(command.calcjob_outputcat, options)
         assert result.exception is not None
@@ -247,7 +243,6 @@ class TestVerdiCalculation:
 
     def test_calcjob_cleanworkdir(self):
         """Test verdi calcjob cleanworkdir"""
-
         # Specifying no filtering options and no explicit calcjobs should exit with non-zero status
         options = []
         result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
@@ -303,10 +298,9 @@ class TestVerdiCalculation:
 
     def test_calcjob_inoutputcat_old(self):
         """Test most recent process class / plug-in can be successfully used to find filenames"""
-
         # Import old archive of ArithmeticAddCalculation
         import_test_archive('calcjob/arithmetic.add_old.aiida')
-        ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
+        ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')  # noqa: N806
         calculations = orm.QueryBuilder().append(ArithmeticAddCalculation).all()
         add_job = None
         for job in calculations:

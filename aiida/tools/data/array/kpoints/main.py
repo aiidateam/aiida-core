@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Various utilities to deal with KpointsData instances or create new ones
+"""Various utilities to deal with KpointsData instances or create new ones
 (e.g. band paths, kpoints from a parsed input text file, ...)
 """
 from aiida.orm import Dict, KpointsData
@@ -17,8 +16,7 @@ __all__ = ('get_kpoints_path', 'get_explicit_kpoints_path')
 
 
 def get_kpoints_path(structure, method='seekpath', **kwargs):
-    """
-    Returns a dictionary whose contents depend on the method but includes at least the following keys
+    """Returns a dictionary whose contents depend on the method but includes at least the following keys
 
         * parameters: Dict node
 
@@ -52,8 +50,7 @@ def get_kpoints_path(structure, method='seekpath', **kwargs):
 
 
 def get_explicit_kpoints_path(structure, method='seekpath', **kwargs):
-    """
-    Returns a dictionary whose contents depend on the method but includes at least the following keys
+    """Returns a dictionary whose contents depend on the method but includes at least the following keys
 
         * parameters: Dict node
         * explicit_kpoints: KpointsData node with explicit kpoints path
@@ -88,8 +85,7 @@ def get_explicit_kpoints_path(structure, method='seekpath', **kwargs):
 
 
 def _seekpath_get_kpoints_path(structure, **kwargs):
-    """
-    Call the get_kpoints_path wrapper function for Seekpath
+    """Call the get_kpoints_path wrapper function for Seekpath
 
     :param structure: a StructureData node
     :param with_time_reversal: if False, and the group has no inversion
@@ -124,8 +120,7 @@ def _seekpath_get_kpoints_path(structure, **kwargs):
 
 
 def _seekpath_get_explicit_kpoints_path(structure, **kwargs):
-    """
-    Call the get_explicit_kpoints_path wrapper function for Seekpath
+    """Call the get_explicit_kpoints_path wrapper function for Seekpath
 
     :param structure: a StructureData node
     :param with_time_reversal: if False, and the group has no inversion
@@ -164,8 +159,7 @@ def _seekpath_get_explicit_kpoints_path(structure, **kwargs):
 
 
 def _legacy_get_kpoints_path(structure, **kwargs):
-    """
-    Call the get_kpoints_path of the legacy implementation
+    """Call the get_kpoints_path of the legacy implementation
 
     :param structure: a StructureData node
     :param bool cartesian: if set to true, reads the coordinates eventually passed in value as cartesian coordinates
@@ -192,8 +186,7 @@ def _legacy_get_kpoints_path(structure, **kwargs):
 
 
 def _legacy_get_explicit_kpoints_path(structure, **kwargs):
-    """
-    Call the get_explicit_kpoints_path of the legacy implementation
+    """Call the get_explicit_kpoints_path of the legacy implementation
 
     :param structure: a StructureData node
     :param float kpoint_distance: parameter controlling the distance between kpoints. Distance is
@@ -212,7 +205,7 @@ def _legacy_get_explicit_kpoints_path(structure, **kwargs):
     if args_unknown:
         raise ValueError(f'unknown arguments {args_unknown}')
 
-    point_coords, path, bravais_info, explicit_kpoints, labels = legacy.get_explicit_kpoints_path(  # pylint: disable=unbalanced-tuple-unpacking
+    point_coords, path, bravais_info, explicit_kpoints, labels = legacy.get_explicit_kpoints_path(
         cell=structure.cell, pbc=structure.pbc, **kwargs
     )
 

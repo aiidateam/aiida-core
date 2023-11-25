@@ -7,10 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for the :mod:`aiida.cmdline.params.options.callable` module."""
-from click.shell_completion import ShellComplete
 import pytest
+from click.shell_completion import ShellComplete
 
 from aiida.cmdline.commands.cmd_verdi import verdi
 

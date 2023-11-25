@@ -8,13 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Translator for node"""
-from importlib._bootstrap import _exec, _load
 import importlib.machinery
 import importlib.util
 import inspect
 import os
 import pkgutil
 import sys
+from importlib._bootstrap import _exec, _load
 
 from aiida import orm
 from aiida.common.exceptions import (
@@ -38,10 +38,7 @@ from aiida.restapi.translator.base import BaseTranslator
 
 
 class NodeTranslator(BaseTranslator):
-    # pylint: disable=too-many-instance-attributes,anomalous-backslash-in-string,too-many-arguments,too-many-branches,fixme
-    """
-    Translator relative to resource 'nodes' and aiida class Node
-    """
+    """Translator relative to resource 'nodes' and aiida class Node"""
 
     # A label associated to the present class (coincides with the resource name)
     __label__ = 'nodes'
@@ -66,11 +63,9 @@ class NodeTranslator(BaseTranslator):
     _filename = None
 
     def __init__(self, **kwargs):
-        """
-        Initialise the parameters.
+        """Initialise the parameters.
         Create the basic query_help
         """
-
         # basic initialization
         super().__init__(**kwargs)
 
@@ -96,21 +91,13 @@ class NodeTranslator(BaseTranslator):
         self._backend = get_manager().get_profile_storage()
 
     def set_query_type(
-        self,
-        query_type,
-        attributes_filter=None,
-        extras_filter=None,
-        download_format=None,
-        download=None,
-        filename=None
+        self, query_type, attributes_filter=None, extras_filter=None, download_format=None, download=None, filename=None
     ):
-        """
-        sets one of the mutually exclusive values for self._result_type and
+        """Sets one of the mutually exclusive values for self._result_type and
         self._content_type.
 
         :param query_type:(string) the value assigned to either variable.
         """
-
         if query_type == 'default':
             pass
         elif query_type == 'incoming':
@@ -143,15 +130,17 @@ class NodeTranslator(BaseTranslator):
         # Add input/output relation to the query help
         if self._result_type != self.__label__:
             edge_tag = f'{self.__label__}--{self._result_type}'
-            self._query_help['path'].append({
-                'cls': self._aiida_class,
-                'tag': self._result_type,
-                'edge_tag': edge_tag,
-                self._result_type: self.__label__
-            })
+            self._query_help['path'].append(
+                {
+                    'cls': self._aiida_class,
+                    'tag': self._result_type,
+                    'edge_tag': edge_tag,
+                    self._result_type: self.__label__,
+                }
+            )
             self._query_help['project'][edge_tag] = [{'label': {}}, {'type': {}}]
 
-    def set_query(  # pylint: disable=arguments-renamed
+    def set_query(
         self,
         filters=None,
         orders=None,
@@ -165,10 +154,9 @@ class NodeTranslator(BaseTranslator):
         attributes_filter=None,
         extras=None,
         extras_filter=None,
-        full_type=None
+        full_type=None,
     ):
-        """
-        Adds filters, default projections, order specs to the query_help,
+        """Adds filters, default projections, order specs to the query_help,
         and initializes the qb object
 
         :param filters: dictionary with the filters
@@ -184,13 +172,10 @@ class NodeTranslator(BaseTranslator):
         :param extras: flag to show extras for nodes
         :param extras_filter: list of extras to query
         """
-        # pylint: disable=arguments-differ, too-many-locals
-
         ## Check the compatibility of query_type and id
         if query_type != 'default' and id is None:
             raise ValidationError(
-                'non default result/content can only be '
-                'applied to a specific node (specify an id)'
+                'non default result/content can only be ' 'applied to a specific node (specify an id)'
             )
 
         ## Set the type of query
@@ -200,7 +185,7 @@ class NodeTranslator(BaseTranslator):
             extras_filter=extras_filter,
             download_format=download_format,
             download=download,
-            filename=filename
+            filename=filename,
         )
 
         ## Define projections
@@ -231,17 +216,14 @@ class NodeTranslator(BaseTranslator):
             attributes=attributes,
             attributes_filter=attributes_filter,
             extras=extras,
-            extras_filter=extras_filter
+            extras_filter=extras_filter,
         )
 
     def _get_content(self):
-        """
-        Used by get_results() in case of endpoint include "content" option
+        """Used by get_results() in case of endpoint include "content" option
         :return: data: a dictionary containing the results obtained by
         running the query
         """
-        # pylint: disable=too-many-statements
-
         if not self._is_qb_initialized:
             raise InvalidOperation('query builder object has not been initialized.')
 
@@ -254,7 +236,7 @@ class NodeTranslator(BaseTranslator):
             return {}
 
         # otherwise ...
-        node = self.qbobj.first()[0]  # pylint: disable=unsubscriptable-object
+        node = self.qbobj.first()[0]
 
         # content/attributes
         if self._content_type == 'attributes':
@@ -312,8 +294,7 @@ class NodeTranslator(BaseTranslator):
         return data
 
     def _get_subclasses(self, parent=None, parent_class=None, recursive=True):
-        """
-        Import all submodules of the package containing the present class.
+        """Import all submodules of the package containing the present class.
         Includes subpackages recursively, if specified.
 
         :param parent: package/class.
@@ -322,13 +303,11 @@ class NodeTranslator(BaseTranslator):
         :param parent_class: class of which to look for subclasses
         :param recursive: True/False (go recursively into submodules)
         """
-
         # If no parent class is specified set it to self.__class
         parent = self.__class__ if parent is None else parent
 
         # Suppose parent is class
         if inspect.isclass(parent):
-
             # Set the package where the class is contained
             classfile = inspect.getfile(parent)
             package_path = os.path.dirname(classfile)
@@ -340,7 +319,6 @@ class NodeTranslator(BaseTranslator):
         # Suppose parent is a package (directory containing __init__.py).
         # Check if it contains attribute __path__
         elif inspect.ismodule(parent) and hasattr(parent, '__path__'):
-
             # Assume path is one element list
             package_path = parent.__path__[0]
 
@@ -358,7 +336,7 @@ class NodeTranslator(BaseTranslator):
             if is_pkg:
                 # re-implementation of deprecated `imp.load_package`
                 if os.path.isdir(full_path_base):
-                    #Adds an extension to check for __init__ file in the package directory
+                    # Adds an extension to check for __init__ file in the package directory
                     extensions = importlib.machinery.SOURCE_SUFFIXES[:] + importlib.machinery.BYTECODE_SUFFIXES[:]
                     for extension in extensions:
                         init_path = os.path.join(full_path_base, '__init__' + extension)
@@ -367,13 +345,13 @@ class NodeTranslator(BaseTranslator):
                             break
                     else:
                         raise ValueError(f'{full_path_base!r} is not a package')
-                #passing [] to submodule_search_locations indicates its a package and python searches for sub-modules
+                # passing [] to submodule_search_locations indicates its a package and python searches for sub-modules
                 spec = importlib.util.spec_from_file_location(full_path_base, path, submodule_search_locations=[])
                 if full_path_base in sys.modules:
-                    #executes from sys.modules
+                    # executes from sys.modules
                     app_module = _exec(spec, sys.modules[full_path_base])
                 else:
-                    #loads and executes the module
+                    # loads and executes the module
                     app_module = _load(spec)
             else:
                 full_path = f'{full_path_base}.py'
@@ -395,8 +373,7 @@ class NodeTranslator(BaseTranslator):
         return results
 
     def get_derived_properties(self, node):
-        """
-        Generic function to get the derived properties of the node.
+        """Generic function to get the derived properties of the node.
         Actual definition is in child classes as the content to be
         returned depends on the plugin specific
         to the resource
@@ -408,13 +385,12 @@ class NodeTranslator(BaseTranslator):
         of object and invoke the correct method in the lowest-compatible
         subclass
         """
-
         # Look for the translator associated to the class of which this node
         # is instance
         tclass = type(node)
 
         for subclass in self._subclasses.values():
-            if subclass._aiida_type.split('.')[-1] == tclass.__name__:  # pylint: disable=protected-access
+            if subclass._aiida_type.split('.')[-1] == tclass.__name__:
                 lowtrans = subclass
 
         derived_properties = lowtrans.get_derived_properties(node)
@@ -423,10 +399,7 @@ class NodeTranslator(BaseTranslator):
 
     @staticmethod
     def get_all_download_formats(full_type=None):
-        """
-        returns dict of possible node formats for all available node types
-        """
-
+        """Returns dict of possible node formats for all available node types"""
         all_formats = {}
 
         if full_type:
@@ -460,8 +433,7 @@ class NodeTranslator(BaseTranslator):
 
     @staticmethod
     def get_downloadable_data(node, download_format=None):
-        """
-        Generic function to download file in specified format.
+        """Generic function to download file in specified format.
         Actual definition is in child classes as the content to be
         returned and its format depends on the download plugin specific
         to the resource
@@ -474,12 +446,12 @@ class NodeTranslator(BaseTranslator):
         invoke the get_downloadable_data method in the Data transaltor.
         Otherwise it raises RestFeatureNotAvailable exception
         """
-
         # This needs to be here because currently, for all nodes the `NodeTranslator` will be instantiated. Once that
         # logic is cleaned where the correct translator sub class is instantiated based on the node type that is
         # referenced, this hack can be removed.
         if isinstance(node, Data):
-            from .data import DataTranslator  # pylint: disable=cyclic-import
+            from .data import DataTranslator
+
             downloadable_data = DataTranslator.get_downloadable_data(node, download_format=download_format)
             return downloadable_data
 
@@ -487,8 +459,7 @@ class NodeTranslator(BaseTranslator):
 
     @staticmethod
     def get_repo_list(node, filename=''):
-        """
-        Every node in AiiDA is having repo folder.
+        """Every node in AiiDA is having repo folder.
         This function returns the metadata using list_objects() method
         :param node: node object
         :param filename: folder name (optional)
@@ -505,14 +476,12 @@ class NodeTranslator(BaseTranslator):
 
     @staticmethod
     def get_repo_contents(node, filename=''):
-        """
-        Every node in AiiDA is having repo folder.
+        """Every node in AiiDA is having repo folder.
         This function returns the metadata using get_object() method
         :param node: node object
         :param filename: folder or file name (optional)
         :return: file content in bytes to download
         """
-
         if filename:
             try:
                 data = node.base.repository.get_object_content(filename, mode='rb')
@@ -523,25 +492,25 @@ class NodeTranslator(BaseTranslator):
 
     @staticmethod
     def get_comments(node):
-        """
-        :param node: node object
+        """:param node: node object
         :return: node comments
         """
         comments = node.base.comments.all()
         response = []
         for cobj in comments:
-            response.append({
-                'created_time': cobj.ctime,
-                'modified_time': cobj.mtime,
-                'user': f'{cobj.user.first_name} {cobj.user.last_name}',
-                'message': cobj.content
-            })
+            response.append(
+                {
+                    'created_time': cobj.ctime,
+                    'modified_time': cobj.mtime,
+                    'user': f'{cobj.user.first_name} {cobj.user.last_name}',
+                    'message': cobj.content,
+                }
+            )
         return response
 
     @staticmethod
     def get_file_content(node, file_name):
-        """
-        It reads the file from directory and returns its content.
+        """It reads the file from directory and returns its content.
 
         Instead of using "send_from_directory" from flask, this method is written
         because in next aiida releases the file can be stored locally or in object storage.
@@ -561,8 +530,7 @@ class NodeTranslator(BaseTranslator):
             return fobj.read()
 
     def get_results(self):
-        """
-        Returns either a list of nodes or details of single node from database
+        """Returns either a list of nodes or details of single node from database
 
         :return: either a list of nodes or the details of single node
             from the database
@@ -573,15 +541,13 @@ class NodeTranslator(BaseTranslator):
         return super().get_results()
 
     def get_formatted_result(self, label):
-        """
-        Runs the query and retrieves results tagged as "label".
+        """Runs the query and retrieves results tagged as "label".
 
         :param label: the tag of the results to be extracted out of
           the query rows.
         :type label: str
         :return: a list of the query results
         """
-
         results = super().get_formatted_result(label)
 
         if self._result_type == 'with_outgoing':
@@ -595,7 +561,8 @@ class NodeTranslator(BaseTranslator):
             # construct full_type and add it to every node
             node_entry['full_type'] = (
                 construct_full_type(node_entry.get('node_type'), node_entry.get('process_type'))
-                if node_entry.get('node_type') or node_entry.get('process_type') else None
+                if node_entry.get('node_type') or node_entry.get('process_type')
+                else None
             )
 
         return results
@@ -606,23 +573,17 @@ class NodeTranslator(BaseTranslator):
 
     @staticmethod
     def get_namespace(user_pk=None, count_nodes=False):
-        """
-        return full_types of the nodes
-        """
-
+        """Return full_types of the nodes"""
         return get_node_namespace(user_pk=user_pk, count_nodes=count_nodes).get_description()
 
     def get_io_tree(self, uuid_pattern, tree_in_limit, tree_out_limit):
-        # pylint: disable=too-many-statements,too-many-locals
-        """
-        json data to display nodes in tree format
+        """Json data to display nodes in tree format
         :param uuid_pattern: main node uuid
         :return: json data to display node tree
         """
 
         def get_node_description(node):
-            """
-            Get the description of the node.
+            """Get the description of the node.
             CalcJobNodes migrated from AiiDA < 1.0.0 do not have a valid CalcJobState,
             in this case the function returns as description the type of the node (CalcJobNode)
             :param node: node object
@@ -652,27 +613,26 @@ class NodeTranslator(BaseTranslator):
             ctime = main_node.ctime
             mtime = main_node.mtime
 
-            nodes.append({
-                'ctime': ctime,
-                'mtime': mtime,
-                'id': pk,
-                'uuid': uuid,
-                'node_type': nodetype,
-                'node_label': nodelabel,
-                'description': description,
-                'incoming': [],
-                'outgoing': []
-            })
+            nodes.append(
+                {
+                    'ctime': ctime,
+                    'mtime': mtime,
+                    'id': pk,
+                    'uuid': uuid,
+                    'node_type': nodetype,
+                    'node_label': nodelabel,
+                    'description': description,
+                    'incoming': [],
+                    'outgoing': [],
+                }
+            )
 
         # get all incoming
         qb_obj = orm.QueryBuilder()
         qb_obj.append(Node, tag='main', project=['*'], filters=self._id_filter)
-        qb_obj.append(Node, tag='in', project=['*'], edge_project=['label', 'type'],
-                      with_outgoing='main').order_by({'in': [{
-                          'id': {
-                              'order': 'asc'
-                          }
-                      }]})
+        qb_obj.append(Node, tag='in', project=['*'], edge_project=['label', 'type'], with_outgoing='main').order_by(
+            {'in': [{'id': {'order': 'asc'}}]}
+        )
         if tree_in_limit is not None:
             qb_obj.limit(tree_in_limit)
 
@@ -691,27 +651,26 @@ class NodeTranslator(BaseTranslator):
                 node_ctime = node.ctime
                 node_mtime = node.mtime
 
-                nodes[0]['incoming'].append({
-                    'ctime': node_ctime,
-                    'mtime': node_mtime,
-                    'id': pk,
-                    'uuid': uuid,
-                    'node_type': nodetype,
-                    'node_label': nodelabel,
-                    'description': description,
-                    'link_label': linklabel,
-                    'link_type': linktype
-                })
+                nodes[0]['incoming'].append(
+                    {
+                        'ctime': node_ctime,
+                        'mtime': node_mtime,
+                        'id': pk,
+                        'uuid': uuid,
+                        'node_type': nodetype,
+                        'node_label': nodelabel,
+                        'description': description,
+                        'link_label': linklabel,
+                        'link_type': linktype,
+                    }
+                )
 
         # get all outgoing
         qb_obj = orm.QueryBuilder()
         qb_obj.append(Node, tag='main', project=['*'], filters=self._id_filter)
-        qb_obj.append(Node, tag='out', project=['*'], edge_project=['label', 'type'],
-                      with_incoming='main').order_by({'out': [{
-                          'id': {
-                              'order': 'asc'
-                          }
-                      }]})
+        qb_obj.append(Node, tag='out', project=['*'], edge_project=['label', 'type'], with_incoming='main').order_by(
+            {'out': [{'id': {'order': 'asc'}}]}
+        )
         if tree_out_limit is not None:
             qb_obj.limit(tree_out_limit)
 
@@ -730,17 +689,19 @@ class NodeTranslator(BaseTranslator):
                 node_ctime = node.ctime
                 node_mtime = node.mtime
 
-                nodes[0]['outgoing'].append({
-                    'ctime': node_ctime,
-                    'mtime': node_mtime,
-                    'id': pk,
-                    'uuid': uuid,
-                    'node_type': nodetype,
-                    'node_label': nodelabel,
-                    'description': description,
-                    'link_label': linklabel,
-                    'link_type': linktype
-                })
+                nodes[0]['outgoing'].append(
+                    {
+                        'ctime': node_ctime,
+                        'mtime': node_mtime,
+                        'id': pk,
+                        'uuid': uuid,
+                        'node_type': nodetype,
+                        'node_label': nodelabel,
+                        'description': description,
+                        'link_label': linklabel,
+                        'link_type': linktype,
+                    }
+                )
 
         # count total no of nodes
         builder = orm.QueryBuilder()
@@ -753,18 +714,19 @@ class NodeTranslator(BaseTranslator):
         builder.append(Node, tag='out', project=['id'], with_incoming='main')
         total_no_of_outgoings = builder.count()
 
-        metadata = [{
-            'total_no_of_incomings': total_no_of_incomings,
-            'total_no_of_outgoings': total_no_of_outgoings,
-            'sent_no_of_incomings': sent_no_of_incomings,
-            'sent_no_of_outgoings': sent_no_of_outgoings
-        }]
+        metadata = [
+            {
+                'total_no_of_incomings': total_no_of_incomings,
+                'total_no_of_outgoings': total_no_of_outgoings,
+                'sent_no_of_incomings': sent_no_of_incomings,
+                'sent_no_of_outgoings': sent_no_of_outgoings,
+            }
+        ]
 
         return {'nodes': nodes, 'metadata': metadata}
 
-    def get_projectable_properties(self):  # pylint: disable=arguments-differ
-        """
-        Get projectable properties specific for Node
+    def get_projectable_properties(self):
+        """Get projectable properties specific for Node
         :return: dict of projectable properties and column_order list
         """
         projectable_properties = {
@@ -773,42 +735,42 @@ class NodeTranslator(BaseTranslator):
                 'help_text': 'User that created the node',
                 'is_foreign_key': False,
                 'type': 'str',
-                'is_display': True
+                'is_display': True,
             },
             'ctime': {
                 'display_name': 'Creation time',
                 'help_text': 'Creation time of the node',
                 'is_foreign_key': False,
                 'type': 'datetime.datetime',
-                'is_display': True
+                'is_display': True,
             },
             'label': {
                 'display_name': 'Label',
                 'help_text': 'User-assigned label',
                 'is_foreign_key': False,
                 'type': 'str',
-                'is_display': False
+                'is_display': False,
             },
             'mtime': {
                 'display_name': 'Last Modification time',
                 'help_text': 'Last modification time',
                 'is_foreign_key': False,
                 'type': 'datetime.datetime',
-                'is_display': True
+                'is_display': True,
             },
             'node_type': {
                 'display_name': 'Type',
                 'help_text': 'Node type',
                 'is_foreign_key': False,
                 'type': 'str',
-                'is_display': True
+                'is_display': True,
             },
             'process_type': {
                 'display_name': 'Process type',
                 'help_text': 'Process type',
                 'is_foreign_key': False,
                 'type': 'str',
-                'is_display': False
+                'is_display': False,
             },
             'user_id': {
                 'display_name': 'Id of creator',
@@ -817,15 +779,15 @@ class NodeTranslator(BaseTranslator):
                 'related_column': 'id',
                 'related_resource': 'users',
                 'type': 'int',
-                'is_display': False
+                'is_display': False,
             },
             'uuid': {
                 'display_name': 'Unique ID',
                 'help_text': 'Universally Unique Identifier',
                 'is_foreign_key': False,
                 'type': 'unicode',
-                'is_display': True
-            }
+                'is_display': True,
+            },
         }
 
         # Note: final schema will contain details for only the fields present in column order

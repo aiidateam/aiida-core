@@ -117,7 +117,7 @@ class NodeRepository:
 
         :param repo: the repository to clone.
         """
-        self._repository = copy.copy(repo._repository)  # pylint: disable=protected-access
+        self._repository = copy.copy(repo._repository)
 
     def _clone(self, repo: 'NodeRepository') -> None:
         """Clone the repository from another instance.
@@ -126,7 +126,7 @@ class NodeRepository:
 
         :param repo: the repository to clone.
         """
-        self._repository.clone(repo._repository)  # pylint: disable=protected-access
+        self._repository.clone(repo._repository)
 
     def serialize(self) -> dict:
         """Serialize the metadata of the repository content into a JSON-serializable format.
@@ -209,7 +209,6 @@ class NodeRepository:
         obj = self.get_object(path)
 
         with tempfile.TemporaryDirectory() as tmp_path:
-
             dirpath = pathlib.Path(tmp_path)
 
             if obj.is_dir():
@@ -283,7 +282,7 @@ class NodeRepository:
         if isinstance(handle, io.StringIO):  # type: ignore[unreachable]
             handle = io.BytesIO(handle.read().encode('utf-8'))  # type: ignore[unreachable]
 
-        if isinstance(handle, tempfile._TemporaryFileWrapper):  # type: ignore[unreachable] # pylint: disable=protected-access
+        if isinstance(handle, tempfile._TemporaryFileWrapper):  # type: ignore[unreachable]
             if 'b' in handle.file.mode:  # type: ignore[unreachable]
                 handle = io.BytesIO(handle.read())
             else:

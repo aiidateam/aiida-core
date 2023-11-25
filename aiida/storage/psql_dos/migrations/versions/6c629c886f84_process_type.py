@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Add the process_type column to DbNode
 
 Revision ID: 6c629c886f84
@@ -15,8 +14,8 @@ Revises: 0aebbeab274d
 Create Date: 2018-03-15 13:23:12.941148
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = '6c629c886f84'

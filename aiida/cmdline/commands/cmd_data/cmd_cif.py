@@ -93,7 +93,7 @@ def cif_content(data):
         try:
             echo.echo(node.get_content())
         except IOError as exception:
-            echo.echo_warning(f'could not read the content for CifData<{node.pk}>: {str(exception)}')
+            echo.echo_warning(f'could not read the content for CifData<{node.pk}>: {exception!s}')
 
 
 @cif.command('export')
@@ -122,6 +122,6 @@ def cif_import(filename):
 
     try:
         node, _ = CifData.get_or_create(filename)
-        echo.echo_success(f'imported {str(node)}')
+        echo.echo_success(f'imported {node!s}')
     except ValueError as err:
         echo.echo_critical(str(err))

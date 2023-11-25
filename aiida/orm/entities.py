@@ -35,6 +35,7 @@ BackendEntityType = TypeVar('BackendEntityType', bound='BackendEntity')
 
 class EntityTypes(Enum):
     """Enum for referring to ORM entities in a backend-agnostic manner."""
+
     AUTHINFO = 'authinfo'
     COMMENT = 'comment'
     COMPUTER = 'computer'
@@ -62,16 +63,18 @@ class Collection(abc.ABC, Generic[EntityType]):
         :param backend: the backend instance to get the collection for
         """
         from aiida.orm.implementation import StorageBackend
+
         type_check(backend, StorageBackend)
         return cls(entity_class, backend=backend)
 
     def __init__(self, entity_class: Type[EntityType], backend: Optional['StorageBackend'] = None) -> None:
-        """ Construct a new entity collection.
+        """Construct a new entity collection.
 
         :param entity_class: the entity type e.g. User, Computer, etc
         :param backend: the backend instance to get the collection for, or use the default
         """
         from aiida.orm.implementation import StorageBackend
+
         type_check(backend, StorageBackend, allow_none=True)
         assert issubclass(entity_class, self._entity_base_cls())
         self._backend = backend or get_manager().get_profile_storage()
@@ -98,7 +101,7 @@ class Collection(abc.ABC, Generic[EntityType]):
         filters: Optional['FilterType'] = None,
         order_by: Optional['OrderByType'] = None,
         limit: Optional[int] = None,
-        offset: Optional[int] = None
+        offset: Optional[int] = None,
     ) -> 'QueryBuilder':
         """Get a query builder for the objects of this collection.
 
@@ -131,7 +134,7 @@ class Collection(abc.ABC, Generic[EntityType]):
         self,
         filters: Optional['FilterType'] = None,
         order_by: Optional['OrderByType'] = None,
-        limit: Optional[int] = None
+        limit: Optional[int] = None,
     ) -> List[EntityType]:
         """Find collection entries matching the filter criteria.
 
@@ -149,7 +152,7 @@ class Collection(abc.ABC, Generic[EntityType]):
 
         :return: A list of all entities
         """
-        return cast(List[EntityType], self.query().all(flat=True))  # pylint: disable=no-member
+        return cast(List[EntityType], self.query().all(flat=True))
 
     def count(self, filters: Optional['FilterType'] = None) -> int:
         """Count entities in this collection according to criteria.
@@ -167,7 +170,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
     _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore[assignment]
 
     @classproperty
-    def objects(cls: EntityType) -> CollectionType:  # pylint: disable=no-self-argument
+    def objects(cls: EntityType) -> CollectionType:  # noqa: N805
         """Get a collection for objects of this type, with the default backend.
 
         .. deprecated:: This will be removed in v3, use ``collection`` instead.
@@ -178,7 +181,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         return cls.collection
 
     @classproperty
-    def collection(cls) -> CollectionType:  # pylint: disable=no-self-argument
+    def collection(cls) -> CollectionType:  # noqa: N805
         """Get a collection for objects of this type, with the default backend.
 
         :return: an object that can be used to access entities of this type
@@ -207,14 +210,12 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         warn_deprecation(
             f'`{cls.__name__}.get` method is deprecated, use `{cls.__name__}.collection.get` instead.',
             version=3,
-            stacklevel=2
+            stacklevel=2,
         )
-        return cls.collection.get(**kwargs)  # pylint: disable=no-member
+        return cls.collection.get(**kwargs)
 
     def __init__(self, backend_entity: BackendEntityType) -> None:
-        """
-        :param backend_entity: the backend model supporting this entity
-        """
+        """:param backend_entity: the backend model supporting this entity"""
         self._backend_entity = backend_entity
         call_with_super_check(self.initialize)
 
@@ -230,7 +231,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         """
 
     @property
-    def id(self) -> int | None:  # pylint: disable=invalid-name
+    def id(self) -> int | None:
         """Return the id for this entity.
 
         This identifier is guaranteed to be unique amongst entities of the same type for a single backend instance.
@@ -284,6 +285,6 @@ def from_backend_entity(cls: Type[EntityType], backend_entity: BackendEntityType
 
     type_check(backend_entity, BackendEntity)
     entity = cls.__new__(cls)
-    entity._backend_entity = backend_entity  # pylint: disable=protected-access
+    entity._backend_entity = backend_entity
     call_with_super_check(entity.initialize)
     return entity

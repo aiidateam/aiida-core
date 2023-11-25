@@ -20,8 +20,7 @@ ToContext = dict
 
 
 def assign_(target: Union[Awaitable, ProcessNode]) -> Awaitable:
-    """
-    Convenience function that will construct an Awaitable for a given class instance
+    """Convenience function that will construct an Awaitable for a given class instance
     with the context action set to ASSIGN. When the awaitable target is completed
     it will be assigned to the context for a key that is to be defined later
 
@@ -36,8 +35,7 @@ def assign_(target: Union[Awaitable, ProcessNode]) -> Awaitable:
 
 
 def append_(target: Union[Awaitable, ProcessNode]) -> Awaitable:
-    """
-    Convenience function that will construct an Awaitable for a given class instance
+    """Convenience function that will construct an Awaitable for a given class instance
     with the context action set to APPEND. When the awaitable target is completed
     it will be appended to a list in the context for a key that is to be defined later
 

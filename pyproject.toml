@@ -107,8 +107,6 @@ pre-commit = [
     "mypy~=1.7",
     "packaging~=23.0",
     "pre-commit~=2.2",
-    "pylint~=2.17.4",
-    "pylint-aiida~=0.1.1",
     "sqlalchemy[mypy]~=2.0",
     "tomli",
     "types-PyYAML",
@@ -266,69 +264,6 @@ exclude = [
     "tests/",
 ]
 
-[tool.pylint.master]
-load-plugins = ["pylint_aiida"]
-
-[tool.pylint.format]
-max-line-length = 120
-
-[tool.pylint.messages_control]
-disable = [
-    "consider-using-f-string",
-    "cyclic-import",
-    "duplicate-code",
-    "import-outside-toplevel",
-    "inconsistent-return-statements",
-    "locally-disabled",
-    "logging-fstring-interpolation",
-    "no-else-raise",
-    "no-member",
-    "no-name-in-module",
-    "raise-missing-from",
-    "too-few-public-methods",
-    "too-many-ancestors",
-    "too-many-arguments",
-    "too-many-instance-attributes",
-    # this can be removed when https://github.com/PyCQA/astroid/issues/1015 is fixed
-    "not-context-manager",
-    "unnecessary-lambda-assignment",
-    "use-dict-literal",
-    "unnecessary-dunder-call",
-]
-extension-pkg-whitelist = "pydantic"
-
-[tool.pylint.basic]
-good-names = [
-    "_",
-    "x",
-    "y",
-    "z",
-    "i",
-    "j",
-    "k",
-    "dt",
-    "pk",
-    "fg",
-    "tz",
-    "nl",
-    "TemplatereplacerCalculation",
-    "ArithmeticAddCalculation",
-    "MultiplyAddWorkChain",
-    "SelfType",
-    "EntityType",
-    "MethodType",
-    "ReturnType",
-    "BackendNodeType",
-    "EnumType",
-    "CollectionType",
-    "BackendEntityType",
-]
-no-docstring-rgx = "^_,setUp,tearDown"
-docstring-min-length = 5
-
-[tool.pylint.design]
-max-locals = 20
-
 [tool.pytest.ini_options]
 minversion = "7.0"
 xfail_strict = true
@@ -353,23 +288,6 @@ markers = [
     "requires_rmq: requires a connection (on port 5672) to RabbitMQ",
     "sphinx: set parameters for the sphinx `app` fixture"
 ]
-
-[tool.isort]
-line_length = 120
-force_sort_within_sections = true
-# this configuration is compatible with yapf
-multi_line_output = 3
-include_trailing_comma = true
-
-[tool.yapf]
-based_on_style = "google"
-column_limit = 120
-dedent_closing_brackets = true
-coalesce_brackets = true
-align_closing_bracket_with_visual_indent = true
-split_arguments_when_comma_terminated = true
-indent_dictionary_value = false
-allow_split_before_dict_value = false
 
 [tool.mypy]
 enable_error_code = [
@@ -453,6 +371,35 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = 'plumpy'
 ignore_errors = true
+
+[tool.ruff]
+line-length = 120
+select = [
+    'E',    # pydocstyle
+    'W',    # pydocstyle
+    'F',    # pyflakes
+    'I',    # isort
+    'N',    # pep8-naming
+    'PLC',  # pylint-convention
+    'PLE',  # pylint-error
+    'PLR',  # pylint-refactor
+    'PLW',  # pylint-warning
+    'RUF',  # ruff
+]
+ignore = [
+    'F403',  # Star imports unable to detect undefined names
+    'F405',  # Import may be undefined or defined from star imports
+    'PLR0911',  # Too many return statements
+    'PLR0912',  # Too many branches
+    'PLR0913',  # Too many arguments in function definition
+    'PLR0915',  # Too many statements
+    'PLR2004',  # Magic value used in comparison
+    'RUF005',  # Consider iterable unpacking instead of concatenation
+    'RUF012',  # Mutable class attributes should be annotated with `typing.ClassVar`
+]
+
+[tool.ruff.format]
+quote-style = 'single'
 
 [tool.tox]
 legacy_tox_ini = """

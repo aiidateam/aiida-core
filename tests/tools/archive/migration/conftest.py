@@ -42,12 +42,9 @@ def migrate_from_func():
         """
         archive_path = get_archive_file(
             filename_archive,
-            **(archive_kwargs or {
-                'filepath': 'archives',
-                'external_module': 'aiida-export-migration-tests'
-            })
+            **(archive_kwargs or {'filepath': 'archives', 'external_module': 'aiida-export-migration-tests'}),
         )
-        metadata, data = read_json_files(archive_path)  # pylint: disable=unbalanced-tuple-unpacking
+        metadata, data = read_json_files(archive_path)
         verify_metadata_version(metadata, version=version_old)
         migration_method(metadata, data)
         verify_metadata_version(metadata, version=version_new)

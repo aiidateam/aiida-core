@@ -8,13 +8,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Miscellaneous generic utility functions and classes."""
-from datetime import datetime
 import filecmp
 import inspect
 import io
 import os
 import re
 import sys
+from datetime import datetime
 from typing import Any, Dict
 from uuid import UUID
 
@@ -22,10 +22,9 @@ from .lang import classproperty
 
 
 def get_new_uuid():
-    """
-    Return a new UUID (typically to be used for new nodes).
-    """
+    """Return a new UUID (typically to be used for new nodes)."""
     import uuid
+
     return str(uuid.uuid4())
 
 
@@ -43,8 +42,7 @@ def validate_uuid(given_uuid: str) -> bool:
 
 
 def validate_list_of_string_tuples(val, tuple_length):
-    """
-    Check that:
+    """Check that:
 
     1. ``val`` is a list or tuple
     2. each element of the list:
@@ -68,8 +66,9 @@ def validate_list_of_string_tuples(val, tuple_length):
 
     for element in val:
         if (
-            not isinstance(element, (list, tuple)) or (len(element) != tuple_length) or
-            not all(isinstance(s, str) for s in element)
+            not isinstance(element, (list, tuple))
+            or (len(element) != tuple_length)
+            or not all(isinstance(s, str) for s in element)
         ):
             raise ValidationError(err_msg)
 
@@ -77,8 +76,7 @@ def validate_list_of_string_tuples(val, tuple_length):
 
 
 def get_unique_filename(filename, list_of_filenames):
-    """
-    Return a unique filename that can be added to the list_of_filenames.
+    """Return a unique filename that can be added to the list_of_filenames.
 
     If filename is not in list_of_filenames, it simply returns the filename
     string itself. Otherwise, it appends a integer number to the filename
@@ -106,9 +104,8 @@ def get_unique_filename(filename, list_of_filenames):
     return new_filename
 
 
-def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero=False):  # pylint: disable=invalid-name
-    """
-    Given a dt in seconds, return it in a HH:MM:SS format.
+def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero=False):
+    """Given a dt in seconds, return it in a HH:MM:SS format.
 
     :param dt: a TimeDelta object
     :param max_num_fields: maximum number of non-zero fields to show
@@ -174,8 +171,7 @@ def str_timedelta(dt, max_num_fields=3, short=False, negative_to_zero=False):  #
 
 
 def get_class_string(obj):
-    """
-    Return the string identifying the class of the object (module + object name,
+    """Return the string identifying the class of the object (module + object name,
     joined by dots).
 
     It works both for classes and for class instances.
@@ -187,8 +183,7 @@ def get_class_string(obj):
 
 
 def get_object_from_string(class_string):
-    """
-    Given a string identifying an object (as returned by the get_class_string
+    """Given a string identifying an object (as returned by the get_class_string
     method) load and return the actual object.
     """
     import importlib
@@ -198,9 +193,8 @@ def get_object_from_string(class_string):
     return getattr(importlib.import_module(the_module), the_name)
 
 
-def grouper(n, iterable):  # pylint: disable=invalid-name
-    """
-    Given an iterable, returns an iterable that returns tuples of groups of
+def grouper(n, iterable):
+    """Given an iterable, returns an iterable that returns tuples of groups of
     elements from iterable of length n, except the last one that has the
     required length to exaust iterable (i.e., there is no filling applied).
 
@@ -219,10 +213,10 @@ def grouper(n, iterable):  # pylint: disable=invalid-name
 
 
 class ArrayCounter:
-    """
-    A counter & a method that increments it and returns its value.
+    """A counter & a method that increments it and returns its value.
     It is used in various tests.
     """
+
     seq = None
 
     def __init__(self):
@@ -234,8 +228,7 @@ class ArrayCounter:
 
 
 def are_dir_trees_equal(dir1, dir2):
-    """
-    Compare two directories recursively. Files in each directory are
+    """Compare two directories recursively. Files in each directory are
     assumed to be equal if their names and contents are equal.
 
     @param dir1: First directory path
@@ -245,16 +238,16 @@ def are_dir_trees_equal(dir1, dir2):
         there were no errors while accessing the directories or files,
         False otherwise.
     """
-
     # Directory comparison
     dirs_cmp = filecmp.dircmp(dir1, dir2)
     if dirs_cmp.left_only or dirs_cmp.right_only or dirs_cmp.funny_files:
         return (
-            False, 'Left directory: {}, right directory: {}, files only '
+            False,
+            'Left directory: {}, right directory: {}, files only '
             'in left directory: {}, files only in right directory: '
             '{}, not comparable files: {}'.format(
                 dir1, dir2, dirs_cmp.left_only, dirs_cmp.right_only, dirs_cmp.funny_files
-            )
+            ),
         )
 
     # If the directories contain the same files, compare the common files
@@ -275,15 +268,13 @@ def are_dir_trees_equal(dir1, dir2):
 
 
 class Prettifier:
-    """
-    Class to manage prettifiers (typically for labels of kpoints
+    """Class to manage prettifiers (typically for labels of kpoints
     in band plots)
     """
 
     @classmethod
     def _prettify_label_pass(cls, label):
-        """
-        No-op prettifier, simply returns  the same label
+        """No-op prettifier, simply returns  the same label
 
         :param label: a string to prettify
         """
@@ -291,29 +282,24 @@ class Prettifier:
 
     @classmethod
     def _prettify_label_agr(cls, label):
-        """
-        Prettifier for XMGrace
+        """Prettifier for XMGrace
 
         :param label: a string to prettify
         """
-
         label = (
-            label
-                .replace('GAMMA', r'\xG\f{}')
-                .replace('DELTA', r'\xD\f{}')
-                .replace('LAMBDA', r'\xL\f{}')
-                .replace('SIGMA', r'\xS\f{}')
-        )  # yapf:disable
+            label.replace('GAMMA', r'\xG\f{}')
+            .replace('DELTA', r'\xD\f{}')
+            .replace('LAMBDA', r'\xL\f{}')
+            .replace('SIGMA', r'\xS\f{}')
+        )
         return re.sub(r'_(.?)', r'\\s\1\\N', label)
 
     @classmethod
     def _prettify_label_agr_simple(cls, label):
-        """
-        Prettifier for XMGrace (for old label names)
+        """Prettifier for XMGrace (for old label names)
 
         :param label: a string to prettify
         """
-
         if label == 'G':
             return r'\xG'
 
@@ -321,33 +307,23 @@ class Prettifier:
 
     @classmethod
     def _prettify_label_gnuplot(cls, label):
-        """
-        Prettifier for Gnuplot
+        """Prettifier for Gnuplot
 
         :note: uses unicode, returns unicode strings (potentially, if needed)
 
         :param label: a string to prettify
         """
-
-        label = (
-            label
-                .replace('GAMMA', 'Γ')
-                .replace('DELTA', 'Δ')
-                .replace('LAMBDA', 'Λ')
-                .replace('SIGMA', 'Σ')
-        )  # yapf:disable
+        label = label.replace('GAMMA', 'Γ').replace('DELTA', 'Δ').replace('LAMBDA', 'Λ').replace('SIGMA', 'Σ')
         return re.sub(r'_(.?)', r'_{\1}', label)
 
     @classmethod
     def _prettify_label_gnuplot_simple(cls, label):
-        """
-        Prettifier for Gnuplot (for old label names)
+        """Prettifier for Gnuplot (for old label names)
 
         :note: uses unicode, returns unicode strings (potentially, if needed)
 
         :param label: a string to prettify
         """
-
         if label == 'G':
             return 'Γ'
 
@@ -355,19 +331,16 @@ class Prettifier:
 
     @classmethod
     def _prettify_label_latex(cls, label):
-        """
-        Prettifier for matplotlib, using LaTeX syntax
+        """Prettifier for matplotlib, using LaTeX syntax
 
         :param label: a string to prettify
         """
-
         label = (
-            label
-                .replace('GAMMA', r'$\Gamma$')
-                .replace('DELTA', r'$\Delta$')
-                .replace('LAMBDA', r'$\Lambda$')
-                .replace('SIGMA', r'$\Sigma$')
-        )  # yapf:disable
+            label.replace('GAMMA', r'$\Gamma$')
+            .replace('DELTA', r'$\Delta$')
+            .replace('LAMBDA', r'$\Lambda$')
+            .replace('SIGMA', r'$\Sigma$')
+        )
         label = re.sub(r'_(.?)', r'$_{\1}$', label)
 
         # label += r"$_{\vphantom{0}}$"
@@ -376,8 +349,7 @@ class Prettifier:
 
     @classmethod
     def _prettify_label_latex_simple(cls, label):
-        """
-        Prettifier for matplotlib, using LaTeX syntax (for old label names)
+        """Prettifier for matplotlib, using LaTeX syntax (for old label names)
 
         :param label: a string to prettify
         """
@@ -387,9 +359,8 @@ class Prettifier:
         return re.sub(r'(\d+)', r'$_{\1}$', label)
 
     @classproperty
-    def prettifiers(cls) -> Dict[str, Any]:  # pylint: disable=no-self-argument
-        """
-        Property that returns a dictionary that for each string associates
+    def prettifiers(cls) -> Dict[str, Any]:  # noqa: N805
+        """Property that returns a dictionary that for each string associates
         the function to prettify a label
 
         :return: a dictionary where keys are strings and values are functions
@@ -406,16 +377,14 @@ class Prettifier:
 
     @classmethod
     def get_prettifiers(cls):
-        """
-        Return a list of valid prettifier strings
+        """Return a list of valid prettifier strings
 
         :return: a list of strings
         """
         return sorted(cls.prettifiers.keys())
 
-    def __init__(self, format):  # pylint: disable=redefined-builtin
-        """
-        Create a class to pretttify strings of a given format
+    def __init__(self, format):
+        """Create a class to pretttify strings of a given format
 
         :param format: a string with the format to use to prettify.
            Valid formats are obtained from self.prettifiers
@@ -424,13 +393,12 @@ class Prettifier:
             format = 'pass'
 
         try:
-            self._prettifier_f = self.prettifiers[format]  # pylint: disable=unsubscriptable-object
+            self._prettifier_f = self.prettifiers[format]
         except KeyError:
             raise ValueError(f"Unknown prettifier format {format}; valid formats: {', '.join(self.get_prettifiers())}")
 
     def prettify(self, label):
-        """
-        Prettify a label using the format passed in the initializer
+        """Prettify a label using the format passed in the initializer
 
         :param label: the string to prettify
         :return: a prettified string
@@ -438,9 +406,8 @@ class Prettifier:
         return self._prettifier_f(label)
 
 
-def prettify_labels(labels, format=None):  # pylint: disable=redefined-builtin
-    """
-    Prettify label for typesetting in various formats
+def prettify_labels(labels, format=None):
+    """Prettify label for typesetting in various formats
 
     :param labels: a list of length-2 tuples, in the format(position, label)
     :param format: a string with the format for the prettifier (e.g. 'agr',
@@ -453,9 +420,8 @@ def prettify_labels(labels, format=None):  # pylint: disable=redefined-builtin
     return [(pos, prettifier.prettify(label)) for pos, label in labels]
 
 
-def join_labels(labels, join_symbol='|', threshold=1.e-6):
-    """
-    Join labels with a joining symbol when they are very close
+def join_labels(labels, join_symbol='|', threshold=1.0e-6):
+    """Join labels with a joining symbol when they are very close
 
     :param labels: a list of length-2 tuples, in the format(position, label)
     :param join_symbol: the string to use to join different paths. By default, a pipe
@@ -481,8 +447,7 @@ def join_labels(labels, join_symbol='|', threshold=1.e-6):
 
 
 def strip_prefix(full_string, prefix):
-    """
-    Strip the prefix from the given string and return it. If the prefix is not present
+    """Strip the prefix from the given string and return it. If the prefix is not present
     the original string will be returned unaltered
 
     :param full_string: the string from which to remove the prefix
@@ -496,8 +461,7 @@ def strip_prefix(full_string, prefix):
 
 
 class Capturing:
-    """
-    This class captures stdout and returns it
+    """This class captures stdout and returns it
     (as a list, split by lines).
 
     Note: if you raise a SystemExit, you have to catch it outside.
@@ -515,8 +479,6 @@ class Capturing:
     :param capture_stderr: if True, also captures sys.stderr. To access the
         lines, use obj.stderr_lines. If False, obj.stderr_lines is None.
     """
-
-    # pylint: disable=attribute-defined-outside-init
 
     def __init__(self, capture_stderr=False):
         """Construct a new instance."""
@@ -558,8 +520,7 @@ class Capturing:
 
 
 class ErrorAccumulator:
-    """
-    Allows to run a number of functions and collect all the errors they raise
+    """Allows to run a number of functions and collect all the errors they raise
 
     This allows to validate multiple things and tell the user about all the
     errors encountered at once. Works best if the individual functions do not depend on each other.
@@ -592,8 +553,7 @@ class ErrorAccumulator:
 
 
 class DatetimePrecision:
-    """
-    A simple class which stores a datetime object with its precision. No
+    """A simple class which stores a datetime object with its precision. No
     internal check is done (cause itis not possible).
 
     precision:  1 (only full date)
@@ -603,8 +563,7 @@ class DatetimePrecision:
     """
 
     def __init__(self, dtobj, precision):
-        """ Constructor to check valid datetime object and precision """
-
+        """Constructor to check valid datetime object and precision"""
         if not isinstance(dtobj, datetime):
             raise TypeError('dtobj argument has to be a datetime object')
 

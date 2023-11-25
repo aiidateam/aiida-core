@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Deleting dbpath table and triggers
 
 Revision ID: 70c7d732f1b2
@@ -15,8 +14,8 @@ Revises:
 Create Date: 2017-10-17 10:30:23.327195
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = '70c7d732f1b2'

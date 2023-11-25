@@ -21,9 +21,27 @@ class CalculationQueryBuilder:
     _compound_projections = ('state',)
     _default_projections = ('pk', 'ctime', 'process_label', 'cached', 'state', 'process_status')
     _valid_projections = (
-        'pk', 'uuid', 'ctime', 'mtime', 'state', 'process_state', 'process_status', 'exit_status', 'exit_message',
-        'sealed', 'process_label', 'label', 'description', 'node_type', 'paused', 'process_type', 'job_state',
-        'scheduler_state', 'exception', 'cached', 'cached_from'
+        'pk',
+        'uuid',
+        'ctime',
+        'mtime',
+        'state',
+        'process_state',
+        'process_status',
+        'exit_status',
+        'exit_message',
+        'sealed',
+        'process_label',
+        'label',
+        'description',
+        'node_type',
+        'paused',
+        'process_type',
+        'job_state',
+        'scheduler_state',
+        'exception',
+        'cached',
+        'cached_from',
     )
 
     def __init__(self, mapper=None):
@@ -52,7 +70,7 @@ class CalculationQueryBuilder:
         paused=False,
         exit_status=None,
         failed=False,
-        node_types=None
+        node_types=None,
     ):
         """Return a set of QueryBuilder filters based on typical command line options.
 
@@ -65,7 +83,6 @@ class CalculationQueryBuilder:
         :param failed: Boolean to filter only failed processes.
         :return: Dictionary of filters suitable for a QueryBuilder.append() call.
         """
-        # pylint: disable=too-many-arguments
         from aiida.engine import ProcessState
 
         exit_status_attribute = self.mapper.get_attribute('exit_status')

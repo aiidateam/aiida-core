@@ -15,9 +15,8 @@ from . import exceptions
 __all__ = ('AttributeDict', 'FixedFieldsAttributeDict', 'DefaultFieldsAttributeDict')
 
 
-class AttributeDict(dict):  # pylint: disable=too-many-instance-attributes
-    """
-    This class internally stores values in a dictionary, but exposes
+class AttributeDict(dict):
+    """This class internally stores values in a dictionary, but exposes
     the keys also as attributes, i.e. asking for attrdict.key
     will return the value of attrdict['key'] and so on.
 
@@ -95,8 +94,7 @@ class AttributeDict(dict):  # pylint: disable=too-many-instance-attributes
 
 
 class FixedFieldsAttributeDict(AttributeDict):
-    """
-    A dictionary with access to the keys as attributes, and with filtering
+    """A dictionary with access to the keys as attributes, and with filtering
     of valid attributes.
     This is only the base class, without valid attributes;
     use a derived class to do the actual work.
@@ -105,6 +103,7 @@ class FixedFieldsAttributeDict(AttributeDict):
         class TestExample(FixedFieldsAttributeDict):
             _valid_fields = ('a','b','c')
     """
+
     _valid_fields = tuple()
 
     def __init__(self, init=None):
@@ -118,18 +117,14 @@ class FixedFieldsAttributeDict(AttributeDict):
         super().__init__(init)
 
     def __setitem__(self, item, value):
-        """
-        Set a key as an attribute.
-        """
+        """Set a key as an attribute."""
         if item not in self._valid_fields:
             errmsg = f"'{item}' is not a valid key for object '{self.__class__.__name__}'"
             raise KeyError(errmsg)
         super().__setitem__(item, value)
 
     def __setattr__(self, attr, value):
-        """
-        Overridden to allow direct access to fields with underscore.
-        """
+        """Overridden to allow direct access to fields with underscore."""
         if attr.startswith('_'):
             object.__setattr__(self, attr, value)
         else:
@@ -137,9 +132,7 @@ class FixedFieldsAttributeDict(AttributeDict):
 
     @classmethod
     def get_valid_fields(cls):
-        """
-        Return the list of valid fields.
-        """
+        """Return the list of valid fields."""
         return cls._valid_fields
 
     def __dir__(self):
@@ -147,8 +140,7 @@ class FixedFieldsAttributeDict(AttributeDict):
 
 
 class DefaultFieldsAttributeDict(AttributeDict):
-    """
-    A dictionary with access to the keys as attributes, and with an
+    """A dictionary with access to the keys as attributes, and with an
     internal value storing the 'default' keys to be distinguished
     from extra fields.
 
@@ -199,13 +191,11 @@ class DefaultFieldsAttributeDict(AttributeDict):
 
         See if we want that setting a default field to None means deleting it.
     """
-    # pylint: disable=invalid-name
+
     _default_fields = tuple()
 
     def validate(self):
-        """
-        Validate the keys, if any ``validate_*`` method is available.
-        """
+        """Validate the keys, if any ``validate_*`` method is available."""
         for key in self.get_default_fields():
             # I get the attribute starting with validate_ and containing the name of the key
             # I set a dummy function if there is no validate_KEY function defined
@@ -217,17 +207,14 @@ class DefaultFieldsAttributeDict(AttributeDict):
                     raise exceptions.ValidationError(f"Invalid value for key '{key}' [{exc.__class__.__name__}]: {exc}")
 
     def __setattr__(self, attr, value):
-        """
-        Overridden to allow direct access to fields with underscore.
-        """
+        """Overridden to allow direct access to fields with underscore."""
         if attr.startswith('_'):
             object.__setattr__(self, attr, value)
         else:
             super().__setattr__(attr, value)
 
     def __getitem__(self, key):
-        """
-        Return None instead of raising an exception if the key does not exist
+        """Return None instead of raising an exception if the key does not exist
         but is in the list of default fields.
         """
         try:
@@ -239,19 +226,13 @@ class DefaultFieldsAttributeDict(AttributeDict):
 
     @classmethod
     def get_default_fields(cls):
-        """
-        Return the list of default fields, either defined in the instance or not.
-        """
+        """Return the list of default fields, either defined in the instance or not."""
         return list(cls._default_fields)
 
     def defaultkeys(self):
-        """
-        Return the default keys defined in the instance.
-        """
+        """Return the default keys defined in the instance."""
         return [_ for _ in self.keys() if _ in self._default_fields]
 
     def extrakeys(self):
-        """
-        Return the extra keys defined in the instance.
-        """
+        """Return the extra keys defined in the instance."""
         return [_ for _ in self.keys() if _ not in self._default_fields]

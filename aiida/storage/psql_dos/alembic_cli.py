@@ -39,7 +39,7 @@ class AlembicRunner:
             raise click.ClickException('No profile specified')
         migrator = PsqlDosMigrator(self.profile)
 
-        context = migrator._alembic_connect() if connect else contextlib.nullcontext(migrator._alembic_config())  # pylint: disable=protected-access
+        context = migrator._alembic_connect() if connect else contextlib.nullcontext(migrator._alembic_config())
         with context as config:
             command = getattr(alembic.command, command_name)
             config.stdout = click.get_text_stream('stdout')
@@ -109,4 +109,4 @@ def alembic_downgrade(runner, revision):
 
 
 if __name__ == '__main__':
-    alembic_cli()  # pylint: disable=no-value-for-parameter
+    alembic_cli()

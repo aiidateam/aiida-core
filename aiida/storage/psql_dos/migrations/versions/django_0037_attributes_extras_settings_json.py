@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Move `db_dbattribute`/`db_dbextra` to `db_dbnode.attributes`/`db_dbnode.extras`, and add `dbsetting.val`
 
 Revision ID: django_0037
@@ -16,8 +15,8 @@ Revises: django_0036
 """
 import math
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy import cast, func, select
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql import column, table
@@ -88,7 +87,7 @@ def upgrade():
     op.add_column('db_dbnode', sa.Column('extras', postgresql.JSONB(astext_type=sa.Text()), nullable=True))
 
     # transition attributes and extras to node
-    node_count = conn.execute(select(func.count()).select_from(node_tbl)).scalar()  # pylint: disable=not-callable
+    node_count = conn.execute(select(func.count()).select_from(node_tbl)).scalar()
     if node_count:
         with get_progress_reporter()(total=node_count, desc='Updating attributes and extras') as progress:
             for node in conn.execute(select(node_tbl)).all():
@@ -107,7 +106,7 @@ def upgrade():
     op.add_column('db_dbsetting', sa.Column('val', postgresql.JSONB(astext_type=sa.Text()), nullable=True))
 
     # transition settings
-    setting_count = conn.execute(select(func.count()).select_from(setting_tbl)).scalar()  # pylint: disable=not-callable
+    setting_count = conn.execute(select(func.count()).select_from(setting_tbl)).scalar()
     if setting_count:
         with get_progress_reporter()(total=setting_count, desc='Updating settings') as progress:
             for setting in conn.execute(select(setting_tbl)).all():
@@ -129,8 +128,9 @@ def upgrade():
                     else:
                         val = setting.dval
                 conn.execute(
-                    setting_tbl.update().where(setting_tbl.c.id == setting.id
-                                               ).values(val=cast(val, postgresql.JSONB(astext_type=sa.Text())))
+                    setting_tbl.update()
+                    .where(setting_tbl.c.id == setting.id)
+                    .values(val=cast(val, postgresql.JSONB(astext_type=sa.Text())))
                 )
                 progress.update()
 
@@ -157,11 +157,9 @@ def downgrade():
 
 
 def attributes_to_dict(attr_list: list):
-    """
-    Transform the attributes of a node into a dictionary. It assumes the key
+    """Transform the attributes of a node into a dictionary. It assumes the key
     are ordered alphabetically, and that they all belong to the same node.
     """
-    # pylint: disable=too-many-branches
     d: dict = {}
 
     error = False
@@ -207,8 +205,7 @@ def attributes_to_dict(attr_list: list):
 
 
 def select_from_key(key, d):
-    """
-    Return element of the dict to do the insertion on. If it is foo.1.bar, it
+    """Return element of the dict to do the insertion on. If it is foo.1.bar, it
     will return d["foo"][1]. If it is only foo, it will return d directly.
     """
     path = key.split('.')[:-1]

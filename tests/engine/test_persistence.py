@@ -21,7 +21,7 @@ class TestProcess:
     """Test the basic saving and loading of process states."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Initialize the profile."""
         assert Process.current() is None
         yield
@@ -42,12 +42,12 @@ class TestProcess:
 @pytest.mark.requires_rmq
 class TestAiiDAPersister:
     """Test AiiDAPersister."""
+
     maxDiff = 1024
 
     @pytest.fixture(autouse=True)
-    def init_profile(self):  # pylint: disable=unused-argument
+    def init_profile(self):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.persister = AiiDAPersister()
 
     def test_save_load_checkpoint(self):

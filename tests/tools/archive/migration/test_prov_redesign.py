@@ -16,7 +16,6 @@ until "dbgroup_type_string_change_content" (django: 0022), both included.
 The effects of the large db migration "provenance_redesign" (django: 0020)
 is tested in `TestLinks`, since the greatest change concerns links.
 """
-# pylint: disable=too-many-locals
 import pytest
 
 from aiida import orm
@@ -24,7 +23,7 @@ from aiida.tools.archive import create_archive, import_archive
 
 
 def test_base_data_type_change(tmp_path, aiida_profile):
-    """ Base Data types type string changed
+    """Base Data types type string changed
     Example: Bool: “data.base.Bool.” → “data.bool.Bool.”
     """
     aiida_profile.clear_profile()
@@ -85,7 +84,7 @@ def test_base_data_type_change(tmp_path, aiida_profile):
 
 @pytest.mark.requires_rmq
 def test_node_process_type(aiida_profile, tmp_path):
-    """ Column `process_type` added to `Node` entity DB table """
+    """Column `process_type` added to `Node` entity DB table"""
     from aiida.engine import run_get_node
     from tests.utils.processes import AddProcess
 
@@ -135,7 +134,7 @@ def test_node_process_type(aiida_profile, tmp_path):
 
 @pytest.mark.usefixtures('suppress_internal_deprecations')
 def test_code_type_change(aiida_profile, tmp_path, aiida_localhost):
-    """ Code type string changed
+    """Code type string changed
     Change: “code.Bool.” → “data.code.Code.”
     """
     # Create Code instance
@@ -175,7 +174,7 @@ def test_code_type_change(aiida_profile, tmp_path, aiida_localhost):
 
 
 def test_group_name_and_type_change(tmp_path, aiida_profile):
-    """ Group's name and type columns have changed
+    """Group's name and type columns have changed
     Change for columns:
     “name”            --> “label”
     "type"            --> "type_string"
@@ -202,15 +201,17 @@ def test_group_name_and_type_change(tmp_path, aiida_profile):
     groups_label = ['Users', 'UpfData']
     upf_filename = 'Al.test_file.UPF'
     # regular upf file version 2 header
-    upf_contents = '\n'.join([
-        "<UPF version=\"2.0.1\">",
-        'Human readable section is completely irrelevant for parsing!',
-        '<PP_HEADER',
-        'contents before element tag',
-        "element=\"Al\"",
-        'contents following element tag',
-        '>',
-    ])
+    upf_contents = '\n'.join(
+        [
+            '<UPF version="2.0.1">',
+            'Human readable section is completely irrelevant for parsing!',
+            '<PP_HEADER',
+            'contents before element tag',
+            'element="Al"',
+            'contents following element tag',
+            '>',
+        ]
+    )
     with (tmp_path / upf_filename).open('w') as upf_file:
         upf_file.write(upf_contents)
 

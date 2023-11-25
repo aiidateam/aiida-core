@@ -20,8 +20,16 @@ from aiida.common.utils import Prettifier
 
 LIST_PROJECT_HEADERS = ['ID', 'Formula', 'Ctime', 'Label']
 EXPORT_FORMATS = [
-    'agr', 'agr_batch', 'dat_blocks', 'dat_multicolumn', 'gnuplot', 'json', 'mpl_pdf', 'mpl_png', 'mpl_singlefile',
-    'mpl_withjson'
+    'agr',
+    'agr_batch',
+    'dat_blocks',
+    'dat_multicolumn',
+    'gnuplot',
+    'json',
+    'mpl_pdf',
+    'mpl_png',
+    'mpl_singlefile',
+    'mpl_withjson',
 ]
 VISUALIZATION_FORMATS = ['xmgrace']
 
@@ -31,7 +39,6 @@ def bands():
     """Manipulate BandsData objects (band structures)."""
 
 
-# pylint: disable=too-many-arguments
 @bands.command('list')
 @decorators.with_dbenv()
 @list_options
@@ -100,15 +107,13 @@ def bands_show(data, fmt):
     '--y-min-lim',
     type=click.FLOAT,
     default=None,
-    help='The minimum value for the y axis.'
-    ' Default: minimum of all bands'
+    help='The minimum value for the y axis.' ' Default: minimum of all bands',
 )
 @click.option(
     '--y-max-lim',
     type=click.FLOAT,
     default=None,
-    help='The maximum value for the y axis.'
-    ' Default: maximum of all bands'
+    help='The maximum value for the y axis.' ' Default: maximum of all bands',
 )
 @click.option(
     '-o',
@@ -117,14 +122,14 @@ def bands_show(data, fmt):
     default=None,
     help='If present, store the output directly on a file '
     'with the given name. It is essential to use this option '
-    'if more than one file needs to be created.'
+    'if more than one file needs to be created.',
 )
 @options.FORCE(help='If passed, overwrite files without checking.')
 @click.option(
     '--prettify-format',
     default=None,
     type=click.Choice(Prettifier.get_prettifiers()),
-    help='The style of labels for the prettifier'
+    help='The style of labels for the prettifier',
 )
 @decorators.with_dbenv()
 def bands_export(fmt, y_min_lim, y_max_lim, output, force, prettify_format, datum):

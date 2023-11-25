@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Rename `db_dbgroup.type_string`.
 
 Note this is identical to sqlalchemy migration e72ad251bcdb.

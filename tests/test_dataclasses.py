@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-lines,invalid-name,no-member,too-many-public-methods
+# ruff: noqa: N806
 """Tests for specific subclasses of Data."""
 import os
 import tempfile
@@ -35,9 +35,11 @@ from aiida.orm.nodes.data.structure import (
 def has_seekpath():
     """Check if there is the seekpath dependency
 
-    :return: True if seekpath is installed, False otherwise"""
+    :return: True if seekpath is installed, False otherwise
+    """
     try:
-        import seekpath  # pylint: disable=unused-import
+        import seekpath  # noqa: F401
+
         return True
     except ImportError:
         return False
@@ -49,14 +51,16 @@ def to_list_of_lists(lofl):
 
     :param lofl: an iterable of iterables
 
-    :return: a list of lists"""
-    return [[el for el in l] for l in lofl]  # pylint: disable=unnecessary-comprehension
+    :return: a list of lists
+    """
+    return [[el for el in lst] for lst in lofl]
 
 
 def simplify(string):
     """Takes a string, strips spaces in each line and returns it
     Useful to compare strings when different versions of a code give
-    different spaces."""
+    different spaces.
+    """
     return '\n'.join(s.strip() for s in string.split())
 
 
@@ -74,7 +78,7 @@ def test_get_pymatgen_version():
 class TestCifData:
     """Tests for CifData class."""
 
-    valid_sample_cif_str = '''
+    valid_sample_cif_str = """
         data_test
         _cell_length_a    10
         _cell_length_b    10
@@ -92,9 +96,9 @@ class TestCifData:
         C 0 0 0 0
         O 0.5 0.5 0.5 .
         H 0.75 0.75 0.75 0
-    '''
+    """
 
-    valid_sample_cif_str_2 = '''
+    valid_sample_cif_str_2 = """
         data_test
         _cell_length_a    10
         _cell_length_b    10
@@ -111,7 +115,7 @@ class TestCifData:
         _atom_site_attached_hydrogens
         C 0 0 0 0
         O 0.5 0.5 0.5 .
-    '''
+    """
 
     @skip_pycifrw
     def test_reload_cifdata(self):
@@ -212,7 +216,7 @@ class TestCifData:
         """Test `CifData.get_structure`."""
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(
-                '''
+                """
 data_test
 _cell_length_a    10
 _cell_length_b    10
@@ -231,7 +235,7 @@ _atom_site_fract_y
 _atom_site_fract_z
 C 0 0 0
 O 0.5 0.5 0.5
-            '''
+            """
             )
             tmpf.flush()
             a = CifData(file=tmpf.name)
@@ -249,12 +253,12 @@ O 0.5 0.5 0.5
     def test_ase_primitive_and_conventional_cells_ase(self):
         """Checking the number of atoms per primitive/conventional cell
         returned by ASE ase.io.read() method. Test input is
-        adapted from http://www.crystallography.net/cod/9012064.cif@120115"""
-        import ase
+        adapted from http://www.crystallography.net/cod/9012064.cif@120115
+        """
 
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(
-                '''
+                """
                 data_9012064
                 _space_group_IT_number           166
                 _symmetry_space_group_name_H-M   'R -3 m :H'
@@ -274,19 +278,16 @@ O 0.5 0.5 0.5
                 Bi 0.00000 0.00000 0.40046 0.02330
                 Te1 0.00000 0.00000 0.00000 0.01748
                 Te2 0.00000 0.00000 0.79030 0.01912
-            '''
+            """
             )
             tmpf.flush()
             c = CifData(file=tmpf.name)
 
-        ase = c.get_structure(converter='ase', primitive_cell=False).get_ase()
-        assert ase.get_global_number_of_atoms() == 15
+        assert c.get_structure(converter='ase', primitive_cell=False).get_ase().get_global_number_of_atoms() == 15
+        assert c.get_structure(converter='ase').get_ase().get_global_number_of_atoms() == 15
 
-        ase = c.get_structure(converter='ase').get_ase()
-        assert ase.get_global_number_of_atoms() == 15
-
-        ase = c.get_structure(converter='ase', primitive_cell=True, subtrans_included=False).get_ase()
-        assert ase.get_global_number_of_atoms() == 5
+        structure = c.get_structure(converter='ase', primitive_cell=True, subtrans_included=False)
+        assert structure.get_ase().get_global_number_of_atoms() == 5
 
     @skip_ase
     @skip_pycifrw
@@ -295,10 +296,11 @@ O 0.5 0.5 0.5
     def test_ase_primitive_and_conventional_cells_pymatgen(self):
         """Checking the number of atoms per primitive/conventional cell
         returned by ASE ase.io.read() method. Test input is
-        adapted from http://www.crystallography.net/cod/9012064.cif@120115"""
+        adapted from http://www.crystallography.net/cod/9012064.cif@120115
+        """
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(
-                '''
+                """
 data_9012064
 _space_group_IT_number           166
 _symmetry_space_group_name_H-M   'R -3 m :H'
@@ -330,7 +332,7 @@ _atom_site_U_iso_or_equiv
 Bi 0.00000 0.00000 0.40046 0.02330
 Te1 0.00000 0.00000 0.00000 0.01748
 Te2 0.00000 0.00000 0.79030 0.01912
-            '''
+            """
             )
             tmpf.flush()
             c = CifData(file=tmpf.name)
@@ -346,27 +348,26 @@ Te2 0.00000 0.00000 0.79030 0.01912
 
     @skip_pycifrw
     def test_pycifrw_from_datablocks(self):
-        """
-        Tests CifData.pycifrw_from_cif()
-        """
+        """Tests CifData.pycifrw_from_cif()"""
         import re
 
         from aiida.orm.nodes.data.cif import pycifrw_from_cif
 
-        datablocks = [{
-            '_atom_site_label': ['A', 'B', 'C'],
-            '_atom_site_occupancy': [1.0, 0.5, 0.5],
-            '_publ_section_title': 'Test CIF'
-        }]
+        datablocks = [
+            {
+                '_atom_site_label': ['A', 'B', 'C'],
+                '_atom_site_occupancy': [1.0, 0.5, 0.5],
+                '_publ_section_title': 'Test CIF',
+            }
+        ]
         with Capturing():
             lines = pycifrw_from_cif(datablocks).WriteOut().split('\n')
         non_comments = []
         for line in lines:
             if not re.search('^#', line):
                 non_comments.append(line)
-        assert simplify('\n'.join(non_comments)) == \
-            simplify(
-                '''
+        assert simplify('\n'.join(non_comments)) == simplify(
+            """
 data_0
 loop_
   _atom_site_label
@@ -381,8 +382,8 @@ loop_
    0.5
 
 _publ_section_title                     'Test CIF'
-'''
-            )
+"""
+        )
 
         loops = {'_atom_site': ['_atom_site_label', '_atom_site_occupancy']}
         with Capturing():
@@ -391,9 +392,8 @@ _publ_section_title                     'Test CIF'
         for line in lines:
             if not re.search('^#', line):
                 non_comments.append(line)
-        assert simplify('\n'.join(non_comments)) == \
-            simplify(
-                '''
+        assert simplify('\n'.join(non_comments)) == simplify(
+            """
 data_0
 loop_
   _atom_site_label
@@ -403,8 +403,8 @@ loop_
    C  0.5
 
 _publ_section_title                     'Test CIF'
-'''
-            )
+"""
+        )
 
     @skip_pycifrw
     def test_pycifrw_syntax(self):
@@ -413,31 +413,37 @@ _publ_section_title                     'Test CIF'
 
         from aiida.orm.nodes.data.cif import pycifrw_from_cif
 
-        datablocks = [{
-            '_tag': '[value]',
-        }]
+        datablocks = [
+            {
+                '_tag': '[value]',
+            }
+        ]
         with Capturing():
             lines = pycifrw_from_cif(datablocks).WriteOut().split('\n')
         non_comments = []
         for line in lines:
             if not re.search('^#', line):
                 non_comments.append(line)
-        assert simplify('\n'.join(non_comments)) == \
-            simplify('''
+        assert simplify('\n'.join(non_comments)) == simplify(
+            """
 data_0
 _tag                                    '[value]'
-''')
+"""
+        )
 
     @skip_pycifrw
     @staticmethod
     def test_cif_with_long_line():
         """Tests CifData - check that long lines (longer than 2048 characters) are supported.
-        Should not raise any error."""
+        Should not raise any error.
+        """
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
-            tmpf.write(f'''
+            tmpf.write(
+                f"""
 data_0
 _tag   {'a' * 5000}
- ''')
+ """
+            )
             tmpf.flush()
             _ = CifData(file=tmpf.name)
 
@@ -447,7 +453,7 @@ _tag   {'a' * 5000}
         """Test the `CifData` roundtrip."""
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(
-                '''
+                """
                 data_test
                 _cell_length_a    10
                 _cell_length_b    10
@@ -464,18 +470,18 @@ _tag   {'a' * 5000}
                 O 0.5 0.5 0.5
                 _cod_database_code 0000001
                 _[local]_flags     ''
-            '''
+            """
             )
             tmpf.flush()
             a = CifData(file=tmpf.name)
 
         b = CifData(values=a.values)
         c = CifData(values=b.values)
-        assert b._prepare_cif() == c._prepare_cif()  # pylint: disable=protected-access
+        assert b._prepare_cif() == c._prepare_cif()
 
         b = CifData(ase=a.ase)
         c = CifData(ase=b.ase)
-        assert b._prepare_cif() == c._prepare_cif()  # pylint: disable=protected-access
+        assert b._prepare_cif() == c._prepare_cif()
 
     def test_symop_string_from_symop_matrix_tr(self):
         """Test symmetry operations."""
@@ -493,7 +499,7 @@ _tag   {'a' * 5000}
         """Test parsing of file with attached hydrogens."""
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(
-                '''
+                """
                 data_test
                 _cell_length_a    10
                 _cell_length_b    10
@@ -510,7 +516,7 @@ _tag   {'a' * 5000}
                 C 0 0 0 ?
                 O 0.5 0.5 0.5 .
                 H 0.75 0.75 0.75 0
-            '''
+            """
             )
             tmpf.flush()
             a = CifData(file=tmpf.name)
@@ -519,7 +525,7 @@ _tag   {'a' * 5000}
 
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(
-                '''
+                """
                 data_test
                 _cell_length_a    10
                 _cell_length_b    10
@@ -536,7 +542,7 @@ _tag   {'a' * 5000}
                 C 0 0 0 ?
                 O 0.5 0.5 0.5 1
                 H 0.75 0.75 0.75 0
-            '''
+            """
             )
             tmpf.flush()
             a = CifData(file=tmpf.name)
@@ -548,15 +554,14 @@ _tag   {'a' * 5000}
     @skip_spglib
     @pytest.mark.requires_rmq
     def test_refine(self):
-        """
-        Test case for refinement (space group determination) for a
+        """Test case for refinement (space group determination) for a
         CifData object.
         """
         from aiida.tools.data.cif import refine_inline
 
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(
-                '''
+                """
                 data_test
                 _cell_length_a    10
                 _cell_length_b    10
@@ -572,7 +577,7 @@ _tag   {'a' * 5000}
                 C 0.5 0.5 0.5
                 O 0.25 0.5 0.5
                 O 0.75 0.5 0.5
-            '''
+            """
             )
             tmpf.flush()
             a = CifData(file=tmpf.name)
@@ -582,15 +587,31 @@ _tag   {'a' * 5000}
         assert list(b.values.keys()) == ['test']
         assert b.values['test']['_chemical_formula_sum'] == 'C O2'
         assert b.values['test']['_symmetry_equiv_pos_as_xyz'] == [
-            'x,y,z', '-x,-y,-z', '-y,x,z', 'y,-x,-z', '-x,-y,z', 'x,y,-z', 'y,-x,z', '-y,x,-z', 'x,-y,-z', '-x,y,z',
-            '-y,-x,-z', 'y,x,z', '-x,y,-z', 'x,-y,z', 'y,x,-z', '-y,-x,z'
+            'x,y,z',
+            '-x,-y,-z',
+            '-y,x,z',
+            'y,-x,-z',
+            '-x,-y,z',
+            'x,y,-z',
+            'y,-x,z',
+            '-y,x,-z',
+            'x,-y,-z',
+            '-x,y,z',
+            '-y,-x,-z',
+            'y,x,z',
+            '-x,y,-z',
+            'x,-y,z',
+            'y,x,-z',
+            '-y,-x,z',
         ]
 
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
-            tmpf.write('''
+            tmpf.write(
+                """
                 data_a
                 data_b
-            ''')
+            """
+            )
             tmpf.flush()
             c = CifData(file=tmpf.name)
 
@@ -606,16 +627,17 @@ _tag   {'a' * 5000}
 
             default = CifData(file=tmpf.name)
             default2 = CifData(file=tmpf.name, scan_type='standard')
-            assert default._prepare_cif() == default2._prepare_cif()  # pylint: disable=protected-access
+            assert default._prepare_cif() == default2._prepare_cif()
 
             flex = CifData(file=tmpf.name, scan_type='flex')
-            assert default._prepare_cif() == flex._prepare_cif()  # pylint: disable=protected-access
+            assert default._prepare_cif() == flex._prepare_cif()
 
     @skip_pycifrw
     def test_empty_cif(self):
         """Test empty CifData
 
-        Note: This test does not need PyCifRW."""
+        Note: This test does not need PyCifRW.
+        """
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
             tmpf.write(self.valid_sample_cif_str)
             tmpf.flush()
@@ -627,7 +649,7 @@ _tag   {'a' * 5000}
             with pytest.raises(AttributeError):
                 _ = a.filename
 
-            #now it has
+            # now it has
             a.set_file(tmpf.name)
             _ = a.filename
 
@@ -642,18 +664,18 @@ _tag   {'a' * 5000}
 
             # this will parse the cif
             eager = CifData(file=tmpf.name, parse_policy='eager')
-            assert eager._values is not None  # pylint: disable=protected-access
+            assert eager._values is not None
 
             # this should not parse the cif
             lazy = CifData(file=tmpf.name, parse_policy='lazy')
-            assert lazy._values is None  # pylint: disable=protected-access
+            assert lazy._values is None
 
             # also lazy-loaded nodes should be storable
             lazy.store()
 
             # this should parse the cif
             _ = lazy.values
-            assert lazy._values is not None  # pylint: disable=protected-access
+            assert lazy._values is not None
 
     @skip_pycifrw
     def test_set_file(self):
@@ -801,7 +823,7 @@ class TestSiteValidWeights:
     def test_symbol_weight_mismatch(self):
         """Should not accept a size mismatch of the symbols and weights list."""
         with pytest.raises(ValueError):
-            Kind(symbols=['Ba', 'C'], weights=[1.])
+            Kind(symbols=['Ba', 'C'], weights=[1.0])
 
         with pytest.raises(ValueError):
             Kind(symbols=['Ba'], weights=[0.1, 0.2])
@@ -819,12 +841,12 @@ class TestSiteValidWeights:
     @staticmethod
     def test_sum_one_weights():
         """Should accept a sum equal to one."""
-        Kind(symbols=['Ba', 'C'], weights=[1. / 3., 2. / 3.])
+        Kind(symbols=['Ba', 'C'], weights=[1.0 / 3.0, 2.0 / 3.0])
 
     @staticmethod
     def test_sum_less_one_weights():
         """Should accept a sum equal less than one."""
-        Kind(symbols=['Ba', 'C'], weights=[1. / 3., 1. / 3.])
+        Kind(symbols=['Ba', 'C'], weights=[1.0 / 3.0, 1.0 / 3.0])
 
     @staticmethod
     def test_none():
@@ -837,30 +859,28 @@ class TestKindTestGeneral:
 
     def test_sum_one_general(self):
         """Should accept a sum equal to one."""
-        a = Kind(symbols=['Ba', 'C'], weights=[1. / 3., 2. / 3.])
+        a = Kind(symbols=['Ba', 'C'], weights=[1.0 / 3.0, 2.0 / 3.0])
         assert a.is_alloy
         assert not a.has_vacancies
 
     def test_sum_less_one_general(self):
         """Should accept a sum equal less than one."""
-        a = Kind(symbols=['Ba', 'C'], weights=[1. / 3., 1. / 3.])
+        a = Kind(symbols=['Ba', 'C'], weights=[1.0 / 3.0, 1.0 / 3.0])
         assert a.is_alloy
         assert a.has_vacancies
 
     def test_no_position(self):
         """Should not accept a 'positions' parameter."""
         with pytest.raises(ValueError):
-            Kind(position=[0., 0., 0.], symbols=['Ba'], weights=[1.])
+            Kind(position=[0.0, 0.0, 0.0], symbols=['Ba'], weights=[1.0])
 
     def test_simple(self):
-        """
-        Should recognize a simple element.
-        """
+        """Should recognize a simple element."""
         a = Kind(symbols='Ba')
         assert not a.is_alloy
         assert not a.has_vacancies
 
-        b = Kind(symbols='Ba', weights=1.)
+        b = Kind(symbols='Ba', weights=1.0)
         assert not b.is_alloy
         assert not b.has_vacancies
 
@@ -869,19 +889,17 @@ class TestKindTestGeneral:
         assert not c.has_vacancies
 
     def test_automatic_name(self):
-        """
-        Check the automatic name generator.
-        """
+        """Check the automatic name generator."""
         a = Kind(symbols='Ba')
         assert a.name == 'Ba'
 
         a = Kind(symbols='X')
         assert a.name == 'X'
 
-        a = Kind(symbols=('Si', 'Ge'), weights=(1. / 3., 2. / 3.))
+        a = Kind(symbols=('Si', 'Ge'), weights=(1.0 / 3.0, 2.0 / 3.0))
         assert a.name == 'GeSi'
 
-        a = Kind(symbols=('Si', 'X'), weights=(1. / 3., 2. / 3.))
+        a = Kind(symbols=('Si', 'X'), weights=(1.0 / 3.0, 2.0 / 3.0))
         assert a.name == 'SiX'
 
         a = Kind(symbols=('Si', 'Ge'), weights=(0.4, 0.5))
@@ -896,77 +914,55 @@ class TestKindTestGeneral:
 
 
 class TestKindTestMasses:
-    """
-    Tests the management of masses during the creation of Kind objects.
-    """
+    """Tests the management of masses during the creation of Kind objects."""
 
     def test_auto_mass_one(self):
-        """
-        mass for elements with sum one
-        """
-        a = Kind(symbols=['Ba', 'C'], weights=[1. / 3., 2. / 3.])
-        assert round(abs(a.mass - (_atomic_masses['Ba'] + 2. * _atomic_masses['C']) / 3.), 7) == 0
+        """Mass for elements with sum one"""
+        a = Kind(symbols=['Ba', 'C'], weights=[1.0 / 3.0, 2.0 / 3.0])
+        assert round(abs(a.mass - (_atomic_masses['Ba'] + 2.0 * _atomic_masses['C']) / 3.0), 7) == 0
 
     def test_sum_less_one_masses(self):
-        """
-        mass for elements with sum less than one
-        """
-        a = Kind(symbols=['Ba', 'C'], weights=[1. / 3., 1. / 3.])
-        assert round(abs(a.mass - (_atomic_masses['Ba'] + _atomic_masses['C']) / 2.), 7) == 0
+        """Mass for elements with sum less than one"""
+        a = Kind(symbols=['Ba', 'C'], weights=[1.0 / 3.0, 1.0 / 3.0])
+        assert round(abs(a.mass - (_atomic_masses['Ba'] + _atomic_masses['C']) / 2.0), 7) == 0
 
     def test_sum_less_one_singleelem(self):
-        """
-        mass for a single element
-        """
+        """Mass for a single element"""
         a = Kind(symbols=['Ba'])
         assert round(abs(a.mass - _atomic_masses['Ba']), 7) == 0
 
     def test_manual_mass(self):
-        """
-        mass set manually
-        """
-        a = Kind(symbols=['Ba', 'C'], weights=[1. / 3., 1. / 3.], mass=1000.)
-        assert round(abs(a.mass - 1000.), 7) == 0
+        """Mass set manually"""
+        a = Kind(symbols=['Ba', 'C'], weights=[1.0 / 3.0, 1.0 / 3.0], mass=1000.0)
+        assert round(abs(a.mass - 1000.0), 7) == 0
 
 
 class TestStructureDataInit:
-    """
-    Tests the creation of StructureData objects (cell and pbc).
-    """
+    """Tests the creation of StructureData objects (cell and pbc)."""
 
     def test_cell_wrong_size_1(self):
-        """
-        Wrong cell size (not 3x3)
-        """
+        """Wrong cell size (not 3x3)"""
         with pytest.raises(ValueError):
-            StructureData(cell=((1., 2., 3.),))
+            StructureData(cell=((1.0, 2.0, 3.0),))
 
     def test_cell_wrong_size_2(self):
-        """
-        Wrong cell size (not 3x3)
-        """
+        """Wrong cell size (not 3x3)"""
         with pytest.raises(ValueError):
-            StructureData(cell=((1., 0., 0.), (0., 0., 3.), (0., 3.)))
+            StructureData(cell=((1.0, 0.0, 0.0), (0.0, 0.0, 3.0), (0.0, 3.0)))
 
     def test_cell_zero_vector(self):
-        """
-        Wrong cell (one vector has zero length)
-        """
+        """Wrong cell (one vector has zero length)"""
         with pytest.raises(ValueError):
-            StructureData(cell=((0., 0., 0.), (0., 1., 0.), (0., 0., 1.))).store()
+            StructureData(cell=((0.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0))).store()
 
     def test_cell_zero_volume(self):
-        """
-        Wrong cell (volume is zero)
-        """
+        """Wrong cell (volume is zero)"""
         with pytest.raises(ValueError):
-            StructureData(cell=((1., 0., 0.), (0., 1., 0.), (1., 1., 0.))).store()
+            StructureData(cell=((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (1.0, 1.0, 0.0))).store()
 
     def test_cell_ok_init(self):
-        """
-        Correct cell
-        """
-        cell = ((1., 0., 0.), (0., 2., 0.), (0., 0., 3.))
+        """Correct cell"""
+        cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
         a = StructureData(cell=cell)
         out_cell = a.cell
 
@@ -975,41 +971,31 @@ class TestStructureDataInit:
                 assert round(abs(cell[i][j] - out_cell[i][j]), 7) == 0
 
     def test_volume(self):
-        """
-        Check the volume calculation
-        """
-        a = StructureData(cell=((1., 0., 0.), (0., 2., 0.), (0., 0., 3.)))
-        assert round(abs(a.get_cell_volume() - 6.), 7) == 0
+        """Check the volume calculation"""
+        a = StructureData(cell=((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0)))
+        assert round(abs(a.get_cell_volume() - 6.0), 7) == 0
 
     def test_wrong_pbc_1(self):
-        """
-        Wrong pbc parameter (not bool or iterable)
-        """
+        """Wrong pbc parameter (not bool or iterable)"""
         with pytest.raises(ValueError):
-            cell = ((1., 0., 0.), (0., 2., 0.), (0., 0., 3.))
+            cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
             StructureData(cell=cell, pbc=1)
 
     def test_wrong_pbc_2(self):
-        """
-        Wrong pbc parameter (iterable but with wrong len)
-        """
+        """Wrong pbc parameter (iterable but with wrong len)"""
         with pytest.raises(ValueError):
-            cell = ((1., 0., 0.), (0., 2., 0.), (0., 0., 3.))
+            cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
             StructureData(cell=cell, pbc=[True, True])
 
     def test_wrong_pbc_3(self):
-        """
-        Wrong pbc parameter (iterable but with wrong len)
-        """
+        """Wrong pbc parameter (iterable but with wrong len)"""
         with pytest.raises(ValueError):
-            cell = ((1., 0., 0.), (0., 2., 0.), (0., 0., 3.))
+            cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
             StructureData(cell=cell, pbc=[])
 
     def test_ok_pbc_1(self):
-        """
-        Single pbc value
-        """
-        cell = ((1., 0., 0.), (0., 2., 0.), (0., 0., 3.))
+        """Single pbc value"""
+        cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
         a = StructureData(cell=cell, pbc=True)
         assert a.pbc == tuple([True, True, True])
 
@@ -1017,10 +1003,8 @@ class TestStructureDataInit:
         assert a.pbc == tuple([False, False, False])
 
     def test_ok_pbc_2(self):
-        """
-        One-element list
-        """
-        cell = ((1., 0., 0.), (0., 2., 0.), (0., 0., 3.))
+        """One-element list"""
+        cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
         a = StructureData(cell=cell, pbc=[True])
         assert a.pbc == tuple([True, True, True])
 
@@ -1028,31 +1012,25 @@ class TestStructureDataInit:
         assert a.pbc == tuple([False, False, False])
 
     def test_ok_pbc_3(self):
-        """
-        Three-element list
-        """
-        cell = ((1., 0., 0.), (0., 2., 0.), (0., 0., 3.))
+        """Three-element list"""
+        cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
         a = StructureData(cell=cell, pbc=[True, False, True])
         assert a.pbc == tuple([True, False, True])
 
 
 class TestStructureData:
-    """
-    Tests the creation of StructureData objects (cell and pbc).
-    """
+    """Tests the creation of StructureData objects (cell and pbc)."""
 
     def test_cell_ok_and_atoms(self):
-        """
-        Test the creation of a cell and the appending of atoms
-        """
-        cell = [[2., 0., 0.], [0., 2., 0.], [0., 0., 2.]]
+        """Test the creation of a cell and the appending of atoms"""
+        cell = [[2.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 2.0]]
 
         a = StructureData(cell=cell)
         out_cell = a.cell
         np.testing.assert_allclose(out_cell, cell)
 
-        a.append_atom(position=(0., 0., 0.), symbols=['Ba'])
-        a.append_atom(position=(1., 1., 1.), symbols=['Ti'])
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols=['Ba'])
+        a.append_atom(position=(1.0, 1.0, 1.0), symbols=['Ti'])
         a.append_atom(position=(1.2, 1.4, 1.6), symbols=['Ti'])
         assert not a.is_alloy
         assert not a.has_vacancies
@@ -1060,32 +1038,31 @@ class TestStructureData:
         # belong to the same kind)
         assert len(a.kinds) == 2
 
-        a.append_atom(position=(0.5, 1., 1.5), symbols=['O', 'C'], weights=[0.5, 0.5])
+        a.append_atom(position=(0.5, 1.0, 1.5), symbols=['O', 'C'], weights=[0.5, 0.5])
         assert a.is_alloy
         assert not a.has_vacancies
 
-        a.append_atom(position=(0.5, 1., 1.5), symbols=['O'], weights=[0.5])
+        a.append_atom(position=(0.5, 1.0, 1.5), symbols=['O'], weights=[0.5])
         assert a.is_alloy
         assert a.has_vacancies
 
         a.clear_kinds()
-        a.append_atom(position=(0.5, 1., 1.5), symbols=['O'], weights=[0.5])
+        a.append_atom(position=(0.5, 1.0, 1.5), symbols=['O'], weights=[0.5])
         assert not a.is_alloy
         assert a.has_vacancies
 
     def test_cell_ok_and_unknown_atoms(self):
-        """
-        Test the creation of a cell and the appending of atoms, including
+        """Test the creation of a cell and the appending of atoms, including
         the unknown entry.
         """
-        cell = [[2., 0., 0.], [0., 2., 0.], [0., 0., 2.]]
+        cell = [[2.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 2.0]]
 
         a = StructureData(cell=cell)
         out_cell = a.cell
         np.testing.assert_allclose(out_cell, cell)
 
-        a.append_atom(position=(0., 0., 0.), symbols=['Ba'])
-        a.append_atom(position=(1., 1., 1.), symbols=['X'])
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols=['Ba'])
+        a.append_atom(position=(1.0, 1.0, 1.0), symbols=['X'])
         a.append_atom(position=(1.2, 1.4, 1.6), symbols=['X'])
         assert not a.is_alloy
         assert not a.has_vacancies
@@ -1093,127 +1070,118 @@ class TestStructureData:
         # belong to the same kind)
         assert len(a.kinds) == 2
 
-        a.append_atom(position=(0.5, 1., 1.5), symbols=['O', 'C'], weights=[0.5, 0.5])
+        a.append_atom(position=(0.5, 1.0, 1.5), symbols=['O', 'C'], weights=[0.5, 0.5])
         assert a.is_alloy
         assert not a.has_vacancies
 
-        a.append_atom(position=(0.5, 1., 1.5), symbols=['O'], weights=[0.5])
+        a.append_atom(position=(0.5, 1.0, 1.5), symbols=['O'], weights=[0.5])
         assert a.is_alloy
         assert a.has_vacancies
 
         a.clear_kinds()
-        a.append_atom(position=(0.5, 1., 1.5), symbols=['X'], weights=[0.5])
+        a.append_atom(position=(0.5, 1.0, 1.5), symbols=['X'], weights=[0.5])
         assert not a.is_alloy
         assert a.has_vacancies
 
     def test_kind_1(self):
-        """
-        Test the management of kinds (automatic detection of kind of
+        """Test the management of kinds (automatic detection of kind of
         simple atoms).
         """
-        a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+        a = StructureData(cell=((2.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 2.0)))
 
-        a.append_atom(position=(0., 0., 0.), symbols=['Ba'])
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols=['Ba'])
         a.append_atom(position=(0.5, 0.5, 0.5), symbols=['Ba'])
-        a.append_atom(position=(1., 1., 1.), symbols=['Ti'])
+        a.append_atom(position=(1.0, 1.0, 1.0), symbols=['Ti'])
 
         assert len(a.kinds) == 2  # I should only have two types
         # I check for the default names of kinds
         assert set(k.name for k in a.kinds) == set(('Ba', 'Ti'))
 
     def test_kind_1_unknown(self):
-        """
-        Test the management of kinds (automatic detection of kind of
+        """Test the management of kinds (automatic detection of kind of
         simple atoms), inluding the unknown entry.
         """
-        a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+        a = StructureData(cell=((2.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 2.0)))
 
-        a.append_atom(position=(0., 0., 0.), symbols=['X'])
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols=['X'])
         a.append_atom(position=(0.5, 0.5, 0.5), symbols=['X'])
-        a.append_atom(position=(1., 1., 1.), symbols=['Ti'])
+        a.append_atom(position=(1.0, 1.0, 1.0), symbols=['Ti'])
 
         assert len(a.kinds) == 2  # I should only have two types
         # I check for the default names of kinds
         assert set(k.name for k in a.kinds) == set(('X', 'Ti'))
 
     def test_kind_2(self):
-        """
-        Test the management of kinds (manual specification of kind name).
-        """
-        a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+        """Test the management of kinds (manual specification of kind name)."""
+        a = StructureData(cell=((2.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 2.0)))
 
-        a.append_atom(position=(0., 0., 0.), symbols=['Ba'], name='Ba1')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols=['Ba'], name='Ba1')
         a.append_atom(position=(0.5, 0.5, 0.5), symbols=['Ba'], name='Ba2')
-        a.append_atom(position=(1., 1., 1.), symbols=['Ti'])
+        a.append_atom(position=(1.0, 1.0, 1.0), symbols=['Ti'])
 
         kind_list = a.kinds
         assert len(kind_list) == 3  # I should have now three kinds
         assert set(k.name for k in kind_list) == set(('Ba1', 'Ba2', 'Ti'))
 
     def test_kind_2_unknown(self):
-        """
-        Test the management of kinds (manual specification of kind name),
+        """Test the management of kinds (manual specification of kind name),
         including the unknown entry.
         """
-        a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+        a = StructureData(cell=((2.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 2.0)))
 
-        a.append_atom(position=(0., 0., 0.), symbols=['X'], name='X1')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols=['X'], name='X1')
         a.append_atom(position=(0.5, 0.5, 0.5), symbols=['X'], name='X2')
-        a.append_atom(position=(1., 1., 1.), symbols=['Ti'])
+        a.append_atom(position=(1.0, 1.0, 1.0), symbols=['Ti'])
 
         kind_list = a.kinds
         assert len(kind_list) == 3  # I should have now three kinds
         assert set(k.name for k in kind_list) == set(('X1', 'X2', 'Ti'))
 
     def test_kind_3(self):
-        """
-        Test the management of kinds (adding an atom with different mass).
-        """
-        a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+        """Test the management of kinds (adding an atom with different mass)."""
+        a = StructureData(cell=((2.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 2.0)))
 
-        a.append_atom(position=(0., 0., 0.), symbols=['Ba'], mass=100.)
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols=['Ba'], mass=100.0)
         with pytest.raises(ValueError):
             # Shouldn't allow, I am adding two sites with the same name 'Ba'
-            a.append_atom(position=(0.5, 0.5, 0.5), symbols=['Ba'], mass=101., name='Ba')
+            a.append_atom(position=(0.5, 0.5, 0.5), symbols=['Ba'], mass=101.0, name='Ba')
 
             # now it should work because I am using a different kind name
-        a.append_atom(position=(0.5, 0.5, 0.5), symbols=['Ba'], mass=101., name='Ba2')
+        a.append_atom(position=(0.5, 0.5, 0.5), symbols=['Ba'], mass=101.0, name='Ba2')
 
-        a.append_atom(position=(1., 1., 1.), symbols=['Ti'])
+        a.append_atom(position=(1.0, 1.0, 1.0), symbols=['Ti'])
 
         assert len(a.kinds) == 3  # I should have now three types
         assert len(a.sites) == 3  # and 3 sites
         assert set(k.name for k in a.kinds) == set(('Ba', 'Ba2', 'Ti'))
 
     def test_kind_3_unknown(self):
-        """
-        Test the management of kinds (adding an atom with different mass),
+        """Test the management of kinds (adding an atom with different mass),
         including the unknown entry.
         """
-        a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+        a = StructureData(cell=((2.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 2.0)))
 
-        a.append_atom(position=(0., 0., 0.), symbols=['X'], mass=100.)
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols=['X'], mass=100.0)
         with pytest.raises(ValueError):
             # Shouldn't allow, I am adding two sites with the same name 'Ba'
-            a.append_atom(position=(0.5, 0.5, 0.5), symbols=['X'], mass=101., name='X')
+            a.append_atom(position=(0.5, 0.5, 0.5), symbols=['X'], mass=101.0, name='X')
 
             # now it should work because I am using a different kind name
-        a.append_atom(position=(0.5, 0.5, 0.5), symbols=['X'], mass=101., name='X2')
+        a.append_atom(position=(0.5, 0.5, 0.5), symbols=['X'], mass=101.0, name='X2')
 
-        a.append_atom(position=(1., 1., 1.), symbols=['Ti'])
+        a.append_atom(position=(1.0, 1.0, 1.0), symbols=['Ti'])
 
         assert len(a.kinds) == 3  # I should have now three types
         assert len(a.sites) == 3  # and 3 sites
         assert set(k.name for k in a.kinds) == set(('X', 'X2', 'Ti'))
 
     def test_kind_4(self):
-        """
-        Test the management of kind (adding an atom with different symbols
+        """Test the management of kind (adding an atom with different symbols
         or weights).
         """
-        a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+        a = StructureData(cell=((2.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 2.0)))
 
-        a.append_atom(position=(0., 0., 0.), symbols=['Ba', 'Ti'], weights=(1., 0.), name='mytype')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols=['Ba', 'Ti'], weights=(1.0, 0.0), name='mytype')
 
         with pytest.raises(ValueError):
             # Shouldn't allow, different weights
@@ -1229,21 +1197,20 @@ class TestStructureData:
 
         with pytest.raises(ValueError):
             # Shouldn't allow, different symbols list
-            a.append_atom(position=(0.5, 0.5, 0.5), symbols=['Si', 'Ti'], weights=(1., 0.), name='mytype')
+            a.append_atom(position=(0.5, 0.5, 0.5), symbols=['Si', 'Ti'], weights=(1.0, 0.0), name='mytype')
 
             # should allow because every property is identical
-        a.append_atom(position=(0., 0., 0.), symbols=['Ba', 'Ti'], weights=(1., 0.), name='mytype')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols=['Ba', 'Ti'], weights=(1.0, 0.0), name='mytype')
 
         assert len(a.kinds) == 1
 
     def test_kind_4_unknown(self):
-        """
-        Test the management of kind (adding an atom with different symbols
+        """Test the management of kind (adding an atom with different symbols
         or weights), including the unknown entry.
         """
-        a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+        a = StructureData(cell=((2.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 2.0)))
 
-        a.append_atom(position=(0., 0., 0.), symbols=['X', 'Ti'], weights=(1., 0.), name='mytype')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols=['X', 'Ti'], weights=(1.0, 0.0), name='mytype')
 
         with pytest.raises(ValueError):
             # Shouldn't allow, different weights
@@ -1259,31 +1226,30 @@ class TestStructureData:
 
         with pytest.raises(ValueError):
             # Shouldn't allow, different symbols list
-            a.append_atom(position=(0.5, 0.5, 0.5), symbols=['Si', 'Ti'], weights=(1., 0.), name='mytype')
+            a.append_atom(position=(0.5, 0.5, 0.5), symbols=['Si', 'Ti'], weights=(1.0, 0.0), name='mytype')
 
             # should allow because every property is identical
-        a.append_atom(position=(0., 0., 0.), symbols=['X', 'Ti'], weights=(1., 0.), name='mytype')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols=['X', 'Ti'], weights=(1.0, 0.0), name='mytype')
 
         assert len(a.kinds) == 1
 
     def test_kind_5(self):
-        """
-        Test the management of kinds (automatic creation of new kind
+        """Test the management of kinds (automatic creation of new kind
         if name is not specified and properties are different).
         """
-        a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+        a = StructureData(cell=((2.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 2.0)))
 
-        a.append_atom(position=(0., 0., 0.), symbols='Ba', mass=100.)
-        a.append_atom(position=(0., 0., 0.), symbols='Ti')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Ba', mass=100.0)
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Ti')
         # The name does not exist
-        a.append_atom(position=(0., 0., 0.), symbols='Ti', name='Ti2')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Ti', name='Ti2')
         # The name already exists, but the properties are identical => OK
-        a.append_atom(position=(1., 1., 1.), symbols='Ti', name='Ti2')
+        a.append_atom(position=(1.0, 1.0, 1.0), symbols='Ti', name='Ti2')
         # The name already exists, but the properties are different!
         with pytest.raises(ValueError):
-            a.append_atom(position=(1., 1., 1.), symbols='Ti', mass=100., name='Ti2')
+            a.append_atom(position=(1.0, 1.0, 1.0), symbols='Ti', mass=100.0, name='Ti2')
         # Should not complain, should create a new type
-        a.append_atom(position=(0., 0., 0.), symbols='Ba', mass=150.)
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Ba', mass=150.0)
 
         # There should be 4 kinds, the automatic name for the last one
         # should be Ba1
@@ -1291,24 +1257,23 @@ class TestStructureData:
         assert len(a.sites) == 5
 
     def test_kind_5_unknown(self):
-        """
-        Test the management of kinds (automatic creation of new kind
+        """Test the management of kinds (automatic creation of new kind
         if name is not specified and properties are different), including
         the unknown entry.
         """
-        a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+        a = StructureData(cell=((2.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 2.0)))
 
-        a.append_atom(position=(0., 0., 0.), symbols='X', mass=100.)
-        a.append_atom(position=(0., 0., 0.), symbols='Ti')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='X', mass=100.0)
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Ti')
         # The name does not exist
-        a.append_atom(position=(0., 0., 0.), symbols='Ti', name='Ti2')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Ti', name='Ti2')
         # The name already exists, but the properties are identical => OK
-        a.append_atom(position=(1., 1., 1.), symbols='Ti', name='Ti2')
+        a.append_atom(position=(1.0, 1.0, 1.0), symbols='Ti', name='Ti2')
         # The name already exists, but the properties are different!
         with pytest.raises(ValueError):
-            a.append_atom(position=(1., 1., 1.), symbols='Ti', mass=100., name='Ti2')
+            a.append_atom(position=(1.0, 1.0, 1.0), symbols='Ti', mass=100.0, name='Ti2')
         # Should not complain, should create a new type
-        a.append_atom(position=(0., 0., 0.), symbols='X', mass=150.)
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='X', mass=150.0)
 
         # There should be 4 kinds, the automatic name for the last one
         # should be Ba1
@@ -1318,10 +1283,11 @@ class TestStructureData:
     def test_kind_5_bis(self):
         """Test the management of kinds (automatic creation of new kind
         if name is not specified and properties are different).
-        This test was failing in, e.g., commit f6a8f4b."""
+        This test was failing in, e.g., commit f6a8f4b.
+        """
         from aiida.common.constants import elements
 
-        s = StructureData(cell=((6., 0., 0.), (0., 6., 0.), (0., 0., 6.)))
+        s = StructureData(cell=((6.0, 0.0, 0.0), (0.0, 6.0, 0.0), (0.0, 0.0, 6.0)))
 
         s.append_atom(symbols='Fe', position=[0, 0, 0], mass=12)
         s.append_atom(symbols='Fe', position=[1, 0, 0], mass=12)
@@ -1341,10 +1307,11 @@ class TestStructureData:
         """Test the management of kinds (automatic creation of new kind
         if name is not specified and properties are different).
         This test was failing in, e.g., commit f6a8f4b. This also includes
-        the unknown entry."""
+        the unknown entry.
+        """
         from aiida.common.constants import elements
 
-        s = StructureData(cell=((6., 0., 0.), (0., 6., 0.), (0., 0., 6.)))
+        s = StructureData(cell=((6.0, 0.0, 0.0), (0.0, 6.0, 0.0), (0.0, 0.0, 6.0)))
 
         s.append_atom(symbols='X', position=[0, 0, 0], mass=12)
         s.append_atom(symbols='X', position=[1, 0, 0], mass=12)
@@ -1362,23 +1329,23 @@ class TestStructureData:
 
     @skip_ase
     def test_kind_5_bis_ase(self):
-        """
-        Same test as test_kind_5_bis, but using ase
-        """
+        """Same test as test_kind_5_bis, but using ase"""
         import ase
 
-        asecell = ase.Atoms('Fe5', cell=((6., 0., 0.), (0., 6., 0.), (0., 0., 6.)))
-        asecell.set_positions([
-            [0, 0, 0],
-            [1, 0, 0],
-            [2, 0, 0],
-            [3, 0, 0],
-            [4, 0, 0],
-        ])
+        asecell = ase.Atoms('Fe5', cell=((6.0, 0.0, 0.0), (0.0, 6.0, 0.0), (0.0, 0.0, 6.0)))
+        asecell.set_positions(
+            [
+                [0, 0, 0],
+                [1, 0, 0],
+                [2, 0, 0],
+                [3, 0, 0],
+                [4, 0, 0],
+            ]
+        )
 
-        asecell[0].mass = 12.  # pylint: disable=assigning-non-slot
-        asecell[1].mass = 12.  # pylint: disable=assigning-non-slot
-        asecell[2].mass = 12.  # pylint: disable=assigning-non-slot
+        asecell[0].mass = 12.0
+        asecell[1].mass = 12.0
+        asecell[2].mass = 12.0
 
         s = StructureData(ase=asecell)
 
@@ -1392,23 +1359,23 @@ class TestStructureData:
 
     @skip_ase
     def test_kind_5_bis_ase_unknown(self):
-        """
-        Same test as test_kind_5_bis_unknown, but using ase
-        """
+        """Same test as test_kind_5_bis_unknown, but using ase"""
         import ase
 
-        asecell = ase.Atoms('X5', cell=((6., 0., 0.), (0., 6., 0.), (0., 0., 6.)))
-        asecell.set_positions([
-            [0, 0, 0],
-            [1, 0, 0],
-            [2, 0, 0],
-            [3, 0, 0],
-            [4, 0, 0],
-        ])
+        asecell = ase.Atoms('X5', cell=((6.0, 0.0, 0.0), (0.0, 6.0, 0.0), (0.0, 0.0, 6.0)))
+        asecell.set_positions(
+            [
+                [0, 0, 0],
+                [1, 0, 0],
+                [2, 0, 0],
+                [3, 0, 0],
+                [4, 0, 0],
+            ]
+        )
 
-        asecell[0].mass = 12.  # pylint: disable=assigning-non-slot
-        asecell[1].mass = 12.  # pylint: disable=assigning-non-slot
-        asecell[2].mass = 12.  # pylint: disable=assigning-non-slot
+        asecell[0].mass = 12.0
+        asecell[1].mass = 12.0
+        asecell[2].mass = 12.0
 
         s = StructureData(ase=asecell)
 
@@ -1421,20 +1388,19 @@ class TestStructureData:
         assert kind_of_each_site == ['X', 'X', 'X', 'X1', 'X1']
 
     def test_kind_6(self):
-        """
-        Test the returning of kinds from the string name (most of the code
+        """Test the returning of kinds from the string name (most of the code
         copied from :py:meth:`.test_kind_5`).
         """
-        a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+        a = StructureData(cell=((2.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 2.0)))
 
-        a.append_atom(position=(0., 0., 0.), symbols='Ba', mass=100.)
-        a.append_atom(position=(0., 0., 0.), symbols='Ti')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Ba', mass=100.0)
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Ti')
         # The name does not exist
-        a.append_atom(position=(0., 0., 0.), symbols='Ti', name='Ti2')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Ti', name='Ti2')
         # The name already exists, but the properties are identical => OK
-        a.append_atom(position=(1., 1., 1.), symbols='Ti', name='Ti2')
+        a.append_atom(position=(1.0, 1.0, 1.0), symbols='Ti', name='Ti2')
         # Should not complain, should create a new type
-        a.append_atom(position=(0., 0., 0.), symbols='Ba', mass=150.)
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Ba', mass=150.0)
         # There should be 4 kinds, the automatic name for the last one
         # should be Ba1 (same check of test_kind_5
         assert [k.name for k in a.kinds] == ['Ba', 'Ti', 'Ti2', 'Ba1']
@@ -1445,23 +1411,22 @@ class TestStructureData:
             a.get_kind('Ti3')
         k = a.get_kind('Ba1')
         assert k.symbols == ('Ba',)
-        assert round(abs(k.mass - 150.), 7) == 0
+        assert round(abs(k.mass - 150.0), 7) == 0
 
     def test_kind_6_unknown(self):
-        """
-        Test the returning of kinds from the string name (most of the code
+        """Test the returning of kinds from the string name (most of the code
         copied from :py:meth:`.test_kind_5`), including the unknown entry.
         """
-        a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+        a = StructureData(cell=((2.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 2.0)))
 
-        a.append_atom(position=(0., 0., 0.), symbols='X', mass=100.)
-        a.append_atom(position=(0., 0., 0.), symbols='Ti')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='X', mass=100.0)
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Ti')
         # The name does not exist
-        a.append_atom(position=(0., 0., 0.), symbols='Ti', name='Ti2')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Ti', name='Ti2')
         # The name already exists, but the properties are identical => OK
-        a.append_atom(position=(1., 1., 1.), symbols='Ti', name='Ti2')
+        a.append_atom(position=(1.0, 1.0, 1.0), symbols='Ti', name='Ti2')
         # Should not complain, should create a new type
-        a.append_atom(position=(0., 0., 0.), symbols='X', mass=150.)
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='X', mass=150.0)
         # There should be 4 kinds, the automatic name for the last one
         # should be Ba1 (same check of test_kind_5
         assert [k.name for k in a.kinds] == ['X', 'Ti', 'Ti2', 'X1']
@@ -1472,46 +1437,40 @@ class TestStructureData:
             a.get_kind('Ti3')
         k = a.get_kind('X1')
         assert k.symbols == ('X',)
-        assert round(abs(k.mass - 150.), 7) == 0
+        assert round(abs(k.mass - 150.0), 7) == 0
 
     def test_kind_7(self):
-        """
-        Test the functions returning the list of kinds, symbols, ...
-        """
-        a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+        """Test the functions returning the list of kinds, symbols, ..."""
+        a = StructureData(cell=((2.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 2.0)))
 
-        a.append_atom(position=(0., 0., 0.), symbols='Ba', mass=100.)
-        a.append_atom(position=(0., 0., 0.), symbols='Ti')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Ba', mass=100.0)
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Ti')
         # The name does not exist
-        a.append_atom(position=(0., 0., 0.), symbols='Ti', name='Ti2')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Ti', name='Ti2')
         # The name already exists, but the properties are identical => OK
-        a.append_atom(position=(0., 0., 0.), symbols=['O', 'H'], weights=[0.9, 0.1], mass=15.)
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols=['O', 'H'], weights=[0.9, 0.1], mass=15.0)
 
         assert a.get_symbols_set() == set(['Ba', 'Ti', 'O', 'H'])
 
     def test_kind_7_unknown(self):
-        """
-        Test the functions returning the list of kinds, symbols, ...
+        """Test the functions returning the list of kinds, symbols, ...
         including the unknown entry.
         """
-        a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+        a = StructureData(cell=((2.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 2.0)))
 
-        a.append_atom(position=(0., 0., 0.), symbols='Ba', mass=100.)
-        a.append_atom(position=(0., 0., 0.), symbols='X')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Ba', mass=100.0)
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='X')
         # The name does not exist
-        a.append_atom(position=(0., 0., 0.), symbols='X', name='X2')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='X', name='X2')
         # The name already exists, but the properties are identical => OK
-        a.append_atom(position=(0., 0., 0.), symbols=['O', 'H'], weights=[0.9, 0.1], mass=15.)
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols=['O', 'H'], weights=[0.9, 0.1], mass=15.0)
 
         assert a.get_symbols_set() == set(['Ba', 'X', 'O', 'H'])
 
     @skip_ase
     @skip_spglib
     def test_kind_8(self):
-        """
-        Test the ase_refine_cell() function
-        """
-        # pylint: disable=too-many-statements
+        """Test the ase_refine_cell() function"""
         import math
 
         import ase
@@ -1579,9 +1538,13 @@ class TestStructureData:
         # Generated from COD entry 1507756
         # (http://www.crystallography.net/cod/1507756.cif@87343)
         from ase.spacegroup import crystal
-        a = crystal(['Ba', 'Ti', 'O', 'O'], [[0, 0, 0], [0.5, 0.5, 0.482], [0.5, 0.5, 0.016], [0.5, 0, 0.515]],
-                    cell=[3.9999, 3.9999, 4.0170],
-                    spacegroup=99)
+
+        a = crystal(
+            ['Ba', 'Ti', 'O', 'O'],
+            [[0, 0, 0], [0.5, 0.5, 0.482], [0.5, 0.5, 0.016], [0.5, 0, 0.515]],
+            cell=[3.9999, 3.9999, 4.0170],
+            spacegroup=99,
+        )
         b, sym = ase_refine_cell(a)
         sym.pop('rotations')
         sym.pop('translations')
@@ -1589,56 +1552,52 @@ class TestStructureData:
         assert sym == {'hall': 'P 4 -2', 'hm': 'P4mm', 'tables': 99}
 
     def test_get_formula(self):
-        """
-        Tests the generation of formula
-        """
+        """Tests the generation of formula"""
         assert get_formula(['Ba', 'Ti'] + ['O'] * 3) == 'BaO3Ti'
         assert get_formula(['Ba', 'Ti', 'C'] + ['O'] * 3, separator=' ') == 'C Ba O3 Ti'
         assert get_formula(['H'] * 6 + ['C'] * 6) == 'C6H6'
         assert get_formula(['H'] * 6 + ['C'] * 6, mode='hill_compact') == 'CH'
-        assert get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + \
-                                      ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
-                                      mode='group') == \
-                          '(BaTiO3)2BaTi2O3'
-        assert get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + \
-                                      ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
-                                      mode='group', separator=' ') == \
-                          '(Ba Ti O3)2 Ba Ti2 O3'
-        assert get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + \
-                                      ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
-                                      mode='reduce') == \
-                          'BaTiO3BaTiO3BaTi2O3'
-        assert get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + \
-                                      ['Ba'] + ['Ti'] * 2 + ['O'] * 3,
-                                      mode='reduce', separator=', ') == \
-                          'Ba, Ti, O3, Ba, Ti, O3, Ba, Ti2, O3'
+        assert (
+            get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + ['Ba'] + ['Ti'] * 2 + ['O'] * 3, mode='group')
+            == '(BaTiO3)2BaTi2O3'
+        )
+        assert (
+            get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + ['Ba'] + ['Ti'] * 2 + ['O'] * 3, mode='group', separator=' ')
+            == '(Ba Ti O3)2 Ba Ti2 O3'
+        )
+        assert (
+            get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + ['Ba'] + ['Ti'] * 2 + ['O'] * 3, mode='reduce')
+            == 'BaTiO3BaTiO3BaTi2O3'
+        )
+        assert (
+            get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2 + ['Ba'] + ['Ti'] * 2 + ['O'] * 3, mode='reduce', separator=', ')
+            == 'Ba, Ti, O3, Ba, Ti, O3, Ba, Ti2, O3'
+        )
         assert get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2, mode='count') == 'Ba2Ti2O6'
         assert get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2, mode='count_compact') == 'BaTiO3'
 
     def test_get_formula_unknown(self):
-        """
-        Tests the generation of formula, including unknown entry.
-        """
+        """Tests the generation of formula, including unknown entry."""
         assert get_formula(['Ba', 'Ti'] + ['X'] * 3) == 'BaTiX3'
         assert get_formula(['Ba', 'Ti', 'C'] + ['X'] * 3, separator=' ') == 'C Ba Ti X3'
         assert get_formula(['X'] * 6 + ['C'] * 6) == 'C6X6'
         assert get_formula(['X'] * 6 + ['C'] * 6, mode='hill_compact') == 'CX'
-        assert get_formula((['Ba', 'Ti'] + ['X'] * 3) * 2 + \
-                                      ['Ba'] + ['X'] * 2 + ['O'] * 3,
-                                      mode='group') == \
-                          '(BaTiX3)2BaX2O3'
-        assert get_formula((['Ba', 'Ti'] + ['X'] * 3) * 2 + \
-                                      ['Ba'] + ['X'] * 2 + ['O'] * 3,
-                                      mode='group', separator=' ') == \
-                          '(Ba Ti X3)2 Ba X2 O3'
-        assert get_formula((['Ba', 'Ti'] + ['X'] * 3) * 2 + \
-                                      ['Ba'] + ['Ti'] * 2 + ['X'] * 3,
-                                      mode='reduce') == \
-                          'BaTiX3BaTiX3BaTi2X3'
-        assert get_formula((['Ba', 'Ti'] + ['X'] * 3) * 2 + \
-                                      ['Ba'] + ['Ti'] * 2 + ['X'] * 3,
-                                      mode='reduce', separator=', ') == \
-                          'Ba, Ti, X3, Ba, Ti, X3, Ba, Ti2, X3'
+        assert (
+            get_formula((['Ba', 'Ti'] + ['X'] * 3) * 2 + ['Ba'] + ['X'] * 2 + ['O'] * 3, mode='group')
+            == '(BaTiX3)2BaX2O3'
+        )
+        assert (
+            get_formula((['Ba', 'Ti'] + ['X'] * 3) * 2 + ['Ba'] + ['X'] * 2 + ['O'] * 3, mode='group', separator=' ')
+            == '(Ba Ti X3)2 Ba X2 O3'
+        )
+        assert (
+            get_formula((['Ba', 'Ti'] + ['X'] * 3) * 2 + ['Ba'] + ['Ti'] * 2 + ['X'] * 3, mode='reduce')
+            == 'BaTiX3BaTiX3BaTi2X3'
+        )
+        assert (
+            get_formula((['Ba', 'Ti'] + ['X'] * 3) * 2 + ['Ba'] + ['Ti'] * 2 + ['X'] * 3, mode='reduce', separator=', ')
+            == 'Ba, Ti, X3, Ba, Ti, X3, Ba, Ti2, X3'
+        )
         assert get_formula((['Ba', 'Ti'] + ['O'] * 3) * 2, mode='count') == 'Ba2Ti2O6'
         assert get_formula((['Ba', 'Ti'] + ['X'] * 3) * 2, mode='count_compact') == 'BaTiX3'
 
@@ -1646,26 +1605,23 @@ class TestStructureData:
     @skip_pycifrw
     @pytest.mark.requires_rmq
     def test_get_cif(self):
-        """
-        Tests the conversion to CifData
-        """
+        """Tests the conversion to CifData"""
         import re
 
-        a = StructureData(cell=((2., 0., 0.), (0., 2., 0.), (0., 0., 2.)))
+        a = StructureData(cell=((2.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 2.0)))
 
-        a.append_atom(position=(0., 0., 0.), symbols=['Ba'])
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols=['Ba'])
         a.append_atom(position=(0.5, 0.5, 0.5), symbols=['Ba'])
-        a.append_atom(position=(1., 1., 1.), symbols=['Ti'])
+        a.append_atom(position=(1.0, 1.0, 1.0), symbols=['Ti'])
 
         c = a.get_cif()
-        lines = c._prepare_cif()[0].decode('utf-8').split('\n')  # pylint: disable=protected-access
+        lines = c._prepare_cif()[0].decode('utf-8').split('\n')
         non_comments = []
         for line in lines:
             if not re.search('^#', line):
                 non_comments.append(line)
-        assert simplify('\n'.join(non_comments)) == \
-            simplify(
-                """
+        assert simplify('\n'.join(non_comments)) == simplify(
+            """
 data_0
 loop_
   _atom_site_label
@@ -1690,7 +1646,7 @@ loop_
 _symmetry_int_tables_number             1
 _symmetry_space_group_name_H-M          'P 1'
 """
-            )
+        )
 
     def test_xyz_parser(self):
         """Test XYZ parser."""
@@ -1718,7 +1674,7 @@ Ag 0 0 2.0335
         for xyz_string in (xyz_string1, xyz_string2, xyz_string3):
             s = StructureData()
             # Parsing the string:
-            s._parse_xyz(xyz_string)  # pylint: disable=protected-access
+            s._parse_xyz(xyz_string)
             # Making sure that the periodic boundary condition are not True
             # because I cannot parse a cell!
             assert not any(s.pbc)
@@ -1755,22 +1711,22 @@ Ag 0 0
         # The above cases have to fail because the number of atoms is wrong
         for xyz_string in (xyz_string4, xyz_string5, xyz_string6):
             with pytest.raises(TypeError):
-                StructureData()._parse_xyz(xyz_string)  # pylint: disable=protected-access
+                StructureData()._parse_xyz(xyz_string)
 
 
 def test_lock():
     """Test that the structure is locked after storage."""
-    cell = ((1., 0., 0.), (0., 2., 0.), (0., 0., 3.))
+    cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
     a = StructureData(cell=cell)
 
     a.pbc = [False, True, True]
 
     k = Kind(symbols='Ba', name='Ba')
-    s = Site(position=(0., 0., 0.), kind_name='Ba')
+    s = Site(position=(0.0, 0.0, 0.0), kind_name='Ba')
     a.append_kind(k)
     a.append_site(s)
 
-    a.append_atom(symbols='Ti', position=[0., 0., 0.])
+    a.append_atom(symbols='Ti', position=[0.0, 0.0, 0.0])
 
     a.store()
 
@@ -1804,22 +1760,19 @@ def test_lock():
 
 
 class TestStructureDataReload:
-    """
-    Tests the creation of StructureData, converting it to a raw format and
+    """Tests the creation of StructureData, converting it to a raw format and
     converting it back.
     """
 
     def test_reload(self):
-        """
-        Start from a StructureData object, convert to raw and then back
-        """
-        cell = ((1., 0., 0.), (0., 2., 0.), (0., 0., 3.))
+        """Start from a StructureData object, convert to raw and then back"""
+        cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
         a = StructureData(cell=cell)
 
         a.pbc = [False, True, True]
 
-        a.append_atom(position=(0., 0., 0.), symbols=['Ba'])
-        a.append_atom(position=(1., 1., 1.), symbols=['Ti'])
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols=['Ba'])
+        a.append_atom(position=(1.0, 1.0, 1.0), symbols=['Ti'])
 
         a.store()
 
@@ -1834,9 +1787,9 @@ class TestStructureDataReload:
         assert b.kinds[0].symbols[0] == 'Ba'
         assert b.kinds[1].symbols[0] == 'Ti'
         for i in range(3):
-            assert round(abs(b.sites[0].position[i] - 0.), 7) == 0
+            assert round(abs(b.sites[0].position[i] - 0.0), 7) == 0
         for i in range(3):
-            assert round(abs(b.sites[1].position[i] - 1.), 7) == 0
+            assert round(abs(b.sites[1].position[i] - 1.0), 7) == 0
 
         # Fully reload from UUID
         b = load_node(a.uuid, sub_classes=(StructureData,))
@@ -1850,21 +1803,19 @@ class TestStructureDataReload:
         assert b.kinds[0].symbols[0] == 'Ba'
         assert b.kinds[1].symbols[0] == 'Ti'
         for i in range(3):
-            assert round(abs(b.sites[0].position[i] - 0.), 7) == 0
+            assert round(abs(b.sites[0].position[i] - 0.0), 7) == 0
         for i in range(3):
-            assert round(abs(b.sites[1].position[i] - 1.), 7) == 0
+            assert round(abs(b.sites[1].position[i] - 1.0), 7) == 0
 
     def test_clone(self):
-        """
-        Start from a StructureData object, clone it and see if it is preserved
-        """
-        cell = ((1., 0., 0.), (0., 2., 0.), (0., 0., 3.))
+        """Start from a StructureData object, clone it and see if it is preserved"""
+        cell = ((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
         a = StructureData(cell=cell)
 
         a.pbc = [False, True, True]
 
-        a.append_atom(position=(0., 0., 0.), symbols=['Ba'])
-        a.append_atom(position=(1., 1., 1.), symbols=['Ti'])
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols=['Ba'])
+        a.append_atom(position=(1.0, 1.0, 1.0), symbols=['Ti'])
 
         b = a.clone()
 
@@ -1878,9 +1829,9 @@ class TestStructureDataReload:
         assert b.kinds[0].symbols[0] == 'Ba'
         assert b.kinds[1].symbols[0] == 'Ti'
         for i in range(3):
-            assert round(abs(b.sites[0].position[i] - 0.), 7) == 0
+            assert round(abs(b.sites[0].position[i] - 0.0), 7) == 0
         for i in range(3):
-            assert round(abs(b.sites[1].position[i] - 1.), 7) == 0
+            assert round(abs(b.sites[1].position[i] - 1.0), 7) == 0
 
         a.store()
 
@@ -1896,9 +1847,9 @@ class TestStructureDataReload:
         assert c.kinds[0].symbols[0] == 'Ba'
         assert c.kinds[1].symbols[0] == 'Ti'
         for i in range(3):
-            assert round(abs(c.sites[0].position[i] - 0.), 7) == 0
+            assert round(abs(c.sites[0].position[i] - 0.0), 7) == 0
         for i in range(3):
-            assert round(abs(c.sites[1].position[i] - 1.), 7) == 0
+            assert round(abs(c.sites[1].position[i] - 1.0), 7) == 0
 
 
 class TestStructureDataFromAse:
@@ -1909,12 +1860,14 @@ class TestStructureDataFromAse:
         """Tests roundtrip ASE -> StructureData -> ASE."""
         import ase
 
-        a = ase.Atoms('SiGe', cell=(1., 2., 3.), pbc=(True, False, False))
-        a.set_positions((
-            (0., 0., 0.),
-            (0.5, 0.7, 0.9),
-        ))
-        a[1].mass = 110.2  # pylint: disable=assigning-non-slot
+        a = ase.Atoms('SiGe', cell=(1.0, 2.0, 3.0), pbc=(True, False, False))
+        a.set_positions(
+            (
+                (0.0, 0.0, 0.0),
+                (0.5, 0.7, 0.9),
+            )
+        )
+        a[1].mass = 110.2
 
         b = StructureData(ase=a)
         c = b.get_ase()
@@ -1933,6 +1886,7 @@ class TestStructureDataFromAse:
     def test_ase_molecule(self):
         """Tests that importing a molecule from ASE works."""
         from ase.build import molecule
+
         s = StructureData(ase=molecule('H2O'))
 
         assert s.pbc == (False, False, False)
@@ -1951,22 +1905,22 @@ class TestStructureDataFromAse:
 
     @skip_ase
     def test_conversion_of_types_1(self):
-        """
-        Tests roundtrip ASE -> StructureData -> ASE, with tags
-        """
+        """Tests roundtrip ASE -> StructureData -> ASE, with tags"""
         import ase
 
-        a = ase.Atoms('Si4Ge4', cell=(1., 2., 3.), pbc=(True, False, False))
-        a.set_positions((
-            (0.0, 0.0, 0.0),
-            (0.1, 0.1, 0.1),
-            (0.2, 0.2, 0.2),
-            (0.3, 0.3, 0.3),
-            (0.4, 0.4, 0.4),
-            (0.5, 0.5, 0.5),
-            (0.6, 0.6, 0.6),
-            (0.7, 0.7, 0.7),
-        ))
+        a = ase.Atoms('Si4Ge4', cell=(1.0, 2.0, 3.0), pbc=(True, False, False))
+        a.set_positions(
+            (
+                (0.0, 0.0, 0.0),
+                (0.1, 0.1, 0.1),
+                (0.2, 0.2, 0.2),
+                (0.3, 0.3, 0.3),
+                (0.4, 0.4, 0.4),
+                (0.5, 0.5, 0.5),
+                (0.6, 0.6, 0.6),
+                (0.7, 0.7, 0.7),
+            )
+        )
 
         a.set_tags((0, 1, 2, 3, 4, 5, 6, 7))
 
@@ -1980,23 +1934,24 @@ class TestStructureDataFromAse:
 
     @skip_ase
     def test_conversion_of_types_2(self):
-        """
-        Tests roundtrip ASE -> StructureData -> ASE, with tags, and
+        """Tests roundtrip ASE -> StructureData -> ASE, with tags, and
         changing the atomic masses
         """
         import ase
 
-        a = ase.Atoms('Si4', cell=(1., 2., 3.), pbc=(True, False, False))
-        a.set_positions((
-            (0.0, 0.0, 0.0),
-            (0.1, 0.1, 0.1),
-            (0.2, 0.2, 0.2),
-            (0.3, 0.3, 0.3),
-        ))
+        a = ase.Atoms('Si4', cell=(1.0, 2.0, 3.0), pbc=(True, False, False))
+        a.set_positions(
+            (
+                (0.0, 0.0, 0.0),
+                (0.1, 0.1, 0.1),
+                (0.2, 0.2, 0.2),
+                (0.3, 0.3, 0.3),
+            )
+        )
 
         a.set_tags((0, 1, 0, 1))
-        a[2].mass = 100.  # pylint: disable=assigning-non-slot
-        a[3].mass = 300.  # pylint: disable=assigning-non-slot
+        a[2].mass = 100.0
+        a[3].mass = 300.0
 
         b = StructureData(ase=a)
         # This will give funny names to the kinds, because I am using
@@ -2014,23 +1969,21 @@ class TestStructureDataFromAse:
 
     @skip_ase
     def test_conversion_of_types_3(self):
-        """
-        Tests StructureData -> ASE, with all sorts of kind names
-        """
+        """Tests StructureData -> ASE, with all sorts of kind names"""
         a = StructureData(cell=[[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-        a.append_atom(position=(0., 0., 0.), symbols='Ba', name='Ba')
-        a.append_atom(position=(0., 0., 0.), symbols='Ba', name='Ba1')
-        a.append_atom(position=(0., 0., 0.), symbols='Cu', name='Cu')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Ba', name='Ba')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Ba', name='Ba1')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Cu', name='Cu')
         # continues with a number
-        a.append_atom(position=(0., 0., 0.), symbols='Cu', name='Cu2')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Cu', name='Cu2')
         # does not continue with a number
-        a.append_atom(position=(0., 0., 0.), symbols='Cu', name='Cu_my')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Cu', name='Cu_my')
         # random string
-        a.append_atom(position=(0., 0., 0.), symbols='Cu', name='a_name')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Cu', name='a_name')
         # a name of another chemical symbol
-        a.append_atom(position=(0., 0., 0.), symbols='Cu', name='Fe')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Cu', name='Fe')
         # lowercase! as if it were a random string
-        a.append_atom(position=(0., 0., 0.), symbols='Cu', name='cu1')
+        a.append_atom(position=(0.0, 0.0, 0.0), symbols='Cu', name='cu1')
 
         # Just to be sure that the species were saved with the correct name
         # in the first place
@@ -2042,15 +1995,13 @@ class TestStructureDataFromAse:
 
     @skip_ase
     def test_conversion_of_types_4(self):
-        """
-        Tests ASE -> StructureData -> ASE, in particular conversion tags / kind names
-        """
+        """Tests ASE -> StructureData -> ASE, in particular conversion tags / kind names"""
         import ase
 
         atoms = ase.Atoms('Fe5')
-        atoms[2].tag = 1  # pylint: disable=assigning-non-slot
-        atoms[3].tag = 1  # pylint: disable=assigning-non-slot
-        atoms[4].tag = 4  # pylint: disable=assigning-non-slot
+        atoms[2].tag = 1
+        atoms[3].tag = 1
+        atoms[4].tag = 4
         atoms.set_cell([1, 1, 1])
         s = StructureData(ase=atoms)
         kindnames = {k.name for k in s.kinds}
@@ -2063,16 +2014,15 @@ class TestStructureDataFromAse:
 
     @skip_ase
     def test_conversion_of_types_5(self):
-        """
-        Tests ASE -> StructureData -> ASE, in particular conversion tags / kind names
+        """Tests ASE -> StructureData -> ASE, in particular conversion tags / kind names
         (subtle variation of test_conversion_of_types_4)
         """
         import ase
 
         atoms = ase.Atoms('Fe5')
-        atoms[0].tag = 1  # pylint: disable=assigning-non-slot
-        atoms[2].tag = 1  # pylint: disable=assigning-non-slot
-        atoms[3].tag = 4  # pylint: disable=assigning-non-slot
+        atoms[0].tag = 1
+        atoms[2].tag = 1
+        atoms[3].tag = 4
         atoms.set_cell([1, 1, 1])
         s = StructureData(ase=atoms)
         kindnames = {k.name for k in s.kinds}
@@ -2085,9 +2035,7 @@ class TestStructureDataFromAse:
 
     @skip_ase
     def test_conversion_of_types_6(self):
-        """
-        Tests roundtrip StructureData -> ASE -> StructureData, with tags/kind names
-        """
+        """Tests roundtrip StructureData -> ASE -> StructureData, with tags/kind names"""
         a = StructureData(cell=[[4, 0, 0], [0, 4, 0], [0, 0, 4]])
         a.append_atom(position=(0, 0, 0), symbols='Ni', name='Ni1')
         a.append_atom(position=(2, 2, 2), symbols='Ni', name='Ni2')
@@ -2101,19 +2049,17 @@ class TestStructureDataFromAse:
         c = StructureData(ase=b)
         assert c.get_site_kindnames() == ['Ni1', 'Ni2', 'Cl', 'Cl']
         assert [k.symbol for k in c.kinds] == ['Ni', 'Ni', 'Cl']
-        assert [s.position for s in c.sites] == [(0., 0., 0.), (2., 2., 2.), (1., 0., 1.), (1., 3., 1.)]
+        assert [s.position for s in c.sites] == [(0.0, 0.0, 0.0), (2.0, 2.0, 2.0), (1.0, 0.0, 1.0), (1.0, 3.0, 1.0)]
 
 
 class TestStructureDataFromPymatgen:
-    """
-    Tests the creation of StructureData from a pymatgen Structure and
+    """Tests the creation of StructureData from a pymatgen Structure and
     Molecule objects.
     """
 
     @skip_pymatgen
     def test_1(self):
-        """
-        Tests roundtrip pymatgen -> StructureData -> pymatgen
+        """Tests roundtrip pymatgen -> StructureData -> pymatgen
         Test's input is derived from COD entry 9011963, processed with
         cif_mark_disorder (from cod-tools) and abbreviated.
         """
@@ -2159,12 +2105,18 @@ class TestStructureDataFromPymatgen:
             # Pymatgen's Composition does not guarantee any particular ordering of the kinds,
             # see the definition of its internal datatype at
             #   pymatgen/core/composition.py#L135 (d4fe64c18a52949a4e22bfcf7b45de5b87242c51)
-            assert [sorted(x.symbols) for x in struct.kinds] == [[
-                'Bi',
-            ], ['Se', 'Te']]
-            assert [sorted(x.weights) for x in struct.kinds] == [[
-                1.0,
-            ], [0.33333, 0.66667]]
+            assert [sorted(x.symbols) for x in struct.kinds] == [
+                [
+                    'Bi',
+                ],
+                ['Se', 'Te'],
+            ]
+            assert [sorted(x.weights) for x in struct.kinds] == [
+                [
+                    1.0,
+                ],
+                [0.33333, 0.66667],
+            ]
 
         struct = StructureData(pymatgen_structure=pymatgen_struct)
 
@@ -2208,8 +2160,7 @@ class TestStructureDataFromPymatgen:
 
     @skip_pymatgen
     def test_2(self):
-        """
-        Tests xyz -> pymatgen -> StructureData
+        """Tests xyz -> pymatgen -> StructureData
         Input source: http://pymatgen.org/_static/Molecule.html
         """
         from pymatgen.io.xyz import XYZ
@@ -2239,8 +2190,7 @@ class TestStructureDataFromPymatgen:
 
     @skip_pymatgen
     def test_partial_occ_and_spin(self):
-        """
-        Tests pymatgen -> StructureData, with partial occupancies and spins.
+        """Tests pymatgen -> StructureData, with partial occupancies and spins.
         This should raise a ValueError.
         """
         from pymatgen.core.composition import Composition
@@ -2248,15 +2198,15 @@ class TestStructureDataFromPymatgen:
         from pymatgen.core.structure import Structure
 
         try:
-            Fe_spin_up = Specie('Fe', 0, spin=1)  # pylint: disable=unexpected-keyword-arg
-            Mn_spin_up = Specie('Mn', 0, spin=1)  # pylint: disable=unexpected-keyword-arg
-            Fe_spin_down = Specie('Fe', 0, spin=-1)  # pylint: disable=unexpected-keyword-arg
-            Mn_spin_down = Specie('Mn', 0, spin=-1)  # pylint: disable=unexpected-keyword-arg
+            Fe_spin_up = Specie('Fe', 0, spin=1)
+            Mn_spin_up = Specie('Mn', 0, spin=1)
+            Fe_spin_down = Specie('Fe', 0, spin=-1)
+            Mn_spin_down = Specie('Mn', 0, spin=-1)
         except TypeError:
-            Fe_spin_up = Specie('Fe', 0, properties={'spin': 1})  # pylint: disable=unexpected-keyword-arg
-            Mn_spin_up = Specie('Mn', 0, properties={'spin': 1})  # pylint: disable=unexpected-keyword-arg
-            Fe_spin_down = Specie('Fe', 0, properties={'spin': -1})  # pylint: disable=unexpected-keyword-arg
-            Mn_spin_down = Specie('Mn', 0, properties={'spin': -1})  # pylint: disable=unexpected-keyword-arg
+            Fe_spin_up = Specie('Fe', 0, properties={'spin': 1})
+            Mn_spin_up = Specie('Mn', 0, properties={'spin': 1})
+            Fe_spin_down = Specie('Fe', 0, properties={'spin': -1})
+            Mn_spin_down = Specie('Mn', 0, properties={'spin': -1})
         FeMn1 = Composition({Fe_spin_up: 0.5, Mn_spin_up: 0.5})
         FeMn2 = Composition({Fe_spin_down: 0.5, Mn_spin_down: 0.5})
         a = Structure(
@@ -2280,7 +2230,8 @@ class TestStructureDataFromPymatgen:
     @staticmethod
     def test_multiple_kinds_partial_occupancies():
         """Tests that a structure with multiple sites with the same element but different
-        partial occupancies, get their own unique kind name."""
+        partial occupancies, get their own unique kind name.
+        """
         from pymatgen.core.composition import Composition
         from pymatgen.core.structure import Structure
 
@@ -2296,8 +2247,7 @@ class TestStructureDataFromPymatgen:
     @skip_pymatgen
     @staticmethod
     def test_multiple_kinds_alloy():
-        """
-        Tests that a structure with multiple sites with the same alloy symbols but different
+        """Tests that a structure with multiple sites with the same alloy symbols but different
         weights, get their own unique kind name
         """
         from pymatgen.core.composition import Composition
@@ -2309,7 +2259,7 @@ class TestStructureDataFromPymatgen:
         a = Structure(
             lattice=[[4, 0, 0], [0, 4, 0], [0, 0, 4]],
             species=[alloy_one, alloy_two],
-            coords=[[0, 0, 0], [0.5, 0.5, 0.5]]
+            coords=[[0, 0, 0], [0.5, 0.5, 0.5]],
         )
 
         StructureData(pymatgen=a)
@@ -2317,7 +2267,8 @@ class TestStructureDataFromPymatgen:
 
 class TestPymatgenFromStructureData:
     """Tests the creation of pymatgen Structure and Molecule objects from
-    StructureData."""
+    StructureData.
+    """
 
     @skip_pymatgen
     def test_1(self):
@@ -2337,13 +2288,15 @@ class TestPymatgenFromStructureData:
         """Tests ASE -> StructureData -> pymatgen."""
         import ase
 
-        aseatoms = ase.Atoms('Si4', cell=(1., 2., 3.), pbc=(True, True, True))
-        aseatoms.set_scaled_positions((
-            (0.0, 0.0, 0.0),
-            (0.1, 0.1, 0.1),
-            (0.2, 0.2, 0.2),
-            (0.3, 0.3, 0.3),
-        ))
+        aseatoms = ase.Atoms('Si4', cell=(1.0, 2.0, 3.0), pbc=(True, True, True))
+        aseatoms.set_scaled_positions(
+            (
+                (0.0, 0.0, 0.0),
+                (0.1, 0.1, 0.1),
+                (0.2, 0.2, 0.2),
+                (0.3, 0.3, 0.3),
+            )
+        )
 
         a_struct = StructureData(ase=aseatoms)
         p_struct = a_struct.get_pymatgen_structure()
@@ -2358,31 +2311,35 @@ class TestPymatgenFromStructureData:
     @skip_ase
     @skip_pymatgen
     def test_3(self):
-        """
-        Tests the conversion of StructureData to pymatgen's Molecule
+        """Tests the conversion of StructureData to pymatgen's Molecule
         (ASE -> StructureData -> pymatgen)
         """
         import ase
 
         aseatoms = ase.Atoms('Si4', cell=(10, 10, 10), pbc=(True, True, True))
-        aseatoms.set_scaled_positions((
-            (0.0, 0.0, 0.0),
-            (0.1, 0.1, 0.1),
-            (0.2, 0.2, 0.2),
-            (0.3, 0.3, 0.3),
-        ))
+        aseatoms.set_scaled_positions(
+            (
+                (0.0, 0.0, 0.0),
+                (0.1, 0.1, 0.1),
+                (0.2, 0.2, 0.2),
+                (0.3, 0.3, 0.3),
+            )
+        )
 
         a_struct = StructureData(ase=aseatoms)
         p_mol = a_struct.get_pymatgen_molecule()
 
         p_mol_dict = p_mol.as_dict()
-        assert [x['xyz'] for x in p_mol_dict['sites']] == \
-                         [[0.0, 0.0, 0.0], [1.0, 1.0, 1.0], [2.0, 2.0, 2.0], [3.0, 3.0, 3.0]]
+        assert [x['xyz'] for x in p_mol_dict['sites']] == [
+            [0.0, 0.0, 0.0],
+            [1.0, 1.0, 1.0],
+            [2.0, 2.0, 2.0],
+            [3.0, 3.0, 3.0],
+        ]
 
     @skip_pymatgen
     def test_roundtrip(self):
-        """
-        Tests roundtrip StructureData -> pymatgen -> StructureData
+        """Tests roundtrip StructureData -> pymatgen -> StructureData
         (no spins)
         """
         a = StructureData(cell=[[5.6, 0, 0], [0, 5.6, 0], [0, 0, 5.6]])
@@ -2399,13 +2356,20 @@ class TestPymatgenFromStructureData:
         c = StructureData(pymatgen=b)
         assert c.get_site_kindnames() == ['Cl', 'Cl', 'Cl', 'Cl', 'Na', 'Na', 'Na', 'Na']
         assert [k.symbol for k in c.kinds] == ['Cl', 'Na']
-        assert [s.position for s in c.sites] == [(0., 0., 0.), (2.8, 0, 2.8), (0, 2.8, 2.8), (2.8, 2.8, 0),
-                                                 (2.8, 2.8, 2.8), (2.8, 0, 0), (0, 2.8, 0), (0, 0, 2.8)]
+        assert [s.position for s in c.sites] == [
+            (0.0, 0.0, 0.0),
+            (2.8, 0, 2.8),
+            (0, 2.8, 2.8),
+            (2.8, 2.8, 0),
+            (2.8, 2.8, 2.8),
+            (2.8, 0, 0),
+            (0, 2.8, 0),
+            (0, 0, 2.8),
+        ]
 
     @skip_pymatgen
     def test_roundtrip_kindnames(self):
-        """
-        Tests roundtrip StructureData -> pymatgen -> StructureData
+        """Tests roundtrip StructureData -> pymatgen -> StructureData
         (no spins, but with all kind of kind names)
         """
         a = StructureData(cell=[[5.6, 0, 0], [0, 5.6, 0], [0, 0, 5.6]])
@@ -2419,19 +2383,34 @@ class TestPymatgenFromStructureData:
         a.append_atom(position=(0, 0, 2.8), symbols='Na', name='Na4')
 
         b = a.get_pymatgen()
-        assert [site.properties['kind_name'] for site in b.sites] == \
-                         ['Cl', 'Cl10', 'Cla', 'cl_x', 'Na1', 'Na2', 'Na_Na', 'Na4']
+        assert [site.properties['kind_name'] for site in b.sites] == [
+            'Cl',
+            'Cl10',
+            'Cla',
+            'cl_x',
+            'Na1',
+            'Na2',
+            'Na_Na',
+            'Na4',
+        ]
 
         c = StructureData(pymatgen=b)
         assert c.get_site_kindnames() == ['Cl', 'Cl10', 'Cla', 'cl_x', 'Na1', 'Na2', 'Na_Na', 'Na4']
         assert c.get_symbols_set() == set(['Cl', 'Na'])
-        assert [s.position for s in c.sites] == [(0., 0., 0.), (2.8, 0, 2.8), (0, 2.8, 2.8), (2.8, 2.8, 0),
-                                                 (2.8, 2.8, 2.8), (2.8, 0, 0), (0, 2.8, 0), (0, 0, 2.8)]
+        assert [s.position for s in c.sites] == [
+            (0.0, 0.0, 0.0),
+            (2.8, 0, 2.8),
+            (0, 2.8, 2.8),
+            (2.8, 2.8, 0),
+            (2.8, 2.8, 2.8),
+            (2.8, 0, 0),
+            (0, 2.8, 0),
+            (0, 0, 2.8),
+        ]
 
     @skip_pymatgen
     def test_roundtrip_spins(self):
-        """
-        Tests roundtrip StructureData -> pymatgen -> StructureData
+        """Tests roundtrip StructureData -> pymatgen -> StructureData
         (with spins)
         """
         a = StructureData(cell=[[5.6, 0, 0], [0, 5.6, 0], [0, 0, 5.6]])
@@ -2454,30 +2433,37 @@ class TestPymatgenFromStructureData:
         c = StructureData(pymatgen=b)
         assert c.get_site_kindnames() == ['Mn1', 'Mn1', 'Mn1', 'Mn1', 'Mn2', 'Mn2', 'Mn2', 'Mn2']
         assert [k.symbol for k in c.kinds] == ['Mn', 'Mn']
-        assert [s.position for s in c.sites] == [(0., 0., 0.), (2.8, 0, 2.8), (0, 2.8, 2.8), (2.8, 2.8, 0),
-                                                 (2.8, 2.8, 2.8), (2.8, 0, 0), (0, 2.8, 0), (0, 0, 2.8)]
+        assert [s.position for s in c.sites] == [
+            (0.0, 0.0, 0.0),
+            (2.8, 0, 2.8),
+            (0, 2.8, 2.8),
+            (2.8, 2.8, 0),
+            (2.8, 2.8, 2.8),
+            (2.8, 0, 0),
+            (0, 2.8, 0),
+            (0, 0, 2.8),
+        ]
 
     @skip_pymatgen
     def test_roundtrip_partial_occ(self):
-        """
-        Tests roundtrip StructureData -> pymatgen -> StructureData
+        """Tests roundtrip StructureData -> pymatgen -> StructureData
         (with partial occupancies).
         """
         from numpy import testing
 
-        a = StructureData(cell=[[4.0, 0.0, 0.0], [-2., 3.5, 0.0], [0.0, 0.0, 16.]])
+        a = StructureData(cell=[[4.0, 0.0, 0.0], [-2.0, 3.5, 0.0], [0.0, 0.0, 16.0]])
         a.append_atom(position=(0.0, 0.0, 13.5), symbols='Mn')
         a.append_atom(position=(0.0, 0.0, 2.6), symbols='Mn')
         a.append_atom(position=(0.0, 0.0, 5.5), symbols='Mn')
-        a.append_atom(position=(0.0, 0.0, 11.), symbols='Mn')
-        a.append_atom(position=(2., 1., 12.), symbols='Mn', weights=0.8)
-        a.append_atom(position=(0.0, 2.2, 4.), symbols='Mn', weights=0.8)
-        a.append_atom(position=(0.0, 2.2, 12.), symbols='Si')
-        a.append_atom(position=(2., 1., 4.), symbols='Si')
-        a.append_atom(position=(2., 1., 15.), symbols='N')
+        a.append_atom(position=(0.0, 0.0, 11.0), symbols='Mn')
+        a.append_atom(position=(2.0, 1.0, 12.0), symbols='Mn', weights=0.8)
+        a.append_atom(position=(0.0, 2.2, 4.0), symbols='Mn', weights=0.8)
+        a.append_atom(position=(0.0, 2.2, 12.0), symbols='Si')
+        a.append_atom(position=(2.0, 1.0, 4.0), symbols='Si')
+        a.append_atom(position=(2.0, 1.0, 15.0), symbols='N')
         a.append_atom(position=(0.0, 2.2, 1.5), symbols='N')
-        a.append_atom(position=(0.0, 2.2, 7.), symbols='N')
-        a.append_atom(position=(2., 1., 9.5), symbols='N')
+        a.append_atom(position=(0.0, 2.2, 7.0), symbols='N')
+        a.append_atom(position=(2.0, 1.0, 9.5), symbols='N')
 
         # a few checks on the structure kinds and symbols
         assert a.get_symbols_set() == set(['Mn', 'Si', 'N'])
@@ -2486,47 +2472,50 @@ class TestPymatgenFromStructureData:
 
         b = a.get_pymatgen()
         # check the partial occupancies
-        assert [s.as_dict() for s in b.species_and_occu] == [{
-            'Mn': 1.0
-        }, {
-            'Mn': 1.0
-        }, {
-            'Mn': 1.0
-        }, {
-            'Mn': 1.0
-        }, {
-            'Mn': 0.8
-        }, {
-            'Mn': 0.8
-        }, {
-            'Si': 1.0
-        }, {
-            'Si': 1.0
-        }, {
-            'N': 1.0
-        }, {
-            'N': 1.0
-        }, {
-            'N': 1.0
-        }, {
-            'N': 1.0
-        }]
+        assert [s.as_dict() for s in b.species_and_occu] == [
+            {'Mn': 1.0},
+            {'Mn': 1.0},
+            {'Mn': 1.0},
+            {'Mn': 1.0},
+            {'Mn': 0.8},
+            {'Mn': 0.8},
+            {'Si': 1.0},
+            {'Si': 1.0},
+            {'N': 1.0},
+            {'N': 1.0},
+            {'N': 1.0},
+            {'N': 1.0},
+        ]
 
         # back to StructureData
         c = StructureData(pymatgen=b)
-        assert c.cell == [[4., 0.0, 0.0], [-2., 3.5, 0.0], [0.0, 0.0, 16.]]
+        assert c.cell == [[4.0, 0.0, 0.0], [-2.0, 3.5, 0.0], [0.0, 0.0, 16.0]]
         assert c.get_symbols_set() == set(['Mn', 'Si', 'N'])
         assert c.get_site_kindnames() == ['Mn', 'Mn', 'Mn', 'Mn', 'MnX', 'MnX', 'Si', 'Si', 'N', 'N', 'N', 'N']
         assert c.get_formula() == 'Mn4N4Si2{Mn0.80X0.20}2'
-        testing.assert_allclose([s.position for s in c.sites], [(0.0, 0.0, 13.5), (0.0, 0.0, 2.6), (0.0, 0.0, 5.5),
-                                                                (0.0, 0.0, 11.), (2., 1., 12.), (0.0, 2.2, 4.),
-                                                                (0.0, 2.2, 12.), (2., 1., 4.), (2., 1., 15.),
-                                                                (0.0, 2.2, 1.5), (0.0, 2.2, 7.), (2., 1., 9.5)])
+        testing.assert_allclose(
+            [s.position for s in c.sites],
+            [
+                (0.0, 0.0, 13.5),
+                (0.0, 0.0, 2.6),
+                (0.0, 0.0, 5.5),
+                (0.0, 0.0, 11.0),
+                (2.0, 1.0, 12.0),
+                (0.0, 2.2, 4.0),
+                (0.0, 2.2, 12.0),
+                (2.0, 1.0, 4.0),
+                (2.0, 1.0, 15.0),
+                (0.0, 2.2, 1.5),
+                (0.0, 2.2, 7.0),
+                (2.0, 1.0, 9.5),
+            ],
+        )
 
     @skip_pymatgen
     def test_partial_occ_and_spin(self):
         """Tests StructureData -> pymatgen, with partial occupancies and spins.
-        This should raise a ValueError."""
+        This should raise a ValueError.
+        """
         a = StructureData(cell=[[4, 0, 0], [0, 4, 0], [0, 0, 4]])
         a.append_atom(position=(0, 0, 0), symbols=('Fe', 'Al'), weights=(0.8, 0.2), name='FeAl1')
         a.append_atom(position=(2, 2, 2), symbols=('Fe', 'Al'), weights=(0.8, 0.2), name='FeAl2')
@@ -2557,12 +2546,9 @@ class TestArrayData:
     """Tests the ArrayData objects."""
 
     def test_creation(self):
-        """
-        Check the methods to add, remove, modify, and get arrays and
+        """Check the methods to add, remove, modify, and get arrays and
         array shapes.
         """
-        # pylint: disable=too-many-statements
-
         # Create a node with two arrays
         n = ArrayData()
         first = np.random.rand(2, 3, 4)
@@ -2576,9 +2562,9 @@ class TestArrayData:
 
         # Check if the arrays are there
         assert set(['first', 'second', 'third']) == set(n.get_arraynames())
-        assert round(abs(abs(first - n.get_array('first')).max() - 0.), 7) == 0
-        assert round(abs(abs(second - n.get_array('second')).max() - 0.), 7) == 0
-        assert round(abs(abs(third - n.get_array('third')).max() - 0.), 7) == 0
+        assert round(abs(abs(first - n.get_array('first')).max() - 0.0), 7) == 0
+        assert round(abs(abs(second - n.get_array('second')).max() - 0.0), 7) == 0
+        assert round(abs(abs(third - n.get_array('third')).max() - 0.0), 7) == 0
         assert first.shape == n.get_shape('first')
         assert second.shape == n.get_shape('second')
         assert third.shape == n.get_shape('third')
@@ -2597,8 +2583,8 @@ class TestArrayData:
 
         # Check if the arrays are there, and if I am getting the new one
         assert set(['first', 'second']) == set(n.get_arraynames())
-        assert round(abs(abs(first - n.get_array('first')).max() - 0.), 7) == 0
-        assert round(abs(abs(second - n.get_array('second')).max() - 0.), 7) == 0
+        assert round(abs(abs(first - n.get_array('first')).max() - 0.0), 7) == 0
+        assert round(abs(abs(second - n.get_array('second')).max() - 0.0), 7) == 0
         assert first.shape == n.get_shape('first')
         assert second.shape == n.get_shape('second')
 
@@ -2606,31 +2592,31 @@ class TestArrayData:
 
         # Same checks, after storing
         assert set(['first', 'second']) == set(n.get_arraynames())
-        assert round(abs(abs(first - n.get_array('first')).max() - 0.), 7) == 0
-        assert round(abs(abs(second - n.get_array('second')).max() - 0.), 7) == 0
+        assert round(abs(abs(first - n.get_array('first')).max() - 0.0), 7) == 0
+        assert round(abs(abs(second - n.get_array('second')).max() - 0.0), 7) == 0
         assert first.shape == n.get_shape('first')
         assert second.shape == n.get_shape('second')
 
         # Same checks, again (this is checking the caching features)
         assert set(['first', 'second']) == set(n.get_arraynames())
-        assert round(abs(abs(first - n.get_array('first')).max() - 0.), 7) == 0
-        assert round(abs(abs(second - n.get_array('second')).max() - 0.), 7) == 0
+        assert round(abs(abs(first - n.get_array('first')).max() - 0.0), 7) == 0
+        assert round(abs(abs(second - n.get_array('second')).max() - 0.0), 7) == 0
         assert first.shape == n.get_shape('first')
         assert second.shape == n.get_shape('second')
 
         # Same checks, after reloading
         n2 = load_node(uuid=n.uuid)
         assert set(['first', 'second']) == set(n2.get_arraynames())
-        assert round(abs(abs(first - n2.get_array('first')).max() - 0.), 7) == 0
-        assert round(abs(abs(second - n2.get_array('second')).max() - 0.), 7) == 0
+        assert round(abs(abs(first - n2.get_array('first')).max() - 0.0), 7) == 0
+        assert round(abs(abs(second - n2.get_array('second')).max() - 0.0), 7) == 0
         assert first.shape == n2.get_shape('first')
         assert second.shape == n2.get_shape('second')
 
         # Same checks, after reloading with UUID
         n2 = load_node(n.uuid, sub_classes=(ArrayData,))
         assert set(['first', 'second']) == set(n2.get_arraynames())
-        assert round(abs(abs(first - n2.get_array('first')).max() - 0.), 7) == 0
-        assert round(abs(abs(second - n2.get_array('second')).max() - 0.), 7) == 0
+        assert round(abs(abs(first - n2.get_array('first')).max() - 0.0), 7) == 0
+        assert round(abs(abs(second - n2.get_array('second')).max() - 0.0), 7) == 0
         assert first.shape == n2.get_shape('first')
         assert second.shape == n2.get_shape('second')
 
@@ -2643,15 +2629,13 @@ class TestArrayData:
         # Again same checks, to verify that the attempts to delete/overwrite
         # arrays did not damage the node content
         assert set(['first', 'second']) == set(n.get_arraynames())
-        assert round(abs(abs(first - n.get_array('first')).max() - 0.), 7) == 0
-        assert round(abs(abs(second - n.get_array('second')).max() - 0.), 7) == 0
+        assert round(abs(abs(first - n.get_array('first')).max() - 0.0), 7) == 0
+        assert round(abs(abs(second - n.get_array('second')).max() - 0.0), 7) == 0
         assert first.shape == n.get_shape('first')
         assert second.shape == n.get_shape('second')
 
     def test_iteration(self):
-        """
-        Check the functionality of the get_iterarrays() iterator
-        """
+        """Check the functionality of the get_iterarrays() iterator"""
         # Create a node with two arrays
         n = ArrayData()
         first = np.random.rand(2, 3, 4)
@@ -2665,11 +2649,11 @@ class TestArrayData:
 
         for name, array in n.get_iterarrays():
             if name == 'first':
-                assert round(abs(abs(first - array).max() - 0.), 7) == 0
+                assert round(abs(abs(first - array).max() - 0.0), 7) == 0
             if name == 'second':
-                assert round(abs(abs(second - array).max() - 0.), 7) == 0
+                assert round(abs(abs(second - array).max() - 0.0), 7) == 0
             if name == 'third':
-                assert round(abs(abs(third - array).max() - 0.), 7) == 0
+                assert round(abs(abs(third - array).max() - 0.0), 7) == 0
 
 
 class TestTrajectoryData:
@@ -2677,44 +2661,60 @@ class TestTrajectoryData:
 
     def test_creation(self):
         """Check the methods to set and retrieve a trajectory."""
-        # pylint: disable=too-many-statements
-
         # Create a node with two arrays
         n = TrajectoryData()
 
         # I create sample data
         stepids = np.array([60, 70])
         times = stepids * 0.01
-        cells = np.array([[[
-            2.,
-            0.,
-            0.,
-        ], [
-            0.,
-            2.,
-            0.,
-        ], [
-            0.,
-            0.,
-            2.,
-        ]], [[
-            3.,
-            0.,
-            0.,
-        ], [
-            0.,
-            3.,
-            0.,
-        ], [
-            0.,
-            0.,
-            3.,
-        ]]])
+        cells = np.array(
+            [
+                [
+                    [
+                        2.0,
+                        0.0,
+                        0.0,
+                    ],
+                    [
+                        0.0,
+                        2.0,
+                        0.0,
+                    ],
+                    [
+                        0.0,
+                        0.0,
+                        2.0,
+                    ],
+                ],
+                [
+                    [
+                        3.0,
+                        0.0,
+                        0.0,
+                    ],
+                    [
+                        0.0,
+                        3.0,
+                        0.0,
+                    ],
+                    [
+                        0.0,
+                        0.0,
+                        3.0,
+                    ],
+                ],
+            ]
+        )
         symbols = ['H', 'O', 'C']
-        positions = np.array([[[0., 0., 0.], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]],
-                              [[0., 0., 0.], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]]])
-        velocities = np.array([[[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]],
-                               [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, -0.5, -0.5]]])
+        positions = np.array(
+            [[[0.0, 0.0, 0.0], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]], [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]]]
+        )
+        velocities = np.array(
+            [
+                [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+                [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, -0.5, -0.5]],
+            ]
+        )
 
         # I set the node
         n.set_trajectory(
@@ -2724,21 +2724,21 @@ class TestTrajectoryData:
         # Generic checks
         assert n.numsites == 3
         assert n.numsteps == 2
-        assert round(abs(abs(stepids - n.get_stepids()).sum() - 0.), 7) == 0
-        assert round(abs(abs(times - n.get_times()).sum() - 0.), 7) == 0
-        assert round(abs(abs(cells - n.get_cells()).sum() - 0.), 7) == 0
+        assert round(abs(abs(stepids - n.get_stepids()).sum() - 0.0), 7) == 0
+        assert round(abs(abs(times - n.get_times()).sum() - 0.0), 7) == 0
+        assert round(abs(abs(cells - n.get_cells()).sum() - 0.0), 7) == 0
         assert symbols == n.symbols
-        assert round(abs(abs(positions - n.get_positions()).sum() - 0.), 7) == 0
-        assert round(abs(abs(velocities - n.get_velocities()).sum() - 0.), 7) == 0
+        assert round(abs(abs(positions - n.get_positions()).sum() - 0.0), 7) == 0
+        assert round(abs(abs(velocities - n.get_velocities()).sum() - 0.0), 7) == 0
 
         # get_step_data function check
         data = n.get_step_data(1)
         assert data[0] == stepids[1]
         assert round(abs(data[1] - times[1]), 7) == 0
-        assert round(abs(abs(cells[1] - data[2]).sum() - 0.), 7) == 0
+        assert round(abs(abs(cells[1] - data[2]).sum() - 0.0), 7) == 0
         assert symbols == data[3]
-        assert round(abs(abs(data[4] - positions[1]).sum() - 0.), 7) == 0
-        assert round(abs(abs(data[5] - velocities[1]).sum() - 0.), 7) == 0
+        assert round(abs(abs(data[4] - positions[1]).sum() - 0.0), 7) == 0
+        assert round(abs(abs(data[5] - velocities[1]).sum() - 0.0), 7) == 0
 
         # Step 70 has index 1
         assert n.get_index_from_stepid(70) == 1
@@ -2752,11 +2752,11 @@ class TestTrajectoryData:
         # Generic checks
         assert n.numsites == 3
         assert n.numsteps == 2
-        assert round(abs(abs(stepids - n.get_stepids()).sum() - 0.), 7) == 0
+        assert round(abs(abs(stepids - n.get_stepids()).sum() - 0.0), 7) == 0
         assert n.get_times() is None
-        assert round(abs(abs(cells - n.get_cells()).sum() - 0.), 7) == 0
+        assert round(abs(abs(cells - n.get_cells()).sum() - 0.0), 7) == 0
         assert symbols == n.symbols
-        assert round(abs(abs(positions - n.get_positions()).sum() - 0.), 7) == 0
+        assert round(abs(abs(positions - n.get_positions()).sum() - 0.0), 7) == 0
         assert n.get_velocities() is None
 
         # Same thing, but for a new node
@@ -2765,11 +2765,11 @@ class TestTrajectoryData:
         # Generic checks
         assert n.numsites == 3
         assert n.numsteps == 2
-        assert round(abs(abs(stepids - n.get_stepids()).sum() - 0.), 7) == 0
+        assert round(abs(abs(stepids - n.get_stepids()).sum() - 0.0), 7) == 0
         assert n.get_times() is None
-        assert round(abs(abs(cells - n.get_cells()).sum() - 0.), 7) == 0
+        assert round(abs(abs(cells - n.get_cells()).sum() - 0.0), 7) == 0
         assert symbols == n.symbols
-        assert round(abs(abs(positions - n.get_positions()).sum() - 0.), 7) == 0
+        assert round(abs(abs(positions - n.get_positions()).sum() - 0.0), 7) == 0
         assert n.get_velocities() is None
 
         ########################################################
@@ -2778,11 +2778,11 @@ class TestTrajectoryData:
         # Generic checks
         assert n.numsites == 3
         assert n.numsteps == 2
-        assert round(abs(abs(stepids - n.get_stepids()).sum() - 0.), 7) == 0
-        assert round(abs(abs(times - n.get_times()).sum() - 0.), 7) == 0
-        assert round(abs(abs(cells - n.get_cells()).sum() - 0.), 7) == 0
+        assert round(abs(abs(stepids - n.get_stepids()).sum() - 0.0), 7) == 0
+        assert round(abs(abs(times - n.get_times()).sum() - 0.0), 7) == 0
+        assert round(abs(abs(cells - n.get_cells()).sum() - 0.0), 7) == 0
         assert symbols == n.symbols
-        assert round(abs(abs(positions - n.get_positions()).sum() - 0.), 7) == 0
+        assert round(abs(abs(positions - n.get_positions()).sum() - 0.0), 7) == 0
         assert n.get_velocities() is None
 
         # Same thing, but for a new node
@@ -2791,11 +2791,11 @@ class TestTrajectoryData:
         # Generic checks
         assert n.numsites == 3
         assert n.numsteps == 2
-        assert round(abs(abs(stepids - n.get_stepids()).sum() - 0.), 7) == 0
-        assert round(abs(abs(times - n.get_times()).sum() - 0.), 7) == 0
-        assert round(abs(abs(cells - n.get_cells()).sum() - 0.), 7) == 0
+        assert round(abs(abs(stepids - n.get_stepids()).sum() - 0.0), 7) == 0
+        assert round(abs(abs(times - n.get_times()).sum() - 0.0), 7) == 0
+        assert round(abs(abs(cells - n.get_cells()).sum() - 0.0), 7) == 0
         assert symbols == n.symbols
-        assert round(abs(abs(positions - n.get_positions()).sum() - 0.), 7) == 0
+        assert round(abs(abs(positions - n.get_positions()).sum() - 0.0), 7) == 0
         assert n.get_velocities() is None
 
         n.store()
@@ -2804,20 +2804,20 @@ class TestTrajectoryData:
         # Generic checks
         assert n.numsites == 3
         assert n.numsteps == 2
-        assert round(abs(abs(stepids - n.get_stepids()).sum() - 0.), 7) == 0
-        assert round(abs(abs(times - n.get_times()).sum() - 0.), 7) == 0
-        assert round(abs(abs(cells - n.get_cells()).sum() - 0.), 7) == 0
+        assert round(abs(abs(stepids - n.get_stepids()).sum() - 0.0), 7) == 0
+        assert round(abs(abs(times - n.get_times()).sum() - 0.0), 7) == 0
+        assert round(abs(abs(cells - n.get_cells()).sum() - 0.0), 7) == 0
         assert symbols == n.symbols
-        assert round(abs(abs(positions - n.get_positions()).sum() - 0.), 7) == 0
+        assert round(abs(abs(positions - n.get_positions()).sum() - 0.0), 7) == 0
         assert n.get_velocities() is None
 
         # get_step_data function check
         data = n.get_step_data(1)
         assert data[0] == stepids[1]
         assert round(abs(data[1] - times[1]), 7) == 0
-        assert round(abs(abs(cells[1] - data[2]).sum() - 0.), 7) == 0
+        assert round(abs(abs(cells[1] - data[2]).sum() - 0.0), 7) == 0
         assert symbols == data[3]
-        assert round(abs(abs(data[4] - positions[1]).sum() - 0.), 7) == 0
+        assert round(abs(abs(data[4] - positions[1]).sum() - 0.0), 7) == 0
         assert data[5] is None
 
         # Step 70 has index 1
@@ -2832,20 +2832,20 @@ class TestTrajectoryData:
         # Generic checks
         assert n.numsites == 3
         assert n.numsteps == 2
-        assert round(abs(abs(stepids - n.get_stepids()).sum() - 0.), 7) == 0
-        assert round(abs(abs(times - n.get_times()).sum() - 0.), 7) == 0
-        assert round(abs(abs(cells - n.get_cells()).sum() - 0.), 7) == 0
+        assert round(abs(abs(stepids - n.get_stepids()).sum() - 0.0), 7) == 0
+        assert round(abs(abs(times - n.get_times()).sum() - 0.0), 7) == 0
+        assert round(abs(abs(cells - n.get_cells()).sum() - 0.0), 7) == 0
         assert symbols == n.symbols
-        assert round(abs(abs(positions - n.get_positions()).sum() - 0.), 7) == 0
+        assert round(abs(abs(positions - n.get_positions()).sum() - 0.0), 7) == 0
         assert n.get_velocities() is None
 
         # get_step_data function check
         data = n.get_step_data(1)
         assert data[0] == stepids[1]
         assert round(abs(data[1] - times[1]), 7) == 0
-        assert round(abs(abs(cells[1] - data[2]).sum() - 0.), 7) == 0
+        assert round(abs(abs(cells[1] - data[2]).sum() - 0.0), 7) == 0
         assert symbols == data[3]
-        assert round(abs(abs(data[4] - positions[1]).sum() - 0.), 7) == 0
+        assert round(abs(abs(data[4] - positions[1]).sum() - 0.0), 7) == 0
         assert data[5] is None
 
         # Step 70 has index 1
@@ -2856,46 +2856,61 @@ class TestTrajectoryData:
 
     @pytest.mark.requires_rmq
     def test_conversion_to_structure(self):
-        """
-        Check the methods to export a given time step to a StructureData node.
-        """
-
+        """Check the methods to export a given time step to a StructureData node."""
         # Create a node with two arrays
         n = TrajectoryData()
 
         # I create sample data
         stepids = np.array([60, 70])
         times = stepids * 0.01
-        cells = np.array([[[
-            2.,
-            0.,
-            0.,
-        ], [
-            0.,
-            2.,
-            0.,
-        ], [
-            0.,
-            0.,
-            2.,
-        ]], [[
-            3.,
-            0.,
-            0.,
-        ], [
-            0.,
-            3.,
-            0.,
-        ], [
-            0.,
-            0.,
-            3.,
-        ]]])
+        cells = np.array(
+            [
+                [
+                    [
+                        2.0,
+                        0.0,
+                        0.0,
+                    ],
+                    [
+                        0.0,
+                        2.0,
+                        0.0,
+                    ],
+                    [
+                        0.0,
+                        0.0,
+                        2.0,
+                    ],
+                ],
+                [
+                    [
+                        3.0,
+                        0.0,
+                        0.0,
+                    ],
+                    [
+                        0.0,
+                        3.0,
+                        0.0,
+                    ],
+                    [
+                        0.0,
+                        0.0,
+                        3.0,
+                    ],
+                ],
+            ]
+        )
         symbols = ['H', 'O', 'C']
-        positions = np.array([[[0., 0., 0.], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]],
-                              [[0., 0., 0.], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]]])
-        velocities = np.array([[[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]],
-                               [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, -0.5, -0.5]]])
+        positions = np.array(
+            [[[0.0, 0.0, 0.0], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]], [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]]]
+        )
+        velocities = np.array(
+            [
+                [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+                [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, -0.5, -0.5]],
+            ]
+        )
 
         # I set the node
         n.set_trajectory(
@@ -2917,75 +2932,87 @@ class TestTrajectoryData:
             # principle and we want to check
             k1 = Kind(name='C', symbols='Cu')
             k2 = Kind(name='H', symbols='He')
-            k3 = Kind(name='O', symbols='Os', mass=100.)
+            k3 = Kind(name='O', symbols='Os', mass=100.0)
             k4 = Kind(name='Ge', symbols='Ge')
 
             with pytest.raises(ValueError):
                 # Not enough kinds
-                struc = n.get_step_structure(1, custom_kinds=[k1, k2])
+                n.get_step_structure(1, custom_kinds=[k1, k2])
 
             with pytest.raises(ValueError):
                 # Too many kinds
-                struc = n.get_step_structure(1, custom_kinds=[k1, k2, k3, k4])
+                n.get_step_structure(1, custom_kinds=[k1, k2, k3, k4])
 
             with pytest.raises(ValueError):
                 # Wrong kinds
-                struc = n.get_step_structure(1, custom_kinds=[k1, k2, k4])
+                n.get_step_structure(1, custom_kinds=[k1, k2, k4])
 
             with pytest.raises(ValueError):
                 # Two kinds with the same name
-                struc = n.get_step_structure(1, custom_kinds=[k1, k2, k3, k3])
+                n.get_step_structure(1, custom_kinds=[k1, k2, k3, k3])
 
             # Correct kinds
-            struc = n.get_step_structure(1, custom_kinds=[k1, k2, k3])
+            structure = n.get_step_structure(1, custom_kinds=[k1, k2, k3])
 
             # Checks
-            assert len(struc.sites) == 3  # 3 sites
-            assert round(abs(abs(np.array(struc.cell) - cells[1]).sum() - 0), 7) == 0
-            newpos = np.array([s.position for s in struc.sites])
+            assert len(structure.sites) == 3  # 3 sites
+            assert round(abs(abs(np.array(structure.cell) - cells[1]).sum() - 0), 7) == 0
+            newpos = np.array([s.position for s in structure.sites])
             assert round(abs(abs(newpos - positions[1]).sum() - 0), 7) == 0
-            newkinds = [s.kind_name for s in struc.sites]
+            newkinds = [s.kind_name for s in structure.sites]
             # Kinds are in the same order as given in the custm_kinds list
             assert newkinds == symbols
-            newatomtypes = [struc.get_kind(s.kind_name).symbols[0] for s in struc.sites]
+            newatomtypes = [structure.get_kind(s.kind_name).symbols[0] for s in structure.sites]
             # Atoms remain in the same order as given in the positions list
             assert newatomtypes == ['He', 'Os', 'Cu']
             # Check the mass of the kind of the second atom ('O' _> symbol Os, mass 100)
-            assert round(abs(struc.get_kind(struc.sites[1].kind_name).mass - 100.), 7) == 0
+            assert round(abs(structure.get_kind(structure.sites[1].kind_name).mass - 100.0), 7) == 0
 
     def test_conversion_from_structurelist(self):
-        """
-        Check the method to create a TrajectoryData from list of AiiDA
+        """Check the method to create a TrajectoryData from list of AiiDA
         structures.
         """
-        cells = [[[
-            2.,
-            0.,
-            0.,
-        ], [
-            0.,
-            2.,
-            0.,
-        ], [
-            0.,
-            0.,
-            2.,
-        ]], [[
-            3.,
-            0.,
-            0.,
-        ], [
-            0.,
-            3.,
-            0.,
-        ], [
-            0.,
-            0.,
-            3.,
-        ]]]
+        cells = [
+            [
+                [
+                    2.0,
+                    0.0,
+                    0.0,
+                ],
+                [
+                    0.0,
+                    2.0,
+                    0.0,
+                ],
+                [
+                    0.0,
+                    0.0,
+                    2.0,
+                ],
+            ],
+            [
+                [
+                    3.0,
+                    0.0,
+                    0.0,
+                ],
+                [
+                    0.0,
+                    3.0,
+                    0.0,
+                ],
+                [
+                    0.0,
+                    0.0,
+                    3.0,
+                ],
+            ],
+        ]
         symbols = [['H', 'O', 'C'], ['H', 'O', 'C']]
-        positions = [[[0., 0., 0.], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]],
-                     [[0., 0., 0.], [0.75, 0.75, 0.75], [1.25, 1.25, 1.25]]]
+        positions = [
+            [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]],
+            [[0.0, 0.0, 0.0], [0.75, 0.75, 0.75], [1.25, 1.25, 1.25]],
+        ]
         structurelist = []
         for i in range(0, 2):
             struct = StructureData(cell=cells[i])
@@ -3017,36 +3044,54 @@ class TestTrajectoryData:
         # I create sample data
         stepids = np.array([60, 70])
         times = stepids * 0.01
-        cells = np.array([[[
-            2.,
-            0.,
-            0.,
-        ], [
-            0.,
-            2.,
-            0.,
-        ], [
-            0.,
-            0.,
-            2.,
-        ]], [[
-            3.,
-            0.,
-            0.,
-        ], [
-            0.,
-            3.,
-            0.,
-        ], [
-            0.,
-            0.,
-            3.,
-        ]]])
+        cells = np.array(
+            [
+                [
+                    [
+                        2.0,
+                        0.0,
+                        0.0,
+                    ],
+                    [
+                        0.0,
+                        2.0,
+                        0.0,
+                    ],
+                    [
+                        0.0,
+                        0.0,
+                        2.0,
+                    ],
+                ],
+                [
+                    [
+                        3.0,
+                        0.0,
+                        0.0,
+                    ],
+                    [
+                        0.0,
+                        3.0,
+                        0.0,
+                    ],
+                    [
+                        0.0,
+                        0.0,
+                        3.0,
+                    ],
+                ],
+            ]
+        )
         symbols = ['H', 'O', 'C']
-        positions = np.array([[[0., 0., 0.], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]],
-                              [[0., 0., 0.], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]]])
-        velocities = np.array([[[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]],
-                               [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, -0.5, -0.5]]])
+        positions = np.array(
+            [[[0.0, 0.0, 0.0], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]], [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]]]
+        )
+        velocities = np.array(
+            [
+                [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+                [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, -0.5, -0.5]],
+            ]
+        )
 
         # I set the node
         n.set_trajectory(
@@ -3082,9 +3127,7 @@ class TestKpointsData:
     """Tests the KpointsData objects."""
 
     def test_mesh(self):
-        """
-        Check the methods to set and retrieve a mesh.
-        """
+        """Check the methods to set and retrieve a mesh."""
         # Create a node with two arrays
         k = KpointsData()
 
@@ -3093,7 +3136,7 @@ class TestKpointsData:
         k.set_kpoints_mesh(input_mesh)
         mesh, offset = k.get_kpoints_mesh()
         assert mesh == input_mesh
-        assert offset == [0., 0., 0.]  # must be a tuple of three 0 by default
+        assert offset == [0.0, 0.0, 0.0]  # must be a tuple of three 0 by default
 
         # a too long list should fail
         with pytest.raises(ValueError):
@@ -3116,18 +3159,17 @@ class TestKpointsData:
             k.set_kpoints_mesh(input_mesh)
 
     def test_list(self):
-        """
-        Test the method to set and retrieve a kpoint list.
-        """
-
+        """Test the method to set and retrieve a kpoint list."""
         k = KpointsData()
 
-        input_klist = np.array([
-            (0.0, 0.0, 0.0),
-            (0.2, 0.0, 0.0),
-            (0.0, 0.2, 0.0),
-            (0.0, 0.0, 0.2),
-        ])
+        input_klist = np.array(
+            [
+                (0.0, 0.0, 0.0),
+                (0.2, 0.0, 0.0),
+                (0.0, 0.2, 0.0),
+                (0.0, 0.0, 0.2),
+            ]
+        )
 
         # set kpoints list
         k.set_kpoints(input_klist)
@@ -3164,26 +3206,27 @@ class TestKpointsData:
             k.set_kpoints(input_klist)
 
     def test_kpoints_to_cartesian(self):
-        """
-        Test how the list of kpoints is converted to cartesian coordinates
-        """
-
+        """Test how the list of kpoints is converted to cartesian coordinates"""
         k = KpointsData()
 
-        input_klist = np.array([
-            (0.0, 0.0, 0.0),
-            (0.2, 0.0, 0.0),
-            (0.0, 0.2, 0.0),
-            (0.0, 0.0, 0.2),
-        ])
+        input_klist = np.array(
+            [
+                (0.0, 0.0, 0.0),
+                (0.2, 0.0, 0.0),
+                (0.0, 0.2, 0.0),
+                (0.0, 0.0, 0.2),
+            ]
+        )
 
         # define a cell
-        alat = 4.
-        cell = np.array([
-            [alat, 0., 0.],
-            [0., alat, 0.],
-            [0., 0., alat],
-        ])
+        alat = 4.0
+        cell = np.array(
+            [
+                [alat, 0.0, 0.0],
+                [0.0, alat, 0.0],
+                [0.0, 0.0, alat],
+            ]
+        )
 
         k.set_cell(cell)
 
@@ -3202,12 +3245,10 @@ class TestKpointsData:
         assert np.allclose(klist, input_klist, atol=1e-16)
 
     def test_path_wrapper_legacy(self):
-        """
-        This is a clone of the test_path test but instead it goes through the new wrapper
+        """This is a clone of the test_path test but instead it goes through the new wrapper
         calling the deprecated legacy implementation. This tests that the wrapper maintains
         the same behavior of the old implementation
         """
-
         from aiida.tools.data.array.kpoints import get_explicit_kpoints_path
 
         # Shouldn't get anything without having set the cell
@@ -3215,50 +3256,74 @@ class TestKpointsData:
             get_explicit_kpoints_path(None)
 
         # Define a cell
-        alat = 4.
-        cell = np.array([
-            [alat, 0., 0.],
-            [0., alat, 0.],
-            [0., 0., alat],
-        ])
+        alat = 4.0
+        cell = np.array(
+            [
+                [alat, 0.0, 0.0],
+                [0.0, alat, 0.0],
+                [0.0, 0.0, alat],
+            ]
+        )
 
         structure = StructureData(cell=cell)
 
         # test the various formats for specifying the path
-        get_explicit_kpoints_path(structure, method='legacy', value=[
-            ('G', 'M'),
-        ])
-        get_explicit_kpoints_path(structure, method='legacy', value=[
-            ('G', 'M', 30),
-        ])
-        get_explicit_kpoints_path(structure, method='legacy', value=[
-            ('G', (0., 0., 0.), 'M', (1., 1., 1.)),
-        ])
-        get_explicit_kpoints_path(structure, method='legacy', value=[
-            ('G', (0., 0., 0.), 'M', (1., 1., 1.), 30),
-        ])
+        get_explicit_kpoints_path(
+            structure,
+            method='legacy',
+            value=[
+                ('G', 'M'),
+            ],
+        )
+        get_explicit_kpoints_path(
+            structure,
+            method='legacy',
+            value=[
+                ('G', 'M', 30),
+            ],
+        )
+        get_explicit_kpoints_path(
+            structure,
+            method='legacy',
+            value=[
+                ('G', (0.0, 0.0, 0.0), 'M', (1.0, 1.0, 1.0)),
+            ],
+        )
+        get_explicit_kpoints_path(
+            structure,
+            method='legacy',
+            value=[
+                ('G', (0.0, 0.0, 0.0), 'M', (1.0, 1.0, 1.0), 30),
+            ],
+        )
 
         # at least 2 points per segment
         with pytest.raises(ValueError):
-            get_explicit_kpoints_path(structure, method='legacy', value=[
-                ('G', 'M', 1),
-            ])
+            get_explicit_kpoints_path(
+                structure,
+                method='legacy',
+                value=[
+                    ('G', 'M', 1),
+                ],
+            )
 
         with pytest.raises(ValueError):
-            get_explicit_kpoints_path(structure, method='legacy', value=[
-                ('G', (0., 0., 0.), 'M', (1., 1., 1.), 1),
-            ])
+            get_explicit_kpoints_path(
+                structure,
+                method='legacy',
+                value=[
+                    ('G', (0.0, 0.0, 0.0), 'M', (1.0, 1.0, 1.0), 1),
+                ],
+            )
 
         # try to set points with a spacing
         get_explicit_kpoints_path(structure, method='legacy', kpoint_distance=0.1)
 
     def test_tetra_z_wrapper_legacy(self):
-        """
-        This is a clone of the test_tetra_z test but instead it goes through the new wrapper
+        """This is a clone of the test_tetra_z test but instead it goes through the new wrapper
         calling the deprecated legacy implementation. This tests that the wrapper maintains
         the same behavior of the old implementation
         """
-
         from aiida.tools.data.array.kpoints import get_kpoints_path
 
         alat = 1.5
@@ -3271,22 +3336,27 @@ class TestKpointsData:
         point_coords = result['parameters'].dict.point_coords
 
         assert round(abs(point_coords['Z'][2] - np.pi / alat), 7) == 0
-        assert round(abs(point_coords['Z'][0] - 0.), 7) == 0
+        assert round(abs(point_coords['Z'][0] - 0.0), 7) == 0
 
 
 class TestSpglibTupleConversion:
     """Tests for conversion of Spglib tuples."""
 
     def test_simple_to_aiida(self):
-        """
-        Test conversion of a simple tuple to an AiiDA structure
-        """
+        """Test conversion of a simple tuple to an AiiDA structure"""
         from aiida.tools import spglib_tuple_to_structure
 
-        cell = np.array([[4., 1., 0.], [0., 4., 0.], [0., 0., 4.]])
+        cell = np.array([[4.0, 1.0, 0.0], [0.0, 4.0, 0.0], [0.0, 0.0, 4.0]])
 
-        relcoords = np.array([[0.09493671, 0., 0.], [0.59493671, 0.5, 0.5], [0.59493671, 0.5, 0.],
-                              [0.59493671, 0., 0.5], [0.09493671, 0.5, 0.5]])
+        relcoords = np.array(
+            [
+                [0.09493671, 0.0, 0.0],
+                [0.59493671, 0.5, 0.5],
+                [0.59493671, 0.5, 0.0],
+                [0.59493671, 0.0, 0.5],
+                [0.09493671, 0.5, 0.5],
+            ]
+        )
 
         abscoords = np.dot(cell.T, relcoords.T).T
 
@@ -3294,21 +3364,32 @@ class TestSpglibTupleConversion:
 
         struc = spglib_tuple_to_structure((cell, relcoords, numbers))
 
-        assert round(abs(np.sum(np.abs(np.array(struc.cell) - np.array(cell))) - 0.), 7) == 0
-        assert round(
-            abs(np.sum(np.abs(np.array([site.position for site in struc.sites]) - np.array(abscoords))) - 0.), 7
-        ) == 0
+        assert round(abs(np.sum(np.abs(np.array(struc.cell) - np.array(cell))) - 0.0), 7) == 0
+        assert (
+            round(abs(np.sum(np.abs(np.array([site.position for site in struc.sites]) - np.array(abscoords))) - 0.0), 7)
+            == 0
+        )
         assert [site.kind_name for site in struc.sites] == ['Ba', 'Ti', 'O', 'O', 'O']
 
     def test_complex1_to_aiida(self):
         """Test conversion of a  tuple to an AiiDA structure when passing also information on the kinds."""
         from aiida.tools import spglib_tuple_to_structure
 
-        cell = np.array([[4., 1., 0.], [0., 4., 0.], [0., 0., 4.]])
+        cell = np.array([[4.0, 1.0, 0.0], [0.0, 4.0, 0.0], [0.0, 0.0, 4.0]])
 
-        relcoords = np.array([[0.09493671, 0., 0.], [0.59493671, 0.5, 0.5], [0.59493671, 0.5, 0.],
-                              [0.59493671, 0., 0.5], [0.09493671, 0.5, 0.5], [0.09493671, 0.5, 0.5],
-                              [0.09493671, 0.5, 0.5], [0.09493671, 0.5, 0.5], [0.09493671, 0.5, 0.5]])
+        relcoords = np.array(
+            [
+                [0.09493671, 0.0, 0.0],
+                [0.59493671, 0.5, 0.5],
+                [0.59493671, 0.5, 0.0],
+                [0.59493671, 0.0, 0.5],
+                [0.09493671, 0.5, 0.5],
+                [0.09493671, 0.5, 0.5],
+                [0.09493671, 0.5, 0.5],
+                [0.09493671, 0.5, 0.5],
+                [0.09493671, 0.5, 0.5],
+            ]
+        )
 
         abscoords = np.dot(cell.T, relcoords.T).T
 
@@ -3322,25 +3403,27 @@ class TestSpglibTupleConversion:
             Kind(name='Ba', symbols='Ba'),
             Kind(name='Ti', symbols='Ti'),
             Kind(name='O', symbols='O'),
-            Kind(name='Ba2', symbols='Ba', mass=100.),
-            Kind(name='BaTi', symbols=('Ba', 'Ti'), weights=(0.5, 0.5), mass=100.),
-            Kind(name='BaTi2', symbols=('Ba', 'Ti'), weights=(0.4, 0.6), mass=100.),
-            Kind(name='Ba3', symbols='Ba', mass=100.)
+            Kind(name='Ba2', symbols='Ba', mass=100.0),
+            Kind(name='BaTi', symbols=('Ba', 'Ti'), weights=(0.5, 0.5), mass=100.0),
+            Kind(name='BaTi2', symbols=('Ba', 'Ti'), weights=(0.4, 0.6), mass=100.0),
+            Kind(name='Ba3', symbols='Ba', mass=100.0),
         ]
 
         kinds_wrong = [
             Kind(name='Ba', symbols='Ba'),
             Kind(name='Ti', symbols='Ti'),
             Kind(name='O', symbols='O'),
-            Kind(name='Ba2', symbols='Ba', mass=100.),
-            Kind(name='BaTi', symbols=('Ba', 'Ti'), weights=(0.5, 0.5), mass=100.),
-            Kind(name='BaTi2', symbols=('Ba', 'Ti'), weights=(0.4, 0.6), mass=100.),
-            Kind(name='Ba4', symbols='Ba', mass=100.)
+            Kind(name='Ba2', symbols='Ba', mass=100.0),
+            Kind(name='BaTi', symbols=('Ba', 'Ti'), weights=(0.5, 0.5), mass=100.0),
+            Kind(name='BaTi2', symbols=('Ba', 'Ti'), weights=(0.4, 0.6), mass=100.0),
+            Kind(name='Ba4', symbols='Ba', mass=100.0),
         ]
 
         # Must specify also kind_info and kinds
         with pytest.raises(ValueError):
-            struc = spglib_tuple_to_structure((cell, relcoords, numbers),)
+            struc = spglib_tuple_to_structure(
+                (cell, relcoords, numbers),
+            )
 
         # There is no kind_info for one of the numbers
         with pytest.raises(ValueError):
@@ -3353,26 +3436,26 @@ class TestSpglibTupleConversion:
 
         struc = spglib_tuple_to_structure((cell, relcoords, numbers), kind_info=kind_info, kinds=kinds)
 
-        assert round(abs(np.sum(np.abs(np.array(struc.cell) - np.array(cell))) - 0.), 7) == 0
-        assert round(
-            abs(np.sum(np.abs(np.array([site.position for site in struc.sites]) - np.array(abscoords))) - 0.), 7
-        ) == 0
-        assert [site.kind_name for site in struc.sites] == \
-                         ['Ba', 'Ti', 'O', 'O', 'O', 'Ba2', 'BaTi', 'BaTi2', 'Ba3']
+        assert round(abs(np.sum(np.abs(np.array(struc.cell) - np.array(cell))) - 0.0), 7) == 0
+        assert (
+            round(abs(np.sum(np.abs(np.array([site.position for site in struc.sites]) - np.array(abscoords))) - 0.0), 7)
+            == 0
+        )
+        assert [site.kind_name for site in struc.sites] == ['Ba', 'Ti', 'O', 'O', 'O', 'Ba2', 'BaTi', 'BaTi2', 'Ba3']
 
     def test_from_aiida(self):
         """Test conversion of an AiiDA structure to a spglib tuple."""
         from aiida.tools import structure_to_spglib_tuple
 
-        cell = np.array([[4., 1., 0.], [0., 4., 0.], [0., 0., 4.]])
+        cell = np.array([[4.0, 1.0, 0.0], [0.0, 4.0, 0.0], [0.0, 0.0, 4.0]])
 
         struc = StructureData(cell=cell)
         struc.append_atom(symbols='Ba', position=(0, 0, 0))
         struc.append_atom(symbols='Ti', position=(1, 2, 3))
         struc.append_atom(symbols='O', position=(-1, -2, -4))
-        struc.append_kind(Kind(name='Ba2', symbols='Ba', mass=100.))
+        struc.append_kind(Kind(name='Ba2', symbols='Ba', mass=100.0))
         struc.append_site(Site(kind_name='Ba2', position=[3, 2, 1]))
-        struc.append_kind(Kind(name='Test', symbols=['Ba', 'Ti'], weights=[0.2, 0.4], mass=120.))
+        struc.append_kind(Kind(name='Test', symbols=['Ba', 'Ti'], weights=[0.2, 0.4], mass=120.0))
         struc.append_site(Site(kind_name='Test', position=[3, 5, 1]))
 
         struc_tuple, kind_info, _ = structure_to_spglib_tuple(struc)
@@ -3380,43 +3463,46 @@ class TestSpglibTupleConversion:
         abscoords = np.array([_.position for _ in struc.sites])
         struc_relpos = np.dot(np.linalg.inv(cell.T), abscoords.T).T
 
-        assert round(abs(np.sum(np.abs(np.array(struc.cell) - np.array(struc_tuple[0]))) - 0.), 7) == 0
-        assert round(abs(np.sum(np.abs(np.array(struc_tuple[1]) - struc_relpos)) - 0.), 7) == 0
+        assert round(abs(np.sum(np.abs(np.array(struc.cell) - np.array(struc_tuple[0]))) - 0.0), 7) == 0
+        assert round(abs(np.sum(np.abs(np.array(struc_tuple[1]) - struc_relpos)) - 0.0), 7) == 0
 
         expected_kind_info = [kind_info[site.kind_name] for site in struc.sites]
         assert struc_tuple[2] == expected_kind_info
 
     def test_aiida_roundtrip(self):
-        """
-        Convert an AiiDA structure to a tuple and go back to see if we get the same results
-        """
+        """Convert an AiiDA structure to a tuple and go back to see if we get the same results"""
         from aiida.tools import spglib_tuple_to_structure, structure_to_spglib_tuple
 
-        cell = np.array([[4., 1., 0.], [0., 4., 0.], [0., 0., 4.]])
+        cell = np.array([[4.0, 1.0, 0.0], [0.0, 4.0, 0.0], [0.0, 0.0, 4.0]])
 
         struc = StructureData(cell=cell)
         struc.append_atom(symbols='Ba', position=(0, 0, 0))
         struc.append_atom(symbols='Ti', position=(1, 2, 3))
         struc.append_atom(symbols='O', position=(-1, -2, -4))
-        struc.append_kind(Kind(name='Ba2', symbols='Ba', mass=100.))
+        struc.append_kind(Kind(name='Ba2', symbols='Ba', mass=100.0))
         struc.append_site(Site(kind_name='Ba2', position=[3, 2, 1]))
-        struc.append_kind(Kind(name='Test', symbols=['Ba', 'Ti'], weights=[0.2, 0.4], mass=120.))
+        struc.append_kind(Kind(name='Test', symbols=['Ba', 'Ti'], weights=[0.2, 0.4], mass=120.0))
         struc.append_site(Site(kind_name='Test', position=[3, 5, 1]))
 
         struc_tuple, kind_info, kinds = structure_to_spglib_tuple(struc)
         roundtrip_struc = spglib_tuple_to_structure(struc_tuple, kind_info, kinds)
 
-        assert round(abs(np.sum(np.abs(np.array(struc.cell) - np.array(roundtrip_struc.cell))) - 0.), 7) == 0
+        assert round(abs(np.sum(np.abs(np.array(struc.cell) - np.array(roundtrip_struc.cell))) - 0.0), 7) == 0
         assert struc.base.attributes.get('kinds') == roundtrip_struc.base.attributes.get('kinds')
         assert [_.kind_name for _ in struc.sites] == [_.kind_name for _ in roundtrip_struc.sites]
-        assert np.sum(
-            np.abs(np.array([_.position for _ in struc.sites]) - np.array([_.position for _ in roundtrip_struc.sites]))
-        ) == 0.
+        assert (
+            np.sum(
+                np.abs(
+                    np.array([_.position for _ in struc.sites]) - np.array([_.position for _ in roundtrip_struc.sites])
+                )
+            )
+            == 0.0
+        )
 
 
 @pytest.mark.skipif(not has_seekpath(), reason='No seekpath available')
 def test_seekpath_explicit_path():
-    """"Tests the `get_explicit_kpoints_path` from SeeK-path."""
+    """ "Tests the `get_explicit_kpoints_path` from SeeK-path."""
     from aiida.plugins import DataFactory
     from aiida.tools import get_explicit_kpoints_path
 
@@ -3427,7 +3513,7 @@ def test_seekpath_explicit_path():
     structure.append_atom(symbols='O', position=[2, 0, 3])
     structure.append_atom(symbols='O', position=[0, 2, 3])
 
-    params = {'with_time_reversal': True, 'reference_distance': 0.025, 'recipe': 'hpkot', 'threshold': 1.e-7}
+    params = {'with_time_reversal': True, 'reference_distance': 0.025, 'recipe': 'hpkot', 'threshold': 1.0e-7}
 
     return_value = get_explicit_kpoints_path(structure, method='seekpath', **params)
     retdict = return_value['parameters'].get_dict()
@@ -3435,54 +3521,87 @@ def test_seekpath_explicit_path():
     assert retdict['has_inversion_symmetry']
     assert not retdict['augmented_path']
     assert round(abs(retdict['volume_original_wrt_prim'] - 1.0), 7) == 0
-    assert to_list_of_lists(retdict['explicit_segments']) == \
-        [[0, 31], [30, 61], [60, 104], [103, 123], [122, 153], [152, 183], [182, 226], [226, 246], [246, 266]]
+    assert to_list_of_lists(retdict['explicit_segments']) == [
+        [0, 31],
+        [30, 61],
+        [60, 104],
+        [103, 123],
+        [122, 153],
+        [152, 183],
+        [182, 226],
+        [226, 246],
+        [246, 266],
+    ]
 
     ret_k = return_value['explicit_kpoints']
-    assert to_list_of_lists(ret_k.labels) == [[0, 'GAMMA'], [30, 'X'], [60, 'M'], [103, 'GAMMA'], [122, 'Z'],
-                                              [152, 'R'], [182, 'A'], [225, 'Z'], [226, 'X'], [245, 'R'], [246, 'M'],
-                                              [265, 'A']]
+    assert to_list_of_lists(ret_k.labels) == [
+        [0, 'GAMMA'],
+        [30, 'X'],
+        [60, 'M'],
+        [103, 'GAMMA'],
+        [122, 'Z'],
+        [152, 'R'],
+        [182, 'A'],
+        [225, 'Z'],
+        [226, 'X'],
+        [245, 'R'],
+        [246, 'M'],
+        [265, 'A'],
+    ]
     kpts = ret_k.get_kpoints(cartesian=False)
     highsympoints_relcoords = [kpts[idx] for idx, label in ret_k.labels]
-    assert round(
-        abs(
-            np.sum(
-                np.abs(
-                    np.array([
-                        [0., 0., 0.],  # Gamma
-                        [0., 0.5, 0.],  # X
-                        [0.5, 0.5, 0.],  # M
-                        [0., 0., 0.],  # Gamma
-                        [0., 0., 0.5],  # Z
-                        [0., 0.5, 0.5],  # R
-                        [0.5, 0.5, 0.5],  # A
-                        [0., 0., 0.5],  # Z
-                        [0., 0.5, 0.],  # X
-                        [0., 0.5, 0.5],  # R
-                        [0.5, 0.5, 0.],  # M
-                        [0.5, 0.5, 0.5],  # A
-                    ]) - np.array(highsympoints_relcoords)
+    assert (
+        round(
+            abs(
+                np.sum(
+                    np.abs(
+                        np.array(
+                            [
+                                [0.0, 0.0, 0.0],  # Gamma
+                                [0.0, 0.5, 0.0],  # X
+                                [0.5, 0.5, 0.0],  # M
+                                [0.0, 0.0, 0.0],  # Gamma
+                                [0.0, 0.0, 0.5],  # Z
+                                [0.0, 0.5, 0.5],  # R
+                                [0.5, 0.5, 0.5],  # A
+                                [0.0, 0.0, 0.5],  # Z
+                                [0.0, 0.5, 0.0],  # X
+                                [0.0, 0.5, 0.5],  # R
+                                [0.5, 0.5, 0.0],  # M
+                                [0.5, 0.5, 0.5],  # A
+                            ]
+                        )
+                        - np.array(highsympoints_relcoords)
+                    )
                 )
-            ) - 0.
-        ),
-        7
-    ) == 0
+                - 0.0
+            ),
+            7,
+        )
+        == 0
+    )
 
     ret_prims = return_value['primitive_structure']
     ret_convs = return_value['conv_structure']
     # The primitive structure should be the same as the one I input
-    assert round(abs(np.sum(np.abs(np.array(structure.cell) - np.array(ret_prims.cell))) - 0.), 7) == 0
+    assert round(abs(np.sum(np.abs(np.array(structure.cell) - np.array(ret_prims.cell))) - 0.0), 7) == 0
     assert [_.kind_name for _ in structure.sites] == [_.kind_name for _ in ret_prims.sites]
-    assert np.sum(
-        np.abs(np.array([_.position for _ in structure.sites]) - np.array([_.position for _ in ret_prims.sites]))
-    ) == 0.
+    assert (
+        np.sum(
+            np.abs(np.array([_.position for _ in structure.sites]) - np.array([_.position for _ in ret_prims.sites]))
+        )
+        == 0.0
+    )
 
     # Also the conventional structure should be the same as the one I input
-    assert round(abs(np.sum(np.abs(np.array(structure.cell) - np.array(ret_convs.cell))) - 0.), 7) == 0
+    assert round(abs(np.sum(np.abs(np.array(structure.cell) - np.array(ret_convs.cell))) - 0.0), 7) == 0
     assert [_.kind_name for _ in structure.sites] == [_.kind_name for _ in ret_convs.sites]
-    assert np.sum(
-        np.abs(np.array([_.position for _ in structure.sites]) - np.array([_.position for _ in ret_convs.sites]))
-    ) == 0.
+    assert (
+        np.sum(
+            np.abs(np.array([_.position for _ in structure.sites]) - np.array([_.position for _ in ret_convs.sites]))
+        )
+        == 0.0
+    )
 
 
 @pytest.mark.skipif(not has_seekpath(), reason='No seekpath available')
@@ -3498,7 +3617,7 @@ def test_seekpath():
     structure.append_atom(symbols='O', position=[2, 0, 3])
     structure.append_atom(symbols='O', position=[0, 2, 3])
 
-    params = {'with_time_reversal': True, 'recipe': 'hpkot', 'threshold': 1.e-7}
+    params = {'with_time_reversal': True, 'recipe': 'hpkot', 'threshold': 1.0e-7}
 
     return_value = get_kpoints_path(structure, method='seekpath', **params)
     retdict = return_value['parameters'].get_dict()
@@ -3509,8 +3628,17 @@ def test_seekpath():
     assert round(abs(retdict['volume_original_wrt_conv'] - 1.0), 7) == 0
     assert retdict['bravais_lattice'] == 'tP'
     assert retdict['bravais_lattice_extended'] == 'tP1'
-    assert to_list_of_lists(retdict['path']) == [['GAMMA', 'X'], ['X', 'M'], ['M', 'GAMMA'], ['GAMMA', 'Z'], ['Z', 'R'],
-                                                 ['R', 'A'], ['A', 'Z'], ['X', 'R'], ['M', 'A']]
+    assert to_list_of_lists(retdict['path']) == [
+        ['GAMMA', 'X'],
+        ['X', 'M'],
+        ['M', 'GAMMA'],
+        ['GAMMA', 'Z'],
+        ['Z', 'R'],
+        ['R', 'A'],
+        ['A', 'Z'],
+        ['X', 'R'],
+        ['M', 'A'],
+    ]
 
     assert retdict['point_coords'] == {
         'A': [0.5, 0.5, 0.5],
@@ -3518,58 +3646,66 @@ def test_seekpath():
         'R': [0.0, 0.5, 0.5],
         'X': [0.0, 0.5, 0.0],
         'Z': [0.0, 0.0, 0.5],
-        'GAMMA': [0.0, 0.0, 0.0]
+        'GAMMA': [0.0, 0.0, 0.0],
     }
 
-    assert round(
-        abs(
-            np.sum(
-                np.abs(
-                    np.array(retdict['inverse_primitive_transformation_matrix']) -
-                    np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    assert (
+        round(
+            abs(
+                np.sum(
+                    np.abs(
+                        np.array(retdict['inverse_primitive_transformation_matrix'])
+                        - np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+                    )
                 )
-            ) - 0.
-        ), 7
-    ) == 0
+                - 0.0
+            ),
+            7,
+        )
+        == 0
+    )
 
     ret_prims = return_value['primitive_structure']
     ret_convs = return_value['conv_structure']
     # The primitive structure should be the same as the one I input
-    assert round(abs(np.sum(np.abs(np.array(structure.cell) - np.array(ret_prims.cell))) - 0.), 7) == 0
+    assert round(abs(np.sum(np.abs(np.array(structure.cell) - np.array(ret_prims.cell))) - 0.0), 7) == 0
     assert [_.kind_name for _ in structure.sites] == [_.kind_name for _ in ret_prims.sites]
-    assert np.sum(
-        np.abs(np.array([_.position for _ in structure.sites]) - np.array([_.position for _ in ret_prims.sites]))
-    ) == 0.
+    assert (
+        np.sum(
+            np.abs(np.array([_.position for _ in structure.sites]) - np.array([_.position for _ in ret_prims.sites]))
+        )
+        == 0.0
+    )
 
     # Also the conventional structure should be the same as the one I input
-    assert round(abs(np.sum(np.abs(np.array(structure.cell) - np.array(ret_convs.cell))) - 0.), 7) == 0
+    assert round(abs(np.sum(np.abs(np.array(structure.cell) - np.array(ret_convs.cell))) - 0.0), 7) == 0
     assert [_.kind_name for _ in structure.sites] == [_.kind_name for _ in ret_convs.sites]
-    assert np.sum(
-        np.abs(np.array([_.position for _ in structure.sites]) - np.array([_.position for _ in ret_convs.sites]))
-    ) == 0.
+    assert (
+        np.sum(
+            np.abs(np.array([_.position for _ in structure.sites]) - np.array([_.position for _ in ret_convs.sites]))
+        )
+        == 0.0
+    )
 
 
 class TestBandsData:
-    """
-    Tests the BandsData objects.
-    """
+    """Tests the BandsData objects."""
 
     def test_band(self):
-        """
-        Check the methods to set and retrieve a mesh.
-        """
-
+        """Check the methods to set and retrieve a mesh."""
         # define a cell
-        alat = 4.
-        cell = np.array([
-            [alat, 0., 0.],
-            [0., alat, 0.],
-            [0., 0., alat],
-        ])
+        alat = 4.0
+        cell = np.array(
+            [
+                [alat, 0.0, 0.0],
+                [0.0, alat, 0.0],
+                [0.0, 0.0, alat],
+            ]
+        )
 
         k = KpointsData()
         k.set_cell(cell)
-        k.set_kpoints([[0., 0., 0.], [0.1, 0.1, 0.1]])
+        k.set_kpoints([[0.0, 0.0, 0.0], [0.1, 0.1, 0.1]])
 
         b = BandsData()
         b.set_kpointsdata(k)
@@ -3582,7 +3718,7 @@ class TestBandsData:
         b.set_bands(input_bands, units='ev')
         b.set_bands(input_bands, occupations=input_occupations)
         with pytest.raises(TypeError):
-            b.set_bands(occupations=input_occupations, units='ev')  # pylint: disable=no-value-for-parameter
+            b.set_bands(occupations=input_occupations, units='ev')
 
         b.set_bands(input_bands, occupations=input_occupations, units='ev')
         bands, occupations = b.get_bands(also_occupations=True)
@@ -3598,18 +3734,19 @@ class TestBandsData:
     @staticmethod
     def test_export_to_file():
         """Export the band structure on a file, check if it is working."""
-
         # define a cell
-        alat = 4.
-        cell = np.array([
-            [alat, 0., 0.],
-            [0., alat, 0.],
-            [0., 0., alat],
-        ])
+        alat = 4.0
+        cell = np.array(
+            [
+                [alat, 0.0, 0.0],
+                [0.0, alat, 0.0],
+                [0.0, 0.0, alat],
+            ]
+        )
 
         k = KpointsData()
         k.set_cell(cell)
-        k.set_kpoints([[0., 0., 0.], [0.1, 0.1, 0.1]])
+        k.set_kpoints([[0.0, 0.0, 0.0], [0.1, 0.1, 0.1]])
 
         b = BandsData()
         b.set_kpointsdata(k)

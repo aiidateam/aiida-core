@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .array import *
 from .bands import *
@@ -31,4 +30,4 @@ __all__ = (
     'find_bandgap',
 )
 
-# yapf: enable
+# fmt: on

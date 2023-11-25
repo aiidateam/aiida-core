@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-AiiDA ORM data class storing (numpy) arrays
+"""AiiDA ORM data class storing (numpy) arrays
 """
 from __future__ import annotations
 
@@ -28,21 +27,22 @@ def _(value):
 
 
 class ArrayData(Data):
-    """
-    Store a set of arrays on disk (rather than on the database) in an efficient
-    way using numpy.save() (therefore, this class requires numpy to be
-    installed).
+    """Store a set of arrays on disk (rather than on the database) in an efficient way
+
+    Arrays are stored using numpy and therefore this class requires numpy to be installed.
 
     Each array is stored within the Node folder as a different .npy file.
 
     :note: Before storing, no caching is done: if you perform a
-      :py:meth:`.get_array` call, the array will be re-read from disk.
-      If instead the ArrayData node has already been stored,
-      the array is cached in memory after the first read, and the cached array
-      is used thereafter.
-      If too much RAM memory is used, you can clear the
-      cache with the :py:meth:`.clear_internal_cache` method.
+        :py:meth:`.get_array` call, the array will be re-read from disk.
+        If instead the ArrayData node has already been stored,
+        the array is cached in memory after the first read, and the cached array
+        is used thereafter.
+        If too much RAM memory is used, you can clear the
+        cache with the :py:meth:`.clear_internal_cache` method.
+
     """
+
     array_prefix = 'array|'
     default_array_name = 'default'
 
@@ -75,8 +75,7 @@ class ArrayData(Data):
         self._cached_arrays = {}
 
     def delete_array(self, name: str) -> None:
-        """
-        Delete an array from the node. Can only be called before storing.
+        """Delete an array from the node. Can only be called before storing.
 
         :param name: The name of the array to delete from the node.
         """
@@ -93,8 +92,7 @@ class ArrayData(Data):
             pass
 
     def get_arraynames(self) -> list[str]:
-        """
-        Return a list of all arrays stored in the node, listing the files (and
+        """Return a list of all arrays stored in the node, listing the files (and
         not relying on the properties).
 
         .. versionadded:: 0.7
@@ -103,22 +101,19 @@ class ArrayData(Data):
         return self._arraynames_from_properties()
 
     def _arraynames_from_files(self) -> list[str]:
-        """
-        Return a list of all arrays stored in the node, listing the files (and
+        """Return a list of all arrays stored in the node, listing the files (and
         not relying on the properties).
         """
         return [i[:-4] for i in self.base.repository.list_object_names() if i.endswith('.npy')]
 
     def _arraynames_from_properties(self) -> list[str]:
-        """
-        Return a list of all arrays stored in the node, listing the attributes
+        """Return a list of all arrays stored in the node, listing the attributes
         starting with the correct prefix.
         """
-        return [i[len(self.array_prefix):] for i in self.base.attributes.keys() if i.startswith(self.array_prefix)]
+        return [i[len(self.array_prefix) :] for i in self.base.attributes.keys() if i.startswith(self.array_prefix)]
 
     def get_shape(self, name: str) -> tuple[int, ...]:
-        """
-        Return the shape of an array (read from the value cached in the
+        """Return the shape of an array (read from the value cached in the
         properties for efficiency reasons).
 
         :param name: The name of the array.
@@ -126,8 +121,7 @@ class ArrayData(Data):
         return tuple(self.base.attributes.get(f'{self.array_prefix}{name}'))
 
     def get_iterarrays(self) -> Iterator[tuple[str, ndarray]]:
-        """
-        Iterator that returns tuples (name, array) for each array stored in the node.
+        """Iterator that returns tuples (name, array) for each array stored in the node.
 
         .. versionadded:: 1.0
             Renamed from iterarrays
@@ -136,8 +130,7 @@ class ArrayData(Data):
             yield (name, self.get_array(name))
 
     def get_array(self, name: str | None = None) -> ndarray:
-        """
-        Return an array stored in the node
+        """Return an array stored in the node
 
         :param name: The name of the array to return. The name can be omitted in case the node contains only a single
             array, which will be returned in that case. If ``name`` is ``None`` and the node contains multiple arrays or
@@ -166,7 +159,7 @@ class ArrayData(Data):
 
             # Open a handle in binary read mode as the arrays are written as binary files as well
             with self.base.repository.open(filename, mode='rb') as handle:
-                return numpy.load(handle, allow_pickle=False)  # pylint: disable=unexpected-keyword-arg
+                return numpy.load(handle, allow_pickle=False)
 
         # Return with proper caching if the node is stored, otherwise always re-read from disk
         if not self.is_stored:
@@ -178,8 +171,7 @@ class ArrayData(Data):
         return self._cached_arrays[name]
 
     def clear_internal_cache(self) -> None:
-        """
-        Clear the internal memory cache where the arrays are stored after being
+        """Clear the internal memory cache where the arrays are stored after being
         read from disk (used in order to reduce at minimum the readings from
         disk).
         This function is useful if you want to keep the node in memory, but you
@@ -188,8 +180,7 @@ class ArrayData(Data):
         self._cached_arrays = {}
 
     def set_array(self, name: str, array: ndarray) -> None:
-        """
-        Store a new numpy array inside the node. Possibly overwrite the array
+        """Store a new numpy array inside the node. Possibly overwrite the array
         if it already existed.
 
         Internally, it stores a name.npy file in numpy format.
@@ -227,8 +218,7 @@ class ArrayData(Data):
         self.base.attributes.set(f'{self.array_prefix}{name}', list(array.shape))
 
     def _validate(self) -> bool:
-        """
-        Check if the list of .npy files stored inside the node and the
+        """Check if the list of .npy files stored inside the node and the
         list of properties match. Just a name check, no check on the size
         since this would require to reload all arrays and this may take time
         and memory.
@@ -251,14 +241,12 @@ class ArrayData(Data):
         the value is the numpy array transformed into a list. This is so that
         it can be transformed into a json object.
         """
-
         array_dict = {}
         for key, val in self.get_iterarrays():
-
             array_dict[key] = clean_array(val)
         return array_dict
 
-    def _prepare_json(self, main_file_name='', comments=True) -> tuple[bytes, dict]:  # pylint: disable=unused-argument
+    def _prepare_json(self, main_file_name='', comments=True) -> tuple[bytes, dict]:
         """Dump the content of the arrays stored in this node into JSON format.
 
         :param comments: if True, includes comments (if it makes sense for the given format)
@@ -277,8 +265,7 @@ class ArrayData(Data):
 
 
 def clean_array(array: ndarray) -> list:
-    """
-    Replacing np.nan and np.inf/-np.inf for Nones.
+    """Replacing np.nan and np.inf/-np.inf for Nones.
 
     The function will also sanitize the array removing ``np.nan`` and ``np.inf``
     for ``None`` of this way the resulting JSON is always valid.
@@ -293,9 +280,10 @@ def clean_array(array: ndarray) -> list:
     import numpy as np
 
     output = np.reshape(
-        np.asarray([
-            entry if not np.isnan(entry) and not np.isinf(entry) else None for entry in array.flatten().tolist()
-        ]), array.shape
+        np.asarray(
+            [entry if not np.isnan(entry) and not np.isinf(entry) else None for entry in array.flatten().tolist()]
+        ),
+        array.shape,
     )
 
     return output.tolist()

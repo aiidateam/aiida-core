@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=import-error,no-name-in-module
 """Module to manage authentification information for the SQLA backend."""
 from sqlalchemy import ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
@@ -25,20 +24,21 @@ class DbAuthInfo(Base):
     The model also has an ``enabled`` logical switch that indicates whether the device is available for use or not.
     This last one can be set and unset by the user.
     """
+
     __tablename__ = 'db_dbauthinfo'
 
-    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
+    id = Column(Integer, primary_key=True)
     aiidauser_id = Column(
         Integer,
         ForeignKey('db_dbuser.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
         nullable=False,
-        index=True
+        index=True,
     )
     dbcomputer_id = Column(
         Integer,
         ForeignKey('db_dbcomputer.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
         nullable=False,
-        index=True
+        index=True,
     )
     _metadata = Column('metadata', JSONB, default=dict, nullable=False)
     auth_params = Column(JSONB, default=dict, nullable=False)

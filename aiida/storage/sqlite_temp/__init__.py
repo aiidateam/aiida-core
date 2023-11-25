@@ -16,8 +16,7 @@ and destroys it when it is garbage collected.
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .backend import *
 
@@ -25,4 +24,4 @@ __all__ = (
     'SqliteTempBackend',
 )
 
-# yapf: enable
+# fmt: on

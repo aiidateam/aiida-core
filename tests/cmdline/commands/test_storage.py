@@ -25,6 +25,7 @@ def tests_storage_version(run_cli_command):
 def tests_storage_info(aiida_localhost, run_cli_command):
     """Test the ``verdi storage info`` command with the ``--detailed`` option."""
     from aiida import orm
+
     node = orm.Dict().store()
 
     result = run_cli_command(cmd_storage.storage_info, parameters=['--detailed'])
@@ -44,6 +45,7 @@ def tests_storage_migrate_force(run_cli_command):
 def tests_storage_migrate_interactive(run_cli_command):
     """Test the ``verdi storage migrate`` command (with interactive prompt)."""
     from aiida.manage import get_manager
+
     profile = get_manager().get_profile()
 
     result = run_cli_command(cmd_storage.storage_migrate, user_input='MIGRATE NOW')
@@ -68,27 +70,25 @@ def tests_storage_migrate_cancel_prompt(run_cli_command, monkeypatch):
     """Test that ``verdi storage migrate`` detects the cancelling of the interactive prompt."""
     import click
 
-    monkeypatch.setattr(click, 'prompt', lambda text, **kwargs: exec('import click\nraise click.Abort()'))  # pylint: disable=exec-used
+    monkeypatch.setattr(click, 'prompt', lambda text, **kwargs: exec('import click\nraise click.Abort()'))
     result = run_cli_command(cmd_storage.storage_migrate, raises=True, use_subprocess=False)
 
     assert 'aborted' in result.output.lower()
 
 
-@pytest.mark.parametrize('raise_type', [
-    exceptions.ConfigurationError,
-    exceptions.StorageMigrationError,
-])
 @pytest.mark.parametrize(
-    'call_kwargs', [
-        {
-            'raises': True,
-            'user_input': 'MIGRATE NOW'
-        },
-        {
-            'raises': True,
-            'parameters': ['--force']
-        },
-    ]
+    'raise_type',
+    [
+        exceptions.ConfigurationError,
+        exceptions.StorageMigrationError,
+    ],
+)
+@pytest.mark.parametrize(
+    'call_kwargs',
+    [
+        {'raises': True, 'user_input': 'MIGRATE NOW'},
+        {'raises': True, 'parameters': ['--force']},
+    ],
 )
 @pytest.mark.usefixtures('stopped_daemon_client')
 def tests_storage_migrate_raises(run_cli_command, raise_type, call_kwargs, monkeypatch):
@@ -101,6 +101,7 @@ def tests_storage_migrate_raises(run_cli_command, raise_type, call_kwargs, monke
     objects will have the modified method.
     """
     from aiida.manage import get_manager
+
     manager = get_manager()
 
     def mocked_migrate(self):
@@ -118,6 +119,7 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch):
     """Test all the information and cases of the storage maintain command."""
     from aiida.common.log import AIIDA_LOGGER
     from aiida.manage import get_manager
+
     storage = get_manager().get_profile_storage()
 
     def mock_maintain(*args, **kwargs):

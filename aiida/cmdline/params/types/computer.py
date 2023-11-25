@@ -7,49 +7,45 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Module for the custom click param type computer
+"""Module for the custom click param type computer
 """
 from click.shell_completion import CompletionItem
 from click.types import StringParamType
 
-from ...utils import decorators  # pylint: disable=no-name-in-module
+from ...utils import decorators
 from .identifier import IdentifierParamType
 
 __all__ = ('ComputerParamType', 'ShebangParamType', 'MpirunCommandParamType')
 
 
 class ComputerParamType(IdentifierParamType):
-    """
-    The ParamType for identifying Computer entities or its subclasses
-    """
+    """The ParamType for identifying Computer entities or its subclasses"""
 
     name = 'Computer'
 
     @property
     def orm_class_loader(self):
-        """
-        Return the orm entity loader class, which should be a subclass of OrmEntityLoader. This class is supposed
+        """Return the orm entity loader class, which should be a subclass of OrmEntityLoader. This class is supposed
         to be used to load the entity for a given identifier
 
         :return: the orm entity loader class for this ParamType
         """
         from aiida.orm.utils.loaders import ComputerEntityLoader
+
         return ComputerEntityLoader
 
     @decorators.with_dbenv()
-    def shell_complete(self, ctx, param, incomplete):  # pylint: disable=unused-argument
+    def shell_complete(self, ctx, param, incomplete):
         """Return possible completions based on an incomplete value.
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description
         """
-        return [CompletionItem(option) for option, in self.orm_class_loader.get_options(incomplete, project='label')]
+        return [CompletionItem(option) for (option,) in self.orm_class_loader.get_options(incomplete, project='label')]
 
 
 class ShebangParamType(StringParamType):
-    """
-    Custom click param type for shebang line
-    """
+    """Custom click param type for shebang line"""
+
     name = 'shebangline'
 
     def convert(self, value, param, ctx):
@@ -65,8 +61,7 @@ class ShebangParamType(StringParamType):
 
 
 class MpirunCommandParamType(StringParamType):
-    """
-    Custom click param type for mpirun-command
+    """Custom click param type for mpirun-command
 
     .. note:: requires also a scheduler to be provided, and the scheduler
        must be called first!
@@ -76,6 +71,7 @@ class MpirunCommandParamType(StringParamType):
 
     Return a list of arguments (by using 'value.strip().split(" ") on the input string)
     """
+
     name = 'mpiruncommandstring'
 
     def __repr__(self):

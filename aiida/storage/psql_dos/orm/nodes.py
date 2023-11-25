@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SqlAlchemy implementation of the `BackendNode` and `BackendNodeCollection` classes."""
-# pylint: disable=no-name-in-module,import-error
 from datetime import datetime
 from typing import Any, Dict, Iterable, Tuple, Type
 
@@ -31,8 +30,6 @@ from .users import SqlaUser
 class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode):
     """SQLA Node backend entity"""
 
-    # pylint: disable=too-many-public-methods
-
     MODEL_CLASS = models.DbNode
     USER_CLASS = SqlaUser
     COMPUTER_CLASS = SqlaComputer
@@ -48,7 +45,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         label='',
         description='',
         ctime=None,
-        mtime=None
+        mtime=None,
     ):
         """Construct a new `BackendNode` instance wrapping a new `DbNode` instance.
 
@@ -61,7 +58,6 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         :param ctime: The creation time as datetime object
         :param mtime: The modification time as datetime object
         """
-        # pylint: disable=too-many-arguments
         super().__init__(backend)
 
         arguments = {
@@ -104,9 +100,9 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
             'extras': self.model.extras,
         }
 
-        clone = self.__class__.__new__(self.__class__)  # pylint: disable=no-value-for-parameter
+        clone = self.__class__.__new__(self.__class__)
         clone.__init__(self.backend, self.node_type, self.user)
-        clone._model = sqla_utils.ModelWrapper(self.MODEL_CLASS(**arguments), self.backend)  # pylint: disable=protected-access
+        clone._model = sqla_utils.ModelWrapper(self.MODEL_CLASS(**arguments), self.backend)
         return clone
 
     @property
@@ -211,7 +207,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         self.model.attributes = clean_value(self.model.attributes)
         self.model.extras = clean_value(self.model.extras)
 
-    def store(self, links=None, clean=True):  # pylint: disable=arguments-differ
+    def store(self, links=None, clean=True):
         session = self.backend.get_session()
 
         if clean:

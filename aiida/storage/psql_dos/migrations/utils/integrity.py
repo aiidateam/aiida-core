@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name
 """Methods to validate the database integrity and fix violations."""
 from __future__ import annotations
 
@@ -36,7 +35,8 @@ registered_calculation_entry_points = [
     'crystal17.basic = aiida_crystal17.calculations.cry_basic:CryBasicCalculation',
     'crystal17.immigrant = aiida_crystal17.calculations.cry_main_immigrant:CryMainImmigrantCalculation',
     'crystal17.main = aiida_crystal17.calculations.cry_main:CryMainCalculation',
-    'ddec = aiida_ddec.calculations:DdecCalculation', 'diff = aiida_diff.calculations:DiffCalculation',
+    'ddec = aiida_ddec.calculations:DdecCalculation',
+    'diff = aiida_diff.calculations:DiffCalculation',
     'dynaphopy = aiida_lammps.calculations.dynaphopy: DynaphopyCalculation',
     'gollum.gollum = aiida_gollum.calculations.gollum:GollumCalculation',
     'gudhi.rdm = aiida_gudhi.calculations.rips:RipsDistanceMatrixCalculation',
@@ -54,7 +54,8 @@ registered_calculation_entry_points = [
     'phonopy.phonopy = aiida_phonopy.calculations.phonopy.phonopy: PhonopyCalculation',
     'phtools.dmatrix = aiida_phtools.calculations.distance_matrix:DistanceMatrixCalculation',
     'phtools.surface = aiida_phtools.calculations.pore_surface:PoreSurfaceCalculation',
-    'qeq.eqeq = aiida_qeq.calculations.eqeq:EQeqCalculation', 'qeq.qeq = aiida_qeq.calculations.qeq:QeqCalculation',
+    'qeq.eqeq = aiida_qeq.calculations.eqeq:EQeqCalculation',
+    'qeq.qeq = aiida_qeq.calculations.qeq:QeqCalculation',
     'quantumespresso.cp = aiida_quantumespresso.calculations.cp:CpCalculation',
     'quantumespresso.dos = aiida_quantumespresso.calculations.dos:DosCalculation',
     'quantumespresso.hp = aiida_quantumespresso_hp.calculations.hp:HpCalculation',
@@ -70,11 +71,12 @@ registered_calculation_entry_points = [
     'quantumespresso.q2r = aiida_quantumespresso.calculations.q2r:Q2rCalculation',
     'raspa = aiida_raspa.calculations:RaspaCalculation',
     'siesta.siesta = aiida_siesta.calculations.siesta:SiestaCalculation',
-    'siesta.stm = aiida_siesta.calculations.stm:STMCalculation', 'vasp.vasp = aiida_vasp.calcs.vasp:VaspCalculation',
+    'siesta.stm = aiida_siesta.calculations.stm:STMCalculation',
+    'vasp.vasp = aiida_vasp.calcs.vasp:VaspCalculation',
     'vasp.vasp2w90 = aiida_vasp.calcs.vasp2w90:Vasp2w90Calculation',
     'wannier90.wannier90 = aiida_wannier90.calculations:Wannier90Calculation',
     'yambo.yambo =  aiida_yambo.calculations.gw:YamboCalculation',
-    'zeopp.network = aiida_zeopp.calculations.network:NetworkCalculation'
+    'zeopp.network = aiida_zeopp.calculations.network:NetworkCalculation',
 ]
 
 
@@ -127,12 +129,11 @@ def infer_calculation_entry_point(type_strings):
             entry_point_names.append(entry_point.name)
 
     for type_string in type_strings:
-
         # If it does not start with the calculation job prefix, it cannot possibly reference a calculation plugin
         if not type_string.startswith(prefix_calc_job):
             continue
 
-        plugin_string = type_string[len(prefix_calc_job):]
+        plugin_string = type_string[len(prefix_calc_job) :]
         plugin_parts = [part for part in plugin_string.split('.') if part]
         plugin_class = plugin_parts.pop()
         inferred_entry_point_name = '.'.join(plugin_parts)
@@ -160,7 +161,6 @@ def write_database_integrity_violation(results, headers, reason_message, action_
     :param reason_message: a human readable message detailing the reason of the integrity violation
     :param action_message: an optional human readable message detailing a performed action, if any
     """
-    # pylint: disable=duplicate-string-formatting-argument
     from datetime import datetime
     from tempfile import NamedTemporaryFile
 

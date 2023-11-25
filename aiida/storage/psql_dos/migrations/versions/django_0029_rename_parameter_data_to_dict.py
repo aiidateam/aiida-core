@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Rename `db_dbnode.type` values `data.parameter.ParameterData.` to `data.dict.Dict.`
 
 Note this is identical to migration d254fdfed416
@@ -16,8 +15,8 @@ Revision ID: django_0029
 Revises: django_0028
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = 'django_0029'
 down_revision = 'django_0028'

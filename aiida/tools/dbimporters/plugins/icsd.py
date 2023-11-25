@@ -19,7 +19,7 @@ import io
 from aiida.tools.dbimporters.baseclasses import CifEntry, DbImporter, DbSearchResults
 
 
-class IcsdImporterExp(Exception):
+class IcsdImporterExp(Exception):  # noqa: N818
     """Base class for ICSD exceptions."""
 
 
@@ -32,8 +32,7 @@ class NoResultsWebExp(IcsdImporterExp):
 
 
 class IcsdDbImporter(DbImporter):
-    """
-    Importer for the Inorganic Crystal Structure Database, short ICSD, provided by
+    """Importer for the Inorganic Crystal Structure Database, short ICSD, provided by
     FIZ Karlsruhe. It allows to run queries and analyse all the results.
 
     :param server: Server URL, the web page of the database. It is
@@ -96,8 +95,7 @@ class IcsdDbImporter(DbImporter):
 
     # for mysql db query
     def _int_clause(self, key, alias, values):
-        """
-        Return SQL query predicate for querying integer fields
+        """Return SQL query predicate for querying integer fields
         :param key: Database keyword
         :param alias: Query parameter name
         :param values: Corresponding values from query
@@ -109,36 +107,28 @@ class IcsdDbImporter(DbImporter):
         return f"{key} IN ({', '.join(str(int(i)) for i in values)})"
 
     def _str_exact_clause(self, key, alias, values):
-        """
-        Return SQL query predicate for querying string fields.
-        """
+        """Return SQL query predicate for querying string fields."""
         for value in values:
             if not isinstance(value, int) and not isinstance(value, str):
                 raise ValueError("incorrect value for keyword '" + alias + ' only integers and strings are accepted')
         return '{} IN ({})'.format(key, ', '.join("'{}'".format(f) for f in values))
 
     def _formula_clause(self, key, alias, values):
-        """
-        Return SQL query predicate for querying formula fields.
-        """
+        """Return SQL query predicate for querying formula fields."""
         for value in values:
             if not isinstance(value, str):
                 raise ValueError("incorrect value for keyword '" + alias + ' only strings are accepted')
         return self._str_exact_clause(key, alias, [str(f) for f in values])
 
     def _str_fuzzy_clause(self, key, alias, values):
-        """
-        Return SQL query predicate for fuzzy querying of string fields.
-        """
+        """Return SQL query predicate for fuzzy querying of string fields."""
         for value in values:
             if not isinstance(value, int) and not isinstance(value, str):
                 raise ValueError("incorrect value for keyword '" + alias + ' only integers and strings are accepted')
         return ' OR '.join(f"{key} LIKE '%{s}%'" for s in values)
 
-    def _composition_clause(self, key, alias, values):  # pylint: disable=unused-argument
-        """
-        Return SQL query predicate for querying elements in formula fields.
-        """
+    def _composition_clause(self, key, alias, values):
+        """Return SQL query predicate for querying elements in formula fields."""
         for value in values:
             if not isinstance(value, str):
                 raise ValueError("incorrect value for keyword '" + alias + ' only strings are accepted')
@@ -151,18 +141,14 @@ class IcsdDbImporter(DbImporter):
         return ' AND '.join(r'SUM_FORM REGEXP \'(^|\ ){}[0-9\.]+($|\ )\''.format(value) for value in values)
 
     def _double_clause(self, key, alias, values, precision):
-        """
-        Return SQL query predicate for querying double-valued fields.
-        """
+        """Return SQL query predicate for querying double-valued fields."""
         for value in values:
             if not isinstance(value, int) and not isinstance(value, float):
                 raise ValueError("incorrect value for keyword '" + alias + ' only integers and floats are accepted')
         return ' OR '.join(f'{key} BETWEEN {d - precision} AND {d + precision}' for d in values)
 
     def _crystal_system_clause(self, key, alias, values):
-        """
-        Return SQL query predicate for querying crystal_system.
-        """
+        """Return SQL query predicate for querying crystal_system."""
         valid_systems = {
             'cubic': 'CU',
             'hexagonal': 'HE',
@@ -170,7 +156,7 @@ class IcsdDbImporter(DbImporter):
             'orthorhombic': 'OR',
             'tetragonal': 'TE',
             'trigonal': 'TG',
-            'triclinic': 'TC'
+            'triclinic': 'TC',
         }  # from icsd accepted crystal systems
 
         for value in values:
@@ -179,46 +165,33 @@ class IcsdDbImporter(DbImporter):
         return key + ' IN (' + ', '.join("'" + valid_systems[f.lower()] + "'" for f in values) + ')'
 
     def _length_clause(self, key, alias, values):
-        """
-        Return SQL query predicate for querying lattice vector lengths.
-        """
+        """Return SQL query predicate for querying lattice vector lengths."""
         return self._double_clause(key, alias, values, self.length_precision)
 
     def _density_clause(self, key, alias, values):
-        """
-        Return SQL query predicate for querying density.
-        """
+        """Return SQL query predicate for querying density."""
         return self._double_clause(key, alias, values, self.density_precision)
 
     def _angle_clause(self, key, alias, values):
-        """
-        Return SQL query predicate for querying lattice angles.
-        """
+        """Return SQL query predicate for querying lattice angles."""
         return self._double_clause(key, alias, values, self.angle_precision)
 
     def _volume_clause(self, key, alias, values):
-        """
-        Return SQL query predicate for querying unit cell volume.
-        """
+        """Return SQL query predicate for querying unit cell volume."""
         return self._double_clause(key, alias, values, self.volume_precision)
 
     def _temperature_clause(self, key, alias, values):
-        """
-        Return SQL query predicate for querying temperature.
-        """
+        """Return SQL query predicate for querying temperature."""
         return self._double_clause(key, alias, values, self.temperature_precision)
 
     def _pressure_clause(self, key, alias, values):
-        """
-        Return SQL query predicate for querying pressure.
-        """
+        """Return SQL query predicate for querying pressure."""
         return self._double_clause(key, alias, values, self.pressure_precision)
 
     # for the web query
     @staticmethod
-    def _parse_all(key, values):  # pylint: disable=unused-argument
-        """
-        Convert numbers, strings, lists into strings.
+    def _parse_all(key, values):
+        """Convert numbers, strings, lists into strings.
         :param key: query parameter
         :param values: corresponding values
         :return retval: string
@@ -232,9 +205,8 @@ class IcsdDbImporter(DbImporter):
         return retval
 
     @staticmethod
-    def _parse_number(key, values):  # pylint: disable=unused-argument
-        """
-        Convert int into string.
+    def _parse_number(key, values):
+        """Convert int into string.
         :param key: query parameter
         :param values: corresponding values
         :return retval: string
@@ -247,8 +219,7 @@ class IcsdDbImporter(DbImporter):
 
     @staticmethod
     def _parse_mineral(key, values):
-        """
-        Convert mineral_name and chemical_name into right format.
+        """Convert mineral_name and chemical_name into right format.
         :param key: query parameter
         :param values: corresponding values
         :return retval: string
@@ -260,9 +231,8 @@ class IcsdDbImporter(DbImporter):
         return retval
 
     @staticmethod
-    def _parse_volume(key, values):  # pylint: disable=too-many-return-statements
-        """
-        Convert volume, cell parameter and angle queries into right format.
+    def _parse_volume(key, values):
+        """Convert volume, cell parameter and angle queries into right format.
         :param key: query parameter
         :param values: corresponding values
         :return retval: string
@@ -289,9 +259,8 @@ class IcsdDbImporter(DbImporter):
             return 'ga=' + values
 
     @staticmethod
-    def _parse_system(key, values):  # pylint: disable=unused-argument
-        """
-        Return crystal system in the right format.
+    def _parse_system(key, values):
+        """Return crystal system in the right format.
         :param key: query parameter
         :param values: corresponding values
         :return retval: string
@@ -303,7 +272,7 @@ class IcsdDbImporter(DbImporter):
             'orthorhombic': 'OR',
             'tetragonal': 'TE',
             'trigonal': 'TG',
-            'triclinic': 'TC'
+            'triclinic': 'TC',
         }
 
         return valid_systems[values.lower()]
@@ -359,8 +328,7 @@ class IcsdDbImporter(DbImporter):
     }
 
     def query(self, **kwargs):
-        """
-        Depending on the db_parameters, the mysql database or the web page are queried.
+        """Depending on the db_parameters, the mysql database or the web page are queried.
         Valid parameters are found using IcsdDbImporter.get_supported_keywords().
 
         :param kwargs: A list of ''keyword = [values]'' pairs.
@@ -371,24 +339,23 @@ class IcsdDbImporter(DbImporter):
         return self._queryweb(**kwargs)
 
     def _query_sql_db(self, **kwargs):
-        """
-        Perform a query on Icsd mysql database using ``keyword = value`` pairs,
+        """Perform a query on Icsd mysql database using ``keyword = value`` pairs,
         specified in ``kwargs``. Returns an instance of IcsdSearchResults.
         :param kwargs: A list of ``keyword = [values]`` pairs
         :return: IcsdSearchResults
         """
-
         sql_where_query = []  # second part of sql query
 
         for key, value in kwargs.items():
             if not isinstance(value, list):
-                value = [value]
+                value = [value]  # noqa: PLW2901
             sql_where_query.append(f'({self.keywords_db[key][1](self, self.keywords_db[key][0], key, value)})')
         if 'crystal_system' in kwargs:  # to query another table than the main one, add LEFT JOIN in front of WHERE
-            sql_query = 'LEFT JOIN space_group ON space_group.sgr=icsd.sgr LEFT '\
-                        'JOIN space_group_number ON '\
-                        'space_group_number.sgr_num=space_group.sgr_num '\
-                        + 'WHERE' + ' AND '.join(sql_where_query)
+            sql_query = (
+                'LEFT JOIN space_group ON space_group.sgr=icsd.sgr LEFT '
+                'JOIN space_group_number ON '
+                'space_group_number.sgr_num=space_group.sgr_num ' + 'WHERE' + ' AND '.join(sql_where_query)
+            )
         elif sql_where_query:
             sql_query = 'WHERE' + ' AND '.join(sql_where_query)
         else:
@@ -397,21 +364,21 @@ class IcsdDbImporter(DbImporter):
         return IcsdSearchResults(query=sql_query, db_parameters=self.db_parameters)
 
     def _queryweb(self, **kwargs):
-        """
-        Perform a query on the Icsd web database using ``keyword = value`` pairs,
+        """Perform a query on the Icsd web database using ``keyword = value`` pairs,
         specified in ``kwargs``. Returns an instance of IcsdSearchResults.
         :note: Web search has a maximum result number fixed at 1000.
         :param kwargs: A list of ``keyword = [values]`` pairs
         :return: IcsdSearchResults
         """
         from urllib.parse import urlencode
-        self.actual_args = {  # pylint: disable=attribute-defined-outside-init
+
+        self.actual_args = {
             'action': 'Search',
             'nb_rows': '100',  # max is 100
             'order_by': 'yearDesc',
             'authors': '',
             'volume': '',
-            'mineral': ''
+            'mineral': '',
         }
 
         for key, value in kwargs.items():
@@ -432,8 +399,7 @@ class IcsdDbImporter(DbImporter):
         return IcsdSearchResults(query=query_url, db_parameters=self.db_parameters)
 
     def setup_db(self, **kwargs):
-        """
-        Change the database connection details.
+        """Change the database connection details.
         At least the host server has to be defined.
 
         :param kwargs: db_parameters for the mysql database connection
@@ -444,29 +410,26 @@ class IcsdDbImporter(DbImporter):
                 self.db_parameters[key] = kwargs[key]
 
     def get_supported_keywords(self):
-        """
-        :return: List of all supported query keywords.
-        """
+        """:return: List of all supported query keywords."""
         if self.db_parameters['querydb']:
             return self.keywords_db.keys()
 
         return self.keywords.keys()
 
 
-class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too-many-instance-attributes
-    """
-    Result manager for the query performed on ICSD.
+class IcsdSearchResults(DbSearchResults):
+    """Result manager for the query performed on ICSD.
 
     :param query: mysql query or webpage query
     :param db_parameters: database parameter setup during the
       initialisation of the IcsdDbImporter.
     """
+
     cif_url = '/index.php?format=cif&action=Export&id%5B%5D={}'
     db_name = 'Icsd'
 
     def __init__(self, query, db_parameters):
-        # pylint: disable=super-init-not-called
-        self.db = None  # pylint: disable=invalid-name
+        self.db = None
         self.cursor = None
         self.db_parameters = db_parameters
         self.query = query
@@ -485,15 +448,11 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
 
     @property
     def results(self):
-        """
-        Return the list of results
-        """
+        """Return the list of results"""
         return self._results
 
     def next(self):
-        """
-        Return next result as IcsdEntry.
-        """
+        """Return next result as IcsdEntry."""
         if self.number_of_results > self.position:
             self.position = self.position + 1
             return self.at(self.position - 1)
@@ -502,10 +461,7 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
         raise StopIteration()
 
     def at(self, position):
-        """
-        Return ``position``-th result as IcsdEntry.
-        """
-
+        """Return ``position``-th result as IcsdEntry."""
         if position < 0 or position >= self.number_of_results:
             raise IndexError('index out of bounds')
         while position + 1 >= len(self._results) and len(self._results) < self.number_of_results:
@@ -515,32 +471,28 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
         if position not in self.entries:
             if self.db_parameters['querydb']:
                 self.entries[position] = IcsdEntry(
-                    self.db_parameters['server'] + self.db_parameters['dl_db'] +
-                    self.cif_url.format(self._results[position]),
+                    self.db_parameters['server']
+                    + self.db_parameters['dl_db']
+                    + self.cif_url.format(self._results[position]),
                     db_name=self.db_name,
                     id=self.cif_numbers[position],
                     version=self.db_version,
-                    extras={
-                        'idnum': self._results[position],
-                        'is_theoretical': self.is_theoretical[position]
-                    }
+                    extras={'idnum': self._results[position], 'is_theoretical': self.is_theoretical[position]},
                 )
             else:
                 self.entries[position] = IcsdEntry(
-                    self.db_parameters['server'] + self.db_parameters['dl_db'] +
-                    self.cif_url.format(self._results[position]),
+                    self.db_parameters['server']
+                    + self.db_parameters['dl_db']
+                    + self.cif_url.format(self._results[position]),
                     db_name=self.db_name,
-                    extras={'idnum': self._results[position]}
+                    extras={'idnum': self._results[position]},
                 )
         return self.entries[position]
 
     def query_db_version(self):
-        """
-        Query the version of the icsd database (last row of RELEASE_TAGS).
-        """
+        """Query the version of the icsd database (last row of RELEASE_TAGS)."""
         results = []
         if self.db_parameters['querydb']:
-
             sql_select_query = 'SELECT RELEASE_TAG '
             sql_from_query = 'FROM icsd.icsd_database_information '
 
@@ -562,8 +514,7 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
             raise NotImplementedError('Cannot query the database version with a web query.')
 
     def query_page(self):
-        """
-        Query the mysql or web page database, depending on the db_parameters.
+        """Query the mysql or web page database, depending on the db_parameters.
         Store the number_of_results, cif file number and the corresponding icsd number.
 
         Additionally, for the mysql case, determine if the origin of the structure is theoretical.
@@ -574,11 +525,10 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
                 file numbers.
         """
         if self.db_parameters['querydb']:
-
             # Build the "THEORY" column based on the icsd_remarks table
             sql_theory_column_query = (
-                "SELECT IDNUM, count(case when STD_REM_CODE IN ('THE', 'ZTHE') then 1 end) >= 1 AS THEORY " +
-                'FROM icsd_remarks GROUP BY IDNUM'
+                "SELECT IDNUM, count(case when STD_REM_CODE IN ('THE', 'ZTHE') then 1 end) >= 1 AS THEORY "
+                + 'FROM icsd_remarks GROUP BY IDNUM'
             )
 
             # call it `tt` and join it with the main table based on IDNUM
@@ -607,7 +557,7 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
             import re
             from urllib.request import urlopen
 
-            from bs4 import BeautifulSoup  # pylint: disable=import-error
+            from bs4 import BeautifulSoup
 
             with urlopen(
                 self.db_parameters['server'] + self.db_parameters['db'] + '/' + self.query.format(str(self.page))
@@ -617,7 +567,6 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
             self.soup = BeautifulSoup(self.html)
 
             try:
-
                 if self.number_of_results is None:
                     self.number_of_results = int(re.findall(r'\d+', str(self.soup.find_all('i')[-1]))[0])
             except IndexError:
@@ -627,33 +576,28 @@ class IcsdSearchResults(DbSearchResults):  # pylint: disable=abstract-method,too
                 self._results.append(i['id'])
 
     def _connect_db(self):
-        """
-        Connect to the MySQL database for performing searches.
-        """
+        """Connect to the MySQL database for performing searches."""
         try:
             import MySQLdb
         except ImportError:
-            import pymysql as MySQLdb
+            import pymysql as MySQLdb  # noqa: N812
 
         self.db = MySQLdb.connect(
             host=self.db_parameters['host'],
             user=self.db_parameters['user'],
             passwd=self.db_parameters['passwd'],
             db=self.db_parameters['db'],
-            port=int(self.db_parameters['port'])
+            port=int(self.db_parameters['port']),
         )
         self.cursor = self.db.cursor()
 
     def _disconnect_db(self):
-        """
-        Close connection to the MySQL database.
-        """
+        """Close connection to the MySQL database."""
         self.db.close()
 
 
-class IcsdEntry(CifEntry):  # pylint: disable=abstract-method
-    """
-    Represent an entry from Icsd.
+class IcsdEntry(CifEntry):
+    """Represent an entry from Icsd.
 
     :note:
       - Before July 2nd 2015, source['id'] contained icsd.IDNUM (internal
@@ -662,12 +606,11 @@ class IcsdEntry(CifEntry):  # pylint: disable=abstract-method
       - After July 2nd 2015, source['id'] has been replaced by the cif
         number and source['extras']['idnum'] is icsd.IDNUM .
     """
+
     _license = 'ICSD'
 
     def __init__(self, uri, **kwargs):
-        """
-        Create an instance of IcsdEntry, related to the supplied URI.
-        """
+        """Create an instance of IcsdEntry, related to the supplied URI."""
         super().__init__(**kwargs)
         _extras = kwargs.get('extras', {})
         self.source = {
@@ -676,17 +619,13 @@ class IcsdEntry(CifEntry):  # pylint: disable=abstract-method
             'id': kwargs.get('id', None),
             'version': kwargs.get('version', None),
             'uri': uri,
-            'extras': {
-                'idnum': _extras.get('idnum', None),
-                'is_theoretical': _extras.get('is_theoretical', None)
-            },
+            'extras': {'idnum': _extras.get('idnum', None), 'is_theoretical': _extras.get('is_theoretical', None)},
             'license': self._license,
         }
 
     @property
     def contents(self):
-        """
-        Returns raw contents of a file as string. This overrides the DbEntry implementation because
+        """Returns raw contents of a file as string. This overrides the DbEntry implementation because
         the ICSD php backend returns the contents of the CIF in ISO-8859-1 encoding. However, the
         PyCifRW library (and most other sensible applications), expects UTF-8. Therefore, we decode
         the original CIF data to unicode and encode it in the UTF-8 format
@@ -695,6 +634,7 @@ class IcsdEntry(CifEntry):  # pylint: disable=abstract-method
 
         if self._contents is None:
             from hashlib import md5
+
             with urllib.request.urlopen(self.source['uri']) as handle:
                 self._contents = handle.read()
             self._contents = self._contents.decode('iso-8859-1').encode('utf8')
@@ -703,17 +643,15 @@ class IcsdEntry(CifEntry):  # pylint: disable=abstract-method
         return self._contents
 
     def get_ase_structure(self):
-        """
-        :return: ASE structure corresponding to the cif file.
-        """
+        """:return: ASE structure corresponding to the cif file."""
         from aiida.orm import CifData
+
         cif = correct_cif(self.cif)
         return CifData.read_cif(io.StringIO(cif))
 
 
 def correct_cif(cif):
-    """
-    Correct the format of the CIF files.
+    """Correct the format of the CIF files.
     At the moment, it only fixes missing quotes in the authors field
     (``ase.read.io`` only works if the author names are quoted,
     if not an AssertionError is raised).
@@ -738,7 +676,7 @@ def correct_cif(cif):
             if len(words) == 0 or words[0] == 'loop_' or words[0][0] == '_':
                 return '\n'.join(lines)
 
-            if ((words[0][0] == "'" and words[-1][-1] == "'") or (words[0][0] == '"' and words[-1][-1] == '"')):
+            if (words[0][0] == "'" and words[-1][-1] == "'") or (words[0][0] == '"' and words[-1][-1] == '"'):
                 # if quotes are already there, check next line
                 inc = inc + 1
             else:

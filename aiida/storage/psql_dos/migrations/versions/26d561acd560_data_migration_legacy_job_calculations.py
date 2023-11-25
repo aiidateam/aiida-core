@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
+# ruff: noqa: E501
 """Migrate legacy `JobCalculations`.
 
 These old nodes have already been migrated to the correct `CalcJobNode` type in a previous migration, but they can
@@ -47,7 +47,6 @@ Revises: 07fac78e6209
 Create Date: 2019-06-22 09:55:25.284168
 
 """
-# pylint: disable=invalid-name,no-member,import-error,no-name-in-module,line-too-long
 
 from alembic import op
 from sqlalchemy.sql import text
@@ -61,7 +60,7 @@ depends_on = None
 
 def upgrade():
     """Migrations for the upgrade."""
-    conn = op.get_bind()  # pylint: disable=no-member
+    conn = op.get_bind()
 
     # Note that the condition on matching target nodes is done only on the `node_type` amd the `state` attribute value.
     # New `CalcJobs` will have the same node type and while their active can have a `state` attribute with a value

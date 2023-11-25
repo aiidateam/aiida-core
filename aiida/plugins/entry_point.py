@@ -44,14 +44,14 @@ def eps() -> EntryPoints:
     possible duplicate entries.
     """
     from importlib_metadata import EntryPoints, entry_points
+
     all_eps = entry_points()
     return EntryPoints(sorted(all_eps, key=lambda x: x.group))
 
 
 @functools.lru_cache(maxsize=100)
 def eps_select(group: str, name: str | None = None) -> EntryPoints:
-    """
-    A thin wrapper around entry_points.select() calls, which are
+    """A thin wrapper around entry_points.select() calls, which are
     expensive so we want to cache them.
     """
     if name is None:
@@ -60,8 +60,7 @@ def eps_select(group: str, name: str | None = None) -> EntryPoints:
 
 
 class EntryPointFormat(enum.Enum):
-    """
-    Enum to distinguish between the various possible entry point string formats. An entry point string
+    """Enum to distinguish between the various possible entry point string formats. An entry point string
     is fully qualified by its group and name concatenated by the entry point string separator character.
     The group in AiiDA has the prefix `aiida.` and the separator character is the colon `:`.
 
@@ -105,9 +104,30 @@ ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP = {
 DEPRECATED_ENTRY_POINTS_MAPPING = {
     'aiida.calculations': ['arithmetic.add', 'templatereplacer'],
     'aiida.data': [
-        'array', 'array.bands', 'array.kpoints', 'array.projection', 'array.trajectory', 'array.xy', 'base', 'bool',
-        'cif', 'code', 'dict', 'float', 'folder', 'int', 'list', 'numeric', 'orbital', 'remote', 'remote.stash',
-        'remote.stash.folder', 'singlefile', 'str', 'structure', 'upf'
+        'array',
+        'array.bands',
+        'array.kpoints',
+        'array.projection',
+        'array.trajectory',
+        'array.xy',
+        'base',
+        'bool',
+        'cif',
+        'code',
+        'dict',
+        'float',
+        'folder',
+        'int',
+        'list',
+        'numeric',
+        'orbital',
+        'remote',
+        'remote.stash',
+        'remote.stash.folder',
+        'singlefile',
+        'str',
+        'structure',
+        'upf',
     ],
     'aiida.tools.dbimporters': ['cod', 'icsd', 'materialsproject', 'mpds', 'mpod', 'nninc', 'oqmd', 'pcod', 'tcod'],
     'aiida.tools.data.orbitals': ['orbital', 'realhydrogen'],
@@ -134,11 +154,12 @@ ENTRY_POINT_GROUP_FACTORY_MAPPING = {
 def parse_entry_point(group: str, spec: str) -> EntryPoint:
     """Return an entry point, given its group and spec (as formatted in the setup)"""
     from importlib_metadata import EntryPoint
+
     name, value = spec.split('=', maxsplit=1)
     return EntryPoint(group=group, name=name.strip(), value=value.strip())
 
 
-def validate_registered_entry_points() -> None:  # pylint: disable=invalid-name
+def validate_registered_entry_points() -> None:
     """Validate all registered entry points by loading them with the corresponding factory.
 
     :raises EntryPointError: if any of the registered entry points cannot be loaded. This can happen if:
@@ -154,8 +175,7 @@ def validate_registered_entry_points() -> None:  # pylint: disable=invalid-name
 
 
 def format_entry_point_string(group: str, name: str, fmt: EntryPointFormat = EntryPointFormat.FULL) -> str:
-    """
-    Format an entry point string for a given entry point group and name, based on the specified format
+    """Format an entry point string for a given entry point group and name, based on the specified format
 
     :param group: the entry point group
     :param name: the name of the entry point
@@ -176,8 +196,7 @@ def format_entry_point_string(group: str, name: str, fmt: EntryPointFormat = Ent
 
 
 def parse_entry_point_string(entry_point_string: str) -> Tuple[str, str]:
-    """
-    Validate the entry point string and attempt to parse the entry point group and name
+    """Validate the entry point string and attempt to parse the entry point group and name
 
     :param entry_point_string: the entry point string
     :return: the entry point group and name if the string is valid
@@ -196,8 +215,7 @@ def parse_entry_point_string(entry_point_string: str) -> Tuple[str, str]:
 
 
 def get_entry_point_string_format(entry_point_string: str) -> EntryPointFormat:
-    """
-    Determine the format of an entry point string. Note that it does not validate the actual entry point
+    """Determine the format of an entry point string. Note that it does not validate the actual entry point
     string and it may not correspond to any actual entry point. This will only assess the string format
 
     :param entry_point_string: the entry point string
@@ -215,8 +233,7 @@ def get_entry_point_string_format(entry_point_string: str) -> EntryPointFormat:
 
 
 def get_entry_point_from_string(entry_point_string: str) -> EntryPoint:
-    """
-    Return an entry point for the given entry point string
+    """Return an entry point for the given entry point string
 
     :param entry_point_string: the entry point string
     :return: the entry point if it exists else None
@@ -230,8 +247,7 @@ def get_entry_point_from_string(entry_point_string: str) -> EntryPoint:
 
 
 def load_entry_point_from_string(entry_point_string: str) -> Any:
-    """
-    Load the class registered for a given entry point string that determines group and name
+    """Load the class registered for a given entry point string that determines group and name
 
     :param entry_point_string: the entry point string
     :return: class registered at the given entry point
@@ -246,8 +262,7 @@ def load_entry_point_from_string(entry_point_string: str) -> Any:
 
 
 def load_entry_point(group: str, name: str) -> Any:
-    """
-    Load the class registered under the entry point for a given name and group
+    """Load the class registered under the entry point for a given name and group
 
     :param group: the entry point group
     :param name: the name of the entry point
@@ -269,8 +284,7 @@ def load_entry_point(group: str, name: str) -> Any:
 
 
 def get_entry_point_groups() -> Set[str]:
-    """
-    Return a list of all the recognized entry point groups
+    """Return a list of all the recognized entry point groups
 
     :return: a list of valid entry point groups
     """
@@ -286,8 +300,7 @@ def get_entry_point_names(group: str, sort: bool = True) -> List[str]:
 
 
 def get_entry_points(group: str) -> EntryPoints:
-    """
-    Return a list of all the entry points within a specific group
+    """Return a list of all the entry points within a specific group
 
     :param group: the entry point group
     :return: a list of entry points
@@ -296,8 +309,7 @@ def get_entry_points(group: str) -> EntryPoints:
 
 
 def get_entry_point(group: str, name: str) -> EntryPoint:
-    """
-    Return an entry point with a given name within a specific group
+    """Return an entry point with a given name within a specific group
 
     :param group: the entry point group
     :param name: the name of the entry point
@@ -343,8 +355,7 @@ def convert_potentially_deprecated_entry_point(group: str, name: str) -> str:
 
 @functools.lru_cache(maxsize=100)
 def get_entry_point_from_class(class_module: str, class_name: str) -> Tuple[Optional[str], Optional[EntryPoint]]:
-    """
-    Given the module and name of a class, attempt to obtain the corresponding entry point if it exists
+    """Given the module and name of a class, attempt to obtain the corresponding entry point if it exists
 
     :param class_module: module of the class
     :param class_name: name of the class
@@ -356,9 +367,8 @@ def get_entry_point_from_class(class_module: str, class_name: str) -> Tuple[Opti
     return None, None
 
 
-def get_entry_point_string_from_class(class_module: str, class_name: str) -> Optional[str]:  # pylint: disable=invalid-name
-    """
-    Given the module and name of a class, attempt to obtain the corresponding entry point if it
+def get_entry_point_string_from_class(class_module: str, class_name: str) -> Optional[str]:
+    """Given the module and name of a class, attempt to obtain the corresponding entry point if it
     exists and return the entry point string which will be the entry point group and entry point
     name concatenated by the entry point string separator
 
@@ -381,8 +391,7 @@ def get_entry_point_string_from_class(class_module: str, class_name: str) -> Opt
 
 
 def is_valid_entry_point_string(entry_point_string: str) -> bool:
-    """
-    Verify whether the given entry point string is a valid one. For the string to be valid means that it is composed
+    """Verify whether the given entry point string is a valid one. For the string to be valid means that it is composed
     of two strings, the entry point group and name, concatenated by the entry point string separator. If that is the
     case, the group name will be verified to see if it is known. If the group can be retrieved and it is known, the
     string is considered to be valid. It is invalid otherwise

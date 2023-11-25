@@ -24,18 +24,19 @@ class Awaitable(AttributesDict):
 
 class AwaitableTarget(Enum):
     """Enum that describes the class of the target a given awaitable."""
+
     PROCESS = 'process'
 
 
 class AwaitableAction(Enum):
     """Enum that describes the action to be taken for a given awaitable."""
+
     ASSIGN = 'assign'
     APPEND = 'append'
 
 
 def construct_awaitable(target: Union[Awaitable, ProcessNode]) -> Awaitable:
-    """
-    Construct an instance of the Awaitable class that will contain the information
+    """Construct an instance of the Awaitable class that will contain the information
     related to the action to be taken with respect to the context once the awaitable
     object is completed.
 

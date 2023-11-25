@@ -3,8 +3,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .base import *
 from .folder import *
@@ -14,4 +13,4 @@ __all__ = (
     'RemoteStashFolderData',
 )
 
-# yapf: enable
+# fmt: on

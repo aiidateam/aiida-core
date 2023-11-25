@@ -10,11 +10,11 @@
 """Test the schema of the sqlite file within the archive."""
 from contextlib import suppress
 
+import yaml
 from archive_path import extract_file_in_zip
 from sqlalchemy import String, inspect
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.engine import Inspector
-import yaml
 
 from aiida import get_profile
 from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
@@ -60,7 +60,7 @@ def test_psql_sync_migrate(tmp_path):
             raise AssertionError(f'Schema is not in-sync with the psql backend:\n{yaml.safe_dump(diffs)}')
 
 
-def diff_schemas(psql_insp: Inspector, sqlite_insp: Inspector):  # pylint: disable=too-many-branches,too-many-statements,too-many-locals
+def diff_schemas(psql_insp: Inspector, sqlite_insp: Inspector):
     """Compare the reflected schemas of the two databases."""
     diffs: dict = {}
 
@@ -108,8 +108,9 @@ def diff_schemas(psql_insp: Inspector, sqlite_insp: Inspector):  # pylint: disab
             psql_nullable = psql_columns[column_name]['nullable']
             sqlite_nullable = sqlite_columns[column_name]['nullable']
             if psql_nullable != sqlite_nullable:
-                diffs.setdefault(table_name, {}).setdefault(column_name,
-                                                            {})['nullable'] = f'{sqlite_nullable} != {psql_nullable}'
+                diffs.setdefault(table_name, {}).setdefault(column_name, {})[
+                    'nullable'
+                ] = f'{sqlite_nullable} != {psql_nullable}'
 
         # compare unique constraints
         psql_uq_constraints = [c['name'] for c in psql_insp.get_unique_constraints(table_name)]

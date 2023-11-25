@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Migration to add the `repository_metadata` JSONB column.
 
 Revision ID: 7536a82b2cc4
@@ -15,8 +14,8 @@ Revises: 0edcdd5a30f0
 Create Date: 2020-07-09 11:32:39.924151
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
@@ -30,7 +29,7 @@ def upgrade():
     """Migrations for the upgrade."""
     op.add_column(
         'db_dbnode',
-        sa.Column('repository_metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default='{}')
+        sa.Column('repository_metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default='{}'),
     )
     op.alter_column('db_dbnode', 'repository_metadata', server_default=None)
 

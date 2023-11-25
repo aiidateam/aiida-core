@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=cyclic-import
 """Module for converting backend entities into frontend, ORM, entities"""
 from collections.abc import Iterator, Mapping, Sized
 from functools import singledispatch
@@ -72,6 +71,7 @@ def _(backend_entity):
 @get_orm_entity.register(BackendGroup)
 def _(backend_entity):
     from .groups import load_group_class
+
     group_class = load_group_class(backend_entity.type_string)
     return from_backend_entity(group_class, backend_entity)
 
@@ -79,43 +79,48 @@ def _(backend_entity):
 @get_orm_entity.register(BackendComputer)
 def _(backend_entity):
     from . import computers
+
     return from_backend_entity(computers.Computer, backend_entity)
 
 
 @get_orm_entity.register(BackendUser)
 def _(backend_entity):
     from . import users
+
     return from_backend_entity(users.User, backend_entity)
 
 
 @get_orm_entity.register(BackendAuthInfo)
 def _(backend_entity):
     from . import authinfos
+
     return from_backend_entity(authinfos.AuthInfo, backend_entity)
 
 
 @get_orm_entity.register(BackendLog)
 def _(backend_entity):
     from . import logs
+
     return from_backend_entity(logs.Log, backend_entity)
 
 
 @get_orm_entity.register(BackendComment)
 def _(backend_entity):
     from . import comments
+
     return from_backend_entity(comments.Comment, backend_entity)
 
 
 @get_orm_entity.register(BackendNode)
 def _(backend_entity):
-    from .utils.node import load_node_class  # pylint: disable=import-error,no-name-in-module
+    from .utils.node import load_node_class
+
     node_class = load_node_class(backend_entity.node_type)
     return from_backend_entity(node_class, backend_entity)
 
 
 class ConvertIterator(Iterator, Sized):
-    """
-    Iterator that converts backend entities into frontend ORM entities as needed
+    """Iterator that converts backend entities into frontend ORM entities as needed
 
     See :func:`aiida.orm.Group.nodes` for an example.
     """

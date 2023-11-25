@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Parity with Django backend (rev: 0048),
 part 2: Alter columns to be non-nullable and change type of some columns.
 
@@ -16,8 +15,8 @@ Revises: 1de112340b16
 Create Date: 2021-08-25 04:28:52.102767
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 # revision identifiers, used by Alembic.

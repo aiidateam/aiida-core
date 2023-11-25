@@ -7,12 +7,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# ruff: noqa: E402
 """Modules related to the configuration of an AiiDA instance."""
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .config import *
 from .migrations import *
@@ -36,25 +36,30 @@ __all__ = (
     'upgrade_config',
 )
 
-# yapf: enable
+# fmt: on
 
 # END AUTO-GENERATED
 
-# pylint: disable=global-statement,redefined-outer-name,wrong-import-order
 
 __all__ += (
-    'get_config', 'get_config_option', 'get_config_path', 'get_profile', 'load_profile', 'reset_config', 'CONFIG'
+    'get_config',
+    'get_config_option',
+    'get_config_path',
+    'get_profile',
+    'load_profile',
+    'reset_config',
+    'CONFIG',
 )
 
-from contextlib import contextmanager
 import os
-from typing import TYPE_CHECKING, Any, Optional
 import warnings
+from contextlib import contextmanager
+from typing import TYPE_CHECKING, Any, Optional
 
 from aiida.common.warnings import AiidaDeprecationWarning
 
 if TYPE_CHECKING:
-    from aiida.manage.configuration import Config, Profile  # pylint: disable=import-self
+    from aiida.manage.configuration import Config, Profile
 
 # global variables for aiida
 CONFIG: Optional['Config'] = None
@@ -121,7 +126,7 @@ def _merge_deprecated_cache_yaml(config, filepath):
         'cache_config.yml use is deprecated and support will be removed in `v3.0`. Merging into config.json and '
         f'moving to: {cache_path_backup}',
         AiidaDeprecationWarning,
-        stacklevel=2
+        stacklevel=2,
     )
 
     with open(cache_path, 'r', encoding='utf8') as handle:
@@ -130,8 +135,11 @@ def _merge_deprecated_cache_yaml(config, filepath):
         if profile_name not in config.profile_names:
             warnings.warn(f"Profile '{profile_name}' from cache_config.yml not in config.json, skipping", UserWarning)
             continue
-        for key, option_name in [('default', 'caching.default_enabled'), ('enabled', 'caching.enabled_for'),
-                                 ('disabled', 'caching.disabled_for')]:
+        for key, option_name in [
+            ('default', 'caching.default_enabled'),
+            ('enabled', 'caching.enabled_for'),
+            ('disabled', 'caching.disabled_for'),
+        ]:
             if key in data:
                 value = data[key]
                 # in case of empty key
@@ -154,6 +162,7 @@ def load_profile(profile: Optional[str] = None, allow_switch=False) -> 'Profile'
         if another profile has already been loaded and allow_switch is False
     """
     from aiida.manage import get_manager
+
     return get_manager().load_profile(profile, allow_switch)
 
 
@@ -163,6 +172,7 @@ def get_profile() -> Optional['Profile']:
     :return: the globally loaded `Profile` instance or `None`
     """
     from aiida.manage import get_manager
+
     return get_manager().get_profile()
 
 
@@ -176,6 +186,7 @@ def profile_context(profile: Optional[str] = None, allow_switch=False) -> 'Profi
     :return: a context manager for temporarily loading a profile
     """
     from aiida.manage import get_manager
+
     manager = get_manager()
     current_profile = manager.get_profile()
     manager.load_profile(profile, allow_switch)
@@ -195,7 +206,7 @@ def create_profile(
     first_name: Optional[str] = None,
     last_name: Optional[str] = None,
     institution: Optional[str] = None,
-    **kwargs
+    **kwargs,
 ) -> Profile:
     """Create a new profile, initialise its storage and create a default user.
 
@@ -233,7 +244,7 @@ def reset_config():
     .. warning:: This is experimental functionality and should for now be used only internally. If the reset is unclean
         weird unknown side-effects may occur that end up corrupting or destroying data.
     """
-    global CONFIG
+    global CONFIG  # noqa: PLW0603
     CONFIG = None
 
 
@@ -255,7 +266,7 @@ def get_config(create=False):
     :rtype: :class:`~aiida.manage.configuration.config.Config`
     :raises aiida.common.ConfigurationError: if the configuration file could not be found, read or deserialized
     """
-    global CONFIG
+    global CONFIG  # noqa: PLW0603
 
     if not CONFIG:
         CONFIG = load_config(create=create)
@@ -264,10 +275,10 @@ def get_config(create=False):
             # If the user does not want to get AiiDA deprecation warnings, we disable them - this can be achieved with::
             #   verdi config warnings.showdeprecations False
             # Note that the AiidaDeprecationWarning does NOT inherit from DeprecationWarning
-            warnings.simplefilter('default', AiidaDeprecationWarning)  # pylint: disable=no-member
+            warnings.simplefilter('default', AiidaDeprecationWarning)
             # This should default to 'once', i.e. once per different message
         else:
-            warnings.simplefilter('ignore', AiidaDeprecationWarning)  # pylint: disable=no-member
+            warnings.simplefilter('ignore', AiidaDeprecationWarning)
 
     return CONFIG
 
@@ -286,4 +297,5 @@ def get_config_option(option_name: str) -> Any:
     :raises `aiida.common.exceptions.ConfigurationError`: if the option is not found
     """
     from aiida.manage import get_manager
+
     return get_manager().get_option(option_name)

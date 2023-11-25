@@ -18,13 +18,13 @@ if TYPE_CHECKING:
 
 __all__ = ('BackendEntity', 'BackendCollection', 'EntityType', 'BackendEntityExtrasMixin')
 
-EntityType = TypeVar('EntityType', bound='BackendEntity')  # pylint: disable=invalid-name
+EntityType = TypeVar('EntityType', bound='BackendEntity')
 
 
 class BackendEntity(abc.ABC):
     """An first-class entity in the backend"""
 
-    def __init__(self, backend: 'StorageBackend', **kwargs: Any):  # pylint: disable=unused-argument
+    def __init__(self, backend: 'StorageBackend', **kwargs: Any):
         self._backend = backend
 
     @property
@@ -37,7 +37,7 @@ class BackendEntity(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def id(self) -> int:  # pylint: disable=invalid-name
+    def id(self) -> int:
         """Return the id for this entity.
 
         This is unique only amongst entities of this type for a particular backend.
@@ -77,9 +77,7 @@ class BackendCollection(Generic[EntityType]):
     ENTITY_CLASS: ClassVar[Type[EntityType]]  # type: ignore[misc]
 
     def __init__(self, backend: 'StorageBackend'):
-        """
-        :param backend: the backend this collection belongs to
-        """
+        """:param backend: the backend this collection belongs to"""
         assert issubclass(self.ENTITY_CLASS, BackendEntity), 'Must set the ENTRY_CLASS class variable to an entity type'
         self._backend = backend
 
@@ -89,8 +87,7 @@ class BackendCollection(Generic[EntityType]):
         return self._backend
 
     def create(self, **kwargs: Any) -> EntityType:
-        """
-        Create new a entry and set the attributes to those specified in the keyword arguments
+        """Create new a entry and set the attributes to those specified in the keyword arguments
 
         :return: the newly created entry of type ENTITY_CLASS
         """

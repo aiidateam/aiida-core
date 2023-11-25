@@ -34,7 +34,7 @@ def restapi_server():
             request_handler=None,
             passthrough_errors=True,
             ssl_context=None,
-            fd=None
+            fd=None,
         )
 
     return _restapi_server
@@ -48,7 +48,7 @@ def server_url():
 
 
 @pytest.fixture
-def restrict_db_connections():  # pylint: disable=unused-argument
+def restrict_db_connections():
     """Restrict the number of database connections allowed to the PSQL database."""
     from aiida.manage import get_manager
 
@@ -60,13 +60,8 @@ def restrict_db_connections():  # pylint: disable=unused-argument
     current_profile = manager.get_profile()
     new_profile = current_profile.copy()
     new_profile.set_storage(
-        new_profile.storage_backend, {
-            'engine_kwargs': {
-                'pool_timeout': 1,
-                'max_overflow': 0
-            },
-            **new_profile.storage_config
-        }
+        new_profile.storage_backend,
+        {'engine_kwargs': {'pool_timeout': 1, 'max_overflow': 0}, **new_profile.storage_config},
     )
     # load the new profile and initialise the database connection
     manager.unload_profile()
@@ -75,7 +70,7 @@ def restrict_db_connections():  # pylint: disable=unused-argument
     # double check that the connection is set with these parameters
     session = backend.get_session()
     assert session.bind.pool.timeout() == 1
-    assert session.bind.pool._max_overflow == 0  # pylint: disable=protected-access
+    assert session.bind.pool._max_overflow == 0
     yield
     # reset the original profile
     manager.unload_profile()
@@ -85,7 +80,6 @@ def restrict_db_connections():  # pylint: disable=unused-argument
 @pytest.fixture
 def populate_restapi_database():
     """Populates the database with a considerable set of nodes to test the restAPI"""
-    # pylint: disable=unused-argument
     from aiida import orm
 
     struct_forcif = orm.StructureData(pbc=False).store()

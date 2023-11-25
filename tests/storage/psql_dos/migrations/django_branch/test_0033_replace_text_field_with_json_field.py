@@ -15,7 +15,7 @@ from aiida.common.utils import get_new_uuid
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 
 
-def test_text_to_jsonb(perform_migrations: PsqlDosMigrator):  # pylint: disable=too-many-locals
+def test_text_to_jsonb(perform_migrations: PsqlDosMigrator):
     """Test replacing the use of text fields to store JSON data with JSONB fields.
 
     `db_dbauthinfo.auth_params`, `db_dbauthinfo.metadata`,
@@ -66,7 +66,7 @@ def test_text_to_jsonb(perform_migrations: PsqlDosMigrator):  # pylint: disable=
             'append_text': '',
             'prepend_text': '',
             'mpirun_command': ['mpirun', '-np', '{tot_num_mpiprocs}'],
-            'default_mpiprocs_per_machine': 1
+            'default_mpiprocs_per_machine': 1,
         }
         computer_transport_params = {'a': 1}
         computer_kwargs = {
@@ -114,7 +114,7 @@ def test_text_to_jsonb(perform_migrations: PsqlDosMigrator):  # pylint: disable=
             'levelname': 'localhost',
             'message': '',
             'dbnode_id': node.id,
-            'metadata': json.dumps(log_metadata)
+            'metadata': json.dumps(log_metadata),
         }
         log = log_model(**log_kwargs)
         session.add(log)
@@ -128,7 +128,6 @@ def test_text_to_jsonb(perform_migrations: PsqlDosMigrator):  # pylint: disable=
     authinfo_model = perform_migrations.get_current_table('db_dbauthinfo')
     log_model = perform_migrations.get_current_table('db_dblog')
     with perform_migrations.session() as session:
-
         computer = session.query(computer_model).filter(computer_model.id == computer_id).one()
         assert computer.metadata == computer_metadata
         assert computer.transport_params == computer_transport_params

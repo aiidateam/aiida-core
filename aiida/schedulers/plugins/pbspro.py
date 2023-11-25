@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Plugin for PBSPro.
+"""Plugin for PBSPro.
 This has been tested on PBSPro v. 12.
 """
 
@@ -36,8 +35,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class PbsproScheduler(PbsBaseClass):
-    """
-    Subclass to support the PBSPro scheduler
+    """Subclass to support the PBSPro scheduler
     (http://www.pbsworks.com/).
 
     I redefine only what needs to change from the base class
@@ -53,8 +51,7 @@ class PbsproScheduler(PbsBaseClass):
     def _get_resource_lines(
         self, num_machines, num_mpiprocs_per_machine, num_cores_per_machine, max_memory_kb, max_wallclock_seconds
     ):
-        """
-        Return the lines for machines, memory and wallclock relative
+        """Return the lines for machines, memory and wallclock relative
         to pbspro.
         """
         # Note: num_cores_per_machine is not used here but is provided by
@@ -75,9 +72,9 @@ class PbsproScheduler(PbsBaseClass):
                     raise ValueError
             except ValueError:
                 raise ValueError(
-                    'max_wallclock_seconds must be '
-                    "a positive integer (in seconds)! It is instead '{}'"
-                    ''.format(max_wallclock_seconds)
+                    'max_wallclock_seconds must be ' "a positive integer (in seconds)! It is instead '{}'" ''.format(
+                        max_wallclock_seconds
+                    )
                 )
             hours = tot_secs // 3600
             tot_minutes = tot_secs % 3600

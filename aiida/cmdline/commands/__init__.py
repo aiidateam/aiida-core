@@ -7,6 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# ruff: noqa: F401, E402
 """Sub commands of the ``verdi`` command line interface.
 
 The commands need to be imported here for them to be registered with the top-level command group.

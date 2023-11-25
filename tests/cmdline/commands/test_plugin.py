@@ -40,11 +40,12 @@ def test_plugin_list_non_existing(run_cli_command):
 
 
 @pytest.mark.parametrize(
-    'entry_point_string', (
+    'entry_point_string',
+    (
         'aiida.calculations:core.arithmetic.add',
         'aiida.workflows:core.arithmetic.multiply_add',
         'aiida.workflows:core.arithmetic.add_multiply',
-    )
+    ),
 )
 def test_plugin_list_detail(run_cli_command, entry_point_string):
     """Test the `verdi plugin list` command for specific entry points."""

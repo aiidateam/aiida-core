@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Unit tests for the :class:`aiida.cmdline.params.options.config.ConfigOption`."""
 import functools
 import tempfile
@@ -38,10 +37,14 @@ def cmd(integer, boolean):
 def test_valid(run_cli_command):
     """Test the option for a valid configuration file."""
     with tempfile.NamedTemporaryFile('w+') as handle:
-        handle.write(textwrap.dedent("""
+        handle.write(
+            textwrap.dedent(
+                """
             integer: 1
             boolean: false
-        """))
+        """
+            )
+        )
         handle.flush()
 
         result = run_cli_command(cmd, ['--config', handle.name])
@@ -52,10 +55,14 @@ def test_valid(run_cli_command):
 def test_invalid_unknown_keys(run_cli_command):
     """Test the option for an invalid configuration file containing unknown keys."""
     with tempfile.NamedTemporaryFile('w+') as handle:
-        handle.write(textwrap.dedent("""
+        handle.write(
+            textwrap.dedent(
+                """
             integer: 1
             unknown: 2.0
-        """))
+        """
+            )
+        )
         handle.flush()
 
         result = run_cli_command(cmd, ['--config', handle.name], raises=True)

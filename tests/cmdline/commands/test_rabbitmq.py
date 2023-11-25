@@ -8,8 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for ``verdi devel rabbitmq``."""
-from plumpy.process_comms import RemoteProcessThreadController
 import pytest
+from plumpy.process_comms import RemoteProcessThreadController
 
 from aiida.cmdline.commands import cmd_rabbitmq
 from aiida.engine import ProcessState, submit

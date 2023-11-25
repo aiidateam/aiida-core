@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Rename `db_dbnode.type` values `data.parameter.ParameterData.` to `data.dict.Dict.`
 
 Note this is identical to migration django_0029

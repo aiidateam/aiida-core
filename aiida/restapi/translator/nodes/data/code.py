@@ -7,22 +7,20 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Translator for code
+"""Translator for code
 """
 
 from aiida.restapi.translator.nodes.data import DataTranslator
 
 
 class CodeTranslator(DataTranslator):
-    """
-    Translator relative to resource 'codes' and aiida class Code
-    """
+    """Translator relative to resource 'codes' and aiida class Code"""
 
     # A label associated to the present class (coincides with the resource name)
     __label__ = 'codes'
     # The AiiDA class one-to-one associated to the present class
     from aiida.orm import Code
+
     _aiida_class = Code
     # The string name of the AiiDA class
     _aiida_type = 'data.core.code.Code'
@@ -30,9 +28,8 @@ class CodeTranslator(DataTranslator):
     _result_type = __label__
 
     @staticmethod
-    def get_derived_properties(node):  # pylint: disable=arguments-differ
-        """
-        Generic function extended for codes data. Currently
+    def get_derived_properties(node):
+        """Generic function extended for codes data. Currently
         it is not implemented.
 
         :param node: node object

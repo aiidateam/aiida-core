@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Unique constraints for the db_dbgroup_dbnodes table
 
 Revision ID: 7a6587e16f4c
@@ -25,14 +24,10 @@ depends_on = None
 
 
 def upgrade():
-    """
-    Add unique constraints to the db_dbgroup_dbnodes table.
-    """
+    """Add unique constraints to the db_dbgroup_dbnodes table."""
     op.create_unique_constraint('uix_dbnode_id_dbgroup_id', 'db_dbgroup_dbnodes', ['dbnode_id', 'dbgroup_id'])
 
 
 def downgrade():
-    """
-    Remove unique constraints from the db_dbgroup_dbnodes table.
-    """
+    """Remove unique constraints from the db_dbgroup_dbnodes table."""
     op.drop_constraint('uix_dbnode_id_dbgroup_id', 'db_dbgroup_dbnodes')

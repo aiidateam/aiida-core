@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name,unused-argument
 """Collection of ``pytest`` fixtures that are intended for use in plugin packages.
 
 To use these fixtures, simply create a ``conftest.py`` in the tests folder and add the following line:
@@ -32,10 +31,10 @@ import typing as t
 import uuid
 import warnings
 
-from importlib_metadata import EntryPoint, EntryPoints
 import plumpy
 import pytest
 import wrapt
+from importlib_metadata import EntryPoint, EntryPoints
 
 from aiida import plugins
 from aiida.common.exceptions import NotExistent
@@ -56,7 +55,7 @@ def recursive_merge(left: dict[t.Any, t.Any], right: dict[t.Any, t.Any]) -> None
     :param right: Dictionary to recurisvely merge on top of ``left`` dictionary.
     """
     for key, value in right.items():
-        if (key in left and isinstance(left[key], dict) and isinstance(value, dict)):
+        if key in left and isinstance(left[key], dict) and isinstance(value, dict):
             recursive_merge(left[key], value)
         else:
             left[key] = value
@@ -73,9 +72,7 @@ def aiida_caplog(caplog):
 
 @pytest.fixture(scope='session')
 def postgres_cluster(
-    database_name: str | None = None,
-    database_username: str | None = None,
-    database_password: str | None = None
+    database_name: str | None = None, database_username: str | None = None, database_password: str | None = None
 ) -> t.Generator[dict[str, str], None, None]:
     """Create a temporary and isolated PostgreSQL cluster using ``pgtest`` and cleanup after the yield.
 
@@ -204,7 +201,7 @@ def config_psql_dos(
                 'config': {
                     **postgres_cluster,
                     'repository_uri': f'file://{tmp_path_factory.mktemp("repository")}',
-                }
+                },
             }
         }
         recursive_merge(configuration, custom_configuration or {})
@@ -227,7 +224,7 @@ def clear_profile():
         daemon_client.stop_daemon(wait=True)
 
     manager = get_manager()
-    manager.get_profile_storage()._clear()  # pylint: disable=protected-access
+    manager.get_profile_storage()._clear()
     manager.reset_communicator()
     manager.reset_runner()
 
@@ -265,12 +262,12 @@ def aiida_profile_factory(
                     'broker_host': '127.0.0.1',
                     'broker_port': 5672,
                     'broker_virtual_host': '',
-                }
+                },
             },
             'options': {
                 'warnings.development_version': False,
                 'warnings.rabbitmq_version': False,
-            }
+            },
         }
         recursive_merge(configuration, custom_configuration or {})
         configuration['test_profile'] = True
@@ -452,10 +449,7 @@ def aiida_local_code_factory(aiida_localhost):
 
         builder = QueryBuilder().append(Computer, filters={'uuid': computer.uuid}, tag='computer')
         builder.append(
-            InstalledCode, filters={
-                'label': label,
-                'attributes.input_plugin': entry_point
-            }, with_computer='computer'
+            InstalledCode, filters={'label': label, 'attributes.input_plugin': entry_point}, with_computer='computer'
         )
 
         try:
@@ -475,7 +469,7 @@ def aiida_local_code_factory(aiida_localhost):
             default_calc_job_plugin=entry_point,
             computer=computer,
             filepath_executable=executable_path,
-            **kwargs
+            **kwargs,
         )
 
         return code.store()
@@ -530,11 +524,11 @@ def aiida_computer(tmp_path) -> t.Callable[[], Computer]:
     """Factory to return a :class:`aiida.orm.computers.Computer` instance."""
 
     def factory(
-        label: str = None,
+        label: t.Optional[str] = None,
         minimum_job_poll_interval: int = 0,
         default_mpiprocs_per_machine: int = 1,
-        configuration_kwargs: dict[t.Any, t.Any] = None,
-        **kwargs
+        configuration_kwargs: t.Optional[dict[t.Any, t.Any]] = None,
+        **kwargs,
     ) -> Computer:
         """Return a :class:`aiida.orm.computers.Computer` instance.
 
@@ -579,7 +573,7 @@ def aiida_computer(tmp_path) -> t.Callable[[], Computer]:
 def aiida_computer_local(aiida_computer) -> t.Callable[[], Computer]:
     """Factory to return a :class:`aiida.orm.computers.Computer` instance with ``core.local`` transport."""
 
-    def factory(label: str = None, configure: bool = True) -> Computer:
+    def factory(label: t.Optional[str] = None, configure: bool = True) -> Computer:
         """Return a :class:`aiida.orm.computers.Computer` instance representing localhost with ``core.local`` transport.
 
         The database is queried for an existing computer with the given label. If it exists, it is returned, otherwise a
@@ -606,7 +600,7 @@ def aiida_computer_local(aiida_computer) -> t.Callable[[], Computer]:
 def aiida_computer_ssh(aiida_computer, ssh_key) -> t.Callable[[], Computer]:
     """Factory to return a :class:`aiida.orm.computers.Computer` instance with ``core.ssh`` transport."""
 
-    def factory(label: str = None, configure: bool = True) -> Computer:
+    def factory(label: t.Optional[str] = None, configure: bool = True) -> Computer:
         """Return a :class:`aiida.orm.computers.Computer` instance representing localhost with ``core.ssh`` transport.
 
         The database is queried for an existing computer with the given label. If it exists, it is returned, otherwise a
@@ -667,7 +661,7 @@ def daemon_client(aiida_profile):
         # Give an additional grace period by manually waiting for the daemon to be stopped. In certain unit test
         # scenarios, the built in wait time in ``daemon_client.stop_daemon`` is not sufficient and even though the
         # daemon is stopped, ``daemon_client.is_daemon_running`` will return false for a little bit longer.
-        daemon_client._await_condition(  # pylint: disable=protected-access
+        daemon_client._await_condition(
             lambda: not daemon_client.is_daemon_running,
             DaemonTimeoutException('The daemon failed to stop.'),
         )
@@ -691,7 +685,7 @@ def stopped_daemon_client(daemon_client):
         # Give an additional grace period by manually waiting for the daemon to be stopped. In certain unit test
         # scenarios, the built in wait time in ``daemon_client.stop_daemon`` is not sufficient and even though the
         # daemon is stopped, ``daemon_client.is_daemon_running`` will return false for a little bit longer.
-        daemon_client._await_condition(  # pylint: disable=protected-access
+        daemon_client._await_condition(
             lambda: not daemon_client.is_daemon_running,
             DaemonTimeoutException('The daemon failed to stop.'),
         )
@@ -707,7 +701,7 @@ def submit_and_await(started_daemon_client):
         submittable: Process | ProcessBuilder | ProcessNode,
         state: plumpy.ProcessState = plumpy.ProcessState.FINISHED,
         timeout: int = 20,
-        **kwargs
+        **kwargs,
     ):
         """Submit a process and wait for it to achieve the given state.
 
@@ -730,7 +724,6 @@ def submit_and_await(started_daemon_client):
         start_time = time.time()
 
         while node.process_state is not state:
-
             if node.is_excepted:
                 raise RuntimeError(f'The process excepted: {node.exception}')
 
@@ -804,7 +797,7 @@ class EntryPointManager:
         entry_point_string: str | None = None,
         *,
         name: str | None = None,
-        group: str | None = None
+        group: str | None = None,
     ) -> None:
         """Add an entry point.
 

@@ -18,9 +18,7 @@ __all__ = ('CodeParamType',)
 
 
 class CodeParamType(IdentifierParamType):
-    """
-    The ParamType for identifying Code entities or its subclasses
-    """
+    """The ParamType for identifying Code entities or its subclasses"""
 
     name = 'Code'
 
@@ -35,24 +33,24 @@ class CodeParamType(IdentifierParamType):
 
     @property
     def orm_class_loader(self):
-        """
-        Return the orm entity loader class, which should be a subclass of OrmEntityLoader. This class is supposed
+        """Return the orm entity loader class, which should be a subclass of OrmEntityLoader. This class is supposed
         to be used to load the entity for a given identifier
 
         :return: the orm entity loader class for this ParamType
         """
         from aiida.orm.utils.loaders import CodeEntityLoader
+
         return CodeEntityLoader
 
     @decorators.with_dbenv()
-    def shell_complete(self, ctx, param, incomplete):  # pylint: disable=unused-argument
+    def shell_complete(self, ctx, param, incomplete):
         """Return possible completions based on an incomplete value.
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description
         """
         return [
             click.shell_completion.CompletionItem(option)
-            for option, in self.orm_class_loader.get_options(incomplete, project='label')
+            for (option,) in self.orm_class_loader.get_options(incomplete, project='label')
         ]
 
     def convert(self, value, param, ctx):

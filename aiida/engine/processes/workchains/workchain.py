@@ -18,9 +18,8 @@ import typing as t
 from plumpy.persistence import auto_persist
 from plumpy.process_states import Continue, Wait
 from plumpy.processes import ProcessStateMachineMeta
-from plumpy.workchains import Stepper
+from plumpy.workchains import Stepper, _PropagateReturn, if_, return_, while_
 from plumpy.workchains import WorkChainSpec as PlumpyWorkChainSpec
-from plumpy.workchains import _PropagateReturn, if_, return_, while_
 
 from aiida.common import exceptions
 from aiida.common.extendeddicts import AttributeDict
@@ -34,7 +33,7 @@ from ..process_spec import ProcessSpec
 from .awaitable import Awaitable, AwaitableAction, AwaitableTarget, construct_awaitable
 
 if t.TYPE_CHECKING:
-    from aiida.engine.runners import Runner  # pylint: disable=unused-import
+    from aiida.engine.runners import Runner
 
 __all__ = ('WorkChain', 'if_', 'while_', 'return_')
 
@@ -62,7 +61,7 @@ class Protect(ProcessStateMachineMeta):
 
     __SENTINEL = object()
 
-    def __new__(mcs, name, bases, namespace, **kwargs):
+    def __new__(mcs, name, bases, namespace, **kwargs):  # noqa: N804
         """Collect all methods that were marked as protected and raise if the subclass defines it.
 
         :raises RuntimeError: If the new class defines (i.e. overrides) a method that was decorated with ``final``.
@@ -76,25 +75,25 @@ class Protect(ProcessStateMachineMeta):
         return super().__new__(mcs, name, bases, namespace, **kwargs)
 
     @classmethod
-    def __is_final(mcs, method) -> bool:  # pylint: disable=unused-private-member
+    def __is_final(mcs, method) -> bool:  # noqa: N804
         """Return whether the method has been decorated by the ``final`` classmethod.
 
         :return: Boolean, ``True`` if the method is marked as final, ``False`` otherwise.
         """
         try:
-            return method.__final is mcs.__SENTINEL  # pylint: disable=protected-access
+            return method.__final is mcs.__SENTINEL
         except AttributeError:
             return False
 
     @classmethod
-    def final(mcs, method: MethodType) -> MethodType:
+    def final(mcs, method: MethodType) -> MethodType:  # noqa: N804
         """Decorate a method with this method to protect it from being overridden.
 
         Adds the ``__SENTINEL`` object as the ``__final`` private attribute to the given ``method`` and wraps it in
         the ``typing.final`` decorator. The latter indicates to typing systems that it cannot be overridden in
         subclasses.
         """
-        method.__final = mcs.__SENTINEL  # type: ignore[attr-defined] # pylint: disable=protected-access,unused-private-member
+        method.__final = mcs.__SENTINEL  # type: ignore[attr-defined]
         return t.final(method)
 
 
@@ -112,7 +111,7 @@ class WorkChain(Process, metaclass=Protect):
         inputs: dict | None = None,
         logger: logging.Logger | None = None,
         runner: 'Runner' | None = None,
-        enable_persistence: bool = True
+        enable_persistence: bool = True,
     ) -> None:
         """Construct a WorkChain instance.
 
@@ -187,8 +186,7 @@ class WorkChain(Process, metaclass=Protect):
         self.node.set_stepper_state_info(str(self._stepper))
 
     def _resolve_nested_context(self, key: str) -> tuple[AttributeDict, str]:
-        """
-        Returns a reference to a sub-dictionary of the context and the last key,
+        """Returns a reference to a sub-dictionary of the context and the last key,
         after resolving a potentially segmented key where required sub-dictionaries are created as needed.
 
         :param key: A key into the context, where words before a dot are interpreted as a key for a sub-dictionary
@@ -210,7 +208,7 @@ class WorkChain(Process, metaclass=Protect):
             #   (subclasses of AttributeDict) but after resolution of an Awaitable this will be the value itself
             # * assumption: a resolved value is never a plain AttributeDict, on the other hand if a resolved Awaitable
             #   would be an AttributeDict we can append things to it since the order of tasks is maintained.
-            if type(ctx) != AttributeDict:  # pylint: disable=C0123
+            if type(ctx) != AttributeDict:
                 raise ValueError(
                     f'Can not update the context for key `{key}`:'
                     f' found instance of `{type(ctx)}` at `{".".join(ctx_path[:index+1])}`, expected AttributeDict'
@@ -248,7 +246,6 @@ class WorkChain(Process, metaclass=Protect):
 
         :param awaitable: the awaitable to resolve
         """
-
         ctx, key = self._resolve_nested_context(awaitable.key)
 
         if awaitable.action == AwaitableAction.ASSIGN:
@@ -363,7 +360,7 @@ class WorkChain(Process, metaclass=Protect):
         super().on_exiting()
         try:
             self._store_nodes(self.ctx)
-        except Exception:  # pylint: disable=broad-except
+        except Exception:
             # An uncaught exception here will have bizarre and disastrous consequences
             self.logger.exception('exception in _store_nodes called in on_exiting')
 
@@ -388,7 +385,7 @@ class WorkChain(Process, metaclass=Protect):
                 callback = functools.partial(self.call_soon, self._on_awaitable_finished, awaitable)
                 self.runner.call_on_process_finish(awaitable.pk, callback)
             else:
-                assert f"invalid awaitable target '{awaitable.target}'"
+                raise AssertionError(f"invalid awaitable target '{awaitable.target}'")
 
     def _on_awaitable_finished(self, awaitable: Awaitable) -> None:
         """Callback function, for when an awaitable process instance is completed.

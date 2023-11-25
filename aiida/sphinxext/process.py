@@ -7,11 +7,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+"""Defines an rst directive to auto-document AiiDA processes.
 """
-Defines an rst directive to auto-document AiiDA processes.
-"""
-from collections.abc import Iterable, Mapping
 import inspect
+from collections.abc import Iterable, Mapping
 
 from docutils import nodes
 from docutils.core import publish_doctree
@@ -34,6 +33,7 @@ def setup_extension(app):
 
 class AiidaProcessDocumenter(ClassDocumenter):
     """Sphinx Documenter class for AiiDA Processes."""
+
     directivetype = 'aiida-process'
     objtype = 'process'
     priority = 10
@@ -44,9 +44,8 @@ class AiidaProcessDocumenter(ClassDocumenter):
 
 
 class AiidaProcessDirective(SphinxDirective):
-    """
-    Directive to auto-document AiiDA processes.
-    """
+    """Directive to auto-document AiiDA processes."""
+
     required_arguments = 1
     optional_arguments = 0
     final_argument_whitespace = True
@@ -56,7 +55,7 @@ class AiidaProcessDirective(SphinxDirective):
     option_spec = {
         'module': directives.unchanged_required,
         HIDE_UNSTORED_INPUTS_FLAG: directives.flag,
-        EXPAND_NAMESPACES_FLAG: directives.flag
+        EXPAND_NAMESPACES_FLAG: directives.flag,
     }
     signature = 'Process'
     annotation = 'process'
@@ -72,7 +71,6 @@ class AiidaProcessDirective(SphinxDirective):
 
         Includes importing the process class.
         """
-        # pylint: disable=attribute-defined-outside-init
         load_profile()
 
         self.class_name = self.arguments[0].split('(')[0]
@@ -101,9 +99,7 @@ class AiidaProcessDirective(SphinxDirective):
         return signature
 
     def build_content(self):
-        """
-        Returns the main content (docstring, inputs, outputs) of the documentation.
-        """
+        """Returns the main content (docstring, inputs, outputs) of the documentation."""
         content = addnodes.desc_content()
 
         content += nodes.paragraph(text=self.process.__doc__)
@@ -124,9 +120,7 @@ class AiidaProcessDirective(SphinxDirective):
         return content
 
     def build_doctree(self, title, port_namespace):
-        """
-        Returns a doctree for a given port namespace, including a title.
-        """
+        """Returns a doctree for a given port namespace, including a title."""
         paragraph = nodes.paragraph()
         paragraph += nodes.strong(text=title)
         namespace_doctree = self.build_portnamespace_doctree(port_namespace)
@@ -162,9 +156,7 @@ class AiidaProcessDirective(SphinxDirective):
         return result
 
     def build_port_content(self, name, port):
-        """
-        Build the content that describes a single port.
-        """
+        """Build the content that describes a single port."""
         res = []
         res.append(addnodes.literal_strong(text=name))
         res.append(nodes.Text(', '))
@@ -209,15 +201,14 @@ class AiidaProcessDirective(SphinxDirective):
         res = []
         if isinstance(outline, str):
             res.append(indent_str + outline)
+        elif isinstance(outline, Mapping):
+            for key, outline_part in outline.items():
+                res.append(indent_str + key)
+                res.extend(self.build_outline_lines(outline_part, indent=indent + 4))
         else:
-            if isinstance(outline, Mapping):
-                for key, outline_part in outline.items():
-                    res.append(indent_str + key)
-                    res.extend(self.build_outline_lines(outline_part, indent=indent + 4))
-            else:
-                assert isinstance(outline, Iterable)
-                for outline_part in outline:
-                    res.extend(self.build_outline_lines(outline_part, indent=indent))
+            assert isinstance(outline, Iterable)
+            for outline_part in outline:
+                res.extend(self.build_outline_lines(outline_part, indent=indent))
         return res
 
 

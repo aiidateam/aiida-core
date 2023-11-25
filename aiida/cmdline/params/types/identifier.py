@@ -7,14 +7,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Module for custom click param type identifier
+"""Module for custom click param type identifier
 """
 from __future__ import annotations
 
+import typing as t
 from abc import ABC, abstractmethod
 from functools import cached_property
-import typing as t
 
 import click
 
@@ -30,8 +29,7 @@ __all__ = ('IdentifierParamType',)
 
 
 class IdentifierParamType(click.ParamType, ABC):
-    """
-    An extension of click.ParamType for a generic identifier parameter. In AiiDA, orm entities can often be
+    """An extension of click.ParamType for a generic identifier parameter. In AiiDA, orm entities can often be
     identified by either their ID, UUID or optionally some LABEL identifier. This parameter type implements
     the convert method, which attempts to convert a value passed to the command for a parameter with this type,
     to an orm entity. The actual loading of the entity is delegated to the orm class loader. Subclasses of this
@@ -40,8 +38,7 @@ class IdentifierParamType(click.ParamType, ABC):
     """
 
     def __init__(self, sub_classes: tuple[str, ...] | None = None):
-        """
-        Construct the parameter type, optionally specifying a tuple of entry points that reference classes
+        """Construct the parameter type, optionally specifying a tuple of entry points that reference classes
         that should be a sub class of the base orm class of the orm class loader. The classes pointed to by
         these entry points will be passed to the OrmEntityLoader when converting an identifier and they will
         restrict the query set by demanding that the class of the corresponding entity matches these sub classes.
@@ -82,8 +79,7 @@ class IdentifierParamType(click.ParamType, ABC):
     @abstractmethod
     @with_dbenv()  # type: ignore[misc]
     def orm_class_loader(self) -> OrmEntityLoader:
-        """
-        Return the orm entity loader class, which should be a subclass of OrmEntityLoader. This class is supposed
+        """Return the orm entity loader class, which should be a subclass of OrmEntityLoader. This class is supposed
         to be used to load the entity for a given identifier
 
         :return: the orm entity loader class for this ParamType
@@ -91,8 +87,7 @@ class IdentifierParamType(click.ParamType, ABC):
 
     @with_dbenv()  # type: ignore[misc]
     def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context) -> t.Any:
-        """
-        Attempt to convert the given value to an instance of the orm class using the orm class loader.
+        """Attempt to convert the given value to an instance of the orm class using the orm class loader.
 
         :return: the loaded orm entity
         :raises click.BadParameter: if the value is ambiguous and leads to multiple entities
@@ -116,7 +111,6 @@ class IdentifierParamType(click.ParamType, ABC):
         # sub classes of the orm class loader and then pass it as the sub_class parameter to the load_entity call.
         # We store the loaded entry points in an instance variable, such that the loading only has to be done once.
         if self._entry_points and self._sub_classes is None:
-
             sub_classes = []
 
             for entry_point in self._entry_points:

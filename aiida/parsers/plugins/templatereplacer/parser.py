@@ -46,7 +46,6 @@ class TemplatereplacerParser(Parser):
                 return self.exit_codes.ERROR_NO_TEMPORARY_RETRIEVED_FOLDER
 
             for retrieved_file in retrieve_temporary_files:
-
                 file_path = os.path.join(retrieved_temporary_folder, retrieved_file)
 
                 if not os.path.isfile(file_path):

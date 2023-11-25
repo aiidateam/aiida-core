@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .client import *
 
@@ -21,4 +20,4 @@ __all__ = (
     'get_daemon_client',
 )
 
-# yapf: enable
+# fmt: on

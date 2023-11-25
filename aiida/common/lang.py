@@ -50,7 +50,7 @@ MethodType = TypeVar('MethodType', bound=Callable[..., Any])
 def override_decorator(check=False) -> Callable[[MethodType], MethodType]:
     """Decorator to signal that a method from a base class is being overridden completely."""
 
-    def wrap(func: MethodType) -> MethodType:  # pylint: disable=missing-docstring
+    def wrap(func: MethodType) -> MethodType:
         import inspect
 
         if isinstance(func, property):
@@ -63,7 +63,7 @@ def override_decorator(check=False) -> Callable[[MethodType], MethodType]:
         if check:
 
             @functools.wraps(func)
-            def wrapped_fn(self, *args, **kwargs):  # pylint: disable=missing-docstring
+            def wrapped_fn(self, *args, **kwargs):
                 try:
                     getattr(super(), func.__name__)
                 except AttributeError:
@@ -78,15 +78,14 @@ def override_decorator(check=False) -> Callable[[MethodType], MethodType]:
     return wrap
 
 
-override = override_decorator(check=False)  # pylint: disable=invalid-name
+override = override_decorator(check=False)
 
 ReturnType = TypeVar('ReturnType')
 SelfType = TypeVar('SelfType')
 
 
-class classproperty(Generic[ReturnType]):  # pylint: disable=invalid-name
-    """
-    A class that, when used as a decorator, works as if the
+class classproperty(Generic[ReturnType]):  # noqa: N801
+    """A class that, when used as a decorator, works as if the
     two decorators @property and @classmethod where applied together
     (i.e., the object works as a property, both for the Class and for any
     of its instance; and is called with the class cls rather than with the

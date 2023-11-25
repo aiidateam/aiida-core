@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Tests for fixtures in the ``conftest.py``."""
-from importlib_metadata import EntryPoint
 import pytest
+from importlib_metadata import EntryPoint
 
 from aiida.common.exceptions import MissingEntryPointError
 from aiida.plugins.entry_point import get_entry_point, load_entry_point
@@ -70,7 +70,6 @@ def raise_runtime_error():
 
 def test_entry_points_add_and_load(entry_points):
     """Test adding an entry point to an inline function loading it and calling it."""
-
     entry_point_name = 'core.test'
     entry_points.add(raise_runtime_error, group=ENTRY_POINT_GROUP, name=entry_point_name)
 

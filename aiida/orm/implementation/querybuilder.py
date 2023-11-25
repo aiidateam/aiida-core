@@ -29,8 +29,15 @@ EntityRelationships: Dict[str, Set[str]] = {
     EntityTypes.GROUP.value: {'with_node', 'with_user'},
     EntityTypes.LOG.value: {'with_node'},
     EntityTypes.NODE.value: {
-        'with_comment', 'with_log', 'with_incoming', 'with_outgoing', 'with_descendants', 'with_ancestors',
-        'with_computer', 'with_user', 'with_group'
+        'with_comment',
+        'with_log',
+        'with_incoming',
+        'with_outgoing',
+        'with_descendants',
+        'with_ancestors',
+        'with_computer',
+        'with_user',
+        'with_group',
     },
     EntityTypes.USER.value: {'with_authinfo', 'with_comment', 'with_group', 'with_node'},
     EntityTypes.LINK.value: set(),
@@ -81,10 +88,9 @@ class BackendQueryBuilder(abc.ABC):
     """Backend query builder interface"""
 
     def __init__(self, backend: 'StorageBackend'):
-        """
-        :param backend: the backend
-        """
+        """:param backend: the backend"""
         from .storage_backend import StorageBackend
+
         type_check(backend, StorageBackend)
         self._backend = backend
 

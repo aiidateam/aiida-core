@@ -8,10 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """AiiDA specific implementation of plumpy Ports and PortNamespaces for the ProcessSpec."""
-from collections.abc import Mapping
 import re
-from typing import Any, Callable, Dict, Optional, Sequence
 import warnings
+from collections.abc import Mapping
+from typing import Any, Callable, Dict, Optional, Sequence
 
 from plumpy import ports
 from plumpy.ports import breadcrumbs_to_port
@@ -20,13 +20,18 @@ from aiida.common.links import validate_link_label
 from aiida.orm import Data, Node
 
 __all__ = (
-    'PortNamespace', 'InputPort', 'OutputPort', 'CalcJobOutputPort', 'WithNonDb', 'WithSerialize',
-    'PORT_NAMESPACE_SEPARATOR'
+    'PortNamespace',
+    'InputPort',
+    'OutputPort',
+    'CalcJobOutputPort',
+    'WithNonDb',
+    'WithSerialize',
+    'PORT_NAMESPACE_SEPARATOR',
 )
 
-PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES = 1  # pylint: disable=invalid-name
+PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES = 1
 PORT_NAMESPACE_SEPARATOR = '__'  # The character sequence to represent a nested port namespace in a flat link label
-OutputPort = ports.OutputPort  # pylint: disable=invalid-name
+OutputPort = ports.OutputPort
 
 
 class WithNonDb:
@@ -101,8 +106,7 @@ class WithMetadata:
 
 
 class WithSerialize:
-    """
-    A mixin that adds support for a serialization function which is automatically applied on inputs
+    """A mixin that adds support for a serialization function which is automatically applied on inputs
     that are not AiiDA data types.
     """
 
@@ -124,8 +128,7 @@ class WithSerialize:
 
 
 class InputPort(WithMetadata, WithSerialize, WithNonDb, ports.InputPort):
-    """
-    Sub class of plumpy.InputPort which mixes in the WithSerialize and WithNonDb mixins to support automatic
+    """Sub class of plumpy.InputPort which mixes in the WithSerialize and WithNonDb mixins to support automatic
     value serialization to database storable types and support non database storable input types as well.
 
     The mixins have to go before the main port class in the superclass order to make sure they have the chance to
@@ -134,15 +137,16 @@ class InputPort(WithMetadata, WithSerialize, WithNonDb, ports.InputPort):
 
     def __init__(self, *args, **kwargs) -> None:
         """Override the constructor to check the type of the default if set and warn if not immutable."""
-        # pylint: disable=redefined-builtin,too-many-arguments
         if 'default' in kwargs:
             default = kwargs['default']
             # If the default is specified and it is a node instance, raise a warning. This is to try and prevent that
             # people set node instances as defaults which can cause various problems.
             if default is not ports.UNSPECIFIED and isinstance(default, Node):
-                message = 'default of input port `{}` is a `Node` instance, which can lead to unexpected side effects.'\
+                message = (
+                    'default of input port `{}` is a `Node` instance, which can lead to unexpected side effects.'
                     ' It is advised to use a lambda instead, e.g.: `default=lambda: orm.Int(5)`.'.format(args[0])
-                warnings.warn(UserWarning(message))  # pylint: disable=no-member
+                )
+                warnings.warn(UserWarning(message))
 
         # If the port is not required and defines ``valid_type``, automatically add ``None`` as a valid type
         valid_type = kwargs.get('valid_type', ())
@@ -181,8 +185,7 @@ class CalcJobOutputPort(ports.OutputPort):
 
 
 class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
-    """
-    Sub class of plumpy.PortNamespace which implements the serialize method to support automatic recursive
+    """Sub class of plumpy.PortNamespace which implements the serialize method to support automatic recursive
     serialization of a given mapping onto the ports of the PortNamespace.
     """
 
@@ -200,9 +203,7 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
 
         self.validate_port_name(key)
 
-        if hasattr(
-            port, 'is_metadata_explicitly_set'
-        ) and not port.is_metadata_explicitly_set:  # type: ignore[attr-defined]
+        if hasattr(port, 'is_metadata_explicitly_set') and not port.is_metadata_explicitly_set:  # type: ignore[attr-defined]
             port.is_metadata = self.is_metadata  # type: ignore[attr-defined]
 
         if hasattr(port, 'non_db_explicitly_set') and not port.non_db_explicitly_set:  # type: ignore[attr-defined]
@@ -263,7 +264,6 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
 
         for name, value in mapping.items():
             if name in self:
-
                 port = self[name]
                 if isinstance(port, PortNamespace):
                     result[name] = port.serialize(value, breadcrumbs)

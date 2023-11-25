@@ -62,13 +62,13 @@ class List(Data, MutableSequence):
         if not self._using_list_reference():
             self.set_list(data)
 
-    def extend(self, value):  # pylint: disable=arguments-renamed
+    def extend(self, value):
         data = self.get_list()
         data.extend(value)
         if not self._using_list_reference():
             self.set_list(data)
 
-    def insert(self, i, value):  # pylint: disable=arguments-renamed
+    def insert(self, i, value):
         data = self.get_list()
         data.insert(i, value)
         if not self._using_list_reference():
@@ -81,7 +81,7 @@ class List(Data, MutableSequence):
             self.set_list(data)
         return item
 
-    def pop(self, **kwargs):  # pylint: disable=arguments-differ
+    def pop(self, **kwargs):
         """Remove and return item at index (default last)."""
         data = self.get_list()
         item = data.pop(**kwargs)
@@ -89,7 +89,7 @@ class List(Data, MutableSequence):
             self.set_list(data)
         return item
 
-    def index(self, value):  # pylint: disable=arguments-differ
+    def index(self, value):
         """Return first index of value.."""
         return self.get_list().index(value)
 
@@ -130,8 +130,7 @@ class List(Data, MutableSequence):
         self.base.attributes.set(self._LIST_KEY, data.copy())
 
     def _using_list_reference(self):
-        """
-        This function tells the class if we are using a list reference.  This
+        """This function tells the class if we are using a list reference.  This
         means that calls to self.get_list return a reference rather than a copy
         of the underlying list and therefore self.set_list need not be called.
         This knwoledge is essential to make sure this class is performant.

@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=import-error,no-name-in-module
 """Module to manage node settings for the SQLA backend."""
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSONB
@@ -20,9 +19,10 @@ from aiida.storage.psql_dos.models.base import Base
 
 class DbSetting(Base):
     """Database model to store global settings."""
+
     __tablename__ = 'db_dbsetting'
 
-    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
+    id = Column(Integer, primary_key=True)
     key = Column(String(1024), nullable=False, unique=True)
     val = Column(JSONB, default={})
 

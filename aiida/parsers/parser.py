@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-This module implements a generic output plugin, that is general enough
+"""This module implements a generic output plugin, that is general enough
 to allow the reading of the outputs of a calculation.
 """
 from abc import ABC, abstractmethod
@@ -113,10 +112,9 @@ class Parser(ABC):
         return result
 
     @classmethod
-    def parse_from_node(cls,
-                        node: 'CalcJobNode',
-                        store_provenance=True,
-                        retrieved_temporary_folder=None) -> Tuple[Optional[Dict[str, Any]], 'orm.CalcFunctionNode']:
+    def parse_from_node(
+        cls, node: 'CalcJobNode', store_provenance=True, retrieved_temporary_folder=None
+    ) -> Tuple[Optional[Dict[str, Any]], 'orm.CalcFunctionNode']:
         """Parse the outputs directly from the `CalcJobNode`.
 
         If `store_provenance` is set to False, a `CalcFunctionNode` will still be generated, but it will not be stored.
@@ -155,7 +153,7 @@ class Parser(ABC):
             process = Process.current()
 
             try:
-                process.spec()._ports['outputs'] = node.process_class.spec().outputs  # type: ignore[union-attr]  # pylint: disable=protected-access
+                process.spec()._ports['outputs'] = node.process_class.spec().outputs  # type: ignore[union-attr]
             except ValueError:
                 LOGGER.warning(
                     f'Could not load the process class of node `{node}`. This means that the output specification of '

@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Clean the log records from non-Node entity records (part a).
 
 It removes from the ``DbLog`` table, the legacy workflow records and records
@@ -19,8 +18,8 @@ Revision ID: django_0024a
 Revises: django_0023
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 from aiida.storage.psql_dos.migrations.utils.dblog_update import export_and_clean_workflow_logs, set_new_uuid
@@ -53,9 +52,11 @@ def upgrade():
     op.create_foreign_key(
         'db_dblog_dbnode_id_da34b732_fk_db_dbnode_id',
         'db_dblog',
-        'db_dbnode', ['dbnode_id'], ['id'],
+        'db_dbnode',
+        ['dbnode_id'],
+        ['id'],
         initially='DEFERRED',
-        deferrable=True
+        deferrable=True,
         # note, the django migration added on_delete='CASCADE', however, this does not actually set it on the database,
         # see: https://stackoverflow.com/a/35780859/5033292
     )
@@ -74,7 +75,7 @@ def upgrade():
             postgresql.UUID(),
             nullable=False,
             server_default='f6a16ff7-4a31-11eb-be7b-8344edc8f36b',
-        )
+        ),
     )
     op.alter_column('db_dblog', 'uuid', server_default=None)
 

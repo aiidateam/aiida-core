@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """DbGroup class: change type_string values
 
 Revision ID: e72ad251bcdb
@@ -15,7 +14,6 @@ Revises: b8b23ddefad4
 Create Date: 2018-12-06 19:34:47.732890
 
 """
-# pylint: disable=no-name-in-module,import-error
 from alembic import op
 from sqlalchemy.sql import text
 

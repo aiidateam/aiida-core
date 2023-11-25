@@ -37,7 +37,7 @@ def test_write_read(tmp_path):
             'email': 'jon@doe.com',
             'first_name': 'John',
             'last_name': 'Doe',
-            'institution': 'Doe Inc.'
+            'institution': 'Doe Inc.',
         }
         # should fail due to unknown field
         with pytest.raises(IntegrityError, match='Incorrect fields'):
@@ -80,7 +80,7 @@ def test_write_read(tmp_path):
             'email': 'jane@smith.com',
             'first_name': 'Jane',
             'last_name': 'Smith',
-            'institution': 'Doe Inc.'
+            'institution': 'Doe Inc.',
         }
         appender.bulk_insert(EntityTypes.USER, [user_row2])
         # delete the existing object

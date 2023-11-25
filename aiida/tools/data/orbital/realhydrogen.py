@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-A module defining hydrogen-like orbitals that are real valued (rather than
+"""A module defining hydrogen-like orbitals that are real valued (rather than
 complex-valued).
 """
 from aiida.common.exceptions import ValidationError
@@ -19,9 +18,7 @@ __all__ = ('RealhydrogenOrbital',)
 
 
 def validate_l(value):
-    """
-    Validate the value of the angular momentum
-    """
+    """Validate the value of the angular momentum"""
     if not isinstance(value, int):
         raise ValidationError('angular momentum (l) must be integer')
 
@@ -32,9 +29,7 @@ def validate_l(value):
 
 
 def validate_m(value):
-    """
-    Validate the value of the magnetic number
-    """
+    """Validate the value of the magnetic number"""
     if not isinstance(value, int):
         raise ValidationError('magnetic number (m) must be integer')
 
@@ -45,9 +40,7 @@ def validate_m(value):
 
 
 def validate_kind_name(value):
-    """
-    Validate the value of the kind_name
-    """
+    """Validate the value of the kind_name"""
     if value is not None and not isinstance(value, str):
         raise ValidationError('kind_name must be a string')
 
@@ -55,9 +48,7 @@ def validate_kind_name(value):
 
 
 def validate_n(value):
-    """
-    Validate the value of the number of radial nodes
-    """
+    """Validate the value of the number of radial nodes"""
     if not isinstance(value, int):
         raise ValidationError('number of radial nodes (n) must be integer')
 
@@ -68,9 +59,7 @@ def validate_n(value):
 
 
 def validate_spin(value):
-    """
-    Validate the value of the spin
-    """
+    """Validate the value of the spin"""
     if not isinstance(value, int):
         raise ValidationError('spin must be integer')
 
@@ -81,174 +70,63 @@ def validate_spin(value):
 
 
 CONVERSION_DICT = {
-    'S': {
-        'S': {
-            'angular_momentum': 0,
-            'magnetic_number': 0
-        }
-    },
+    'S': {'S': {'angular_momentum': 0, 'magnetic_number': 0}},
     'P': {
-        'PZ': {
-            'angular_momentum': 1,
-            'magnetic_number': 0
-        },
-        'PX': {
-            'angular_momentum': 1,
-            'magnetic_number': 1
-        },
-        'PY': {
-            'angular_momentum': 1,
-            'magnetic_number': 2
-        },
+        'PZ': {'angular_momentum': 1, 'magnetic_number': 0},
+        'PX': {'angular_momentum': 1, 'magnetic_number': 1},
+        'PY': {'angular_momentum': 1, 'magnetic_number': 2},
     },
     'D': {
-        'DZ2': {
-            'angular_momentum': 2,
-            'magnetic_number': 0
-        },
-        'DXZ': {
-            'angular_momentum': 2,
-            'magnetic_number': 1
-        },
-        'DYZ': {
-            'angular_momentum': 2,
-            'magnetic_number': 2
-        },
-        'DX2-Y2': {
-            'angular_momentum': 2,
-            'magnetic_number': 3
-        },
-        'DXY': {
-            'angular_momentum': 2,
-            'magnetic_number': 4
-        },
+        'DZ2': {'angular_momentum': 2, 'magnetic_number': 0},
+        'DXZ': {'angular_momentum': 2, 'magnetic_number': 1},
+        'DYZ': {'angular_momentum': 2, 'magnetic_number': 2},
+        'DX2-Y2': {'angular_momentum': 2, 'magnetic_number': 3},
+        'DXY': {'angular_momentum': 2, 'magnetic_number': 4},
     },
     'F': {
-        'FZ3': {
-            'angular_momentum': 3,
-            'magnetic_number': 0
-        },
-        'FZX2': {
-            'angular_momentum': 3,
-            'magnetic_number': 1
-        },
-        'FYZ2': {
-            'angular_momentum': 3,
-            'magnetic_number': 2
-        },
-        'FZ(X2-Y2)': {
-            'angular_momentum': 3,
-            'magnetic_number': 3
-        },
-        'FXYZ': {
-            'angular_momentum': 3,
-            'magnetic_number': 4
-        },
-        'FX(X2-3Y2)': {
-            'angular_momentum': 3,
-            'magnetic_number': 5
-        },
-        'FY(3X2-Y2)': {
-            'angular_momentum': 3,
-            'magnetic_number': 6
-        },
+        'FZ3': {'angular_momentum': 3, 'magnetic_number': 0},
+        'FZX2': {'angular_momentum': 3, 'magnetic_number': 1},
+        'FYZ2': {'angular_momentum': 3, 'magnetic_number': 2},
+        'FZ(X2-Y2)': {'angular_momentum': 3, 'magnetic_number': 3},
+        'FXYZ': {'angular_momentum': 3, 'magnetic_number': 4},
+        'FX(X2-3Y2)': {'angular_momentum': 3, 'magnetic_number': 5},
+        'FY(3X2-Y2)': {'angular_momentum': 3, 'magnetic_number': 6},
     },
     'SP': {
-        'SP-1': {
-            'angular_momentum': -1,
-            'magnetic_number': 0
-        },
-        'SP-2': {
-            'angular_momentum': -1,
-            'magnetic_number': 1
-        },
+        'SP-1': {'angular_momentum': -1, 'magnetic_number': 0},
+        'SP-2': {'angular_momentum': -1, 'magnetic_number': 1},
     },
     'SP2': {
-        'SP2-1': {
-            'angular_momentum': -2,
-            'magnetic_number': 0
-        },
-        'SP2-2': {
-            'angular_momentum': -2,
-            'magnetic_number': 1
-        },
-        'SP2-3': {
-            'angular_momentum': -2,
-            'magnetic_number': 2
-        },
+        'SP2-1': {'angular_momentum': -2, 'magnetic_number': 0},
+        'SP2-2': {'angular_momentum': -2, 'magnetic_number': 1},
+        'SP2-3': {'angular_momentum': -2, 'magnetic_number': 2},
     },
     'SP3': {
-        'SP3-1': {
-            'angular_momentum': -3,
-            'magnetic_number': 0
-        },
-        'SP3-2': {
-            'angular_momentum': -3,
-            'magnetic_number': 1
-        },
-        'SP3-3': {
-            'angular_momentum': -3,
-            'magnetic_number': 2
-        },
-        'SP3-4': {
-            'angular_momentum': -3,
-            'magnetic_number': 3
-        },
+        'SP3-1': {'angular_momentum': -3, 'magnetic_number': 0},
+        'SP3-2': {'angular_momentum': -3, 'magnetic_number': 1},
+        'SP3-3': {'angular_momentum': -3, 'magnetic_number': 2},
+        'SP3-4': {'angular_momentum': -3, 'magnetic_number': 3},
     },
     'SP3D': {
-        'SP3D-1': {
-            'angular_momentum': -4,
-            'magnetic_number': 0
-        },
-        'SP3D-2': {
-            'angular_momentum': -4,
-            'magnetic_number': 1
-        },
-        'SP3D-3': {
-            'angular_momentum': -4,
-            'magnetic_number': 2
-        },
-        'SP3D-4': {
-            'angular_momentum': -4,
-            'magnetic_number': 3
-        },
-        'SP3D-5': {
-            'angular_momentum': -4,
-            'magnetic_number': 4
-        },
+        'SP3D-1': {'angular_momentum': -4, 'magnetic_number': 0},
+        'SP3D-2': {'angular_momentum': -4, 'magnetic_number': 1},
+        'SP3D-3': {'angular_momentum': -4, 'magnetic_number': 2},
+        'SP3D-4': {'angular_momentum': -4, 'magnetic_number': 3},
+        'SP3D-5': {'angular_momentum': -4, 'magnetic_number': 4},
     },
     'SP3D2': {
-        'SP3D2-1': {
-            'angular_momentum': -5,
-            'magnetic_number': 0
-        },
-        'SP3D2-2': {
-            'angular_momentum': -5,
-            'magnetic_number': 1
-        },
-        'SP3D2-3': {
-            'angular_momentum': -5,
-            'magnetic_number': 2
-        },
-        'SP3D2-4': {
-            'angular_momentum': -5,
-            'magnetic_number': 3
-        },
-        'SP3D2-5': {
-            'angular_momentum': -5,
-            'magnetic_number': 4
-        },
-        'SP3D2-6': {
-            'angular_momentum': -5,
-            'magnetic_number': 5
-        },
-    }
+        'SP3D2-1': {'angular_momentum': -5, 'magnetic_number': 0},
+        'SP3D2-2': {'angular_momentum': -5, 'magnetic_number': 1},
+        'SP3D2-3': {'angular_momentum': -5, 'magnetic_number': 2},
+        'SP3D2-4': {'angular_momentum': -5, 'magnetic_number': 3},
+        'SP3D2-5': {'angular_momentum': -5, 'magnetic_number': 4},
+        'SP3D2-6': {'angular_momentum': -5, 'magnetic_number': 5},
+    },
 }
 
 
 class RealhydrogenOrbital(Orbital):
-    """
-    Orbitals for hydrogen, largely follows the conventions used by wannier90
+    """Orbitals for hydrogen, largely follows the conventions used by wannier90
     Object to handle the generation of real hydrogen orbitals and their
     hybrids, has methods for producing s, p, d, f, and sp, sp2, sp3, sp3d,
     sp3d2 hybrids. This method does not deal with the cannonical hydrogen
@@ -275,13 +153,15 @@ class RealhydrogenOrbital(Orbital):
     table 3.2. M then indexes all the possible orbitals from 0 to 2L for
     L > 0 and from 0 to (-L) for L < 0.
     """
+
     _base_fields_required = tuple(
-        list(Orbital._base_fields_required) +
-        [('angular_momentum', validate_l), ('magnetic_number', validate_m), ('radial_nodes', validate_n)]
+        list(Orbital._base_fields_required)
+        + [('angular_momentum', validate_l), ('magnetic_number', validate_m), ('radial_nodes', validate_n)]
     )
 
     _base_fields_optional = tuple(
-        list(Orbital._base_fields_optional) + [
+        list(Orbital._base_fields_optional)
+        + [
             ('kind_name', validate_kind_name, None),
             ('spin', validate_spin, 0),
             ('x_orientation', validate_len3_list_or_none, None),
@@ -301,8 +181,10 @@ class RealhydrogenOrbital(Orbital):
                 orb_dict['position'][0], orb_dict['position'][1], orb_dict['position'][2]
             )
             out_string = 'r{} {} orbital {} @ {}'.format(
-                orb_dict['radial_nodes'], orb_name,
-                "for kind '{}'".format(orb_dict['kind_name']) if orb_dict['kind_name'] else '', position_string
+                orb_dict['radial_nodes'],
+                orb_name,
+                "for kind '{}'".format(orb_dict['kind_name']) if orb_dict['kind_name'] else '',
+                position_string,
             )
         except KeyError:
             # Should not happen, but we want it not to crash in __str__
@@ -310,8 +192,7 @@ class RealhydrogenOrbital(Orbital):
         return out_string
 
     def _validate_keys(self, input_dict):
-        """
-        Validates the keys otherwise raise ValidationError. Does basic
+        """Validates the keys otherwise raise ValidationError. Does basic
         validation from the parent followed by validations for the
         quantum numbers. Raises exceptions should the input_dict fail the
         valiation or if it contains any unsupported keywords.
@@ -345,13 +226,13 @@ class RealhydrogenOrbital(Orbital):
 
     @classmethod
     def get_name_from_quantum_numbers(cls, angular_momentum, magnetic_number=None):
-        """
-        Returns the orbital_name correponding to the angular_momentum alone,
+        """Returns the orbital_name correponding to the angular_momentum alone,
         or to both angular_number with magnetic_number. For example using
         angular_momentum=1 and magnetic_number=1 will return "Px"
         """
         orbital_name = [
-            orbital for orbital, data in CONVERSION_DICT.items()
+            orbital
+            for orbital, data in CONVERSION_DICT.items()
             if any(values['angular_momentum'] == angular_momentum for values in data.values())
         ]
         if not orbital_name:
@@ -360,7 +241,8 @@ class RealhydrogenOrbital(Orbital):
             # finds angular momentum
             orbital_name = orbital_name[0]
             orbital_name = [
-                x for x in CONVERSION_DICT[orbital_name]
+                x
+                for x in CONVERSION_DICT[orbital_name]
                 if CONVERSION_DICT[orbital_name][x]['magnetic_number'] == magnetic_number
             ]
 
@@ -372,15 +254,16 @@ class RealhydrogenOrbital(Orbital):
 
     @classmethod
     def get_quantum_numbers_from_name(cls, name):
-        """
-        Returns all the angular and magnetic numbers corresponding to name.
+        """Returns all the angular and magnetic numbers corresponding to name.
         For example, using "P" as name will return all quantum numbers
         associated with a "P" orbital, while "Px" will return only one set
         of quantum numbers, the ones associated with "Px"
         """
         name = name.upper()
         list_of_dicts = [
-            subdata for orbital, data in CONVERSION_DICT.items() for suborbital, subdata in data.items()
+            subdata
+            for orbital, data in CONVERSION_DICT.items()
+            for suborbital, subdata in data.items()
             if name in (suborbital, orbital)
         ]
         if not list_of_dicts:

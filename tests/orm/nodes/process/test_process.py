@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=redefined-outer-name
 """Tests for :mod:`aiida.orm.nodes.process.process`."""
 import pytest
 
@@ -29,7 +28,7 @@ def process_nodes():
 
     node_invalid_cache_extra = WorkflowNode(label='node_invalid_cache_extra')
     node_invalid_cache_extra.set_process_state(ProcessState.FINISHED)
-    node_invalid_cache_extra.base.extras.set(NodeCaching._VALID_CACHE_KEY, False)  # pylint: disable=protected-access
+    node_invalid_cache_extra.base.extras.set(NodeCaching._VALID_CACHE_KEY, False)
 
     node_no_process_class = WorkflowNode(label='node_no_process_class')
     node_no_process_class.set_process_state(ProcessState.FINISHED)

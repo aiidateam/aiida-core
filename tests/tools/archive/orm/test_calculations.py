@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """orm.CalcNode tests for the export and import routines"""
-# pylint: disable=invalid-name
 import pytest
 
 from aiida import orm
@@ -29,7 +28,7 @@ def test_calcfunction(tmp_path, aiida_profile):
         return {'res': orm.Float(a + b)}
 
     def max_(**kwargs):
-        """select the max value"""
+        """Select the max value"""
         max_val = max((v.value, v) for v in kwargs.values())
         return {'res': max_val[1]}
 

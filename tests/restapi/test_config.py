@@ -8,7 +8,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Tests for the configuration options from `aiida.restapi.common.config` when running the REST API."""
-# pylint: disable=redefined-outer-name
 import pytest
 
 from aiida import orm

@@ -49,7 +49,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         entry_point_group: str,
         entry_point_name_filter: str = r'.*',
         shared_options: list[click.Option] | None = None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self._command = command
@@ -66,11 +66,14 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         :param ctx: The :class:`click.Context`.
         """
         commands = super().list_commands(ctx)
-        commands.extend([
-            entry_point for entry_point in get_entry_point_names(self.entry_point_group)
-            if re.match(self.entry_point_name_filter, entry_point) and
-            getattr(self.factory(entry_point), 'cli_exposed', True)
-        ])
+        commands.extend(
+            [
+                entry_point
+                for entry_point in get_entry_point_names(self.entry_point_group)
+                if re.match(self.entry_point_name_filter, entry_point)
+                and getattr(self.factory(entry_point), 'cli_exposed', True)
+            ]
+        )
         return sorted(commands)
 
     def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
@@ -138,9 +141,15 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             #     '`pydantic.BaseModel` that should be assigned to the `Config` class attribute.',
             #     version=3
             # )
+            from aiida.common.warnings import warn_deprecation
+
+            warn_deprecation(
+                'Relying on `_get_cli_options` is deprecated. The options should be defined through a '
+                '`pydantic.BaseModel` that should be assigned to the `Config` class attribute.',
+                version=3,
+            )
             options_spec = self.factory(entry_point).get_cli_options()  # type: ignore[union-attr]
         else:
-
             options_spec = {}
 
             for key, field_info in cls.Configuration.model_fields.items():

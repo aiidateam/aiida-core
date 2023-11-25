@@ -30,8 +30,7 @@ CALC_JOB_DRY_RUN_BASE_PATH = 'submit_test'
 
 
 class Folder:
-    """
-    A class to manage generic folders, avoiding to get out of
+    """A class to manage generic folders, avoiding to get out of
     specific given folder borders.
 
     .. todo::
@@ -66,9 +65,7 @@ class Folder:
 
     @property
     def mode_dir(self):
-        """
-        Return the mode with which the folders should be created
-        """
+        """Return the mode with which the folders should be created"""
         if GROUP_WRITABLE:
             return 0o770
 
@@ -76,17 +73,14 @@ class Folder:
 
     @property
     def mode_file(self):
-        """
-        Return the mode with which the files should be created
-        """
+        """Return the mode with which the files should be created"""
         if GROUP_WRITABLE:
             return 0o660
 
         return 0o600
 
     def get_subfolder(self, subfolder, create=False, reset_limit=False):
-        """
-        Return a Folder object pointing to a subfolder.
+        """Return a Folder object pointing to a subfolder.
 
         :param subfolder: a string with the relative path of the subfolder,
             relative to the absolute path of this object. Note that
@@ -163,7 +157,6 @@ class Folder:
         :param overwrite: if ``False``, raises an error on existing destination;
                 otherwise, delete it first.
         """
-        # pylint: disable=too-many-branches
         if dest_name is None:
             filename = str(os.path.basename(src))
         else:
@@ -276,8 +269,7 @@ class Folder:
 
     @contextlib.contextmanager
     def open(self, name, mode='r', encoding='utf8', check_existence=False):
-        """
-        Open a file in the current folder and return the corresponding file object.
+        """Open a file in the current folder and return the corresponding file object.
 
         :param check_existence: if False, just return the file path.
             Otherwise, also check if the file or directory actually exists.
@@ -291,41 +283,32 @@ class Folder:
 
     @property
     def abspath(self):
-        """
-        The absolute path of the folder.
-        """
+        """The absolute path of the folder."""
         return self._abspath
 
     @property
     def folder_limit(self):
-        """
-        The folder limit that cannot be crossed when creating files and folders.
-        """
+        """The folder limit that cannot be crossed when creating files and folders."""
         return self._folder_limit
 
     def exists(self):
-        """
-        Return True if the folder exists, False otherwise.
-        """
+        """Return True if the folder exists, False otherwise."""
         return os.path.exists(self.abspath)
 
     def isfile(self, relpath):
-        """
-        Return True if 'relpath' exists inside the folder and is a file,
+        """Return True if 'relpath' exists inside the folder and is a file,
         False otherwise.
         """
         return os.path.isfile(os.path.join(self.abspath, relpath))
 
     def isdir(self, relpath):
-        """
-        Return True if 'relpath' exists inside the folder and is a directory,
+        """Return True if 'relpath' exists inside the folder and is a directory,
         False otherwise.
         """
         return os.path.isdir(os.path.join(self.abspath, relpath))
 
     def erase(self, create_empty_folder=False):
-        """
-        Erases the folder. Should be called only in very specific cases,
+        """Erases the folder. Should be called only in very specific cases,
         in general folder should not be erased!
 
         Doesn't complain if the folder does not exist.
@@ -339,8 +322,7 @@ class Folder:
             self.create()
 
     def create(self):
-        """
-        Creates the folder, if it does not exist on the disk yet.
+        """Creates the folder, if it does not exist on the disk yet.
 
         It will also create top directories, if absent.
 
@@ -387,7 +369,7 @@ class Folder:
             os.chmod(dirpath, self.mode_dir)
             for filename in filenames:
                 # do not change permissions of symlinks (this would actually change permissions of the linked file/dir)
-                # TODO check whether this is a big speed loss  # pylint: disable=fixme
+                # TODO check whether this is a big speed loss
                 full_file_path = os.path.join(dirpath, filename)
                 if not os.path.islink(full_file_path):
                     os.chmod(full_file_path, self.mode_file)

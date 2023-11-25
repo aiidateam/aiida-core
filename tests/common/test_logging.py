@@ -34,10 +34,10 @@ def test_log_report(caplog):
     msg = 'Testing a report message'
     logger = logging.getLogger()
 
-    with caplog.at_level(logging.REPORT):  # pylint: disable=no-member
+    with caplog.at_level(logging.REPORT):
         logger.report(msg)
 
-    assert caplog.record_tuples == [(logger.name, logging.REPORT, msg)]  # pylint: disable=no-member
+    assert caplog.record_tuples == [(logger.name, logging.REPORT, msg)]
 
 
 def test_capture_logging():

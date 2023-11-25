@@ -35,18 +35,18 @@ def upf():
     '--stop-if-existing',
     is_flag=True,
     default=False,
-    help='Interrupt pseudos import if a pseudo was already present in the AiiDA database'
+    help='Interrupt pseudos import if a pseudo was already present in the AiiDA database',
 )
 @decorators.with_dbenv()
 def upf_uploadfamily(folder, group_label, group_description, stop_if_existing):
-    """
-    Create a new UPF family from a folder of UPF files.
+    """Create a new UPF family from a folder of UPF files.
 
     Returns the numbers of files found and the number of nodes uploaded.
 
     Call without parameters to get some help.
     """
     from aiida.orm.nodes.data.upf import upload_upf_family
+
     files_found, files_uploaded = upload_upf_family(folder, group_label, group_description, stop_if_existing)
     echo.echo_success(f'UPF files found: {files_found}. New files uploaded: {files_uploaded}')
 
@@ -61,18 +61,16 @@ def upf_uploadfamily(folder, group_label, group_description, stop_if_existing):
     'with_description',
     is_flag=True,
     default=False,
-    help='Show also the description for the UPF family'
+    help='Show also the description for the UPF family',
 )
 @options.WITH_ELEMENTS()
 @decorators.with_dbenv()
 def upf_listfamilies(elements, with_description):
-    """
-    List all UPF families that exist in the database.
-    """
+    """List all UPF families that exist in the database."""
     from aiida import orm
     from aiida.plugins import DataFactory
 
-    UpfData = DataFactory('core.upf')  # pylint: disable=invalid-name
+    UpfData = DataFactory('core.upf')  # noqa: N806
     query = orm.QueryBuilder()
     query.append(UpfData, tag='upfdata')
     if elements is not None:
@@ -107,8 +105,7 @@ def upf_listfamilies(elements, with_description):
 @arguments.GROUP()
 @decorators.with_dbenv()
 def upf_exportfamily(folder, group):
-    """
-    Export a pseudopotential family into a folder.
+    """Export a pseudopotential family into a folder.
     Call without parameters to get some help.
     """
     if group.is_empty:
@@ -130,9 +127,7 @@ def upf_exportfamily(folder, group):
 @click.argument('filename', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
 @decorators.with_dbenv()
 def upf_import(filename):
-    """
-    Import a UPF pseudopotential from a file.
-    """
+    """Import a UPF pseudopotential from a file."""
     from aiida.orm import UpfData
 
     node, _ = UpfData.get_or_create(filename)

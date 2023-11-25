@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=import-error,no-name-in-module
 """Module to manage nodes for the SQLA backend."""
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import backref, relationship
@@ -38,7 +37,7 @@ class DbNode(Base):
 
     __tablename__ = 'db_dbnode'
 
-    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
+    id = Column(Integer, primary_key=True)
     uuid = Column(UUID(as_uuid=True), default=get_new_uuid, nullable=False, unique=True)
     node_type = Column(String(255), default='', nullable=False, index=True)
     process_type = Column(String(255), index=True)
@@ -53,16 +52,15 @@ class DbNode(Base):
         Integer,
         ForeignKey('db_dbcomputer.id', deferrable=True, initially='DEFERRED', ondelete='RESTRICT'),
         nullable=True,
-        index=True
+        index=True,
     )
     user_id = Column(
         Integer,
         ForeignKey('db_dbuser.id', deferrable=True, initially='DEFERRED', ondelete='RESTRICT'),
         nullable=False,
-        index=True
+        index=True,
     )
 
-    # pylint: disable=fixme
     # TODO SP: The 'passive_deletes=all' argument here means that SQLAlchemy
     # won't take care of automatic deleting in the DbLink table. This still
     # isn't exactly the same behaviour than with Django. The solution to
@@ -70,11 +68,14 @@ class DbNode(Base):
     # we would remove all link with x as an output.
 
     dbcomputer = relationship('DbComputer', backref=backref('dbnodes', passive_deletes='all', cascade='merge'))
-    user = relationship('DbUser', backref=backref(
-        'dbnodes',
-        passive_deletes='all',
-        cascade='merge',
-    ))
+    user = relationship(
+        'DbUser',
+        backref=backref(
+            'dbnodes',
+            passive_deletes='all',
+            cascade='merge',
+        ),
+    )
 
     # outputs via db_dblink table
     outputs_q = relationship(
@@ -84,7 +85,7 @@ class DbNode(Base):
         secondaryjoin='DbNode.id == DbLink.output_id',
         backref=backref('inputs_q', passive_deletes=True, lazy='dynamic'),
         lazy='dynamic',
-        passive_deletes=True
+        passive_deletes=True,
     )
 
     __table_args__ = (
@@ -95,13 +96,13 @@ class DbNode(Base):
             'ix_pat_db_dbnode_node_type',
             node_type,
             postgresql_using='btree',
-            postgresql_ops={'node_type': 'varchar_pattern_ops'}
+            postgresql_ops={'node_type': 'varchar_pattern_ops'},
         ),
         Index(
             'ix_pat_db_dbnode_process_type',
             process_type,
             postgresql_using='btree',
-            postgresql_ops={'process_type': 'varchar_pattern_ops'}
+            postgresql_ops={'process_type': 'varchar_pattern_ops'},
         ),
     )
 
@@ -111,11 +112,10 @@ class DbNode(Base):
 
     @property
     def inputs(self):
-        return self.inputs_q.all()  # pylint: disable=no-member
+        return self.inputs_q.all()
 
     def get_simple_name(self, invalid_result=None):
-        """
-        Return a string with the last part of the type name.
+        """Return a string with the last part of the type name.
 
         If the type is empty, use 'Node'.
         If the type is invalid, return the content of the input variable
@@ -158,7 +158,7 @@ class DbLink(Base):
 
     __tablename__ = 'db_dblink'
 
-    id = Column(Integer, primary_key=True)  # pylint: disable=invalid-name
+    id = Column(Integer, primary_key=True)
     input_id = Column(
         Integer, ForeignKey('db_dbnode.id', deferrable=True, initially='DEFERRED'), nullable=False, index=True
     )
@@ -166,7 +166,7 @@ class DbLink(Base):
         Integer,
         ForeignKey('db_dbnode.id', ondelete='CASCADE', deferrable=True, initially='DEFERRED'),
         nullable=False,
-        index=True
+        index=True,
     )
 
     # https://docs.sqlalchemy.org/en/14/errors.html#relationship-x-will-copy-column-q-to-column-p-which-conflicts-with-relationship-s-y
@@ -193,6 +193,8 @@ class DbLink(Base):
 
     def __str__(self):
         return '{} ({}) --> {} ({})'.format(
-            self.input.get_simple_name(invalid_result='Unknown node'), self.input.pk,
-            self.output.get_simple_name(invalid_result='Unknown node'), self.output.pk
+            self.input.get_simple_name(invalid_result='Unknown node'),
+            self.input.pk,
+            self.output.get_simple_name(invalid_result='Unknown node'),
+            self.output.pk,
         )

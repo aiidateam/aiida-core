@@ -38,7 +38,7 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
         )
 
     @property
-    def id(self):  # pylint: disable=invalid-name
+    def id(self):
         return self.model.id
 
     @property
@@ -100,14 +100,14 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
 
         :return: a dictionary with metadata
         """
-        return self.model._metadata  # pylint: disable=protected-access
+        return self.model._metadata
 
     def set_metadata(self, metadata):
         """Set the dictionary of metadata
 
         :param metadata: a dictionary with metadata
         """
-        self.model._metadata = metadata  # pylint: disable=protected-access
+        self.model._metadata = metadata
 
 
 class SqlaAuthInfoCollection(BackendAuthInfoCollection):
@@ -120,7 +120,6 @@ class SqlaAuthInfoCollection(BackendAuthInfoCollection):
 
         :param pk: the pk of the entry to delete
         """
-        # pylint: disable=import-error,no-name-in-module
         from sqlalchemy.orm.exc import NoResultFound
 
         session = self.backend.get_session()

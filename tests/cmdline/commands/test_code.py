@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=unused-argument,redefined-outer-name
 """Tests for the 'verdi code' command."""
 import io
 import os
@@ -169,8 +168,13 @@ def test_noninteractive_upload(run_cli_command, non_interactive_editor):
     """Test non-interactive code setup."""
     label = 'noninteractive_upload'
     options = [
-        '--non-interactive', f'--label={label}', '--description=description', '--input-plugin=core.arithmetic.add',
-        '--store-in-db', f'--code-folder={os.path.dirname(__file__)}', f'--code-rel-path={os.path.basename(__file__)}'
+        '--non-interactive',
+        f'--label={label}',
+        '--description=description',
+        '--input-plugin=core.arithmetic.add',
+        '--store-in-db',
+        f'--code-folder={os.path.dirname(__file__)}',
+        f'--code-rel-path={os.path.basename(__file__)}',
     ]
     run_cli_command(cmd_code.setup_code, options)
     assert isinstance(load_code(label), PortableCode)
@@ -287,8 +291,9 @@ def test_from_config_url(non_interactive_editor, run_cli_command, aiida_localhos
     from urllib import request
 
     monkeypatch.setattr(
-        request, 'urlopen',
-        lambda *args, **kwargs: config_file_template.format(label=label, computer=aiida_localhost.label)
+        request,
+        'urlopen',
+        lambda *args, **kwargs: config_file_template.format(label=label, computer=aiida_localhost.label),
     )
 
     config_file_template = textwrap.dedent(
@@ -316,9 +321,9 @@ def test_code_setup_remote_duplicate_full_label_interactive(
     assert isinstance(load_code(label), InstalledCode)
 
     label_unique = 'label-unique'
-    user_input = '\n'.join([
-        'yes', aiida_localhost.label, label, label_unique, 'd', 'core.arithmetic.add', '/bin/bash', 'y'
-    ])
+    user_input = '\n'.join(
+        ['yes', aiida_localhost.label, label, label_unique, 'd', 'core.arithmetic.add', '/bin/bash', 'y']
+    )
     run_cli_command(cmd_code.setup_code, user_input=user_input)
     assert isinstance(load_code(label_unique), InstalledCode)
 
@@ -377,8 +382,16 @@ def test_code_setup_local_duplicate_full_label_non_interactive(
     assert isinstance(load_code(label), PortableCode)
 
     options = [
-        '-n', '-D', 'd', '-P', 'core.arithmetic.add', '--store-in-db', '--code-folder=/bin', '--code-rel-path=bash',
-        '--label', label
+        '-n',
+        '-D',
+        'd',
+        '-P',
+        'core.arithmetic.add',
+        '--store-in-db',
+        '--code-folder=/bin',
+        '--code-rel-path=bash',
+        '--label',
+        label,
     ]
 
     result = run_cli_command(cmd_code.setup_code, options, raises=True)
@@ -443,22 +456,31 @@ def command_options(request, aiida_localhost, tmp_path):
     if 'containerized' in request.param:
         engine_command = 'singularity exec --bind $PWD:$PWD {image_name}'
         image_name = 'ubuntu'
-        options.extend([
-            '--computer',
-            str(aiida_localhost.pk), '--filepath-executable', '/usr/bin/bash', '--engine-command', engine_command,
-            '--image-name', image_name
-        ])
+        options.extend(
+            [
+                '--computer',
+                str(aiida_localhost.pk),
+                '--filepath-executable',
+                '/usr/bin/bash',
+                '--engine-command',
+                engine_command,
+                '--image-name',
+                image_name,
+            ]
+        )
 
     return options, request.param
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize(
-    'command_options', (
+    'command_options',
+    (
         'core.code.installed',
         'core.code.portable',
         'core.code.containerized',
-    ), indirect=True
+    ),
+    indirect=True,
 )
 @pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
 def test_code_create(run_cli_command, command_options, non_interactive_editor):

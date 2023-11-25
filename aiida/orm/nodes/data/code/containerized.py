@@ -25,6 +25,7 @@ __all__ = ('ContainerizedCode',)
 
 class ContainerizedCode(InstalledCode):
     """Data plugin representing an executable code in container on a remote computer."""
+
     _KEY_ATTRIBUTE_ENGINE_COMMAND: str = 'engine_command'
     _KEY_ATTRIBUTE_IMAGE_NAME: str = 'image_name'
 
@@ -97,7 +98,8 @@ class ContainerizedCode(InstalledCode):
     ) -> list[str]:
         """Return the list of prepend cmdline params for mpi seeting
 
-        :return: list of prepend cmdline parameters."""
+        :return: list of prepend cmdline parameters.
+        """
         engine_cmdline = self.engine_command.format(image_name=self.image_name)
         engine_cmdline_params = engine_cmdline.split()
 
@@ -130,7 +132,7 @@ class ContainerizedCode(InstalledCode):
                 'help': 'Whether all command line parameters to be passed to the engine command should be wrapped in '
                 'a double quotes to form a single argument. This should be set to `True` for Docker.',
                 'prompt': 'Wrap command line parameters',
-            }
+            },
         }
         options.update(**super()._get_cli_options())
 

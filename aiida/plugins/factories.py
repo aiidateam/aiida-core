@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,cyclic-import
+# ruff: noqa: N802
 """Definition of factories to load classes from the various plugin groups."""
 from __future__ import annotations
 
@@ -16,8 +16,18 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, Tuple, Type,
 from aiida.common.exceptions import InvalidEntryPointTypeError
 
 __all__ = (
-    'BaseFactory', 'CalculationFactory', 'CalcJobImporterFactory', 'DataFactory', 'DbImporterFactory', 'GroupFactory',
-    'OrbitalFactory', 'ParserFactory', 'SchedulerFactory', 'StorageFactory', 'TransportFactory', 'WorkflowFactory'
+    'BaseFactory',
+    'CalculationFactory',
+    'CalcJobImporterFactory',
+    'DataFactory',
+    'DbImporterFactory',
+    'GroupFactory',
+    'OrbitalFactory',
+    'ParserFactory',
+    'SchedulerFactory',
+    'StorageFactory',
+    'TransportFactory',
+    'WorkflowFactory',
 )
 
 if TYPE_CHECKING:
@@ -95,8 +105,9 @@ def CalculationFactory(entry_point_name: str, load: bool = True) -> Union[EntryP
     if not load:
         return entry_point
 
-    if ((isclass(entry_point) and issubclass(entry_point, CalcJob)) or
-        (is_process_function(entry_point) and entry_point.node_class is CalcFunctionNode)):  # type: ignore[union-attr]
+    if (isclass(entry_point) and issubclass(entry_point, CalcJob)) or (
+        is_process_function(entry_point) and entry_point.node_class is CalcFunctionNode  # type: ignore[union-attr]
+    ):
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)
@@ -445,8 +456,9 @@ def WorkflowFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoin
     if not load:
         return entry_point
 
-    if ((isclass(entry_point) and issubclass(entry_point, WorkChain)) or
-        (is_process_function(entry_point) and entry_point.node_class is WorkFunctionNode)):  # type: ignore[union-attr]
+    if (isclass(entry_point) and issubclass(entry_point, WorkChain)) or (
+        is_process_function(entry_point) and entry_point.node_class is WorkFunctionNode  # type: ignore[union-attr]
+    ):
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)

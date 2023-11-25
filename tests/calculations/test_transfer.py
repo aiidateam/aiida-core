@@ -19,7 +19,6 @@ from aiida.common import datastructures
 @pytest.mark.requires_rmq
 def test_get_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path):
     """Test a default `TransferCalculation`."""
-
     file1 = tmp_path / 'file1.txt'
     file1.write_text('file 1 content')
     folder = tmp_path / 'folder'
@@ -68,7 +67,6 @@ def test_get_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_p
 @pytest.mark.requires_rmq
 def test_put_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path):
     """Test a default `TransferCalculation`."""
-
     file1 = tmp_path / 'file1.txt'
     file1.write_text('file 1 content')
     folder = tmp_path / 'folder'
@@ -151,10 +149,10 @@ def test_validate_transfer_inputs(aiida_localhost, tmp_path):
         hostname='localhost-fake',
         workdir=str(tmp_path),
         transport_type='core.local',
-        scheduler_type='core.direct'
+        scheduler_type='core.direct',
     )
     fake_localhost.store()
-    fake_localhost.set_minimum_job_poll_interval(0.)
+    fake_localhost.set_minimum_job_poll_interval(0.0)
     fake_localhost.configure()
 
     inputs = {
@@ -168,15 +166,15 @@ def test_validate_transfer_inputs(aiida_localhost, tmp_path):
                 'symlink_files': [('inexistent_node', None, None)],
             }
         ),
-        'metadata': {
-            'computer': fake_localhost
-        },
+        'metadata': {'computer': fake_localhost},
     }
     expected_list = []
-    expected_list.append((
-        f' > remote node `unused_node` points to computer `{aiida_localhost}`, '
-        f'not the one being used (`{fake_localhost}`)'
-    ))
+    expected_list.append(
+        (
+            f' > remote node `unused_node` points to computer `{aiida_localhost}`, '
+            f'not the one being used (`{fake_localhost}`)'
+        )
+    )
     expected_list.append(check_node_type('local_files', 'inexistent_node', None, orm.FolderData))
     expected_list.append(check_node_type('remote_files', 'inexistent_node', None, orm.RemoteData))
     expected_list.append(check_node_type('symlink_files', 'inexistent_node', None, orm.RemoteData))
@@ -240,7 +238,7 @@ def test_integration_transfer(aiida_localhost, tmp_path):
     assert output_retrieved.base.repository.get_object_content('file_local.txt') == content_local
     assert output_retrieved.base.repository.get_object_content('file_remote.txt') == content_remote
 
-    # Check the remote folder
+    # Check the remote folder
     assert 'file_local.txt' in output_remotedir.listdir()
     assert 'file_remote.txt' in output_remotedir.listdir()
     output_remotedir.getfile(relpath='file_local.txt', destpath=str(tmp_path / 'retrieved_local.txt'))

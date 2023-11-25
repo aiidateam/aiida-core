@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=cyclic-import
 """AiiDA manager for global settings"""
 import functools
 from typing import TYPE_CHECKING, Any, Optional, Union
@@ -32,13 +31,13 @@ MANAGER: Optional['Manager'] = None
 
 def get_manager() -> 'Manager':
     """Return the AiiDA global manager instance."""
-    global MANAGER  # pylint: disable=global-statement
+    global MANAGER  # noqa: PLW0603
     if MANAGER is None:
         MANAGER = Manager()
     return MANAGER
 
 
-class Manager:  # pylint: disable=too-many-public-methods
+class Manager:
     """Manager singleton for globally loaded resources.
 
     AiiDA can have the following global resources loaded:
@@ -85,6 +84,7 @@ class Manager:  # pylint: disable=too-many-public-methods
 
         """
         from .configuration import get_config
+
         return get_config(create=create)
 
     def get_profile(self) -> Optional['Profile']:
@@ -235,6 +235,7 @@ class Manager:  # pylint: disable=too-many-public-methods
         Deprecated: use `get_profile_storage` instead.
         """
         from aiida.common.warnings import warn_deprecation
+
         warn_deprecation('get_backend() is deprecated, use get_profile_storage() instead', version=3)
         return self.get_profile_storage()
 
@@ -371,6 +372,7 @@ class Manager:  # pylint: disable=too-many-public-methods
 
         """
         from plumpy.process_comms import RemoteProcessThreadController
+
         if self._process_controller is None:
             self._process_controller = RemoteProcessThreadController(self.get_communicator())
 
@@ -451,7 +453,7 @@ class Manager:  # pylint: disable=too-many-public-methods
             loop=runner_loop,
             persister=self.get_persister(),
             load_context=LoadSaveContext(runner=runner),
-            loader=persistence.get_object_loader()
+            loader=persistence.get_object_loader(),
         )
 
         assert runner.communicator is not None, 'communicator not set for runner'
@@ -507,6 +509,7 @@ def is_rabbitmq_version_supported(communicator: 'RmqThreadCommunicator') -> bool
     :return: boolean whether the current RabbitMQ version is supported.
     """
     from packaging.version import parse
+
     version = get_rabbitmq_version(communicator)
     return parse('3.6.0') <= version < parse('3.8.15')
 
@@ -517,4 +520,5 @@ def get_rabbitmq_version(communicator: 'RmqThreadCommunicator'):
     :return: :class:`packaging.version.Version`
     """
     from packaging.version import parse
+
     return parse(communicator.server_properties['version'].decode('utf-8'))

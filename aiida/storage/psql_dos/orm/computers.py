@@ -11,7 +11,6 @@
 
 from copy import copy
 
-# pylint: disable=import-error,no-name-in-module
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.session import make_transient
 
@@ -24,8 +23,6 @@ from . import entities, utils
 
 class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
     """SqlAlchemy implementation for `BackendComputer`."""
-
-    # pylint: disable=too-many-public-methods
 
     MODEL_CLASS = DbComputer
 
@@ -42,7 +39,7 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
         return self.model.id
 
     @property
-    def id(self):  # pylint: disable=invalid-name
+    def id(self):
         return self.model.id
 
     @property
@@ -86,10 +83,10 @@ class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
         return self.model.hostname
 
     def get_metadata(self):
-        return self.model._metadata  # pylint: disable=protected-access
+        return self.model._metadata
 
     def set_metadata(self, metadata):
-        self.model._metadata = metadata  # pylint: disable=protected-access
+        self.model._metadata = metadata
 
     def set_label(self, val):
         self.model.label = val

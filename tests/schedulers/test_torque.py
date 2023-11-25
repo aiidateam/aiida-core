@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,protected-access,too-many-lines
 """Tests for the `TorqueScheduler` plugin."""
 import unittest
 import uuid
@@ -755,16 +754,12 @@ Unable to copy file 543984.E
 
 
 class TestParserQstat(unittest.TestCase):
-    """
-    Tests to verify if teh function _parse_joblist_output behave correctly
+    """Tests to verify if teh function _parse_joblist_output behave correctly
     The tests is done parsing a string defined above, to be used offline
     """
 
     def test_parse_common_joblist_output(self):
-        """
-        Test whether _parse_joblist can parse the qstat -f output
-        """
-        # pylint: disable=too-many-locals
+        """Test whether _parse_joblist can parse the qstat -f output"""
         s = TorqueScheduler()
 
         retval = 0
@@ -779,28 +774,23 @@ class TestParserQstat(unittest.TestCase):
         self.assertEqual(job_parsed, job_on_cluster)
 
         job_running = 2
-        job_running_parsed = len([j for j in job_list if j.job_state \
-                                  and j.job_state == JobState.RUNNING])
+        job_running_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.RUNNING])
         self.assertEqual(job_running, job_running_parsed)
 
         job_held = 2
-        job_held_parsed = len([j for j in job_list if j.job_state \
-                               and j.job_state == JobState.QUEUED_HELD])
+        job_held_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.QUEUED_HELD])
         self.assertEqual(job_held, job_held_parsed)
 
         job_queued = 2
-        job_queued_parsed = len([j for j in job_list if j.job_state \
-                                 and j.job_state == JobState.QUEUED])
+        job_queued_parsed = len([j for j in job_list if j.job_state and j.job_state == JobState.QUEUED])
         self.assertEqual(job_queued, job_queued_parsed)
 
         running_users = ['user02', 'user3']
-        parsed_running_users = [j.job_owner for j in job_list if j.job_state \
-                                and j.job_state == JobState.RUNNING]
+        parsed_running_users = [j.job_owner for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
         self.assertEqual(set(running_users), set(parsed_running_users))
 
         running_jobs = ['69301.mycluster', '74164.mycluster']
-        parsed_running_jobs = [j.job_id for j in job_list if j.job_state \
-                               and j.job_state == JobState.RUNNING]
+        parsed_running_jobs = [j.job_id for j in job_list if j.job_state and j.job_state == JobState.RUNNING]
         self.assertEqual(set(running_jobs), set(parsed_running_jobs))
 
         for j in job_list:
@@ -815,11 +805,9 @@ class TestParserQstat(unittest.TestCase):
                 self.assertTrue(j.num_cpus == num_cpus)
 
     def test_parse_with_unexpected_newlines(self):
-        """
-        Test whether _parse_joblist can parse the qstat -f output
+        """Test whether _parse_joblist can parse the qstat -f output
         also when there are unexpected newlines
         """
-        # pylint: disable=too-many-locals
         s = TorqueScheduler()
 
         retval = 0
@@ -869,9 +857,7 @@ class TestSubmitScript(unittest.TestCase):
     """Test the submit script."""
 
     def test_submit_script(self):
-        """
-        Test to verify if scripts works fine with default options
-        """
+        """Test to verify if scripts works fine with default options"""
         from aiida.common.datastructures import CodeRunMode
         from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
 
@@ -896,8 +882,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_with_num_cores_per_machine(self):
-        """
-        Test to verify if script works fine if we specify only
+        """Test to verify if script works fine if we specify only
         num_cores_per_machine value.
         """
         from aiida.common.datastructures import CodeRunMode
@@ -926,8 +911,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_with_num_cores_per_mpiproc(self):
-        """
-        Test to verify if scripts works fine if we pass only
+        """Test to verify if scripts works fine if we pass only
         num_cores_per_mpiproc value
         """
         from aiida.common.datastructures import CodeRunMode
@@ -956,8 +940,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_with_num_cores_per_machine_and_mpiproc1(self):
-        """
-        Test to verify if scripts works fine if we pass both
+        """Test to verify if scripts works fine if we pass both
         num_cores_per_machine and num_cores_per_mpiproc correct values
         It should pass in check:
         res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine
@@ -988,8 +971,7 @@ class TestSubmitScript(unittest.TestCase):
         self.assertTrue("'mpirun' '-np' '23' 'pw.x' '-npool' '1' < 'aiida.in'" in submit_script_text)
 
     def test_submit_script_with_num_cores_per_machine_and_mpiproc2(self):
-        """
-        Test to verify if scripts works fine if we pass
+        """Test to verify if scripts works fine if we pass
         num_cores_per_machine and num_cores_per_mpiproc wrong values
         It should fail in check:
         res.num_cores_per_mpiproc * res.num_mpiprocs_per_machine = res.num_cores_per_machine

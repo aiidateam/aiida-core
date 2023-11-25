@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Update all link labels with the value `_return`
 
 This is the legacy default single link label.
@@ -20,8 +19,8 @@ Revision ID: django_0043
 Revises: django_0042
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = 'django_0043'
 down_revision = 'django_0042'
@@ -32,15 +31,19 @@ depends_on = None
 def upgrade():
     """Migrations for the upgrade."""
     conn = op.get_bind()
-    statement = sa.text("""
+    statement = sa.text(
+        """
         UPDATE db_dblink SET label='result' WHERE label = '_return';
-    """)
+    """
+    )
     conn.execute(statement)
 
 
 def downgrade():
     """Migrations for the downgrade."""
-    statement = sa.text("""
+    statement = sa.text(
+        """
         UPDATE db_dblink SET label='_result' WHERE label = 'return';
-    """)
+    """
+    )
     op.get_bind().execute(statement)

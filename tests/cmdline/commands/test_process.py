@@ -38,11 +38,10 @@ def await_condition(condition: t.Callable, timeout: int = 1):
 class TestVerdiProcess:
     """Tests for `verdi process`."""
 
-    TEST_TIMEOUT = 5.
+    TEST_TIMEOUT = 5.0
 
     def test_list_non_raw(self, run_cli_command):
         """Test the list command as the user would run it (e.g. without -r)."""
-
         result = run_cli_command(cmd_process.process_list)
 
         assert 'Total results:' in result.output
@@ -50,13 +49,11 @@ class TestVerdiProcess:
 
     def test_list(self, run_cli_command):
         """Test the list command."""
-        # pylint: disable=too-many-branches,too-many-statements
         calcs = []
         process_label = 'SomeDummyWorkFunctionNode'
 
         # Create 6 WorkFunctionNodes and WorkChainNodes (one for each ProcessState)
         for state in ProcessState:
-
             calc = WorkFunctionNode()
             calc.set_process_state(state)
 
@@ -105,7 +102,6 @@ class TestVerdiProcess:
 
         # but the orders should be inverse
         for flag in ['-D', '--order-direction']:
-
             flag_value = 'asc'
             result = run_cli_command(cmd_process.process_list, ['-r', '-O', 'id', flag, flag_value])
 
@@ -342,8 +338,7 @@ class TestVerdiProcess:
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_list_worker_slot_warning(run_cli_command, monkeypatch):
-    """
-    Test that the if the number of used worker process slots exceeds a threshold,
+    """Test that the if the number of used worker process slots exceeds a threshold,
     that the warning message is displayed to the user when running `verdi process list`
     """
     from aiida.engine import DaemonClient
@@ -385,7 +380,6 @@ class TestVerdiProcessCallRoot:
     @pytest.fixture(autouse=True)
     def init_profile(self):
         """Initialize the profile."""
-        # pylint: disable=attribute-defined-outside-init
         self.node_root = WorkflowNode()
         self.node_middle = WorkflowNode()
         self.node_terminal = WorkflowNode()

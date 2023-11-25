@@ -78,7 +78,6 @@ class CalculationProjectionMapper(ProjectionMapper):
     """The CLI projection mapper for Calculation derived entities."""
 
     def __init__(self, projections, projection_labels=None, projection_attributes=None, projection_formatters=None):
-        # pylint: disable=too-many-locals
         from aiida.orm import ProcessNode
         from aiida.orm.nodes.caching import NodeCaching
         from aiida.orm.utils.mixins import Sealable
@@ -103,7 +102,7 @@ class CalculationProjectionMapper(ProjectionMapper):
             'ctime': 'Created',
             'mtime': 'Modified',
             'state': 'Process State',
-            'cached': '\u267B'
+            'cached': '\u267B',
         }
 
         default_attributes = {

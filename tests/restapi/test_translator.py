@@ -9,7 +9,6 @@
 ###########################################################################
 """Tests for the `aiida.restapi.translator` module."""
 from aiida.orm import Data
-# pylint: disable=invalid-name
 from aiida.restapi.translator.nodes.node import NodeTranslator
 
 

@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Translator for group
+"""Translator for group
 """
 
 from aiida import orm
@@ -16,9 +15,7 @@ from aiida.restapi.translator.base import BaseTranslator
 
 
 class GroupTranslator(BaseTranslator):
-    """
-    Translator relative to resource 'groups' and aiida class Group
-    """
+    """Translator relative to resource 'groups' and aiida class Group"""
 
     # A label associated to the present class (coincides with the resource name)
     __label__ = 'groups'
@@ -32,9 +29,8 @@ class GroupTranslator(BaseTranslator):
 
     _result_type = __label__
 
-    def get_projectable_properties(self):  # pylint: disable=arguments-differ
-        """
-        Get projectable properties specific for Group
+    def get_projectable_properties(self):
+        """Get projectable properties specific for Group
         :return: dict of projectable properties and column_order list
         """
         projectable_properties = {
@@ -43,28 +39,28 @@ class GroupTranslator(BaseTranslator):
                 'help_text': 'Short description of the group',
                 'is_foreign_key': False,
                 'type': 'str',
-                'is_display': False
+                'is_display': False,
             },
             'id': {
                 'display_name': 'Id',
                 'help_text': 'Id of the object',
                 'is_foreign_key': False,
                 'type': 'int',
-                'is_display': False
+                'is_display': False,
             },
             'label': {
                 'display_name': 'Label',
                 'help_text': 'Name of the object',
                 'is_foreign_key': False,
                 'type': 'str',
-                'is_display': True
+                'is_display': True,
             },
             'type_string': {
                 'display_name': 'Type_string',
                 'help_text': 'Type of the group',
                 'is_foreign_key': False,
                 'type': 'str',
-                'is_display': True
+                'is_display': True,
             },
             'user_id': {
                 'display_name': 'Id of creator',
@@ -73,15 +69,15 @@ class GroupTranslator(BaseTranslator):
                 'related_column': 'id',
                 'related_resource': 'users',
                 'type': 'int',
-                'is_display': False
+                'is_display': False,
             },
             'uuid': {
                 'display_name': 'Unique ID',
                 'help_text': 'Universally Unique Identifier',
                 'is_foreign_key': False,
                 'type': 'unicode',
-                'is_display': False
-            }
+                'is_display': False,
+            },
         }
 
         # Note: final schema will contain details for only the fields present in column order

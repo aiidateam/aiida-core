@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Various utilities to deal with StructureData instances or create new ones
+"""Various utilities to deal with StructureData instances or create new ones
 (e.g. convert format to/from SPGLIB, create a StructureData from a different
 format, ...)
 
@@ -28,8 +27,7 @@ __all__ = ('structure_to_spglib_tuple', 'spglib_tuple_to_structure')
 
 @calcfunction
 def _get_cif_ase_inline(struct, parameters):
-    """
-    Creates :py:class:`aiida.orm.nodes.data.cif.CifData` using ASE.
+    """Creates :py:class:`aiida.orm.nodes.data.cif.CifData` using ASE.
 
     .. note:: requires ASE module.
     """
@@ -41,7 +39,6 @@ def _get_cif_ase_inline(struct, parameters):
     cif = CifData(ase=struct.get_ase(**kwargs))
     formula = struct.get_formula(mode='hill', separator=' ')
     for i in cif.values.keys():
-        # pylint: disable=unsubscriptable-object
         cif.values[i]['_symmetry_space_group_name_H-M'] = 'P 1'
         cif.values[i]['_symmetry_space_group_name_Hall'] = 'P 1'
         cif.values[i]['_symmetry_Int_Tables_number'] = 1
@@ -51,8 +48,7 @@ def _get_cif_ase_inline(struct, parameters):
 
 
 def structure_to_spglib_tuple(structure):
-    """
-    Convert an AiiDA structure to a tuple of the format (cell, scaled_positions, element_numbers).
+    """Convert an AiiDA structure to a tuple of the format (cell, scaled_positions, element_numbers).
 
     :param structure: the AiiDA structure
     :return: (structure_tuple, kind_info, kinds) where structure_tuple
@@ -64,9 +60,7 @@ def structure_to_spglib_tuple(structure):
     """
 
     def get_new_number(the_list, start_from):
-        """
-        Get the first integer >= start_from not yet in the list
-        """
+        """Get the first integer >= start_from not yet in the list"""
         retval = start_from
         comp_list = sorted(_ for _ in the_list if _ >= start_from)
 
@@ -107,9 +101,8 @@ def structure_to_spglib_tuple(structure):
     return ((cell, rel_pos, numbers), kind_numbers, list(structure.kinds))
 
 
-def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):  # pylint: disable=too-many-locals
-    """
-    Convert a tuple of the format (cell, scaled_positions, element_numbers) to an AiiDA structure.
+def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):
+    """Convert a tuple of the format (cell, scaled_positions, element_numbers) to an AiiDA structure.
 
     Unless the element_numbers are identical to the Z number of the atoms,
     you should pass both kind_info and kinds, with the same format as returned
@@ -125,7 +118,7 @@ def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):  # p
     if kinds is None and kind_info is not None:
         raise ValueError('If you pass kinds, you should also pass kind_info')
 
-    #Z = {v['symbol']: k for k, v in elements.items()}
+    # Z = {v['symbol']: k for k, v in elements.items()}
     cell, rel_pos, numbers = structure_tuple
     if kind_info:
         _kind_info = copy.copy(kind_info)
@@ -174,8 +167,7 @@ def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):  # p
 
 
 def xyz_parser_iterator(xyz_string):
-    """
-    Yields a tuple `(natoms, comment, atomiter)`for each frame
+    """Yields a tuple `(natoms, comment, atomiter)`for each frame
     in a XYZ file where `atomiter` is an iterator yielding a
     nested tuple `(symbol, (x, y, z))` for each entry.
 
@@ -183,8 +175,7 @@ def xyz_parser_iterator(xyz_string):
     """
 
     class BlockIterator:
-        """
-        An iterator for wrapping the iterator returned by `match.finditer`
+        """An iterator for wrapping the iterator returned by `match.finditer`
         to extract the required fields directly from the match object
         """
 
@@ -196,7 +187,7 @@ def xyz_parser_iterator(xyz_string):
         def __iter__(self):
             return self
 
-        def __next__(self):  # pylint: disable=missing-docstring
+        def __next__(self):
             try:
                 match = next(self._it)
             except StopIteration:
@@ -227,7 +218,8 @@ def xyz_parser_iterator(xyz_string):
 (?P<x> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? ) [ \t]+     # Get x
 (?P<y> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? ) [ \t]+     # Get y
 (?P<z> [\+\-]?  ( \d*[\.]\d+  | \d+[\.]?\d* )  ([Ee][\+\-]?\d+)? )            # Get z
-""", re.X | re.M
+""",
+        re.X | re.M,
     )
     pos_block_regex = re.compile(
         r"""
@@ -269,7 +261,8 @@ def xyz_parser_iterator(xyz_string):
         [\n]                                                # line break at the end
     )+
 )                                                           # A positions block should be one or more lines
-                    """, re.X | re.M
+                    """,
+        re.X | re.M,
     )
 
     for block in pos_block_regex.finditer(xyz_string):

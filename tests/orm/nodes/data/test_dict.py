@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for :class:`aiida.orm.nodes.data.dict.Dict` class."""
 import pytest
 
@@ -124,7 +123,7 @@ def test_equality(dictionary):
     assert node != different_dict
 
     # Test equality comparison between `Dict` nodes
-    assert node is node  # pylint: disable=comparison-with-itself
+    assert node is node  # noqa: PLR0124
     assert node == clone
     assert node != different_node
 

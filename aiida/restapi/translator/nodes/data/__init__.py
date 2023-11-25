@@ -7,8 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Translator for data node
+"""Translator for data node
 """
 
 from aiida.common.exceptions import LicensingException
@@ -17,14 +16,13 @@ from aiida.restapi.translator.nodes.node import NodeTranslator
 
 
 class DataTranslator(NodeTranslator):
-    """
-    Translator relative to resource 'data' and aiida class `~aiida.orm.nodes.data.data.Data`
-    """
+    """Translator relative to resource 'data' and aiida class `~aiida.orm.nodes.data.data.Data`"""
 
     # A label associated to the present class (coincides with the resource name)
     __label__ = 'data'
     # The AiiDA class one-to-one associated to the present class
     from aiida.orm import Data
+
     _aiida_class = Data
     # The string name of the AiiDA class
     _aiida_type = 'data.Data'
@@ -33,8 +31,7 @@ class DataTranslator(NodeTranslator):
 
     @staticmethod
     def get_downloadable_data(node, download_format=None):
-        """
-        Return content in the specified format for download
+        """Return content in the specified format for download
 
         :param node: node representing cif file to be downloaded
         :param download_format: export format
@@ -51,7 +48,7 @@ class DataTranslator(NodeTranslator):
 
         elif download_format in node.get_export_formats():
             try:
-                response['data'] = node._exportcontent(download_format)[0]  # pylint: disable=protected-access
+                response['data'] = node._exportcontent(download_format)[0]
                 response['status'] = 200
                 try:
                     response['filename'] = node.filename

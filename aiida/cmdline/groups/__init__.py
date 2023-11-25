@@ -3,8 +3,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .dynamic import *
 from .verdi import *
@@ -14,4 +13,4 @@ __all__ = (
     'VerdiCommandGroup',
 )
 
-# yapf: enable
+# fmt: on

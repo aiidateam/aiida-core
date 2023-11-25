@@ -7,7 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member,line-too-long
+# ruff: noqa: E501
 """Migrate legacy `JobCalculations`.
 
 These old nodes have already been migrated to the correct `CalcJobNode` type in a previous migration, but they can
@@ -46,8 +46,8 @@ Revision ID: django_0038
 Revises: django_0037
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = 'django_0038'
 down_revision = 'django_0037'
@@ -57,7 +57,7 @@ depends_on = None
 
 def upgrade():
     """Migrations for the upgrade."""
-    conn = op.get_bind()  # pylint: disable=no-member
+    conn = op.get_bind()
 
     # Note that the condition on matching target nodes is done only on the `node_type` amd the `state` attribute value.
     # New `CalcJobs` will have the same node type and while their active can have a `state` attribute with a value

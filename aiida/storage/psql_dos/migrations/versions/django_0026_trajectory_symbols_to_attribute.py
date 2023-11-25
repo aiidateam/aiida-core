@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name,no-member
 """Move trajectory symbols from repository array to attribute
 
 Note, this is similar to the sqlalchemy migration 12536798d4d3
@@ -16,8 +15,8 @@ Revision ID: django_0026
 Revises: django_0025
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 from aiida.storage.psql_dos.backend import get_filepath_container

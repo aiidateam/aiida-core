@@ -40,10 +40,10 @@ class TestBackendEntitiesAndCollections:
         user_collection_count = orm.User.collection.count()
         number_of_users = orm.QueryBuilder().append(orm.User).count()
         assert number_of_users > 0, 'There should be more than 0 Users in the DB'
-        assert user_collection_count == \
-            number_of_users, \
-            '{} User(s) was/were found using Collections\' count() method, ' \
+        assert user_collection_count == number_of_users, (
+            "{} User(s) was/were found using Collections' count() method, "
             'but {} User(s) was/were found using QueryBuilder directly'.format(user_collection_count, number_of_users)
+        )
 
     def test_pickle(self):
         """Pickling is not supported and should raise."""

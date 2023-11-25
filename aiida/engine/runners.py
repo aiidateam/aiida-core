@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=global-statement
 """Runners that can run and submit processes."""
 from __future__ import annotations
 
@@ -16,8 +15,8 @@ import functools
 import logging
 import signal
 import threading
-from typing import Any, Callable, Dict, NamedTuple, Optional, Tuple, Type, Union
 import uuid
+from typing import Any, Callable, Dict, NamedTuple, Optional, Tuple, Type, Union
 
 import kiwipy
 from plumpy.communications import wrap_communicator
@@ -48,12 +47,12 @@ class ResultAndPk(NamedTuple):
     pk: int | None
 
 
-TYPE_RUN_PROCESS = Union[Process, Type[Process], ProcessBuilder]  # pylint: disable=invalid-name
+TYPE_RUN_PROCESS = Union[Process, Type[Process], ProcessBuilder]
 # run can also be process function, but it is not clear what type this should be
-TYPE_SUBMIT_PROCESS = Union[Process, Type[Process], ProcessBuilder]  # pylint: disable=invalid-name
+TYPE_SUBMIT_PROCESS = Union[Process, Type[Process], ProcessBuilder]
 
 
-class Runner:  # pylint: disable=too-many-public-methods
+class Runner:
     """Class that can launch processes by running in the current interpreter or by submitting them to the daemon."""
 
     _persister: Optional[Persister] = None
@@ -67,7 +66,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         loop: Optional[asyncio.AbstractEventLoop] = None,
         communicator: Optional[kiwipy.Communicator] = None,
         rmq_submit: bool = False,
-        persister: Optional[Persister] = None
+        persister: Optional[Persister] = None,
     ):
         """Construct a new runner.
 
@@ -78,8 +77,9 @@ class Runner:  # pylint: disable=too-many-public-methods
         :param persister: the persister to use to persist processes
 
         """
-        assert not (rmq_submit and persister is None), \
-            'Must supply a persister if you want to submit using communicator'
+        assert not (
+            rmq_submit and persister is None
+        ), 'Must supply a persister if you want to submit using communicator'
 
         set_event_loop_policy()
         self._loop = loop if loop is not None else asyncio.get_event_loop()
@@ -167,13 +167,14 @@ class Runner:  # pylint: disable=too-many-public-methods
         self._closed = True
 
     def instantiate_process(self, process: TYPE_RUN_PROCESS, **inputs):
-        from .utils import instantiate_process  # pylint: disable=no-name-in-module
+        from .utils import instantiate_process
+
         return instantiate_process(self, process, **inputs)
 
     def submit(self, process: TYPE_SUBMIT_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any):
-        """
-        Submit the process with the supplied inputs to this runner immediately returning control to
-        the interpreter. The return value will be the calculation node of the submitted process
+        """Submit the process with the supplied inputs to this runner immediately returning control to the interpreter.
+
+        The return value will be the calculation node of the submitted process
 
         :param process: the process class to submit
         :param inputs: the inputs to be passed to the process
@@ -205,8 +206,7 @@ class Runner:  # pylint: disable=too-many-public-methods
     def schedule(
         self, process: TYPE_SUBMIT_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any
     ) -> ProcessNode:
-        """
-        Schedule a process to be executed by this runner
+        """Schedule a process to be executed by this runner.
 
         :param process: the process class to submit
         :param inputs: the inputs to be passed to the process
@@ -220,12 +220,11 @@ class Runner:  # pylint: disable=too-many-public-methods
         self.loop.create_task(process_inited.step_until_terminated())
         return process_inited.node
 
-    def _run(self,
-             process: TYPE_RUN_PROCESS,
-             inputs: dict[str, Any] | None = None,
-             **kwargs: Any) -> Tuple[Dict[str, Any], ProcessNode]:
-        """
-        Run the process with the supplied inputs in this runner that will block until the process is completed.
+    def _run(
+        self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any
+    ) -> Tuple[Dict[str, Any], ProcessNode]:
+        """Run the process with the supplied inputs in this runner that will block until the process is completed.
+
         The return value will be the results of the completed process
 
         :param process: the process class or process function to run
@@ -265,8 +264,8 @@ class Runner:  # pylint: disable=too-many-public-methods
             return process_inited.outputs, process_inited.node
 
     def run(self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any) -> Dict[str, Any]:
-        """
-        Run the process with the supplied inputs in this runner that will block until the process is completed.
+        """Run the process with the supplied inputs in this runner that will block until the process is completed.
+
         The return value will be the results of the completed process
 
         :param process: the process class or process function to run
@@ -279,8 +278,8 @@ class Runner:  # pylint: disable=too-many-public-methods
     def run_get_node(
         self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any
     ) -> ResultAndNode:
-        """
-        Run the process with the supplied inputs in this runner that will block until the process is completed.
+        """Run the process with the supplied inputs in this runner that will block until the process is completed.
+
         The return value will be the results of the completed process
 
         :param process: the process class or process function to run
@@ -291,8 +290,8 @@ class Runner:  # pylint: disable=too-many-public-methods
         return ResultAndNode(result, node)
 
     def run_get_pk(self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any) -> ResultAndPk:
-        """
-        Run the process with the supplied inputs in this runner that will block until the process is completed.
+        """Run the process with the supplied inputs in this runner that will block until the process is completed.
+
         The return value will be the results of the completed process
 
         :param process: the process class or process function to run
@@ -316,7 +315,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         subscriber_identifier = str(uuid.uuid4())
         event = threading.Event()
 
-        def inline_callback(event, *args, **kwargs):  # pylint: disable=unused-argument
+        def inline_callback(event, *args, **kwargs):
             """Callback to wrap the actual callback, that will always remove the subscriber that will be registered.
 
             As soon as the callback is called successfully once, the `event` instance is toggled, such that if this

@@ -32,10 +32,13 @@ def test_config_set_option_no_profile(run_cli_command, empty_config):
     assert str(config.get_option(option_name, scope=None)) == option_value
 
 
-@pytest.mark.parametrize('option_name, is_list', (
-    ('storage.sandbox', False),
-    ('caching.enabled_for', True),
-))
+@pytest.mark.parametrize(
+    'option_name, is_list',
+    (
+        ('storage.sandbox', False),
+        ('caching.enabled_for', True),
+    ),
+)
 def test_config_set_option(run_cli_command, config_with_profile_factory, option_name, is_list):
     """Test the `verdi config set` command when setting an option."""
     config = config_with_profile_factory()
@@ -56,8 +59,10 @@ def test_config_append_option(run_cli_command, config_with_profile_factory):
     for value in ['transfer', 'arithmetic.add', 'transfer', 'arithmetic.add']:
         options = ['config', 'set', '--append', option_name, f'{prefix}{value}']
         run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
-    assert sorted(config.get_option(option_name,
-                                    scope=get_profile().name)) == [f'{prefix}arithmetic.add', f'{prefix}transfer']
+    assert sorted(config.get_option(option_name, scope=get_profile().name)) == [
+        f'{prefix}arithmetic.add',
+        f'{prefix}transfer',
+    ]
 
 
 def test_config_remove_option(run_cli_command, config_with_profile_factory):
@@ -178,13 +183,14 @@ def test_config_caching(run_cli_command, config_with_profile_factory):
 
 
 @pytest.mark.parametrize(
-    'value, raises', (
+    'value, raises',
+    (
         ('aiida.calculations:core.arithmetic.add', False),
         ('aiida.calculations:core.arithmetic.invalid', True),
         ('core.arithmetic.invalid', True),
         ('aiida.calculations.arithmetic.add.ArithmeticAddCalculation', False),
         ('aiida.calculations.arithmetic.invalid.ArithmeticAddCalculation', True),
-    )
+    ),
 )
 def test_config_set_caching_enabled(run_cli_command, config_with_profile_factory, value, raises):
     """Test `verdi config set caching.enabled_for`"""
@@ -194,7 +200,7 @@ def test_config_set_caching_enabled(run_cli_command, config_with_profile_factory
     if raises:
         assert 'Critical: Invalid identifier pattern' in result.output
     else:
-        assert 'Success: \'caching.enabled_for\' set to' in result.output
+        assert "Success: 'caching.enabled_for' set to" in result.output
 
 
 def test_config_downgrade(run_cli_command, config_with_profile_factory):

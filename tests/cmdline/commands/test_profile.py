@@ -7,10 +7,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=redefined-outer-name
 """Tests for ``verdi profile``."""
-from pgtest.pgtest import PGTest
 import pytest
+from pgtest.pgtest import PGTest
 
 from aiida.cmdline.commands import cmd_profile, cmd_verdi
 from aiida.manage import configuration
@@ -51,7 +50,7 @@ def mock_profiles(empty_config, profile_factory):
 
 @pytest.mark.parametrize(
     'command',
-    (cmd_profile.profile_list, cmd_profile.profile_setdefault, cmd_profile.profile_delete, cmd_profile.profile_show)
+    (cmd_profile.profile_list, cmd_profile.profile_setdefault, cmd_profile.profile_delete, cmd_profile.profile_show),
 )
 def test_help(run_cli_command, command):
     """Tests help text for all ``verdi profile`` commands."""
@@ -124,8 +123,9 @@ def test_delete(run_cli_command, mock_profiles, pg_test_cluster):
 
     # Delete multiple profiles
     result = run_cli_command(
-        cmd_profile.profile_delete, ['--force', '--keep-data', profile_list[1], profile_list[2], profile_list[3]],
-        use_subprocess=False
+        cmd_profile.profile_delete,
+        ['--force', '--keep-data', profile_list[1], profile_list[2], profile_list[3]],
+        use_subprocess=False,
     )
     assert 'was the default profile, no profiles remain to set as default.' in result.output
     result = run_cli_command(cmd_profile.profile_list, use_subprocess=False)
@@ -192,8 +192,15 @@ def test_setup_set_as_default(run_cli_command, isolated_config, tmp_path, set_as
     profile_name = 'temp-profile'
     flag = '--set-as-default' if set_as_default else '--no-set-as-default'
     options = [
-        'core.sqlite_dos', '-n', '--filepath',
-        str(tmp_path), '--profile', profile_name, '--email', 'email@host', flag
+        'core.sqlite_dos',
+        '-n',
+        '--filepath',
+        str(tmp_path),
+        '--profile',
+        profile_name,
+        '--email',
+        'email@host',
+        flag,
     ]
     result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
     assert f'Created new profile `{profile_name}`.' in result.output

@@ -7,22 +7,20 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""
-Translator for kpoints data
+"""Translator for kpoints data
 """
 
 from aiida.restapi.translator.nodes.data import DataTranslator
 
 
 class KpointsDataTranslator(DataTranslator):
-    """
-    Translator relative to resource 'kpoints' and aiida class KpointsData
-    """
+    """Translator relative to resource 'kpoints' and aiida class KpointsData"""
 
     # A label associated to the present class (coincides with the resource name)
     __label__ = 'kpoints'
     # The AiiDA class one-to-one associated to the present class
     from aiida.orm import KpointsData
+
     _aiida_class = KpointsData
     # The string name of the AiiDA class
     _aiida_type = 'data.core.array.kpoints.KpointsData'
@@ -31,10 +29,7 @@ class KpointsDataTranslator(DataTranslator):
 
     @staticmethod
     def get_derived_properties(node):
-        # pylint: disable=too-many-locals,too-many-statements,too-many-branches,arguments-differ
-        """
-
-        Returns: data in a format required by dr.js to visualize a 2D plot
+        """Returns: data in a format required by dr.js to visualize a 2D plot
         with multiple data series.
 
         Strategy: For the time being rely on the function implemented in
@@ -43,7 +38,6 @@ class KpointsDataTranslator(DataTranslator):
         by ordinary kpointsdata methods, except the logic to create a list
         of explicit keypoints from the mesh and the cell vectors.
         """
-
         import numpy as np
 
         # First, check whether it contains the cell => BZ and explicit kpoints
@@ -89,7 +83,8 @@ class KpointsDataTranslator(DataTranslator):
 
             # Get BZ faces and add them to the json. Fields: faces,
             # triangles, triangle_vertices. Most probably only faces is needed.
-            from seekpath.brillouinzone.brillouinzone import get_BZ  # pylint: disable=import-error,no-name-in-module
+            from seekpath.brillouinzone.brillouinzone import get_BZ
+
             response['faces_data'] = get_BZ(coords1, coords2, coords3)
 
             # Provide kpoints cooridnates in absolute units ...
@@ -99,9 +94,7 @@ class KpointsDataTranslator(DataTranslator):
         # Add labels field
         has_labels = False
         if explicit_kpoints:
-
             if node.labels is not None:
-
                 has_labels = True
                 high_symm_rel = {}
                 path = []

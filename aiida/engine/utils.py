@@ -7,15 +7,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=invalid-name
 """Utilities for the workflow engine."""
 from __future__ import annotations
 
 import asyncio
 import contextlib
-from datetime import datetime
 import inspect
 import logging
+from datetime import datetime
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterator, List, Optional, Tuple, Type, Union
 
 if TYPE_CHECKING:
@@ -52,8 +51,7 @@ def prepare_inputs(inputs: dict[str, Any] | None = None, **kwargs: Any) -> dict[
 def instantiate_process(
     runner: 'Runner', process: Union['Process', Type['Process'], 'ProcessBuilder'], **inputs
 ) -> 'Process':
-    """
-    Return an instance of the process with the given inputs. The function can deal with various types
+    """Return an instance of the process with the given inputs. The function can deal with various types
     of the `process`:
 
         * Process instance: will simply return the instance
@@ -75,7 +73,7 @@ def instantiate_process(
     if isinstance(process, ProcessBuilder):
         builder = process
         process_class = builder.process_class
-        inputs.update(**builder._inputs(prune=True))  # pylint: disable=protected-access
+        inputs.update(**builder._inputs(prune=True))
     elif is_process_function(process):
         process_class = process.process_class  # type: ignore[attr-defined]
     elif inspect.isclass(process) and issubclass(process, Process):
@@ -96,8 +94,7 @@ class InterruptableFuture(asyncio.Future):
         self.set_exception(reason)
 
     async def with_interrupt(self, coro: Awaitable[Any]) -> Any:
-        """
-        return result of a coroutine which will be interrupted if this future is interrupted ::
+        """Return result of a coroutine which will be interrupted if this future is interrupted ::
 
             import asyncio
             loop = asyncio.get_event_loop()
@@ -121,17 +118,14 @@ class InterruptableFuture(asyncio.Future):
 
 
 def interruptable_task(
-    coro: Callable[[InterruptableFuture], Awaitable[Any]],
-    loop: Optional[asyncio.AbstractEventLoop] = None
+    coro: Callable[[InterruptableFuture], Awaitable[Any]], loop: Optional[asyncio.AbstractEventLoop] = None
 ) -> InterruptableFuture:
-    """
-    Turn the given coroutine into an interruptable task by turning it into an InterruptableFuture and returning it.
+    """Turn the given coroutine into an interruptable task by turning it into an InterruptableFuture and returning it.
 
     :param coro: the coroutine that should be made interruptable with object of InterutableFuture as last paramenter
     :param loop: the event loop in which to run the coroutine, by default uses asyncio.get_event_loop()
     :return: an InterruptableFuture
     """
-
     loop = loop or asyncio.get_event_loop()
     future = InterruptableFuture()
 
@@ -139,13 +133,15 @@ def interruptable_task(
         """Coroutine that wraps the original coroutine and sets it result on the future only if not already set."""
         try:
             result = await coro(future)
-        except Exception as exception:  # pylint: disable=broad-except
+        except Exception as exception:
             if not future.done():
                 future.set_exception(exception)
             else:
                 LOGGER.warning(
-                    'Interruptable future set to %s before its coro %s is done. %s', future.result(), coro.__name__,
-                    str(exception)
+                    'Interruptable future set to %s before its coro %s is done. %s',
+                    future.result(),
+                    coro.__name__,
+                    str(exception),
                 )
         else:
             # If the future has not been set elsewhere, i.e. by the interrupt call, by the time that the coroutine
@@ -159,8 +155,7 @@ def interruptable_task(
 
 
 def ensure_coroutine(fct: Callable[..., Any]) -> Callable[..., Awaitable[Any]]:
-    """
-    Ensure that the given function ``fct`` is a coroutine
+    """Ensure that the given function ``fct`` is a coroutine
 
     If the passed function is not already a coroutine, it will be made to be a coroutine
 
@@ -181,10 +176,9 @@ async def exponential_backoff_retry(
     initial_interval: Union[int, float] = 10.0,
     max_attempts: int = 5,
     logger: Optional[logging.Logger] = None,
-    ignore_exceptions: Union[None, Type[Exception], Tuple[Type[Exception], ...]] = None
+    ignore_exceptions: Union[None, Type[Exception], Tuple[Type[Exception], ...]] = None,
 ) -> Any:
-    """
-    Coroutine to call a function, recalling it with an exponential backoff in the case of an exception
+    """Coroutine to call a function, recalling it with an exponential backoff in the case of an exception
 
     This coroutine will loop ``max_attempts`` times, calling the ``fct`` function, breaking immediately when the call
     finished without raising an exception, at which point the result will be returned. If an exception is caught, the
@@ -208,8 +202,7 @@ async def exponential_backoff_retry(
         try:
             result = await coro()
             break  # Finished successfully
-        except Exception as exception:  # pylint: disable=broad-except
-
+        except Exception as exception:
             # Re-raise exceptions that should be ignored
             if ignore_exceptions is not None and isinstance(exception, ignore_exceptions):
                 raise
@@ -247,13 +240,13 @@ def is_process_scoped() -> bool:
     :returns: True if the current scope is within a nested process, False otherwise
     """
     from .processes.process import Process
+
     return Process.current() is not None
 
 
 @contextlib.contextmanager
 def loop_scope(loop) -> Iterator[None]:
-    """
-    Make an event loop current for the scope of the context
+    """Make an event loop current for the scope of the context
 
     :param loop: The event loop to make current for the duration of the scope
     """
@@ -267,15 +260,14 @@ def loop_scope(loop) -> Iterator[None]:
 
 
 def set_process_state_change_timestamp(process: 'Process') -> None:
-    """
-    Set the global setting that reflects the last time a process changed state, for the process type
+    """Set the global setting that reflects the last time a process changed state, for the process type
     of the given process, to the current timestamp. The process type will be determined based on
     the class of the calculation node it has as its database container.
 
     :param process: the Process instance that changed its state
     """
     from aiida.common import timezone
-    from aiida.manage import get_manager  # pylint: disable=cyclic-import
+    from aiida.manage import get_manager
     from aiida.orm import CalculationNode, ProcessNode, WorkflowNode
 
     if isinstance(process.node, CalculationNode):
@@ -297,8 +289,7 @@ def set_process_state_change_timestamp(process: 'Process') -> None:
 
 
 def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Optional[datetime]:
-    """
-    Get the global setting that reflects the last time a process of the given process type changed its state.
+    """Get the global setting that reflects the last time a process of the given process type changed its state.
     The returned value will be the corresponding timestamp or None if the setting does not exist.
 
     :param process_type: optional process type for which to get the latest state change timestamp.
@@ -306,7 +297,7 @@ def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Op
         known process types will be returned.
     :return: a timestamp or None
     """
-    from aiida.manage import get_manager  # pylint: disable=cyclic-import
+    from aiida.manage import get_manager
 
     valid_process_types = ['calculation', 'work']
 

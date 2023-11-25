@@ -24,4 +24,4 @@ async def test_shutdown_worker(manager):
         assert runner.is_closed()
     finally:
         # Reset the runner of the manager, because once closed it cannot be reused by other tests.
-        manager._runner = None  # pylint: disable=protected-access
+        manager._runner = None

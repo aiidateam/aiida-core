@@ -11,8 +11,7 @@
 
 # AUTO-GENERATED
 
-# yapf: disable
-# pylint: disable=wildcard-import
+# fmt: off
 
 from .attributes import *
 from .data import *
@@ -71,4 +70,4 @@ __all__ = (
     'to_aiida_type',
 )
 
-# yapf: enable
+# fmt: on

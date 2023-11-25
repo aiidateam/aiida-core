@@ -32,7 +32,7 @@ class BaseType(Data):
 
         super().__init__(**kwargs)
 
-        self.value = value or self._type()  # pylint: disable=no-member
+        self.value = value or self._type()
 
     @property
     def value(self):
@@ -40,7 +40,7 @@ class BaseType(Data):
 
     @value.setter
     def value(self, value):
-        self.base.attributes.set('value', self._type(value))  # pylint: disable=no-member
+        self.base.attributes.set('value', self._type(value))
 
     def __str__(self):
         return f'{super().__str__()} value: {self.value}'

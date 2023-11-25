@@ -8,11 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """SqlAlchemy implementation of `aiida.orm.implementation.backends.Backend`."""
-# pylint: disable=missing-function-docstring
-from contextlib import contextmanager, nullcontext
 import functools
 import gc
 import pathlib
+from contextlib import contextmanager, nullcontext
 from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence, Set, Union
 
 from pydantic import BaseModel, Field
@@ -31,8 +30,6 @@ from aiida.storage.psql_dos.models import base
 from .orm import authinfos, comments, computers, convert, groups, logs, nodes, querybuilder, users
 
 if TYPE_CHECKING:
-    from disk_objectstore import Container
-
     from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
 __all__ = ('PsqlDosBackend',)
@@ -42,7 +39,7 @@ CONTAINER_DEFAULTS: dict = {
     'pack_size_target': 4 * 1024 * 1024 * 1024,
     'loose_prefix_len': 2,
     'hash_type': 'sha256',
-    'compression_algorithm': 'zlib+1'
+    'compression_algorithm': 'zlib+1',
 }
 
 
@@ -68,7 +65,7 @@ def get_filepath_container(profile: Profile) -> pathlib.Path:
     return filepath.expanduser() / 'container'
 
 
-class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
+class PsqlDosBackend(StorageBackend):
     """An AiiDA storage backend that stores data in a PostgreSQL database and disk-objectstore repository.
 
     Note, there were originally two such backends, `sqlalchemy` and `django`.
@@ -81,7 +78,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         database_engine: str = Field(
             title='PostgreSQL engine',
             description='The engine to use to connect to the database.',
-            default='postgresql_psycopg2'
+            default='postgresql_psycopg2',
         )
         database_hostname: str = Field(
             title='PostgreSQL hostname', description='The hostname of the PostgreSQL server.', default='localhost'
@@ -168,6 +165,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         Although, in the future, we may want to move the multi-thread handling to higher in the AiiDA stack.
         """
         from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
+
         engine = create_sqlalchemy_engine(self._profile.storage_config)  # type: ignore[arg-type]
         self._session_factory = scoped_session(sessionmaker(bind=engine, future=True, expire_on_commit=True))
 
@@ -181,7 +179,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         if self._session_factory is None:
             return  # the instance is already closed, and so this is a no-op
         # close the connection
-        # pylint: disable=no-member
+
         engine = self._session_factory.bind
         if engine is not None:
             engine.dispose()  # type: ignore[union-attr]
@@ -199,7 +197,6 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         super()._clear()
 
         with self.migrator_context(self._profile) as migrator:
-
             # Close the session otherwise the ``delete_tables`` call will hang as there will be an open connection
             # to the PostgreSQL server and it will block the deletion and the command will hang.
             self.get_session().close()
@@ -216,8 +213,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
 
             with self.transaction() as session:
                 session.execute(
-                    DbSetting.__table__.update().where(DbSetting.key == REPOSITORY_UUID_KEY
-                                                       ).values(val=repository_uuid)
+                    DbSetting.__table__.update().where(DbSetting.key == REPOSITORY_UUID_KEY).values(val=repository_uuid)
                 )
 
     def get_repository(self) -> 'DiskObjectStoreRepositoryBackend':
@@ -298,6 +294,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         from aiida.storage.psql_dos.models.log import DbLog
         from aiida.storage.psql_dos.models.node import DbLink, DbNode
         from aiida.storage.psql_dos.models.user import DbUser
+
         model = {
             EntityTypes.AUTHINFO: DbAuthInfo,
             EntityTypes.COMMENT: DbComment,
@@ -332,7 +329,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         # https://docs.sqlalchemy.org/en/14/changelog/migration_14.html#orm-batch-inserts-with-psycopg2-now-batch-statements-with-returning-in-most-cases
         # by contrast, in sqlite, bulk_insert is faster: https://docs.sqlalchemy.org/en/14/faq/performance.html
         session = self.get_session()
-        with (nullcontext() if self.in_transaction else self.transaction()):
+        with nullcontext() if self.in_transaction else self.transaction():
             result = session.execute(insert(mapper).returning(mapper, column('id')), rows).fetchall()
         return [row.id for row in result]
 
@@ -346,7 +343,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
             if not keys.issuperset(row):
                 raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
         session = self.get_session()
-        with (nullcontext() if self.in_transaction else self.transaction()):
+        with nullcontext() if self.in_transaction else self.transaction():
             session.execute(update(mapper), rows)
 
     def delete(self, delete_database_user: bool = False) -> None:
@@ -377,7 +374,6 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
             LOGGER.report(f'Deleted database user `{config["database_username"]}`.')
 
     def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]) -> None:
-        # pylint: disable=no-value-for-parameter
         from aiida.storage.psql_dos.models.group import DbGroupNode
         from aiida.storage.psql_dos.models.node import DbLink, DbNode
 
@@ -386,8 +382,9 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
 
         session = self.get_session()
         # Delete the membership of these nodes to groups.
-        session.query(DbGroupNode).filter(DbGroupNode.dbnode_id.in_(list(pks_to_delete))
-                                          ).delete(synchronize_session='fetch')
+        session.query(DbGroupNode).filter(DbGroupNode.dbnode_id.in_(list(pks_to_delete))).delete(
+            synchronize_session='fetch'
+        )
         # Delete the links coming out of the nodes marked for deletion.
         session.query(DbLink).filter(DbLink.input_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
         # Delete the links pointing to the nodes marked for deletion.
@@ -396,8 +393,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         session.query(DbNode).filter(DbNode.id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
 
     def get_backend_entity(self, model: base.Base) -> BackendEntity:
-        """
-        Return the backend entity that corresponds to the given Model instance
+        """Return the backend entity that corresponds to the given Model instance
 
         :param model: the ORM model instance to promote to a backend instance
         :return: the backend entity corresponding to the given model
@@ -410,7 +406,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         from aiida.storage.psql_dos.models.settings import DbSetting
 
         session = self.get_session()
-        with (nullcontext() if self.in_transaction else self.transaction()):
+        with nullcontext() if self.in_transaction else self.transaction():
             if session.query(DbSetting).filter(DbSetting.key == key).count():
                 if overwrite:
                     session.query(DbSetting).filter(DbSetting.key == key).update(dict(val=value))
@@ -423,7 +419,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         from aiida.storage.psql_dos.models.settings import DbSetting
 
         session = self.get_session()
-        with (nullcontext() if self.in_transaction else self.transaction()):
+        with nullcontext() if self.in_transaction else self.transaction():
             setting = session.query(DbSetting).filter(DbSetting.key == key).one_or_none()
             if setting is None:
                 raise KeyError(f'No setting found with key {key}')

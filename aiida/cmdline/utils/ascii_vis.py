@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility functions to draw ASCII diagrams to the command line."""
+from typing import Optional
+
 __all__ = ('format_call_graph',)
 
 TREE_LAST_ENTRY = '\u2514\u2500\u2500 '
@@ -32,11 +34,12 @@ def calc_info(node, call_link_label: bool = False) -> str:
 
     if call_link_label and (caller := node.caller):
         from aiida.common.links import LinkType
-        call_link = [
+
+        call_link = next(
             triple.link_label
             for triple in caller.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all()
             if triple.node.pk == node.pk
-        ][0]
+        )
     else:
         call_link = None
 
@@ -54,7 +57,7 @@ def calc_info(node, call_link_label: bool = False) -> str:
     return string
 
 
-def format_call_graph(calc_node, max_depth: int = None, call_link_label: bool = False, info_fn=calc_info):
+def format_call_graph(calc_node, max_depth: Optional[int] = None, call_link_label: bool = False, info_fn=calc_info):
     """Print a tree like the POSIX tree command for the calculation call graph.
 
     :param calc_node: The calculation node
@@ -67,7 +70,9 @@ def format_call_graph(calc_node, max_depth: int = None, call_link_label: bool = 
     return format_tree_descending(call_tree)
 
 
-def build_call_graph(calc_node, max_depth: int = None, call_link_label: bool = False, info_fn=calc_info) -> str:
+def build_call_graph(
+    calc_node, max_depth: Optional[int] = None, call_link_label: bool = False, info_fn=calc_info
+) -> str:
     """Build the call graph of a given node.
 
     :param calc_node: The calculation node
@@ -97,7 +102,6 @@ def build_call_graph(calc_node, max_depth: int = None, call_link_label: bool = F
 
 def format_tree_descending(tree, prefix='', pos=-1):
     """Format a descending tree."""
-    # pylint: disable=too-many-branches
     text = []
 
     if isinstance(tree, tuple):

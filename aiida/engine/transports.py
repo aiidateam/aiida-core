@@ -24,7 +24,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class TransportRequest:
-    """ Information kept about request for a transport object """
+    """Information kept about request for a transport object"""
 
     def __init__(self):
         super().__init__()
@@ -33,8 +33,7 @@ class TransportRequest:
 
 
 class TransportQueue:
-    """
-    A queue to get transport objects from authinfo.  This class allows clients
+    """A queue to get transport objects from authinfo.  This class allows clients
     to register their interest in a transport object which will be provided at
     some point in the future.
 
@@ -45,21 +44,18 @@ class TransportQueue:
     """
 
     def __init__(self, loop: Optional[asyncio.AbstractEventLoop] = None):
-        """
-        :param loop: An asyncio event, will use `asyncio.get_event_loop()` if not supplied
-        """
+        """:param loop: An asyncio event, will use `asyncio.get_event_loop()` if not supplied"""
         self._loop = loop if loop is not None else asyncio.get_event_loop()
         self._transport_requests: Dict[Hashable, TransportRequest] = {}
 
     @property
     def loop(self) -> asyncio.AbstractEventLoop:
-        """ Get the loop being used by this transport queue """
+        """Get the loop being used by this transport queue"""
         return self._loop
 
     @contextlib.contextmanager
     def request_transport(self, authinfo: AuthInfo) -> Iterator[Awaitable['Transport']]:
-        """
-        Request a transport from an authinfo.  Because the client is not allowed to
+        """Request a transport from an authinfo.  Because the client is not allowed to
         request a transport immediately they will instead be given back a future
         that can be awaited to get the transport::
 
@@ -83,13 +79,13 @@ class TransportQueue:
             safe_open_interval = transport.get_safe_open_interval()
 
             def do_open():
-                """ Actually open the transport """
+                """Actually open the transport"""
                 if transport_request.count > 0:
                     # The user still wants the transport so open it
                     _LOGGER.debug('Transport request opening transport for %s', authinfo)
                     try:
                         transport.open()
-                    except Exception as exception:  # pylint: disable=broad-except
+                    except Exception as exception:
                         _LOGGER.error('exception occurred while trying to open transport:\n %s', exception)
                         transport_request.future.set_exception(exception)
 
@@ -108,7 +104,7 @@ class TransportQueue:
         try:
             transport_request.count += 1
             yield transport_request.future
-        except asyncio.CancelledError:  # pylint: disable=try-except-raise
+        except asyncio.CancelledError:
             # note this is only required in python<=3.7,
             # where asyncio.CancelledError inherits from Exception
             _LOGGER.debug('Transport task cancelled')

@@ -7,7 +7,6 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# pylint: disable=too-many-locals,too-many-branches,too-many-statements
 """"Migrate the file repository to the new disk object store based implementation."""
 import json
 from tempfile import NamedTemporaryFile
@@ -26,14 +25,14 @@ from aiida.storage.psql_dos.migrations.utils import utils
 
 def migrate_repository(connection, profile):
     """Migrations for the upgrade."""
-    DbNode = table(  # pylint: disable=invalid-name
+    DbNode = table(  # noqa: N806
         'db_dbnode',
         column('id', Integer),
         column('uuid', UUID),
         column('repository_metadata', JSONB),
     )
 
-    node_count = connection.execute(select(func.count()).select_from(DbNode)).scalar()  # pylint: disable=not-callable
+    node_count = connection.execute(select(func.count()).select_from(DbNode)).scalar()
     missing_repo_folder = []
     shard_count = 256
 
@@ -65,8 +64,7 @@ def migrate_repository(connection, profile):
 
     with get_progress_reporter()(total=shard_count, desc='Migrating file repository') as progress:
         for i in range(shard_count):
-
-            shard = '%.2x' % i  # noqa flynt
+            shard = f'{i:02x}'  # flynt
             progress.set_description_str(f'Migrating file repository: shard {shard}')
 
             mapping_node_repository_metadata, missing_sub_repo_folder = utils.migrate_legacy_repository(profile, shard)
@@ -79,7 +77,6 @@ def migrate_repository(connection, profile):
                 continue
 
             for node_uuid, repository_metadata in mapping_node_repository_metadata.items():
-
                 # If `repository_metadata` is `{}` or `None`, we skip it, as we can leave the column default `null`.
                 if not repository_metadata:
                     continue
@@ -105,7 +102,6 @@ def migrate_repository(connection, profile):
     connection.execute(statement)
 
     if not profile.is_test_profile:
-
         if missing_repo_folder:
             prefix = 'migration-repository-missing-subfolder-'
             with NamedTemporaryFile(prefix=prefix, suffix='.json', dir='.', mode='w+', delete=False) as handle:

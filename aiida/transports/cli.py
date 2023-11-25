@@ -21,7 +21,6 @@ from aiida.common.exceptions import NotExistent
 TRANSPORT_PARAMS = []
 
 
-# pylint: disable=unused-argument
 def match_comp_transport(ctx, param, computer, transport_type):
     """Check the computer argument against the transport type."""
     if computer.transport_type != transport_type:
@@ -132,6 +131,7 @@ def create_option(name, spec):
 
 def list_transport_options(transport_type):
     from aiida.plugins import TransportFactory
+
     options_list = [create_option(*item) for item in TransportFactory(transport_type).auth_options.items()]
     return options_list
 
@@ -158,7 +158,6 @@ def create_configure_cmd(transport_type):
     """Create verdi computer configure subcommand for a transport type."""
     help_text = f"""Configure COMPUTER for {transport_type} transport."""
 
-    # pylint: disable=unused-argument
     def transport_configure_command(computer, user, non_interactive, **kwargs):
         """Configure COMPUTER for a type of transport."""
         configure_computer_main(computer, user, **kwargs)

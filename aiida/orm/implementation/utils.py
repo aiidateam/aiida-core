@@ -8,10 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Utility methods for backend non-specific implementations."""
-from collections.abc import Iterable, Mapping
-from decimal import Decimal
 import math
 import numbers
+from collections.abc import Iterable, Mapping
+from decimal import Decimal
 
 from aiida.common import exceptions
 from aiida.common.constants import AIIDA_FLOAT_PRECISION
@@ -38,8 +38,7 @@ def validate_attribute_extra_key(key):
 
 
 def clean_value(value):
-    """
-    Get value from input and (recursively) replace, if needed, all occurrences
+    """Get value from input and (recursively) replace, if needed, all occurrences
     of BaseType AiiDA data nodes with their value, and List with a standard list.
     It also makes a deep copy of everything
     The purpose of this function is to convert data to a type which can be serialized and deserialized
@@ -57,8 +56,7 @@ def clean_value(value):
     from aiida.orm import BaseType
 
     def clean_builtin(val):
-        """
-        A function to clean build-in python values (`BaseType`).
+        """A function to clean build-in python values (`BaseType`).
 
         It mainly checks that we don't store NaN or Inf.
         """
@@ -103,7 +101,7 @@ def clean_value(value):
         # Check dictionary before iterables
         return {k: clean_value(v) for k, v in value.items()}
 
-    if (isinstance(value, Iterable) and not isinstance(value, str)):
+    if isinstance(value, Iterable) and not isinstance(value, str):
         # list, tuple, ... but not a string
         # This should also properly take care of dealing with the
         # basedatatypes.List object

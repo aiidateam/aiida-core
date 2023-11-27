@@ -2,6 +2,7 @@
 """Functions to control and interact with running processes."""
 from __future__ import annotations
 
+import collections
 import concurrent
 import typing as t
 
@@ -12,6 +13,7 @@ from plumpy.futures import unwrap_kiwi_future
 from aiida.common.exceptions import AiidaException
 from aiida.common.log import AIIDA_LOGGER
 from aiida.engine.daemon.client import DaemonException, get_daemon_client
+from aiida.manage.configuration.profile import Profile
 from aiida.manage.manager import get_manager
 from aiida.orm import ProcessNode, QueryBuilder
 from aiida.tools.query.calculation import CalculationQueryBuilder
@@ -23,15 +25,47 @@ class ProcessTimeoutException(AiidaException):
     """Raised when action to communicate with a process times out."""
 
 
-def get_active_processes(paused: bool = False) -> list[ProcessNode]:
+def get_active_processes(paused: bool = False, project: str | list[str] = '*') -> list[ProcessNode] | list[t.Any]:
     """Return all active processes, i.e., those with a process state of created, waiting or running.
 
     :param paused: Boolean, if True, filter for processes that are paused.
+    :param project: Single or list of properties to project. By default projects the entire node.
     :return: A list of process nodes of active processes.
     """
     filters = CalculationQueryBuilder().get_filters(process_state=('created', 'waiting', 'running'), paused=paused)
-    builder = QueryBuilder().append(ProcessNode, filters=filters)
+    builder = QueryBuilder().append(ProcessNode, filters=filters, project=project)
     return builder.all(flat=True)
+
+
+def iterate_process_tasks(
+    profile: Profile, communicator: kiwipy.rmq.RmqCommunicator
+) -> collections.abc.Iterator[kiwipy.rmq.RmqIncomingTask]:
+    """Return the list of process pks that have a process task in the RabbitMQ process queue.
+
+    :returns: A list of process pks that have a corresponding process task with RabbitMQ.
+    """
+    from aiida.manage.external.rmq import get_launch_queue_name
+
+    launch_queue = get_launch_queue_name(profile.rmq_prefix)
+
+    for task in communicator.task_queue(launch_queue):
+        yield task
+
+
+def get_process_tasks(profile: Profile, communicator: kiwipy.rmq.RmqCommunicator) -> list[int]:
+    """Return the list of process pks that have a process task in the RabbitMQ process queue.
+
+    :returns: A list of process pks that have a corresponding process task with RabbitMQ.
+    """
+    pks = []
+
+    for task in iterate_process_tasks(profile, communicator):
+        try:
+            pks.append(task.body.get('args', {})['pid'])
+        except KeyError:
+            pass
+
+    return pks
 
 
 def revive_processes(processes: list[ProcessNode], *, wait: bool = False) -> None:

@@ -10,7 +10,6 @@
 """`verdi devel rabbitmq` commands."""
 from __future__ import annotations
 
-import collections
 import re
 import sys
 import typing as t
@@ -23,10 +22,7 @@ from aiida.cmdline.params import arguments, options
 from aiida.cmdline.utils import decorators, echo, echo_tabulate
 
 if t.TYPE_CHECKING:
-    import kiwipy.rmq
     import requests
-
-    from aiida.manage.configuration.profile import Profile
 
 
 @verdi_devel.group('rabbitmq')
@@ -132,16 +128,8 @@ def with_client(ctx, wrapped, _, args, kwargs):
     return wrapped(*args, **kwargs)
 
 
-@wrapt.decorator
-def with_manager(wrapped, _, args, kwargs):
-    """Decorate a function injecting a :class:`kiwipy.rmq.communicator.RmqCommunicator`."""
-    from aiida.manage import get_manager
-    kwargs['manager'] = get_manager()
-    return wrapped(*args, **kwargs)
-
-
 @cmd_rabbitmq.command('server-properties')
-@with_manager
+@decorators.with_manager
 def cmd_server_properties(manager):
     """List the server properties."""
     import yaml
@@ -218,7 +206,7 @@ def cmd_queues_delete(client, queues):
 
 
 @cmd_tasks.command('list')
-@with_manager
+@decorators.with_manager
 @decorators.only_if_daemon_not_running()
 @click.pass_context
 def cmd_tasks_list(ctx, manager):
@@ -228,72 +216,18 @@ def cmd_tasks_list(ctx, manager):
     only be seen when they are not currently with a daemon worker, this command can only be run when the daemon is not
     running.
     """
+    from aiida.engine.processes.control import get_process_tasks
+
     for pk in get_process_tasks(ctx.obj.profile, manager.get_communicator()):
         echo.echo(pk)
 
 
-def get_active_processes() -> list[int]:
-    """Return the list of pks of active processes.
-
-    An active process is defined as a process that has a node with its attribute ``process_state`` set to one of:
-
-        * ``created``
-        * ``waiting``
-        * ``running``
-
-    :returns: A list of process pks that are marked as active in the database.
-    """
-    from aiida.engine import ProcessState
-    from aiida.orm import ProcessNode, QueryBuilder
-
-    return QueryBuilder().append(  # type: ignore[return-value]
-        ProcessNode,
-        filters={
-            'attributes.process_state': {
-                'in': [ProcessState.CREATED.value, ProcessState.WAITING.value, ProcessState.RUNNING.value]
-            }
-        },
-        project='id'
-    ).all(flat=True)
-
-
-def iterate_process_tasks(
-    profile: Profile, communicator: kiwipy.rmq.RmqCommunicator
-) -> collections.abc.Iterator[kiwipy.rmq.RmqIncomingTask]:
-    """Return the list of process pks that have a process task in the RabbitMQ process queue.
-
-    :returns: A list of process pks that have a corresponding process task with RabbitMQ.
-    """
-    from aiida.manage.external.rmq import get_launch_queue_name
-
-    launch_queue = get_launch_queue_name(profile.rmq_prefix)
-
-    for task in communicator.task_queue(launch_queue):
-        yield task
-
-
-def get_process_tasks(profile: Profile, communicator: kiwipy.rmq.RmqCommunicator) -> list[int]:
-    """Return the list of process pks that have a process task in the RabbitMQ process queue.
-
-    :returns: A list of process pks that have a corresponding process task with RabbitMQ.
-    """
-    pks = []
-
-    for task in iterate_process_tasks(profile, communicator):
-        try:
-            pks.append(task.body.get('args', {})['pid'])
-        except KeyError:
-            pass
-
-    return pks
-
-
 @cmd_tasks.command('analyze')
 @click.option('--fix', is_flag=True, help='Attempt to fix the inconsistencies if any are detected.')
-@with_manager
 @decorators.only_if_daemon_not_running()
+@decorators.deprecated_command('Use `verdi process repair` instead.')
 @click.pass_context
-def cmd_tasks_analyze(ctx, manager, fix):
+def cmd_tasks_analyze(ctx, fix):
     """Perform analysis of process tasks.
 
     This command will perform a query of the database to find all "active" processes, meaning those that haven't yet
@@ -305,59 +239,8 @@ def cmd_tasks_analyze(ctx, manager, fix):
 
     Use ``-v INFO`` to be more verbose and print more information.
     """
-    active_processes = get_active_processes()
-    process_tasks = get_process_tasks(ctx.obj.profile, manager.get_communicator())
-
-    set_active_processes = set(active_processes)
-    set_process_tasks = set(process_tasks)
-
-    echo.echo_info(f'Active processes: {active_processes}')
-    echo.echo_info(f'Process tasks: {process_tasks}')
-
-    state_inconsistent = False
-
-    if len(process_tasks) != len(set_process_tasks):
-        state_inconsistent = True
-        echo.echo_warning('There are duplicates process tasks: ', nl=False)
-        echo.echo(set(x for x in process_tasks if process_tasks.count(x) > 1))
-
-    if set_process_tasks.difference(set_active_processes):
-        state_inconsistent = True
-        echo.echo_warning('There are process tasks for terminated processes: ', nl=False)
-        echo.echo(set_process_tasks.difference(set_active_processes))
-
-    if set_active_processes.difference(set_process_tasks):
-        state_inconsistent = True
-        echo.echo_warning('There are active processes without process task: ', nl=False)
-        echo.echo(set_active_processes.difference(set_process_tasks))
-
-    if state_inconsistent and not fix:
-        echo.echo_critical(
-            'Inconsistencies detected between database and RabbitMQ. Run again with `--fix` to address problems.'
-        )
-
-    if not state_inconsistent:
-        echo.echo_success('No inconsistencies detected between database and RabbitMQ.')
-        return
-
-    # At this point we have either exited because of inconsistencies and ``--fix`` was not passed, or we returned
-    # because there were no inconsistencies, so all that is left is to address inconsistencies
-    echo.echo_info('Attempting to fix inconsistencies')
-
-    # Eliminate duplicate tasks and tasks that correspond to terminated process
-    for task in iterate_process_tasks(ctx.obj.profile, manager.get_communicator()):
-        pid = task.body.get('args', {}).get('pid', None)
-        if pid not in set_active_processes:
-            with task.processing() as outcome:
-                outcome.set_result(False)
-            echo.echo_report(f'Acknowledged task `{pid}`')
-
-    # Revive zombie processes that no longer have a process task
-    process_controller = manager.get_process_controller()
-    for pid in set_active_processes:
-        if pid not in set_process_tasks:
-            process_controller.continue_process(pid)
-            echo.echo_report(f'Revived process `{pid}`')
+    from .cmd_process import process_repair
+    ctx.invoke(process_repair, dry_run=not fix)
 
 
 @cmd_tasks.command('revive')

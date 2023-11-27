@@ -332,6 +332,7 @@ Below is a list with all available subcommands.
       list       Show a list of running or terminated processes.
       pause      Pause running processes.
       play       Play (unpause) paused processes.
+      repair     Automatically repair all stuck processes.
       report     Show the log report for one or multiple processes.
       show       Show details for one or multiple processes.
       status     Print the status of one or multiple processes.

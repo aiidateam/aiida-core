@@ -14,8 +14,16 @@ import click
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options, types
 from aiida.cmdline.utils import decorators, echo
-from aiida.common.log import LOG_LEVELS
+from aiida.common.log import LOG_LEVELS, capture_logging
 from aiida.manage import get_manager
+
+REPAIR_INSTRUCTIONS = """\
+If one ore more processes are unreachable, you can run the following commands to try and repair them:
+
+    verdi daemon stop
+    verdi process repair
+    verdi daemon start
+"""
 
 
 def valid_projections():
@@ -233,11 +241,15 @@ def process_kill(processes, all_entries, timeout, wait):
     if all_entries:
         click.confirm('Are you sure you want to kill all processes?', abort=True)
 
-    try:
-        message = 'Killed through `verdi process kill`'
-        control.kill_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait, message=message)
-    except control.ProcessTimeoutException as exception:
-        echo.echo_critical(str(exception) + '\nFrom the CLI you can call `verdi devel revive <PID>`.')
+    with capture_logging() as stream:
+        try:
+            message = 'Killed through `verdi process kill`'
+            control.kill_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait, message=message)
+        except control.ProcessTimeoutException as exception:
+            echo.echo_critical(f'{exception}\n{REPAIR_INSTRUCTIONS}')
+
+        if 'unreachable' in stream.getvalue():
+            echo.echo_report(REPAIR_INSTRUCTIONS)
 
 
 @verdi_process.command('pause')
@@ -253,11 +265,15 @@ def process_pause(processes, all_entries, timeout, wait):
     if processes and all_entries:
         raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
 
-    try:
-        message = 'Paused through `verdi process pause`'
-        control.pause_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait, message=message)
-    except control.ProcessTimeoutException as exception:
-        echo.echo_critical(str(exception) + '\nFrom the CLI you can call `verdi devel revive <PID>`.')
+    with capture_logging() as stream:
+        try:
+            message = 'Paused through `verdi process pause`'
+            control.pause_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait, message=message)
+        except control.ProcessTimeoutException as exception:
+            echo.echo_critical(f'{exception}\n{REPAIR_INSTRUCTIONS}')
+
+        if 'unreachable' in stream.getvalue():
+            echo.echo_report(REPAIR_INSTRUCTIONS)
 
 
 @verdi_process.command('play')
@@ -273,10 +289,14 @@ def process_play(processes, all_entries, timeout, wait):
     if processes and all_entries:
         raise click.BadOptionUsage('all', 'cannot specify individual processes and the `--all` flag at the same time.')
 
-    try:
-        control.play_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait)
-    except control.ProcessTimeoutException as exception:
-        echo.echo_critical(str(exception) + '\nFrom the CLI you can call `verdi devel revive <PID>`.')
+    with capture_logging() as stream:
+        try:
+            control.play_processes(processes, all_entries=all_entries, timeout=timeout, wait=wait)
+        except control.ProcessTimeoutException as exception:
+            echo.echo_critical(f'{exception}\n{REPAIR_INSTRUCTIONS}')
+
+        if 'unreachable' in stream.getvalue():
+            echo.echo_report(REPAIR_INSTRUCTIONS)
 
 
 @verdi_process.command('watch')

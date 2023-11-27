@@ -324,3 +324,77 @@ def process_watch(processes):
 
         # Reraise to trigger clicks builtin abort sequence
         raise
+
+
+@verdi_process.command('repair')
+@options.DRY_RUN()
+@decorators.only_if_daemon_not_running()
+@decorators.with_manager
+@click.pass_context
+def process_repair(ctx, manager, dry_run):
+    """Automatically repair all stuck processes.
+
+    N.B.: This command requires the daemon to be stopped.
+
+    This command queries the database to find all "active" processes, meaning those that haven't yet reached a terminal
+    state, and cross-references them with the active process tasks in the process queue of RabbitMQ. Any active process
+    that does not have a corresponding process task can be considered a zombie, as it will never be picked up by a
+    daemon worker to complete it and will effectively be "stuck". Any process task that does not correspond to an active
+    process is useless and should be discarded. Finally, duplicate process tasks are also problematic and are discarded.
+    """
+    from aiida.engine.processes.control import get_active_processes, get_process_tasks, iterate_process_tasks
+
+    active_processes = get_active_processes(project='id')
+    process_tasks = get_process_tasks(ctx.obj.profile, manager.get_communicator())
+
+    set_active_processes = set(active_processes)
+    set_process_tasks = set(process_tasks)
+
+    echo.echo_info(f'Active processes: {active_processes}')
+    echo.echo_info(f'Process tasks: {process_tasks}')
+
+    state_inconsistent = False
+
+    if len(process_tasks) != len(set_process_tasks):
+        state_inconsistent = True
+        echo.echo_warning('There are duplicates process tasks: ', nl=False)
+        echo.echo(set(x for x in process_tasks if process_tasks.count(x) > 1))
+
+    if set_process_tasks.difference(set_active_processes):
+        state_inconsistent = True
+        echo.echo_warning('There are process tasks for terminated processes: ', nl=False)
+        echo.echo(set_process_tasks.difference(set_active_processes))
+
+    if set_active_processes.difference(set_process_tasks):
+        state_inconsistent = True
+        echo.echo_warning('There are active processes without process task: ', nl=False)
+        echo.echo(set_active_processes.difference(set_process_tasks))
+
+    if state_inconsistent:
+        echo.echo_critical('Inconsistencies detected between database and RabbitMQ.')
+
+    if not state_inconsistent:
+        echo.echo_success('No inconsistencies detected between database and RabbitMQ.')
+        return
+
+    if dry_run:
+        return
+
+    # At this point we have either exited because of inconsistencies and ``--dry-run`` was passed, or we returned
+    # because there were no inconsistencies, so all that is left is to address inconsistencies
+    echo.echo_info('Attempting to fix inconsistencies')
+
+    # Eliminate duplicate tasks and tasks that correspond to terminated process
+    for task in iterate_process_tasks(ctx.obj.profile, manager.get_communicator()):
+        pid = task.body.get('args', {}).get('pid', None)
+        if pid not in set_active_processes:
+            with task.processing() as outcome:
+                outcome.set_result(False)
+            echo.echo_report(f'Acknowledged task `{pid}`')
+
+    # Revive zombie processes that no longer have a process task
+    process_controller = manager.get_process_controller()
+    for pid in set_active_processes:
+        if pid not in set_process_tasks:
+            process_controller.continue_process(pid)
+            echo.echo_report(f'Revived process `{pid}`')

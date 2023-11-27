@@ -31,6 +31,14 @@ DAEMON_NOT_RUNNING_DEFAULT_MESSAGE = 'daemon is not running'
 __all__ = ('with_dbenv', 'dbenv', 'only_if_daemon_running')
 
 
+@decorator
+def with_manager(wrapped, _, args, kwargs):
+    """Decorate a function injecting a :class:`kiwipy.rmq.communicator.RmqCommunicator`."""
+    from aiida.manage import get_manager
+    kwargs['manager'] = get_manager()
+    return wrapped(*args, **kwargs)
+
+
 def load_backend_if_not_loaded():
     """Load the database backend environment for the currently loaded profile.
 

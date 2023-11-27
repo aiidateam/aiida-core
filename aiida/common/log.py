@@ -13,9 +13,10 @@ from __future__ import annotations
 import collections
 import contextlib
 import enum
+import io
 import logging
 import types
-from typing import cast
+import typing as t
 
 __all__ = ('AIIDA_LOGGER', 'override_log_level')
 
@@ -56,7 +57,7 @@ LOG_LEVELS = {
 
 LogLevels = enum.Enum('LogLevels', {key: key for key in LOG_LEVELS})  # type: ignore[misc]
 
-AIIDA_LOGGER = cast(AiidaLoggerType, logging.getLogger('aiida'))
+AIIDA_LOGGER = t.cast(AiidaLoggerType, logging.getLogger('aiida'))
 
 CLI_ACTIVE: bool | None = None
 """Flag that is set to ``True`` if the module is imported by ``verdi`` being called."""
@@ -249,3 +250,22 @@ def override_log_level(level=logging.CRITICAL):
         yield
     finally:
         logging.disable(level=logging.NOTSET)
+
+
+@contextlib.contextmanager
+def capture_logging(logger: logging.Logger = AIIDA_LOGGER) -> t.Generator[io.StringIO, None, None]:
+    """Capture logging to a stream in memory.
+
+    Note, this only copies any content that is being logged to a stream in memory. It does not interfere with any other
+    existing stream handlers. In this sense, this context manager is non-destructive.
+
+    :param logger: The logger whose output to capture.
+    :returns: A stream to which the logged content is captured.
+    """
+    stream = io.StringIO()
+    handler = logging.StreamHandler(stream)
+    logger.addHandler(handler)
+    try:
+        yield stream
+    finally:
+        logger.removeHandler(handler)

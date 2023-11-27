@@ -10,6 +10,8 @@
 """Tests for the :mod:`aiida.common.log` module."""
 import logging
 
+from aiida.common.log import capture_logging
+
 
 def test_logging_before_dbhandler_loaded(caplog):
     """Test that logging still works even if no database is loaded.
@@ -36,3 +38,12 @@ def test_log_report(caplog):
         logger.report(msg)
 
     assert caplog.record_tuples == [(logger.name, logging.REPORT, msg)]  # pylint: disable=no-member
+
+
+def test_capture_logging():
+    """Test the :func:`aiida.common.log.capture_logging` function."""
+    logger = logging.getLogger()
+    message = 'Some message'
+    with capture_logging(logger) as stream:
+        logging.getLogger().error(message)
+        assert stream.getvalue().strip() == message

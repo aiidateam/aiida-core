@@ -44,6 +44,15 @@ def test_dict_property(dictionary):
     assert node.dict.nested == dictionary['nested']
 
 
+def test_get(dictionary):
+    """Test the ``get`` method."""
+    node = Dict(dictionary)
+    assert node.get('invalid') is None
+    assert node.get('invalid', 'default') == 'default'
+    assert node.get('value') == dictionary['value']
+    assert node.get('nested') == dictionary['nested']
+
+
 def test_get_item(dictionary):
     """Test the ``__getitem__`` method."""
     node = Dict(dictionary)

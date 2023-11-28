@@ -45,8 +45,13 @@ def function_return_input(data):
 
 
 @calcfunction
-def function_variadic_arguments(int_a, int_b, *args):
-    return int_a + int_b + orm.Int(sum(args))
+def function_variadic_arguments(str_a, str_b, *args):
+    return orm.Str(' '.join([e.value for e in (str_a, str_b, *args)]))
+
+
+@calcfunction
+def function_variadic_arguments_and_keywords(*args, str_a, str_b):
+    return orm.Str(' '.join([e.value for e in (*args, str_a, str_b)]))
 
 
 @calcfunction
@@ -223,17 +228,17 @@ def test_get_function_source_code():
 
 def test_function_varargs():
     """Test a function with variadic arguments."""
-    result, node = function_variadic_arguments.run_get_node(orm.Int(1), orm.Int(2), *(orm.Int(3), orm.Int(4)))
-    assert isinstance(result, orm.Int)
-    assert result.value == 10
+    result, node = function_variadic_arguments.run_get_node(orm.Str('a'), orm.Str('b'), *(orm.Str('c'), orm.Str('d')))
+    assert isinstance(result, orm.Str)
+    assert result.value == 'a b c d'
 
     inputs = node.get_incoming().nested()
-    assert inputs['int_a'].value == 1
-    assert inputs['int_b'].value == 2
-    assert inputs['args_0'].value == 3
-    assert inputs['args_1'].value == 4
-    assert node.inputs.args_0.value == 3
-    assert node.inputs.args_1.value == 4
+    assert inputs['str_a'].value == 'a'
+    assert inputs['str_b'].value == 'b'
+    assert inputs['args_0'].value == 'c'
+    assert inputs['args_1'].value == 'd'
+    assert node.inputs.args_0.value == 'c'
+    assert node.inputs.args_1.value == 'd'
 
 
 def test_function_varargs_label_overlap():
@@ -243,6 +248,14 @@ def test_function_varargs_label_overlap():
     """
     with pytest.raises(RuntimeError, match=r'variadic argument with index `.*` would get the label `.*` but this'):
         function_variadic_arguments_label_overlap.run_get_node(orm.Int(1), *(orm.Int(2), orm.Int(3)))
+
+
+def test_function_variadic_arguments_and_keywords():
+    """Test passing variable positional arguments before keyword arguments."""
+    result = function_variadic_arguments_and_keywords(
+        *(orm.Str('a'), orm.Str('b')), str_a=orm.Str('c'), str_b=orm.Str('d')
+    )
+    assert result.value == 'a b c d'
 
 
 def test_function_args():

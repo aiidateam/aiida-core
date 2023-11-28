@@ -336,7 +336,8 @@ class FunctionProcess(Process):
     """Function process class used for turning functions into a Process"""
 
     _func_args: t.Sequence[str] = ()
-    _varargs: str | None = None
+    _var_positional: str | None = None
+    _var_keyword: str | None = None
 
     @staticmethod
     def _func(*_args, **_kwargs) -> dict:
@@ -371,7 +372,8 @@ class FunctionProcess(Process):
         signature = inspect.signature(func)  # type: ignore[unreachable]
 
         args: list[str] = []
-        varargs: str | None = None
+        var_positional: str | None = None
+        var_keyword: str | None = None
         keywords: str | None = None
 
         try:
@@ -400,12 +402,12 @@ class FunctionProcess(Process):
                 args.append(key)
 
             if parameter.kind is parameter.VAR_POSITIONAL:
-                varargs = key
+                var_positional = key
 
             if parameter.kind is parameter.VAR_KEYWORD:
-                varargs = key
+                var_keyword = key
 
-        def _define(cls, spec):  # pylint: disable=unused-argument
+        def define(cls, spec):  # pylint: disable=unused-argument
             """Define the spec dynamically"""
             from plumpy.ports import UNSPECIFIED
 
@@ -461,7 +463,7 @@ class FunctionProcess(Process):
             spec.inputs.help = namespace_help_string
 
             # If the function supports varargs or kwargs then allow dynamic inputs, otherwise disallow
-            spec.inputs.dynamic = keywords is not None or varargs
+            spec.inputs.dynamic = keywords is not None or var_positional or var_keyword
 
             # Function processes must have a dynamic output namespace since we do not know beforehand what outputs
             # will be returned and the valid types for the value should be `Data` nodes as well as a dictionary because
@@ -474,9 +476,10 @@ class FunctionProcess(Process):
                 '__name__': func.__name__,
                 '__qualname__': func.__qualname__,
                 '_func': staticmethod(func),
-                Process.define.__name__: classmethod(_define),
+                Process.define.__name__: classmethod(define),
                 '_func_args': args,
-                '_varargs': varargs or None,
+                '_var_positional': var_positional,
+                '_var_keyword': var_keyword,
                 '_node_class': node_class
             }
         )
@@ -490,7 +493,6 @@ class FunctionProcess(Process):
         """
         nargs = len(args)
         nparameters = len(cls._func_args)
-        has_varargs = cls._varargs is not None
 
         # If the spec is dynamic, i.e. the function signature includes `**kwargs` and the number of positional arguments
         # passed is larger than the number of explicitly defined parameters in the signature, the inputs are invalid and
@@ -498,61 +500,42 @@ class FunctionProcess(Process):
         # misinterpreted as keyword arguments, but they won't have an explicit name to use for the link label, causing
         # the input link to be completely lost. If the function supports variadic arguments, however, additional args
         # should be accepted.
-        if cls.spec().inputs.dynamic and nargs > nparameters and not has_varargs:
+        if cls.spec().inputs.dynamic and nargs > nparameters and cls._var_positional is None:
             name = cls._func.__name__
             raise TypeError(f'{name}() takes {nparameters} positional arguments but {nargs} were given')
 
     @classmethod
     def create_inputs(cls, *args: t.Any, **kwargs: t.Any) -> dict[str, t.Any]:
-        """Create the input args for the FunctionProcess."""
+        """Create the input dictionary for the ``FunctionProcess``."""
         cls.validate_inputs(*args, **kwargs)
 
-        ins = {}
-        if kwargs:
-            ins.update(kwargs)
-        if args:
-            ins.update(cls.args_to_dict(*args))
-        return ins
+        # The complete input dictionary consists of the keyword arguments...
+        inputs = dict(kwargs or {})
+        arguments = list(args)
 
-    @classmethod
-    def args_to_dict(cls, *args: t.Any) -> dict[str, t.Any]:
-        """
-        Create an input dictionary (of form label -> value) from supplied args.
+        # ... and then the positional arguments need be added. Arguments with an explicit positional argument simply use
+        # the argument name as the key in the dictionary explicit label. For variable positional arguments, the label is
+        # constructed based on the name used for the variable positional arguments, which is stored in the
+        # ``cls._var_positional`` class attribute and is suffixed with the index. If the auto-generated label would
+        # overlap with an existing label (i.e. from one of the keyword arguments) an exception is raised.
+        for name, parameter in inspect.signature(cls._func).parameters.items():
+            if parameter.kind in [parameter.POSITIONAL_ONLY, parameter.POSITIONAL_OR_KEYWORD]:
+                try:
+                    inputs[name] = arguments.pop(0)
+                except IndexError:
+                    pass
+            elif name == cls._var_positional and parameter.kind is parameter.VAR_POSITIONAL:
+                for index, arg in enumerate(arguments):
+                    label = f'{cls._var_positional}_{index}'
+                    if label in inputs:
+                        raise RuntimeError(
+                            f'variadic argument with index `{index}` would get the label `{label}` but this is already '
+                            'in use by another function argument with the exact same name. To avoid this error, please '
+                            f'change the name of argument `{label}` to something else.'
+                        )
+                    inputs[label] = arg
 
-        :param args: The values to use for the dictionary
-
-        :return: A label -> value dictionary
-
-        """
-        dictionary = {}
-        values = list(args)
-
-        for arg in cls._func_args:
-            try:
-                dictionary[arg] = values.pop(0)
-            except IndexError:
-                pass
-
-        # If arguments remain and the function supports variadic arguments, add those as well.
-        if cls._varargs and args:
-
-            # By default the prefix for variadic labels is the key with which the varargs were declared
-            variadic_prefix = cls._varargs
-
-            for index, arg in enumerate(values):
-                label = f'{variadic_prefix}_{index}'
-
-                # If the generated vararg label overlaps with a keyword argument, function signature should be changed
-                if label in dictionary:
-                    raise RuntimeError(
-                        f'variadic argument with index `{index}` would get the label `{label}` but this is already in '
-                        'use by another function argument with the exact same name. To avoid this error, please change '
-                        f'the name of argument `{label}` to something else.'
-                    )
-
-                dictionary[label] = arg
-
-        return dictionary
+        return inputs
 
     @classmethod
     def get_or_create_db_record(cls) -> 'ProcessNode':
@@ -605,26 +588,27 @@ class FunctionProcess(Process):
         if self.node.exit_status is not None:
             return ExitCode(self.node.exit_status, self.node.exit_message)
 
-        # Split the inputs into positional and keyword arguments
-        args = [None] * len(self._func_args)
-        kwargs = {}
+        # Now the original functions arguments need to be reconstructed from the inputs to the process, as they were
+        # passed to the original function call. To do so, all positional parameters are popped from the inputs
+        # dictionary and added to the positional arguments list.
+        args = []
+        kwargs: dict[str, Data] = {}
+        inputs = dict(self.inputs or {})
 
-        for name, value in (self.inputs or {}).items():
-            try:
-                if self.spec().inputs[name].is_metadata:  # type: ignore[union-attr]
-                    # Don't consider ports that defined ``is_metadata=True``
-                    continue
-            except KeyError:
-                pass  # No port found
+        for name, parameter in inspect.signature(self._func).parameters.items():
+            if parameter.kind in [parameter.POSITIONAL_ONLY, parameter.POSITIONAL_OR_KEYWORD]:
+                args.append(inputs.pop(name))
+            elif parameter.kind is parameter.VAR_POSITIONAL:
+                for key in [key for key in inputs.keys() if key.startswith(f'{name}_')]:
+                    args.append(inputs.pop(key))
 
-            # Check if it is a positional arg, if not then keyword
-            try:
-                args[self._func_args.index(name)] = value
-            except ValueError:
-                if name.startswith(f'{self._varargs}_'):
-                    args.append(value)
-                else:
-                    kwargs[name] = value
+        # Any inputs that correspond to metadata ports were not part of the original function signature but were added
+        # by the process function decorator, so these have to be removed.
+        for key in [key for key, port in self.spec().inputs.items() if port.is_metadata]:
+            inputs.pop(key, None)
+
+        # The remaining inputs have to be keyword arguments.
+        kwargs.update(**inputs)
 
         result = self._func(*args, **kwargs)
 

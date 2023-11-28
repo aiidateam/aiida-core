@@ -1,5 +1,15 @@
 # Changelog
 
+## v2.4.2 - 2023-11-30
+
+### Docker
+- Disable the consumer timeout for RabbitMQ [[5ce1e7ec3]](https://github.com/aiidateam/aiida-core/commit/5ce1e7ec37207013a7733b9df943977a15e421e5)
+- Add `rsync` and `graphviz` to system requirements [[c4799add4]](https://github.com/aiidateam/aiida-core/commit/c4799add41a29944dd02be2ca44756eaf8035b1c)
+
+### Dependencies
+- Add upper limit `jedi<0.19` [[90e586fe3]](https://github.com/aiidateam/aiida-core/commit/90e586fe367daf8f9ebe953c2a976bc5c4d33903)
+
+
 ## v2.4.1 - 2023-11-15
 
 This patch release comes with an improved set of Docker images and a few fixes to provide compatibility with recent versions of `pymatgen`.

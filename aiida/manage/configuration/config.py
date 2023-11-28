@@ -132,7 +132,7 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         """Validate the caching identifier patterns."""
         from aiida.manage.caching import _validate_identifier_pattern
         for identifier in value:
-            _validate_identifier_pattern(identifier=identifier)
+            _validate_identifier_pattern(identifier=identifier, strict=True)
         return value
 
 

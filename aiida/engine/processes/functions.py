@@ -374,7 +374,6 @@ class FunctionProcess(Process):
         args: list[str] = []
         var_positional: str | None = None
         var_keyword: str | None = None
-        keywords: str | None = None
 
         try:
             annotations = get_annotations(func, eval_str=True)
@@ -463,7 +462,7 @@ class FunctionProcess(Process):
             spec.inputs.help = namespace_help_string
 
             # If the function supports varargs or kwargs then allow dynamic inputs, otherwise disallow
-            spec.inputs.dynamic = keywords is not None or var_positional or var_keyword
+            spec.inputs.dynamic = var_positional or var_keyword
 
             # Function processes must have a dynamic output namespace since we do not know beforehand what outputs
             # will be returned and the valid types for the value should be `Data` nodes as well as a dictionary because
@@ -486,21 +485,19 @@ class FunctionProcess(Process):
 
     @classmethod
     def validate_inputs(cls, *args: t.Any, **kwargs: t.Any) -> None:  # pylint: disable=unused-argument
-        """
-        Validate the positional and keyword arguments passed in the function call.
+        """Validate the positional and keyword arguments passed in the function call.
 
         :raises TypeError: if more positional arguments are passed than the function defines
         """
         nargs = len(args)
         nparameters = len(cls._func_args)
 
-        # If the spec is dynamic, i.e. the function signature includes `**kwargs` and the number of positional arguments
-        # passed is larger than the number of explicitly defined parameters in the signature, the inputs are invalid and
-        # we should raise. If we don't, some of the passed arguments, intended to be positional arguments, will be
-        # misinterpreted as keyword arguments, but they won't have an explicit name to use for the link label, causing
-        # the input link to be completely lost. If the function supports variadic arguments, however, additional args
-        # should be accepted.
-        if cls.spec().inputs.dynamic and nargs > nparameters and cls._var_positional is None:
+        # If the number of positional arguments passed is larger than the number of explicitly defined parameters in the
+        # signature and the function does not support variable positional arguments the inputs are invalid and we raise.
+        # If we don't, some of the passed arguments, intended to be positional arguments, will be misinterpreted as
+        # keyword arguments, but they won't have an explicit name to use for the link label, causing the input link to
+        # be completely lost. If the function supports variadic arguments, however, additional args should be accepted.
+        if nargs > nparameters and cls._var_positional is None:
             name = cls._func.__name__
             raise TypeError(f'{name}() takes {nparameters} positional arguments but {nargs} were given')
 

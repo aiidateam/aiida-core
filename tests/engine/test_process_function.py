@@ -87,6 +87,15 @@ def function_kwargs(**kwargs):
 
 
 @workfunction
+def function_varargs_kwargs(*args, **kwargs):
+    """Return the positional and keyword arguments as is in a single dictionary."""
+    results = dict(kwargs)
+    for index, arg in enumerate(args):
+        results[f'arg_{index}'] = arg
+    return results
+
+
+@workfunction
 def function_args_and_kwargs(data_a, **kwargs):
     result = {'data_a': data_a}
     result.update(kwargs)
@@ -355,6 +364,16 @@ def test_function_args_and_kwargs_default():
     result = function_args_and_default(*args_input_explicit)
     assert isinstance(result, dict)
     assert result == {'data_a': args_input_explicit[0], 'data_b': args_input_explicit[1]}
+
+
+def test_function_varargs_and_kwargs():
+    """Test function that accepts both positional and keyword arguments."""
+    results = function_varargs_kwargs(*(orm.Str('a'), orm.Str('b')), kwarg_c=orm.Str('c'), kwarg_d=orm.Str('d'))
+    assert sorted(results.keys()) == ['arg_0', 'arg_1', 'kwarg_c', 'kwarg_d']
+    assert results['arg_0'] == orm.Str('a')
+    assert results['arg_1'] == orm.Str('b')
+    assert results['kwarg_c'] == orm.Str('c')
+    assert results['kwarg_d'] == orm.Str('d')
 
 
 def test_function_args_passing_kwargs():

@@ -31,7 +31,7 @@ from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.manage.configuration import get_config_option
-from aiida.orm import CalcJobNode, Code, FolderData, Node, PortableCode, RemoteData, load_node, load_computer
+from aiida.orm import CalcJobNode, Code, FolderData, Node, PortableCode, RemoteData, load_computer, load_node
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.repository.common import FileType
 from aiida.schedulers.datastructures import JobState

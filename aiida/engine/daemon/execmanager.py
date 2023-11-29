@@ -31,7 +31,7 @@ from aiida.common.folders import SandboxFolder
 from aiida.common.links import LinkType
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.manage.configuration import get_config_option
-from aiida.orm import CalcJobNode, Code, FolderData, Node, PortableCode, RemoteData, load_node
+from aiida.orm import CalcJobNode, Code, FolderData, Node, PortableCode, RemoteData, load_node, load_computer
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.repository.common import FileType
 from aiida.schedulers.datastructures import JobState
@@ -247,7 +247,7 @@ def upload_calculation(
             transport.put(folder.get_abs_path(filename), filename)
 
         for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_copy_list:
-            if remote_computer_uuid == computer.uuid:
+            if load_computer(remote_computer_uuid).hostname == computer.hostname:
                 logger.debug(
                     f'[submission of calculation {node.pk}] copying {dest_rel_path} '
                     f'remotely, directly on the machine {computer.label}'
@@ -272,7 +272,7 @@ def upload_calculation(
                 )
 
         for (remote_computer_uuid, remote_abs_path, dest_rel_path) in remote_symlink_list:
-            if remote_computer_uuid == computer.uuid:
+            if load_computer(remote_computer_uuid).hostname == computer.hostname:
                 logger.debug(
                     f'[submission of calculation {node.pk}] copying {dest_rel_path} remotely, '
                     f'directly on the machine {computer.label}'

@@ -28,10 +28,12 @@ import yaml
 
 from aiida import orm
 from aiida.common import AttributeDict
+from aiida.orm.utils.managers import NodeLinksManager
 
 _ENUM_TAG = '!enum'
 _DATACLASS_TAG = '!dataclass'
 _NODE_TAG = '!aiida_node'
+_LINK_TAG = '!aiida_link'
 _GROUP_TAG = '!aiida_group'
 _COMPUTER_TAG = '!aiida_computer'
 _ATTRIBUTE_DICT_TAG = '!aiida_attributedict'
@@ -84,6 +86,26 @@ def node_constructor(loader: yaml.Loader, node: yaml.Node) -> orm.Node:
     """Load a node from the yaml representation."""
     yaml_node = loader.construct_scalar(node)  # type: ignore[arg-type]
     return orm.load_node(uuid=yaml_node)
+
+
+def represent_link(dumper: yaml.Dumper, link: NodeLinksManager) -> yaml.MappingNode:
+    """Represent a link in yaml."""
+    data = {
+        'incoming': link._incoming,
+        'link_type': link._link_type.value,
+        'node': link._node.uuid,
+    }
+    return dumper.represent_mapping(_LINK_TAG, data)
+
+
+def link_constructor(loader: yaml.Loader, link: yaml.Node) -> NodeLinksManager:
+    """Load a link from the yaml representation."""
+    from aiida.common.links import LinkType
+    yaml_link = loader.construct_mapping(link)  # type: ignore[arg-type]
+    link_type = LinkType(yaml_link['link_type'])
+    node = orm.load_node(uuid=yaml_link['node'])
+    incoming = yaml_link['incoming']
+    return NodeLinksManager(node=node, link_type=link_type, incoming=incoming)
 
 
 def represent_group(dumper: yaml.Dumper, group: orm.Group) -> yaml.ScalarNode:
@@ -154,6 +176,8 @@ class AiiDADumper(yaml.Dumper):
     def represent_data(self, data):
         if isinstance(data, orm.Node):
             return represent_node(self, data)
+        if isinstance(data, NodeLinksManager):
+            return represent_link(self, data)
         if isinstance(data, orm.Computer):
             return represent_computer(self, data)
         if isinstance(data, orm.Group):
@@ -184,6 +208,7 @@ yaml.add_constructor(
 )
 yaml.add_constructor(_PLUMPY_BUNDLE, bundle_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_NODE_TAG, node_constructor, Loader=AiiDALoader)
+yaml.add_constructor(_LINK_TAG, link_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_GROUP_TAG, group_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_COMPUTER_TAG, computer_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_ENUM_TAG, enum_constructor, Loader=AiiDALoader)

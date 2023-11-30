@@ -179,3 +179,12 @@ def test_dataclass():
 
     deserialized = serialize.deserialize_unsafe(serialized)
     assert deserialized == obj
+
+
+def test_serialize_link():
+    """Test you can serialize and deserialize a link"""
+    from aiida.orm.utils.managers import NodeLinksManager
+    node = orm.Data().store()
+    link = NodeLinksManager(node=node, link_type=LinkType.CREATE, incoming=False)
+    deserialized = serialize.deserialize_unsafe(serialize.serialize(link))
+    assert node.uuid == deserialized._node.uuid

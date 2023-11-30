@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1701110162104,
+  "lastUpdate": 1701352552910,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -23060,6 +23060,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.0012053",
             "group": "node",
             "extra": "mean: 16.232 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "2.95",
+          "cores": 4,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.10.13",
+          "metadata": "postgres:12.14, rabbitmq:3.8.14-management"
+        },
+        "commit": {
+          "id": "5b27ff3f6acb100e204abf9d2bf33590c2512193",
+          "message": "ORM: Filter inconsequential warnings from `sqlalchemy` (#6192)\n\nRecently, the code was updated to be compatible with `sqlalchmey~=2.0`\r\nwhich caused a lot of warnings to be emitted. As of `sqlalchemy==2.0.19`\r\nthe `sqlalchemy.orm.unitofwork.UOWTransaction.register_object` method\r\nemits a warning whenever an object is registered that is not part of the\r\nsession. See for details:\r\n\r\nhttps://docs.sqlalchemy.org/en/20/changelog/changelog_20.html#change-53740fe9731bbe0f3bb71e3453df07d3\r\n\r\nThis can happen when the session is committed or flushed and an\r\nobject inside the session contains a reference to another object, for\r\nexample through a relationship, is not explicitly part of the session.\r\nIf that referenced object is not already stored and persisted, it might\r\nget lost. On the other hand, if the object was already persisted before,\r\nthere is no risk.\r\n\r\nThis situation occurs a lot in AiiDA's code base. Prime example is when\r\na new process is created. Typically the input nodes are either already\r\nstored, or stored first. As soon as they get stored, the session is\r\ncommitted and the session is reset by expiring all objects. Now, the\r\ninput links are created from the input nodes to the process node, and at\r\nthe end the process node is stored to commit and persist it with the\r\nlinks. It is at this point that Sqlalchemy realises that the input nodes\r\nare not explicitly part of the session.\r\n\r\nOne direct solution would be to add the input nodes again to the session\r\nbefore committing the process node and the links. However, this code is\r\npart of the backend independent :mod:`aiida.orm` module and this is a\r\nbackend-specific problem. This is also just one example and there are\r\nmost likely other places in the code where the problem arises. Therefore,\r\nas a workaround, a warning filter is put in place to silence this\r\nparticular warning. Note that `pytest` undoes all registered warning\r\nfilters, so it has to be added again in the `pytest` configuration in\r\nthe `pyproject.toml`.",
+          "timestamp": "2023-11-30T14:47:36+01:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/5b27ff3f6acb100e204abf9d2bf33590c2512193",
+          "distinct": true,
+          "tree_id": "fad3e348cb80bfbf1e8e4fa470e5beac0be9a2a8"
+        },
+        "date": 1701352536876,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 3.2176839033611278,
+            "unit": "iter/sec",
+            "range": "stddev: 0.052540",
+            "group": "import-export",
+            "extra": "mean: 310.78 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 3.365915041251494,
+            "unit": "iter/sec",
+            "range": "stddev: 0.060727",
+            "group": "import-export",
+            "extra": "mean: 297.10 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 5.929145062274575,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0046130",
+            "group": "import-export",
+            "extra": "mean: 168.66 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 4.748537416147668,
+            "unit": "iter/sec",
+            "range": "stddev: 0.091193",
+            "group": "import-export",
+            "extra": "mean: 210.59 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 4.024347205619512,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0051598",
+            "group": "engine",
+            "extra": "mean: 248.49 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.8876405932948134,
+            "unit": "iter/sec",
+            "range": "stddev: 0.073944",
+            "group": "engine",
+            "extra": "mean: 1.1266 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.9925942296378075,
+            "unit": "iter/sec",
+            "range": "stddev: 0.077848",
+            "group": "engine",
+            "extra": "mean: 1.0075 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.22629393554692748,
+            "unit": "iter/sec",
+            "range": "stddev: 0.13632",
+            "group": "engine",
+            "extra": "mean: 4.4190 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.24990281279610357,
+            "unit": "iter/sec",
+            "range": "stddev: 0.14377",
+            "group": "engine",
+            "extra": "mean: 4.0016 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.945710283462781,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0070865",
+            "group": "engine",
+            "extra": "mean: 339.48 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.6308179857490057,
+            "unit": "iter/sec",
+            "range": "stddev: 0.027964",
+            "group": "engine",
+            "extra": "mean: 1.5852 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.7138666345437124,
+            "unit": "iter/sec",
+            "range": "stddev: 0.025288",
+            "group": "engine",
+            "extra": "mean: 1.4008 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.17889411426074062,
+            "unit": "iter/sec",
+            "range": "stddev: 0.063463",
+            "group": "engine",
+            "extra": "mean: 5.5899 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.19691601027468003,
+            "unit": "iter/sec",
+            "range": "stddev: 0.086470",
+            "group": "engine",
+            "extra": "mean: 5.0783 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 412.43665869463507,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00012673",
+            "group": "node",
+            "extra": "mean: 2.4246 msec\nrounds: 253"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 76.38896025953916,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00022753",
+            "group": "node",
+            "extra": "mean: 13.091 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 52.97528853028656,
+            "unit": "iter/sec",
+            "range": "stddev: 0.026430",
+            "group": "node",
+            "extra": "mean: 18.877 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 302.8787379205721,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00023407",
+            "group": "node",
+            "extra": "mean: 3.3017 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 62.236911427838315,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00087509",
+            "group": "node",
+            "extra": "mean: 16.068 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 60.399701548109455,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0013199",
+            "group": "node",
+            "extra": "mean: 16.556 msec\nrounds: 100"
           }
         ]
       }

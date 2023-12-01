@@ -181,10 +181,13 @@ def test_dataclass():
     assert deserialized == obj
 
 
-def test_serialize_link():
-    """Test you can serialize and deserialize a link"""
+def test_serialize_node_links_manager():
+    """Test you can serialize and deserialize a NodeLinksManager"""
     from aiida.orm.utils.managers import NodeLinksManager
     node = orm.Data().store()
-    link = NodeLinksManager(node=node, link_type=LinkType.CREATE, incoming=False)
-    deserialized = serialize.deserialize_unsafe(serialize.serialize(link))
-    assert node.uuid == deserialized._node.uuid
+    node_links_manager = NodeLinksManager(node=node, link_type=LinkType.CREATE, incoming=False)
+    deserialized = serialize.deserialize_unsafe(serialize.serialize(node_links_manager))
+    assert isinstance(deserialized, NodeLinksManager)
+    assert deserialized._node.uuid == node.uuid
+    assert deserialized._link_type == LinkType.CREATE
+    assert deserialized._incoming is False

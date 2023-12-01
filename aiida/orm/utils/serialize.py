@@ -28,10 +28,12 @@ import yaml
 
 from aiida import orm
 from aiida.common import AttributeDict
+from aiida.orm.utils.managers import NodeLinksManager
 
 _ENUM_TAG = '!enum'
 _DATACLASS_TAG = '!dataclass'
 _NODE_TAG = '!aiida_node'
+_NODE_LINKS_MANAGER_TAG = '!aiida_node_links_manager'
 _GROUP_TAG = '!aiida_group'
 _COMPUTER_TAG = '!aiida_computer'
 _ATTRIBUTE_DICT_TAG = '!aiida_attributedict'
@@ -84,6 +86,26 @@ def node_constructor(loader: yaml.Loader, node: yaml.Node) -> orm.Node:
     """Load a node from the yaml representation."""
     yaml_node = loader.construct_scalar(node)  # type: ignore[arg-type]
     return orm.load_node(uuid=yaml_node)
+
+
+def represent_node_links_manager(dumper: yaml.Dumper, node_links_manager: NodeLinksManager) -> yaml.MappingNode:
+    """Represent a link in yaml."""
+    data = {
+        'incoming': node_links_manager._incoming,  # pylint: disable=protected-access
+        'link_type': node_links_manager._link_type.value,  # pylint: disable=protected-access
+        'node': node_links_manager._node.uuid,  # pylint: disable=protected-access
+    }
+    return dumper.represent_mapping(_NODE_LINKS_MANAGER_TAG, data)
+
+
+def node_links_manager_constructor(loader: yaml.Loader, node_links_manager: yaml.Node) -> NodeLinksManager:
+    """Load a link from the yaml representation."""
+    from aiida.common.links import LinkType
+    yaml_node_links_manager = loader.construct_mapping(node_links_manager)  # type: ignore[arg-type]
+    link_type = LinkType(yaml_node_links_manager['link_type'])
+    node = orm.load_node(uuid=yaml_node_links_manager['node'])
+    incoming = yaml_node_links_manager['incoming']
+    return NodeLinksManager(node=node, link_type=link_type, incoming=incoming)
 
 
 def represent_group(dumper: yaml.Dumper, group: orm.Group) -> yaml.ScalarNode:
@@ -154,6 +176,8 @@ class AiiDADumper(yaml.Dumper):
     def represent_data(self, data):
         if isinstance(data, orm.Node):
             return represent_node(self, data)
+        if isinstance(data, NodeLinksManager):
+            return represent_node_links_manager(self, data)
         if isinstance(data, orm.Computer):
             return represent_computer(self, data)
         if isinstance(data, orm.Group):
@@ -184,6 +208,7 @@ yaml.add_constructor(
 )
 yaml.add_constructor(_PLUMPY_BUNDLE, bundle_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_NODE_TAG, node_constructor, Loader=AiiDALoader)
+yaml.add_constructor(_NODE_LINKS_MANAGER_TAG, node_links_manager_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_GROUP_TAG, group_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_COMPUTER_TAG, computer_constructor, Loader=AiiDALoader)
 yaml.add_constructor(_ENUM_TAG, enum_constructor, Loader=AiiDALoader)

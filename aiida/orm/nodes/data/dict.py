@@ -8,7 +8,10 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`Data` sub class to represent a dictionary."""
+from __future__ import annotations
+
 import copy
+import typing as t
 
 from aiida.common import exceptions
 
@@ -78,6 +81,15 @@ class Dict(Data):
     def __contains__(self, key: str) -> bool:
         """Return whether the node contains a key."""
         return key in self.base.attributes
+
+    def get(self, key: str, default: t.Any | None = None, /):  # type: ignore[override]  # pylint: disable=arguments-differ
+        """Return the value for key if key is in the dictionary, else default.
+
+        :param key: The key whose value to return.
+        :param default: Optional default to return in case the key does not exist.
+        :returns: The value if the key exists, otherwise the ``default``.
+        """
+        return self.base.attributes.get(key, default)
 
     def set_dict(self, dictionary):
         """Replace the current dictionary with another one.

@@ -462,7 +462,7 @@ class FunctionProcess(Process):
             spec.inputs.help = namespace_help_string
 
             # If the function supports varargs or kwargs then allow dynamic inputs, otherwise disallow
-            spec.inputs.dynamic = var_positional or var_keyword
+            spec.inputs.dynamic = var_positional is not None or var_keyword is not None
 
             # Function processes must have a dynamic output namespace since we do not know beforehand what outputs
             # will be returned and the valid types for the value should be `Data` nodes as well as a dictionary because

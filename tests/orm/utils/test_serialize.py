@@ -188,6 +188,6 @@ def test_serialize_node_links_manager():
     node_links_manager = NodeLinksManager(node=node, link_type=LinkType.CREATE, incoming=False)
     deserialized = serialize.deserialize_unsafe(serialize.serialize(node_links_manager))
     assert isinstance(deserialized, NodeLinksManager)
-    assert deserialized._node.uuid == node.uuid
-    assert deserialized._link_type == LinkType.CREATE
-    assert deserialized._incoming is False
+    assert deserialized._node.uuid == node.uuid  # pylint: disable=protected-access
+    assert deserialized._link_type == LinkType.CREATE  # pylint: disable=protected-access
+    assert deserialized._incoming is False  # pylint: disable=protected-access

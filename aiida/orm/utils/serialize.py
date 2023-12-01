@@ -91,9 +91,9 @@ def node_constructor(loader: yaml.Loader, node: yaml.Node) -> orm.Node:
 def represent_node_links_manager(dumper: yaml.Dumper, node_links_manager: NodeLinksManager) -> yaml.MappingNode:
     """Represent a link in yaml."""
     data = {
-        'incoming': node_links_manager._incoming,
-        'link_type': node_links_manager._link_type.value,
-        'node': node_links_manager._node.uuid,
+        'incoming': node_links_manager._incoming,  # pylint: disable=protected-access
+        'link_type': node_links_manager._link_type.value,  # pylint: disable=protected-access
+        'node': node_links_manager._node.uuid,  # pylint: disable=protected-access
     }
     return dumper.represent_mapping(_NODE_LINKS_MANAGER_TAG, data)
 

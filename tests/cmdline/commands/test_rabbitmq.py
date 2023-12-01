@@ -13,6 +13,7 @@ import pytest
 
 from aiida.cmdline.commands import cmd_rabbitmq
 from aiida.engine import ProcessState, submit
+from aiida.engine.processes import control
 from aiida.orm import Int
 
 
@@ -32,7 +33,7 @@ def test_tasks_list_running_daemon(run_cli_command):
 @pytest.mark.usefixtures('stopped_daemon_client')
 def test_tasks_list(monkeypatch, run_cli_command):
     """Test the ``tasks list`` command when everything is consistent."""
-    monkeypatch.setattr(cmd_rabbitmq, 'get_process_tasks', lambda *args: [1, 2, 3])
+    monkeypatch.setattr(control, 'get_process_tasks', lambda *args: [1, 2, 3])
 
     result = run_cli_command(cmd_rabbitmq.cmd_tasks_list, use_subprocess=False)
     assert result.output == '1\n2\n3\n'
@@ -40,63 +41,25 @@ def test_tasks_list(monkeypatch, run_cli_command):
 
 @pytest.mark.usefixtures('started_daemon_client')
 def test_tasks_analyze_running_daemon(run_cli_command):
-    """Test the ``tasks analyze`` command excepts when the daemon is running."""
+    """Test the ``tasks analyze`` command excepts when the daemon is running.
+
+    This is a copy of the test for the equivalent ``verdi process repair`` since it just forwards to that command.
+    """
     result = run_cli_command(cmd_rabbitmq.cmd_tasks_analyze, raises=True, use_subprocess=False)
     assert 'The daemon needs to be stopped before running this command.' in result.output
 
 
 @pytest.mark.usefixtures('stopped_daemon_client')
 def test_tasks_analyze_consistent(monkeypatch, run_cli_command):
-    """Test the ``tasks analyze`` command when everything is consistent."""
-    monkeypatch.setattr(cmd_rabbitmq, 'get_active_processes', lambda *args: [1, 2, 3])
-    monkeypatch.setattr(cmd_rabbitmq, 'get_process_tasks', lambda *args: [1, 2, 3])
+    """Test the ``tasks analyze`` command when everything is consistent.
+
+    This is a copy of the test for the equivalent ``verdi process repair`` since it just forwards to that command.
+    """
+    monkeypatch.setattr(control, 'get_active_processes', lambda *args, **kwargs: [1, 2, 3])
+    monkeypatch.setattr(control, 'get_process_tasks', lambda *args: [1, 2, 3])
 
     result = run_cli_command(cmd_rabbitmq.cmd_tasks_analyze, use_subprocess=False)
     assert 'No inconsistencies detected between database and RabbitMQ.' in result.output
-
-
-@pytest.mark.usefixtures('stopped_daemon_client')
-def test_tasks_analyze_duplicate_tasks(monkeypatch, run_cli_command):
-    """Test the ``tasks analyze`` command when there are duplicate tasks."""
-    monkeypatch.setattr(cmd_rabbitmq, 'get_active_processes', lambda *args: [1, 2])
-    monkeypatch.setattr(cmd_rabbitmq, 'get_process_tasks', lambda *args: [1, 2, 2])
-
-    result = run_cli_command(cmd_rabbitmq.cmd_tasks_analyze, raises=True, use_subprocess=False)
-    assert 'There are duplicates process tasks:' in result.output
-    assert 'Inconsistencies detected between database and RabbitMQ.' in result.output
-
-
-@pytest.mark.usefixtures('stopped_daemon_client')
-def test_tasks_analyze_additional_tasks(monkeypatch, run_cli_command):
-    """Test the ``tasks analyze`` command when there are additional tasks."""
-    monkeypatch.setattr(cmd_rabbitmq, 'get_active_processes', lambda *args: [1, 2])
-    monkeypatch.setattr(cmd_rabbitmq, 'get_process_tasks', lambda *args: [1, 2, 3])
-
-    result = run_cli_command(cmd_rabbitmq.cmd_tasks_analyze, raises=True, use_subprocess=False)
-    assert 'There are process tasks for terminated processes:' in result.output
-    assert 'Inconsistencies detected between database and RabbitMQ.' in result.output
-
-
-@pytest.mark.usefixtures('stopped_daemon_client')
-def test_tasks_analyze_missing_tasks(monkeypatch, run_cli_command):
-    """Test the ``tasks analyze`` command when there are missing tasks."""
-    monkeypatch.setattr(cmd_rabbitmq, 'get_active_processes', lambda *args: [1, 2, 3])
-    monkeypatch.setattr(cmd_rabbitmq, 'get_process_tasks', lambda *args: [1, 2])
-
-    result = run_cli_command(cmd_rabbitmq.cmd_tasks_analyze, raises=True, use_subprocess=False)
-    assert 'There are active processes without process task:' in result.output
-    assert 'Inconsistencies detected between database and RabbitMQ.' in result.output
-
-
-@pytest.mark.usefixtures('stopped_daemon_client')
-def test_tasks_analyze_verbosity(monkeypatch, run_cli_command):
-    """Test the ``tasks analyze`` command with ``-v INFO```."""
-    monkeypatch.setattr(cmd_rabbitmq, 'get_active_processes', lambda *args: [1, 2, 3, 4])
-    monkeypatch.setattr(cmd_rabbitmq, 'get_process_tasks', lambda *args: [1, 2])
-
-    result = run_cli_command(cmd_rabbitmq.cmd_tasks_analyze, ['-v', 'INFO'], raises=True, use_subprocess=False)
-    assert 'Active processes: [1, 2, 3, 4]' in result.output
-    assert 'Process tasks: [1, 2]' in result.output
 
 
 @pytest.mark.usefixtures('stopped_daemon_client')

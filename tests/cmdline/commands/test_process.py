@@ -21,6 +21,7 @@ from aiida.cmdline.commands import cmd_process
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.engine import Process, ProcessState
+from aiida.engine.processes import control as process_control
 from aiida.orm import CalcJobNode, Group, WorkChainNode, WorkflowNode, WorkFunctionNode
 from tests.utils.processes import WaitProcess
 
@@ -489,3 +490,64 @@ def test_process_kill_all(submit_and_await, run_cli_command):
     run_cli_command(cmd_process.process_kill, ['--all', '--wait'], user_input='y')
     await_condition(lambda: node.is_killed)
     assert node.process_status == 'Killed through `verdi process kill`'
+
+
+@pytest.mark.usefixtures('started_daemon_client')
+def test_process_repair_running_daemon(run_cli_command):
+    """Test the ``verdi process repair`` command excepts when the daemon is running."""
+    result = run_cli_command(cmd_process.process_repair, raises=True, use_subprocess=False)
+    assert 'The daemon needs to be stopped before running this command.' in result.output
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_process_repair_consistent(monkeypatch, run_cli_command):
+    """Test the ``verdi process repair`` command when everything is consistent."""
+    monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2, 3])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2, 3])
+
+    result = run_cli_command(cmd_process.process_repair, use_subprocess=False)
+    assert 'No inconsistencies detected between database and RabbitMQ.' in result.output
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_process_repair_duplicate_tasks(monkeypatch, run_cli_command):
+    """Test the ``verdi process repair`` command when there are duplicate tasks."""
+    monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2, 2])
+
+    result = run_cli_command(cmd_process.process_repair, raises=True, use_subprocess=False)
+    assert 'There are duplicates process tasks:' in result.output
+    assert 'Inconsistencies detected between database and RabbitMQ.' in result.output
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_process_repair_additional_tasks(monkeypatch, run_cli_command):
+    """Test the ``verdi process repair`` command when there are additional tasks."""
+    monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2, 3])
+
+    result = run_cli_command(cmd_process.process_repair, raises=True, use_subprocess=False)
+    assert 'There are process tasks for terminated processes:' in result.output
+    assert 'Inconsistencies detected between database and RabbitMQ.' in result.output
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_process_repair_missing_tasks(monkeypatch, run_cli_command):
+    """Test the ``verdi process repair`` command when there are missing tasks."""
+    monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2, 3])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2])
+
+    result = run_cli_command(cmd_process.process_repair, raises=True, use_subprocess=False)
+    assert 'There are active processes without process task:' in result.output
+    assert 'Inconsistencies detected between database and RabbitMQ.' in result.output
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_process_repair_verbosity(monkeypatch, run_cli_command):
+    """Test the ``verdi process repair`` command with ``-v INFO```."""
+    monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [1, 2, 3, 4])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2])
+
+    result = run_cli_command(cmd_process.process_repair, ['-v', 'INFO'], raises=True, use_subprocess=False)
+    assert 'Active processes: [1, 2, 3, 4]' in result.output
+    assert 'Process tasks: [1, 2]' in result.output

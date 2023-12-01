@@ -344,6 +344,7 @@ filterwarnings = [
     "ignore::DeprecationWarning:pymatgen:",
     "ignore::DeprecationWarning:jsonbackend:",
     "ignore::DeprecationWarning:pkg_resources:",
+    "ignore:Object of type .* not in session, .* operation along .* will not proceed:sqlalchemy.exc.SAWarning",
     "ignore::pytest.PytestCollectionWarning",
     "default::ResourceWarning",
 ]

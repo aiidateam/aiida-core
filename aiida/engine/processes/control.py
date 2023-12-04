@@ -218,6 +218,7 @@ def _perform_actions(
     _resolve_futures(futures, infinitive, present, wait, timeout)
 
 
+#pylint: disable=too-many-branches
 def _resolve_futures(
     futures: dict[concurrent.futures.Future, ProcessNode],
     infinitive: str,
@@ -258,7 +259,10 @@ def _resolve_futures(
             try:
                 # unwrap is need here since LoopCommunicator will also wrap a future
                 future = unwrap_kiwi_future(future)
-                result = future.result()
+                if future.done():
+                    result = future.result(timeout=timeout)
+                else:
+                    result = future.exception(timeout=timeout)
             except communications.TimeoutError:
                 LOGGER.error(f'call to {infinitive} Process<{process.pk}> timed out')
             except Exception as exception:  # pylint: disable=broad-except

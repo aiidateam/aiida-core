@@ -28,7 +28,13 @@ def test_serialize_round_trip():
     node_a = orm.Data().store()
     node_b = orm.Data().store()
 
-    data = {'test': 1, 'list': [1, 2, 3, node_a], 'dict': {('Si',): node_b, 'foo': 'bar'}, 'baz': 'aar'}
+    data = {
+        'test': 1,
+        'list': [1, 2, 3, node_a],
+        'dict': {('Si',): node_b,
+                 'foo': 'bar'},
+        'baz': 'aar'
+    }
 
     serialized_data = serialize.serialize(data)
     deserialized_data = serialize.deserialize_unsafe(serialized_data)

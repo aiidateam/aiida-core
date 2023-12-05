@@ -32,6 +32,7 @@ class MultiplyAddWorkChain(WorkChain):
         spec.input('x', valid_type=Int)
         spec.input('y', valid_type=Int)
         spec.input('z', valid_type=Int)
+        spec.input('t', valid_type=Int, required=False, default=Int(0))
         spec.input('code', valid_type=AbstractCode)
         spec.outline(
             cls.multiply,
@@ -48,7 +49,16 @@ class MultiplyAddWorkChain(WorkChain):
 
     def add(self):
         """Add two numbers using the `ArithmeticAddCalculation` calculation job plugin."""
-        inputs = {'x': self.ctx.product, 'y': self.inputs.z, 'code': self.inputs.code}
+        inputs = {
+            'x': self.ctx.product,
+            'y': self.inputs.z,
+            'code': self.inputs.code,
+            'metadata': {
+                'options': {
+                    'sleep': self.inputs.t.value
+                }
+            }
+        }
         future = self.submit(ArithmeticAddCalculation, **inputs)
 
         return ToContext(addition=future)

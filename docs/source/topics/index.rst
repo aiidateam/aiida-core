@@ -14,6 +14,7 @@ Topics
    data_types
    database
    repository
+   storage
    plugins
    schedulers
    transport

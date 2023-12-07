@@ -10,10 +10,7 @@
 from __future__ import annotations
 
 import abc
-import pathlib
 from typing import TYPE_CHECKING, Any, ContextManager, List, Optional, Sequence, TypeVar, Union
-
-from disk_objectstore import backup_utils
 
 if TYPE_CHECKING:
     from aiida.manage.configuration.profile import Profile
@@ -310,24 +307,16 @@ class StorageBackend(abc.ABC):
     @abc.abstractmethod
     def backup(
         self,
-        backup_utils_instance: backup_utils.BackupUtilities,
-        path: pathlib.Path,
-        prev_backup: Optional[pathlib.Path] = None,
-        pg_dump_exe: str = 'pg_dump',
+        dest: str,
+        keep: int,
+        exes: dict,
     ) -> bool:
         """Create a backup of the storage contents.
-
-        :param path:
-            Path to where the backup will be created. If 'remote' is specified, must be an absolute path,
-            otherwise can be relative.
-
-        :param prev_backup:
-            Path to the previous backup. Rsync calls will be hard-linked to this path, making the backup
-            incremental and efficient. If this is specified, the automatic folder management is not used.
 
         :return:
             True is successful and False if unsuccessful.
         """
+        raise NotImplementedError
 
     def get_info(self, detailed: bool = False) -> dict:
         """Return general information on the storage.

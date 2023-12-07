@@ -477,14 +477,12 @@ class PsqlDosBackend(StorageBackend):
         results['repository'] = self.get_repository().get_info(detailed)
         return results
 
-
-    def backup( # pylint: disable=too-many-locals, too-many-return-statements, too-many-branches, too-many-statements
+    def _backup(
         self,
-        backup_utils_instance: backup_utils.BackupUtilities,
+        manager: backup_utils.BackupManager,
         path: pathlib.Path,
         prev_backup: Optional[pathlib.Path] = None,
-        pg_dump_exe: str = 'pg_dump',
-    ) -> bool:
+    ) -> None:
         """Create a backup of the postgres database and disk-objectstore to the provided path.
 
         :param path:
@@ -514,13 +512,13 @@ class PsqlDosBackend(StorageBackend):
         try:
             ProfileAccessManager(self._profile).request_access()
         except LockedProfileError:
-            STORAGE_LOGGER.error('The profile is locked!')
-            return False
+            raise backup_utils.BackupError('The profile is locked!')
 
         # step 1: first run the storage maintenance version that can safely be performed while aiida is running
         self.maintain(full=False, compress=True)
 
         # step 2: dump the PostgreSQL database into a temporary directory
+        pg_dump_exe = manager.exes['pg_dump']
         with tempfile.TemporaryDirectory() as temp_dir_name:
             psql_temp_loc = pathlib.Path(temp_dir_name) / 'db.psql'
 
@@ -534,36 +532,40 @@ class PsqlDosBackend(StorageBackend):
             try:
                 subprocess.run(cmd, check=True, env=env)
             except subprocess.CalledProcessError as exc:
-                STORAGE_LOGGER.error(f'pg_dump: {exc}')
-                return False
+                raise backup_utils.BackupError(f'pg_dump: {exc}')
 
             if psql_temp_loc.is_file():
                 STORAGE_LOGGER.info(f'Dumped the PostgreSQL database to {str(psql_temp_loc)}')
             else:
-                STORAGE_LOGGER.error(f"'{str(psql_temp_loc)}' was not created.")
-                return False
+                raise backup_utils.BackupError(f"'{str(psql_temp_loc)}' was not created.")
 
             # step 3: transfer the PostgreSQL database file
-            success = backup_utils_instance.call_rsync(
-                psql_temp_loc, path, link_dest=prev_backup, dest_trailing_slash=True
-            )
-            if not success:
-                return False
+            manager.call_rsync(psql_temp_loc, path, link_dest=prev_backup, dest_trailing_slash=True)
 
         # step 4: back up the disk-objectstore
-        success = backup_utils_instance.backup_container(
-            container, path / 'container', prev_backup=prev_backup / 'container' if prev_backup else None
+        backup_utils.backup_container(
+            manager, container, path / 'container', prev_backup=prev_backup / 'container' if prev_backup else None
         )
-        if not success:
-            return False
 
         # step 5: back up aiida config.json file
         try:
             config = get_config()
-            success = backup_utils_instance.call_rsync(pathlib.Path(config.filepath), path)
-            if not success:
-                return False
+            manager.call_rsync(pathlib.Path(config.filepath), path)
         except (exceptions.MissingConfigurationError, exceptions.ConfigurationError):
             STORAGE_LOGGER.warning('aiida config.json not found!')
+
+    def backup(
+        self,
+        dest: str,
+        keep: int,
+        exes: dict,
+    ) -> bool:
+
+        try:
+            backup_manager = backup_utils.BackupManager(dest, STORAGE_LOGGER, exes=exes, keep=keep)
+            backup_manager.backup_auto_folders(lambda path, prev: self._backup(backup_manager, path, prev))
+        except backup_utils.BackupError as exc:
+            STORAGE_LOGGER.error(f'Error: {exc}')
+            return False
 
         return True

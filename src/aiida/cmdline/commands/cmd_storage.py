@@ -7,6 +7,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi storage` commands."""
+import sys
+
 import click
 from click_spinner import spinner
 
@@ -14,7 +16,6 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators, echo
 from aiida.common import exceptions
-from aiida.storage.log import STORAGE_LOGGER
 
 
 @verdi.group('storage')
@@ -201,29 +202,15 @@ def storage_backup(dest: str, keep: int, pg_dump_exe: str, rsync_exe: str):
     NOTE: 'rsync' and other UNIX-specific commands are called, thus the command will not work on
     non-UNIX environments.
     """
-    from disk_objectstore import backup_utils
 
     from aiida.manage.manager import get_manager
 
     manager = get_manager()
     storage = manager.get_profile_storage()
 
-    try:
-        backup_utils_instance = backup_utils.BackupUtilities(dest, keep, rsync_exe, STORAGE_LOGGER)
-    except ValueError as exc:
-        click.echo(f'Error: {exc}')
-        return
-
-    success = backup_utils_instance.validate_inputs(additional_exes=[pg_dump_exe])
+    success = storage.backup(dest, keep, exes={'rsync': rsync_exe, 'pg_dump': pg_dump_exe})
     if not success:
-        click.echo('Input validation failed.')
-        return
-
-    success = backup_utils_instance.backup_auto_folders(
-        lambda path, prev: storage.backup(backup_utils_instance, path, prev_backup=prev, pg_dump_exe=pg_dump_exe)
-    )
-    if not success:
-        click.echo('Error: backup failed.')
-        return
+        click.echo('Backup was not successful.')
+        sys.exit(1)
 
     click.echo(f'Success! Profile backed up to {dest}')

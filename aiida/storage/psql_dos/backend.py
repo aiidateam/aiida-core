@@ -93,7 +93,7 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         database_password: str = Field(
             title='PostgreSQL password', description='The password with which to connect to the PostgreSQL server.'
         )
-        database_name: Union[str, None] = Field(
+        database_name: str = Field(
             title='PostgreSQL database name', description='The name of the database in the PostgreSQL server.'
         )
 

@@ -51,7 +51,7 @@ import os
 from typing import TYPE_CHECKING, Any, Optional
 import warnings
 
-from aiida.common.warnings import AiidaDeprecationWarning, warn_deprecation
+from aiida.common.warnings import AiidaDeprecationWarning
 
 if TYPE_CHECKING:
     from aiida.manage.configuration import Config, Profile  # pylint: disable=import-self
@@ -117,11 +117,13 @@ def _merge_deprecated_cache_yaml(config, filepath):
     while not cache_path_backup or os.path.isfile(cache_path_backup):
         cache_path_backup = f"{cache_path}.{timezone.now().strftime('%Y%m%d-%H%M%S.%f')}"
 
-    warn_deprecation(
+    warnings.warn(
         'cache_config.yml use is deprecated and support will be removed in `v3.0`. Merging into config.json and '
         f'moving to: {cache_path_backup}',
-        version=3
+        AiidaDeprecationWarning,
+        stacklevel=2
     )
+
     with open(cache_path, 'r', encoding='utf8') as handle:
         cache_config = yaml.safe_load(handle)
     for profile_name, data in cache_config.items():

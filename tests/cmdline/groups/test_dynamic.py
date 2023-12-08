@@ -31,3 +31,4 @@ def test_list_options(entry_points):
         option = option_decorators(lambda x: True).__click_params__[0]
         field = CustomClass.Configuration.model_fields[option.name]
         assert option.default == field.default_factory if field.default is PydanticUndefined else field.default
+        assert option.type == t.get_args(field.annotation) or field.annotation

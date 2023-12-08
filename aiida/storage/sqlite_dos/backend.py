@@ -12,8 +12,8 @@ from __future__ import annotations
 
 from functools import cached_property
 from pathlib import Path
-from tempfile import mkdtemp
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
 from disk_objectstore import Container
 from pydantic import BaseModel, Field
@@ -21,6 +21,7 @@ from sqlalchemy import insert
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 from aiida.manage import Profile
+from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
 from aiida.orm.implementation import BackendEntity
 from aiida.storage.psql_dos.models.settings import DbSetting
 from aiida.storage.sqlite_zip import models, orm
@@ -97,7 +98,7 @@ class SqliteDosStorage(PsqlDosBackend):
         filepath: str = Field(
             title='Directory of the backend',
             description='Filepath of the directory in which to store data for this backend.',
-            default_factory=mkdtemp
+            default_factory=lambda: AIIDA_CONFIG_FOLDER / 'repository' / f'sqlite_dos_{uuid4().hex}'
         )
 
     @classmethod

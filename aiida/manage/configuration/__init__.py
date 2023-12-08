@@ -340,6 +340,9 @@ def load_documentation_profile():
                     'broker_virtual_host': '',
                 }
             },
+            'options': {
+                'warnings.showdeprecations': False
+            }
         }
         config = {'default_profile': profile_name, 'profiles': {profile_name: profile_config}}
         CONFIG = Config(handle.name, config)

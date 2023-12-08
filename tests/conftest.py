@@ -527,18 +527,33 @@ def run_cli_command(reset_log_level, aiida_instance, aiida_profile):  # pylint: 
         # Cast all elements in ``parameters`` to strings as that is required by ``subprocess.run``.
         parameters = [str(param) for param in parameters or []]
 
-        if use_subprocess:
-            result = run_cli_command_subprocess(command, parameters, user_input, aiida_profile.name, suppress_warnings)
-        else:
-            result = run_cli_command_runner(command, parameters, user_input, initialize_ctx_obj, kwargs)
+        try:
+            config_show_deprecations = aiida_instance.get_option('warnings.showdeprecations')
 
-        if raises:
-            assert result.exception is not None, result.output
-            assert result.exit_code != 0, result.exit_code
-        else:
-            import traceback
-            assert result.exception is None, ''.join(traceback.format_exception(*result.exc_info))
-            assert result.exit_code == 0, (result.exit_code, result.stderr)
+            if config_show_deprecations and suppress_warnings:
+                aiida_instance.set_option('warnings.showdeprecations', False)
+                if use_subprocess:
+                    aiida_instance.store()
+
+            if use_subprocess:
+                result = run_cli_command_subprocess(
+                    command, parameters, user_input, aiida_profile.name, suppress_warnings
+                )
+            else:
+                result = run_cli_command_runner(command, parameters, user_input, initialize_ctx_obj, kwargs)
+
+            if raises:
+                assert result.exception is not None, result.output
+                assert result.exit_code != 0, result.exit_code
+            else:
+                import traceback
+                assert result.exception is None, ''.join(traceback.format_exception(*result.exc_info))
+                assert result.exit_code == 0, (result.exit_code, result.stderr)
+        finally:
+            if config_show_deprecations and suppress_warnings:
+                aiida_instance.set_option('warnings.showdeprecations', config_show_deprecations)
+                if use_subprocess:
+                    aiida_instance.store()
 
         return result
 

@@ -19,11 +19,14 @@ from .singlefile import SinglefileData
 
 __all__ = ('UpfData',)
 
-warn_deprecation(
-    'This module is deprecated. See '
-    'https://aiida-pseudo.readthedocs.io/en/latest/howto.html#migrate-from-legacy-upfdata-from-aiida-core.',
-    version=3
-)
+
+def emit_deprecation():
+    warn_deprecation(
+        'The `aiida.orm.nodes.data.upf` module is deprecated. For details how to replace it, please see '
+        'https://aiida-pseudo.readthedocs.io/en/latest/howto.html#migrate-from-legacy-upfdata-from-aiida-core.',
+        version=3
+    )
+
 
 REGEX_UPF_VERSION = re.compile(r"""
     \s*<UPF\s+version\s*="
@@ -56,6 +59,8 @@ def get_pseudos_from_structure(structure, family_name):
     :raise aiida.common.NotExistent: if no UPF for an element in the group is found in the group.
     """
     from aiida.common.exceptions import MultipleObjectsError, NotExistent
+
+    emit_deprecation()
 
     pseudo_list = {}
     family_pseudos = {}
@@ -95,6 +100,8 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
     from aiida.common import AIIDA_LOGGER
     from aiida.common.exceptions import UniquenessError
     from aiida.common.files import md5_file
+
+    emit_deprecation()
 
     if not os.path.isdir(folder):
         raise ValueError('folder must be a directory')
@@ -204,6 +211,8 @@ def parse_upf(fname, check_filename=True, encoding='utf-8'):
     from aiida.common.exceptions import ParsingError
     from aiida.orm.nodes.data.structure import _valid_symbols
 
+    emit_deprecation()
+
     parsed_data = {}
 
     try:
@@ -278,6 +287,8 @@ class UpfData(SinglefileData):
 
         from aiida.common.files import md5_file
 
+        emit_deprecation()
+
         if not os.path.isabs(filepath):
             raise ValueError('filepath must be an absolute path')
 
@@ -300,6 +311,10 @@ class UpfData(SinglefileData):
             )
 
         return (pseudos[0], False)
+
+    def __init__(self, *args, **kwargs):
+        emit_deprecation()
+        super().__init__(*args, **kwargs)
 
     def store(self, *args, **kwargs):  # pylint: disable=signature-differs
         """Store the node, reparsing the file so that the md5 and the element are correctly reset."""

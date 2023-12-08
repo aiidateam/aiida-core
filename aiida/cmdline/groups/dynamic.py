@@ -142,9 +142,15 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
             for key, field_info in cls.Configuration.model_fields.items():
                 default = field_info.default_factory if field_info.default is PydanticUndefined else field_info.default
+
+                # The ``field_info.annotation`` property returns the annotation of the field. This can be a plain type
+                # or a type from ``typing``, e.g., ``Union[int, float]`` or ``Optional[str]``. In these cases, the type
+                # that needs to be passed to ``click`` is the arguments of the type, which can be obtained using the
+                # ``typing.get_args()`` method. If it is not a compound type, this returns an empty tuplem so in that
+                # case, the type is simply the ``field_info.annotation``.
                 options_spec[key] = {
                     'required': field_info.is_required(),
-                    'type': field_info.annotation,
+                    'type': t.get_args(field_info.annotation) or field_info.annotation,
                     'prompt': field_info.title,
                     'default': default,
                     'help': field_info.description,

@@ -11,6 +11,7 @@ import click
 
 from aiida.common import exceptions
 from aiida.plugins.entry_point import ENTRY_POINT_GROUP_FACTORY_MAPPING, get_entry_point_names
+from aiida.plugins.factories import BaseFactory
 
 from ..params import options
 from ..params.options.interactive import InteractiveOption
@@ -54,7 +55,9 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         self._command = command
         self.entry_point_group = entry_point_group
         self.entry_point_name_filter = entry_point_name_filter
-        self.factory = ENTRY_POINT_GROUP_FACTORY_MAPPING[entry_point_group]
+        self.factory = ENTRY_POINT_GROUP_FACTORY_MAPPING.get(
+            entry_point_group, functools.partial(BaseFactory, entry_point_group)
+        )
         self.shared_options = shared_options
 
     def list_commands(self, ctx: click.Context) -> list[str]:
@@ -121,6 +124,8 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
         :param entry_point: The entry point.
         """
+        from pydantic_core import PydanticUndefined
+
         cls = self.factory(entry_point)
 
         if not hasattr(cls, 'Configuration'):
@@ -136,11 +141,12 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             options_spec = {}
 
             for key, field_info in cls.Configuration.model_fields.items():
+                default = field_info.default_factory if field_info.default is PydanticUndefined else field_info.default
                 options_spec[key] = {
                     'required': field_info.is_required(),
                     'type': field_info.annotation,
                     'prompt': field_info.title,
-                    'default': field_info.default if field_info.default is not None else None,
+                    'default': default,
                     'help': field_info.description,
                 }
 

@@ -159,32 +159,34 @@ class MultiCodesCalcJob(CalcJob):
 
 
 @pytest.mark.parametrize(
-    'code_key, with_mpi_code, with_mpi_option, expected', (
-        ('code_info_with_mpi_none', None, True, 3),
-        ('code_info_with_mpi_none', None, False, 0),
-        ('code_info_with_mpi_none', None, None, 0),
-        ('code_info_with_mpi_none', True, True, 3),
-        ('code_info_with_mpi_none', True, False, None),
-        ('code_info_with_mpi_none', False, True, None),
-        ('code_info_with_mpi_none', False, False, 0),
-        ('code_info_with_mpi_true', None, True, 3),
-        ('code_info_with_mpi_true', None, False, None),
-        ('code_info_with_mpi_true', None, None, 3),
-        ('code_info_with_mpi_true', True, True, 3),
-        ('code_info_with_mpi_true', True, False, None),
-        ('code_info_with_mpi_true', False, True, None),
-        ('code_info_with_mpi_true', False, False, None),
-        ('code_info_with_mpi_false', None, True, None),
-        ('code_info_with_mpi_false', None, False, 0),
-        ('code_info_with_mpi_false', None, None, 0),
-        ('code_info_with_mpi_false', True, True, None),
-        ('code_info_with_mpi_false', True, False, None),
-        ('code_info_with_mpi_false', False, True, None),
-        ('code_info_with_mpi_false', False, False, 0),
+    'code_key, with_mpi_code, with_mpi_option, with_mpi_option_default, expected', (
+        ('code_info_with_mpi_none', None, True, True, 3),
+        ('code_info_with_mpi_none', None, False, True, 0),
+        ('code_info_with_mpi_none', None, None, False, 0),
+        ('code_info_with_mpi_none', None, None, True, 3),
+        ('code_info_with_mpi_none', True, True, True, 3),
+        ('code_info_with_mpi_none', True, False, True, None),
+        ('code_info_with_mpi_none', False, True, True, None),
+        ('code_info_with_mpi_none', False, False, True, 0),
+        ('code_info_with_mpi_true', None, True, True, 3),
+        ('code_info_with_mpi_true', None, False, True, None),
+        ('code_info_with_mpi_true', None, None, True, 3),
+        ('code_info_with_mpi_true', True, True, True, 3),
+        ('code_info_with_mpi_true', True, False, True, None),
+        ('code_info_with_mpi_true', False, True, True, None),
+        ('code_info_with_mpi_true', False, False, True, None),
+        ('code_info_with_mpi_false', None, True, True, None),
+        ('code_info_with_mpi_false', None, False, True, 0),
+        ('code_info_with_mpi_false', None, None, True, 0),
+        ('code_info_with_mpi_false', True, True, True, None),
+        ('code_info_with_mpi_false', True, False, True, None),
+        ('code_info_with_mpi_false', False, True, True, None),
+        ('code_info_with_mpi_false', False, False, True, 0),
     )
 )
 def test_multi_codes_with_mpi(
-    aiida_local_code_factory, fixture_sandbox, manager, code_key, with_mpi_code, with_mpi_option, expected
+    aiida_local_code_factory, fixture_sandbox, manager, code_key, with_mpi_code, with_mpi_option,
+    with_mpi_option_default, expected
 ):
     """Test the functionality that controls whether the calculation is to be run with MPI.
 
@@ -213,10 +215,18 @@ def test_multi_codes_with_mpi(
         }
     }
 
+    class SubMultiCodesCalcJob(MultiCodesCalcJob):
+        """Subclass to override the default for the ``withmpi`` option."""
+
+        @classmethod
+        def define(cls, spec):
+            super().define(spec)
+            spec.inputs['metadata']['options']['withmpi'].default = with_mpi_option_default
+
     if with_mpi_option is not None:
         inputs['metadata']['options']['withmpi'] = with_mpi_option
 
-    process = instantiate_process(manager.get_runner(), MultiCodesCalcJob, **inputs)
+    process = instantiate_process(manager.get_runner(), SubMultiCodesCalcJob, **inputs)
 
     if expected is None:
         with pytest.raises(RuntimeError, match=r'Inconsistent requirements as to whether'):

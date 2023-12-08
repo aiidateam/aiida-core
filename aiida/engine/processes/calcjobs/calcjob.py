@@ -946,8 +946,14 @@ class CalcJob(Process):
             if with_mpi_values_set:
                 with_mpi = with_mpi_values_set.pop()
             else:
-                # Fall back to the default, which is to not use MPI
-                with_mpi = False
+                # Fall back to the default, which is the default of the option in the process input specification with
+                # ``False`` as final fallback if the default is not even specified
+                try:
+                    with_mpi = self.spec().inputs['metadata']['options']['withmpi'].default  # type: ignore[index]
+                except RuntimeError:
+                    # ``plumpy.InputPort.default`` raises a ``RuntimeError`` if no default has been set. This is bad
+                    # design and should be changed, but we have to deal with it like this for now.
+                    with_mpi = False
 
             if with_mpi:
                 prepend_cmdline_params = code.get_prepend_cmdline_params(mpi_args, extra_mpirun_params)

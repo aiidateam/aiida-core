@@ -37,14 +37,21 @@ class AiidaTestWarning(Warning):
 
 
 def warn_deprecation(message: str, version: int, stacklevel=2) -> None:
-    """Warns about a deprecation for a future aiida-core version.
+    """Warn about a deprecation for a future aiida-core version.
 
-    Warnings are activated if the `AIIDA_WARN_v{major}` environment variable is set to `True`.
+    Warnings are emitted if the ``warnings.showdeprecations`` config option is set to ``True``. Its value can be
+    overwritten with the ``AIIDA_WARN_v{version}`` environment variable. The exact value for the environment variable is
+    irrelevant. Any value will mean the variable is enabled and warnings will be emitted.
 
     :param message: the message to be printed
     :param version: the major version number of the future version
     :param stacklevel: the stack level at which the warning is issued
     """
-    if os.environ.get(f'AIIDA_WARN_v{version}'):
+    from aiida.manage.configuration import get_config_option
+
+    from_config = get_config_option('warnings.showdeprecations')
+    from_environment = os.environ.get(f'AIIDA_WARN_v{version}')
+
+    if from_config or from_environment:
         message = f'{message} (this will be removed in v{version})'
         warnings.warn(message, AiidaDeprecationWarning, stacklevel=stacklevel)

@@ -13,6 +13,8 @@ from __future__ import annotations
 import copy
 import typing as t
 
+from frozendict import frozendict
+
 from aiida.common import exceptions
 
 from .base import to_aiida_type
@@ -65,15 +67,28 @@ class Dict(Data):
             self.set_dict(dictionary)
 
     def __getitem__(self, key):
+        """Get the ``value`` of a key.
+
+        If the node is not stored, the value is returned as is (if present). Once the node is stored, we check if the
+        value is a dictionary and if so, we return a ``frozendict`` instance to prevent modifications. This is to
+        prevent the user from modifying the dictionary in place, which would not be reflected in the database.
+        """
         try:
-            return self.base.attributes.get(key)
+            value = self.base.attributes.get(key)
         except AttributeError as exc:
             raise KeyError from exc
 
+        if self.is_stored and isinstance(value, dict):
+            return frozendict(value)
+
+        return value
+
     def __setitem__(self, key, value):
+        """Set the ``value`` of a key."""
         self.base.attributes.set(key, value)
 
     def __eq__(self, other):
+        """Compare if the current node is equal to another node or to a dictionary."""
         if isinstance(other, Dict):
             return self.get_dict() == other.get_dict()
         return self.get_dict() == other

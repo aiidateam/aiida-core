@@ -137,10 +137,28 @@ def test_delete(run_cli_command, mock_profiles, pg_test_cluster):
 def test_setup(run_cli_command, isolated_config, tmp_path, entry_point):
     """Test the ``verdi profile setup`` command.
 
-    Note that the options for user name and institution are not given in purpose
+    Note that the options for user name and institution are not given on purpose as these should not be required.
     """
     profile_name = 'temp-profile'
     options = [entry_point, '-n', '--filepath', str(tmp_path), '--profile', profile_name, '--email', 'email@host']
     result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
     assert f'Created new profile `{profile_name}`.' in result.output
     assert profile_name in isolated_config.profile_names
+    assert isolated_config.default_profile_name == profile_name
+
+
+@pytest.mark.parametrize('set_as_default', (True, False))
+def test_setup_set_as_default(run_cli_command, isolated_config, tmp_path, set_as_default):
+    """Test the ``--set-as-default`` flag of the ``verdi profile setup`` command."""
+    profile_name = 'temp-profile'
+    flag = '--set-as-default' if set_as_default else '--no-set-as-default'
+    options = [
+        'core.sqlite_dos', '-n', '--filepath',
+        str(tmp_path), '--profile', profile_name, '--email', 'email@host', flag
+    ]
+    result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+    assert f'Created new profile `{profile_name}`.' in result.output
+    if set_as_default:
+        assert isolated_config.default_profile_name == profile_name
+    else:
+        assert isolated_config.default_profile_name != profile_name

@@ -159,8 +159,8 @@ An example of an automated generated directory is ``.aiida/repository/sqlite_dos
 ``core.sqlite_zip``
 ===================
 
-The `core.sqlite_zip` is a storage plugin that is used to create export archives.
-It functions more or less identical to the `core.sqlite_dos` plugin, as it uses an SQLite database and a disk-objectstore container, except everything is bundled up in a `zip archive <https://en.wikipedia.org/wiki/ZIP_(file_format)>`_.
+The ``core.sqlite_zip`` is a storage plugin that is used to create export archives.
+It functions more or less identical to the ``core.sqlite_dos`` plugin, as it uses an SQLite database and a disk-objectstore container, except everything is bundled up in a `zip archive <https://en.wikipedia.org/wiki/ZIP_(file_format)>`_.
 
 The storage plugin is not suited for normal use, because once the archive is created, it becomes read-only.
 However, since otherwise it functions like normal storage plugins, a profile can be created with it that make it easy to explore its contents:

@@ -42,6 +42,9 @@ def command_create_profile(
     :param set_as_default: Whether to set the created profile as the new default.
     :param kwargs: Arguments to initialise instance of the selected storage implementation.
     """
+    if not storage_cls.read_only and kwargs.get('email', None) is None:
+        raise click.BadParameter('The option is required for storages that are not read-only.', param_hint='--email')
+
     try:
         profile = create_profile(ctx.obj.config, storage_cls, name=profile.name, **kwargs)
     except (ValueError, TypeError, exceptions.EntryPointError, exceptions.StorageMigrationError) as exception:
@@ -61,7 +64,7 @@ def command_create_profile(
     shared_options=[
         setup.SETUP_PROFILE(),
         setup.SETUP_PROFILE_SET_AS_DEFAULT(),
-        setup.SETUP_USER_EMAIL(),
+        setup.SETUP_USER_EMAIL(required=False),
         setup.SETUP_USER_FIRST_NAME(),
         setup.SETUP_USER_LAST_NAME(),
         setup.SETUP_USER_INSTITUTION(),

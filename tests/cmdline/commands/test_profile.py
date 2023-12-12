@@ -14,6 +14,7 @@ import pytest
 
 from aiida.cmdline.commands import cmd_profile, cmd_verdi
 from aiida.manage import configuration
+from aiida.tools.archive.create import create_archive
 
 
 @pytest.fixture(scope='module')
@@ -133,12 +134,16 @@ def test_delete(run_cli_command, mock_profiles, pg_test_cluster):
     assert profile_list[3] not in result.output
 
 
-@pytest.mark.parametrize('entry_point', ('core.sqlite_temp', 'core.sqlite_dos'))
+@pytest.mark.parametrize('entry_point', ('core.sqlite_temp', 'core.sqlite_dos', 'core.sqlite_zip'))
 def test_setup(run_cli_command, isolated_config, tmp_path, entry_point):
     """Test the ``verdi profile setup`` command.
 
     Note that the options for user name and institution are not given on purpose as these should not be required.
     """
+    if entry_point == 'core.sqlite_zip':
+        tmp_path = tmp_path / 'archive.aiida'
+        create_archive([], filename=tmp_path)
+
     profile_name = 'temp-profile'
     options = [entry_point, '-n', '--filepath', str(tmp_path), '--profile', profile_name, '--email', 'email@host']
     result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)

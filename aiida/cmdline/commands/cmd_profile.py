@@ -24,7 +24,14 @@ def verdi_profile():
     """Inspect and manage the configured profiles."""
 
 
-def command_create_profile(ctx: click.Context, storage_cls, non_interactive: bool, profile: Profile, **kwargs):  # pylint: disable=unused-argument
+def command_create_profile(
+    ctx: click.Context,
+    storage_cls,
+    non_interactive: bool,
+    profile: Profile,
+    set_as_default: bool = True,
+    **kwargs
+):  # pylint: disable=unused-argument
     """Create a new profile, initialise its storage and create a default user.
 
     :param ctx: The context of the CLI command.
@@ -32,6 +39,7 @@ def command_create_profile(ctx: click.Context, storage_cls, non_interactive: boo
     :param non_interactive: Whether the command was invoked interactively or not.
     :param profile: The profile instance. This is an empty ``Profile`` instance created by the command line argument
         which currently only contains the selected profile name for the profile that is to be created.
+    :param set_as_default: Whether to set the created profile as the new default.
     :param kwargs: Arguments to initialise instance of the selected storage implementation.
     """
     try:
@@ -41,6 +49,9 @@ def command_create_profile(ctx: click.Context, storage_cls, non_interactive: boo
 
     echo.echo_success(f'Created new profile `{profile.name}`.')
 
+    if set_as_default:
+        ctx.invoke(profile_setdefault, profile=profile)
+
 
 @verdi_profile.group(
     'setup',
@@ -49,6 +60,7 @@ def command_create_profile(ctx: click.Context, storage_cls, non_interactive: boo
     entry_point_group='aiida.storage',
     shared_options=[
         setup.SETUP_PROFILE(),
+        setup.SETUP_PROFILE_SET_AS_DEFAULT(),
         setup.SETUP_USER_EMAIL(),
         setup.SETUP_USER_FIRST_NAME(),
         setup.SETUP_USER_LAST_NAME(),

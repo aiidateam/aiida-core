@@ -177,6 +177,15 @@ SETUP_PROFILE = options.OverridableOption(
     cls=options.interactive.InteractiveOption
 )
 
+SETUP_PROFILE_SET_AS_DEFAULT = options.OverridableOption(
+    '--set-as-default/--no-set-as-default',
+    prompt='Set as default?',
+    help='Whether to set the profile as the default.',
+    is_flag=True,
+    default=True,
+    cls=options.interactive.InteractiveOption
+)
+
 SETUP_USER_EMAIL = options.USER_EMAIL.clone(
     prompt='Email Address (for sharing data)',
     default=functools.partial(get_config_option, 'autofill.user.email'),

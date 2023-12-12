@@ -14,6 +14,7 @@ import pytest
 
 from aiida.cmdline.commands import cmd_profile, cmd_verdi
 from aiida.manage import configuration
+from aiida.plugins import StorageFactory
 from aiida.tools.archive.create import create_archive
 
 
@@ -167,3 +168,26 @@ def test_setup_set_as_default(run_cli_command, isolated_config, tmp_path, set_as
         assert isolated_config.default_profile_name == profile_name
     else:
         assert isolated_config.default_profile_name != profile_name
+
+
+@pytest.mark.parametrize('entry_point', ('core.sqlite_zip', 'core.sqlite_dos'))
+def test_setup_email_required(run_cli_command, isolated_config, tmp_path, entry_point):
+    """Test the ``--email`` option is not required for read-only storage plugins."""
+    storage_cls = StorageFactory(entry_point)
+    profile_name = f'profile_{entry_point}'
+
+    if entry_point == 'core.sqlite_zip':
+        tmp_path = tmp_path / 'archive.aiida'
+        create_archive([], filename=tmp_path)
+
+    isolated_config.unset_option('autofill.user.email')
+
+    options = [entry_point, '-n', '--filepath', str(tmp_path), '--profile', profile_name]
+
+    if storage_cls.read_only:
+        result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+        assert f'Created new profile `{profile_name}`.' in result.output
+        assert profile_name in isolated_config.profile_names
+    else:
+        result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False, raises=True)
+        assert 'Invalid value for --email: The option is required for storages that are not read-only.' in result.output

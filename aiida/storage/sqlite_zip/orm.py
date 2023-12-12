@@ -68,7 +68,7 @@ class SqliteEntityOverride:
 
     def store(self, *args, **kwargs):
         backend = self._model._backend  # pylint: disable=protected-access
-        if getattr(backend, '_read_only', False):
+        if backend.read_only:
             raise ReadOnlyError(f'Cannot store entity in read-only backend: {backend}')
         return super().store(*args, **kwargs)  # type: ignore # pylint: disable=no-member
 

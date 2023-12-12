@@ -51,8 +51,6 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
             default_factory=mkdtemp
         )
 
-    _read_only = False
-
     cli_exposed = False
     """Ensure this plugin is not exposed in ``verdi profile setup``."""
 

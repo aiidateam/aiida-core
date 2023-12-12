@@ -65,6 +65,9 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
 
     """
 
+    read_only = True
+    """This plugin is read only and data cannot be created or mutated."""
+
     class Configuration(BaseModel):
         """Model describing required information to configure an instance of the storage."""
 
@@ -80,8 +83,6 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
             filepath = Path(value)
             assert filepath.is_file(), f'The archive `{value}` does not exist.'
             return str(filepath.resolve().absolute())
-
-    _read_only = True
 
     @classmethod
     def version_head(cls) -> str:

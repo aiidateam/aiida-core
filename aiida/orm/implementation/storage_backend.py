@@ -52,6 +52,8 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
     created only for the latest schema version.
     """
 
+    read_only = False
+
     @classmethod
     @abc.abstractmethod
     def version_head(cls) -> str:

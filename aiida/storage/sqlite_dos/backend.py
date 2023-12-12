@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from disk_objectstore import Container
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import insert
 from sqlalchemy.orm import scoped_session, sessionmaker
 
@@ -94,12 +94,19 @@ class SqliteDosStorage(PsqlDosBackend):
     migrator = SqliteDosMigrator
 
     class Configuration(BaseModel):
+        """Model describing required information to configure an instance of the storage."""
 
         filepath: str = Field(
             title='Directory of the backend',
             description='Filepath of the directory in which to store data for this backend.',
             default_factory=lambda: AIIDA_CONFIG_FOLDER / 'repository' / f'sqlite_dos_{uuid4().hex}'
         )
+
+        @field_validator('filepath')
+        @classmethod
+        def filepath_is_absolute(cls, value: str) -> str:
+            """Return the resolved and absolute filepath."""
+            return str(Path(value).resolve().absolute())
 
     @classmethod
     def initialise(cls, profile: Profile, reset: bool = False) -> bool:

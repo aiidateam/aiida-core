@@ -21,7 +21,7 @@ from typing import BinaryIO, Iterable, Iterator, Optional, Sequence, Tuple, cast
 from zipfile import ZipFile, is_zipfile
 
 from archive_path import ZipPath, extract_file_in_zip
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from aiida import __version__
@@ -66,11 +66,20 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
     """
 
     class Configuration(BaseModel):
+        """Model describing required information to configure an instance of the storage."""
 
         filepath: str = Field(
             title='Filepath of the archive',
             description='Filepath of the archive in which to store data for this backend.'
         )
+
+        @field_validator('filepath')
+        @classmethod
+        def filepath_exists_and_is_absolute(cls, value: str) -> str:
+            """Validate the filepath exists and return the resolved and absolute filepath."""
+            filepath = Path(value)
+            assert filepath.is_file(), f'The archive `{value}` does not exist.'
+            return str(filepath.resolve().absolute())
 
     _read_only = True
 

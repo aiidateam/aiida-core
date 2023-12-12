@@ -71,10 +71,7 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
     class Configuration(BaseModel):
         """Model describing required information to configure an instance of the storage."""
 
-        filepath: str = Field(
-            title='Filepath of the archive',
-            description='Filepath of the archive in which to store data for this backend.'
-        )
+        filepath: str = Field(title='Filepath of the archive', description='Filepath of the archive.')
 
         @field_validator('filepath')
         @classmethod
@@ -89,15 +86,15 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
         return get_schema_version_head()
 
     @staticmethod
-    def create_profile(path: str | Path, options: dict | None = None) -> Profile:
+    def create_profile(filepath: str | Path, options: dict | None = None) -> Profile:
         """Create a new profile instance for this backend, from the path to the zip file."""
-        profile_name = Path(path).name
+        profile_name = Path(filepath).name
         return Profile(
             profile_name, {
                 'storage': {
                     'backend': 'core.sqlite_zip',
                     'config': {
-                        'path': str(path)
+                        'filepath': str(filepath)
                     }
                 },
                 'process_control': {
@@ -110,7 +107,7 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
 
     @classmethod
     def version_profile(cls, profile: Profile) -> Optional[str]:
-        return read_version(profile.storage_config['path'], search_limit=None)
+        return read_version(profile.storage_config['filepath'], search_limit=None)
 
     @classmethod
     def initialise(cls, profile: 'Profile', reset: bool = False) -> bool:
@@ -121,7 +118,7 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
             tests having run.
         :returns: ``True`` if the storage was initialised by the function call, ``False`` if it was already initialised.
         """
-        filepath_archive = Path(profile.storage_config['path'])
+        filepath_archive = Path(profile.storage_config['filepath'])
 
         if filepath_archive.exists() and not reset:
             # The archive exists but ``reset == False``, so we try to migrate to the latest schema version. If the
@@ -173,7 +170,7 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
 
     def __init__(self, profile: Profile):
         super().__init__(profile)
-        self._path = Path(profile.storage_config['path'])
+        self._path = Path(profile.storage_config['filepath'])
         validate_storage(self._path)
         # lazy open the archive zipfile and extract the database file
         self._db_file: Optional[Path] = None

@@ -208,16 +208,21 @@ def create_profile(
     :param institution: Institution for the default user.
     :param kwargs: Arguments to initialise instance of the selected storage implementation.
     """
+    from aiida.manage import get_manager
     from aiida.orm import User
 
     storage_config = storage_cls.Configuration(**{k: v for k, v in kwargs.items() if v is not None}).model_dump()
     profile: Profile = config.create_profile(name=name, storage_cls=storage_cls, storage_config=storage_config)
 
     with profile_context(profile.name, allow_switch=True):
-        user = User(email=email, first_name=first_name, last_name=last_name, institution=institution).store()
-        # We can safely use ``Config.set_default_user_email`` here instead of ``Manager.set_default_user_email`` since
-        # the storage backend of this new profile is not loaded yet.
-        config.set_default_user_email(profile, user.email)
+        manager = get_manager()
+        storage = manager.get_profile_storage()
+
+        if not storage.read_only:
+            user = User(email=email, first_name=first_name, last_name=last_name, institution=institution).store()
+            # We can safely use ``Config.set_default_user_email`` here instead of ``Manager.set_default_user_email``
+            # since the storage backend of this new profile is not loaded yet.
+            config.set_default_user_email(profile, user.email)
 
     return profile
 

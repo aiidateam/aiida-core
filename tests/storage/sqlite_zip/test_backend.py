@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
-"""Tests for :mod:`aiida.storage.sqlite_zip.backend.SqliteZipBackend`."""
+"""Tests for :mod:`aiida.storage.sqlite_zip.backend`."""
+import pathlib
+
+from pydantic_core import ValidationError
+import pytest
+
 from aiida.storage.sqlite_zip.backend import SqliteZipBackend
 from aiida.storage.sqlite_zip.migrator import validate_storage
 
@@ -45,3 +50,16 @@ def test_initialise_reset_false(tmp_path, aiida_caplog):
     assert filepath_archive.exists()
     validate_storage(filepath_archive)
     assert any('Migrating existing SqliteZipBackend' in record.message for record in aiida_caplog.records)
+
+
+@pytest.mark.usefixtures('chdir_tmp_path')
+def test_configuration():
+    """Test :class:`aiida.storage.sqlite_zip.backend.SqliteZipBackend.Configuration`."""
+    with pytest.raises(ValidationError, match=r'.*The archive `non-existent` does not exist.*'):
+        SqliteZipBackend.Configuration(filepath='non-existent')
+
+    filepath = pathlib.Path.cwd() / 'archive.aiida'
+    filepath.touch()
+
+    configuration = SqliteZipBackend.Configuration(filepath=filepath.name)
+    assert pathlib.Path(configuration.filepath).is_absolute()

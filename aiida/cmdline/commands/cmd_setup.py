@@ -14,6 +14,7 @@ from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.params.options.commands import setup as options_setup
 from aiida.cmdline.utils import echo
+from aiida.cmdline.utils.defaults import get_default_database_name
 from aiida.manage.configuration import Profile, load_profile
 
 
@@ -125,6 +126,7 @@ def setup(
 @options_setup.SETUP_USER_FIRST_NAME()
 @options_setup.SETUP_USER_LAST_NAME()
 @options_setup.SETUP_USER_INSTITUTION()
+@options_setup.QUICKSETUP_CREATE_DATABASE()
 @options_setup.QUICKSETUP_DATABASE_ENGINE()
 @options_setup.QUICKSETUP_DATABASE_BACKEND()
 @options_setup.QUICKSETUP_DATABASE_HOSTNAME()
@@ -146,9 +148,9 @@ def setup(
 @options.CONFIG_FILE()
 @click.pass_context
 def quicksetup(
-    ctx, non_interactive, profile, email, first_name, last_name, institution, db_engine, db_backend, db_host, db_port,
-    db_name, db_username, db_password, su_db_name, su_db_username, su_db_password, broker_protocol, broker_username,
-    broker_password, broker_host, broker_port, broker_virtual_host, repository, test_profile
+    ctx, non_interactive, profile, email, first_name, last_name, institution, create_new_db, db_engine, db_backend,
+    db_host, db_port, db_name, db_username, db_password, su_db_name, su_db_username, su_db_password, broker_protocol,
+    broker_username, broker_password, broker_host, broker_port, broker_virtual_host, repository, test_profile
 ):
     """Setup a new profile in a fully automated fashion."""
     # pylint: disable=too-many-arguments,too-many-locals
@@ -157,31 +159,47 @@ def quicksetup(
     # store default user settings so user does not have to re-enter them
     _store_default_user_settings(ctx.obj.config, email, first_name, last_name, institution)
 
-    dbinfo_su = {
-        'host': db_host,
-        'port': db_port,
-        'user': su_db_username,
-        'password': su_db_password,
-        'database': su_db_name,
-    }
-    postgres = Postgres(interactive=not non_interactive, quiet=False, dbinfo=dbinfo_su)
+    if create_new_db:
 
-    if not postgres.is_connected:
-        echo.echo_critical('failed to determine the PostgreSQL setup')
+        dbinfo_su = {
+            'host': db_host,
+            'port': db_port,
+            'user': su_db_username,
+            'password': su_db_password,
+            'database': su_db_name,
+        }
+        postgres = Postgres(interactive=not non_interactive, quiet=False, dbinfo=dbinfo_su)
 
-    try:
-        db_username, db_name = postgres.create_dbuser_db_safe(dbname=db_name, dbuser=db_username, dbpass=db_password)
-    except Exception as exception:
-        echo.echo_error(
-            '\n'.join([
-                'Oops! quicksetup was unable to create the AiiDA database for you.',
-                'See `verdi quicksetup -h` for how to specify non-standard parameters for the postgresql connection.\n'
-                'Alternatively, create the AiiDA database yourself: ',
-                manual_setup_instructions(db_username=db_username,
-                                          db_name=db_name), '', 'and then use `verdi setup` instead', ''
-            ])
-        )
-        raise exception
+        if not postgres.is_connected:
+            echo.echo_critical('failed to determine the PostgreSQL setup')
+
+        default_dbname = get_default_database_name(profile)
+        if db_name == default_dbname:
+            echo.echo_report(f'Using default database name {db_name} (if it already exists, {db_name}_N)')
+        else:
+            db_exists = postgres.db_exists(db_name)
+            if db_exists:
+                echo.echo_critical(f'Database name provided {db_name} already exists, please choose a different name')
+
+        try:
+            db_username, db_name = postgres.create_dbuser_db_safe(
+                dbname=db_name, dbuser=db_username, dbpass=db_password
+            )
+        except Exception as exception:
+            echo.echo_error(
+                '\n'.join([
+                    'Oops! quicksetup was unable to create the AiiDA database for you.',
+                    'See `verdi quicksetup -h` for how to specify non-standard parameters ',
+                    'for the postgresql connection.\n'
+                    'Alternatively, create the AiiDA database yourself: ',
+                    manual_setup_instructions(db_username=db_username,
+                                              db_name=db_name), '', 'and then use `verdi setup` instead', ''
+                ])
+            )
+            raise exception
+
+        db_host = postgres.host_for_psycopg2
+        db_port = postgres.port_for_psycopg2
 
     # The contextual defaults or `verdi setup` are not being called when `invoking`, so we have to explicitly define
     # them here, even though the `verdi setup` command would populate those when called from the command line.
@@ -196,8 +214,8 @@ def quicksetup(
         'db_backend': db_backend,
         'db_name': db_name,
         # from now on we connect as the AiiDA DB user, which may be forbidden when going via sockets
-        'db_host': postgres.host_for_psycopg2,
-        'db_port': postgres.port_for_psycopg2,
+        'db_host': db_host,
+        'db_port': db_port,
         'db_username': db_username,
         'db_password': db_password,
         'broker_protocol': broker_protocol,

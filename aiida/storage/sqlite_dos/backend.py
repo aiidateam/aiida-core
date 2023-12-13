@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from functools import cached_property
 from pathlib import Path
+from shutil import rmtree
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -20,6 +21,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import insert
 from sqlalchemy.orm import scoped_session, sessionmaker
 
+from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import Profile
 from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
 from aiida.orm.implementation import BackendEntity
@@ -35,6 +37,8 @@ if TYPE_CHECKING:
     from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
 __all__ = ('SqliteDosStorage',)
+
+LOGGER = AIIDA_LOGGER.getChild(__file__)
 
 
 class SqliteDosMigrator(PsqlDosMigrator):
@@ -142,6 +146,13 @@ class SqliteDosStorage(PsqlDosBackend):
         """
         engine = create_sqla_engine(Path(self._profile.storage_config['filepath']) / 'database.sqlite')
         self._session_factory = scoped_session(sessionmaker(bind=engine, future=True, expire_on_commit=True))
+
+    def delete(self) -> None:  # type: ignore[override]  # pylint: disable=arguments-differ
+        """Delete the storage and all the data."""
+        filepath = Path(self.profile.storage_config['filepath'])
+        if filepath.exists():
+            rmtree(filepath)
+            LOGGER.report(f'Deleted storage directory at `{filepath}`.')
 
     def get_repository(self) -> 'DiskObjectStoreRepositoryBackend':
         from aiida.repository.backend import DiskObjectStoreRepositoryBackend

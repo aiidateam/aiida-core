@@ -293,6 +293,13 @@ class SqliteZipBackend(StorageBackend):  # pylint: disable=too-many-public-metho
     def bulk_update(self, entity_type: EntityTypes, rows: list[dict]) -> None:
         raise ReadOnlyError()
 
+    def delete(self) -> None:
+        """Delete the storage and all the data."""
+        filepath = Path(self.profile.storage_config['filepath'])
+        if filepath.exists():
+            filepath.unlink()
+            LOGGER.report(f'Deleted archive at `{filepath}`.')
+
     def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]):
         raise ReadOnlyError()
 

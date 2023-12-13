@@ -247,6 +247,10 @@ class StorageBackend(abc.ABC):  # pylint: disable=too-many-public-methods
         :raises: ``IntegrityError`` if the keys in a row are not a subset of the columns in the table
         """
 
+    def delete(self) -> None:
+        """Delete the storage and all the data."""
+        raise NotImplementedError()
+
     @abc.abstractmethod
     def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]):
         """Delete all nodes corresponding to pks in the input and any links to/from them.

@@ -8,6 +8,8 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """`verdi profile` command."""
+from __future__ import annotations
+
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -133,69 +135,39 @@ def profile_setdefault(profile):
 
 
 @verdi_profile.command('delete')
-@options.FORCE(help='to skip questions and warnings about loss of data')
+@options.FORCE(help='Skip any prompts for confirmation.')
 @click.option(
-    '--include-config/--skip-config',
-    default=True,
-    show_default=True,
-    help='Include deletion of entry in configuration file.'
-)
-@click.option(
-    '--include-db/--skip-db',
-    'include_database',
-    default=True,
-    show_default=True,
-    help='Include deletion of associated database.'
-)
-@click.option(
-    '--include-db-user/--skip-db-user',
-    'include_database_user',
-    default=False,
-    show_default=True,
-    help='Include deletion of associated database user.'
-)
-@click.option(
-    '--include-repository/--skip-repository',
-    default=True,
-    show_default=True,
-    help='Include deletion of associated file repository.'
+    '--delete-data/--keep-data',
+    default=None,
+    help='Whether to delete the storage with all its data or not. This flag has to be explicitly specified'
 )
 @arguments.PROFILES(required=True)
-def profile_delete(force, include_config, include_database, include_database_user, include_repository, profiles):
+def profile_delete(force, delete_data, profiles):
     """Delete one or more profiles.
 
     The PROFILES argument takes one or multiple profile names that will be deleted. Deletion here means that the profile
-    will be removed including its file repository and database. The various options can be used to control which parts
-    of the profile are deleted.
+    will be removed from the config file. If ``--delete-storage`` is specified, the storage containing all data is also
+    deleted.
     """
-    if not include_config:
-        echo.echo_deprecated('the `--skip-config` option is deprecated and is no longer respected.')
+    if force and delete_data is None:
+        raise click.BadParameter(
+            'When the `-f/--force` flag is used either `--delete-data` or `--keep-data` has to be explicitly specified.'
+        )
+
+    if not force and delete_data is None:
+        echo.echo_warning('Do you also want to permanently delete all data?', nl=False)
+        delete_data = click.confirm('', default=False)
 
     for profile in profiles:
+        suffix = click.style('including' if delete_data else 'without', fg='red', bold=True)
+        echo.echo_warning(f'Deleting profile `{profile.name}`, {suffix} all data.')
 
-        includes = {
-            'database': include_database,
-            'database user': include_database_user,
-            'file repository': include_repository
-        }
+        if not force:
+            echo.echo_warning('This operation cannot be undone, are you sure you want to continue?', nl=False)
 
-        if not all(includes.values()):
-            excludes = [label for label, value in includes.items() if not value]
-            message_suffix = f' excluding: {", ".join(excludes)}.'
-        else:
-            message_suffix = '.'
-
-        echo.echo_warning(f'deleting profile `{profile.name}`{message_suffix}')
-        echo.echo_warning('this operation cannot be undone, ', nl=False)
-
-        if not force and not click.confirm('are you sure you want to continue?'):
-            echo.echo_report(f'deleting of `{profile.name} cancelled.')
+        if not force and not click.confirm(''):
+            echo.echo_report(f'Deleting of `{profile.name}` cancelled.')
             continue
 
-        get_config().delete_profile(
-            profile.name,
-            include_database=include_database,
-            include_database_user=include_database_user,
-            include_repository=include_repository
-        )
-        echo.echo_success(f'profile `{profile.name}` was deleted{message_suffix}.')
+        get_config().delete_profile(profile.name, delete_storage=delete_data)
+        echo.echo_success(f'Profile `{profile.name}` was deleted.')

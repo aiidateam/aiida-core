@@ -284,6 +284,10 @@ class SqliteTempBackend(StorageBackend):  # pylint: disable=too-many-public-meth
         with (nullcontext() if self.in_transaction else self.transaction()):
             session.execute(update(mapper), rows)
 
+    def delete(self) -> None:
+        """Delete the storage and all the data."""
+        self._repo.erase()
+
     def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]):
         raise NotImplementedError
 

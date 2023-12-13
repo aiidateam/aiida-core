@@ -545,44 +545,35 @@ class Config:  # pylint: disable=too-many-public-methods
         self._profiles.pop(name)
         return self
 
-    def delete_profile(
-        self,
-        name: str,
-        include_database: bool = True,
-        include_database_user: bool = False,
-        include_repository: bool = True
-    ):
+    def delete_profile(self, name: str, delete_storage: bool = True) -> None:
         """Delete a profile including its storage.
 
-        :param include_database: also delete the database configured for the profile.
-        :param include_database_user: also delete the database user configured for the profile.
-        :param include_repository: also delete the repository configured for the profile.
+        :param delete_storage: Whether to delete the storage with all its data or not.
         """
-        import shutil
-
-        from aiida.manage.external.postgres import Postgres
+        from aiida.plugins import StorageFactory
 
         profile = self.get_profile(name)
+        is_default_profile: bool = profile.name == self.default_profile_name
 
-        if include_repository:
-            # Note, this is currently being hardcoded, but really this `delete_profile` should get the storage backend
-            # for the given profile and call `StorageBackend.erase` method. Currently this is leaking details
-            # of the implementation of the PsqlDosBackend into a generic function which would fail for profiles that
-            # use a different storage backend implementation.
-            from aiida.storage.psql_dos.backend import get_filepath_container
-            folder = get_filepath_container(profile).parent
-            if folder.exists():
-                shutil.rmtree(folder)
-
-        if include_database:
-            postgres = Postgres.from_profile(profile)
-            if postgres.db_exists(profile.storage_config['database_name']):
-                postgres.drop_db(profile.storage_config['database_name'])
-
-        if include_database_user and postgres.dbuser_exists(profile.storage_config['database_username']):
-            postgres.drop_dbuser(profile.storage_config['database_username'])
+        if delete_storage:
+            storage_cls = StorageFactory(profile.storage_backend)
+            storage = storage_cls(profile)
+            storage.delete()
+            LOGGER.report(f'Data storage deleted, configuration was: {profile.storage_config}')
+        else:
+            LOGGER.report(f'Data storage not deleted, configuration is: {profile.storage_config}')
 
         self.remove_profile(name)
+
+        if is_default_profile and not self.profile_names:
+            LOGGER.warning(f'`{name}` was the default profile, no profiles remain to set as default.')
+            self.store()
+            return
+
+        if is_default_profile:
+            LOGGER.warning(f'`{name}` was the default profile, setting `{self.profile_names[0]}` as the new default.')
+            self.set_default_profile(self.profile_names[0], overwrite=True)
+
         self.store()
 
     def set_default_profile(self, name, overwrite=False):

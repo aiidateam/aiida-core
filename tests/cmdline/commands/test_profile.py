@@ -106,33 +106,66 @@ def test_show_with_profile_option(run_cli_command, mock_profiles):
     assert profile_name_non_default not in result.output
 
 
-def test_delete_partial(run_cli_command, mock_profiles):
-    """Test the ``verdi profile delete`` command.
-
-    .. note:: we skip deleting the database as this might require sudo rights and this is tested in the CI tests
-        defined in the file ``.github/system_tests/test_profile.py``
-    """
-    profile_list = mock_profiles()
-    run_cli_command(cmd_profile.profile_delete, ['--force', '--skip-db', profile_list[1]], use_subprocess=False)
-    result = run_cli_command(cmd_profile.profile_list, use_subprocess=False)
-    assert profile_list[1] not in result.output
-
-
 def test_delete(run_cli_command, mock_profiles, pg_test_cluster):
     """Test for verdi profile delete command."""
     kwargs = {'database_port': pg_test_cluster.dsn['port']}
     profile_list = mock_profiles(**kwargs)
+    config = configuration.get_config()
 
     # Delete single profile
-    run_cli_command(cmd_profile.profile_delete, ['--force', profile_list[1]], use_subprocess=False)
+    result = run_cli_command(
+        cmd_profile.profile_delete, ['--force', '--keep-data', profile_list[0]], use_subprocess=False
+    )
+    output = result.output
+    assert f'`{profile_list[0]}` was the default profile, setting `{profile_list[1]}` as the new default.' in output
     result = run_cli_command(cmd_profile.profile_list, use_subprocess=False)
-    assert profile_list[1] not in result.output
+    assert profile_list[0] not in result.output
+    assert config.default_profile_name == profile_list[1]
 
     # Delete multiple profiles
-    run_cli_command(cmd_profile.profile_delete, ['--force', profile_list[2], profile_list[3]], use_subprocess=False)
+    result = run_cli_command(
+        cmd_profile.profile_delete, ['--force', '--keep-data', profile_list[1], profile_list[2], profile_list[3]],
+        use_subprocess=False
+    )
+    assert 'was the default profile, no profiles remain to set as default.' in result.output
     result = run_cli_command(cmd_profile.profile_list, use_subprocess=False)
+    assert profile_list[1] not in result.output
     assert profile_list[2] not in result.output
     assert profile_list[3] not in result.output
+
+
+def test_delete_force(run_cli_command, mock_profiles, pg_test_cluster):
+    """Test that if force is specified the ``--delete-data`` or ``--keep-data`` has to be explicitly specified."""
+    kwargs = {'database_port': pg_test_cluster.dsn['port']}
+    profile_list = mock_profiles(**kwargs)
+
+    result = run_cli_command(
+        cmd_profile.profile_delete, ['--force', profile_list[0]], use_subprocess=False, raises=True
+    )
+    assert 'When the `-f/--force` flag is used either `--delete-data` or `--keep-data`' in result.output
+
+
+@pytest.mark.parametrize('entry_point', ('core.sqlite_dos', 'core.sqlite_zip'))
+def test_delete_storage(run_cli_command, isolated_config, tmp_path, entry_point):
+    """Test the ``verdi profile delete`` command with the ``--delete-storage`` option."""
+    profile_name = 'temp-profile'
+
+    if entry_point == 'core.sqlite_zip':
+        filepath = tmp_path / 'archive.aiida'
+        create_archive([], filename=filepath)
+    else:
+        filepath = tmp_path / 'storage'
+
+    options = [entry_point, '-n', '--filepath', str(filepath), '--profile', profile_name, '--email', 'email@host']
+    result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+    assert filepath.exists()
+    assert profile_name in isolated_config.profile_names
+
+    run_cli_command(cmd_profile.profile_delete, ['--force', '--delete-data', profile_name], use_subprocess=False)
+    result = run_cli_command(cmd_profile.profile_list, use_subprocess=False)
+    assert profile_name not in result.output
+    assert not filepath.exists()
+    assert profile_name not in isolated_config.profile_names
 
 
 @pytest.mark.parametrize('entry_point', ('core.sqlite_temp', 'core.sqlite_dos', 'core.sqlite_zip'))

@@ -68,7 +68,8 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         commands = super().list_commands(ctx)
         commands.extend([
             entry_point for entry_point in get_entry_point_names(self.entry_point_group)
-            if re.match(self.entry_point_name_filter, entry_point)
+            if re.match(self.entry_point_name_filter, entry_point) and
+            getattr(self.factory(entry_point), 'cli_exposed', True)
         ])
         return sorted(commands)
 

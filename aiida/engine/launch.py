@@ -125,8 +125,11 @@ def submit(process: TYPE_SUBMIT_PROCESS, wait: bool = False, wait_interval: int 
         return node
 
     while not node.is_terminated:
+        LOGGER.report(
+            f'Process<{node.pk}> has not yet terminated, current state is `{node.process_state}`. '
+            f'Waiting for {wait_interval} seconds.'
+        )
         time.sleep(wait_interval)
-        LOGGER.report(f'Process<{node.pk}> has not yet terminated, current state is `{node.process_state}`.')
 
     return node
 

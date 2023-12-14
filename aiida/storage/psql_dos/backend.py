@@ -20,6 +20,7 @@ from sqlalchemy import column, insert, update
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from aiida.common.exceptions import ClosedStorage, ConfigurationError, IntegrityError
+from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration.profile import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import BackendEntity, StorageBackend
@@ -36,6 +37,7 @@ if TYPE_CHECKING:
 
 __all__ = ('PsqlDosBackend',)
 
+LOGGER = AIIDA_LOGGER.getChild(__file__)
 CONTAINER_DEFAULTS: dict = {
     'pack_size_target': 4 * 1024 * 1024 * 1024,
     'loose_prefix_len': 2,
@@ -346,6 +348,33 @@ class PsqlDosBackend(StorageBackend):  # pylint: disable=too-many-public-methods
         session = self.get_session()
         with (nullcontext() if self.in_transaction else self.transaction()):
             session.execute(update(mapper), rows)
+
+    def delete(self, delete_database_user: bool = False) -> None:
+        """Delete the storage and all the data.
+
+        :param delete_database_user: Also delete the database user. This is ``False`` by default because the user may be
+            used by other databases.
+        """
+        import shutil
+
+        from aiida.manage.external.postgres import Postgres
+
+        profile = self.profile
+        config = profile.storage_config
+        postgres = Postgres.from_profile(self.profile)
+        repository = get_filepath_container(profile).parent
+
+        if repository.exists():
+            shutil.rmtree(repository)
+            LOGGER.report(f'Deleted repository at `{repository}`.')
+
+        if postgres.db_exists(config['database_name']):
+            postgres.drop_db(config['database_name'])
+            LOGGER.report(f'Deleted database `{config["database_name"]}`.')
+
+        if delete_database_user and postgres.dbuser_exists(config['database_username']):
+            postgres.drop_dbuser(config['database_username'])
+            LOGGER.report(f'Deleted database user `{config["database_username"]}`.')
 
     def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]) -> None:
         # pylint: disable=no-value-for-parameter

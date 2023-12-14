@@ -427,7 +427,7 @@ def test_delete_profile(config_with_profile, profile_factory):
     # Write the contents to disk so that the to-be-deleted profile is in the config file on disk
     config.store()
 
-    config.delete_profile(profile_name)
+    config.delete_profile(profile_name, delete_storage=False)
     assert profile_name not in config.profile_names
 
     # Now reload the config from disk to make sure the changes after deletion were persisted to disk

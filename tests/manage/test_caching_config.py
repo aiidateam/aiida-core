@@ -72,7 +72,7 @@ def test_merge_deprecated_yaml(tmp_path):
         cache_dictionary = {
             'default': {
                 'default': True,
-                'enabled': ['aiida.calculations:quantumespresso.pw'],
+                'enabled': ['aiida.calculations:core.arithmetic.add'],
                 'disabled': ['aiida.calculations:core.templatereplacer']
             }
         }
@@ -83,7 +83,7 @@ def test_merge_deprecated_yaml(tmp_path):
         load_profile('default')
 
         assert get_config_option('caching.default_enabled') is True
-        assert get_config_option('caching.enabled_for') == ['aiida.calculations:quantumespresso.pw']
+        assert get_config_option('caching.enabled_for') == ['aiida.calculations:core.arithmetic.add']
         assert get_config_option('caching.disabled_for') == ['aiida.calculations:core.templatereplacer']
         # should have now been moved to cache_config.yml.<DATETIME>
         assert not tmp_path.joinpath('cache_config.yml').exists()
@@ -236,10 +236,10 @@ def test_enable_caching_global(configure_caching):
     """
     Check that using enable_caching for a specific identifier works.
     """
-    specific_identifier = 'some_ident'
+    specific_identifier = 'aiida.calculations.arithmetic.add.ArithmeticAddCalculation'
     with configure_caching(config_dict={'default_enabled': False, 'disabled_for': [specific_identifier]}):
         with enable_caching():
-            assert get_use_cache(identifier='some_other_ident')
+            assert get_use_cache(identifier='aiida.calculations.transfer.TransferCalculation')
             assert get_use_cache(identifier=specific_identifier)
 
 
@@ -247,7 +247,7 @@ def test_disable_caching_specific(configure_caching):
     """
     Check that using disable_caching for a specific identifier works.
     """
-    identifier = 'some_ident'
+    identifier = 'aiida.calculations.arithmetic.add.ArithmeticAddCalculation'
     with configure_caching({'default_enabled': True}):
         with disable_caching(identifier=identifier):
             assert not get_use_cache(identifier=identifier)
@@ -257,10 +257,10 @@ def test_disable_caching_global(configure_caching):
     """
     Check that using disable_caching for a specific identifier works.
     """
-    specific_identifier = 'some_ident'
+    specific_identifier = 'aiida.calculations.arithmetic.add.ArithmeticAddCalculation'
     with configure_caching(config_dict={'default_enabled': True, 'enabled_for': [specific_identifier]}):
         with disable_caching():
-            assert not get_use_cache(identifier='some_other_ident')
+            assert not get_use_cache(identifier='aiida.calculations.transfer.TransferCalculation')
             assert not get_use_cache(identifier=specific_identifier)
 
 

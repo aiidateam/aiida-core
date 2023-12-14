@@ -844,7 +844,18 @@ Besides the on/off switch set by ``caching.default_enabled``, caching can be con
 In this example, caching is enabled by default, but explicitly disabled for calculations of the ``TemplatereplacerCalculation`` class, identified by its corresponding ``aiida.calculations:core.templatereplacer`` entry point string.
 It also shows how to enable caching for particular calculations (which has no effect here due to the profile-wide default).
 
+.. note::
+
+    It is also possible to provide the full import path of the class in case it does not have a registered entry point.
+    For example, if the class can be imported as ``from some.module.path import SomeClass``, it can be added as:
+
+    .. code-block:: console
+
+        verdi config set caching.enabled_for some.module.path.SomeClass
+
 .. tip:: To set multiple entry-points at once, use a ``,`` delimiter.
+
+.. warning:: If a specified value for ``verdi config set enabled_for/disabled_for`` is an entry point that cannot be loaded, or is a path that cannot be improted, an error is raised.
 
 For the available entry-points in your environment, you can list which are enabled/disabled using:
 

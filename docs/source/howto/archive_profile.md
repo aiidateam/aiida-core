@@ -20,69 +20,50 @@ This tutorial can be downloaded and run as a Jupyter Notebook: {nb-download}`arc
 ```
 
 The AiiDA archive is a file format for long term storage of data from a particular profile.
-
 See {ref}`how-to:share:archives` for information on how to create and migrate an archive.
-Once you have an archive at the latest version, you can inspect its contents in the same way you would with a standard AiiDA profile.
 
-We first create a profile instance from the archive path:
+The easiest way to inspect the contents of an archive is to create a profile that "mounts" the archive as its data storage:
 
 ```{code-cell} ipython3
-from aiida import manage, orm, profile_context
-from aiida.storage.sqlite_zip.backend import SqliteZipBackend
-
-archive_profile = SqliteZipBackend.create_profile('include/process.aiida')
-print(archive_profile)
+!verdi profile setup core.sqlite_zip -n --profile archive --filepath include/process.aiida
 ```
 
-The {py:func}`~aiida.manage.configuration.profile_context` function works similarly to the {py:func}`~aiida.manage.configuration.load_profile` function,
-but is used within a context manager, that insures that the storage is properly closed when the context is exited.
-With this, we can load our archive as a profile:
+You can now inspect the contents of the `process.aiida` archive by using the `archive` profile in the same way you would a standard AiiDA profile.
+For example, you can start an interactive shell using `verdi -p archive shell` or if you are already in a notebook simply load the profile:
 
 ```{code-cell} ipython3
-with profile_context(archive_profile):
-    print(manage.get_manager().get_profile())
+from aiida import load_profile
+load_profile('archive', allow_switch=True)
 ```
 
-To directly access the storage backend, and view information about it, we can use:
-
-```{code-cell} ipython3
-import json
-with profile_context(archive_profile):
-    storage = manage.get_manager().get_profile_storage()
-    print(storage)
-    print(json.dumps(storage.get_info(), indent=2))
+```{warning}
+A profile using the `core.sqlite_zip` storage is read-only.
+It is therefore possible to query data, but trying to modify existing data or store new data will raise an exception.
 ```
 
-This is directly equivalent to the command-line call:
+Just as with a normal profile, we can now use the {py:class}`~aiida.orm.QueryBuilder`, to [find and query for data](how-to:query):
 
 ```{code-cell} ipython3
-!verdi archive info include/process.aiida
-```
-
-Note, that once the context manager is exited, the storage is closed, and will except on further calls.
-
-```{code-cell} ipython3
-print(storage)
-```
-
-As per a standard profile, we can now use the {py:class}`~aiida.orm.QueryBuilder`, to [find and query for data](how-to:query):
-
-```{code-cell} ipython3
-with profile_context(archive_profile):
-    process = orm.QueryBuilder().append(orm.ProcessNode).first(flat=True)
-    print(process)
+from aiida import orm
+process = orm.QueryBuilder().append(orm.ProcessNode).first(flat=True)
+print(process)
 ```
 
 and also use {py:class}`~aiida.tools.visualization.graph.Graph`, to [visualize data provenance](how-to:data:visualise-provenance):
 
 ```{code-cell} ipython3
+from aiida import orm
 from aiida.tools.visualization import Graph
-
-with profile_context(archive_profile):
-    process = orm.QueryBuilder().append(orm.ProcessNode).first(flat=True)
-    graph = Graph(graph_attr={"size": "8!,8!", "rankdir": "LR"})
-    graph.add_incoming(process, annotate_links="both")
-    graph.add_outgoing(process, annotate_links="both")
-
+process = orm.QueryBuilder().append(orm.ProcessNode).first(flat=True)
+graph = Graph(graph_attr={'rankdir': 'LR'})
+graph.add_incoming(process, annotate_links='both')
+graph.add_outgoing(process, annotate_links='both')
 graph.graphviz
 ```
+
+Once you are done inspecting the archive and you no longer want to keep the profile around, you can delete it:
+```{code-block} console
+verdi profile delete archive
+```
+You will be prompted whether you also want to keep the data.
+If you want to keep the `process.aiida` archive file, select not to delete the data.

@@ -82,9 +82,7 @@ def test_submit(runner):
         runner.submit(Proc, inputs, **inputs)
 
     runner.submit(Proc, inputs)
-
-    with pytest.warns(match='Passing inputs as keyword arguments is deprecated'):
-        runner.submit(Proc, **inputs)
+    runner.submit(Proc, **inputs)
 
 
 def test_run_return_value_cached(aiida_local_code_factory):

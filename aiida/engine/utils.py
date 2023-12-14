@@ -18,8 +18,6 @@ import inspect
 import logging
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterator, List, Optional, Tuple, Type, Union
 
-from aiida.common.warnings import warn_deprecation
-
 if TYPE_CHECKING:
     from .processes import Process, ProcessBuilder
     from .runners import Runner
@@ -30,25 +28,12 @@ LOGGER = logging.getLogger(__name__)
 PROCESS_STATE_CHANGE_KEY = 'process|state_change|{}'
 PROCESS_STATE_CHANGE_DESCRIPTION = 'The last time a process of type {}, changed state'
 
-LAUNCHER_SIGNATURE_DEPRECATION = """
-Passing inputs as keyword arguments is deprecated. Please pass as the second positional argument:
-
-    inputs = {...}
-    submit(process, inputs)
-
-or as a keyword argument instead:
-
-    inputs = {...}
-    submit(process, inputs=inputs)
-"""
-
 
 def prepare_inputs(inputs: dict[str, Any] | None = None, **kwargs: Any) -> dict[str, Any]:
     """Prepare inputs for launch of a process.
 
-    This is a temporary utility function while the launch functions accept inputs to the process both through keyword
+    This is a utility function to pre-process inputs for the process that can be specified both through keyword
     arguments as well as through the explicit ``inputs`` argument. When both are specified, a ``ValueError`` is raised.
-    If keywords are used, a deprecation warning is issued.
 
     :param inputs: Inputs dictionary.
     :param kwargs: Inputs defined as keyword arguments.
@@ -59,7 +44,6 @@ def prepare_inputs(inputs: dict[str, Any] | None = None, **kwargs: Any) -> dict[
         raise ValueError('Cannot specify both `inputs` and `kwargs`.')
 
     if kwargs:
-        warn_deprecation(LAUNCHER_SIGNATURE_DEPRECATION, version=3)
         inputs = kwargs
 
     return inputs or {}

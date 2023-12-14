@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1702558493063,
+  "lastUpdate": 1702571868653,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -25988,6 +25988,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.0018026",
             "group": "node",
             "extra": "mean: 24.686 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "3.22",
+          "cores": 4,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.10.13",
+          "metadata": "postgres:12.14, rabbitmq:3.8.14-management"
+        },
+        "commit": {
+          "id": "5015f5fe12d93024ed0d7594d860f1f2cd977548",
+          "message": "`verdi profile delete`: Make it storage plugin agnostic (#6224)\n\nThe `verdi profile delete` implementation was hardcoded to work only for\r\nthe `core.psql_dos` storage plugin. However, it is possible for profiles\r\nto use different storage plugins, causing the command to except.\r\n\r\nThe command now forwards to `Config.delete_profile`. This method gets\r\nthe storage plugin defined for the profile and constructs an instance of\r\nit for the given profile. It then calls `delete` on the storage instance\r\nif the `delete_storage` argument is set to `True`.\r\n\r\nThe new `delete` method is defined on the `StorageBackend` abstract base\r\nclass. It is intentionally not made abstract, but rather explicitly\r\nraises `NotImplementedError`. Otherwise existing storage plugins outside\r\nof `aiida-core` would no longer be instantiable before they implement\r\nthe method.\r\n\r\nThe various options of `verdi profile delete` to control what parts of\r\nthe storage are deleted, are simplified to just a single switch that\r\ncontrols whether the storage is deleted or not. The switch is not\r\ndefined at all by default. The user will have to explicitly select\r\neither `--delete-data` or `--keep-data`, or they will be prompted what\r\nvalue to choose. If the `--force` flag is specified and no explicit flag\r\nto delete or keep the data, the command raises.\r\n\r\nThe command now also properly detects if the delete profile was the\r\ndefault, in which case another profile is marked as the new default if\r\nany profiles remain at all.",
+          "timestamp": "2023-12-14T17:29:11+01:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/5015f5fe12d93024ed0d7594d860f1f2cd977548",
+          "distinct": true,
+          "tree_id": "fd0cdb7c4efb0ca64ae6f07c273960447a5718a0"
+        },
+        "date": 1702571863802,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 3.2277683855501076,
+            "unit": "iter/sec",
+            "range": "stddev: 0.053312",
+            "group": "import-export",
+            "extra": "mean: 309.81 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 3.091346023676537,
+            "unit": "iter/sec",
+            "range": "stddev: 0.061269",
+            "group": "import-export",
+            "extra": "mean: 323.48 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 4.100368808560976,
+            "unit": "iter/sec",
+            "range": "stddev: 0.074424",
+            "group": "import-export",
+            "extra": "mean: 243.88 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 4.5361045240593825,
+            "unit": "iter/sec",
+            "range": "stddev: 0.014760",
+            "group": "import-export",
+            "extra": "mean: 220.45 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 3.739028014384572,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0028515",
+            "group": "engine",
+            "extra": "mean: 267.45 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.7945073323322595,
+            "unit": "iter/sec",
+            "range": "stddev: 0.073143",
+            "group": "engine",
+            "extra": "mean: 1.2586 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.9232167777493802,
+            "unit": "iter/sec",
+            "range": "stddev: 0.024712",
+            "group": "engine",
+            "extra": "mean: 1.0832 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.21076964014058552,
+            "unit": "iter/sec",
+            "range": "stddev: 0.10495",
+            "group": "engine",
+            "extra": "mean: 4.7445 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.2345984136501952,
+            "unit": "iter/sec",
+            "range": "stddev: 0.10709",
+            "group": "engine",
+            "extra": "mean: 4.2626 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.5882319993287597,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0088362",
+            "group": "engine",
+            "extra": "mean: 386.36 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.5566941592432038,
+            "unit": "iter/sec",
+            "range": "stddev: 0.032965",
+            "group": "engine",
+            "extra": "mean: 1.7963 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.6231847398939051,
+            "unit": "iter/sec",
+            "range": "stddev: 0.039039",
+            "group": "engine",
+            "extra": "mean: 1.6047 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.16324491593426887,
+            "unit": "iter/sec",
+            "range": "stddev: 0.075258",
+            "group": "engine",
+            "extra": "mean: 6.1258 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.18387343762123387,
+            "unit": "iter/sec",
+            "range": "stddev: 0.041141",
+            "group": "engine",
+            "extra": "mean: 5.4385 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 499.830482916294,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00017866",
+            "group": "node",
+            "extra": "mean: 2.0007 msec\nrounds: 295"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 80.92099073281933,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00014139",
+            "group": "node",
+            "extra": "mean: 12.358 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 54.76041606087834,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00074142",
+            "group": "node",
+            "extra": "mean: 18.261 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 292.9147426998874,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00032117",
+            "group": "node",
+            "extra": "mean: 3.4140 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 45.621774703330296,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00079914",
+            "group": "node",
+            "extra": "mean: 21.919 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 44.47015398444155,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0016562",
+            "group": "node",
+            "extra": "mean: 22.487 msec\nrounds: 100"
           }
         ]
       }

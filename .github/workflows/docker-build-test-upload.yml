@@ -61,14 +61,14 @@ jobs:
                 docker save ${{ env.OWNER }}/aiida-core-with-services -o /tmp/aiida-core/aiida-core-with-services-${{ inputs.architecture }}.tar
 
             - name: Upload aiida-core-base image as artifact 💾
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v4
               with:
                   name: aiida-core-base-${{ inputs.architecture }}
                   path: /tmp/aiida-core/aiida-core-base-${{ inputs.architecture }}.tar
                   retention-days: 3
 
             - name: Upload aiida-core-with-services image as artifact 💾
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v4
               with:
                   name: aiida-core-with-services-${{ inputs.architecture }}
                   path: /tmp/aiida-core/aiida-core-with-services-${{ inputs.architecture }}.tar

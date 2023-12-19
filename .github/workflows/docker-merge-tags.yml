@@ -33,12 +33,12 @@ jobs:
                   architecture: amd64
 
             - name: Download amd64 tags file 📥
-              uses: actions/download-artifact@v3
+              uses: actions/download-artifact@v4
               with:
                   name: ${{ inputs.registry }}-${{ matrix.image }}-amd64-tags
                   path: /tmp/aiida-core
             - name: Download arm64 tags file 📥
-              uses: actions/download-artifact@v3
+              uses: actions/download-artifact@v4
               with:
                   name: ${{ inputs.registry }}-${{ matrix.image }}-arm64-tags
                   path: /tmp/aiida-core

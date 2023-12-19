@@ -1,7 +1,7 @@
 {
     "variable": {
       "PYTHON_VERSION": {
-        "default": "3.9.13"
+        "default": "3.10.13"
       },
       "PGSQL_VERSION": {
         "default": "15"

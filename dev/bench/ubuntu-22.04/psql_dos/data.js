@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1703019745962,
+  "lastUpdate": 1703068830193,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -26354,6 +26354,189 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.0011727",
             "group": "node",
             "extra": "mean: 22.161 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "3.18",
+          "cores": 4,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.10.13",
+          "metadata": "postgres:12.14, rabbitmq:3.8.14-management"
+        },
+        "commit": {
+          "id": "6d18ccb8680f16e8da80deffe40808cc2e669de0",
+          "message": "Engine: Make process inputs in launchers positional (#6202)\n\nSo far the launcher functions, `run` and `submit`, had a signature where\r\nthe process class was the only positional argument and the inputs for\r\nthe process were defined through keyword arguments.\r\n\r\nRecently, however, some fixed arguments were added to `submit`, namely\r\n`wait` and `wait_interval`. A potential problem was missed in this\r\nchange as these new keywords now \"shadow\" a similarly named input port\r\nfor a process. If a `Process` defines an input port named `wait` or\r\n`wait_interval`, when passed through the keyword arguments, it will now\r\nbe mistaken as the fixed argument for the `submit` function and won't be\r\npassed to the process inputs.\r\n\r\nThe new functionality by `wait` and `wait_interval` is desirable and in\r\nthe future additional arguments may need to be added. Therefore, rather\r\nthan undoing the change, another solution is implemented. The `inputs`\r\npositional argument is added and the `wait` and `wait_interval`\r\narguments are made keyword only. The process inputs should now be\r\ndefined as a dictionary for the `inputs` argument and no longer through\r\n`**kwargs`. The `**kwargs` are still supported, as in certain situations\r\nit is more legible and forcing to define an intermediate input dictionary\r\nis unnecessary.\r\n\r\nWith this approach, backwards-compatibility is maintained and users will\r\nbe able to transition to passing inputs as a dictionary instead of\r\nkeywords. In addition, if a user actually gets hit by `wait` shadowing\r\nthe input port of a `Process`, they can now switch to specifying the\r\ninputs through `inputs` and their input won't be blocked.",
+          "timestamp": "2023-12-20T11:31:56+01:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/6d18ccb8680f16e8da80deffe40808cc2e669de0",
+          "distinct": true,
+          "tree_id": "1723a23c5266380d80587f61c2cbc519c9c99401"
+        },
+        "date": 1703068825130,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 3.265526276677708,
+            "unit": "iter/sec",
+            "range": "stddev: 0.050113",
+            "group": "import-export",
+            "extra": "mean: 306.23 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 3.0491553162226053,
+            "unit": "iter/sec",
+            "range": "stddev: 0.059853",
+            "group": "import-export",
+            "extra": "mean: 327.96 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 3.993435619813522,
+            "unit": "iter/sec",
+            "range": "stddev: 0.084015",
+            "group": "import-export",
+            "extra": "mean: 250.41 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 4.698402650692403,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0016653",
+            "group": "import-export",
+            "extra": "mean: 212.84 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 3.7827641998090553,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0025571",
+            "group": "engine",
+            "extra": "mean: 264.36 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.8043407318331789,
+            "unit": "iter/sec",
+            "range": "stddev: 0.076183",
+            "group": "engine",
+            "extra": "mean: 1.2433 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.9280759869327119,
+            "unit": "iter/sec",
+            "range": "stddev: 0.031496",
+            "group": "engine",
+            "extra": "mean: 1.0775 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.21225657135084203,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11177",
+            "group": "engine",
+            "extra": "mean: 4.7113 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.23041242435286577,
+            "unit": "iter/sec",
+            "range": "stddev: 0.13340",
+            "group": "engine",
+            "extra": "mean: 4.3400 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.443948886449474,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0095196",
+            "group": "engine",
+            "extra": "mean: 409.17 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.5240122895589892,
+            "unit": "iter/sec",
+            "range": "stddev: 0.031718",
+            "group": "engine",
+            "extra": "mean: 1.9084 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.5757669296758425,
+            "unit": "iter/sec",
+            "range": "stddev: 0.049320",
+            "group": "engine",
+            "extra": "mean: 1.7368 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.1648948648334325,
+            "unit": "iter/sec",
+            "range": "stddev: 0.093798",
+            "group": "engine",
+            "extra": "mean: 6.0645 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.18288195891315673,
+            "unit": "iter/sec",
+            "range": "stddev: 0.070735",
+            "group": "engine",
+            "extra": "mean: 5.4680 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 414.09082696413543,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000071335",
+            "group": "node",
+            "extra": "mean: 2.4149 msec\nrounds: 264"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 75.83909813432417,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00034655",
+            "group": "node",
+            "extra": "mean: 13.186 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 47.483359194422846,
+            "unit": "iter/sec",
+            "range": "stddev: 0.026444",
+            "group": "node",
+            "extra": "mean: 21.060 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 307.73011588747767,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00016550",
+            "group": "node",
+            "extra": "mean: 3.2496 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 47.60757457897069,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00032103",
+            "group": "node",
+            "extra": "mean: 21.005 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 46.25090522967874,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00089623",
+            "group": "node",
+            "extra": "mean: 21.621 msec\nrounds: 100"
           }
         ]
       }

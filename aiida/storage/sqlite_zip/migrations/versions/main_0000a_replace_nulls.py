@@ -43,8 +43,8 @@ def upgrade():  # pylint: disable=too-many-statements
     )
 
     # remove rows with null values, which may have previously resulted from deletion of a user or computer
-    op.execute(db_dbauthinfo.delete().where(db_dbauthinfo.c.aiidauser_id.is_(None)))  # type: ignore[arg-type]
-    op.execute(db_dbauthinfo.delete().where(db_dbauthinfo.c.dbcomputer_id.is_(None)))  # type: ignore[arg-type]
+    op.execute(db_dbauthinfo.delete().where(db_dbauthinfo.c.aiidauser_id.is_(None)))
+    op.execute(db_dbauthinfo.delete().where(db_dbauthinfo.c.dbcomputer_id.is_(None)))
 
     op.execute(db_dbauthinfo.update().where(db_dbauthinfo.c.enabled.is_(None)).values(enabled=True))
     op.execute(db_dbauthinfo.update().where(db_dbauthinfo.c.auth_params.is_(None)).values(auth_params={}))
@@ -61,8 +61,8 @@ def upgrade():  # pylint: disable=too-many-statements
     )
 
     # remove rows with null values, which may have previously resulted from deletion of a node or user
-    op.execute(db_dbcomment.delete().where(db_dbcomment.c.dbnode_id.is_(None)))  # type: ignore[arg-type]
-    op.execute(db_dbcomment.delete().where(db_dbcomment.c.user_id.is_(None)))  # type: ignore[arg-type]
+    op.execute(db_dbcomment.delete().where(db_dbcomment.c.dbnode_id.is_(None)))
+    op.execute(db_dbcomment.delete().where(db_dbcomment.c.user_id.is_(None)))
 
     op.execute(db_dbcomment.update().where(db_dbcomment.c.content.is_(None)).values(content=''))
     op.execute(db_dbcomment.update().where(db_dbcomment.c.ctime.is_(None)).values(ctime=timezone.now()))

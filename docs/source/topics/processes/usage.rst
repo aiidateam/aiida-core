@@ -334,10 +334,19 @@ As the name suggest, the first three will 'run' the process and the latter will 
 Running means that the process will be executed in the same interpreter in which it is launched, blocking the interpreter, until the process is terminated.
 Submitting to the daemon, in contrast, means that the process will be sent to the daemon for execution, and the interpreter is released straight away.
 
-All functions have the exact same interface ``launch(process, **inputs)`` where:
+All functions have the exact same interface ``launch(process, inputs)`` where:
 
 * ``process`` is the process class or process function to launch
-* ``inputs`` are the inputs as keyword arguments to pass to the process.
+* ``inputs`` the inputs dictionary to pass to the process.
+
+.. versionchanged:: 2.5
+
+    Before AiiDA v2.5, the inputs could only be passed as keyword arguments.
+    This behavior is still supported, e.g., one can launch a process as ``launch(process, **inputs)`` or ``launch(process, input_a=value_a, input_b=value_b)``.
+    However, the recommended approach is now to use an input dictionary passed as the second positional argument.
+    The reason is that certain launchers define arguments themselves which can overlap with inputs of the process.
+    For example, the ``submit`` method defines the ``wait`` keyword.
+    If the process being launched *also* defines an input named ``wait``, the launcher method cannot tell them apart.
 
 What inputs can be passed depends on the exact process class that is to be launched.
 For example, when we want to run an instance of the :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation` process, which takes two :py:class:`~aiida.orm.nodes.data.int.Int` nodes as inputs under the name ``x`` and ``y`` [#f1]_, we would do the following:
@@ -350,7 +359,8 @@ The function will submit the calculation to the daemon and immediately return co
 .. warning::
     For a process to be submittable, the class or function needs to be importable in the daemon environment by a) giving it an :ref:`associated entry point<how-to:plugin-codes:entry-points>` or b) :ref:`including its module path<how-to:faq:process-not-importable-daemon>` in the ``PYTHONPATH`` that the daemon workers will have.
 
-.. tip::
+.. versionadded:: 2.5
+
     Use ``wait=True`` when calling ``submit`` to wait for the process to complete before returning the node.
     This can be useful for tutorials and demos in interactive notebooks where the user should not continue before the process is done.
     One could of course also use ``run`` (see below), but then the process would be lost if the interpreter gets accidentally shut down.

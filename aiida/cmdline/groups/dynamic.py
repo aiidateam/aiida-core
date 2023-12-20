@@ -130,12 +130,14 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         cls = self.factory(entry_point)
 
         if not hasattr(cls, 'Configuration'):
-            from aiida.common.warnings import warn_deprecation
-            warn_deprecation(
-                'Relying on `_get_cli_options` is deprecated. The options should be defined through a '
-                '`pydantic.BaseModel` that should be assigned to the `Config` class attribute.',
-                version=3
-            )
+            # This should be enabled once the ``Code`` classes are migrated to using pydantic to define their model.
+            # See https://github.com/aiidateam/aiida-core/pull/6190
+            # from aiida.common.warnings import warn_deprecation
+            # warn_deprecation(
+            #     'Relying on `_get_cli_options` is deprecated. The options should be defined through a '
+            #     '`pydantic.BaseModel` that should be assigned to the `Config` class attribute.',
+            #     version=3
+            # )
             options_spec = self.factory(entry_point).get_cli_options()  # type: ignore[union-attr]
         else:
 

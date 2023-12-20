@@ -12,10 +12,20 @@ import os
 import sys
 
 import aiida
-from aiida.manage.configuration import load_documentation_profile
-
-# Load the dummy profile for sphinx autodoc to use when loading modules
-load_documentation_profile()
+# imports required for docs/source/reference/api/public.rst
+from aiida import (  # pylint: disable=unused-import
+    cmdline,
+    common,
+    engine,
+    manage,
+    orm,
+    parsers,
+    plugins,
+    schedulers,
+    tools,
+    transports,
+)
+from aiida.cmdline.params import arguments, options  # pylint: disable=unused-import
 
 # -- General configuration -----------------------------------------------------
 

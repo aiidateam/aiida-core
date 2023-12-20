@@ -100,10 +100,6 @@ def validate_verdi_documentation():
     """Auto-generate the documentation for `verdi` through `click`."""
     from click import Context
 
-    from aiida.manage.configuration import load_documentation_profile
-
-    load_documentation_profile()
-
     from aiida.cmdline.commands.cmd_verdi import verdi
 
     width = 90  # The maximum width of the formatted help strings in characters

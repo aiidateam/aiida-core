@@ -170,7 +170,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         from .utils import instantiate_process  # pylint: disable=no-name-in-module
         return instantiate_process(self, process, **inputs)
 
-    def submit(self, process: TYPE_SUBMIT_PROCESS, **inputs: Any):
+    def submit(self, process: TYPE_SUBMIT_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any):
         """
         Submit the process with the supplied inputs to this runner immediately returning control to
         the interpreter. The return value will be the calculation node of the submitted process
@@ -182,6 +182,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         assert not utils.is_process_function(process), 'Cannot submit a process function'
         assert not self._closed
 
+        inputs = utils.prepare_inputs(inputs, **kwargs)
         process_inited = self.instantiate_process(process, **inputs)
 
         if not process_inited.metadata.store_provenance:
@@ -201,7 +202,9 @@ class Runner:  # pylint: disable=too-many-public-methods
 
         return process_inited.node
 
-    def schedule(self, process: TYPE_SUBMIT_PROCESS, *args: Any, **inputs: Any) -> ProcessNode:
+    def schedule(
+        self, process: TYPE_SUBMIT_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any
+    ) -> ProcessNode:
         """
         Schedule a process to be executed by this runner
 
@@ -212,11 +215,15 @@ class Runner:  # pylint: disable=too-many-public-methods
         assert not utils.is_process_function(process), 'Cannot submit a process function'
         assert not self._closed
 
-        process_inited = self.instantiate_process(process, *args, **inputs)
+        inputs = utils.prepare_inputs(inputs, **kwargs)
+        process_inited = self.instantiate_process(process, **inputs)
         self.loop.create_task(process_inited.step_until_terminated())
         return process_inited.node
 
-    def _run(self, process: TYPE_RUN_PROCESS, *args: Any, **inputs: Any) -> Tuple[Dict[str, Any], ProcessNode]:
+    def _run(self,
+             process: TYPE_RUN_PROCESS,
+             inputs: dict[str, Any] | None = None,
+             **kwargs: Any) -> Tuple[Dict[str, Any], ProcessNode]:
         """
         Run the process with the supplied inputs in this runner that will block until the process is completed.
         The return value will be the results of the completed process
@@ -227,12 +234,14 @@ class Runner:  # pylint: disable=too-many-public-methods
         """
         assert not self._closed
 
+        inputs = utils.prepare_inputs(inputs, **kwargs)
+
         if utils.is_process_function(process):
-            result, node = process.run_get_node(*args, **inputs)  # type: ignore[union-attr]
+            result, node = process.run_get_node(**inputs)  # type: ignore[union-attr]
             return result, node
 
         with utils.loop_scope(self.loop):
-            process_inited = self.instantiate_process(process, *args, **inputs)
+            process_inited = self.instantiate_process(process, **inputs)
 
             def kill_process(_num, _frame):
                 """Send the kill signal to the process in the current scope."""
@@ -255,7 +264,7 @@ class Runner:  # pylint: disable=too-many-public-methods
 
             return process_inited.outputs, process_inited.node
 
-    def run(self, process: TYPE_RUN_PROCESS, *args: Any, **inputs: Any) -> Dict[str, Any]:
+    def run(self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any) -> Dict[str, Any]:
         """
         Run the process with the supplied inputs in this runner that will block until the process is completed.
         The return value will be the results of the completed process
@@ -264,10 +273,12 @@ class Runner:  # pylint: disable=too-many-public-methods
         :param inputs: the inputs to be passed to the process
         :return: the outputs of the process
         """
-        result, _ = self._run(process, *args, **inputs)
+        result, _ = self._run(process, inputs, **kwargs)
         return result
 
-    def run_get_node(self, process: TYPE_RUN_PROCESS, *args: Any, **inputs: Any) -> ResultAndNode:
+    def run_get_node(
+        self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any
+    ) -> ResultAndNode:
         """
         Run the process with the supplied inputs in this runner that will block until the process is completed.
         The return value will be the results of the completed process
@@ -276,10 +287,10 @@ class Runner:  # pylint: disable=too-many-public-methods
         :param inputs: the inputs to be passed to the process
         :return: tuple of the outputs of the process and the calculation node
         """
-        result, node = self._run(process, *args, **inputs)
+        result, node = self._run(process, inputs, **kwargs)
         return ResultAndNode(result, node)
 
-    def run_get_pk(self, process: TYPE_RUN_PROCESS, *args: Any, **inputs: Any) -> ResultAndPk:
+    def run_get_pk(self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any) -> ResultAndPk:
         """
         Run the process with the supplied inputs in this runner that will block until the process is completed.
         The return value will be the results of the completed process
@@ -288,7 +299,7 @@ class Runner:  # pylint: disable=too-many-public-methods
         :param inputs: the inputs to be passed to the process
         :return: tuple of the outputs of the process and process node pk
         """
-        result, node = self._run(process, *args, **inputs)
+        result, node = self._run(process, inputs, **kwargs)
         return ResultAndPk(result, node.pk)
 
     def call_on_process_finish(self, pk: int, callback: Callable[[], Any]) -> None:

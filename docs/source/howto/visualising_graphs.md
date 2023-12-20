@@ -72,7 +72,7 @@ as outlined in the [graphviz attributes table](https://www.graphviz.org/doc/info
 graph = Graph(node_id_type="uuid",
               global_node_style={"penwidth": 1},
               global_edge_style={"color": "blue"},
-              graph_attr={"size": "8!,8!", "rankdir": "LR"})
+              graph_attr={"rankdir": "LR"})
 graph.add_incoming(calc1_uuid)
 graph.add_outgoing(calc1_uuid)
 graph.graphviz
@@ -86,7 +86,7 @@ def link_style(link_pair, **kwargs):
 
 graph = Graph(node_style_fn=pstate_node_styles,
               link_style_fn=link_style,
-              graph_attr={"size": "8!,8!", "rankdir": "LR"})
+              graph_attr={"rankdir": "LR"})
 graph.add_incoming(calc1_uuid)
 graph.add_outgoing(calc1_uuid)
 graph.graphviz
@@ -95,7 +95,7 @@ graph.graphviz
 Edges can be annotated by one or both of their edge label and link type.
 
 ```{code-cell} ipython3
-graph = Graph(graph_attr={"size": "8!,8!", "rankdir": "LR"})
+graph = Graph(graph_attr={"rankdir": "LR"})
 graph.add_incoming(calc1_uuid,
                    annotate_links="both")
 graph.add_outgoing(calc1_uuid,
@@ -106,7 +106,7 @@ graph.graphviz
 The {py:meth}`~aiida.tools.visualization.graph.Graph.recurse_descendants` and {py:meth}`~aiida.tools.visualization.graph.Graph.recurse_ancestors` methods can be used to construct a full provenance graph.
 
 ```{code-cell} ipython3
-graph = Graph(graph_attr={"size": "8!,8!", "rankdir": "LR"})
+graph = Graph(graph_attr={"rankdir": "LR"})
 graph.recurse_descendants(
     dict1_uuid,
     origin_style=None,
@@ -119,7 +119,7 @@ graph.graphviz
 The link types can also be filtered, to view only the 'data' or 'logical' provenance.
 
 ```{code-cell} ipython3
-graph = Graph(graph_attr={"size": "8,8!", "rankdir": "LR"})
+graph = Graph(graph_attr={"rankdir": "LR"})
 graph.recurse_descendants(
     dict1_uuid,
     origin_style=None,
@@ -131,7 +131,7 @@ graph.graphviz
 ```
 
 ```{code-cell} ipython3
-graph = Graph(graph_attr={"size": "8,8!", "rankdir": "LR"})
+graph = Graph(graph_attr={"rankdir": "LR"})
 graph.recurse_descendants(
     dict1_uuid,
     origin_style=None,
@@ -147,7 +147,7 @@ then the `highlight_classes` option can be used
 to only color specified nodes:
 
 ```{code-cell} ipython3
-graph = Graph(graph_attr={"size": "20,20", "rankdir": "LR"})
+graph = Graph(graph_attr={"rankdir": "LR"})
 graph.recurse_descendants(
     dict1_uuid,
     highlight_classes=['Dict']

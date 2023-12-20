@@ -23,7 +23,7 @@ from .processes.builder import ProcessBuilder
 from .processes.functions import FunctionProcess
 from .processes.process import Process
 from .runners import ResultAndPk
-from .utils import instantiate_process, is_process_scoped  # pylint: disable=no-name-in-module
+from .utils import instantiate_process, is_process_scoped, prepare_inputs  # pylint: disable=no-name-in-module
 
 __all__ = ('run', 'run_get_pk', 'run_get_node', 'submit', 'await_processes')
 
@@ -33,7 +33,7 @@ TYPE_SUBMIT_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]  # pylin
 LOGGER = AIIDA_LOGGER.getChild('engine.launch')
 
 
-def run(process: TYPE_RUN_PROCESS, *args: t.Any, **inputs: t.Any) -> dict[str, t.Any]:
+def run(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any) -> dict[str, t.Any]:
     """Run the process with the supplied inputs in a local runner that will block until the process is completed.
 
     :param process: the process class or process function to run
@@ -45,10 +45,12 @@ def run(process: TYPE_RUN_PROCESS, *args: t.Any, **inputs: t.Any) -> dict[str, t
     else:
         runner = manager.get_manager().get_runner()
 
-    return runner.run(process, *args, **inputs)
+    return runner.run(process, inputs, **kwargs)
 
 
-def run_get_node(process: TYPE_RUN_PROCESS, *args: t.Any, **inputs: t.Any) -> tuple[dict[str, t.Any], ProcessNode]:
+def run_get_node(process: TYPE_RUN_PROCESS,
+                 inputs: dict[str, t.Any] | None = None,
+                 **kwargs: t.Any) -> tuple[dict[str, t.Any], ProcessNode]:
     """Run the process with the supplied inputs in a local runner that will block until the process is completed.
 
     :param process: the process class, instance, builder or function to run
@@ -60,10 +62,10 @@ def run_get_node(process: TYPE_RUN_PROCESS, *args: t.Any, **inputs: t.Any) -> tu
     else:
         runner = manager.get_manager().get_runner()
 
-    return runner.run_get_node(process, *args, **inputs)
+    return runner.run_get_node(process, inputs, **kwargs)
 
 
-def run_get_pk(process: TYPE_RUN_PROCESS, *args: t.Any, **inputs: t.Any) -> ResultAndPk:
+def run_get_pk(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any) -> ResultAndPk:
     """Run the process with the supplied inputs in a local runner that will block until the process is completed.
 
     :param process: the process class, instance, builder or function to run
@@ -75,10 +77,17 @@ def run_get_pk(process: TYPE_RUN_PROCESS, *args: t.Any, **inputs: t.Any) -> Resu
     else:
         runner = manager.get_manager().get_runner()
 
-    return runner.run_get_pk(process, *args, **inputs)
+    return runner.run_get_pk(process, inputs, **kwargs)
 
 
-def submit(process: TYPE_SUBMIT_PROCESS, wait: bool = False, wait_interval: int = 5, **inputs: t.Any) -> ProcessNode:
+def submit(
+    process: TYPE_SUBMIT_PROCESS,
+    inputs: dict[str, t.Any] | None = None,
+    *,
+    wait: bool = False,
+    wait_interval: int = 5,
+    **kwargs: t.Any
+) -> ProcessNode:
     """Submit the process with the supplied inputs to the daemon immediately returning control to the interpreter.
 
     .. warning: this should not be used within another process. Instead, there one should use the ``submit`` method of
@@ -87,12 +96,16 @@ def submit(process: TYPE_SUBMIT_PROCESS, wait: bool = False, wait_interval: int 
     .. warning: submission of processes requires ``store_provenance=True``.
 
     :param process: the process class, instance or builder to submit
-    :param inputs: the inputs to be passed to the process
+    :param inputs: the input dictionary to be passed to the process
     :param wait: when set to ``True``, the submission will be blocking and wait for the process to complete at which
         point the function returns the calculation node.
     :param wait_interval: the number of seconds to wait between checking the state of the process when ``wait=True``.
+    :param kwargs: inputs to be passed to the process. This is deprecated and the inputs should instead be passed as a
+        dictionary to the ``inputs`` argument.
     :return: the calculation node of the process
     """
+    inputs = prepare_inputs(inputs, **kwargs)
+
     # Submitting from within another process requires ``self.submit``` unless it is a work function, in which case the
     # current process in the scope should be an instance of ``FunctionProcess``.
     if is_process_scoped() and not isinstance(Process.current(), FunctionProcess):
@@ -100,7 +113,7 @@ def submit(process: TYPE_SUBMIT_PROCESS, wait: bool = False, wait_interval: int 
 
     runner = manager.get_manager().get_runner()
     assert runner.persister is not None, 'runner does not have a persister'
-    assert runner.controller is not None, 'runner does not have a persister'
+    assert runner.controller is not None, 'runner does not have a controller'
 
     process_inited = instantiate_process(runner, process, **inputs)
 

@@ -9,6 +9,8 @@
 ###########################################################################
 # pylint: disable=invalid-name
 """Utilities for the workflow engine."""
+from __future__ import annotations
+
 import asyncio
 import contextlib
 from datetime import datetime
@@ -25,6 +27,26 @@ __all__ = ('interruptable_task', 'InterruptableFuture', 'is_process_function')
 LOGGER = logging.getLogger(__name__)
 PROCESS_STATE_CHANGE_KEY = 'process|state_change|{}'
 PROCESS_STATE_CHANGE_DESCRIPTION = 'The last time a process of type {}, changed state'
+
+
+def prepare_inputs(inputs: dict[str, Any] | None = None, **kwargs: Any) -> dict[str, Any]:
+    """Prepare inputs for launch of a process.
+
+    This is a utility function to pre-process inputs for the process that can be specified both through keyword
+    arguments as well as through the explicit ``inputs`` argument. When both are specified, a ``ValueError`` is raised.
+
+    :param inputs: Inputs dictionary.
+    :param kwargs: Inputs defined as keyword arguments.
+    :raises ValueError: If both ``kwargs`` and ``inputs`` are defined.
+    :returns: The dictionary of inputs for the process.
+    """
+    if inputs is not None and kwargs:
+        raise ValueError('Cannot specify both `inputs` and `kwargs`.')
+
+    if kwargs:
+        inputs = kwargs
+
+    return inputs or {}
 
 
 def instantiate_process(

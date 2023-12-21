@@ -3,20 +3,20 @@ name: test-install
 on:
   pull_request:
     paths:
-      - 'environment.yml'
-      - '**/requirements*.txt'
-      - 'pyproject.toml'
-      - 'util/dependency_management.py'
-      - '.github/workflows/test-install.yml'
+    - environment.yml
+    - '**/requirements*.txt'
+    - pyproject.toml
+    - util/dependency_management.py
+    - .github/workflows/test-install.yml
     branches-ignore: [gh-pages]
   schedule:
-    - cron: '30 02 * * *'  # nightly build
+  - cron: 30 02 * * *      # nightly build
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
     # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
-    group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
 
@@ -111,7 +111,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        extras: [ '', '[atomic_tools,docs,notebook,rest,tests,tui]' ]
+        extras: ['', '[atomic_tools,docs,notebook,rest,tests,tui]']
 
     steps:
     - uses: actions/checkout@v2
@@ -130,8 +130,7 @@ jobs:
 
     - name: Test importing aiida
       if: steps.pip_install.outcome == 'success'
-      run:
-        python -c "import aiida"
+      run: python -c "import aiida"
 
   install-with-conda:
     # Verify that we can install AiiDA with conda.
@@ -153,8 +152,8 @@ jobs:
         include:
           # Installing with conda without specyfing the Python version should
           # not fail since this is advocated as part of the user documentation.
-          - python-version: ''
-            optional: false
+        - python-version: ''
+          optional: false
 
     steps:
     - uses: actions/checkout@v2
@@ -210,16 +209,16 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         ports:
-          - 5432:5432
+        - 5432:5432
       rabbitmq:
         image: rabbitmq:3.8.14-management
         ports:
-          - 5672:5672
-          - 15672:15672
+        - 5672:5672
+        - 15672:15672
       slurm:
         image: xenonmiddleware/slurm:17
         ports:
-          - 5001:22
+        - 5001:22
 
     steps:
     - uses: actions/checkout@v2
@@ -247,15 +246,13 @@ jobs:
     - run: pip freeze
 
     - name: Setup AiiDA environment
-      run:
-        .github/workflows/setup.sh
+      run: .github/workflows/setup.sh
 
     - name: Run test suite
       env:
         AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
-      run:
-        pytest --cov aiida --verbose tests -m 'not nightly'
+      run: pytest --cov aiida --verbose tests -m 'not nightly'
 
     - name: Freeze test environment
       run: pip freeze | sed '1d' | tee requirements-py-${{ matrix.python-version }}.txt
@@ -334,8 +331,8 @@ jobs:
       uses: peter-evans/create-pull-request@v3
       with:
         branch: update-requirements
-        commit-message: "Automated update of requirements/ files."
-        title: "Update requirements/ files."
+        commit-message: Automated update of requirements/ files.
+        title: Update requirements/ files.
         body: |
           Update requirements files to ensure that they are consistent
           with the dependencies specified in the 'pyproject.toml' file.

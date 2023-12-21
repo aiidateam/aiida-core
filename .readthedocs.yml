@@ -8,26 +8,26 @@ formats: []
 
 build:
   apt_packages:
-    - graphviz
+  - graphviz
   os: ubuntu-22.04
   tools:
-    python: "3.10"
+    python: '3.10'
 
 # Need to install the package itself such that the entry points are installed and the API doc can build properly
 python:
-    install:
-        - method: pip
-          path: .
-          extra_requirements:
-            - docs
-            - tests
-            - rest
-            - atomic_tools
+  install:
+  - method: pip
+    path: .
+    extra_requirements:
+    - docs
+    - tests
+    - rest
+    - atomic_tools
 
 # Let the build fail if there are any warnings
 sphinx:
-    builder: html
-    fail_on_warning: true
+  builder: html
+  fail_on_warning: true
 
 search:
   ranking:

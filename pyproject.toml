@@ -207,7 +207,7 @@ notebook = [
   'notebook~=6.1,>=6.1.5'
 ]
 pre-commit = [
-  'mypy~=1.7',
+  'mypy~=1.7.1',
   'packaging~=23.0',
   'pre-commit~=2.2',
   'sqlalchemy[mypy]~=2.0',

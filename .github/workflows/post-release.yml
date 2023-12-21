@@ -36,8 +36,7 @@ jobs:
       env:
         READTHEDOCS: 'True'
         RUN_APIDOC: 'True'
-      run:
-        make -C docs gettext
+      run: make -C docs gettext
 
     - name: Install Transifex CLI
       run: |
